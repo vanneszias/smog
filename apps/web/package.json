@@ -32,7 +32,6 @@
     "@libsql/client": "catalog:",
     "libsql": "catalog:",
     "better-auth": "catalog:",
-    "@polar-sh/better-auth": "catalog:",
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
     "@smog/styles": "workspace:*",

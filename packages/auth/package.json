@@ -18,8 +18,7 @@
   },
   "dependencies": {
     "better-auth": "catalog:",
-    "@polar-sh/better-auth": "catalog:",
-    "@polar-sh/sdk": "^0.34.16",
+    "@mollie/api-client": "^4.3.3",
     "dotenv": "catalog:",
     "zod": "catalog:",
     "@smog/db": "workspace:*"

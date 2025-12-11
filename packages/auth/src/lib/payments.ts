@@ -1,6 +1,5 @@
-import { Polar } from "@polar-sh/sdk";
+import { createMollieClient } from "@mollie/api-client";
 
-export const polarClient = new Polar({
-  accessToken: process.env.POLAR_ACCESS_TOKEN,
-  server: "sandbox",
+export const mollieClient = createMollieClient({
+  apiKey: process.env.MOLLIE_API_KEY || "",
 });
