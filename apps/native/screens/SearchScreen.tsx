@@ -200,31 +200,33 @@ const SearchScreen = () => {
 
   // Multi-category handler for CategoryListBottomSheet
   const handleCategoryChange = useCallback(
-    (categories: string[]) => {
+    (categoryList: string[]) => {
       const previousCategories = selectedCategories;
-      const addedCategories = categories.filter(
+      const addedCategories = categoryList.filter(
         (c) => !previousCategories.includes(c)
       );
       const removedCategories = previousCategories.filter(
-        (c) => !categories.includes(c)
+        (c) => !categoryList.includes(c)
       );
 
       // Track category changes
-      addedCategories.forEach((category) => {
-        trackSearchCategoryAdded(category, categories.length);
-      });
-      removedCategories.forEach((category) => {
-        trackSearchCategoryRemoved(category, categories.length);
-      });
+      for (const category of addedCategories) {
+        trackSearchCategoryAdded(category, categoryList.length);
+      }
+      for (const category of removedCategories) {
+        trackSearchCategoryRemoved(category, categoryList.length);
+      }
 
-      setSelectedCategories(categories);
+      setSelectedCategories(categoryList);
       setCategorySheetVisible(false);
       trackBottomSheetClosed("category_selection");
       router.push({
         pathname: "/search",
         params: {
           query: searchTerm,
-          ...(categories.length > 0 ? { category: categories.join(",") } : {}),
+          ...(categoryList.length > 0
+            ? { category: categoryList.join(",") }
+            : {}),
         },
       });
     },

@@ -19,10 +19,18 @@ type ToastContextType = {
 };
 
 const ToastContext = createContext<ToastContextType>({
-  showToast: () => {},
-  hideToast: () => {},
-  triggerHide: () => {},
-  registerHideCallback: () => {},
+  showToast: () => {
+    /* noop */
+  },
+  hideToast: () => {
+    /* noop */
+  },
+  triggerHide: () => {
+    /* noop */
+  },
+  registerHideCallback: () => {
+    /* noop */
+  },
   isVisible: false,
   toastOptions: null,
 });

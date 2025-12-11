@@ -13,7 +13,9 @@ type LogContextType = {
 
 export const LogContext = createContext<LogContextType>({
   logs: [],
-  clearLogs: () => {},
+  clearLogs: () => {
+    /* noop */
+  },
 });
 
 const MAX_LOGS = 200;

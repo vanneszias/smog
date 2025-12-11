@@ -101,6 +101,8 @@ const SearchBar = ({
     [showClearButton, searchQuery.length]
   );
 
+  const shouldShowClearButton = showClear && !isLoading;
+
   const placeholderText = placeholder || t("search.placeholder");
 
   const handleContainerPress = useCallback(() => {
@@ -159,14 +161,14 @@ const SearchBar = ({
             ]}
             value={searchQuery}
           />
-          {isLoading && (
+          {!!isLoading && (
             <ActivityIndicator
               color={theme.primary}
               size="small"
               style={styles.loadingIndicator}
             />
           )}
-          {showClear && !isLoading && (
+          {shouldShowClearButton ? (
             <TouchableOpacity
               hitSlop={HIT_SLOP.md}
               onPress={handleClear}
@@ -178,10 +180,10 @@ const SearchBar = ({
                 size={ICON_SIZE.md}
               />
             </TouchableOpacity>
-          )}
+          ) : null}
         </TouchableOpacity>
       </Animated.View>
-      {showCancelButton && (
+      {!!showCancelButton && (
         <Animated.View
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(200)}

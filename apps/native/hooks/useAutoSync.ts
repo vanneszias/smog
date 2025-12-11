@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import { convexSyncService } from "@/services/convexSyncService";
 
+const BACKGROUND_STATE_REGEX = /inactive|background/;
+
 /**
  * Hook to automatically check for updates when the app comes to foreground
  * This ensures users get fresh data when they open the app
@@ -13,7 +15,7 @@ export const useAutoSync = () => {
     const isAppComingToForeground = (
       currentState: string,
       nextState: AppStateStatus
-    ) => currentState.match(/inactive|background/) && nextState === "active";
+    ) => BACKGROUND_STATE_REGEX.test(currentState) && nextState === "active";
 
     const performSyncCheck = async () => {
       if (__DEV__) {

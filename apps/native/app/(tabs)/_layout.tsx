@@ -46,13 +46,19 @@ export default function TabLayout() {
         name="index"
         options={{
           title: t("tabs.home"),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              color={color}
-              name={focused ? "home" : "home-outline"}
-              size={Platform.OS === "ios" ? (focused ? size + 2 : size) : size}
-            />
-          ),
+          tabBarIcon: ({ color, size, focused }) => {
+            let iconSize = size;
+            if (Platform.OS === "ios" && focused) {
+              iconSize = size + 2;
+            }
+            return (
+              <Ionicons
+                color={color}
+                name={focused ? "home" : "home-outline"}
+                size={iconSize}
+              />
+            );
+          },
         }}
       />
 
@@ -60,13 +66,19 @@ export default function TabLayout() {
         name="search"
         options={{
           title: t("tabs.search"),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              color={color}
-              name={focused ? "search" : "search-outline"}
-              size={Platform.OS === "ios" ? (focused ? size + 2 : size) : size}
-            />
-          ),
+          tabBarIcon: ({ color, size, focused }) => {
+            let iconSize = size;
+            if (Platform.OS === "ios" && focused) {
+              iconSize = size + 2;
+            }
+            return (
+              <Ionicons
+                color={color}
+                name={focused ? "search" : "search-outline"}
+                size={iconSize}
+              />
+            );
+          },
         }}
       />
 
@@ -74,13 +86,19 @@ export default function TabLayout() {
         name="favorites"
         options={{
           title: t("tabs.favorites"),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              color={color}
-              name={focused ? "heart" : "heart-outline"}
-              size={Platform.OS === "ios" ? (focused ? size + 2 : size) : size}
-            />
-          ),
+          tabBarIcon: ({ color, size, focused }) => {
+            let iconSize = size;
+            if (Platform.OS === "ios" && focused) {
+              iconSize = size + 2;
+            }
+            return (
+              <Ionicons
+                color={color}
+                name={focused ? "heart" : "heart-outline"}
+                size={iconSize}
+              />
+            );
+          },
         }}
       />
     </Tabs>

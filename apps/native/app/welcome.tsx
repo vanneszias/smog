@@ -22,7 +22,7 @@ export default function WelcomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const handleSignInSignUp = async () => {
+  const handleSignInSignUp = () => {
     try {
       console.log("[Welcome] Starting WorkOS sign-in");
 
@@ -49,7 +49,9 @@ export default function WelcomeScreen() {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.primary }]}
     >
-      <View style={[styles.content, isSmallScreen && styles.contentSmall]}>
+      <View
+        style={[styles.content, isSmallScreen ? styles.contentSmall : null]}
+      >
         <View style={[styles.logoContainer]}>
           <Logo
             height={isSmallScreen ? 60 : 80}
@@ -61,18 +63,21 @@ export default function WelcomeScreen() {
         <View
           style={[
             styles.buttonContainer,
-            isSmallScreen && styles.buttonContainerSmall,
+            isSmallScreen ? styles.buttonContainerSmall : null,
           ]}
         >
           <TouchableOpacity
             onPress={handleGuestAccess}
-            style={[styles.guestButton, isSmallScreen && styles.buttonSmall]}
+            style={[
+              styles.guestButton,
+              isSmallScreen ? styles.buttonSmall : null,
+            ]}
           >
             <Text
               style={[
                 styles.guestButtonText,
                 { color: theme.background },
-                isSmallScreen && styles.buttonTextSmall,
+                isSmallScreen ? styles.buttonTextSmall : null,
               ]}
             >
               {t("auth.continueAsGuest")}
@@ -84,14 +89,14 @@ export default function WelcomeScreen() {
             style={[
               styles.primaryButton,
               { backgroundColor: theme.background },
-              isSmallScreen && styles.buttonSmall,
+              isSmallScreen ? styles.buttonSmall : null,
             ]}
           >
             <Text
               style={[
                 styles.primaryButtonText,
                 { color: theme.primary },
-                isSmallScreen && styles.buttonTextSmall,
+                isSmallScreen ? styles.buttonTextSmall : null,
               ]}
             >
               {t("auth.welcome.signInSignUp")}

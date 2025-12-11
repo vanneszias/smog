@@ -29,7 +29,9 @@ export type FavoritesContextType = {
 const FavoritesContext = createContext<FavoritesContextType>({
   favorites: [],
   favoriteGestures: [],
-  toggleFavorite: () => {},
+  toggleFavorite: () => {
+    /* noop */
+  },
   isFavorite: () => false,
   isLoading: false,
   pendingOperations: 0,

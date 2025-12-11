@@ -33,11 +33,11 @@ const BaseInput: React.FC<BaseInputProps> = ({
 
   return (
     <View style={containerStyle}>
-      {label && (
+      {label ? (
         <Text style={[styles.label, { color: theme.text }, labelStyle]}>
           {label}
         </Text>
-      )}
+      ) : null}
       <TextInput
         placeholderTextColor={theme.textLight}
         style={[
@@ -52,11 +52,11 @@ const BaseInput: React.FC<BaseInputProps> = ({
         ]}
         {...textInputProps}
       />
-      {error && (
+      {error ? (
         <Text style={[styles.error, { color: theme.error }, errorStyle]}>
           {error}
         </Text>
-      )}
+      ) : null}
     </View>
   );
 };

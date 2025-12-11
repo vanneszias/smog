@@ -283,10 +283,10 @@ const SettingsScreen = () => {
                 window.alert("Tap 5 times to open Developer Tools");
               } else {
                 const globalAlert = (globalThis as RNGlobal).Alert;
-                if (
-                  globalAlert?.alert &&
-                  typeof globalAlert.alert === "function"
-                ) {
+                const hasAlert =
+                  !!globalAlert?.alert &&
+                  typeof globalAlert.alert === "function";
+                if (hasAlert) {
                   globalAlert.alert("Tap 5 times to open Developer Tools");
                 }
               }

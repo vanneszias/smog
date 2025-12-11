@@ -1,4 +1,10 @@
-import * as Haptics from "expo-haptics";
+import {
+  ImpactFeedbackStyle,
+  impactAsync,
+  NotificationFeedbackType,
+  notificationAsync,
+  selectionAsync,
+} from "expo-haptics";
 import { useCallback } from "react";
 import { Platform } from "react-native";
 
@@ -8,19 +14,22 @@ export const useNativeInteractions = () => {
       if (Platform.OS === "ios") {
         switch (type) {
           case "light":
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            impactAsync(ImpactFeedbackStyle.Light);
             break;
           case "medium":
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            impactAsync(ImpactFeedbackStyle.Medium);
             break;
           case "heavy":
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            impactAsync(ImpactFeedbackStyle.Heavy);
             break;
           case "success":
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            notificationAsync(NotificationFeedbackType.Success);
             break;
           case "error":
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            notificationAsync(NotificationFeedbackType.Error);
+            break;
+          default:
+            // Handle default case
             break;
         }
       }
@@ -30,7 +39,7 @@ export const useNativeInteractions = () => {
 
   const triggerSelection = useCallback(() => {
     if (Platform.OS === "ios") {
-      Haptics.selectionAsync();
+      selectionAsync();
     }
   }, []);
 

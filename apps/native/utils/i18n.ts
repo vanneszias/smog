@@ -54,7 +54,9 @@ const languageDetector = {
       callback(DEFAULT_LANGUAGE);
     }
   },
-  init: () => {},
+  init: () => {
+    /* noop */
+  },
   cacheUserLanguage: async (lng: string) => {
     try {
       await AsyncStorage.setItem("userLanguage", lng);

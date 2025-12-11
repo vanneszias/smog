@@ -29,6 +29,9 @@ import posthog, {
   trackAppOpened,
 } from "@/services/analyticsService";
 
+// Regex patterns for app state detection
+const INACTIVE_OR_BACKGROUND_REGEX = /inactive|background/;
+
 // Keep the default splash visible while we load resources
 SplashScreen.preventAutoHideAsync();
 
@@ -106,7 +109,9 @@ function AuthenticatedLayout() {
         />
       </Stack>
       <StatusBar
-        backgroundColor={Platform.OS === "android" ? theme.primary : undefined}
+        backgroundColor={
+          Platform.OS === "android" ? theme.primary : "transparent"
+        }
         style={theme.statusBar}
         translucent={Platform.OS === "android"}
       />
@@ -232,11 +237,11 @@ export default function RootLayout() {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       const currentTime = Date.now();
       const isComingToForeground =
-        appStateRef.current.match(/inactive|background/) &&
+        appStateRef.current.match(INACTIVE_OR_BACKGROUND_REGEX) &&
         nextAppState === "active";
       const isGoingToBackground =
         appStateRef.current === "active" &&
-        nextAppState.match(/inactive|background/);
+        nextAppState.match(INACTIVE_OR_BACKGROUND_REGEX);
 
       if (isComingToForeground) {
         handleAppToForeground(currentTime);

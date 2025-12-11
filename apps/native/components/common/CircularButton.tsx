@@ -72,7 +72,7 @@ const CircularButton: React.FC<CircularButtonProps> = ({
         },
         SHADOWS.medium,
         style,
-        disabled && styles.disabled,
+        disabled ? styles.disabled : null,
       ]}
     >
       <Ionicons

@@ -13,7 +13,7 @@ function SuccessPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1>Payment Successful!</h1>
-      {checkout_id && <p>Checkout ID: {checkout_id}</p>}
+      {checkout_id ? <p>Checkout ID: {checkout_id}</p> : null}
     </div>
   );
 }

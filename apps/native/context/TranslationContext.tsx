@@ -67,5 +67,5 @@ export const useTranslation = () => {
 };
 
 // Export types and constants for backward compatibility
-export type { Language };
-export { AVAILABLE_LANGUAGES };
+export type { Language } from "@/utils/i18n";
+export { AVAILABLE_LANGUAGES } from "@/utils/i18n";

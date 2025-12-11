@@ -26,7 +26,7 @@ const DeveloperToolsScreen: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { logs, clearLogs } = useContext(LogContext);
 
-  const fetchCacheStats = useCallback(async () => {
+  const fetchCacheStats = useCallback(() => {
     gestureService
       .getCacheStats()
       .then((stats) => setCacheStats(stats))
@@ -40,7 +40,7 @@ const DeveloperToolsScreen: React.FC = () => {
     fetchCacheStats();
   }, [fetchCacheStats]);
 
-  const handleRefreshData = useCallback(async () => {
+  const handleRefreshData = useCallback(() => {
     setIsRefreshing(true);
     setIsRefreshing(true);
     gestureService

@@ -44,10 +44,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const videoUrl = `https://stream.mux.com/${playbackId}.m3u8`;
 
   // Create video player instance
-  const player = useVideoPlayer(videoUrl, (player) => {
-    player.loop = true;
+  const player = useVideoPlayer(videoUrl, (videoPlayer) => {
+    videoPlayer.loop = true;
     if (autoPlay) {
-      player.play();
+      videoPlayer.play();
     }
   });
 
@@ -177,11 +177,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         style={styles.video}
       />
 
-      {isLoading && (
+      {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={theme.primary} size="large" />
         </View>
-      )}
+      ) : null}
 
       <TouchableOpacity
         onPress={togglePlayPause}

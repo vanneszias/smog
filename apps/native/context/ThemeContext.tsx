@@ -13,7 +13,9 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType>({
   theme: themes.light,
   themeMode: "system",
-  setThemeMode: () => {},
+  setThemeMode: () => {
+    /* noop */
+  },
 });
 
 export const useTheme = () => useContext(ThemeContext);

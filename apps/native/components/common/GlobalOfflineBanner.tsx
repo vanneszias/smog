@@ -48,11 +48,11 @@ const GlobalOfflineBanner: React.FC = () => {
 
   // Helper function to handle initial offline state
   const handleInitialState = useCallback(
-    (isOffline: boolean) => {
-      previousOfflineState.current = isOffline;
+    (offline: boolean) => {
+      previousOfflineState.current = offline;
 
       // If app opens offline (and enough time has passed since app start), show offline banner
-      if (isOffline && Date.now() - appStartTime.current > 1000) {
+      if (offline && Date.now() - appStartTime.current > 1000) {
         setBannerState("offline");
         setHasShownOfflineBanner(true);
         showBanner();
@@ -63,15 +63,15 @@ const GlobalOfflineBanner: React.FC = () => {
 
   // Helper function to handle state changes after initialization
   const handleStateChange = useCallback(
-    (isOffline: boolean) => {
+    (offline: boolean) => {
       // Check if state actually changed
-      if (previousOfflineState.current === isOffline) {
+      if (previousOfflineState.current === offline) {
         return; // No change, do nothing
       }
 
       // Ignore very quick transitions that happen within first 2 seconds of app start
       if (Date.now() - appStartTime.current < 2000) {
-        previousOfflineState.current = isOffline;
+        previousOfflineState.current = offline;
         return;
       }
 
@@ -81,7 +81,7 @@ const GlobalOfflineBanner: React.FC = () => {
         onlineTimeoutRef.current = null;
       }
 
-      if (isOffline) {
+      if (offline) {
         // Went offline - show offline banner
         setBannerState("offline");
         setHasShownOfflineBanner(true);
@@ -98,7 +98,7 @@ const GlobalOfflineBanner: React.FC = () => {
       }
 
       // Update previous state
-      previousOfflineState.current = isOffline;
+      previousOfflineState.current = offline;
     },
     [showBanner, hideBanner, hasShownOfflineBanner]
   );

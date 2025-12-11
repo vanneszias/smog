@@ -22,7 +22,7 @@ const AccountSettingsScreen = () => {
   const navigation = useNavigation();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Alert.alert(
       t("account.logoutConfirmTitle"),
       t("account.logoutConfirmMessage"),
@@ -97,6 +97,11 @@ const AccountSettingsScreen = () => {
     );
   };
 
+  const userName =
+    user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : (user?.email ?? t("account.unknownUser"));
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
@@ -145,12 +150,10 @@ const AccountSettingsScreen = () => {
             <View style={styles.userInfo}>
               <View style={styles.userDetails}>
                 <Text style={[styles.userName, { color: theme.text }]}>
-                  {user?.firstName && user?.lastName
-                    ? `${user.firstName} ${user.lastName}`
-                    : user?.email || t("account.unknownUser")}
+                  {userName}
                 </Text>
                 <Text style={[styles.userEmail, { color: theme.textLight }]}>
-                  {user?.email || ""}
+                  {user?.email ?? ""}
                 </Text>
               </View>
               <TouchableOpacity
@@ -170,7 +173,7 @@ const AccountSettingsScreen = () => {
       </View>
 
       {/* Account Actions Section */}
-      {isAuthenticated && (
+      {isAuthenticated ? (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
             {t("account.accountActions")}
@@ -226,7 +229,7 @@ const AccountSettingsScreen = () => {
             />
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
 
       {/* Danger Zone Section */}
       <View style={styles.section}>
@@ -256,16 +259,16 @@ const AccountSettingsScreen = () => {
               {isLoggingOut ? t("account.loggingOut") : t("account.logout")}
             </Text>
           </View>
-          {isLoggingOut && (
+          {isLoggingOut ? (
             <View style={styles.loadingIndicator}>
               <Text style={[styles.loadingText, { color: theme.textLight }]}>
                 ...
               </Text>
             </View>
-          )}
+          ) : null}
         </TouchableOpacity>
 
-        {isAuthenticated && (
+        {isAuthenticated ? (
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleDeleteAccount}
@@ -293,7 +296,7 @@ const AccountSettingsScreen = () => {
               size={ICON_SIZE.sm}
             />
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
     </SafeAreaView>
   );

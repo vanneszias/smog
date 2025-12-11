@@ -169,7 +169,7 @@ export const Toast: React.FC<ToastProps> = ({
                 {message}
               </Text>
             </View>
-            {action && (
+            {action ? (
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => {
@@ -183,7 +183,7 @@ export const Toast: React.FC<ToastProps> = ({
                   {action.label}
                 </Text>
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
         </Animated.View>
       </View>

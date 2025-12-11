@@ -59,14 +59,14 @@ const BaseCard: React.FC<BaseCardProps> = ({
         style,
       ]}
     >
-      {(title || subtitle) && (
+      {title || subtitle ? (
         <View style={styles.header}>
-          {title && (
+          {title ? (
             <Text style={[typography.title, { color: theme.text }, titleStyle]}>
               {title}
             </Text>
-          )}
-          {subtitle && (
+          ) : null}
+          {subtitle ? (
             <Text
               style={[
                 typography.bodySmall,
@@ -76,9 +76,9 @@ const BaseCard: React.FC<BaseCardProps> = ({
             >
               {subtitle}
             </Text>
-          )}
+          ) : null}
         </View>
-      )}
+      ) : null}
       <View style={[styles.content, contentStyle]}>{children}</View>
     </View>
   );

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BORDER_RADIUS, ICON_SIZE, SHADOWS, SPACING } from "@smog/styles";
-import * as Haptics from "expo-haptics";
+import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
 import { useEffect, useImperativeHandle, useRef } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
@@ -82,7 +82,7 @@ const GestureCard = ({
 
   const handleLike = () => {
     if (onToggleFavorite) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      impactAsync(ImpactFeedbackStyle.Medium);
 
       const wasLiked = isFavorite;
       onToggleFavorite(gesture.id);
@@ -240,20 +240,20 @@ const GestureCard = ({
               <Text style={[typography.bodySmall, { color: theme.textLight }]}>
                 {gesture.category.join(", ")}
               </Text>
-              {gesture.concept && gesture.concept.length > 0 && (
+              {gesture.concept?.length ? (
                 <Text style={[typography.caption, { color: theme.textLight }]}>
                   {gesture.concept.join(", ")}
                 </Text>
-              )}
-              {gesture.info && (
+              ) : null}
+              {gesture.info ? (
                 <Text style={[typography.caption, { color: theme.textLight }]}>
                   {gesture.info}
                 </Text>
-              )}
+              ) : null}
             </View>
           </View>
 
-          {onToggleFavorite && (
+          {onToggleFavorite ? (
             <TouchableOpacity
               activeOpacity={0.8}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -266,7 +266,7 @@ const GestureCard = ({
                 size={ICON_SIZE.md}
               />
             </TouchableOpacity>
-          )}
+          ) : null}
 
           {/* Like animation overlay */}
           <Animated.View

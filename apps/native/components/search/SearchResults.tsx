@@ -44,11 +44,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   const gestureRefs = useRef<(GestureCardRef | null)[]>([]);
 
   const closeAllGestures = useCallback(() => {
-    gestureRefs.current.forEach((ref) => {
+    for (const ref of gestureRefs.current) {
       if (ref) {
         ref.close();
       }
-    });
+    }
   }, []);
 
   const renderItem = useCallback(
@@ -98,7 +98,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         extraData={extraData}
         keyboardShouldPersistTaps="handled"
         keyExtractor={keyExtractor}
-        onEndReached={hasMore ? onLoadMore : undefined}
+        onEndReached={hasMore ? onLoadMore : null}
         onEndReachedThreshold={0.5}
         onRefresh={onRefresh}
         onScroll={handleScrollEvent}

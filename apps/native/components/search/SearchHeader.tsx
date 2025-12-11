@@ -69,7 +69,7 @@ const SearchHeader: React.FC<SearchHeaderProps> = ({
           columnGap: rowGap,
         }}
       >
-        {showFilterButton && (
+        {!!showFilterButton && (
           <CircularButton
             icon="filter"
             onPress={onShowCategorySheet}
@@ -88,7 +88,7 @@ const SearchHeader: React.FC<SearchHeaderProps> = ({
             value={searchTerm}
           />
         </View>
-        {showSearchButton && (
+        {!!showSearchButton && (
           <CircularButton
             icon="search"
             onPress={() => onSearchSubmit(searchTerm)}
@@ -103,13 +103,23 @@ const SearchHeader: React.FC<SearchHeaderProps> = ({
       />
       {/* Category Filters Chips */}
       <CategoryFilters
-        onRemoveCategory={onRemoveCategory ?? (() => {})}
+        onRemoveCategory={
+          onRemoveCategory ??
+          (() => {
+            /* noop */
+          })
+        }
         selectedCategories={selectedCategories}
       />
       {/* Category List Bottom Sheet */}
       <CategoryListBottomSheet
         categories={categories}
-        onCategoryChange={onCategoryChange ?? (() => {})}
+        onCategoryChange={
+          onCategoryChange ??
+          (() => {
+            /* noop */
+          })
+        }
         onClose={onHideCategorySheet}
         selectedCategories={selectedCategories}
         visible={categorySheetVisible}

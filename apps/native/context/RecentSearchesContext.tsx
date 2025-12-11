@@ -17,8 +17,12 @@ type RecentSearchesContextType = {
 
 const RecentSearchesContext = createContext<RecentSearchesContextType>({
   recentSearches: [],
-  addRecentSearch: () => {},
-  clearRecentSearches: () => {},
+  addRecentSearch: () => {
+    /* noop */
+  },
+  clearRecentSearches: () => {
+    /* noop */
+  },
   // Removed setOnSelect and onSelect for prop-based handler pattern
 });
 

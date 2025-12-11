@@ -19,14 +19,40 @@
       "!**/.alchemy",
       "!**/.svelte-kit",
       "!**/wrangler.jsonc",
-      "!**/.source"
+      "!**/.source",
+      "!**/_generated"
     ]
   },
   "extends": ["ultracite/core", "ultracite/react"],
+  "javascript": {
+    "globals": ["__DEV__"]
+  },
   "linter": {
     "rules": {
       "performance": {
-        "noBarrelFile": "off"
+        "noBarrelFile": "off",
+        "noNamespaceImport": "off",
+        "useTopLevelRegex": "off"
+      },
+      "complexity": {
+        "noForEach": "off"
+      },
+      "style": {
+        "useFilenamingConvention": "off",
+        "noNestedTernary": "off",
+        "useDefaultSwitchClause": "off",
+        "noNonNullAssertion": "off",
+        "noExportedImports": "off",
+        "useConsistentMemberAccessibility": "off"
+      },
+      "suspicious": {
+        "noAlert": "off",
+        "useAwait": "off"
+      },
+      "nursery": {
+        "noShadow": "off",
+        "useMaxParams": "off",
+        "noIncrementDecrement": "off"
       }
     }
   }

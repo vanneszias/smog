@@ -3,7 +3,7 @@ import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
-import * as WebBrowser from "expo-web-browser";
+import { maybeCompleteAuthSession } from "expo-web-browser";
 import type React from "react";
 import {
   createContext,
@@ -17,7 +17,7 @@ import {
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { generateGuestId } from "@/services/userService";
 
-WebBrowser.maybeCompleteAuthSession();
+maybeCompleteAuthSession();
 
 type AuthMode = "guest" | "authenticated" | "loading";
 
@@ -115,16 +115,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           redirectUri,
         });
 
-        const user: WorkOSUser = {
+        const authenticatedUser: WorkOSUser = {
           id: workosUser.workosId,
           email: workosUser.email,
           firstName: workosUser.firstName,
           lastName: workosUser.lastName,
         };
 
-        console.log("[AuthContext] WorkOS user authenticated:", user.email);
-        setUser(user);
-        await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+        console.log(
+          "[AuthContext] WorkOS user authenticated:",
+          authenticatedUser.email
+        );
+        setUser(authenticatedUser);
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(authenticatedUser));
         setAuthMode("authenticated");
 
         // Clear guest mode when user signs in
@@ -236,14 +239,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (getUserByWorkOSId === null) {
         const storedGuestId = await AsyncStorage.getItem(GUEST_ID_KEY);
         if (storedGuestId) {
-          const userId = await migrateGuestToUser({
+          const migratedUserId = await migrateGuestToUser({
             guestId: storedGuestId,
             workosId: user?.id,
           });
-          setUserId(userId);
+          setUserId(migratedUserId);
         } else {
-          const userId = await createUser({ workosId: user?.id });
-          setUserId(userId);
+          const createdUserId = await createUser({ workosId: user?.id });
+          setUserId(createdUserId);
         }
       }
     };
