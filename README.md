@@ -1,4 +1,4 @@
-# smog-sponsors
+# smog
 
 This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, Hono, ORPC, and more.
 
@@ -60,7 +60,7 @@ The API is running at [http://localhost:3000](http://localhost:3000).
 ## Project Structure
 
 ```
-smog-sponsors/
+smog/
 ├── apps/
 │   ├── web/         # Frontend application (React + TanStack Router)
 │   └── server/      # Backend API (Hono, ORPC)

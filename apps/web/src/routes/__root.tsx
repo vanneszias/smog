@@ -1,6 +1,6 @@
 import { createORPCClient } from "@orpc/client";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
-import type { AppRouterClient } from "@smog-sponsors/api/routers/index";
+import type { AppRouterClient } from "@smog/api/routers/index";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
@@ -16,10 +16,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { link, type orpc } from "@/utils/orpc";
 import "../index.css";
 
-export interface RouterAppContext {
+export type RouterAppContext = {
   orpc: typeof orpc;
   queryClient: QueryClient;
-}
+};
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
@@ -44,7 +44,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootComponent() {
   const [client] = useState<AppRouterClient>(() => createORPCClient(link));
-  const [orpcUtils] = useState(() => createTanstackQueryUtils(client));
+  const [_orpcUtils] = useState(() => createTanstackQueryUtils(client));
 
   return (
     <>

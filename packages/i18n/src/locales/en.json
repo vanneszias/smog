@@ -1,0 +1,220 @@
+{
+  "search": {
+    "placeholder": "Search signs...",
+    "noResults": "No results found for {{query}}",
+    "enterSearchTerm": "Enter a search term",
+    "promptText": "Type a search term to find gestures.",
+    "allCategories": "All categories",
+    "offlineMode": "You're offline. Some features may be limited.",
+    "backOnline": "You're back online!",
+    "recentSearches": "Recent searches",
+    "clear": "Clear",
+    "foundResults": "Found {{count}} results in {{time}}ms",
+    "searching": "Searching...",
+    "retry": "Retry",
+    "noGestures": "No gestures found"
+  },
+  "home": {
+    "loadingGestures": "Loading gestures...",
+    "noGesturesFound": "No gestures found"
+  },
+  "favorites": {
+    "emptyMessage": "To add a gesture to your favorites, tap the heart icon on a gesture.",
+    "added": "Added to favorites",
+    "removed": "Removed from favorites",
+    "undo": "Undo"
+  },
+  "auth": {
+    "welcome": {
+      "title": "Welcome to SMOG",
+      "subtitle": "Learn SMOG",
+      "footer": "By continuing, you agree to our Terms of Service and Privacy Policy",
+      "signInSignUp": "Sign In"
+    },
+    "signUp": {
+      "title": "Create Account",
+      "subtitle": "Join SMOG to save your progress",
+      "button": "Sign Up",
+      "hasAccount": "Already have an account?",
+      "steps": {
+        "firstName": {
+          "title": "What's your first name?",
+          "subtitle": "We'll use this to personalize your experience"
+        },
+        "lastName": {
+          "title": "And your last name?",
+          "subtitle": "Just to complete your profile"
+        },
+        "username": {
+          "title": "Choose a username",
+          "subtitle": "This will be your unique identifier"
+        },
+        "email": {
+          "title": "What's your email?",
+          "subtitle": "We'll send you a verification code"
+        },
+        "password": {
+          "title": "Create a secure password",
+          "subtitle": "Make it at least 8 characters long"
+        }
+      },
+      "navigation": {
+        "continue": "Continue →",
+        "back": "← Back",
+        "createAccount": "Create Account"
+      }
+    },
+    "signIn": {
+      "title": "Welcome Back",
+      "subtitle": "Sign in to your account",
+      "button": "Sign In",
+      "noAccount": "Don't have an account?"
+    },
+    "verification": {
+      "title": "Verify Your Email",
+      "subtitle": "Enter the verification code sent to your email",
+      "alreadyVerified": "Already verified? Sign in instead"
+    },
+    "verify": {
+      "button": "Verify"
+    },
+    "email": "Email",
+    "password": "Password",
+    "username": "Username",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "emailPlaceholder": "Enter your email",
+    "passwordPlaceholder": "Enter your password",
+    "usernamePlaceholder": "Choose a username",
+    "firstNamePlaceholder": "Enter your first name",
+    "lastNamePlaceholder": "Enter your last name",
+    "verificationCode": "Verification Code",
+    "verificationCodePlaceholder": "Enter 6-digit code",
+    "continueAsGuest": "Continue as Guest",
+    "resendCode": "Resend Code",
+    "errors": {
+      "emailRequired": "Email is required",
+      "emailInvalid": "Please enter a valid email",
+      "passwordRequired": "Password is required",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "usernameRequired": "Username is required",
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required",
+      "codeRequired": "Verification code is required",
+      "signUpFailed": "Failed to create account",
+      "signInFailed": "Failed to sign in",
+      "verificationFailed": "Verification failed",
+      "verificationIncomplete": "Email verification is not complete. Please check your email and try again."
+    }
+  },
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "error": "Error",
+    "comingSoon": "Coming Soon"
+  },
+  "account": {
+    "title": "Account Settings",
+    "accountInfo": "Account Information",
+    "guestMode": "Guest Mode",
+    "guestModeDescription": "You're using the app as a guest. Sign in to save your progress and sync across devices.",
+    "unknownUser": "Unknown User",
+    "accountActions": "Account Actions",
+    "editProfile": "Edit Profile",
+    "changePassword": "Change Password",
+    "dangerZone": "Account",
+    "logout": "Sign Out",
+    "loggingOut": "Signing out...",
+    "deleteAccount": "Delete Account",
+    "logoutConfirmTitle": "Sign Out",
+    "logoutConfirmMessage": "Are you sure you want to sign out?",
+    "logoutError": "Failed to sign out. Please try again.",
+    "deleteAccountTitle": "Delete Account",
+    "deleteAccountMessage": "Are you sure you want to delete your account? This action cannot be undone.",
+    "editProfileComingSoon": "Profile editing will be available soon.",
+    "changePasswordComingSoon": "Password changing will be available soon.",
+    "deleteAccountComingSoon": "Account deletion will be available soon."
+  },
+  "noGesturesFound": "No gestures found",
+  "tabs": {
+    "home": "Home",
+    "search": "Search",
+    "favorites": "Favorites"
+  },
+  "gesture": {
+    "loadFailed": "Failed to load gesture",
+    "about": "About",
+    "description": "This is the {{name}} gesture",
+    "related": "Related",
+    "relatedDescription": "There are no related gestures",
+    "initial": "{{name}}",
+    "videoComplete": {
+      "1": "These videos are support, not a replacement for a course or initiation. Click here for more info.",
+      "2": "If you want to take a course after watching these videos, click here.",
+      "3": "If you want more info about the underlying theory of SMOG, take a course. Click here.",
+      "4": "The gestures are protected. Don't invent others.",
+      "5": "Never learn the gestures only from these videos, but take a course or initiation.",
+      "6": "Want to know more about SMOG and its origin? Click here.",
+      "7": "Want to know more about SMOG? Send an email to info@smog.vlaanderen"
+    },
+    "concepts": "{{name}} has these concept(s): {{concepts}}",
+    "infoLabel": "This is important to know:",
+    "conceptsLabel": "This gesture has these concepts:",
+    "relatedLabel": "This gesture is related to:"
+  },
+  "languages": {
+    "en": "English",
+    "fr": "French"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark",
+    "dataSource": "Data Source",
+    "mockData": "Mock Data",
+    "realDataw": "Real Data",
+    "production": "Production",
+    "mock": "Test Data",
+    "openDeveloperTools": "Open Developer Tools",
+    "refreshData": "Refresh Data",
+    "refreshNow": "Refresh Now",
+    "refreshing": "Refreshing...",
+    "auth": "Authentication",
+    "manageAccount": "Manage Account"
+  },
+  "about": {
+    "title": "About Us",
+    "heading": "Welcome to SMOG&Co!",
+    "content": "SMOG, Speaking with Support of Signs, is a service from the socio-cultural organization Gezin en Handicap. They are the point of contact for parents of a child with a disability.",
+    "missionTitle": "With our SMOG service",
+    "mission1Bold": "1. We offer SMOG in Flanders, ",
+    "mission1Rest": "to everyone who can benefit from it.",
+    "mission1Description1": "To this end, we organize courses for individuals and professionals, and we issue official SMOG certificates. These allow professionals to teach SMOG to people with communication disabilities and their environment.",
+    "mission1Description2": "We teach the gestures for free in our videos and share blog articles.",
+    "mission1Description3": "We issue quality labels to organizations that work with SMOG on a daily basis.",
+    "mission1Description4": "Through these actions, we help ensure that anyone with a communication limitation and their environment can learn and use SMOG to communicate.",
+    "mission2Bold": "2. We are the point of contact for questions about SMOG",
+    "mission2Rest": "from parents, friends, and caregivers of people with communication challenges, as well as from professionals, participants, and students.",
+    "description": "This is a simple app to learn and practice sign language gestures. It includes a collection of gestures, their meanings, and related gestures."
+  },
+  "contact": {
+    "title": "Contact",
+    "subtitle": "Do you have a question?",
+    "info": "Check our frequently asked questions on our website. You might find your answer there.",
+    "namePlaceholder": "Your first and last name",
+    "emailPlaceholder": "Your email*",
+    "gsmPlaceholder": "Phone number",
+    "topicTitle": "What is your question about?",
+    "submit": "Send",
+    "topics": {
+      "smog": "About smog",
+      "practical": "Practical info about SMOG courses",
+      "personal": "About my personal situation",
+      "concerns": "Concerns when learning SMOG",
+      "extra": "Extra"
+    }
+  }
+}

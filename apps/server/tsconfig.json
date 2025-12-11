@@ -1,5 +1,5 @@
 {
-  "extends": "@smog-sponsors/config/tsconfig.base.json",
+  "extends": "@smog/config/tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
     "outDir": "dist",

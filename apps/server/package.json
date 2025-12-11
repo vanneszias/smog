@@ -17,14 +17,14 @@
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:",
-    "@smog-sponsors/api": "workspace:*",
-    "@smog-sponsors/auth": "workspace:*",
-    "@smog-sponsors/db": "workspace:*"
+    "@smog/api": "workspace:*",
+    "@smog/auth": "workspace:*",
+    "@smog/db": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.2",
     "@types/bun": "^1.2.6",
     "tsdown": "^0.16.5",
-    "@smog-sponsors/config": "workspace:*"
+    "@smog/config": "workspace:*"
   }
 }

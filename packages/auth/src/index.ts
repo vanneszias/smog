@@ -1,6 +1,6 @@
 import { checkout, polar, portal } from "@polar-sh/better-auth";
-import { db } from "@smog-sponsors/db";
-import * as schema from "@smog-sponsors/db/schema/auth";
+import { db } from "@smog/db";
+import * as schema from "@smog/db/schema/auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { polarClient } from "./lib/payments";

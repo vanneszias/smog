@@ -1,5 +1,5 @@
 {
-  "name": "@smog-sponsors/api",
+  "name": "@smog/api",
   "exports": {
     ".": {
       "default": "./src/index.ts"
@@ -11,7 +11,7 @@
   "type": "module",
   "scripts": {},
   "devDependencies": {
-    "@smog-sponsors/config": "workspace:*"
+    "@smog/config": "workspace:*"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -24,7 +24,7 @@
     "hono": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:",
-    "@smog-sponsors/auth": "workspace:*",
-    "@smog-sponsors/db": "workspace:*"
+    "@smog/auth": "workspace:*",
+    "@smog/db": "workspace:*"
   }
 }

@@ -32,6 +32,17 @@
     "db:generate": {
       "cache": false,
       "persistent": true
+    },
+    "ios": {
+      "cache": false,
+      "persistent": true
+    },
+    "android": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "cache": false
     }
   }
 }

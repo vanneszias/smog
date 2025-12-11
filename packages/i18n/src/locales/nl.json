@@ -1,0 +1,194 @@
+{
+  "search": {
+    "placeholder": "Zoek gebaren...",
+    "noResults": "Geen resultaten gevonden voor {{query}}",
+    "enterSearchTerm": "Voer een zoekterm in",
+    "promptText": "Typ een zoekterm om gebaren te vinden.",
+    "allCategories": "Alle categorieën",
+    "offlineMode": "Je bent offline. Sommige functies kunnen beperkt zijn.",
+    "backOnline": "Je bent terug online!",
+    "recentSearches": "Recente zoekopdrachten",
+    "clear": "Wissen",
+    "foundResults": "{{count}} resultaten gevonden in {{time}}ms",
+    "searching": "Zoeken...",
+    "retry": "Opnieuw proberen",
+    "noGestures": "Geen gebaren gevonden"
+  },
+  "home": {
+    "loadingGestures": "Gebaren laden...",
+    "noGesturesFound": "Geen gebaren gevonden"
+  },
+  "favorites": {
+    "emptyMessage": "Om favorieten toe te voegen, klik op het hartje in de rechterbovenhoek van een gebaar.",
+    "added": "Toegevoegd aan favorieten",
+    "removed": "Verwijderd uit favorieten",
+    "undo": "Ongedaan maken"
+  },
+  "auth": {
+    "welcome": {
+      "title": "Welkom bij SMOG",
+      "subtitle": "Leer SMOG",
+      "footer": "Door verder te gaan, ga je akkoord met onze Servicevoorwaarden en Privacybeleid",
+      "signInSignUp": "Inloggen"
+    },
+    "signUp": {
+      "title": "Account aanmaken",
+      "subtitle": "Word lid van SMOG om je voortgang op te slaan",
+      "button": "Registreren",
+      "hasAccount": "Heb je al een account?"
+    },
+    "signIn": {
+      "title": "Welkom terug",
+      "subtitle": "Meld je aan bij je account",
+      "button": "Inloggen",
+      "noAccount": "Heb je nog geen account?"
+    },
+    "verification": {
+      "title": "Verifieer je e-mail",
+      "subtitle": "Voer de verificatiecode in die naar je e-mail is gestuurd"
+    },
+    "verify": {
+      "button": "Verifiëren"
+    },
+    "email": "E-mail",
+    "password": "Wachtwoord",
+    "username": "Gebruikersnaam",
+    "firstName": "Voornaam",
+    "lastName": "Achternaam",
+    "emailPlaceholder": "Voer je e-mail in",
+    "passwordPlaceholder": "Voer je wachtwoord in",
+    "usernamePlaceholder": "Kies een gebruikersnaam",
+    "firstNamePlaceholder": "Voer je voornaam in",
+    "lastNamePlaceholder": "Voer je achternaam in",
+    "verificationCode": "Verificatiecode",
+    "verificationCodePlaceholder": "Voer 6-cijferige code in",
+    "continueAsGuest": "Doorgaan als gast",
+    "resendCode": "Code opnieuw versturen",
+    "forgotPassword": "Wachtwoord vergeten?",
+    "errors": {
+      "emailRequired": "E-mail is verplicht",
+      "emailInvalid": "Voer een geldig e-mailadres in",
+      "passwordRequired": "Wachtwoord is verplicht",
+      "passwordTooShort": "Wachtwoord moet minstens 8 tekens lang zijn",
+      "usernameRequired": "Gebruikersnaam is verplicht",
+      "firstNameRequired": "Voornaam is verplicht",
+      "lastNameRequired": "Achternaam is verplicht",
+      "codeRequired": "Verificatiecode is verplicht",
+      "signUpFailed": "Account aanmaken mislukt",
+      "signInFailed": "Inloggen mislukt",
+      "verificationFailed": "Verificatie mislukt",
+      "verificationIncomplete": "E-mailverificatie is niet voltooid. Controleer je e-mail en probeer opnieuw."
+    }
+  },
+  "common": {
+    "back": "Terug",
+    "cancel": "Annuleren",
+    "error": "Fout",
+    "comingSoon": "Binnenkort beschikbaar"
+  },
+  "account": {
+    "title": "Account instellingen",
+    "accountInfo": "Account informatie",
+    "guestMode": "Gastmodus",
+    "guestModeDescription": "Je gebruikt de app als gast. Log in om je voortgang op te slaan en te synchroniseren tussen apparaten.",
+    "unknownUser": "Onbekende gebruiker",
+    "accountActions": "Account acties",
+    "editProfile": "Profiel bewerken",
+    "changePassword": "Wachtwoord wijzigen",
+    "dangerZone": "Account",
+    "logout": "Uitloggen",
+    "loggingOut": "Uitloggen...",
+    "deleteAccount": "Account verwijderen",
+    "logoutConfirmTitle": "Uitloggen",
+    "logoutConfirmMessage": "Weet je zeker dat je wilt uitloggen?",
+    "logoutError": "Uitloggen mislukt. Probeer opnieuw.",
+    "deleteAccountTitle": "Account verwijderen",
+    "deleteAccountMessage": "Weet je zeker dat je je account wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "editProfileComingSoon": "Profiel bewerken wordt binnenkort beschikbaar.",
+    "changePasswordComingSoon": "Wachtwoord wijzigen wordt binnenkort beschikbaar.",
+    "deleteAccountComingSoon": "Account verwijderen wordt binnenkort beschikbaar."
+  },
+  "noGesturesFound": "Geen gebaren gevonden met deze zoekterm",
+  "tabs": {
+    "home": "Home",
+    "search": "Zoeken",
+    "favorites": "Favorieten"
+  },
+  "gesture": {
+    "loadFailed": "Het laden van dit gebaar is mislukt",
+    "about": "Over",
+    "description": "Dit is het {{name}} gebaar",
+    "relatedDescription": "Er zijn geen gerelateerde gebaren gevonden",
+    "initial": "{{name}}",
+    "videoComplete": {
+      "1": "Deze filmpjes zijn een ondersteuning, geen vervanging voor een cursus of initiatie. Klik hier voor meer info.",
+      "2": "Wil je na het bekijken van deze filmpjes een cursus volgen, klik dan hier.",
+      "3": "Wil je meer info over de achterliggende theorie van SMOG, volg dan een cursus. Klik hier.",
+      "4": "De gebaren zijn beschermd. Vind er geen anderen uit.",
+      "5": "Leer nooit de gebaren enkel vanuit deze filmpjes, maar volg een cursus of een initiatie.",
+      "6": "Wil je meer weten over SMOG en het ontstaan. Klik hier.",
+      "7": "Wil je meer weten over SMOG stuur een mail naar info@smog.vlaanderen"
+    },
+    "concepts": "{{name}} heeft deze concepten: {{concepts}}",
+    "infoLabel": "Dit is belangrijk om te weten:",
+    "conceptsLabel": "Dit gebaar heeft deze concepten:",
+    "relatedLabel": "Dit gebaar is gerelateerd aan:",
+    "related": "Gerelateerd"
+  },
+  "languages": {
+    "en": "Engels",
+    "fr": "Frans",
+    "nl": "Nederlands"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "language": "Taal",
+    "theme": "Thema",
+    "system": "Systeem",
+    "light": "Licht",
+    "dark": "Donker",
+    "refreshData": "Gegevens verversen",
+    "refreshNow": "Nu verversen",
+    "refreshing": "Bezig met verversen...",
+    "dataSource": "Gegevensbron",
+    "mockData": "Testgegevens",
+    "realData": "Echte gegevens",
+    "production": "Productie",
+    "mock": "Testgegevens",
+    "realDataw": "Echte Data",
+    "auth": "Authenticatie",
+    "manageAccount": "Account beheren"
+  },
+  "about": {
+    "title": "Over ons",
+    "heading": "Welkom bij SMOG&Co!",
+    "content": "SMOG, Spreken met Ondersteuning van Gebaren, is een dienst van de sociaal-culturele organisatie Gezin en Handicap. Zij zijn het aanspreekpunt voor ouders van een kind met een handicap.",
+    "missionTitle": "Met onze SMOG-dienst",
+    "mission1Bold": "1. Bieden we SMOG aan in Vlaanderen, ",
+    "mission1Rest": "aan iedereen die er baat bij heeft.",
+    "mission1Description1": "Daarvoor organiseren we cursussen voor particulieren en professionelen en reiken we de officiële SMOG-attesten uit. Daarmee kan een professional SMOG aanleren aan personen met een communicatieve handicap en hun omgeving.",
+    "mission1Description2": "We leren de gebaren gratis aan in onze video's en delen blogartikels.",
+    "mission1Description3": "We reiken kwaliteitslabels uit aan organisaties die dagelijks met SMOG werken.",
+    "mission1Description4": "Met deze acties zorgen we er mee voor dat iedereen met een communicatiebeperking én zijn/haar omgeving SMOG kan leren en inzetten om te communiceren.",
+    "mission2Bold": "2. Zijn we het aanspreekpunt voor vragen over SMOG",
+    "mission2Rest": "van ouders, vrienden en begeleiders van personen met een communicatieve hindernis, en van professionelen, cursisten en studenten.",
+    "description": "Dit is een eenvoudige app om gebarentaalgebaren te leren en te oefenen. Het bevat een verzameling gebaren, hun betekenissen en gerelateerde gebaren."
+  },
+  "contact": {
+    "title": "Contact",
+    "subtitle": "Heb je een vraag?",
+    "info": "Kijk eerst even naar onze veelgestelde vragen op onze site. Wie weet vind je daar je antwoord.",
+    "namePlaceholder": "Jouw voornaam en naam",
+    "emailPlaceholder": "Je e-mail*",
+    "gsmPlaceholder": "GSM-nummer",
+    "topicTitle": "Waar gaat je vraag over?",
+    "submit": "Verzenden",
+    "topics": {
+      "smog": "Over smog",
+      "practical": "Praktische zaken rond de SMOG-cursussen",
+      "personal": "Over mijn persoonlijke situatie",
+      "concerns": "Bezorgdheden bij het leren van SMOG",
+      "extra": "Extra"
+    }
+  }
+}

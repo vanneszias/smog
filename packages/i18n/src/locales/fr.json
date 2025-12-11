@@ -1,0 +1,131 @@
+{
+  "search": {
+    "placeholder": "Rechercher des signes...",
+    "noResults": "Aucun résultat trouvé pour {{query}}",
+    "enterSearchTerm": "Entrez un terme de recherche",
+    "promptText": "Tapez un terme de recherche pour trouver des gestes.",
+    "allCategories": "Toutes les catégories",
+    "offlineMode": "Vous êtes hors ligne. Certaines fonctionnalités peuvent être limitées.",
+    "backOnline": "Vous êtes de nouveau en ligne!",
+    "recentSearches": "Recherches récentes",
+    "clear": "Effacer",
+    "foundResults": "{{count}} résultats trouvés en {{time}}ms",
+    "searching": "Recherche...",
+    "retry": "Réessayer",
+    "noGestures": "Aucun geste trouvé"
+  },
+  "home": {
+    "loadingGestures": "Chargement des gestes...",
+    "noGesturesFound": "Aucun geste trouvé"
+  },
+  "favorites": {
+    "emptyMessage": "Pour ajouter un geste à vos favoris, appuyez sur le bouton étoile dans la vue du geste.",
+    "added": "Ajouté aux favoris",
+    "removed": "Retiré des favoris",
+    "undo": "Annuler"
+  },
+  "auth": {
+    "welcome": {
+      "title": "Bienvenue à SMOG",
+      "subtitle": "Apprenez les gestes de la langue des signes",
+      "footer": "En continuant, vous acceptez nos Conditions de service et notre Politique de confidentialité",
+      "signInSignUp": "Se connecter"
+    },
+    "continueAsGuest": "Continuer en tant qu'invité"
+  },
+  "noGesturesFound": "Aucun geste trouvé",
+  "tabs": {
+    "home": "Accueil",
+    "search": "Recherche",
+    "favorites": "Favoris"
+  },
+  "gesture": {
+    "loadFailed": "Échec du chargement du geste",
+    "about": "À propos",
+    "description": "Ceci est le geste {{name}}",
+    "related": "Liés",
+    "relatedDescription": "Il n'y a pas de gestes liés",
+    "initial": "{{name}}",
+    "videoComplete": {
+      "1": "Ces vidéos sont un support, pas un remplacement pour un cours ou une initiation. Cliquez ici pour plus d'informations.",
+      "2": "Si vous souhaitez suivre un cours après avoir regardé ces vidéos, cliquez ici.",
+      "3": "Pour en savoir plus sur la théorie derrière SMOG, suivez un cours. Cliquez ici.",
+      "4": "Les gestes sont protégés. N'en inventez pas d'autres.",
+      "5": "N'apprenez jamais les gestes uniquement à partir de ces vidéos, mais suivez un cours ou une initiation.",
+      "6": "Pour en savoir plus sur SMOG et son origine, cliquez ici.",
+      "7": "Pour en savoir plus sur SMOG, envoyez un e-mail à info@smog.vlaanderen"
+    },
+    "concepts": "{{name}} a ces concept(s) : {{concepts}}",
+    "infoLabel": "C'est important à savoir :",
+    "conceptsLabel": "Ce geste a ces concepts :",
+    "relatedLabel": "Ce geste est lié à :"
+  },
+  "languages": {
+    "en": "Anglais",
+    "fr": "Français"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "language": "Langue",
+    "theme": "Thème",
+    "system": "Système",
+    "light": "Lumière",
+    "dark": "Sombre",
+    "dataSource": "Source de données",
+    "mockData": "Données simulées",
+    "realData": "Données réelles",
+    "production": "Production",
+    "mock": "Données de test",
+    "auth": "Authentification",
+    "manageAccount": "Gérer le compte"
+  },
+  "about": {
+    "title": "À propos",
+    "description": "Ceci est une application simple pour apprendre et pratiquer les gestes de la langue des signes. Elle comprend une collection de gestes, leurs significations et des gestes liés."
+  },
+  "common": {
+    "back": "Retour",
+    "cancel": "Annuler",
+    "error": "Erreur",
+    "comingSoon": "Bientôt disponible"
+  },
+  "account": {
+    "title": "Paramètres du compte",
+    "accountInfo": "Informations du compte",
+    "guestMode": "Mode invité",
+    "guestModeDescription": "Vous utilisez l'app en tant qu'invité. Connectez-vous pour sauvegarder vos progrès et synchroniser entre appareils.",
+    "unknownUser": "Utilisateur inconnu",
+    "accountActions": "Actions du compte",
+    "editProfile": "Modifier le profil",
+    "changePassword": "Changer le mot de passe",
+    "dangerZone": "Compte",
+    "logout": "Se déconnecter",
+    "loggingOut": "Déconnexion...",
+    "deleteAccount": "Supprimer le compte",
+    "logoutConfirmTitle": "Se déconnecter",
+    "logoutConfirmMessage": "Êtes-vous sûr de vouloir vous déconnecter ?",
+    "logoutError": "Échec de la déconnexion. Veuillez réessayer.",
+    "deleteAccountTitle": "Supprimer le compte",
+    "deleteAccountMessage": "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action ne peut pas être annulée.",
+    "editProfileComingSoon": "La modification du profil sera bientôt disponible.",
+    "changePasswordComingSoon": "Le changement de mot de passe sera bientôt disponible.",
+    "deleteAccountComingSoon": "La suppression du compte sera bientôt disponible."
+  },
+  "contact": {
+    "title": "Contact",
+    "subtitle": "Vous avez une question ?",
+    "info": "Consultez d'abord notre FAQ sur le site. Vous y trouverez peut-être votre réponse.",
+    "namePlaceholder": "Votre prénom et nom",
+    "emailPlaceholder": "Votre adresse e-mail*",
+    "gsmPlaceholder": "Numéro de téléphone",
+    "topicTitle": "Votre question concerne :",
+    "submit": "Envoyer",
+    "topics": {
+      "smog": "À propos du smog",
+      "practical": "Infos pratiques sur les cours SMOG",
+      "personal": "À propos de ma situation personnelle",
+      "concerns": "Préoccupations concernant l'apprentissage de SMOG",
+      "extra": "Autre"
+    }
+  }
+}

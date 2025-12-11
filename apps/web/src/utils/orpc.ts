@@ -1,7 +1,7 @@
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
-import type { AppRouterClient } from "@smog-sponsors/api/routers/index";
+import type { AppRouterClient } from "@smog/api/routers/index";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -22,8 +22,8 @@ export const queryClient = new QueryClient({
 
 export const link = new RPCLink({
   url: `${import.meta.env.VITE_SERVER_URL}/rpc`,
-  fetch(url, options) {
-    return fetch(url, {
+  fetch(_url, options) {
+    return fetch(_url, {
       ...options,
       credentials: "include",
     });

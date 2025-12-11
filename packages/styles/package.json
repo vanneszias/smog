@@ -1,0 +1,20 @@
+{
+  "name": "@smog/styles",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./colors": "./src/colors.ts",
+    "./constants": "./src/constants.ts",
+    "./theme": "./src/theme.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -b"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "@smog/config": "workspace:*"
+  }
+}

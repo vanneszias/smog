@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "SMOG & Co",
+    "slug": "smog",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/adaptive-icon.png",
+    "scheme": "smog",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vanneszias.smog",
+      "icon": "./assets/images/smog.icon"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#00805F"
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "smog"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
+      "package": "com.vanneszias.smog"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/smog.icon/Assets/logo.svg"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-localization",
+      "expo-font",
+      "expo-secure-store",
+      "expo-sqlite",
+      "expo-video",
+      "expo-web-browser",
+      [
+        "expo-custom-assets",
+        {
+          "assetsPaths": ["./assets/"]
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9fa68b63-dfa5-498a-9196-5eba93ecac29"
+      }
+    },
+    "owner": "smog-and-co"
+  }
+}

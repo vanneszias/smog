@@ -1,4 +1,4 @@
-import { auth } from "@smog-sponsors/auth";
+import { auth } from "@smog/auth";
 import type { Context as HonoContext } from "hono";
 
 export type CreateContextOptions = {

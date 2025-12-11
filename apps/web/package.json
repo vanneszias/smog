@@ -33,8 +33,12 @@
     "libsql": "catalog:",
     "better-auth": "catalog:",
     "@polar-sh/better-auth": "catalog:",
-    "@smog-sponsors/api": "workspace:*",
-    "@smog-sponsors/auth": "workspace:*"
+    "@smog/api": "workspace:*",
+    "@smog/auth": "workspace:*",
+    "@smog/styles": "workspace:*",
+    "@smog/types": "workspace:*",
+    "@smog/i18n": "workspace:*",
+    "@smog/ui": "workspace:*"
   },
   "devDependencies": {
     "@tanstack/react-router-devtools": "^1.114.27",
@@ -48,6 +52,6 @@
     "tailwindcss": "^4.0.15",
     "vite": "^6.2.2",
     "@tanstack/react-query-devtools": "^5.85.5",
-    "@smog-sponsors/config": "workspace:*"
+    "@smog/config": "workspace:*"
   }
 }
