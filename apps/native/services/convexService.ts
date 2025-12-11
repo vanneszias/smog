@@ -1,7 +1,7 @@
 import type { ConvexReactClient } from "convex/react";
 import type { Gesture } from "@/types";
-import { api } from "../convex/_generated/api";
-import type { Id } from "../convex/_generated/dataModel";
+import { api } from "@smog/convex";
+import type { Id } from "@smog/convex/dataModel";
 
 class ConvexService {
   private client: ConvexReactClient | null = null;

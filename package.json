@@ -33,7 +33,10 @@
     "db:push": "turbo -F @smog/db db:push",
     "db:studio": "turbo -F @smog/db db:studio",
     "db:generate": "turbo -F @smog/db db:generate",
-    "db:migrate": "turbo -F @smog/db db:migrate"
+    "db:migrate": "turbo -F @smog/db db:migrate",
+    "convex:codegen": "turbo -F @smog/convex codegen",
+    "convex:dev": "turbo -F @smog/convex dev",
+    "convex:deploy": "turbo -F @smog/convex deploy"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

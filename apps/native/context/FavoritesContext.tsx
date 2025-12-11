@@ -9,8 +9,8 @@ import {
   useState,
 } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import { api } from "@smog/convex";
+import type { Id } from "@smog/convex/dataModel";
 import gestureService from "@/services/gestureService";
 import offlineFavoritesService, {
   type SyncOperation,

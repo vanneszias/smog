@@ -12,8 +12,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import { api } from "@smog/convex";
+import type { Id } from "@smog/convex/dataModel";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { generateGuestId } from "@/services/userService";
 

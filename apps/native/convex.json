@@ -1,4 +1,5 @@
 {
+  "functions": "../../packages/convex/src",
   "node": {
     "externalPackages": ["@mux/mux-node"]
   }

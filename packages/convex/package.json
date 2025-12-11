@@ -1,0 +1,24 @@
+{
+  "name": "@smog/convex",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./convex/_generated/api.js",
+    "./api": "./convex/_generated/api.js",
+    "./dataModel": "./convex/_generated/dataModel.d.ts",
+    "./server": "./convex/_generated/server.js"
+  },
+  "scripts": {
+    "codegen": "convex codegen",
+    "dev": "convex dev",
+    "deploy": "convex deploy"
+  },
+  "dependencies": {
+    "convex": "^1.31.0"
+  },
+  "devDependencies": {
+    "@smog/config": "workspace:*",
+    "typescript": "^5.8.2"
+  }
+}
