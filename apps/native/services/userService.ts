@@ -1,5 +1,5 @@
-import { getRandomBytes } from "expo-crypto";
 import type { Id } from "@smog/convex/dataModel";
+import { getRandomBytes } from "expo-crypto";
 import type { Gesture } from "@/types";
 
 export const generateGuestId = (): string => {

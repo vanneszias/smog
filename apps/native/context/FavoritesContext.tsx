@@ -1,4 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api } from "@smog/convex";
+import type { Id } from "@smog/convex/dataModel";
 import { useMutation } from "convex/react";
 import type React from "react";
 import {
@@ -9,8 +11,6 @@ import {
   useState,
 } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { api } from "@smog/convex";
-import type { Id } from "@smog/convex/dataModel";
 import gestureService from "@/services/gestureService";
 import offlineFavoritesService, {
   type SyncOperation,

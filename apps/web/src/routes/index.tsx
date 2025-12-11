@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { orpc } from "@/utils/orpc";
 
 export const Route = createFileRoute("/")({

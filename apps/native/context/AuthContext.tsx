@@ -1,4 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api } from "@smog/convex";
+import type { Id } from "@smog/convex/dataModel";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
@@ -12,8 +14,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { api } from "@smog/convex";
-import type { Id } from "@smog/convex/dataModel";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { generateGuestId } from "@/services/userService";
 
