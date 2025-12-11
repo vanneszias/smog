@@ -12,8 +12,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 import GlobalOfflineBanner from "@/components/common/GlobalOfflineBanner";
 import RiveSplashScreen from "@/components/RiveSplashScreen";
 import AppProviders from "@/context/AppProviders";
@@ -262,23 +260,17 @@ export default function RootLayout() {
   }
 
   return (
-    <AppProviders>
-      <PostHogProvider autocapture={autocaptureConfig} client={posthog}>
-        <GestureHandlerRootView>
-          <SafeAreaProvider>
-            {showSplash ? (
-              <RiveSplashScreen
-                onAnimationComplete={() => setShowSplash(false)}
-              />
-            ) : (
-              <BottomSheetModalProvider>
-                <RootLayoutNav />
-              </BottomSheetModalProvider>
-            )}
-          </SafeAreaProvider>
-        </GestureHandlerRootView>
-      </PostHogProvider>
-    </AppProviders>
+    <PostHogProvider autocapture={autocaptureConfig} client={posthog}>
+      <AppProviders>
+        {showSplash ? (
+          <RiveSplashScreen onAnimationComplete={() => setShowSplash(false)} />
+        ) : (
+          <BottomSheetModalProvider>
+            <RootLayoutNav />
+          </BottomSheetModalProvider>
+        )}
+      </AppProviders>
+    </PostHogProvider>
   );
 }
 

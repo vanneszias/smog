@@ -1,5 +1,7 @@
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import type React from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useConvexInit } from "@/hooks/useConvexInit";
 import { AuthProvider } from "./AuthContext";
 import FavoritesProvider from "./FavoritesContext";
@@ -43,7 +45,11 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
             <ConvexInitializer>
               <ToastProvider>
                 <FavoritesProvider>
-                  <RecentSearchesProvider>{children}</RecentSearchesProvider>
+                  <RecentSearchesProvider>
+                    <GestureHandlerRootView>
+                      <SafeAreaProvider>{children}</SafeAreaProvider>
+                    </GestureHandlerRootView>
+                  </RecentSearchesProvider>
                 </FavoritesProvider>
               </ToastProvider>
             </ConvexInitializer>

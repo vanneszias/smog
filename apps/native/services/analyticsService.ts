@@ -11,9 +11,10 @@ export const posthog = new PostHog(POSTHOG_API_KEY, {
 });
 
 // Autocapture configuration for PostHogProvider
+// Note: captureTouches is disabled to avoid conflicts with Reanimated animated styles
 export const autocaptureConfig = {
   captureScreens: true,
-  captureTouches: true,
+  captureTouches: false, // Disabled to prevent conflicts with Reanimated
   routeToName: (
     name: string,
     params?: Record<
