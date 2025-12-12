@@ -1,5 +1,5 @@
 import type { GestureCardData } from "@smog/ui";
-import { GestureList } from "@smog/ui";
+import { GestureDetail, GestureList } from "@smog/ui";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Search, X } from "lucide-react";
@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { client } from "@/utils/orpc";
 
-export const Route = createFileRoute("/gestures")({
+export const Route = createFileRoute("/gestures_/$id")({
   component: GesturesComponent,
 });
 
@@ -154,6 +154,7 @@ function SearchFilters({
 }
 
 function GesturesComponent() {
+  const { id } = Route.useParams();
   const navigate = useNavigate();
 
   const gesturesQuery = useInfiniteQuery({
@@ -203,8 +204,19 @@ function GesturesComponent() {
     filteredGestures,
   } = useGestureFiltering(allGestures);
 
+  const selectedGesture = useMemo(() => {
+    if (!id) {
+      return null;
+    }
+    return allGestures.find((g) => g._id === id);
+  }, [id, allGestures]);
+
   const handleSelectGesture = (gestureId: string) => {
     navigate({ to: "/gestures/$id", params: { id: gestureId } });
+  };
+
+  const handleDeselectGesture = () => {
+    navigate({ to: "/gestures" });
   };
 
   return (
@@ -243,7 +255,7 @@ function GesturesComponent() {
               isLoading={gesturesQuery.isLoading}
               onSelectGesture={handleSelectGesture}
               onSort={handleSort}
-              selectedGestureId={null}
+              selectedGestureId={id}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
             />
@@ -251,13 +263,20 @@ function GesturesComponent() {
         </div>
 
         <div className="w-1/2 overflow-auto bg-muted/20">
-          <div className="flex h-full items-center justify-center p-6 text-center">
-            <div>
-              <p className="text-muted-foreground">
-                Select a gesture to view details
-              </p>
+          {selectedGesture ? (
+            <GestureDetail
+              gesture={selectedGesture}
+              onBack={handleDeselectGesture}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center p-6 text-center">
+              <div>
+                <p className="text-muted-foreground">
+                  Select a gesture to view details
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
