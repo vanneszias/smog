@@ -19,8 +19,8 @@ export function useGestures() {
       }
       return lastPage.continueCursor ?? null;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+    staleTime: 5 * 60 * 1000, // 5 minutes - how long before refetch in background
+    gcTime: 24 * 60 * 60 * 1000, // 24 hours - must match persister maxAge
   });
 
   // Automatically fetch next page until all gestures are loaded
