@@ -11,8 +11,7 @@ This project was created with [Better-T-Stack](https://github.com/AmanVarshney01
 - **Hono** - Lightweight, performant server framework
 - **oRPC** - End-to-end type-safe APIs with OpenAPI integration
 - **Bun** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **SQLite/Turso** - Database engine
+- **Convex** - Backend platform with real-time database
 - **Authentication** - Better-Auth
 - **Turborepo** - Optimized monorepo build system
 - **Biome** - Linting and formatting
@@ -24,23 +23,6 @@ First, install the dependencies:
 ```bash
 bun install
 ```
-## Database Setup
-
-This project uses SQLite with Drizzle ORM.
-
-1. Start the local SQLite database:
-```bash
-cd packages/db && bun run db:local
-```
-
-
-2. Update your `.env` file in the `apps/server` directory with the appropriate connection details if needed.
-
-3. Apply the schema to your database:
-```bash
-bun run db:push
-```
-
 
 Then, run the development server:
 
@@ -67,7 +49,7 @@ smog/
 ├── packages/
 │   ├── api/         # API layer / business logic
 │   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
+│   └── convex/      # Convex database schema & queries
 ```
 
 ## Available Scripts
@@ -77,7 +59,6 @@ smog/
 - `bun run dev:web`: Start only the web application
 - `bun run dev:server`: Start only the server
 - `bun run check-types`: Check TypeScript types across all apps
-- `bun run db:push`: Push schema changes to database
-- `bun run db:studio`: Open database studio UI
-- `cd packages/db && bun run db:local`: Start the local SQLite database
+- `bun run convex:dev`: Start Convex development backend
+- `bun run convex:deploy`: Deploy Convex backend
 - `bun run check`: Run Biome formatting and linting
