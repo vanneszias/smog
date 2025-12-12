@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "@mollie/api-client": "^4.3.3",
-    "@smog/db": "workspace:*",
     "dotenv": "catalog:",
     "zod": "catalog:"
   }

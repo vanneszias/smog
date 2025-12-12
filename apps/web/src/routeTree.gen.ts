@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SuccessRouteImport } from './routes/success'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as GesturesRouteImport } from './routes/gestures'
+import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GesturesIdRouteImport } from './routes/gestures_.$id'
@@ -30,6 +31,11 @@ const LoginRoute = LoginRouteImport.update({
 const GesturesRoute = GesturesRouteImport.update({
   id: '/gestures',
   path: '/gestures',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FavoritesRoute = FavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -56,6 +62,7 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
   '/success': typeof SuccessRoute
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
   '/success': typeof SuccessRoute
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
   '/success': typeof SuccessRoute
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/favorites'
     | '/gestures'
     | '/login'
     | '/success'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/dashboard'
+    | '/favorites'
     | '/gestures'
     | '/login'
     | '/success'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/favorites'
     | '/gestures'
     | '/login'
     | '/success'
@@ -114,6 +126,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
+  FavoritesRoute: typeof FavoritesRoute
   GesturesRoute: typeof GesturesRoute
   LoginRoute: typeof LoginRoute
   SuccessRoute: typeof SuccessRoute
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/gestures'
       fullPath: '/gestures'
       preLoaderRoute: typeof GesturesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/favorites': {
+      id: '/favorites'
+      path: '/favorites'
+      fullPath: '/favorites'
+      preLoaderRoute: typeof FavoritesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -178,6 +198,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
+  FavoritesRoute: FavoritesRoute,
   GesturesRoute: GesturesRoute,
   LoginRoute: LoginRoute,
   SuccessRoute: SuccessRoute,

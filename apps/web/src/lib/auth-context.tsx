@@ -21,12 +21,15 @@ type AuthContextType = {
   signIn: () => void;
   signOut: () => void;
   accessToken: string | null;
+  convexUserId: string | null;
+  setConvexUserId: (id: string | null) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_STORAGE_KEY = "smog_web_user";
 const TOKEN_STORAGE_KEY = "smog_web_token";
+const CONVEX_USER_ID_KEY = "smog_web_convex_user_id";
 
 // WorkOS OAuth configuration
 const WORKOS_CLIENT_ID = import.meta.env.VITE_WORKOS_CLIENT_ID || "";
@@ -38,18 +41,32 @@ const WORKOS_AUTH_URL = "https://api.workos.com/user_management/authorize";
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<WorkOSUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [convexUserId, setConvexUserIdState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check for stored user and token
     const storedUser = localStorage.getItem(USER_STORAGE_KEY);
     const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const storedConvexUserId = localStorage.getItem(CONVEX_USER_ID_KEY);
 
     if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
       setAccessToken(storedToken);
+      if (storedConvexUserId) {
+        setConvexUserIdState(storedConvexUserId);
+      }
     }
     setIsLoading(false);
+  }, []);
+
+  const setConvexUserId = useCallback((id: string | null) => {
+    setConvexUserIdState(id);
+    if (id) {
+      localStorage.setItem(CONVEX_USER_ID_KEY, id);
+    } else {
+      localStorage.removeItem(CONVEX_USER_ID_KEY);
+    }
   }, []);
 
   const signIn = useCallback(() => {
@@ -66,8 +83,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(() => {
     setUser(null);
     setAccessToken(null);
+    setConvexUserIdState(null);
     localStorage.removeItem(USER_STORAGE_KEY);
     localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(CONVEX_USER_ID_KEY);
   }, []);
 
   const value = useMemo(
@@ -78,8 +97,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signOut,
       accessToken,
+      convexUserId,
+      setConvexUserId,
     }),
-    [user, isLoading, signIn, signOut, accessToken]
+    [
+      user,
+      isLoading,
+      signIn,
+      signOut,
+      accessToken,
+      convexUserId,
+      setConvexUserId,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

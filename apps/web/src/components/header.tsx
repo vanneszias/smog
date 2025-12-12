@@ -1,11 +1,16 @@
 import { Link } from "@tanstack/react-router";
+import { Heart } from "lucide-react";
+import { useFavorites } from "@/lib/favorites-context";
 import { ModeToggle } from "./mode-toggle";
 import UserMenu from "./user-menu";
 
 export default function Header() {
+  const { favoriteIds } = useFavorites();
+
   const links = [
     { to: "/", label: "Home" },
     { to: "/dashboard", label: "Dashboard" },
+    { to: "/gestures", label: "Gestures" },
   ] as const;
 
   return (
@@ -17,6 +22,15 @@ export default function Header() {
               {label}
             </Link>
           ))}
+          <Link className="flex items-center gap-1.5" to="/favorites">
+            <Heart className="h-4 w-4" style={{ color: "var(--liked)" }} />
+            Favorites
+            {favoriteIds.length > 0 ? (
+              <span className="ml-1 rounded-full bg-[var(--liked)] px-2 py-0.5 font-medium text-white text-xs">
+                {favoriteIds.length}
+              </span>
+            ) : null}
+          </Link>
         </nav>
         <div className="flex items-center gap-2">
           <ModeToggle />

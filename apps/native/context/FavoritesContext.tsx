@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type React from "react";
 import {
   createContext,
@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import gestureService from "@/services/gestureService";
 import offlineFavoritesService, {
   type SyncOperation,
@@ -47,13 +48,18 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
   children,
 }) => {
   const { userId } = useAuth();
+  const { isOffline } = useNetworkStatus();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [favoriteGestures, setFavoriteGestures] = useState<Gesture[]>([]);
-  const [isLoading, _setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [pendingOperations, setPendingOperations] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Convex mutations for sync
+  // Convex queries and mutations - primary data source
+  const convexFavoriteIds = useQuery(
+    api.favorites.getUserFavorites,
+    userId ? { userId } : "skip"
+  );
   const toggleUserFavorite = useMutation(api.favorites.toggleUserFavorite);
 
   // Initialize offline favorites service
@@ -64,18 +70,10 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
 
         // Set up sync callback
         offlineFavoritesService.onSyncOperation = async (op: SyncOperation) => {
-          if (op.operation === "add") {
-            await toggleUserFavorite({
-              userId: op.user_id as Id<"users">,
-              gestureId: op.gesture_id as Id<"gestures">,
-            });
-          } else {
-            // For remove operations, we need the remove mutation
-            await toggleUserFavorite({
-              userId: op.user_id as Id<"users">,
-              gestureId: op.gesture_id as Id<"gestures">,
-            });
-          }
+          await toggleUserFavorite({
+            userId: op.user_id as Id<"users">,
+            gestureId: op.gesture_id as Id<"gestures">,
+          });
         };
 
         setIsInitialized(true);
@@ -120,66 +118,179 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
     migrateLegacyFavorites();
   }, [userId, isInitialized]);
 
-  // Load favorites from local database
+  // Sync local database with Convex favorites
+  const syncLocalWithConvex = useCallback(
+    async (convexFavoriteIds: string[], userId: string) => {
+      const localFavorites = await offlineFavoritesService.getFavorites(userId);
+
+      // Add missing favorites to local database
+      for (const gestureId of convexFavoriteIds) {
+        if (!localFavorites.includes(gestureId)) {
+          await offlineFavoritesService.toggleFavorite(userId, gestureId);
+        }
+      }
+
+      // Remove extras from local database
+      for (const gestureId of localFavorites) {
+        if (!convexFavoriteIds.includes(gestureId)) {
+          await offlineFavoritesService.toggleFavorite(userId, gestureId);
+        }
+      }
+    },
+    []
+  );
+
+  // Load favorites from Convex (primary) or local database (fallback)
+  const loadFavoritesFromConvex = useCallback(
+    async (convexIds: string[], userId: string) => {
+      // Update local database with Convex data for offline access
+      if (convexIds.length > 0) {
+        await syncLocalWithConvex(convexIds, userId);
+      }
+
+      if (__DEV__) {
+        console.log(
+          `[FavoritesProvider] Loaded ${convexIds.length} favorites from Convex`
+        );
+      }
+
+      return convexIds;
+    },
+    [syncLocalWithConvex]
+  );
+
+  const loadFavoritesFromLocal = useCallback(async (userId: string) => {
+    const favoriteIds = await offlineFavoritesService.getFavorites(userId);
+
+    if (__DEV__) {
+      console.log(
+        `[FavoritesProvider] Loaded ${favoriteIds.length} favorites from local database (offline mode)`
+      );
+    }
+
+    return favoriteIds;
+  }, []);
+
+  const loadGestureDetails = useCallback(async (favoriteIds: string[]) => {
+    if (favoriteIds.length > 0) {
+      const gestures = await gestureService.getGesturesByIds(favoriteIds);
+      setFavoriteGestures(gestures);
+    } else {
+      setFavoriteGestures([]);
+    }
+  }, []);
+
+  // Load favorites from Convex (primary) or local database (fallback when offline)
   const loadFavorites = useCallback(async () => {
     if (!(userId && isInitialized)) {
       return;
     }
 
     try {
-      const favoriteIds = await offlineFavoritesService.getFavorites(userId);
-      setFavorites(favoriteIds);
+      setIsLoading(true);
 
-      // Load gesture details
-      if (favoriteIds.length > 0) {
-        const gestures = await gestureService.getGesturesByIds(favoriteIds);
-        setFavoriteGestures(gestures);
+      let favoriteIds: string[] = [];
+
+      // Primary: Use Convex data when online
+      const canUseConvex = !isOffline && convexFavoriteIds !== undefined;
+      if (canUseConvex) {
+        favoriteIds = await loadFavoritesFromConvex(
+          convexFavoriteIds as string[],
+          userId
+        );
       } else {
-        setFavoriteGestures([]);
+        // Fallback: Use local database when offline
+        favoriteIds = await loadFavoritesFromLocal(userId);
       }
+
+      setFavorites(favoriteIds);
+      await loadGestureDetails(favoriteIds);
 
       // Update pending operations count
       const pending = await offlineFavoritesService.getPendingOperationsCount();
       setPendingOperations(pending);
     } catch (error) {
       console.error("Failed to load favorites:", error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [userId, isInitialized]);
+  }, [
+    userId,
+    isInitialized,
+    isOffline,
+    convexFavoriteIds,
+    loadFavoritesFromConvex,
+    loadFavoritesFromLocal,
+    loadGestureDetails,
+  ]);
 
-  // Load favorites when user or service becomes available
+  // Load favorites when data becomes available
   useEffect(() => {
     loadFavorites();
   }, [loadFavorites]);
 
-  // Refresh favorites periodically to catch sync updates
+  // Sync pending operations when coming back online
   useEffect(() => {
-    if (!(userId && isInitialized)) {
-      return;
+    const shouldSync = !isOffline && isInitialized && userId;
+    if (shouldSync) {
+      offlineFavoritesService.syncPendingOperations().catch((error) => {
+        console.warn(
+          "[FavoritesProvider] Failed to sync pending operations:",
+          error
+        );
+      });
     }
+  }, [isOffline, isInitialized, userId]);
 
-    const interval = setInterval(() => {
-      loadFavorites();
-    }, 10_000); // Refresh every 10 seconds
+  const toggleFavoriteOnline = useCallback(
+    async (userId: string, gestureId: string) => {
+      const wasAdded = await toggleUserFavorite({
+        userId: userId as Id<"users">,
+        gestureId: gestureId as Id<"gestures">,
+      });
 
-    return () => clearInterval(interval);
-  }, [userId, isInitialized, loadFavorites]);
+      // Update local database to match Convex
+      const isFavoriteLocal = await offlineFavoritesService.isFavorite(
+        userId,
+        gestureId
+      );
+      if (wasAdded !== isFavoriteLocal) {
+        await offlineFavoritesService.toggleFavorite(userId, gestureId);
+      }
 
-  const toggleFavorite = async (gestureId: string, _gestureName?: string) => {
-    if (!(userId && isInitialized)) {
-      console.warn("Cannot toggle favorite: user or service not available");
-      return;
-    }
+      if (__DEV__) {
+        console.log(
+          `[FavoritesProvider] Favorite ${wasAdded ? "added" : "removed"} via Convex: ${gestureId}`
+        );
+      }
 
-    try {
+      return wasAdded;
+    },
+    [toggleUserFavorite]
+  );
+
+  const toggleFavoriteOffline = useCallback(
+    async (userId: string, gestureId: string) => {
       const wasAdded = await offlineFavoritesService.toggleFavorite(
         userId,
         gestureId
       );
 
-      // Update local state immediately for instant UI feedback
+      if (__DEV__) {
+        console.log(
+          `[FavoritesProvider] Favorite ${wasAdded ? "added" : "removed"} offline: ${gestureId}`
+        );
+      }
+
+      return wasAdded;
+    },
+    []
+  );
+
+  const updateLocalState = useCallback(
+    async (gestureId: string, wasAdded: boolean) => {
       if (wasAdded) {
         setFavorites((current) => [...current, gestureId]);
-        // Add gesture to favorite gestures if we can find it
         const gesture = await gestureService.getGestureById(gestureId);
         if (gesture) {
           setFavoriteGestures((current) => [...current, gesture]);
@@ -190,16 +301,40 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
           current.filter((gesture) => gesture.id !== gestureId)
         );
       }
+    },
+    []
+  );
+
+  const toggleFavorite = async (gestureId: string, _gestureName?: string) => {
+    if (!(userId && isInitialized)) {
+      console.warn("Cannot toggle favorite: user or service not available");
+      return;
+    }
+
+    try {
+      let wasAdded = false;
+
+      // Primary: Try Convex mutation first when online
+      if (isOffline) {
+        wasAdded = await toggleFavoriteOffline(userId, gestureId);
+      } else {
+        try {
+          wasAdded = await toggleFavoriteOnline(userId, gestureId);
+        } catch (error) {
+          console.error(
+            "[FavoritesProvider] Convex mutation failed, falling back to offline mode:",
+            error
+          );
+          wasAdded = await toggleFavoriteOffline(userId, gestureId);
+        }
+      }
+
+      // Update local state immediately for instant UI feedback
+      await updateLocalState(gestureId, wasAdded);
 
       // Update pending operations count
       const pending = await offlineFavoritesService.getPendingOperationsCount();
       setPendingOperations(pending);
-
-      if (__DEV__) {
-        console.log(
-          `[FavoritesProvider] Favorite ${wasAdded ? "added" : "removed"} offline: ${gestureId}`
-        );
-      }
     } catch (error) {
       console.error("Failed to toggle favorite:", error);
     }

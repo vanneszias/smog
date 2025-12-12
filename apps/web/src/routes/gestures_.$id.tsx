@@ -5,6 +5,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { useFavorites } from "@/lib/favorites-context";
 import { client } from "@/utils/orpc";
 
 export const Route = createFileRoute("/gestures_/$id")({
@@ -156,6 +157,7 @@ function SearchFilters({
 function GesturesComponent() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const gesturesQuery = useInfiniteQuery({
     queryKey: ["gestures", "list"],
@@ -258,7 +260,11 @@ function GesturesComponent() {
           {selectedGesture ? (
             <GestureDetail
               gesture={selectedGesture}
+              isFavorite={isFavorite(selectedGesture._id)}
               onBack={handleDeselectGesture}
+              onToggleFavorite={() =>
+                toggleFavorite(selectedGesture._id, selectedGesture.name)
+              }
             />
           ) : (
             <div className="flex h-full items-center justify-center p-6 text-center">

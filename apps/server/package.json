@@ -15,7 +15,6 @@
     "@orpc/zod": "catalog:",
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
-    "@smog/db": "workspace:*",
     "dotenv": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"
