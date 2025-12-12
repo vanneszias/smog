@@ -2,6 +2,7 @@ import { SearchBar } from "@smog/ui";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, BookOpen, Heart, Search } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Logo from "@/components/Logo";
 import RecentSearches from "@/components/RecentSearches";
 
@@ -10,12 +11,13 @@ export const Route = createFileRoute("/")({
 });
 
 function HomeComponent() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearches] = useState<string[]>([
-    "hello",
-    "thank you",
-    "please",
+    "hallo",
+    "dank u",
+    "alstublieft",
     "sorry",
   ]);
 
@@ -45,15 +47,14 @@ function HomeComponent() {
           className="mb-4 text-center font-bold text-3xl leading-tight md:text-5xl"
           style={{ color: "var(--text)" }}
         >
-          Learn Sign Language
+          {t("web.home.title")}
         </h1>
 
         <p
           className="mb-8 max-w-2xl text-center text-lg md:mb-12 md:text-xl"
           style={{ color: "var(--text-light)" }}
         >
-          Discover and master sign language gestures with our comprehensive
-          video library. Search, learn, and practice at your own pace.
+          {t("web.home.subtitle")}
         </p>
 
         {/* Search Section */}
@@ -63,7 +64,7 @@ function HomeComponent() {
             className="mb-6"
             onChange={setSearchQuery}
             onSubmit={handleSearch}
-            placeholder="Search for a gesture..."
+            placeholder={t("web.home.searchPlaceholder")}
             value={searchQuery}
           />
 
@@ -90,17 +91,16 @@ function HomeComponent() {
               className="mb-2 font-semibold text-lg"
               style={{ color: "var(--text)" }}
             >
-              Browse Gestures
+              {t("web.home.browseGestures.title")}
             </h3>
             <p className="mb-4 text-sm" style={{ color: "var(--text-light)" }}>
-              Explore our complete library of sign language gestures with
-              detailed videos and descriptions.
+              {t("web.home.browseGestures.description")}
             </p>
             <div
               className="flex items-center font-medium text-sm"
               style={{ color: "var(--primary)" }}
             >
-              Explore now
+              {t("web.home.browseGestures.action")}
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </div>
           </Link>
@@ -119,17 +119,16 @@ function HomeComponent() {
               className="mb-2 font-semibold text-lg"
               style={{ color: "var(--text)" }}
             >
-              Save Favorites
+              {t("web.home.saveFavorites.title")}
             </h3>
             <p className="mb-4 text-sm" style={{ color: "var(--text-light)" }}>
-              Create your personal collection of gestures to practice and review
-              anytime.
+              {t("web.home.saveFavorites.description")}
             </p>
             <div
               className="flex items-center font-medium text-sm"
               style={{ color: "var(--liked)" }}
             >
-              View favorites
+              {t("web.home.saveFavorites.action")}
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </div>
           </Link>
@@ -148,17 +147,16 @@ function HomeComponent() {
               className="mb-2 font-semibold text-lg"
               style={{ color: "var(--text)" }}
             >
-              Learn by Category
+              {t("web.home.learnByCategory.title")}
             </h3>
             <p className="mb-4 text-sm" style={{ color: "var(--text-light)" }}>
-              Filter gestures by topic and category to focus on what you need to
-              learn.
+              {t("web.home.learnByCategory.description")}
             </p>
             <div
               className="flex items-center font-medium text-sm"
               style={{ color: "var(--accent)" }}
             >
-              Start learning
+              {t("web.home.learnByCategory.action")}
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </div>
           </Link>
@@ -171,7 +169,7 @@ function HomeComponent() {
           className="container mx-auto px-4 text-center text-sm"
           style={{ color: "var(--text-light)" }}
         >
-          <p>© 2024 SMOG. All rights reserved.</p>
+          <p>{t("web.home.footer")}</p>
         </div>
       </footer>
     </div>

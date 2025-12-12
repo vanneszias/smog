@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { client } from "../utils/orpc";
 import { useAuth } from "./auth-context";
@@ -23,6 +24,7 @@ const FavoritesContext = createContext<FavoritesContextType | undefined>(
 );
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const { isAuthenticated, convexUserId, setConvexUserId } = useAuth();
   const [isInitializing, setIsInitializing] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -61,11 +63,11 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       setFavoriteIds(ids);
     } catch (error) {
       console.error("Failed to fetch favorites:", error);
-      toast.error("Failed to load favorites");
+      toast.error(t("web.favorites.failedToLoad"));
     } finally {
       setIsLoading(false);
     }
-  }, [convexUserId]);
+  }, [convexUserId, t]);
 
   // Load favorites when convexUserId changes
   useEffect(() => {
@@ -80,7 +82,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const toggleFavorite = useCallback(
     async (gestureId: string, gestureName?: string) => {
       if (!convexUserId) {
-        toast.error("Please sign in to save favorites");
+        toast.error(t("web.favorites.signInRequired"));
         return;
       }
 
@@ -95,23 +97,23 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
           setFavoriteIds((prev) => [...prev, gestureId]);
           toast.success(
             gestureName
-              ? `Added "${gestureName}" to favorites`
-              : "Added to favorites"
+              ? t("web.favorites.addedToFavorites", { name: gestureName })
+              : t("web.favorites.addedToFavoritesShort")
           );
         } else {
           setFavoriteIds((prev) => prev.filter((id) => id !== gestureId));
           toast.success(
             gestureName
-              ? `Removed "${gestureName}" from favorites`
-              : "Removed from favorites"
+              ? t("web.favorites.removedFromFavorites", { name: gestureName })
+              : t("web.favorites.removedFromFavoritesShort")
           );
         }
       } catch (error) {
         console.error("Failed to toggle favorite:", error);
-        toast.error("Failed to update favorite");
+        toast.error(t("web.favorites.failedToUpdate"));
       }
     },
-    [convexUserId]
+    [convexUserId, t]
   );
 
   const value = useMemo(

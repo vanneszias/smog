@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "./ui/button";
 
@@ -6,15 +7,18 @@ export default function SignInForm({
 }: {
   onSwitchToSignUp: () => void;
 }) {
+  const { t } = useTranslation();
   const { signIn } = useAuth();
 
   return (
     <div className="mx-auto mt-10 w-full max-w-md p-6">
-      <h1 className="mb-6 text-center font-bold text-3xl">Welcome Back</h1>
+      <h1 className="mb-6 text-center font-bold text-3xl">
+        {t("web.signIn.title")}
+      </h1>
 
       <div className="space-y-4">
         <Button className="w-full" onClick={signIn} type="button">
-          Sign In with WorkOS
+          {t("web.signIn.button")}
         </Button>
 
         <div className="mt-4 text-center">
@@ -23,7 +27,7 @@ export default function SignInForm({
             onClick={onSwitchToSignUp}
             variant="link"
           >
-            Need an account? Sign Up
+            {t("web.signIn.switchToSignUp")}
           </Button>
         </div>
       </div>

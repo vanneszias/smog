@@ -3,6 +3,7 @@ import { GestureList } from "@smog/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth-context";
 import { useFavorites } from "@/lib/favorites-context";
 import { client } from "@/utils/orpc";
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/favorites")({
 });
 
 function FavoritesComponent() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAuthenticated, convexUserId } = useAuth();
   const { favoriteIds, toggleFavorite } = useFavorites();
@@ -58,9 +60,11 @@ function FavoritesComponent() {
     return (
       <div className="flex flex-col items-center justify-center p-6">
         <Heart className="mb-4 h-16 w-16 text-muted-foreground" />
-        <h2 className="mb-2 font-bold text-2xl">Sign in to view favorites</h2>
+        <h2 className="mb-2 font-bold text-2xl">
+          {t("web.favorites.signInTitle")}
+        </h2>
         <p className="text-center text-muted-foreground">
-          Sign in to save and view your favorite gestures
+          {t("web.favorites.signInDescription")}
         </p>
       </div>
     );
@@ -76,16 +80,18 @@ function FavoritesComponent() {
         ) : favoriteGestures.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-6 text-center">
             <Heart className="mb-4 h-16 w-16 text-muted-foreground" />
-            <h2 className="mb-2 font-bold text-xl">No favorites yet</h2>
+            <h2 className="mb-2 font-bold text-xl">
+              {t("web.favorites.noFavoritesTitle")}
+            </h2>
             <p className="mb-4 text-muted-foreground">
-              Start adding gestures to your favorites to see them here
+              {t("web.favorites.noFavoritesDescription")}
             </p>
             <button
               className="rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
               onClick={() => navigate({ to: "/gestures" })}
               type="button"
             >
-              Browse Gestures
+              {t("web.favorites.browseGestures")}
             </button>
           </div>
         ) : (

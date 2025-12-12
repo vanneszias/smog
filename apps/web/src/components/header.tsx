@@ -1,18 +1,21 @@
 import { Link } from "@tanstack/react-router";
 import { Heart, Home, Menu, Search } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useFavorites } from "@/lib/favorites-context";
+import { LanguageToggle } from "./language-toggle";
 import Logo from "./Logo";
 import { ModeToggle } from "./mode-toggle";
 import UserMenu from "./user-menu";
 
 export default function Header() {
+  const { t } = useTranslation();
   const { favoriteIds } = useFavorites();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const links = [
-    { to: "/", label: "Home", icon: Home },
-    { to: "/gestures", label: "Browse", icon: Search },
+    { to: "/", label: t("web.navigation.home"), icon: Home },
+    { to: "/gestures", label: t("web.navigation.browse"), icon: Search },
   ] as const;
 
   return (
@@ -49,7 +52,7 @@ export default function Header() {
               to="/favorites"
             >
               <Heart className="h-4 w-4" />
-              Favorites
+              {t("web.navigation.favorites")}
               {favoriteIds.length > 0 && (
                 <span
                   className="ml-1 flex h-5 w-5 items-center justify-center rounded-full font-medium text-white text-xs"
@@ -63,6 +66,7 @@ export default function Header() {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-2">
+            <LanguageToggle />
             <ModeToggle />
             <UserMenu />
 
@@ -106,7 +110,7 @@ export default function Header() {
                 to="/favorites"
               >
                 <Heart className="h-5 w-5" />
-                Favorites
+                {t("web.navigation.favorites")}
                 {favoriteIds.length > 0 && (
                   <span
                     className="ml-1 flex h-5 w-5 items-center justify-center rounded-full font-medium text-white text-xs"

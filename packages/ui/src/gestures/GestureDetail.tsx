@@ -1,6 +1,7 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { ArrowLeft, Heart } from "lucide-react";
 import { Suspense } from "react";
+import { useTranslation } from "react-i18next";
 import { ShimmerSkeleton } from "../common/Skeleton";
 import type { GestureCardData } from "./GestureCard";
 
@@ -19,6 +20,8 @@ export function GestureDetail({
   onToggleFavorite,
   onBack,
 }: GestureDetailProps) {
+  const { t } = useTranslation();
+
   const handleFavoriteClick = () => {
     if (onToggleFavorite) {
       onToggleFavorite(gesture._id);
@@ -42,7 +45,7 @@ export function GestureDetail({
             type="button"
           >
             <ArrowLeft className="h-5 w-5" />
-            Back to Gestures
+            {t("ui.gestureDetail.backToGestures")}
           </button>
         ) : null}
 
@@ -59,7 +62,9 @@ export function GestureDetail({
                   : "fill-none stroke-primary"
               }`}
             />
-            {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+            {isFavorite
+              ? t("ui.gestureDetail.removeFromFavorites")
+              : t("ui.gestureDetail.addToFavorites")}
           </button>
         ) : null}
       </div>
@@ -122,7 +127,7 @@ export function GestureDetail({
             className="mb-3 font-semibold text-xl"
             style={{ color: "var(--text)" }}
           >
-            Description
+            {t("ui.gestureDetail.description")}
           </h2>
           <p className="text-muted-foreground leading-relaxed">
             {gesture.info}
@@ -140,12 +145,12 @@ export function GestureDetail({
             className="mb-3 font-semibold text-xl"
             style={{ color: "var(--text)" }}
           >
-            Related Concepts
+            {t("ui.gestureDetail.relatedConcepts")}
           </h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap ">
             {gesture.concept.map((c) => (
               <span
-                className="rounded-lg px-3 py-1.5 text-sm"
+                className="rounded-lg pr-3 py-1.5 text-sm"
                 key={c}
                 style={{
                   backgroundColor: "var(--muted)",

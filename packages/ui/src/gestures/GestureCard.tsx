@@ -2,6 +2,7 @@ import MuxPlayer from "@mux/mux-player-react";
 import { Link } from "@tanstack/react-router";
 import { Heart } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export type GestureCardData = {
   _id: string;
@@ -24,6 +25,7 @@ export function GestureCard({
   onToggleFavorite,
 }: GestureCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const { t } = useTranslation();
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -62,7 +64,7 @@ export function GestureCard({
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-              No video available
+              {t("ui.gestureDetail.noVideo")}
             </div>
           )}
 
@@ -70,7 +72,9 @@ export function GestureCard({
           {onToggleFavorite ? (
             <button
               aria-label={
-                isFavorite ? "Remove from favorites" : "Add to favorites"
+                isFavorite
+                  ? t("ui.gestureList.removeFromFavorites")
+                  : t("ui.gestureList.addToFavorites")
               }
               className="absolute top-3 right-3 rounded-full bg-background/80 p-2 backdrop-blur-sm transition-all hover:scale-110 hover:bg-background"
               onClick={handleFavoriteClick}

@@ -164,7 +164,8 @@
   },
   "languages": {
     "en": "English",
-    "fr": "French"
+    "fr": "French",
+    "nl": "Dutch"
   },
   "settings": {
     "title": "Settings",
@@ -215,6 +216,139 @@
       "personal": "About my personal situation",
       "concerns": "Concerns when learning SMOG",
       "extra": "Extra"
+    }
+  },
+  "web": {
+    "home": {
+      "title": "Learn Sign Language",
+      "subtitle": "Discover and master sign language gestures with our comprehensive video library. Search, learn, and practice at your own pace.",
+      "searchPlaceholder": "Search for a gesture...",
+      "recentSearches": "Recent Searches",
+      "browseGestures": {
+        "title": "Browse Gestures",
+        "description": "Explore our complete library of sign language gestures with detailed videos and descriptions.",
+        "action": "Explore now"
+      },
+      "saveFavorites": {
+        "title": "Save Favorites",
+        "description": "Create your personal collection of gestures to practice and review anytime.",
+        "action": "View favorites"
+      },
+      "learnByCategory": {
+        "title": "Learn by Category",
+        "description": "Filter gestures by topic and category to focus on what you need to learn.",
+        "action": "Start learning"
+      },
+      "footer": "© 2024 SMOG. All rights reserved."
+    },
+    "gestures": {
+      "searchPlaceholder": "Search gestures by name, concept, or description...",
+      "noResultsWithFilters": "No gestures found matching your search",
+      "noResults": "No gestures available",
+      "loading": "Loading gestures...",
+      "selectGesture": "Select a gesture to view details"
+    },
+    "favorites": {
+      "signInTitle": "Sign in to view favorites",
+      "signInDescription": "Sign in to save and view your favorite gestures",
+      "noFavoritesTitle": "No favorites yet",
+      "noFavoritesDescription": "Start adding gestures to your favorites to see them here",
+      "browseGestures": "Browse Gestures",
+      "addedToFavorites": "Added \"{{name}}\" to favorites",
+      "addedToFavoritesShort": "Added to favorites",
+      "removedFromFavorites": "Removed \"{{name}}\" from favorites",
+      "removedFromFavoritesShort": "Removed from favorites",
+      "failedToLoad": "Failed to load favorites",
+      "failedToUpdate": "Failed to update favorite",
+      "signInRequired": "Please sign in to save favorites"
+    },
+    "navigation": {
+      "home": "Home",
+      "browse": "Browse",
+      "favorites": "Favorites"
+    },
+    "signIn": {
+      "title": "Welcome Back",
+      "button": "Sign In with WorkOS",
+      "switchToSignUp": "Need an account? Sign Up",
+      "link": "Sign In"
+    },
+    "signUp": {
+      "title": "Create Account",
+      "button": "Sign Up with WorkOS",
+      "switchToSignIn": "Already have an account? Sign In"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "welcome": "Welcome {{name}}",
+      "apiLabel": "API: "
+    },
+    "auth": {
+      "signingIn": "Signing you in...",
+      "authenticationWait": "Please wait while we complete your authentication.",
+      "signedInSuccess": "Successfully signed in!",
+      "signInFailed": "Failed to sign in: {{error}}",
+      "authenticationFailed": "Failed to authenticate",
+      "noAuthCode": "No authorization code received"
+    },
+    "success": {
+      "title": "Payment Successful!",
+      "checkoutId": "Checkout ID: "
+    },
+    "userMenu": {
+      "myAccount": "My Account",
+      "signOut": "Sign Out"
+    },
+    "recentSearches": {
+      "title": "Recent Searches",
+      "clear": "Clear"
+    },
+    "theme": {
+      "toggle": "Toggle theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "language": {
+      "toggle": "Toggle language"
+    },
+    "errors": {
+      "generic": "Error: {{message}}",
+      "retry": "retry"
+    },
+    "metadata": {
+      "title": "smog-sponsors",
+      "description": "smog-sponsors is a web application"
+    }
+  },
+  "ui": {
+    "gestureList": {
+      "name": "Name",
+      "category": "Category",
+      "concepts": "Concepts",
+      "loading": "Loading...",
+      "errorLoading": "Error loading gestures",
+      "errorTryAgain": "Please try again later.",
+      "noGestures": "No gestures found.",
+      "addToFavorites": "Add to favorites",
+      "removeFromFavorites": "Remove from favorites"
+    },
+    "gestureDetail": {
+      "backToGestures": "Back to Gestures",
+      "addToFavorites": "Add to Favorites",
+      "removeFromFavorites": "Remove from Favorites",
+      "description": "Description",
+      "relatedConcepts": "Related Concepts",
+      "noVideo": "No video available"
+    },
+    "gestureFilters": {
+      "searchPlaceholder": "Search gestures...",
+      "results": "{{count}} result",
+      "results_other": "{{count}} results",
+      "clearFilters": "Clear filters"
+    },
+    "searchBar": {
+      "placeholder": "Search gestures..."
     }
   }
 }

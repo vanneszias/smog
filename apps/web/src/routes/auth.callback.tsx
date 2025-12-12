@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { setAuthData } from "@/lib/auth-context";
 
@@ -43,6 +44,7 @@ async function exchangeCodeForUser(code: string) {
 }
 
 function AuthCallback() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -54,7 +56,7 @@ function AuthCallback() {
         console.log("[Auth Callback] Code received:", !!code);
 
         if (!code) {
-          throw new Error("No authorization code received");
+          throw new Error(t("web.auth.noAuthCode"));
         }
 
         const data = await exchangeCodeForUser(code);
@@ -68,27 +70,27 @@ function AuthCallback() {
         };
 
         setAuthData(user, data.workosId);
-        toast.success("Successfully signed in!");
+        toast.success(t("web.auth.signedInSuccess"));
         navigate({ to: "/dashboard" });
       } catch (error) {
         console.error("Authentication error:", error);
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        toast.error(`Failed to sign in: ${errorMessage}`);
+        toast.error(t("web.auth.signInFailed", { error: errorMessage }));
         navigate({ to: "/login" });
       }
     };
 
     handleCallback();
-  }, [navigate]);
+  }, [navigate, t]);
 
   return (
     <div className="flex h-screen items-center justify-center">
       <div className="text-center">
-        <h2 className="mb-4 font-semibold text-2xl">Signing you in...</h2>
-        <p className="text-gray-600">
-          Please wait while we complete your authentication.
-        </p>
+        <h2 className="mb-4 font-semibold text-2xl">
+          {t("web.auth.signingIn")}
+        </h2>
+        <p className="text-gray-600">{t("web.auth.authenticationWait")}</p>
       </div>
     </div>
   );

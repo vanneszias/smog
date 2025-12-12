@@ -1,4 +1,5 @@
 import { Clock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type RecentSearchesProps = {
   searches: string[];
@@ -13,6 +14,8 @@ export default function RecentSearches({
   onClear,
   className = "",
 }: RecentSearchesProps) {
+  const { t } = useTranslation();
+
   if (searches.length === 0) {
     return null;
   }
@@ -21,7 +24,7 @@ export default function RecentSearches({
     <div className={`${className}`}>
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-medium text-muted-foreground text-sm">
-          Recent Searches
+          {t("web.recentSearches.title")}
         </h3>
         {onClear ? (
           <button
@@ -29,7 +32,7 @@ export default function RecentSearches({
             onClick={onClear}
             type="button"
           >
-            Clear
+            {t("web.recentSearches.clear")}
           </button>
         ) : null}
       </div>

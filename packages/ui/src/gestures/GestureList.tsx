@@ -1,4 +1,5 @@
 import { Heart } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   TableBody,
   TableCell,
@@ -40,6 +41,8 @@ function GestureTableRow({
   isFavorite?: boolean;
   onToggleFavorite?: (gestureId: string) => void;
 }) {
+  const { t } = useTranslation();
+
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onToggleFavorite) {
@@ -82,7 +85,9 @@ function GestureTableRow({
         <TableCell className="w-12">
           <button
             aria-label={
-              isFavorite ? "Remove from favorites" : "Add to favorites"
+              isFavorite
+                ? t("ui.gestureList.removeFromFavorites")
+                : t("ui.gestureList.addToFavorites")
             }
             className="rounded-full p-1 transition-all hover:scale-110 hover:bg-muted"
             onClick={handleFavoriteClick}
@@ -113,6 +118,8 @@ function GestureTableHeader({
   onSort?: (column: "name" | "category") => void;
   showFavoriteColumn?: boolean;
 }) {
+  const { t } = useTranslation();
+
   const sortableClass = onSort
     ? "cursor-pointer select-none hover:bg-muted/50"
     : "";
@@ -134,17 +141,17 @@ function GestureTableHeader({
       <TableRow>
         <TableHead className={sortableClass} onClick={handleNameClick}>
           <div className="flex items-center gap-1">
-            Name
+            {t("ui.gestureList.name")}
             {renderSortIndicator("name")}
           </div>
         </TableHead>
         <TableHead className={sortableClass} onClick={handleCategoryClick}>
           <div className="flex items-center gap-1">
-            Category
+            {t("ui.gestureList.category")}
             {renderSortIndicator("category")}
           </div>
         </TableHead>
-        <TableHead>Concepts</TableHead>
+        <TableHead>{t("ui.gestureList.concepts")}</TableHead>
         {showFavoriteColumn === true && <TableHead className="w-12" />}
       </TableRow>
     </TableHeader>
@@ -163,6 +170,8 @@ export function GestureList({
   favoriteGestureIds = [],
   onToggleFavorite,
 }: GestureListProps) {
+  const { t } = useTranslation();
+
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -176,10 +185,10 @@ export function GestureList({
       <div className="flex h-full items-center justify-center p-6 text-center">
         <div>
           <p className="font-semibold text-[var(--error)]">
-            Error loading gestures
+            {t("ui.gestureList.errorLoading")}
           </p>
           <p className="mt-2 text-muted-foreground text-sm">
-            Please try again later.
+            {t("ui.gestureList.errorTryAgain")}
           </p>
         </div>
       </div>
@@ -189,7 +198,9 @@ export function GestureList({
   if (gestures.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-center">
-        <p className="text-muted-foreground">No gestures found.</p>
+        <p className="text-muted-foreground">
+          {t("ui.gestureList.noGestures")}
+        </p>
       </div>
     );
   }

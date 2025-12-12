@@ -190,5 +190,138 @@
       "concerns": "Bezorgdheden bij het leren van SMOG",
       "extra": "Extra"
     }
+  },
+  "web": {
+    "home": {
+      "title": "Leer SMOG",
+      "subtitle": "Ontdek en beheers SMOG met onze uitgebreide videobibliotheek. Zoek, leer en oefen in op eigen tempo.",
+      "searchPlaceholder": "Zoek naar een gebaar...",
+      "recentSearches": "Recente Zoekopdrachten",
+      "browseGestures": {
+        "title": "Gebaren Verkennen",
+        "description": "Verken onze complete bibliotheek van gebarentaalgebaren met gedetailleerde video's en beschrijvingen.",
+        "action": "Nu verkennen"
+      },
+      "saveFavorites": {
+        "title": "Favorieten Opslaan",
+        "description": "Creëer je persoonlijke verzameling van gebaren om te oefenen en te bekijken wanneer je wilt.",
+        "action": "Favorieten bekijken"
+      },
+      "learnByCategory": {
+        "title": "Leren per Categorie",
+        "description": "Filter gebaren op onderwerp en categorie om je te concentreren op wat je wilt leren.",
+        "action": "Begin met leren"
+      },
+      "footer": "© 2025 SMOG. Alle rechten voorbehouden."
+    },
+    "gestures": {
+      "searchPlaceholder": "Zoek gebaren op naam, concept of beschrijving...",
+      "noResultsWithFilters": "Geen gebaren gevonden die aan je zoekopdracht voldoen",
+      "noResults": "Geen gebaren beschikbaar",
+      "loading": "Gebaren laden...",
+      "selectGesture": "Selecteer een gebaar om details te bekijken"
+    },
+    "favorites": {
+      "signInTitle": "Inloggen om favorieten te bekijken",
+      "signInDescription": "Log in om je favoriete gebaren op te slaan en te bekijken",
+      "noFavoritesTitle": "Nog geen favorieten",
+      "noFavoritesDescription": "Begin met het toevoegen van gebaren aan je favorieten om ze hier te zien",
+      "browseGestures": "Gebaren Verkennen",
+      "addedToFavorites": "\"{{name}}\" toegevoegd aan favorieten",
+      "addedToFavoritesShort": "Toegevoegd aan favorieten",
+      "removedFromFavorites": "\"{{name}}\" verwijderd uit favorieten",
+      "removedFromFavoritesShort": "Verwijderd uit favorieten",
+      "failedToLoad": "Favorieten laden mislukt",
+      "failedToUpdate": "Favoriet bijwerken mislukt",
+      "signInRequired": "Log in om favorieten op te slaan"
+    },
+    "navigation": {
+      "home": "Home",
+      "browse": "Verkennen",
+      "favorites": "Favorieten"
+    },
+    "signIn": {
+      "title": "Welkom Terug",
+      "button": "Inloggen met WorkOS",
+      "switchToSignUp": "Heb je nog geen account? Registreren",
+      "link": "Inloggen"
+    },
+    "signUp": {
+      "title": "Account Aanmaken",
+      "button": "Registreren met WorkOS",
+      "switchToSignIn": "Heb je al een account? Inloggen"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "welcome": "Welkom {{name}}",
+      "apiLabel": "API: "
+    },
+    "auth": {
+      "signingIn": "Bezig met inloggen...",
+      "authenticationWait": "Een moment geduld terwijl we je authenticatie voltooien.",
+      "signedInSuccess": "Succesvol ingelogd!",
+      "signInFailed": "Inloggen mislukt: {{error}}",
+      "authenticationFailed": "Authenticatie mislukt",
+      "noAuthCode": "Geen autorisatiecode ontvangen"
+    },
+    "success": {
+      "title": "Betaling Geslaagd!",
+      "checkoutId": "Afrekening ID: "
+    },
+    "userMenu": {
+      "myAccount": "Mijn Account",
+      "signOut": "Uitloggen"
+    },
+    "recentSearches": {
+      "title": "Recente Zoekopdrachten",
+      "clear": "Wissen"
+    },
+    "theme": {
+      "toggle": "Thema wijzigen",
+      "light": "Licht",
+      "dark": "Donker",
+      "system": "Systeem"
+    },
+    "language": {
+      "toggle": "Taal wijzigen"
+    },
+    "errors": {
+      "generic": "Fout: {{message}}",
+      "retry": "opnieuw proberen"
+    },
+    "metadata": {
+      "title": "smog-sponsors",
+      "description": "smog-sponsors is een webapplicatie"
+    }
+  },
+  "ui": {
+    "gestureList": {
+      "name": "Naam",
+      "category": "Categorie",
+      "concepts": "Concepten",
+      "loading": "Laden...",
+      "errorLoading": "Fout bij het laden van gebaren",
+      "errorTryAgain": "Probeer het later opnieuw.",
+      "noGestures": "Geen gebaren gevonden.",
+      "addToFavorites": "Toevoegen aan favorieten",
+      "removeFromFavorites": "Verwijderen uit favorieten"
+    },
+    "gestureDetail": {
+      "backToGestures": "Terug naar Gebaren",
+      "addToFavorites": "Toevoegen aan Favorieten",
+      "removeFromFavorites": "Verwijderen uit Favorieten",
+      "description": "Dit is belangrijk om te weten",
+      "relatedConcepts": "Dit gebaar heeft deze concepten",
+      "noVideo": "Geen video beschikbaar"
+    },
+    "gestureFilters": {
+      "searchPlaceholder": "Zoek gebaren...",
+      "results": "{{count}} resultaat",
+      "results_other": "{{count}} resultaten",
+      "clearFilters": "Filters wissen"
+    },
+    "searchBar": {
+      "placeholder": "Zoek gebaren..."
+    }
   }
 }

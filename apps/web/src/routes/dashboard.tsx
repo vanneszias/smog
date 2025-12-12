@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import { orpc } from "@/utils/orpc";
 
 const TOKEN_STORAGE_KEY = "smog_web_token";
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function RouteComponent() {
+  const { t } = useTranslation();
   const { user } = Route.useRouteContext();
 
   const privateData = useQuery(orpc.privateData.queryOptions());
@@ -35,9 +37,12 @@ function RouteComponent() {
 
   return (
     <div>
-      <h1>Dashboard</h1>
-      <p>Welcome {displayName}</p>
-      <p>API: {privateData.data?.message}</p>
+      <h1>{t("web.dashboard.title")}</h1>
+      <p>{t("web.dashboard.welcome", { name: displayName })}</p>
+      <p>
+        {t("web.dashboard.apiLabel")}
+        {privateData.data?.message}
+      </p>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +13,7 @@ import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 
 export default function UserMenu() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, isLoading, signOut } = useAuth();
 
@@ -22,7 +24,7 @@ export default function UserMenu() {
   if (!user) {
     return (
       <Button asChild variant="outline">
-        <Link to="/login">Sign In</Link>
+        <Link to="/login">{t("web.signIn.link")}</Link>
       </Button>
     );
   }
@@ -37,7 +39,7 @@ export default function UserMenu() {
         <Button variant="outline">{displayName}</Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-card">
-        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("web.userMenu.myAccount")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem>{user.email}</DropdownMenuItem>
         <DropdownMenuItem asChild>
@@ -49,7 +51,7 @@ export default function UserMenu() {
             }}
             variant="destructive"
           >
-            Sign Out
+            {t("web.userMenu.signOut")}
           </Button>
         </DropdownMenuItem>
       </DropdownMenuContent>

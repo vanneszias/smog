@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import CategoryFilter from "../common/CategoryFilter";
 import SearchBar from "../common/SearchBar";
 
@@ -22,14 +23,18 @@ export function GestureFilters({
   filteredCount,
   onClearFilters,
   showResultCount = false,
-  searchPlaceholder = "Search gestures...",
+  searchPlaceholder,
 }: GestureFiltersProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="shrink-0 border-border border-b bg-background px-6 py-4">
       <SearchBar
         className="mb-3"
         onChange={onSearchChange}
-        placeholder={searchPlaceholder}
+        placeholder={
+          searchPlaceholder || t("ui.gestureFilters.searchPlaceholder")
+        }
         value={searchQuery}
       />
       <CategoryFilter
@@ -43,7 +48,7 @@ export function GestureFilters({
       filteredCount !== undefined ? (
         <div className="mt-4 flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">
-            {filteredCount} result{filteredCount !== 1 ? "s" : ""}
+            {t("ui.gestureFilters.results", { count: filteredCount })}
           </span>
           {selectedCategories.length > 0 && onClearFilters ? (
             <button
@@ -51,7 +56,7 @@ export function GestureFilters({
               onClick={onClearFilters}
               type="button"
             >
-              Clear filters
+              {t("ui.gestureFilters.clearFilters")}
             </button>
           ) : null}
         </div>

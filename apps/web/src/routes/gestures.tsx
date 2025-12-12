@@ -6,6 +6,7 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import EmptyState from "@/components/EmptyState";
 import { useGestures } from "@/hooks/useGestures";
 import { useFavorites } from "@/lib/favorites-context";
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/gestures")({
 });
 
 function GesturesComponent() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const searchParams = useSearch({ from: "/gestures" });
   const { favoriteIds, toggleFavorite } = useFavorites();
@@ -86,7 +88,7 @@ function GesturesComponent() {
         onCategoryToggle={handleCategoryToggle}
         onClearFilters={clearFilters}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Search gestures by name, concept, or description..."
+        searchPlaceholder={t("web.gestures.searchPlaceholder")}
         searchQuery={searchQuery}
         selectedCategories={selectedCategories}
         showResultCount={true}
@@ -102,8 +104,8 @@ function GesturesComponent() {
           <EmptyState
             message={
               searchQuery || selectedCategories.length > 0
-                ? "No gestures found matching your search"
-                : "No gestures available"
+                ? t("web.gestures.noResultsWithFilters")
+                : t("web.gestures.noResults")
             }
           />
         ) : (

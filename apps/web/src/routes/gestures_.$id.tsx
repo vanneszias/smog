@@ -7,6 +7,7 @@ import {
 } from "@smog/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useGestures } from "@/hooks/useGestures";
 import { useFavorites } from "@/lib/favorites-context";
 
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/gestures_/$id")({
 });
 
 function GesturesComponent() {
+  const { t } = useTranslation();
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite, favoriteIds } = useFavorites();
@@ -70,7 +72,7 @@ function GesturesComponent() {
             allCategories={allCategories}
             onCategoryToggle={handleCategoryToggle}
             onSearchChange={setSearchQuery}
-            searchPlaceholder="Search gestures by name, concept, or description..."
+            searchPlaceholder={t("web.gestures.searchPlaceholder")}
             searchQuery={searchQuery}
             selectedCategories={selectedCategories}
           />
@@ -113,7 +115,7 @@ function GesturesComponent() {
             <div className="flex h-full items-center justify-center p-6 text-center">
               <div>
                 <p className="text-muted-foreground">
-                  Select a gesture to view details
+                  {t("web.gestures.selectGesture")}
                 </p>
               </div>
             </div>
