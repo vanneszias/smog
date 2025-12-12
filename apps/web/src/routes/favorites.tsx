@@ -14,7 +14,7 @@ export const Route = createFileRoute("/favorites")({
 function FavoritesComponent() {
   const navigate = useNavigate();
   const { isAuthenticated, convexUserId } = useAuth();
-  const { favoriteIds } = useFavorites();
+  const { favoriteIds, toggleFavorite } = useFavorites();
   const [favoriteGestures, setFavoriteGestures] = useState<GestureCardData[]>(
     []
   );
@@ -46,6 +46,11 @@ function FavoritesComponent() {
 
   const handleSelectGesture = (gestureId: string) => {
     navigate({ to: "/gestures/$id", params: { id: gestureId } });
+  };
+
+  const handleToggleFavorite = (gestureId: string) => {
+    const gesture = favoriteGestures.find((g) => g._id === gestureId);
+    toggleFavorite(gestureId, gesture?.name);
   };
 
   // Show sign in message if not authenticated
@@ -99,9 +104,11 @@ function FavoritesComponent() {
           </div>
         ) : (
           <GestureList
+            favoriteGestureIds={favoriteIds}
             gestures={favoriteGestures}
             isLoading={isLoading}
             onSelectGesture={handleSelectGesture}
+            onToggleFavorite={handleToggleFavorite}
             selectedGestureId={null}
           />
         )}

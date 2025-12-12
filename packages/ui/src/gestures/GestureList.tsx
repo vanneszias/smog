@@ -1,3 +1,4 @@
+import { Heart } from "lucide-react";
 import {
   TableBody,
   TableCell,
@@ -22,17 +23,30 @@ type GestureListProps = {
   sortColumn?: "name" | "category";
   sortDirection?: "asc" | "desc";
   onSort?: (column: "name" | "category") => void;
+  favoriteGestureIds?: string[];
+  onToggleFavorite?: (gestureId: string) => void;
 };
 
 function GestureTableRow({
   gesture,
   isSelected,
   onClick,
+  isFavorite,
+  onToggleFavorite,
 }: {
   gesture: GestureCardData;
   isSelected: boolean;
   onClick: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: (gestureId: string) => void;
 }) {
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleFavorite) {
+      onToggleFavorite(gesture._id);
+    }
+  };
+
   return (
     <TableRow
       className={`cursor-pointer ${isSelected ? "bg-[var(--primary)]/10" : ""}`}
@@ -64,6 +78,26 @@ function GestureTableRow({
       <TableCell className="max-w-xs truncate text-muted-foreground text-sm">
         {gesture.concept.join(", ")}
       </TableCell>
+      {onToggleFavorite ? (
+        <TableCell className="w-12">
+          <button
+            aria-label={
+              isFavorite ? "Remove from favorites" : "Add to favorites"
+            }
+            className="rounded-full p-1 transition-all hover:scale-110 hover:bg-muted"
+            onClick={handleFavoriteClick}
+            type="button"
+          >
+            <Heart
+              className={`h-5 w-5 transition-all ${
+                isFavorite
+                  ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
+                  : "fill-none stroke-[var(--primary)] hover:fill-[var(--primary)]/20"
+              }`}
+            />
+          </button>
+        </TableCell>
+      ) : null}
     </TableRow>
   );
 }
@@ -72,54 +106,46 @@ function GestureTableHeader({
   sortColumn,
   sortDirection,
   onSort,
+  showFavoriteColumn,
 }: {
   sortColumn: "name" | "category";
   sortDirection: "asc" | "desc";
   onSort?: (column: "name" | "category") => void;
+  showFavoriteColumn?: boolean;
 }) {
-  const handleNameSort = onSort
-    ? () => {
-        onSort("name");
-      }
-    : undefined;
-  const handleCategorySort = onSort
-    ? () => {
-        onSort("category");
-      }
-    : undefined;
-
   const sortableClass = onSort
     ? "cursor-pointer select-none hover:bg-muted/50"
     : "";
 
+  const renderSortIndicator = (column: "name" | "category") => {
+    if (!onSort || sortColumn !== column) {
+      return null;
+    }
+    return (
+      <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
+    );
+  };
+
+  const handleNameClick = onSort ? () => onSort("name") : undefined;
+  const handleCategoryClick = onSort ? () => onSort("category") : undefined;
+
   return (
     <TableHeader className="sticky top-0 z-10 bg-background">
       <TableRow>
-        <TableHead className={sortableClass} onClick={handleNameSort}>
+        <TableHead className={sortableClass} onClick={handleNameClick}>
           <div className="flex items-center gap-1">
             Name
-            {onSort ? (
-              sortColumn === "name" ? (
-                <span className="text-xs">
-                  {sortDirection === "asc" ? "↑" : "↓"}
-                </span>
-              ) : null
-            ) : null}
+            {renderSortIndicator("name")}
           </div>
         </TableHead>
-        <TableHead className={sortableClass} onClick={handleCategorySort}>
+        <TableHead className={sortableClass} onClick={handleCategoryClick}>
           <div className="flex items-center gap-1">
             Category
-            {onSort ? (
-              sortColumn === "category" ? (
-                <span className="text-xs">
-                  {sortDirection === "asc" ? "↑" : "↓"}
-                </span>
-              ) : null
-            ) : null}
+            {renderSortIndicator("category")}
           </div>
         </TableHead>
         <TableHead>Concepts</TableHead>
+        {showFavoriteColumn === true && <TableHead className="w-12" />}
       </TableRow>
     </TableHeader>
   );
@@ -134,6 +160,8 @@ export function GestureList({
   sortColumn = "name",
   sortDirection = "asc",
   onSort,
+  favoriteGestureIds = [],
+  onToggleFavorite,
 }: GestureListProps) {
   if (isLoading) {
     return (
@@ -171,6 +199,7 @@ export function GestureList({
       <table className="w-full caption-bottom text-sm">
         <GestureTableHeader
           onSort={onSort}
+          showFavoriteColumn={!!onToggleFavorite}
           sortColumn={sortColumn}
           sortDirection={sortDirection}
         />
@@ -178,9 +207,11 @@ export function GestureList({
           {gestures.map((gesture) => (
             <GestureTableRow
               gesture={gesture}
+              isFavorite={favoriteGestureIds.includes(gesture._id)}
               isSelected={selectedGestureId === gesture._id}
               key={gesture._id}
               onClick={() => onSelectGesture(gesture._id)}
+              onToggleFavorite={onToggleFavorite}
             />
           ))}
         </TableBody>

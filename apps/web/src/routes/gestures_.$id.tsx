@@ -157,7 +157,7 @@ function SearchFilters({
 function GesturesComponent() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite, favoriteIds } = useFavorites();
 
   const gesturesQuery = useInfiniteQuery({
     queryKey: ["gestures", "list"],
@@ -221,6 +221,11 @@ function GesturesComponent() {
     navigate({ to: "/gestures" });
   };
 
+  const handleToggleFavorite = (gestureId: string) => {
+    const gesture = allGestures.find((g) => g._id === gestureId);
+    toggleFavorite(gestureId, gesture?.name);
+  };
+
   return (
     <div className="flex h-screen flex-col">
       <div className="border-b bg-background px-6 py-4">
@@ -245,10 +250,12 @@ function GesturesComponent() {
           <div className="flex-1 overflow-auto">
             <GestureList
               error={gesturesQuery.error}
+              favoriteGestureIds={favoriteIds}
               gestures={filteredGestures}
               isLoading={gesturesQuery.isLoading}
               onSelectGesture={handleSelectGesture}
               onSort={handleSort}
+              onToggleFavorite={handleToggleFavorite}
               selectedGestureId={id}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
