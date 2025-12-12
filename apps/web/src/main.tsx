@@ -17,12 +17,6 @@ const router = createRouter({
   },
 });
 
-declare module "@tanstack/react-router" {
-  type Register = {
-    router: typeof router;
-  };
-}
-
 const rootElement = document.getElementById("app");
 
 if (!rootElement) {

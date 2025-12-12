@@ -6,7 +6,7 @@ export const appRouter = {
   healthCheck: publicProcedure.handler(() => "OK"),
   privateData: protectedProcedure.handler(({ context }) => ({
     message: "This is private",
-    user: context.session?.user,
+    workosId: context.workosId,
   })),
   gestures: gesturesRouter,
 };

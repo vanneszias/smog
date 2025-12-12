@@ -1,4 +1,3 @@
-import { auth } from "@smog/auth";
 import type { Context as HonoContext } from "hono";
 
 export type CreateContextOptions = {
@@ -6,11 +5,12 @@ export type CreateContextOptions = {
 };
 
 export async function createContext({ context }: CreateContextOptions) {
-  const session = await auth.api.getSession({
-    headers: context.req.raw.headers,
-  });
+  // Extract WorkOS session from Authorization header or cookie
+  const authHeader = context.req.raw.headers.get("Authorization");
+  const workosId = authHeader?.replace("Bearer ", "") || null;
+
   return {
-    session,
+    workosId,
   };
 }
 

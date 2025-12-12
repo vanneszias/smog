@@ -10,16 +10,15 @@
     "start": "bun run dist/index.js"
   },
   "dependencies": {
-    "hono": "catalog:",
-    "@orpc/server": "catalog:",
     "@orpc/openapi": "catalog:",
+    "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
-    "better-auth": "catalog:",
-    "dotenv": "catalog:",
-    "zod": "catalog:",
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
-    "@smog/db": "workspace:*"
+    "@smog/db": "workspace:*",
+    "dotenv": "catalog:",
+    "hono": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "typescript": "^5.8.2",

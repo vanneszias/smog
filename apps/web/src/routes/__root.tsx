@@ -13,6 +13,7 @@ import { useState } from "react";
 import Header from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/lib/auth-context";
 import { link, type orpc } from "@/utils/orpc";
 import "../index.css";
 
@@ -49,18 +50,20 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        disableTransitionOnChange
-        storageKey="vite-ui-theme"
-      >
-        <div className="grid h-svh grid-rows-[auto_1fr]">
-          <Header />
-          <Outlet />
-        </div>
-        <Toaster richColors />
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          disableTransitionOnChange
+          storageKey="vite-ui-theme"
+        >
+          <div className="grid h-svh grid-rows-[auto_1fr]">
+            <Header />
+            <Outlet />
+          </div>
+          <Toaster richColors />
+        </ThemeProvider>
+      </AuthProvider>
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
     </>

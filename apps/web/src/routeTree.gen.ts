@@ -15,6 +15,7 @@ import { Route as GesturesRouteImport } from './routes/gestures'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GesturesIdRouteImport } from './routes/gestures_.$id'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
 const SuccessRoute = SuccessRouteImport.update({
   id: '/success',
@@ -46,6 +47,11 @@ const GesturesIdRoute = GesturesIdRouteImport.update({
   path: '/gestures/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
   '/success': typeof SuccessRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/gestures/$id': typeof GesturesIdRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
   '/success': typeof SuccessRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/gestures/$id': typeof GesturesIdRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
   '/success': typeof SuccessRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/gestures_/$id': typeof GesturesIdRoute
 }
 export interface FileRouteTypes {
@@ -80,9 +89,17 @@ export interface FileRouteTypes {
     | '/gestures'
     | '/login'
     | '/success'
+    | '/auth/callback'
     | '/gestures/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/gestures' | '/login' | '/success' | '/gestures/$id'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/gestures'
+    | '/login'
+    | '/success'
+    | '/auth/callback'
+    | '/gestures/$id'
   id:
     | '__root__'
     | '/'
@@ -90,6 +107,7 @@ export interface FileRouteTypes {
     | '/gestures'
     | '/login'
     | '/success'
+    | '/auth/callback'
     | '/gestures_/$id'
   fileRoutesById: FileRoutesById
 }
@@ -99,6 +117,7 @@ export interface RootRouteChildren {
   GesturesRoute: typeof GesturesRoute
   LoginRoute: typeof LoginRoute
   SuccessRoute: typeof SuccessRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   GesturesIdRoute: typeof GesturesIdRoute
 }
 
@@ -146,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GesturesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -155,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   GesturesRoute: GesturesRoute,
   LoginRoute: LoginRoute,
   SuccessRoute: SuccessRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   GesturesIdRoute: GesturesIdRoute,
 }
 export const routeTree = rootRouteImport

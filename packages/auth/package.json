@@ -17,10 +17,9 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "better-auth": "catalog:",
     "@mollie/api-client": "^4.3.3",
+    "@smog/db": "workspace:*",
     "dotenv": "catalog:",
-    "zod": "catalog:",
-    "@smog/db": "workspace:*"
+    "zod": "catalog:"
   }
 }

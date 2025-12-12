@@ -146,7 +146,14 @@ export const exchangeCodeForToken = action({
       throw new Error(`Failed to authenticate: ${error}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as {
+      user: {
+        id: string;
+        email: string;
+        first_name?: string;
+        last_name?: string;
+      };
+    };
 
     return {
       workosId: data.user.id,

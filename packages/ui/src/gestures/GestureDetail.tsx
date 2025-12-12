@@ -104,8 +104,8 @@ export function GestureDetail({
           }
         >
           <MuxPlayer
-            key={gesture._id}
             accentColor="var(--primary)"
+            key={gesture._id}
             playbackId={gesture.playbackId}
             streamType="on-demand"
             style={{ width: "100%", height: "100%", aspectRatio: "3/4" }}
