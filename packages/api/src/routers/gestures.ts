@@ -14,7 +14,7 @@ export const gesturesRouter = {
     .input(
       z.object({
         cursor: z.string().optional(),
-        numItems: z.number().min(1).max(100).default(20),
+        numItems: z.number().min(1).max(100).default(50),
       })
     )
     .handler(async ({ input }) => {

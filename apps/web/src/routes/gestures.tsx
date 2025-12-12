@@ -1,122 +1,281 @@
-import MuxPlayer from "@mux/mux-player-react";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { orpc } from "@/utils/orpc";
+import type { GestureCardData } from "@smog/ui";
+import { GestureDetail, GestureList } from "@smog/ui";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Search, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { client } from "@/utils/orpc";
 
 export const Route = createFileRoute("/gestures")({
   component: GesturesComponent,
 });
 
-type Gesture = {
-  _id: string;
-  name: string;
-  playbackId: string;
-  concept: string[];
-  info: string;
-  categories: Array<{ _id: string; name: string }>;
-};
+function useGestureFiltering(gestures: GestureCardData[] | undefined) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [sortColumn, setSortColumn] = useState<"name" | "category">("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const allCategories = useMemo(() => {
+    if (!gestures) {
+      return [];
+    }
+    const categorySet = new Set<string>();
+    for (const gesture of gestures) {
+      for (const cat of gesture.categories.filter(Boolean)) {
+        if (cat) {
+          categorySet.add(cat.name);
+        }
+      }
+    }
+    return Array.from(categorySet).sort();
+  }, [gestures]);
+
+  const filteredGestures = useMemo(() => {
+    if (!gestures) {
+      return [];
+    }
+
+    let filtered = gestures;
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((gesture) => {
+        const nameMatch = gesture.name.toLowerCase().includes(query);
+        const conceptMatch = gesture.concept.some((c) =>
+          c.toLowerCase().includes(query)
+        );
+        const infoMatch = gesture.info.toLowerCase().includes(query);
+        return nameMatch || conceptMatch || infoMatch;
+      });
+    }
+
+    if (categoryFilter) {
+      filtered = filtered.filter((gesture) =>
+        gesture.categories.some((cat) => cat?.name === categoryFilter)
+      );
+    }
+
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortColumn === "name") {
+        const comparison = a.name.localeCompare(b.name);
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+      const aCat = a.categories[0]?.name || "";
+      const bCat = b.categories[0]?.name || "";
+      const comparison = aCat.localeCompare(bCat);
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, [gestures, searchQuery, categoryFilter, sortColumn, sortDirection]);
+
+  const handleSort = (column: "name" | "category") => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  return {
+    searchQuery,
+    setSearchQuery,
+    categoryFilter,
+    setCategoryFilter,
+    sortColumn,
+    sortDirection,
+    handleSort,
+    allCategories,
+    filteredGestures,
+  };
+}
+
+function SearchFilters({
+  searchQuery,
+  setSearchQuery,
+  categoryFilter,
+  setCategoryFilter,
+  allCategories,
+}: {
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  categoryFilter: string;
+  setCategoryFilter: (category: string) => void;
+  allCategories: string[];
+}) {
+  return (
+    <div className="border-b bg-background p-4">
+      <div className="relative mb-3">
+        <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          className="pl-9"
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search gestures..."
+          value={searchQuery}
+        />
+        {searchQuery ? (
+          <button
+            className="absolute top-2.5 right-3 text-muted-foreground hover:text-foreground"
+            onClick={() => setSearchQuery("")}
+            type="button"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+      <div className="flex gap-2">
+        <select
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          value={categoryFilter}
+        >
+          <option value="">All Categories</option>
+          {allCategories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
+        {categoryFilter ? (
+          <button
+            className="whitespace-nowrap rounded-md bg-secondary px-3 py-1 text-sm hover:bg-secondary/80"
+            onClick={() => setCategoryFilter("")}
+            type="button"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 function GesturesComponent() {
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
-  const gesturesQuery = useQuery(
-    orpc.gestures.list.queryOptions({
-      input: { cursor, numItems: 20 },
-    })
+  const [selectedGestureId, setSelectedGestureId] = useState<string | null>(
+    null
   );
 
+  const gesturesQuery = useInfiniteQuery({
+    queryKey: ["gestures", "list"],
+    queryFn: async ({ pageParam }) => {
+      const result = await client.gestures.list({
+        cursor: pageParam ?? undefined,
+        numItems: 50,
+      });
+      return result;
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.isDone) {
+        return null;
+      }
+      return lastPage.continueCursor ?? null;
+    },
+  });
+
+  // Automatically fetch next page until all gestures are loaded
+  useEffect(() => {
+    if (gesturesQuery.hasNextPage && !gesturesQuery.isFetchingNextPage) {
+      gesturesQuery.fetchNextPage();
+    }
+  }, [
+    gesturesQuery.hasNextPage,
+    gesturesQuery.isFetchingNextPage,
+    gesturesQuery,
+  ]);
+
+  // Flatten all pages into a single array
+  const allGestures = useMemo(
+    () => gesturesQuery.data?.pages.flatMap((page) => page.gestures) ?? [],
+    [gesturesQuery.data?.pages]
+  );
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    categoryFilter,
+    setCategoryFilter,
+    sortColumn,
+    sortDirection,
+    handleSort,
+    allCategories,
+    filteredGestures,
+  } = useGestureFiltering(allGestures);
+
+  const selectedGesture = useMemo(() => {
+    if (!selectedGestureId) {
+      return null;
+    }
+    return allGestures.find((g) => g._id === selectedGestureId);
+  }, [selectedGestureId, allGestures]);
+
+  const handleDeselectGesture = () => {
+    setSelectedGestureId(null);
+  };
+
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-8">
-        <h1 className="mb-2 font-bold text-3xl">Gestures Library</h1>
-        <p className="text-muted-foreground">
+    <div className="flex h-screen flex-col">
+      <div className="border-b bg-background px-6 py-4">
+        <h1 className="font-bold text-2xl" style={{ color: "var(--text)" }}>
+          Gestures Library
+        </h1>
+        <p className="text-muted-foreground text-sm">
           Browse and learn sign language gestures
         </p>
       </div>
 
-      {gesturesQuery.isLoading ? (
-        <div className="py-12 text-center">Loading gestures...</div>
-      ) : null}
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex w-1/2 flex-col border-r">
+          <SearchFilters
+            allCategories={allCategories}
+            categoryFilter={categoryFilter}
+            searchQuery={searchQuery}
+            setCategoryFilter={setCategoryFilter}
+            setSearchQuery={setSearchQuery}
+          />
 
-      {gesturesQuery.error ? (
-        <div className="py-12 text-center text-red-600">
-          Error loading gestures. Please try again later.
+          <div className="border-b bg-muted/30 px-4 py-2 text-muted-foreground text-sm">
+            {gesturesQuery.isFetchingNextPage
+              ? `Loading... (${allGestures.length} loaded so far)`
+              : filteredGestures.length > 0
+                ? `${filteredGestures.length} gesture${filteredGestures.length !== 1 ? "s" : ""}`
+                : "No gestures"}
+          </div>
+
+          <div className="flex-1 overflow-auto">
+            <GestureList
+              error={gesturesQuery.error}
+              gestures={filteredGestures}
+              isLoading={gesturesQuery.isLoading}
+              onSelectGesture={setSelectedGestureId}
+              onSort={handleSort}
+              selectedGestureId={selectedGestureId}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+            />
+          </div>
         </div>
-      ) : null}
 
-      {gesturesQuery.data ? (
-        <>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {gesturesQuery.data.gestures.map((gesture: Gesture) => (
-              <Link
-                className="group overflow-hidden rounded-lg border bg-card transition-shadow hover:shadow-lg"
-                key={gesture._id}
-                params={{ id: gesture._id }}
-                to="/gestures/$id"
-              >
-                <div className="relative aspect-video overflow-hidden bg-muted">
-                  {gesture.playbackId ? (
-                    <MuxPlayer
-                      className="h-full w-full"
-                      loop
-                      muted
-                      playbackId={gesture.playbackId}
-                      streamType="on-demand"
-                      style={{ height: "100%", width: "100%" }}
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                      No video available
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3 className="mb-2 font-semibold text-lg transition-colors group-hover:text-primary">
-                    {gesture.name}
-                  </h3>
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    {gesture.categories.map((cat) => (
-                      <span
-                        className="rounded-full bg-secondary px-2 py-1 text-secondary-foreground text-xs"
-                        key={cat._id}
-                      >
-                        {cat.name}
-                      </span>
-                    ))}
-                  </div>
-                  {gesture.concept.length > 0 && (
-                    <p className="line-clamp-2 text-muted-foreground text-sm">
-                      {gesture.concept.join(", ")}
-                    </p>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* Pagination controls */}
-          <div className="mt-8 flex justify-center gap-4">
-            {cursor ? (
-              <button
-                className="rounded-md border px-4 py-2 hover:bg-accent"
-                onClick={() => setCursor(undefined)}
-                type="button"
-              >
-                First Page
-              </button>
-            ) : null}
-            {gesturesQuery.data.isDone ? null : (
-              <button
-                className="rounded-md border px-4 py-2 hover:bg-accent"
-                onClick={() => setCursor(gesturesQuery.data.continueCursor)}
-                type="button"
-              >
-                Next Page
-              </button>
-            )}
-          </div>
-        </>
-      ) : null}
+        <div className="w-1/2 overflow-auto bg-muted/20">
+          {selectedGesture ? (
+            <GestureDetail
+              gesture={selectedGesture}
+              onBack={handleDeselectGesture}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center p-6 text-center">
+              <div>
+                <p className="text-muted-foreground">
+                  Select a gesture to view details
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
