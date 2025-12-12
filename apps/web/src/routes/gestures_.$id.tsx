@@ -1,5 +1,10 @@
 import { useGestureFiltering } from "@smog/hooks";
-import { GestureDetail, GestureFilters, GestureList } from "@smog/ui";
+import {
+  GestureDetail,
+  GestureDetailSkeleton,
+  GestureFilters,
+  GestureList,
+} from "@smog/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useGestures } from "@/hooks/useGestures";
@@ -37,6 +42,8 @@ function GesturesComponent() {
     }
     return allGestures.find((g) => g._id === id);
   }, [id, allGestures]);
+
+  const showSkeleton = isLoading && !!id;
 
   const handleSelectGesture = (gestureId: string) => {
     navigate({ to: "/gestures/$id", params: { id: gestureId } });
@@ -99,7 +106,9 @@ function GesturesComponent() {
         <div
           className={`overflow-auto bg-muted/20 ${selectedGesture ? "flex-1 lg:w-1/2" : "hidden lg:flex lg:w-1/2"}`}
         >
-          {selectedGesture ? (
+          {showSkeleton ? (
+            <GestureDetailSkeleton />
+          ) : selectedGesture ? (
             <GestureDetail
               gesture={selectedGesture}
               isFavorite={isFavorite(selectedGesture._id)}
@@ -108,6 +117,8 @@ function GesturesComponent() {
                 toggleFavorite(selectedGesture._id, selectedGesture.name)
               }
             />
+          ) : id ? (
+            <GestureDetailSkeleton />
           ) : (
             <div className="flex h-full items-center justify-center p-6 text-center">
               <div>

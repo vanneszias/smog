@@ -1,6 +1,7 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { ArrowLeft, Heart } from "lucide-react";
 import { Suspense } from "react";
+import { ShimmerSkeleton } from "../common/Skeleton";
 import type { GestureCardData } from "./GestureCard";
 
 export type GestureDetailData = GestureCardData;
@@ -95,12 +96,10 @@ export function GestureDetail({
       >
         <Suspense
           fallback={
-            <div
-              className="flex h-full w-full items-center justify-center"
-              style={{ aspectRatio: "3/4" }}
-            >
-              <div className="text-muted-foreground">Loading video...</div>
-            </div>
+            <ShimmerSkeleton
+              className="h-full w-full"
+              style={{ aspectRatio: "3/4", borderRadius: 0 }}
+            />
           }
         >
           <MuxPlayer
