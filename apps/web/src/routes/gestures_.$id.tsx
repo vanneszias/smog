@@ -73,7 +73,7 @@ function GesturesComponent() {
             allCategories={allCategories}
             onCategoryToggle={handleCategoryToggle}
             onSearchChange={setSearchQuery}
-            searchPlaceholder="Search gestures..."
+            searchPlaceholder="Search gestures by name, concept, or description..."
             searchQuery={searchQuery}
             selectedCategories={selectedCategories}
           />
