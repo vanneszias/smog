@@ -1,5 +1,6 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { ArrowLeft, Heart } from "lucide-react";
+import { Suspense } from "react";
 import type { GestureCardData } from "./GestureCard";
 
 export type GestureDetailData = GestureCardData;
@@ -35,7 +36,7 @@ export function GestureDetail({
       <div className="mb-6 flex items-center justify-between">
         {onBack ? (
           <button
-            className="inline-flex items-center gap-2 font-medium text-primary transition-colors hover:text-primary/80 hover:cursor-pointer"
+            className="inline-flex items-center gap-2 font-medium text-primary transition-colors hover:cursor-pointer hover:text-primary/80"
             onClick={handleBackClick}
             type="button"
           >
@@ -90,15 +91,26 @@ export function GestureDetail({
       {/* Video Player */}
       <div
         className="mb-8 overflow-hidden rounded-xl border border-border"
-        style={{ backgroundColor: "var(--card)",
-          aspectRatio: "3/4" }}
+        style={{ backgroundColor: "var(--card)", aspectRatio: "3/4" }}
       >
-        <MuxPlayer
-          accentColor="var(--primary)"
-          playbackId={gesture.playbackId}
-          streamType="on-demand"
-          style={{ width: "100%", height: "100%", aspectRatio:"3/4" }}
-        />
+        <Suspense
+          fallback={
+            <div
+              className="flex h-full w-full items-center justify-center"
+              style={{ aspectRatio: "3/4" }}
+            >
+              <div className="text-muted-foreground">Loading video...</div>
+            </div>
+          }
+        >
+          <MuxPlayer
+            key={gesture._id}
+            accentColor="var(--primary)"
+            playbackId={gesture.playbackId}
+            streamType="on-demand"
+            style={{ width: "100%", height: "100%", aspectRatio: "3/4" }}
+          />
+        </Suspense>
       </div>
 
       {/* Description Section */}
