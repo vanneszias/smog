@@ -217,6 +217,7 @@
       "devDependencies": {
         "@smog/config": "workspace:*",
         "@smog/types": "workspace:*",
+        "@smog/ui": "workspace:*",
         "@tanstack/react-query": "^5.85.5",
         "@types/react": "~19.1.10",
         "typescript": "^5.8.2",

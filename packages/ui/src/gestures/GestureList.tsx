@@ -52,7 +52,7 @@ function GestureTableRow({
 
   return (
     <TableRow
-      className={`cursor-pointer ${isSelected ? "bg-[var(--primary)]/10" : ""}`}
+      className={`cursor-pointer ${isSelected ? "bg-(--primary)/10" : ""}`}
       onClick={onClick}
     >
       <TableCell className="font-medium">{gesture.name}</TableCell>
@@ -97,7 +97,7 @@ function GestureTableRow({
               className={`h-5 w-5 transition-all ${
                 isFavorite
                   ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
-                  : "fill-none stroke-[var(--primary)] hover:fill-[var(--primary)]/20"
+                  : "fill-none stroke-primary hover:fill-(--primary)/20"
               }`}
             />
           </button>
@@ -175,7 +175,7 @@ export function GestureList({
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
@@ -184,7 +184,7 @@ export function GestureList({
     return (
       <div className="flex h-full items-center justify-center p-6 text-center">
         <div>
-          <p className="font-semibold text-[var(--error)]">
+          <p className="font-semibold text-(--error)">
             {t("ui.gestureList.errorLoading")}
           </p>
           <p className="mt-2 text-muted-foreground text-sm">

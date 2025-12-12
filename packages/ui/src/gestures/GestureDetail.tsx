@@ -147,10 +147,10 @@ export function GestureDetail({
           >
             {t("ui.gestureDetail.relatedConcepts")}
           </h2>
-          <div className="flex flex-wrap ">
+          <div className="flex flex-wrap">
             {gesture.concept.map((c) => (
               <span
-                className="rounded-lg pr-3 py-1.5 text-sm"
+                className="rounded-lg py-1.5 pr-3 text-sm"
                 key={c}
                 style={{
                   backgroundColor: "var(--muted)",

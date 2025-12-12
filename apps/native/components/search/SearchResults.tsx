@@ -94,7 +94,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     <View style={[{ flex: 1 }, style]}>
       <FlashList
         data={uniqueResults}
-        estimatedItemSize={120}
         extraData={extraData}
         keyboardShouldPersistTaps="handled"
         keyExtractor={keyExtractor}

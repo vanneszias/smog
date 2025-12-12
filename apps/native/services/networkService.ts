@@ -118,7 +118,7 @@ class NetworkService {
 
   // Check if device is connected to internet
   isConnected(): boolean {
-    return (
+    return !!(
       this.networkState?.isConnected && this.networkState?.isInternetReachable
     );
   }

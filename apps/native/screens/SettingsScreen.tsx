@@ -287,7 +287,7 @@ const SettingsScreen = () => {
                   !!globalAlert?.alert &&
                   typeof globalAlert.alert === "function";
                 if (hasAlert) {
-                  globalAlert.alert("Tap 5 times to open Developer Tools");
+                  globalAlert?.alert?.("Tap 5 times to open Developer Tools");
                 }
               }
             };

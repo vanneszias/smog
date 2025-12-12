@@ -38,6 +38,10 @@ class ConvexService {
       paginationOpts: { numItems: 1000, cursor: null },
     });
 
+    if (!result) {
+      return [];
+    }
+
     // Resolve categories for all gestures
     const gesturesWithCategories = await Promise.all(
       result.page.map(async (doc) => {
@@ -67,6 +71,10 @@ class ConvexService {
 
     const categories = await this.client?.query(api.categories.list, {});
 
+    if (!categories) {
+      return [];
+    }
+
     return categories.map((doc) => ({
       id: doc._id,
       name: doc.name,
@@ -87,13 +95,18 @@ class ConvexService {
       ids: categoryIds,
     });
 
+    if (!categories) {
+      return [];
+    }
+
     return categories.map((cat) => cat.name);
   }
 
   async getLastUpdated(): Promise<number | null> {
     this.ensureInitialized();
 
-    return await this.client?.query(api.gestures.getLastUpdated, {});
+    const result = await this.client?.query(api.gestures.getLastUpdated, {});
+    return result ?? null;
   }
 
   async searchGestures(
@@ -106,6 +119,10 @@ class ConvexService {
       searchText,
       limit,
     });
+
+    if (!results) {
+      return [];
+    }
 
     // Resolve categories for all gestures
     const gesturesWithCategories = await Promise.all(

@@ -116,7 +116,7 @@ const CategoryListBottomSheet: React.FC<CategoryListBottomSheetProps> = ({
       <BottomSheetFlatList
         contentContainerStyle={styles.listContentContainer}
         data={categories}
-        keyExtractor={(item) => item}
+        keyExtractor={(item: string) => item}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
       />

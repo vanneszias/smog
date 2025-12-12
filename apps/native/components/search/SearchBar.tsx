@@ -55,7 +55,7 @@ const SearchBar = ({
   showCancelButton = false,
   onCancel,
   ref,
-}: SearchBarProps & { ref?: RefObject<TextInput | null> }) => {
+}: SearchBarProps & { ref?: React.Ref<TextInput> }) => {
   const { theme } = useTheme();
   const [internalQuery, setInternalQuery] = useState("");
   const searchQuery = value !== undefined ? value : internalQuery;

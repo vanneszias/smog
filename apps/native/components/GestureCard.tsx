@@ -42,7 +42,7 @@ const GestureCard = ({
   onToggleFavorite,
   source = "search_results",
   ref,
-}: GestureCardProps & { ref?: RefObject<GestureCardRef | null> }) => {
+}: GestureCardProps & { ref?: React.Ref<GestureCardRef> }) => {
   const { theme } = useTheme();
   const { showToast } = useToast();
   const { t } = useTranslation();

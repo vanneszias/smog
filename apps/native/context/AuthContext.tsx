@@ -241,11 +241,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         if (storedGuestId) {
           const migratedUserId = await migrateGuestToUser({
             guestId: storedGuestId,
-            workosId: user?.id,
+            workosId: user?.id || "",
           });
           setUserId(migratedUserId);
         } else {
-          const createdUserId = await createUser({ workosId: user?.id });
+          const createdUserId = await createUser({ workosId: user?.id || "" });
           setUserId(createdUserId);
         }
       }

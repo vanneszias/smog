@@ -1,5 +1,13 @@
-import type { GestureCardData } from "@smog/ui";
 import { useMemo, useState } from "react";
+
+export type GestureCardData = {
+  _id: string;
+  name: string;
+  playbackId: string;
+  concept: string[];
+  info: string;
+  categories: Array<{ _id: string; name: string } | undefined>;
+};
 
 export type UseGestureFilteringOptions = {
   gestures: GestureCardData[] | undefined;
@@ -44,7 +52,7 @@ export function useGestureFiltering({
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((gesture) => {
         const nameMatch = gesture.name.toLowerCase().includes(query);
-        const conceptMatch = gesture.concept.some((c) =>
+        const conceptMatch = gesture.concept.some((c: string) =>
           c.toLowerCase().includes(query)
         );
         const infoMatch = gesture.info.toLowerCase().includes(query);
@@ -54,8 +62,9 @@ export function useGestureFiltering({
 
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((gesture) =>
-        gesture.categories.some((cat) =>
-          selectedCategories.includes(cat?.name || "")
+        gesture.categories.some(
+          (cat: { _id: string; name: string } | undefined) =>
+            selectedCategories.includes(cat?.name || "")
         )
       );
     }

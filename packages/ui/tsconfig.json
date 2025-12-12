@@ -4,7 +4,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "composite": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM"]
   },
   "include": ["src/**/*"],
   "references": [
