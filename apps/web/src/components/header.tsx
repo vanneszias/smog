@@ -1,43 +1,125 @@
 import { Link } from "@tanstack/react-router";
-import { Heart } from "lucide-react";
+import { Heart, Home, Menu, Search } from "lucide-react";
+import { useState } from "react";
 import { useFavorites } from "@/lib/favorites-context";
+import Logo from "./Logo";
 import { ModeToggle } from "./mode-toggle";
 import UserMenu from "./user-menu";
 
 export default function Header() {
   const { favoriteIds } = useFavorites();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const links = [
-    { to: "/", label: "Home" },
-    { to: "/dashboard", label: "Dashboard" },
-    { to: "/gestures", label: "Gestures" },
+    { to: "/", label: "Home", icon: Home },
+    { to: "/gestures", label: "Browse", icon: Search },
   ] as const;
 
   return (
-    <div>
-      <div className="flex flex-row items-center justify-between px-2 py-1">
-        <nav className="flex gap-4 text-lg">
-          {links.map(({ to, label }) => (
-            <Link key={to} to={to}>
-              {label}
-            </Link>
-          ))}
-          <Link className="flex items-center gap-1.5" to="/favorites">
-            <Heart className="h-4 w-4" style={{ color: "var(--liked)" }} />
-            Favorites
-            {favoriteIds.length > 0 ? (
-              <span className="ml-1 rounded-full bg-[var(--liked)] px-2 py-0.5 font-medium text-white text-xs">
-                {favoriteIds.length}
-              </span>
-            ) : null}
+    <header className="sticky top-0 z-50 border-border border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto">
+        <div className="flex h-16 items-center justify-between px-4">
+          {/* Logo */}
+          <Link className="flex items-center" to="/">
+            <Logo height={40} width={120} />
           </Link>
-        </nav>
-        <div className="flex items-center gap-2">
-          <ModeToggle />
-          <UserMenu />
+
+          {/* Desktop Navigation */}
+          <nav className="hidden items-center gap-6 md:flex">
+            {links.map(({ to, label, icon: Icon }) => (
+              <Link
+                activeProps={{
+                  className: "font-semibold",
+                  style: { color: "var(--primary)" },
+                }}
+                className="flex items-center gap-2 text-foreground transition-colors hover:text-primary"
+                key={to}
+                to={to}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            ))}
+            <Link
+              activeProps={{
+                className: "font-semibold",
+                style: { color: "var(--liked)" },
+              }}
+              className="flex items-center gap-2 text-foreground transition-colors hover:text-primary"
+              to="/favorites"
+            >
+              <Heart className="h-4 w-4" />
+              Favorites
+              {favoriteIds.length > 0 && (
+                <span
+                  className="ml-1 flex h-5 w-5 items-center justify-center rounded-full font-medium text-white text-xs"
+                  style={{ backgroundColor: "var(--liked)" }}
+                >
+                  {favoriteIds.length}
+                </span>
+              )}
+            </Link>
+          </nav>
+
+          {/* Right Side Actions */}
+          <div className="flex items-center gap-2">
+            <ModeToggle />
+            <UserMenu />
+
+            {/* Mobile Menu Button */}
+            <button
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              type="button"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen ? (
+          <div className="border-border border-t md:hidden">
+            <nav className="flex flex-col gap-2 p-4">
+              {links.map(({ to, label, icon: Icon }) => (
+                <Link
+                  activeProps={{
+                    className: "font-semibold",
+                    style: { color: "var(--primary)" },
+                  }}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-foreground transition-colors hover:bg-muted"
+                  key={to}
+                  onClick={() => setMobileMenuOpen(false)}
+                  to={to}
+                >
+                  <Icon className="h-5 w-5" />
+                  {label}
+                </Link>
+              ))}
+              <Link
+                activeProps={{
+                  className: "font-semibold",
+                  style: { color: "var(--liked)" },
+                }}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-foreground transition-colors hover:bg-muted"
+                onClick={() => setMobileMenuOpen(false)}
+                to="/favorites"
+              >
+                <Heart className="h-5 w-5" />
+                Favorites
+                {favoriteIds.length > 0 && (
+                  <span
+                    className="ml-1 flex h-5 w-5 items-center justify-center rounded-full font-medium text-white text-xs"
+                    style={{ backgroundColor: "var(--liked)" }}
+                  >
+                    {favoriteIds.length}
+                  </span>
+                )}
+              </Link>
+            </nav>
+          </div>
+        ) : null}
       </div>
-      <hr />
-    </div>
+    </header>
   );
 }

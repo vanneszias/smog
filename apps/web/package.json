@@ -19,6 +19,7 @@
     "@orpc/tanstack-query": "^1.10.0",
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
+    "@smog/hooks": "workspace:*",
     "@smog/i18n": "workspace:*",
     "@smog/styles": "workspace:*",
     "@smog/types": "workspace:*",

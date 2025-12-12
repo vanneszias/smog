@@ -1,3 +1,6 @@
+// Common components
+export * from "./common";
+
 // Gesture components
 export * from "./gestures";
 

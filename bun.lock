@@ -122,6 +122,7 @@
         "@orpc/tanstack-query": "^1.10.0",
         "@smog/api": "workspace:*",
         "@smog/auth": "workspace:*",
+        "@smog/hooks": "workspace:*",
         "@smog/i18n": "workspace:*",
         "@smog/styles": "workspace:*",
         "@smog/types": "workspace:*",
@@ -205,6 +206,21 @@
       "devDependencies": {
         "@smog/config": "workspace:*",
         "typescript": "^5.8.2",
+      },
+    },
+    "packages/hooks": {
+      "name": "@smog/hooks",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@smog/config": "workspace:*",
+        "@smog/types": "workspace:*",
+        "@tanstack/react-query": "^5.85.5",
+        "@types/react": "~19.1.10",
+        "typescript": "^5.8.2",
+      },
+      "peerDependencies": {
+        "@tanstack/react-query": "^5.85.5",
+        "react": "19.1.0",
       },
     },
     "packages/i18n": {
@@ -1065,6 +1081,8 @@
     "@smog/config": ["@smog/config@workspace:packages/config"],
 
     "@smog/convex": ["@smog/convex@workspace:packages/convex"],
+
+    "@smog/hooks": ["@smog/hooks@workspace:packages/hooks"],
 
     "@smog/i18n": ["@smog/i18n@workspace:packages/i18n"],
 

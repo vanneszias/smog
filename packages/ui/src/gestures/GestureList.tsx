@@ -195,7 +195,7 @@ export function GestureList({
   }
 
   return (
-    <div className="relative w-full">
+    <div className="relative h-full w-full overflow-auto">
       <table className="w-full caption-bottom text-sm">
         <GestureTableHeader
           onSort={onSort}

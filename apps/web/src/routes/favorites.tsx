@@ -67,8 +67,8 @@ function FavoritesComponent() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
-      <div className="border-b bg-background px-6 py-4">
+    <div className="flex h-full max-h-full flex-col overflow-hidden">
+      <div className="shrink-0 border-b bg-background px-6 py-4">
         <div className="flex items-center gap-3">
           <Heart className="h-6 w-6" style={{ color: "var(--liked)" }} />
           <h1 className="font-bold text-2xl" style={{ color: "var(--text)" }}>
@@ -82,7 +82,7 @@ function FavoritesComponent() {
         </p>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="min-h-0 flex-1">
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent" />
