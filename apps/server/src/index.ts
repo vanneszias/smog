@@ -9,6 +9,11 @@ import { appRouter } from "@smog/api/routers/index";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { startExpirationCronJob } from "./cron";
+import { handleMollieWebhook } from "./webhooks/mollie";
+
+// Start cron jobs
+startExpirationCronJob();
 
 const app = new Hono();
 
@@ -101,6 +106,9 @@ app.post("/auth/workos/callback", async (c) => {
     return c.json({ error: `Authentication failed: ${errorMessage}` }, 500);
   }
 });
+
+// Mollie webhook endpoint
+app.post("/webhooks/mollie", handleMollieWebhook);
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
   plugins: [

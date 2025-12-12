@@ -11,6 +11,7 @@
 import type * as categories from "../categories.js";
 import type * as favorites from "../favorites.js";
 import type * as gestures from "../gestures.js";
+import type * as sponsorships from "../sponsorships.js";
 import type * as users from "../users.js";
 
 import type {
@@ -23,6 +24,7 @@ declare const fullApi: ApiFromModules<{
   categories: typeof categories;
   favorites: typeof favorites;
   gestures: typeof gestures;
+  sponsorships: typeof sponsorships;
   users: typeof users;
 }>;
 

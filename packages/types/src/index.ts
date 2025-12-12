@@ -77,3 +77,45 @@ export type SearchFilters = {
   categories?: string[];
   query?: string;
 };
+
+// Sponsorship types
+export type SponsorshipStatus = "pending" | "active" | "expired" | "cancelled";
+
+export type Sponsorship = {
+  id: string;
+  gestureId: string;
+  sponsorName: string;
+  sponsorEmail: string;
+  overlayImageStorageId: string;
+  overlayText: string;
+  sponsoredVideoPlaybackId?: string;
+  originalVideoPlaybackId: string;
+  sponsoredVideoStorageId?: string;
+  startDate: number;
+  endDate: number;
+  durationWeeks: number;
+  status: SponsorshipStatus;
+  molliePaymentId?: string;
+  paymentAmount: number;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type GestureWithSponsorship = Gesture & {
+  sponsorship: Sponsorship | null;
+};
+
+export type CreateSponsorshipInput = {
+  gestureId: string;
+  sponsorName: string;
+  sponsorEmail: string;
+  overlayImageFile: File;
+  overlayText: string;
+  durationWeeks: number;
+};
+
+export type SponsorshipPricing = {
+  pricePerWeekCents: number;
+  weeks: number;
+  totalCents: number;
+};

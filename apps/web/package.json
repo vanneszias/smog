@@ -11,6 +11,8 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@hookform/resolvers": "^5.1.1",
     "@libsql/client": "catalog:",
     "@mux/mux-player-react": "^3.10.1",

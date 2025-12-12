@@ -42,4 +42,28 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_gesture", ["gestureId"])
     .index("by_user_gesture", ["userId", "gestureId"]),
+
+  sponsorships: defineTable({
+    gestureId: v.id("gestures"),
+    sponsorName: v.string(),
+    sponsorEmail: v.string(),
+    overlayImageStorageId: v.id("_storage"),
+    overlayText: v.string(),
+    sponsoredVideoPlaybackId: v.optional(v.string()),
+    originalVideoPlaybackId: v.string(),
+    sponsoredVideoStorageId: v.optional(v.id("_storage")),
+    startDate: v.number(),
+    endDate: v.number(),
+    durationWeeks: v.number(),
+    status: v.string(),
+    molliePaymentId: v.optional(v.string()),
+    paymentAmount: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_gesture", ["gestureId"])
+    .index("by_status", ["status"])
+    .index("by_gesture_and_status", ["gestureId", "status"])
+    .index("by_end_date", ["endDate"])
+    .index("by_payment_id", ["molliePaymentId"]),
 });

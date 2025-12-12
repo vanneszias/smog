@@ -10,19 +10,24 @@
     "start": "bun run dist/index.js"
   },
   "dependencies": {
+    "@mux/mux-node": "^12.8.1",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
+    "@smog/convex": "workspace:*",
+    "convex": "^1.31.0",
     "dotenv": "catalog:",
     "hono": "catalog:",
+    "node-cron": "^4.2.1",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "typescript": "^5.8.2",
+    "@smog/config": "workspace:*",
     "@types/bun": "^1.2.6",
+    "@types/node-cron": "^3.0.11",
     "tsdown": "^0.16.5",
-    "@smog/config": "workspace:*"
+    "typescript": "^5.8.2"
   }
 }
