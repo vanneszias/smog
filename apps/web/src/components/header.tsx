@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Heart, Home, Menu, Search } from "lucide-react";
+import { Heart, Home, Menu, Search, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useFavorites } from "@/lib/favorites-context";
@@ -16,6 +16,7 @@ export default function Header() {
   const links = [
     { to: "/", label: t("web.navigation.home"), icon: Home },
     { to: "/gestures", label: t("web.navigation.browse"), icon: Search },
+    { to: "/sponsors", label: "Sponsors", icon: Sparkles },
   ] as const;
 
   return (

@@ -11,8 +11,6 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@ffmpeg/ffmpeg": "^0.12.15",
-    "@ffmpeg/util": "^0.12.2",
     "@hookform/resolvers": "^5.1.1",
     "@libsql/client": "catalog:",
     "@mux/mux-player-react": "^3.10.1",
@@ -21,6 +19,7 @@
     "@orpc/tanstack-query": "^1.10.0",
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
+    "@smog/convex": "workspace:*",
     "@smog/hooks": "workspace:*",
     "@smog/i18n": "workspace:*",
     "@smog/styles": "workspace:*",
@@ -33,6 +32,7 @@
     "@tanstack/react-router": "^1.114.25",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "convex": "^1.31.0",
     "i18next": "^25.7.2",
     "libsql": "catalog:",
     "lucide-react": "^0.473.0",
