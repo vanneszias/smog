@@ -35,7 +35,7 @@ export function GestureDetail({
       <div className="mb-6 flex items-center justify-between">
         {onBack ? (
           <button
-            className="inline-flex items-center gap-2 font-medium text-[var(--primary)] transition-colors hover:text-[var(--primary)]/80"
+            className="inline-flex items-center gap-2 font-medium text-primary transition-colors hover:text-primary/80 hover:cursor-pointer"
             onClick={handleBackClick}
             type="button"
           >
@@ -54,7 +54,7 @@ export function GestureDetail({
               className={`h-5 w-5 transition-all ${
                 isFavorite
                   ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
-                  : "fill-none stroke-[var(--primary)]"
+                  : "fill-none stroke-primary"
               }`}
             />
             {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
@@ -90,12 +90,14 @@ export function GestureDetail({
       {/* Video Player */}
       <div
         className="mb-8 overflow-hidden rounded-xl border border-border"
-        style={{ backgroundColor: "var(--card)" }}
+        style={{ backgroundColor: "var(--card)",
+          aspectRatio: "3/4" }}
       >
         <MuxPlayer
           accentColor="var(--primary)"
           playbackId={gesture.playbackId}
           streamType="on-demand"
+          style={{ width: "100%", height: "100%", aspectRatio:"3/4" }}
         />
       </div>
 

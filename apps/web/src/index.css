@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Scan the UI package for Tailwind classes */
+@source "../../../packages/ui/src";
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
