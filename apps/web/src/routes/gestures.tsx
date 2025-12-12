@@ -228,14 +228,6 @@ function GesturesComponent() {
             setSearchQuery={setSearchQuery}
           />
 
-          <div className="border-b bg-muted/30 px-4 py-2 text-muted-foreground text-sm">
-            {gesturesQuery.isFetchingNextPage
-              ? `Loading... (${allGestures.length} loaded so far)`
-              : filteredGestures.length > 0
-                ? `${filteredGestures.length} gesture${filteredGestures.length !== 1 ? "s" : ""}`
-                : "No gestures"}
-          </div>
-
           <div className="flex-1 overflow-auto">
             <GestureList
               error={gesturesQuery.error}

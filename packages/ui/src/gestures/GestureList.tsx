@@ -1,5 +1,4 @@
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -94,7 +93,7 @@ function GestureTableHeader({
     : "";
 
   return (
-    <TableHeader className="sticky top-0 bg-background">
+    <TableHeader className="sticky top-0 z-10 bg-background">
       <TableRow>
         <TableHead className={sortableClass} onClick={handleNameSort}>
           <div className="flex items-center gap-1">
@@ -168,22 +167,24 @@ export function GestureList({
   }
 
   return (
-    <Table>
-      <GestureTableHeader
-        onSort={onSort}
-        sortColumn={sortColumn}
-        sortDirection={sortDirection}
-      />
-      <TableBody>
-        {gestures.map((gesture) => (
-          <GestureTableRow
-            gesture={gesture}
-            isSelected={selectedGestureId === gesture._id}
-            key={gesture._id}
-            onClick={() => onSelectGesture(gesture._id)}
-          />
-        ))}
-      </TableBody>
-    </Table>
+    <div className="relative w-full">
+      <table className="w-full caption-bottom text-sm">
+        <GestureTableHeader
+          onSort={onSort}
+          sortColumn={sortColumn}
+          sortDirection={sortDirection}
+        />
+        <TableBody>
+          {gestures.map((gesture) => (
+            <GestureTableRow
+              gesture={gesture}
+              isSelected={selectedGestureId === gesture._id}
+              key={gesture._id}
+              onClick={() => onSelectGesture(gesture._id)}
+            />
+          ))}
+        </TableBody>
+      </table>
+    </div>
   );
 }
