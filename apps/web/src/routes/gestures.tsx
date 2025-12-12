@@ -79,16 +79,6 @@ function GesturesComponent() {
 
   return (
     <div className="flex h-full max-h-full flex-col overflow-hidden">
-      {/* Header Section */}
-      <div className="shrink-0 border-border border-b bg-background px-6 py-4">
-        <h1 className="font-bold text-2xl" style={{ color: "var(--text)" }}>
-          Gestures Library
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Browse and learn sign language gestures
-        </p>
-      </div>
-
       {/* Search and Filter Section */}
       <GestureFilters
         allCategories={allCategories}
@@ -106,7 +96,7 @@ function GesturesComponent() {
       <div className="min-h-0 flex-1">
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent" />
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
         ) : filteredGestures.length === 0 ? (
           <EmptyState

@@ -60,16 +60,6 @@ function GesturesComponent() {
 
   return (
     <div className="flex h-full max-h-full flex-col overflow-hidden">
-      {/* Header */}
-      <div className="shrink-0 border-border border-b bg-background px-6 py-4">
-        <h1 className="font-bold text-2xl" style={{ color: "var(--text)" }}>
-          Gestures Library
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Browse and learn sign language gestures
-        </p>
-      </div>
-
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* List Panel - hidden on mobile when gesture is selected */}
         <div
