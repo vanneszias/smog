@@ -15,7 +15,8 @@ export default defineConfig({
     /^ioredis/,
     /^uuid/,
     /^prom-client/,
-    /^@mux\/node/,
+    /^@mux\/mux-node/,
+    /^fluent-ffmpeg/,
   ],
-  // Keep fluent-ffmpeg and sharp external as they have native dependencies
+  // Keep sharp external as it has native dependencies
 });

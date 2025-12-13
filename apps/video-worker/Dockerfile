@@ -74,8 +74,12 @@ COPY --from=builder /app/apps/video-worker/dist ./dist
 COPY --from=builder /app/apps/video-worker/package.json ./package.json
 
 # Only copy production node_modules for external dependencies
-# that aren't bundled (like native modules: sharp, fluent-ffmpeg)
+# that aren't bundled (like native modules: sharp)
 COPY --from=deps /app/node_modules ./node_modules
+
+# Create symlinks for workspace-specific dependencies that don't have root-level symlinks
+# Sharp is kept external because it has native bindings
+RUN ln -sf .bun/sharp@0.34.5/node_modules/sharp node_modules/sharp
 
 # Create temp directory for video processing
 RUN mkdir -p /tmp/video-processing && \
