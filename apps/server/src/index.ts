@@ -9,15 +9,53 @@ import { appRouter } from "@smog/api/routers/index";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import {
+  Counter,
+  collectDefaultMetrics,
+  Histogram,
+  register,
+} from "prom-client";
 import { startExpirationCronJob } from "./cron";
 import { handleMollieWebhook } from "./webhooks/mollie";
 
 // Start cron jobs
 startExpirationCronJob();
 
+// Initialize Prometheus metrics
+collectDefaultMetrics({ register });
+
+// Custom metrics
+const httpRequestDuration = new Histogram({
+  name: "http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route", "status_code"],
+  registers: [register],
+});
+
+const httpRequestTotal = new Counter({
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status_code"],
+  registers: [register],
+});
+
 const app = new Hono();
 
 app.use(logger());
+
+// Metrics middleware
+app.use("*", async (c, next) => {
+  const start = Date.now();
+  await next();
+  const duration = (Date.now() - start) / 1000;
+  const route = c.req.path;
+  const method = c.req.method;
+  const status = c.res.status;
+
+  httpRequestDuration.observe({ method, route, status_code: status }, duration);
+  httpRequestTotal.inc({ method, route, status_code: status });
+});
+
 app.use(
   "/*",
   cors({
@@ -156,5 +194,11 @@ app.use("/*", async (c, next) => {
 });
 
 app.get("/", (c) => c.text("OK"));
+
+// Prometheus metrics endpoint
+app.get("/metrics", async (c) => {
+  c.header("Content-Type", register.contentType);
+  return c.text(await register.metrics());
+});
 
 export default app;

@@ -5,5 +5,15 @@ export default defineConfig({
   format: "esm",
   outDir: "./dist",
   clean: true,
-  noExternal: [/@smog\/.*/],
+  noExternal: [
+    /@smog\/.*/,
+    /@orpc\/.*/,
+    /@mux\/.*/,
+    /^hono/,
+    /^zod/,
+    /^dotenv/,
+    /^convex/,
+    /^node-cron/,
+    /^prom-client/,
+  ],
 });

@@ -33,9 +33,9 @@ const CONVEX_USER_ID_KEY = "smog_web_convex_user_id";
 
 // WorkOS OAuth configuration
 const WORKOS_CLIENT_ID = import.meta.env.VITE_WORKOS_CLIENT_ID || "";
-const WORKOS_REDIRECT_URI = import.meta.env.VITE_WORKOS_REDIRECT_URI
-  ? `${window.location.origin}${import.meta.env.VITE_WORKOS_REDIRECT_URI}`
-  : `${window.location.origin}/auth/callback`;
+const WORKOS_REDIRECT_URI =
+  import.meta.env.VITE_WORKOS_REDIRECT_URI ||
+  `${window.location.origin}/auth/callback`;
 const WORKOS_AUTH_URL = "https://api.workos.com/user_management/authorize";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

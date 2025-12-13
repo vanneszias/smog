@@ -1,0 +1,25 @@
+http://smog.zias.be {
+    root * /srv
+    encode gzip
+
+    handle_path /api* {
+        reverse_proxy server:3000
+    }
+    handle /rpc/* {
+        reverse_proxy server:3000
+    }
+    handle /auth/workos/* {
+        reverse_proxy server:3000
+    }
+    handle /webhooks/* {
+        reverse_proxy server:3000
+    }
+    handle /health {
+        respond "OK" 200
+    }
+
+    handle {
+        try_files {path} /index.html
+        file_server
+    }
+}

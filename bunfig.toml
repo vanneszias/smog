@@ -1,2 +1,5 @@
 [install]
+# Use hardlink linker for better performance in Docker/CI environments
+# This creates hard links instead of isolated copies, significantly faster
+# Falls back to 'isolated' if hard links aren't supported
 linker = "isolated"

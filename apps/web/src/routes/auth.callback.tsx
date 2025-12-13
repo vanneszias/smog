@@ -9,9 +9,9 @@ export const Route = createFileRoute("/auth/callback")({
 });
 
 async function exchangeCodeForUser(code: string) {
-  const redirectUri = import.meta.env.VITE_WORKOS_REDIRECT_URI
-    ? `${window.location.origin}${import.meta.env.VITE_WORKOS_REDIRECT_URI}`
-    : `${window.location.origin}/auth/callback`;
+  const redirectUri =
+    import.meta.env.VITE_WORKOS_REDIRECT_URI ||
+    `${window.location.origin}/auth/callback`;
 
   console.log("[Auth Callback] Redirect URI:", redirectUri);
   console.log("[Auth Callback] Server URL:", import.meta.env.VITE_SERVER_URL);

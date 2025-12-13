@@ -53,14 +53,16 @@ function GestureCard({
         </h3>
 
         {/* Status */}
-        {isSponsored && endDate ? (
-          <div
-            className="mb-4 flex items-center text-sm"
-            style={{ color: "var(--text-light)" }}
-          >
-            <Clock className="mr-1 h-4 w-4" />
-            Sponsored until {endDate.toLocaleDateString()}
-          </div>
+        {isSponsored ? (
+          endDate !== null ? (
+            <div
+              className="mb-4 flex items-center text-sm"
+              style={{ color: "var(--text-light)" }}
+            >
+              <Clock className="mr-1 h-4 w-4" />
+              Sponsored until {endDate.toLocaleDateString()}
+            </div>
+          ) : null
         ) : (
           <div className="mb-4 text-sm" style={{ color: "var(--accent)" }}>
             Available for sponsorship

@@ -89,14 +89,16 @@ bun run dev
 
 ```bash
 # Build and start all services
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f server
+docker compose logs -f server
 
 # Stop services
-docker-compose down
+docker compose down
 ```
+
+**Note:** The Dockerfile builds from the monorepo root to include all workspace dependencies.
 
 ### Manual Docker Build
 

@@ -1,0 +1,252 @@
+# Enable BuildKit for faster builds with cache mounts
+# BuildKit provides better caching, parallelization, and performance
+x-buildkit: &buildkit
+  DOCKER_BUILDKIT: 1
+  BUILDKIT_PROGRESS: plain
+
+# Docker Compose configuration for Smog
+#
+# IMPORTANT: This configuration requires Docker BuildKit for optimized builds
+# Enable it by setting: export DOCKER_BUILDKIT=1
+# Or use: docker compose build --build-arg BUILDKIT_INLINE_CACHE=1
+#
+# BuildKit provides:
+# - Faster builds with cache mounts (10-20x faster subsequent builds)
+# - Better layer caching and parallelization
+# - Progress output with --progress=plain
+#
+# To build with BuildKit: DOCKER_BUILDKIT=1 docker compose build
+# To run: docker compose up --build
+
+services:
+  # Web application with Caddy reverse proxy
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: production
+      args:
+        - VITE_SERVER_URL=${VITE_SERVER_URL:-http://localhost:3000}
+        - VITE_WORKOS_CLIENT_ID=${VITE_WORKOS_CLIENT_ID}
+        - VITE_WORKOS_REDIRECT_URI=${VITE_WORKOS_REDIRECT_URI:-http://localhost/auth/callback}
+        - VITE_CONVEX_URL=${VITE_CONVEX_URL}
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - server
+      - video-worker
+    networks:
+      - app-network
+    restart: unless-stopped
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # API Server
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - WORKOS_CLIENT_ID=${WORKOS_CLIENT_ID}
+      - WORKOS_CLIENT_SECRET=${WORKOS_CLIENT_SECRET}
+      - MOLLIE_API_KEY=${MOLLIE_API_KEY}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost}
+      - CONVEX_URL=${CONVEX_URL}
+      - MUX_TOKEN_ID=${MUX_TOKEN_ID}
+      - MUX_TOKEN_SECRET=${MUX_TOKEN_SECRET}
+      - VIDEO_SERVICE_URL=http://video-worker:3002
+      - REDIS_HOST=redis-session
+      - REDIS_PORT=6379
+    depends_on:
+      redis-session:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Video Worker Service with FFmpeg
+  video-worker:
+    build:
+      context: .
+      dockerfile: apps/video-worker/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - CONVEX_URL=${CONVEX_URL}
+      - MUX_TOKEN_ID=${MUX_TOKEN_ID}
+      - MUX_TOKEN_SECRET=${MUX_TOKEN_SECRET}
+      - REDIS_HOST=redis-queue
+      - REDIS_PORT=6379
+      - VIDEO_COMPOSITION_CONCURRENCY=${VIDEO_COMPOSITION_CONCURRENCY:-2}
+    depends_on:
+      redis-queue:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+    volumes:
+      - video-temp:/tmp/video-processing
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+  # Redis for session storage
+  redis-session:
+    image: redis:7-alpine
+    volumes:
+      - redis-session-data:/data
+    networks:
+      - app-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for video job queue
+  redis-queue:
+    image: redis:7-alpine
+    volumes:
+      - redis-queue-data:/data
+    networks:
+      - app-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy noeviction
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prometheus for metrics collection
+  # Exposed on localhost only - accessible from server only
+  # Access: http://localhost:9091 (on server)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "127.0.0.1:9091:9090"  # Bind to localhost only for security
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.external-url=http://localhost:9091/"
+      - "--web.route-prefix=/"
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Grafana for metrics visualization
+  # Exposed on localhost only - accessible from server only
+  # Access: http://localhost:3001 (on server)
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "127.0.0.1:3001:3000"  # Bind to localhost only for security
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      # SECURITY WARNING: Change GRAFANA_ADMIN_PASSWORD in .env file!
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=false
+      # Additional security settings
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_AUTH_BASIC_ENABLED=true
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_SNAPSHOTS_EXTERNAL_ENABLED=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - app-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # Node Exporter for system metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Redis Exporter for Redis metrics
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    environment:
+      - REDIS_ADDR=redis://redis-session:6379,redis://redis-queue:6379
+    networks:
+      - app-network
+    restart: unless-stopped
+    depends_on:
+      - redis-session
+      - redis-queue
+
+  # Convex Backend (Optional - Self-hosted)
+  # Uncomment to use self-hosted Convex instead of cloud
+  # convex:
+  #   image: convex/convex-backend:latest
+  #   ports:
+  #     - "3210:3210"
+  #   environment:
+  #     - CONVEX_SITE_URL=${CONVEX_SITE_URL:-http://localhost:3210}
+  #   volumes:
+  #     - convex-data:/var/convex
+  #   networks:
+  #     - app-network
+  #   restart: unless-stopped
+
+volumes:
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
+  redis-session-data:
+    driver: local
+  redis-queue-data:
+    driver: local
+  video-temp:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  # convex-data:
+  #   driver: local
+
+networks:
+  app-network:
+    driver: bridge

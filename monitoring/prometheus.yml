@@ -1,0 +1,61 @@
+# Prometheus configuration for monitoring the Smog application
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: "smog-monitoring"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Node Exporter for system metrics
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          service: "system"
+
+  # Redis Exporter for Redis metrics
+  - job_name: "redis-exporter"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+        labels:
+          service: "redis"
+
+  # API Server (if metrics endpoint is added)
+  - job_name: "api-server"
+    static_configs:
+      - targets: ["server:3000"]
+        labels:
+          service: "api"
+    metrics_path: "/metrics"
+
+  # Video Worker (if metrics endpoint is added)
+  - job_name: "video-worker"
+    static_configs:
+      - targets: ["video-worker:3002"]
+        labels:
+          service: "video-worker"
+    metrics_path: "/metrics"
+
+  # Caddy (if metrics are exposed)
+  - job_name: "caddy"
+    static_configs:
+      - targets: ["web:2019"]
+        labels:
+          service: "web"
+    metrics_path: "/metrics"
+
+# Alerting rules (optional - can be expanded)
+rule_files:
+  # - "alerts/*.yml"
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
