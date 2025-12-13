@@ -9,7 +9,7 @@ export const create = mutation({
     sponsorEmail: v.string(),
     overlayImageStorageId: v.string(),
     overlayText: v.string(),
-    sponsoredVideoStorageId: v.string(),
+    sponsoredVideoPlaybackId: v.string(), // Mux playback ID
     durationWeeks: v.number(),
     paymentAmount: v.number(),
   },
@@ -44,7 +44,7 @@ export const create = mutation({
       sponsorEmail: args.sponsorEmail,
       overlayImageStorageId: args.overlayImageStorageId,
       overlayText: args.overlayText,
-      sponsoredVideoStorageId: args.sponsoredVideoStorageId,
+      sponsoredVideoPlaybackId: args.sponsoredVideoPlaybackId,
       originalVideoPlaybackId: gesture.playbackId,
       startDate: 0, // Set after payment
       endDate,

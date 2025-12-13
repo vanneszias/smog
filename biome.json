@@ -23,14 +23,9 @@
       "!**/_generated"
     ]
   },
-  "extends": [
-    "ultracite/core",
-    "ultracite/react"
-  ],
+  "extends": ["ultracite/core", "ultracite/react"],
   "javascript": {
-    "globals": [
-      "__DEV__"
-    ]
+    "globals": ["__DEV__"]
   },
   "linter": {
     "rules": {

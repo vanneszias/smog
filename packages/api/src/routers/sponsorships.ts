@@ -8,46 +8,57 @@ import { publicProcedure } from "../index";
 // Initialize Convex client for server-side operations
 const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 
+// Get video worker URL from environment
+const VIDEO_WORKER_URL =
+  process.env.VIDEO_WORKER_URL || "http://localhost:3002";
+
 export const sponsorshipsRouter = {
   /**
-   * Start video composition job using external service
-   *
-   * TODO: Implement this to call your external video service
-   * Your service should:
-   * 1. Download original video from Mux using playbackId
-   * 2. Compose video with overlay image and text
-   * 3. Upload composed video to Mux
-   * 4. Return new Mux playback ID
+   * Start video composition job using video-worker service
    */
   composeVideo: publicProcedure
     .input(
       z.object({
         playbackId: z.string(),
-        overlayImageUrl: z.string(), // Base64 data URL or blob URL from client
+        overlayImageUrl: z.string(), // Convex storage URL or base64 data URL
         overlayText: z.string().max(100),
       })
     )
-    .handler(async () => {
+    .handler(async ({ input }) => {
       try {
         console.log("[SponsorshipsRouter] Starting video composition...");
+        console.log("[SponsorshipsRouter] Video worker URL:", VIDEO_WORKER_URL);
 
-        // TODO: Call your external video service here
-        // const result = await fetch('http://localhost:3002/api/compose', {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify({
-        //     playbackId: input.playbackId,
-        //     overlayImageUrl: input.overlayImageUrl,
-        //     overlayText: input.overlayText
-        //   })
-        // });
+        // Call video-worker service
+        const response = await fetch(`${VIDEO_WORKER_URL}/api/compose`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            playbackId: input.playbackId,
+            overlayImageUrl: input.overlayImageUrl,
+            overlayText: input.overlayText,
+          }),
+        });
 
-        // For now, return a placeholder job ID
-        const jobId = `job-${Date.now()}`;
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`Video worker returned ${response.status}: ${error}`);
+        }
+
+        const result = (await response.json()) as {
+          success: boolean;
+          jobId: string;
+          message: string;
+        };
+
+        console.log(
+          "[SponsorshipsRouter] Video composition job started:",
+          result.jobId
+        );
 
         return {
-          success: true,
-          jobId,
+          success: result.success,
+          jobId: result.jobId,
         };
       } catch (error) {
         console.error("[SponsorshipsRouter] Compose video error:", error);
@@ -58,9 +69,7 @@ export const sponsorshipsRouter = {
     }),
 
   /**
-   * Get status of video composition job from external service
-   *
-   * TODO: Implement this to poll your external video service
+   * Get status of video composition job from video-worker service
    */
   getCompositionStatus: publicProcedure
     .input(
@@ -72,17 +81,31 @@ export const sponsorshipsRouter = {
       try {
         console.log("[SponsorshipsRouter] Checking job status:", input.jobId);
 
-        // TODO: Poll your external video service here
-        // const response = await fetch(`http://localhost:3002/api/compose/status/${input.jobId}`);
-        // const status = await response.json();
-        // return status;
+        // Poll video-worker service
+        const response = await fetch(
+          `${VIDEO_WORKER_URL}/api/compose/status/${input.jobId}`
+        );
 
-        // For now, return placeholder status
-        return {
-          state: "waiting" as const,
-          progress: 0,
-          result: undefined,
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`Video worker returned ${response.status}: ${error}`);
+        }
+
+        const status = (await response.json()) as {
+          jobId: string;
+          state: string;
+          progress: number;
+          result?: {
+            success: boolean;
+            composedVideoPlaybackId?: string;
+          };
         };
+
+        console.log(
+          `[SponsorshipsRouter] Job ${input.jobId} status: ${status.state} (${status.progress}%)`
+        );
+
+        return status;
       } catch (error) {
         console.error("[SponsorshipsRouter] Get status error:", error);
         throw new Error(

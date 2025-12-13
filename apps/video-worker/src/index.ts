@@ -9,7 +9,7 @@ import {
   Histogram,
   register,
 } from "prom-client";
-import { initQueue } from "./queue";
+import { initQueue, videoQueue } from "./queue";
 
 const app = new Hono();
 
@@ -99,12 +99,18 @@ app.post("/api/compose", async (c) => {
       );
     }
 
-    // TODO: Add job to queue
-    const jobId = `job-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Add job to queue
+    const job = await videoQueue.add("compose-video", {
+      playbackId,
+      overlayImageUrl,
+      overlayText,
+    });
+
+    console.log(`[Video Worker] Job ${job.id} added to queue`);
 
     return c.json({
       success: true,
-      jobId,
+      jobId: job.id,
       message: "Video composition job queued",
     });
   } catch (error) {
@@ -127,12 +133,22 @@ app.get("/api/compose/status/:jobId", async (c) => {
       return c.json({ error: "Job ID is required" }, 400);
     }
 
-    // TODO: Get job status from queue
+    // Get job from queue
+    const job = await videoQueue.getJob(jobId);
+
+    if (!job) {
+      return c.json({ error: "Job not found" }, 404);
+    }
+
+    const state = await job.getState();
+    const progress = job.progress || 0;
+    const returnValue = job.returnvalue;
+
     return c.json({
-      jobId,
-      state: "waiting",
-      progress: 0,
-      result: undefined,
+      jobId: job.id,
+      state,
+      progress,
+      result: returnValue,
     });
   } catch (error) {
     console.error("[Video Worker] Status check error:", error);
@@ -148,13 +164,28 @@ app.get("/api/compose/status/:jobId", async (c) => {
 
 // Queue metrics endpoint
 app.get("/api/queue/metrics", async (c) => {
-  // TODO: Get queue metrics
-  return c.json({
-    waiting: 0,
-    active: 0,
-    completed: 0,
-    failed: 0,
-  });
+  try {
+    const waiting = await videoQueue.getWaitingCount();
+    const active = await videoQueue.getActiveCount();
+    const completed = await videoQueue.getCompletedCount();
+    const failed = await videoQueue.getFailedCount();
+
+    return c.json({
+      waiting,
+      active,
+      completed,
+      failed,
+    });
+  } catch (error) {
+    console.error("[Video Worker] Metrics error:", error);
+    return c.json(
+      {
+        error: "Failed to get queue metrics",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      500
+    );
+  }
 });
 
 // Prometheus metrics endpoint

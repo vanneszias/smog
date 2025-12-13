@@ -51,7 +51,6 @@ export default defineSchema({
     overlayText: v.string(),
     sponsoredVideoPlaybackId: v.optional(v.string()),
     originalVideoPlaybackId: v.string(),
-    sponsoredVideoStorageId: v.optional(v.string()),
     startDate: v.number(),
     endDate: v.number(),
     durationWeeks: v.number(),

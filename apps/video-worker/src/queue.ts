@@ -1,6 +1,7 @@
 import type { Job } from "bullmq";
 import { Queue, Worker } from "bullmq";
 import Redis from "ioredis";
+import { processVideoComposition, type VideoCompositionJob } from "./processor";
 
 // Redis connection
 const redisConnection = new Redis({
@@ -31,35 +32,28 @@ export const videoQueue = new Queue("video-composition", {
   },
 });
 
-// Job processor (placeholder)
-const processVideoComposition = async (job: Job) => {
+// Job processor
+const processVideoCompositionJob = async (job: Job) => {
   console.log(`[Video Worker] Processing job ${job.id}`, job.data);
 
-  const { playbackId } = job.data;
+  const jobData: VideoCompositionJob = job.data;
 
-  // Update progress
-  await job.updateProgress(10);
+  // Process the video with progress updates
+  const result = await processVideoComposition(jobData, (progress) => {
+    job.updateProgress(progress);
+  });
 
-  // TODO: Implement video composition
-  // 1. Download video from Mux using playbackId
-  await job.updateProgress(30);
+  if (!result.success) {
+    throw new Error(result.error || "Video composition failed");
+  }
 
-  // 2. Process overlay image
-  await job.updateProgress(50);
-
-  // 3. Compose video with FFmpeg
-  await job.updateProgress(70);
-
-  // 4. Upload to Convex storage
-  await job.updateProgress(90);
-
-  // 5. Return result
-  await job.updateProgress(100);
+  console.log(
+    `[Video Worker] Job ${job.id} completed successfully. New playback ID: ${result.composedVideoPlaybackId}`
+  );
 
   return {
     success: true,
-    composedVideoUrl: "https://placeholder.convex.dev/composed-video.mp4",
-    playbackId,
+    composedVideoPlaybackId: result.composedVideoPlaybackId,
   };
 };
 
@@ -69,7 +63,7 @@ let worker: Worker | null = null;
 export const initQueue = () => {
   const concurrency = Number(process.env.VIDEO_COMPOSITION_CONCURRENCY) || 2;
 
-  worker = new Worker("video-composition", processVideoComposition, {
+  worker = new Worker("video-composition", processVideoCompositionJob, {
     connection: redisConnection,
     concurrency,
     limiter: {

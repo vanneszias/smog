@@ -1,9 +1,16 @@
-// Placeholder for video processing logic
-// This will contain the FFmpeg video composition implementation
-
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import Mux from "@mux/mux-node";
+import type { FfmpegCommand } from "fluent-ffmpeg";
+import ffmpeg from "fluent-ffmpeg";
+import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
+
+// Initialize Mux client
+const mux = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID!,
+  tokenSecret: process.env.MUX_TOKEN_SECRET!,
+});
 
 export type VideoCompositionJob = {
   playbackId: string;
@@ -13,29 +20,34 @@ export type VideoCompositionJob = {
 
 export type VideoCompositionResult = {
   success: boolean;
-  composedVideoUrl?: string;
+  composedVideoPlaybackId?: string;
   error?: string;
 };
+
+export type ProgressCallback = (progress: number) => void;
 
 /**
  * Process video composition with FFmpeg
  *
- * TODO: Implement the following steps:
+ * Steps:
  * 1. Download original video from Mux
- * 2. Convert overlay image (SVG/PNG/JPG) to PNG with Sharp
- * 3. Compose video with FFmpeg:
- *    - Add image overlay
- *    - Add text overlay
- * 4. Upload composed video to Convex storage
+ * 2. Download and process overlay image with Sharp
+ * 3. Compose video with FFmpeg (overlay + text)
+ * 4. Upload composed video to Mux
  * 5. Clean up temporary files
  *
  * @param job - Video composition job data
- * @returns Result with composed video URL
+ * @param onProgress - Optional progress callback
+ * @returns Result with composed video Mux playback ID
  */
 export async function processVideoComposition(
-  job: VideoCompositionJob
+  job: VideoCompositionJob,
+  onProgress?: ProgressCallback
 ): Promise<VideoCompositionResult> {
   const workDir = path.join("/tmp/video-processing", uuidv4());
+  const videoPath = path.join(workDir, "original.mp4");
+  const overlayPath = path.join(workDir, "overlay.png");
+  const outputPath = path.join(workDir, "composed.mp4");
 
   try {
     // Create working directory
@@ -45,12 +57,44 @@ export async function processVideoComposition(
     console.log(`[Processor] Playback ID: ${job.playbackId}`);
     console.log(`[Processor] Overlay text: ${job.overlayText}`);
 
-    // TODO: Implement actual video processing
-    // For now, just return a placeholder response
+    // Step 1: Download video from Mux (0-30%)
+    onProgress?.(5);
+    console.log("[Processor] Downloading video from Mux...");
+    await downloadVideoFromMux(job.playbackId, videoPath);
+    onProgress?.(30);
+
+    // Step 2: Process overlay image (30-40%)
+    console.log("[Processor] Processing overlay image...");
+    await processOverlayImage(job.overlayImageUrl, overlayPath);
+    onProgress?.(40);
+
+    // Step 3: Compose video with FFmpeg (40-80%)
+    console.log("[Processor] Composing video with FFmpeg...");
+    await composeVideoWithFFmpeg(
+      videoPath,
+      overlayPath,
+      job.overlayText,
+      outputPath,
+      (ffmpegProgress) => {
+        // Map FFmpeg progress (0-100) to our range (40-80)
+        const mappedProgress = 40 + (ffmpegProgress * 40) / 100;
+        onProgress?.(Math.round(mappedProgress));
+      }
+    );
+    onProgress?.(80);
+
+    // Step 4: Upload to Mux (80-100%)
+    console.log("[Processor] Uploading composed video to Mux...");
+    const composedVideoPlaybackId = await uploadComposedVideoToMux(outputPath);
+    onProgress?.(100);
+
+    console.log(
+      `[Processor] Video composition completed! New playback ID: ${composedVideoPlaybackId}`
+    );
 
     return {
       success: true,
-      composedVideoUrl: "https://placeholder.convex.dev/composed-video.mp4",
+      composedVideoPlaybackId,
     };
   } catch (error) {
     console.error("[Processor] Error processing video:", error);
@@ -70,45 +114,269 @@ export async function processVideoComposition(
 }
 
 /**
- * Download video from Mux
- * TODO: Implement Mux video download
+ * Download video from Mux using playback ID
+ * Mux provides MP4 downloads at: https://stream.mux.com/{playbackId}/high.mp4
  */
-async function _downloadVideoFromMux(
+async function downloadVideoFromMux(
   playbackId: string,
   destination: string
 ): Promise<void> {
+  const videoUrl = `https://stream.mux.com/${playbackId}/high.mp4`;
+  console.log(`[Processor] Downloading from ${videoUrl}`);
+
+  const response = await fetch(videoUrl);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to download video from Mux: ${response.status} ${response.statusText}`
+    );
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  await fs.writeFile(destination, Buffer.from(arrayBuffer));
+
+  const stats = await fs.stat(destination);
   console.log(
-    `[Processor] TODO: Download video ${playbackId} to ${destination}`
+    `[Processor] Downloaded video: ${(stats.size / 1024 / 1024).toFixed(2)} MB`
   );
-  // Implementation needed
 }
 
-// The following functions will be implemented when video processing is added:
-// - downloadVideoFromMux(playbackId: string, destination: string): Promise<void>
-// - processOverlayImage(imageUrl: string, destination: string): Promise<void>
-// - composeVideoWithFFmpeg(videoPath, overlayImagePath, overlayText, outputPath): Promise<void>
-// - uploadToConvex(videoPath: string): Promise<string>
+/**
+ * Process overlay image with Sharp
+ * Converts any format to PNG with transparency support
+ */
+async function processOverlayImage(
+  imageUrl: string,
+  destination: string
+): Promise<void> {
+  console.log(`[Processor] Processing overlay image from ${imageUrl}`);
+
+  // Download image
+  const response = await fetch(imageUrl);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to download overlay image: ${response.status} ${response.statusText}`
+    );
+  }
+
+  const imageBuffer = Buffer.from(await response.arrayBuffer());
+
+  // Process with Sharp: convert to PNG with transparency
+  // Resize to max 400px width to ensure it doesn't dominate the video
+  await sharp(imageBuffer)
+    .resize(400, null, {
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .png()
+    .toFile(destination);
+
+  const stats = await fs.stat(destination);
+  console.log(
+    `[Processor] Processed overlay image: ${(stats.size / 1024).toFixed(2)} KB`
+  );
+}
 
 /**
  * Compose video with FFmpeg
- * TODO: Implement FFmpeg composition
+ * Adds overlay image at bottom-center and text overlay
+ * Maintains original video quality
  */
-async function _composeVideoWithFFmpeg(
-  _videoPath: string,
-  _overlayImagePath: string,
-  _overlayText: string,
-  outputPath: string
+async function composeVideoWithFFmpeg(
+  videoPath: string,
+  overlayImagePath: string,
+  overlayText: string,
+  outputPath: string,
+  onProgress?: (progress: number) => void
 ): Promise<void> {
-  console.log(`[Processor] TODO: Compose video with FFmpeg to ${outputPath}`);
-  // Implementation needed
+  return new Promise((resolve, reject) => {
+    console.log("[Processor] Starting FFmpeg composition...");
+
+    // Get video duration first for progress calculation
+    ffmpeg.ffprobe(videoPath, (err, metadata) => {
+      if (err) {
+        reject(new Error(`FFprobe error: ${err.message}`));
+        return;
+      }
+
+      const duration = metadata.format.duration || 0;
+
+      // Build FFmpeg command
+      const command: FfmpegCommand = ffmpeg()
+        .input(videoPath)
+        .input(overlayImagePath);
+
+      // Complex filter for overlay positioning and text
+      // Position overlay at bottom-center: x=(W-w)/2, y=H-h-20 (20px from bottom)
+      // Add text below/on the overlay
+      const filterComplex = [
+        // Overlay the image at bottom-center
+        "[0:v][1:v]overlay=(W-w)/2:H-h-20[v1]",
+        // Add text overlay (below the image)
+        `[v1]drawtext=text='${escapeFFmpegText(overlayText)}':fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:fontsize=24:fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=h-40[v]`,
+      ].join(";");
+
+      command
+        .complexFilter(filterComplex)
+        .map("[v]")
+        .outputOptions([
+          "-c:v libx264", // H.264 codec
+          "-preset medium", // Balanced speed/quality
+          "-crf 18", // High quality (lower = better, 18 is visually lossless)
+          "-c:a copy", // Copy audio stream without re-encoding
+          "-movflags +faststart", // Enable streaming
+        ])
+        .output(outputPath);
+
+      // Progress tracking
+      command.on("progress", (progress) => {
+        if (duration > 0 && progress.timemark) {
+          // Parse timemark (format: "HH:MM:SS.mm")
+          const timeParts = progress.timemark.split(":");
+          const seconds =
+            Number.parseInt(timeParts[0], 10) * 3600 +
+            Number.parseInt(timeParts[1], 10) * 60 +
+            Number.parseFloat(timeParts[2]);
+
+          const percent = Math.min((seconds / duration) * 100, 100);
+          onProgress?.(Math.round(percent));
+          console.log(`[Processor] FFmpeg progress: ${percent.toFixed(1)}%`);
+        }
+      });
+
+      command.on("end", () => {
+        console.log("[Processor] FFmpeg composition completed");
+        resolve();
+      });
+
+      command.on("error", (err) => {
+        console.error("[Processor] FFmpeg error:", err);
+        reject(new Error(`FFmpeg error: ${err.message}`));
+      });
+
+      command.run();
+    });
+  });
 }
 
 /**
- * Upload to Convex storage
- * TODO: Implement Convex upload
+ * Escape text for FFmpeg drawtext filter
+ * FFmpeg requires special characters to be escaped
  */
-async function _uploadToConvex(videoPath: string): Promise<string> {
-  console.log(`[Processor] TODO: Upload ${videoPath} to Convex`);
-  // Implementation needed
-  return "https://placeholder.convex.dev/composed-video.mp4";
+function escapeFFmpegText(text: string): string {
+  return text
+    .replace(/\\/g, "\\\\") // Backslash
+    .replace(/'/g, "\\'") // Single quote
+    .replace(/:/g, "\\:") // Colon
+    .replace(/\[/g, "\\[") // Left bracket
+    .replace(/\]/g, "\\]"); // Right bracket
+}
+
+/**
+ * Upload composed video to Mux using direct upload
+ */
+async function uploadComposedVideoToMux(videoPath: string): Promise<string> {
+  console.log("[Processor] Uploading to Mux via direct upload...");
+
+  try {
+    // Step 1: Create a direct upload
+    const upload = await mux.video.uploads.create({
+      new_asset_settings: {
+        playback_policy: ["public"],
+        mp4_support: "standard",
+        test: process.env.NODE_ENV === "development",
+      },
+      cors_origin: "*",
+    });
+
+    console.log("[Processor] Direct upload created:", upload.id);
+    console.log("[Processor] Upload URL:", upload.url);
+
+    // Step 2: Read the video file
+    const videoBuffer = await fs.readFile(videoPath);
+    const stats = await fs.stat(videoPath);
+    console.log(
+      `[Processor] Video file size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`
+    );
+
+    // Step 3: Upload the video file to Mux's upload URL
+    const uploadResponse = await fetch(upload.url, {
+      method: "PUT",
+      body: videoBuffer,
+      headers: {
+        "Content-Type": "video/mp4",
+        "Content-Length": stats.size.toString(),
+      },
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      throw new Error(
+        `Failed to upload video file: ${uploadResponse.status} ${uploadResponse.statusText} - ${errorText}`
+      );
+    }
+
+    console.log("[Processor] Video file uploaded successfully");
+
+    // Step 4: Wait for the asset to be created
+    let assetId: string | undefined;
+    const maxAttempts = 150; // 5 minutes
+    let attempts = 0;
+
+    while (!assetId && attempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const uploadStatus = await mux.video.uploads.retrieve(upload.id);
+      assetId = uploadStatus.asset_id;
+      attempts++;
+
+      console.log(
+        `[Processor] Waiting for asset creation (attempt ${attempts}/${maxAttempts})...`
+      );
+    }
+
+    if (!assetId) {
+      throw new Error("Failed to get asset ID from upload after 5 minutes");
+    }
+
+    console.log("[Processor] Mux asset created:", assetId);
+
+    // Step 5: Wait for asset to be ready
+    let assetStatus = await mux.video.assets.retrieve(assetId);
+    attempts = 0;
+
+    while (assetStatus.status !== "ready" && attempts < maxAttempts) {
+      if (assetStatus.status === "errored") {
+        throw new Error(
+          `Mux asset processing failed: ${JSON.stringify(assetStatus.errors)}`
+        );
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      assetStatus = await mux.video.assets.retrieve(assetId);
+      attempts++;
+
+      console.log(
+        `[Processor] Asset status: ${assetStatus.status} (attempt ${attempts}/${maxAttempts})`
+      );
+    }
+
+    if (assetStatus.status !== "ready") {
+      throw new Error(
+        `Mux asset processing timeout after ${maxAttempts * 2} seconds`
+      );
+    }
+
+    const playbackId = assetStatus.playback_ids?.[0]?.id;
+    if (!playbackId) {
+      throw new Error("Mux asset has no playback ID");
+    }
+
+    console.log(
+      "[Processor] Composed video ready with playback ID:",
+      playbackId
+    );
+    return playbackId;
+  } catch (error) {
+    console.error("[Processor] Mux upload error:", error);
+    throw error;
+  }
 }

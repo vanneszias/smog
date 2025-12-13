@@ -18,7 +18,7 @@ export type CreateSponsorshipPaymentParams = {
     sponsorEmail: string;
     overlayImageStorageId: string;
     overlayText: string;
-    sponsoredVideoStorageId: string;
+    sponsoredVideoPlaybackId: string;
     durationWeeks: number;
     paymentAmount: number;
   }) => Promise<Id<"sponsorships">>;
@@ -56,18 +56,17 @@ export async function createSponsorshipPayment(
     // Convert image to base64 for storage
     const base64Image = await convertFileToBase64(imageFile);
 
-    // Note: The video composition will be finalized by the external video service
-    // after payment confirmation. The webhook handler will receive the new playback ID
-    // from the external service and update the sponsorship record.
+    // Note: The tempVideoUrl contains the Mux playback ID from the video composition
+    // that was done before payment. We store this as the sponsoredVideoPlaybackId.
 
-    // Create sponsorship with base64 image data
+    // Create sponsorship with composed video playback ID
     const sponsorshipId = await createSponsorship({
       gestureId,
       sponsorName,
       sponsorEmail,
       overlayImageStorageId: base64Image, // Store base64 image data
       overlayText,
-      sponsoredVideoStorageId: base64Image, // Placeholder - will be updated with Mux playback ID after payment
+      sponsoredVideoPlaybackId: tempVideoUrl, // Mux playback ID from composition
       durationWeeks,
       paymentAmount: totalCents,
     });

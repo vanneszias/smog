@@ -108,20 +108,23 @@ Health check endpoint.
 
 ### ✅ Completed
 - Basic service structure
-- Queue setup with BullMQ
-- API endpoints scaffolding
-- Docker configuration
+- Queue setup with BullMQ  
+- API endpoints (compose, status, metrics)
+- Docker configuration with FFmpeg
 - Health checks
+- **Mux video download** ✅
+- **Sharp image processing** ✅
+- **FFmpeg video composition** ✅
+- **Mux direct upload** ✅
+- **Progress tracking** ✅
+- **Queue integration** ✅
+- **Job status tracking** ✅
 
-### 🚧 TODO
-- [ ] Implement Mux video download
-- [ ] Implement Sharp image processing
-- [ ] Implement FFmpeg video composition
-- [ ] Implement Convex upload
-- [ ] Add progress tracking
-- [ ] Error handling and retries
-- [ ] Queue metrics implementation
-- [ ] Job status tracking
+### 🔧 In Progress
+- End-to-end testing with real videos
+- Frontend integration for video preview
+- Error handling refinements
+- Performance optimization
 
 ## Docker Deployment
 
