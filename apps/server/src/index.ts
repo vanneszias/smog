@@ -16,6 +16,7 @@ import {
   register,
 } from "prom-client";
 import { startExpirationCronJob } from "./cron";
+import { getMasterDownloadUrl } from "./services/mux";
 import { handleMollieWebhook } from "./webhooks/mollie";
 
 // Start cron jobs
@@ -142,6 +143,53 @@ app.post("/auth/workos/callback", async (c) => {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
     return c.json({ error: `Authentication failed: ${errorMessage}` }, 500);
+  }
+});
+
+// Secure video master access endpoint
+// This endpoint provides temporary download URLs for video files
+// Only accessible by authenticated services (video-worker)
+app.post("/api/video/master-access", async (c) => {
+  try {
+    console.log("[Master Access] Request received");
+
+    // Basic authentication check
+    // In production, you should use a proper API key or JWT
+    const authHeader = c.req.header("Authorization");
+    const expectedToken = process.env.VIDEO_WORKER_API_KEY || "dev-secret-key";
+
+    if (authHeader !== `Bearer ${expectedToken}`) {
+      console.error("[Master Access] Unauthorized request");
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const body = await c.req.json();
+    const { playbackId } = body;
+
+    if (!playbackId) {
+      console.error("[Master Access] No playback ID provided");
+      return c.json({ error: "playbackId is required" }, 400);
+    }
+
+    console.log("[Master Access] Getting master URL for playback ID:", playbackId);
+
+    // Get temporary master download URL from Mux
+    const masterAccess = await getMasterDownloadUrl(playbackId);
+
+    console.log("[Master Access] Master URL generated successfully");
+    console.log("[Master Access] URL expires at:", masterAccess.expiresAt);
+
+    return c.json({
+      url: masterAccess.url,
+      expiresAt: masterAccess.expiresAt.toISOString(),
+    });
+  } catch (error) {
+    console.error("[Master Access] Error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return c.json(
+      { error: `Failed to get master access URL: ${errorMessage}` },
+      500
+    );
   }
 });
 

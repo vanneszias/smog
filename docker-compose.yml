@@ -58,6 +58,7 @@ services:
       - MUX_TOKEN_ID=${MUX_TOKEN_ID}
       - MUX_TOKEN_SECRET=${MUX_TOKEN_SECRET}
       - VIDEO_WORKER_URL=${VIDEO_WORKER_URL:-http://video-worker:3002}
+      - VIDEO_WORKER_API_KEY=${VIDEO_WORKER_API_KEY:-dev-secret-key}
       - REDIS_HOST=redis-session
       - REDIS_PORT=6379
     depends_on:
@@ -86,6 +87,8 @@ services:
       - REDIS_HOST=redis-queue
       - REDIS_PORT=6379
       - VIDEO_COMPOSITION_CONCURRENCY=${VIDEO_COMPOSITION_CONCURRENCY:-2}
+      - VIDEO_WORKER_API_KEY=${VIDEO_WORKER_API_KEY:-dev-secret-key}
+      - SERVER_URL=${SERVER_URL:-http://server:3000}
     depends_on:
       redis-queue:
         condition: service_healthy

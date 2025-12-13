@@ -16,6 +16,11 @@ export type MuxAssetStatus = {
   playbackId?: string;
 };
 
+export type MasterAccessUrl = {
+  url: string;
+  expiresAt: Date;
+};
+
 /**
  * Upload a video to MUX and return the playback ID
  * @param options Video URL and metadata
@@ -27,11 +32,12 @@ export async function uploadVideoToMux(
   try {
     console.log("[MUX] Creating asset from URL:", options.videoUrl);
 
-    // Create MUX asset from URL
+    // Create MUX asset from URL with master access enabled for secure downloads
     const asset = await mux.video.assets.create({
       inputs: [{ url: options.videoUrl }],
       playback_policy: ["public"],
       mp4_support: "standard",
+      master_access: "temporary",
       test: process.env.NODE_ENV === "development",
     });
 
@@ -119,6 +125,141 @@ export async function getAssetStatus(assetId: string): Promise<MuxAssetStatus> {
     };
   } catch (error) {
     console.error("[MUX] Get asset status error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get asset ID from playback ID
+ * @param playbackId MUX playback ID
+ * @returns Asset ID
+ */
+export async function getAssetIdFromPlaybackId(
+  playbackId: string
+): Promise<string> {
+  try {
+    console.log("[MUX] Finding asset ID for playback ID:", playbackId);
+
+    // Search through pages of assets to find the matching playback ID
+    let page = 1;
+    const limit = 100;
+    const maxPages = 10; // Search up to 1000 assets
+
+    while (page <= maxPages) {
+      console.log(`[MUX] Searching assets page ${page}...`);
+      const assets = await mux.video.assets.list({ limit, page });
+      
+      const asset = assets.data.find((a) =>
+        a.playback_ids?.some((p) => p.id === playbackId)
+      );
+
+      if (asset) {
+        console.log("[MUX] Found asset ID:", asset.id);
+        return asset.id;
+      }
+
+      // If we got fewer results than the limit, we've reached the end
+      if (assets.data.length < limit) {
+        break;
+      }
+
+      page++;
+    }
+
+    throw new Error(
+      `Asset not found for playback ID: ${playbackId} (searched ${page * limit} assets)`
+    );
+  } catch (error) {
+    console.error("[MUX] Get asset ID error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Enable master access for an asset if not already enabled
+ * @param assetId MUX asset ID
+ */
+export async function enableMasterAccess(assetId: string): Promise<void> {
+  try {
+    console.log("[MUX] Enabling master access for asset:", assetId);
+
+    // Check current master access status
+    const asset = await mux.video.assets.retrieve(assetId);
+
+    if (asset.master_access === "temporary") {
+      console.log("[MUX] Master access already enabled");
+      return;
+    }
+
+    // Enable master access
+    await mux.video.assets.updateMasterAccess(assetId, {
+      master_access: "temporary",
+    });
+
+    console.log("[MUX] Master access enabled successfully");
+  } catch (error) {
+    console.error("[MUX] Enable master access error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get master download URL for a playback ID
+ * This function ensures master access is enabled and returns a temporary download URL
+ * The URL expires after 24 hours
+ * @param playbackId MUX playback ID
+ * @returns Temporary master download URL
+ */
+export async function getMasterDownloadUrl(
+  playbackId: string
+): Promise<MasterAccessUrl> {
+  try {
+    console.log("[MUX] Getting master download URL for playback ID:", playbackId);
+
+    // Step 1: Get asset ID from playback ID
+    const assetId = await getAssetIdFromPlaybackId(playbackId);
+
+    // Step 2: Enable master access if not already enabled
+    await enableMasterAccess(assetId);
+
+    // Step 3: Wait for master to be ready (poll with timeout)
+    const maxAttempts = 30; // 1 minute (30 attempts * 2 seconds)
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      const asset = await mux.video.assets.retrieve(assetId);
+
+      // Check if master is ready
+      if (asset.master?.status === "ready" && asset.master?.url) {
+        console.log("[MUX] Master download URL ready");
+        
+        // Master URLs expire after 24 hours
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+
+        return {
+          url: asset.master.url,
+          expiresAt,
+        };
+      }
+
+      if (asset.master?.status === "errored") {
+        throw new Error("Master access preparation failed");
+      }
+
+      // Master is still preparing, wait and retry
+      console.log(
+        `[MUX] Master status: ${asset.master?.status || "preparing"} (attempt ${attempts + 1}/${maxAttempts})`
+      );
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      attempts++;
+    }
+
+    throw new Error(
+      `Timeout waiting for master download URL after ${maxAttempts * 2} seconds`
+    );
+  } catch (error) {
+    console.error("[MUX] Get master download URL error:", error);
     throw error;
   }
 }

@@ -114,16 +114,48 @@ export async function processVideoComposition(
 }
 
 /**
- * Download video from Mux using playback ID
- * Mux provides MP4 downloads at: https://stream.mux.com/{playbackId}/high.mp4
+ * Download video from Mux using secure master access
+ * Requests a temporary download URL from the server API which uses Mux credentials
+ * This ensures only authorized services can download videos
  */
 async function downloadVideoFromMux(
   playbackId: string,
   destination: string
 ): Promise<void> {
-  const videoUrl = `https://stream.mux.com/${playbackId}/high.mp4`;
-  console.log(`[Processor] Downloading from ${videoUrl}`);
+  console.log(`[Processor] Requesting secure download URL for playback ID: ${playbackId}`);
 
+  // Step 1: Get temporary master download URL from server API
+  const serverUrl = process.env.SERVER_URL || "http://server:3000";
+  const apiKey = process.env.VIDEO_WORKER_API_KEY || "dev-secret-key";
+
+  const masterAccessResponse = await fetch(
+    `${serverUrl}/api/video/master-access`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ playbackId }),
+    }
+  );
+
+  if (!masterAccessResponse.ok) {
+    const errorText = await masterAccessResponse.text();
+    throw new Error(
+      `Failed to get master access URL: ${masterAccessResponse.status} ${masterAccessResponse.statusText} - ${errorText}`
+    );
+  }
+
+  const { url: videoUrl, expiresAt } = (await masterAccessResponse.json()) as {
+    url: string;
+    expiresAt: string;
+  };
+
+  console.log(`[Processor] Got temporary master URL (expires: ${expiresAt})`);
+  console.log(`[Processor] Downloading from secure URL...`);
+
+  // Step 2: Download video from temporary URL
   const response = await fetch(videoUrl);
   if (!response.ok) {
     throw new Error(
@@ -278,11 +310,11 @@ async function uploadComposedVideoToMux(videoPath: string): Promise<string> {
   console.log("[Processor] Uploading to Mux via direct upload...");
 
   try {
-    // Step 1: Create a direct upload
+    // Step 1: Create a direct upload with master access enabled for secure downloads
     const upload = await mux.video.uploads.create({
       new_asset_settings: {
         playback_policy: ["public"],
-        mp4_support: "standard",
+        master_access: "temporary",
         test: process.env.NODE_ENV === "development",
       },
       cors_origin: "*",
