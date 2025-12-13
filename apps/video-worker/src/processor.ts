@@ -196,9 +196,9 @@ async function processOverlayImage(
   const imageBuffer = Buffer.from(await response.arrayBuffer());
 
   // Process with Sharp: convert to PNG with transparency
-  // Fixed maximum size: 300x300px for consistency across all sponsors
+  // Fixed maximum size: 200x200px for consistency across all sponsors
   await sharp(imageBuffer)
-    .resize(300, 300, {
+    .resize(200, 200, {
       fit: "inside",
       withoutEnlargement: true,
     })
@@ -207,7 +207,7 @@ async function processOverlayImage(
 
   const stats = await fs.stat(destination);
   console.log(
-    `[Processor] Processed overlay image (max 300x300px): ${(stats.size / 1024).toFixed(2)} KB`
+    `[Processor] Processed overlay image (max 200x200px): ${(stats.size / 1024).toFixed(2)} KB`
   );
 }
 
@@ -249,13 +249,13 @@ async function composeVideoWithFFmpeg(
 
       // Complex filter for overlay positioning and text
       // The overlay and text only appear in the last 5 seconds using enable='gte(t,${sponsorStartTime})'
-      // Position overlay at bottom-center: x=(W-w)/2, y=H-h-50 (50px from bottom)
-      // Text is positioned above the image
+      // Position image at bottom-center: y=H-h-120 (120px from bottom to leave room for text below)
+      // Text is positioned below the image at y=H-80 (80px from bottom), centered, with larger font and no border
       const filterComplex = [
         // Overlay the image at bottom-center, enabled only in last 5 seconds
-        `[0:v][1:v]overlay=(W-w)/2:H-h-50:enable='gte(t,${sponsorStartTime})'[v1]`,
-        // Add text overlay above the image, using custom font, enabled only in last 5 seconds
-        `[v1]drawtext=text='${escapeFFmpegText(overlayText)}':fontfile=/app/assets/font.ttf:fontsize=32:fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=h-90:enable='gte(t,${sponsorStartTime})'[v]`,
+        `[0:v][1:v]overlay=(W-w)/2:H-h-120:enable='gte(t,${sponsorStartTime})'[v1]`,
+        // Add text below the image, using custom font, larger size, no border, enabled only in last 5 seconds
+        `[v1]drawtext=text='${escapeFFmpegText(overlayText)}':fontfile=/app/assets/font.ttf:fontsize=48:fontcolor=white:x=(w-text_w)/2:y=h-80:enable='gte(t,${sponsorStartTime})'[v]`,
       ].join(";");
 
       command
