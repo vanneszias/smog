@@ -122,7 +122,9 @@ async function downloadVideoFromMux(
   playbackId: string,
   destination: string
 ): Promise<void> {
-  console.log(`[Processor] Requesting secure download URL for playback ID: ${playbackId}`);
+  console.log(
+    `[Processor] Requesting secure download URL for playback ID: ${playbackId}`
+  );
 
   // Step 1: Get temporary master download URL from server API
   const serverUrl = process.env.SERVER_URL || "http://server:3000";
@@ -153,7 +155,7 @@ async function downloadVideoFromMux(
   };
 
   console.log(`[Processor] Got temporary master URL (expires: ${expiresAt})`);
-  console.log(`[Processor] Downloading from secure URL...`);
+  console.log("[Processor] Downloading from secure URL...");
 
   // Step 2: Download video from temporary URL
   const response = await fetch(videoUrl);
@@ -175,6 +177,7 @@ async function downloadVideoFromMux(
 /**
  * Process overlay image with Sharp
  * Converts any format to PNG with transparency support
+ * Fixed maximum size: 300x300px for consistency across all sponsors
  */
 async function processOverlayImage(
   imageUrl: string,
@@ -193,9 +196,9 @@ async function processOverlayImage(
   const imageBuffer = Buffer.from(await response.arrayBuffer());
 
   // Process with Sharp: convert to PNG with transparency
-  // Resize to max 400px width to ensure it doesn't dominate the video
+  // Fixed maximum size: 300x300px for consistency across all sponsors
   await sharp(imageBuffer)
-    .resize(400, null, {
+    .resize(300, 300, {
       fit: "inside",
       withoutEnlargement: true,
     })
@@ -204,13 +207,14 @@ async function processOverlayImage(
 
   const stats = await fs.stat(destination);
   console.log(
-    `[Processor] Processed overlay image: ${(stats.size / 1024).toFixed(2)} KB`
+    `[Processor] Processed overlay image (max 300x300px): ${(stats.size / 1024).toFixed(2)} KB`
   );
 }
 
 /**
  * Compose video with FFmpeg
- * Adds overlay image at bottom-center and text overlay
+ * Adds overlay image and text ONLY in the last 5 seconds (sponsor segment)
+ * Uses custom font for consistent branding
  * Maintains original video quality
  */
 async function composeVideoWithFFmpeg(
@@ -231,6 +235,12 @@ async function composeVideoWithFFmpeg(
       }
 
       const duration = metadata.format.duration || 0;
+      const sponsorStartTime = Math.max(0, duration - 5); // Last 5 seconds
+
+      console.log(`[Processor] Video duration: ${duration}s`);
+      console.log(
+        `[Processor] Sponsor overlay will appear from ${sponsorStartTime}s to ${duration}s`
+      );
 
       // Build FFmpeg command
       const command: FfmpegCommand = ffmpeg()
@@ -238,13 +248,14 @@ async function composeVideoWithFFmpeg(
         .input(overlayImagePath);
 
       // Complex filter for overlay positioning and text
-      // Position overlay at bottom-center: x=(W-w)/2, y=H-h-20 (20px from bottom)
-      // Add text below/on the overlay
+      // The overlay and text only appear in the last 5 seconds using enable='gte(t,${sponsorStartTime})'
+      // Position overlay at bottom-center: x=(W-w)/2, y=H-h-50 (50px from bottom)
+      // Text is positioned above the image
       const filterComplex = [
-        // Overlay the image at bottom-center
-        "[0:v][1:v]overlay=(W-w)/2:H-h-20[v1]",
-        // Add text overlay (below the image)
-        `[v1]drawtext=text='${escapeFFmpegText(overlayText)}':fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:fontsize=24:fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=h-40[v]`,
+        // Overlay the image at bottom-center, enabled only in last 5 seconds
+        `[0:v][1:v]overlay=(W-w)/2:H-h-50:enable='gte(t,${sponsorStartTime})'[v1]`,
+        // Add text overlay above the image, using custom font, enabled only in last 5 seconds
+        `[v1]drawtext=text='${escapeFFmpegText(overlayText)}':fontfile=/app/assets/font.ttf:fontsize=32:fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=h-90:enable='gte(t,${sponsorStartTime})'[v]`,
       ].join(";");
 
       command

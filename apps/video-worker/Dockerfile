@@ -36,7 +36,7 @@ ENV SHARP_IGNORE_GLOBAL_LIBVIPS=1
 # --frozen-lockfile ensures reproducible builds
 # Cache mounts persist between builds, making subsequent builds 10-20x faster
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-  bun install 
+  bun install
 
 # Stage 2: Build application
 FROM oven/bun:1 AS builder
@@ -72,6 +72,9 @@ COPY --from=builder /app/apps/video-worker/dist ./dist
 
 # Copy package.json to read metadata if needed
 COPY --from=builder /app/apps/video-worker/package.json ./package.json
+
+# Copy custom font for video overlays
+COPY --from=builder /app/apps/video-worker/assets/font.ttf ./assets/font.ttf
 
 # Only copy production node_modules for external dependencies
 # that aren't bundled (like native modules: sharp)
