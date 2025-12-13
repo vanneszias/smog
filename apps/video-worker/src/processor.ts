@@ -247,15 +247,20 @@ async function composeVideoWithFFmpeg(
         .input(videoPath)
         .input(overlayImagePath);
 
-      // Complex filter for overlay positioning and text
-      // The overlay and text only appear in the last 5 seconds using enable='gte(t,${sponsorStartTime})'
-      // Position image at bottom-center: y=H-h-120 (120px from bottom to leave room for text below)
-      // Text is positioned below the image at y=H-80 (80px from bottom), centered, with larger font and no border
+      // Wrap the text to fit within reasonable width
+      const wrappedText = wrapText(overlayText, 30);
+
+      // Complex filter for overlay positioning and text with fade-in animation
+      // The overlay and text fade in over 1 second at the start of the sponsor segment
+      // Position image at bottom-center: y=H-h-220 (220px from bottom to leave room for wrapped text)
+      // Text is positioned below the image, centered, with larger black font
+      const fadeInDuration = 1.0; // Fade in over 1 second
       const filterComplex = [
-        // Overlay the image at bottom-center, enabled only in last 5 seconds
-        `[0:v][1:v]overlay=(W-w)/2:H-h-120:enable='gte(t,${sponsorStartTime})'[v1]`,
-        // Add text below the image, using custom font, larger size, no border, enabled only in last 5 seconds
-        `[v1]drawtext=text='${escapeFFmpegText(overlayText)}':fontfile=/app/assets/font.ttf:fontsize=48:fontcolor=white:x=(w-text_w)/2:y=h-80:enable='gte(t,${sponsorStartTime})'[v]`,
+        // Add fade-in to the overlay image, then position it at bottom-center
+        `[1:v]fade=t=in:st=0:d=${fadeInDuration}:alpha=1[overlay]`,
+        `[0:v][overlay]overlay=(W-w)/2:H-h-220:enable='gte(t,${sponsorStartTime})'[v1]`,
+        // Add wrapped text below the image with fade-in, black color, larger size
+        `[v1]drawtext=text='${escapeFFmpegText(wrappedText)}':fontfile=/app/assets/font.ttf:fontsize=48:fontcolor=black:x=(w-text_w)/2:y=h-180:alpha='if(lt(t,${sponsorStartTime}),0,if(lt(t,${sponsorStartTime + fadeInDuration}),(t-${sponsorStartTime})/${fadeInDuration},1))':enable='gte(t,${sponsorStartTime})'[v]`,
       ].join(";");
 
       command
@@ -299,6 +304,35 @@ async function composeVideoWithFFmpeg(
       command.run();
     });
   });
+}
+
+/**
+ * Wrap text to fit within a maximum character width
+ * Inserts \n at word boundaries to create multi-line text
+ */
+function wrapText(text: string, maxCharsPerLine = 30): string {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+
+    if (testLine.length <= maxCharsPerLine) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      currentLine = word;
+    }
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines.join("\\n");
 }
 
 /**
