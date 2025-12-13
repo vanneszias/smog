@@ -224,6 +224,11 @@ async function composeVideoWithFFmpeg(
   outputPath: string,
   onProgress?: (progress: number) => void
 ): Promise<void> {
+  // Create temp text file for multiline text support
+  const textFilePath = path.join(path.dirname(outputPath), "overlay-text.txt");
+  const wrappedText = wrapText(overlayText, 30);
+  await fs.writeFile(textFilePath, wrappedText, "utf-8");
+
   return new Promise((resolve, reject) => {
     console.log("[Processor] Starting FFmpeg composition...");
 
@@ -247,20 +252,18 @@ async function composeVideoWithFFmpeg(
         .input(videoPath)
         .input(overlayImagePath);
 
-      // Wrap the text to fit within reasonable width
-      const wrappedText = wrapText(overlayText, 30);
-
       // Complex filter for overlay positioning and text with fade-in animation
-      // The overlay and text fade in over 1 second at the start of the sponsor segment
       // Position image at bottom-center: y=H-h-220 (220px from bottom to leave room for wrapped text)
-      // Text is positioned below the image, centered, with larger black font
+      // Text is positioned below the image, centered, with larger black font and fade-in
+      // Using textfile parameter for proper multiline support
       const fadeInDuration = 1.0; // Fade in over 1 second
+
       const filterComplex = [
-        // Add fade-in to the overlay image, then position it at bottom-center
-        `[1:v]fade=t=in:st=0:d=${fadeInDuration}:alpha=1[overlay]`,
-        `[0:v][overlay]overlay=(W-w)/2:H-h-220:enable='gte(t,${sponsorStartTime})'[v1]`,
-        // Add wrapped text below the image with fade-in, black color, larger size
-        `[v1]drawtext=text='${escapeFFmpegText(wrappedText)}':fontfile=/app/assets/font.ttf:fontsize=48:fontcolor=black:x=(w-text_w)/2:y=h-180:alpha='if(lt(t,${sponsorStartTime}),0,if(lt(t,${sponsorStartTime + fadeInDuration}),(t-${sponsorStartTime})/${fadeInDuration},1))':enable='gte(t,${sponsorStartTime})'[v]`,
+        // Overlay the image at bottom-center with fade-in animation, enabled only in last 5 seconds
+        `[1:v]format=rgba[overlay]`,
+        `[0:v][overlay]overlay=(W-w)/2:H-h-220:enable='gte(t,${sponsorStartTime})':eval=frame:alpha='if(lt(t,${sponsorStartTime}),0,if(lt(t,${sponsorStartTime + fadeInDuration}),(t-${sponsorStartTime})/${fadeInDuration},1))'[v1]`,
+        // Add wrapped text below the image with fade-in, black color, larger size, using textfile for multiline support
+        `[v1]drawtext=textfile='${textFilePath}':fontfile=/app/assets/font.ttf:fontsize=48:fontcolor=black:x=(w-text_w)/2:y=h-180:alpha='if(lt(t,${sponsorStartTime}),0,if(lt(t,${sponsorStartTime + fadeInDuration}),(t-${sponsorStartTime})/${fadeInDuration},1))'[v]`,
       ].join(";");
 
       command
@@ -291,13 +294,25 @@ async function composeVideoWithFFmpeg(
         }
       });
 
-      command.on("end", () => {
+      command.on("end", async () => {
         console.log("[Processor] FFmpeg composition completed");
+        // Clean up temp text file
+        try {
+          await fs.unlink(textFilePath);
+        } catch (cleanupError) {
+          console.error("[Processor] Failed to cleanup text file:", cleanupError);
+        }
         resolve();
       });
 
-      command.on("error", (err) => {
+      command.on("error", async (err) => {
         console.error("[Processor] FFmpeg error:", err);
+        // Clean up temp text file
+        try {
+          await fs.unlink(textFilePath);
+        } catch (cleanupError) {
+          console.error("[Processor] Failed to cleanup text file:", cleanupError);
+        }
         reject(new Error(`FFmpeg error: ${err.message}`));
       });
 
@@ -332,7 +347,7 @@ function wrapText(text: string, maxCharsPerLine = 30): string {
     lines.push(currentLine);
   }
 
-  return lines.join("\\n");
+  return lines.join("\n");
 }
 
 /**
