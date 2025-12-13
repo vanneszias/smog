@@ -98,6 +98,7 @@ export const sponsorshipsRouter = {
           result?: {
             success: boolean;
             composedVideoPlaybackId?: string;
+            error?: string;
           };
         };
 

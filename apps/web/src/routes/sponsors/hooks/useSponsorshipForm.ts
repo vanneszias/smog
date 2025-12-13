@@ -28,10 +28,8 @@ export function useSponsorshipForm(params: UseSponsorshipFormParams) {
   const [sponsorEmail, setSponsorEmail] = useState("");
 
   // Video composition state
-  const [composedVideoUrl, _setComposedVideoUrl] = useState<string | null>(
-    null
-  );
-  const [tempVideoUrl, _setTempVideoUrl] = useState<string | null>(null);
+  const [composedVideoUrl, setComposedVideoUrl] = useState<string | null>(null);
+  const [tempVideoUrl, setTempVideoUrl] = useState<string | null>(null);
   const [isComposing, setIsComposing] = useState(false);
   const [composeProgress, setComposeProgress] = useState(0);
 
@@ -113,9 +111,19 @@ export function useSponsorshipForm(params: UseSponsorshipFormParams) {
       return;
     }
 
-    // For now, show message about external service
-    if (result.error) {
-      setError(result.error);
+    // Set video URLs and advance to preview step
+    if (result.composedVideoPlaybackId) {
+      const muxUrl = `https://stream.mux.com/${result.composedVideoPlaybackId}.m3u8`;
+      console.log("[Sponsors] Video composed successfully:", muxUrl);
+
+      setComposedVideoUrl(muxUrl);
+      setTempVideoUrl(result.composedVideoPlaybackId);
+
+      // Advance to preview step
+      setStep("preview");
+    } else {
+      setError("Video composed but no playback ID received");
+      setComposeProgress(0);
     }
   };
 

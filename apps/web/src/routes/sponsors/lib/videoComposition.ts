@@ -11,6 +11,7 @@ export type ComposeVideoParams = {
 export type ComposeVideoResult = {
   success: boolean;
   jobId?: string;
+  composedVideoPlaybackId?: string;
   error?: string;
 };
 
@@ -47,16 +48,55 @@ export async function composeVideo(
     console.log("[Sponsors] Job started with ID:", jobId);
     onProgress(15);
 
-    // TODO: Implement proper polling when external video service is ready
-    // For now, return a success indicator that the job was started
-    onProgress(100);
+    // Poll for job completion
+    console.log("[Sponsors] Polling for job completion...");
+    let pollAttempts = 0;
+    const maxAttempts = 300; // 5 minutes (poll every 1 second)
+    const pollInterval = 1000; // 1 second
 
-    return {
-      success: true,
-      jobId,
-      error:
-        "Video composition feature requires an external video service to be implemented.",
-    };
+    while (pollAttempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+      pollAttempts++;
+
+      const status = await orpcClient.sponsorships.getCompositionStatus({
+        jobId,
+      });
+
+      console.log(
+        `[Sponsors] Job status: ${status.state} (${status.progress}%)`
+      );
+
+      // Update progress (15% to 95% based on actual job progress)
+      const progressPercent = 15 + Math.min(80, (status.progress / 100) * 80);
+      onProgress(Math.round(progressPercent));
+
+      if (status.state === "completed") {
+        if (status.result?.success && status.result?.composedVideoPlaybackId) {
+          console.log(
+            "[Sponsors] Video composition completed!",
+            status.result.composedVideoPlaybackId
+          );
+          onProgress(100);
+
+          return {
+            success: true,
+            jobId,
+            composedVideoPlaybackId: status.result.composedVideoPlaybackId,
+          };
+        }
+        throw new Error("Composition completed but no playback ID returned");
+      }
+
+      if (status.state === "failed") {
+        throw new Error(
+          `Video composition failed: ${status.result?.error || "Unknown error"}`
+        );
+      }
+
+      // States: waiting, active, completed, failed
+    }
+
+    throw new Error(`Video composition timed out after ${maxAttempts} seconds`);
   } catch (err) {
     console.error("[Sponsors] Video composition error:", err);
     return {
