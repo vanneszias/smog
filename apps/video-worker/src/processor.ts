@@ -287,17 +287,24 @@ async function composeVideoWithFFmpeg(
         .input(overlayImagePath);
 
       // Complex filter for overlay positioning and text with fade-in animation
-      // Scale image to exact size, then overlay at custom position with fade-in
+      // Scale image to exact size, manipulate alpha for fade-in, then overlay at custom position
       // Text is positioned at custom location with custom size/color and fade-in
+      const fadeEndTime = sponsorStartTime + fadeInDuration;
+
       const filterComplex = [
-        // Scale image to exact size
-        `[1:v]scale=${imageConfig.width}:${imageConfig.height},format=rgba[overlay]`,
+        // Scale image to exact size and ensure RGBA format for alpha manipulation
+        `[1:v]scale=${imageConfig.width}:${imageConfig.height},format=rgba[scaled]`,
 
-        // Overlay image at custom position with fade-in animation, enabled only during sponsor time
-        `[0:v][overlay]overlay=${imageConfig.x}:${imageConfig.y}:enable='gte(t,${sponsorStartTime})':eval=frame:alpha='if(lt(t,${sponsorStartTime}),0,if(lt(t,${sponsorStartTime + fadeInDuration}),(t-${sponsorStartTime})/${fadeInDuration},1))'[v1]`,
+        // Apply fade-in animation to the overlay image using geq filter to manipulate alpha channel
+        // Alpha value: 0 before start, linear fade from 0 to 255 during fade-in, 255 after
+        `[scaled]geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lt(T,${sponsorStartTime}),0,if(lt(T,${fadeEndTime}),(T-${sponsorStartTime})/${fadeInDuration}*alpha(X,Y),alpha(X,Y)))'[overlay]`,
 
-        // Add wrapped text at custom position with custom size/color and fade-in
-        `[v1]drawtext=textfile='${textFilePath}':fontfile=/app/assets/font.ttf:fontsize=${textConfig.fontSize}:fontcolor=0x${textConfig.color}:x=${textConfig.x}:y=${textConfig.y}:alpha='if(lt(t,${sponsorStartTime}),0,if(lt(t,${sponsorStartTime + fadeInDuration}),(t-${sponsorStartTime})/${fadeInDuration},1))'[v]`,
+        // Overlay image at custom position, enabled only during sponsor time
+        `[0:v][overlay]overlay=${imageConfig.x}:${imageConfig.y}:enable='gte(t,${sponsorStartTime})'[v1]`,
+
+        // Add wrapped text at custom position with custom size/color and fade-in using alpha expression
+        // Alpha value: 0 before start, linear fade from 0 to 1 during fade-in, 1 after
+        `[v1]drawtext=textfile='${textFilePath}':fontfile=/app/assets/font.ttf:fontsize=${textConfig.fontSize}:fontcolor=0x${textConfig.color}:x=${textConfig.x}:y=${textConfig.y}:alpha='if(lt(t,${sponsorStartTime}),0,if(lt(t,${fadeEndTime}),(t-${sponsorStartTime})/${fadeInDuration},1))'[v]`,
       ].join(";");
 
       command
