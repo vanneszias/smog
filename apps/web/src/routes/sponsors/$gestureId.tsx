@@ -30,6 +30,8 @@ function SponsorshipFormComponent() {
     setSponsorName,
     sponsorEmail,
     setSponsorEmail,
+    overlayConfig,
+    setOverlayConfig,
     composedVideoUrl,
     isComposing,
     composeProgress,
@@ -106,8 +108,10 @@ function SponsorshipFormComponent() {
             imageFile={imageFile}
             imagePreview={imagePreview}
             isComposing={isComposing}
+            overlayConfig={overlayConfig}
             overlayText={overlayText}
             setDurationWeeks={setDurationWeeks}
+            setOverlayConfig={setOverlayConfig}
             setText={setText}
           />
         ) : null}

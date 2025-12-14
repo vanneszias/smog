@@ -86,7 +86,7 @@ app.get("/health", (c) =>
 app.post("/api/compose", async (c) => {
   try {
     const body = await c.req.json();
-    const { playbackId, overlayImageUrl, overlayText } = body;
+    const { playbackId, overlayImageUrl, overlayText, overlayConfig } = body;
 
     const hasRequiredFields = playbackId && overlayImageUrl && overlayText;
     if (!hasRequiredFields) {
@@ -99,11 +99,12 @@ app.post("/api/compose", async (c) => {
       );
     }
 
-    // Add job to queue
+    // Add job to queue (overlayConfig is optional, will use defaults if not provided)
     const job = await videoQueue.add("compose-video", {
       playbackId,
       overlayImageUrl,
       overlayText,
+      overlayConfig, // Optional: custom positioning and styling
     });
 
     console.log(`[Video Worker] Job ${job.id} added to queue`);

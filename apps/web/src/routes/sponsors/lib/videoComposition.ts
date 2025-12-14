@@ -1,3 +1,4 @@
+import type { OverlayConfig } from "@smog/types";
 import type { client } from "@/utils/orpc";
 import { convertFileToBase64 } from "./imageValidation";
 
@@ -5,6 +6,7 @@ export type ComposeVideoParams = {
   imageFile: File;
   overlayText: string;
   playbackId: string;
+  overlayConfig: OverlayConfig;
   onProgress: (progress: number) => void;
 };
 
@@ -19,7 +21,8 @@ export async function composeVideo(
   params: ComposeVideoParams,
   orpcClient: typeof client
 ): Promise<ComposeVideoResult> {
-  const { imageFile, overlayText, playbackId, onProgress } = params;
+  const { imageFile, overlayText, playbackId, overlayConfig, onProgress } =
+    params;
 
   try {
     console.log("[Sponsors] Starting video composition...");
@@ -38,6 +41,7 @@ export async function composeVideo(
       playbackId,
       overlayImageUrl: base64Image,
       overlayText,
+      overlayConfig,
     });
 
     if (!(composeResponse.success && composeResponse.jobId)) {

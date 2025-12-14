@@ -1,4 +1,6 @@
+import type { OverlayConfig } from "@smog/types";
 import { Upload } from "lucide-react";
+import { OverlayEditor } from "@/components/overlay/OverlayEditor";
 import {
   calculatePrice,
   DURATION_OPTIONS,
@@ -14,9 +16,11 @@ type UploadStepProps = {
   durationWeeks: number;
   isComposing: boolean;
   composeProgress: number;
+  overlayConfig: OverlayConfig;
   handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setText: (text: string) => void;
   setDurationWeeks: (weeks: number) => void;
+  setOverlayConfig: (config: OverlayConfig) => void;
   handleComposeVideo: () => void;
 };
 
@@ -27,9 +31,11 @@ export function UploadStep({
   durationWeeks,
   isComposing,
   composeProgress,
+  overlayConfig,
   handleImageUpload,
   setText,
   setDurationWeeks,
+  setOverlayConfig,
   handleComposeVideo,
 }: UploadStepProps) {
   return (
@@ -74,46 +80,50 @@ export function UploadStep({
             </span>
           ) : null}
         </div>
-        {imagePreview ? (
-          <img
-            alt="Preview"
-            className="mt-4 h-32 w-32 rounded border object-cover"
-            height={128}
-            src={imagePreview}
-            width={128}
-          />
-        ) : null}
       </div>
 
-      {/* Text Input */}
-      <div className="mb-6">
-        <label
-          className="mb-2 block font-medium"
-          htmlFor="overlay-text"
-          style={{ color: "var(--text)" }}
-        >
-          Overlay Text
-        </label>
-        <p className="mb-3 text-sm" style={{ color: "var(--text-light)" }}>
-          Enter text to display below your image (max 50 characters)
-        </p>
-        <input
-          className="w-full rounded border border-border px-4 py-2"
-          id="overlay-text"
-          maxLength={50}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Your message here..."
-          style={{ color: "var(--text)" }}
-          type="text"
-          value={overlayText}
-        />
-        <div
-          className="mt-1 text-right text-sm"
-          style={{ color: "var(--text-light)" }}
-        >
-          {overlayText.length}/50
+      {/* Overlay Editor - replaces simple preview */}
+      {imagePreview ? (
+        <div className="mb-6">
+          <OverlayEditor
+            imageFile={imageFile}
+            imagePreview={imagePreview}
+            initialConfig={overlayConfig}
+            onConfigChange={setOverlayConfig}
+            onTextChange={setText}
+            overlayText={overlayText}
+          />
         </div>
-      </div>
+      ) : (
+        <div className="mb-6">
+          <label
+            className="mb-2 block font-medium"
+            htmlFor="overlay-text"
+            style={{ color: "var(--text)" }}
+          >
+            Overlay Text
+          </label>
+          <p className="mb-3 text-sm" style={{ color: "var(--text-light)" }}>
+            Enter text to display below your image (max 50 characters)
+          </p>
+          <input
+            className="w-full rounded border border-border px-4 py-2"
+            id="overlay-text"
+            maxLength={50}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Your message here..."
+            style={{ color: "var(--text)" }}
+            type="text"
+            value={overlayText}
+          />
+          <div
+            className="mt-1 text-right text-sm"
+            style={{ color: "var(--text-light)" }}
+          >
+            {overlayText.length}/50
+          </div>
+        </div>
+      )}
 
       {/* Duration Selector */}
       <div className="mb-6">

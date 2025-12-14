@@ -1,5 +1,7 @@
 import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
+import type { OverlayConfig } from "@smog/types";
+import { DEFAULT_OVERLAY_CONFIG } from "@smog/types";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { calculatePrice } from "@/lib/pricing";
@@ -26,6 +28,9 @@ export function useSponsorshipForm(params: UseSponsorshipFormParams) {
   const [durationWeeks, setDurationWeeks] = useState(4);
   const [sponsorName, setSponsorName] = useState("");
   const [sponsorEmail, setSponsorEmail] = useState("");
+  const [overlayConfig, setOverlayConfig] = useState<OverlayConfig>(
+    DEFAULT_OVERLAY_CONFIG
+  );
 
   // Video composition state
   const [composedVideoUrl, setComposedVideoUrl] = useState<string | null>(null);
@@ -98,6 +103,7 @@ export function useSponsorshipForm(params: UseSponsorshipFormParams) {
         imageFile,
         overlayText,
         playbackId: gesture.playbackId,
+        overlayConfig,
         onProgress: setComposeProgress,
       },
       client
@@ -181,6 +187,8 @@ export function useSponsorshipForm(params: UseSponsorshipFormParams) {
     setSponsorName,
     sponsorEmail,
     setSponsorEmail,
+    overlayConfig,
+    setOverlayConfig,
 
     // Video composition
     composedVideoUrl,

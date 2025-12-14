@@ -171,7 +171,10 @@ app.post("/api/video/master-access", async (c) => {
       return c.json({ error: "playbackId is required" }, 400);
     }
 
-    console.log("[Master Access] Getting master URL for playback ID:", playbackId);
+    console.log(
+      "[Master Access] Getting master URL for playback ID:",
+      playbackId
+    );
 
     // Get temporary master download URL from Mux
     const masterAccess = await getMasterDownloadUrl(playbackId);
@@ -185,7 +188,8 @@ app.post("/api/video/master-access", async (c) => {
     });
   } catch (error) {
     console.error("[Master Access] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     return c.json(
       { error: `Failed to get master access URL: ${errorMessage}` },
       500

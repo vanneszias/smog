@@ -119,3 +119,51 @@ export type SponsorshipPricing = {
   weeks: number;
   totalCents: number;
 };
+
+// Overlay configuration for video sponsorships
+// All positioning uses relative coordinates (percentages 0-100) for video size independence
+export type OverlayConfig = {
+  // Image properties (relative to video dimensions: 0-100%)
+  image: {
+    x: number; // X position as percentage (0-100)
+    y: number; // Y position as percentage (0-100)
+    width: number; // Width as percentage (0-100)
+    height: number; // Height as percentage (0-100)
+  };
+
+  // Text properties (relative to video dimensions)
+  text: {
+    x: number; // X position as percentage (0-100)
+    y: number; // Y position as percentage (0-100)
+    fontSize: number; // Font size as percentage of video height (0-20)
+    color: string; // Hex color (e.g., "#000000")
+  };
+
+  // Animation properties
+  animation: {
+    startTime: number; // When to show overlay (seconds from end)
+    fadeInDuration: number; // Fade-in duration in seconds
+  };
+};
+
+// Default configuration matching current hardcoded values
+// Image: 200px on 1080p centered, 220px from bottom
+// Text: 48px on 1080p centered, 180px from bottom
+export const DEFAULT_OVERLAY_CONFIG: OverlayConfig = {
+  image: {
+    x: 50, // Center horizontally
+    y: 79, // 220px from bottom on 1080p = ~79%
+    width: 18, // 200px on 1080p width (1920) = ~10.4%, but using 18% for better visibility
+    height: 18, // 200px on 1080p height = ~18.5%
+  },
+  text: {
+    x: 50, // Center horizontally
+    y: 83, // 180px from bottom on 1080p = ~83%
+    fontSize: 4.4, // 48px on 1080p = ~4.4%
+    color: "#000000",
+  },
+  animation: {
+    startTime: 5, // Last 5 seconds
+    fadeInDuration: 1, // 1 second fade-in
+  },
+};

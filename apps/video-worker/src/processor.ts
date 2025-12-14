@@ -1,6 +1,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import Mux from "@mux/mux-node";
+import type { OverlayConfig } from "@smog/types";
+import { DEFAULT_OVERLAY_CONFIG } from "@smog/types";
 import type { FfmpegCommand } from "fluent-ffmpeg";
 import ffmpeg from "fluent-ffmpeg";
 import sharp from "sharp";
@@ -16,6 +18,7 @@ export type VideoCompositionJob = {
   playbackId: string;
   overlayImageUrl: string;
   overlayText: string;
+  overlayConfig?: OverlayConfig;
 };
 
 export type VideoCompositionResult = {
@@ -49,6 +52,9 @@ export async function processVideoComposition(
   const overlayPath = path.join(workDir, "overlay.png");
   const outputPath = path.join(workDir, "composed.mp4");
 
+  // Use provided config or default
+  const config = job.overlayConfig || DEFAULT_OVERLAY_CONFIG;
+
   try {
     // Create working directory
     await fs.mkdir(workDir, { recursive: true });
@@ -56,6 +62,7 @@ export async function processVideoComposition(
     console.log(`[Processor] Starting video composition in ${workDir}`);
     console.log(`[Processor] Playback ID: ${job.playbackId}`);
     console.log(`[Processor] Overlay text: ${job.overlayText}`);
+    console.log("[Processor] Overlay config:", config);
 
     // Step 1: Download video from Mux (0-30%)
     onProgress?.(5);
@@ -75,6 +82,7 @@ export async function processVideoComposition(
       overlayPath,
       job.overlayText,
       outputPath,
+      config,
       (ffmpegProgress) => {
         // Map FFmpeg progress (0-100) to our range (40-80)
         const mappedProgress = 40 + (ffmpegProgress * 40) / 100;
@@ -213,7 +221,7 @@ async function processOverlayImage(
 
 /**
  * Compose video with FFmpeg
- * Adds overlay image and text ONLY in the last 5 seconds (sponsor segment)
+ * Adds overlay image and text with custom positioning based on config
  * Uses custom font for consistent branding
  * Maintains original video quality
  */
@@ -222,6 +230,7 @@ async function composeVideoWithFFmpeg(
   overlayImagePath: string,
   overlayText: string,
   outputPath: string,
+  config: OverlayConfig,
   onProgress?: (progress: number) => void
 ): Promise<void> {
   // Create temp text file for multiline text support
@@ -232,7 +241,7 @@ async function composeVideoWithFFmpeg(
   return new Promise((resolve, reject) => {
     console.log("[Processor] Starting FFmpeg composition...");
 
-    // Get video duration first for progress calculation
+    // Get video duration and dimensions first for calculations
     ffmpeg.ffprobe(videoPath, (err, metadata) => {
       if (err) {
         reject(new Error(`FFprobe error: ${err.message}`));
@@ -240,12 +249,37 @@ async function composeVideoWithFFmpeg(
       }
 
       const duration = metadata.format.duration || 0;
-      const sponsorStartTime = Math.max(0, duration - 5); // Last 5 seconds
+      const videoWidth = metadata.streams[0].width || 1920;
+      const videoHeight = metadata.streams[0].height || 1080;
 
+      // Convert percentage-based config to pixel values
+      const imageConfig = {
+        x: Math.round((config.image.x / 100) * videoWidth),
+        y: Math.round((config.image.y / 100) * videoHeight),
+        width: Math.round((config.image.width / 100) * videoWidth),
+        height: Math.round((config.image.height / 100) * videoHeight),
+      };
+
+      const textConfig = {
+        x: Math.round((config.text.x / 100) * videoWidth),
+        y: Math.round((config.text.y / 100) * videoHeight),
+        fontSize: Math.round((config.text.fontSize / 100) * videoHeight),
+        color: config.text.color.replace("#", ""),
+      };
+
+      const sponsorStartTime = Math.max(
+        0,
+        duration - config.animation.startTime
+      );
+      const fadeInDuration = config.animation.fadeInDuration;
+
+      console.log(`[Processor] Video dimensions: ${videoWidth}x${videoHeight}`);
       console.log(`[Processor] Video duration: ${duration}s`);
       console.log(
         `[Processor] Sponsor overlay will appear from ${sponsorStartTime}s to ${duration}s`
       );
+      console.log("[Processor] Image overlay config (pixels):", imageConfig);
+      console.log("[Processor] Text overlay config (pixels):", textConfig);
 
       // Build FFmpeg command
       const command: FfmpegCommand = ffmpeg()
@@ -253,17 +287,17 @@ async function composeVideoWithFFmpeg(
         .input(overlayImagePath);
 
       // Complex filter for overlay positioning and text with fade-in animation
-      // Position image at bottom-center: y=H-h-220 (220px from bottom to leave room for wrapped text)
-      // Text is positioned below the image, centered, with larger black font and fade-in
-      // Using textfile parameter for proper multiline support
-      const fadeInDuration = 1.0; // Fade in over 1 second
-
+      // Scale image to exact size, then overlay at custom position with fade-in
+      // Text is positioned at custom location with custom size/color and fade-in
       const filterComplex = [
-        // Overlay the image at bottom-center with fade-in animation, enabled only in last 5 seconds
-        `[1:v]format=rgba[overlay]`,
-        `[0:v][overlay]overlay=(W-w)/2:H-h-220:enable='gte(t,${sponsorStartTime})':eval=frame:alpha='if(lt(t,${sponsorStartTime}),0,if(lt(t,${sponsorStartTime + fadeInDuration}),(t-${sponsorStartTime})/${fadeInDuration},1))'[v1]`,
-        // Add wrapped text below the image with fade-in, black color, larger size, using textfile for multiline support
-        `[v1]drawtext=textfile='${textFilePath}':fontfile=/app/assets/font.ttf:fontsize=48:fontcolor=black:x=(w-text_w)/2:y=h-180:alpha='if(lt(t,${sponsorStartTime}),0,if(lt(t,${sponsorStartTime + fadeInDuration}),(t-${sponsorStartTime})/${fadeInDuration},1))'[v]`,
+        // Scale image to exact size
+        `[1:v]scale=${imageConfig.width}:${imageConfig.height},format=rgba[overlay]`,
+
+        // Overlay image at custom position with fade-in animation, enabled only during sponsor time
+        `[0:v][overlay]overlay=${imageConfig.x}:${imageConfig.y}:enable='gte(t,${sponsorStartTime})':eval=frame:alpha='if(lt(t,${sponsorStartTime}),0,if(lt(t,${sponsorStartTime + fadeInDuration}),(t-${sponsorStartTime})/${fadeInDuration},1))'[v1]`,
+
+        // Add wrapped text at custom position with custom size/color and fade-in
+        `[v1]drawtext=textfile='${textFilePath}':fontfile=/app/assets/font.ttf:fontsize=${textConfig.fontSize}:fontcolor=0x${textConfig.color}:x=${textConfig.x}:y=${textConfig.y}:alpha='if(lt(t,${sponsorStartTime}),0,if(lt(t,${sponsorStartTime + fadeInDuration}),(t-${sponsorStartTime})/${fadeInDuration},1))'[v]`,
       ].join(";");
 
       command
@@ -300,20 +334,26 @@ async function composeVideoWithFFmpeg(
         try {
           await fs.unlink(textFilePath);
         } catch (cleanupError) {
-          console.error("[Processor] Failed to cleanup text file:", cleanupError);
+          console.error(
+            "[Processor] Failed to cleanup text file:",
+            cleanupError
+          );
         }
         resolve();
       });
 
-      command.on("error", async (err) => {
-        console.error("[Processor] FFmpeg error:", err);
+      command.on("error", async (ffmpegError) => {
+        console.error("[Processor] FFmpeg error:", ffmpegError);
         // Clean up temp text file
         try {
           await fs.unlink(textFilePath);
         } catch (cleanupError) {
-          console.error("[Processor] Failed to cleanup text file:", cleanupError);
+          console.error(
+            "[Processor] Failed to cleanup text file:",
+            cleanupError
+          );
         }
-        reject(new Error(`FFmpeg error: ${err.message}`));
+        reject(new Error(`FFmpeg error: ${ffmpegError.message}`));
       });
 
       command.run();
@@ -348,19 +388,6 @@ function wrapText(text: string, maxCharsPerLine = 30): string {
   }
 
   return lines.join("\n");
-}
-
-/**
- * Escape text for FFmpeg drawtext filter
- * FFmpeg requires special characters to be escaped
- */
-function escapeFFmpegText(text: string): string {
-  return text
-    .replace(/\\/g, "\\\\") // Backslash
-    .replace(/'/g, "\\'") // Single quote
-    .replace(/:/g, "\\:") // Colon
-    .replace(/\[/g, "\\[") // Left bracket
-    .replace(/\]/g, "\\]"); // Right bracket
 }
 
 /**

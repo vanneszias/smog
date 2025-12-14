@@ -148,7 +148,7 @@ export async function getAssetIdFromPlaybackId(
     while (page <= maxPages) {
       console.log(`[MUX] Searching assets page ${page}...`);
       const assets = await mux.video.assets.list({ limit, page });
-      
+
       const asset = assets.data.find((a) =>
         a.playback_ids?.some((p) => p.id === playbackId)
       );
@@ -214,7 +214,10 @@ export async function getMasterDownloadUrl(
   playbackId: string
 ): Promise<MasterAccessUrl> {
   try {
-    console.log("[MUX] Getting master download URL for playback ID:", playbackId);
+    console.log(
+      "[MUX] Getting master download URL for playback ID:",
+      playbackId
+    );
 
     // Step 1: Get asset ID from playback ID
     const assetId = await getAssetIdFromPlaybackId(playbackId);
@@ -232,7 +235,7 @@ export async function getMasterDownloadUrl(
       // Check if master is ready
       if (asset.master?.status === "ready" && asset.master?.url) {
         console.log("[MUX] Master download URL ready");
-        
+
         // Master URLs expire after 24 hours
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 24);

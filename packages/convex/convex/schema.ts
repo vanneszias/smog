@@ -51,6 +51,26 @@ export default defineSchema({
     overlayText: v.string(),
     sponsoredVideoPlaybackId: v.optional(v.string()),
     originalVideoPlaybackId: v.string(),
+    overlayConfig: v.optional(
+      v.object({
+        image: v.object({
+          x: v.number(),
+          y: v.number(),
+          width: v.number(),
+          height: v.number(),
+        }),
+        text: v.object({
+          x: v.number(),
+          y: v.number(),
+          fontSize: v.number(),
+          color: v.string(),
+        }),
+        animation: v.object({
+          startTime: v.number(),
+          fadeInDuration: v.number(),
+        }),
+      })
+    ),
     startDate: v.number(),
     endDate: v.number(),
     durationWeeks: v.number(),

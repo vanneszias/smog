@@ -22,6 +22,24 @@ export const sponsorshipsRouter = {
         playbackId: z.string(),
         overlayImageUrl: z.string(), // Convex storage URL or base64 data URL
         overlayText: z.string().max(100),
+        overlayConfig: z.object({
+          image: z.object({
+            x: z.number().min(0).max(100),
+            y: z.number().min(0).max(100),
+            width: z.number().min(1).max(100),
+            height: z.number().min(1).max(100),
+          }),
+          text: z.object({
+            x: z.number().min(0).max(100),
+            y: z.number().min(0).max(100),
+            fontSize: z.number().min(0.5).max(20),
+            color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+          }),
+          animation: z.object({
+            startTime: z.number().min(1).max(60),
+            fadeInDuration: z.number().min(0).max(5),
+          }),
+        }),
       })
     )
     .handler(async ({ input }) => {
@@ -37,6 +55,7 @@ export const sponsorshipsRouter = {
             playbackId: input.playbackId,
             overlayImageUrl: input.overlayImageUrl,
             overlayText: input.overlayText,
+            overlayConfig: input.overlayConfig,
           }),
         });
 
