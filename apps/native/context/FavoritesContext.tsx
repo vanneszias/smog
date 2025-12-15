@@ -118,45 +118,21 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
     migrateLegacyFavorites();
   }, [userId, isInitialized]);
 
-  // Sync local database with Convex favorites
-  const syncLocalWithConvex = useCallback(
-    async (convexFavoriteIds: string[], userId: string) => {
-      const localFavorites = await offlineFavoritesService.getFavorites(userId);
-
-      // Add missing favorites to local database
-      for (const gestureId of convexFavoriteIds) {
-        if (!localFavorites.includes(gestureId)) {
-          await offlineFavoritesService.toggleFavorite(userId, gestureId);
-        }
-      }
-
-      // Remove extras from local database
-      for (const gestureId of localFavorites) {
-        if (!convexFavoriteIds.includes(gestureId)) {
-          await offlineFavoritesService.toggleFavorite(userId, gestureId);
-        }
-      }
-    },
-    []
-  );
-
-  // Load favorites from Convex (primary) or local database (fallback)
+  // Sync local cache from Convex (Convex is source of truth)
   const loadFavoritesFromConvex = useCallback(
     async (convexIds: string[], userId: string) => {
-      // Update local database with Convex data for offline access
-      if (convexIds.length > 0) {
-        await syncLocalWithConvex(convexIds, userId);
-      }
+      // Update local cache with Convex data for offline access (one-way sync)
+      await offlineFavoritesService.syncFromConvex(userId, convexIds);
 
       if (__DEV__) {
         console.log(
-          `[FavoritesProvider] Loaded ${convexIds.length} favorites from Convex`
+          `[FavoritesProvider] Loaded ${convexIds.length} favorites from Convex and synced to local cache`
         );
       }
 
       return convexIds;
     },
-    [syncLocalWithConvex]
+    []
   );
 
   const loadFavoritesFromLocal = useCallback(async (userId: string) => {
@@ -244,19 +220,18 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
 
   const toggleFavoriteOnline = useCallback(
     async (userId: string, gestureId: string) => {
+      // Use Convex as source of truth
       const wasAdded = await toggleUserFavorite({
         userId: userId as Id<"users">,
         gestureId: gestureId as Id<"gestures">,
       });
 
-      // Update local database to match Convex
-      const isFavoriteLocal = await offlineFavoritesService.isFavorite(
+      // Update local cache to match Convex
+      await offlineFavoritesService.updateLocalCache(
         userId,
-        gestureId
+        gestureId,
+        wasAdded
       );
-      if (wasAdded !== isFavoriteLocal) {
-        await offlineFavoritesService.toggleFavorite(userId, gestureId);
-      }
 
       if (__DEV__) {
         console.log(
@@ -271,14 +246,14 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
 
   const toggleFavoriteOffline = useCallback(
     async (userId: string, gestureId: string) => {
-      const wasAdded = await offlineFavoritesService.toggleFavorite(
+      const wasAdded = await offlineFavoritesService.toggleFavoriteOffline(
         userId,
         gestureId
       );
 
       if (__DEV__) {
         console.log(
-          `[FavoritesProvider] Favorite ${wasAdded ? "added" : "removed"} offline: ${gestureId}`
+          `[FavoritesProvider] Favorite ${wasAdded ? "added" : "removed"} offline (queued for sync): ${gestureId}`
         );
       }
 

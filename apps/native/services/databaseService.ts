@@ -386,7 +386,7 @@ class DatabaseService {
     };
 
     await this.db.runAsync(
-      `INSERT OR REPLACE INTO gestures 
+      `INSERT OR REPLACE INTO gestures
        (id, convexId, name, category, playbackId, concept, info, createdAt, updatedAt, lastSyncAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -446,7 +446,7 @@ class DatabaseService {
 
     const now = new Date().toISOString();
     await this.db.runAsync(
-      `INSERT OR REPLACE INTO categories 
+      `INSERT OR REPLACE INTO categories
        (id, convexId, name, description, isActive, createdAt, updatedAt, lastSyncAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -488,8 +488,8 @@ class DatabaseService {
 
     const placeholders = ids.map(() => "?").join(",");
     const query = `
-      SELECT * FROM gestures 
-      WHERE id IN (${placeholders}) 
+      SELECT * FROM gestures
+      WHERE id IN (${placeholders})
       ORDER BY name ASC
     `;
 
@@ -507,7 +507,7 @@ class DatabaseService {
     }
 
     let query = `
-      SELECT * FROM gestures 
+      SELECT * FROM gestures
       WHERE (name LIKE ? OR concept LIKE ? OR category LIKE ?)
     `;
     const params: string[] = [
@@ -542,8 +542,8 @@ class DatabaseService {
     }
 
     const query = `
-      SELECT * FROM gestures 
-      WHERE category LIKE ? 
+      SELECT * FROM gestures
+      WHERE category LIKE ?
       ORDER BY name ASC
     `;
 

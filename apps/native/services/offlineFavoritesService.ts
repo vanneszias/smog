@@ -43,7 +43,9 @@ class OfflineFavoritesService {
       networkService.addListener(this.handleNetworkChange.bind(this));
 
       if (__DEV__) {
-        console.log("[offlineFavoritesService] Service initialized");
+        console.log(
+          "[offlineFavoritesService] Service initialized - offline cache mode"
+        );
       }
     } catch (error) {
       console.error("[offlineFavoritesService] Failed to initialize:", error);
@@ -62,7 +64,99 @@ class OfflineFavoritesService {
     return `fav_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
-  async toggleFavorite(userId: string, gestureId: string): Promise<boolean> {
+  /**
+   * Updates the local cache to match Convex state (Convex is source of truth)
+   * This is used to keep offline cache in sync
+   */
+  async updateLocalCache(
+    userId: string,
+    gestureId: string,
+    isFavorite: boolean
+  ): Promise<void> {
+    if (!this.db) {
+      throw new Error("Service not initialized");
+    }
+
+    const now = new Date().toISOString();
+
+    try {
+      await this.db.runAsync(
+        `
+        INSERT OR REPLACE INTO user_favorites
+        (user_id, gesture_id, is_favorite, created_at, updated_at, sync_status, operation_id)
+        VALUES (?, ?, ?, ?, ?, 'synced', 'cache')
+      `,
+        [userId, gestureId, isFavorite ? 1 : 0, now, now]
+      );
+
+      if (__DEV__) {
+        console.log(
+          `[offlineFavoritesService] Updated local cache: ${gestureId} = ${isFavorite}`
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[offlineFavoritesService] Failed to update local cache:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Syncs all favorites from Convex to local cache (overwrites local state)
+   */
+  async syncFromConvex(
+    userId: string,
+    convexFavorites: string[]
+  ): Promise<void> {
+    if (!this.db) {
+      throw new Error("Service not initialized");
+    }
+
+    const now = new Date().toISOString();
+
+    try {
+      // Clear all existing favorites for this user
+      await this.db.runAsync(
+        "DELETE FROM user_favorites WHERE user_id = ? AND sync_status = 'synced'",
+        [userId]
+      );
+
+      // Insert all favorites from Convex
+      for (const gestureId of convexFavorites) {
+        await this.db.runAsync(
+          `
+          INSERT OR REPLACE INTO user_favorites
+          (user_id, gesture_id, is_favorite, created_at, updated_at, sync_status, operation_id)
+          VALUES (?, ?, 1, ?, ?, 'synced', 'cache')
+        `,
+          [userId, gestureId, now, now]
+        );
+      }
+
+      if (__DEV__) {
+        console.log(
+          `[offlineFavoritesService] Synced ${convexFavorites.length} favorites from Convex to local cache`
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[offlineFavoritesService] Failed to sync from Convex:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Toggles favorite in OFFLINE mode only (queues for sync when online)
+   * When online, use Convex directly instead
+   */
+  async toggleFavoriteOffline(
+    userId: string,
+    gestureId: string
+  ): Promise<boolean> {
     if (!this.db) {
       throw new Error("Service not initialized");
     }
@@ -74,7 +168,7 @@ class OfflineFavoritesService {
       // Check current state
       const currentFavorite = (await this.db.getFirstAsync(
         `
-        SELECT * FROM user_favorites 
+        SELECT * FROM user_favorites
         WHERE user_id = ? AND gesture_id = ?
       `,
         [userId, gestureId]
@@ -87,7 +181,7 @@ class OfflineFavoritesService {
       // Update/insert favorite locally
       await this.db.runAsync(
         `
-        INSERT OR REPLACE INTO user_favorites 
+        INSERT OR REPLACE INTO user_favorites
         (user_id, gesture_id, is_favorite, created_at, updated_at, sync_status, operation_id)
         VALUES (?, ?, ?, ?, ?, 'pending', ?)
       `,
@@ -97,33 +191,23 @@ class OfflineFavoritesService {
       // Add to sync queue
       await this.db.runAsync(
         `
-        INSERT OR REPLACE INTO favorites_sync_queue 
+        INSERT OR REPLACE INTO favorites_sync_queue
         (operation_id, user_id, gesture_id, operation, created_at, retry_count)
         VALUES (?, ?, ?, ?, ?, 0)
       `,
         [operationId, userId, gestureId, operation, now]
       );
 
-      // Try immediate sync if online
-      if (networkService.isConnected()) {
-        this.syncPendingOperations().catch((error) => {
-          console.warn(
-            "[offlineFavoritesService] Immediate sync failed:",
-            error
-          );
-        });
-      }
-
       if (__DEV__) {
         console.log(
-          `[offlineFavoritesService] Favorite ${operation}ed locally: ${gestureId}`
+          `[offlineFavoritesService] Favorite ${operation}ed offline (queued for sync): ${gestureId}`
         );
       }
 
       return isNewFavorite;
     } catch (error) {
       console.error(
-        "[offlineFavoritesService] Failed to toggle favorite:",
+        "[offlineFavoritesService] Failed to toggle favorite offline:",
         error
       );
       throw error;
@@ -138,7 +222,7 @@ class OfflineFavoritesService {
     try {
       const favorites = (await this.db.getAllAsync(
         `
-        SELECT gesture_id FROM user_favorites 
+        SELECT gesture_id FROM user_favorites
         WHERE user_id = ? AND is_favorite = 1
         ORDER BY updated_at DESC
       `,
@@ -163,7 +247,7 @@ class OfflineFavoritesService {
     try {
       const favorite = (await this.db.getFirstAsync(
         `
-        SELECT is_favorite FROM user_favorites 
+        SELECT is_favorite FROM user_favorites
         WHERE user_id = ? AND gesture_id = ?
       `,
         [userId, gestureId]
@@ -188,9 +272,9 @@ class OfflineFavoritesService {
 
     try {
       const pendingOps = (await this.db.getAllAsync(`
-        SELECT * FROM favorites_sync_queue 
-        WHERE retry_count < 3 
-        ORDER BY created_at ASC 
+        SELECT * FROM favorites_sync_queue
+        WHERE retry_count < 3
+        ORDER BY created_at ASC
         LIMIT 10
       `)) as SyncOperation[];
 
@@ -200,7 +284,7 @@ class OfflineFavoritesService {
 
       if (__DEV__) {
         console.log(
-          `[offlineFavoritesService] Syncing ${pendingOps.length} pending operations`
+          `[offlineFavoritesService] Syncing ${pendingOps.length} pending operations to Convex`
         );
       }
 
@@ -216,23 +300,30 @@ class OfflineFavoritesService {
             [op.operation_id]
           );
 
-          // Mark as synced
+          // Update local cache to 'synced' status (no longer pending)
+          // The Convex data will be the source of truth
           await this.db.runAsync(
             `
-            UPDATE user_favorites 
-            SET sync_status = 'synced' 
-            WHERE user_id = ? AND gesture_id = ?
+            UPDATE user_favorites
+            SET sync_status = 'synced', operation_id = 'cache'
+            WHERE user_id = ? AND gesture_id = ? AND operation_id = ?
           `,
-            [op.user_id, op.gesture_id]
+            [op.user_id, op.gesture_id, op.operation_id]
           );
+
+          if (__DEV__) {
+            console.log(
+              `[offlineFavoritesService] Successfully synced operation: ${op.operation_id}`
+            );
+          }
         } catch (error) {
           // Update retry count
           await this.db.runAsync(
             `
-            UPDATE favorites_sync_queue 
-            SET retry_count = retry_count + 1, 
-                last_retry_at = ?, 
-                error_message = ? 
+            UPDATE favorites_sync_queue
+            SET retry_count = retry_count + 1,
+                last_retry_at = ?,
+                error_message = ?
             WHERE operation_id = ?
           `,
             [new Date().toISOString(), String(error), op.operation_id]
@@ -252,56 +343,32 @@ class OfflineFavoritesService {
   }
 
   private async syncSingleOperation(op: SyncOperation): Promise<void> {
-    // This would need to be called with proper Convex client context
-    // For now, we'll implement a callback approach
+    // This callback syncs the operation to Convex
     if (this.onSyncOperation) {
       try {
         await this.onSyncOperation(op);
+
+        if (__DEV__) {
+          console.log(
+            `[offlineFavoritesService] Operation synced to Convex: ${op.operation} ${op.gesture_id}`
+          );
+        }
       } catch (error) {
-        // Handle conflicts here - for now we'll implement simple retry logic
+        // Handle conflicts - Convex is source of truth, so we don't retry conflicts
         if (
           String(error).includes("conflict") ||
           String(error).includes("version")
         ) {
-          // Mark as conflict and attempt resolution
-          await this.handleConflict(op);
-          throw error;
+          console.warn(
+            `[offlineFavoritesService] Conflict detected for ${op.operation_id}, Convex state will override`
+          );
+          // Don't throw - let the operation complete and Convex will sync back the correct state
+          return;
         }
         throw error;
       }
     } else {
       throw new Error("No sync callback registered");
-    }
-  }
-
-  private async handleConflict(op: SyncOperation): Promise<void> {
-    if (!this.db) {
-      return;
-    }
-
-    try {
-      // For now, implement simple conflict resolution:
-      // Last-write-wins - the operation will be retried
-      // More sophisticated conflict resolution could be added here
-      await this.db.runAsync(
-        `
-        UPDATE user_favorites 
-        SET sync_status = 'conflict' 
-        WHERE user_id = ? AND gesture_id = ?
-      `,
-        [op.user_id, op.gesture_id]
-      );
-
-      if (__DEV__) {
-        console.log(
-          `[offlineFavoritesService] Conflict detected for operation: ${op.operation_id}`
-        );
-      }
-    } catch (error) {
-      console.error(
-        "[offlineFavoritesService] Failed to handle conflict:",
-        error
-      );
     }
   }
 
@@ -319,21 +386,13 @@ class OfflineFavoritesService {
     const now = new Date().toISOString();
 
     try {
+      // Queue legacy favorites for sync to Convex (don't add to cache directly)
       for (const gestureId of legacyFavorites) {
         const operationId = this.generateOperationId();
 
         await this.db.runAsync(
           `
-          INSERT OR IGNORE INTO user_favorites 
-          (user_id, gesture_id, is_favorite, created_at, updated_at, sync_status, operation_id)
-          VALUES (?, ?, 1, ?, ?, 'pending', ?)
-        `,
-          [userId, gestureId, now, now, operationId]
-        );
-
-        await this.db.runAsync(
-          `
-          INSERT OR IGNORE INTO favorites_sync_queue 
+          INSERT OR IGNORE INTO favorites_sync_queue
           (operation_id, user_id, gesture_id, operation, created_at, retry_count)
           VALUES (?, ?, ?, 'add', ?, 0)
         `,
@@ -343,7 +402,7 @@ class OfflineFavoritesService {
 
       if (__DEV__) {
         console.log(
-          `[offlineFavoritesService] Migrated ${legacyFavorites.length} legacy favorites`
+          `[offlineFavoritesService] Migrated ${legacyFavorites.length} legacy favorites (queued for sync to Convex)`
         );
       }
     } catch (error) {
@@ -361,6 +420,7 @@ class OfflineFavoritesService {
     }
 
     try {
+      // Clear cache and pending operations
       await this.db.runAsync("DELETE FROM user_favorites WHERE user_id = ?", [
         userId,
       ]);
@@ -371,7 +431,7 @@ class OfflineFavoritesService {
 
       if (__DEV__) {
         console.log(
-          `[offlineFavoritesService] Cleared favorites for user: ${userId}`
+          `[offlineFavoritesService] Cleared local cache for user: ${userId}`
         );
       }
     } catch (error) {

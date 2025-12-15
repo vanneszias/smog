@@ -28,8 +28,11 @@
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
-    "native:ios": "turbo -F native ios",
-    "native:android": "turbo -F native android",
+    "native:ios": "turbo -F native ios --",
+    "native:ios:release": "turbo -F native ios -- --configuration Release --device",
+    "native:ios:debug": "turbo -F native ios -- --configuration Debug",
+    "native:android": "turbo -F native android --",
+    "native:android:release": "turbo -F native android -- --variant release",
     "convex:codegen": "turbo -F @smog/convex codegen",
     "convex:dev": "turbo -F @smog/convex dev",
     "convex:deploy": "turbo -F @smog/convex deploy"
