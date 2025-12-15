@@ -17,7 +17,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SponsorsIndexRouteImport } from './routes/sponsors/index'
 import { Route as SponsorsSuccessRouteImport } from './routes/sponsors/success'
-import { Route as SponsorsGestureIdRouteImport } from './routes/sponsors/$gestureId'
+import { Route as SponsorsCreateRouteImport } from './routes/sponsors/create'
 import { Route as GesturesIdRouteImport } from './routes/gestures_.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
@@ -61,9 +61,9 @@ const SponsorsSuccessRoute = SponsorsSuccessRouteImport.update({
   path: '/sponsors/success',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SponsorsGestureIdRoute = SponsorsGestureIdRouteImport.update({
-  id: '/sponsors/$gestureId',
-  path: '/sponsors/$gestureId',
+const SponsorsCreateRoute = SponsorsCreateRouteImport.update({
+  id: '/sponsors/create',
+  path: '/sponsors/create',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GesturesIdRoute = GesturesIdRouteImport.update({
@@ -86,7 +86,7 @@ export interface FileRoutesByFullPath {
   '/success': typeof SuccessRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/gestures/$id': typeof GesturesIdRoute
-  '/sponsors/$gestureId': typeof SponsorsGestureIdRoute
+  '/sponsors/create': typeof SponsorsCreateRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsors': typeof SponsorsIndexRoute
 }
@@ -99,7 +99,7 @@ export interface FileRoutesByTo {
   '/success': typeof SuccessRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/gestures/$id': typeof GesturesIdRoute
-  '/sponsors/$gestureId': typeof SponsorsGestureIdRoute
+  '/sponsors/create': typeof SponsorsCreateRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsors': typeof SponsorsIndexRoute
 }
@@ -113,7 +113,7 @@ export interface FileRoutesById {
   '/success': typeof SuccessRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/gestures_/$id': typeof GesturesIdRoute
-  '/sponsors/$gestureId': typeof SponsorsGestureIdRoute
+  '/sponsors/create': typeof SponsorsCreateRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsors/': typeof SponsorsIndexRoute
 }
@@ -128,7 +128,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/auth/callback'
     | '/gestures/$id'
-    | '/sponsors/$gestureId'
+    | '/sponsors/create'
     | '/sponsors/success'
     | '/sponsors'
   fileRoutesByTo: FileRoutesByTo
@@ -141,7 +141,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/auth/callback'
     | '/gestures/$id'
-    | '/sponsors/$gestureId'
+    | '/sponsors/create'
     | '/sponsors/success'
     | '/sponsors'
   id:
@@ -154,7 +154,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/auth/callback'
     | '/gestures_/$id'
-    | '/sponsors/$gestureId'
+    | '/sponsors/create'
     | '/sponsors/success'
     | '/sponsors/'
   fileRoutesById: FileRoutesById
@@ -168,7 +168,7 @@ export interface RootRouteChildren {
   SuccessRoute: typeof SuccessRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   GesturesIdRoute: typeof GesturesIdRoute
-  SponsorsGestureIdRoute: typeof SponsorsGestureIdRoute
+  SponsorsCreateRoute: typeof SponsorsCreateRoute
   SponsorsSuccessRoute: typeof SponsorsSuccessRoute
   SponsorsIndexRoute: typeof SponsorsIndexRoute
 }
@@ -231,11 +231,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SponsorsSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sponsors/$gestureId': {
-      id: '/sponsors/$gestureId'
-      path: '/sponsors/$gestureId'
-      fullPath: '/sponsors/$gestureId'
-      preLoaderRoute: typeof SponsorsGestureIdRouteImport
+    '/sponsors/create': {
+      id: '/sponsors/create'
+      path: '/sponsors/create'
+      fullPath: '/sponsors/create'
+      preLoaderRoute: typeof SponsorsCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gestures_/$id': {
@@ -264,7 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuccessRoute: SuccessRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   GesturesIdRoute: GesturesIdRoute,
-  SponsorsGestureIdRoute: SponsorsGestureIdRoute,
+  SponsorsCreateRoute: SponsorsCreateRoute,
   SponsorsSuccessRoute: SponsorsSuccessRoute,
   SponsorsIndexRoute: SponsorsIndexRoute,
 }

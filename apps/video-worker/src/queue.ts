@@ -1,7 +1,8 @@
+import type { OverlayConfig } from "@smog/types";
 import type { Job } from "bullmq";
 import { Queue, Worker } from "bullmq";
 import Redis from "ioredis";
-import { processVideoComposition, type VideoCompositionJob } from "./processor";
+import { createVideoComposer } from "./core/VideoComposer";
 
 // Redis connection
 const redisConnection = new Redis({
@@ -13,8 +14,21 @@ const redisConnection = new Redis({
 const ONE_HOUR_SECONDS = 3600;
 const ONE_DAY_SECONDS = 86_400;
 
+export type VideoCompositionJob = {
+  playbackId: string;
+  overlayImageUrl: string;
+  overlayText: string;
+  overlayConfig?: OverlayConfig;
+};
+
+export type VideoCompositionResult = {
+  success: boolean;
+  composedVideoPlaybackId?: string;
+  error?: string;
+};
+
 // Video composition queue
-export const videoQueue = new Queue("video-composition", {
+export const videoQueue = new Queue<VideoCompositionJob>("video-composition", {
   connection: redisConnection,
   defaultJobOptions: {
     attempts: 2,
@@ -23,24 +37,94 @@ export const videoQueue = new Queue("video-composition", {
       delay: 5000,
     },
     removeOnComplete: {
-      age: ONE_HOUR_SECONDS, // Keep completed jobs for 1 hour
+      age: ONE_HOUR_SECONDS,
       count: 100,
     },
     removeOnFail: {
-      age: ONE_DAY_SECONDS, // Keep failed jobs for 24 hours
+      age: ONE_DAY_SECONDS,
     },
   },
 });
 
-// Job processor
-const processVideoCompositionJob = async (job: Job) => {
+// Job processor using new VideoComposer architecture
+const processVideoCompositionJob = async (
+  job: Job<VideoCompositionJob>
+): Promise<VideoCompositionResult> => {
   console.log(`[Video Worker] Processing job ${job.id}`, job.data);
 
-  const jobData: VideoCompositionJob = job.data;
+  const { playbackId, overlayImageUrl, overlayText, overlayConfig } = job.data;
 
-  // Process the video with progress updates
-  const result = await processVideoComposition(jobData, (progress) => {
-    job.updateProgress(progress);
+  // Create VideoComposer instance
+  const composer = createVideoComposer({
+    tokenId: process.env.MUX_TOKEN_ID!,
+    tokenSecret: process.env.MUX_TOKEN_SECRET!,
+  });
+
+  // Register progress tracking using events
+  const emitter = composer.getEmitter();
+
+  // Map events to job progress updates
+  emitter.on("download:start", () => {
+    job.updateProgress(5);
+    job.log("Starting video download...");
+  });
+
+  emitter.on("download:complete", () => {
+    job.updateProgress(30);
+    job.log("Video downloaded successfully");
+  });
+
+  emitter.on("image:start", () => {
+    job.updateProgress(35);
+    job.log("Processing overlay image...");
+  });
+
+  emitter.on("image:complete", () => {
+    job.updateProgress(40);
+    job.log("Image processed successfully");
+  });
+
+  emitter.on("compose:start", () => {
+    job.updateProgress(45);
+    job.log("Starting video composition with FFmpeg...");
+  });
+
+  emitter.on("compose:progress", (percent) => {
+    // Map compose progress (0-100) to job progress (45-80)
+    const mappedProgress = 45 + (percent * 35) / 100;
+    job.updateProgress(Math.round(mappedProgress));
+  });
+
+  emitter.on("compose:complete", () => {
+    job.updateProgress(80);
+    job.log("Video composition completed");
+  });
+
+  emitter.on("upload:start", () => {
+    job.updateProgress(85);
+    job.log("Uploading composed video to Mux...");
+  });
+
+  emitter.on("upload:complete", (newPlaybackId) => {
+    job.updateProgress(95);
+    job.log(`Upload completed: ${newPlaybackId}`);
+  });
+
+  emitter.on("cleanup:complete", () => {
+    job.updateProgress(100);
+    job.log("Cleanup completed");
+  });
+
+  emitter.on("error", (error) => {
+    job.log(`Error: ${error.message}`);
+  });
+
+  // Execute composition
+  const result = await composer.compose({
+    playbackId,
+    overlayImageUrl,
+    overlayText,
+    overlayConfig,
   });
 
   if (!result.success) {
@@ -51,10 +135,7 @@ const processVideoCompositionJob = async (job: Job) => {
     `[Video Worker] Job ${job.id} completed successfully. New playback ID: ${result.composedVideoPlaybackId}`
   );
 
-  return {
-    success: true,
-    composedVideoPlaybackId: result.composedVideoPlaybackId,
-  };
+  return result;
 };
 
 // Worker instance
@@ -67,8 +148,8 @@ export const initQueue = () => {
     connection: redisConnection,
     concurrency,
     limiter: {
-      max: 10, // Max 10 jobs
-      duration: 60_000, // Per minute
+      max: 10,
+      duration: 60_000,
     },
   });
 

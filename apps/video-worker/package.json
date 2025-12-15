@@ -3,11 +3,11 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "main": "src/index.ts",
+  "main": "src/server.ts",
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
+    "dev": "bun run --hot src/server.ts",
     "build": "tsdown",
-    "start": "bun run dist/index.mjs",
+    "start": "bun run dist/server.mjs",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {

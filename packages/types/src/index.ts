@@ -167,3 +167,6 @@ export const DEFAULT_OVERLAY_CONFIG: OverlayConfig = {
     fadeInDuration: 1, // 1 second fade-in
   },
 };
+
+// Presets
+export * from "./presets";

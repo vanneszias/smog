@@ -1,214 +1,175 @@
-import { api } from "@smog/convex";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
-import { Clock, Sparkles } from "lucide-react";
+import { GestureList } from "@smog/ui";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Sparkles, Upload } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { useGestures } from "@/hooks/useGestures";
 
 export const Route = createFileRoute("/sponsors/")({
   component: SponsorsComponent,
 });
 
-function GestureCard({
-  gesture,
-}: {
-  gesture: {
-    _id: string;
-    name: string;
-    playbackId: string;
-    sponsorship: {
-      endDate: number;
-    } | null;
-  };
-}) {
-  const isSponsored = Boolean(gesture.sponsorship);
-  const endDate = gesture.sponsorship
-    ? new Date(gesture.sponsorship.endDate)
-    : null;
-
-  return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
-      {/* Video Preview */}
-      <div className="relative aspect-video bg-black">
-        {/*<video
-          autoPlay
-          className="h-full w-full object-cover"
-          loop
-          muted
-          playsInline
-          src={`https://stream.mux.com/${gesture.playbackId}.m3u8`}
-        />*/}
-        {isSponsored ? (
-          <div className="absolute top-2 right-2 rounded bg-yellow-500 px-2 py-1 font-semibold text-black text-xs">
-            Sponsored
-          </div>
-        ) : null}
-      </div>
-
-      {/* Content */}
-      <div className="p-4">
-        <h3
-          className="mb-2 font-semibold text-lg"
-          style={{ color: "var(--text)" }}
-        >
-          {gesture.name}
-        </h3>
-
-        {/* Status */}
-        {isSponsored ? (
-          endDate !== null ? (
-            <div
-              className="mb-4 flex items-center text-sm"
-              style={{ color: "var(--text-light)" }}
-            >
-              <Clock className="mr-1 h-4 w-4" />
-              Sponsored until {endDate.toLocaleDateString()}
-            </div>
-          ) : null
-        ) : (
-          <div className="mb-4 text-sm" style={{ color: "var(--accent)" }}>
-            Available for sponsorship
-          </div>
-        )}
-
-        {/* Action Button */}
-        <Link
-          className={`block w-full rounded px-4 py-2 text-center font-medium transition-colors ${
-            isSponsored
-              ? "cursor-not-allowed bg-gray-300 text-gray-500"
-              : "bg-primary text-white hover:opacity-90"
-          }`}
-          disabled={isSponsored}
-          style={
-            isSponsored ? undefined : { backgroundColor: "var(--primary)" }
-          }
-          to={isSponsored ? "#" : `/sponsors/${gesture._id}`}
-        >
-          {isSponsored ? "Not Available" : "Sponsor This Gesture"}
-        </Link>
-      </div>
-    </div>
-  );
-}
-
 function SponsorsComponent() {
-  const gesturesWithSponsorship = useQuery(
-    api.sponsorships.listGesturesWithSponsorship,
-    {}
-  );
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { gestures: allGestures, isLoading, error } = useGestures();
+  const [selectedGestureIds, setSelectedGestureIds] = useState<string[]>([]);
 
-  const isLoading = gesturesWithSponsorship === undefined;
+  const handleSelectGesture = (gestureId: string) => {
+    setSelectedGestureIds((prev) =>
+      prev.includes(gestureId)
+        ? prev.filter((id) => id !== gestureId)
+        : [...prev, gestureId]
+    );
+  };
+
+  const handleContinue = () => {
+    if (selectedGestureIds.length > 0) {
+      navigate({
+        to: "/sponsors/create",
+        search: { gestureIds: selectedGestureIds.join(",") },
+      });
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1
-            className="mb-4 font-bold text-4xl"
-            style={{ color: "var(--text)" }}
-          >
-            <Sparkles className="mr-2 inline h-8 w-8" />
-            Sponsor a Gesture
-          </h1>
-          <p
-            className="mx-auto max-w-2xl text-lg"
-            style={{ color: "var(--text-light)" }}
-          >
-            Choose a gesture to sponsor with your brand. Your custom overlay
-            will appear in the video for the duration of your sponsorship.
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Header */}
+      <div className="border-b bg-background px-6 py-6">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-4 flex items-center gap-2">
+            <Sparkles className="h-8 w-8 text-primary" />
+            <h1 className="font-bold text-3xl">
+              {t("web.sponsors.title", "Sponsor Gestures")}
+            </h1>
+          </div>
+          <p className="text-muted-foreground">
+            {t(
+              "web.sponsors.description",
+              "Select one or more gestures to sponsor. Each video will have your custom outro with branding and message."
+            )}
           </p>
-        </div>
 
-        {/* Loading State */}
-        {isLoading ? (
-          <div className="text-center" style={{ color: "var(--text-light)" }}>
-            Loading gestures...
-          </div>
-        ) : null}
-
-        {/* Gesture Grid */}
-        {!isLoading && gesturesWithSponsorship ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {gesturesWithSponsorship.map((gesture) => (
-              <GestureCard gesture={gesture} key={gesture._id} />
-            ))}
-          </div>
-        ) : null}
-
-        {/* Empty State */}
-        {!isLoading &&
-        gesturesWithSponsorship &&
-        gesturesWithSponsorship.length === 0 ? (
-          <div className="text-center" style={{ color: "var(--text-light)" }}>
-            No gestures available at the moment.
-          </div>
-        ) : null}
-
-        {/* Info Section */}
-        <div className="mt-12 rounded-lg border border-border bg-card p-6">
-          <h2
-            className="mb-4 font-semibold text-xl"
-            style={{ color: "var(--text)" }}
-          >
-            How It Works
-          </h2>
-          <div className="grid gap-6 md:grid-cols-3">
-            <div>
-              <div
-                className="mb-2 flex h-10 w-10 items-center justify-center rounded-full font-bold text-white"
-                style={{ backgroundColor: "var(--primary)" }}
-              >
-                1
+          {/* Selection Counter and Action */}
+          {selectedGestureIds.length > 0 && (
+            <div className="mt-4 flex items-center gap-4">
+              <div className="rounded-lg bg-primary/10 px-4 py-2">
+                <span className="font-medium">
+                  {selectedGestureIds.length}{" "}
+                  {selectedGestureIds.length === 1
+                    ? t("web.sponsors.gestureSelected", "gesture selected")
+                    : t("web.sponsors.gesturesSelected", "gestures selected")}
+                </span>
               </div>
-              <h3
-                className="mb-2 font-semibold"
-                style={{ color: "var(--text)" }}
+              <Button onClick={handleContinue} size="lg">
+                <Upload className="mr-2 h-4 w-4" />
+                {t("web.sponsors.continue", "Continue to Upload")}
+              </Button>
+              <Button
+                onClick={() => setSelectedGestureIds([])}
+                size="lg"
+                variant="outline"
               >
-                Choose & Customize
-              </h3>
-              <p className="text-sm" style={{ color: "var(--text-light)" }}>
-                Select a gesture and upload your image with custom text (max 50
-                characters)
-              </p>
+                {t("web.sponsors.clearSelection", "Clear Selection")}
+              </Button>
             </div>
-            <div>
-              <div
-                className="mb-2 flex h-10 w-10 items-center justify-center rounded-full font-bold text-white"
-                style={{ backgroundColor: "var(--primary)" }}
-              >
-                2
-              </div>
-              <h3
-                className="mb-2 font-semibold"
-                style={{ color: "var(--text)" }}
-              >
-                Preview & Pay
-              </h3>
-              <p className="text-sm" style={{ color: "var(--text-light)" }}>
-                Preview your sponsored video and complete payment. Pricing
-                starts at €50 per week.
-              </p>
-            </div>
-            <div>
-              <div
-                className="mb-2 flex h-10 w-10 items-center justify-center rounded-full font-bold text-white"
-                style={{ backgroundColor: "var(--primary)" }}
-              >
-                3
-              </div>
-              <h3
-                className="mb-2 font-semibold"
-                style={{ color: "var(--text)" }}
-              >
-                Go Live
-              </h3>
-              <p className="text-sm" style={{ color: "var(--text-light)" }}>
-                Your sponsored video goes live immediately and runs for your
-                selected duration.
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
+
+      {/* Gesture List */}
+      <div className="min-h-0 flex-1">
+        {isLoading ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </div>
+        ) : allGestures.length === 0 ? (
+          <div className="flex h-full items-center justify-center p-6 text-center">
+            <div>
+              <Sparkles className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+              <h2 className="mb-2 font-bold text-xl">
+                {t("web.sponsors.noGestures", "No gestures available")}
+              </h2>
+              <p className="text-muted-foreground">
+                {t(
+                  "web.sponsors.noGesturesDescription",
+                  "Check back later for available gestures to sponsor."
+                )}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <GestureList
+            error={error}
+            gestures={allGestures.map((g) => ({
+              ...g,
+              // Add a visual indicator for selected gestures
+              _isSelected: selectedGestureIds.includes(g._id),
+            }))}
+            isLoading={isLoading}
+            onSelectGesture={handleSelectGesture}
+            selectedGestureId={
+              selectedGestureIds.length === 1 ? selectedGestureIds[0] : null
+            }
+          />
+        )}
+      </div>
+
+      {/* Info Section */}
+      {!isLoading && allGestures.length > 0 && (
+        <div className="border-t bg-muted/30 px-6 py-6">
+          <div className="mx-auto max-w-7xl">
+            <h2 className="mb-4 font-semibold text-lg">
+              {t("web.sponsors.howItWorks", "How It Works")}
+            </h2>
+            <div className="grid gap-6 md:grid-cols-3">
+              <div>
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
+                  1
+                </div>
+                <h3 className="mb-2 font-semibold">
+                  {t("web.sponsors.step1Title", "Select Gestures")}
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  {t(
+                    "web.sponsors.step1Description",
+                    "Choose one or more gestures from the list. All will use the same outro."
+                  )}
+                </p>
+              </div>
+              <div>
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
+                  2
+                </div>
+                <h3 className="mb-2 font-semibold">
+                  {t("web.sponsors.step2Title", "Upload & Customize")}
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  {t(
+                    "web.sponsors.step2Description",
+                    "Upload your image and add custom text for the outro overlay."
+                  )}
+                </p>
+              </div>
+              <div>
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
+                  3
+                </div>
+                <h3 className="mb-2 font-semibold">
+                  {t("web.sponsors.step3Title", "Preview & Pay")}
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  {t(
+                    "web.sponsors.step3Description",
+                    "Review your videos and complete payment to go live."
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
