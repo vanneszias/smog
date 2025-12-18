@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
-import { orpc } from "@/utils/orpc";
+import { client } from "@/utils/orpc";
 
 const TOKEN_STORAGE_KEY = "smog_web_token";
 const USER_STORAGE_KEY = "smog_web_user";
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/admin")({
 
     // Verify admin access
     try {
-      await orpc.admin.verifyAdmin.query();
+      await client.admin.verifyAdmin();
     } catch (error) {
       console.error("Admin verification failed:", error);
       throw redirect({
