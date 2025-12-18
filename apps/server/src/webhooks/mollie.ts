@@ -10,7 +10,24 @@ export async function handleMollieWebhook(c: Context) {
   try {
     console.log("[Mollie Webhook] Received webhook");
 
-    const body = await c.req.json<{ id: string }>();
+    // Try to parse body - Mollie sends JSON
+    let body: { id?: string } = {};
+    try {
+      body = await c.req.json<{ id: string }>();
+    } catch {
+      // If JSON parsing fails, try form data
+      try {
+        const formData = await c.req.formData();
+        const id = formData.get("id");
+        if (typeof id === "string") {
+          body = { id };
+        }
+      } catch {
+        // If both fail, log the raw body
+        console.error("[Mollie Webhook] Failed to parse body");
+      }
+    }
+
     const paymentId = body.id;
 
     if (!paymentId) {

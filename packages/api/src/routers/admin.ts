@@ -49,10 +49,13 @@ export const adminRouter = {
   gestures: {
     listAll: adminProcedure
       .input(
-        z.object({
-          limit: z.number().optional(),
-          includeInactive: z.boolean().optional(),
-        })
+        z
+          .object({
+            limit: z.number().optional(),
+            includeInactive: z.boolean().optional(),
+          })
+          .optional()
+          .default({})
       )
       .handler(async ({ input }) => {
         const gestures = await convexClient.query(api.gestures.listAll, input);
@@ -176,10 +179,13 @@ export const adminRouter = {
   sponsorships: {
     listAll: adminProcedure
       .input(
-        z.object({
-          status: z.string().optional(),
-          limit: z.number().optional(),
-        })
+        z
+          .object({
+            status: z.string().optional(),
+            limit: z.number().optional(),
+          })
+          .optional()
+          .default({})
       )
       .handler(async ({ input }) => {
         const sponsorships = await convexClient.query(
