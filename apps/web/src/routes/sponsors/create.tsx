@@ -55,6 +55,7 @@ function CreateSponsorshipComponent() {
   // Sponsor details
   const [sponsorName, setSponsorName] = useState("");
   const [sponsorEmail, setSponsorEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Video composition
   const composition = useVideoComposition();
@@ -91,6 +92,12 @@ function CreateSponsorshipComponent() {
   };
 
   const handleSubmit = async () => {
+    // Prevent duplicate submissions
+    if (isSubmitting) {
+      console.log("Submission already in progress, ignoring duplicate call");
+      return;
+    }
+
     const hasRequiredData =
       composition.playbackId && imageFile && selectedGestures[0];
     if (!hasRequiredData) {
@@ -99,6 +106,8 @@ function CreateSponsorshipComponent() {
     }
 
     try {
+      setIsSubmitting(true);
+
       // For now, we only support single gesture sponsorships
       // TODO: Support multiple gestures in the future
       const gesture = selectedGestures[0];
@@ -136,10 +145,12 @@ function CreateSponsorshipComponent() {
         window.location.href = result.checkoutUrl;
       } else {
         console.error("Failed to create sponsorship payment:", result.error);
+        setIsSubmitting(false);
         // TODO: Show error toast to user
       }
     } catch (error) {
       console.error("Error submitting sponsorship:", error);
+      setIsSubmitting(false);
       // TODO: Show error toast to user
     }
   };
@@ -285,6 +296,7 @@ function CreateSponsorshipComponent() {
           {step === "details" && (
             <DetailsStep
               handleSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
               pricing={pricing}
               selectedGestures={selectedGestures}
               setSponsorEmail={setSponsorEmail}
@@ -556,6 +568,7 @@ function DetailsStep({
   setSponsorName,
   setSponsorEmail,
   handleSubmit,
+  isSubmitting,
 }: {
   selectedGestures: Array<{ _id: string; name: string }>;
   pricing: { totalCents: number };
@@ -564,10 +577,11 @@ function DetailsStep({
   setSponsorName: (name: string) => void;
   setSponsorEmail: (email: string) => void;
   handleSubmit: () => void;
+  isSubmitting: boolean;
 }) {
   const { t } = useTranslation();
   const isButtonDisabled =
-    sponsorName.length === 0 || sponsorEmail.length === 0;
+    isSubmitting || sponsorName.length === 0 || sponsorEmail.length === 0;
 
   return (
     <div className="space-y-6">
@@ -641,7 +655,9 @@ function DetailsStep({
         size="lg"
       >
         <CheckCircle className="mr-2 h-5 w-5" />
-        {t("web.sponsors.proceedToPayment", "Proceed to Payment")}
+        {isSubmitting
+          ? t("web.sponsors.processing", "Processing...")
+          : t("web.sponsors.proceedToPayment", "Proceed to Payment")}
       </Button>
     </div>
   );

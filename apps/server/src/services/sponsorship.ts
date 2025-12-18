@@ -39,8 +39,8 @@ export async function processSuccessfulPayment(
     }
 
     if (sponsorship.status !== "pending") {
-      console.warn(
-        `[Sponsorship] Sponsorship is not pending (status: ${sponsorship.status}), skipping`
+      console.log(
+        `[Sponsorship] Sponsorship already processed (status: ${sponsorship.status}), webhook is idempotent - returning success`
       );
       return;
     }
