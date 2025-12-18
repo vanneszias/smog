@@ -308,6 +308,7 @@ export const expire = mutation({
 });
 
 // Update sponsorship payment ID (after creating Mollie payment)
+// This just stores the payment ID but keeps status as "pending" until payment is confirmed
 export const updatePaymentId = mutation({
   args: {
     sponsorshipId: v.id("sponsorships"),
@@ -315,6 +316,36 @@ export const updatePaymentId = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await ctx.db.patch(args.sponsorshipId, {
+      molliePaymentId: args.molliePaymentId,
+      // Keep status as "pending" until webhook confirms payment
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+// Mark sponsorship as paid (called by webhook after payment confirmation)
+export const markAsPaid = mutation({
+  args: {
+    sponsorshipId: v.id("sponsorships"),
+    molliePaymentId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const sponsorship = await ctx.db.get(args.sponsorshipId);
+    if (!sponsorship) {
+      throw new Error("Sponsorship not found");
+    }
+
+    // Only update if currently pending
+    if (sponsorship.status !== "pending") {
+      console.log(
+        `Sponsorship ${args.sponsorshipId} already processed (status: ${sponsorship.status})`
+      );
+      return null;
+    }
+
     await ctx.db.patch(args.sponsorshipId, {
       molliePaymentId: args.molliePaymentId,
       status: "pending_payment",
