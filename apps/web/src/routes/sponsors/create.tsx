@@ -1,5 +1,7 @@
+import { api } from "@smog/convex";
 import { DEFAULT_OVERLAY_CONFIG, type OverlayConfig } from "@smog/types";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ConvexHttpClient } from "convex/browser";
 import { ArrowLeft, CheckCircle, Upload } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,8 +16,10 @@ import {
   formatPrice,
   getPriceBreakdown,
 } from "@/lib/pricing";
+import { client } from "@/utils/orpc";
 import { useVideoComposition } from "./hooks/useVideoComposition";
 import type { CompositionStep } from "./lib/composition/types";
+import { createSponsorshipPayment } from "./lib/sponsorshipPayment";
 
 type CreateSearch = {
   gestureIds: string;
@@ -112,13 +116,7 @@ function CreateSponsorshipComponent() {
       // TODO: Support multiple gestures in the future
       const gesture = selectedGestures[0];
 
-      // Import the sponsorship payment utilities
-      const { createSponsorshipPayment } = await import(
-        "./lib/sponsorshipPayment"
-      );
-      const { client } = await import("@/utils/orpc");
-      const { api } = await import("@smog/convex");
-      const { ConvexHttpClient } = await import("convex/browser");
+      // Initialize Convex client
       const convex = new ConvexHttpClient(import.meta.env.VITE_CONVEX_URL!);
 
       const result = await createSponsorshipPayment(
