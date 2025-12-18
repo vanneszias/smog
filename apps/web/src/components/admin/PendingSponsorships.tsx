@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { orpc } from "@/utils/orpc";
+import { client, orpc } from "@/utils/orpc";
 
 export function PendingSponsorships() {
   const queryClient = useQueryClient();
@@ -24,7 +24,7 @@ export function PendingSponsorships() {
 
   const approveMutation = useMutation({
     mutationFn: (sponsorshipId: string) =>
-      orpc.admin.sponsorships.approve.mutate({ sponsorshipId }),
+      client.admin.sponsorships.approve({ sponsorshipId }),
     onSuccess: () => {
       toast.success("Sponsorship approved successfully");
       queryClient.invalidateQueries({
@@ -43,7 +43,7 @@ export function PendingSponsorships() {
     }: {
       sponsorshipId: string;
       reason: string;
-    }) => orpc.admin.sponsorships.reject.mutate({ sponsorshipId, reason }),
+    }) => client.admin.sponsorships.reject({ sponsorshipId, reason }),
     onSuccess: () => {
       toast.success("Sponsorship rejected");
       setRejectDialog(null);

@@ -9,29 +9,37 @@ import { processSuccessfulPayment } from "../services/sponsorship";
 export async function handleMollieWebhook(c: Context) {
   try {
     console.log("[Mollie Webhook] Received webhook");
+    console.log("[Mollie Webhook] Content-Type:", c.req.header("content-type"));
 
     // Try to parse body - Mollie sends JSON
     let body: { id?: string } = {};
+
     try {
-      body = await c.req.json<{ id: string }>();
-    } catch {
-      // If JSON parsing fails, try form data
+      const rawBody = await c.req.text();
+      console.log("[Mollie Webhook] Raw body:", rawBody);
+
+      // Try parsing as JSON first
       try {
-        const formData = await c.req.formData();
-        const id = formData.get("id");
-        if (typeof id === "string") {
+        body = JSON.parse(rawBody);
+      } catch {
+        // If not JSON, try parsing as form data (id=xxx)
+        const params = new URLSearchParams(rawBody);
+        const id = params.get("id");
+        if (id) {
           body = { id };
         }
-      } catch {
-        // If both fail, log the raw body
-        console.error("[Mollie Webhook] Failed to parse body");
       }
+    } catch (error) {
+      console.error("[Mollie Webhook] Failed to read body:", error);
     }
 
     const paymentId = body.id;
 
     if (!paymentId) {
-      console.error("[Mollie Webhook] No payment ID in webhook");
+      console.error(
+        "[Mollie Webhook] No payment ID in webhook. Parsed body:",
+        JSON.stringify(body)
+      );
       return c.json({ error: "Payment ID required" }, 400);
     }
 
