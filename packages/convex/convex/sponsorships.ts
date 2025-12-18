@@ -308,7 +308,6 @@ export const expire = mutation({
 });
 
 // Update sponsorship payment ID (after creating Mollie payment)
-// This just stores the payment ID but keeps status as "pending" until payment is confirmed
 export const updatePaymentId = mutation({
   args: {
     sponsorshipId: v.id("sponsorships"),
@@ -318,18 +317,17 @@ export const updatePaymentId = mutation({
   handler: async (ctx, args) => {
     await ctx.db.patch(args.sponsorshipId, {
       molliePaymentId: args.molliePaymentId,
-      // Keep status as "pending" until webhook confirms payment
+      status: "pending_payment", // Waiting for payment confirmation
       updatedAt: Date.now(),
     });
     return null;
   },
 });
 
-// Mark sponsorship as paid (called by webhook after payment confirmation)
-export const markAsPaid = mutation({
+// Mark sponsorship as paid and awaiting approval (called by webhook after payment confirmation)
+export const markAsAwaitingApproval = mutation({
   args: {
     sponsorshipId: v.id("sponsorships"),
-    molliePaymentId: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -338,17 +336,16 @@ export const markAsPaid = mutation({
       throw new Error("Sponsorship not found");
     }
 
-    // Only update if currently pending
-    if (sponsorship.status !== "pending") {
+    // Only update if currently pending_payment
+    if (sponsorship.status !== "pending_payment") {
       console.log(
-        `Sponsorship ${args.sponsorshipId} already processed (status: ${sponsorship.status})`
+        `Sponsorship ${args.sponsorshipId} cannot be marked as awaiting approval (current status: ${sponsorship.status})`
       );
       return null;
     }
 
     await ctx.db.patch(args.sponsorshipId, {
-      molliePaymentId: args.molliePaymentId,
-      status: "pending_payment",
+      status: "pending_approval",
       updatedAt: Date.now(),
     });
     return null;
@@ -440,7 +437,7 @@ export const listPendingApproval = query({
   handler: async (ctx) => {
     const sponsorships = await ctx.db
       .query("sponsorships")
-      .withIndex("by_status", (q) => q.eq("status", "pending_payment"))
+      .withIndex("by_status", (q) => q.eq("status", "pending_approval"))
       .order("desc")
       .collect();
 
@@ -472,7 +469,7 @@ export const approve = mutation({
       throw new Error("Sponsorship not found");
     }
 
-    if (sponsorship.status !== "pending_payment") {
+    if (sponsorship.status !== "pending_approval") {
       throw new Error(
         `Cannot approve sponsorship with status: ${sponsorship.status}`
       );

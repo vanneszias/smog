@@ -38,23 +38,21 @@ export async function processSuccessfulPayment(
       throw new Error(`Sponsorship not found: ${options.sponsorshipId}`);
     }
 
-    // Allow idempotent webhook calls - if already pending_payment, payment was already processed
+    // Allow idempotent webhook calls - if already pending_approval, payment was already processed
     if (
-      sponsorship.status !== "pending" &&
-      sponsorship.status !== "pending_payment"
+      sponsorship.status === "pending_approval" ||
+      sponsorship.status === "active"
     ) {
-      console.log(
-        `[Sponsorship] Sponsorship cannot be processed in current status: ${sponsorship.status}`
-      );
-      throw new Error(`Invalid sponsorship status: ${sponsorship.status}`);
-    }
-
-    // If already pending_payment, this is an idempotent webhook call
-    if (sponsorship.status === "pending_payment") {
       console.log(
         `[Sponsorship] Sponsorship already processed (status: ${sponsorship.status}), webhook is idempotent - returning success`
       );
       return;
+    }
+
+    if (sponsorship.status !== "pending_payment") {
+      throw new Error(
+        `Invalid sponsorship status for payment processing: ${sponsorship.status}`
+      );
     }
 
     if (!sponsorship.sponsoredVideoPlaybackId) {
@@ -67,11 +65,10 @@ export async function processSuccessfulPayment(
       "[Sponsorship] Marking sponsorship as paid and awaiting admin approval"
     );
 
-    // Mark sponsorship as paid - changes status from "pending" to "pending_payment"
+    // Mark sponsorship as paid - changes status from "pending_payment" to "pending_approval"
     // This makes it appear in the admin approval queue
-    await convex.mutation(api.sponsorships.markAsPaid, {
+    await convex.mutation(api.sponsorships.markAsAwaitingApproval, {
       sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
-      molliePaymentId: options.molliePaymentId,
     });
 
     console.log(
