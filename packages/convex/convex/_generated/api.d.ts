@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as adminLogs from "../adminLogs.js";
 import type * as categories from "../categories.js";
 import type * as favorites from "../favorites.js";
 import type * as gestures from "../gestures.js";
@@ -21,6 +22,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  adminLogs: typeof adminLogs;
   categories: typeof categories;
   favorites: typeof favorites;
   gestures: typeof gestures;

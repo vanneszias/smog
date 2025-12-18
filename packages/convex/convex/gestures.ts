@@ -1,6 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 
 export const list = query({
   args: {
@@ -102,5 +102,167 @@ export const getLastUpdated = query({
       .first();
 
     return latestGesture?.lastUpdated || null;
+  },
+});
+
+// Admin queries and mutations
+
+// List all gestures (including inactive ones)
+export const listAll = query({
+  args: {
+    limit: v.optional(v.number()),
+    includeInactive: v.optional(v.boolean()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("gestures"),
+      _creationTime: v.number(),
+      name: v.string(),
+      categoryIds: v.array(v.id("categories")),
+      playbackId: v.string(),
+      concept: v.array(v.string()),
+      info: v.string(),
+      isActive: v.boolean(),
+      lastUpdated: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 1000;
+
+    if (args.includeInactive) {
+      return await ctx.db.query("gestures").order("desc").take(limit);
+    }
+
+    return await ctx.db
+      .query("gestures")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .order("desc")
+      .take(limit);
+  },
+});
+
+// Update gesture fields
+export const updateGesture = mutation({
+  args: {
+    gestureId: v.id("gestures"),
+    name: v.optional(v.string()),
+    categoryIds: v.optional(v.array(v.id("categories"))),
+    playbackId: v.optional(v.string()),
+    concept: v.optional(v.array(v.string())),
+    info: v.optional(v.string()),
+    isActive: v.optional(v.boolean()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { gestureId, ...updates } = args;
+
+    if (Object.keys(updates).length === 0) {
+      throw new Error("No fields to update");
+    }
+
+    await ctx.db.patch(gestureId, {
+      ...updates,
+      lastUpdated: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+// Bulk update gestures
+export const bulkUpdate = mutation({
+  args: {
+    gestureIds: v.array(v.id("gestures")),
+    updates: v.object({
+      isActive: v.optional(v.boolean()),
+      categoryIds: v.optional(v.array(v.id("categories"))),
+    }),
+  },
+  returns: v.object({
+    updated: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    if (Object.keys(args.updates).length === 0) {
+      throw new Error("No fields to update");
+    }
+
+    const now = Date.now();
+
+    await Promise.all(
+      args.gestureIds.map((id) =>
+        ctx.db.patch(id, {
+          ...args.updates,
+          lastUpdated: now,
+        })
+      )
+    );
+
+    return { updated: args.gestureIds.length };
+  },
+});
+
+// Toggle active status
+export const toggleActive = mutation({
+  args: {
+    gestureId: v.id("gestures"),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const gesture = await ctx.db.get(args.gestureId);
+    if (!gesture) {
+      throw new Error("Gesture not found");
+    }
+
+    const newStatus = !gesture.isActive;
+
+    await ctx.db.patch(args.gestureId, {
+      isActive: newStatus,
+      lastUpdated: Date.now(),
+    });
+
+    return newStatus;
+  },
+});
+
+// Update playback ID
+export const updatePlaybackId = mutation({
+  args: {
+    gestureId: v.id("gestures"),
+    playbackId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.gestureId, {
+      playbackId: args.playbackId,
+      lastUpdated: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+// Create new gesture
+export const create = mutation({
+  args: {
+    name: v.string(),
+    categoryIds: v.array(v.id("categories")),
+    playbackId: v.string(),
+    concept: v.array(v.string()),
+    info: v.string(),
+    isActive: v.optional(v.boolean()),
+  },
+  returns: v.id("gestures"),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    return await ctx.db.insert("gestures", {
+      name: args.name,
+      categoryIds: args.categoryIds,
+      playbackId: args.playbackId,
+      concept: args.concept,
+      info: args.info,
+      isActive: args.isActive ?? true,
+      lastUpdated: now,
+    });
   },
 });

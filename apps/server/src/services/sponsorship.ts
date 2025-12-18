@@ -11,14 +11,14 @@ export type ProcessPaymentOptions = {
 };
 
 /**
- * Process a successful payment and update sponsorship
+ * Process a successful payment and mark sponsorship as pending approval
  *
- * TODO: Your external worker should have already:
- * 1. Composed the video
- * 2. Uploaded to Mux
- * 3. Returned the new playback ID
- *
- * This function just updates the sponsorship record with the new playback ID
+ * The workflow is:
+ * 1. User creates sponsorship (video already composed)
+ * 2. User completes payment
+ * 3. Webhook marks sponsorship as "pending_payment"
+ * 4. Admin reviews and approves/rejects
+ * 5. If approved, sponsorship becomes "active" and gesture video is swapped
  */
 export async function processSuccessfulPayment(
   options: ProcessPaymentOptions
@@ -45,27 +45,25 @@ export async function processSuccessfulPayment(
       return;
     }
 
-    // TODO: Get the new playback ID from your external worker
-    // This could be:
-    // 1. Passed via payment metadata
-    // 2. Stored in your database by the worker
-    // 3. Retrieved from your worker service API
-    const newPlaybackId = options.newPlaybackId || "TODO_GET_FROM_WORKER";
+    if (!sponsorship.sponsoredVideoPlaybackId) {
+      throw new Error(
+        `Sponsorship missing sponsored video playback ID: ${options.sponsorshipId}`
+      );
+    }
 
     console.log(
-      "[Sponsorship] Updating sponsorship with new playback ID:",
-      newPlaybackId
+      "[Sponsorship] Updating sponsorship payment status to pending_payment"
     );
 
-    // Update sponsorship with payment info and new playback ID
-    await convex.mutation(api.sponsorships.updateAfterPayment, {
+    // Update sponsorship with payment info - mark as pending admin approval
+    // The sponsored video playback ID is already stored in the sponsorship record
+    await convex.mutation(api.sponsorships.updatePaymentId, {
       sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
       molliePaymentId: options.molliePaymentId,
-      sponsoredVideoPlaybackId: newPlaybackId,
     });
 
     console.log(
-      "[Sponsorship] Sponsorship activated successfully:",
+      "[Sponsorship] Sponsorship marked as pending approval:",
       options.sponsorshipId
     );
   } catch (error) {

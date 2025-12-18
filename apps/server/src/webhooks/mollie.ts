@@ -42,15 +42,11 @@ export async function handleMollieWebhook(c: Context) {
 
     console.log("[Mollie Webhook] Processing sponsorship:", sponsorshipId);
 
-    // TODO: Extract new playback ID from your external worker
-    // This could be stored in payment metadata by your worker
-    // Or retrieved from your worker service API
-
     // Process the successful payment
+    // This will mark the sponsorship as "pending_payment" awaiting admin approval
     await processSuccessfulPayment({
       sponsorshipId,
       molliePaymentId: paymentId,
-      // newPlaybackId: extracted_from_worker,  // TODO: implement
     });
 
     console.log("[Mollie Webhook] Payment processed successfully");

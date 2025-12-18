@@ -1,5 +1,7 @@
 {
   "node": {
-    "externalPackages": ["@mux/mux-node"]
+    "externalPackages": [
+      "@mux/mux-node"
+    ]
   }
 }

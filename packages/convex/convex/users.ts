@@ -29,6 +29,7 @@ export const getUserByWorkOSId = query({
       _creationTime: v.number(),
       workosId: v.optional(v.string()),
       guestId: v.optional(v.string()),
+      role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
       createdAt: v.number(),
       lastActiveAt: v.number(),
     }),
@@ -49,6 +50,7 @@ export const getUserByGuestId = query({
       _creationTime: v.number(),
       workosId: v.optional(v.string()),
       guestId: v.optional(v.string()),
+      role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
       createdAt: v.number(),
       lastActiveAt: v.number(),
     }),
@@ -162,4 +164,95 @@ export const exchangeCodeForToken = action({
       lastName: data.user.last_name,
     };
   },
+});
+
+// Admin queries and mutations
+export const listAllUsers = query({
+  args: {
+    limit: v.optional(v.number()),
+    cursor: v.optional(v.string()),
+  },
+  returns: v.object({
+    users: v.array(
+      v.object({
+        _id: v.id("users"),
+        _creationTime: v.number(),
+        workosId: v.optional(v.string()),
+        guestId: v.optional(v.string()),
+        role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
+        createdAt: v.number(),
+        lastActiveAt: v.number(),
+      })
+    ),
+    hasMore: v.boolean(),
+    nextCursor: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 50;
+
+    const users = await ctx.db
+      .query("users")
+      .order("desc")
+      .take(limit + 1);
+
+    const hasMore = users.length > limit;
+    const results = hasMore ? users.slice(0, limit) : users;
+
+    return {
+      users: results,
+      hasMore,
+      nextCursor: hasMore ? results.at(-1)?._id : undefined,
+    };
+  },
+});
+
+export const listAdmins = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("users"),
+      _creationTime: v.number(),
+      workosId: v.optional(v.string()),
+      guestId: v.optional(v.string()),
+      role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
+      createdAt: v.number(),
+      lastActiveAt: v.number(),
+    })
+  ),
+  handler: async (ctx) =>
+    await ctx.db
+      .query("users")
+      .withIndex("by_role", (q) => q.eq("role", "admin"))
+      .collect(),
+});
+
+export const updateUserRole = mutation({
+  args: {
+    userId: v.id("users"),
+    role: v.union(v.literal("user"), v.literal("admin")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      role: args.role,
+    });
+    return null;
+  },
+});
+
+export const getUserById = query({
+  args: { userId: v.id("users") },
+  returns: v.union(
+    v.object({
+      _id: v.id("users"),
+      _creationTime: v.number(),
+      workosId: v.optional(v.string()),
+      guestId: v.optional(v.string()),
+      role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
+      createdAt: v.number(),
+      lastActiveAt: v.number(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => await ctx.db.get(args.userId),
 });

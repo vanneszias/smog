@@ -317,7 +317,221 @@ export const updatePaymentId = mutation({
   handler: async (ctx, args) => {
     await ctx.db.patch(args.sponsorshipId, {
       molliePaymentId: args.molliePaymentId,
+      status: "pending_payment",
       updatedAt: Date.now(),
     });
+    return null;
+  },
+});
+
+// Admin: List all sponsorships with filters
+export const listAll = query({
+  args: {
+    status: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("sponsorships"),
+      _creationTime: v.number(),
+      gestureId: v.id("gestures"),
+      gestureName: v.optional(v.string()),
+      sponsorName: v.string(),
+      sponsorEmail: v.string(),
+      overlayImageStorageId: v.string(),
+      overlayText: v.string(),
+      sponsoredVideoPlaybackId: v.optional(v.string()),
+      originalVideoPlaybackId: v.string(),
+      startDate: v.number(),
+      endDate: v.number(),
+      durationWeeks: v.number(),
+      status: v.string(),
+      molliePaymentId: v.optional(v.string()),
+      paymentAmount: v.number(),
+      rejectionReason: v.optional(v.string()),
+      reviewedBy: v.optional(v.id("users")),
+      reviewedAt: v.optional(v.number()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 100;
+
+    let query = ctx.db.query("sponsorships");
+
+    if (args.status) {
+      query = query.withIndex("by_status", (q) => q.eq("status", args.status));
+    }
+
+    const sponsorships = await query.order("desc").take(limit);
+
+    // Enrich with gesture names
+    const enriched = await Promise.all(
+      sponsorships.map(async (s) => {
+        const gesture = await ctx.db.get(s.gestureId);
+        return {
+          ...s,
+          gestureName: gesture?.name,
+        };
+      })
+    );
+
+    return enriched;
+  },
+});
+
+// Admin: List pending payment sponsorships (paid but not approved yet)
+export const listPendingApproval = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("sponsorships"),
+      _creationTime: v.number(),
+      gestureId: v.id("gestures"),
+      gestureName: v.optional(v.string()),
+      sponsorName: v.string(),
+      sponsorEmail: v.string(),
+      overlayImageStorageId: v.string(),
+      overlayText: v.string(),
+      sponsoredVideoPlaybackId: v.optional(v.string()),
+      originalVideoPlaybackId: v.string(),
+      startDate: v.number(),
+      endDate: v.number(),
+      durationWeeks: v.number(),
+      status: v.string(),
+      molliePaymentId: v.optional(v.string()),
+      paymentAmount: v.number(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+  ),
+  handler: async (ctx) => {
+    const sponsorships = await ctx.db
+      .query("sponsorships")
+      .withIndex("by_status", (q) => q.eq("status", "pending_payment"))
+      .order("desc")
+      .collect();
+
+    // Enrich with gesture names
+    const enriched = await Promise.all(
+      sponsorships.map(async (s) => {
+        const gesture = await ctx.db.get(s.gestureId);
+        return {
+          ...s,
+          gestureName: gesture?.name,
+        };
+      })
+    );
+
+    return enriched;
+  },
+});
+
+// Admin: Approve sponsorship (activate it)
+export const approve = mutation({
+  args: {
+    sponsorshipId: v.id("sponsorships"),
+    adminUserId: v.id("users"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const sponsorship = await ctx.db.get(args.sponsorshipId);
+    if (!sponsorship) {
+      throw new Error("Sponsorship not found");
+    }
+
+    if (sponsorship.status !== "pending_payment") {
+      throw new Error(
+        `Cannot approve sponsorship with status: ${sponsorship.status}`
+      );
+    }
+
+    if (!sponsorship.sponsoredVideoPlaybackId) {
+      throw new Error("Sponsored video playback ID is missing");
+    }
+
+    const startDate = Date.now();
+    const endDate =
+      startDate + sponsorship.durationWeeks * 7 * 24 * 60 * 60 * 1000;
+
+    // Update sponsorship status
+    await ctx.db.patch(args.sponsorshipId, {
+      status: "active",
+      startDate,
+      endDate,
+      reviewedBy: args.adminUserId,
+      reviewedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    // Update gesture to use sponsored video
+    await ctx.db.patch(sponsorship.gestureId, {
+      playbackId: sponsorship.sponsoredVideoPlaybackId,
+      lastUpdated: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+// Admin: Reject sponsorship
+export const reject = mutation({
+  args: {
+    sponsorshipId: v.id("sponsorships"),
+    adminUserId: v.id("users"),
+    reason: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const sponsorship = await ctx.db.get(args.sponsorshipId);
+    if (!sponsorship) {
+      throw new Error("Sponsorship not found");
+    }
+
+    await ctx.db.patch(args.sponsorshipId, {
+      status: "rejected",
+      rejectionReason: args.reason,
+      reviewedBy: args.adminUserId,
+      reviewedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+// Admin: Manually expire a sponsorship
+export const forceExpire = mutation({
+  args: {
+    sponsorshipId: v.id("sponsorships"),
+    adminUserId: v.id("users"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const sponsorship = await ctx.db.get(args.sponsorshipId);
+    if (!sponsorship) {
+      throw new Error("Sponsorship not found");
+    }
+
+    if (sponsorship.status !== "active") {
+      throw new Error("Only active sponsorships can be expired");
+    }
+
+    // Restore original video
+    await ctx.db.patch(sponsorship.gestureId, {
+      playbackId: sponsorship.originalVideoPlaybackId,
+      lastUpdated: Date.now(),
+    });
+
+    // Mark as expired
+    await ctx.db.patch(args.sponsorshipId, {
+      status: "expired",
+      reviewedBy: args.adminUserId,
+      reviewedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return null;
   },
 });

@@ -28,11 +28,13 @@ export default defineSchema({
   users: defineTable({
     workosId: v.optional(v.string()),
     guestId: v.optional(v.string()),
+    role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
     createdAt: v.number(),
     lastActiveAt: v.number(),
   })
     .index("by_workos_id", ["workosId"])
-    .index("by_guest_id", ["guestId"]),
+    .index("by_guest_id", ["guestId"])
+    .index("by_role", ["role"]),
 
   user_favorites: defineTable({
     userId: v.id("users"),
@@ -77,6 +79,9 @@ export default defineSchema({
     status: v.string(),
     molliePaymentId: v.optional(v.string()),
     paymentAmount: v.number(),
+    rejectionReason: v.optional(v.string()),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -85,4 +90,17 @@ export default defineSchema({
     .index("by_gesture_and_status", ["gestureId", "status"])
     .index("by_end_date", ["endDate"])
     .index("by_payment_id", ["molliePaymentId"]),
+
+  adminLogs: defineTable({
+    userId: v.id("users"),
+    action: v.string(),
+    targetId: v.string(),
+    targetType: v.string(),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_action", ["action"])
+    .index("by_target", ["targetType", "targetId"])
+    .index("by_created_at", ["createdAt"]),
 });

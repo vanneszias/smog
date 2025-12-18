@@ -1,5 +1,6 @@
 import type { RouterClient } from "@orpc/server";
 import { protectedProcedure, publicProcedure } from "../index";
+import { adminRouter } from "./admin";
 import { favoritesRouter } from "./favorites";
 import { gesturesRouter } from "./gestures";
 import { sponsorshipsRouter } from "./sponsorships";
@@ -15,6 +16,7 @@ export const appRouter = {
   favorites: favoritesRouter,
   users: usersRouter,
   sponsorships: sponsorshipsRouter,
+  admin: adminRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;
