@@ -28,7 +28,8 @@ export function PendingSponsorships() {
     onSuccess: () => {
       toast.success("Sponsorship approved successfully");
       queryClient.invalidateQueries({
-        queryKey: orpc.admin.sponsorships.listPendingApproval.getQueryKey(),
+        queryKey:
+          orpc.admin.sponsorships.listPendingApproval.queryOptions().queryKey,
       });
     },
     onError: (error) => {
@@ -49,7 +50,8 @@ export function PendingSponsorships() {
       setRejectDialog(null);
       setRejectReason("");
       queryClient.invalidateQueries({
-        queryKey: orpc.admin.sponsorships.listPendingApproval.getQueryKey(),
+        queryKey:
+          orpc.admin.sponsorships.listPendingApproval.queryOptions().queryKey,
       });
     },
     onError: (error) => {

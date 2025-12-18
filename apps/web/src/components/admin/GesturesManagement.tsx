@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { orpc } from "@/utils/orpc";
+import { client, orpc } from "@/utils/orpc";
 
 type Gesture = {
   _id: string;
@@ -43,12 +43,15 @@ export function GesturesManagement() {
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<Gesture> & { gestureId: string }) =>
-      orpc.admin.gestures.update.mutate(data),
+      client.admin.gestures.update(data),
     onSuccess: () => {
       toast.success("Gesture updated successfully");
       setEditDialog(null);
       queryClient.invalidateQueries({
-        queryKey: orpc.admin.gestures.listAll.getQueryKey(),
+        queryKey: orpc.admin.gestures.listAll.queryOptions({
+          includeInactive: true,
+          limit: 500,
+        }).queryKey,
       });
     },
     onError: (error) => {
@@ -60,12 +63,15 @@ export function GesturesManagement() {
     mutationFn: (data: {
       gestureIds: string[];
       updates: { isActive?: boolean };
-    }) => orpc.admin.gestures.bulkUpdate.mutate(data),
+    }) => client.admin.gestures.bulkUpdate(data),
     onSuccess: () => {
       toast.success("Gestures updated");
       setSelectedGestures(new Set());
       queryClient.invalidateQueries({
-        queryKey: orpc.admin.gestures.listAll.getQueryKey(),
+        queryKey: orpc.admin.gestures.listAll.queryOptions({
+          includeInactive: true,
+          limit: 500,
+        }).queryKey,
       });
     },
     onError: (error) => {
