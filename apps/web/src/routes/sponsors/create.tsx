@@ -91,14 +91,57 @@ function CreateSponsorshipComponent() {
   };
 
   const handleSubmit = async () => {
-    // TODO: Implement payment and submission
-    console.log("Submit sponsorship:", {
-      gestureIds: selectedGestureIds,
-      sponsorName,
-      sponsorEmail,
-      durationWeeks,
-    });
-    navigate({ to: "/sponsors/success" });
+    const hasRequiredData =
+      composition.playbackId && imageFile && selectedGestures[0];
+    if (!hasRequiredData) {
+      console.error("Missing required data for sponsorship submission");
+      return;
+    }
+
+    try {
+      // For now, we only support single gesture sponsorships
+      // TODO: Support multiple gestures in the future
+      const gesture = selectedGestures[0];
+
+      // Import the sponsorship payment utilities
+      const { createSponsorshipPayment } = await import(
+        "./lib/sponsorshipPayment"
+      );
+      const { client } = await import("@/utils/orpc");
+      const { api } = await import("@smog/convex");
+      const { ConvexHttpClient } = await import("convex/browser");
+      const convex = new ConvexHttpClient(import.meta.env.VITE_CONVEX_URL!);
+
+      const result = await createSponsorshipPayment(
+        {
+          gestureId: gesture._id,
+          gestureName: gesture.name,
+          sponsorName,
+          sponsorEmail,
+          imageFile,
+          overlayText,
+          tempVideoUrl: composition.playbackId,
+          durationWeeks,
+          totalCents: pricing.totalCents,
+          createSponsorship: (params) =>
+            convex.mutation(api.sponsorships.create, params),
+          updatePaymentId: (params) =>
+            convex.mutation(api.sponsorships.updatePaymentId, params),
+        },
+        client
+      );
+
+      if (result.success && result.checkoutUrl) {
+        // Redirect to Mollie payment page
+        window.location.href = result.checkoutUrl;
+      } else {
+        console.error("Failed to create sponsorship payment:", result.error);
+        // TODO: Show error toast to user
+      }
+    } catch (error) {
+      console.error("Error submitting sponsorship:", error);
+      // TODO: Show error toast to user
+    }
   };
 
   const pricing = calculatePrice(durationWeeks * selectedGestureIds.length);
