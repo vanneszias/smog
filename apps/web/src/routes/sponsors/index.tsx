@@ -68,7 +68,15 @@ function useGestureSelection(
 
   const handleSelectGesture = (gestureId: string) => {
     const gesture = gesturesWithSponsorship?.find((g) => g._id === gestureId);
-    if (gesture?.sponsorship?.status === "active") {
+    const sponsorshipStatus = gesture?.sponsorship?.status;
+
+    // Prevent selection if gesture has active or any pending sponsorship
+    if (
+      sponsorshipStatus === "active" ||
+      sponsorshipStatus === "pending" ||
+      sponsorshipStatus === "pending_payment" ||
+      sponsorshipStatus === "pending_approval"
+    ) {
       return;
     }
 
@@ -170,6 +178,73 @@ function SponsorGestureList({
       day: "numeric",
     });
 
+  const renderSponsorshipStatus = (
+    gesture: (typeof gestures)[number],
+    isSponsored: boolean,
+    isPending: boolean,
+    hasSponsorship: boolean
+  ) => {
+    if (isSponsored && hasSponsorship) {
+      return (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 font-medium text-green-800 text-xs">
+              ✓ {t("web.sponsors.sponsored", "Sponsored")}
+            </span>
+          </div>
+          {Boolean(gesture.sponsorship?.sponsorName) &&
+            Boolean(gesture.sponsorship?.endDate) && (
+              <div className="text-muted-foreground text-xs">
+                <div className="flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  <span>{gesture.sponsorship?.sponsorName}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  <span>
+                    {t("web.sponsors.availableAgainOn", "Available again:")}{" "}
+                    {formatDate(gesture.sponsorship!.endDate)}
+                  </span>
+                </div>
+              </div>
+            )}
+        </div>
+      );
+    }
+
+    if (isPending && hasSponsorship) {
+      return (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
+              ⏳ {t("web.sponsors.pendingApproval", "Pending Approval")}
+            </span>
+          </div>
+          {Boolean(gesture.sponsorship?.sponsorName) && (
+            <div className="text-muted-foreground text-xs">
+              <div className="flex items-center gap-1">
+                <User className="h-3 w-3" />
+                <span>{gesture.sponsorship?.sponsorName}</span>
+              </div>
+              <p className="mt-1">
+                {t(
+                  "web.sponsors.pendingDescription",
+                  "This sponsorship is awaiting approval"
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 font-medium text-blue-800 text-xs">
+        {t("web.sponsors.available", "Available to sponsor")}
+      </span>
+    );
+  };
+
   const handleNameClick = onSort ? () => onSort("name") : undefined;
   const handleCategoryClick = onSort ? () => onSort("category") : undefined;
   const handleSponsorshipClick = onSort
@@ -216,15 +291,22 @@ function SponsorGestureList({
         <tbody>
           {gestures.map((gesture) => {
             const isSelected = selectedGestureIds.includes(gesture._id);
-            const isSponsored = gesture.sponsorship?.status === "active";
-            const hasSponsorship =
-              Boolean(isSponsored) && Boolean(gesture.sponsorship);
+            const sponsorshipStatus = gesture.sponsorship?.status;
+            const isSponsored = sponsorshipStatus === "active";
+            const isPending =
+              sponsorshipStatus === "pending" ||
+              sponsorshipStatus === "pending_payment" ||
+              sponsorshipStatus === "pending_approval";
+            const isUnavailable = isSponsored || isPending;
+            const hasSponsorship = Boolean(gesture.sponsorship);
 
             return (
               <tr
-                className={`cursor-pointer border-b transition-colors hover:bg-muted/50 ${
-                  isSelected ? "bg-primary/10" : ""
-                } ${isSponsored ? "opacity-60" : ""}`}
+                className={`border-b transition-colors ${
+                  isUnavailable
+                    ? "cursor-not-allowed opacity-60"
+                    : "cursor-pointer hover:bg-muted/50"
+                } ${isSelected ? "bg-primary/10" : ""}`}
                 key={gesture._id}
                 onClick={() => onSelectGesture(gesture._id)}
               >
@@ -253,34 +335,11 @@ function SponsorGestureList({
                   {gesture.concept.join(", ")}
                 </td>
                 <td className="p-4">
-                  {hasSponsorship ? (
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 font-medium text-green-800 text-xs">
-                          ✓ {t("web.sponsors.sponsored", "Sponsored")}
-                        </span>
-                      </div>
-                      <div className="text-muted-foreground text-xs">
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          <span>{gesture.sponsorship!.sponsorName}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Sparkles className="h-3 w-3" />
-                          <span>
-                            {t(
-                              "web.sponsors.availableAgainOn",
-                              "Available again:"
-                            )}{" "}
-                            {formatDate(gesture.sponsorship!.endDate)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 font-medium text-blue-800 text-xs">
-                      {t("web.sponsors.available", "Available to sponsor")}
-                    </span>
+                  {renderSponsorshipStatus(
+                    gesture,
+                    isSponsored,
+                    isPending,
+                    hasSponsorship
                   )}
                 </td>
               </tr>
