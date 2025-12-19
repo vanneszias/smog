@@ -61,6 +61,11 @@ function CreateSponsorshipComponent() {
   const [sponsorName, setSponsorName] = useState("");
   const [sponsorEmail, setSponsorEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({
+    current: 0,
+    total: 0,
+    currentGestureName: "",
+  });
 
   // Video composition
   const composition = useVideoComposition();
@@ -164,9 +169,51 @@ function CreateSponsorshipComponent() {
     // Convert image to base64 for storage
     const base64Image = await convertFileToBase64(imageFile!);
 
-    // For now, we'll use the same composed video for all gestures
-    const sponsoredVideoPlaybackIds = selectedGestures.map(
-      () => composition.playbackId!
+    // Compose videos for each gesture
+    console.log("Composing videos for each gesture...");
+    const sponsoredVideoPlaybackIds: string[] = [];
+
+    setBulkProgress({
+      current: 0,
+      total: selectedGestures.length,
+      currentGestureName: "",
+    });
+
+    for (let i = 0; i < selectedGestures.length; i++) {
+      const gesture = selectedGestures[i];
+      console.log(
+        `Composing video ${i + 1}/${selectedGestures.length} for gesture: ${gesture.name}`
+      );
+
+      setBulkProgress({
+        current: i + 1,
+        total: selectedGestures.length,
+        currentGestureName: gesture.name,
+      });
+
+      // Compose video for this gesture
+      const result = await composition.compose({
+        playbackId: gesture.playbackId,
+        imageFile: imageFile!,
+        overlayText,
+        overlayConfig,
+      });
+
+      if (!result.success) {
+        throw new Error(`Failed to compose video for gesture: ${gesture.name}`);
+      }
+      if (!result.playbackId) {
+        throw new Error(`No playback ID returned for gesture: ${gesture.name}`);
+      }
+
+      sponsoredVideoPlaybackIds.push(result.playbackId);
+      console.log(
+        `Completed video ${i + 1}/${selectedGestures.length}: ${result.playbackId}`
+      );
+    }
+
+    console.log(
+      `Successfully composed ${sponsoredVideoPlaybackIds.length} videos`
     );
 
     // Create bulk sponsorships
@@ -181,10 +228,11 @@ function CreateSponsorshipComponent() {
       paymentAmountPerGesture: pricing.totalCents / selectedGestures.length,
     });
 
-    const hasSuccess =
-      sponsorshipResult.success && sponsorshipResult.sponsorshipIds;
-    if (!hasSuccess) {
+    if (!sponsorshipResult.success) {
       throw new Error("Failed to create sponsorships");
+    }
+    if (!sponsorshipResult.sponsorshipIds) {
+      throw new Error("No sponsorship IDs returned");
     }
 
     console.log(
@@ -197,7 +245,7 @@ function CreateSponsorshipComponent() {
       sponsorshipIds: sponsorshipResult.sponsorshipIds,
       totalAmount: pricing.totalCents,
       description: `Sponsorship: ${selectedGestures.length} gestures (${gestureNames.substring(0, 100)}) - ${durationWeeks} weeks`,
-      redirectUrl: `${window.location.origin}/sponsors/success?sponsorshipIds=${sponsorshipResult.sponsorshipIds.join(",")}&tempVideoUrl=${encodeURIComponent(composition.playbackId!)}`,
+      redirectUrl: `${window.location.origin}/sponsors/success?sponsorshipIds=${sponsorshipResult.sponsorshipIds.join(",")}&tempVideoUrl=${encodeURIComponent(sponsoredVideoPlaybackIds[0])}`,
     });
 
     if (paymentResult.checkoutUrl) {
@@ -348,6 +396,7 @@ function CreateSponsorshipComponent() {
 
           {step === "details" && (
             <DetailsStep
+              bulkProgress={bulkProgress}
               handleSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               pricing={pricing}
@@ -622,6 +671,7 @@ function DetailsStep({
   setSponsorEmail,
   handleSubmit,
   isSubmitting,
+  bulkProgress,
 }: {
   selectedGestures: Array<{ _id: string; name: string }>;
   pricing: { totalCents: number };
@@ -631,6 +681,7 @@ function DetailsStep({
   setSponsorEmail: (email: string) => void;
   handleSubmit: () => void;
   isSubmitting: boolean;
+  bulkProgress: { current: number; total: number; currentGestureName: string };
 }) {
   const { t } = useTranslation();
   const isButtonDisabled =
@@ -712,6 +763,34 @@ function DetailsStep({
           ? t("web.sponsors.processing", "Processing...")
           : t("web.sponsors.proceedToPayment", "Proceed to Payment")}
       </Button>
+
+      {/* Bulk Progress Display */}
+      {isSubmitting === true &&
+        bulkProgress.total > 1 &&
+        bulkProgress.current > 0 &&
+        bulkProgress.currentGestureName.length > 0 && (
+          <div className="rounded-lg border bg-blue-50 p-4 dark:bg-blue-950">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="font-medium text-sm">
+                Composing videos: {bulkProgress.current} of {bulkProgress.total}
+              </p>
+              <span className="font-semibold text-sm">
+                {Math.round((bulkProgress.current / bulkProgress.total) * 100)}%
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-blue-200 dark:bg-blue-900">
+              <div
+                className="h-full bg-blue-600 transition-all duration-300"
+                style={{
+                  width: `${(bulkProgress.current / bulkProgress.total) * 100}%`,
+                }}
+              />
+            </div>
+            <p className="mt-2 text-muted-foreground text-xs">
+              Currently composing: {bulkProgress.currentGestureName}
+            </p>
+          </div>
+        )}
     </div>
   );
 }
