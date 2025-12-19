@@ -14,6 +14,79 @@ const VIDEO_WORKER_URL =
 
 export const sponsorshipsRouter = {
   /**
+   * List all gestures with their sponsorship status
+   */
+  listGesturesWithSponsorship: publicProcedure.handler(async () => {
+    try {
+      const gestures = await convex.query(
+        api.sponsorships.listGesturesWithSponsorship
+      );
+      return gestures;
+    } catch (error) {
+      console.error(
+        "[SponsorshipsRouter] List gestures with sponsorship error:",
+        error
+      );
+      throw new Error(
+        `Failed to list gestures with sponsorship: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  }),
+
+  /**
+   * Create bulk sponsorships for multiple gestures
+   */
+  createBulkSponsorships: publicProcedure
+    .input(
+      z.object({
+        gestureIds: z.array(z.string()),
+        sponsorName: z.string(),
+        sponsorEmail: z.string(),
+        overlayImageStorageId: z.string(),
+        overlayText: z.string(),
+        sponsoredVideoPlaybackIds: z.array(z.string()),
+        durationWeeks: z.number(),
+        paymentAmountPerGesture: z.number(),
+      })
+    )
+    .handler(async ({ input }) => {
+      try {
+        console.log("[SponsorshipsRouter] Creating bulk sponsorships...");
+
+        const sponsorshipIds = await convex.mutation(
+          api.sponsorships.createBulk,
+          {
+            gestureIds: input.gestureIds as Id<"gestures">[],
+            sponsorName: input.sponsorName,
+            sponsorEmail: input.sponsorEmail,
+            overlayImageStorageId: input.overlayImageStorageId,
+            overlayText: input.overlayText,
+            sponsoredVideoPlaybackIds: input.sponsoredVideoPlaybackIds,
+            durationWeeks: input.durationWeeks,
+            paymentAmountPerGesture: input.paymentAmountPerGesture,
+          }
+        );
+
+        console.log(
+          `[SponsorshipsRouter] Created ${sponsorshipIds.length} sponsorships`
+        );
+
+        return {
+          success: true,
+          sponsorshipIds,
+        };
+      } catch (error) {
+        console.error(
+          "[SponsorshipsRouter] Create bulk sponsorships error:",
+          error
+        );
+        throw new Error(
+          `Failed to create bulk sponsorships: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }),
+
+  /**
    * Start video composition job using video-worker service
    */
   composeVideo: publicProcedure

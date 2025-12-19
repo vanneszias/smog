@@ -21,17 +21,36 @@ export const create = mutation({
       throw new Error("Gesture not found");
     }
 
-    // Check if gesture is already sponsored
-    const existing = await ctx.db
+    // Check if gesture already has an active or pending sponsorship
+    const existingActive = await ctx.db
       .query("sponsorships")
       .withIndex("by_gesture_and_status", (q) =>
         q.eq("gestureId", args.gestureId).eq("status", "active")
       )
       .first();
 
-    if (existing) {
+    if (existingActive) {
       throw new Error(
-        `This gesture is already sponsored until ${new Date(existing.endDate).toLocaleDateString()}`
+        `This gesture is already sponsored until ${new Date(existingActive.endDate).toLocaleDateString()}`
+      );
+    }
+
+    // Check for pending/pending_payment/pending_approval sponsorships
+    const existingPending = await ctx.db
+      .query("sponsorships")
+      .withIndex("by_gesture", (q) => q.eq("gestureId", args.gestureId))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("status"), "pending"),
+          q.eq(q.field("status"), "pending_payment"),
+          q.eq(q.field("status"), "pending_approval")
+        )
+      )
+      .first();
+
+    if (existingPending) {
+      throw new Error(
+        "This gesture already has a pending sponsorship. Please wait for it to be processed or contact support."
       );
     }
 
@@ -54,6 +73,115 @@ export const create = mutation({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+  },
+});
+
+// Create multiple sponsorships for multiple gestures (bulk sponsoring)
+export const createBulk = mutation({
+  args: {
+    gestureIds: v.array(v.id("gestures")),
+    sponsorName: v.string(),
+    sponsorEmail: v.string(),
+    overlayImageStorageId: v.string(),
+    overlayText: v.string(),
+    sponsoredVideoPlaybackIds: v.array(v.string()), // Mux playback IDs, one per gesture
+    durationWeeks: v.number(),
+    paymentAmountPerGesture: v.number(),
+  },
+  returns: v.array(v.id("sponsorships")),
+  handler: async (ctx, args) => {
+    if (args.gestureIds.length !== args.sponsoredVideoPlaybackIds.length) {
+      throw new Error(
+        "Number of gesture IDs must match number of sponsored video playback IDs"
+      );
+    }
+
+    const sponsorshipIds: string[] = [];
+    const errors: string[] = [];
+
+    for (let i = 0; i < args.gestureIds.length; i++) {
+      const gestureId = args.gestureIds[i];
+      const sponsoredVideoPlaybackId = args.sponsoredVideoPlaybackIds[i];
+
+      try {
+        // Get gesture to backup original playbackId
+        const gesture = await ctx.db.get(gestureId);
+        if (!gesture) {
+          errors.push(`Gesture ${gestureId} not found`);
+          continue;
+        }
+
+        // Check if gesture already has an active or pending sponsorship
+        const existingActive = await ctx.db
+          .query("sponsorships")
+          .withIndex("by_gesture_and_status", (q) =>
+            q.eq("gestureId", gestureId).eq("status", "active")
+          )
+          .first();
+
+        if (existingActive) {
+          errors.push(
+            `Gesture "${gesture.name}" is already sponsored until ${new Date(existingActive.endDate).toLocaleDateString()}`
+          );
+          continue;
+        }
+
+        // Check for pending/pending_payment/pending_approval sponsorships
+        const existingPending = await ctx.db
+          .query("sponsorships")
+          .withIndex("by_gesture", (q) => q.eq("gestureId", gestureId))
+          .filter((q) =>
+            q.or(
+              q.eq(q.field("status"), "pending"),
+              q.eq(q.field("status"), "pending_payment"),
+              q.eq(q.field("status"), "pending_approval")
+            )
+          )
+          .first();
+
+        if (existingPending) {
+          errors.push(
+            `Gesture "${gesture.name}" already has a pending sponsorship`
+          );
+          continue;
+        }
+
+        // Create sponsorship with pending status
+        const endDate =
+          Date.now() + args.durationWeeks * 7 * 24 * 60 * 60 * 1000;
+
+        const sponsorshipId = await ctx.db.insert("sponsorships", {
+          gestureId,
+          sponsorName: args.sponsorName,
+          sponsorEmail: args.sponsorEmail,
+          overlayImageStorageId: args.overlayImageStorageId,
+          overlayText: args.overlayText,
+          sponsoredVideoPlaybackId,
+          originalVideoPlaybackId: gesture.playbackId,
+          startDate: 0, // Set after payment
+          endDate,
+          durationWeeks: args.durationWeeks,
+          status: "pending",
+          paymentAmount: args.paymentAmountPerGesture,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+
+        sponsorshipIds.push(sponsorshipId);
+      } catch (error) {
+        errors.push(
+          `Error creating sponsorship for gesture ${gestureId}: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }
+
+    if (errors.length > 0) {
+      throw new Error(
+        `Failed to create ${errors.length} sponsorship(s): ${errors.join("; ")}`
+      );
+    }
+
+    return sponsorshipIds;
   },
 });
 
