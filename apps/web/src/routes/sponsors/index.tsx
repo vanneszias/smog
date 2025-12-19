@@ -1,12 +1,14 @@
+import { api } from "@smog/convex";
 import { useGestureFiltering } from "@smog/hooks";
-import { GestureFilters, GestureList } from "@smog/ui";
+import { GestureFilters } from "@smog/ui";
 import { useQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
   useNavigate,
   useSearch,
 } from "@tanstack/react-router";
-import { Sparkles, Upload } from "lucide-react";
+import { useQuery as useConvexQuery } from "convex/react";
+import { Sparkles, Upload, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,9 @@ function useSponsorsData() {
     error,
   } = useQuery(orpc.sponsorships.listGesturesWithSponsorship.queryOptions());
 
+  // Fetch all categories using Convex
+  const allCategories = useConvexQuery(api.categories.list) || [];
+
   const gesturesWithCategories = useMemo(() => {
     if (!gesturesWithSponsorship) {
       return [];
@@ -39,12 +44,11 @@ function useSponsorsData() {
 
     return gesturesWithSponsorship.map((gesture) => ({
       ...gesture,
-      categories: gesture.categoryIds.map(() => ({
-        _id: "",
-        name: "",
-      })),
+      categories: gesture.categoryIds
+        .map((catId) => allCategories.find((cat) => cat._id === catId))
+        .filter((cat): cat is NonNullable<typeof cat> => Boolean(cat)),
     }));
-  }, [gesturesWithSponsorship]);
+  }, [gesturesWithSponsorship, allCategories]);
 
   return {
     gesturesWithSponsorship,
@@ -78,6 +82,214 @@ function useGestureSelection(
   const clearSelection = () => setSelectedGestureIds([]);
 
   return { selectedGestureIds, handleSelectGesture, clearSelection };
+}
+
+// Custom gesture list component with sponsorship information
+function SponsorGestureList({
+  gestures,
+  isLoading,
+  error,
+  selectedGestureIds,
+  onSelectGesture,
+  sortColumn,
+  sortDirection,
+  onSort,
+}: {
+  gestures: Array<{
+    _id: string;
+    name: string;
+    categories: Array<{ _id: string; name: string }>;
+    concept: string[];
+    sponsorship?: {
+      status: string;
+      sponsorName: string;
+      endDate: number;
+    } | null;
+    _isSelected?: boolean;
+  }>;
+  isLoading: boolean;
+  error?: Error | null;
+  selectedGestureIds: string[];
+  onSelectGesture: (gestureId: string) => void;
+  sortColumn?: "name" | "category";
+  sortDirection?: "asc" | "desc";
+  onSort?: (column: "name" | "category") => void;
+}) {
+  const { t } = useTranslation();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-center">
+        <div>
+          <p className="font-semibold text-red-600">
+            {t("ui.gestureList.errorLoading")}
+          </p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            {t("ui.gestureList.errorTryAgain")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (gestures.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-center">
+        <p className="text-muted-foreground">
+          {t("ui.gestureList.noGestures")}
+        </p>
+      </div>
+    );
+  }
+
+  const sortableClass = onSort
+    ? "cursor-pointer select-none hover:bg-muted/50"
+    : "";
+
+  const renderSortIndicator = (column: "name" | "category") => {
+    if (!onSort || sortColumn !== column) {
+      return null;
+    }
+    return (
+      <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
+    );
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Date(timestamp).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+
+  const handleNameClick = onSort ? () => onSort("name") : undefined;
+  const handleCategoryClick = onSort ? () => onSort("category") : undefined;
+
+  return (
+    <div className="relative h-full w-full overflow-auto px-4">
+      <table className="w-full caption-bottom text-sm">
+        <thead className="sticky top-0 z-10 bg-background">
+          <tr className="border-b">
+            <th
+              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
+              onClick={handleNameClick}
+            >
+              <div className="flex items-center gap-1">
+                {t("ui.gestureList.name")}
+                {renderSortIndicator("name")}
+              </div>
+            </th>
+            <th
+              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
+              onClick={handleCategoryClick}
+            >
+              <div className="flex items-center gap-1">
+                {t("ui.gestureList.name")}
+                {renderSortIndicator("name")}
+              </div>
+            </th>
+            <th
+              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
+              onClick={handleCategoryClick}
+            >
+              <div className="flex items-center gap-1">
+                {t("ui.gestureList.category")}
+                {renderSortIndicator("category")}
+              </div>
+            </th>
+            <th className="h-12 px-4 text-left align-middle font-medium">
+              {t("ui.gestureList.concepts")}
+            </th>
+            <th className="h-12 px-4 text-left align-middle font-medium">
+              {t("web.sponsors.sponsorshipStatus", "Sponsorship Status")}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {gestures.map((gesture) => {
+            const isSelected = selectedGestureIds.includes(gesture._id);
+            const isSponsored = gesture.sponsorship?.status === "active";
+            const hasSponsorship =
+              Boolean(isSponsored) && Boolean(gesture.sponsorship);
+
+            return (
+              <tr
+                className={`cursor-pointer border-b transition-colors hover:bg-muted/50 ${
+                  isSelected ? "bg-primary/10" : ""
+                } ${isSponsored ? "opacity-60" : ""}`}
+                key={gesture._id}
+                onClick={() => onSelectGesture(gesture._id)}
+              >
+                <td className="p-4 font-medium">{gesture.name}</td>
+                <td className="p-4">
+                  <div className="flex flex-wrap gap-1">
+                    {gesture.categories
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((cat) => (
+                        <span
+                          className="rounded-full bg-secondary px-2 py-0.5 text-xs"
+                          key={cat._id}
+                        >
+                          {cat.name}
+                        </span>
+                      ))}
+                    {gesture.categories.length > 2 && (
+                      <span className="text-muted-foreground text-xs">
+                        +{gesture.categories.length - 2}
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="max-w-xs truncate p-4 text-muted-foreground text-sm">
+                  {gesture.concept.join(", ")}
+                </td>
+                <td className="p-4">
+                  {hasSponsorship ? (
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 font-medium text-green-800 text-xs">
+                          ✓ {t("web.sponsors.sponsored", "Sponsored")}
+                        </span>
+                      </div>
+                      <div className="text-muted-foreground text-xs">
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span>{gesture.sponsorship!.sponsorName}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          <span>
+                            {t(
+                              "web.sponsors.availableAgainOn",
+                              "Available again:"
+                            )}{" "}
+                            {formatDate(gesture.sponsorship!.endDate)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 font-medium text-blue-800 text-xs">
+                      {t("web.sponsors.available", "Available to sponsor")}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex UI logic with multiple conditional renders
@@ -229,15 +441,13 @@ function SponsorsComponent() {
             </div>
           </div>
         ) : (
-          <GestureList
+          <SponsorGestureList
             error={error}
             gestures={enhancedGestures}
             isLoading={isLoading}
             onSelectGesture={handleSelectGesture}
             onSort={handleSort}
-            selectedGestureId={
-              selectedGestureIds.length === 1 ? selectedGestureIds[0] : null
-            }
+            selectedGestureIds={selectedGestureIds}
             sortColumn={sortColumn}
             sortDirection={sortDirection}
           />
