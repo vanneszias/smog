@@ -111,9 +111,9 @@ function SponsorGestureList({
   error?: Error | null;
   selectedGestureIds: string[];
   onSelectGesture: (gestureId: string) => void;
-  sortColumn?: "name" | "category";
+  sortColumn?: "name" | "category" | "sponsorship";
   sortDirection?: "asc" | "desc";
-  onSort?: (column: "name" | "category") => void;
+  onSort?: (column: "name" | "category" | "sponsorship") => void;
 }) {
   const { t } = useTranslation();
 
@@ -154,7 +154,7 @@ function SponsorGestureList({
     ? "cursor-pointer select-none hover:bg-muted/50"
     : "";
 
-  const renderSortIndicator = (column: "name" | "category") => {
+  const renderSortIndicator = (column: "name" | "category" | "sponsorship") => {
     if (!onSort || sortColumn !== column) {
       return null;
     }
@@ -172,6 +172,9 @@ function SponsorGestureList({
 
   const handleNameClick = onSort ? () => onSort("name") : undefined;
   const handleCategoryClick = onSort ? () => onSort("category") : undefined;
+  const handleSponsorshipClick = onSort
+    ? () => onSort("sponsorship")
+    : undefined;
 
   return (
     <div className="relative h-full w-full overflow-auto px-4">
@@ -192,15 +195,6 @@ function SponsorGestureList({
               onClick={handleCategoryClick}
             >
               <div className="flex items-center gap-1">
-                {t("ui.gestureList.name")}
-                {renderSortIndicator("name")}
-              </div>
-            </th>
-            <th
-              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
-              onClick={handleCategoryClick}
-            >
-              <div className="flex items-center gap-1">
                 {t("ui.gestureList.category")}
                 {renderSortIndicator("category")}
               </div>
@@ -208,8 +202,14 @@ function SponsorGestureList({
             <th className="h-12 px-4 text-left align-middle font-medium">
               {t("ui.gestureList.concepts")}
             </th>
-            <th className="h-12 px-4 text-left align-middle font-medium">
-              {t("web.sponsors.sponsorshipStatus", "Sponsorship Status")}
+            <th
+              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
+              onClick={handleSponsorshipClick}
+            >
+              <div className="flex items-center gap-1">
+                {t("web.sponsors.sponsorshipStatus", "Sponsorship Status")}
+                {renderSortIndicator("sponsorship")}
+              </div>
             </th>
           </tr>
         </thead>
@@ -309,9 +309,8 @@ function SponsorsComponent() {
     selectedCategories,
     handleCategoryToggle,
     clearFilters,
-    sortColumn,
-    sortDirection,
-    handleSort,
+    sortDirection: baseSortDirection,
+    handleSort: baseHandleSort,
     allCategories,
     filteredGestures,
   } = useGestureFiltering({
@@ -321,6 +320,46 @@ function SponsorsComponent() {
       ? searchParams.category.split(",")
       : [],
   });
+
+  // Extended sorting to support sponsorship column
+  const [sponsorSortColumn, setSponsorSortColumn] = useState<
+    "name" | "category" | "sponsorship"
+  >("name");
+  const [sponsorSortDirection, setSponsorSortDirection] = useState<
+    "asc" | "desc"
+  >("asc");
+
+  const handleSponsorSort = (column: "name" | "category" | "sponsorship") => {
+    if (column === "sponsorship") {
+      // Handle sponsorship sorting separately
+      if (sponsorSortColumn === column) {
+        setSponsorSortDirection(
+          sponsorSortDirection === "asc" ? "desc" : "asc"
+        );
+      } else {
+        setSponsorSortColumn(column);
+        setSponsorSortDirection("asc");
+      }
+    } else {
+      // Use base sorting for name and category
+      setSponsorSortColumn(column);
+      setSponsorSortDirection(baseSortDirection);
+      baseHandleSort(column);
+    }
+  };
+
+  // Apply sponsorship sorting if needed
+  const sortedGestures = useMemo(() => {
+    if (sponsorSortColumn === "sponsorship") {
+      return [...filteredGestures].sort((a, b) => {
+        const aSponsored = a.sponsorship?.status === "active" ? 1 : 0;
+        const bSponsored = b.sponsorship?.status === "active" ? 1 : 0;
+        const comparison = aSponsored - bSponsored;
+        return sponsorSortDirection === "asc" ? comparison : -comparison;
+      });
+    }
+    return filteredGestures;
+  }, [filteredGestures, sponsorSortColumn, sponsorSortDirection]);
 
   useEffect(() => {
     navigate({
@@ -346,7 +385,7 @@ function SponsorsComponent() {
 
   const enhancedGestures = useMemo(
     () =>
-      filteredGestures.map((g) => {
+      sortedGestures.map((g) => {
         const gestureWithSponsorship = gesturesWithSponsorship?.find(
           (gs) => gs._id === g._id
         );
@@ -356,7 +395,7 @@ function SponsorsComponent() {
           _isSelected: selectedGestureIds.includes(g._id),
         };
       }),
-    [filteredGestures, gesturesWithSponsorship, selectedGestureIds]
+    [sortedGestures, gesturesWithSponsorship, selectedGestureIds]
   );
 
   return (
@@ -446,10 +485,10 @@ function SponsorsComponent() {
             gestures={enhancedGestures}
             isLoading={isLoading}
             onSelectGesture={handleSelectGesture}
-            onSort={handleSort}
+            onSort={handleSponsorSort}
             selectedGestureIds={selectedGestureIds}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
+            sortColumn={sponsorSortColumn}
+            sortDirection={sponsorSortDirection}
           />
         )}
       </div>
