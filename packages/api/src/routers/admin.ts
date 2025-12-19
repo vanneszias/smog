@@ -304,6 +304,59 @@ export const adminRouter = {
         });
         return sponsorship;
       }),
+
+    getActiveByGesture: adminProcedure
+      .input(
+        z.object({
+          gestureId: z.string(),
+        })
+      )
+      .handler(async ({ input }) => {
+        const sponsorship = await convexClient.query(
+          api.sponsorships.getActiveByGesture,
+          {
+            gestureId: input.gestureId as Id<"gestures">,
+          }
+        );
+        return sponsorship;
+      }),
+
+    restoreOriginalVideo: adminProcedure
+      .input(
+        z.object({
+          gestureId: z.string(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        // Get active sponsorship for this gesture
+        const sponsorship = await convexClient.query(
+          api.sponsorships.getActiveByGesture,
+          {
+            gestureId: input.gestureId as Id<"gestures">,
+          }
+        );
+
+        if (!sponsorship) {
+          throw new Error("No active sponsorship found for this gesture");
+        }
+
+        // Restore original video by expiring the sponsorship
+        await convexClient.mutation(api.sponsorships.forceExpire, {
+          sponsorshipId: sponsorship._id,
+          adminUserId: context.userId,
+        });
+
+        // Log action
+        await convexClient.mutation(api.adminLogs.logAction, {
+          userId: context.userId,
+          action: "restore_original_video",
+          targetId: input.gestureId,
+          targetType: "gesture",
+          metadata: { sponsorshipId: sponsorship._id },
+        });
+
+        return { success: true };
+      }),
   },
 
   // Admin logs
