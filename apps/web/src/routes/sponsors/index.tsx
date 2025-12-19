@@ -416,22 +416,65 @@ function SponsorsComponent() {
           </p>
 
           {selectedGestureIds.length > 0 && (
-            <div className="mt-4 flex items-center gap-4">
-              <div className="rounded-lg bg-primary/10 px-4 py-2">
-                <span className="font-medium">
-                  {selectedGestureIds.length}{" "}
-                  {selectedGestureIds.length === 1
-                    ? t("web.sponsors.gestureSelected", "gesture selected")
-                    : t("web.sponsors.gesturesSelected", "gestures selected")}
-                </span>
+            <div className="mt-6 space-y-3 rounded-lg border-2 border-primary bg-primary/5 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <span className="font-bold text-lg">
+                      {selectedGestureIds.length}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-lg">
+                      {t(
+                        "web.sponsors.selectedForSponsoring",
+                        "Selected for Sponsoring"
+                      )}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      {selectedGestureIds.length === 1
+                        ? t(
+                            "web.sponsors.gestureSelected",
+                            "1 gesture selected"
+                          )
+                        : t(
+                            "web.sponsors.gesturesSelected",
+                            `${selectedGestureIds.length} gestures selected`
+                          )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button onClick={handleContinue} size="lg">
+                    <Upload className="mr-2 h-4 w-4" />
+                    {t("web.sponsors.continue", "Continue to Upload")}
+                  </Button>
+                  <Button onClick={clearSelection} size="lg" variant="outline">
+                    {t("web.sponsors.clearSelection", "Clear Selection")}
+                  </Button>
+                </div>
               </div>
-              <Button onClick={handleContinue} size="lg">
-                <Upload className="mr-2 h-4 w-4" />
-                {t("web.sponsors.continue", "Continue to Upload")}
-              </Button>
-              <Button onClick={clearSelection} size="lg" variant="outline">
-                {t("web.sponsors.clearSelection", "Clear Selection")}
-              </Button>
+              <div className="border-t pt-3">
+                <p className="mb-2 font-semibold text-sm">
+                  {t("web.sponsors.selectedGestures", "Selected Gestures:")}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedGestureIds.map((id) => {
+                    const gesture = gesturesWithSponsorship?.find(
+                      (g) => g._id === id
+                    );
+                    return (
+                      <div
+                        key={id}
+                        className="inline-flex items-center gap-2 rounded-md bg-background px-3 py-1.5 font-medium text-sm shadow-sm"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 text-primary" />
+                        <span>{gesture?.name || id}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>
