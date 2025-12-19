@@ -341,12 +341,35 @@ export const listGesturesWithSponsorship = query({
           overlayText: v.string(),
           sponsoredVideoPlaybackId: v.optional(v.string()),
           originalVideoPlaybackId: v.string(),
+          overlayConfig: v.optional(
+            v.object({
+              image: v.object({
+                x: v.number(),
+                y: v.number(),
+                width: v.number(),
+                height: v.number(),
+              }),
+              text: v.object({
+                x: v.number(),
+                y: v.number(),
+                fontSize: v.number(),
+                color: v.string(),
+              }),
+              animation: v.object({
+                startTime: v.number(),
+                fadeInDuration: v.number(),
+              }),
+            })
+          ),
           startDate: v.number(),
           endDate: v.number(),
           durationWeeks: v.number(),
           status: v.string(),
           molliePaymentId: v.optional(v.string()),
           paymentAmount: v.number(),
+          rejectionReason: v.optional(v.string()),
+          reviewedBy: v.optional(v.id("users")),
+          reviewedAt: v.optional(v.number()),
           createdAt: v.number(),
           updatedAt: v.number(),
         }),
