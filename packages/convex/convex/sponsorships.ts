@@ -383,14 +383,21 @@ export const listGesturesWithSponsorship = query({
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .collect();
 
-    const sponsorships = await ctx.db
-      .query("sponsorships")
-      .withIndex("by_status", (q) => q.eq("status", "active"))
-      .collect();
+    // Fetch all sponsorships (active and pending states)
+    const allSponserships = await ctx.db.query("sponsorships").collect();
+
+    // Filter for active or pending sponsorships
+    const relevantSponserships = allSponserships.filter(
+      (s) =>
+        s.status === "active" ||
+        s.status === "pending" ||
+        s.status === "pending_payment" ||
+        s.status === "pending_approval"
+    );
 
     return gestures.map((gesture) => {
       const sponsorship =
-        sponsorships.find((s) => s.gestureId === gesture._id) || null;
+        relevantSponserships.find((s) => s.gestureId === gesture._id) || null;
       return {
         ...gesture,
         sponsorship,

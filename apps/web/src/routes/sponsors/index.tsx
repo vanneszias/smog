@@ -217,7 +217,7 @@ function SponsorGestureList({
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
-              ⏳ {t("web.sponsors.pendingApproval", "Pending Approval")}
+              ⏳ {t("web.sponsors.pending", "Pending")}
             </span>
           </div>
           {Boolean(gesture.sponsorship?.sponsorName) && (
@@ -229,7 +229,7 @@ function SponsorGestureList({
               <p className="mt-1">
                 {t(
                   "web.sponsors.pendingDescription",
-                  "This sponsorship is awaiting approval"
+                  "This sponsorship is being processed"
                 )}
               </p>
             </div>
