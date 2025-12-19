@@ -410,7 +410,7 @@ export function SponsorshipsManagement() {
       playbackId:
         sponsorship.sponsoredVideoPlaybackId ||
         sponsorship.originalVideoPlaybackId,
-      concept: [sponsorship.sponsorName],
+      concept: [sponsorship.sponsorName, sponsorship.status.replace("_", " ")],
       info: `€${(sponsorship.paymentAmount / 100).toFixed(2)} | ${sponsorship.durationWeeks}w`,
       categories: [],
     }));
@@ -486,15 +486,7 @@ export function SponsorshipsManagement() {
           ) : (
             <GestureList
               gestures={filteredData}
-              onGestureClick={(gesture) =>
-                setSelectedSponsorshipId(gesture._id)
-              }
-              renderBadge={(gesture) => {
-                const sponsorship = sponsorships?.find(
-                  (s) => s._id === gesture._id
-                );
-                return sponsorship ? getStatusBadge(sponsorship.status) : null;
-              }}
+              onSelectGesture={setSelectedSponsorshipId}
               selectedGestureId={selectedSponsorshipId}
             />
           )}
