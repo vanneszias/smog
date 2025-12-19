@@ -1,6 +1,7 @@
 import type { RouterClient } from "@orpc/server";
 import { protectedProcedure, publicProcedure } from "../index";
 import { adminRouter } from "./admin";
+import { categoriesRouter } from "./categories";
 import { favoritesRouter } from "./favorites";
 import { gesturesRouter } from "./gestures";
 import { sponsorshipsRouter } from "./sponsorships";
@@ -13,6 +14,7 @@ export const appRouter = {
     workosId: context.workosId,
   })),
   gestures: gesturesRouter,
+  categories: categoriesRouter,
   favorites: favoritesRouter,
   users: usersRouter,
   sponsorships: sponsorshipsRouter,

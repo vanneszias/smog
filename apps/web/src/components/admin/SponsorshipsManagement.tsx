@@ -46,12 +46,14 @@ export function SponsorshipsManagement() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [detailsDialog, setDetailsDialog] = useState<Sponsorship | null>(null);
 
-  const { data: sponsorships, isLoading } = useQuery(
-    orpc.admin.sponsorships.listAll.queryOptions({
+  const { data: sponsorships, isLoading } = useQuery({
+    ...orpc.admin.sponsorships.listAll.queryOptions({
       status: statusFilter === "all" ? undefined : statusFilter,
       limit: 100,
-    })
-  );
+    }),
+    // Force refetch when filter changes
+    refetchOnMount: true,
+  });
 
   const getStatusBadge = (status: string) => {
     const variants: Record<
@@ -60,6 +62,7 @@ export function SponsorshipsManagement() {
     > = {
       pending: "secondary",
       pending_payment: "outline",
+      pending_approval: "outline",
       active: "default",
       expired: "secondary",
       rejected: "destructive",
@@ -88,6 +91,7 @@ export function SponsorshipsManagement() {
             <SelectItem value="all">All</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="pending_payment">Pending Payment</SelectItem>
+            <SelectItem value="pending_approval">Pending Approval</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
