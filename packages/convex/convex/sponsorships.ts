@@ -89,6 +89,7 @@ export const createBulk = mutation({
     paymentAmountPerGesture: v.number(),
   },
   returns: v.array(v.id("sponsorships")),
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: inherently complex bulk operation
   handler: async (ctx, args) => {
     if (args.gestureIds.length !== args.sponsoredVideoPlaybackIds.length) {
       throw new Error(
@@ -96,12 +97,22 @@ export const createBulk = mutation({
       );
     }
 
-    const sponsorshipIds: string[] = [];
+    // biome-ignore lint/suspicious/noExplicitAny: Convex ID type
+    const sponsorshipIds: any[] = [];
     const errors: string[] = [];
 
     for (let i = 0; i < args.gestureIds.length; i++) {
       const gestureId = args.gestureIds[i];
+      if (!gestureId) {
+        errors.push(`Gesture ID at index ${i} is undefined`);
+        continue;
+      }
+
       const sponsoredVideoPlaybackId = args.sponsoredVideoPlaybackIds[i];
+      if (!sponsoredVideoPlaybackId) {
+        errors.push(`Sponsored video playback ID at index ${i} is undefined`);
+        continue;
+      }
 
       try {
         // Get gesture to backup original playbackId
@@ -544,13 +555,13 @@ export const listAll = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 100;
 
-    let query = ctx.db.query("sponsorships");
-
-    if (args.status) {
-      query = query.withIndex("by_status", (q) => q.eq("status", args.status));
-    }
-
-    const sponsorships = await query.order("desc").take(limit);
+    const sponsorships = args.status
+      ? await ctx.db
+          .query("sponsorships")
+          .withIndex("by_status", (q) => q.eq("status", args.status as string))
+          .order("desc")
+          .take(limit)
+      : await ctx.db.query("sponsorships").order("desc").take(limit);
 
     // Enrich with gesture names
     const enriched = await Promise.all(

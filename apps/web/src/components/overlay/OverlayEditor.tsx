@@ -254,7 +254,6 @@ export function OverlayEditor({
   // Add/update text - Create once and update text content separately
   // Note: overlayText is intentionally not in the dependency array
   // We only use it for initial creation, and updates are handled by event listeners
-  // biome-ignore lint/correctness/useExhaustiveDependencies: overlayText only used for initial creation
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) {
@@ -344,7 +343,6 @@ export function OverlayEditor({
       canvas.off("text:changed", handleTextChanged);
       canvas.off("text:editing:exited", handleTextEditingExited);
     };
-    // biome-ignore lint/correctness/useExhaustiveDependencies: overlayText is only used for initial creation, updates handled by event listeners
   }, [
     config.text.color,
     config.text.x,
@@ -353,6 +351,7 @@ export function OverlayEditor({
     updateConfigFromCanvas,
     onTextChange,
     constrainToBounds,
+    overlayText,
   ]);
 
   // Update text content when overlayText prop changes from outside

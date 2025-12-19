@@ -135,9 +135,9 @@ function CreateSponsorshipComponent() {
         gestureName: gesture.name,
         sponsorName,
         sponsorEmail,
-        imageFile,
+        imageFile: imageFile!,
         overlayText,
-        tempVideoUrl: composition.playbackId,
+        tempVideoUrl: composition.playbackId!,
         durationWeeks,
         totalCents: pricing.totalCents,
         createSponsorship: (params) =>
@@ -166,7 +166,7 @@ function CreateSponsorshipComponent() {
 
     // For now, we'll use the same composed video for all gestures
     const sponsoredVideoPlaybackIds = selectedGestures.map(
-      () => composition.playbackId
+      () => composition.playbackId!
     );
 
     // Create bulk sponsorships
@@ -197,7 +197,7 @@ function CreateSponsorshipComponent() {
       sponsorshipIds: sponsorshipResult.sponsorshipIds,
       totalAmount: pricing.totalCents,
       description: `Sponsorship: ${selectedGestures.length} gestures (${gestureNames.substring(0, 100)}) - ${durationWeeks} weeks`,
-      redirectUrl: `${window.location.origin}/sponsors/success?sponsorshipIds=${sponsorshipResult.sponsorshipIds.join(",")}&tempVideoUrl=${encodeURIComponent(composition.playbackId)}`,
+      redirectUrl: `${window.location.origin}/sponsors/success?sponsorshipIds=${sponsorshipResult.sponsorshipIds.join(",")}&tempVideoUrl=${encodeURIComponent(composition.playbackId!)}`,
     });
 
     if (paymentResult.checkoutUrl) {

@@ -35,12 +35,15 @@ export const adminRouter = {
     updateRole: adminProcedure
       .input(
         z.object({
-          userId: z.string() as z.ZodType<Id<"users">>,
+          userId: z.string(),
           role: z.enum(["user", "admin"]),
         })
       )
       .handler(async ({ input }) => {
-        await convexClient.mutation(api.users.updateUserRole, input);
+        await convexClient.mutation(api.users.updateUserRole, {
+          userId: input.userId as Id<"users">,
+          role: input.role,
+        });
         return { success: true };
       }),
   },
@@ -65,11 +68,9 @@ export const adminRouter = {
     update: adminProcedure
       .input(
         z.object({
-          gestureId: z.string() as z.ZodType<Id<"gestures">>,
+          gestureId: z.string(),
           name: z.string().optional(),
-          categoryIds: z
-            .array(z.string() as z.ZodType<Id<"categories">>)
-            .optional(),
+          categoryIds: z.array(z.string()).optional(),
           playbackId: z.string().optional(),
           concept: z.array(z.string()).optional(),
           info: z.string().optional(),
@@ -77,7 +78,15 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        await convexClient.mutation(api.gestures.updateGesture, input);
+        await convexClient.mutation(api.gestures.updateGesture, {
+          gestureId: input.gestureId as Id<"gestures">,
+          name: input.name,
+          categoryIds: input.categoryIds as Id<"categories">[] | undefined,
+          playbackId: input.playbackId,
+          concept: input.concept,
+          info: input.info,
+          isActive: input.isActive,
+        });
 
         // Log action
         await convexClient.mutation(api.adminLogs.logAction, {
@@ -94,20 +103,23 @@ export const adminRouter = {
     bulkUpdate: adminProcedure
       .input(
         z.object({
-          gestureIds: z.array(z.string() as z.ZodType<Id<"gestures">>),
+          gestureIds: z.array(z.string()),
           updates: z.object({
             isActive: z.boolean().optional(),
-            categoryIds: z
-              .array(z.string() as z.ZodType<Id<"categories">>)
-              .optional(),
+            categoryIds: z.array(z.string()).optional(),
           }),
         })
       )
       .handler(async ({ input, context }) => {
-        const result = await convexClient.mutation(
-          api.gestures.bulkUpdate,
-          input
-        );
+        const result = await convexClient.mutation(api.gestures.bulkUpdate, {
+          gestureIds: input.gestureIds as Id<"gestures">[],
+          updates: {
+            isActive: input.updates.isActive,
+            categoryIds: input.updates.categoryIds as
+              | Id<"categories">[]
+              | undefined,
+          },
+        });
 
         // Log action
         await convexClient.mutation(api.adminLogs.logAction, {
@@ -124,13 +136,15 @@ export const adminRouter = {
     toggleActive: adminProcedure
       .input(
         z.object({
-          gestureId: z.string() as z.ZodType<Id<"gestures">>,
+          gestureId: z.string(),
         })
       )
       .handler(async ({ input, context }) => {
         const newStatus = await convexClient.mutation(
           api.gestures.toggleActive,
-          input
+          {
+            gestureId: input.gestureId as Id<"gestures">,
+          }
         );
 
         // Log action
@@ -149,7 +163,7 @@ export const adminRouter = {
       .input(
         z.object({
           name: z.string(),
-          categoryIds: z.array(z.string() as z.ZodType<Id<"categories">>),
+          categoryIds: z.array(z.string()),
           playbackId: z.string(),
           concept: z.array(z.string()),
           info: z.string(),
@@ -157,10 +171,14 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        const gestureId = await convexClient.mutation(
-          api.gestures.create,
-          input
-        );
+        const gestureId = await convexClient.mutation(api.gestures.create, {
+          name: input.name,
+          categoryIds: input.categoryIds as Id<"categories">[],
+          playbackId: input.playbackId,
+          concept: input.concept,
+          info: input.info,
+          isActive: input.isActive,
+        });
 
         // Log action
         await convexClient.mutation(api.adminLogs.logAction, {
@@ -205,12 +223,12 @@ export const adminRouter = {
     approve: adminProcedure
       .input(
         z.object({
-          sponsorshipId: z.string() as z.ZodType<Id<"sponsorships">>,
+          sponsorshipId: z.string(),
         })
       )
       .handler(async ({ input, context }) => {
         await convexClient.mutation(api.sponsorships.approve, {
-          sponsorshipId: input.sponsorshipId,
+          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
           adminUserId: context.userId,
         });
 
@@ -228,13 +246,13 @@ export const adminRouter = {
     reject: adminProcedure
       .input(
         z.object({
-          sponsorshipId: z.string() as z.ZodType<Id<"sponsorships">>,
+          sponsorshipId: z.string(),
           reason: z.string(),
         })
       )
       .handler(async ({ input, context }) => {
         await convexClient.mutation(api.sponsorships.reject, {
-          sponsorshipId: input.sponsorshipId,
+          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
           adminUserId: context.userId,
           reason: input.reason,
         });
@@ -254,12 +272,12 @@ export const adminRouter = {
     forceExpire: adminProcedure
       .input(
         z.object({
-          sponsorshipId: z.string() as z.ZodType<Id<"sponsorships">>,
+          sponsorshipId: z.string(),
         })
       )
       .handler(async ({ input, context }) => {
         await convexClient.mutation(api.sponsorships.forceExpire, {
-          sponsorshipId: input.sponsorshipId,
+          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
           adminUserId: context.userId,
         });
 
@@ -277,14 +295,13 @@ export const adminRouter = {
     getById: adminProcedure
       .input(
         z.object({
-          id: z.string() as z.ZodType<Id<"sponsorships">>,
+          id: z.string(),
         })
       )
       .handler(async ({ input }) => {
-        const sponsorship = await convexClient.query(
-          api.sponsorships.getById,
-          input
-        );
+        const sponsorship = await convexClient.query(api.sponsorships.getById, {
+          id: input.id as Id<"sponsorships">,
+        });
         return sponsorship;
       }),
   },

@@ -216,7 +216,7 @@ function SponsorGestureList({
       return (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
+            <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-1 font-medium text-xs text-yellow-800">
               ⏳ {t("web.sponsors.pending", "Pending")}
             </span>
           </div>
@@ -351,7 +351,6 @@ function SponsorGestureList({
   );
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex UI logic with multiple conditional renders
 function SponsorsComponent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -359,8 +358,20 @@ function SponsorsComponent() {
 
   const { gesturesWithSponsorship, gesturesWithCategories, isLoading, error } =
     useSponsorsData();
+
+  const simplifiedGesturesWithSponsorship = useMemo(
+    () =>
+      (gesturesWithSponsorship || []).map((g) => ({
+        _id: g._id,
+        sponsorship: g.sponsorship
+          ? { status: g.sponsorship.status }
+          : undefined,
+      })),
+    [gesturesWithSponsorship]
+  );
+
   const { selectedGestureIds, handleSelectGesture, clearSelection } =
-    useGestureSelection(gesturesWithSponsorship || []);
+    useGestureSelection(simplifiedGesturesWithSponsorship);
 
   const {
     searchQuery,
@@ -409,16 +420,32 @@ function SponsorsComponent() {
 
   // Apply sponsorship sorting if needed
   const sortedGestures = useMemo(() => {
+    // Join filtered gestures with sponsorship data
+    const gesturesWithSponsorshipStatus = filteredGestures.map((g) => {
+      const gestureWithSponsorship = gesturesWithSponsorship?.find(
+        (gs) => gs._id === g._id
+      );
+      return {
+        ...g,
+        sponsorship: gestureWithSponsorship?.sponsorship,
+      };
+    });
+
     if (sponsorSortColumn === "sponsorship") {
-      return [...filteredGestures].sort((a, b) => {
+      return gesturesWithSponsorshipStatus.sort((a, b) => {
         const aSponsored = a.sponsorship?.status === "active" ? 1 : 0;
         const bSponsored = b.sponsorship?.status === "active" ? 1 : 0;
         const comparison = aSponsored - bSponsored;
         return sponsorSortDirection === "asc" ? comparison : -comparison;
       });
     }
-    return filteredGestures;
-  }, [filteredGestures, sponsorSortColumn, sponsorSortDirection]);
+    return gesturesWithSponsorshipStatus;
+  }, [
+    filteredGestures,
+    gesturesWithSponsorship,
+    sponsorSortColumn,
+    sponsorSortDirection,
+  ]);
 
   useEffect(() => {
     navigate({
@@ -448,9 +475,19 @@ function SponsorsComponent() {
         const gestureWithSponsorship = gesturesWithSponsorship?.find(
           (gs) => gs._id === g._id
         );
+        const sponsorship = gestureWithSponsorship?.sponsorship;
         return {
           ...g,
-          sponsorship: gestureWithSponsorship?.sponsorship,
+          categories: g.categories.filter(
+            (c): c is { _id: string; name: string } => c !== undefined
+          ),
+          sponsorship: sponsorship
+            ? {
+                status: sponsorship.status,
+                sponsorName: sponsorship.sponsorName,
+                endDate: sponsorship.endDate,
+              }
+            : null,
           _isSelected: selectedGestureIds.includes(g._id),
         };
       }),
@@ -524,8 +561,8 @@ function SponsorsComponent() {
                     );
                     return (
                       <div
-                        key={id}
                         className="inline-flex items-center gap-2 rounded-md bg-background px-3 py-1.5 font-medium text-sm shadow-sm"
+                        key={id}
                       >
                         <Sparkles className="h-3.5 w-3.5 text-primary" />
                         <span>{gesture?.name || id}</span>
