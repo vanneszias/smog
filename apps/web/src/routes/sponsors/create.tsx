@@ -19,6 +19,7 @@ import {
 import { client } from "@/utils/orpc";
 import { useVideoComposition } from "./hooks/useVideoComposition";
 import type { CompositionStep } from "./lib/composition/types";
+import { convertFileToBase64 } from "./lib/imageValidation";
 import { createSponsorshipPayment } from "./lib/sponsorshipPayment";
 
 type CreateSearch = {
@@ -77,12 +78,12 @@ function CreateSponsorshipComponent() {
   };
 
   const handleComposeVideo = async () => {
-    const hasRequirements = imageFile && selectedGestures[0];
+    const hasRequirements = imageFile && selectedGestures.length > 0;
     if (!hasRequirements) {
       return;
     }
 
-    // For now, compose just the first video as preview
+    // Compose video for the first gesture as preview
     const result = await composition.compose({
       playbackId: selectedGestures[0].playbackId,
       imageFile,
@@ -103,7 +104,7 @@ function CreateSponsorshipComponent() {
     }
 
     const hasRequiredData =
-      composition.playbackId && imageFile && selectedGestures[0];
+      composition.playbackId && imageFile && selectedGestures.length > 0;
     if (!hasRequiredData) {
       console.error("Missing required data for sponsorship submission");
       return;
@@ -112,44 +113,98 @@ function CreateSponsorshipComponent() {
     try {
       setIsSubmitting(true);
 
-      // For now, we only support single gesture sponsorships
-      // TODO: Support multiple gestures in the future
-      const gesture = selectedGestures[0];
-
-      // Initialize Convex client
-      const convex = new ConvexHttpClient(import.meta.env.VITE_CONVEX_URL!);
-
-      const result = await createSponsorshipPayment(
-        {
-          gestureId: gesture._id,
-          gestureName: gesture.name,
-          sponsorName,
-          sponsorEmail,
-          imageFile,
-          overlayText,
-          tempVideoUrl: composition.playbackId,
-          durationWeeks,
-          totalCents: pricing.totalCents,
-          createSponsorship: (params) =>
-            convex.mutation(api.sponsorships.create, params),
-          updatePaymentId: (params) =>
-            convex.mutation(api.sponsorships.updatePaymentId, params),
-        },
-        client
-      );
-
-      if (result.success && result.checkoutUrl) {
-        // Redirect to Mollie payment page
-        window.location.href = result.checkoutUrl;
+      if (selectedGestures.length === 1) {
+        await handleSingleGestureSubmission();
       } else {
-        console.error("Failed to create sponsorship payment:", result.error);
-        setIsSubmitting(false);
-        // TODO: Show error toast to user
+        await handleMultipleGesturesSubmission();
       }
     } catch (error) {
       console.error("Error submitting sponsorship:", error);
       setIsSubmitting(false);
       // TODO: Show error toast to user
+    }
+  };
+
+  const handleSingleGestureSubmission = async () => {
+    const gesture = selectedGestures[0];
+    const convex = new ConvexHttpClient(import.meta.env.VITE_CONVEX_URL!);
+
+    const result = await createSponsorshipPayment(
+      {
+        gestureId: gesture._id,
+        gestureName: gesture.name,
+        sponsorName,
+        sponsorEmail,
+        imageFile,
+        overlayText,
+        tempVideoUrl: composition.playbackId,
+        durationWeeks,
+        totalCents: pricing.totalCents,
+        createSponsorship: (params) =>
+          convex.mutation(api.sponsorships.create, params),
+        updatePaymentId: (params) =>
+          convex.mutation(api.sponsorships.updatePaymentId, params),
+      },
+      client
+    );
+
+    if (result.success && result.checkoutUrl) {
+      window.location.href = result.checkoutUrl;
+    } else {
+      console.error("Failed to create sponsorship payment:", result.error);
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMultipleGesturesSubmission = async () => {
+    console.log(
+      `Creating ${selectedGestures.length} sponsorships for multiple gestures`
+    );
+
+    // Convert image to base64 for storage
+    const base64Image = await convertFileToBase64(imageFile!);
+
+    // For now, we'll use the same composed video for all gestures
+    const sponsoredVideoPlaybackIds = selectedGestures.map(
+      () => composition.playbackId
+    );
+
+    // Create bulk sponsorships
+    const sponsorshipResult = await client.sponsorships.createBulkSponsorships({
+      gestureIds: selectedGestureIds,
+      sponsorName,
+      sponsorEmail,
+      overlayImageStorageId: base64Image,
+      overlayText,
+      sponsoredVideoPlaybackIds,
+      durationWeeks,
+      paymentAmountPerGesture: pricing.totalCents / selectedGestures.length,
+    });
+
+    const hasSuccess =
+      sponsorshipResult.success && sponsorshipResult.sponsorshipIds;
+    if (!hasSuccess) {
+      throw new Error("Failed to create sponsorships");
+    }
+
+    console.log(
+      `Created ${sponsorshipResult.sponsorshipIds.length} sponsorships`
+    );
+
+    // Create bulk payment
+    const gestureNames = selectedGestures.map((g) => g.name).join(", ");
+    const paymentResult = await client.sponsorships.createBulkPayment({
+      sponsorshipIds: sponsorshipResult.sponsorshipIds,
+      totalAmount: pricing.totalCents,
+      description: `Sponsorship: ${selectedGestures.length} gestures (${gestureNames.substring(0, 100)}) - ${durationWeeks} weeks`,
+      redirectUrl: `${window.location.origin}/sponsors/success?sponsorshipIds=${sponsorshipResult.sponsorshipIds.join(",")}&tempVideoUrl=${encodeURIComponent(composition.playbackId)}`,
+    });
+
+    if (paymentResult.checkoutUrl) {
+      window.location.href = paymentResult.checkoutUrl;
+    } else {
+      console.error("Failed to create bulk payment");
+      setIsSubmitting(false);
     }
   };
 

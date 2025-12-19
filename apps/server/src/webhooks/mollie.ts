@@ -57,9 +57,36 @@ export async function handleMollieWebhook(c: Context) {
       return c.json({ status: "skipped" }, 200);
     }
 
-    // Get sponsorship ID from payment metadata
+    // Get sponsorship ID(s) from payment metadata
     const metadata = payment.metadata as Record<string, string> | undefined;
     const sponsorshipId = metadata?.sponsorshipId;
+    const isBulkPayment = metadata?.isBulkPayment === "true";
+    const sponsorshipIdsJson = metadata?.sponsorshipIds;
+
+    if (isBulkPayment && sponsorshipIdsJson) {
+      // Handle bulk payment
+      console.log("[Mollie Webhook] Processing bulk payment");
+      const sponsorshipIds = JSON.parse(sponsorshipIdsJson) as string[];
+      console.log(
+        `[Mollie Webhook] Processing ${sponsorshipIds.length} sponsorships`
+      );
+
+      // Process all sponsorships
+      await Promise.all(
+        sponsorshipIds.map((id) =>
+          processSuccessfulPayment({
+            sponsorshipId: id,
+            molliePaymentId: paymentId,
+          })
+        )
+      );
+
+      console.log(
+        `[Mollie Webhook] Bulk payment processed successfully for ${sponsorshipIds.length} sponsorships`
+      );
+      return c.json({ status: "success", count: sponsorshipIds.length }, 200);
+    }
+
     if (!sponsorshipId) {
       console.error("[Mollie Webhook] No sponsorship ID in payment metadata");
       return c.json({ error: "Sponsorship ID missing in metadata" }, 400);

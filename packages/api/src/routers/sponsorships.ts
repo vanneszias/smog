@@ -252,4 +252,74 @@ export const sponsorshipsRouter = {
         checkoutUrl: payment._links.checkout?.href,
       };
     }),
+
+  /**
+   * Create Mollie payment for multiple sponsorships
+   */
+  createBulkPayment: publicProcedure
+    .input(
+      z.object({
+        sponsorshipIds: z.array(z.string()),
+        totalAmount: z.number(),
+        description: z.string(),
+        redirectUrl: z.string(),
+      })
+    )
+    .handler(async ({ input }) => {
+      console.log(
+        `[SponsorshipsRouter] Creating bulk payment for ${input.sponsorshipIds.length} sponsorships`
+      );
+
+      // Verify all sponsorships exist and are in pending state
+      const sponsorships = await Promise.all(
+        input.sponsorshipIds.map((id) =>
+          convex.query(api.sponsorships.getById, {
+            id: id as Id<"sponsorships">,
+          })
+        )
+      );
+
+      const invalidSponsorships = sponsorships.filter(
+        (s) => !s || s.status !== "pending"
+      );
+      if (invalidSponsorships.length > 0) {
+        throw new Error(
+          "Some sponsorships are not found or not in pending state"
+        );
+      }
+
+      // Create Mollie payment with all sponsorship IDs in metadata
+      const payment = await mollieClient.payments.create({
+        amount: {
+          currency: "EUR",
+          value: (input.totalAmount / 100).toFixed(2),
+        },
+        description: input.description,
+        redirectUrl: input.redirectUrl,
+        webhookUrl: `${process.env.CORS_ORIGIN || "http://localhost:3000"}/webhooks/mollie`,
+        metadata: {
+          sponsorshipIds: JSON.stringify(input.sponsorshipIds),
+          isBulkPayment: "true",
+        },
+      });
+
+      // Update all sponsorships with the payment ID
+      await Promise.all(
+        input.sponsorshipIds.map((id) =>
+          convex.mutation(api.sponsorships.updatePaymentId, {
+            sponsorshipId: id as Id<"sponsorships">,
+            molliePaymentId: payment.id,
+          })
+        )
+      );
+
+      console.log(
+        `[SponsorshipsRouter] Bulk payment created: ${payment.id} for ${input.sponsorshipIds.length} sponsorships`
+      );
+
+      return {
+        paymentId: payment.id,
+        checkoutUrl: payment._links.checkout?.href,
+      };
+    }),
 };

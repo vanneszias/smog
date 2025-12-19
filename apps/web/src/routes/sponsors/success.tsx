@@ -8,18 +8,26 @@ import { useEffect } from "react";
 
 type SuccessSearch = {
   sponsorshipId?: string;
+  sponsorshipIds?: string;
 };
 
 export const Route = createFileRoute("/sponsors/success")({
   component: SuccessComponent,
   validateSearch: (search: Record<string, unknown>): SuccessSearch => ({
     sponsorshipId: (search.sponsorshipId as string) || undefined,
+    sponsorshipIds: (search.sponsorshipIds as string) || undefined,
   }),
 });
 
 function SuccessComponent() {
   const navigate = useNavigate();
-  const { sponsorshipId } = useSearch({ from: "/sponsors/success" });
+  const { sponsorshipId, sponsorshipIds } = useSearch({
+    from: "/sponsors/success",
+  });
+
+  const sponsorshipCount = sponsorshipIds
+    ? sponsorshipIds.split(",").length
+    : 1;
 
   useEffect(() => {
     // Auto-redirect after 5 seconds
@@ -48,12 +56,16 @@ function SuccessComponent() {
         </h1>
 
         <p className="mb-6 text-lg" style={{ color: "var(--text-light)" }}>
-          Your sponsorship is being processed. Your video will go live shortly!
+          {sponsorshipCount > 1
+            ? `Your ${sponsorshipCount} sponsorships are being processed. Your videos will go live shortly!`
+            : "Your sponsorship is being processed. Your video will go live shortly!"}
         </p>
 
-        {sponsorshipId ? (
+        {sponsorshipId || sponsorshipIds ? (
           <p className="mb-6 text-sm" style={{ color: "var(--text-light)" }}>
-            Sponsorship ID: {sponsorshipId}
+            {sponsorshipCount > 1
+              ? `${sponsorshipCount} Sponsorships Created`
+              : `Sponsorship ID: ${sponsorshipId}`}
           </p>
         ) : null}
 
@@ -61,8 +73,14 @@ function SuccessComponent() {
           <p className="font-medium text-blue-900">What happens next?</p>
           <ul className="mt-2 space-y-1 text-blue-800">
             <li>• Your payment has been confirmed</li>
-            <li>• We're uploading your video to our servers</li>
-            <li>• Your sponsored video will be live in 2-5 minutes</li>
+            <li>
+              • We're uploading your {sponsorshipCount > 1 ? "videos" : "video"}{" "}
+              to our servers
+            </li>
+            <li>
+              • Your sponsored {sponsorshipCount > 1 ? "videos" : "video"} will
+              be live in 2-5 minutes
+            </li>
             <li>• You'll receive a confirmation email shortly</li>
           </ul>
         </div>
