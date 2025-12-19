@@ -1,6 +1,6 @@
 import { GestureList } from "@smog/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,7 @@ export function GesturesManagement() {
   const [selectedGestureId, setSelectedGestureId] = useState<string | null>(
     null
   );
+  const [searchQuery, setSearchQuery] = useState("");
   const [editDialog, setEditDialog] = useState<Gesture | null>(null);
   const [editForm, setEditForm] = useState<Partial<Gesture>>({});
 
@@ -92,6 +93,21 @@ export function GesturesManagement() {
       }),
     })) || [];
 
+  // Filter by search query
+  const filteredGestures = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return gesturesWithCategories;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return gesturesWithCategories.filter(
+      (gesture) =>
+        gesture.name.toLowerCase().includes(query) ||
+        gesture.info.toLowerCase().includes(query) ||
+        gesture.concept.some((c) => c.toLowerCase().includes(query))
+    );
+  }, [gesturesWithCategories, searchQuery]);
+
   const selectedGesture = gestures?.find((g) => g._id === selectedGestureId);
 
   if (isLoading) {
@@ -99,124 +115,136 @@ export function GesturesManagement() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-300px)] gap-4">
-      {/* Gesture List */}
-      <div className="flex-1 overflow-hidden rounded-lg border">
-        <GestureList
-          gestures={gesturesWithCategories}
-          isLoading={isLoading}
-          onSelectGesture={setSelectedGestureId}
-          selectedGestureId={selectedGestureId}
+    <div className="space-y-4">
+      {/* Search */}
+      <div>
+        <Input
+          className="max-w-md"
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by name, description, or concept..."
+          value={searchQuery}
         />
       </div>
 
-      {/* Gesture Details & Actions */}
-      <div className="w-80 space-y-4">
-        {selectedGesture ? (
-          <>
-            <div className="rounded-lg border p-4">
-              <h3 className="mb-2 font-semibold">{selectedGesture.name}</h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <p className="font-medium">Playback ID:</p>
-                  <p className="break-all font-mono text-muted-foreground text-xs">
-                    {selectedGesture.playbackId}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium">Status:</p>
-                  <p className="text-muted-foreground">
-                    {selectedGesture.isActive ? "Active" : "Inactive"}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium">Description:</p>
-                  <p className="text-muted-foreground">
-                    {selectedGesture.info}
-                  </p>
+      <div className="flex h-[calc(100vh-350px)] gap-4">
+        {/* Gesture List */}
+        <div className="flex-1 overflow-hidden rounded-lg border">
+          <GestureList
+            gestures={filteredGestures}
+            isLoading={isLoading}
+            onSelectGesture={setSelectedGestureId}
+            selectedGestureId={selectedGestureId}
+          />
+        </div>
+
+        {/* Gesture Details & Actions */}
+        <div className="w-80 space-y-4">
+          {selectedGesture ? (
+            <>
+              <div className="rounded-lg border p-4">
+                <h3 className="mb-2 font-semibold">{selectedGesture.name}</h3>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <p className="font-medium">Playback ID:</p>
+                    <p className="break-all font-mono text-muted-foreground text-xs">
+                      {selectedGesture.playbackId}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-medium">Status:</p>
+                    <p className="text-muted-foreground">
+                      {selectedGesture.isActive ? "Active" : "Inactive"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-medium">Description:</p>
+                    <p className="text-muted-foreground">
+                      {selectedGesture.info}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Button
-                className="w-full"
-                onClick={() => handleEdit(selectedGesture)}
-                variant="outline"
-              >
-                Edit Gesture
+              <div className="space-y-2">
+                <Button
+                  className="w-full"
+                  onClick={() => handleEdit(selectedGesture)}
+                  variant="outline"
+                >
+                  Edit Gesture
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex h-full items-center justify-center rounded-lg border p-4 text-center text-muted-foreground">
+              Select a gesture to view details
+            </div>
+          )}
+        </div>
+
+        {/* Edit Dialog */}
+        <Dialog onOpenChange={() => setEditDialog(null)} open={!!editDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Gesture</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, name: e.target.value })
+                  }
+                  value={editForm.name || ""}
+                />
+              </div>
+              <div>
+                <Label htmlFor="playbackId">Mux Playback ID</Label>
+                <Input
+                  id="playbackId"
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, playbackId: e.target.value })
+                  }
+                  value={editForm.playbackId || ""}
+                />
+              </div>
+              <div>
+                <Label htmlFor="info">Description</Label>
+                <Textarea
+                  id="info"
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, info: e.target.value })
+                  }
+                  rows={4}
+                  value={editForm.info || ""}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={editForm.isActive}
+                  id="active"
+                  onCheckedChange={(checked) =>
+                    setEditForm({ ...editForm, isActive: checked })
+                  }
+                />
+                <Label htmlFor="active">Active</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setEditDialog(null)} variant="outline">
+                Cancel
               </Button>
-            </div>
-          </>
-        ) : (
-          <div className="flex h-full items-center justify-center rounded-lg border p-4 text-center text-muted-foreground">
-            Select a gesture to view details
-          </div>
-        )}
+              <Button
+                disabled={updateMutation.isPending}
+                onClick={handleSaveEdit}
+              >
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Edit Dialog */}
-      <Dialog onOpenChange={() => setEditDialog(null)} open={!!editDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Gesture</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                onChange={(e) =>
-                  setEditForm({ ...editForm, name: e.target.value })
-                }
-                value={editForm.name || ""}
-              />
-            </div>
-            <div>
-              <Label htmlFor="playbackId">Mux Playback ID</Label>
-              <Input
-                id="playbackId"
-                onChange={(e) =>
-                  setEditForm({ ...editForm, playbackId: e.target.value })
-                }
-                value={editForm.playbackId || ""}
-              />
-            </div>
-            <div>
-              <Label htmlFor="info">Description</Label>
-              <Textarea
-                id="info"
-                onChange={(e) =>
-                  setEditForm({ ...editForm, info: e.target.value })
-                }
-                rows={4}
-                value={editForm.info || ""}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={editForm.isActive}
-                id="active"
-                onCheckedChange={(checked) =>
-                  setEditForm({ ...editForm, isActive: checked })
-                }
-              />
-              <Label htmlFor="active">Active</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setEditDialog(null)} variant="outline">
-              Cancel
-            </Button>
-            <Button
-              disabled={updateMutation.isPending}
-              onClick={handleSaveEdit}
-            >
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
