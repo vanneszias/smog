@@ -17,6 +17,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/lib/auth-context";
+import { client } from "@/lib/client";
 
 export const Route = createFileRoute("/account")({
   component: AccountComponent,
@@ -30,7 +31,6 @@ function AccountComponent() {
   // Get consent status from Convex
   const consentStatus = useQuery(api.gdpr.getConsentStatus);
   const updateConsent = useMutation(api.gdpr.updateConsent);
-  const exportUserData = useMutation(api.gdpr.exportUserData);
   const deleteUserAccount = useMutation(api.gdpr.deleteUserAccount);
 
   // Show sign in message if not authenticated
@@ -69,7 +69,8 @@ function AccountComponent() {
 
   const handleExportData = async () => {
     try {
-      const data = await exportUserData();
+      // Call the Convex query to export data
+      const data = await client.query(api.gdpr.exportUserData);
 
       // Create a blob and download it
       const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -94,7 +95,7 @@ function AccountComponent() {
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
     try {
-      await deleteUserAccount();
+      await deleteUserAccount({ confirmDelete: true });
 
       // Clear local storage
       localStorage.clear();

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api } from "@smog/convex";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -16,7 +17,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
-import { api } from "@/convex/_generated/api";
 import {
   disableAnalytics,
   enableAnalytics,
@@ -43,7 +43,7 @@ export default function AccountSettingsScreen() {
       setAnalyticsEnabled(value);
 
       // Update backend consent
-      if (user?.workosId) {
+      if (user) {
         await updateConsent({ analyticsConsent: value });
       }
 
@@ -158,7 +158,7 @@ export default function AccountSettingsScreen() {
           <Text
             style={[
               styles.emptyText,
-              { color: theme.textSecondary, fontFamily: "Onest-Regular" },
+              { color: theme.textLight, fontFamily: "Onest-Regular" },
             ]}
           >
             {t("account.guestModeDescription")}
@@ -205,13 +205,13 @@ export default function AccountSettingsScreen() {
           <View
             style={[
               styles.card,
-              { backgroundColor: theme.surface, borderColor: theme.border },
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
             <Text
               style={[
                 styles.label,
-                { color: theme.textSecondary, fontFamily: "Onest-Regular" },
+                { color: theme.textLight, fontFamily: "Onest-Regular" },
               ]}
             >
               {t("auth.email")}
@@ -240,7 +240,7 @@ export default function AccountSettingsScreen() {
           <View
             style={[
               styles.card,
-              { backgroundColor: theme.surface, borderColor: theme.border },
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
             <View style={styles.row}>
@@ -257,7 +257,7 @@ export default function AccountSettingsScreen() {
                   style={[
                     styles.settingDescription,
                     {
-                      color: theme.textSecondary,
+                      color: theme.textLight,
                       fontFamily: "Onest-Regular",
                     },
                   ]}
@@ -295,7 +295,7 @@ export default function AccountSettingsScreen() {
             style={[
               styles.card,
               styles.actionCard,
-              { backgroundColor: theme.surface, borderColor: theme.border },
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
             <View>
@@ -311,7 +311,7 @@ export default function AccountSettingsScreen() {
                 style={[
                   styles.actionDescription,
                   {
-                    color: theme.textSecondary,
+                    color: theme.textLight,
                     fontFamily: "Onest-Regular",
                   },
                 ]}
@@ -349,7 +349,7 @@ export default function AccountSettingsScreen() {
             style={[
               styles.card,
               styles.actionCard,
-              { backgroundColor: theme.surface, borderColor: "#FEE2E2" },
+              { backgroundColor: theme.card, borderColor: "#FEE2E2" },
             ]}
           >
             <View>
@@ -365,7 +365,7 @@ export default function AccountSettingsScreen() {
                 style={[
                   styles.actionDescription,
                   {
-                    color: theme.textSecondary,
+                    color: theme.textLight,
                     fontFamily: "Onest-Regular",
                   },
                 ]}

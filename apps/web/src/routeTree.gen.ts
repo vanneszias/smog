@@ -9,12 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SuccessRouteImport } from './routes/success'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as GesturesRouteImport } from './routes/gestures'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SponsorsIndexRouteImport } from './routes/sponsors/index'
 import { Route as SponsorsSuccessRouteImport } from './routes/sponsors/success'
@@ -22,9 +25,19 @@ import { Route as SponsorsCreateRouteImport } from './routes/sponsors/create'
 import { Route as GesturesIdRouteImport } from './routes/gestures_.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SuccessRoute = SuccessRouteImport.update({
   id: '/success',
   path: '/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -50,6 +63,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -85,12 +103,15 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
+  '/terms': typeof TermsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/gestures/$id': typeof GesturesIdRoute
   '/sponsors/create': typeof SponsorsCreateRoute
@@ -99,12 +120,15 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
+  '/terms': typeof TermsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/gestures/$id': typeof GesturesIdRoute
   '/sponsors/create': typeof SponsorsCreateRoute
@@ -114,12 +138,15 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
+  '/terms': typeof TermsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/gestures_/$id': typeof GesturesIdRoute
   '/sponsors/create': typeof SponsorsCreateRoute
@@ -130,12 +157,15 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/admin'
     | '/dashboard'
     | '/favorites'
     | '/gestures'
     | '/login'
+    | '/privacy'
     | '/success'
+    | '/terms'
     | '/auth/callback'
     | '/gestures/$id'
     | '/sponsors/create'
@@ -144,12 +174,15 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
     | '/admin'
     | '/dashboard'
     | '/favorites'
     | '/gestures'
     | '/login'
+    | '/privacy'
     | '/success'
+    | '/terms'
     | '/auth/callback'
     | '/gestures/$id'
     | '/sponsors/create'
@@ -158,12 +191,15 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/admin'
     | '/dashboard'
     | '/favorites'
     | '/gestures'
     | '/login'
+    | '/privacy'
     | '/success'
+    | '/terms'
     | '/auth/callback'
     | '/gestures_/$id'
     | '/sponsors/create'
@@ -173,12 +209,15 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRoute
   DashboardRoute: typeof DashboardRoute
   FavoritesRoute: typeof FavoritesRoute
   GesturesRoute: typeof GesturesRoute
   LoginRoute: typeof LoginRoute
+  PrivacyRoute: typeof PrivacyRoute
   SuccessRoute: typeof SuccessRoute
+  TermsRoute: typeof TermsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   GesturesIdRoute: typeof GesturesIdRoute
   SponsorsCreateRoute: typeof SponsorsCreateRoute
@@ -188,11 +227,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/success': {
       id: '/success'
       path: '/success'
       fullPath: '/success'
       preLoaderRoute: typeof SuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -228,6 +281,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -277,12 +337,15 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRoute,
   FavoritesRoute: FavoritesRoute,
   GesturesRoute: GesturesRoute,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
   SuccessRoute: SuccessRoute,
+  TermsRoute: TermsRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   GesturesIdRoute: GesturesIdRoute,
   SponsorsCreateRoute: SponsorsCreateRoute,

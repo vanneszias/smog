@@ -104,7 +104,7 @@ export default function GDPRConsentModal({
             <Text
               style={[
                 styles.description,
-                { color: theme.textSecondary, fontFamily: "Onest-Regular" },
+                { color: theme.textLight, fontFamily: "Onest-Regular" },
               ]}
             >
               {t("gdpr.consent.description")}
@@ -138,7 +138,7 @@ export default function GDPRConsentModal({
                 style={[
                   styles.sectionDescription,
                   {
-                    color: theme.textSecondary,
+                    color: theme.textLight,
                     fontFamily: "Onest-Regular",
                   },
                 ]}
@@ -173,7 +173,7 @@ export default function GDPRConsentModal({
                 style={[
                   styles.sectionDescription,
                   {
-                    color: theme.textSecondary,
+                    color: theme.textLight,
                     fontFamily: "Onest-Regular",
                   },
                 ]}
@@ -188,7 +188,7 @@ export default function GDPRConsentModal({
                 style={[
                   styles.legalText,
                   {
-                    color: theme.textSecondary,
+                    color: theme.textLight,
                     fontFamily: "Onest-Regular",
                   },
                 ]}

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api } from "@smog/convex";
 import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -16,7 +17,6 @@ import Logo from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
-import { api } from "@/convex/_generated/api";
 
 const { height: screenHeight } = Dimensions.get("window");
 const isSmallScreen = screenHeight < 700;

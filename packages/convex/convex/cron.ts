@@ -10,10 +10,10 @@ crons.monthly(
   internal.gdprCron.cleanupInactiveGuests
 );
 
-// Clean up old admin logs annually
-crons.yearly(
+// Clean up old admin logs on the 1st of every January (simulating yearly)
+crons.monthly(
   "cleanup-old-admin-logs",
-  { month: 1, day: 1, hourUTC: 3, minuteUTC: 0 },
+  { day: 1, hourUTC: 3, minuteUTC: 0 },
   internal.gdprCron.cleanupOldAdminLogs
 );
 

@@ -6,7 +6,13 @@ const POSTHOG_HOST =
   process.env.EXPO_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com";
 
 let isAnalyticsEnabled = false;
-let posthogInstance: PostHog | null = null;
+
+// Initialize a default PostHog instance that can be used with provider
+const posthogInstance = new PostHog(POSTHOG_API_KEY, {
+  host: POSTHOG_HOST,
+  captureAppLifecycleEvents: false,
+  enableSessionReplay: false,
+});
 
 // Initialize analytics based on user consent
 export const initializeAnalytics = async () => {
@@ -15,17 +21,13 @@ export const initializeAnalytics = async () => {
 
   if (!isAnalyticsEnabled) {
     console.log("[Analytics] User opted out of analytics");
+    // Disable capture if user opted out
+    posthogInstance.optOut();
     return;
   }
 
-  if (!posthogInstance) {
-    posthogInstance = new PostHog(POSTHOG_API_KEY, {
-      host: POSTHOG_HOST,
-      captureAppLifecycleEvents: true,
-      enableSessionReplay: false, // Disabled by default for privacy
-    });
-  }
-
+  // Enable capture if user consented
+  posthogInstance.optIn();
   console.log("[Analytics] PostHog initialized");
 };
 
@@ -40,11 +42,8 @@ export const enableAnalytics = async () => {
 export const disableAnalytics = async () => {
   isAnalyticsEnabled = false;
   await AsyncStorage.setItem("@smog_analytics_consent", "false");
-
-  if (posthogInstance) {
-    posthogInstance.reset(); // Clear user identity
-  }
-
+  posthogInstance.optOut();
+  posthogInstance.reset(); // Clear user identity
   console.log("[Analytics] Analytics disabled");
 };
 
