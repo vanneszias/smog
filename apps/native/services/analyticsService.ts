@@ -1,19 +1,60 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import PostHog from "posthog-react-native";
 
 const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || "";
 const POSTHOG_HOST =
   process.env.EXPO_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com";
 
-export const posthog = new PostHog(POSTHOG_API_KEY, {
-  host: POSTHOG_HOST,
-  captureAppLifecycleEvents: true,
-  enableSessionReplay: true,
-});
+let isAnalyticsEnabled = false;
+let posthogInstance: PostHog | null = null;
+
+// Initialize analytics based on user consent
+export const initializeAnalytics = async () => {
+  const consent = await AsyncStorage.getItem("@smog_analytics_consent");
+  isAnalyticsEnabled = consent === "true";
+
+  if (!isAnalyticsEnabled) {
+    console.log("[Analytics] User opted out of analytics");
+    return;
+  }
+
+  if (!posthogInstance) {
+    posthogInstance = new PostHog(POSTHOG_API_KEY, {
+      host: POSTHOG_HOST,
+      captureAppLifecycleEvents: true,
+      enableSessionReplay: false, // Disabled by default for privacy
+    });
+  }
+
+  console.log("[Analytics] PostHog initialized");
+};
+
+// Enable analytics (called when user consents)
+export const enableAnalytics = async () => {
+  isAnalyticsEnabled = true;
+  await AsyncStorage.setItem("@smog_analytics_consent", "true");
+  await initializeAnalytics();
+};
+
+// Disable analytics (called when user opts out)
+export const disableAnalytics = async () => {
+  isAnalyticsEnabled = false;
+  await AsyncStorage.setItem("@smog_analytics_consent", "false");
+
+  if (posthogInstance) {
+    posthogInstance.reset(); // Clear user identity
+  }
+
+  console.log("[Analytics] Analytics disabled");
+};
+
+// Get PostHog instance (null if not consented)
+export const posthog = posthogInstance;
 
 // Autocapture configuration for PostHogProvider
 // Note: captureTouches is disabled to avoid conflicts with Reanimated animated styles
 export const autocaptureConfig = {
-  captureScreens: true,
+  captureScreens: isAnalyticsEnabled,
   captureTouches: false, // Disabled to prevent conflicts with Reanimated
   routeToName: (
     name: string,
@@ -86,7 +127,13 @@ function filterProperties(
 
 // Base event tracking function
 export function trackEvent(event: string, properties?: AnalyticsProperties) {
-  posthog.capture(event, filterProperties(properties));
+  if (!isAnalyticsEnabled) {
+    return;
+  }
+  if (!posthogInstance) {
+    return;
+  }
+  posthogInstance.capture(event, filterProperties(properties));
 }
 
 // User identification
@@ -94,15 +141,27 @@ export function identifyUser(
   distinctId: string,
   properties?: AnalyticsProperties
 ) {
-  posthog.identify(distinctId, filterProperties(properties));
+  if (!isAnalyticsEnabled) {
+    return;
+  }
+  if (!posthogInstance) {
+    return;
+  }
+  posthogInstance.identify(distinctId, filterProperties(properties));
 }
 
 export async function getDistinctId(): Promise<string> {
-  return posthog.getDistinctId();
+  if (!posthogInstance) {
+    return "anonymous";
+  }
+  return posthogInstance.getDistinctId();
 }
 
 export function flushAnalytics() {
-  return posthog.flush();
+  if (!posthogInstance) {
+    return Promise.resolve();
+  }
+  return posthogInstance.flush();
 }
 
 // ===== SCREEN NAVIGATION EVENTS =====
@@ -113,7 +172,13 @@ export function trackScreenView(
   screenName: string,
   properties?: Record<string, unknown>
 ) {
-  posthog.screen(screenName, {
+  if (!isAnalyticsEnabled) {
+    return;
+  }
+  if (!posthogInstance) {
+    return;
+  }
+  posthogInstance.screen(screenName, {
     screen_name: screenName,
     ...properties,
   });
@@ -727,4 +792,9 @@ export function trackLearningEffectiveness(sessionMetrics: {
   });
 }
 
-export default posthog;
+// Check if analytics is enabled
+export function isAnalyticsActive(): boolean {
+  return isAnalyticsEnabled;
+}
+
+export default posthogInstance;

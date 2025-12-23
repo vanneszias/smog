@@ -87,6 +87,7 @@
     "back": "Retour",
     "cancel": "Annuler",
     "error": "Erreur",
+    "success": "Succès",
     "comingSoon": "Bientôt disponible"
   },
   "account": {
@@ -159,6 +160,46 @@
     },
     "searchBar": {
       "placeholder": "Rechercher des gestes..."
+  "gdpr": {
+    "consent": {
+      "title": "Confidentialité et utilisation des données",
+      "description": "Nous respectons votre vie privée et nous nous engageons à protéger vos données personnelles.",
+      "analyticsTitle": "Analyse d'utilisation",
+      "analyticsDescription": "Aidez-nous à améliorer l'application en partageant des données d'utilisation anonymes",
+      "requiredTitle": "Requis",
+      "requiredDescription": "Gestion de compte et fonctionnalités essentielles de l'application",
+      "acceptAll": "Tout accepter",
+      "acceptRequired": "Accepter uniquement les requis",
+      "customize": "Personnaliser",
+      "learnMore": "En savoir plus dans notre",
+      "privacyPolicy": "Politique de confidentialité",
+      "and": "et",
+      "termsOfService": "Conditions de service",
+      "consentRequired": "Vous devez accepter notre Politique de confidentialité et nos Conditions de service pour continuer",
+      "updated": "Préférences mises à jour",
+      "failed": "Échec de la mise à jour des préférences"
+    },
+    "account": {
+      "manageData": "Gérer vos données",
+      "exportData": "Télécharger mes données",
+      "exportDescription": "Obtenez une copie de toutes vos données au format JSON",
+      "exportButton": "Exporter les données",
+      "exporting": "Exportation en cours...",
+      "exportSuccess": "Données exportées avec succès",
+      "exportFailed": "Échec de l'exportation des données",
+      "deleteAccount": "Supprimer mon compte",
+      "deleteDescription": "Supprimer définitivement votre compte et toutes les données associées",
+      "deleteButton": "Supprimer le compte",
+      "deleteConfirmTitle": "Supprimer le compte ?",
+      "deleteConfirmMessage": "Cette action supprimera définitivement votre compte, vos favoris et toutes les données associées. Cette action ne peut pas être annulée.",
+      "deleteConfirmButton": "Oui, supprimer mon compte",
+      "deleting": "Suppression en cours...",
+      "deleteSuccess": "Compte supprimé avec succès",
+      "deleteFailed": "Échec de la suppression du compte",
+      "analytics": "Analyse",
+      "analyticsDescription": "Partagez des données d'utilisation pour nous aider à améliorer l'application",
+      "analyticsEnabled": "Activé",
+      "analyticsDisabled": "Désactivé"
     }
   }
 }

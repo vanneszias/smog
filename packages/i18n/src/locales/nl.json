@@ -84,6 +84,7 @@
     "back": "Terug",
     "cancel": "Annuleren",
     "error": "Fout",
+    "success": "Succes",
     "comingSoon": "Binnenkort beschikbaar"
   },
   "account": {
@@ -325,6 +326,48 @@
     },
     "searchBar": {
       "placeholder": "Zoek gebaren..."
+    }
+  },
+  "gdpr": {
+    "consent": {
+      "title": "Privacy & gegevensgebruik",
+      "description": "We respecteren uw privacy en zijn toegewijd aan het beschermen van uw persoonlijke gegevens.",
+      "analyticsTitle": "Gebruiksanalyse",
+      "analyticsDescription": "Help ons de app te verbeteren door anonieme gebruiksgegevens te delen",
+      "requiredTitle": "Vereist",
+      "requiredDescription": "Accountbeheer en kernfunctionaliteit van de app",
+      "acceptAll": "Alles accepteren",
+      "acceptRequired": "Alleen vereiste accepteren",
+      "customize": "Aanpassen",
+      "learnMore": "Meer informatie in ons",
+      "privacyPolicy": "Privacybeleid",
+      "and": "en",
+      "termsOfService": "Servicevoorwaarden",
+      "consentRequired": "U moet ons Privacybeleid en onze Servicevoorwaarden accepteren om door te gaan",
+      "updated": "Voorkeuren bijgewerkt",
+      "failed": "Voorkeuren bijwerken mislukt"
+    },
+    "account": {
+      "manageData": "Beheer uw gegevens",
+      "exportData": "Mijn gegevens downloaden",
+      "exportDescription": "Krijg een kopie van al uw gegevens in JSON-formaat",
+      "exportButton": "Gegevens exporteren",
+      "exporting": "Exporteren...",
+      "exportSuccess": "Gegevens succesvol geëxporteerd",
+      "exportFailed": "Exporteren van gegevens mislukt",
+      "deleteAccount": "Mijn account verwijderen",
+      "deleteDescription": "Verwijder permanent uw account en alle bijbehorende gegevens",
+      "deleteButton": "Account verwijderen",
+      "deleteConfirmTitle": "Account verwijderen?",
+      "deleteConfirmMessage": "Dit zal uw account, favorieten en alle bijbehorende gegevens permanent verwijderen. Deze actie kan niet ongedaan worden gemaakt.",
+      "deleteConfirmButton": "Ja, verwijder mijn account",
+      "deleting": "Verwijderen...",
+      "deleteSuccess": "Account succesvol verwijderd",
+      "deleteFailed": "Account verwijderen mislukt",
+      "analytics": "Analyse",
+      "analyticsDescription": "Deel gebruiksgegevens om ons te helpen de app te verbeteren",
+      "analyticsEnabled": "Ingeschakeld",
+      "analyticsDisabled": "Uitgeschakeld"
     }
   }
 }

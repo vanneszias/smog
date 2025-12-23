@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useState } from "react";
+import { GDPRConsentBanner } from "@/components/gdpr-consent-banner";
 import Header from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -63,6 +64,7 @@ function RootComponent() {
               <Header />
               <Outlet />
             </div>
+            <GDPRConsentBanner />
             <Toaster richColors />
           </ThemeProvider>
         </FavoritesProvider>

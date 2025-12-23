@@ -111,6 +111,7 @@
     "back": "Back",
     "cancel": "Cancel",
     "error": "Error",
+    "success": "Success",
     "comingSoon": "Coming Soon"
   },
   "account": {
@@ -352,6 +353,48 @@
     },
     "searchBar": {
       "placeholder": "Search gestures..."
+    }
+  },
+  "gdpr": {
+    "consent": {
+      "title": "Privacy & Data Usage",
+      "description": "We respect your privacy and are committed to protecting your personal data.",
+      "analyticsTitle": "Usage Analytics",
+      "analyticsDescription": "Help us improve the app by sharing anonymous usage data",
+      "requiredTitle": "Required",
+      "requiredDescription": "Account management and core app functionality",
+      "acceptAll": "Accept All",
+      "acceptRequired": "Accept Required Only",
+      "customize": "Customize",
+      "learnMore": "Learn more in our",
+      "privacyPolicy": "Privacy Policy",
+      "and": "and",
+      "termsOfService": "Terms of Service",
+      "consentRequired": "You must accept our Privacy Policy and Terms of Service to continue",
+      "updated": "Preferences updated",
+      "failed": "Failed to update preferences"
+    },
+    "account": {
+      "manageData": "Manage Your Data",
+      "exportData": "Download My Data",
+      "exportDescription": "Get a copy of all your data in JSON format",
+      "exportButton": "Export Data",
+      "exporting": "Exporting...",
+      "exportSuccess": "Data exported successfully",
+      "exportFailed": "Failed to export data",
+      "deleteAccount": "Delete My Account",
+      "deleteDescription": "Permanently delete your account and all associated data",
+      "deleteButton": "Delete Account",
+      "deleteConfirmTitle": "Delete Account?",
+      "deleteConfirmMessage": "This will permanently delete your account, favorites, and all associated data. This action cannot be undone.",
+      "deleteConfirmButton": "Yes, Delete My Account",
+      "deleting": "Deleting...",
+      "deleteSuccess": "Account deleted successfully",
+      "deleteFailed": "Failed to delete account",
+      "analytics": "Analytics",
+      "analyticsDescription": "Share usage data to help us improve the app",
+      "analyticsEnabled": "Enabled",
+      "analyticsDisabled": "Disabled"
     }
   }
 }

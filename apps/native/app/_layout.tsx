@@ -25,6 +25,7 @@ import { PostHogProvider } from "posthog-react-native";
 import { useAutoSync } from "@/hooks/useAutoSync";
 import posthog, {
   autocaptureConfig,
+  initializeAnalytics,
   trackAppBackgrounded,
   trackAppOpened,
 } from "@/services/analyticsService";
@@ -204,6 +205,9 @@ export default function RootLayout() {
       // Don't automatically hide splash after timeout anymore
       // Let the Rive animation control when to hide
       SplashScreen.hideAsync();
+
+      // Initialize analytics based on user consent
+      initializeAnalytics();
 
       // Track app opened on first load
       if (isFirstLaunchRef.current) {
