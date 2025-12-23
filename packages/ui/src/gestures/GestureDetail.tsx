@@ -1,11 +1,18 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { ArrowLeft, Heart, Smartphone } from "lucide-react";
+import { ArrowLeft, Heart, Sparkles, Smartphone } from "lucide-react";
 import { Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { ShimmerSkeleton } from "../common/Skeleton";
 import type { GestureCardData } from "./GestureCard";
 
-export type GestureDetailData = GestureCardData;
+export type GestureDetailData = GestureCardData & {
+  sponsorship?: {
+    status: string;
+    sponsorName?: string;
+    endDate?: number;
+  } | null;
+};
 
 type GestureDetailProps = {
   gesture: GestureDetailData;
@@ -15,6 +22,97 @@ type GestureDetailProps = {
   showOpenInApp?: boolean;
   onOpenInApp?: () => void;
 };
+
+function SponsorshipCTA({
+  gestureId,
+  t,
+}: {
+  gestureId: string;
+  t: (key: string, fallback: string) => string;
+}) {
+  return (
+    <div
+      className="rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-6"
+      style={{ backgroundColor: "var(--card)" }}
+    >
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary">
+          <Sparkles className="h-6 w-6 text-white" />
+        </div>
+        <div className="flex-1">
+          <h2
+            className="mb-2 font-semibold text-xl"
+            style={{ color: "var(--text)" }}
+          >
+            {t("ui.gestureDetail.sponsorThisGesture", "Sponsor This Gesture")}
+          </h2>
+          <p className="mb-4 text-muted-foreground leading-relaxed">
+            {t(
+              "ui.gestureDetail.sponsorDescription",
+              "Make this gesture yours! Add your brand and message to the video and support sign language education."
+            )}
+          </p>
+          <a
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-white transition-all hover:bg-primary/90"
+            href={`/sponsors/create?gestureIds=${gestureId}`}
+          >
+            <Sparkles className="h-4 w-4" />
+            {t("ui.gestureDetail.sponsorNow", "Sponsor Now")}
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SponsorshipInfo({
+  sponsorship,
+  t,
+}: {
+  sponsorship: { sponsorName?: string; endDate?: number };
+  t: (key: string, fallback: string) => string;
+}) {
+  return (
+    <div
+      className="rounded-xl border border-border p-6"
+      style={{ backgroundColor: "var(--card)" }}
+    >
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100">
+          <Sparkles className="h-6 w-6 text-green-600" />
+        </div>
+        <div className="flex-1">
+          <h2
+            className="mb-2 font-semibold text-xl"
+            style={{ color: "var(--text)" }}
+          >
+            {t("ui.gestureDetail.currentlySponsored", "Currently Sponsored")}
+          </h2>
+          <p className="text-muted-foreground leading-relaxed">
+            {sponsorship.sponsorName
+              ? t(
+                  "ui.gestureDetail.sponsoredBy",
+                  `This gesture is sponsored by ${sponsorship.sponsorName}.`
+                )
+              : t(
+                  "ui.gestureDetail.sponsored",
+                  "This gesture is currently sponsored."
+                )}
+            {sponsorship.endDate ? (
+              <>
+                {" "}
+                {t(
+                  "ui.gestureDetail.availableFrom",
+                  `It will be available for sponsorship again from ${new Date(sponsorship.endDate).toLocaleDateString()}.`
+                )}
+              </>
+            ) : null}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function GestureDetail({
   gesture,
@@ -50,6 +148,12 @@ export function GestureDetail({
       onOpenInApp();
     }
   };
+  const isAvailableForSponsorship =
+    !gesture.sponsorship ||
+    gesture.sponsorship.status === "available" ||
+    gesture.sponsorship.status === "expired";
+
+  const isActiveSponsorship = gesture.sponsorship?.status === "active";
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
@@ -208,6 +312,17 @@ export function GestureDetail({
             ))}
           </div>
         </div>
+      ) : null}
+
+      {/* Sponsorship Section */}
+      {isAvailableForSponsorship ? (
+        <SponsorshipCTA gestureId={gesture._id} t={t} />
+      ) : null}
+
+      {isActiveSponsorship === true &&
+      gesture.sponsorship !== null &&
+      gesture.sponsorship !== undefined ? (
+        <SponsorshipInfo sponsorship={gesture.sponsorship} t={t} />
       ) : null}
     </div>
   );

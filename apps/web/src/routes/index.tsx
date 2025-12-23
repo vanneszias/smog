@@ -135,7 +135,7 @@ function HomeComponent() {
 
           <Link
             className="group rounded-xl border border-border bg-card p-6 transition-all hover:shadow-lg"
-            to="/gestures"
+            to="/sponsors"
           >
             <div
               className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg"
@@ -147,16 +147,16 @@ function HomeComponent() {
               className="mb-2 font-semibold text-lg"
               style={{ color: "var(--text)" }}
             >
-              {t("web.home.learnByCategory.title")}
+              Sponsor Gestures
             </h3>
             <p className="mb-4 text-sm" style={{ color: "var(--text-light)" }}>
-              {t("web.home.learnByCategory.description")}
+              Support SMOG by sponsoring gestures and showcase your brand
             </p>
             <div
               className="flex items-center font-medium text-sm"
               style={{ color: "var(--accent)" }}
             >
-              {t("web.home.learnByCategory.action")}
+              Learn more
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </div>
           </Link>
@@ -164,12 +164,124 @@ function HomeComponent() {
       </div>
 
       {/* Footer */}
-      <footer className="border-border border-t py-6">
-        <div
-          className="container mx-auto px-4 text-center text-sm"
-          style={{ color: "var(--text-light)" }}
-        >
-          <p>{t("web.home.footer")}</p>
+      <footer className="border-border border-t py-8">
+        <div className="container mx-auto px-4">
+          <div className="grid gap-8 md:grid-cols-4">
+            {/* About Section */}
+            <div>
+              <h3
+                className="mb-3 font-semibold"
+                style={{ color: "var(--text)" }}
+              >
+                About SMOG
+              </h3>
+              <p className="text-sm" style={{ color: "var(--text-light)" }}>
+                Learn sign language with video demonstrations and interactive
+                features.
+              </p>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h3
+                className="mb-3 font-semibold"
+                style={{ color: "var(--text)" }}
+              >
+                Quick Links
+              </h3>
+              <ul
+                className="space-y-2 text-sm"
+                style={{ color: "var(--text-light)" }}
+              >
+                <li>
+                  <Link
+                    className="transition-colors hover:text-primary"
+                    to="/gestures"
+                  >
+                    Browse Gestures
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    className="transition-colors hover:text-primary"
+                    to="/favorites"
+                  >
+                    Favorites
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    className="transition-colors hover:text-primary"
+                    to="/sponsors"
+                  >
+                    Become a Sponsor
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h3
+                className="mb-3 font-semibold"
+                style={{ color: "var(--text)" }}
+              >
+                Legal
+              </h3>
+              <ul
+                className="space-y-2 text-sm"
+                style={{ color: "var(--text-light)" }}
+              >
+                <li>
+                  <Link
+                    className="transition-colors hover:text-primary"
+                    to="/privacy"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    className="transition-colors hover:text-primary"
+                    to="/terms"
+                  >
+                    Terms of Service
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h3
+                className="mb-3 font-semibold"
+                style={{ color: "var(--text)" }}
+              >
+                Support
+              </h3>
+              <ul
+                className="space-y-2 text-sm"
+                style={{ color: "var(--text-light)" }}
+              >
+                <li>
+                  <Link
+                    className="transition-colors hover:text-primary"
+                    to="/account"
+                  >
+                    Account Settings
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Copyright */}
+          <div
+            className="mt-8 border-t pt-6 text-center text-sm"
+            style={{ color: "var(--text-light)" }}
+          >
+            <p>{t("web.home.footer")}</p>
+          </div>
         </div>
       </footer>
     </div>
