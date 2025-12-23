@@ -4,12 +4,14 @@ import { GestureList } from "@smog/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -375,6 +377,9 @@ export function SponsorshipsManagement() {
     string | null
   >(null);
   const [detailsDialog, setDetailsDialog] = useState<Sponsorship | null>(null);
+  const [confirmExpireDialog, setConfirmExpireDialog] = useState<string | null>(
+    null
+  );
   const queryClient = useQueryClient();
 
   const { data: sponsorships, isLoading } = useQuery({
@@ -386,15 +391,19 @@ export function SponsorshipsManagement() {
   });
 
   const forceExpireMutation = useMutation({
-    mutationFn: async (sponsorshipId: string) => {
-      await client.admin.sponsorships.forceExpire.mutate({ sponsorshipId });
-    },
+    mutationFn: (sponsorshipId: string) =>
+      client.admin.sponsorships.forceExpire({ sponsorshipId }),
     onSuccess: () => {
+      toast.success("Sponsorship expired successfully");
       queryClient.invalidateQueries({
         queryKey: ["admin", "sponsorships"],
       });
       setSelectedSponsorshipId(null);
       setDetailsDialog(null);
+      setConfirmExpireDialog(null);
+    },
+    onError: (error) => {
+      toast.error(`Failed to expire sponsorship: ${error.message}`);
     },
   });
 
@@ -497,7 +506,7 @@ export function SponsorshipsManagement() {
           <SponsorshipDetailsPanel
             isExpiring={forceExpireMutation.isPending}
             onForceExpire={() =>
-              forceExpireMutation.mutate(selectedSponsorship._id)
+              setConfirmExpireDialog(selectedSponsorship._id)
             }
             onViewDetails={() => setDetailsDialog(selectedSponsorship)}
             sponsorship={selectedSponsorship}
@@ -510,6 +519,42 @@ export function SponsorshipsManagement() {
         onClose={() => setDetailsDialog(null)}
         sponsorship={detailsDialog}
       />
+
+      {/* Confirm Expire Dialog */}
+      <Dialog
+        onOpenChange={() => setConfirmExpireDialog(null)}
+        open={!!confirmExpireDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Force Expire Sponsorship</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to expire this sponsorship? This will
+              immediately restore the original video and mark the sponsorship as
+              expired.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setConfirmExpireDialog(null)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={forceExpireMutation.isPending}
+              onClick={() => {
+                if (confirmExpireDialog) {
+                  forceExpireMutation.mutate(confirmExpireDialog);
+                }
+              }}
+              variant="destructive"
+            >
+              {forceExpireMutation.isPending ? "Expiring..." : "Force Expire"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
