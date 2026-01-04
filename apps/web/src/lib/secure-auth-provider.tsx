@@ -181,7 +181,14 @@ export function SecureAuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(() => {
     const clientId = import.meta.env.VITE_WORKOS_CLIENT_ID;
     const redirectUri = import.meta.env.VITE_WORKOS_REDIRECT_URI;
-    const authUrl = `https://authkit.workos.com/?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    // Use the WorkOS User Management authorize endpoint
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      provider: "authkit",
+    });
+    const authUrl = `https://api.workos.com/user_management/authorize?${params.toString()}`;
     window.location.assign(authUrl);
   }, []);
 

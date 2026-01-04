@@ -19,7 +19,7 @@ http://smog.zias.be {
     handle /rpc/* {
         reverse_proxy server:3000
     }
-    handle /auth/workos/* {
+    handle /auth/* {
         reverse_proxy server:3000
     }
     handle /webhooks/* {
