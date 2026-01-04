@@ -2,6 +2,17 @@ http://smog.zias.be {
     root * /srv
     encode gzip
 
+    # Security headers to mitigate XSS attacks
+    header {
+        # Prevent XSS attacks
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Content Security Policy - adjust as needed for your app
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.convex.cloud https://api.workos.com https://authkit.workos.com wss://*.convex.cloud; frame-ancestors 'none';"
+    }
+
     handle_path /api* {
         reverse_proxy server:3000
     }

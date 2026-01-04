@@ -1,14 +1,13 @@
 /**
  * Auth Context for Web Application
  *
- * This wraps WorkOS AuthKit's useAuth hook and provides additional state
+ * This wraps the secure auth provider and adds additional state
  * for Convex user management.
  *
  * For checking if the user is authenticated with Convex (which validates the JWT),
  * use useConvexAuth() from "convex/react" instead.
  */
 
-import { useAuth as useAuthKit } from "@workos-inc/authkit-react";
 import {
   createContext,
   type ReactNode,
@@ -18,6 +17,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useSecureAuth } from "./secure-auth-provider";
 
 export type WorkOSUser = {
   id: string;
@@ -42,7 +42,7 @@ const CONVEX_USER_ID_KEY = "smog_web_convex_user_id";
 const TOKEN_STORAGE_KEY = "smog_web_token";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const authKit = useAuthKit();
+  const secureAuth = useSecureAuth();
   const [convexUserId, setConvexUserIdState] = useState<string | null>(() => {
     // Initialize from localStorage
     if (typeof window !== "undefined") {
@@ -53,21 +53,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Store workosId in localStorage for API authentication when user changes
   useEffect(() => {
-    if (authKit.user?.id) {
-      localStorage.setItem(TOKEN_STORAGE_KEY, authKit.user.id);
-    } else if (!authKit.isLoading) {
+    if (secureAuth.user?.id) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, secureAuth.user.id);
+    } else if (!secureAuth.isLoading) {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
     }
-  }, [authKit.user?.id, authKit.isLoading]);
+  }, [secureAuth.user?.id, secureAuth.isLoading]);
 
   // Clear convexUserId if user is not authenticated (stale data from another session/device)
   useEffect(() => {
-    if (authKit.isLoading || authKit.user) {
+    if (secureAuth.isLoading || secureAuth.user) {
       return;
     }
     setConvexUserIdState(null);
     localStorage.removeItem(CONVEX_USER_ID_KEY);
-  }, [authKit.isLoading, authKit.user]);
+  }, [secureAuth.isLoading, secureAuth.user]);
 
   const setConvexUserId = useCallback((id: string | null) => {
     setConvexUserIdState(id);
@@ -80,43 +80,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const user = useMemo(
     () =>
-      authKit.user
+      secureAuth.user
         ? {
-            id: authKit.user.id,
-            email: authKit.user.email ?? "",
-            firstName: authKit.user.firstName ?? undefined,
-            lastName: authKit.user.lastName ?? undefined,
+            id: secureAuth.user.id,
+            email: secureAuth.user.email ?? "",
+            firstName: secureAuth.user.firstName ?? undefined,
+            lastName: secureAuth.user.lastName ?? undefined,
           }
         : null,
-    [authKit.user]
+    [secureAuth.user]
   );
 
-  const signIn = useCallback(() => {
-    authKit.signIn();
-  }, [authKit]);
-
-  const signOut = useCallback(() => {
+  const signOut = useCallback(async () => {
     // Clear Convex user ID and API token on sign out
     setConvexUserId(null);
     localStorage.removeItem(TOKEN_STORAGE_KEY);
-    authKit.signOut();
-  }, [authKit, setConvexUserId]);
+    await secureAuth.signOut();
+  }, [secureAuth, setConvexUserId]);
 
   const value = useMemo(
     () => ({
       user,
-      isLoading: authKit.isLoading,
-      isAuthenticated: !!authKit.user,
-      signIn,
+      isLoading: secureAuth.isLoading,
+      isAuthenticated: !!secureAuth.user,
+      signIn: secureAuth.signIn,
       signOut,
       convexUserId,
       setConvexUserId,
     }),
     [
       user,
-      authKit.isLoading,
-      authKit.user,
-      signIn,
+      secureAuth.isLoading,
+      secureAuth.user,
+      secureAuth.signIn,
       signOut,
       convexUserId,
       setConvexUserId,

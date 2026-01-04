@@ -8,6 +8,7 @@ import { createContext } from "@smog/api/context";
 import { appRouter } from "@smog/api/routers/index";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { logger } from "hono/logger";
 import {
   Counter,
@@ -18,6 +19,12 @@ import {
 import { startExpirationCronJob } from "./cron";
 import { getMasterDownloadUrl } from "./services/mux";
 import { handleMollieWebhook } from "./webhooks/mollie";
+
+// ==============================================
+// Auth Configuration
+// ==============================================
+const REFRESH_TOKEN_COOKIE = "workos_refresh_token";
+const isProduction = process.env.NODE_ENV === "production";
 
 // Start cron jobs
 startExpirationCronJob();
@@ -68,6 +75,7 @@ app.use(
 );
 
 // WorkOS OAuth callback endpoint
+// Exchanges the authorization code for tokens and stores refresh token securely
 app.post("/auth/workos/callback", async (c) => {
   try {
     console.log("[WorkOS] Callback received");
@@ -96,7 +104,7 @@ app.post("/auth/workos/callback", async (c) => {
 
     console.log("[WorkOS] Exchanging code for user info...");
 
-    // Exchange code for user information
+    // Exchange code for user information and tokens
     const response = await fetch(
       "https://api.workos.com/user_management/authenticate",
       {
@@ -122,21 +130,42 @@ app.post("/auth/workos/callback", async (c) => {
     }
 
     const data = (await response.json()) as {
+      access_token: string;
+      refresh_token: string;
       user: {
         id: string;
         email: string;
         first_name?: string;
         last_name?: string;
+        email_verified: boolean;
+        profile_picture_url?: string;
+        created_at: string;
+        updated_at: string;
       };
     };
 
     console.log("[WorkOS] Successfully authenticated user:", data.user.email);
 
+    // Store refresh token in httpOnly cookie (secure server-side storage)
+    setCookie(c, REFRESH_TOKEN_COOKIE, data.refresh_token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "Lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    });
+
+    // Return user info (tokens are handled via cookies, not exposed to client)
     return c.json({
-      workosId: data.user.id,
-      email: data.user.email,
-      firstName: data.user.first_name,
-      lastName: data.user.last_name,
+      success: true,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        firstName: data.user.first_name,
+        lastName: data.user.last_name,
+        emailVerified: data.user.email_verified,
+        profilePictureUrl: data.user.profile_picture_url,
+      },
     });
   } catch (error) {
     console.error("[WorkOS] Callback error:", error);
@@ -199,6 +228,106 @@ app.post("/api/video/master-access", async (c) => {
 
 // Mollie webhook endpoint
 app.post("/webhooks/mollie", handleMollieWebhook);
+
+// ==============================================
+// Secure Auth Token Management (httpOnly cookies)
+// ==============================================
+
+// Refresh the access token using the stored refresh token
+// This proxies the refresh through the server so the refresh token stays secure
+app.post("/auth/token/refresh", async (c) => {
+  try {
+    const refreshToken = getCookie(c, REFRESH_TOKEN_COOKIE);
+
+    if (!refreshToken) {
+      return c.json({ error: "No refresh token found" }, 401);
+    }
+
+    const clientId = process.env.WORKOS_CLIENT_ID;
+
+    if (!clientId) {
+      return c.json({ error: "WorkOS not configured" }, 500);
+    }
+
+    // Call WorkOS to refresh the token
+    const response = await fetch(
+      "https://api.workos.com/user_management/authenticate",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: clientId,
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("[Auth] WorkOS refresh error:", error);
+      // Clear invalid refresh token
+      deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: "/" });
+      return c.json({ error: "Token refresh failed" }, 401);
+    }
+
+    const data = (await response.json()) as {
+      access_token: string;
+      refresh_token: string;
+      user: {
+        id: string;
+        email: string;
+        first_name?: string;
+        last_name?: string;
+        email_verified: boolean;
+        profile_picture_url?: string;
+        created_at: string;
+        updated_at: string;
+      };
+    };
+
+    // Store the new refresh token
+    setCookie(c, REFRESH_TOKEN_COOKIE, data.refresh_token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "Lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    });
+
+    // Return the access token and user info (NOT the refresh token)
+    return c.json({
+      accessToken: data.access_token,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        firstName: data.user.first_name,
+        lastName: data.user.last_name,
+        emailVerified: data.user.email_verified,
+        profilePictureUrl: data.user.profile_picture_url,
+        createdAt: data.user.created_at,
+        updatedAt: data.user.updated_at,
+      },
+    });
+  } catch (error) {
+    console.error("[Auth] Token refresh error:", error);
+    return c.json({ error: "Failed to refresh token" }, 500);
+  }
+});
+
+// Clear refresh token cookie (logout)
+app.post("/auth/token/clear", async (c) => {
+  try {
+    deleteCookie(c, REFRESH_TOKEN_COOKIE, {
+      path: "/",
+    });
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("[Auth] Token clear error:", error);
+    return c.json({ error: "Failed to clear token" }, 500);
+  }
+});
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
   plugins: [
