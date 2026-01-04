@@ -60,6 +60,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [authKit.user?.id, authKit.isLoading]);
 
+  // Clear convexUserId if user is not authenticated (stale data from another session/device)
+  useEffect(() => {
+    if (authKit.isLoading || authKit.user) {
+      return;
+    }
+    setConvexUserIdState(null);
+    localStorage.removeItem(CONVEX_USER_ID_KEY);
+  }, [authKit.isLoading, authKit.user]);
+
   const setConvexUserId = useCallback((id: string | null) => {
     setConvexUserIdState(id);
     if (id) {
