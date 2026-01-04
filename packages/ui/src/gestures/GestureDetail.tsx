@@ -1,6 +1,5 @@
 import MuxPlayer from "@mux/mux-player-react";
-import { ArrowLeft, Heart, Smartphone } from "lucide-react";
-import { ArrowLeft, Heart, Sparkles, Smartphone } from "lucide-react";
+import { ArrowLeft, Heart, Smartphone, Sparkles } from "lucide-react";
 import { Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { ShimmerSkeleton } from "../common/Skeleton";
@@ -32,7 +31,7 @@ function SponsorshipCTA({
 }) {
   return (
     <div
-      className="rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-6"
+      className="rounded-xl border-2 border-primary/20 bg-linear-to-br from-primary/5 to-primary/10 p-6"
       style={{ backgroundColor: "var(--card)" }}
     >
       <div className="flex items-start gap-4">

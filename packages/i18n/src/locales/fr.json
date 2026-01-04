@@ -160,6 +160,8 @@
     },
     "searchBar": {
       "placeholder": "Rechercher des gestes..."
+    }
+  },
   "gdpr": {
     "consent": {
       "title": "Confidentialité et utilisation des données",
