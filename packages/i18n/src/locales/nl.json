@@ -328,6 +328,16 @@
       "placeholder": "Zoek gebaren..."
     }
   },
+  "screenshot": {
+    "sharePrompt": {
+      "title": "Gebaar delen",
+      "message": "Wil je de link naar dit gebaar ({{name}}) delen?",
+      "cancel": "Annuleren",
+      "share": "Delen",
+      "shareTitle": "{{name}} - SMOG",
+      "shareMessage": "Bekijk dit gebaar: {{name}}"
+    }
+  },
   "gdpr": {
     "consent": {
       "title": "Privacy & gegevensgebruik",

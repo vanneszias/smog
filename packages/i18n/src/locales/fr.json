@@ -162,6 +162,16 @@
       "placeholder": "Rechercher des gestes..."
     }
   },
+  "screenshot": {
+    "sharePrompt": {
+      "title": "Partager le geste",
+      "message": "Voulez-vous partager le lien vers ce geste ({{name}}) ?",
+      "cancel": "Annuler",
+      "share": "Partager",
+      "shareTitle": "{{name}} - SMOG",
+      "shareMessage": "Découvrez ce geste : {{name}}"
+    }
+  },
   "gdpr": {
     "consent": {
       "title": "Confidentialité et utilisation des données",

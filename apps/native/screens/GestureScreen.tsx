@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import { BORDER_RADIUS, SPACING } from "@smog/styles";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -23,6 +23,7 @@ import { useFavorites } from "@/context/FavoritesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useToast } from "@/context/ToastContext";
 import { useTranslation } from "@/context/TranslationContext";
+import { useScreenshotDetection } from "@/hooks/useScreenshotDetection";
 import {
   trackCategoryPressed,
   trackEvent,
@@ -35,7 +36,6 @@ import gestureService from "@/services/gestureService";
 import type { Gesture } from "@/types";
 
 const GestureScreen: React.FC = () => {
-  const _router = useRouter();
   const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme } = useTheme();
@@ -47,6 +47,13 @@ const GestureScreen: React.FC = () => {
   const [relatedGestures, setRelatedGestures] = useState<Gesture[]>([]);
   const lastToastTimeRef = useRef<number>(0);
   const [hasTrackedView, setHasTrackedView] = useState(false);
+
+  // Enable screenshot detection for sharing gesture links
+  useScreenshotDetection({
+    gestureId: gesture?.id || null,
+    gestureName: gesture?.name || null,
+    enabled: true,
+  });
 
   useEffect(() => {
     if (id) {

@@ -355,6 +355,16 @@
       "placeholder": "Search gestures..."
     }
   },
+  "screenshot": {
+    "sharePrompt": {
+      "title": "Share Gesture",
+      "message": "Would you like to share the link to this gesture ({{name}})?",
+      "cancel": "Cancel",
+      "share": "Share",
+      "shareTitle": "{{name}} - SMOG",
+      "shareMessage": "Check out this gesture: {{name}}"
+    }
+  },
   "gdpr": {
     "consent": {
       "title": "Privacy & Data Usage",
