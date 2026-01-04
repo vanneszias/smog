@@ -64,12 +64,12 @@ export default function GDPRConsentModal({
 
   const openPrivacyPolicy = () => {
     // Update with your actual privacy policy URL
-    Linking.openURL("https://smog.app/privacy");
+    Linking.openURL("https://smog.zias.be/privacy");
   };
 
   const openTerms = () => {
     // Update with your actual terms URL
-    Linking.openURL("https://smog.app/terms");
+    Linking.openURL("https://smog.zias.be/terms");
   };
 
   return (

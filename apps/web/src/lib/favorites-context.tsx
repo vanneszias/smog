@@ -27,13 +27,14 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const { isAuthenticated, convexUserId, setConvexUserId } = useAuth();
   const [isInitializing, setIsInitializing] = useState(false);
+  const [initError, setInitError] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch or create Convex user when authenticated
   useEffect(() => {
     async function initializeUser() {
-      if (isAuthenticated && !convexUserId && !isInitializing) {
+      if (isAuthenticated && !convexUserId && !isInitializing && !initError) {
         setIsInitializing(true);
         try {
           const user = await client.users.getOrCreateUser();
@@ -42,13 +43,28 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (error) {
           console.error("Failed to initialize user:", error);
+          // Prevent infinite retries on auth errors
+          setInitError(true);
         } finally {
           setIsInitializing(false);
         }
       }
     }
     initializeUser();
-  }, [isAuthenticated, convexUserId, setConvexUserId, isInitializing]);
+  }, [
+    isAuthenticated,
+    convexUserId,
+    setConvexUserId,
+    isInitializing,
+    initError,
+  ]);
+
+  // Reset error state when auth state changes (e.g., user signs out and back in)
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setInitError(false);
+    }
+  }, [isAuthenticated]);
 
   // Fetch favorites
   const fetchFavorites = useCallback(async () => {

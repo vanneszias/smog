@@ -14,6 +14,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -38,6 +39,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const CONVEX_USER_ID_KEY = "smog_web_convex_user_id";
+const TOKEN_STORAGE_KEY = "smog_web_token";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const authKit = useAuthKit();
@@ -48,6 +50,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     return null;
   });
+
+  // Store workosId in localStorage for API authentication when user changes
+  useEffect(() => {
+    if (authKit.user?.id) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, authKit.user.id);
+    } else if (!authKit.isLoading) {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+  }, [authKit.user?.id, authKit.isLoading]);
 
   const setConvexUserId = useCallback((id: string | null) => {
     setConvexUserIdState(id);
@@ -76,8 +87,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [authKit]);
 
   const signOut = useCallback(() => {
-    // Clear Convex user ID on sign out
+    // Clear Convex user ID and API token on sign out
     setConvexUserId(null);
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
     authKit.signOut();
   }, [authKit, setConvexUserId]);
 

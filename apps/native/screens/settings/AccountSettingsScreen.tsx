@@ -1,10 +1,13 @@
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "@smog/convex";
+import { FONT_SIZE, FONT_WEIGHT, ICON_SIZE, SPACING } from "@smog/styles";
 import { useMutation, useQuery } from "convex/react";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { Stack, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
-  Alert,
+  Platform,
+  SafeAreaView,
   ScrollView,
   Share,
   StyleSheet,
@@ -13,10 +16,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import BottomSheet from "@/components/bottom-sheet/BottomSheet";
+import BaseButton from "@/components/common/BaseButton";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useToast } from "@/context/ToastContext";
 import { useTranslation } from "@/context/TranslationContext";
+import { useNativeInteractions } from "@/hooks/useNativeInteractions";
 import {
   disableAnalytics,
   enableAnalytics,
@@ -27,7 +33,9 @@ export default function AccountSettingsScreen() {
   const { user, signOut } = useAuth();
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const router = useRouter();
+  const { triggerHaptic } = useNativeInteractions();
 
   const _consentStatus = useQuery(api.gdpr.getConsentStatus);
   const exportData = useQuery(api.gdpr.exportUserData);
@@ -36,149 +44,210 @@ export default function AccountSettingsScreen() {
 
   const [analyticsEnabled, setAnalyticsEnabled] = useState(isAnalyticsActive());
   const [isExporting, setIsExporting] = useState(false);
+  const [showDeleteConfirmSheet, setShowDeleteConfirmSheet] = useState(false);
+  const [showSignOutConfirmSheet, setShowSignOutConfirmSheet] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
-  const handleAnalyticsToggle = async (value: boolean) => {
-    try {
-      setAnalyticsEnabled(value);
+  const handleAnalyticsToggle = useCallback(
+    async (value: boolean) => {
+      try {
+        triggerHaptic("light");
+        setAnalyticsEnabled(value);
 
-      // Update backend consent
-      if (user) {
-        await updateConsent({ analyticsConsent: value });
+        // Update analytics locally
+        if (value) {
+          await enableAnalytics();
+        } else {
+          await disableAnalytics();
+        }
+
+        // Try to sync with server if authenticated
+        if (user) {
+          try {
+            await updateConsent({ analyticsConsent: value });
+          } catch (syncError) {
+            // Log but don't fail the entire operation if server sync fails
+            console.warn(
+              "[AccountSettings] Failed to sync consent to server:",
+              syncError
+            );
+          }
+        }
+
+        showToast({
+          type: "success",
+          message: t("gdpr.consent.updated"),
+        });
+      } catch (error) {
+        console.error(
+          "[AccountSettings] Failed to update analytics consent:",
+          error
+        );
+        showToast({
+          type: "error",
+          message: t("gdpr.consent.failed"),
+        });
+        setAnalyticsEnabled(!value);
       }
+    },
+    [user, updateConsent, triggerHaptic, showToast, t]
+  );
 
-      // Update local analytics state
-      if (value) {
-        await enableAnalytics();
-      } else {
-        await disableAnalytics();
-      }
-
-      Alert.alert(t("common.success"), t("gdpr.consent.updated"));
-    } catch (error) {
-      console.error(
-        "[AccountSettings] Failed to update analytics consent:",
-        error
-      );
-      Alert.alert(t("common.error"), t("gdpr.consent.failed"));
-      // Revert the switch
-      setAnalyticsEnabled(!value);
-    }
-  };
-
-  const handleExportData = async () => {
+  const handleExportData = useCallback(async () => {
     try {
+      triggerHaptic("medium");
       setIsExporting(true);
 
       if (!exportData) {
-        Alert.alert(t("common.error"), t("gdpr.account.exportFailed"));
+        showToast({
+          type: "error",
+          message: t("gdpr.account.exportFailed"),
+        });
         return;
       }
 
       const jsonString = JSON.stringify(exportData, null, 2);
       const fileName = `smog-data-export-${new Date().toISOString()}.json`;
 
-      await Share.share({
-        message: jsonString,
-        title: fileName,
-      });
+      if (Platform.OS === "web") {
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+      } else {
+        await Share.share({
+          message: jsonString,
+          title: fileName,
+        });
+      }
 
-      Alert.alert(t("common.success"), t("gdpr.account.exportSuccess"));
+      showToast({
+        type: "success",
+        message: t("gdpr.account.exportSuccess"),
+      });
     } catch (error) {
       console.error("[AccountSettings] Failed to export data:", error);
-      Alert.alert(t("common.error"), t("gdpr.account.exportFailed"));
+      showToast({
+        type: "error",
+        message: t("gdpr.account.exportFailed"),
+      });
     } finally {
       setIsExporting(false);
     }
-  };
+  }, [exportData, triggerHaptic, showToast, t]);
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      t("gdpr.account.deleteConfirmTitle"),
-      t("gdpr.account.deleteConfirmMessage"),
-      [
-        {
-          text: t("common.cancel"),
-          style: "cancel",
-        },
-        {
-          text: t("gdpr.account.deleteConfirmButton"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setIsDeleting(true);
+  const handleSignOutPress = useCallback(() => {
+    triggerHaptic("medium");
+    setShowSignOutConfirmSheet(true);
+  }, [triggerHaptic]);
 
-              // Delete account in backend
-              await deleteAccount({ confirmDelete: true });
+  const handleSignOutConfirm = useCallback(async () => {
+    try {
+      setIsSigningOut(true);
+      setShowSignOutConfirmSheet(false);
+      triggerHaptic("success");
 
-              // Clear local storage
-              await AsyncStorage.multiRemove([
-                "@smog_gdpr_consent",
-                "@smog_analytics_consent",
-                "@smog_consent_version",
-                "@smog_consent_date",
-                "@smog_user",
-                "@smog_guest_id",
-                "@smog_guest_mode",
-              ]);
+      await signOut();
 
-              // Sign out
-              await signOut();
+      showToast({
+        type: "success",
+        message: "Successfully signed out",
+      });
 
-              Alert.alert(
-                t("common.success"),
-                t("gdpr.account.deleteSuccess"),
-                [
-                  {
-                    text: "OK",
-                    onPress: () => router.replace("/welcome"),
-                  },
-                ]
-              );
-            } catch (error) {
-              console.error(
-                "[AccountSettings] Failed to delete account:",
-                error
-              );
-              Alert.alert(t("common.error"), t("gdpr.account.deleteFailed"));
-              setIsDeleting(false);
-            }
-          },
-        },
-      ]
-    );
-  };
+      router.replace("/welcome");
+    } catch (error) {
+      console.error("[AccountSettings] Failed to sign out:", error);
+      showToast({
+        type: "error",
+        message: t("account.logoutError"),
+      });
+    } finally {
+      setIsSigningOut(false);
+    }
+  }, [signOut, router, triggerHaptic, showToast, t]);
+
+  const handleDeletePress = useCallback(() => {
+    triggerHaptic("heavy");
+    setShowDeleteConfirmSheet(true);
+  }, [triggerHaptic]);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    try {
+      setIsDeleting(true);
+      setShowDeleteConfirmSheet(false);
+
+      await deleteAccount({ confirmDelete: true });
+
+      await AsyncStorage.multiRemove([
+        "@smog_gdpr_consent",
+        "@smog_analytics_consent",
+        "@smog_consent_version",
+        "@smog_consent_date",
+        "@smog_user",
+        "@smog_guest_id",
+        "@smog_guest_mode",
+      ]);
+
+      await signOut();
+
+      triggerHaptic("success");
+
+      showToast({
+        type: "success",
+        message: t("gdpr.account.deleteSuccess"),
+      });
+
+      router.replace("/welcome");
+    } catch (error) {
+      console.error("[AccountSettings] Failed to delete account:", error);
+      showToast({
+        type: "error",
+        message: t("gdpr.account.deleteFailed"),
+      });
+      setIsDeleting(false);
+    }
+  }, [deleteAccount, signOut, router, triggerHaptic, showToast, t]);
 
   if (!user) {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: theme.background }]}
       >
-        <View style={styles.center}>
-          <Text
-            style={[
-              styles.emptyText,
-              { color: theme.textLight, fontFamily: "Onest-Regular" },
-            ]}
-          >
+        <Stack.Screen
+          options={{
+            title: t("account.title"),
+            headerStyle: {
+              backgroundColor: theme.primary,
+            },
+            headerBackButtonDisplayMode: "minimal",
+            headerTintColor: theme.background,
+            headerTitleStyle: {
+              fontWeight: FONT_WEIGHT.bold,
+            },
+          }}
+        />
+        <View style={styles.emptyContainer}>
+          <Ionicons
+            color={theme.textLight}
+            name="person-outline"
+            size={ICON_SIZE.xl * 2}
+          />
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>
+            {t("account.guestMode")}
+          </Text>
+          <Text style={[styles.emptyDescription, { color: theme.textLight }]}>
             {t("account.guestModeDescription")}
           </Text>
-          <TouchableOpacity
-            onPress={() => router.push("/welcome")}
-            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-          >
-            <Text
-              style={[
-                styles.buttonText,
-                {
-                  color: theme.background,
-                  fontFamily: "Onest-SemiBold",
-                },
-              ]}
-            >
-              {t("auth.welcome.signInSignUp")}
-            </Text>
-          </TouchableOpacity>
+          <BaseButton
+            onPress={() => router.replace("/welcome")}
+            size="large"
+            style={styles.signInButton}
+            title={t("auth.welcome.signInSignUp")}
+          />
         </View>
       </SafeAreaView>
     );
@@ -188,204 +257,247 @@ export default function AccountSettingsScreen() {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
+      <Stack.Screen
+        options={{
+          title: t("account.title"),
+          headerStyle: {
+            backgroundColor: theme.primary,
+          },
+          headerBackButtonDisplayMode: "minimal",
+          headerTintColor: theme.background,
+          headerTitleStyle: {
+            fontWeight: FONT_WEIGHT.bold,
+          },
+        }}
+      />
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Account Info */}
+        {/* Account Information */}
         <View style={styles.section}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              { color: theme.text, fontFamily: "Onest-SemiBold" },
-            ]}
-          >
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
             {t("account.accountInfo")}
           </Text>
-          <View
+          <TouchableOpacity
+            activeOpacity={1}
             style={[
-              styles.card,
+              styles.settingRow,
               { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
-            <Text
-              style={[
-                styles.label,
-                { color: theme.textLight, fontFamily: "Onest-Regular" },
-              ]}
-            >
-              {t("auth.email")}
-            </Text>
-            <Text
-              style={[
-                styles.value,
-                { color: theme.text, fontFamily: "Onest-Medium" },
-              ]}
-            >
-              {user.email || t("account.unknownUser")}
-            </Text>
-          </View>
+            <Ionicons
+              color={theme.primary}
+              name="mail-outline"
+              size={ICON_SIZE.md}
+            />
+            <View style={styles.settingContent}>
+              <Text style={[styles.settingLabel, { color: theme.textLight }]}>
+                {t("auth.email")}
+              </Text>
+              <Text style={[styles.settingValue, { color: theme.text }]}>
+                {user.email || t("account.unknownUser")}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Privacy Settings */}
         <View style={styles.section}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              { color: theme.text, fontFamily: "Onest-SemiBold" },
-            ]}
-          >
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
             {t("gdpr.account.analytics")}
           </Text>
           <View
             style={[
-              styles.card,
+              styles.settingRow,
               { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
-            <View style={styles.row}>
-              <View style={styles.flex}>
-                <Text
-                  style={[
-                    styles.settingLabel,
-                    { color: theme.text, fontFamily: "Onest-Medium" },
-                  ]}
-                >
-                  {t("gdpr.consent.analyticsTitle")}
-                </Text>
-                <Text
-                  style={[
-                    styles.settingDescription,
-                    {
-                      color: theme.textLight,
-                      fontFamily: "Onest-Regular",
-                    },
-                  ]}
-                >
-                  {t("gdpr.account.analyticsDescription")}
-                </Text>
-              </View>
-              <Switch
-                onValueChange={handleAnalyticsToggle}
-                thumbColor={theme.background}
-                trackColor={{
-                  false: theme.border,
-                  true: theme.primary,
-                }}
-                value={analyticsEnabled}
-              />
+            <Ionicons
+              color={theme.text}
+              name="analytics-outline"
+              size={ICON_SIZE.md}
+            />
+            <View style={styles.settingContent}>
+              <Text style={[styles.settingValue, { color: theme.text }]}>
+                {t("gdpr.consent.analyticsTitle")}
+              </Text>
+              <Text
+                style={[styles.settingDescription, { color: theme.textLight }]}
+              >
+                {t("gdpr.account.analyticsDescription")}
+              </Text>
             </View>
+            <Switch
+              ios_backgroundColor={theme.border}
+              onValueChange={handleAnalyticsToggle}
+              thumbColor={theme.background}
+              trackColor={{
+                false: theme.border,
+                true: theme.primary,
+              }}
+              value={analyticsEnabled}
+            />
           </View>
         </View>
 
         {/* Data Management */}
         <View style={styles.section}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              { color: theme.text, fontFamily: "Onest-SemiBold" },
-            ]}
-          >
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
             {t("gdpr.account.manageData")}
           </Text>
-
           <TouchableOpacity
+            activeOpacity={0.8}
             disabled={isExporting || !exportData}
             onPress={handleExportData}
             style={[
-              styles.card,
-              styles.actionCard,
+              styles.settingRow,
               { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
-            <View>
-              <Text
-                style={[
-                  styles.actionTitle,
-                  { color: theme.text, fontFamily: "Onest-SemiBold" },
-                ]}
-              >
+            <Ionicons
+              color={theme.text}
+              name="download-outline"
+              size={ICON_SIZE.md}
+            />
+            <View style={styles.settingContent}>
+              <Text style={[styles.settingValue, { color: theme.text }]}>
                 {t("gdpr.account.exportData")}
               </Text>
               <Text
-                style={[
-                  styles.actionDescription,
-                  {
-                    color: theme.textLight,
-                    fontFamily: "Onest-Regular",
-                  },
-                ]}
+                style={[styles.settingDescription, { color: theme.textLight }]}
               >
                 {t("gdpr.account.exportDescription")}
               </Text>
             </View>
-            <Text
-              style={[
-                styles.actionButton,
-                { color: theme.primary, fontFamily: "Onest-Medium" },
-              ]}
-            >
-              {isExporting
-                ? t("gdpr.account.exporting")
-                : t("gdpr.account.exportButton")}
-            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Danger Zone */}
+        {/* Account Actions */}
         <View style={styles.section}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              { color: "#EF4444", fontFamily: "Onest-SemiBold" },
-            ]}
-          >
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
             {t("account.dangerZone")}
           </Text>
 
+          <BaseButton
+            disabled={isSigningOut}
+            loading={isSigningOut}
+            onPress={handleSignOutPress}
+            size="large"
+            style={styles.actionButton}
+            textStyle={{ color: theme.text }}
+            title={isSigningOut ? t("account.loggingOut") : t("account.logout")}
+            variant="outline"
+          />
+
           <TouchableOpacity
+            activeOpacity={0.8}
             disabled={isDeleting}
-            onPress={handleDeleteAccount}
+            onPress={handleDeletePress}
             style={[
-              styles.card,
-              styles.actionCard,
-              { backgroundColor: theme.card, borderColor: "#FEE2E2" },
+              styles.settingRow,
+              styles.deleteRow,
+              { backgroundColor: theme.card },
             ]}
           >
-            <View>
-              <Text
-                style={[
-                  styles.actionTitle,
-                  { color: "#EF4444", fontFamily: "Onest-SemiBold" },
-                ]}
-              >
+            <Ionicons
+              color="#EF4444"
+              name="trash-outline"
+              size={ICON_SIZE.md}
+            />
+            <View style={styles.settingContent}>
+              <Text style={[styles.settingValue, { color: "#EF4444" }]}>
                 {t("gdpr.account.deleteAccount")}
               </Text>
               <Text
-                style={[
-                  styles.actionDescription,
-                  {
-                    color: theme.textLight,
-                    fontFamily: "Onest-Regular",
-                  },
-                ]}
+                style={[styles.settingDescription, { color: theme.textLight }]}
               >
                 {t("gdpr.account.deleteDescription")}
               </Text>
             </View>
-            <Text
-              style={[
-                styles.actionButton,
-                { color: "#EF4444", fontFamily: "Onest-Medium" },
-              ]}
-            >
-              {isDeleting
-                ? t("gdpr.account.deleting")
-                : t("gdpr.account.deleteButton")}
-            </Text>
+            <Ionicons
+              color="#EF4444"
+              name="chevron-forward"
+              size={ICON_SIZE.sm}
+            />
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Sign Out Confirmation Bottom Sheet */}
+      <BottomSheet
+        contentContainerStyle={styles.bottomSheetContent}
+        onClose={() => setShowSignOutConfirmSheet(false)}
+        snapPoints={["35%"]}
+        visible={showSignOutConfirmSheet}
+      >
+        <View style={styles.confirmContainer}>
+          <Ionicons
+            color={theme.textLight}
+            name="log-out-outline"
+            size={ICON_SIZE.xl}
+          />
+          <Text style={[styles.confirmTitle, { color: theme.text }]}>
+            {t("account.logoutConfirmTitle")}
+          </Text>
+          <Text style={[styles.confirmMessage, { color: theme.textLight }]}>
+            {t("account.logoutConfirmMessage")}
+          </Text>
+          <View style={styles.confirmButtons}>
+            <BaseButton
+              onPress={() => setShowSignOutConfirmSheet(false)}
+              size="large"
+              style={styles.confirmButton}
+              title={t("common.cancel")}
+              variant="outline"
+            />
+            <BaseButton
+              onPress={handleSignOutConfirm}
+              size="large"
+              style={[styles.confirmButton, { backgroundColor: theme.primary }]}
+              title={t("account.logout")}
+            />
+          </View>
+        </View>
+      </BottomSheet>
+
+      {/* Delete Account Confirmation Bottom Sheet */}
+      <BottomSheet
+        contentContainerStyle={styles.bottomSheetContent}
+        onClose={() => setShowDeleteConfirmSheet(false)}
+        snapPoints={["40%"]}
+        visible={showDeleteConfirmSheet}
+      >
+        <View style={styles.confirmContainer}>
+          <Ionicons
+            color="#EF4444"
+            name="warning-outline"
+            size={ICON_SIZE.xl}
+          />
+          <Text style={[styles.confirmTitle, { color: "#EF4444" }]}>
+            {t("gdpr.account.deleteConfirmTitle")}
+          </Text>
+          <Text style={[styles.confirmMessage, { color: theme.textLight }]}>
+            {t("gdpr.account.deleteConfirmMessage")}
+          </Text>
+          <View style={styles.confirmButtons}>
+            <BaseButton
+              onPress={() => setShowDeleteConfirmSheet(false)}
+              size="large"
+              style={styles.confirmButton}
+              title={t("common.cancel")}
+              variant="outline"
+            />
+            <BaseButton
+              onPress={handleDeleteConfirm}
+              size="large"
+              style={[styles.confirmButton, { backgroundColor: "#EF4444" }]}
+              title={t("gdpr.account.deleteConfirmButton")}
+            />
+          </View>
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -395,77 +507,97 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: SPACING.md,
+    paddingBottom: SPACING.xl,
   },
-  center: {
+  emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    paddingHorizontal: SPACING.xl,
+  },
+  emptyTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.sm,
+  },
+  emptyDescription: {
+    fontSize: FONT_SIZE.md,
+    textAlign: "center",
+    marginBottom: SPACING.xl,
+    lineHeight: 22,
+  },
+  signInButton: {
+    minWidth: 200,
   },
   section: {
-    marginBottom: 24,
+    marginTop: SPACING.xl,
   },
   sectionTitle: {
-    fontSize: 18,
-    marginBottom: 12,
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.bold,
+    marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.sm,
   },
-  card: {
-    padding: 16,
-    borderRadius: 12,
+  settingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    borderRadius: 8,
     borderWidth: 1,
+    minHeight: 60,
   },
-  actionCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  label: {
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  value: {
-    fontSize: 16,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  flex: {
+  settingContent: {
     flex: 1,
   },
   settingLabel: {
-    fontSize: 16,
-    marginBottom: 4,
+    fontSize: FONT_SIZE.sm,
+    marginBottom: 2,
+  },
+  settingValue: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
   },
   settingDescription: {
-    fontSize: 13,
-  },
-  actionTitle: {
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  actionDescription: {
-    fontSize: 13,
+    fontSize: FONT_SIZE.sm,
+    lineHeight: 18,
+    marginTop: 4,
   },
   actionButton: {
-    fontSize: 14,
+    marginBottom: SPACING.md,
   },
-  emptyText: {
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 22,
+  deleteRow: {
+    borderColor: "#FEE2E2",
+    borderWidth: 1,
   },
-  primaryButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    minWidth: 200,
+  bottomSheetContent: {
+    padding: SPACING.lg,
+  },
+  confirmContainer: {
     alignItems: "center",
   },
-  buttonText: {
-    fontSize: 16,
+  confirmTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+    textAlign: "center",
+  },
+  confirmMessage: {
+    fontSize: FONT_SIZE.md,
+    textAlign: "center",
+    marginBottom: SPACING.xl,
+    lineHeight: 22,
+  },
+  confirmButtons: {
+    flexDirection: "row",
+    gap: SPACING.md,
+    width: "100%",
+  },
+  confirmButton: {
+    flex: 1,
   },
 });
