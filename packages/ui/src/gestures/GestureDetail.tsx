@@ -26,6 +26,13 @@ export function GestureDetail({
 }: GestureDetailProps) {
   const { t } = useTranslation();
 
+  // Debug logging
+  console.log("GestureDetail render:", {
+    showOpenInApp,
+    hasOnOpenInApp: !!onOpenInApp,
+    willShowBanner: !!showOpenInApp && !!onOpenInApp,
+  });
+
   const handleFavoriteClick = () => {
     if (onToggleFavorite) {
       onToggleFavorite(gesture._id);

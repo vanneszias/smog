@@ -12,7 +12,21 @@ export function isMobileDevice(): boolean {
       userAgent
     );
 
-  return isMobile;
+  // Also check for touch capability and screen size as additional indicators
+  const hasTouchScreen =
+    "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  const isSmallScreen = window.innerWidth < 1024; // lg breakpoint in Tailwind
+
+  // Debug logging (remove in production)
+  console.log("Device Detection:", {
+    userAgent: `${userAgent.substring(0, 50)}...`,
+    isMobile,
+    hasTouchScreen,
+    isSmallScreen,
+    result: isMobile || (hasTouchScreen && isSmallScreen),
+  });
+
+  return isMobile || (hasTouchScreen && isSmallScreen);
 }
 
 /**
@@ -44,6 +58,8 @@ export function isAndroid(): boolean {
  * @param path - The path to open in the app (e.g., "/gestures/123")
  */
 export function openInApp(path: string): void {
+  console.log("Attempting to open app with path:", path);
+
   // Try custom scheme first (works on both iOS and Android)
   const customSchemeUrl = `smog://${path}`;
 

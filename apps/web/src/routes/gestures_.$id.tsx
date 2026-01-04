@@ -21,11 +21,21 @@ function GesturesComponent() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite, favoriteIds } = useFavorites();
-  const [showOpenInApp, setShowOpenInApp] = useState(false);
 
-  // Detect if user is on mobile device
+  // Detect mobile immediately (not in useEffect) to avoid hydration issues
+  const [showOpenInApp, setShowOpenInApp] = useState(() => {
+    // This will be false on server, true on client if mobile
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return isMobileDevice();
+  });
+
+  // Re-check on mount to handle SSR
   useEffect(() => {
-    setShowOpenInApp(isMobileDevice());
+    const isMobile = isMobileDevice();
+    console.log("Setting showOpenInApp to:", isMobile);
+    setShowOpenInApp(isMobile);
   }, []);
 
   // Use shared gestures hook
