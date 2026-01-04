@@ -1,9 +1,9 @@
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 import type React from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useConvexInit } from "@/hooks/useConvexInit";
-import { AuthProvider } from "./AuthContext";
+import { AuthProvider, useConvexAuth } from "./AuthContext";
 import FavoritesProvider from "./FavoritesContext";
 import { LogProvider } from "./logs/LogProvider";
 import RecentSearchesProvider from "./RecentSearchesContext";
@@ -33,14 +33,19 @@ const ConvexInitializer: React.FC<{ children: React.ReactNode }> = ({
  * AppProviders wraps all context providers for global usage.
  * Place this at the root of your app (e.g., in App.tsx) to provide
  * theme, translation, favorites, recent searches, and toast context globally.
+ *
+ * Authentication flow:
+ * 1. AuthProvider handles OAuth flow with WorkOS
+ * 2. ConvexProviderWithAuth receives tokens from AuthProvider via useConvexAuth
+ * 3. Convex validates the JWT using the auth.config.ts configuration
  */
 const AppProviders: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => (
-  <ConvexProvider client={convex}>
-    <LogProvider>
-      <ThemeProvider>
-        <AuthProvider>
+  <LogProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ConvexProviderWithAuth client={convex} useAuth={useConvexAuth}>
           <TranslationProvider>
             <ConvexInitializer>
               <ToastProvider>
@@ -54,10 +59,10 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
               </ToastProvider>
             </ConvexInitializer>
           </TranslationProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </LogProvider>
-  </ConvexProvider>
+        </ConvexProviderWithAuth>
+      </AuthProvider>
+    </ThemeProvider>
+  </LogProvider>
 );
 
 export default AppProviders;

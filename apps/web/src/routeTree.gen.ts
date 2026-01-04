@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as GesturesRouteImport } from './routes/gestures'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CallbackRouteImport } from './routes/callback'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
@@ -23,7 +24,6 @@ import { Route as SponsorsIndexRouteImport } from './routes/sponsors/index'
 import { Route as SponsorsSuccessRouteImport } from './routes/sponsors/success'
 import { Route as SponsorsCreateRouteImport } from './routes/sponsors/create'
 import { Route as GesturesIdRouteImport } from './routes/gestures_.$id'
-import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -58,6 +58,11 @@ const FavoritesRoute = FavoritesRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CallbackRoute = CallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -95,16 +100,12 @@ const GesturesIdRoute = GesturesIdRouteImport.update({
   path: '/gestures/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthCallbackRoute = AuthCallbackRouteImport.update({
-  id: '/auth/callback',
-  path: '/auth/callback',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
+  '/callback': typeof CallbackRoute
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
@@ -112,7 +113,6 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
-  '/auth/callback': typeof AuthCallbackRoute
   '/gestures/$id': typeof GesturesIdRoute
   '/sponsors/create': typeof SponsorsCreateRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
@@ -122,6 +122,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
+  '/callback': typeof CallbackRoute
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
@@ -129,7 +130,6 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
-  '/auth/callback': typeof AuthCallbackRoute
   '/gestures/$id': typeof GesturesIdRoute
   '/sponsors/create': typeof SponsorsCreateRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
@@ -140,6 +140,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
+  '/callback': typeof CallbackRoute
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
@@ -147,7 +148,6 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
-  '/auth/callback': typeof AuthCallbackRoute
   '/gestures_/$id': typeof GesturesIdRoute
   '/sponsors/create': typeof SponsorsCreateRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
@@ -159,6 +159,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/admin'
+    | '/callback'
     | '/dashboard'
     | '/favorites'
     | '/gestures'
@@ -166,7 +167,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/success'
     | '/terms'
-    | '/auth/callback'
     | '/gestures/$id'
     | '/sponsors/create'
     | '/sponsors/success'
@@ -176,6 +176,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/admin'
+    | '/callback'
     | '/dashboard'
     | '/favorites'
     | '/gestures'
@@ -183,7 +184,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/success'
     | '/terms'
-    | '/auth/callback'
     | '/gestures/$id'
     | '/sponsors/create'
     | '/sponsors/success'
@@ -193,6 +193,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/admin'
+    | '/callback'
     | '/dashboard'
     | '/favorites'
     | '/gestures'
@@ -200,7 +201,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/success'
     | '/terms'
-    | '/auth/callback'
     | '/gestures_/$id'
     | '/sponsors/create'
     | '/sponsors/success'
@@ -211,6 +211,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRoute
+  CallbackRoute: typeof CallbackRoute
   DashboardRoute: typeof DashboardRoute
   FavoritesRoute: typeof FavoritesRoute
   GesturesRoute: typeof GesturesRoute
@@ -218,7 +219,6 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SuccessRoute: typeof SuccessRoute
   TermsRoute: typeof TermsRoute
-  AuthCallbackRoute: typeof AuthCallbackRoute
   GesturesIdRoute: typeof GesturesIdRoute
   SponsorsCreateRoute: typeof SponsorsCreateRoute
   SponsorsSuccessRoute: typeof SponsorsSuccessRoute
@@ -276,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/callback': {
+      id: '/callback'
+      path: '/callback'
+      fullPath: '/callback'
+      preLoaderRoute: typeof CallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -325,13 +332,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GesturesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/callback': {
-      id: '/auth/callback'
-      path: '/auth/callback'
-      fullPath: '/auth/callback'
-      preLoaderRoute: typeof AuthCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -339,6 +339,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
   AdminRoute: AdminRoute,
+  CallbackRoute: CallbackRoute,
   DashboardRoute: DashboardRoute,
   FavoritesRoute: FavoritesRoute,
   GesturesRoute: GesturesRoute,
@@ -346,7 +347,6 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SuccessRoute: SuccessRoute,
   TermsRoute: TermsRoute,
-  AuthCallbackRoute: AuthCallbackRoute,
   GesturesIdRoute: GesturesIdRoute,
   SponsorsCreateRoute: SponsorsCreateRoute,
   SponsorsSuccessRoute: SponsorsSuccessRoute,

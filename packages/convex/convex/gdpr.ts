@@ -4,6 +4,12 @@ import { mutation, query } from "./_generated/server";
 /**
  * GDPR Compliance Functions
  * Implements user rights: access, deletion, consent management
+ *
+ * Security Notes:
+ * - All data export and deletion functions require authentication
+ * - Authentication is validated via JWT tokens from WorkOS
+ * - Guest users cannot export or delete data (their data is auto-removed after 12 months)
+ * - The client must use <Authenticated> wrappers to ensure proper auth state
  */
 
 // GDPR Article 15: Right of Access - Export user data
@@ -12,10 +18,12 @@ export const exportUserData = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error(
+        "Authentication required. Please sign in to export your data."
+      );
     }
 
-    // Find user by workosId
+    // Find user by workosId (identity.subject contains the WorkOS user ID)
     const user = await ctx.db
       .query("users")
       .withIndex("by_workos_id", (q) => q.eq("workosId", identity.subject))
@@ -108,15 +116,19 @@ export const deleteUserAccount = mutation({
   },
   handler: async (ctx, args) => {
     if (!args.confirmDelete) {
-      throw new Error("Deletion must be confirmed");
+      throw new Error(
+        "Deletion must be confirmed by setting confirmDelete to true"
+      );
     }
 
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error(
+        "Authentication required. Please sign in to delete your account."
+      );
     }
 
-    // Find user by workosId
+    // Find user by workosId (identity.subject contains the WorkOS user ID)
     const user = await ctx.db
       .query("users")
       .withIndex("by_workos_id", (q) => q.eq("workosId", identity.subject))
@@ -189,7 +201,7 @@ export const deleteUserAccount = mutation({
   },
 });
 
-// Record user consent
+// Record user consent (for authenticated users)
 export const recordConsent = mutation({
   args: {
     analyticsConsent: v.boolean(),
@@ -200,10 +212,12 @@ export const recordConsent = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error(
+        "Authentication required. Please sign in to update consent preferences."
+      );
     }
 
-    // Find user
+    // Find user by workosId
     const user = await ctx.db
       .query("users")
       .withIndex("by_workos_id", (q) => q.eq("workosId", identity.subject))
@@ -268,7 +282,7 @@ export const recordGuestConsent = mutation({
   },
 });
 
-// Update consent preferences
+// Update consent preferences (for authenticated users)
 export const updateConsent = mutation({
   args: {
     analyticsConsent: v.boolean(),
@@ -277,7 +291,9 @@ export const updateConsent = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error(
+        "Authentication required. Please sign in to update consent preferences."
+      );
     }
 
     const user = await ctx.db
@@ -302,12 +318,14 @@ export const updateConsent = mutation({
   },
 });
 
-// Get current consent status
+// Get current consent status (for authenticated users)
+// Returns null if not authenticated (graceful handling for UI)
 export const getConsentStatus = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
+      // Return null instead of throwing - allows UI to handle gracefully
       return null;
     }
 

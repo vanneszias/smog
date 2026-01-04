@@ -3,6 +3,7 @@ import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
+import * as SecureStore from "expo-secure-store";
 import { maybeCompleteAuthSession } from "expo-web-browser";
 import type React from "react";
 import {
@@ -45,15 +46,63 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Token context for Convex authentication
+type TokenContextType = {
+  accessToken: string | null;
+  refreshToken: string | null;
+  isTokenLoading: boolean;
+  fetchAccessToken: () => Promise<string | null>;
+};
+
+const TokenContext = createContext<TokenContextType | undefined>(undefined);
+
 const GUEST_MODE_KEY = "@smog_guest_mode";
 const GUEST_ID_KEY = "@smog_guest_id";
 const USER_KEY = "@smog_user";
+
+// Secure storage keys for tokens
+const ACCESS_TOKEN_KEY = "smog_access_token";
+const REFRESH_TOKEN_KEY = "smog_refresh_token";
 
 // WorkOS OAuth discovery configuration
 const discovery = {
   authorizationEndpoint: "https://api.workos.com/user_management/authorize",
   tokenEndpoint: "https://api.workos.com/user_management/token",
 };
+
+/**
+ * Securely store a value using expo-secure-store
+ */
+async function secureStore(key: string, value: string): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(key, value);
+  } catch (error) {
+    console.error(`[SecureStore] Failed to store ${key}:`, error);
+  }
+}
+
+/**
+ * Securely retrieve a value from expo-secure-store
+ */
+async function secureRetrieve(key: string): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(key);
+  } catch (error) {
+    console.error(`[SecureStore] Failed to retrieve ${key}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Securely delete a value from expo-secure-store
+ */
+async function secureDelete(key: string): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(key);
+  } catch (error) {
+    console.error(`[SecureStore] Failed to delete ${key}:`, error);
+  }
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -64,11 +113,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [userId, setUserId] = useState<Id<"users"> | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
   const [user, setUser] = useState<WorkOSUser | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  const [isTokenLoading, setIsTokenLoading] = useState(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const createUser = useMutation(api.users.createUser);
   const migrateGuestToUser = useMutation(api.users.migrateGuestToUser);
   const exchangeCode = useAction(api.users.exchangeCodeForToken);
+  const refreshAccessTokenAction = useAction(api.users.refreshAccessToken);
   const getUserByWorkOSId = useQuery(
     api.users.getUserByWorkOSId,
     user?.id ? { workosId: user.id } : "skip"
@@ -104,28 +157,88 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     discovery
   );
 
+  /**
+   * Fetch a valid access token, refreshing if necessary.
+   * This is called by ConvexProviderWithAuth.
+   */
+  const fetchAccessToken = useCallback(async (): Promise<string | null> => {
+    // If we have a token, return it
+    if (accessToken) {
+      return accessToken;
+    }
+
+    // If not authenticated, return null
+    if (authMode !== "authenticated") {
+      return null;
+    }
+
+    // Try to get token from secure storage
+    const storedToken = await secureRetrieve(ACCESS_TOKEN_KEY);
+    if (storedToken) {
+      setAccessToken(storedToken);
+      return storedToken;
+    }
+
+    // Try to refresh using refresh token
+    const storedRefreshToken = await secureRetrieve(REFRESH_TOKEN_KEY);
+    if (storedRefreshToken && !isOffline) {
+      try {
+        console.log("[AuthContext] Refreshing access token...");
+        const result = await refreshAccessTokenAction({
+          refreshToken: storedRefreshToken,
+        });
+
+        setAccessToken(result.accessToken);
+        await secureStore(ACCESS_TOKEN_KEY, result.accessToken);
+
+        if (result.refreshToken) {
+          setRefreshToken(result.refreshToken);
+          await secureStore(REFRESH_TOKEN_KEY, result.refreshToken);
+        }
+
+        return result.accessToken;
+      } catch (error) {
+        console.error("[AuthContext] Failed to refresh token:", error);
+        // Token refresh failed - user needs to re-authenticate
+        return null;
+      }
+    }
+
+    return null;
+  }, [accessToken, authMode, isOffline, refreshAccessTokenAction]);
+
   const exchangeCodeForUser = useCallback(
     async (code: string, _state?: string) => {
       try {
-        console.log("[AuthContext] Exchanging code for user...");
+        console.log("[AuthContext] Exchanging code for user and tokens...");
 
-        // Exchange the authorization code for user info via Convex action
-        const workosUser = await exchangeCode({
+        // Exchange the authorization code for user info and tokens
+        const result = await exchangeCode({
           code,
           redirectUri,
         });
 
         const authenticatedUser: WorkOSUser = {
-          id: workosUser.workosId,
-          email: workosUser.email,
-          firstName: workosUser.firstName,
-          lastName: workosUser.lastName,
+          id: result.workosId,
+          email: result.email,
+          firstName: result.firstName,
+          lastName: result.lastName,
         };
 
         console.log(
           "[AuthContext] WorkOS user authenticated:",
           authenticatedUser.email
         );
+
+        // Store tokens securely
+        await secureStore(ACCESS_TOKEN_KEY, result.accessToken);
+        setAccessToken(result.accessToken);
+
+        if (result.refreshToken) {
+          await secureStore(REFRESH_TOKEN_KEY, result.refreshToken);
+          setRefreshToken(result.refreshToken);
+        }
+
         setUser(authenticatedUser);
         await AsyncStorage.setItem(USER_KEY, JSON.stringify(authenticatedUser));
         setAuthMode("authenticated");
@@ -135,7 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         await AsyncStorage.removeItem(GUEST_ID_KEY);
         setGuestId(null);
 
-        console.log("[AuthContext] User authentication completed");
+        console.log("[AuthContext] User authentication completed with tokens");
       } catch (error) {
         console.error("Error exchanging code for user:", error);
       }
@@ -156,9 +269,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const initializeAuth = useCallback(async () => {
     try {
+      setIsTokenLoading(true);
+
       const guestMode = await AsyncStorage.getItem(GUEST_MODE_KEY);
       const storedGuestId = await AsyncStorage.getItem(GUEST_ID_KEY);
       const storedUser = await AsyncStorage.getItem(USER_KEY);
+
+      // Try to load stored tokens
+      const storedAccessToken = await secureRetrieve(ACCESS_TOKEN_KEY);
+      const storedRefreshToken = await secureRetrieve(REFRESH_TOKEN_KEY);
+
+      if (storedAccessToken) {
+        setAccessToken(storedAccessToken);
+      }
+      if (storedRefreshToken) {
+        setRefreshToken(storedRefreshToken);
+      }
 
       let newAuthMode: AuthMode;
 
@@ -187,10 +313,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log(`[AuthContext] Initial auth mode set to: ${newAuthMode}`);
       setAuthMode(newAuthMode);
       setIsInitialized(true);
+      setIsTokenLoading(false);
     } catch (error) {
       console.error("Error checking auth state:", error);
       setAuthMode("loading");
       setIsInitialized(true);
+      setIsTokenLoading(false);
     }
   }, []);
 
@@ -308,10 +436,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await AsyncStorage.removeItem(USER_KEY);
       await AsyncStorage.removeItem(GUEST_MODE_KEY);
       await AsyncStorage.removeItem(GUEST_ID_KEY);
+
+      // Clear tokens from secure storage
+      await secureDelete(ACCESS_TOKEN_KEY);
+      await secureDelete(REFRESH_TOKEN_KEY);
+
       setAuthMode("loading");
       setUserId(null);
       setGuestId(null);
       setUser(null);
+      setAccessToken(null);
+      setRefreshToken(null);
     } catch (error) {
       console.error("Error during sign out:", error);
     }
@@ -351,7 +486,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [request, promptAsync, redirectUri]);
 
-  const value: AuthContextType = useMemo(
+  const authValue: AuthContextType = useMemo(
     () => ({
       authMode,
       isGuest: authMode === "guest",
@@ -380,7 +515,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     ]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const tokenValue: TokenContextType = useMemo(
+    () => ({
+      accessToken,
+      refreshToken,
+      isTokenLoading,
+      fetchAccessToken,
+    }),
+    [accessToken, refreshToken, isTokenLoading, fetchAccessToken]
+  );
+
+  return (
+    <AuthContext.Provider value={authValue}>
+      <TokenContext.Provider value={tokenValue}>
+        {children}
+      </TokenContext.Provider>
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
@@ -390,3 +541,30 @@ export const useAuth = () => {
   }
   return context;
 };
+
+/**
+ * Hook for ConvexProviderWithAuth to get authentication state.
+ * This hook provides the interface that Convex expects for authentication.
+ */
+export function useConvexAuth() {
+  const authContext = useContext(AuthContext);
+  const tokenContext = useContext(TokenContext);
+
+  if (authContext === undefined) {
+    throw new Error("useConvexAuth must be used within an AuthProvider");
+  }
+
+  if (tokenContext === undefined) {
+    throw new Error("useConvexAuth must be used within an AuthProvider");
+  }
+
+  const isLoading = authContext.isLoading || tokenContext.isTokenLoading;
+  const hasToken = tokenContext.accessToken !== null;
+  const isAuthenticated = authContext.isAuthenticated && hasToken;
+
+  return {
+    isLoading,
+    isAuthenticated,
+    fetchAccessToken: tokenContext.fetchAccessToken,
+  };
+}

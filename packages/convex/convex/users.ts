@@ -117,6 +117,8 @@ export const exchangeCodeForToken = action({
     email: v.string(),
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
+    accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
   }),
   handler: async (_ctx, args) => {
     const clientId = process.env.WORKOS_CLIENT_ID;
@@ -126,7 +128,7 @@ export const exchangeCodeForToken = action({
       throw new Error("WorkOS credentials not configured");
     }
 
-    // Exchange code for user information
+    // Exchange code for user information and tokens
     const response = await fetch(
       "https://api.workos.com/user_management/authenticate",
       {
@@ -155,6 +157,8 @@ export const exchangeCodeForToken = action({
         first_name?: string;
         last_name?: string;
       };
+      access_token: string;
+      refresh_token?: string;
     };
 
     return {
@@ -162,6 +166,58 @@ export const exchangeCodeForToken = action({
       email: data.user.email,
       firstName: data.user.first_name,
       lastName: data.user.last_name,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+    };
+  },
+});
+
+// Refresh access token using refresh token
+export const refreshAccessToken = action({
+  args: {
+    refreshToken: v.string(),
+  },
+  returns: v.object({
+    accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
+  }),
+  handler: async (_ctx, args) => {
+    const clientId = process.env.WORKOS_CLIENT_ID;
+    const clientSecret = process.env.WORKOS_CLIENT_SECRET;
+
+    if (!(clientId && clientSecret)) {
+      throw new Error("WorkOS credentials not configured");
+    }
+
+    const response = await fetch(
+      "https://api.workos.com/user_management/authenticate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+          client_secret: clientSecret,
+          refresh_token: args.refreshToken,
+          grant_type: "refresh_token",
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to refresh token: ${error}`);
+    }
+
+    const data = (await response.json()) as {
+      access_token: string;
+      refresh_token?: string;
+    };
+
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
     };
   },
 });

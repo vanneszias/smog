@@ -10,6 +10,11 @@ export default function SignUpForm({
   const { t } = useTranslation();
   const { signIn } = useAuth();
 
+  // WorkOS AuthKit uses the same flow for sign in and sign up
+  const handleSignUp = () => {
+    signIn();
+  };
+
   return (
     <div className="mx-auto mt-10 w-full max-w-md p-6">
       <h1 className="mb-6 text-center font-bold text-3xl">
@@ -17,7 +22,7 @@ export default function SignUpForm({
       </h1>
 
       <div className="space-y-4">
-        <Button className="w-full" onClick={signIn} type="button">
+        <Button className="w-full" onClick={handleSignUp} type="button">
           {t("web.signUp.button")}
         </Button>
 

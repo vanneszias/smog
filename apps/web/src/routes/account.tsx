@@ -1,6 +1,12 @@
 import { api } from "@smog/convex";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation, useQuery } from "convex/react";
+import {
+  Authenticated,
+  AuthLoading,
+  Unauthenticated,
+  useMutation,
+  useQuery,
+} from "convex/react";
 import { Download, Loader2, Settings, Trash2, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -17,34 +23,69 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/lib/auth-context";
-import { client } from "@/lib/client";
 
 export const Route = createFileRoute("/account")({
-  component: AccountComponent,
+  component: AccountPage,
 });
 
-function AccountComponent() {
-  const { user, isAuthenticated, signOut } = useAuth();
+function AccountPage() {
+  return (
+    <>
+      <AuthLoading>
+        <LoadingState />
+      </AuthLoading>
+      <Unauthenticated>
+        <UnauthenticatedState />
+      </Unauthenticated>
+      <Authenticated>
+        <AccountContent />
+      </Authenticated>
+    </>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="container mx-auto flex min-h-full flex-col items-center justify-center px-4 py-12">
+      <Loader2 className="mb-4 h-16 w-16 animate-spin text-muted-foreground" />
+      <h2 className="mb-2 font-bold text-2xl">Loading...</h2>
+      <p className="text-center text-muted-foreground">
+        Please wait while we verify your authentication
+      </p>
+    </div>
+  );
+}
+
+function UnauthenticatedState() {
+  const { signIn } = useAuth();
+
+  return (
+    <div className="container mx-auto flex min-h-full flex-col items-center justify-center px-4 py-12">
+      <User className="mb-4 h-16 w-16 text-muted-foreground" />
+      <h2 className="mb-2 font-bold text-2xl">Sign In Required</h2>
+      <p className="mb-4 text-center text-muted-foreground">
+        Please sign in to manage your account settings
+      </p>
+      <Button onClick={() => signIn()}>Sign In</Button>
+    </div>
+  );
+}
+
+/**
+ * Account content component - only rendered when authenticated with Convex.
+ * This ensures ctx.auth.getUserIdentity() will return a valid identity.
+ */
+function AccountContent() {
+  const { user, signOut } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Get consent status from Convex
+  // Get consent status from Convex - this will work because we're inside <Authenticated>
   const consentStatus = useQuery(api.gdpr.getConsentStatus);
   const updateConsent = useMutation(api.gdpr.updateConsent);
   const deleteUserAccount = useMutation(api.gdpr.deleteUserAccount);
-
-  // Show sign in message if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="container mx-auto flex min-h-full flex-col items-center justify-center px-4 py-12">
-        <User className="mb-4 h-16 w-16 text-muted-foreground" />
-        <h2 className="mb-2 font-bold text-2xl">Sign In Required</h2>
-        <p className="mb-4 text-center text-muted-foreground">
-          Please sign in to manage your account settings
-        </p>
-      </div>
-    );
-  }
+  const exportUserData = useQuery(api.gdpr.exportUserData);
 
   const handleAnalyticsToggle = async (checked: boolean) => {
     try {
@@ -68,12 +109,15 @@ function AccountComponent() {
   };
 
   const handleExportData = async () => {
-    try {
-      // Call the Convex query to export data
-      const data = await client.query(api.gdpr.exportUserData);
+    if (!exportUserData) {
+      toast.error("Unable to export data. Please try again.");
+      return;
+    }
 
+    setIsExporting(true);
+    try {
       // Create a blob and download it
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
+      const blob = new Blob([JSON.stringify(exportUserData, null, 2)], {
         type: "application/json",
       });
       const url = URL.createObjectURL(blob);
@@ -89,6 +133,8 @@ function AccountComponent() {
     } catch (error) {
       console.error("Failed to export data:", error);
       toast.error("Failed to export data. Please try again.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -172,9 +218,22 @@ function AccountComponent() {
             Export all your account data including favorites, preferences, and
             consent history in JSON format.
           </p>
-          <Button onClick={handleExportData} variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Download Data
+          <Button
+            disabled={!exportUserData || isExporting}
+            onClick={handleExportData}
+            variant="outline"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Download Data
+              </>
+            )}
           </Button>
         </div>
 

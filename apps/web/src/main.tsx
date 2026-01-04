@@ -1,13 +1,16 @@
+import { ConvexProviderWithAuthKit } from "@convex-dev/workos";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
-import { ConvexProvider } from "convex/react";
+import { AuthKitProvider, useAuth } from "@workos-inc/authkit-react";
+import { ConvexReactClient } from "convex/react";
 import ReactDOM from "react-dom/client";
 import "./lib/i18n";
 import Loader from "./components/loader";
-import { client } from "./lib/client";
 import { routeTree } from "./routeTree.gen";
 import { orpc, queryClient } from "./utils/orpc";
 import { persistOptions } from "./utils/queryPersister";
+
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
 
 const router = createRouter({
   routeTree,
@@ -16,14 +19,19 @@ const router = createRouter({
   context: { orpc, queryClient },
   Wrap({ children }: { children: React.ReactNode }) {
     return (
-      <ConvexProvider client={client}>
-        <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={persistOptions}
-        >
-          {children}
-        </PersistQueryClientProvider>
-      </ConvexProvider>
+      <AuthKitProvider
+        clientId={import.meta.env.VITE_WORKOS_CLIENT_ID}
+        redirectUri={import.meta.env.VITE_WORKOS_REDIRECT_URI}
+      >
+        <ConvexProviderWithAuthKit client={convex} useAuth={useAuth}>
+          <PersistQueryClientProvider
+            client={queryClient}
+            persistOptions={persistOptions}
+          >
+            {children}
+          </PersistQueryClientProvider>
+        </ConvexProviderWithAuthKit>
+      </AuthKitProvider>
     );
   },
 });

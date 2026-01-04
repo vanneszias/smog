@@ -10,6 +10,10 @@ export default function SignInForm({
   const { t } = useTranslation();
   const { signIn } = useAuth();
 
+  const handleSignIn = () => {
+    signIn();
+  };
+
   return (
     <div className="mx-auto mt-10 w-full max-w-md p-6">
       <h1 className="mb-6 text-center font-bold text-3xl">
@@ -17,7 +21,7 @@ export default function SignInForm({
       </h1>
 
       <div className="space-y-4">
-        <Button className="w-full" onClick={signIn} type="button">
+        <Button className="w-full" onClick={handleSignIn} type="button">
           {t("web.signIn.button")}
         </Button>
 
