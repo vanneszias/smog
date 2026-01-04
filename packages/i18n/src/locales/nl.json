@@ -312,7 +312,10 @@
       "removeFromFavorites": "Verwijderen uit Favorieten",
       "description": "Dit is belangrijk om te weten",
       "relatedConcepts": "Dit gebaar heeft deze concepten",
-      "noVideo": "Geen video beschikbaar"
+      "noVideo": "Geen video beschikbaar",
+      "openInApp": "Open in App",
+      "betterExperience": "Krijg een betere ervaring met onze mobiele app",
+      "open": "Openen"
     },
     "gestureFilters": {
       "searchPlaceholder": "Zoek gebaren...",

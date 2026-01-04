@@ -339,7 +339,10 @@
       "removeFromFavorites": "Remove from Favorites",
       "description": "Description",
       "relatedConcepts": "Related Concepts",
-      "noVideo": "No video available"
+      "noVideo": "No video available",
+      "openInApp": "Open in App",
+      "betterExperience": "Get a better experience with our mobile app",
+      "open": "Open"
     },
     "gestureFilters": {
       "searchPlaceholder": "Search gestures...",

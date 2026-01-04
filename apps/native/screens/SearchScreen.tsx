@@ -264,7 +264,7 @@ const SearchScreen = () => {
 
   const handleGesturePress = useCallback(
     (gesture: { id: string; name: string; category: string[] }): void => {
-      router.push(`/gesture/${gesture.id}`);
+      router.push(`/gestures/${gesture.id}`);
     },
     [router]
   );

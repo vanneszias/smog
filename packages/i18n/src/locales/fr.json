@@ -127,5 +127,38 @@
       "concerns": "Préoccupations concernant l'apprentissage de SMOG",
       "extra": "Autre"
     }
+  },
+  "ui": {
+    "gestureList": {
+      "name": "Nom",
+      "category": "Catégorie",
+      "concepts": "Concepts",
+      "loading": "Chargement...",
+      "errorLoading": "Erreur lors du chargement des gestes",
+      "errorTryAgain": "Veuillez réessayer plus tard.",
+      "noGestures": "Aucun geste trouvé.",
+      "addToFavorites": "Ajouter aux favoris",
+      "removeFromFavorites": "Retirer des favoris"
+    },
+    "gestureDetail": {
+      "backToGestures": "Retour aux Gestes",
+      "addToFavorites": "Ajouter aux Favoris",
+      "removeFromFavorites": "Retirer des Favoris",
+      "description": "Description",
+      "relatedConcepts": "Concepts Liés",
+      "noVideo": "Aucune vidéo disponible",
+      "openInApp": "Ouvrir dans l'App",
+      "betterExperience": "Obtenez une meilleure expérience avec notre application mobile",
+      "open": "Ouvrir"
+    },
+    "gestureFilters": {
+      "searchPlaceholder": "Rechercher des gestes...",
+      "results": "{{count}} résultat",
+      "results_other": "{{count}} résultats",
+      "clearFilters": "Effacer les filtres"
+    },
+    "searchBar": {
+      "placeholder": "Rechercher des gestes..."
+    }
   }
 }

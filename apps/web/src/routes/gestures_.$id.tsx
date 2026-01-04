@@ -6,10 +6,11 @@ import {
   GestureList,
 } from "@smog/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGestures } from "@/hooks/useGestures";
 import { useFavorites } from "@/lib/favorites-context";
+import { isMobileDevice, openInApp } from "@/utils/deviceDetection";
 
 export const Route = createFileRoute("/gestures_/$id")({
   component: GesturesComponent,
@@ -20,6 +21,12 @@ function GesturesComponent() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite, favoriteIds } = useFavorites();
+  const [showOpenInApp, setShowOpenInApp] = useState(false);
+
+  // Detect if user is on mobile device
+  useEffect(() => {
+    setShowOpenInApp(isMobileDevice());
+  }, []);
 
   // Use shared gestures hook
   const { gestures: allGestures, isLoading, error } = useGestures();
@@ -59,6 +66,12 @@ function GesturesComponent() {
     const gesture = allGestures.find((g) => g._id === gestureId);
     toggleFavorite(gestureId, gesture?.name);
   };
+
+  const handleOpenInApp = useCallback(() => {
+    if (id) {
+      openInApp(`/gestures/${id}`);
+    }
+  }, [id]);
 
   return (
     <div className="flex h-full max-h-full flex-col overflow-hidden">
@@ -105,9 +118,11 @@ function GesturesComponent() {
               gesture={selectedGesture}
               isFavorite={isFavorite(selectedGesture._id)}
               onBack={handleDeselectGesture}
+              onOpenInApp={handleOpenInApp}
               onToggleFavorite={() =>
                 toggleFavorite(selectedGesture._id, selectedGesture.name)
               }
+              showOpenInApp={showOpenInApp}
             />
           ) : id ? (
             <GestureDetailSkeleton />

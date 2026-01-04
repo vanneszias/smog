@@ -63,7 +63,7 @@ const HomeScreen: React.FC = () => {
 
   const handleGesturePress = useCallback(
     (gesture: Gesture) => {
-      router.push(`/gesture/${gesture.id}`);
+      router.push(`/gestures/${gesture.id}`);
     },
     [router]
   );

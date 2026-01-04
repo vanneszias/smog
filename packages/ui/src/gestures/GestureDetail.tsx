@@ -1,5 +1,5 @@
 import MuxPlayer from "@mux/mux-player-react";
-import { ArrowLeft, Heart } from "lucide-react";
+import { ArrowLeft, Heart, Smartphone } from "lucide-react";
 import { Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { ShimmerSkeleton } from "../common/Skeleton";
@@ -12,6 +12,8 @@ type GestureDetailProps = {
   isFavorite?: boolean;
   onToggleFavorite?: (gestureId: string) => void;
   onBack?: () => void;
+  showOpenInApp?: boolean;
+  onOpenInApp?: () => void;
 };
 
 export function GestureDetail({
@@ -19,6 +21,8 @@ export function GestureDetail({
   isFavorite = false,
   onToggleFavorite,
   onBack,
+  showOpenInApp = false,
+  onOpenInApp,
 }: GestureDetailProps) {
   const { t } = useTranslation();
 
@@ -34,8 +38,43 @@ export function GestureDetail({
     }
   };
 
+  const handleOpenInAppClick = () => {
+    if (onOpenInApp) {
+      onOpenInApp();
+    }
+  };
+
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
+      {/* Open in App Banner (Mobile Only) */}
+      {!!showOpenInApp && !!onOpenInApp && (
+        <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Smartphone className="h-5 w-5 text-primary" />
+              <div>
+                <p
+                  className="font-medium text-sm"
+                  style={{ color: "var(--text)" }}
+                >
+                  {t("ui.gestureDetail.openInApp")}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  {t("ui.gestureDetail.betterExperience")}
+                </p>
+              </div>
+            </div>
+            <button
+              className="rounded-lg bg-primary px-4 py-2 font-medium text-sm text-white transition-all hover:bg-primary/90"
+              onClick={handleOpenInAppClick}
+              type="button"
+            >
+              {t("ui.gestureDetail.open")}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header with Back Button */}
       <div className="mb-6 flex items-center justify-between">
         {onBack ? (

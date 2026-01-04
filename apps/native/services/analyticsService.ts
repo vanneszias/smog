@@ -27,13 +27,13 @@ export const autocaptureConfig = {
       index: "Home",
       search: "Search",
       favorites: "Favorites",
-      "gesture/[id]": "Gesture Detail",
+      "gestures/[id]": "Gesture Detail",
       "settings/index": "Settings",
       "settings/developer-tools": "Developer Tools",
     };
 
     // Handle dynamic routes with parameters
-    if (name === "gesture/[id]" && params?.id) {
+    if (name === "gestures/[id]" && params?.id) {
       return "Gesture Detail";
     }
 
@@ -52,7 +52,7 @@ export const autocaptureConfig = {
       string | number | boolean | null | undefined | string[]
     > = {};
 
-    if (name === "gesture/[id]" && params?.id) {
+    if (name === "gestures/[id]" && params?.id) {
       properties.gesture_id = params.id;
     }
 

@@ -44,7 +44,7 @@ const FavoritesScreen: React.FC = () => {
 
   const handleGesturePress = useCallback(
     (gesture: Gesture) => {
-      router.push(`/gesture/${gesture.id}`);
+      router.push(`/gestures/${gesture.id}`);
     },
     [router]
   );

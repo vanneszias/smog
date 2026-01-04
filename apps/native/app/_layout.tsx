@@ -47,7 +47,7 @@ function AuthenticatedLayout() {
       <Stack initialRouteName="(tabs)">
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
-          name="gesture/[id]"
+          name="gestures/[id]"
           options={{
             headerStyle: {
               backgroundColor: theme.primary,

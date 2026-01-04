@@ -54,9 +54,9 @@ export default function AppNavigator() {
         }}
       />
 
-      {/* Hide the gesture/[id] route from tab bar */}
+      {/* Hide the gestures/[id] route from tab bar */}
       <Tabs.Screen
-        name="gesture/[id]"
+        name="gestures/[id]"
         options={{
           href: null, // This prevents the route from showing as a tab
         }}

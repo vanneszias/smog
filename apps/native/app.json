@@ -11,7 +11,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.vanneszias.smog",
-      "icon": "./assets/images/smog.icon"
+      "icon": "./assets/images/smog.icon",
+      "associatedDomains": ["applinks:smog.zias.be"]
     },
     "android": {
       "adaptiveIcon": {
@@ -25,6 +26,17 @@
           "data": [
             {
               "scheme": "smog"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "smog.zias.be"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]

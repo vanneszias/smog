@@ -77,7 +77,7 @@ const RelatedGesturesSection: React.FC<RelatedGesturesSectionProps> = ({
               {relatedGestures.map((gesture) => (
                 <TouchableOpacity
                   key={gesture.id}
-                  onPress={() => router.push(`/gesture/${gesture.id}`)}
+                  onPress={() => router.push(`/gestures/${gesture.id}`)}
                   style={[
                     styles.relatedBadge,
                     { backgroundColor: `${theme.primary}22` },
