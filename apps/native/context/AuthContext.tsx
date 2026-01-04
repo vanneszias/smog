@@ -1,7 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
-import { useAction, useMutation, useQuery } from "convex/react";
 import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
 import * as SecureStore from "expo-secure-store";
 import { maybeCompleteAuthSession } from "expo-web-browser";
@@ -15,7 +13,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { generateGuestId } from "@/services/userService";
 
 maybeCompleteAuthSession();
@@ -42,6 +39,17 @@ type AuthContextType = {
   clearGuestMode: () => Promise<void>;
   signIn: () => void;
   signUp: () => void;
+  // Internal setter for user ID (used by ConvexUserSync)
+  setUserId: (id: Id<"users"> | null) => void;
+  // Pending OAuth code to be exchanged (used by ConvexUserSync)
+  pendingOAuthCode: { code: string; redirectUri: string } | null;
+  clearPendingOAuthCode: () => void;
+  // Called by ConvexUserSync after successful token exchange
+  onTokenExchangeSuccess: (params: {
+    accessToken: string;
+    refreshToken?: string;
+    user: WorkOSUser;
+  }) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,6 +60,15 @@ type TokenContextType = {
   refreshToken: string | null;
   isTokenLoading: boolean;
   fetchAccessToken: () => Promise<string | null>;
+  // Internal setter for refresh token action (used by ConvexUserSync)
+  setRefreshTokenAction: (
+    action:
+      | ((params: { refreshToken: string }) => Promise<{
+          accessToken: string;
+          refreshToken?: string;
+        }>)
+      | null
+  ) => void;
 };
 
 const TokenContext = createContext<TokenContextType | undefined>(undefined);
@@ -107,7 +124,6 @@ async function secureDelete(key: string): Promise<void> {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { isOffline } = useNetworkStatus();
   const [authMode, setAuthMode] = useState<AuthMode>("loading");
   const [isInitialized, setIsInitialized] = useState(false);
   const [userId, setUserId] = useState<Id<"users"> | null>(null);
@@ -116,20 +132,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isTokenLoading, setIsTokenLoading] = useState(true);
+  const [pendingOAuthCode, setPendingOAuthCode] = useState<{
+    code: string;
+    redirectUri: string;
+  } | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const createUser = useMutation(api.users.createUser);
-  const migrateGuestToUser = useMutation(api.users.migrateGuestToUser);
-  const exchangeCode = useAction(api.users.exchangeCodeForToken);
-  const refreshAccessTokenAction = useAction(api.users.refreshAccessToken);
-  const getUserByWorkOSId = useQuery(
-    api.users.getUserByWorkOSId,
-    user?.id ? { workosId: user.id } : "skip"
-  );
-  const getUserByGuestId = useQuery(
-    api.users.getUserByGuestId,
-    guestId ? { guestId } : "skip"
-  );
+  // Store the refresh action so it can be called without Convex context
+  const refreshTokenActionRef = useRef<
+    | ((params: { refreshToken: string }) => Promise<{
+        accessToken: string;
+        refreshToken?: string;
+      }>)
+    | null
+  >(null);
 
   // WorkOS OAuth setup
   const redirectUri = makeRedirectUri({
@@ -157,6 +172,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     discovery
   );
 
+  const setRefreshTokenAction = useCallback(
+    (
+      action:
+        | ((params: { refreshToken: string }) => Promise<{
+            accessToken: string;
+            refreshToken?: string;
+          }>)
+        | null
+    ) => {
+      refreshTokenActionRef.current = action;
+    },
+    []
+  );
+
   /**
    * Fetch a valid access token, refreshing if necessary.
    * This is called by ConvexProviderWithAuth.
@@ -181,10 +210,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Try to refresh using refresh token
     const storedRefreshToken = await secureRetrieve(REFRESH_TOKEN_KEY);
-    if (storedRefreshToken && !isOffline) {
+    if (storedRefreshToken && refreshTokenActionRef.current) {
       try {
         console.log("[AuthContext] Refreshing access token...");
-        const result = await refreshAccessTokenAction({
+        const result = await refreshTokenActionRef.current({
           refreshToken: storedRefreshToken,
         });
 
@@ -205,67 +234,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     return null;
-  }, [accessToken, authMode, isOffline, refreshAccessTokenAction]);
+  }, [accessToken, authMode]);
 
-  const exchangeCodeForUser = useCallback(
-    async (code: string, _state?: string) => {
-      try {
-        console.log("[AuthContext] Exchanging code for user and tokens...");
+  /**
+   * Called by ConvexUserSync after successful OAuth code exchange
+   */
+  const onTokenExchangeSuccess = useCallback(
+    async (params: {
+      accessToken: string;
+      refreshToken?: string;
+      user: WorkOSUser;
+    }) => {
+      console.log(
+        "[AuthContext] WorkOS user authenticated:",
+        params.user.email
+      );
 
-        // Exchange the authorization code for user info and tokens
-        const result = await exchangeCode({
-          code,
-          redirectUri,
-        });
+      // Store tokens securely
+      await secureStore(ACCESS_TOKEN_KEY, params.accessToken);
+      setAccessToken(params.accessToken);
 
-        const authenticatedUser: WorkOSUser = {
-          id: result.workosId,
-          email: result.email,
-          firstName: result.firstName,
-          lastName: result.lastName,
-        };
-
-        console.log(
-          "[AuthContext] WorkOS user authenticated:",
-          authenticatedUser.email
-        );
-
-        // Store tokens securely
-        await secureStore(ACCESS_TOKEN_KEY, result.accessToken);
-        setAccessToken(result.accessToken);
-
-        if (result.refreshToken) {
-          await secureStore(REFRESH_TOKEN_KEY, result.refreshToken);
-          setRefreshToken(result.refreshToken);
-        }
-
-        setUser(authenticatedUser);
-        await AsyncStorage.setItem(USER_KEY, JSON.stringify(authenticatedUser));
-        setAuthMode("authenticated");
-
-        // Clear guest mode when user signs in
-        await AsyncStorage.removeItem(GUEST_MODE_KEY);
-        await AsyncStorage.removeItem(GUEST_ID_KEY);
-        setGuestId(null);
-
-        console.log("[AuthContext] User authentication completed with tokens");
-      } catch (error) {
-        console.error("Error exchanging code for user:", error);
+      if (params.refreshToken) {
+        await secureStore(REFRESH_TOKEN_KEY, params.refreshToken);
+        setRefreshToken(params.refreshToken);
       }
+
+      setUser(params.user);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(params.user));
+      setAuthMode("authenticated");
+
+      // Clear guest mode when user signs in
+      await AsyncStorage.removeItem(GUEST_MODE_KEY);
+      await AsyncStorage.removeItem(GUEST_ID_KEY);
+      setGuestId(null);
+
+      console.log("[AuthContext] User authentication completed with tokens");
     },
-    [exchangeCode, redirectUri]
+    []
   );
 
-  // Handle OAuth response
+  const clearPendingOAuthCode = useCallback(() => {
+    setPendingOAuthCode(null);
+  }, []);
+
+  // Handle OAuth response - store code for ConvexUserSync to process
   useEffect(() => {
     if (response?.type === "success") {
-      const { code, state } = response.params;
-      console.log("[AuthContext] OAuth success, received code:", code);
-      exchangeCodeForUser(code, state);
+      const { code } = response.params;
+      console.log("[AuthContext] OAuth success, storing code for processing");
+      setPendingOAuthCode({ code, redirectUri });
     } else if (response?.type === "error") {
       console.error("[AuthContext] OAuth error:", response.error);
     }
-  }, [response, exchangeCodeForUser]);
+  }, [response, redirectUri]);
 
   const initializeAuth = useCallback(async () => {
     try {
@@ -322,7 +343,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  // Initialize auth state - handle both online and offline scenarios
+  // Initialize auth state
   useEffect(() => {
     if (isInitialized) {
       return;
@@ -343,75 +364,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     };
   }, [isInitialized, initializeAuth]);
-
-  // Handle user creation/migration when auth state changes
-  useEffect(() => {
-    if (!isInitialized) {
-      return;
-    }
-
-    // Skip Convex operations when offline
-    if (isOffline) {
-      console.log(
-        "[AuthContext] Offline mode - skipping Convex user operations"
-      );
-      return;
-    }
-
-    const handleAuthenticatedUser = async () => {
-      if (getUserByWorkOSId && getUserByWorkOSId !== null) {
-        setUserId(getUserByWorkOSId._id);
-        return;
-      }
-
-      if (getUserByWorkOSId === null) {
-        const storedGuestId = await AsyncStorage.getItem(GUEST_ID_KEY);
-        if (storedGuestId) {
-          const migratedUserId = await migrateGuestToUser({
-            guestId: storedGuestId,
-            workosId: user?.id || "",
-          });
-          setUserId(migratedUserId);
-        } else {
-          const createdUserId = await createUser({ workosId: user?.id || "" });
-          setUserId(createdUserId);
-        }
-      }
-    };
-
-    const handleGuestUser = async () => {
-      if (!guestId) {
-        return;
-      }
-
-      if (getUserByGuestId && getUserByGuestId !== null) {
-        setUserId(getUserByGuestId._id);
-      } else if (getUserByGuestId === null) {
-        const newUserId = await createUser({ guestId });
-        setUserId(newUserId);
-      }
-    };
-
-    const handleUserSetup = async () => {
-      if (user?.id && authMode === "authenticated") {
-        await handleAuthenticatedUser();
-      } else if (authMode === "guest" && guestId) {
-        await handleGuestUser();
-      }
-    };
-
-    handleUserSetup().catch(console.error);
-  }, [
-    user,
-    authMode,
-    guestId,
-    getUserByWorkOSId,
-    getUserByGuestId,
-    isInitialized,
-    isOffline,
-    createUser,
-    migrateGuestToUser,
-  ]);
 
   const continueAsGuest = useCallback(async () => {
     try {
@@ -500,6 +452,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       clearGuestMode,
       signIn,
       signUp,
+      setUserId,
+      pendingOAuthCode,
+      clearPendingOAuthCode,
+      onTokenExchangeSuccess,
     }),
     [
       authMode,
@@ -512,6 +468,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       clearGuestMode,
       signIn,
       signUp,
+      pendingOAuthCode,
+      clearPendingOAuthCode,
+      onTokenExchangeSuccess,
     ]
   );
 
@@ -521,8 +480,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       refreshToken,
       isTokenLoading,
       fetchAccessToken,
+      setRefreshTokenAction,
     }),
-    [accessToken, refreshToken, isTokenLoading, fetchAccessToken]
+    [
+      accessToken,
+      refreshToken,
+      isTokenLoading,
+      fetchAccessToken,
+      setRefreshTokenAction,
+    ]
   );
 
   return (
@@ -538,6 +504,14 @@ export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
+
+export const useTokenContext = () => {
+  const context = useContext(TokenContext);
+  if (context === undefined) {
+    throw new Error("useTokenContext must be used within an AuthProvider");
   }
   return context;
 };

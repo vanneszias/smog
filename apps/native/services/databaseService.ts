@@ -638,6 +638,19 @@ class DatabaseService {
     return result?.count || 0;
   }
 
+  async getCategoryCount(): Promise<number> {
+    if (!this.db) {
+      throw new Error("Database not initialized");
+    }
+
+    const result = (await this.db.getFirstAsync(
+      "SELECT COUNT(*) as count FROM categories WHERE isActive = 1"
+    )) as {
+      count: number;
+    };
+    return result?.count || 0;
+  }
+
   async getDatabaseStats(): Promise<{
     gestureCount: number;
     lastSync: Date | null;

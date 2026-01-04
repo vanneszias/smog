@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useConvexInit } from "@/hooks/useConvexInit";
 import { AuthProvider, useConvexAuth } from "./AuthContext";
+import { ConvexUserSync } from "./ConvexUserSync";
 import FavoritesProvider from "./FavoritesContext";
 import { LogProvider } from "./logs/LogProvider";
 import RecentSearchesProvider from "./RecentSearchesContext";
@@ -46,19 +47,21 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
     <ThemeProvider>
       <AuthProvider>
         <ConvexProviderWithAuth client={convex} useAuth={useConvexAuth}>
-          <TranslationProvider>
-            <ConvexInitializer>
-              <ToastProvider>
-                <FavoritesProvider>
-                  <RecentSearchesProvider>
-                    <GestureHandlerRootView>
-                      <SafeAreaProvider>{children}</SafeAreaProvider>
-                    </GestureHandlerRootView>
-                  </RecentSearchesProvider>
-                </FavoritesProvider>
-              </ToastProvider>
-            </ConvexInitializer>
-          </TranslationProvider>
+          <ConvexUserSync>
+            <TranslationProvider>
+              <ConvexInitializer>
+                <ToastProvider>
+                  <FavoritesProvider>
+                    <RecentSearchesProvider>
+                      <GestureHandlerRootView>
+                        <SafeAreaProvider>{children}</SafeAreaProvider>
+                      </GestureHandlerRootView>
+                    </RecentSearchesProvider>
+                  </FavoritesProvider>
+                </ToastProvider>
+              </ConvexInitializer>
+            </TranslationProvider>
+          </ConvexUserSync>
         </ConvexProviderWithAuth>
       </AuthProvider>
     </ThemeProvider>

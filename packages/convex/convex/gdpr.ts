@@ -18,9 +18,8 @@ export const exportUserData = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error(
-        "Authentication required. Please sign in to export your data."
-      );
+      // Return null instead of throwing - allows UI to handle gracefully
+      return null;
     }
 
     // Find user by workosId (identity.subject contains the WorkOS user ID)
@@ -30,7 +29,7 @@ export const exportUserData = query({
       .unique();
 
     if (!user) {
-      throw new Error("User not found");
+      return null;
     }
 
     // Gather all user data

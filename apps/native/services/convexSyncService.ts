@@ -75,10 +75,11 @@ class ConvexSyncService {
   private async checkAndPerformInitialSync(): Promise<void> {
     const lastSync = await databaseService.getLastSyncTime();
     const gestureCount = await databaseService.getGestureCount();
+    const categoryCount = await databaseService.getCategoryCount();
 
     if (__DEV__) {
       console.log(
-        `[convexSyncService] Initialization check - lastSync: ${lastSync?.toISOString() || "null"}, gestureCount: ${gestureCount}`
+        `[convexSyncService] Initialization check - lastSync: ${lastSync?.toISOString() || "null"}, gestureCount: ${gestureCount}, categoryCount: ${categoryCount}`
       );
     }
 
@@ -103,7 +104,7 @@ class ConvexSyncService {
       return;
     }
 
-    if (this.shouldPerformInitialSync(gestureCount, lastSync)) {
+    if (this.shouldPerformInitialSync(gestureCount, categoryCount, lastSync)) {
       await this.performSync(true);
     } else if (__DEV__) {
       console.log("[convexSyncService] Initial sync not needed - data exists");
@@ -112,12 +113,22 @@ class ConvexSyncService {
 
   private shouldPerformInitialSync(
     gestureCount: number,
+    categoryCount: number,
     lastSync: Date | null
   ): boolean {
     if (gestureCount === 0) {
       if (__DEV__) {
         console.log(
           "[convexSyncService] Initial sync needed - no gestures in database"
+        );
+      }
+      return true;
+    }
+
+    if (categoryCount === 0) {
+      if (__DEV__) {
+        console.log(
+          "[convexSyncService] Initial sync needed - no categories in database"
         );
       }
       return true;
