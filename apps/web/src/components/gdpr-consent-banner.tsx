@@ -43,10 +43,10 @@ export function GDPRConsentBanner() {
   }
 
   return (
-    <div className="fixed right-0 bottom-0 left-0 z-50 border-gray-200 border-t bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+    <div className="fixed right-0 bottom-0 left-0 z-50 border-t bg-background p-4 shadow-lg border-border">
       <div className="container mx-auto max-w-6xl">
         <h3 className="mb-2 font-semibold text-lg">Privacy & Data Usage</h3>
-        <p className="mb-4 text-gray-600 text-sm dark:text-gray-400">
+        <p className="mb-4 text-sm text-muted-foreground">
           We respect your privacy and are committed to protecting your personal
           data. Learn more in our{" "}
           <Link className="text-blue-600 underline" to="/privacy">
