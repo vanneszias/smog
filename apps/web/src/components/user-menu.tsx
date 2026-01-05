@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
@@ -42,6 +43,13 @@ export default function UserMenu() {
         <DropdownMenuLabel>{t("web.userMenu.myAccount")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem>{user.email}</DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link className="flex items-center gap-2" to="/account">
+            <Settings className="h-4 w-4" />
+            {t("web.userMenu.accountSettings")}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Button
             className="w-full"

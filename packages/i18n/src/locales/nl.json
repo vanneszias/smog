@@ -271,6 +271,7 @@
     },
     "userMenu": {
       "myAccount": "Mijn Account",
+      "accountSettings": "Accountinstellingen",
       "signOut": "Uitloggen"
     },
     "recentSearches": {

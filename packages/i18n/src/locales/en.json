@@ -298,6 +298,7 @@
     },
     "userMenu": {
       "myAccount": "My Account",
+      "accountSettings": "Account Settings",
       "signOut": "Sign Out"
     },
     "recentSearches": {

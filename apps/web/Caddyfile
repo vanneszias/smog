@@ -9,8 +9,10 @@ http://smog.zias.be {
         X-Frame-Options "DENY"
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
+        # Permissions Policy - disable privacy sandbox features we don't use
+        Permissions-Policy "interest-cohort=(), attribution-reporting=(), private-state-token-issuance=(), private-state-token-redemption=()"
         # Content Security Policy - adjust as needed for your app
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.convex.cloud https://api.workos.com https://authkit.workos.com wss://*.convex.cloud; frame-ancestors 'none';"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.convex.cloud https://api.workos.com https://authkit.workos.com wss://*.convex.cloud https://cloudflareinsights.com; frame-ancestors 'none';"
     }
 
     handle_path /api* {
