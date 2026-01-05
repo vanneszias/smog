@@ -7,8 +7,8 @@ import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { createContext } from "@smog/api/context";
 import { appRouter } from "@smog/api/routers/index";
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import {
   Counter,
@@ -146,7 +146,7 @@ app.post("/auth/workos/callback", async (c) => {
 
     console.log("[WorkOS] Successfully authenticated user:", data.user.email);
 
-    // Store refresh token in httpOnly cookie (secure server-side storage)
+    // Store refresh token in httpOnly cookie (secure server-side storage for web)
     setCookie(c, REFRESH_TOKEN_COOKIE, data.refresh_token, {
       httpOnly: true,
       secure: isProduction,
@@ -155,9 +155,12 @@ app.post("/auth/workos/callback", async (c) => {
       maxAge: 60 * 60 * 24 * 30, // 30 days
     });
 
-    // Return user info (tokens are handled via cookies, not exposed to client)
+    // Return user info and tokens
+    // Web apps use cookies, native apps use the returned tokens
     return c.json({
       success: true,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
       user: {
         id: data.user.id,
         email: data.user.email,
@@ -235,9 +238,21 @@ app.post("/webhooks/mollie", handleMollieWebhook);
 
 // Refresh the access token using the stored refresh token
 // This proxies the refresh through the server so the refresh token stays secure
+// Supports both cookie-based (web) and body-based (native) refresh tokens
 app.post("/auth/token/refresh", async (c) => {
   try {
-    const refreshToken = getCookie(c, REFRESH_TOKEN_COOKIE);
+    // Try to get refresh token from cookie first (web), then from body (native)
+    let refreshToken = getCookie(c, REFRESH_TOKEN_COOKIE);
+
+    if (!refreshToken) {
+      // Try to get from request body (for native apps)
+      try {
+        const body = await c.req.json();
+        refreshToken = body.refreshToken;
+      } catch {
+        // No body or invalid JSON
+      }
+    }
 
     if (!refreshToken) {
       return c.json({ error: "No refresh token found" }, 401);
@@ -266,7 +281,7 @@ app.post("/auth/token/refresh", async (c) => {
     if (!response.ok) {
       const error = await response.text();
       console.error("[Auth] WorkOS refresh error:", error);
-      // Clear invalid refresh token
+      // Clear invalid refresh token (cookie only)
       deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: "/" });
       return c.json({ error: "Token refresh failed" }, 401);
     }
@@ -286,7 +301,7 @@ app.post("/auth/token/refresh", async (c) => {
       };
     };
 
-    // Store the new refresh token
+    // Store the new refresh token in cookie (for web clients)
     setCookie(c, REFRESH_TOKEN_COOKIE, data.refresh_token, {
       httpOnly: true,
       secure: isProduction,
@@ -295,9 +310,11 @@ app.post("/auth/token/refresh", async (c) => {
       maxAge: 60 * 60 * 24 * 30, // 30 days
     });
 
-    // Return the access token and user info (NOT the refresh token)
+    // Return the access token, refresh token, and user info
+    // Native apps need the refresh token to store it securely
     return c.json({
       accessToken: data.access_token,
+      refreshToken: data.refresh_token,
       user: {
         id: data.user.id,
         email: data.user.email,

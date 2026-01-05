@@ -3,11 +3,11 @@ import type React from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useConvexInit } from "@/hooks/useConvexInit";
-import { AuthProvider, useConvexAuth } from "./AuthContext";
 import { ConvexUserSync } from "./ConvexUserSync";
 import FavoritesProvider from "./FavoritesContext";
 import { LogProvider } from "./logs/LogProvider";
 import RecentSearchesProvider from "./RecentSearchesContext";
+import { SecureAuthProvider, useAuthForConvex } from "./SecureAuthProvider";
 import ThemeProvider from "./ThemeContext";
 import { ToastProvider } from "./ToastContext";
 import { TranslationProvider } from "./TranslationContext";
@@ -36,17 +36,18 @@ const ConvexInitializer: React.FC<{ children: React.ReactNode }> = ({
  * theme, translation, favorites, recent searches, and toast context globally.
  *
  * Authentication flow:
- * 1. AuthProvider handles OAuth flow with WorkOS
- * 2. ConvexProviderWithAuth receives tokens from AuthProvider via useConvexAuth
+ * 1. SecureAuthProvider handles OAuth flow with WorkOS via server
+ * 2. ConvexProviderWithAuth receives tokens via useAuthForConvex
  * 3. Convex validates the JWT using the auth.config.ts configuration
+ * 4. ConvexUserSync creates/syncs user records in Convex database
  */
 const AppProviders: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => (
   <LogProvider>
     <ThemeProvider>
-      <AuthProvider>
-        <ConvexProviderWithAuth client={convex} useAuth={useConvexAuth}>
+      <SecureAuthProvider>
+        <ConvexProviderWithAuth client={convex} useAuth={useAuthForConvex}>
           <ConvexUserSync>
             <TranslationProvider>
               <ConvexInitializer>
@@ -63,7 +64,7 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
             </TranslationProvider>
           </ConvexUserSync>
         </ConvexProviderWithAuth>
-      </AuthProvider>
+      </SecureAuthProvider>
     </ThemeProvider>
   </LogProvider>
 );

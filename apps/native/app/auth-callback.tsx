@@ -2,11 +2,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
-import { useAuth } from "@/context/AuthContext";
+import { useSecureAuth } from "@/context/SecureAuthProvider";
 
 export default function AuthCallback() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading } = useSecureAuth();
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {

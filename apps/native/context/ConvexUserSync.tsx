@@ -1,43 +1,40 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "@smog/convex";
-import { useAction, useMutation, useQuery } from "convex/react";
+import type { Id } from "@smog/convex/dataModel";
+import { useMutation, useQuery } from "convex/react";
 import type React from "react";
-import { useEffect } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { useAuth, useTokenContext } from "./AuthContext";
+import { useSecureAuth } from "./SecureAuthProvider";
 
 const GUEST_ID_KEY = "@smog_guest_id";
 
+type ConvexUserContextType = {
+  userId: Id<"users"> | null;
+};
+
+const ConvexUserContext = createContext<ConvexUserContextType>({
+  userId: null,
+});
+
 /**
  * Component that handles Convex user synchronization.
- * Must be rendered inside ConvexProviderWithAuth.
+ * Must be rendered inside ConvexProviderWithAuth and SecureAuthProvider.
  *
  * This component:
- * 1. Exchanges OAuth codes for tokens via Convex action
- * 2. Creates/migrates users in Convex
- * 3. Syncs user IDs back to AuthContext
+ * 1. Creates/migrates users in Convex database
+ * 2. Provides the Convex user ID to the app
  */
 export const ConvexUserSync: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { isOffline } = useNetworkStatus();
-  const {
-    authMode,
-    user,
-    guestId,
-    setUserId,
-    pendingOAuthCode,
-    clearPendingOAuthCode,
-    onTokenExchangeSuccess,
-    isLoading: isAuthLoading,
-  } = useAuth();
-  const { setRefreshTokenAction } = useTokenContext();
+  const { authMode, user, guestId, isLoading: isAuthLoading } = useSecureAuth();
+  const [userId, setUserId] = useState<Id<"users"> | null>(null);
 
-  // Convex mutations and actions
+  // Convex mutations
   const createUser = useMutation(api.users.createUser);
   const migrateGuestToUser = useMutation(api.users.migrateGuestToUser);
-  const exchangeCode = useAction(api.users.exchangeCodeForToken);
-  const refreshAccessTokenAction = useAction(api.users.refreshAccessToken);
 
   // Convex queries for user lookup
   const getUserByWorkOSId = useQuery(
@@ -48,57 +45,6 @@ export const ConvexUserSync: React.FC<{ children: React.ReactNode }> = ({
     api.users.getUserByGuestId,
     guestId ? { guestId } : "skip"
   );
-
-  // Register the refresh token action with AuthContext
-  useEffect(() => {
-    setRefreshTokenAction(refreshAccessTokenAction);
-    return () => setRefreshTokenAction(null);
-  }, [refreshAccessTokenAction, setRefreshTokenAction]);
-
-  // Handle OAuth code exchange
-  useEffect(() => {
-    if (!pendingOAuthCode || isOffline) {
-      return;
-    }
-
-    const exchangeCodeForUser = async () => {
-      try {
-        console.log("[ConvexUserSync] Exchanging code for user and tokens...");
-
-        const result = await exchangeCode({
-          code: pendingOAuthCode.code,
-          redirectUri: pendingOAuthCode.redirectUri,
-        });
-
-        await onTokenExchangeSuccess({
-          accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
-          user: {
-            id: result.workosId,
-            email: result.email,
-            firstName: result.firstName,
-            lastName: result.lastName,
-          },
-        });
-
-        clearPendingOAuthCode();
-      } catch (error) {
-        console.error(
-          "[ConvexUserSync] Error exchanging code for user:",
-          error
-        );
-        clearPendingOAuthCode();
-      }
-    };
-
-    exchangeCodeForUser();
-  }, [
-    pendingOAuthCode,
-    isOffline,
-    exchangeCode,
-    onTokenExchangeSuccess,
-    clearPendingOAuthCode,
-  ]);
 
   // Handle user creation/migration when auth state changes
   useEffect(() => {
@@ -115,6 +61,10 @@ export const ConvexUserSync: React.FC<{ children: React.ReactNode }> = ({
     }
 
     const handleAuthenticatedUser = async () => {
+      if (!user?.id) {
+        return;
+      }
+
       if (getUserByWorkOSId && getUserByWorkOSId !== null) {
         setUserId(getUserByWorkOSId._id);
         return;
@@ -123,13 +73,17 @@ export const ConvexUserSync: React.FC<{ children: React.ReactNode }> = ({
       if (getUserByWorkOSId === null) {
         const storedGuestId = await AsyncStorage.getItem(GUEST_ID_KEY);
         if (storedGuestId) {
+          console.log(
+            "[ConvexUserSync] Migrating guest to authenticated user..."
+          );
           const migratedUserId = await migrateGuestToUser({
             guestId: storedGuestId,
-            workosId: user?.id || "",
+            workosId: user.id,
           });
           setUserId(migratedUserId);
         } else {
-          const createdUserId = await createUser({ workosId: user?.id || "" });
+          console.log("[ConvexUserSync] Creating new authenticated user...");
+          const createdUserId = await createUser({ workosId: user.id });
           setUserId(createdUserId);
         }
       }
@@ -143,16 +97,20 @@ export const ConvexUserSync: React.FC<{ children: React.ReactNode }> = ({
       if (getUserByGuestId && getUserByGuestId !== null) {
         setUserId(getUserByGuestId._id);
       } else if (getUserByGuestId === null) {
+        console.log("[ConvexUserSync] Creating new guest user...");
         const newUserId = await createUser({ guestId });
         setUserId(newUserId);
       }
     };
 
     const handleUserSetup = async () => {
-      if (user?.id && authMode === "authenticated") {
+      if (authMode === "authenticated" && user?.id) {
         await handleAuthenticatedUser();
       } else if (authMode === "guest" && guestId) {
         await handleGuestUser();
+      } else {
+        // Not authenticated or guest - clear userId
+        setUserId(null);
       }
     };
 
@@ -167,8 +125,20 @@ export const ConvexUserSync: React.FC<{ children: React.ReactNode }> = ({
     isOffline,
     createUser,
     migrateGuestToUser,
-    setUserId,
   ]);
 
-  return <>{children}</>;
+  const value = useMemo(() => ({ userId }), [userId]);
+
+  return (
+    <ConvexUserContext.Provider value={value}>
+      {children}
+    </ConvexUserContext.Provider>
+  );
 };
+
+/**
+ * Hook to get the current Convex user ID
+ */
+export function useConvexUserId() {
+  return useContext(ConvexUserContext).userId;
+}

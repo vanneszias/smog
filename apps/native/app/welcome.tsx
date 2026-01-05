@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import GDPRConsentModal from "@/components/GDPRConsentModal";
 import Logo from "@/components/Logo";
-import { useAuth } from "@/context/AuthContext";
+import { useSecureAuth } from "@/context/SecureAuthProvider";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
@@ -22,7 +22,7 @@ const { height: screenHeight } = Dimensions.get("window");
 const isSmallScreen = screenHeight < 700;
 
 export default function WelcomeScreen() {
-  const { continueAsGuest, signIn, user } = useAuth();
+  const { continueAsGuest, signIn, user } = useSecureAuth();
   const { theme } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();

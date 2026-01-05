@@ -10,7 +10,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useConvexUserId } from "@/context/ConvexUserSync";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import gestureService from "@/services/gestureService";
 import offlineFavoritesService, {
@@ -47,7 +47,7 @@ type FavoritesProviderProps = {
 export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
   children,
 }) => {
-  const { userId } = useAuth();
+  const userId = useConvexUserId();
   const { isOffline } = useNetworkStatus();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [favoriteGestures, setFavoriteGestures] = useState<Gesture[]>([]);
