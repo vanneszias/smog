@@ -14,7 +14,7 @@ import { GDPRConsentBanner } from "@/components/gdpr-consent-banner";
 import Header from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/lib/auth-context";
+import { AuthProvider } from "@/lib/auth";
 import { FavoritesProvider } from "@/lib/favorites-context";
 import { link, type orpc } from "@/utils/orpc";
 import "../index.css";

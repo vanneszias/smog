@@ -1,4 +1,4 @@
-import { mollieClient } from "@smog/auth";
+import { mollieClient } from "@smog/auth/server";
 import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
 import { ConvexHttpClient } from "convex/browser";

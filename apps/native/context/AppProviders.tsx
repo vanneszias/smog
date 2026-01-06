@@ -3,11 +3,11 @@ import type React from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useConvexInit } from "@/hooks/useConvexInit";
+import { AuthProvider, useAuthForConvex } from "./AuthProvider";
 import { ConvexUserSync } from "./ConvexUserSync";
 import FavoritesProvider from "./FavoritesContext";
 import { LogProvider } from "./logs/LogProvider";
 import RecentSearchesProvider from "./RecentSearchesContext";
-import { SecureAuthProvider, useAuthForConvex } from "./SecureAuthProvider";
 import ThemeProvider from "./ThemeContext";
 import { ToastProvider } from "./ToastContext";
 import { TranslationProvider } from "./TranslationContext";
@@ -21,7 +21,7 @@ if (!convexUrl) {
 const convex = new ConvexReactClient(convexUrl);
 
 /**
- * Internal component to initialize Convex services
+ * Convex service initializer
  */
 const ConvexInitializer: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -32,13 +32,11 @@ const ConvexInitializer: React.FC<{ children: React.ReactNode }> = ({
 
 /**
  * AppProviders wraps all context providers for global usage.
- * Place this at the root of your app (e.g., in App.tsx) to provide
- * theme, translation, favorites, recent searches, and toast context globally.
  *
  * Authentication flow:
- * 1. SecureAuthProvider handles OAuth flow with WorkOS via server
+ * 1. AuthProvider handles OAuth flow with WorkOS via server
  * 2. ConvexProviderWithAuth receives tokens via useAuthForConvex
- * 3. Convex validates the JWT using the auth.config.ts configuration
+ * 3. Convex validates the JWT using auth.config.ts
  * 4. ConvexUserSync creates/syncs user records in Convex database
  */
 const AppProviders: React.FC<{ children: React.ReactNode }> = ({
@@ -46,7 +44,7 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
 }) => (
   <LogProvider>
     <ThemeProvider>
-      <SecureAuthProvider>
+      <AuthProvider>
         <ConvexProviderWithAuth client={convex} useAuth={useAuthForConvex}>
           <ConvexUserSync>
             <TranslationProvider>
@@ -64,7 +62,7 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
             </TranslationProvider>
           </ConvexUserSync>
         </ConvexProviderWithAuth>
-      </SecureAuthProvider>
+      </AuthProvider>
     </ThemeProvider>
   </LogProvider>
 );

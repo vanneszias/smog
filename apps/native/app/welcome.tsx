@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import GDPRConsentModal from "@/components/GDPRConsentModal";
 import Logo from "@/components/Logo";
-import { useSecureAuth } from "@/context/SecureAuthProvider";
+import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
@@ -22,7 +22,7 @@ const { height: screenHeight } = Dimensions.get("window");
 const isSmallScreen = screenHeight < 700;
 
 export default function WelcomeScreen() {
-  const { continueAsGuest, signIn, user } = useSecureAuth();
+  const { continueAsGuest, signIn, user } = useAuth();
   const { theme } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
@@ -73,7 +73,7 @@ export default function WelcomeScreen() {
       return;
     }
 
-    await continueAsGuest();
+    await continueAsGuest?.();
     router.replace("/(tabs)");
   };
 
@@ -105,7 +105,7 @@ export default function WelcomeScreen() {
         // Record consent in backend
         await recordGuestConsent({ guestId, analyticsConsent });
 
-        await continueAsGuest();
+        await continueAsGuest?.();
         router.replace("/(tabs)");
       } else if (pendingAction === "signin") {
         signIn();

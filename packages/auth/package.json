@@ -4,6 +4,9 @@
     ".": {
       "default": "./src/index.ts"
     },
+    "./server": {
+      "default": "./src/server.ts"
+    },
     "./*": {
       "default": "./src/*.ts"
     }

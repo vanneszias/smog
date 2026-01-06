@@ -1,4 +1,4 @@
-import { mollieClient } from "@smog/auth";
+import { mollieClient } from "@smog/auth/server";
 import type { Context } from "hono";
 import { processSuccessfulPayment } from "../services/sponsorship";
 

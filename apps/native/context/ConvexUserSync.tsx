@@ -1,144 +1,165 @@
+/**
+ * Convex User Sync for Native
+ *
+ * Creates and synchronizes users in the Convex database based on auth state.
+ * Handles both authenticated users (WorkOS) and guest users.
+ */
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
 import { useMutation, useQuery } from "convex/react";
-import type React from "react";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { useSecureAuth } from "./SecureAuthProvider";
+import { useAuth } from "./AuthProvider";
 
 const GUEST_ID_KEY = "@smog_guest_id";
 
 type ConvexUserContextType = {
   userId: Id<"users"> | null;
+  isLoading: boolean;
 };
 
 const ConvexUserContext = createContext<ConvexUserContextType>({
   userId: null,
+  isLoading: true,
 });
 
 /**
- * Component that handles Convex user synchronization.
- * Must be rendered inside ConvexProviderWithAuth and SecureAuthProvider.
- *
- * This component:
- * 1. Creates/migrates users in Convex database
- * 2. Provides the Convex user ID to the app
+ * Provider that syncs users to Convex database
+ * Must be rendered inside ConvexProviderWithAuth and AuthProvider
  */
-export const ConvexUserSync: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export function ConvexUserSync({ children }: { children: ReactNode }) {
   const { isOffline } = useNetworkStatus();
-  const { authMode, user, guestId, isLoading: isAuthLoading } = useSecureAuth();
+  const { authMode, user, guestId, isLoading: isAuthLoading } = useAuth();
   const [userId, setUserId] = useState<Id<"users"> | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
 
   // Convex mutations
   const createUser = useMutation(api.users.createUser);
   const migrateGuestToUser = useMutation(api.users.migrateGuestToUser);
 
-  // Convex queries for user lookup
-  const getUserByWorkOSId = useQuery(
+  // Convex queries
+  const workosId = user?.id;
+  const existingUserByWorkOS = useQuery(
     api.users.getUserByWorkOSId,
-    user?.id ? { workosId: user.id } : "skip"
+    workosId ? { workosId } : "skip"
   );
-  const getUserByGuestId = useQuery(
+  const existingUserByGuest = useQuery(
     api.users.getUserByGuestId,
     guestId ? { guestId } : "skip"
   );
 
-  // Handle user creation/migration when auth state changes
-  useEffect(() => {
-    if (isAuthLoading) {
+  // Sync authenticated user
+  const syncAuthenticatedUser = useCallback(async () => {
+    if (!workosId) {
       return;
     }
 
-    // Skip Convex operations when offline
-    if (isOffline) {
-      console.log(
-        "[ConvexUserSync] Offline mode - skipping Convex user operations"
-      );
+    // User exists in Convex
+    if (existingUserByWorkOS) {
+      setUserId(existingUserByWorkOS._id);
       return;
     }
 
-    const handleAuthenticatedUser = async () => {
-      if (!user?.id) {
-        return;
-      }
-
-      if (getUserByWorkOSId && getUserByWorkOSId !== null) {
-        setUserId(getUserByWorkOSId._id);
-        return;
-      }
-
-      if (getUserByWorkOSId === null) {
+    // Need to create user
+    if (existingUserByWorkOS === null) {
+      setIsInitializing(true);
+      try {
         const storedGuestId = await AsyncStorage.getItem(GUEST_ID_KEY);
-        if (storedGuestId) {
-          console.log(
-            "[ConvexUserSync] Migrating guest to authenticated user..."
-          );
-          const migratedUserId = await migrateGuestToUser({
-            guestId: storedGuestId,
-            workosId: user.id,
-          });
-          setUserId(migratedUserId);
-        } else {
-          console.log("[ConvexUserSync] Creating new authenticated user...");
-          const createdUserId = await createUser({ workosId: user.id });
-          setUserId(createdUserId);
-        }
+        const newUserId = storedGuestId
+          ? await migrateGuestToUser({ guestId: storedGuestId, workosId })
+          : await createUser({ workosId });
+        setUserId(newUserId);
+      } catch (error) {
+        console.error("[ConvexUserSync] Failed to sync user:", error);
+      } finally {
+        setIsInitializing(false);
       }
-    };
+    }
+  }, [workosId, existingUserByWorkOS, createUser, migrateGuestToUser]);
 
-    const handleGuestUser = async () => {
-      if (!guestId) {
-        return;
-      }
+  // Sync guest user
+  const syncGuestUser = useCallback(async () => {
+    if (!guestId) {
+      return;
+    }
 
-      if (getUserByGuestId && getUserByGuestId !== null) {
-        setUserId(getUserByGuestId._id);
-      } else if (getUserByGuestId === null) {
-        console.log("[ConvexUserSync] Creating new guest user...");
+    // Guest exists in Convex
+    if (existingUserByGuest) {
+      setUserId(existingUserByGuest._id);
+      return;
+    }
+
+    // Need to create guest
+    if (existingUserByGuest === null) {
+      setIsInitializing(true);
+      try {
         const newUserId = await createUser({ guestId });
         setUserId(newUserId);
+      } catch (error) {
+        console.error("[ConvexUserSync] Failed to create guest:", error);
+      } finally {
+        setIsInitializing(false);
       }
-    };
+    }
+  }, [guestId, existingUserByGuest, createUser]);
 
-    const handleUserSetup = async () => {
-      if (authMode === "authenticated" && user?.id) {
-        await handleAuthenticatedUser();
-      } else if (authMode === "guest" && guestId) {
-        await handleGuestUser();
-      } else {
-        // Not authenticated or guest - clear userId
-        setUserId(null);
-      }
-    };
+  // Handle auth state changes
+  useEffect(() => {
+    if (isAuthLoading || isInitializing || isOffline) {
+      return;
+    }
 
-    handleUserSetup().catch(console.error);
+    if (authMode === "authenticated") {
+      syncAuthenticatedUser();
+    } else if (authMode === "guest") {
+      syncGuestUser();
+    } else {
+      setUserId(null);
+    }
   }, [
-    user,
     authMode,
-    guestId,
-    getUserByWorkOSId,
-    getUserByGuestId,
     isAuthLoading,
     isOffline,
-    createUser,
-    migrateGuestToUser,
+    isInitializing,
+    syncAuthenticatedUser,
+    syncGuestUser,
   ]);
 
-  const value = useMemo(() => ({ userId }), [userId]);
+  const value = useMemo(
+    () => ({
+      userId,
+      isLoading: isAuthLoading || isInitializing,
+    }),
+    [userId, isAuthLoading, isInitializing]
+  );
 
   return (
     <ConvexUserContext.Provider value={value}>
       {children}
     </ConvexUserContext.Provider>
   );
-};
+}
 
 /**
- * Hook to get the current Convex user ID
+ * Hook to get the current Convex user context
  */
-export function useConvexUserId() {
+export function useConvexUser() {
+  return useContext(ConvexUserContext);
+}
+
+/**
+ * Hook to get just the Convex user ID
+ */
+export function useConvexUserId(): Id<"users"> | null {
   return useContext(ConvexUserContext).userId;
 }

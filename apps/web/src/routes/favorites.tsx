@@ -4,7 +4,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/lib/auth";
+import { useConvexUserId } from "@/lib/convex-user-sync";
 import { useFavorites } from "@/lib/favorites-context";
 import { client } from "@/utils/orpc";
 
@@ -15,7 +16,8 @@ export const Route = createFileRoute("/favorites")({
 function FavoritesComponent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAuthenticated, convexUserId } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const convexUserId = useConvexUserId();
   const { favoriteIds, toggleFavorite } = useFavorites();
   const [favoriteGestures, setFavoriteGestures] = useState<GestureCardData[]>(
     []

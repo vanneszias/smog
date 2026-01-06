@@ -9,7 +9,8 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { client } from "../utils/orpc";
-import { useAuth } from "./auth-context";
+import { useAuth } from "./auth";
+import { useConvexUserId } from "./convex-user-sync";
 
 type FavoritesContextType = {
   favoriteIds: string[];
@@ -25,46 +26,10 @@ const FavoritesContext = createContext<FavoritesContextType | undefined>(
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
-  const { isAuthenticated, convexUserId, setConvexUserId } = useAuth();
-  const [isInitializing, setIsInitializing] = useState(false);
-  const [initError, setInitError] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const convexUserId = useConvexUserId();
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Fetch or create Convex user when authenticated
-  useEffect(() => {
-    async function initializeUser() {
-      if (isAuthenticated && !convexUserId && !isInitializing && !initError) {
-        setIsInitializing(true);
-        try {
-          const user = await client.users.getOrCreateUser();
-          if (user?._id) {
-            setConvexUserId(user._id);
-          }
-        } catch (error) {
-          console.error("Failed to initialize user:", error);
-          // Prevent infinite retries on auth errors
-          setInitError(true);
-        } finally {
-          setIsInitializing(false);
-        }
-      }
-    }
-    initializeUser();
-  }, [
-    isAuthenticated,
-    convexUserId,
-    setConvexUserId,
-    isInitializing,
-    initError,
-  ]);
-
-  // Reset error state when auth state changes (e.g., user signs out and back in)
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setInitError(false);
-    }
-  }, [isAuthenticated]);
 
   // Fetch favorites
   const fetchFavorites = useCallback(async () => {
@@ -89,6 +54,13 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchFavorites();
   }, [fetchFavorites]);
+
+  // Clear favorites when user signs out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setFavoriteIds([]);
+    }
+  }, [isAuthenticated]);
 
   const isFavorite = useCallback(
     (gestureId: string) => favoriteIds.includes(gestureId),

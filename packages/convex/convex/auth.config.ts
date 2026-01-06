@@ -1,32 +1,37 @@
 /**
- * Convex Auth Configuration for WorkOS AuthKit
+ * Convex Auth Configuration for WorkOS
  *
- * This configuration enables Convex to validate JWTs issued by WorkOS.
- * The WORKOS_CLIENT_ID environment variable must be set in the Convex dashboard.
+ * Configures JWT validation for WorkOS tokens. Convex validates tokens
+ * using the JWKS endpoint provided by WorkOS.
  *
- * @see https://docs.convex.dev/auth/authkit
+ * Required environment variable in Convex dashboard:
+ * - WORKOS_CLIENT_ID
  */
 
 const clientId = process.env.WORKOS_CLIENT_ID;
 
-const authConfig = {
+if (!clientId) {
+  console.warn(
+    "[Auth] WORKOS_CLIENT_ID not set - authentication will not work"
+  );
+}
+
+export default {
   providers: [
     {
-      // SSO provider configuration
+      // WorkOS User Management JWT provider
+      type: "customJwt",
+      issuer: `https://api.workos.com/user_management/${clientId}`,
+      algorithm: "RS256",
+      jwks: `https://api.workos.com/sso/jwks/${clientId}`,
+    },
+    {
+      // WorkOS SSO JWT provider (for enterprise SSO flows)
       type: "customJwt",
       issuer: "https://api.workos.com/",
       algorithm: "RS256",
       applicationID: clientId,
       jwks: `https://api.workos.com/sso/jwks/${clientId}`,
     },
-    {
-      // User Management provider configuration
-      type: "customJwt",
-      issuer: `https://api.workos.com/user_management/${clientId}`,
-      algorithm: "RS256",
-      jwks: `https://api.workos.com/sso/jwks/${clientId}`,
-    },
   ],
 };
-
-export default authConfig;

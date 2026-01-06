@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import BottomSheet from "@/components/bottom-sheet/BottomSheet";
 import BaseButton from "@/components/common/BaseButton";
-import { useSecureAuth } from "@/context/SecureAuthProvider";
+import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
 import { useToast } from "@/context/ToastContext";
 import { useTranslation } from "@/context/TranslationContext";
@@ -30,7 +30,7 @@ import {
 } from "@/services/analyticsService";
 
 export default function AccountSettingsScreen() {
-  const { user, signOut } = useSecureAuth();
+  const { user, signOut } = useAuth();
   const { theme } = useTheme();
   const { t } = useTranslation();
   const { showToast } = useToast();

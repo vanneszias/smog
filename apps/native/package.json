@@ -17,7 +17,6 @@
     "preset": "jest-expo"
   },
   "dependencies": {
-    "@clerk/clerk-expo": "^2.19.10",
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^5.2.8",
@@ -28,6 +27,7 @@
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/native": "^7.1.8",
     "@shopify/flash-list": "2.0.2",
+    "@smog/auth": "workspace:*",
     "@smog/convex": "workspace:*",
     "@smog/i18n": "workspace:*",
     "@smog/styles": "workspace:*",

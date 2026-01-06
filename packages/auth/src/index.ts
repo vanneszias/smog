@@ -1,11 +1,56 @@
-// Export Mollie client for payment handling
-export { mollieClient } from "./lib/payments";
+/**
+ * @smog/auth - Shared authentication package
+ *
+ * This package provides unified authentication utilities for the Smog monorepo,
+ * including WorkOS integration, token handling, and type definitions.
+ *
+ * ## Usage
+ *
+ * ### Types (all platforms)
+ * ```ts
+ * import type { WorkOSUser, AuthState, AuthContextType } from "@smog/auth";
+ * ```
+ *
+ * ### Config (all platforms)
+ * ```ts
+ * import { getWorkOSConfig, buildAuthorizationUrl, WORKOS_ENDPOINTS } from "@smog/auth";
+ * ```
+ *
+ * ### Token utilities (all platforms)
+ * ```ts
+ * import { isTokenExpired, getTokenExpiry, generateGuestId } from "@smog/auth";
+ * ```
+ *
+ * ### Server utilities (server-side only!)
+ * ```ts
+ * import { exchangeCodeForTokens, refreshAccessToken } from "@smog/auth/server";
+ * ```
+ */
 
-// WorkOS configuration
-export const workosConfig = {
-  clientId: process.env.WORKOS_CLIENT_ID || "",
-  clientSecret: process.env.WORKOS_CLIENT_SECRET || "",
-  redirectUri: process.env.WORKOS_REDIRECT_URI || "",
-  authorizationEndpoint: "https://api.workos.com/user_management/authorize",
-  tokenEndpoint: "https://api.workos.com/user_management/authenticate",
-};
+// Configuration
+export {
+  buildAuthorizationUrl,
+  getWorkOSConfig,
+  WORKOS_ENDPOINTS,
+  type WorkOSConfig,
+} from "./config";
+
+// Token utilities
+export {
+  generateGuestId,
+  getTokenExpiry,
+  getTokenSubject,
+  isTokenExpired,
+  type JWTPayload,
+  parseJWT,
+} from "./tokens";
+// Types
+export type {
+  AuthActions,
+  AuthContextType,
+  AuthMode,
+  AuthState,
+  ConvexAuthState,
+  TokenResponse,
+  WorkOSUser,
+} from "./types";

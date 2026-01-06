@@ -15,7 +15,7 @@ import {
 import GlobalOfflineBanner from "@/components/common/GlobalOfflineBanner";
 import RiveSplashScreen from "@/components/RiveSplashScreen";
 import AppProviders from "@/context/AppProviders";
-import { useSecureAuth } from "@/context/SecureAuthProvider";
+import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
 // Initialize i18n configuration
 import "@/utils/i18n";
@@ -121,7 +121,7 @@ function AuthenticatedLayout() {
 }
 
 function RootLayoutNav() {
-  const { isLoading, isAuthenticated, isGuest, authMode } = useSecureAuth();
+  const { isLoading, isAuthenticated, isGuest, authMode } = useAuth();
   const router = useRouter();
   const [hasNavigated, setHasNavigated] = useState(false);
   const prevAuthMode = useRef(authMode);

@@ -1,6 +1,73 @@
-import { v } from "convex/values";
-import { action, mutation, query } from "./_generated/server";
+/**
+ * User Management Functions
+ *
+ * Handles user CRUD operations in Convex. Users are created and synced
+ * by the client apps after successful WorkOS authentication.
+ */
 
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+
+// =============================================================================
+// User Type (for return values)
+// =============================================================================
+
+const userReturnType = v.object({
+  _id: v.id("users"),
+  _creationTime: v.number(),
+  workosId: v.optional(v.string()),
+  guestId: v.optional(v.string()),
+  role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
+  createdAt: v.number(),
+  lastActiveAt: v.number(),
+});
+
+// =============================================================================
+// User Queries
+// =============================================================================
+
+/**
+ * Get user by their Convex ID
+ */
+export const getUserById = query({
+  args: { userId: v.id("users") },
+  returns: v.union(userReturnType, v.null()),
+  handler: async (ctx, args) => await ctx.db.get(args.userId),
+});
+
+/**
+ * Get user by their WorkOS ID
+ */
+export const getUserByWorkOSId = query({
+  args: { workosId: v.string() },
+  returns: v.union(userReturnType, v.null()),
+  handler: async (ctx, args) =>
+    await ctx.db
+      .query("users")
+      .withIndex("by_workos_id", (q) => q.eq("workosId", args.workosId))
+      .unique(),
+});
+
+/**
+ * Get user by their guest ID
+ */
+export const getUserByGuestId = query({
+  args: { guestId: v.string() },
+  returns: v.union(userReturnType, v.null()),
+  handler: async (ctx, args) =>
+    await ctx.db
+      .query("users")
+      .withIndex("by_guest_id", (q) => q.eq("guestId", args.guestId))
+      .unique(),
+});
+
+// =============================================================================
+// User Mutations
+// =============================================================================
+
+/**
+ * Create a new user (authenticated or guest)
+ */
 export const createUser = mutation({
   args: {
     workosId: v.optional(v.string()),
@@ -9,60 +76,19 @@ export const createUser = mutation({
   returns: v.id("users"),
   handler: async (ctx, args) => {
     const now = Date.now();
-
-    const userId = await ctx.db.insert("users", {
+    return await ctx.db.insert("users", {
       workosId: args.workosId,
       guestId: args.guestId,
       createdAt: now,
       lastActiveAt: now,
     });
-
-    return userId;
   },
 });
 
-export const getUserByWorkOSId = query({
-  args: { workosId: v.string() },
-  returns: v.union(
-    v.object({
-      _id: v.id("users"),
-      _creationTime: v.number(),
-      workosId: v.optional(v.string()),
-      guestId: v.optional(v.string()),
-      role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
-      createdAt: v.number(),
-      lastActiveAt: v.number(),
-    }),
-    v.null()
-  ),
-  handler: async (ctx, args) =>
-    await ctx.db
-      .query("users")
-      .withIndex("by_workos_id", (q) => q.eq("workosId", args.workosId))
-      .unique(),
-});
-
-export const getUserByGuestId = query({
-  args: { guestId: v.string() },
-  returns: v.union(
-    v.object({
-      _id: v.id("users"),
-      _creationTime: v.number(),
-      workosId: v.optional(v.string()),
-      guestId: v.optional(v.string()),
-      role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
-      createdAt: v.number(),
-      lastActiveAt: v.number(),
-    }),
-    v.null()
-  ),
-  handler: async (ctx, args) =>
-    await ctx.db
-      .query("users")
-      .withIndex("by_guest_id", (q) => q.eq("guestId", args.guestId))
-      .unique(),
-});
-
+/**
+ * Migrate a guest user to an authenticated user
+ * Links the guest's data to their WorkOS account
+ */
 export const migrateGuestToUser = mutation({
   args: {
     guestId: v.string(),
@@ -79,14 +105,15 @@ export const migrateGuestToUser = mutation({
       .unique();
 
     if (guestUser) {
-      // Update existing guest user with WorkOS ID
+      // Update existing guest with WorkOS ID
       await ctx.db.patch(guestUser._id, {
         workosId: args.workosId,
         lastActiveAt: now,
       });
       return guestUser._id;
     }
-    // Create new user with WorkOS ID (guest had no favorites to migrate)
+
+    // No guest found - create new user with both IDs
     return await ctx.db.insert("users", {
       workosId: args.workosId,
       guestId: args.guestId,
@@ -96,156 +123,52 @@ export const migrateGuestToUser = mutation({
   },
 });
 
+/**
+ * Update user's last active timestamp
+ */
 export const updateLastActive = mutation({
   args: { userId: v.id("users") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.userId, {
-      lastActiveAt: Date.now(),
-    });
+    await ctx.db.patch(args.userId, { lastActiveAt: Date.now() });
     return null;
   },
 });
 
-export const exchangeCodeForToken = action({
+/**
+ * Update user's role
+ */
+export const updateUserRole = mutation({
   args: {
-    code: v.string(),
-    redirectUri: v.string(),
+    userId: v.id("users"),
+    role: v.union(v.literal("user"), v.literal("admin")),
   },
-  returns: v.object({
-    workosId: v.string(),
-    email: v.string(),
-    firstName: v.optional(v.string()),
-    lastName: v.optional(v.string()),
-    accessToken: v.string(),
-    refreshToken: v.optional(v.string()),
-  }),
-  handler: async (_ctx, args) => {
-    const clientId = process.env.WORKOS_CLIENT_ID;
-    const clientSecret = process.env.WORKOS_CLIENT_SECRET;
-
-    if (!(clientId && clientSecret)) {
-      throw new Error("WorkOS credentials not configured");
-    }
-
-    // Exchange code for user information and tokens
-    const response = await fetch(
-      "https://api.workos.com/user_management/authenticate",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          client_id: clientId,
-          client_secret: clientSecret,
-          code: args.code,
-          grant_type: "authorization_code",
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to authenticate: ${error}`);
-    }
-
-    const data = (await response.json()) as {
-      user: {
-        id: string;
-        email: string;
-        first_name?: string;
-        last_name?: string;
-      };
-      access_token: string;
-      refresh_token?: string;
-    };
-
-    return {
-      workosId: data.user.id,
-      email: data.user.email,
-      firstName: data.user.first_name,
-      lastName: data.user.last_name,
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-    };
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, { role: args.role });
+    return null;
   },
 });
 
-// Refresh access token using refresh token
-export const refreshAccessToken = action({
-  args: {
-    refreshToken: v.string(),
-  },
-  returns: v.object({
-    accessToken: v.string(),
-    refreshToken: v.optional(v.string()),
-  }),
-  handler: async (_ctx, args) => {
-    const clientId = process.env.WORKOS_CLIENT_ID;
-    const clientSecret = process.env.WORKOS_CLIENT_SECRET;
+// =============================================================================
+// Admin Queries
+// =============================================================================
 
-    if (!(clientId && clientSecret)) {
-      throw new Error("WorkOS credentials not configured");
-    }
-
-    const response = await fetch(
-      "https://api.workos.com/user_management/authenticate",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          client_id: clientId,
-          client_secret: clientSecret,
-          refresh_token: args.refreshToken,
-          grant_type: "refresh_token",
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to refresh token: ${error}`);
-    }
-
-    const data = (await response.json()) as {
-      access_token: string;
-      refresh_token?: string;
-    };
-
-    return {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-    };
-  },
-});
-
-// Admin queries and mutations
+/**
+ * List all users (admin only)
+ */
 export const listAllUsers = query({
   args: {
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
   },
   returns: v.object({
-    users: v.array(
-      v.object({
-        _id: v.id("users"),
-        _creationTime: v.number(),
-        workosId: v.optional(v.string()),
-        guestId: v.optional(v.string()),
-        role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
-        createdAt: v.number(),
-        lastActiveAt: v.number(),
-      })
-    ),
+    users: v.array(userReturnType),
     hasMore: v.boolean(),
     nextCursor: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
     const limit = args.limit || 50;
-
     const users = await ctx.db
       .query("users")
       .order("desc")
@@ -262,53 +185,15 @@ export const listAllUsers = query({
   },
 });
 
+/**
+ * List all admin users
+ */
 export const listAdmins = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("users"),
-      _creationTime: v.number(),
-      workosId: v.optional(v.string()),
-      guestId: v.optional(v.string()),
-      role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
-      createdAt: v.number(),
-      lastActiveAt: v.number(),
-    })
-  ),
+  returns: v.array(userReturnType),
   handler: async (ctx) =>
     await ctx.db
       .query("users")
       .withIndex("by_role", (q) => q.eq("role", "admin"))
       .collect(),
-});
-
-export const updateUserRole = mutation({
-  args: {
-    userId: v.id("users"),
-    role: v.union(v.literal("user"), v.literal("admin")),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.userId, {
-      role: args.role,
-    });
-    return null;
-  },
-});
-
-export const getUserById = query({
-  args: { userId: v.id("users") },
-  returns: v.union(
-    v.object({
-      _id: v.id("users"),
-      _creationTime: v.number(),
-      workosId: v.optional(v.string()),
-      guestId: v.optional(v.string()),
-      role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
-      createdAt: v.number(),
-      lastActiveAt: v.number(),
-    }),
-    v.null()
-  ),
-  handler: async (ctx, args) => await ctx.db.get(args.userId),
 });
