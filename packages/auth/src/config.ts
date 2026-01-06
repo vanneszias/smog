@@ -28,23 +28,24 @@ export type WorkOSConfig = {
 
 /**
  * Get WorkOS config from environment variables
- * Works in both Node.js and browser environments
+ *
+ * Usage:
+ * - Server: Pass process.env explicitly: getWorkOSConfig(process.env)
+ * - Native: Reads from process.env automatically (Expo injects EXPO_PUBLIC_*)
+ * - Web: Pass env vars explicitly or read directly via import.meta.env in your app
+ *
+ * Note: import.meta.env is NOT used here as it's not supported in React Native/Hermes.
+ * Web apps should read import.meta.env directly and pass values to this function.
  */
 export function getWorkOSConfig(
   env?: Record<string, string | undefined>
 ): WorkOSConfig {
-  // Allow passing env vars directly (for Node.js/server)
-  // Fall back to import.meta.env (Vite) or process.env (Expo/Node)
   const getVar = (key: string): string | undefined => {
+    // Check explicitly passed env first
     if (env?.[key]) {
       return env[key];
     }
-    const envValue = (
-      import.meta as unknown as Record<string, Record<string, string>>
-    ).env?.[key];
-    if (typeof import.meta !== "undefined" && envValue) {
-      return envValue;
-    }
+    // Fall back to process.env (works in Node.js and React Native via Expo)
     if (typeof process !== "undefined" && process.env?.[key]) {
       return process.env[key];
     }
