@@ -6,7 +6,7 @@ http://smog.zias.be {
         X-Content-Type-Options "nosniff"
         X-Frame-Options "SAMEORIGIN"
         Referrer-Policy "strict-origin-when-cross-origin"
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https://*.mux.com https://stream.mux.com; font-src 'self' data:; connect-src 'self' https://*.convex.cloud https://api.workos.com https://authkit.workos.com wss://*.convex.cloud https://cloudflareinsights.com https://*.posthog.com https://*.mux.com; frame-ancestors 'self';"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' blob: https://*.mux.com https://stream.mux.com; font-src 'self' data:; connect-src 'self' https://*.convex.cloud https://api.workos.com https://authkit.workos.com wss://*.convex.cloud https://cloudflareinsights.com https://*.posthog.com https://*.mux.com https://inferred.litix.io; frame-ancestors 'self';"
     }
     handle_path /api* {
         reverse_proxy server:3000
