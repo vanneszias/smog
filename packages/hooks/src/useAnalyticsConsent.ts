@@ -25,34 +25,43 @@ function getStoredConsent(): AnalyticsConsentStatus | null {
   if (typeof window === "undefined") {
     return null;
   }
-  const consent = localStorage.getItem("smog_analytics_consent");
-  if (consent === null) {
+  try {
+    const consent = localStorage.getItem("smog_analytics_consent");
+    if (consent === null) {
+      return null;
+    }
+    return {
+      hasConsent: true,
+      analyticsConsent: consent === "true",
+      marketingConsent:
+        localStorage.getItem("smog_marketing_consent") === "true",
+      consentDate: localStorage.getItem("smog_consent_date") || undefined,
+    };
+  } catch {
     return null;
   }
-  return {
-    hasConsent: true,
-    analyticsConsent: consent === "true",
-    marketingConsent: localStorage.getItem("smog_marketing_consent") === "true",
-    consentDate: localStorage.getItem("smog_consent_date") || undefined,
-  };
 }
 
 export { getStoredConsent };
 
 function saveConsent(status: AnalyticsConsentStatus): void {
-  localStorage.setItem(
-    "smog_analytics_consent",
-    status.analyticsConsent.toString()
-  );
-  localStorage.setItem(
-    "smog_marketing_consent",
-    status.marketingConsent.toString()
-  );
-  localStorage.setItem(
-    "smog_consent_date",
-    status.consentDate || new Date().toISOString()
-  );
-  localStorage.setItem("smog_gdpr_consent", "accepted");
+  try {
+    localStorage.setItem(
+      "smog_analytics_consent",
+      status.analyticsConsent.toString()
+    );
+    localStorage.setItem(
+      "smog_marketing_consent",
+      status.marketingConsent.toString()
+    );
+    localStorage.setItem(
+      "smog_consent_date",
+      status.consentDate || new Date().toISOString()
+    );
+    localStorage.setItem("smog_gdpr_consent", "accepted");
+  } catch {
+    console.debug("[Analytics] Unable to persist consent");
+  }
 }
 
 export type UseAnalyticsConsentOptions = {

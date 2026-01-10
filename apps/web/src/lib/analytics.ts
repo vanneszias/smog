@@ -15,6 +15,11 @@ export const initializeAnalytics = () => {
   consent = getStoredConsent();
   const enabled = getAnalyticsEnabled();
 
+  if (!POSTHOG_API_KEY) {
+    console.log("[Analytics] PostHog skipped - no API key configured");
+    return;
+  }
+
   posthog.init(POSTHOG_API_KEY, {
     api_host: POSTHOG_HOST,
     capture_pageview: false,

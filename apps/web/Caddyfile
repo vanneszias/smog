@@ -1,20 +1,13 @@
 http://smog.zias.be {
     root * /srv
-    encode gzip
+    encode gzip zstd
 
-    # Security headers to mitigate XSS attacks
     header {
-        # Prevent XSS attacks
         X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY"
-        X-XSS-Protection "1; mode=block"
+        X-Frame-Options "SAMEORIGIN"
         Referrer-Policy "strict-origin-when-cross-origin"
-        # Permissions Policy - disable privacy sandbox features we don't use
-        Permissions-Policy "interest-cohort=(), attribution-reporting=(), private-state-token-issuance=(), private-state-token-redemption=()"
-        # Content Security Policy - adjust as needed for your app
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.convex.cloud https://api.workos.com https://authkit.workos.com wss://*.convex.cloud https://cloudflareinsights.com; frame-ancestors 'none';"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https://*.mux.com https://stream.mux.com; font-src 'self' data:; connect-src 'self' https://*.convex.cloud https://api.workos.com https://authkit.workos.com wss://*.convex.cloud https://cloudflareinsights.com https://*.posthog.com https://*.mux.com; frame-ancestors 'self';"
     }
-
     handle_path /api* {
         reverse_proxy server:3000
     }
@@ -30,7 +23,6 @@ http://smog.zias.be {
     handle /health {
         respond "OK" 200
     }
-
     handle {
         try_files {path} /index.html
         file_server
