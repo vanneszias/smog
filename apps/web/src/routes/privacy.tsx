@@ -145,12 +145,13 @@ function PrivacyPolicyPage() {
           </p>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.2 Analytics - PostHog (optional, native app only)
+            6.2 Analytics - PostHog (optional)
           </h3>
           <p>
-            If you consent, we use PostHog (EU-hosted) for usage analytics.
-            PostHog helps us understand how users interact with our app. You can
-            opt out at any time in settings. See PostHog Privacy Policy at:{" "}
+            If you consent, we use PostHog (EU-hosted) for usage analytics on
+            both our web and native applications. PostHog helps us understand
+            how users interact with our app. You can opt out at any time in
+            settings. See PostHog Privacy Policy at:{" "}
             <a
               className="text-blue-600 underline"
               href="https://posthog.com/privacy"

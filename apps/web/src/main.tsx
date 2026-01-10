@@ -4,6 +4,7 @@ import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 import ReactDOM from "react-dom/client";
 import "./lib/i18n";
 import Loader from "./components/loader";
+import { initializeAnalytics } from "./lib/analytics";
 import { AuthProvider, useAuthForConvex } from "./lib/auth";
 import { ConvexUserSync } from "./lib/convex-user-sync";
 import { FavoritesProvider } from "./lib/favorites-context";
@@ -56,6 +57,8 @@ const rootElement = document.getElementById("app");
 if (!rootElement) {
   throw new Error("Root element not found");
 }
+
+initializeAnalytics();
 
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);

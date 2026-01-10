@@ -86,17 +86,18 @@ export const autocaptureConfig = {
       string | number | boolean | null | undefined | string[]
     >
   ) => {
-    // Add useful properties for analysis
     const properties: Record<
       string,
       string | number | boolean | null | undefined | string[]
-    > = {};
+    > = {
+      platform: "native",
+    };
 
     if (name === "gestures/[id]" && params?.id) {
       properties.gesture_id = params.id;
     }
 
-    return Object.keys(properties).length > 0 ? properties : undefined;
+    return properties;
   },
 };
 
@@ -106,22 +107,26 @@ type AnalyticsProperties = Record<
   string | number | boolean | null | undefined | string[]
 >;
 
-// Helper function to filter out undefined values
-function filterProperties(
-  properties?: AnalyticsProperties
-): Record<string, string | number | boolean | null | string[]> | undefined {
-  if (!properties) {
-    return;
-  }
+const platformProperties = {
+  platform: "native" as const,
+};
 
+// Helper function to filter out undefined values and merge with base properties
+function buildEventProperties(
+  properties?: AnalyticsProperties
+): Record<string, string | number | boolean | null | string[]> {
   const filtered: Record<string, string | number | boolean | null | string[]> =
-    {};
-  for (const [key, value] of Object.entries(properties)) {
-    if (value !== undefined) {
-      filtered[key] = value;
+    {
+      ...platformProperties,
+    };
+  if (properties) {
+    for (const [key, value] of Object.entries(properties)) {
+      if (value !== undefined) {
+        filtered[key] = value;
+      }
     }
   }
-  return Object.keys(filtered).length > 0 ? filtered : undefined;
+  return filtered;
 }
 
 // Base event tracking function
@@ -132,7 +137,7 @@ export function trackEvent(event: string, properties?: AnalyticsProperties) {
   if (!posthogInstance) {
     return;
   }
-  posthogInstance.capture(event, filterProperties(properties));
+  posthogInstance.capture(event, buildEventProperties(properties));
 }
 
 // User identification
@@ -146,7 +151,7 @@ export function identifyUser(
   if (!posthogInstance) {
     return;
   }
-  posthogInstance.identify(distinctId, filterProperties(properties));
+  posthogInstance.identify(distinctId, buildEventProperties(properties));
 }
 
 export async function getDistinctId(): Promise<string> {
@@ -178,6 +183,7 @@ export function trackScreenView(
     return;
   }
   posthogInstance.screen(screenName, {
+    platform: "native",
     screen_name: screenName,
     ...properties,
   });

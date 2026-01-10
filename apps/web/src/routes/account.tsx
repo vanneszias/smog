@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { onConsentChange } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/account")({
@@ -89,13 +90,11 @@ function AccountContent() {
 
   const handleAnalyticsToggle = async (checked: boolean) => {
     try {
-      await updateConsent({
-        analyticsConsent: checked,
-        marketingConsent: consentStatus?.marketingConsent ?? false,
-      });
-
-      // Update local storage to match
-      localStorage.setItem("smog_analytics_consent", checked.toString());
+      if (checked) {
+        await updateAnalyticsConsent(true);
+      } else {
+        await updateAnalyticsConsent(false);
+      }
 
       toast.success(
         checked
@@ -107,6 +106,18 @@ function AccountContent() {
       toast.error("Failed to update analytics preference. Please try again.");
     }
   };
+
+  async function updateAnalyticsConsent(enabled: boolean) {
+    await updateConsent({
+      analyticsConsent: enabled,
+      marketingConsent: consentStatus?.marketingConsent ?? false,
+    });
+    onConsentChange({
+      hasConsent: true,
+      analyticsConsent: enabled,
+      marketingConsent: false,
+    });
+  }
 
   const handleExportData = async () => {
     if (!exportUserData) {

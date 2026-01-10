@@ -2,63 +2,12 @@ import "dotenv/config";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import {
-  Counter,
-  collectDefaultMetrics,
-  Gauge,
-  Histogram,
-  register,
-} from "prom-client";
 import { initQueue, videoQueue } from "./queue";
 
 const app = new Hono();
 
-// Initialize Prometheus metrics
-collectDefaultMetrics({ register });
-
-// Custom metrics
-const httpRequestDuration = new Histogram({
-  name: "http_request_duration_seconds",
-  help: "Duration of HTTP requests in seconds",
-  labelNames: ["method", "route", "status_code"],
-  registers: [register],
-});
-
-const httpRequestTotal = new Counter({
-  name: "http_requests_total",
-  help: "Total number of HTTP requests",
-  labelNames: ["method", "route", "status_code"],
-  registers: [register],
-});
-
-const _videoJobsTotal = new Counter({
-  name: "video_jobs_total",
-  help: "Total number of video composition jobs",
-  labelNames: ["status"],
-  registers: [register],
-});
-
-const _videoJobsActive = new Gauge({
-  name: "video_jobs_active",
-  help: "Number of currently active video jobs",
-  registers: [register],
-});
-
 // Middleware
 app.use(logger());
-
-// Metrics middleware
-app.use("*", async (c, next) => {
-  const start = Date.now();
-  await next();
-  const duration = (Date.now() - start) / 1000;
-  const route = c.req.path;
-  const method = c.req.method;
-  const status = c.res.status;
-
-  httpRequestDuration.observe({ method, route, status_code: status }, duration);
-  httpRequestTotal.inc({ method, route, status_code: status });
-});
 
 app.use(
   "/*",
@@ -163,8 +112,8 @@ app.get("/api/compose/status/:jobId", async (c) => {
   }
 });
 
-// Queue metrics endpoint
-app.get("/api/queue/metrics", async (c) => {
+// Queue info endpoint
+app.get("/api/queue/status", async (c) => {
   try {
     const waiting = await videoQueue.getWaitingCount();
     const active = await videoQueue.getActiveCount();
@@ -178,21 +127,15 @@ app.get("/api/queue/metrics", async (c) => {
       failed,
     });
   } catch (error) {
-    console.error("[Video Worker] Metrics error:", error);
+    console.error("[Video Worker] Queue status error:", error);
     return c.json(
       {
-        error: "Failed to get queue metrics",
+        error: "Failed to get queue status",
         details: error instanceof Error ? error.message : "Unknown error",
       },
       500
     );
   }
-});
-
-// Prometheus metrics endpoint
-app.get("/metrics", async (c) => {
-  c.header("Content-Type", register.contentType);
-  return c.text(await register.metrics());
 });
 
 // Initialize queue on startup

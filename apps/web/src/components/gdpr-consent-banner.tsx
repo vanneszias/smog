@@ -1,40 +1,33 @@
+import { type AnalyticsConsentStatus, useAnalyticsConsent } from "@smog/hooks";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { onConsentChange } from "@/lib/analytics";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 
 export function GDPRConsentBanner() {
-  const [showBanner, setShowBanner] = useState(false);
-  const [analyticsConsent, setAnalyticsConsent] = useState(true);
+  const { grantConsent, revokeConsent, updateConsent, consent } =
+    useAnalyticsConsent({
+      onConsentChange: (enabled) => {
+        const newConsent: AnalyticsConsentStatus = {
+          hasConsent: true,
+          analyticsConsent: enabled,
+          marketingConsent: consent?.marketingConsent ?? false,
+          consentDate: new Date().toISOString(),
+        };
+        onConsentChange(newConsent);
+      },
+    });
 
-  useEffect(() => {
-    const consent = localStorage.getItem("smog_gdpr_consent");
-    if (!consent) {
-      setShowBanner(true);
-    }
-  }, []);
+  const [showBanner, setShowBanner] = useState(!consent?.hasConsent);
 
   const handleAcceptAll = () => {
-    localStorage.setItem("smog_gdpr_consent", "accepted");
-    localStorage.setItem("smog_analytics_consent", "true");
-    localStorage.setItem("smog_consent_version", "1.0");
-    localStorage.setItem("smog_consent_date", new Date().toISOString());
+    grantConsent();
     setShowBanner(false);
   };
 
-  const handleAcceptRequired = () => {
-    localStorage.setItem("smog_gdpr_consent", "accepted");
-    localStorage.setItem("smog_analytics_consent", "false");
-    localStorage.setItem("smog_consent_version", "1.0");
-    localStorage.setItem("smog_consent_date", new Date().toISOString());
-    setShowBanner(false);
-  };
-
-  const handleCustomize = () => {
-    localStorage.setItem("smog_gdpr_consent", "accepted");
-    localStorage.setItem("smog_analytics_consent", analyticsConsent.toString());
-    localStorage.setItem("smog_consent_version", "1.0");
-    localStorage.setItem("smog_consent_date", new Date().toISOString());
+  const handleCustomize = (analyticsEnabled: boolean) => {
+    updateConsent(analyticsEnabled, false);
     setShowBanner(false);
   };
 
@@ -62,8 +55,8 @@ export function GDPRConsentBanner() {
         <div className="mb-4 flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Switch
-              checked={analyticsConsent}
-              onCheckedChange={setAnalyticsConsent}
+              checked={consent?.analyticsConsent ?? false}
+              onCheckedChange={(checked) => handleCustomize(checked)}
             />
             <span className="text-sm">
               Usage Analytics (Help us improve the app)
@@ -73,10 +66,7 @@ export function GDPRConsentBanner() {
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleAcceptAll}>Accept All</Button>
-          <Button onClick={handleCustomize} variant="outline">
-            Save Preferences
-          </Button>
-          <Button onClick={handleAcceptRequired} variant="outline">
+          <Button onClick={() => revokeConsent()} variant="outline">
             Required Only
           </Button>
         </div>
