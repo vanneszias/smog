@@ -1,22 +1,21 @@
 # @smog/convex
 
-Shared Convex schema and generated types for all SMOG applications.
+Shared Convex schema and types for all SMOG apps.
 
 ## Usage
 
-### In Native App (React)
-```typescript
+### React Native/Web (Hooks)
+```ts
 import { api } from "@smog/convex";
-import type { Id } from "@smog/convex/dataModel";
 import { useQuery } from "convex/react";
 
-const gestures = useQuery(api.gestures.list, { 
-  paginationOpts: { numItems: 20, cursor: null } 
+const gestures = useQuery(api.gestures.list, {
+  paginationOpts: { numItems: 20, cursor: null }
 });
 ```
 
-### In Server/API (HTTP Client)
-```typescript
+### Server/API (HTTP Client)
+```ts
 import { api } from "@smog/convex";
 import { ConvexHttpClient } from "convex/browser";
 
@@ -24,23 +23,18 @@ const client = new ConvexHttpClient(process.env.CONVEX_URL);
 const result = await client.query(api.gestures.list, {...});
 ```
 
-## Development
+## Commands
 
 ```bash
-# Generate types
-bun run codegen
-
-# Watch for changes (requires deployment)
-bun run dev
-
-# Deploy to production
-bun run deploy
+bun codegen        # Generate types
+bun dev            # Watch for changes
+bun deploy         # Deploy to production
 ```
 
 ## Schema Files
 
-- `schema.ts` - Database schema definitions
+- `schema.ts` - Database schema
 - `categories.ts` - Category queries
 - `gestures.ts` - Gesture queries
-- `favorites.ts` - User favorites mutations/queries
-- `users.ts` - User management with WorkOS integration
+- `favorites.ts` - Favorites mutations/queries
+- `users.ts` - User management

@@ -1,163 +1,74 @@
-# Video Worker Service
+# Video Worker
 
-Handles video composition with FFmpeg and manages job queue using Redis/BullMQ.
+Video composition service using FFmpeg and BullMQ.
 
 ## Purpose
 
-This service processes video composition jobs:
+Processes sponsor overlay videos:
+1. Downloads from Mux
+2. Applies overlays (image + text)
+3. Composes with FFmpeg
+4. Uploads to Convex
 
-1. Downloads original videos from Mux
-2. Applies sponsor overlays (images + text)
-3. Composes final video with FFmpeg
-4. Uploads to Convex storage
+## Tech Stack
 
-## Architecture
+- **Queue**: BullMQ + Redis
+- **Processing**: FFmpeg
+- **Images**: Sharp
+- **Runtime**: Bun
 
-- **Queue System**: BullMQ + Redis for job management
-- **Video Processing**: FFmpeg for video composition
-- **Image Processing**: Sharp for overlay image handling
-- **Storage**: Convex for final video storage
-
-## Development
+## Commands
 
 ```bash
-# Install dependencies
-bun install
-
-# Run in development mode
-bun run dev
-
-# Build for production
-bun run build
-
-# Run production build
-bun run start
+bun dev            # Start dev server
+bun build          # Build with tsdown
+bun check-types    # Typecheck
 ```
 
-## Environment Variables
+## Environment
 
-```env
-NODE_ENV=production
-CONVEX_URL=your_convex_url
-MUX_TOKEN_ID=your_mux_token_id
-MUX_TOKEN_SECRET=your_mux_token_secret
-REDIS_HOST=localhost
-REDIS_PORT=6379
-VIDEO_COMPOSITION_CONCURRENCY=2
+Required:
+```
+CONVEX_URL=
+MUX_TOKEN_ID=
+MUX_TOKEN_SECRET=
+REDIS_HOST=
+REDIS_PORT=
+VIDEO_COMPOSITION_CONCURRENCY=
 ```
 
 ## API Endpoints
 
 ### POST /api/compose
-
-Start a video composition job.
-
-**Request Body:**
-```json
-{
-  "playbackId": "mux_playback_id",
-  "overlayImageUrl": "https://convex.dev/image.png",
-  "overlayText": "Sponsored by Company"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "jobId": "job-1234567890",
-  "message": "Video composition job queued"
-}
-```
+Start composition job.
 
 ### GET /api/compose/status/:jobId
-
-Check the status of a composition job.
-
-**Response:**
-```json
-{
-  "jobId": "job-1234567890",
-  "state": "completed",
-  "progress": 100,
-  "result": {
-    "composedVideoUrl": "https://convex.dev/composed.mp4"
-  }
-}
-```
+Check job status.
 
 ### GET /api/queue/metrics
-
-Get queue statistics.
-
-**Response:**
-```json
-{
-  "waiting": 5,
-  "active": 2,
-  "completed": 100,
-  "failed": 3
-}
-```
+Queue statistics.
 
 ### GET /health
+Health check.
 
-Health check endpoint.
+## Features
 
-## Implementation Status
+- Mux video download
+- Sharp image processing
+- FFmpeg video composition
+- Progress tracking
+- Queue integration
+- Job status tracking
 
-### ✅ Completed
-- Basic service structure
-- Queue setup with BullMQ  
-- API endpoints (compose, status, metrics)
-- Docker configuration with FFmpeg
-- Health checks
-- **Mux video download** ✅
-- **Sharp image processing** ✅
-- **FFmpeg video composition** ✅
-- **Mux direct upload** ✅
-- **Progress tracking** ✅
-- **Queue integration** ✅
-- **Job status tracking** ✅
-- **Frontend integration** ✅
-- **Video preview flow** ✅
-
-### 🎯 Ready for Testing
-The complete video composition pipeline is now fully implemented and ready for end-to-end testing with real videos.
-
-## Docker Deployment
-
-This service is automatically included in the docker-compose stack:
+## Docker
 
 ```bash
-# Build and start all services
 docker-compose up --build
-
-# View logs
 docker-compose logs -f video-worker
 ```
 
-## Resource Requirements
+## Requirements
 
-- **CPU**: 1-2 cores (more for higher concurrency)
-- **RAM**: 512MB-2GB depending on video size
-- **Disk**: Temporary space for video processing
-- **FFmpeg**: Full installation with codecs
-
-## Monitoring
-
-The service exposes metrics that can be scraped by Prometheus:
-
-- Queue depth and processing times
-- Job success/failure rates
-- FFmpeg processing duration
-- Redis connection status
-
-## Future Enhancements
-
-1. **GPU Acceleration**: Use FFmpeg with NVIDIA/AMD GPU support
-2. **Horizontal Scaling**: Multiple worker instances
-3. **Priority Queue**: VIP sponsor videos processed first
-4. **Webhook Notifications**: Notify on job completion
-5. **Video Preview**: Generate preview thumbnails
-6. **Batch Processing**: Handle multiple videos simultaneously
+- CPU: 1-2 cores
+- RAM: 512MB-2GB
+- FFmpeg with codecs
