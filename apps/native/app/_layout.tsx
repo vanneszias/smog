@@ -17,12 +17,13 @@ import RiveSplashScreen from "@/components/RiveSplashScreen";
 import AppProviders from "@/context/AppProviders";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
+import { useAutoSync } from "@/hooks/useAutoSync";
+import { useDbReady } from "@/hooks/useDbReady";
 // Initialize i18n configuration
 import "@/utils/i18n";
 
 // PostHog
 import { PostHogProvider } from "posthog-react-native";
-import { useAutoSync } from "@/hooks/useAutoSync";
 import posthog, {
   autocaptureConfig,
   initializeAnalytics,
@@ -123,6 +124,7 @@ function AuthenticatedLayout() {
 function RootLayoutNav() {
   const { isLoading, isAuthenticated, isGuest, authMode } = useAuth();
   const router = useRouter();
+  const { isReady: dbReady } = useDbReady();
   const [hasNavigated, setHasNavigated] = useState(false);
   const prevAuthMode = useRef(authMode);
 
@@ -141,16 +143,20 @@ function RootLayoutNav() {
   useEffect(() => {
     if (!(isLoading || hasNavigated)) {
       if (isAuthenticated || isGuest) {
-        console.log("User is authenticated/guest - initial navigation to tabs");
-        router.replace("/(tabs)");
-        setHasNavigated(true);
+        if (dbReady) {
+          console.log(
+            "User is authenticated/guest and db is ready - initial navigation to tabs"
+          );
+          router.replace("/(tabs)");
+          setHasNavigated(true);
+        }
       } else {
         console.log("User is not authenticated - initial navigation to auth");
         router.replace("/welcome");
         setHasNavigated(true);
       }
     }
-  }, [isLoading, isAuthenticated, isGuest, router, hasNavigated]);
+  }, [isLoading, isAuthenticated, isGuest, dbReady, router, hasNavigated]);
 
   // Reset navigation flag when auth mode actually changes (not immediately)
   useEffect(() => {
@@ -158,6 +164,20 @@ function RootLayoutNav() {
       setHasNavigated(false);
     }
   }, [authMode]);
+
+  // Navigate to tabs when db becomes ready for authenticated/guest users
+  useEffect(() => {
+    if (
+      (isAuthenticated || isGuest) &&
+      dbReady &&
+      !hasNavigated &&
+      !isLoading
+    ) {
+      console.log("DB became ready - navigating to tabs");
+      router.replace("/(tabs)");
+      setHasNavigated(true);
+    }
+  }, [dbReady, isAuthenticated, isGuest, hasNavigated, isLoading, router]);
 
   // Show loading while determining auth state
   if (isLoading) {

@@ -16,6 +16,7 @@ class ConvexSyncService {
   private isSyncing = false;
   private isInitializing = false;
   private isInitialized = false;
+  private isInitialSyncComplete = false;
   private lastSyncAttempt: Date | null = null;
   private syncInterval: NodeJS.Timeout | null = null;
 
@@ -85,6 +86,7 @@ class ConvexSyncService {
     const isOnline = networkService.isConnected();
 
     if (!isOnline) {
+      this.isInitialSyncComplete = gestureCount > 0;
       if (gestureCount > 0) {
         logger.log(
           "[convexSyncService] Offline mode - skipping initial sync, using cached data"
@@ -292,6 +294,10 @@ class ConvexSyncService {
 
     await databaseService.setLastSyncTime(new Date());
 
+    if (isInitialSync) {
+      this.isInitialSyncComplete = true;
+    }
+
     result.success = true;
     result.synced = gesturesData.length;
 
@@ -376,6 +382,24 @@ class ConvexSyncService {
     this.isSyncing = false;
     this.isInitialized = false;
     this.isInitializing = false;
+    this.isInitialSyncComplete = false;
+  }
+
+  /**
+   * Check if the database is ready for navigation
+   * Returns true if either initial sync is complete or there's existing data
+   */
+  async isReadyForNavigation(): Promise<boolean> {
+    if (this.isInitialSyncComplete) {
+      return true;
+    }
+
+    if (!this.isInitialized) {
+      return false;
+    }
+
+    const gestureCount = await databaseService.getGestureCount();
+    return gestureCount > 0;
   }
 }
 

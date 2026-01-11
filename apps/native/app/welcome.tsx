@@ -4,6 +4,7 @@ import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   StyleSheet,
@@ -17,6 +18,7 @@ import Logo from "@/components/Logo";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
+import { useDbReady } from "@/hooks/useDbReady";
 
 const { height: screenHeight } = Dimensions.get("window");
 const isSmallScreen = screenHeight < 700;
@@ -26,14 +28,23 @@ export default function WelcomeScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
+  const { isReady: dbReady } = useDbReady();
 
   const [showConsent, setShowConsent] = useState(false);
   const [hasCheckedConsent, setHasCheckedConsent] = useState(false);
   const [pendingAction, setPendingAction] = useState<"guest" | "signin" | null>(
     null
   );
+  const [pendingNavigation, setPendingNavigation] = useState(false);
 
   const recordGuestConsent = useMutation(api.gdpr.recordGuestConsent);
+
+  useEffect(() => {
+    if (pendingNavigation && dbReady) {
+      router.replace("/(tabs)");
+      setPendingNavigation(false);
+    }
+  }, [dbReady, pendingNavigation, router]);
 
   useEffect(() => {
     const checkConsentStatus = async () => {
@@ -74,7 +85,11 @@ export default function WelcomeScreen() {
     }
 
     await continueAsGuest?.();
-    router.replace("/(tabs)");
+    if (dbReady) {
+      router.replace("/(tabs)");
+    } else {
+      setPendingNavigation(true);
+    }
   };
 
   const handleAcceptAll = async (analyticsConsent: boolean) => {
@@ -130,6 +145,22 @@ export default function WelcomeScreen() {
 
   if (!hasCheckedConsent) {
     return null; // Loading state
+  }
+
+  // Show loading while database is being prepared for navigation
+  if (pendingNavigation) {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.primary }]}
+      >
+        <View style={styles.centerContainer}>
+          <ActivityIndicator color={theme.background} size="large" />
+          <Text style={[styles.loadingText, { color: theme.background }]}>
+            {t("common.loading") || "Loading..."}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -294,5 +325,14 @@ const styles = StyleSheet.create({
   },
   buttonTextSmall: {
     fontSize: 15,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
   },
 });
