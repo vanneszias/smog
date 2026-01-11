@@ -2,7 +2,6 @@ import MuxPlayer from "@mux/mux-player-react";
 import { ArrowLeft, Heart, Smartphone, Sparkles } from "lucide-react";
 import { Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import logger from "@/utils/logger";
 import { ShimmerSkeleton } from "../common/Skeleton";
 import type { GestureCardData } from "./GestureCard";
 
@@ -125,7 +124,7 @@ export function GestureDetail({
   const { t } = useTranslation();
 
   // Debug logging
-  logger.debug("GestureDetail render:", {
+  console.debug("GestureDetail render:", {
     showOpenInApp,
     hasOnOpenInApp: !!onOpenInApp,
     willShowBanner: !!showOpenInApp && !!onOpenInApp,

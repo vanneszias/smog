@@ -59,7 +59,7 @@ const RecentSearches: React.FC<RecentSearchesProps> = ({
   ];
 
   useEffect(() => {
-    let hideTimeout: NodeJS.Timeout | null = null;
+    let hideTimeout: number | null = null;
 
     if (visible && shown.length > 0) {
       setShouldRender(true);

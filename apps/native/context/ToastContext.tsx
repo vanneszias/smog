@@ -44,7 +44,7 @@ type ToastProviderProps = {
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [toastOptions, setToastOptions] = useState<ToastOptions | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<number | null>(null);
   const triggerHideCallbackRef = useRef<(() => void) | null>(null);
 
   const showToast = (options: ToastOptions) => {

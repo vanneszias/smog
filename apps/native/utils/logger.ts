@@ -1,6 +1,7 @@
 import * as FileSystem from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 
-const LOG_DIR = `${FileSystem.documentDirectory}logs/`;
+const LOG_DIR = `${Paths.document.uri}logs/`;
 const MAX_LOG_FILES = 10;
 const MAX_LOG_SIZE = 1024 * 1024;
 
@@ -55,7 +56,15 @@ const writeToFile = async (
       await FileSystem.deleteAsync(filePath, { idempotent: true });
     }
 
-    await FileSystem.writeAsStringAsync(filePath, logLine, { appending: true });
+    const file = new File(filePath);
+    if (file.exists) {
+      const handle = file.open();
+      handle.offset = file.size;
+      handle.writeBytes(new TextEncoder().encode(logLine));
+      handle.close();
+    } else {
+      file.write(logLine);
+    }
   } catch (error) {
     console.error("[logger] Failed to write to log file:", error);
   }
@@ -66,35 +75,45 @@ const logger = {
     if (__DEV__) {
       console.info(...messages);
     } else {
-      writeToFile("info", messages).catch(() => {});
+      writeToFile("info", messages).catch(() => {
+        /* ignore */
+      });
     }
   },
   warn: (...messages: unknown[]): void => {
     if (__DEV__) {
       console.warn(...messages);
     } else {
-      writeToFile("warn", messages).catch(() => {});
+      writeToFile("warn", messages).catch(() => {
+        /* ignore */
+      });
     }
   },
   error: (...messages: unknown[]): void => {
     if (__DEV__) {
       console.error(...messages);
     } else {
-      writeToFile("error", messages).catch(() => {});
+      writeToFile("error", messages).catch(() => {
+        /* ignore */
+      });
     }
   },
   debug: (...messages: unknown[]): void => {
     if (__DEV__) {
       console.debug(...messages);
     } else {
-      writeToFile("debug", messages).catch(() => {});
+      writeToFile("debug", messages).catch(() => {
+        /* ignore */
+      });
     }
   },
   log: (...messages: unknown[]): void => {
     if (__DEV__) {
       console.log(...messages);
     } else {
-      writeToFile("log", messages).catch(() => {});
+      writeToFile("log", messages).catch(() => {
+        /* ignore */
+      });
     }
   },
 };

@@ -248,10 +248,10 @@ const DeveloperToolsScreen: React.FC = () => {
             ) : (
               logs.map((log) => (
                 <Text
-                  key={log}
+                  key={log.id}
                   style={{ color: theme.textLight, fontSize: FONT_SIZE.sm }}
                 >
-                  {log}
+                  {log.message}
                 </Text>
               ))
             )}
