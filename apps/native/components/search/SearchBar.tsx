@@ -17,7 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, { FadeIn, FadeOut, Layout } from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
@@ -116,10 +116,7 @@ const SearchBar = ({
 
   return (
     <View style={styles.wrapper}>
-      <Animated.View
-        layout={Layout.duration(200)}
-        style={styles.searchContainer}
-      >
+      <View style={styles.searchContainer}>
         <TouchableOpacity
           accessibilityLabel={placeholderText}
           accessibilityRole="search"
@@ -182,7 +179,7 @@ const SearchBar = ({
             </TouchableOpacity>
           ) : null}
         </TouchableOpacity>
-      </Animated.View>
+      </View>
       {!!showCancelButton && (
         <Animated.View
           entering={FadeIn.duration(200)}
