@@ -2,6 +2,7 @@ import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
 import type { ConvexReactClient } from "convex/react";
 import type { Gesture } from "@/types";
+import logger from "@/utils/logger";
 
 class ConvexService {
   private client: ConvexReactClient | null = null;
@@ -15,9 +16,7 @@ class ConvexService {
     this.client = client;
     this.isInitialized = true;
 
-    if (__DEV__) {
-      console.log("[convexService] Convex client initialized");
-    }
+    logger.log("[convexService] Convex client initialized");
   }
 
   private ensureInitialized(): void {

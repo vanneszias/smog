@@ -9,6 +9,7 @@ import {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import logger from "@/utils/logger";
 
 type UseHeaderHeightReturn = {
   headerRef: React.RefObject<View | null>;
@@ -82,11 +83,9 @@ export const useHeaderHeight = (
         setIsHeaderMeasured(true);
         paddingTop.value = totalHeight;
 
-        if (__DEV__) {
-          console.log(
-            `[useHeaderHeight] Measured header height: ${height}px, Total height: ${totalHeight}px`
-          );
-        }
+        logger.log(
+          `[useHeaderHeight] Measured header height: ${height}px, Total height: ${totalHeight}px`
+        );
       });
     }
   }, [
@@ -115,11 +114,9 @@ export const useHeaderHeight = (
         duration: 300,
         easing: Easing.out(Easing.cubic),
       });
-      if (__DEV__) {
-        console.log(
-          `[useHeaderHeight] Header hidden at scroll Y: ${currentScrollY}px`
-        );
-      }
+      logger.log(
+        `[useHeaderHeight] Header hidden at scroll Y: ${currentScrollY}px`
+      );
     },
     [headerHeight, translateY, opacity, scale, paddingTop]
   );
@@ -146,11 +143,9 @@ export const useHeaderHeight = (
         stiffness: 300,
         mass: 0.8,
       });
-      if (__DEV__) {
-        console.log(
-          `[useHeaderHeight] Header shown at scroll Y: ${currentScrollY}px`
-        );
-      }
+      logger.log(
+        `[useHeaderHeight] Header shown at scroll Y: ${currentScrollY}px`
+      );
     },
     [headerHeight, translateY, opacity, scale, paddingTop]
   );

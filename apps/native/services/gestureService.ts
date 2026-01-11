@@ -1,6 +1,7 @@
 import { convexSyncService } from "@/services/convexSyncService";
 import { databaseService } from "@/services/databaseService";
 import type { Gesture } from "@/types";
+import logger from "@/utils/logger";
 
 // Search index for fast text search (kept in memory for performance)
 type SearchIndex = {
@@ -42,9 +43,7 @@ class GestureService {
 
       this.isInitialized = true;
 
-      if (__DEV__) {
-        console.log("[gestureService] Service initialized successfully");
-      }
+      logger.log("[gestureService] Service initialized successfully");
     } catch (error) {
       console.error("[gestureService] Failed to initialize:", error);
       throw error;
@@ -81,9 +80,7 @@ class GestureService {
 
     this.isIndexBuilt = true;
 
-    if (__DEV__) {
-      console.log("[gestureService] Search index built successfully");
-    }
+    logger.log("[gestureService] Search index built successfully");
   }
 
   // Get all gestures from local database
@@ -91,11 +88,7 @@ class GestureService {
     try {
       await this.ensureInitialized();
 
-      if (__DEV__) {
-        console.log(
-          "[gestureService] Fetching all gestures from local database"
-        );
-      }
+      logger.log("[gestureService] Fetching all gestures from local database");
 
       const gestures = await databaseService.getAllGestures();
 
@@ -116,9 +109,7 @@ class GestureService {
     try {
       await this.ensureInitialized();
 
-      if (__DEV__) {
-        console.log("[gestureService] Fetching categories from local database");
-      }
+      logger.log("[gestureService] Fetching categories from local database");
 
       return await databaseService.getCategories();
     } catch (error) {
@@ -136,11 +127,9 @@ class GestureService {
     try {
       await this.ensureInitialized();
 
-      if (__DEV__) {
-        console.log(
-          `[gestureService] Searching gestures for: "${searchText}" categories: ${categories?.join(",") || "all"}`
-        );
-      }
+      logger.log(
+        `[gestureService] Searching gestures for: "${searchText}" categories: ${categories?.join(",") || "all"}`
+      );
 
       // Use database search for efficiency
       const results = await databaseService.searchGestures(
@@ -161,11 +150,9 @@ class GestureService {
     try {
       await this.ensureInitialized();
 
-      if (__DEV__) {
-        console.log(
-          `[gestureService] Fetching gestures by category "${category}" from local database`
-        );
-      }
+      logger.log(
+        `[gestureService] Fetching gestures by category "${category}" from local database`
+      );
 
       return await databaseService.getGesturesByCategory(category);
     } catch (error) {
@@ -186,11 +173,9 @@ class GestureService {
         return [];
       }
 
-      if (__DEV__) {
-        console.log(
-          `[gestureService] Fetching gestures by IDs from local database: ${ids.join(", ")}`
-        );
-      }
+      logger.log(
+        `[gestureService] Fetching gestures by IDs from local database: ${ids.join(", ")}`
+      );
 
       return await databaseService.getGesturesByIds(ids);
     } catch (error) {
@@ -204,11 +189,9 @@ class GestureService {
     try {
       await this.ensureInitialized();
 
-      if (__DEV__) {
-        console.log(
-          `[gestureService] Fetching gesture by ID from local database: ${id}`
-        );
-      }
+      logger.log(
+        `[gestureService] Fetching gesture by ID from local database: ${id}`
+      );
 
       const gestures = await databaseService.getGesturesByIds([id]);
       return gestures.length > 0 ? gestures[0] : null;
@@ -230,7 +213,7 @@ class GestureService {
     try {
       await this.ensureInitialized();
 
-      console.log(
+      logger.log(
         "[gestureService] getGesturesPaginated called with pageSize:",
         pageSize,
         "offset:",
@@ -244,7 +227,7 @@ class GestureService {
       const gestures = allGestures.slice(start, end);
       const hasMore = end < total;
 
-      console.log(
+      logger.log(
         "[gestureService] Retrieved",
         total,
         "total gestures, returning",
@@ -272,9 +255,7 @@ class GestureService {
     try {
       await this.ensureInitialized();
 
-      if (__DEV__) {
-        console.log("[gestureService] Forcing data refresh from server");
-      }
+      logger.log("[gestureService] Forcing data refresh from server");
 
       const result = await convexSyncService.forceSyncNow();
 
@@ -284,11 +265,9 @@ class GestureService {
         this.buildSearchIndex(gestures);
       }
 
-      if (__DEV__) {
-        console.log(
-          `[gestureService] Data refresh completed - synced ${result.synced} gestures`
-        );
-      }
+      logger.log(
+        `[gestureService] Data refresh completed - synced ${result.synced} gestures`
+      );
     } catch (error) {
       console.error("[gestureService] Failed to refresh data:", error);
       throw error;
@@ -340,9 +319,7 @@ class GestureService {
     try {
       await this.ensureInitialized();
 
-      if (__DEV__) {
-        console.log("[gestureService] Clearing all local data");
-      }
+      logger.log("[gestureService] Clearing all local data");
 
       await databaseService.clearAllGestures();
       this.searchIndex = {};

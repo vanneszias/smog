@@ -1,5 +1,6 @@
 import type React from "react";
 import { createContext, useCallback, useEffect, useRef, useState } from "react";
+import logger from "@/utils/logger";
 
 type LogEntry = {
   id: string;
@@ -9,6 +10,7 @@ type LogEntry = {
 type LogContextType = {
   logs: LogEntry[];
   clearLogs: () => void;
+  exportLogs: () => string;
 };
 
 export const LogContext = createContext<LogContextType>({
@@ -16,9 +18,10 @@ export const LogContext = createContext<LogContextType>({
   clearLogs: () => {
     /* noop */
   },
+  exportLogs: () => "",
 });
 
-const MAX_LOGS = 200;
+const MAX_LOGS = 2000;
 
 function generateLogId() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
@@ -56,12 +59,19 @@ export const LogProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const clearLogs = useCallback(() => {
+    logger.debug("[LogProvider] Clearing all logs");
     logsRef.current = [];
     setLogs([]);
   }, []);
 
+  const exportLogs = useCallback(() => {
+    const logText = logsRef.current.map((l) => l.message).join("\n");
+    logger.debug(`[LogProvider] Exporting ${logsRef.current.length} logs`);
+    return logText;
+  }, []);
+
   return (
-    <LogContext.Provider value={{ logs, clearLogs }}>
+    <LogContext.Provider value={{ logs, clearLogs, exportLogs }}>
       {children}
     </LogContext.Provider>
   );

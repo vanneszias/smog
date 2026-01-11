@@ -1,5 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import type { Gesture } from "@/types";
+import logger from "@/utils/logger";
 
 type DatabaseGesture = {
   id: string;
@@ -43,9 +44,7 @@ class DatabaseService {
       await this.createTables();
       this.isInitialized = true;
 
-      if (__DEV__) {
-        console.log("[databaseService] Database initialized successfully");
-      }
+      logger.log("[databaseService] Database initialized successfully");
     } catch (error) {
       console.error("[databaseService] Failed to initialize database:", error);
       throw error;
@@ -79,32 +78,24 @@ class DatabaseService {
       const targetVersion = 3; // New version with favorites tables
 
       if (currentVersion < targetVersion) {
-        if (__DEV__) {
-          console.log(
-            `[databaseService] Database version upgrade needed: ${currentVersion} -> ${targetVersion}`
-          );
-          console.log(
-            "[databaseService] Performing complete database reset for schema migration"
-          );
-        }
+        logger.log(
+          `[databaseService] Database version upgrade needed: ${currentVersion} -> ${targetVersion}`
+        );
+        logger.log(
+          "[databaseService] Performing complete database reset for schema migration"
+        );
 
         // Force complete reset for major schema changes
         await this.db.execAsync("DROP TABLE IF EXISTS gestures;");
         await this.db.execAsync("DROP TABLE IF EXISTS categories;");
         await this.db.execAsync("DROP TABLE IF EXISTS sync_metadata;");
 
-        if (__DEV__) {
-          console.log(
-            "[databaseService] All tables dropped for clean migration"
-          );
-        }
+        logger.log("[databaseService] All tables dropped for clean migration");
       }
     } catch (_error) {
-      if (__DEV__) {
-        console.log(
-          "[databaseService] No existing database found, creating fresh"
-        );
-      }
+      logger.log(
+        "[databaseService] No existing database found, creating fresh"
+      );
     }
   }
 
@@ -150,9 +141,7 @@ class DatabaseService {
       ["db_version", "3", new Date().toISOString()]
     );
 
-    if (__DEV__) {
-      console.log("[databaseService] Database tables created successfully");
-    }
+    logger.log("[databaseService] Database tables created successfully");
   }
 
   private async ensureCorrectSchema(): Promise<void> {
@@ -175,18 +164,9 @@ class DatabaseService {
       );
       await this.createTablesWithCorrectSchema();
 
-      if (__DEV__) {
-        console.log(
-          "[databaseService] Schema validation and migration completed"
-        );
-      }
+      logger.log("[databaseService] Schema validation and migration completed");
     } catch (error) {
-      if (__DEV__) {
-        console.error(
-          "[databaseService] Error during schema migration:",
-          error
-        );
-      }
+      logger.error("[databaseService] Error during schema migration:", error);
       throw error;
     }
   }
@@ -203,8 +183,8 @@ class DatabaseService {
     const hasConvexId = tableInfo.some((col) => col.name === "convexId");
 
     const needsMigration = hasVideoUrl || !hasPlaybackId || !hasConvexId;
-    if (needsMigration && __DEV__) {
-      console.log(
+    if (needsMigration) {
+      logger.log(
         "[databaseService] Gestures table needs migration - old schema detected"
       );
     }
@@ -222,8 +202,8 @@ class DatabaseService {
     const hasIsActive = tableInfo.some((col) => col.name === "isActive");
 
     const needsMigration = !(hasConvexId && hasIsActive);
-    if (needsMigration && __DEV__) {
-      console.log(
+    if (needsMigration) {
+      logger.log(
         "[databaseService] Categories table needs migration - old schema detected"
       );
     }
@@ -239,20 +219,16 @@ class DatabaseService {
     }
 
     if (needsGesturesMigration) {
-      if (__DEV__) {
-        console.log(
-          "[databaseService] Dropping and recreating gestures table with new schema"
-        );
-      }
+      logger.log(
+        "[databaseService] Dropping and recreating gestures table with new schema"
+      );
       await this.db.execAsync("DROP TABLE IF EXISTS gestures;");
     }
 
     if (needsCategoriesMigration) {
-      if (__DEV__) {
-        console.log(
-          "[databaseService] Dropping and recreating categories table with new schema"
-        );
-      }
+      logger.log(
+        "[databaseService] Dropping and recreating categories table with new schema"
+      );
       await this.db.execAsync("DROP TABLE IF EXISTS categories;");
     }
   }
@@ -403,9 +379,7 @@ class DatabaseService {
       ]
     );
 
-    if (__DEV__) {
-      console.log(`[databaseService] Inserted gesture: ${gesture.name}`);
-    }
+    logger.log(`[databaseService] Inserted gesture: ${gesture.name}`);
   }
 
   async insertGestures(
@@ -425,11 +399,9 @@ class DatabaseService {
 
       await this.db.execAsync("COMMIT;");
 
-      if (__DEV__) {
-        console.log(
-          `[databaseService] Inserted ${gestures.length} gestures successfully`
-        );
-      }
+      logger.log(
+        `[databaseService] Inserted ${gestures.length} gestures successfully`
+      );
     } catch (error) {
       await this.db.execAsync("ROLLBACK;");
       throw error;
@@ -461,9 +433,7 @@ class DatabaseService {
       ]
     );
 
-    if (__DEV__) {
-      console.log(`[databaseService] Inserted category: ${category.name}`);
-    }
+    logger.log(`[databaseService] Inserted category: ${category.name}`);
   }
 
   async getAllGestures(): Promise<Gesture[]> {
@@ -608,9 +578,7 @@ class DatabaseService {
 
     await this.db.runAsync("DELETE FROM gestures");
 
-    if (__DEV__) {
-      console.log("[databaseService] All gestures cleared");
-    }
+    logger.log("[databaseService] All gestures cleared");
   }
 
   async clearAllCategories(): Promise<void> {
@@ -620,9 +588,7 @@ class DatabaseService {
 
     await this.db.runAsync("DELETE FROM categories");
 
-    if (__DEV__) {
-      console.log("[databaseService] All categories cleared");
-    }
+    logger.log("[databaseService] All categories cleared");
   }
 
   async getGestureCount(): Promise<number> {

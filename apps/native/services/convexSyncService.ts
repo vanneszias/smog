@@ -2,6 +2,7 @@ import type { ConvexReactClient } from "convex/react";
 import { convexService } from "@/services/convexService";
 import { databaseService } from "@/services/databaseService";
 import { NetworkService } from "@/services/networkService";
+import logger from "@/utils/logger";
 
 type SyncResult = {
   success: boolean;
@@ -61,9 +62,7 @@ class ConvexSyncService {
       this.startPeriodicSync();
       this.isInitialized = true;
 
-      if (__DEV__) {
-        console.log("[convexSyncService] Sync service initialized");
-      }
+      logger.log("[convexSyncService] Sync service initialized");
     } catch (error) {
       console.error("[convexSyncService] Failed to initialize:", error);
       throw error;
@@ -77,11 +76,9 @@ class ConvexSyncService {
     const gestureCount = await databaseService.getGestureCount();
     const categoryCount = await databaseService.getCategoryCount();
 
-    if (__DEV__) {
-      console.log(
-        `[convexSyncService] Initialization check - lastSync: ${lastSync?.toISOString() || "null"}, gestureCount: ${gestureCount}, categoryCount: ${categoryCount}`
-      );
-    }
+    logger.log(
+      `[convexSyncService] Initialization check - lastSync: ${lastSync?.toISOString() || "null"}, gestureCount: ${gestureCount}, categoryCount: ${categoryCount}`
+    );
 
     // Check network status before attempting sync
     const networkService = NetworkService.getInstance();
@@ -89,25 +86,21 @@ class ConvexSyncService {
 
     if (!isOnline) {
       if (gestureCount > 0) {
-        if (__DEV__) {
-          console.log(
-            "[convexSyncService] Offline mode - skipping initial sync, using cached data"
-          );
-        }
+        logger.log(
+          "[convexSyncService] Offline mode - skipping initial sync, using cached data"
+        );
         return;
       }
-      if (__DEV__) {
-        console.log(
-          "[convexSyncService] Offline mode - no cached data available, app will have limited functionality"
-        );
-      }
+      logger.log(
+        "[convexSyncService] Offline mode - no cached data available, app will have limited functionality"
+      );
       return;
     }
 
     if (this.shouldPerformInitialSync(gestureCount, categoryCount, lastSync)) {
       await this.performSync(true);
-    } else if (__DEV__) {
-      console.log("[convexSyncService] Initial sync not needed - data exists");
+    } else {
+      logger.log("[convexSyncService] Initial sync not needed - data exists");
     }
   }
 
@@ -117,29 +110,21 @@ class ConvexSyncService {
     lastSync: Date | null
   ): boolean {
     if (gestureCount === 0) {
-      if (__DEV__) {
-        console.log(
-          "[convexSyncService] Initial sync needed - no gestures in database"
-        );
-      }
+      logger.log(
+        "[convexSyncService] Initial sync needed - no gestures in database"
+      );
       return true;
     }
 
     if (categoryCount === 0) {
-      if (__DEV__) {
-        console.log(
-          "[convexSyncService] Initial sync needed - no categories in database"
-        );
-      }
+      logger.log(
+        "[convexSyncService] Initial sync needed - no categories in database"
+      );
       return true;
     }
 
     if (!lastSync) {
-      if (__DEV__) {
-        console.log(
-          "[convexSyncService] Initial sync needed - no sync timestamp"
-        );
-      }
+      logger.log("[convexSyncService] Initial sync needed - no sync timestamp");
       return true;
     }
 
@@ -155,9 +140,7 @@ class ConvexSyncService {
       this.syncIfNeeded();
     }, this.SYNC_INTERVAL_MS);
 
-    if (__DEV__) {
-      console.log("[convexSyncService] Periodic sync started");
-    }
+    logger.log("[convexSyncService] Periodic sync started");
   }
 
   async syncIfNeeded(force = false): Promise<SyncResult | null> {
@@ -180,11 +163,7 @@ class ConvexSyncService {
   private isNetworkSuitable(): boolean {
     const networkService = NetworkService.getInstance();
     if (!(networkService.isConnected() && networkService.isGoodConnection())) {
-      if (__DEV__) {
-        console.log(
-          "[convexSyncService] Skipping sync - poor network connection"
-        );
-      }
+      logger.log("[convexSyncService] Skipping sync - poor network connection");
       return false;
     }
     return true;
@@ -206,22 +185,18 @@ class ConvexSyncService {
       const shouldSync = remoteLastUpdated > localLastSync.getTime();
 
       if (shouldSync) {
-        if (__DEV__) {
-          console.log(
-            "[convexSyncService] Sync needed - remote data has been updated"
-          );
-        }
+        logger.log(
+          "[convexSyncService] Sync needed - remote data has been updated"
+        );
         return true;
       }
 
       return this.checkTimeBasedSync();
     } catch (error) {
-      if (__DEV__) {
-        console.log(
-          "[convexSyncService] Failed to check remote version, falling back to time-based sync:",
-          error
-        );
-      }
+      logger.log(
+        "[convexSyncService] Failed to check remote version, falling back to time-based sync:",
+        error
+      );
       return this.checkTimeBasedSync();
     }
   }
@@ -236,11 +211,7 @@ class ConvexSyncService {
     const timeSinceLastSync = now.getTime() - lastSync.getTime();
 
     if (timeSinceLastSync < this.SYNC_INTERVAL_MS) {
-      if (__DEV__) {
-        console.log(
-          "[convexSyncService] Sync not needed - within time interval"
-        );
-      }
+      logger.log("[convexSyncService] Sync not needed - within time interval");
       return false;
     }
 
@@ -268,9 +239,7 @@ class ConvexSyncService {
 
   private validateSyncPreconditions(): void {
     if (this.isSyncing) {
-      if (__DEV__) {
-        console.log("[convexSyncService] Sync already in progress");
-      }
+      logger.log("[convexSyncService] Sync already in progress");
       throw new Error("Sync already in progress");
     }
   }
@@ -288,11 +257,9 @@ class ConvexSyncService {
     isInitialSync: boolean,
     result: SyncResult
   ): Promise<void> {
-    if (__DEV__) {
-      console.log(
-        `[convexSyncService] Starting ${isInitialSync ? "initial" : "incremental"} sync`
-      );
-    }
+    logger.log(
+      `[convexSyncService] Starting ${isInitialSync ? "initial" : "incremental"} sync`
+    );
 
     // Sync categories first
     const categories = await convexService.getAllCategories();
@@ -328,11 +295,9 @@ class ConvexSyncService {
     result.success = true;
     result.synced = gesturesData.length;
 
-    if (__DEV__) {
-      console.log(
-        `[convexSyncService] Sync completed successfully - ${gesturesData.length} gestures, ${categories.length} categories`
-      );
-    }
+    logger.log(
+      `[convexSyncService] Sync completed successfully - ${gesturesData.length} gestures, ${categories.length} categories`
+    );
   }
 
   private handleSyncError(error: unknown, result: SyncResult): void {
@@ -362,11 +327,9 @@ class ConvexSyncService {
     try {
       await this.performSync();
     } catch (_error) {
-      if (__DEV__) {
-        console.log(
-          `[convexSyncService] Retry ${attempt} failed, attempting again...`
-        );
-      }
+      logger.log(
+        `[convexSyncService] Retry ${attempt} failed, attempting again...`
+      );
       setTimeout(() => {
         this.retrySync(attempt + 1);
       }, this.SYNC_RETRY_DELAY * attempt); // Exponential backoff
@@ -378,9 +341,7 @@ class ConvexSyncService {
   }
 
   async checkForUpdates(): Promise<SyncResult | null> {
-    if (__DEV__) {
-      console.log("[convexSyncService] Checking for updates...");
-    }
+    logger.log("[convexSyncService] Checking for updates...");
     return this.syncIfNeeded(false);
   }
 

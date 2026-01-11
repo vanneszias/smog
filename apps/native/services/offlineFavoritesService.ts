@@ -1,5 +1,6 @@
 import type { NetInfoState } from "@react-native-community/netinfo";
 import * as SQLite from "expo-sqlite";
+import logger from "@/utils/logger";
 import { networkService } from "./networkService";
 
 type LocalFavorite = {
@@ -42,11 +43,9 @@ class OfflineFavoritesService {
       // Listen for network changes to trigger sync
       networkService.addListener(this.handleNetworkChange.bind(this));
 
-      if (__DEV__) {
-        console.log(
-          "[offlineFavoritesService] Service initialized - offline cache mode"
-        );
-      }
+      logger.log(
+        "[offlineFavoritesService] Service initialized - offline cache mode"
+      );
     } catch (error) {
       console.error("[offlineFavoritesService] Failed to initialize:", error);
       throw error;
@@ -89,11 +88,9 @@ class OfflineFavoritesService {
         [userId, gestureId, isFavorite ? 1 : 0, now, now]
       );
 
-      if (__DEV__) {
-        console.log(
-          `[offlineFavoritesService] Updated local cache: ${gestureId} = ${isFavorite}`
-        );
-      }
+      logger.log(
+        `[offlineFavoritesService] Updated local cache: ${gestureId} = ${isFavorite}`
+      );
     } catch (error) {
       console.error(
         "[offlineFavoritesService] Failed to update local cache:",
@@ -135,11 +132,9 @@ class OfflineFavoritesService {
         );
       }
 
-      if (__DEV__) {
-        console.log(
-          `[offlineFavoritesService] Synced ${convexFavorites.length} favorites from Convex to local cache`
-        );
-      }
+      logger.log(
+        `[offlineFavoritesService] Synced ${convexFavorites.length} favorites from Convex to local cache`
+      );
     } catch (error) {
       console.error(
         "[offlineFavoritesService] Failed to sync from Convex:",
@@ -198,11 +193,9 @@ class OfflineFavoritesService {
         [operationId, userId, gestureId, operation, now]
       );
 
-      if (__DEV__) {
-        console.log(
-          `[offlineFavoritesService] Favorite ${operation}ed offline (queued for sync): ${gestureId}`
-        );
-      }
+      logger.log(
+        `[offlineFavoritesService] Favorite ${operation}ed offline (queued for sync): ${gestureId}`
+      );
 
       return isNewFavorite;
     } catch (error) {
@@ -282,11 +275,9 @@ class OfflineFavoritesService {
         return;
       }
 
-      if (__DEV__) {
-        console.log(
-          `[offlineFavoritesService] Syncing ${pendingOps.length} pending operations to Convex`
-        );
-      }
+      logger.log(
+        `[offlineFavoritesService] Syncing ${pendingOps.length} pending operations to Convex`
+      );
 
       for (const op of pendingOps) {
         try {
@@ -311,11 +302,9 @@ class OfflineFavoritesService {
             [op.user_id, op.gesture_id, op.operation_id]
           );
 
-          if (__DEV__) {
-            console.log(
-              `[offlineFavoritesService] Successfully synced operation: ${op.operation_id}`
-            );
-          }
+          logger.log(
+            `[offlineFavoritesService] Successfully synced operation: ${op.operation_id}`
+          );
         } catch (error) {
           // Update retry count
           await this.db.runAsync(
@@ -348,18 +337,16 @@ class OfflineFavoritesService {
       try {
         await this.onSyncOperation(op);
 
-        if (__DEV__) {
-          console.log(
-            `[offlineFavoritesService] Operation synced to Convex: ${op.operation} ${op.gesture_id}`
-          );
-        }
+        logger.log(
+          `[offlineFavoritesService] Operation synced to Convex: ${op.operation} ${op.gesture_id}`
+        );
       } catch (error) {
         // Handle conflicts - Convex is source of truth, so we don't retry conflicts
         if (
           String(error).includes("conflict") ||
           String(error).includes("version")
         ) {
-          console.warn(
+          logger.warn(
             `[offlineFavoritesService] Conflict detected for ${op.operation_id}, Convex state will override`
           );
           // Don't throw - let the operation complete and Convex will sync back the correct state
@@ -400,11 +387,9 @@ class OfflineFavoritesService {
         );
       }
 
-      if (__DEV__) {
-        console.log(
-          `[offlineFavoritesService] Migrated ${legacyFavorites.length} legacy favorites (queued for sync to Convex)`
-        );
-      }
+      logger.log(
+        `[offlineFavoritesService] Migrated ${legacyFavorites.length} legacy favorites (queued for sync to Convex)`
+      );
     } catch (error) {
       console.error(
         "[offlineFavoritesService] Failed to migrate legacy favorites:",
@@ -429,11 +414,9 @@ class OfflineFavoritesService {
         [userId]
       );
 
-      if (__DEV__) {
-        console.log(
-          `[offlineFavoritesService] Cleared local cache for user: ${userId}`
-        );
-      }
+      logger.log(
+        `[offlineFavoritesService] Cleared local cache for user: ${userId}`
+      );
     } catch (error) {
       console.error(
         "[offlineFavoritesService] Failed to clear user favorites:",
