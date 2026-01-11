@@ -1,25 +1,31 @@
 import { FONT_SIZE, SPACING } from "@smog/styles";
 import { Stack } from "expo-router";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   SafeAreaView,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { LogContext } from "@/context/logs/LogProvider";
 import { useTheme } from "@/context/ThemeContext";
 import { convexSyncService } from "@/services/convexSyncService";
 import gestureService from "@/services/gestureService";
-
-const MAX_LOGS = 200;
+import logger from "@/utils/logger";
 
 const DeveloperToolsScreen: React.FC = () => {
   const { theme } = useTheme();
+  const {
+    logs,
+    clearLogs: clearContextLogs,
+    exportLogs,
+  } = useContext(LogContext);
   const [cacheStats, setCacheStats] = useState<{
     size: number;
     keys: string[];
@@ -30,26 +36,11 @@ const DeveloperToolsScreen: React.FC = () => {
   } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
-  const [logs, setLogs] = useState<string[]>([]);
   const logsRef = useRef<string[]>([]);
 
-  // Monkey-patch console.log for in-app logging (dev only)
   useEffect(() => {
-    if (__DEV__) {
-      const originalLog = console.log;
-      console.log = (...args: unknown[]) => {
-        const msg = args
-          .map((a) => (typeof a === "string" ? a : JSON.stringify(a)))
-          .join(" ");
-        logsRef.current = [msg, ...logsRef.current].slice(0, MAX_LOGS);
-        setLogs([...logsRef.current]);
-        originalLog(...args);
-      };
-      return () => {
-        console.log = originalLog;
-      };
-    }
-  }, []);
+    logsRef.current = logs.map((l) => l.message);
+  }, [logs]);
 
   const fetchCacheStats = useCallback(async () => {
     try {
@@ -60,8 +51,8 @@ const DeveloperToolsScreen: React.FC = () => {
       const dbStatsData = await gestureService.getDatabaseStats();
       setDbStats(dbStatsData);
 
-      console.log(`[DevTools] Cache stats: ${stats.size} items`);
-      console.log(
+      logger.log(`[DevTools] Cache stats: ${stats.size} items`);
+      logger.log(
         `[DevTools] DB stats: ${dbStatsData.gestureCount} gestures, last sync: ${dbStatsData.lastSync}`
       );
     } catch (_error) {
@@ -88,10 +79,24 @@ const DeveloperToolsScreen: React.FC = () => {
     }
   }, [fetchCacheStats]);
 
-  const handleClearLogs = () => {
-    logsRef.current = [];
-    setLogs([]);
-  };
+  const handleClearLogs = useCallback(() => {
+    clearContextLogs();
+    logger.debug("[DevTools] Logs cleared by user");
+  }, [clearContextLogs]);
+
+  const handleExportLogs = useCallback(async () => {
+    const logText = exportLogs();
+    if (!logText) {
+      Alert.alert("Info", "No logs to export.");
+      return;
+    }
+    try {
+      await Share.share({ message: logText, title: "Smog App Logs" });
+      logger.debug("[DevTools] Logs exported via share");
+    } catch {
+      Alert.alert("Error", "Failed to export logs.");
+    }
+  }, [exportLogs]);
 
   const handleCheckForUpdates = useCallback(async () => {
     setIsCheckingUpdates(true);
@@ -218,6 +223,21 @@ const DeveloperToolsScreen: React.FC = () => {
           >
             <Text style={[styles.buttonText, { color: theme.background }]}>
               Clear Logs
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleExportLogs}
+            style={[
+              styles.button,
+              {
+                backgroundColor: theme.accent || theme.primary,
+                marginBottom: SPACING.sm,
+              },
+            ]}
+          >
+            <Text style={[styles.buttonText, { color: theme.background }]}>
+              Export Logs
             </Text>
           </TouchableOpacity>
           <ScrollView style={styles.logContainer}>

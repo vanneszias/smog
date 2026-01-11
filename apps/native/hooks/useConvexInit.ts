@@ -2,6 +2,7 @@ import { useConvex } from "convex/react";
 import { useEffect, useRef } from "react";
 import { convexService } from "@/services/convexService";
 import { convexSyncService } from "@/services/convexSyncService";
+import logger from "@/utils/logger";
 
 export const useConvexInit = () => {
   const convex = useConvex();
@@ -23,11 +24,9 @@ export const useConvexInit = () => {
 
         hasInitialized.current = true;
 
-        if (__DEV__) {
-          console.log("[useConvexInit] Services initialized successfully");
-        }
+        logger.log("[useConvexInit] Services initialized successfully");
       } catch (error) {
-        console.error("[useConvexInit] Failed to initialize services:", error);
+        logger.error("[useConvexInit] Failed to initialize services:", error);
       }
     };
 

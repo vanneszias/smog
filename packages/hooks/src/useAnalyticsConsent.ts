@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import logger from "@/utils/logger";
 
 declare const window: { localStorage: Storage };
 
@@ -60,7 +61,7 @@ function saveConsent(status: AnalyticsConsentStatus): void {
     );
     localStorage.setItem("smog_gdpr_consent", "accepted");
   } catch {
-    console.debug("[Analytics] Unable to persist consent");
+    logger.debug("[Analytics] Unable to persist consent");
   }
 }
 

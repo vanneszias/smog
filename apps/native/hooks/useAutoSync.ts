@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import { convexSyncService } from "@/services/convexSyncService";
+import logger from "@/utils/logger";
 
 const BACKGROUND_STATE_REGEX = /inactive|background/;
 
@@ -18,18 +19,12 @@ export const useAutoSync = () => {
     ) => BACKGROUND_STATE_REGEX.test(currentState) && nextState === "active";
 
     const performSyncCheck = async () => {
-      if (__DEV__) {
-        console.log(
-          "[useAutoSync] App came to foreground, checking for updates"
-        );
-      }
+      logger.log("[useAutoSync] App came to foreground, checking for updates");
 
       try {
         await convexSyncService.checkForUpdates();
       } catch (error) {
-        if (__DEV__) {
-          console.log("[useAutoSync] Failed to check for updates:", error);
-        }
+        logger.log("[useAutoSync] Failed to check for updates:", error);
       }
     };
 
