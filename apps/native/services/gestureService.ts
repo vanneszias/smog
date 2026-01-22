@@ -13,6 +13,10 @@ class GestureService {
   private isIndexBuilt = false;
   private isInitialized = false;
   private isInitializing = false;
+  private hasLocalData = false;
+  private ensuringDataPromise: Promise<void> | null = null;
+  private readonly DATA_POLL_INTERVAL_MS = 250;
+  private readonly DATA_WAIT_TIMEOUT_MS = 15 * 1000;
 
   async initialize(): Promise<void> {
     // Prevent concurrent initialization
@@ -33,6 +37,7 @@ class GestureService {
     try {
       // Initialize database
       await databaseService.initialize();
+      await this.ensureLocalDataAvailable();
 
       // Note: ConvexSyncService initialization will be handled by app startup
       // The convex client is initialized in AppProviders
@@ -87,6 +92,7 @@ class GestureService {
   async getAllGestures(): Promise<Gesture[]> {
     try {
       await this.ensureInitialized();
+      await this.ensureLocalDataAvailable();
 
       logger.log("[gestureService] Fetching all gestures from local database");
 
@@ -108,6 +114,7 @@ class GestureService {
   async getCategories(): Promise<string[]> {
     try {
       await this.ensureInitialized();
+      await this.ensureLocalDataAvailable();
 
       logger.log("[gestureService] Fetching categories from local database");
 
@@ -126,6 +133,7 @@ class GestureService {
   ): Promise<{ results: Gesture[]; cacheHit: boolean }> {
     try {
       await this.ensureInitialized();
+      await this.ensureLocalDataAvailable();
 
       logger.log(
         `[gestureService] Searching gestures for: "${searchText}" categories: ${categories?.join(",") || "all"}`
@@ -149,6 +157,7 @@ class GestureService {
   async getGesturesByCategory(category: string): Promise<Gesture[]> {
     try {
       await this.ensureInitialized();
+      await this.ensureLocalDataAvailable();
 
       logger.log(
         `[gestureService] Fetching gestures by category "${category}" from local database`
@@ -173,6 +182,8 @@ class GestureService {
         return [];
       }
 
+      await this.ensureLocalDataAvailable();
+
       logger.log(
         `[gestureService] Fetching gestures by IDs from local database: ${ids.join(", ")}`
       );
@@ -188,6 +199,7 @@ class GestureService {
   async getGestureById(id: string): Promise<Gesture | null> {
     try {
       await this.ensureInitialized();
+      await this.ensureLocalDataAvailable();
 
       logger.log(
         `[gestureService] Fetching gesture by ID from local database: ${id}`
@@ -212,6 +224,7 @@ class GestureService {
   }> {
     try {
       await this.ensureInitialized();
+      await this.ensureLocalDataAvailable();
 
       logger.log(
         "[gestureService] getGesturesPaginated called with pageSize:",
@@ -260,6 +273,7 @@ class GestureService {
       const result = await convexSyncService.forceSyncNow();
 
       if (result.success) {
+        this.hasLocalData = true;
         // Rebuild search index with new data
         const gestures = await databaseService.getAllGestures();
         this.buildSearchIndex(gestures);
@@ -321,12 +335,18 @@ class GestureService {
 
       logger.log("[gestureService] Clearing all local data");
 
+      this.hasLocalData = false;
+      this.ensuringDataPromise = null;
+
       await databaseService.clearAllGestures();
       this.searchIndex = {};
       this.isIndexBuilt = false;
 
       // Force a fresh sync
-      await convexSyncService.forceSyncNow();
+      const result = await convexSyncService.forceSyncNow();
+      if (result.success) {
+        this.hasLocalData = true;
+      }
     } catch (error) {
       console.error("[gestureService] Failed to clear caches:", error);
       throw error;
@@ -351,6 +371,66 @@ class GestureService {
     if (!this.isInitialized) {
       await this.initialize();
     }
+  }
+
+  private async ensureLocalDataAvailable(): Promise<void> {
+    if (this.hasLocalData) {
+      return;
+    }
+
+    if (await this.hasLocalGestures()) {
+      this.hasLocalData = true;
+      return;
+    }
+
+    if (!this.ensuringDataPromise) {
+      this.ensuringDataPromise = this.waitForLocalDataPopulation();
+    }
+
+    try {
+      await this.ensuringDataPromise;
+    } finally {
+      this.ensuringDataPromise = null;
+    }
+  }
+
+  private async waitForLocalDataPopulation(): Promise<void> {
+    logger.log(
+      "[gestureService] Local database empty - waiting for Convex sync to populate gestures"
+    );
+
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < this.DATA_WAIT_TIMEOUT_MS) {
+      await this.delay(this.DATA_POLL_INTERVAL_MS);
+      if (await this.hasLocalGestures()) {
+        this.hasLocalData = true;
+        logger.log(
+          `[gestureService] Local database populated after ${Date.now() - startTime}ms`
+        );
+        return;
+      }
+    }
+
+    logger.warn(
+      "[gestureService] Timed out waiting for gestures to populate locally"
+    );
+  }
+
+  private async hasLocalGestures(): Promise<boolean> {
+    try {
+      const count = await databaseService.getGestureCount();
+      return count > 0;
+    } catch (error) {
+      logger.error("[gestureService] Failed to read gesture count:", error);
+      return false;
+    }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
   }
 }
 

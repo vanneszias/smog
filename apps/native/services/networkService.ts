@@ -118,9 +118,26 @@ class NetworkService {
 
   // Check if device is connected to internet
   isConnected(): boolean {
-    return !!(
-      this.networkState?.isConnected && this.networkState?.isInternetReachable
-    );
+    if (!this.networkState) {
+      return false;
+    }
+
+    const { isConnected, isInternetReachable } = this.networkState;
+
+    // Explicit false values always mean offline
+    if (isConnected === false || isInternetReachable === false) {
+      return false;
+    }
+
+    // Treat "unknown" reachability as connected if the transport is up
+    if (
+      isConnected === true &&
+      (isInternetReachable === null || isInternetReachable === undefined)
+    ) {
+      return true;
+    }
+
+    return Boolean(isConnected && isInternetReachable);
   }
 
   // Check if device is on WiFi
