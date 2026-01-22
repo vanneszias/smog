@@ -58,6 +58,7 @@ class ConvexSyncService {
 
     try {
       await databaseService.initialize();
+      await NetworkService.getInstance().initialize();
       await convexService.initialize(convexClient);
       await this.checkAndPerformInitialSync();
       this.startPeriodicSync();
