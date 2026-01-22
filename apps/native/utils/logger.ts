@@ -215,4 +215,69 @@ export const clearRecentLogs = (): void => {
   recentLogs.length = 0;
 };
 
+const sanitizeTimestamp = (timestamp: string): string =>
+  timestamp.replace(/[:.]/g, "-");
+
+const writeStringToHandle = (
+  handle: ReturnType<File["open"]>,
+  content: string
+): void => {
+  if (!textEncoder) {
+    return;
+  }
+  handle.writeBytes(textEncoder.encode(content));
+};
+
+export const exportLogsToFile = async (): Promise<File> => {
+  if (!textEncoder) {
+    throw new Error("Text encoder unavailable - cannot export logs.");
+  }
+
+  const timestamp = sanitizeTimestamp(new Date().toISOString());
+  const exportFileName = `smog_logs_${timestamp}.log`;
+  const exportFile = new File(Paths.document, exportFileName);
+
+  if (exportFile.exists) {
+    exportFile.delete();
+  }
+
+  exportFile.create({ intermediates: true, overwrite: true });
+
+  const handle = exportFile.open();
+
+  try {
+    const header = `Smog logs export - generated ${new Date().toISOString()}\n========================================\n`;
+    writeStringToHandle(handle, header);
+
+    const activeLogs = [...recentLogs].reverse();
+    if (activeLogs.length) {
+      writeStringToHandle(handle, "\n[Recent Session]\n");
+      writeStringToHandle(
+        handle,
+        `${activeLogs.map((record) => record.formatted).join("\n")}\n`
+      );
+    }
+
+    if (ensureLogDirectory()) {
+      const files = LOG_DIR.list().filter(
+        (entry): entry is File => entry instanceof File
+      );
+      const sortedFiles = files.sort((a, b) => a.name.localeCompare(b.name));
+
+      for (const file of sortedFiles) {
+        writeStringToHandle(handle, `\n[Archived] ${file.name}\n`);
+        const contents = await file.text();
+        writeStringToHandle(handle, `${contents}\n`);
+      }
+    }
+
+    return exportFile;
+  } catch (error) {
+    exportFile.delete();
+    throw error;
+  } finally {
+    handle.close();
+  }
+};
+
 export default logger;
