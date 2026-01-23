@@ -1,371 +1,350 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Trans, useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/privacy")({
   component: PrivacyPolicyPage,
 });
 
 function PrivacyPolicyPage() {
+  const { t } = useTranslation();
+
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
-      <h1 className="mb-6 font-bold text-4xl">Privacy Policy</h1>
+      <h1 className="mb-6 font-bold text-4xl">{t("web.privacy.title")}</h1>
       <p className="mb-4 text-gray-600">
-        Last updated: {new Date().toLocaleDateString()}
+        {t("web.privacy.lastUpdated", {
+          date: new Date().toLocaleDateString(),
+        })}
       </p>
 
       <div className="space-y-6 text-gray-800">
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">1. Introduction</h2>
-          <p>
-            Welcome to SMOG (&quot;we&quot;, &quot;our&quot;, or
-            &quot;us&quot;). We are committed to protecting your personal data
-            and respecting your privacy. This Privacy Policy explains how we
-            collect, use, and protect your information when you use our sign
-            language gesture learning application.
-          </p>
-        </section>
-
-        <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            2. Data Controller Information
+            {t("web.privacy.introduction.title")}
           </h2>
-          <p>
-            The data controller responsible for your personal data is SMOG. For
-            any privacy-related questions, please contact us at: [Your Contact
-            Email]
-          </p>
+          <p>{t("web.privacy.introduction.body")}</p>
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">3. Data We Collect</h2>
+          <h2 className="mb-3 font-semibold text-2xl">
+            {t("web.privacy.controller.title")}
+          </h2>
+          <p>{t("web.privacy.controller.body")}</p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            {t("web.privacy.dataCollect.title")}
+          </h2>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.1 Account Information
+            {t("web.privacy.dataCollect.account.title")}
           </h3>
           <ul className="ml-6 list-disc space-y-1">
-            <li>Email address (via WorkOS authentication)</li>
-            <li>First and last name (via WorkOS authentication)</li>
-            <li>User ID (unique identifier)</li>
-            <li>Account creation and last activity timestamps</li>
+            <li>{t("web.privacy.dataCollect.account.items.email")}</li>
+            <li>{t("web.privacy.dataCollect.account.items.name")}</li>
+            <li>{t("web.privacy.dataCollect.account.items.userId")}</li>
+            <li>{t("web.privacy.dataCollect.account.items.timestamps")}</li>
           </ul>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.2 Usage Data (if you consent to analytics)
+            {t("web.privacy.dataCollect.usage.title")}
           </h3>
           <ul className="ml-6 list-disc space-y-1">
-            <li>Gestures you view and favorite</li>
-            <li>Search queries you perform</li>
-            <li>App navigation patterns</li>
-            <li>Device information (type, OS version)</li>
-            <li>Session duration and frequency</li>
-            <li>Video playback interactions</li>
+            <li>{t("web.privacy.dataCollect.usage.items.gestures")}</li>
+            <li>{t("web.privacy.dataCollect.usage.items.searches")}</li>
+            <li>{t("web.privacy.dataCollect.usage.items.navigation")}</li>
+            <li>{t("web.privacy.dataCollect.usage.items.device")}</li>
+            <li>{t("web.privacy.dataCollect.usage.items.session")}</li>
+            <li>{t("web.privacy.dataCollect.usage.items.video")}</li>
           </ul>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.3 User Preferences
+            {t("web.privacy.dataCollect.preferences.title")}
           </h3>
           <ul className="ml-6 list-disc space-y-1">
-            <li>Favorite gestures</li>
-            <li>Search history (stored locally on your device)</li>
-            <li>Language and theme preferences</li>
-          </ul>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.4 Guest Mode Data
-          </h3>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>Anonymous guest identifier (if using guest mode)</li>
+            <li>{t("web.privacy.dataCollect.preferences.items.favorites")}</li>
             <li>
-              Guest data is deleted after 12 months of inactivity as part of our
-              data retention policy
+              {t("web.privacy.dataCollect.preferences.items.searchHistory")}
             </li>
+            <li>{t("web.privacy.dataCollect.preferences.items.settings")}</li>
+          </ul>
+
+          <h3 className="mt-4 mb-2 font-semibold text-xl">
+            {t("web.privacy.dataCollect.guest.title")}
+          </h3>
+          <ul className="ml-6 list-disc space-y-1">
+            <li>{t("web.privacy.dataCollect.guest.items.identifier")}</li>
+            <li>{t("web.privacy.dataCollect.guest.items.retention")}</li>
           </ul>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            4. Legal Basis for Processing (GDPR)
+            {t("web.privacy.legalBasis.title")}
           </h2>
           <ul className="ml-6 list-disc space-y-2">
             <li>
-              <strong>Contract Performance:</strong> Processing your account
-              information is necessary to provide you with our services
+              <strong>
+                {t("web.privacy.legalBasis.items.contract.label")}:
+              </strong>{" "}
+              {t("web.privacy.legalBasis.items.contract.text")}
             </li>
             <li>
-              <strong>Consent:</strong> Analytics and marketing communications
-              (you can withdraw consent at any time in settings)
+              <strong>
+                {t("web.privacy.legalBasis.items.consent.label")}:
+              </strong>{" "}
+              {t("web.privacy.legalBasis.items.consent.text")}
             </li>
             <li>
-              <strong>Legitimate Interest:</strong> Security, fraud prevention,
-              and service improvement
+              <strong>
+                {t("web.privacy.legalBasis.items.legitimate.label")}:
+              </strong>{" "}
+              {t("web.privacy.legalBasis.items.legitimate.text")}
             </li>
             <li>
-              <strong>Legal Obligation:</strong> Compliance with applicable laws
-              and regulations
+              <strong>{t("web.privacy.legalBasis.items.legal.label")}:</strong>{" "}
+              {t("web.privacy.legalBasis.items.legal.text")}
             </li>
           </ul>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            5. How We Use Your Data
+            {t("web.privacy.useData.title")}
           </h2>
           <ul className="ml-6 list-disc space-y-1">
-            <li>To provide and maintain our service</li>
-            <li>To authenticate your account (via WorkOS)</li>
-            <li>To sync your favorites across devices</li>
-            <li>
-              To improve our app through usage analytics (only if you consent)
-            </li>
-            <li>To personalize your learning experience</li>
-            <li>To provide customer support</li>
-            <li>To comply with legal obligations</li>
+            <li>{t("web.privacy.useData.items.provide")}</li>
+            <li>{t("web.privacy.useData.items.authenticate")}</li>
+            <li>{t("web.privacy.useData.items.sync")}</li>
+            <li>{t("web.privacy.useData.items.analytics")}</li>
+            <li>{t("web.privacy.useData.items.personalize")}</li>
+            <li>{t("web.privacy.useData.items.support")}</li>
+            <li>{t("web.privacy.useData.items.legal")}</li>
           </ul>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            6. Third-Party Services
+            {t("web.privacy.thirdParty.title")}
           </h2>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.1 Authentication - WorkOS
+            {t("web.privacy.thirdParty.workos.title")}
           </h3>
           <p>
-            We use WorkOS for secure authentication. WorkOS processes your email
-            address and name to create and manage your account. See WorkOS
-            Privacy Policy at:{" "}
-            <a
-              className="text-blue-600 underline"
-              href="https://workos.com/privacy"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              https://workos.com/privacy
-            </a>
+            <Trans
+              components={{
+                link: (
+                  <a
+                    className="text-blue-600 underline"
+                    href="https://workos.com/privacy"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    https://workos.com/privacy
+                  </a>
+                ),
+              }}
+              i18nKey="web.privacy.thirdParty.workos.body"
+            />
           </p>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.2 Analytics - PostHog (optional)
+            {t("web.privacy.thirdParty.posthog.title")}
           </h3>
           <p>
-            If you consent, we use PostHog (EU-hosted) for usage analytics on
-            both our web and native applications. PostHog helps us understand
-            how users interact with our app. You can opt out at any time in
-            settings. See PostHog Privacy Policy at:{" "}
-            <a
-              className="text-blue-600 underline"
-              href="https://posthog.com/privacy"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              https://posthog.com/privacy
-            </a>
+            <Trans
+              components={{
+                link: (
+                  <a
+                    className="text-blue-600 underline"
+                    href="https://posthog.com/privacy"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    https://posthog.com/privacy
+                  </a>
+                ),
+              }}
+              i18nKey="web.privacy.thirdParty.posthog.body"
+            />
           </p>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.3 Video Hosting - Mux
+            {t("web.privacy.thirdParty.mux.title")}
           </h3>
           <p>
-            We use Mux to host and stream gesture demonstration videos. Mux may
-            collect technical data necessary for video delivery. See Mux Privacy
-            Policy at:{" "}
-            <a
-              className="text-blue-600 underline"
-              href="https://mux.com/privacy"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              https://mux.com/privacy
-            </a>
+            <Trans
+              components={{
+                link: (
+                  <a
+                    className="text-blue-600 underline"
+                    href="https://mux.com/privacy"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    https://mux.com/privacy
+                  </a>
+                ),
+              }}
+              i18nKey="web.privacy.thirdParty.mux.body"
+            />
           </p>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.4 Database - Convex
+            {t("web.privacy.thirdParty.convex.title")}
           </h3>
-          <p>
-            We use Convex to store your account data, favorites, and user
-            preferences. Convex is our backend database provider.
-          </p>
+          <p>{t("web.privacy.thirdParty.convex.body")}</p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            7. Data Storage and Security
+            {t("web.privacy.storage.title")}
+          </h2>
+          <ul className="ml-6 list-disc space-y-1">
+            <li>{t("web.privacy.storage.items.encryption")}</li>
+            <li>{t("web.privacy.storage.items.analytics")}</li>
+            <li>{t("web.privacy.storage.items.measures")}</li>
+            <li>{t("web.privacy.storage.items.access")}</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            {t("web.privacy.retention.title")}
           </h2>
           <ul className="ml-6 list-disc space-y-1">
             <li>
-              Your data is stored securely using industry-standard encryption
+              <strong>{t("web.privacy.retention.items.active.label")}:</strong>{" "}
+              {t("web.privacy.retention.items.active.text")}
             </li>
             <li>
-              Analytics data is stored on PostHog servers in the European Union
+              <strong>{t("web.privacy.retention.items.guest.label")}:</strong>{" "}
+              {t("web.privacy.retention.items.guest.text")}
             </li>
             <li>
-              We implement appropriate technical and organizational measures to
-              protect your data
+              <strong>{t("web.privacy.retention.items.logs.label")}:</strong>{" "}
+              {t("web.privacy.retention.items.logs.text")}
             </li>
             <li>
-              Access to your personal data is restricted to authorized personnel
-              only
+              <strong>{t("web.privacy.retention.items.deleted.label")}:</strong>{" "}
+              {t("web.privacy.retention.items.deleted.text")}
             </li>
           </ul>
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">8. Data Retention</h2>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>
-              <strong>Active Accounts:</strong> Data retained while your account
-              is active
-            </li>
-            <li>
-              <strong>Guest Accounts:</strong> Automatically deleted after 12
-              months of inactivity
-            </li>
-            <li>
-              <strong>Admin Logs:</strong> Retained for 3 years for audit
-              purposes
-            </li>
-            <li>
-              <strong>Deleted Accounts:</strong> All personal data deleted
-              within 30 days of deletion request
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">9. Your Rights (GDPR)</h2>
-          <p className="mb-2">You have the following rights:</p>
+          <h2 className="mb-3 font-semibold text-2xl">
+            {t("web.privacy.rights.title")}
+          </h2>
+          <p className="mb-2">{t("web.privacy.rights.intro")}</p>
           <ul className="ml-6 list-disc space-y-2">
             <li>
-              <strong>Right of Access:</strong> Request a copy of your personal
-              data (available in Settings → Download My Data)
+              <strong>{t("web.privacy.rights.items.access.label")}:</strong>{" "}
+              {t("web.privacy.rights.items.access.text")}
             </li>
             <li>
-              <strong>Right to Rectification:</strong> Correct inaccurate data
-              through your account settings
+              <strong>
+                {t("web.privacy.rights.items.rectification.label")}:
+              </strong>{" "}
+              {t("web.privacy.rights.items.rectification.text")}
             </li>
             <li>
-              <strong>Right to Erasure:</strong> Delete your account and all
-              associated data (Settings → Delete My Account)
+              <strong>{t("web.privacy.rights.items.erasure.label")}:</strong>{" "}
+              {t("web.privacy.rights.items.erasure.text")}
             </li>
             <li>
-              <strong>Right to Restrict Processing:</strong> Limit how we
-              process your data
+              <strong>{t("web.privacy.rights.items.restrict.label")}:</strong>{" "}
+              {t("web.privacy.rights.items.restrict.text")}
             </li>
             <li>
-              <strong>Right to Data Portability:</strong> Receive your data in a
-              machine-readable format
+              <strong>
+                {t("web.privacy.rights.items.portability.label")}:
+              </strong>{" "}
+              {t("web.privacy.rights.items.portability.text")}
             </li>
             <li>
-              <strong>Right to Object:</strong> Object to processing based on
-              legitimate interests
+              <strong>{t("web.privacy.rights.items.object.label")}:</strong>{" "}
+              {t("web.privacy.rights.items.object.text")}
             </li>
             <li>
-              <strong>Right to Withdraw Consent:</strong> Opt out of analytics
-              at any time
+              <strong>{t("web.privacy.rights.items.withdraw.label")}:</strong>{" "}
+              {t("web.privacy.rights.items.withdraw.text")}
             </li>
           </ul>
-          <p className="mt-3">
-            To exercise these rights, use the options in your account settings
-            or contact us directly.
-          </p>
+          <p className="mt-3">{t("web.privacy.rights.closing")}</p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            10. Children&apos;s Privacy
+            {t("web.privacy.children.title")}
           </h2>
-          <p>
-            Our service is intended for users aged 16 and above (or the age of
-            digital consent in your country). We do not knowingly collect data
-            from children under this age. If you believe we have collected data
-            from a child, please contact us immediately.
-          </p>
+          <p>{t("web.privacy.children.body")}</p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            11. International Data Transfers
+            {t("web.privacy.transfers.title")}
           </h2>
-          <p>
-            Your data may be transferred to and processed in countries outside
-            your country of residence. We ensure appropriate safeguards are in
-            place, including:
-          </p>
+          <p>{t("web.privacy.transfers.intro")}</p>
           <ul className="ml-6 list-disc space-y-1">
-            <li>EU-hosted analytics (PostHog)</li>
-            <li>
-              Standard Contractual Clauses with third-party processors where
-              applicable
-            </li>
-            <li>
-              Adequacy decisions by the European Commission where applicable
-            </li>
+            <li>{t("web.privacy.transfers.items.euHosting")}</li>
+            <li>{t("web.privacy.transfers.items.scc")}</li>
+            <li>{t("web.privacy.transfers.items.adequacy")}</li>
           </ul>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            12. Cookies and Local Storage
+            {t("web.privacy.cookies.title")}
           </h2>
-          <p>We use local storage (not cookies) to store:</p>
+          <p>{t("web.privacy.cookies.intro")}</p>
           <ul className="ml-6 list-disc space-y-1">
-            <li>Authentication tokens</li>
-            <li>User preferences (language, theme)</li>
-            <li>Recent searches (local only, not sent to servers)</li>
-            <li>Cached gesture data for offline access</li>
+            <li>{t("web.privacy.cookies.items.auth")}</li>
+            <li>{t("web.privacy.cookies.items.consent")}</li>
+            <li>{t("web.privacy.cookies.items.preferences")}</li>
+            <li>{t("web.privacy.cookies.items.search")}</li>
+            <li>{t("web.privacy.cookies.items.cache")}</li>
           </ul>
+          <p className="mt-2">{t("web.privacy.cookies.closing")}</p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            {t("web.privacy.changes.title")}
+          </h2>
+          <p>{t("web.privacy.changes.intro")}</p>
+          <ul className="ml-6 list-disc space-y-1">
+            <li>{t("web.privacy.changes.items.updated")}</li>
+            <li>{t("web.privacy.changes.items.notification")}</li>
+            <li>{t("web.privacy.changes.items.renewal")}</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            {t("web.privacy.contact.title")}
+          </h2>
+          <p>{t("web.privacy.contact.intro")}</p>
           <p className="mt-2">
-            You can clear this data at any time through your device/browser
-            settings.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            13. Changes to This Policy
-          </h2>
-          <p>
-            We may update this Privacy Policy from time to time. We will notify
-            you of significant changes by:
-          </p>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>Updating the &quot;Last updated&quot; date</li>
-            <li>Displaying an in-app notification</li>
-            <li>Requesting renewed consent where legally required</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">14. Contact Us</h2>
-          <p>
-            For privacy questions, exercising your rights, or data protection
-            concerns, contact us at:
-          </p>
-          <p className="mt-2">
-            <strong>Email:</strong> [Your Privacy Contact Email]
+            <strong>{t("web.privacy.contact.emailLabel")}:</strong>{" "}
+            {t("web.privacy.contact.emailValue")}
             <br />
-            <strong>Address:</strong> [Your Company Address]
+            <strong>{t("web.privacy.contact.addressLabel")}:</strong>{" "}
+            {t("web.privacy.contact.addressValue")}
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            15. Supervisory Authority
+            {t("web.privacy.authority.title")}
           </h2>
-          <p>
-            If you are located in the EEA or UK, you have the right to lodge a
-            complaint with your local data protection authority if you believe
-            we have not complied with applicable data protection laws.
-          </p>
+          <p>{t("web.privacy.authority.body")}</p>
         </section>
 
         <section className="border-gray-300 border-t pt-6">
-          <p className="text-gray-600 text-sm">
-            This privacy policy is designed to be GDPR-compliant. By using our
-            service, you acknowledge that you have read and understood this
-            policy.
-          </p>
+          <p className="text-gray-600 text-sm">{t("web.privacy.footer")}</p>
         </section>
       </div>
     </div>

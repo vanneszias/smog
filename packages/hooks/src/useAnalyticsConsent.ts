@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-declare const window: { localStorage: Storage };
+declare const document: { cookie: string } | undefined;
 
 export type AnalyticsConsentStatus = {
   hasConsent: boolean;
@@ -21,21 +21,45 @@ function createConsent(
   };
 }
 
-function getStoredConsent(): AnalyticsConsentStatus | null {
-  if (typeof window === "undefined") {
+const CONSENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") {
     return null;
   }
+
+  const cookieValue = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${name}=`));
+
+  if (!cookieValue) {
+    return null;
+  }
+
+  return decodeURIComponent(cookieValue.split("=")[1] || "");
+}
+
+function writeCookie(name: string, value: string): void {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  document.cookie = `${name}=${encodeURIComponent(
+    value
+  )}; path=/; max-age=${CONSENT_COOKIE_MAX_AGE}; samesite=lax`;
+}
+
+function getStoredConsent(): AnalyticsConsentStatus | null {
   try {
-    const consent = localStorage.getItem("smog_analytics_consent");
+    const consent = readCookie("smog_analytics_consent");
     if (consent === null) {
       return null;
     }
     return {
       hasConsent: true,
       analyticsConsent: consent === "true",
-      marketingConsent:
-        localStorage.getItem("smog_marketing_consent") === "true",
-      consentDate: localStorage.getItem("smog_consent_date") || undefined,
+      marketingConsent: readCookie("smog_marketing_consent") === "true",
+      consentDate: readCookie("smog_consent_date") || undefined,
     };
   } catch {
     return null;
@@ -46,19 +70,13 @@ export { getStoredConsent };
 
 function saveConsent(status: AnalyticsConsentStatus): void {
   try {
-    localStorage.setItem(
-      "smog_analytics_consent",
-      status.analyticsConsent.toString()
-    );
-    localStorage.setItem(
-      "smog_marketing_consent",
-      status.marketingConsent.toString()
-    );
-    localStorage.setItem(
+    writeCookie("smog_analytics_consent", status.analyticsConsent.toString());
+    writeCookie("smog_marketing_consent", status.marketingConsent.toString());
+    writeCookie(
       "smog_consent_date",
       status.consentDate || new Date().toISOString()
     );
-    localStorage.setItem("smog_gdpr_consent", "accepted");
+    writeCookie("smog_gdpr_consent", "accepted");
   } catch {
     console.debug("[Analytics] Unable to persist consent");
   }
