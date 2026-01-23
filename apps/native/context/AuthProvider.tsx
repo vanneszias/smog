@@ -30,6 +30,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { networkService } from "@/services/networkService";
 import { generateGuestId } from "@/services/userService";
 
 maybeCompleteAuthSession();
@@ -122,6 +123,16 @@ async function refreshSession(): Promise<{
   return null;
 }
 
+async function isNetworkAvailable(): Promise<boolean> {
+  try {
+    const state = await networkService.refresh();
+    return Boolean(state.isConnected && state.isInternetReachable !== false);
+  } catch (error) {
+    console.error("[Auth] Failed to refresh network state:", error);
+    return networkService.isConnected();
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<WorkOSUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -200,6 +211,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Restore session on mount
   useEffect(() => {
+    const finalizeRestore = (mode: AuthMode) => {
+      setAuthMode(mode);
+      setIsLoading(false);
+    };
+
+    const restoreAuthenticatedSession = async (
+      storedUser: string
+    ): Promise<AuthMode> => {
+      const parsedUser = JSON.parse(storedUser) as WorkOSUser;
+      setUser(parsedUser);
+
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) {
+        return "unauthenticated";
+      }
+
+      const isOnline = await isNetworkAvailable();
+      if (!isOnline) {
+        return "authenticated";
+      }
+
+      const result = await refreshSession();
+      if (!result) {
+        await clearRefreshToken();
+        await AsyncStorage.removeItem(USER_KEY);
+        return "unauthenticated";
+      }
+
+      accessToken = result.accessToken;
+      await storeRefreshToken(result.refreshToken);
+      setUser(result.user);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(result.user));
+      return "authenticated";
+    };
+
     const restoreSession = async () => {
       try {
         // Check guest mode first
@@ -208,38 +254,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (guestMode === "true") {
           setGuestId(storedGuestId);
-          setAuthMode("guest");
-          setIsLoading(false);
+          finalizeRestore("guest");
           return;
         }
 
         // Try to restore authenticated session
         const storedUser = await AsyncStorage.getItem(USER_KEY);
         if (!storedUser) {
-          setAuthMode("unauthenticated");
-          setIsLoading(false);
+          finalizeRestore("unauthenticated");
           return;
         }
 
-        // Refresh token
-        const result = await refreshSession();
-        if (result) {
-          accessToken = result.accessToken;
-          await storeRefreshToken(result.refreshToken);
-          setUser(result.user);
-          await AsyncStorage.setItem(USER_KEY, JSON.stringify(result.user));
-          setAuthMode("authenticated");
-        } else {
-          // Refresh failed - clear session
-          await clearRefreshToken();
-          await AsyncStorage.removeItem(USER_KEY);
-          setAuthMode("unauthenticated");
-        }
+        const mode = await restoreAuthenticatedSession(storedUser);
+        finalizeRestore(mode);
       } catch (error) {
         console.error("[Auth] Session restore error:", error);
-        setAuthMode("unauthenticated");
+        finalizeRestore("unauthenticated");
       }
-      setIsLoading(false);
     };
 
     restoreSession();
@@ -253,6 +284,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Return cached token if valid
     if (accessToken && !isTokenExpired(accessToken)) {
       return accessToken;
+    }
+
+    const isOnline = await isNetworkAvailable();
+    if (!isOnline) {
+      return null;
     }
 
     // Deduplicate concurrent refresh requests
