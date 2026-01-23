@@ -26,6 +26,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { setORPCAccessTokenProvider } from "../utils/orpc";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const clientId = import.meta.env.VITE_WORKOS_CLIENT_ID;
@@ -189,6 +190,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }),
     [user, isLoading, signIn, signOut, getAccessToken]
   );
+
+  // Register access token provider for ORPC client
+  useEffect(() => {
+    setORPCAccessTokenProvider(getAccessToken);
+    return () => {
+      setORPCAccessTokenProvider(null);
+    };
+  }, [getAccessToken]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
