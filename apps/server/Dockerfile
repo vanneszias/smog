@@ -15,7 +15,6 @@ COPY packages/auth/package.json ./packages/auth/
 COPY packages/config/package.json ./packages/config/
 COPY packages/convex/package.json ./packages/convex/
 COPY packages/types/package.json ./packages/types/
-COPY packages/utils/package.json ./packages/utils/
 COPY packages/styles/package.json ./packages/styles/
 COPY packages/hooks/package.json ./packages/hooks/
 COPY packages/i18n/package.json ./packages/i18n/

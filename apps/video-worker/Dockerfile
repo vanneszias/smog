@@ -22,7 +22,6 @@ COPY packages/config/package.json ./packages/config/
 COPY packages/types/package.json ./packages/types/
 COPY packages/api/package.json ./packages/api/
 COPY packages/auth/package.json ./packages/auth/
-COPY packages/utils/package.json ./packages/utils/
 COPY packages/styles/package.json ./packages/styles/
 COPY packages/hooks/package.json ./packages/hooks/
 COPY packages/i18n/package.json ./packages/i18n/
