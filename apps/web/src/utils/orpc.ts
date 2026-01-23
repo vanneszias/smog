@@ -5,7 +5,27 @@ import type { AppRouterClient } from "@smog/api/routers/index";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-const TOKEN_STORAGE_KEY = "smog_web_token";
+type AccessTokenProvider = () => Promise<string | null> | string | null;
+
+let accessTokenProvider: AccessTokenProvider | null = null;
+
+export function setORPCAccessTokenProvider(
+  provider: AccessTokenProvider | null
+) {
+  accessTokenProvider = provider;
+}
+
+async function getAccessTokenFromProvider(): Promise<string | null> {
+  try {
+    const provider = accessTokenProvider;
+    if (!provider) {
+      return null;
+    }
+    return await provider();
+  } catch {
+    return null;
+  }
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,8 +50,8 @@ export const queryClient = new QueryClient({
 
 export const link = new RPCLink({
   url: `${import.meta.env.VITE_SERVER_URL}/rpc`,
-  fetch(_url, options) {
-    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  async fetch(_url, options) {
+    const token = await getAccessTokenFromProvider();
     const headers = new Headers(
       (options as RequestInit | undefined)?.headers || {}
     );
