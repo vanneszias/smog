@@ -1,12 +1,14 @@
+import { api } from "@smog/convex";
 import { type AnalyticsConsentStatus, useAnalyticsConsent } from "@smog/hooks";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useQuery } from "convex/react";
+import { useEffect, useState } from "react";
 import { onConsentChange } from "@/lib/analytics";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 
 export function GDPRConsentBanner() {
-  const { grantConsent, revokeConsent, updateConsent, consent } =
+  const { grantConsent, revokeConsent, updateConsent, consent, isLoading } =
     useAnalyticsConsent({
       onConsentChange: (enabled) => {
         const newConsent: AnalyticsConsentStatus = {
@@ -19,7 +21,33 @@ export function GDPRConsentBanner() {
       },
     });
 
-  const [showBanner, setShowBanner] = useState(!consent?.hasConsent);
+  const shouldCheckDb = !(isLoading || consent?.hasConsent);
+  const consentStatus = useQuery(
+    api.gdpr.getConsentStatus,
+    shouldCheckDb ? {} : "skip"
+  );
+
+  const [showBanner, setShowBanner] = useState(false);
+
+  useEffect(() => {
+    if (isLoading || (shouldCheckDb && consentStatus === undefined)) {
+      return;
+    }
+
+    const hasDbConsent = consentStatus?.hasConsent === true;
+    setShowBanner(!(consent?.hasConsent || hasDbConsent));
+  }, [consent?.hasConsent, consentStatus, isLoading, shouldCheckDb]);
+
+  useEffect(() => {
+    if (!consentStatus?.hasConsent || consent?.hasConsent) {
+      return;
+    }
+
+    updateConsent(
+      consentStatus.analyticsConsent,
+      consentStatus.marketingConsent
+    );
+  }, [consentStatus, consent?.hasConsent, updateConsent]);
 
   const handleAcceptAll = () => {
     grantConsent();
@@ -28,6 +56,11 @@ export function GDPRConsentBanner() {
 
   const handleCustomize = (analyticsEnabled: boolean) => {
     updateConsent(analyticsEnabled, false);
+    setShowBanner(false);
+  };
+
+  const handleRequiredOnly = () => {
+    revokeConsent();
     setShowBanner(false);
   };
 
@@ -66,7 +99,7 @@ export function GDPRConsentBanner() {
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleAcceptAll}>Accept All</Button>
-          <Button onClick={() => revokeConsent()} variant="outline">
+          <Button onClick={handleRequiredOnly} variant="outline">
             Required Only
           </Button>
         </div>

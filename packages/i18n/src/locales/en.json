@@ -321,6 +321,355 @@
     "metadata": {
       "title": "smog-sponsors",
       "description": "smog-sponsors is a web application"
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: {{date}}",
+      "introduction": {
+        "title": "1. Introduction",
+        "body": "Welcome to SMOG&Co (\"we\", \"our\", or \"us\"). We are committed to protecting your personal data and respecting your privacy. This Privacy Policy explains how we collect, use, and protect your information when you use our sign language gesture learning application."
+      },
+      "controller": {
+        "title": "2. Data Controller Information",
+        "body": "The data controller responsible for your personal data is SMOG&Co VZW (Belgium). For any privacy-related questions, please contact us at: [Your Privacy Contact Email]"
+      },
+      "dataCollect": {
+        "title": "3. Data We Collect",
+        "account": {
+          "title": "3.1 Account Information",
+          "items": {
+            "email": "Email address (via WorkOS authentication)",
+            "name": "First and last name (via WorkOS authentication)",
+            "userId": "User ID (unique identifier)",
+            "timestamps": "Account creation and last activity timestamps"
+          }
+        },
+        "usage": {
+          "title": "3.2 Usage Data (if you consent to analytics)",
+          "items": {
+            "gestures": "Gestures you view and favorite",
+            "searches": "Search queries you perform",
+            "navigation": "App navigation patterns",
+            "device": "Device information (type, OS version)",
+            "session": "Session duration and frequency",
+            "video": "Video playback interactions"
+          }
+        },
+        "preferences": {
+          "title": "3.3 User Preferences",
+          "items": {
+            "favorites": "Favorite gestures",
+            "searchHistory": "Search history (stored locally on your device)",
+            "settings": "Language and theme preferences"
+          }
+        },
+        "guest": {
+          "title": "3.4 Guest Mode Data",
+          "items": {
+            "identifier": "Anonymous guest identifier (if using guest mode)",
+            "retention": "Guest data is deleted after 12 months of inactivity as part of our data retention policy"
+          }
+        }
+      },
+      "legalBasis": {
+        "title": "4. Legal Basis for Processing (GDPR)",
+        "items": {
+          "contract": {
+            "label": "Contract Performance",
+            "text": "Processing your account information is necessary to provide you with our services"
+          },
+          "consent": {
+            "label": "Consent",
+            "text": "Analytics and marketing communications (you can withdraw consent at any time in settings)"
+          },
+          "legitimate": {
+            "label": "Legitimate Interest",
+            "text": "Security, fraud prevention, and service improvement"
+          },
+          "legal": {
+            "label": "Legal Obligation",
+            "text": "Compliance with applicable laws and regulations"
+          }
+        }
+      },
+      "useData": {
+        "title": "5. How We Use Your Data",
+        "items": {
+          "provide": "To provide and maintain our service",
+          "authenticate": "To authenticate your account (via WorkOS)",
+          "sync": "To sync your favorites across devices",
+          "analytics": "To improve our app through usage analytics (only if you consent)",
+          "personalize": "To personalize your learning experience",
+          "support": "To provide customer support",
+          "legal": "To comply with legal obligations"
+        }
+      },
+      "thirdParty": {
+        "title": "6. Third-Party Services",
+        "workos": {
+          "title": "6.1 Authentication - WorkOS",
+          "body": "We use WorkOS for secure authentication. WorkOS processes your email address and name to create and manage your account. See WorkOS Privacy Policy at: <link>https://workos.com/privacy</link>"
+        },
+        "posthog": {
+          "title": "6.2 Analytics - PostHog (optional)",
+          "body": "If you consent, we use PostHog (EU-hosted) for usage analytics on both our web and native applications. PostHog helps us understand how users interact with our app. You can opt out at any time in settings. See PostHog Privacy Policy at: <link>https://posthog.com/privacy</link>"
+        },
+        "mux": {
+          "title": "6.3 Video Hosting - Mux",
+          "body": "We use Mux to host and stream gesture demonstration videos. Mux may collect technical data necessary for video delivery. See Mux Privacy Policy at: <link>https://mux.com/privacy</link>"
+        },
+        "convex": {
+          "title": "6.4 Database - Convex",
+          "body": "We use Convex to store your account data, favorites, and user preferences. Convex is our backend database provider."
+        }
+      },
+      "storage": {
+        "title": "7. Data Storage and Security",
+        "items": {
+          "encryption": "Your data is stored securely using industry-standard encryption",
+          "analytics": "Analytics data is stored on PostHog servers in the European Union",
+          "measures": "We implement appropriate technical and organizational measures to protect your data",
+          "access": "Access to your personal data is restricted to authorized personnel only"
+        }
+      },
+      "retention": {
+        "title": "8. Data Retention",
+        "items": {
+          "active": {
+            "label": "Active Accounts",
+            "text": "Data retained while your account is active"
+          },
+          "guest": {
+            "label": "Guest Accounts",
+            "text": "Automatically deleted after 12 months of inactivity"
+          },
+          "logs": {
+            "label": "Admin Logs",
+            "text": "Retained for 3 years for audit purposes"
+          },
+          "deleted": {
+            "label": "Deleted Accounts",
+            "text": "All personal data deleted within 30 days of deletion request"
+          }
+        }
+      },
+      "rights": {
+        "title": "9. Your Rights (GDPR)",
+        "intro": "You have the following rights:",
+        "items": {
+          "access": {
+            "label": "Right of Access",
+            "text": "Request a copy of your personal data (available in Settings → Download My Data)"
+          },
+          "rectification": {
+            "label": "Right to Rectification",
+            "text": "Correct inaccurate data through your account settings"
+          },
+          "erasure": {
+            "label": "Right to Erasure",
+            "text": "Delete your account and all associated data (Settings → Delete My Account)"
+          },
+          "restrict": {
+            "label": "Right to Restrict Processing",
+            "text": "Limit how we process your data"
+          },
+          "portability": {
+            "label": "Right to Data Portability",
+            "text": "Receive your data in a machine-readable format"
+          },
+          "object": {
+            "label": "Right to Object",
+            "text": "Object to processing based on legitimate interests"
+          },
+          "withdraw": {
+            "label": "Right to Withdraw Consent",
+            "text": "Opt out of analytics at any time"
+          }
+        },
+        "closing": "To exercise these rights, use the options in your account settings or contact us directly."
+      },
+      "children": {
+        "title": "10. Children's Privacy",
+        "body": "Our service is intended for users aged 13 and above (or the age of digital consent in your country). We do not knowingly collect data from children under this age. If you believe we have collected data from a child, please contact us immediately."
+      },
+      "transfers": {
+        "title": "11. International Data Transfers",
+        "intro": "Your data may be transferred to and processed in countries outside the EEA/UK. We ensure appropriate safeguards are in place, including:",
+        "items": {
+          "euHosting": "EU-hosted analytics (PostHog)",
+          "scc": "Standard Contractual Clauses with third-party processors where applicable",
+          "adequacy": "Adequacy decisions by the European Commission where applicable"
+        }
+      },
+      "cookies": {
+        "title": "12. Cookies and Local Storage",
+        "intro": "We use cookies and local storage to store:",
+        "items": {
+          "auth": "Strictly necessary cookies for authentication sessions",
+          "consent": "Consent choices for analytics and marketing preferences",
+          "preferences": "User preferences (language, theme)",
+          "search": "Recent searches (local only, not sent to servers)",
+          "cache": "Cached gesture data for offline access"
+        },
+        "closing": "You can clear this data at any time through your device/browser settings. You can also update consent preferences in account settings."
+      },
+      "changes": {
+        "title": "13. Changes to This Policy",
+        "intro": "We may update this Privacy Policy from time to time. We will notify you of significant changes by:",
+        "items": {
+          "updated": "Updating the \"Last updated\" date",
+          "notification": "Displaying an in-app notification",
+          "renewal": "Requesting renewed consent where legally required"
+        }
+      },
+      "contact": {
+        "title": "14. Contact Us",
+        "intro": "For privacy questions, exercising your rights, or data protection concerns, contact us at:",
+        "emailLabel": "Email",
+        "emailValue": "[Your Privacy Contact Email]",
+        "addressLabel": "Address",
+        "addressValue": "[SMOG&Co VZW Registered Address, Belgium]"
+      },
+      "authority": {
+        "title": "15. Supervisory Authority",
+        "body": "If you are located in Belgium, you have the right to lodge a complaint with the Belgian Data Protection Authority (APD/GBA). If you are located elsewhere in the EEA or UK, you may contact your local data protection authority."
+      },
+      "footer": "This privacy policy is designed to be GDPR-compliant and aligned with Belgian data protection law. By using our service, you acknowledge that you have read and understood this policy."
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last updated: {{date}}",
+      "acceptance": {
+        "title": "1. Acceptance of Terms",
+        "body": "By accessing and using SMOG&Co (\"the Service\"), operated by SMOG&Co VZW (Belgium), you accept and agree to be bound by the terms and conditions of this agreement. If you do not agree to these Terms of Service, please do not use the Service."
+      },
+      "description": {
+        "title": "2. Description of Service",
+        "intro": "SMOG&Co is a sign language gesture learning application that provides:",
+        "items": {
+          "library": "Access to a library of sign language gesture videos",
+          "search": "Search and categorization of gestures",
+          "favorites": "Ability to save favorite gestures",
+          "sync": "Cross-device synchronization for registered users",
+          "guest": "Guest mode for temporary access without registration"
+        }
+      },
+      "accounts": {
+        "title": "3. User Accounts",
+        "create": {
+          "title": "3.1 Account Creation",
+          "body": "You may create an account using WorkOS authentication. You are responsible for maintaining the confidentiality of your account credentials and for all activities under your account."
+        },
+        "guest": {
+          "title": "3.2 Guest Mode",
+          "body": "You may use the Service as a guest without creating an account. Guest data is stored locally on your device and will be automatically deleted after 12 months of inactivity."
+        },
+        "termination": {
+          "title": "3.3 Account Termination",
+          "body": "You may delete your account at any time through the settings page. Upon deletion, all your personal data will be permanently removed within 30 days."
+        }
+      },
+      "conduct": {
+        "title": "4. User Conduct",
+        "intro": "You agree NOT to:",
+        "items": {
+          "unlawful": "Use the Service for any unlawful purpose",
+          "access": "Attempt to gain unauthorized access to any portion of the Service",
+          "disrupt": "Interfere with or disrupt the Service or servers or networks connected to the Service",
+          "automated": "Use any automated system to access the Service without our prior written permission",
+          "resell": "Reproduce, duplicate, copy, or resell any part of the Service",
+          "notices": "Remove or modify any copyright, trademark, or proprietary notices"
+        }
+      },
+      "intellectual": {
+        "title": "5. Intellectual Property",
+        "ours": {
+          "title": "5.1 Our Content",
+          "body": "All content provided through the Service, including gesture videos, text, graphics, logos, and software, is the property of SMOG&Co or its licensors and is protected by copyright and other intellectual property laws."
+        },
+        "license": {
+          "title": "5.2 License Grant",
+          "intro": "We grant you a limited, non-exclusive, non-transferable license to access and use the Service for your personal, non-commercial use. This license does not include any rights to:",
+          "items": {
+            "download": "Download or copy gesture videos (except through normal caching)",
+            "modify": "Modify or create derivative works",
+            "display": "Publicly display or perform the content",
+            "commercial": "Use the content for commercial purposes"
+          }
+        },
+        "education": {
+          "title": "5.3 Educational Use",
+          "body": "The Service is intended for educational purposes to help users learn sign language. Users are encouraged to use the knowledge gained to communicate and teach others."
+        }
+      },
+      "privacy": {
+        "title": "6. Privacy",
+        "body": "Your use of the Service is also governed by our Privacy Policy. By using the Service, you consent to the collection and use of your information as described in the Privacy Policy."
+      },
+      "disclaimers": {
+        "title": "7. Disclaimers",
+        "availability": {
+          "title": "7.1 Service Availability",
+          "body": "The Service is provided \"as is\" and \"as available\" without warranties of any kind. We do not guarantee that the Service will be uninterrupted, timely, secure, or error-free."
+        },
+        "educational": {
+          "title": "7.2 Educational Content",
+          "body": "While we strive to provide accurate sign language demonstrations, we do not guarantee the accuracy, completeness, or usefulness of any content. Sign language may vary by region and context."
+        },
+        "noAdvice": {
+          "title": "7.3 No Professional Advice",
+          "body": "The Service is for educational purposes only and does not constitute professional sign language instruction or certification."
+        }
+      },
+      "liability": {
+        "title": "8. Limitation of Liability",
+        "intro": "To the maximum extent permitted by law, SMOG&Co shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses resulting from:",
+        "items": {
+          "access": "Your access to or use of or inability to access or use the Service",
+          "content": "Any conduct or content of any third party on the Service",
+          "materials": "Any content obtained from the Service",
+          "security": "Unauthorized access, use, or alteration of your transmissions or content"
+        }
+      },
+      "indemnification": {
+        "title": "9. Indemnification",
+        "body": "You agree to indemnify and hold harmless SMOG&Co, its officers, directors, employees, and agents from any claims, damages, obligations, losses, liabilities, costs, or debt, and expenses arising from: (i) your use of the Service; (ii) your violation of these Terms; or (iii) your violation of any third-party rights."
+      },
+      "modifications": {
+        "title": "10. Modifications to Service",
+        "body": "We reserve the right to modify or discontinue, temporarily or permanently, the Service (or any part thereof) with or without notice. We shall not be liable to you or any third party for any modification, suspension, or discontinuance of the Service."
+      },
+      "changes": {
+        "title": "11. Changes to Terms",
+        "intro": "We reserve the right to update or modify these Terms at any time. We will notify you of material changes by:",
+        "items": {
+          "updated": "Updating the \"Last updated\" date above",
+          "notification": "Displaying an in-app notification",
+          "acceptance": "Requiring acceptance of new terms upon next login"
+        },
+        "closing": "Your continued use of the Service after such changes constitutes your acceptance of the new Terms."
+      },
+      "governing": {
+        "title": "12. Governing Law",
+        "body": "These Terms shall be governed by and construed in accordance with the laws of Belgium, without regard to its conflict of law provisions. You agree to submit to the exclusive jurisdiction of the courts located in Belgium for resolution of any disputes."
+      },
+      "severability": {
+        "title": "13. Severability",
+        "body": "If any provision of these Terms is found to be unenforceable or invalid, that provision shall be limited or eliminated to the minimum extent necessary so that these Terms shall otherwise remain in full force and effect."
+      },
+      "entire": {
+        "title": "14. Entire Agreement",
+        "body": "These Terms, together with the Privacy Policy, constitute the entire agreement between you and SMOG&Co regarding the use of the Service and supersede all prior agreements and understandings."
+      },
+      "contact": {
+        "title": "15. Contact Information",
+        "intro": "If you have any questions about these Terms, please contact us at:",
+        "emailLabel": "Email",
+        "emailValue": "[Your Contact Email]",
+        "addressLabel": "Address",
+        "addressValue": "[SMOG&Co VZW Registered Address, Belgium]"
+      },
+      "footer": "By using SMOG&Co, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service."
     }
   },
   "ui": {
