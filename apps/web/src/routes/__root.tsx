@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { GDPRConsentBanner } from "@/components/gdpr-consent-banner";
 import Header from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -28,23 +29,6 @@ export type RouterAppContext = {
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
-  head: () => ({
-    meta: [
-      {
-        title: "smog-sponsors",
-      },
-      {
-        name: "description",
-        content: "smog-sponsors is a web application",
-      },
-    ],
-    links: [
-      {
-        rel: "icon",
-        href: "/favicon.ico",
-      },
-    ],
-  }),
 });
 
 function RootComponent() {
@@ -55,6 +39,12 @@ function RootComponent() {
   useEffect(() => {
     trackPageView(location.pathname);
   }, [location.pathname]);
+
+  // Update document language attribute based on i18n
+  const { i18n: i18nInstance } = useTranslation();
+  useEffect(() => {
+    document.documentElement.lang = i18nInstance.language;
+  }, [i18nInstance.language]);
 
   return (
     <>
@@ -69,7 +59,9 @@ function RootComponent() {
           >
             <div className="grid h-svh grid-rows-[auto_1fr]">
               <Header />
-              <Outlet />
+              <main id="main-content">
+                <Outlet />
+              </main>
             </div>
             <GDPRConsentBanner />
             <Toaster richColors />

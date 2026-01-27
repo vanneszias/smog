@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 type LogoProps = {
   variant?: "default" | "white" | "black";
   width?: number;
@@ -11,6 +13,7 @@ export default function Logo({
   height = 80,
   className = "",
 }: LogoProps) {
+  const { t } = useTranslation();
   const logoSrc =
     variant === "default" ? "/assets/logo.svg" : "/assets/logo-flexible.svg";
 
@@ -24,7 +27,7 @@ export default function Logo({
   return (
     <div className={`flex items-center justify-center ${className}`}>
       <img
-        alt="SMOG Logo"
+        alt={t("accessibility.logo.alt", "SMOG Logo")}
         height={height}
         src={logoSrc}
         style={{ filter: colorFilter }}

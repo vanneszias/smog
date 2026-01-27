@@ -501,7 +501,14 @@
       "noVideo": "Aucune vidéo disponible",
       "openInApp": "Ouvrir dans l'App",
       "betterExperience": "Obtenez une meilleure expérience avec notre application mobile",
-      "open": "Ouvrir"
+      "open": "Ouvrir",
+      "sponsorThisGesture": "Parrainer ce geste",
+      "sponsorDescription": "Faites de ce geste le vôtre ! Ajoutez votre marque et votre message à la vidéo et soutenez l'éducation en langue des signes.",
+      "sponsorNow": "Parrainer maintenant",
+      "currentlySponsored": "Actuellement parrainé",
+      "sponsoredBy": "Ce geste est parrainé par {{sponsorName}}.",
+      "sponsored": "Ce geste est actuellement parrainé.",
+      "availableFrom": "Il sera à nouveau disponible pour parrainage à partir du {{date}}."
     },
     "gestureFilters": {
       "searchPlaceholder": "Rechercher des gestes...",

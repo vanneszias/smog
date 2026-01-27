@@ -112,7 +112,10 @@
     "cancel": "Cancel",
     "error": "Error",
     "success": "Success",
-    "comingSoon": "Coming Soon"
+    "comingSoon": "Coming Soon",
+    "errors": {
+      "rootElementNotFound": "Root element not found"
+    }
   },
   "account": {
     "title": "Account Settings",
@@ -221,7 +224,18 @@
   },
   "web": {
     "home": {
+      "header": {
+        "search": "Search",
+        "favorites": "Favorites",
+        "account": "Account",
+        "sponsor": "Sponsor",
+        "discoverGestures": "Discover SMOG Gestures"
+      },
       "title": "Learn Sign Language",
+      "footer": {
+        "terms": "Terms",
+        "privacy": "Privacy"
+      },
       "subtitle": "Discover and master sign language gestures with our comprehensive video library. Search, learn, and practice at your own pace.",
       "searchPlaceholder": "Search for a gesture...",
       "recentSearches": "Recent Searches",
@@ -240,7 +254,7 @@
         "description": "Filter gestures by topic and category to focus on what you need to learn.",
         "action": "Start learning"
       },
-      "footer": "© 2024 SMOG. All rights reserved."
+      "copyright": "© 2024 SMOG. All rights reserved."
     },
     "gestures": {
       "searchPlaceholder": "Search gestures by name, concept, or description...",
@@ -693,7 +707,14 @@
       "noVideo": "No video available",
       "openInApp": "Open in App",
       "betterExperience": "Get a better experience with our mobile app",
-      "open": "Open"
+      "open": "Open",
+      "sponsorThisGesture": "Sponsor This Gesture",
+      "sponsorDescription": "Make this gesture yours! Add your brand and message to the video and support sign language education.",
+      "sponsorNow": "Sponsor Now",
+      "currentlySponsored": "Currently Sponsored",
+      "sponsoredBy": "This gesture is sponsored by {{sponsorName}}.",
+      "sponsored": "This gesture is currently sponsored.",
+      "availableFrom": "It will be available for sponsorship again from {{date}}."
     },
     "gestureFilters": {
       "searchPlaceholder": "Search gestures...",
@@ -756,5 +777,58 @@
       "analyticsEnabled": "Enabled",
       "analyticsDisabled": "Disabled"
     }
+  },
+  "accessibility": {
+    "skipToContent": "Skip to content",
+    "skipToNav": "Skip to navigation",
+    "menu": {
+      "open": "Open menu",
+      "close": "Close menu"
+    },
+    "logo": {
+      "alt": "SMOG Logo"
+    },
+    "keys": {
+      "escape": "Escape"
+    }
+  },
+  "admin": {
+    "gestures": {
+      "updated": "Gesture updated successfully",
+      "searchPlaceholder": "Search by name, description, or concept...",
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      }
+    },
+    "sponsorships": {
+      "unknown": "Unknown",
+      "unknownGesture": "Unknown Gesture",
+      "sponsoredVideo": "Sponsored Video",
+      "originalVideo": "Original Video",
+      "expiring": "Expiring...",
+      "forceExpire": "Force Expire Sponsorship",
+      "expired": "Sponsorship expired successfully",
+      "searchPlaceholder": "Search by gesture, sponsor name, or email...",
+      "overlay": {
+        "alt": "Overlay"
+      },
+      "playbackId": {
+        "notAvailable": "N/A"
+      }
+    },
+    "pending": {
+      "approved": "Sponsorship approved successfully",
+      "rejected": "Sponsorship rejected",
+      "searchPlaceholder": "Search by gesture, sponsor name, or email...",
+      "rejectionPlaceholder": "Reason for rejection..."
+    }
+  },
+  "seo": {
+    "defaultTitle": "SMOG - Learn Sign Language",
+    "defaultDescription": "Discover and master sign language gestures with our comprehensive video library. Search, learn, and practice at your own pace.",
+    "keywords": "sign language, sign language learning, SMOG, gestures, sign language dictionary, learn to sign, sign language video, deaf education",
+    "ogType": "website",
+    "twitterCard": "summary_large_image"
   }
 }

@@ -85,7 +85,10 @@
     "cancel": "Annuleren",
     "error": "Fout",
     "success": "Succes",
-    "comingSoon": "Binnenkort beschikbaar"
+    "comingSoon": "Binnenkort beschikbaar",
+    "errors": {
+      "rootElementNotFound": "Root element niet gevonden"
+    }
   },
   "account": {
     "title": "Account instellingen",
@@ -195,7 +198,18 @@
   "web": {
     "home": {
       "title": "Leer SMOG",
+      "header": {
+        "search": "Zoeken",
+        "favorites": "Favorieten",
+        "account": "Account",
+        "sponsor": "Sponsor",
+        "discoverGestures": "Ontdek de SMOG-gebaren"
+      },
       "subtitle": "Ontdek en beheers SMOG met onze uitgebreide videobibliotheek. Zoek, leer en oefen in op eigen tempo.",
+      "footer": {
+        "terms": "Voorwaarden",
+        "privacy": "Privacy"
+      },
       "searchPlaceholder": "Zoek naar een gebaar...",
       "recentSearches": "Recente Zoekopdrachten",
       "browseGestures": {
@@ -661,12 +675,19 @@
       "backToGestures": "Terug naar Gebaren",
       "addToFavorites": "Toevoegen aan Favorieten",
       "removeFromFavorites": "Verwijderen uit Favorieten",
-      "description": "Dit is belangrijk om te weten",
-      "relatedConcepts": "Dit gebaar heeft deze concepten",
+      "description": "Beschrijving",
+      "relatedConcepts": "Gerelateerde Concepten",
       "noVideo": "Geen video beschikbaar",
       "openInApp": "Open in App",
       "betterExperience": "Krijg een betere ervaring met onze mobiele app",
-      "open": "Openen"
+      "open": "Openen",
+      "sponsorThisGesture": "Sponsor dit Gebaar",
+      "sponsorDescription": "Maak dit gebaar van jou! Voeg je merk en boodschap toe aan de video en steun het onderwijs in gebarentaal.",
+      "sponsorNow": "Nu Sponsoren",
+      "currentlySponsored": "Momenteel Gesponsord",
+      "sponsoredBy": "Dit gebaar wordt gesponsord door {{sponsorName}}.",
+      "sponsored": "Dit gebaar wordt momenteel gesponsord.",
+      "availableFrom": "Het zal opnieuw beschikbaar zijn voor sponsoring vanaf {{date}}."
     },
     "gestureFilters": {
       "searchPlaceholder": "Zoek gebaren...",
@@ -729,5 +750,58 @@
       "analyticsEnabled": "Ingeschakeld",
       "analyticsDisabled": "Uitgeschakeld"
     }
+  },
+  "accessibility": {
+    "skipToContent": "Spring naar inhoud",
+    "skipToNav": "Spring naar navigatie",
+    "menu": {
+      "open": "Menu openen",
+      "close": "Menu sluiten"
+    },
+    "logo": {
+      "alt": "SMOG Logo"
+    },
+    "keys": {
+      "escape": "Escape"
+    }
+  },
+  "admin": {
+    "gestures": {
+      "updated": "Gebaar succesvol bijgewerkt",
+      "searchPlaceholder": "Zoek op naam, beschrijving of concept...",
+      "status": {
+        "active": "Actief",
+        "inactive": "Inactief"
+      }
+    },
+    "sponsorships": {
+      "unknown": "Onbekend",
+      "unknownGesture": "Onbekend gebaar",
+      "sponsoredVideo": "Gesponsorde video",
+      "originalVideo": "Originele video",
+      "expiring": "Verloopt...",
+      "forceExpire": "Sponsoring geforceerd laten verlopen",
+      "expired": "Sponsoring succesvol verlopen",
+      "searchPlaceholder": "Zoek op gebaar, sponsor naam of e-mail...",
+      "overlay": {
+        "alt": "Overlay"
+      },
+      "playbackId": {
+        "notAvailable": "N.v.t."
+      }
+    },
+    "pending": {
+      "approved": "Sponsoring succesvol goedgekeurd",
+      "rejected": "Sponsoring afgewezen",
+      "searchPlaceholder": "Zoek op gebaar, sponsor naam of e-mail...",
+      "rejectionPlaceholder": "Reden voor afwijzing..."
+    }
+  },
+  "seo": {
+    "defaultTitle": "SMOG - Leer gebarentaal",
+    "defaultDescription": "Ontdek en leer gebarentaal gebaren met onze uitgebreide videobibliotheek. Zoek, leer en oefen in je eigen tempo.",
+    "keywords": "gebarentaal, gebarentaal leren, SMOG, gebaren, gebarentaal woordenboek, leer gebaren, gebarentaal video, dovenonderwijs",
+    "ogType": "website",
+    "twitterCard": "summary_large_image"
   }
 }

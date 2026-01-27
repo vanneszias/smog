@@ -12,7 +12,7 @@ export default function Header() {
   // Close sidebar on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === t("accessibility.keys.escape", "Escape")) {
         setSidebarOpen(false);
       }
     };
@@ -27,7 +27,7 @@ export default function Header() {
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "";
     };
-  }, [sidebarOpen]);
+  }, [sidebarOpen, t]);
 
   const navLinks = [
     { to: "/gestures", label: t("web.header.search", "Zoek") },
@@ -67,7 +67,11 @@ export default function Header() {
             {/* Menu Toggle Button - Always visible in top right */}
             <button
               aria-expanded={sidebarOpen}
-              aria-label={sidebarOpen ? "Close menu" : "Open menu"}
+              aria-label={
+                sidebarOpen
+                  ? t("accessibility.menu.close", "Close menu")
+                  : t("accessibility.menu.open", "Open menu")
+              }
               className={`relative flex h-12 w-12 scale-75 items-center justify-center rounded-full bg-white shadow-lg transition-all duration-300 hover:scale-100 ${
                 sidebarOpen
                   ? "border-2 border-primary"
