@@ -1,130 +1,187 @@
 import { Link } from "@tanstack/react-router";
-import { Heart, Home, Menu, Search, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useFavorites } from "@/lib/favorites-context";
 import Logo from "./Logo";
 import { LanguageToggle } from "./language-toggle";
 import { ModeToggle } from "./mode-toggle";
-import UserMenu from "./user-menu";
 
 export default function Header() {
   const { t } = useTranslation();
-  const { favoriteIds } = useFavorites();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const links = [
-    { to: "/", label: t("web.navigation.home"), icon: Home },
-    { to: "/gestures", label: t("web.navigation.browse"), icon: Search },
-    { to: "/sponsors", label: "Sponsors", icon: Sparkles },
-  ] as const;
+  // Close sidebar on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSidebarOpen(false);
+      }
+    };
+
+    if (sidebarOpen) {
+      document.addEventListener("keydown", handleEscape);
+      // Prevent body scroll when sidebar is open
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
+  const navLinks = [
+    { to: "/gestures", label: t("web.header.search", "Zoek") },
+    { to: "/favorites", label: t("web.header.favorites", "Favorieten") },
+    { to: "/account", label: t("web.header.account", "Account") },
+    { to: "/sponsors", label: t("web.header.sponsor", "Sponsor") },
+  ];
 
   return (
-    <header className="sticky top-0 z-50 border-border border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-      <div className="container mx-auto">
-        <div className="flex h-16 items-center justify-between px-4">
+    <>
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm">
+        <div className="mx-auto flex items-center justify-between px-6 py-6 pt-6 lg:px-12">
           {/* Logo */}
-          <Link className="flex items-center" to="/">
-            <Logo height={40} width={120} />
+          <Link className="shrink-0" to="/">
+            <Logo />
           </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden items-center gap-6 md:flex">
-            {links.map(({ to, label, icon: Icon }) => (
-              <Link
-                activeProps={{
-                  className: "font-semibold",
-                  style: { color: "var(--primary)" },
-                }}
-                className="flex items-center gap-2 text-foreground transition-colors hover:text-primary"
-                key={to}
-                to={to}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            ))}
-            <Link
-              activeProps={{
-                className: "font-semibold",
-                style: { color: "var(--liked)" },
-              }}
-              className="flex items-center gap-2 text-foreground transition-colors hover:text-primary"
-              to="/favorites"
-            >
-              <Heart className="h-4 w-4" />
-              {t("web.navigation.favorites")}
-              {favoriteIds.length > 0 && (
-                <span
-                  className="ml-1 flex h-5 w-5 items-center justify-center rounded-full font-medium text-white text-xs"
-                  style={{ backgroundColor: "var(--liked)" }}
-                >
-                  {favoriteIds.length}
-                </span>
-              )}
-            </Link>
-          </nav>
-
-          {/* Right Side Actions */}
-          <div className="flex items-center gap-2">
-            <LanguageToggle />
-            <ModeToggle />
-            <UserMenu />
-
-            {/* Mobile Menu Button */}
-            <button
-              className="md:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              type="button"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen ? (
-          <div className="border-border border-t md:hidden">
-            <nav className="flex flex-col gap-2 p-4">
-              {links.map(({ to, label, icon: Icon }) => (
+          <div className="flex flex-row gap-4">
+            {/* Desktop Navigation - Shows on larger screens */}
+            <nav className="hidden items-center gap-6 xl:flex">
+              {navLinks.map((link) => (
                 <Link
-                  activeProps={{
-                    className: "font-semibold",
-                    style: { color: "var(--primary)" },
-                  }}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-foreground transition-colors hover:bg-muted"
-                  key={to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  to={to}
+                  className="text-primary hover:underline"
+                  key={link.to}
+                  to={link.to}
                 >
-                  <Icon className="h-5 w-5" />
-                  {label}
+                  {link.label}
                 </Link>
               ))}
               <Link
-                activeProps={{
-                  className: "font-semibold",
-                  style: { color: "var(--liked)" },
-                }}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-foreground transition-colors hover:bg-muted"
-                onClick={() => setMobileMenuOpen(false)}
-                to="/favorites"
+                className="inline-flex items-center rounded-full bg-primary px-6 py-3 text-sm text-white uppercase transition-all hover:bg-primary/90"
+                to="/gestures"
               >
-                <Heart className="h-5 w-5" />
-                {t("web.navigation.favorites")}
-                {favoriteIds.length > 0 && (
-                  <span
-                    className="ml-1 flex h-5 w-5 items-center justify-center rounded-full font-medium text-white text-xs"
-                    style={{ backgroundColor: "var(--liked)" }}
-                  >
-                    {favoriteIds.length}
-                  </span>
-                )}
+                {t("web.header.discoverGestures", "Ontdek de SMOG-gebaren")}
               </Link>
             </nav>
+
+            {/* Menu Toggle Button - Always visible in top right */}
+            <button
+              aria-expanded={sidebarOpen}
+              aria-label={sidebarOpen ? "Close menu" : "Open menu"}
+              className={`relative flex h-12 w-12 scale-75 items-center justify-center rounded-full bg-white shadow-lg transition-all duration-300 hover:scale-100 ${
+                sidebarOpen
+                  ? "border-2 border-primary"
+                  : "border-2 border-transparent"
+              }`}
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                className="h-6 w-6"
+                fill="none"
+                strokeLinecap="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  className={`origin-center transition-all duration-300 ${
+                    sidebarOpen
+                      ? "translate-y-0 rotate-45 stroke-primary"
+                      : "-translate-y-1.5 rotate-0 stroke-black"
+                  }`}
+                  d="M5 12h14"
+                />
+                <path
+                  className={`origin-center transition-all duration-300 ${
+                    sidebarOpen
+                      ? "stroke-primary opacity-0"
+                      : "stroke-black opacity-100"
+                  }`}
+                  d="M5 12h14"
+                />
+                <path
+                  className={`origin-center transition-all duration-300 ${
+                    sidebarOpen
+                      ? "-rotate-45 translate-y-0 stroke-primary"
+                      : "translate-y-1.5 rotate-0 stroke-black"
+                  }`}
+                  d="M5 12h14"
+                />
+              </svg>
+            </button>
           </div>
-        ) : null}
-      </div>
-    </header>
+        </div>
+      </header>
+
+      {/* Full Screen Sidebar - Slides from top on mobile, right on desktop */}
+      <aside
+        className={`fixed inset-0 z-40 flex flex-col bg-sidebar transition-transform duration-500 ease-out md:left-auto md:w-[500px] ${
+          sidebarOpen
+            ? "translate-x-0 translate-y-0"
+            : "-translate-y-full md:translate-x-full md:translate-y-0"
+        }`}
+      >
+        {/* Sidebar Navigation */}
+        <div className="flex flex-1 flex-col justify-center overflow-y-auto">
+          <nav className="flex max-w-2xl flex-col gap-6 md:pl-24">
+            {navLinks.map((link, index) => (
+              <Link
+                className="text-center font-normal text-3xl text-primary hover:underline md:text-left md:text-4xl"
+                key={link.to}
+                onClick={() => setSidebarOpen(false)}
+                style={{
+                  animation: sidebarOpen
+                    ? `slideIn 0.5s ease-out ${index * 0.1}s both`
+                    : "none",
+                }}
+                to={link.to}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <Link
+              className="mt-8 inline-flex items-center justify-center self-center rounded-full bg-primary px-8 py-4 text-base text-white uppercase transition-all hover:scale-105 hover:bg-primary/90 md:self-start md:text-lg"
+              onClick={() => setSidebarOpen(false)}
+              style={{
+                animation: sidebarOpen
+                  ? `slideIn 0.5s ease-out ${navLinks.length * 0.1}s both`
+                  : "none",
+              }}
+              to="/gestures"
+            >
+              {t("web.header.discoverGestures", "Ontdek de SMOG-gebaren")}
+            </Link>
+          </nav>
+        </div>
+        {/* Sidebar Footer */}
+        <div className="bottom-0 mb-8 flex flex-col gap-4 md:pl-24">
+          {/* Theme and Language Toggles */}
+          <div className="flex items-center justify-center gap-3 md:justify-start">
+            <ModeToggle />
+            <LanguageToggle />
+          </div>
+
+          {/* Footer Links */}
+          <div className="flex flex-wrap items-center justify-center gap-4 text-center text-muted-foreground text-sm md:justify-start">
+            <Link
+              className="hover:text-primary hover:underline"
+              onClick={() => setSidebarOpen(false)}
+              to="/terms"
+            >
+              {t("web.footer.terms", "Voorwaarden")}
+            </Link>
+            <span>•</span>
+            <Link
+              className="hover:text-primary hover:underline"
+              onClick={() => setSidebarOpen(false)}
+              to="/privacy"
+            >
+              {t("web.footer.privacy", "Privacy")}
+            </Link>
+          </div>
+        </div>
+      </aside>
+    </>
   );
 }

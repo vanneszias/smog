@@ -496,21 +496,8 @@ function SponsorsComponent() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="border-b bg-background px-6 py-6">
+      <div className="bg-background px-6">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-4 flex items-center gap-2">
-            <Sparkles className="h-8 w-8 text-primary" />
-            <h1 className="font-bold text-3xl">
-              {t("web.sponsors.title", "Sponsor Gestures")}
-            </h1>
-          </div>
-          <p className="text-muted-foreground">
-            {t(
-              "web.sponsors.description",
-              "Select one or more gestures to sponsor. Each video will have your custom outro with branding and message."
-            )}
-          </p>
-
           {selectedGestureIds.length > 0 && (
             <div className="mt-6 space-y-3 rounded-lg border-2 border-primary bg-primary/5 p-4">
               <div className="flex items-center justify-between">

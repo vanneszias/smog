@@ -28,7 +28,7 @@ body {
   --secondary: #97c699;
   --accent: #ee971c;
   --warning: #f0c814;
-  --background: #ffffff;
+  --background: #ebf4eb;
   --card: #f8f8f8;
   --text: #333333;
   --text-light: #666666;
@@ -54,7 +54,7 @@ body {
   --chart-3: var(--accent);
   --chart-4: var(--warning);
   --chart-5: var(--liked);
-  --sidebar: var(--background);
+  --sidebar: #f8f8f8;
   --sidebar-foreground: var(--text);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: #ffffff;

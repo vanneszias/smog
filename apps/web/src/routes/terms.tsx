@@ -9,15 +9,15 @@ function TermsOfServicePage() {
   const { t } = useTranslation();
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
+    <div className="container px-12 py-8">
       <h1 className="mb-6 font-bold text-4xl">{t("web.terms.title")}</h1>
-      <p className="mb-4 text-gray-600">
+      <p className="mb-4">
         {t("web.terms.lastUpdated", {
           date: new Date().toLocaleDateString(),
         })}
       </p>
 
-      <div className="space-y-6 text-gray-800">
+      <div className="space-y-6">
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
             {t("web.terms.acceptance.title")}
@@ -206,7 +206,7 @@ function TermsOfServicePage() {
         </section>
 
         <section className="border-gray-300 border-t pt-6">
-          <p className="text-gray-600 text-sm">{t("web.terms.footer")}</p>
+          <p className="text-sm">{t("web.terms.footer")}</p>
         </section>
       </div>
     </div>
