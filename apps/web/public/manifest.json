@@ -10,10 +10,7 @@
   "scope": "/",
   "lang": "nl",
   "dir": "ltr",
-  "categories": [
-    "education",
-    "reference"
-  ],
+  "categories": ["education", "reference"],
   "icons": [
     {
       "src": "/icon-72x72.png",
@@ -92,11 +89,6 @@
   ],
   "related_applications": [],
   "prefer_related_applications": false,
-  "features": [
-    "Cross Platform",
-    "Fast",
-    "Installable",
-    "Offline Support"
-  ],
+  "features": ["Cross Platform", "Fast", "Installable", "Offline Support"],
   "iarc_rating_id": ""
 }

@@ -206,10 +206,6 @@
         "discoverGestures": "Ontdek de SMOG-gebaren"
       },
       "subtitle": "Ontdek en beheers SMOG met onze uitgebreide videobibliotheek. Zoek, leer en oefen in op eigen tempo.",
-      "footer": {
-        "terms": "Voorwaarden",
-        "privacy": "Privacy"
-      },
       "searchPlaceholder": "Zoek naar een gebaar...",
       "recentSearches": "Recente Zoekopdrachten",
       "browseGestures": {
@@ -227,7 +223,7 @@
         "description": "Filter gebaren op onderwerp en categorie om je te concentreren op wat je wilt leren.",
         "action": "Begin met leren"
       },
-      "footer": "© 2025 SMOG. Alle rechten voorbehouden."
+      "footer": "© 2026 SMOG&Co. Alle rechten voorbehouden."
     },
     "gestures": {
       "searchPlaceholder": "Zoek gebaren op naam, concept of beschrijving...",
