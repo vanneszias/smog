@@ -245,7 +245,7 @@ export function GestureDetail({
 
       {/* Video Player */}
       <div
-        className="mb-8 max-h-[70vh] overflow-hidden rounded-xl border border-border md:max-h-none"
+        className="mb-8 max-h-[60vh] overflow-hidden rounded-xl border border-border sm:max-h-[70vh] md:max-h-none"
         style={{ backgroundColor: "var(--card)", aspectRatio: "3/4" }}
       >
         <Suspense

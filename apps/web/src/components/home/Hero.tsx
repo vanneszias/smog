@@ -31,12 +31,12 @@ export function Hero({ onSearch }: HeroProps) {
   };
 
   return (
-    <section className="flex min-h-[80vh] flex-col justify-center">
+    <section className="flex min-h-[50vh] flex-col justify-center md:min-h-[80vh]">
       <div>
         <div className="relative mx-auto flex max-w-7xl flex-col justify-center gap-8 px-6">
           <div className="relative">
             {/* Hand illustration 1 - left side pointing hand */}
-            <div className="ml-auto flex w-[clamp(2rem,8vw,10rem)] justify-end">
+            <div className="ml-auto flex w-[clamp(1.5rem,6vw,10rem)] justify-end">
               <svg
                 aria-hidden="true"
                 className="text-primary"
@@ -51,7 +51,7 @@ export function Hero({ onSearch }: HeroProps) {
             <HeroTitle />
 
             {/* Hand illustration 2 - top right pointing finger */}
-            <div className="absolute top-1/2 left-0 w-[clamp(2rem,8vw,10rem)]">
+            <div className="absolute top-1/2 left-0 w-[clamp(1.5rem,6vw,10rem)]">
               <svg
                 aria-hidden="true"
                 className="text-primary"
@@ -64,7 +64,7 @@ export function Hero({ onSearch }: HeroProps) {
             </div>
 
             {/* Hand illustration 3 - bottom right open hand */}
-            <div className="bottom-0 z-0 mr-24 ml-auto flex w-[clamp(2rem,8vw,10rem)] justify-end">
+            <div className="bottom-0 z-0 mr-24 ml-auto flex w-[clamp(1.5rem,6vw,10rem)] justify-end">
               <svg
                 aria-hidden="true"
                 className="text-primary"
@@ -78,7 +78,7 @@ export function Hero({ onSearch }: HeroProps) {
             <SearchBar
               autoFocus={true}
               buttonLabel={t("search.button", "Zoeken")}
-              className="py-12"
+              className="py-4 md:py-12"
               onChange={setSearchQuery}
               onClear={handleClear}
               onSubmit={handleSearchSubmit}
