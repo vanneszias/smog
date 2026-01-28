@@ -63,7 +63,7 @@ export default function UserMenu() {
     : user.email;
 
   return (
-    <div ref={menuRef} className="relative">
+    <div className="relative" ref={menuRef}>
       <button
         className="cursor-pointer text-primary hover:underline"
         onClick={() => setIsOpen(!isOpen)}
@@ -72,11 +72,11 @@ export default function UserMenu() {
         {displayName}
       </button>
 
-      {isOpen && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-lg border border-border bg-background shadow-lg">
+      {isOpen === true && (
+        <div className="absolute top-full right-0 z-50 mt-2 w-48 rounded-lg border border-border bg-background shadow-lg">
           <div className="flex flex-col p-2">
             <Link
-              className="flex items-center gap-2 rounded-md px-3 py-2.5 text-base text-foreground transition-colors hover:bg-accent"
+              className="flex items-center gap-2 rounded-md px-3 py-2.5 text-left text-base text-foreground transition-colors hover:bg-secondary"
               onClick={() => setIsOpen(false)}
               to="/account"
             >
@@ -84,7 +84,7 @@ export default function UserMenu() {
               {t("web.userMenu.accountSettings")}
             </Link>
             <button
-              className="flex cursor-pointer items-center rounded-md px-3 py-2.5 text-base text-destructive transition-colors hover:bg-accent"
+              className="flex cursor-pointer items-center rounded-md px-3 py-2.5 text-left text-base text-destructive transition-colors hover:bg-secondary"
               onClick={() => {
                 signOut();
                 setIsOpen(false);

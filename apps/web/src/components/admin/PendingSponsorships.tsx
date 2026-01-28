@@ -125,9 +125,9 @@ export function PendingSponsorships() {
         />
       </div>
 
-      <div className="flex h-[calc(100vh-350px)] gap-4">
+      <div className="flex h-[calc(100vh-350px)] gap-4 overflow-hidden">
         {/* Sponsorship List */}
-        <div className="flex-1 overflow-hidden rounded-lg border">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border">
           <GestureList
             gestures={gesturesWithCategories}
             isLoading={isLoading}
@@ -137,7 +137,7 @@ export function PendingSponsorships() {
         </div>
 
         {/* Sponsorship Details & Actions */}
-        <div className="w-96 space-y-4">
+        <div className="w-96 shrink-0 space-y-4 overflow-auto">
           {selectedSponsorship ? (
             <>
               {/* Video Preview */}

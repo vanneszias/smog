@@ -108,22 +108,24 @@ function GesturesComponent() {
   };
 
   return (
-    <div className="flex h-full max-h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Search and Filter Section */}
-      <GestureFilters
-        allCategories={allCategories}
-        filteredCount={filteredGestures.length}
-        onCategoryToggle={handleCategoryToggle}
-        onClearFilters={clearFilters}
-        onSearchChange={setSearchQuery}
-        searchPlaceholder={t("web.gestures.searchPlaceholder")}
-        searchQuery={searchQuery}
-        selectedCategories={selectedCategories}
-        showResultCount={true}
-      />
+      <div className="shrink-0">
+        <GestureFilters
+          allCategories={allCategories}
+          filteredCount={filteredGestures.length}
+          onCategoryToggle={handleCategoryToggle}
+          onClearFilters={clearFilters}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={t("web.gestures.searchPlaceholder")}
+          searchQuery={searchQuery}
+          selectedCategories={selectedCategories}
+          showResultCount={true}
+        />
+      </div>
 
       {/* Content Section */}
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 overflow-hidden">
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />

@@ -126,9 +126,9 @@ export function GesturesManagement() {
         />
       </div>
 
-      <div className="flex h-[calc(100vh-350px)] gap-4">
+      <div className="flex h-[calc(100vh-350px)] gap-4 overflow-hidden">
         {/* Gesture List */}
-        <div className="flex-1 overflow-hidden rounded-lg border">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border">
           <GestureList
             gestures={filteredGestures}
             isLoading={isLoading}
@@ -138,7 +138,7 @@ export function GesturesManagement() {
         </div>
 
         {/* Gesture Details & Actions */}
-        <div className="w-80 space-y-4">
+        <div className="w-80 shrink-0 space-y-4 overflow-auto">
           {selectedGesture ? (
             <>
               <div className="rounded-lg border p-4">

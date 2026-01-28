@@ -73,14 +73,14 @@ function FavoritesComponent() {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden">
-      <div className="min-h-0 flex-1">
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center">
+          <div className="flex h-full items-center justify-center">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
         ) : favoriteGestures.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-6 text-center">
+          <div className="flex h-full flex-col items-center justify-center p-6 text-center">
             <Heart className="mb-4 h-16 w-16 text-muted-foreground" />
             <h2 className="mb-2 font-bold text-xl">
               {t("web.favorites.noFavoritesTitle")}

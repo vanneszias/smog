@@ -485,11 +485,11 @@ export function SponsorshipsManagement() {
       </div>
 
       {/* Master-Detail Layout */}
-      <div className="flex h-[calc(100vh-350px)] gap-4">
+      <div className="flex h-[calc(100vh-350px)] gap-4 overflow-hidden">
         {/* Gesture List (Master) */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {filteredData.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">
+            <div className="flex h-full items-center justify-center py-8 text-center text-muted-foreground">
               No sponsorships found
             </div>
           ) : (

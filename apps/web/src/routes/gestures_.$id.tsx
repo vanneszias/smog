@@ -112,24 +112,26 @@ function GesturesComponent() {
   }, [id]);
 
   return (
-    <div className="flex h-full max-h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* List Panel - hidden on mobile when gesture is selected */}
         <div
-          className={`flex min-h-0 flex-col border-r ${selectedGesture ? "hidden lg:flex lg:w-1/2" : "flex-1"}`}
+          className={`flex min-h-0 flex-col overflow-hidden border-r ${selectedGesture ? "hidden lg:flex lg:w-1/2" : "flex-1"}`}
         >
           {/* Search and Filters */}
-          <GestureFilters
-            allCategories={allCategories}
-            onCategoryToggle={handleCategoryToggle}
-            onSearchChange={setSearchQuery}
-            searchPlaceholder={t("web.gestures.searchPlaceholder")}
-            searchQuery={searchQuery}
-            selectedCategories={selectedCategories}
-          />
+          <div className="shrink-0">
+            <GestureFilters
+              allCategories={allCategories}
+              onCategoryToggle={handleCategoryToggle}
+              onSearchChange={setSearchQuery}
+              searchPlaceholder={t("web.gestures.searchPlaceholder")}
+              searchQuery={searchQuery}
+              selectedCategories={selectedCategories}
+            />
+          </div>
 
           {/* Gesture List */}
-          <div className="min-h-0 flex-1 overflow-auto">
+          <div className="min-h-0 flex-1 overflow-hidden">
             <GestureList
               error={error}
               favoriteGestureIds={favoriteIds}
@@ -147,7 +149,7 @@ function GesturesComponent() {
 
         {/* Detail Panel - Full width on mobile, half on desktop */}
         <div
-          className={`overflow-auto bg-muted/20 ${selectedGesture ? "flex-1 lg:w-1/2" : "hidden lg:flex lg:w-1/2"}`}
+          className={`min-h-0 overflow-auto bg-muted/20 ${selectedGesture ? "flex-1 lg:w-1/2" : "hidden lg:flex lg:w-1/2"}`}
         >
           {showSkeleton ? (
             <GestureDetailSkeleton />
