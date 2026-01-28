@@ -59,7 +59,7 @@ function RootComponent() {
           >
             <div className="grid h-svh grid-rows-[auto_1fr] overflow-hidden">
               <Header />
-              <main className="min-h-0 overflow-hidden" id="main-content">
+              <main className="min-h-0 overflow-y-auto" id="main-content">
                 <Outlet />
               </main>
             </div>
