@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 type SuccessSearch = {
   sponsorshipId?: string;
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/sponsors/success")({
 });
 
 function SuccessComponent() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { sponsorshipId, sponsorshipIds } = useSearch({
     from: "/sponsors/success",
@@ -52,36 +54,46 @@ function SuccessComponent() {
           className="mb-4 font-bold text-2xl"
           style={{ color: "var(--text)" }}
         >
-          Payment Successful!
+          {t("web.sponsors.success.title")}
         </h1>
 
         <p className="mb-6 text-lg" style={{ color: "var(--text-light)" }}>
           {sponsorshipCount > 1
-            ? `Your ${sponsorshipCount} sponsorships are being processed. Your videos will go live shortly!`
-            : "Your sponsorship is being processed. Your video will go live shortly!"}
+            ? t("web.sponsors.success.multipleDescription", {
+                count: sponsorshipCount,
+              })
+            : t("web.sponsors.success.singleDescription")}
         </p>
 
         {sponsorshipId || sponsorshipIds ? (
           <p className="mb-6 text-sm" style={{ color: "var(--text-light)" }}>
             {sponsorshipCount > 1
-              ? `${sponsorshipCount} Sponsorships Created`
-              : `Sponsorship ID: ${sponsorshipId}`}
+              ? t("web.sponsors.success.sponsorshipsCreated", {
+                  count: sponsorshipCount,
+                })
+              : t("web.sponsors.success.sponsorshipId", { id: sponsorshipId })}
           </p>
         ) : null}
 
         <div className="mb-6 rounded-lg bg-blue-50 p-4 text-left text-sm">
-          <p className="font-medium text-blue-900">What happens next?</p>
+          <p className="font-medium text-blue-900">
+            {t("web.sponsors.success.whatNext")}
+          </p>
           <ul className="mt-2 space-y-1 text-blue-800">
-            <li>• Your payment has been confirmed</li>
+            <li>• {t("web.sponsors.success.steps.confirmed")}</li>
             <li>
-              • We're uploading your {sponsorshipCount > 1 ? "videos" : "video"}{" "}
-              to our servers
+              •{" "}
+              {sponsorshipCount > 1
+                ? t("web.sponsors.success.steps.uploadingMultiple")
+                : t("web.sponsors.success.steps.uploadingSingle")}
             </li>
             <li>
-              • Your sponsored {sponsorshipCount > 1 ? "videos" : "video"} will
-              be live in 2-5 minutes
+              •{" "}
+              {sponsorshipCount > 1
+                ? t("web.sponsors.success.steps.liveMultiple")
+                : t("web.sponsors.success.steps.liveSingle")}
             </li>
-            <li>• You'll receive a confirmation email shortly</li>
+            <li>• {t("web.sponsors.success.steps.email")}</li>
           </ul>
         </div>
 
@@ -91,11 +103,11 @@ function SuccessComponent() {
           style={{ backgroundColor: "var(--primary)" }}
           type="button"
         >
-          Back to Sponsors
+          {t("web.sponsors.success.backToSponsors")}
         </button>
 
         <p className="mt-4 text-xs" style={{ color: "var(--text-light)" }}>
-          Redirecting automatically in 5 seconds...
+          {t("web.sponsors.success.redirecting")}
         </p>
       </div>
     </div>

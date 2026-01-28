@@ -52,7 +52,7 @@ function GestureTableRow({
 
   return (
     <TableRow
-      className={`cursor-pointer ${isSelected ? "bg-(--primary)/10" : ""}`}
+      className={`cursor-pointer ${isSelected ? "bg-primary/10" : ""}`}
       onClick={onClick}
     >
       <TableCell className="font-medium">{gesture.name}</TableCell>

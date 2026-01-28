@@ -86,8 +86,15 @@
     "error": "Fout",
     "success": "Succes",
     "comingSoon": "Binnenkort beschikbaar",
+    "edit": "Bewerken",
+    "continue": "Doorgaan",
+    "total": "Totaal",
+    "week": "week",
+    "weeks": "weken",
+    "gesture": "gebaar",
+    "gestures": "gebaren",
     "errors": {
-      "rootElementNotFound": "Root element niet gevonden"
+      "rootElementNotFound": "Hoofdelement niet gevonden"
     }
   },
   "account": {
@@ -253,13 +260,13 @@
     },
     "signIn": {
       "title": "Welkom Terug",
-      "button": "Inloggen met WorkOS",
+      "button": "Inloggen",
       "switchToSignUp": "Heb je nog geen account? Registreren",
       "link": "Inloggen"
     },
     "signUp": {
       "title": "Account Aanmaken",
-      "button": "Registreren met WorkOS",
+      "button": "Registreren",
       "switchToSignIn": "Heb je al een account? Inloggen"
     },
     "dashboard": {
@@ -287,6 +294,152 @@
     "recentSearches": {
       "title": "Recente Zoekopdrachten",
       "clear": "Wissen"
+    },
+    "account": {
+      "loading": {
+        "title": "Even wachten...",
+        "message": "Even geduld, we verifiëren uw authenticatie"
+      },
+      "unauthenticated": {
+        "title": "Log in vereist",
+        "message": "Log in om uw account instellingen te beheren",
+        "signInButton": "Log in"
+      },
+      "title": "Account instellingen",
+      "accountInfo": {
+        "title": "Account informatie",
+        "email": "E-mail",
+        "name": "Naam",
+        "userId": "Gebruikers-ID"
+      },
+      "privacy": {
+        "title": "Privacy & Gegevens",
+        "analytics": {
+          "title": "Gebruiksanalyse",
+          "description": "Help ons SMOG te verbeteren door anonieme gebruiksgegevens te delen. Dit bevat geen persoonlijke informatie."
+        },
+        "export": {
+          "title": "Uw gegevens downloaden",
+          "description": "Exporteer al uw accountgegevens inclusief favorieten, voorkeuren en toestemmingsgeschiedenis in JSON-formaat.",
+          "button": "Gegevens downloaden",
+          "exporting": "Exporteren..."
+        },
+        "learnMore": "Meer informatie over hoe we met uw gegevens omgaan:",
+        "privacyPolicy": "Privacybeleid",
+        "termsOfService": "Servicevoorwaarden"
+      },
+      "dangerZone": {
+        "title": "Gevarenzone",
+        "deleteAccount": {
+          "title": "Account verwijderen",
+          "description": "Verwijder permanent uw account en alle bijbehorende gegevens. Deze actie kan niet ongedaan worden gemaakt.",
+          "button": "Account verwijderen"
+        }
+      },
+      "deleteDialog": {
+        "title": "Weet u het absoluut zeker?",
+        "description": "Deze actie kan niet ongedaan worden gemaakt. Dit zal uw account permanent verwijderen en alle gegevens van onze servers verwijderen, inclusief:",
+        "listItems": {
+          "accountInfo": "Uw accountinformatie",
+          "favorites": "Alle opgeslagen favorieten",
+          "consentHistory": "Uw toestemmingsgeschiedenis",
+          "adminLogs": "Eventuele beheeractiviteitenlogboeken"
+        },
+        "cancel": "Annuleren",
+        "confirm": "Verwijder mijn account",
+        "deleting": "Verwijderen..."
+      },
+      "toast": {
+        "analyticsEnabled": "Analyse ingeschakeld. Bedankt voor uw hulp bij het verbeteren!",
+        "analyticsDisabled": "Analyse uitgeschakeld. Uw gegevens worden niet meer verzameld.",
+        "analyticsUpdateFailed": "Analysevoorkeuren bijwerken mislukt. Probeer het opnieuw.",
+        "exportUnavailable": "Kan gegevens niet exporteren. Probeer het opnieuw.",
+        "exportSuccess": "Uw gegevens zijn succesvol gedownload",
+        "exportFailed": "Exporteren van gegevens mislukt. Probeer het opnieuw.",
+        "deleteSuccess": "Uw account is permanent verwijderd",
+        "deleteFailed": "Account verwijderen mislukt. Probeer het opnieuw."
+      }
+    },
+    "sponsors": {
+      "list": {
+        "title": "Sponsor gebaren",
+        "searchPlaceholder": "Zoek gebaren om te sponsoren...",
+        "sponsored": "Gesponsord",
+        "pending": "In behandeling",
+        "available": "Beschikbaar om te sponsoren",
+        "availableAgainOn": "Weer beschikbaar:",
+        "pendingDescription": "Deze sponsoring wordt verwerkt",
+        "selectedForSponsoring": "Geselecteerd voor sponsoring",
+        "gestureSelected": "1 gebaar geselecteerd",
+        "gesturesSelected": "{{count}} gebaren geselecteerd",
+        "continue": "Doorgaan naar uploaden",
+        "clearSelection": "Selectie wissen",
+        "selectedGestures": "Geselecteerde gebaren:",
+        "noResultsWithFilters": "Geen gebaren gevonden",
+        "noGestures": "Geen gebaren beschikbaar",
+        "tryDifferentFilters": "Probeer uw zoekopdracht of filters aan te passen",
+        "noGesturesDescription": "Kom later terug voor beschikbare gebaren om te sponsoren."
+      },
+      "create": {
+        "title": "Sponsoring aanmaken",
+        "overlayImage": "Overlay afbeelding",
+        "imageDescription": "Upload een vierkante afbeelding (aanbevolen 400x400px, max 2MB)",
+        "chooseImage": "Kies afbeelding",
+        "duration": "Sponsorduur",
+        "durationDescription": "Deze outro wordt toegepast op alle geselecteerde video's",
+        "previewVideo": "Video voorvertoning",
+        "previewTitle": "Bekijk uw gesponsorde video",
+        "previewDescription": "Deze outro wordt toegepast op alle geselecteerde video's",
+        "campaignSummary": "Campagne samenvatting",
+        "gestures": "Gebaren",
+        "totalCost": "Totale kosten",
+        "yourDetails": "Uw gegevens",
+        "name": "Naam / Bedrijf",
+        "namePlaceholder": "Voer uw naam of bedrijf in",
+        "email": "E-mail",
+        "emailPlaceholder": "uw.email@voorbeeld.nl",
+        "paymentSummary": "Betalingsoverzicht",
+        "processing": "Verwerken...",
+        "proceedToPayment": "Doorgaan naar betaling",
+        "composingVideos": "Video's samenstellen: {{current}} van {{total}}",
+        "currentlyComposing": "Momenteel aan het samenstellen: {{name}}",
+        "steps": {
+          "upload": "Uploaden",
+          "preview": "Voorvertoning",
+          "details": "Details"
+        },
+        "composition": {
+          "idle": "Klaar om te starten",
+          "preparing": "Uw afbeelding wordt geconverteerd naar het juiste formaat...",
+          "uploading": "Uw compositieverzoek wordt naar de server verzonden...",
+          "queued": "Wachten op een beschikbare worker om uw video te verwerken...",
+          "downloading": "Worker downloadt de originele video van Mux...",
+          "processingImage": "Worker verwerkt en verkleint uw overlay afbeelding...",
+          "composing": "FFmpeg stelt de video samen met uw overlay...",
+          "uploadingResult": "De definitieve samengestelde video wordt terug geüpload naar Mux...",
+          "completed": "Uw video is klaar!",
+          "failed": "Er is iets misgegaan. Probeer het opnieuw.",
+          "default": "Verwerken..."
+        }
+      },
+      "success": {
+        "title": "Betaling geslaagd!",
+        "singleDescription": "Uw sponsoring wordt verwerkt. Uw video gaat binnenkort live!",
+        "multipleDescription": "Uw {{count}} sponsoringen worden verwerkt. Uw video's gaan binnenkort live!",
+        "sponsorshipId": "Sponsoring ID: {{id}}",
+        "sponsorshipsCreated": "{{count}} Sponsoringen aangemaakt",
+        "whatNext": "Wat gebeurt er nu?",
+        "steps": {
+          "confirmed": "Uw betaling is bevestigd",
+          "uploadingSingle": "We uploaden uw video naar onze servers",
+          "uploadingMultiple": "We uploaden uw video's naar onze servers",
+          "liveSingle": "Uw gesponsorde video gaat binnen 2-5 minuten live",
+          "liveMultiple": "Uw gesponsorde video's gaan binnen 2-5 minuten live",
+          "email": "U ontvangt binnenkort een bevestigingsmail"
+        },
+        "backToSponsors": "Terug naar Sponsors",
+        "redirecting": "Automatisch doorverwijzen over 5 seconden..."
+      }
     },
     "theme": {
       "toggle": "Thema wijzigen",

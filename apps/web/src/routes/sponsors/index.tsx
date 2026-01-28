@@ -189,7 +189,7 @@ function SponsorGestureList({
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 font-medium text-green-800 text-xs">
-              ✓ {t("web.sponsors.sponsored", "Sponsored")}
+              ✓ {t("web.sponsors.list.sponsored")}
             </span>
           </div>
           {Boolean(gesture.sponsorship?.sponsorName) &&
@@ -202,7 +202,7 @@ function SponsorGestureList({
                 <div className="flex items-center gap-1">
                   <Sparkles className="h-3 w-3" />
                   <span>
-                    {t("web.sponsors.availableAgainOn", "Available again:")}{" "}
+                    {t("web.sponsors.list.availableAgainOn")}{" "}
                     {formatDate(gesture.sponsorship!.endDate)}
                   </span>
                 </div>
@@ -217,7 +217,7 @@ function SponsorGestureList({
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-1 font-medium text-xs text-yellow-800">
-              ⏳ {t("web.sponsors.pending", "Pending")}
+              ⏳ {t("web.sponsors.list.pending")}
             </span>
           </div>
           {Boolean(gesture.sponsorship?.sponsorName) && (
@@ -227,10 +227,7 @@ function SponsorGestureList({
                 <span>{gesture.sponsorship?.sponsorName}</span>
               </div>
               <p className="mt-1">
-                {t(
-                  "web.sponsors.pendingDescription",
-                  "This sponsorship is being processed"
-                )}
+                {t("web.sponsors.list.pendingDescription")}
               </p>
             </div>
           )}
@@ -240,7 +237,7 @@ function SponsorGestureList({
 
     return (
       <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 font-medium text-blue-800 text-xs">
-        {t("web.sponsors.available", "Available to sponsor")}
+        {t("web.sponsors.list.available")}
       </span>
     );
   };
@@ -252,37 +249,41 @@ function SponsorGestureList({
     : undefined;
 
   return (
-    <div className="relative h-full w-full overflow-auto px-4">
-      <table className="w-full caption-bottom text-sm">
-        <thead className="sticky top-0 z-10 bg-background">
-          <tr className="border-b">
+    <div className="h-full overflow-y-auto">
+      <table className="w-full">
+        <thead className="sticky top-0 z-10 border-b bg-background">
+          <tr>
+            <th className="w-12 p-4 text-left">
+              <span className="text-muted-foreground text-xs">Select</span>
+            </th>
             <th
-              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
+              className={`p-4 text-left ${sortableClass}`}
               onClick={handleNameClick}
             >
-              <div className="flex items-center gap-1">
-                {t("ui.gestureList.name")}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">
+                  {t("ui.gestureList.name")}
+                </span>
                 {renderSortIndicator("name")}
               </div>
             </th>
             <th
-              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
+              className={`p-4 text-left ${sortableClass}`}
               onClick={handleCategoryClick}
             >
-              <div className="flex items-center gap-1">
-                {t("ui.gestureList.category")}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">
+                  {t("ui.gestureList.category")}
+                </span>
                 {renderSortIndicator("category")}
               </div>
             </th>
-            <th className="h-12 px-4 text-left align-middle font-medium">
-              {t("ui.gestureList.concepts")}
-            </th>
             <th
-              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
+              className={`p-4 text-left ${sortableClass}`}
               onClick={handleSponsorshipClick}
             >
-              <div className="flex items-center gap-1">
-                {t("web.sponsors.sponsorshipStatus", "Sponsorship Status")}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">Sponsorship</span>
                 {renderSortIndicator("sponsorship")}
               </div>
             </th>
@@ -302,37 +303,41 @@ function SponsorGestureList({
 
             return (
               <tr
-                className={`border-b transition-colors ${
-                  isUnavailable
-                    ? "cursor-not-allowed opacity-60"
-                    : "cursor-pointer hover:bg-muted/50"
-                } ${isSelected ? "bg-primary/10" : ""}`}
+                className={`border-b transition-colors hover:bg-muted/50 ${
+                  isSelected ? "bg-primary/10" : ""
+                } ${isUnavailable ? "opacity-60" : ""}`}
                 key={gesture._id}
-                onClick={() => onSelectGesture(gesture._id)}
               >
-                <td className="p-4 font-medium">{gesture.name}</td>
                 <td className="p-4">
-                  <div className="flex flex-wrap gap-1">
-                    {gesture.categories
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((cat) => (
-                        <span
-                          className="rounded-full bg-secondary px-2 py-0.5 text-xs"
-                          key={cat._id}
-                        >
-                          {cat.name}
-                        </span>
-                      ))}
-                    {gesture.categories.length > 2 && (
-                      <span className="text-muted-foreground text-xs">
-                        +{gesture.categories.length - 2}
-                      </span>
+                  <input
+                    checked={isSelected}
+                    className="h-4 w-4 cursor-pointer rounded border-gray-300"
+                    disabled={isUnavailable}
+                    onChange={() => onSelectGesture(gesture._id)}
+                    type="checkbox"
+                  />
+                </td>
+                <td className="p-4">
+                  <div>
+                    <p className="font-medium">{gesture.name}</p>
+                    {gesture.concept.length > 0 && (
+                      <p className="text-muted-foreground text-xs">
+                        {gesture.concept.join(", ")}
+                      </p>
                     )}
                   </div>
                 </td>
-                <td className="max-w-xs truncate p-4 text-muted-foreground text-sm">
-                  {gesture.concept.join(", ")}
+                <td className="p-4">
+                  <div className="flex flex-wrap gap-1">
+                    {gesture.categories.map((cat) => (
+                      <span
+                        className="rounded-full bg-muted px-2 py-0.5 text-xs"
+                        key={cat._id}
+                      >
+                        {cat.name}
+                      </span>
+                    ))}
+                  </div>
                 </td>
                 <td className="p-4">
                   {renderSponsorshipStatus(
@@ -509,37 +514,30 @@ function SponsorsComponent() {
                   </div>
                   <div>
                     <p className="font-bold text-lg">
-                      {t(
-                        "web.sponsors.selectedForSponsoring",
-                        "Selected for Sponsoring"
-                      )}
+                      {t("web.sponsors.list.selectedForSponsoring")}
                     </p>
                     <p className="text-muted-foreground text-sm">
                       {selectedGestureIds.length === 1
-                        ? t(
-                            "web.sponsors.gestureSelected",
-                            "1 gesture selected"
-                          )
-                        : t(
-                            "web.sponsors.gesturesSelected",
-                            `${selectedGestureIds.length} gestures selected`
-                          )}
+                        ? t("web.sponsors.list.gestureSelected")
+                        : t("web.sponsors.list.gesturesSelected", {
+                            count: selectedGestureIds.length,
+                          })}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Button onClick={handleContinue} size="lg">
                     <Upload className="mr-2 h-4 w-4" />
-                    {t("web.sponsors.continue", "Continue to Upload")}
+                    {t("web.sponsors.list.continue")}
                   </Button>
                   <Button onClick={clearSelection} size="lg" variant="outline">
-                    {t("web.sponsors.clearSelection", "Clear Selection")}
+                    {t("web.sponsors.list.clearSelection")}
                   </Button>
                 </div>
               </div>
               <div className="border-t pt-3">
                 <p className="mb-2 font-semibold text-sm">
-                  {t("web.sponsors.selectedGestures", "Selected Gestures:")}
+                  {t("web.sponsors.list.selectedGestures")}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {selectedGestureIds.map((id) => {
@@ -569,10 +567,7 @@ function SponsorsComponent() {
         onCategoryToggle={handleCategoryToggle}
         onClearFilters={clearFilters}
         onSearchChange={setSearchQuery}
-        searchPlaceholder={t(
-          "web.sponsors.searchPlaceholder",
-          "Search gestures to sponsor..."
-        )}
+        searchPlaceholder={t("web.sponsors.list.searchPlaceholder")}
         searchQuery={searchQuery}
         selectedCategories={selectedCategories}
         showResultCount={true}
@@ -589,19 +584,13 @@ function SponsorsComponent() {
               <Sparkles className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
               <h2 className="mb-2 font-bold text-xl">
                 {searchQuery || selectedCategories.length > 0
-                  ? t("web.sponsors.noResultsWithFilters", "No gestures found")
-                  : t("web.sponsors.noGestures", "No gestures available")}
+                  ? t("web.sponsors.list.noResultsWithFilters")
+                  : t("web.sponsors.list.noGestures")}
               </h2>
               <p className="text-muted-foreground">
                 {searchQuery || selectedCategories.length > 0
-                  ? t(
-                      "web.sponsors.tryDifferentFilters",
-                      "Try adjusting your search or filters"
-                    )
-                  : t(
-                      "web.sponsors.noGesturesDescription",
-                      "Check back later for available gestures to sponsor."
-                    )}
+                  ? t("web.sponsors.list.tryDifferentFilters")
+                  : t("web.sponsors.list.noGesturesDescription")}
               </p>
             </div>
           </div>

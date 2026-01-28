@@ -113,6 +113,13 @@
     "error": "Error",
     "success": "Success",
     "comingSoon": "Coming Soon",
+    "edit": "Edit",
+    "continue": "Continue",
+    "total": "Total",
+    "week": "week",
+    "weeks": "weeks",
+    "gesture": "gesture",
+    "gestures": "gestures",
     "errors": {
       "rootElementNotFound": "Root element not found"
     }
@@ -284,13 +291,13 @@
     },
     "signIn": {
       "title": "Welcome Back",
-      "button": "Sign In with WorkOS",
+      "button": "Sign In",
       "switchToSignUp": "Need an account? Sign Up",
       "link": "Sign In"
     },
     "signUp": {
       "title": "Create Account",
-      "button": "Sign Up with WorkOS",
+      "button": "Sign Up",
       "switchToSignIn": "Already have an account? Sign In"
     },
     "dashboard": {
@@ -318,6 +325,152 @@
     "recentSearches": {
       "title": "Recent Searches",
       "clear": "Clear"
+    },
+    "account": {
+      "loading": {
+        "title": "Just a moment...",
+        "message": "Please wait while we verify your authentication"
+      },
+      "unauthenticated": {
+        "title": "Login Required",
+        "message": "Log in to manage your account settings",
+        "signInButton": "Log in"
+      },
+      "title": "Account Settings",
+      "accountInfo": {
+        "title": "Account Information",
+        "email": "Email",
+        "name": "Name",
+        "userId": "User ID"
+      },
+      "privacy": {
+        "title": "Privacy & Data",
+        "analytics": {
+          "title": "Usage Analytics",
+          "description": "Help us improve SMOG by sharing anonymous usage data. This does not include any personal information."
+        },
+        "export": {
+          "title": "Download Your Data",
+          "description": "Export all your account data including favorites, preferences, and consent history in JSON format.",
+          "button": "Download Data",
+          "exporting": "Exporting..."
+        },
+        "learnMore": "Learn more about how we handle your data:",
+        "privacyPolicy": "Privacy Policy",
+        "termsOfService": "Terms of Service"
+      },
+      "dangerZone": {
+        "title": "Danger Zone",
+        "deleteAccount": {
+          "title": "Delete Account",
+          "description": "Permanently delete your account and all associated data. This action cannot be undone.",
+          "button": "Delete Account"
+        }
+      },
+      "deleteDialog": {
+        "title": "Are you absolutely sure?",
+        "description": "This action cannot be undone. This will permanently delete your account and remove all your data from our servers, including:",
+        "listItems": {
+          "accountInfo": "Your account information",
+          "favorites": "All saved favorites",
+          "consentHistory": "Your consent history",
+          "adminLogs": "Any admin activity logs"
+        },
+        "cancel": "Cancel",
+        "confirm": "Delete My Account",
+        "deleting": "Deleting..."
+      },
+      "toast": {
+        "analyticsEnabled": "Analytics enabled. Thank you for helping us improve!",
+        "analyticsDisabled": "Analytics disabled. Your data will no longer be collected.",
+        "analyticsUpdateFailed": "Failed to update analytics preference. Please try again.",
+        "exportUnavailable": "Unable to export data. Please try again.",
+        "exportSuccess": "Your data has been downloaded successfully",
+        "exportFailed": "Failed to export data. Please try again.",
+        "deleteSuccess": "Your account has been permanently deleted",
+        "deleteFailed": "Failed to delete account. Please try again."
+      }
+    },
+    "sponsors": {
+      "list": {
+        "title": "Sponsor Gestures",
+        "searchPlaceholder": "Search gestures to sponsor...",
+        "sponsored": "Sponsored",
+        "pending": "Pending",
+        "available": "Available to sponsor",
+        "availableAgainOn": "Available again:",
+        "pendingDescription": "This sponsorship is being processed",
+        "selectedForSponsoring": "Selected for Sponsoring",
+        "gestureSelected": "1 gesture selected",
+        "gesturesSelected": "{{count}} gestures selected",
+        "continue": "Continue to Upload",
+        "clearSelection": "Clear Selection",
+        "selectedGestures": "Selected Gestures:",
+        "noResultsWithFilters": "No gestures found",
+        "noGestures": "No gestures available",
+        "tryDifferentFilters": "Try adjusting your search or filters",
+        "noGesturesDescription": "Check back later for available gestures to sponsor."
+      },
+      "create": {
+        "title": "Create Sponsorship",
+        "overlayImage": "Overlay Image",
+        "imageDescription": "Upload a square image (recommended 400x400px, max 2MB)",
+        "chooseImage": "Choose Image",
+        "duration": "Sponsorship Duration",
+        "durationDescription": "This outro will be applied to all selected videos",
+        "previewVideo": "Preview Video",
+        "previewTitle": "Preview Your Sponsored Video",
+        "previewDescription": "This outro will be applied to all selected videos",
+        "campaignSummary": "Campaign Summary",
+        "gestures": "Gestures",
+        "totalCost": "Total Cost",
+        "yourDetails": "Your Details",
+        "name": "Name / Company",
+        "namePlaceholder": "Enter your name or company",
+        "email": "Email",
+        "emailPlaceholder": "your.email@example.com",
+        "paymentSummary": "Payment Summary",
+        "processing": "Processing...",
+        "proceedToPayment": "Proceed to Payment",
+        "composingVideos": "Composing videos: {{current}} of {{total}}",
+        "currentlyComposing": "Currently composing: {{name}}",
+        "steps": {
+          "upload": "Upload",
+          "preview": "Preview",
+          "details": "Details"
+        },
+        "composition": {
+          "idle": "Ready to start",
+          "preparing": "Converting your image to the right format...",
+          "uploading": "Sending your composition request to the server...",
+          "queued": "Waiting for an available worker to process your video...",
+          "downloading": "Worker is downloading the original video from Mux...",
+          "processingImage": "Worker is processing and resizing your overlay image...",
+          "composing": "FFmpeg is composing the video with your overlay...",
+          "uploadingResult": "Uploading the final composed video back to Mux...",
+          "completed": "Your video is ready!",
+          "failed": "Something went wrong. Please try again.",
+          "default": "Processing..."
+        }
+      },
+      "success": {
+        "title": "Payment Successful!",
+        "singleDescription": "Your sponsorship is being processed. Your video will go live shortly!",
+        "multipleDescription": "Your {{count}} sponsorships are being processed. Your videos will go live shortly!",
+        "sponsorshipId": "Sponsorship ID: {{id}}",
+        "sponsorshipsCreated": "{{count}} Sponsorships Created",
+        "whatNext": "What happens next?",
+        "steps": {
+          "confirmed": "Your payment has been confirmed",
+          "uploadingSingle": "We're uploading your video to our servers",
+          "uploadingMultiple": "We're uploading your videos to our servers",
+          "liveSingle": "Your sponsored video will be live in 2-5 minutes",
+          "liveMultiple": "Your sponsored videos will be live in 2-5 minutes",
+          "email": "You'll receive a confirmation email shortly"
+        },
+        "backToSponsors": "Back to Sponsors",
+        "redirecting": "Redirecting automatically in 5 seconds..."
+      }
     },
     "theme": {
       "toggle": "Toggle theme",
@@ -349,6 +502,87 @@
       },
       "dataCollect": {
         "title": "3. Data We Collect",
+        "sponsors": {
+          "list": {
+            "title": "Sponsor Gestures",
+            "searchPlaceholder": "Search gestures to sponsor...",
+            "sponsored": "Sponsored",
+            "pending": "Pending",
+            "available": "Available to sponsor",
+            "availableAgainOn": "Available again:",
+            "pendingDescription": "This sponsorship is being processed",
+            "selectedForSponsoring": "Selected for Sponsoring",
+            "gestureSelected": "1 gesture selected",
+            "gesturesSelected": "{{count}} gestures selected",
+            "continue": "Continue to Upload",
+            "clearSelection": "Clear Selection",
+            "selectedGestures": "Selected Gestures:",
+            "noResultsWithFilters": "No gestures found",
+            "noGestures": "No gestures available",
+            "tryDifferentFilters": "Try adjusting your search or filters",
+            "noGesturesDescription": "Check back later for available gestures to sponsor."
+          },
+          "create": {
+            "title": "Create Sponsorship",
+            "overlayImage": "Overlay Image",
+            "imageDescription": "Upload a square image (recommended 400x400px, max 2MB)",
+            "chooseImage": "Choose Image",
+            "duration": "Sponsorship Duration",
+            "durationDescription": "This outro will be applied to all selected videos",
+            "previewVideo": "Preview Video",
+            "previewTitle": "Preview Your Sponsored Video",
+            "previewDescription": "This outro will be applied to all selected videos",
+            "campaignSummary": "Campaign Summary",
+            "gestures": "Gestures",
+            "totalCost": "Total Cost",
+            "yourDetails": "Your Details",
+            "name": "Name / Company",
+            "namePlaceholder": "Enter your name or company",
+            "email": "Email",
+            "emailPlaceholder": "your.email@example.com",
+            "paymentSummary": "Payment Summary",
+            "processing": "Processing...",
+            "proceedToPayment": "Proceed to Payment",
+            "composingVideos": "Composing videos: {{current}} of {{total}}",
+            "currentlyComposing": "Currently composing: {{name}}",
+            "steps": {
+              "upload": "Upload",
+              "preview": "Preview",
+              "details": "Details"
+            },
+            "composition": {
+              "idle": "Ready to start",
+              "preparing": "Converting your image to the right format...",
+              "uploading": "Sending your composition request to the server...",
+              "queued": "Waiting for an available worker to process your video...",
+              "downloading": "Worker is downloading the original video from Mux...",
+              "processingImage": "Worker is processing and resizing your overlay image...",
+              "composing": "FFmpeg is composing the video with your overlay...",
+              "uploadingResult": "Uploading the final composed video back to Mux...",
+              "completed": "Your video is ready!",
+              "failed": "Something went wrong. Please try again.",
+              "default": "Processing..."
+            }
+          },
+          "success": {
+            "title": "Payment Successful!",
+            "singleDescription": "Your sponsorship is being processed. Your video will go live shortly!",
+            "multipleDescription": "Your {{count}} sponsorships are being processed. Your videos will go live shortly!",
+            "sponsorshipId": "Sponsorship ID: {{id}}",
+            "sponsorshipsCreated": "{{count}} Sponsorships Created",
+            "whatNext": "What happens next?",
+            "steps": {
+              "confirmed": "Your payment has been confirmed",
+              "uploadingSingle": "We're uploading your video to our servers",
+              "uploadingMultiple": "We're uploading your videos to our servers",
+              "liveSingle": "Your sponsored video will be live in 2-5 minutes",
+              "liveMultiple": "Your sponsored videos will be live in 2-5 minutes",
+              "email": "You'll receive a confirmation email shortly"
+            },
+            "backToSponsors": "Back to Sponsors",
+            "redirecting": "Redirecting automatically in 5 seconds..."
+          }
+        },
         "account": {
           "title": "3.1 Account Information",
           "items": {

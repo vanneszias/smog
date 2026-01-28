@@ -88,7 +88,14 @@
     "cancel": "Annuler",
     "error": "Erreur",
     "success": "Succès",
-    "comingSoon": "Bientôt disponible"
+    "comingSoon": "Bientôt disponible",
+    "edit": "Modifier",
+    "continue": "Continuer",
+    "total": "Total",
+    "week": "semaine",
+    "weeks": "semaines",
+    "gesture": "geste",
+    "gestures": "gestes"
   },
   "account": {
     "title": "Paramètres du compte",
@@ -130,6 +137,152 @@
     }
   },
   "web": {
+    "account": {
+      "loading": {
+        "title": "Un instant...",
+        "message": "Veuillez patienter pendant que nous vérifions votre authentification"
+      },
+      "unauthenticated": {
+        "title": "Connexion requise",
+        "message": "Connectez-vous pour gérer les paramètres de votre compte",
+        "signInButton": "Se connecter"
+      },
+      "title": "Paramètres du compte",
+      "accountInfo": {
+        "title": "Informations du compte",
+        "email": "E-mail",
+        "name": "Nom",
+        "userId": "ID utilisateur"
+      },
+      "privacy": {
+        "title": "Confidentialité et données",
+        "analytics": {
+          "title": "Analyse d'utilisation",
+          "description": "Aidez-nous à améliorer SMOG en partageant des données d'utilisation anonymes. Cela n'inclut aucune information personnelle."
+        },
+        "export": {
+          "title": "Télécharger vos données",
+          "description": "Exportez toutes les données de votre compte, y compris les favoris, les préférences et l'historique des consentements au format JSON.",
+          "button": "Télécharger les données",
+          "exporting": "Exportation..."
+        },
+        "learnMore": "En savoir plus sur la façon dont nous traitons vos données :",
+        "privacyPolicy": "Politique de confidentialité",
+        "termsOfService": "Conditions d'utilisation"
+      },
+      "dangerZone": {
+        "title": "Zone de danger",
+        "deleteAccount": {
+          "title": "Supprimer le compte",
+          "description": "Supprimez définitivement votre compte et toutes les données associées. Cette action ne peut pas être annulée.",
+          "button": "Supprimer le compte"
+        }
+      },
+      "deleteDialog": {
+        "title": "Êtes-vous absolument sûr ?",
+        "description": "Cette action ne peut pas être annulée. Cela supprimera définitivement votre compte et retirera toutes vos données de nos serveurs, y compris :",
+        "listItems": {
+          "accountInfo": "Les informations de votre compte",
+          "favorites": "Tous les favoris enregistrés",
+          "consentHistory": "Votre historique de consentement",
+          "adminLogs": "Tous les journaux d'activité administrateur"
+        },
+        "cancel": "Annuler",
+        "confirm": "Supprimer mon compte",
+        "deleting": "Suppression..."
+      },
+      "toast": {
+        "analyticsEnabled": "Analyse activée. Merci de nous aider à améliorer !",
+        "analyticsDisabled": "Analyse désactivée. Vos données ne seront plus collectées.",
+        "analyticsUpdateFailed": "Échec de la mise à jour des préférences d'analyse. Veuillez réessayer.",
+        "exportUnavailable": "Impossible d'exporter les données. Veuillez réessayer.",
+        "exportSuccess": "Vos données ont été téléchargées avec succès",
+        "exportFailed": "Échec de l'exportation des données. Veuillez réessayer.",
+        "deleteSuccess": "Votre compte a été définitivement supprimé",
+        "deleteFailed": "Échec de la suppression du compte. Veuillez réessayer."
+      }
+    },
+    "sponsors": {
+      "list": {
+        "title": "Parrainer des gestes",
+        "searchPlaceholder": "Rechercher des gestes à parrainer...",
+        "sponsored": "Parrainé",
+        "pending": "En attente",
+        "available": "Disponible pour parrainage",
+        "availableAgainOn": "Disponible à nouveau:",
+        "pendingDescription": "Ce parrainage est en cours de traitement",
+        "selectedForSponsoring": "Sélectionné pour parrainage",
+        "gestureSelected": "1 geste sélectionné",
+        "gesturesSelected": "{{count}} gestes sélectionnés",
+        "continue": "Continuer vers le téléchargement",
+        "clearSelection": "Effacer la sélection",
+        "selectedGestures": "Gestes sélectionnés:",
+        "noResultsWithFilters": "Aucun geste trouvé",
+        "noGestures": "Aucun geste disponible",
+        "tryDifferentFilters": "Essayez d'ajuster votre recherche ou vos filtres",
+        "noGesturesDescription": "Revenez plus tard pour les gestes disponibles à parrainer."
+      },
+      "create": {
+        "title": "Créer un parrainage",
+        "overlayImage": "Image de superposition",
+        "imageDescription": "Téléchargez une image carrée (recommandé 400x400px, max 2MB)",
+        "chooseImage": "Choisir une image",
+        "duration": "Durée du parrainage",
+        "durationDescription": "Cette outro sera appliquée à toutes les vidéos sélectionnées",
+        "previewVideo": "Aperçu de la vidéo",
+        "previewTitle": "Aperçu de votre vidéo parrainée",
+        "previewDescription": "Cette outro sera appliquée à toutes les vidéos sélectionnées",
+        "campaignSummary": "Résumé de la campagne",
+        "gestures": "Gestes",
+        "totalCost": "Coût total",
+        "yourDetails": "Vos coordonnées",
+        "name": "Nom / Entreprise",
+        "namePlaceholder": "Entrez votre nom ou entreprise",
+        "email": "E-mail",
+        "emailPlaceholder": "votre.email@exemple.com",
+        "paymentSummary": "Résumé du paiement",
+        "processing": "Traitement...",
+        "proceedToPayment": "Procéder au paiement",
+        "composingVideos": "Composition des vidéos: {{current}} sur {{total}}",
+        "currentlyComposing": "Composition en cours: {{name}}",
+        "steps": {
+          "upload": "Télécharger",
+          "preview": "Aperçu",
+          "details": "Détails"
+        },
+        "composition": {
+          "idle": "Prêt à commencer",
+          "preparing": "Conversion de votre image au bon format...",
+          "uploading": "Envoi de votre demande de composition au serveur...",
+          "queued": "En attente d'un worker disponible pour traiter votre vidéo...",
+          "downloading": "Le worker télécharge la vidéo originale depuis Mux...",
+          "processingImage": "Le worker traite et redimensionne votre image de superposition...",
+          "composing": "FFmpeg compose la vidéo avec votre superposition...",
+          "uploadingResult": "Téléchargement de la vidéo composée finale vers Mux...",
+          "completed": "Votre vidéo est prête!",
+          "failed": "Quelque chose s'est mal passé. Veuillez réessayer.",
+          "default": "Traitement..."
+        }
+      },
+      "success": {
+        "title": "Paiement réussi!",
+        "singleDescription": "Votre parrainage est en cours de traitement. Votre vidéo sera en ligne sous peu!",
+        "multipleDescription": "Vos {{count}} parrainages sont en cours de traitement. Vos vidéos seront en ligne sous peu!",
+        "sponsorshipId": "ID de parrainage: {{id}}",
+        "sponsorshipsCreated": "{{count}} Parrainages créés",
+        "whatNext": "Que se passe-t-il ensuite?",
+        "steps": {
+          "confirmed": "Votre paiement a été confirmé",
+          "uploadingSingle": "Nous téléchargeons votre vidéo sur nos serveurs",
+          "uploadingMultiple": "Nous téléchargeons vos vidéos sur nos serveurs",
+          "liveSingle": "Votre vidéo parrainée sera en ligne dans 2 à 5 minutes",
+          "liveMultiple": "Vos vidéos parrainées seront en ligne dans 2 à 5 minutes",
+          "email": "Vous recevrez un e-mail de confirmation sous peu"
+        },
+        "backToSponsors": "Retour aux parrainages",
+        "redirecting": "Redirection automatique dans 5 secondes..."
+      }
+    },
     "privacy": {
       "title": "Politique de confidentialité",
       "lastUpdated": "Dernière mise à jour : {{date}}",

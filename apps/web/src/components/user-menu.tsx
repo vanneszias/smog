@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
-import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 
 export default function UserMenu() {
@@ -41,10 +40,13 @@ export default function UserMenu() {
           {displayName}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-card">
+      <DropdownMenuContent align="end" className="bg-card">
         <DropdownMenuLabel>{t("web.userMenu.myAccount")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>{user.email}</DropdownMenuItem>
+        <div className="px-2 py-1.5 text-muted-foreground text-sm">
+          {user.email}
+        </div>
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link className="flex items-center gap-2" to="/account">
             <Settings className="h-4 w-4" />
@@ -52,17 +54,15 @@ export default function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Button
-            className="w-full"
-            onClick={() => {
-              signOut();
-              navigate({ to: "/" });
-            }}
-            variant="destructive"
-          >
-            {t("web.userMenu.signOut")}
-          </Button>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => {
+            signOut();
+            navigate({ to: "/" });
+          }}
+          variant="destructive"
+        >
+          {t("web.userMenu.signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
