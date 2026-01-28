@@ -234,10 +234,12 @@ body {
 
   .dark ::-moz-selection {
     background-color: #5a8e5c;
+    color: #fff;
   }
 
   .dark ::selection {
     background-color: #5a8e5c;
+    color: #fff;
   }
 
   /* Scrollbar styling - Firefox */
