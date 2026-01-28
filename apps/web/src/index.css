@@ -196,6 +196,7 @@ body {
 
   /* Accessibility: Reduced motion */
   @media (prefers-reduced-motion: reduce) {
+
     *,
     *::before,
     *::after {
@@ -220,5 +221,62 @@ body {
 
   body.user-is-tabbing *:focus {
     @apply outline-2 outline-offset-2 outline-primary;
+  }
+
+  /* Text selection styling */
+  ::-moz-selection {
+    background-color: #97c699;
+  }
+
+  ::selection {
+    background-color: #97c699;
+  }
+
+  .dark ::-moz-selection {
+    background-color: #5a8e5c;
+  }
+
+  .dark ::selection {
+    background-color: #5a8e5c;
+  }
+
+  /* Scrollbar styling - Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #97c699 #ebf4eb;
+  }
+
+  .dark * {
+    scrollbar-color: #5a8e5c #1e1e1e;
+  }
+
+  /* Scrollbar styling - Chrome, Edge, Safari */
+  ::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #ebf4eb;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #97c699;
+    border-radius: 6px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #00805f;
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    background: #1e1e1e;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: #5a8e5c;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #00a077;
   }
 }
