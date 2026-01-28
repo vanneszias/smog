@@ -155,7 +155,7 @@ export function GestureDetail({
   const isActiveSponsorship = gesture.sponsorship?.status === "active";
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
+    <div className="container mx-auto max-w-4xl px-4 py-4 md:py-8">
       {/* Open in App Banner (Mobile Only) */}
       {!!showOpenInApp && !!onOpenInApp && (
         <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
@@ -245,7 +245,7 @@ export function GestureDetail({
 
       {/* Video Player */}
       <div
-        className="mb-8 overflow-hidden rounded-xl border border-border"
+        className="mb-8 overflow-hidden rounded-xl border border-border max-h-[70vh] md:max-h-none"
         style={{ backgroundColor: "var(--card)", aspectRatio: "3/4" }}
       >
         <Suspense
@@ -261,7 +261,7 @@ export function GestureDetail({
             key={gesture._id}
             playbackId={gesture.playbackId}
             streamType="on-demand"
-            style={{ width: "100%", height: "100%", aspectRatio: "3/4" }}
+            style={{ width: "100%", height: "100%", aspectRatio: "3/4", objectFit: "contain" }}
           />
         </Suspense>
       </div>
