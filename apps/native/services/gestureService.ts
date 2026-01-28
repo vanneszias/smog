@@ -4,9 +4,9 @@ import type { Gesture } from "@/types";
 import logger from "@/utils/logger";
 
 // Search index for fast text search (kept in memory for performance)
-type SearchIndex = {
+interface SearchIndex {
   [key: string]: string[]; // word -> gesture IDs
-};
+}
 
 class GestureService {
   private searchIndex: SearchIndex = {};

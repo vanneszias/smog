@@ -3,14 +3,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gestureService } from "@/services/gestureService";
 import type { Gesture } from "@/types";
 
-type UseOptimizedSearchOptions = {
+interface UseOptimizedSearchOptions {
   debounceMs?: number;
   minSearchLength?: number;
   displayPageSize?: number;
   enableCache?: boolean;
-};
+}
 
-type UseOptimizedSearchReturn = {
+interface UseOptimizedSearchReturn {
   results: Gesture[];
   isLoading: boolean;
   isSearching: boolean;
@@ -25,7 +25,7 @@ type UseOptimizedSearchReturn = {
     searchTime: number;
     cacheHit: boolean;
   };
-};
+}
 
 export const useOptimizedSearch = (
   options: UseOptimizedSearchOptions = {}

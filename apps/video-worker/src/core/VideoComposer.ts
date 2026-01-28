@@ -18,18 +18,18 @@ import {
   type WorkspaceFiles,
 } from "../utils/filesystem";
 
-export type VideoComposerOptions = {
+export interface VideoComposerOptions {
   playbackId: string;
   overlayImageUrl: string;
   overlayText: string;
   overlayConfig?: OverlayConfig;
-};
+}
 
-export type VideoComposerResult = {
+export interface VideoComposerResult {
   success: boolean;
   composedVideoPlaybackId?: string;
   error?: string;
-};
+}
 
 /**
  * Video Composer with fluent API

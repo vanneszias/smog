@@ -18,11 +18,11 @@ import { useRecentSearches } from "@/context/RecentSearchesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
-type RecentSearchesProps = {
+interface RecentSearchesProps {
   onSelect: (query: string) => void;
   searchTerm?: string;
   visible?: boolean;
-};
+}
 
 const RecentSearches: React.FC<RecentSearchesProps> = ({
   onSelect,

@@ -1,13 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-type FeatureCardProps = {
+interface FeatureCardProps {
   icon: LucideIcon;
   iconBgColor?: string;
   title: string;
   description: string | ReactNode;
   className?: string;
-};
+}
 
 export function FeatureCard({
   icon: Icon,

@@ -4,12 +4,12 @@ import { databaseService } from "@/services/databaseService";
 import { NetworkService } from "@/services/networkService";
 import logger from "@/utils/logger";
 
-type SyncResult = {
+interface SyncResult {
   success: boolean;
   synced: number;
   errors: string[];
   timestamp: Date;
-};
+}
 
 class ConvexSyncService {
   private static instance: ConvexSyncService;

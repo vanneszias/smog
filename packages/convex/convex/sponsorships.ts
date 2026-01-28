@@ -89,7 +89,6 @@ export const createBulk = mutation({
     paymentAmountPerGesture: v.number(),
   },
   returns: v.array(v.id("sponsorships")),
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: inherently complex bulk operation
   handler: async (ctx, args) => {
     if (args.gestureIds.length !== args.sponsoredVideoPlaybackIds.length) {
       throw new Error(

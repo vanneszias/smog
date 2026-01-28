@@ -23,17 +23,17 @@ import {
 import type { Gesture } from "@/types";
 import { typography } from "@/utils/typography";
 
-type GestureCardProps = {
+interface GestureCardProps {
   gesture: Gesture;
   onPress: (gesture: Gesture) => void;
   isFavorite?: boolean;
   onToggleFavorite?: (gestureId: string) => void;
   source?: "search_results" | "favorites_screen" | "related_gestures";
-};
+}
 
-export type GestureCardRef = {
+export interface GestureCardRef {
   close: () => void;
-};
+}
 
 const GestureCard = ({
   gesture,

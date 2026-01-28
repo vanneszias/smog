@@ -23,18 +23,18 @@ import {
   trackToastShown,
 } from "@/services/analyticsService";
 
-export type ToastAction = {
+export interface ToastAction {
   label: string;
   onPress: () => void;
-};
+}
 
-type ToastProps = {
+interface ToastProps {
   message: string;
   visible: boolean;
   onHide: () => void;
   action?: ToastAction;
   type?: "info" | "success" | "warning" | "error";
-};
+}
 
 export const Toast: React.FC<ToastProps> = ({
   message,

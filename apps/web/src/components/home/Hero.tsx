@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { HeroTitle } from "./HeroTitle";
 
-type HeroProps = {
+interface HeroProps {
   onSearch?: (query: string) => void;
-};
+}
 
 export function Hero({ onSearch }: HeroProps) {
   const { t } = useTranslation();

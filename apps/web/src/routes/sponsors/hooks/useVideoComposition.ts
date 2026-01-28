@@ -13,7 +13,7 @@ import {
   VideoCompositionService,
 } from "../lib/composition/VideoCompositionService";
 
-export type UseVideoCompositionState = {
+export interface UseVideoCompositionState {
   // Status
   isComposing: boolean;
   isComplete: boolean;
@@ -28,9 +28,9 @@ export type UseVideoCompositionState = {
   playbackId?: string;
   error?: string;
   duration?: number;
-};
+}
 
-export type UseVideoCompositionActions = {
+export interface UseVideoCompositionActions {
   compose: (
     options: Omit<ComposeOptions, "overlayConfig"> & {
       overlayConfig: OverlayConfig;
@@ -38,7 +38,7 @@ export type UseVideoCompositionActions = {
   ) => Promise<ComposeResult>;
   cancel: () => void;
   reset: () => void;
-};
+}
 
 export type UseVideoCompositionReturn = UseVideoCompositionState &
   UseVideoCompositionActions;

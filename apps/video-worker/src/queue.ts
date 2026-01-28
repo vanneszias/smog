@@ -14,18 +14,18 @@ const redisConnection = new Redis({
 const ONE_HOUR_SECONDS = 3600;
 const ONE_DAY_SECONDS = 86_400;
 
-export type VideoCompositionJob = {
+export interface VideoCompositionJob {
   playbackId: string;
   overlayImageUrl: string;
   overlayText: string;
   overlayConfig?: OverlayConfig;
-};
+}
 
-export type VideoCompositionResult = {
+export interface VideoCompositionResult {
   success: boolean;
   composedVideoPlaybackId?: string;
   error?: string;
-};
+}
 
 // Video composition queue
 export const videoQueue = new Queue<VideoCompositionJob>("video-composition", {

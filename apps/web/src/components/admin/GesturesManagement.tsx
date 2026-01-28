@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { client, orpc } from "@/utils/orpc";
 
-type Gesture = {
+interface Gesture {
   _id: string;
   name: string;
   info: string;
@@ -24,7 +24,7 @@ type Gesture = {
   concept: string[];
   isActive: boolean;
   categoryIds: string[];
-};
+}
 
 export function GesturesManagement() {
   const queryClient = useQueryClient();

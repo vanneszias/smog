@@ -5,7 +5,7 @@
 
 import { EventEmitter } from "node:events";
 
-export type ProgressEvents = {
+export interface ProgressEvents {
   "download:start": () => void;
   "download:progress": (percent: number) => void;
   "download:complete": () => void;
@@ -22,7 +22,7 @@ export type ProgressEvents = {
   "cleanup:complete": () => void;
   error: (error: Error) => void;
   complete: (playbackId: string) => void;
-};
+}
 
 /**
  * Typed event emitter for video processing events

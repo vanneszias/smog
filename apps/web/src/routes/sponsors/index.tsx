@@ -14,10 +14,10 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { orpc } from "@/utils/orpc";
 
-type SponsorSearch = {
+interface SponsorSearch {
   q?: string;
   category?: string;
-};
+}
 
 export const Route = createFileRoute("/sponsors/")({
   component: SponsorsComponent,

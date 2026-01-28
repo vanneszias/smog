@@ -1,12 +1,12 @@
 import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 
-type GestureCardProps = {
+interface GestureCardProps {
   title: string;
   onClick?: () => void;
   illustration?: ReactNode;
   className?: string;
-};
+}
 
 export function GestureCard({
   title,

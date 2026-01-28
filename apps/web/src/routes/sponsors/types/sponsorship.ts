@@ -1,6 +1,6 @@
 export type SponsorshipStep = "upload" | "preview" | "details" | "payment";
 
-export type SponsorshipFormData = {
+export interface SponsorshipFormData {
   imageFile: File | null;
   imagePreview: string | null;
   overlayText: string;
@@ -9,9 +9,9 @@ export type SponsorshipFormData = {
   sponsorEmail: string;
   composedVideoUrl: string | null;
   tempVideoUrl: string | null;
-};
+}
 
-export type CompositionProgress = {
+export interface CompositionProgress {
   isComposing: boolean;
   progress: number;
-};
+}

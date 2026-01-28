@@ -18,13 +18,13 @@ import {
   trackVideoPlayerOpened,
 } from "@/services/analyticsService";
 
-type VideoPlayerProps = {
+interface VideoPlayerProps {
   playbackId: string;
   autoPlay?: boolean;
   onComplete?: () => void;
   gestureId?: string;
   gestureName?: string;
-};
+}
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
   playbackId,

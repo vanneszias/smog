@@ -2,7 +2,7 @@ import type { NetInfoState } from "@react-native-community/netinfo";
 import { useCallback, useEffect, useState } from "react";
 import { networkService } from "@/services/networkService";
 
-type NetworkStatus = {
+interface NetworkStatus {
   isConnected: boolean;
   isOffline: boolean;
   lastChecked: Date;
@@ -12,7 +12,7 @@ type NetworkStatus = {
   isInternetReachable: boolean | null;
   isGoodConnection: boolean;
   offlineDuration: number;
-};
+}
 
 export const useNetworkStatus = () => {
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus>({

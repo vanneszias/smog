@@ -11,12 +11,12 @@ import {
   verifyFileExists,
 } from "../utils/filesystem";
 
-export type ImageProcessingOptions = {
+export interface ImageProcessingOptions {
   imageUrl: string;
   destination: string;
   maxWidth?: number;
   maxHeight?: number;
-};
+}
 
 export class ImageService {
   private readonly defaultMaxWidth = 200;

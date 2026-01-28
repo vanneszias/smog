@@ -3,11 +3,11 @@ import LogoSvg from "@/assets/images/logo.svg";
 import LogoFlexibleSvg from "@/assets/images/logo-flexible.svg";
 import { useTheme } from "@/context/ThemeContext";
 
-type LogoProps = {
+interface LogoProps {
   variant?: "default" | "white" | "black" | "theme";
   width?: number;
   height?: number;
-};
+}
 
 const Logo = ({ variant = "default", width = 240, height = 80 }: LogoProps) => {
   const { theme } = useTheme();

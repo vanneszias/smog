@@ -1,9 +1,9 @@
 import type React from "react";
 import { CircularButton } from "@/components/common";
 
-type SettingsButtonProps = {
+interface SettingsButtonProps {
   onPress: () => void;
-};
+}
 
 const HomeScreenBottomSheetButton: React.FC<SettingsButtonProps> = ({
   onPress,

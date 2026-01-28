@@ -1,9 +1,9 @@
 import { StyleSheet } from "react-native";
 import Rive from "rive-react-native";
 
-type RiveSplashScreenProps = {
+interface RiveSplashScreenProps {
   onAnimationComplete?: () => void;
-};
+}
 
 export default function RiveSplashScreen({
   onAnimationComplete,

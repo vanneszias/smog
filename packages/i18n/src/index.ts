@@ -8,7 +8,7 @@ export const availableLocales = ["en", "fr", "nl"] as const;
 export type AvailableLocale = (typeof availableLocales)[number];
 
 // Translation keys type (based on en.json structure)
-export type TranslationKeys = {
+export interface TranslationKeys {
   search: {
     placeholder: string;
     noResults: string;
@@ -53,4 +53,4 @@ export type TranslationKeys = {
     light: string;
     dark: string;
   };
-};
+}

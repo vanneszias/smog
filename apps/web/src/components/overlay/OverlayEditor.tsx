@@ -7,14 +7,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const CANVAS_WIDTH = 720;
 const CANVAS_HEIGHT = 960;
 
-type OverlayEditorProps = {
+interface OverlayEditorProps {
   imageFile: File | null;
   imagePreview: string | null;
   overlayText: string;
   onTextChange: (text: string) => void;
   onConfigChange: (config: OverlayConfig) => void;
   initialConfig?: OverlayConfig;
-};
+}
 
 export function OverlayEditor({
   imagePreview,

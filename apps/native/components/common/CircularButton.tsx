@@ -5,7 +5,7 @@ import { StyleSheet, TouchableOpacity, type ViewStyle } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useNativeInteractions } from "@/hooks/useNativeInteractions";
 
-type CircularButtonProps = {
+interface CircularButtonProps {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   size?: "small" | "medium" | "large";
@@ -14,7 +14,7 @@ type CircularButtonProps = {
   style?: ViewStyle;
   disabled?: boolean;
   hapticFeedback?: boolean;
-};
+}
 
 const CircularButton: React.FC<CircularButtonProps> = ({
   icon,

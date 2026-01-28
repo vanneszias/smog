@@ -28,7 +28,7 @@
     "@smog/config": "workspace:*",
     "@types/bun": "^1.2.6",
     "@types/node-cron": "^3.0.11",
-    "tsdown": "^0.16.5",
+    "tsdown": "^0.20.1",
     "typescript": "^5.8.2"
   }
 }

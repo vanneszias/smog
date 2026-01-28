@@ -1,12 +1,12 @@
 import { Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-type RecentSearchesProps = {
+interface RecentSearchesProps {
   searches: string[];
   onSelect: (search: string) => void;
   onClear?: () => void;
   className?: string;
-};
+}
 
 export default function RecentSearches({
   searches,

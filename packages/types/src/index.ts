@@ -1,15 +1,15 @@
 // Core domain types
-export type Gesture = {
+export interface Gesture {
   id: string;
   name: string;
   category: string[];
   playbackId: string; // MUX playback ID instead of videoUrl
   concept: string[];
   info: string;
-};
+}
 
 // Theme types
-export type Theme = {
+export interface Theme {
   primary: string;
   secondary: string;
   background: string;
@@ -18,35 +18,35 @@ export type Theme = {
   textLight: string;
   border: string;
   statusBar: "light" | "dark";
-};
+}
 
-export type ThemeContextType = {
+export interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
-};
+}
 
 // Favorites types
-export type FavoritesContextType = {
+export interface FavoritesContextType {
   favorites: string[];
   isFavorite: (id: string) => boolean;
   toggleFavorite: (id: string) => void;
-};
+}
 
 // User types
-export type User = {
+export interface User {
   id: string;
   email: string;
   firstName?: string;
   lastName?: string;
   username?: string;
   emailVerified?: boolean;
-};
+}
 
 // Auth types
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
-export type AuthContextType = {
+export interface AuthContextType {
   user: User | null;
   status: AuthStatus;
   signIn: (email: string, password: string) => Promise<void>;
@@ -57,31 +57,31 @@ export type AuthContextType = {
   ) => Promise<void>;
   signOut: () => Promise<void>;
   isLoading: boolean;
-};
+}
 
 // Category types
-export type Category = {
+export interface Category {
   id: string;
   name: string;
   slug: string;
   count?: number;
-};
+}
 
 // Search types
-export type SearchResult = {
+export interface SearchResult {
   gesture: Gesture;
   score: number;
-};
+}
 
-export type SearchFilters = {
+export interface SearchFilters {
   categories?: string[];
   query?: string;
-};
+}
 
 // Sponsorship types
 export type SponsorshipStatus = "pending" | "active" | "expired" | "cancelled";
 
-export type Sponsorship = {
+export interface Sponsorship {
   id: string;
   gestureId: string;
   sponsorName: string;
@@ -99,30 +99,30 @@ export type Sponsorship = {
   paymentAmount: number;
   createdAt: number;
   updatedAt: number;
-};
+}
 
 export type GestureWithSponsorship = Gesture & {
   sponsorship: Sponsorship | null;
 };
 
-export type CreateSponsorshipInput = {
+export interface CreateSponsorshipInput {
   gestureId: string;
   sponsorName: string;
   sponsorEmail: string;
   overlayImageFile: File;
   overlayText: string;
   durationWeeks: number;
-};
+}
 
-export type SponsorshipPricing = {
+export interface SponsorshipPricing {
   pricePerWeekCents: number;
   weeks: number;
   totalCents: number;
-};
+}
 
 // Overlay configuration for video sponsorships
 // All positioning uses relative coordinates (percentages 0-100) for video size independence
-export type OverlayConfig = {
+export interface OverlayConfig {
   // Image properties (relative to video dimensions: 0-100%)
   image: {
     x: number; // X position as percentage (0-100)
@@ -144,7 +144,7 @@ export type OverlayConfig = {
     startTime: number; // When to show overlay (seconds from end)
     fadeInDuration: number; // Fade-in duration in seconds
   };
-};
+}
 
 // Default configuration matching current hardcoded values
 // Image: 200px on 1080p centered, 220px from bottom

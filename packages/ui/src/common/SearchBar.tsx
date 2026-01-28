@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
-type SearchBarProps = {
+interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit?: (value: string) => void;
@@ -12,7 +12,7 @@ type SearchBarProps = {
   autoFocus?: boolean;
   className?: string;
   buttonLabel?: string;
-};
+}
 
 export default function SearchBar({
   value,
@@ -56,7 +56,7 @@ export default function SearchBar({
   return (
     <div className={`flex gap-2 ${className}`}>
       <div className="relative flex-1">
-        <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 text-muted-foreground" />
+        <Search className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         <Input
           className="h-12 pr-10 pl-10 text-base"
           onChange={(e) => onChange(e.target.value)}
@@ -67,7 +67,7 @@ export default function SearchBar({
         />
         {value.length > 0 && (
           <button
-            className="-translate-y-1/2 absolute top-1/2 right-3 text-muted-foreground transition-colors hover:text-foreground"
+            className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
             onClick={handleClear}
             type="button"
           >

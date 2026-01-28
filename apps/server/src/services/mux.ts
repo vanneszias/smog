@@ -5,21 +5,21 @@ const mux = new Mux({
   tokenSecret: process.env.MUX_TOKEN_SECRET!,
 });
 
-export type UploadVideoOptions = {
+export interface UploadVideoOptions {
   videoUrl: string;
   gestureId: string;
-};
+}
 
-export type MuxAssetStatus = {
+export interface MuxAssetStatus {
   id: string;
   status: "preparing" | "ready" | "errored";
   playbackId?: string;
-};
+}
 
-export type MasterAccessUrl = {
+export interface MasterAccessUrl {
   url: string;
   expiresAt: Date;
-};
+}
 
 /**
  * Upload a video to MUX and return the playback ID

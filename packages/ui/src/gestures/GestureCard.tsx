@@ -4,20 +4,20 @@ import { Heart } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-export type GestureCardData = {
+export interface GestureCardData {
   _id: string;
   name: string;
   playbackId: string;
   concept: string[];
   info: string;
   categories: Array<{ _id: string; name: string } | undefined>;
-};
+}
 
-type GestureCardProps = {
+interface GestureCardProps {
   gesture: GestureCardData;
   isFavorite?: boolean;
   onToggleFavorite?: (gestureId: string) => void;
-};
+}
 
 export function GestureCard({
   gesture,

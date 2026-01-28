@@ -5,13 +5,13 @@ import type { Language } from "@/utils/i18n";
 import { AVAILABLE_LANGUAGES } from "@/utils/i18n";
 
 // Define context type
-type TranslationContextType = {
+interface TranslationContextType {
   language: Language;
   setLanguage: (language: Language) => Promise<void>;
   t: (key: string, params?: Record<string, string | number>) => string;
   availableLanguages: typeof AVAILABLE_LANGUAGES;
   isReady: boolean;
-};
+}
 
 // Create context
 export const TranslationContext = createContext<

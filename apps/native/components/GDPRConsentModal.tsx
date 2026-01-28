@@ -13,11 +13,11 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
-type GDPRConsentModalProps = {
+interface GDPRConsentModalProps {
   visible: boolean;
   onAcceptAll: (analyticsConsent: boolean) => Promise<void>;
   onAcceptRequired: () => Promise<void>;
-};
+}
 
 export default function GDPRConsentModal({
   visible,

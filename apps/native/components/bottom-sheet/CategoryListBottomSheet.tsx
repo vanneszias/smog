@@ -11,13 +11,13 @@ import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { typography } from "@/utils/typography";
 
-type CategoryListBottomSheetProps = {
+interface CategoryListBottomSheetProps {
   visible: boolean;
   onClose: () => void;
   categories: string[];
   selectedCategories: string[];
   onCategoryChange: (categories: string[]) => void;
-};
+}
 
 /**
  * A specialized BottomSheet that renders a scrollable list of categories.

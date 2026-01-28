@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import type { Gesture } from "@/types";
 
-type SearchResultsProps = {
+interface SearchResultsProps {
   isLoading?: boolean;
   results: Gesture[];
   initialQuery?: string;
@@ -26,7 +26,7 @@ type SearchResultsProps = {
   style?: StyleProp<ViewStyle>;
   onScroll?: (scrollY: number) => void;
   source?: "search_results" | "favorites_screen" | "related_gestures";
-};
+}
 
 const SearchResults: React.FC<SearchResultsProps> = ({
   results,

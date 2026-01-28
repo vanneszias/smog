@@ -1,20 +1,20 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo, { type NetInfoState } from "@react-native-community/netinfo";
 
-type NetworkMetrics = {
+interface NetworkMetrics {
   lastConnected: Date | null;
   connectionEvents: number;
   disconnectionEvents: number;
   totalOfflineTime: number;
   averageConnectionQuality: number;
-};
+}
 
-type NetworkQuality = {
+interface NetworkQuality {
   effectiveType: string | null;
   downlink: number | null;
   rtt: number | null;
   saveData: boolean | null;
-};
+}
 
 class NetworkService {
   private static instance: NetworkService;

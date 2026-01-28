@@ -5,7 +5,7 @@
 
 import type { client } from "@/utils/orpc";
 
-export type JobStatus = {
+export interface JobStatus {
   state: "waiting" | "active" | "completed" | "failed";
   progress: number;
   result?: {
@@ -13,12 +13,12 @@ export type JobStatus = {
     composedVideoPlaybackId?: string;
     error?: string;
   };
-};
+}
 
-export type PollerConfig = {
+export interface PollerConfig {
   pollInterval?: number;
   maxAttempts?: number;
-};
+}
 
 export class StatusPoller {
   private readonly pollInterval: number;

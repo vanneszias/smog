@@ -11,18 +11,18 @@ import { ProgressTracker } from "./ProgressTracker";
 import { StatusPoller } from "./StatusPoller";
 import { STEP_MESSAGES } from "./types";
 
-export type ComposeOptions = {
+export interface ComposeOptions {
   imageFile: File;
   overlayText: string;
   playbackId: string;
   overlayConfig: OverlayConfig;
-};
+}
 
-export type ComposeResult = {
+export interface ComposeResult {
   success: boolean;
   playbackId?: string;
   error?: string;
-};
+}
 
 export class VideoCompositionService {
   private readonly orpcClient: typeof client;

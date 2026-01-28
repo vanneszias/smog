@@ -5,10 +5,10 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { typography } from "@/utils/typography";
 
-type CategoryFiltersProps = {
+interface CategoryFiltersProps {
   selectedCategories: string[];
   onRemoveCategory: (category: string) => void;
-};
+}
 
 const CategoryFilters: React.FC<CategoryFiltersProps> = ({
   selectedCategories,

@@ -11,33 +11,33 @@ export type CompositionEventType =
   | "error"
   | "complete";
 
-export type CompositionProgressEvent = {
+export interface CompositionProgressEvent {
   type: "progress";
   step: CompositionStep;
   progress: number;
   message: string;
-};
+}
 
-export type CompositionStepChangeEvent = {
+export interface CompositionStepChangeEvent {
   type: "step-change";
   previousStep: CompositionStep;
   currentStep: CompositionStep;
   progress: number;
-};
+}
 
-export type CompositionErrorEvent = {
+export interface CompositionErrorEvent {
   type: "error";
   step: CompositionStep;
   message: string;
   suggestion?: string;
   error?: Error;
-};
+}
 
-export type CompositionCompleteEvent = {
+export interface CompositionCompleteEvent {
   type: "complete";
   playbackId: string;
   duration: number;
-};
+}
 
 export type CompositionEvent =
   | CompositionProgressEvent

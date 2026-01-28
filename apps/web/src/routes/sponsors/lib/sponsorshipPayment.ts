@@ -2,7 +2,7 @@ import type { Id } from "@smog/convex/dataModel";
 import type { client } from "@/utils/orpc";
 import { convertFileToBase64 } from "./imageValidation";
 
-export type CreateSponsorshipPaymentParams = {
+export interface CreateSponsorshipPaymentParams {
   gestureId: Id<"gestures">;
   gestureName: string;
   sponsorName: string;
@@ -26,13 +26,13 @@ export type CreateSponsorshipPaymentParams = {
     sponsorshipId: Id<"sponsorships">;
     molliePaymentId: string;
   }) => Promise<null>;
-};
+}
 
-export type CreateSponsorshipPaymentResult = {
+export interface CreateSponsorshipPaymentResult {
   success: boolean;
   checkoutUrl?: string;
   error?: string;
-};
+}
 
 export async function createSponsorshipPayment(
   params: CreateSponsorshipPaymentParams,

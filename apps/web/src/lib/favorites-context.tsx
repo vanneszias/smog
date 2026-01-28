@@ -12,13 +12,13 @@ import { client } from "../utils/orpc";
 import { useAuth } from "./auth";
 import { useConvexUserId } from "./convex-user-sync";
 
-type FavoritesContextType = {
+interface FavoritesContextType {
   favoriteIds: string[];
   isFavorite: (gestureId: string) => boolean;
   toggleFavorite: (gestureId: string, gestureName?: string) => Promise<void>;
   isLoading: boolean;
   refetch: () => Promise<void>;
-};
+}
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(
   undefined

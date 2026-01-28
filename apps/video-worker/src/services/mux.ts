@@ -13,22 +13,22 @@ import {
 } from "../types/errors";
 import { formatFileSize, getFileSize } from "../utils/filesystem";
 
-export type MuxCredentials = {
+export interface MuxCredentials {
   tokenId: string;
   tokenSecret: string;
-};
+}
 
-export type MuxDownloadOptions = {
+export interface MuxDownloadOptions {
   playbackId: string;
   destination: string;
   serverUrl?: string;
   apiKey?: string;
-};
+}
 
-export type MuxUploadOptions = {
+export interface MuxUploadOptions {
   videoPath: string;
   isDevelopment?: boolean;
-};
+}
 
 export class MuxService {
   private readonly client: Mux;

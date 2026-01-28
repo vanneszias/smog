@@ -1,20 +1,20 @@
 import { useMemo, useState } from "react";
 import { type SearchableGesture, searchGestures } from "./gestureSearchRanking";
 
-export type GestureCardData = {
+export interface GestureCardData {
   _id: string;
   name: string;
   playbackId: string;
   concept: string[];
   info: string;
   categories: Array<{ _id: string; name: string } | undefined>;
-};
+}
 
-export type UseGestureFilteringOptions = {
+export interface UseGestureFilteringOptions {
   gestures: GestureCardData[] | undefined;
   initialSearchQuery?: string;
   initialCategories?: string[];
-};
+}
 
 export function useGestureFiltering({
   gestures,

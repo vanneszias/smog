@@ -4,9 +4,9 @@ export * from "@smog/types";
 // Native-specific types (React Native specific)
 import type { TextStyle, ViewStyle } from "react-native";
 
-export type ComponentStyleProps = {
+export interface ComponentStyleProps {
   containerStyle?: ViewStyle;
   textStyle?: TextStyle;
   buttonStyle?: ViewStyle;
   iconStyle?: ViewStyle;
-};
+}

@@ -11,7 +11,7 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { useNativeInteractions } from "@/hooks/useNativeInteractions";
 
-type BaseButtonProps = {
+interface BaseButtonProps {
   title: string;
   onPress: () => void;
   disabled?: boolean;
@@ -21,7 +21,7 @@ type BaseButtonProps = {
   style?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle;
   hapticFeedback?: boolean;
-};
+}
 
 const BaseButton: React.FC<BaseButtonProps> = ({
   title,

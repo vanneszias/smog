@@ -23,10 +23,10 @@ import { useAuth } from "./AuthProvider";
 
 const GUEST_ID_KEY = "@smog_guest_id";
 
-type ConvexUserContextType = {
+interface ConvexUserContextType {
   userId: Id<"users"> | null;
   isLoading: boolean;
-};
+}
 
 const ConvexUserContext = createContext<ConvexUserContextType>({
   userId: null,

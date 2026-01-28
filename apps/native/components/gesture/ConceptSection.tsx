@@ -12,9 +12,9 @@ import { StyleSheet, Text, View } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
-type ConceptSectionProps = {
+interface ConceptSectionProps {
   concepts: string[];
-};
+}
 
 const ConceptSection: React.FC<ConceptSectionProps> = ({ concepts }) => {
   const { theme } = useTheme();

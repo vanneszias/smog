@@ -7,10 +7,10 @@ import { Check } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-type SuccessSearch = {
+interface SuccessSearch {
   sponsorshipId?: string;
   sponsorshipIds?: string;
-};
+}
 
 export const Route = createFileRoute("/sponsors/success")({
   component: SuccessComponent,

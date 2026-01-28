@@ -3,7 +3,7 @@ import * as SQLite from "expo-sqlite";
 import logger from "@/utils/logger";
 import { networkService } from "./networkService";
 
-type LocalFavorite = {
+interface LocalFavorite {
   id: number;
   user_id: string;
   gesture_id: string;
@@ -12,9 +12,9 @@ type LocalFavorite = {
   updated_at: string;
   sync_status: "pending" | "synced" | "conflict";
   operation_id: string;
-};
+}
 
-export type SyncOperation = {
+export interface SyncOperation {
   id: number;
   operation_id: string;
   user_id: string;
@@ -24,7 +24,7 @@ export type SyncOperation = {
   retry_count: number;
   last_retry_at?: string;
   error_message?: string;
-};
+}
 
 class OfflineFavoritesService {
   private db: SQLite.SQLiteDatabase | null = null;

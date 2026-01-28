@@ -9,13 +9,13 @@ import {
 } from "../ui/table";
 import type { GestureCardData } from "./GestureCard";
 
-export type GestureListData = {
+export interface GestureListData {
   gestures: GestureCardData[];
   isDone?: boolean;
   continueCursor?: string;
-};
+}
 
-type GestureListProps = {
+interface GestureListProps {
   gestures: GestureCardData[];
   isLoading?: boolean;
   error?: Error | null;
@@ -26,7 +26,7 @@ type GestureListProps = {
   onSort?: (column: "name" | "category") => void;
   favoriteGestureIds?: string[];
   onToggleFavorite?: (gestureId: string) => void;
-};
+}
 
 function GestureTableRow({
   gesture,

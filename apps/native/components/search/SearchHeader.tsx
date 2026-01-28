@@ -9,7 +9,7 @@ import SearchBar from "@/components/search/SearchBar";
 
 type SearchHeaderMode = "home" | "search";
 
-type SearchHeaderProps = {
+interface SearchHeaderProps {
   mode?: SearchHeaderMode;
   searchTerm: string;
   onSearchChange: (query: string) => void;
@@ -34,7 +34,7 @@ type SearchHeaderProps = {
   searchBarContainerStyle?: StyleProp<ViewStyle>;
   rowGap?: number;
   placeholder?: string;
-};
+}
 
 const SearchHeader: React.FC<SearchHeaderProps> = ({
   searchTerm,

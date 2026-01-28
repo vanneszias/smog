@@ -6,12 +6,12 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { v4 as uuidv4 } from "uuid";
 
-export type WorkspaceFiles = {
+export interface WorkspaceFiles {
   workDir: string;
   videoPath: string;
   overlayPath: string;
   outputPath: string;
-};
+}
 
 /**
  * Create a temporary workspace directory with standard file paths

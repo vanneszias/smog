@@ -22,9 +22,9 @@ import type { CompositionStep } from "./lib/composition/types";
 import { convertFileToBase64 } from "./lib/imageValidation";
 import { createSponsorshipPayment } from "./lib/sponsorshipPayment";
 
-type CreateSearch = {
+interface CreateSearch {
   gestureIds: string;
-};
+}
 
 export const Route = createFileRoute("/sponsors/create")({
   component: CreateSponsorshipComponent,

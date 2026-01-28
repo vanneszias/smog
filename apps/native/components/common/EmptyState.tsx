@@ -3,10 +3,10 @@ import type React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 
-type EmptyStateProps = {
+interface EmptyStateProps {
   message: string;
   recentSearches?: React.ReactNode;
-};
+}
 
 const EmptyState: React.FC<EmptyStateProps> = ({ message, recentSearches }) => {
   const { theme } = useTheme();

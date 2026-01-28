@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import CategoryFilter from "../common/CategoryFilter";
 import SearchBar from "../common/SearchBar";
 
-type GestureFiltersProps = {
+interface GestureFiltersProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   allCategories: string[];
@@ -12,7 +12,7 @@ type GestureFiltersProps = {
   onClearFilters?: () => void;
   showResultCount?: boolean;
   searchPlaceholder?: string;
-};
+}
 
 export function GestureFilters({
   searchQuery,

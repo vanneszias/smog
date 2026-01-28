@@ -3,11 +3,11 @@ import { useEffect } from "react";
 import { Alert, Platform, Share } from "react-native";
 import { useTranslation } from "@/context/TranslationContext";
 
-type UseScreenshotDetectionOptions = {
+interface UseScreenshotDetectionOptions {
   gestureId: string | null;
   gestureName: string | null;
   enabled?: boolean;
-};
+}
 
 export const useScreenshotDetection = ({
   gestureId,

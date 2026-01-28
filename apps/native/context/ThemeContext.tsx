@@ -4,11 +4,11 @@ import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useColorScheme } from "react-native";
 
-type ThemeContextType = {
+interface ThemeContextType {
   theme: ThemeColors;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
-};
+}
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: themes.light,

@@ -8,12 +8,12 @@ import {
   useState,
 } from "react";
 
-type RecentSearchesContextType = {
+interface RecentSearchesContextType {
   recentSearches: string[];
   addRecentSearch: (query: string) => void;
   clearRecentSearches: () => void;
   // Removed setOnSelect and onSelect for prop-based handler pattern
-};
+}
 
 const RecentSearchesContext = createContext<RecentSearchesContextType>({
   recentSearches: [],
@@ -28,10 +28,10 @@ const RecentSearchesContext = createContext<RecentSearchesContextType>({
 
 export const useRecentSearches = () => useContext(RecentSearchesContext);
 
-type RecentSearchesProviderProps = {
+interface RecentSearchesProviderProps {
   children: React.ReactNode;
   maxSearches?: number;
-};
+}
 
 /**
  * Provides global recent search state and handlers.

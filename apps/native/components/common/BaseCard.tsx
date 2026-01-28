@@ -11,7 +11,7 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { typography } from "@/utils/typography";
 
-type BaseCardProps = {
+interface BaseCardProps {
   children: ReactNode;
   title?: string;
   subtitle?: string;
@@ -20,7 +20,7 @@ type BaseCardProps = {
   subtitleStyle?: TextStyle;
   contentStyle?: ViewStyle;
   shadow?: "small" | "medium" | "large" | "none";
-};
+}
 
 const BaseCard: React.FC<BaseCardProps> = ({
   children,

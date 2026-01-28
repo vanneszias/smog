@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 
 declare const document: { cookie: string } | undefined;
 
-export type AnalyticsConsentStatus = {
+export interface AnalyticsConsentStatus {
   hasConsent: boolean;
   analyticsConsent: boolean;
   marketingConsent: boolean;
   consentDate?: string;
-};
+}
 
 function createConsent(
   analytics: boolean,
@@ -82,9 +82,9 @@ function saveConsent(status: AnalyticsConsentStatus): void {
   }
 }
 
-export type UseAnalyticsConsentOptions = {
+export interface UseAnalyticsConsentOptions {
   onConsentChange?: (consent: boolean) => void;
-};
+}
 
 export function useAnalyticsConsent(options: UseAnalyticsConsentOptions = {}): {
   consent: AnalyticsConsentStatus | null;

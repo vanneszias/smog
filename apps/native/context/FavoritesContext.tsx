@@ -19,14 +19,14 @@ import offlineFavoritesService, {
 import type { Gesture } from "@/types";
 import logger from "@/utils/logger";
 
-export type FavoritesContextType = {
+export interface FavoritesContextType {
   favorites: string[];
   favoriteGestures: Gesture[];
   toggleFavorite: (gestureId: string, _gestureName?: string) => void;
   isFavorite: (gestureId: string) => boolean;
   isLoading: boolean;
   pendingOperations: number;
-};
+}
 
 const FavoritesContext = createContext<FavoritesContextType>({
   favorites: [],
@@ -41,9 +41,9 @@ const FavoritesContext = createContext<FavoritesContextType>({
 
 export const useFavorites = () => useContext(FavoritesContext);
 
-type FavoritesProviderProps = {
+interface FavoritesProviderProps {
   children: React.ReactNode;
-};
+}
 
 export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
   children,

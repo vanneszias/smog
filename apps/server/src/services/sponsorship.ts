@@ -4,11 +4,11 @@ import { ConvexHttpClient } from "convex/browser";
 
 const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 
-export type ProcessPaymentOptions = {
+export interface ProcessPaymentOptions {
   sponsorshipId: string;
   molliePaymentId: string;
   newPlaybackId?: string; // New Mux playback ID from external worker
-};
+}
 
 /**
  * Process a successful payment and mark sponsorship as pending approval

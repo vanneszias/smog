@@ -21,7 +21,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
-type SearchBarProps = {
+interface SearchBarProps {
   onSearch: (query: string) => void;
   onSubmit?: (query: string) => void;
   containerStyle?: ViewStyle;
@@ -36,7 +36,7 @@ type SearchBarProps = {
   onBlur?: () => void;
   showCancelButton?: boolean;
   onCancel?: () => void;
-};
+}
 
 // Make the entire SearchBar area clickable to focus the TextInput
 const SearchBar = ({

@@ -3,20 +3,20 @@
  * Converts percentage-based coordinates to pixel values
  */
 
-export type Point = {
+export interface Point {
   x: number;
   y: number;
-};
+}
 
-export type Size = {
+export interface Size {
   width: number;
   height: number;
-};
+}
 
-export type VideoDimensions = {
+export interface VideoDimensions {
   width: number;
   height: number;
-};
+}
 
 /**
  * Convert percentage to pixels

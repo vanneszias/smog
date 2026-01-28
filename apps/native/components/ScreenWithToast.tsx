@@ -2,10 +2,10 @@ import type React from "react";
 import { View, type ViewStyle } from "react-native";
 import ToastContainer from "@/components/ToastContainer";
 
-type ScreenWithToastProps = {
+interface ScreenWithToastProps {
   children: React.ReactNode;
   style?: ViewStyle;
-};
+}
 
 /**
  * Wrapper component that provides consistent toast integration for screens.

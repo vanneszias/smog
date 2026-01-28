@@ -14,19 +14,19 @@ import {
 } from "../utils/coordinates";
 import { calculateLineHeight, splitTextIntoLines } from "../utils/text";
 
-export type VideoMetadata = {
+export interface VideoMetadata {
   duration: number;
   width: number;
   height: number;
-};
+}
 
-export type OverlayImageConfig = {
+export interface OverlayImageConfig {
   position: { x: number; y: number };
   size: { width: number; height: number };
   startTime: number;
-};
+}
 
-export type OverlayTextConfig = {
+export interface OverlayTextConfig {
   text: string;
   centerX: number;
   y: number;
@@ -34,13 +34,13 @@ export type OverlayTextConfig = {
   color: string;
   startTime: number;
   fontPath?: string;
-};
+}
 
-export type FFmpegProgress = {
+export interface FFmpegProgress {
   percent: number;
   currentTime: number;
   targetSize: number;
-};
+}
 
 /**
  * FFmpeg filter builder for creating complex filter chains

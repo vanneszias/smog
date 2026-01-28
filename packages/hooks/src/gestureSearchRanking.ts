@@ -4,7 +4,7 @@ import Fuse from "fuse.js";
  * Type representing a searchable gesture with flexible field types
  * to support both web and native data structures
  */
-export type SearchableGesture = {
+export interface SearchableGesture {
   _id?: string; // Web format
   id?: string; // Native format
   name: string;
@@ -12,7 +12,7 @@ export type SearchableGesture = {
   info: string;
   categories?: Array<{ _id: string; name: string } | undefined>; // Web format
   category?: string[]; // Native format
-};
+}
 
 /**
  * Match type indicating how the search query matched the gesture
@@ -27,18 +27,18 @@ export type MatchField = "name" | "concept" | "category" | "info";
 /**
  * Result of scoring a single gesture against a search query
  */
-export type ScoredGesture<T extends SearchableGesture> = {
+export interface ScoredGesture<T extends SearchableGesture> {
   gesture: T;
   score: number;
   matchType: MatchType;
   matchedField: MatchField;
   fuseScore?: number;
-};
+}
 
 /**
  * Configuration options for the search algorithm
  */
-export type SearchRankingOptions = {
+export interface SearchRankingOptions {
   /**
    * Threshold for fuzzy matching (0 = perfect match, 1 = match anything)
    * Default: 0.4 (balanced between precision and recall)
@@ -56,7 +56,7 @@ export type SearchRankingOptions = {
    * Default: true
    */
   caseSensitiveBonus?: boolean;
-};
+}
 
 /**
  * Field weights for relevance scoring

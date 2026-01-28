@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { client, orpc } from "@/utils/orpc";
 
-type Sponsorship = {
+interface Sponsorship {
   _id: string;
   gestureId: string;
   gestureName?: string;
@@ -46,7 +46,7 @@ type Sponsorship = {
   reviewedAt?: number;
   createdAt: number;
   updatedAt: number;
-};
+}
 
 const getStatusBadge = (status: string) => {
   const variants: Record<

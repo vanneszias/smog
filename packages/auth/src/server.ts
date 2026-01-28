@@ -17,7 +17,7 @@ export { mollieClient } from "./lib/payments";
 /**
  * WorkOS API response types (internal)
  */
-type WorkOSAuthResponse = {
+interface WorkOSAuthResponse {
   access_token: string;
   refresh_token: string;
   user: {
@@ -30,7 +30,7 @@ type WorkOSAuthResponse = {
     created_at: string;
     updated_at: string;
   };
-};
+}
 
 /**
  * Transform WorkOS user response to our user type

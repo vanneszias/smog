@@ -2,7 +2,7 @@ import { colors } from "./colors";
 
 export type ThemeMode = "light" | "dark" | "system";
 
-export type ThemeColors = {
+export interface ThemeColors {
   primary: string;
   secondary: string;
   accent: string;
@@ -15,7 +15,7 @@ export type ThemeColors = {
   error: string;
   liked: string;
   statusBar: "light" | "dark";
-};
+}
 
 export const themes = {
   light: {

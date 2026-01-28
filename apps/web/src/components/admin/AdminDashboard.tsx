@@ -11,13 +11,13 @@ import { GesturesManagement } from "./GesturesManagement";
 import { PendingSponsorships } from "./PendingSponsorships";
 import { SponsorshipsManagement } from "./SponsorshipsManagement";
 
-export type AdminDashboardProps = {
+export interface AdminDashboardProps {
   user: {
     email: string;
     firstName?: string;
     lastName?: string;
   };
-};
+}
 
 export function AdminDashboard({ user }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState("pending");

@@ -1,7 +1,7 @@
-type SkeletonProps = {
+interface SkeletonProps {
   className?: string;
   style?: React.CSSProperties;
-};
+}
 
 export function Skeleton({ className = "", style }: SkeletonProps) {
   return (
@@ -12,10 +12,10 @@ export function Skeleton({ className = "", style }: SkeletonProps) {
   );
 }
 
-type ShimmerSkeletonProps = {
+interface ShimmerSkeletonProps {
   className?: string;
   style?: React.CSSProperties;
-};
+}
 
 export function ShimmerSkeleton({
   className = "",

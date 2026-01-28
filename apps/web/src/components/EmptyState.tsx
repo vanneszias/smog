@@ -1,13 +1,13 @@
 import { Info } from "lucide-react";
 
-type EmptyStateProps = {
+interface EmptyStateProps {
   message: string;
   icon?: React.ReactNode;
   action?: {
     label: string;
     onClick: () => void;
   };
-};
+}
 
 export default function EmptyState({ message, icon, action }: EmptyStateProps) {
   return (

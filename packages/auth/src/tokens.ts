@@ -7,13 +7,13 @@
 /**
  * Parsed JWT payload structure from WorkOS tokens
  */
-export type JWTPayload = {
+export interface JWTPayload {
   sub: string; // WorkOS user ID
   exp: number; // Expiration timestamp (seconds)
   iat: number; // Issued at timestamp (seconds)
   iss: string; // Issuer
   aud?: string; // Audience
-};
+}
 
 /**
  * Parse a JWT token and extract its payload

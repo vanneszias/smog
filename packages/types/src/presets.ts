@@ -12,13 +12,13 @@ export type PresetName =
   | "center"
   | "subtle";
 
-export type OverlayPreset = {
+export interface OverlayPreset {
   name: PresetName;
   label: string;
   description: string;
   config: OverlayConfig;
   icon: string;
-};
+}
 
 export const OVERLAY_PRESETS: OverlayPreset[] = [
   {

@@ -11,7 +11,7 @@ import {
 } from "react-native-reanimated";
 import logger from "@/utils/logger";
 
-type UseHeaderHeightReturn = {
+interface UseHeaderHeightReturn {
   headerRef: React.RefObject<View | null>;
   headerHeight: number;
   onHeaderLayout: () => void;
@@ -27,16 +27,16 @@ type UseHeaderHeightReturn = {
   opacity: SharedValue<number>;
   scale: SharedValue<number>;
   paddingTop: SharedValue<number>;
-};
+}
 
-type UseHeaderHeightOptions = {
+interface UseHeaderHeightOptions {
   additionalTopPadding?: number;
   additionalBottomPadding?: number;
   includeStatusBar?: boolean;
   enableAutoHide?: boolean;
   hideThreshold?: number;
   showThreshold?: number;
-};
+}
 
 /**
  * Custom hook for measuring header height including all paddings and margins

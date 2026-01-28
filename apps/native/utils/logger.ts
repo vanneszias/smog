@@ -2,13 +2,13 @@ import { Directory, File, Paths } from "expo-file-system";
 
 export type LogLevel = "log" | "info" | "warn" | "error" | "debug";
 
-export type LogRecord = {
+export interface LogRecord {
   id: string;
   level: LogLevel;
   message: string;
   timestamp: string; // ISO string
   formatted: string;
-};
+}
 
 type LogSubscriber = (record: LogRecord) => void;
 

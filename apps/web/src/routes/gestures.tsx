@@ -16,10 +16,10 @@ import {
 } from "@/lib/analytics";
 import { useFavorites } from "@/lib/favorites-context";
 
-type GestureSearch = {
+interface GestureSearch {
   q?: string;
   category?: string;
-};
+}
 
 export const Route = createFileRoute("/gestures")({
   component: GesturesComponent,

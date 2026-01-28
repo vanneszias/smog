@@ -15,7 +15,6 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as GesturesRouteImport } from './routes/gestures'
 import { Route as FavoritesRouteImport } from './routes/favorites'
-import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CallbackRouteImport } from './routes/callback'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AccountRouteImport } from './routes/account'
@@ -53,11 +52,6 @@ const GesturesRoute = GesturesRouteImport.update({
 const FavoritesRoute = FavoritesRouteImport.update({
   id: '/favorites',
   path: '/favorites',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CallbackRoute = CallbackRouteImport.update({
@@ -106,7 +100,6 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/callback': typeof CallbackRoute
-  '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
@@ -116,14 +109,13 @@ export interface FileRoutesByFullPath {
   '/gestures/$id': typeof GesturesIdRoute
   '/sponsors/create': typeof SponsorsCreateRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
-  '/sponsors': typeof SponsorsIndexRoute
+  '/sponsors/': typeof SponsorsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/callback': typeof CallbackRoute
-  '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
@@ -141,7 +133,6 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/callback': typeof CallbackRoute
-  '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
   '/login': typeof LoginRoute
@@ -160,7 +151,6 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/callback'
-    | '/dashboard'
     | '/favorites'
     | '/gestures'
     | '/login'
@@ -170,14 +160,13 @@ export interface FileRouteTypes {
     | '/gestures/$id'
     | '/sponsors/create'
     | '/sponsors/success'
-    | '/sponsors'
+    | '/sponsors/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/account'
     | '/admin'
     | '/callback'
-    | '/dashboard'
     | '/favorites'
     | '/gestures'
     | '/login'
@@ -194,7 +183,6 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/callback'
-    | '/dashboard'
     | '/favorites'
     | '/gestures'
     | '/login'
@@ -212,7 +200,6 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRoute
   CallbackRoute: typeof CallbackRoute
-  DashboardRoute: typeof DashboardRoute
   FavoritesRoute: typeof FavoritesRoute
   GesturesRoute: typeof GesturesRoute
   LoginRoute: typeof LoginRoute
@@ -269,13 +256,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FavoritesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/callback': {
       id: '/callback'
       path: '/callback'
@@ -307,7 +287,7 @@ declare module '@tanstack/react-router' {
     '/sponsors/': {
       id: '/sponsors/'
       path: '/sponsors'
-      fullPath: '/sponsors'
+      fullPath: '/sponsors/'
       preLoaderRoute: typeof SponsorsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -340,7 +320,6 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   AdminRoute: AdminRoute,
   CallbackRoute: CallbackRoute,
-  DashboardRoute: DashboardRoute,
   FavoritesRoute: FavoritesRoute,
   GesturesRoute: GesturesRoute,
   LoginRoute: LoginRoute,

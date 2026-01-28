@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next";
 
-type LogoProps = {
+interface LogoProps {
   variant?: "default" | "white" | "black";
   width?: number;
   height?: number;
   className?: string;
-};
+}
 
 export default function Logo({
   variant = "default",

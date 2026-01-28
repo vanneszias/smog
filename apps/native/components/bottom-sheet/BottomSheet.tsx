@@ -10,7 +10,7 @@ import type { ViewStyle } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useNativeInteractions } from "@/hooks/useNativeInteractions";
 
-type BottomSheetProps = {
+interface BottomSheetProps {
   /**
    * Determines whether the bottom sheet is visible.
    */
@@ -32,7 +32,7 @@ type BottomSheetProps = {
    * Optional style for the content container.
    */
   contentContainerStyle?: ViewStyle;
-};
+}
 
 /**
  * A reusable BottomSheet component that replaces the default Modal.

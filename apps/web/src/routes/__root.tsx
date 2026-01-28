@@ -22,10 +22,10 @@ import { FavoritesProvider } from "@/lib/favorites-context";
 import { link, type orpc } from "@/utils/orpc";
 import "../index.css";
 
-export type RouterAppContext = {
+export interface RouterAppContext {
   orpc: typeof orpc;
   queryClient: QueryClient;
-};
+}
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,

@@ -11,9 +11,9 @@ import { StyleSheet, Text, View } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
-type InfoSectionProps = {
+interface InfoSectionProps {
   info: string;
-};
+}
 
 const InfoSection: React.FC<InfoSectionProps> = ({ info }) => {
   const { theme } = useTheme();

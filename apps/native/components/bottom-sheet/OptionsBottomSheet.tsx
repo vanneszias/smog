@@ -7,13 +7,13 @@ import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { typography } from "@/utils/typography";
 
-type OptionsBottomSheetProps = {
+interface OptionsBottomSheetProps {
   visible: boolean;
   onClose: () => void;
   onSettingsPress: () => void;
   onAboutPress: () => void;
   onContactPress: () => void;
-};
+}
 
 const OptionsBottomSheet: React.FC<OptionsBottomSheetProps> = ({
   visible,

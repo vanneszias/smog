@@ -15,10 +15,10 @@ import {
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 
-type CategoryRowProps = {
+interface CategoryRowProps {
   categories: string[];
   onCategoryPress: (category: string) => void;
-};
+}
 
 const CategoryRow: React.FC<CategoryRowProps> = ({
   categories,

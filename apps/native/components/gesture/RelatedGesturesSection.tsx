@@ -20,9 +20,9 @@ import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 import type { Gesture } from "@/types";
 
-type RelatedGesturesSectionProps = {
+interface RelatedGesturesSectionProps {
   relatedGestures: Gesture[];
-};
+}
 
 const RelatedGesturesSection: React.FC<RelatedGesturesSectionProps> = ({
   relatedGestures,

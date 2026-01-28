@@ -123,7 +123,7 @@ export default function Header() {
                 <path
                   className={`origin-center transition-all duration-300 ${
                     sidebarOpen
-                      ? "-rotate-45 translate-y-0 stroke-primary"
+                      ? "translate-y-0 -rotate-45 stroke-primary"
                       : "translate-y-1.5 rotate-0 stroke-black"
                   }`}
                   d="M5 12h14"

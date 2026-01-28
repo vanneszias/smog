@@ -2,21 +2,21 @@ import type React from "react";
 import { createContext, useContext, useRef, useState } from "react";
 import type { ToastAction } from "@/components/Toast";
 
-export type ToastOptions = {
+export interface ToastOptions {
   message: string;
   action?: ToastAction;
   duration?: number;
   type?: "info" | "success" | "warning" | "error";
-};
+}
 
-type ToastContextType = {
+interface ToastContextType {
   showToast: (options: ToastOptions) => void;
   hideToast: () => void;
   triggerHide: () => void;
   registerHideCallback: (callback: () => void) => void;
   isVisible: boolean;
   toastOptions: ToastOptions | null;
-};
+}
 
 const ToastContext = createContext<ToastContextType>({
   showToast: () => {
@@ -37,9 +37,9 @@ const ToastContext = createContext<ToastContextType>({
 
 export const useToast = () => useContext(ToastContext);
 
-type ToastProviderProps = {
+interface ToastProviderProps {
   children: React.ReactNode;
-};
+}
 
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const [isVisible, setIsVisible] = useState(false);

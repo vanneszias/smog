@@ -1,6 +1,6 @@
 import { colors } from "./colors";
 
-export type ShadowStyle = {
+export interface ShadowStyle {
   shadowColor: string;
   shadowOffset: {
     width: number;
@@ -9,15 +9,15 @@ export type ShadowStyle = {
   shadowOpacity: number;
   shadowRadius: number;
   elevation: number;
-};
+}
 
-export type ShadowOptions = {
+export interface ShadowOptions {
   color?: string;
   opacity?: number;
   radius?: number;
   offset?: { width: number; height: number };
   elevation?: number;
-};
+}
 
 export const createShadow = ({
   color = "#000",

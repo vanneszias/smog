@@ -2,7 +2,7 @@ import * as SQLite from "expo-sqlite";
 import type { Gesture } from "@/types";
 import logger from "@/utils/logger";
 
-type DatabaseGesture = {
+interface DatabaseGesture {
   id: string;
   name: string;
   category: string; // JSON string of array
@@ -13,9 +13,9 @@ type DatabaseGesture = {
   updatedAt: string;
   lastSyncAt?: string;
   convexId?: string;
-};
+}
 
-type DatabaseCategory = {
+interface DatabaseCategory {
   id: string;
   name: string;
   description?: string;
@@ -24,7 +24,7 @@ type DatabaseCategory = {
   updatedAt: string;
   lastSyncAt?: string;
   convexId?: string;
-};
+}
 
 class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;

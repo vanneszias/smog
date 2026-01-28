@@ -1,11 +1,11 @@
 import { X } from "lucide-react";
 
-type CategoryFilterProps = {
+interface CategoryFilterProps {
   categories: string[];
   selectedCategories: string[];
   onCategoryToggle: (category: string) => void;
   className?: string;
-};
+}
 
 export default function CategoryFilter({
   categories,

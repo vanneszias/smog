@@ -13,14 +13,14 @@ export type GestureDetailData = GestureCardData & {
   } | null;
 };
 
-type GestureDetailProps = {
+interface GestureDetailProps {
   gesture: GestureDetailData;
   isFavorite?: boolean;
   onToggleFavorite?: (gestureId: string) => void;
   onBack?: () => void;
   showOpenInApp?: boolean;
   onOpenInApp?: () => void;
-};
+}
 
 function SponsorshipCTA({
   gestureId,

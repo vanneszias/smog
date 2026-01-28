@@ -20,11 +20,11 @@ export const WORKOS_ENDPOINTS = {
  * WorkOS OAuth configuration
  * Note: clientSecret should only be used server-side
  */
-export type WorkOSConfig = {
+export interface WorkOSConfig {
   clientId: string;
   clientSecret?: string;
   redirectUri: string;
-};
+}
 
 /**
  * Get WorkOS config from environment variables

@@ -7,11 +7,11 @@ import logger, {
   subscribeToLogs,
 } from "@/utils/logger";
 
-type LogContextType = {
+interface LogContextType {
   logs: LogRecord[];
   clearLogs: () => void;
   exportLogs: () => string;
-};
+}
 
 export const LogContext = createContext<LogContextType>({
   logs: [],
