@@ -206,27 +206,29 @@ export function GestureList({
   }
 
   return (
-    <div className="relative h-full w-full overflow-auto px-4">
-      <table className="w-full caption-bottom text-sm">
-        <GestureTableHeader
-          onSort={onSort}
-          showFavoriteColumn={!!onToggleFavorite}
-          sortColumn={sortColumn}
-          sortDirection={sortDirection}
-        />
-        <TableBody>
-          {gestures.map((gesture) => (
-            <GestureTableRow
-              gesture={gesture}
-              isFavorite={favoriteGestureIds.includes(gesture._id)}
-              isSelected={selectedGestureId === gesture._id}
-              key={gesture._id}
-              onClick={() => onSelectGesture(gesture._id)}
-              onToggleFavorite={onToggleFavorite}
-            />
-          ))}
-        </TableBody>
-      </table>
+    <div className="relative flex h-full max-h-full w-full flex-col overflow-hidden px-4">
+      <div className="min-h-0 flex-1 overflow-auto">
+        <table className="w-full caption-bottom text-sm">
+          <GestureTableHeader
+            onSort={onSort}
+            showFavoriteColumn={!!onToggleFavorite}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
+          />
+          <TableBody>
+            {gestures.map((gesture) => (
+              <GestureTableRow
+                gesture={gesture}
+                isFavorite={favoriteGestureIds.includes(gesture._id)}
+                isSelected={selectedGestureId === gesture._id}
+                key={gesture._id}
+                onClick={() => onSelectGesture(gesture._id)}
+                onToggleFavorite={onToggleFavorite}
+              />
+            ))}
+          </TableBody>
+        </table>
+      </div>
     </div>
   );
 }
