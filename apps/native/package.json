@@ -29,6 +29,7 @@
     "@shopify/flash-list": "2.0.2",
     "@smog/auth": "workspace:*",
     "@smog/convex": "workspace:*",
+    "@smog/hooks": "workspace:*",
     "@smog/i18n": "workspace:*",
     "@smog/styles": "workspace:*",
     "@smog/types": "workspace:*",

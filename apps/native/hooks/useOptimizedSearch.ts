@@ -1,3 +1,4 @@
+import { searchGestures } from "@smog/hooks";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gestureService } from "@/services/gestureService";
 import type { Gesture } from "@/types";
@@ -97,21 +98,10 @@ export const useOptimizedSearch = (
         );
       }
 
-      // Then filter by search query
+      // Apply search with relevance ranking if query meets minimum length
       if (query && query.length >= minSearchLength) {
-        const searchLower = query.toLowerCase();
-        filtered = filtered.filter((gesture) => {
-          const nameMatch = gesture.name.toLowerCase().includes(searchLower);
-          const conceptMatch = gesture.concept.some((concept) =>
-            concept.toLowerCase().includes(searchLower)
-          );
-          const categoryMatch = gesture.category.some((cat) =>
-            cat.toLowerCase().includes(searchLower)
-          );
-          const infoMatch = gesture.info?.toLowerCase().includes(searchLower);
-
-          return nameMatch || conceptMatch || categoryMatch || infoMatch;
-        });
+        // Use the new search algorithm with fuzzy matching and relevance ranking
+        filtered = searchGestures(filtered, query) as Gesture[];
       }
 
       return filtered;

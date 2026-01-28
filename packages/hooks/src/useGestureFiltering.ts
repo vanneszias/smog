@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { type SearchableGesture, searchGestures } from "./gestureSearchRanking";
 
 export type GestureCardData = {
   _id: string;
@@ -48,18 +49,7 @@ export function useGestureFiltering({
 
     let filtered = gestures;
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((gesture) => {
-        const nameMatch = gesture.name.toLowerCase().includes(query);
-        const conceptMatch = gesture.concept.some((c: string) =>
-          c.toLowerCase().includes(query)
-        );
-        const infoMatch = gesture.info.toLowerCase().includes(query);
-        return nameMatch || conceptMatch || infoMatch;
-      });
-    }
-
+    // Filter by categories first if any are selected
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((gesture) =>
         gesture.categories.some(
@@ -69,18 +59,31 @@ export function useGestureFiltering({
       );
     }
 
-    const sorted = [...filtered].sort((a, b) => {
-      if (sortColumn === "name") {
-        const comparison = a.name.localeCompare(b.name);
-        return sortDirection === "asc" ? comparison : -comparison;
-      }
-      const aCat = a.categories[0]?.name || "";
-      const bCat = b.categories[0]?.name || "";
-      const comparison = aCat.localeCompare(bCat);
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
+    // Apply search with relevance ranking if there's a query
+    if (searchQuery && searchQuery.trim().length > 0) {
+      // Use the new search algorithm with fuzzy matching and relevance ranking
+      filtered = searchGestures(
+        filtered as SearchableGesture[],
+        searchQuery
+      ) as GestureCardData[];
+    }
 
-    return sorted;
+    // Apply sorting if no search query (search results are already ranked by relevance)
+    if (!searchQuery || searchQuery.trim().length === 0) {
+      const sorted = [...filtered].sort((a, b) => {
+        if (sortColumn === "name") {
+          const comparison = a.name.localeCompare(b.name);
+          return sortDirection === "asc" ? comparison : -comparison;
+        }
+        const aCat = a.categories[0]?.name || "";
+        const bCat = b.categories[0]?.name || "";
+        const comparison = aCat.localeCompare(bCat);
+        return sortDirection === "asc" ? comparison : -comparison;
+      });
+      return sorted;
+    }
+
+    return filtered;
   }, [gestures, searchQuery, selectedCategories, sortColumn, sortDirection]);
 
   const handleSort = (column: "name" | "category") => {
