@@ -249,41 +249,37 @@ function SponsorGestureList({
     : undefined;
 
   return (
-    <div className="h-full overflow-y-auto">
-      <table className="w-full">
-        <thead className="sticky top-0 z-10 border-b bg-background">
-          <tr>
-            <th className="w-12 p-4 text-left">
-              <span className="text-muted-foreground text-xs">Select</span>
-            </th>
+    <div className="relative h-full w-full overflow-auto px-4">
+      <table className="w-full caption-bottom text-sm">
+        <thead className="sticky top-0 z-10 bg-background">
+          <tr className="border-b">
             <th
-              className={`p-4 text-left ${sortableClass}`}
+              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
               onClick={handleNameClick}
             >
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm">
-                  {t("ui.gestureList.name")}
-                </span>
+              <div className="flex items-center gap-1">
+                {t("ui.gestureList.name")}
                 {renderSortIndicator("name")}
               </div>
             </th>
             <th
-              className={`p-4 text-left ${sortableClass}`}
+              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
               onClick={handleCategoryClick}
             >
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm">
-                  {t("ui.gestureList.category")}
-                </span>
+              <div className="flex items-center gap-1">
+                {t("ui.gestureList.category")}
                 {renderSortIndicator("category")}
               </div>
             </th>
+            <th className="h-12 px-4 text-left align-middle font-medium">
+              {t("ui.gestureList.concepts")}
+            </th>
             <th
-              className={`p-4 text-left ${sortableClass}`}
+              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
               onClick={handleSponsorshipClick}
             >
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm">Sponsorship</span>
+              <div className="flex items-center gap-1">
+                {t("web.sponsors.sponsorshipStatus", "Sponsorship Status")}
                 {renderSortIndicator("sponsorship")}
               </div>
             </th>
@@ -303,41 +299,37 @@ function SponsorGestureList({
 
             return (
               <tr
-                className={`border-b transition-colors hover:bg-muted/50 ${
-                  isSelected ? "bg-primary/10" : ""
-                } ${isUnavailable ? "opacity-60" : ""}`}
+                className={`border-b transition-colors ${
+                  isUnavailable
+                    ? "cursor-not-allowed opacity-60"
+                    : "cursor-pointer hover:bg-muted/50"
+                } ${isSelected ? "bg-primary/10" : ""}`}
                 key={gesture._id}
+                onClick={() => onSelectGesture(gesture._id)}
               >
+                <td className="p-4 font-medium">{gesture.name}</td>
                 <td className="p-4">
-                  <input
-                    checked={isSelected}
-                    className="h-4 w-4 cursor-pointer rounded border-gray-300"
-                    disabled={isUnavailable}
-                    onChange={() => onSelectGesture(gesture._id)}
-                    type="checkbox"
-                  />
-                </td>
-                <td className="p-4">
-                  <div>
-                    <p className="font-medium">{gesture.name}</p>
-                    {gesture.concept.length > 0 && (
-                      <p className="text-muted-foreground text-xs">
-                        {gesture.concept.join(", ")}
-                      </p>
+                  <div className="flex flex-wrap gap-1">
+                    {gesture.categories
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((cat) => (
+                        <span
+                          className="rounded-full bg-secondary px-2 py-0.5 text-xs"
+                          key={cat._id}
+                        >
+                          {cat.name}
+                        </span>
+                      ))}
+                    {gesture.categories.length > 2 && (
+                      <span className="text-muted-foreground text-xs">
+                        +{gesture.categories.length - 2}
+                      </span>
                     )}
                   </div>
                 </td>
-                <td className="p-4">
-                  <div className="flex flex-wrap gap-1">
-                    {gesture.categories.map((cat) => (
-                      <span
-                        className="rounded-full bg-muted px-2 py-0.5 text-xs"
-                        key={cat._id}
-                      >
-                        {cat.name}
-                      </span>
-                    ))}
-                  </div>
+                <td className="max-w-xs truncate p-4 text-muted-foreground text-sm">
+                  {gesture.concept.join(", ")}
                 </td>
                 <td className="p-4">
                   {renderSponsorshipStatus(
