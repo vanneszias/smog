@@ -147,7 +147,7 @@ function GesturesComponent() {
 
         {/* Detail Panel - Full width on mobile, half on desktop */}
         <div
-          className={`overflow-hidden bg-muted/20 ${selectedGesture ? "flex-1 lg:w-1/2" : "hidden lg:flex lg:w-1/2"}`}
+          className={`overflow-auto bg-muted/20 ${selectedGesture ? "flex-1 lg:w-1/2" : "hidden lg:flex lg:w-1/2"}`}
         >
           {showSkeleton ? (
             <GestureDetailSkeleton />
