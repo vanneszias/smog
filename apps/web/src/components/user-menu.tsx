@@ -1,14 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Settings } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { Skeleton } from "./ui/skeleton";
 
@@ -16,6 +9,42 @@ export default function UserMenu() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, isLoading, signOut } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside to close menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Handle escape key to close menu
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
 
   if (isLoading) {
     return <Skeleton className="h-5 w-20" />;
@@ -34,37 +63,40 @@ export default function UserMenu() {
     : user.email;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="text-primary hover:underline" type="button">
-          {displayName}
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-card">
-        <DropdownMenuLabel>{t("web.userMenu.myAccount")}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <div className="px-2 py-1.5 text-muted-foreground text-sm">
-          {user.email}
+    <div ref={menuRef} className="relative">
+      <button
+        className="cursor-pointer text-primary hover:underline"
+        onClick={() => setIsOpen(!isOpen)}
+        type="button"
+      >
+        {displayName}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-lg border border-border bg-background shadow-lg">
+          <div className="flex flex-col p-2">
+            <Link
+              className="flex items-center gap-2 rounded-md px-3 py-2.5 text-base text-foreground transition-colors hover:bg-accent"
+              onClick={() => setIsOpen(false)}
+              to="/account"
+            >
+              <Settings className="h-5 w-5" />
+              {t("web.userMenu.accountSettings")}
+            </Link>
+            <button
+              className="flex cursor-pointer items-center rounded-md px-3 py-2.5 text-base text-destructive transition-colors hover:bg-accent"
+              onClick={() => {
+                signOut();
+                setIsOpen(false);
+                navigate({ to: "/" });
+              }}
+              type="button"
+            >
+              {t("web.userMenu.signOut")}
+            </button>
+          </div>
         </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link className="flex items-center gap-2" to="/account">
-            <Settings className="h-4 w-4" />
-            {t("web.userMenu.accountSettings")}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="cursor-pointer"
-          onClick={() => {
-            signOut();
-            navigate({ to: "/" });
-          }}
-          variant="destructive"
-        >
-          {t("web.userMenu.signOut")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      )}
+    </div>
   );
 }
