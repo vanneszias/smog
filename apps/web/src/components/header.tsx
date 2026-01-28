@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import UserMenu from "@/components/user-menu";
 import Logo from "./Logo";
 import { LanguageToggle } from "./language-toggle";
 import { ModeToggle } from "./mode-toggle";
@@ -29,7 +30,14 @@ export default function Header() {
     };
   }, [sidebarOpen, t]);
 
-  const navLinks = [
+  // Top header navigation - only key actions
+  const headerLinks = [
+    { to: "/favorites", label: t("web.header.favorites", "Favorieten") },
+    { to: "/sponsors", label: t("web.header.sponsor", "Sponsor") },
+  ];
+
+  // Sidebar navigation - all pages
+  const sidebarLinks = [
     { to: "/gestures", label: t("web.header.search", "Zoek") },
     { to: "/favorites", label: t("web.header.favorites", "Favorieten") },
     { to: "/account", label: t("web.header.account", "Account") },
@@ -44,10 +52,11 @@ export default function Header() {
           <Link className="shrink-0" to="/">
             <Logo />
           </Link>
-          <div className="flex flex-row gap-4">
-            {/* Desktop Navigation - Shows on larger screens */}
+
+          <div className="flex flex-row items-center gap-4">
+            {/* Desktop Navigation - Only key actions */}
             <nav className="hidden items-center gap-6 xl:flex">
-              {navLinks.map((link) => (
+              {headerLinks.map((link) => (
                 <Link
                   className="text-primary hover:underline"
                   key={link.to}
@@ -56,15 +65,22 @@ export default function Header() {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                className="inline-flex items-center rounded-full bg-primary px-6 py-3 text-sm text-white uppercase transition-all hover:bg-primary/90"
-                to="/gestures"
-              >
-                {t("web.header.discoverGestures", "Ontdek de SMOG-gebaren")}
-              </Link>
             </nav>
 
-            {/* Menu Toggle Button - Always visible in top right */}
+            {/* User Menu - Desktop only */}
+            <div className="hidden xl:block">
+              <UserMenu />
+            </div>
+
+            {/* CTA Button - Desktop only */}
+            <Link
+              className="hidden items-center rounded-full bg-primary px-6 py-3 text-sm text-white uppercase transition-all hover:bg-primary/90 xl:inline-flex"
+              to="/gestures"
+            >
+              {t("web.header.discoverGestures", "Ontdek de SMOG-gebaren")}
+            </Link>
+
+            {/* Menu Toggle Button - Always visible */}
             <button
               aria-expanded={sidebarOpen}
               aria-label={
@@ -129,7 +145,7 @@ export default function Header() {
         {/* Sidebar Navigation */}
         <div className="flex flex-1 flex-col justify-center overflow-y-auto">
           <nav className="flex max-w-2xl flex-col gap-6 md:pl-24">
-            {navLinks.map((link, index) => (
+            {sidebarLinks.map((link, index) => (
               <Link
                 className="text-center font-normal text-3xl text-primary hover:underline md:text-left md:text-4xl"
                 key={link.to}
@@ -149,7 +165,7 @@ export default function Header() {
               onClick={() => setSidebarOpen(false)}
               style={{
                 animation: sidebarOpen
-                  ? `slideIn 0.5s ease-out ${navLinks.length * 0.1}s both`
+                  ? `slideIn 0.5s ease-out ${sidebarLinks.length * 0.1}s both`
                   : "none",
               }}
               to="/gestures"
@@ -158,8 +174,14 @@ export default function Header() {
             </Link>
           </nav>
         </div>
+
         {/* Sidebar Footer */}
         <div className="bottom-0 mb-8 flex flex-col gap-4 md:pl-24">
+          {/* User Menu - Mobile only */}
+          <div className="flex justify-center md:justify-start xl:hidden">
+            <UserMenu />
+          </div>
+
           {/* Theme and Language Toggles */}
           <div className="flex items-center justify-center gap-3 md:justify-start">
             <ModeToggle />

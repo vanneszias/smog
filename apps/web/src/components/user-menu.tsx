@@ -19,14 +19,14 @@ export default function UserMenu() {
   const { user, isLoading, signOut } = useAuth();
 
   if (isLoading) {
-    return <Skeleton className="h-9 w-24" />;
+    return <Skeleton className="h-5 w-20" />;
   }
 
   if (!user) {
     return (
-      <Button asChild variant="outline">
-        <Link to="/login">{t("web.signIn.link")}</Link>
-      </Button>
+      <Link className="text-primary hover:underline" to="/login">
+        {t("web.signIn.link")}
+      </Link>
     );
   }
 
@@ -37,7 +37,9 @@ export default function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline">{displayName}</Button>
+        <button className="text-primary hover:underline" type="button">
+          {displayName}
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-card">
         <DropdownMenuLabel>{t("web.userMenu.myAccount")}</DropdownMenuLabel>

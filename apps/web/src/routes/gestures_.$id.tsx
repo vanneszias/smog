@@ -129,7 +129,7 @@ function GesturesComponent() {
           />
 
           {/* Gesture List */}
-          <div className="min-h-0 flex-1">
+          <div className="min-h-0 flex-1 overflow-auto">
             <GestureList
               error={error}
               favoriteGestureIds={favoriteIds}
@@ -147,7 +147,7 @@ function GesturesComponent() {
 
         {/* Detail Panel - Full width on mobile, half on desktop */}
         <div
-          className={`overflow-auto bg-muted/20 ${selectedGesture ? "flex-1 lg:w-1/2" : "hidden lg:flex lg:w-1/2"}`}
+          className={`overflow-hidden bg-muted/20 ${selectedGesture ? "flex-1 lg:w-1/2" : "hidden lg:flex lg:w-1/2"}`}
         >
           {showSkeleton ? (
             <GestureDetailSkeleton />
