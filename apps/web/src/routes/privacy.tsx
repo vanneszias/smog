@@ -9,7 +9,7 @@ function PrivacyPolicyPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="container px-12 py-8">
+    <div className="container overflow-y-auto px-12 py-8">
       <h1 className="mb-6 font-bold text-4xl">{t("web.privacy.title")}</h1>
       <p className="mb-4 text-sm">
         {t("web.privacy.lastUpdated", {

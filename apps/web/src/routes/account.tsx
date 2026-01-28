@@ -180,7 +180,7 @@ function AccountContent() {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
+    <div className="container mx-auto max-w-4xl overflow-y-auto px-4 py-8">
       <div className="mb-6 flex items-center gap-3">
         <Settings className="h-8 w-8" />
         <h1 className="font-bold text-3xl">{t("web.account.title")}</h1>
@@ -218,11 +218,9 @@ function AccountContent() {
         </div>
       </Card>
       <Card className="mb-6 p-6">
-        (
         <h2 className="mb-4 font-semibold text-xl">
           {t("web.account.privacy.title")}
         </h2>
-        );
         {/* Analytics Consent */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex-1">
@@ -239,7 +237,7 @@ function AccountContent() {
             onCheckedChange={handleAnalyticsToggle}
           />
         </div>
-        ;{/* Data Export */}
+        {/* Data Export */}
         <div className="mb-6">
           <Label className="mb-2 block font-medium text-base">
             {t("web.account.privacy.export.title")}
@@ -265,7 +263,7 @@ function AccountContent() {
             )}
           </Button>
         </div>
-        ;{/* Privacy Links */}
+        {/* Privacy Links */}
         <div className="border-gray-200 border-t pt-4 dark:border-gray-700">
           <p className="mb-2 text-muted-foreground text-sm">
             {t("web.account.privacy.learnMore")}
@@ -285,7 +283,6 @@ function AccountContent() {
             </Link>
           </div>
         </div>
-        ;
       </Card>
       <Card className="border-red-200 p-6 dark:border-red-900">
         <h2 className="mb-4 font-semibold text-red-600 text-xl dark:text-red-400">
@@ -309,7 +306,6 @@ function AccountContent() {
           </Button>
         </div>
       </Card>
-      ;
       <Dialog onOpenChange={setShowDeleteDialog} open={showDeleteDialog}>
         <DialogContent>
           <DialogHeader>
