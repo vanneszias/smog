@@ -245,7 +245,7 @@ export function GestureDetail({
 
       {/* Video Player */}
       <div
-        className="mb-8 overflow-hidden rounded-xl border border-border max-h-[70vh] md:max-h-none"
+        className="mb-8 max-h-[70vh] overflow-hidden rounded-xl border border-border md:max-h-none"
         style={{ backgroundColor: "var(--card)", aspectRatio: "3/4" }}
       >
         <Suspense
@@ -261,7 +261,12 @@ export function GestureDetail({
             key={gesture._id}
             playbackId={gesture.playbackId}
             streamType="on-demand"
-            style={{ width: "100%", height: "100%", aspectRatio: "3/4", objectFit: "contain" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              aspectRatio: "3/4",
+              objectFit: "contain",
+            }}
           />
         </Suspense>
       </div>
