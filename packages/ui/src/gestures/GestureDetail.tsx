@@ -53,7 +53,7 @@ function SponsorshipCTA({
           </p>
           <a
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-white transition-all hover:bg-primary/90"
-            href={`/sponsors/create?gestureIds=${gestureId}`}
+            href={`/sponsors?gestureId=${gestureId}`}
           >
             <Sparkles className="h-4 w-4" />
             {t("ui.gestureDetail.sponsorNow", "Sponsor Now")}
