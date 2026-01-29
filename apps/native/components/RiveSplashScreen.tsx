@@ -16,7 +16,7 @@ export default function RiveSplashScreen({
       onStop={() => {
         onAnimationComplete?.();
       }}
-      resourceName="Splash"
+      resourceName="splash"
       style={styles.animation}
     />
   );

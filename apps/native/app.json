@@ -12,7 +12,15 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.vanneszias.smog",
       "icon": "./assets/images/smog.icon",
-      "associatedDomains": ["applinks:smog.zias.be"]
+      "associatedDomains": [
+        "applinks:smog.zias.be",
+        "applinks:smog.zias.be",
+        "applinks:smog.zias.be",
+        "applinks:smog.zias.be"
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,6 +28,27 @@
         "backgroundColor": "#00805F"
       },
       "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "smog"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "smog.zias.be"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
         {
           "action": "VIEW",
           "autoVerify": true,
@@ -73,6 +102,12 @@
         "projectId": "9fa68b63-dfa5-498a-9196-5eba93ecac29"
       }
     },
-    "owner": "smog-and-co"
+    "owner": "smog-and-co",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/9fa68b63-dfa5-498a-9196-5eba93ecac29"
+    }
   }
 }

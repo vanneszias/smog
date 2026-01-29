@@ -555,14 +555,12 @@ function SponsorsComponent() {
 
       <GestureFilters
         allCategories={allCategories}
-        filteredCount={filteredGestures.length}
         onCategoryToggle={handleCategoryToggle}
         onClearFilters={clearFilters}
         onSearchChange={setSearchQuery}
         searchPlaceholder={t("web.sponsors.list.searchPlaceholder")}
         searchQuery={searchQuery}
         selectedCategories={selectedCategories}
-        showResultCount={true}
       />
 
       <div className="min-h-0 flex-1">
