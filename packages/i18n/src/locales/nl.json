@@ -362,8 +362,8 @@
     },
     "sponsors": {
       "new": {
-        "title": "Sponsor gebarentaalgebaren",
-        "subtitle": "Steun de gemeenschap en promoot je merk",
+        "title": "Sponsor een gebaar!",
+        "subtitle": "Steun SMOG en promoot je merk",
         "selectGestures": "Selecteer gebaren om te sponsoren",
         "selectedGestures": "Geselecteerde gebaren ({{count}})",
         "sponsorName": "Sponsor naam",
@@ -898,7 +898,7 @@
       "betterExperience": "Krijg een betere ervaring met onze mobiele app",
       "open": "Openen",
       "sponsorThisGesture": "Sponsor dit Gebaar",
-      "sponsorDescription": "Maak dit gebaar van jou! Voeg je merk en boodschap toe aan de video en steun het onderwijs in gebarentaal.",
+      "sponsorDescription": "Maak dit gebaar van jou! Voeg je merk en boodschap toe aan de video en steun het onderwijs in SMOG.",
       "sponsorNow": "Nu Sponsoren",
       "currentlySponsored": "Momenteel Gesponsord",
       "sponsoredBy": "Dit gebaar wordt gesponsord door {{sponsorName}}.",
