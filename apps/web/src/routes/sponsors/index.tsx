@@ -232,6 +232,7 @@ function SponsorsComponent() {
         throw new Error("No gesture selected");
       }
 
+      console.log("[Sponsors] Generating preview for:", firstGesture.name);
       const result = await client.sponsorships.generatePreview({
         gestureId: firstGesture._id,
         sponsorName,
@@ -239,10 +240,11 @@ function SponsorsComponent() {
         overlayText: `Met de warme steun van:\n${sponsorName}`,
       });
 
+      console.log("[Sponsors] Preview generated:", result.playbackId);
       setPreviewPlaybackId(result.playbackId);
       setCurrentStep("preview");
     } catch (error) {
-      console.error("Failed to generate preview:", error);
+      console.error("[Sponsors] Failed to generate preview:", error);
       toast.error("Failed to generate preview. Please try again.");
     } finally {
       setIsGeneratingPreview(false);

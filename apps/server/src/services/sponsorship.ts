@@ -25,7 +25,6 @@ async function triggerVideoComposition(sponsorship: {
 }): Promise<string> {
   const videoWorkerUrl =
     process.env.VIDEO_WORKER_URL || "http://localhost:3002";
-  const convexUrl = process.env.CONVEX_URL;
 
   if (!sponsorship.originalVideoPlaybackId) {
     throw new Error("Original video playback ID is missing");
@@ -35,10 +34,10 @@ async function triggerVideoComposition(sponsorship: {
   const overlayConfig = getSponsorOverlayConfig();
 
   // Build overlay image URL if logo is included
+  // Note: overlayImageStorageId contains the base64 data URL, pass it directly
   let overlayImageUrl: string | undefined;
   if (sponsorship.hasLogo && sponsorship.overlayImageStorageId) {
-    // Convert Convex storage ID to URL
-    overlayImageUrl = `${convexUrl}/api/storage/${sponsorship.overlayImageStorageId}`;
+    overlayImageUrl = sponsorship.overlayImageStorageId;
   }
 
   console.log(
@@ -100,18 +99,23 @@ async function triggerVideoComposition(sponsorship: {
       state: string;
       progress: number;
       result?: {
-        playbackId?: string;
+        success?: boolean;
+        composedVideoPlaybackId?: string;
+        error?: string;
       };
     };
     console.log(
       `[Sponsorship] Job ${jobId} status: ${status.state} (${status.progress}%)`
     );
 
-    if (status.state === "completed" && status.result?.playbackId) {
+    if (
+      status.state === "completed" &&
+      status.result?.composedVideoPlaybackId
+    ) {
       console.log(
-        `[Sponsorship] Video composition completed: ${status.result.playbackId}`
+        `[Sponsorship] Video composition completed: ${status.result.composedVideoPlaybackId}`
       );
-      return status.result.playbackId;
+      return status.result.composedVideoPlaybackId;
     }
 
     if (status.state === "failed") {
