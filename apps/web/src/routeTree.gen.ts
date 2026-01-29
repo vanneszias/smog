@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TestGesturesRouteImport } from './routes/test-gestures'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SuccessRouteImport } from './routes/success'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -25,11 +24,6 @@ import { Route as SponsorsSuccessRouteImport } from './routes/sponsors/success'
 import { Route as SponsorsCreateRouteImport } from './routes/sponsors/create'
 import { Route as GesturesIdRouteImport } from './routes/gestures_.$id'
 
-const TestGesturesRoute = TestGesturesRouteImport.update({
-  id: '/test-gestures',
-  path: '/test-gestures',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -112,7 +106,6 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
-  '/test-gestures': typeof TestGesturesRoute
   '/gestures/$id': typeof GesturesIdRoute
   '/sponsors/create': typeof SponsorsCreateRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
@@ -129,7 +122,6 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
-  '/test-gestures': typeof TestGesturesRoute
   '/gestures/$id': typeof GesturesIdRoute
   '/sponsors/create': typeof SponsorsCreateRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
@@ -147,7 +139,6 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
-  '/test-gestures': typeof TestGesturesRoute
   '/gestures_/$id': typeof GesturesIdRoute
   '/sponsors/create': typeof SponsorsCreateRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
@@ -166,7 +157,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/success'
     | '/terms'
-    | '/test-gestures'
     | '/gestures/$id'
     | '/sponsors/create'
     | '/sponsors/success'
@@ -183,7 +173,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/success'
     | '/terms'
-    | '/test-gestures'
     | '/gestures/$id'
     | '/sponsors/create'
     | '/sponsors/success'
@@ -200,7 +189,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/success'
     | '/terms'
-    | '/test-gestures'
     | '/gestures_/$id'
     | '/sponsors/create'
     | '/sponsors/success'
@@ -218,7 +206,6 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SuccessRoute: typeof SuccessRoute
   TermsRoute: typeof TermsRoute
-  TestGesturesRoute: typeof TestGesturesRoute
   GesturesIdRoute: typeof GesturesIdRoute
   SponsorsCreateRoute: typeof SponsorsCreateRoute
   SponsorsSuccessRoute: typeof SponsorsSuccessRoute
@@ -227,13 +214,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/test-gestures': {
-      id: '/test-gestures'
-      path: '/test-gestures'
-      fullPath: '/test-gestures'
-      preLoaderRoute: typeof TestGesturesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -346,7 +326,6 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SuccessRoute: SuccessRoute,
   TermsRoute: TermsRoute,
-  TestGesturesRoute: TestGesturesRoute,
   GesturesIdRoute: GesturesIdRoute,
   SponsorsCreateRoute: SponsorsCreateRoute,
   SponsorsSuccessRoute: SponsorsSuccessRoute,

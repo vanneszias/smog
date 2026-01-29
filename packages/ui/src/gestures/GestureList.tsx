@@ -1,12 +1,5 @@
 import { Heart } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
 import type { GestureCardData } from "./GestureCard";
 
 export interface GestureListData {
@@ -28,7 +21,7 @@ interface GestureListProps {
   onToggleFavorite?: (gestureId: string) => void;
 }
 
-function GestureTableRow({
+function GestureRow({
   gesture,
   isSelected,
   onClick,
@@ -51,110 +44,82 @@ function GestureTableRow({
   };
 
   return (
-    <TableRow
-      className={`cursor-pointer ${isSelected ? "bg-primary/10" : ""}`}
+    <button
+      className={`group flex min-h-[60px] w-full cursor-pointer items-center gap-4 border-border border-b px-4 py-3 text-left transition-colors hover:bg-muted/30 ${
+        isSelected
+          ? "border-l-4 border-l-primary bg-primary/5"
+          : "border-l-4 border-l-transparent"
+      }`}
       onClick={onClick}
+      type="button"
     >
-      <TableCell className="font-medium">{gesture.name}</TableCell>
-      <TableCell>
-        <div className="flex flex-wrap gap-1">
+      {/* Main content */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        {/* Gesture name */}
+        <div className="font-medium text-base" style={{ color: "var(--text)" }}>
+          {gesture.name}
+        </div>
+
+        {/* Categories */}
+        <div className="flex flex-wrap gap-1.5">
           {gesture.categories
             .filter(Boolean)
-            .slice(0, 2)
+            .slice(0, 3)
             .map((cat) =>
               cat ? (
                 <span
-                  className="rounded-full bg-secondary px-2 py-0.5 text-xs"
+                  className="rounded-full px-2.5 py-1 text-xs"
                   key={cat._id}
+                  style={{
+                    backgroundColor: "var(--secondary)",
+                    color: "var(--text)",
+                  }}
                 >
                   {cat.name}
                 </span>
               ) : null
             )}
-          {gesture.categories.length > 2 ? (
-            <span className="text-muted-foreground text-xs">
-              +{gesture.categories.length - 2}
+          {gesture.categories.length > 3 && (
+            <span
+              className="rounded-full px-2.5 py-1 text-muted-foreground text-xs"
+              style={{ backgroundColor: "var(--muted)" }}
+            >
+              +{gesture.categories.length - 3}
             </span>
-          ) : null}
+          )}
         </div>
-      </TableCell>
-      <TableCell className="max-w-xs truncate text-muted-foreground text-sm">
-        {gesture.concept.join(", ")}
-      </TableCell>
-      {onToggleFavorite ? (
-        <TableCell className="w-12">
-          <button
-            aria-label={
+
+        {/* Concepts (visible on tablet+) */}
+        {gesture.concept.length > 0 && (
+          <div className="hidden truncate text-muted-foreground text-sm md:block">
+            {gesture.concept.slice(0, 4).join(", ")}
+            {gesture.concept.length > 4 && "..."}
+          </div>
+        )}
+      </div>
+
+      {/* Favorite button */}
+      {onToggleFavorite && (
+        <button
+          aria-label={
+            isFavorite
+              ? t("ui.gestureList.removeFromFavorites")
+              : t("ui.gestureList.addToFavorites")
+          }
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-muted"
+          onClick={handleFavoriteClick}
+          type="button"
+        >
+          <Heart
+            className={`h-6 w-6 transition-all ${
               isFavorite
-                ? t("ui.gestureList.removeFromFavorites")
-                : t("ui.gestureList.addToFavorites")
-            }
-            className="rounded-full p-1 transition-all hover:scale-110 hover:bg-muted"
-            onClick={handleFavoriteClick}
-            type="button"
-          >
-            <Heart
-              className={`h-5 w-5 transition-all ${
-                isFavorite
-                  ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
-                  : "fill-none stroke-primary hover:fill-(--primary)/20"
-              }`}
-            />
-          </button>
-        </TableCell>
-      ) : null}
-    </TableRow>
-  );
-}
-
-function GestureTableHeader({
-  sortColumn,
-  sortDirection,
-  onSort,
-  showFavoriteColumn,
-}: {
-  sortColumn: "name" | "category";
-  sortDirection: "asc" | "desc";
-  onSort?: (column: "name" | "category") => void;
-  showFavoriteColumn?: boolean;
-}) {
-  const { t } = useTranslation();
-
-  const sortableClass = onSort
-    ? "cursor-pointer select-none hover:bg-muted/50"
-    : "";
-
-  const renderSortIndicator = (column: "name" | "category") => {
-    if (!onSort || sortColumn !== column) {
-      return null;
-    }
-    return (
-      <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
-    );
-  };
-
-  const handleNameClick = onSort ? () => onSort("name") : undefined;
-  const handleCategoryClick = onSort ? () => onSort("category") : undefined;
-
-  return (
-    <TableHeader className="sticky top-0 z-10 bg-background">
-      <TableRow>
-        <TableHead className={sortableClass} onClick={handleNameClick}>
-          <div className="flex items-center gap-1">
-            {t("ui.gestureList.name")}
-            {renderSortIndicator("name")}
-          </div>
-        </TableHead>
-        <TableHead className={sortableClass} onClick={handleCategoryClick}>
-          <div className="flex items-center gap-1">
-            {t("ui.gestureList.category")}
-            {renderSortIndicator("category")}
-          </div>
-        </TableHead>
-        <TableHead>{t("ui.gestureList.concepts")}</TableHead>
-        {showFavoriteColumn === true && <TableHead className="w-12" />}
-      </TableRow>
-    </TableHeader>
+                ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
+                : "fill-none stroke-primary hover:fill-primary/20"
+            }`}
+          />
+        </button>
+      )}
+    </button>
   );
 }
 
@@ -164,9 +129,9 @@ export function GestureList({
   error = null,
   selectedGestureId = null,
   onSelectGesture,
-  sortColumn = "name",
-  sortDirection = "asc",
-  onSort,
+  sortColumn: _sortColumn = "name",
+  sortDirection: _sortDirection = "asc",
+  onSort: _onSort,
   favoriteGestureIds = [],
   onToggleFavorite,
 }: GestureListProps) {
@@ -206,28 +171,29 @@ export function GestureList({
   }
 
   return (
-    <div className="relative flex h-full max-h-full w-full flex-col overflow-hidden px-4">
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full caption-bottom text-sm">
-          <GestureTableHeader
-            onSort={onSort}
-            showFavoriteColumn={!!onToggleFavorite}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Results count */}
+      <div className="shrink-0 border-border border-b px-4 py-3">
+        <p className="text-muted-foreground text-sm">
+          {gestures.length} {gestures.length === 1 ? "gesture" : "gestures"}{" "}
+          found
+        </p>
+      </div>
+
+      {/* Gesture list */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {gestures.map((gesture) => (
+          <GestureRow
+            gesture={gesture}
+            isFavorite={favoriteGestureIds.includes(gesture._id)}
+            isSelected={selectedGestureId === gesture._id}
+            key={gesture._id}
+            onClick={() => {
+              onSelectGesture(gesture._id);
+            }}
+            onToggleFavorite={onToggleFavorite}
           />
-          <TableBody>
-            {gestures.map((gesture) => (
-              <GestureTableRow
-                gesture={gesture}
-                isFavorite={favoriteGestureIds.includes(gesture._id)}
-                isSelected={selectedGestureId === gesture._id}
-                key={gesture._id}
-                onClick={() => onSelectGesture(gesture._id)}
-                onToggleFavorite={onToggleFavorite}
-              />
-            ))}
-          </TableBody>
-        </table>
+        ))}
       </div>
     </div>
   );

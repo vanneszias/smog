@@ -116,7 +116,7 @@ function GesturesComponent() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* List Panel - hidden on mobile when gesture is selected */}
         <div
-          className={`flex min-h-0 flex-col overflow-hidden border-r ${selectedGesture ? "hidden lg:flex lg:w-1/2" : "flex-1"}`}
+          className={`flex min-h-0 flex-col overflow-hidden border-r ${selectedGesture ? "hidden lg:flex lg:w-[35%] xl:w-[40%]" : "flex-1"}`}
         >
           {/* Search and Filters */}
           <div className="shrink-0">
@@ -147,9 +147,9 @@ function GesturesComponent() {
           </div>
         </div>
 
-        {/* Detail Panel - Full width on mobile, half on desktop */}
+        {/* Detail Panel - Full width on mobile, adaptive split on tablet/desktop */}
         <div
-          className={`min-h-0 overflow-auto bg-muted/20 ${selectedGesture ? "flex-1 lg:w-1/2" : "hidden lg:flex lg:w-1/2"}`}
+          className={`min-h-0 overflow-auto bg-muted/20 ${selectedGesture ? "flex-1 lg:w-[65%] xl:w-[60%]" : "hidden lg:flex lg:w-[65%] xl:w-[60%]"}`}
         >
           {showSkeleton ? (
             <GestureDetailSkeleton />

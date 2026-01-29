@@ -155,179 +155,199 @@ export function GestureDetail({
   const isActiveSponsorship = gesture.sponsorship?.status === "active";
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-4 md:py-8">
-      {/* Open in App Banner (Mobile Only) */}
-      {!!showOpenInApp && !!onOpenInApp && (
-        <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Smartphone className="h-5 w-5 text-primary" />
-              <div>
-                <p
-                  className="font-medium text-sm"
-                  style={{ color: "var(--text)" }}
-                >
-                  {t("ui.gestureDetail.openInApp")}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  {t("ui.gestureDetail.betterExperience")}
-                </p>
-              </div>
-            </div>
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 shrink-0 border-border border-b bg-background/95 backdrop-blur-sm">
+        <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-6 md:py-4">
+          {/* Back button (mobile/tablet only) */}
+          {onBack && (
             <button
-              className="rounded-lg bg-primary px-4 py-2 font-medium text-sm text-white transition-all hover:bg-primary/90"
-              onClick={handleOpenInAppClick}
+              className="flex items-center gap-2 font-medium text-primary transition-colors hover:text-primary/80 lg:hidden"
+              onClick={handleBackClick}
               type="button"
             >
-              {t("ui.gestureDetail.open")}
+              <ArrowLeft className="h-5 w-5" />
+              <span className="hidden sm:inline">
+                {t("ui.gestureDetail.backToGestures")}
+              </span>
             </button>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Header with Back Button */}
-      <div className="mb-6 flex items-center justify-between">
-        {onBack ? (
-          <button
-            className="inline-flex items-center gap-2 font-medium text-primary transition-colors hover:cursor-pointer hover:text-primary/80"
-            onClick={handleBackClick}
-            type="button"
+          {/* Gesture name (truncated on small screens) */}
+          <h1
+            className="flex-1 truncate font-bold text-xl md:text-2xl"
+            style={{ color: "var(--text)" }}
+            title={gesture.name}
           >
-            <ArrowLeft className="h-5 w-5" />
-            {t("ui.gestureDetail.backToGestures")}
-          </button>
-        ) : null}
+            {gesture.name}
+          </h1>
 
-        {onToggleFavorite ? (
-          <button
-            className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 font-medium transition-all hover:bg-card"
-            onClick={handleFavoriteClick}
-            type="button"
-          >
-            <Heart
-              className={`h-5 w-5 transition-all ${
+          {/* Favorite button */}
+          {onToggleFavorite && (
+            <button
+              aria-label={
                 isFavorite
-                  ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
-                  : "fill-none stroke-primary"
-              }`}
-            />
-            {isFavorite
-              ? t("ui.gestureDetail.removeFromFavorites")
-              : t("ui.gestureDetail.addToFavorites")}
-          </button>
-        ) : null}
-      </div>
-
-      {/* Title and Categories */}
-      <div className="mb-8">
-        <h1
-          className="mb-4 font-bold text-4xl"
-          style={{ color: "var(--text)" }}
-        >
-          {gesture.name}
-        </h1>
-
-        <div className="flex flex-wrap gap-2">
-          {gesture.categories.filter(Boolean).map((cat) => (
-            <span
-              className="rounded-full px-4 py-1.5 font-medium text-sm"
-              key={cat!._id}
-              style={{
-                backgroundColor: "var(--secondary)",
-                color: "var(--text)",
-              }}
+                  ? t("ui.gestureDetail.removeFromFavorites")
+                  : t("ui.gestureDetail.addToFavorites")
+              }
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-background transition-all hover:scale-105 hover:bg-card md:h-auto md:w-auto md:gap-2 md:px-4 md:py-2"
+              onClick={handleFavoriteClick}
+              type="button"
             >
-              {cat!.name}
-            </span>
-          ))}
+              <Heart
+                className={`h-5 w-5 transition-all ${
+                  isFavorite
+                    ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
+                    : "fill-none stroke-primary"
+                }`}
+              />
+              <span className="hidden font-medium md:inline">
+                {isFavorite
+                  ? t("ui.gestureDetail.removeFromFavorites")
+                  : t("ui.gestureDetail.addToFavorites")}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Video Player */}
-      <div
-        className="mb-8 max-h-[60vh] overflow-hidden rounded-xl border border-border sm:max-h-[70vh] md:max-h-none"
-        style={{ backgroundColor: "var(--card)", aspectRatio: "3/4" }}
-      >
-        <Suspense
-          fallback={
-            <ShimmerSkeleton
-              className="h-full w-full"
-              style={{ aspectRatio: "3/4", borderRadius: 0 }}
-            />
-          }
-        >
-          <MuxPlayer
-            accentColor="var(--primary)"
-            key={gesture._id}
-            playbackId={gesture.playbackId}
-            streamType="on-demand"
-            style={{
-              width: "100%",
-              height: "100%",
-              aspectRatio: "3/4",
-              objectFit: "contain",
-            }}
-          />
-        </Suspense>
-      </div>
+      {/* Scrollable Content */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-4xl px-4 py-4 md:px-6 md:py-6">
+          {/* Open in App Banner (Mobile Only) */}
+          {!!showOpenInApp && !!onOpenInApp && (
+            <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Smartphone className="h-5 w-5 text-primary" />
+                  <div>
+                    <p
+                      className="font-medium text-sm"
+                      style={{ color: "var(--text)" }}
+                    >
+                      {t("ui.gestureDetail.openInApp")}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {t("ui.gestureDetail.betterExperience")}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className="rounded-lg bg-primary px-4 py-2 font-medium text-sm text-white transition-all hover:bg-primary/90"
+                  onClick={handleOpenInAppClick}
+                  type="button"
+                >
+                  {t("ui.gestureDetail.open")}
+                </button>
+              </div>
+            </div>
+          )}
 
-      {/* Description Section */}
-      {gesture.info ? (
-        <div
-          className="mb-8 rounded-xl border border-border p-6"
-          style={{ backgroundColor: "var(--card)" }}
-        >
-          <h2
-            className="mb-3 font-semibold text-xl"
-            style={{ color: "var(--text)" }}
-          >
-            {t("ui.gestureDetail.description")}
-          </h2>
-          <p className="text-muted-foreground leading-relaxed">
-            {gesture.info}
-          </p>
-        </div>
-      ) : null}
-
-      {/* Related Concepts Section */}
-      {gesture.concept.length > 0 ? (
-        <div
-          className="mb-8 rounded-xl border border-border p-6"
-          style={{ backgroundColor: "var(--card)" }}
-        >
-          <h2
-            className="mb-3 font-semibold text-xl"
-            style={{ color: "var(--text)" }}
-          >
-            {t("ui.gestureDetail.relatedConcepts")}
-          </h2>
-          <div className="flex flex-wrap">
-            {gesture.concept.map((c) => (
+          {/* Categories */}
+          <div className="mb-6 flex flex-wrap gap-2">
+            {gesture.categories.filter(Boolean).map((cat) => (
               <span
-                className="rounded-lg py-1.5 pr-3 text-sm"
-                key={c}
+                className="rounded-full px-4 py-1.5 font-medium text-sm"
+                key={cat!._id}
                 style={{
-                  backgroundColor: "var(--muted)",
-                  color: "var(--text-light)",
+                  backgroundColor: "var(--secondary)",
+                  color: "var(--text)",
                 }}
               >
-                {c}
+                {cat!.name}
               </span>
             ))}
           </div>
+
+          {/* Video Player */}
+          <div className="mb-6">
+            <div
+              className="overflow-hidden rounded-xl border border-border bg-card"
+              style={{ aspectRatio: "3/4", maxHeight: "70vh" }}
+            >
+              <Suspense
+                fallback={
+                  <ShimmerSkeleton
+                    className="h-full w-full"
+                    style={{ aspectRatio: "3/4", borderRadius: 0 }}
+                  />
+                }
+              >
+                <MuxPlayer
+                  accentColor="var(--primary)"
+                  key={gesture._id}
+                  playbackId={gesture.playbackId}
+                  streamType="on-demand"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    aspectRatio: "3/4",
+                    objectFit: "contain",
+                  }}
+                />
+              </Suspense>
+            </div>
+          </div>
+
+          {/* Description Section */}
+          {gesture.info ? (
+            <div
+              className="mb-8 rounded-xl border border-border p-6"
+              style={{ backgroundColor: "var(--card)" }}
+            >
+              <h2
+                className="mb-3 font-semibold text-xl"
+                style={{ color: "var(--text)" }}
+              >
+                {t("ui.gestureDetail.description")}
+              </h2>
+              <p className="text-muted-foreground leading-relaxed">
+                {gesture.info}
+              </p>
+            </div>
+          ) : null}
+
+          {/* Related Concepts Section */}
+          {gesture.concept.length > 0 ? (
+            <div
+              className="mb-8 rounded-xl border border-border p-6"
+              style={{ backgroundColor: "var(--card)" }}
+            >
+              <h2
+                className="mb-3 font-semibold text-xl"
+                style={{ color: "var(--text)" }}
+              >
+                {t("ui.gestureDetail.relatedConcepts")}
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {gesture.concept.map((c) => (
+                  <span
+                    className="rounded-lg px-3 py-1.5 text-sm"
+                    key={c}
+                    style={{
+                      backgroundColor: "var(--muted)",
+                      color: "var(--text-light)",
+                    }}
+                  >
+                    {c}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Sponsorship Section */}
+          {isAvailableForSponsorship ? (
+            <SponsorshipCTA gestureId={gesture._id} t={t} />
+          ) : null}
+
+          {isActiveSponsorship === true &&
+          gesture.sponsorship !== null &&
+          gesture.sponsorship !== undefined ? (
+            <SponsorshipInfo sponsorship={gesture.sponsorship} t={t} />
+          ) : null}
         </div>
-      ) : null}
-
-      {/* Sponsorship Section */}
-      {isAvailableForSponsorship ? (
-        <SponsorshipCTA gestureId={gesture._id} t={t} />
-      ) : null}
-
-      {isActiveSponsorship === true &&
-      gesture.sponsorship !== null &&
-      gesture.sponsorship !== undefined ? (
-        <SponsorshipInfo sponsorship={gesture.sponsorship} t={t} />
-      ) : null}
+      </div>
     </div>
   );
 }
