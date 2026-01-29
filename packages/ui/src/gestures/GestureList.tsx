@@ -172,14 +172,6 @@ export function GestureList({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Results count */}
-      <div className="shrink-0 border-border border-b px-4 py-3">
-        <p className="text-muted-foreground text-sm">
-          {gestures.length} {gestures.length === 1 ? "gesture" : "gestures"}{" "}
-          found
-        </p>
-      </div>
-
       {/* Gesture list */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {gestures.map((gesture) => (
