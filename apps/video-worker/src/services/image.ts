@@ -25,8 +25,17 @@ export class ImageService {
   /**
    * Download and process overlay image
    * Converts to PNG with transparency support and resizes to fit constraints
+   * If imageUrl is empty, skips processing (for text-only overlays)
    */
   async processImage(options: ImageProcessingOptions): Promise<void> {
+    // Skip processing if no image URL provided (text-only overlay)
+    if (!options.imageUrl || options.imageUrl.trim() === "") {
+      console.log(
+        "[ImageService] No image URL provided, skipping image processing"
+      );
+      return;
+    }
+
     console.log(`[ImageService] Processing image from ${options.imageUrl}`);
 
     try {

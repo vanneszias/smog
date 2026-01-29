@@ -37,12 +37,11 @@ app.post("/api/compose", async (c) => {
     const body = await c.req.json();
     const { playbackId, overlayImageUrl, overlayText, overlayConfig } = body;
 
-    const hasRequiredFields = playbackId && overlayImageUrl && overlayText;
-    if (!hasRequiredFields) {
+    // overlayImageUrl is optional (can be empty for text-only overlays)
+    if (!(playbackId && overlayText)) {
       return c.json(
         {
-          error:
-            "Missing required fields: playbackId, overlayImageUrl, overlayText",
+          error: "Missing required fields: playbackId, overlayText",
         },
         400
       );

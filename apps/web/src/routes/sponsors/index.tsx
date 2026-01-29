@@ -196,10 +196,12 @@ function SponsorsComponent() {
       );
     }
 
+    // Logo is only required if includeLogo is true
     if (includeLogo && !logoFile) {
       newErrors.logo = t("web.sponsors.new.validation.logoRequired");
     }
 
+    // Validate file size if logo is provided
     if (logoFile && logoFile.size > 2 * 1024 * 1024) {
       newErrors.logo = t("web.sponsors.new.validation.logoTooLarge");
     }
@@ -213,9 +215,9 @@ function SponsorsComponent() {
     setIsGeneratingPreview(true);
 
     try {
-      // Convert logo to base64 if present
+      // Convert logo to base64 if present and includeLogo is true
       let logoBase64: string | undefined;
-      if (logoFile) {
+      if (includeLogo && logoFile) {
         logoBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
@@ -233,7 +235,7 @@ function SponsorsComponent() {
       const result = await client.sponsorships.generatePreview({
         gestureId: firstGesture._id,
         sponsorName,
-        logoImage: logoBase64,
+        logoImage: logoBase64, // Will be undefined if no logo
         overlayText: `Met de warme steun van:\n${sponsorName}`,
       });
 
@@ -252,9 +254,9 @@ function SponsorsComponent() {
     setIsProcessing(true);
 
     try {
-      // Convert logo to base64 if present
+      // Convert logo to base64 if present and includeLogo is true
       let logoBase64: string | undefined;
-      if (logoFile) {
+      if (includeLogo && logoFile) {
         logoBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
@@ -272,7 +274,7 @@ function SponsorsComponent() {
           contactFullName,
           contactCompany: contactCompany || undefined,
           overlayText: `Met de warme steun van:\n${sponsorName}`,
-          logoImage: logoBase64,
+          logoImage: logoBase64, // Will be undefined if no logo
           includeLogo,
           durationYears: 1,
           previewVideoPlaybackId: previewPlaybackId || "",

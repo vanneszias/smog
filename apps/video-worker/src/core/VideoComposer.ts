@@ -97,19 +97,27 @@ export class VideoComposer {
       });
       this.events.emit("download:complete");
 
-      // Step 2: Process image
-      this.events.emit("image:start");
-      await this.imageService.processImage({
-        imageUrl: options.overlayImageUrl,
-        destination: this.workspace.overlayPath,
-      });
-      this.events.emit("image:complete");
+      // Step 2: Process image (if provided)
+      const hasImage =
+        options.overlayImageUrl && options.overlayImageUrl.trim() !== "";
+      if (hasImage) {
+        this.events.emit("image:start");
+        await this.imageService.processImage({
+          imageUrl: options.overlayImageUrl,
+          destination: this.workspace.overlayPath,
+        });
+        this.events.emit("image:complete");
+      } else {
+        console.log(
+          "[VideoComposer] No overlay image provided, using text-only overlay"
+        );
+      }
 
       // Step 3: Compose video
       this.events.emit("compose:start");
       await this.ffmpegService.composeVideo(
         this.workspace.videoPath,
-        this.workspace.overlayPath,
+        hasImage ? this.workspace.overlayPath : null,
         options.overlayText,
         this.workspace.outputPath,
         config,

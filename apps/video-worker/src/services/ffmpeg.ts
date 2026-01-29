@@ -79,16 +79,22 @@ export class FFmpegFilterBuilder {
 
   /**
    * Add text overlay with multi-line support
+   * Handles both text-only overlays (starting from [0:v]) and image+text overlays (starting from [v1])
    */
-  addTextOverlay(config: OverlayTextConfig): this {
+  addTextOverlay(config: OverlayTextConfig, hasImageOverlay = true): this {
     const lines = splitTextIntoLines(config.text);
     const lineHeight = calculateLineHeight(config.fontSize);
     const fontPath = config.fontPath || "/app/assets/font.ttf";
 
-    let currentLabel = "v1";
+    // Start from [0:v] for text-only, [v1] if image overlay exists
+    let currentLabel = hasImageOverlay ? "v1" : "0:v";
     for (const [index, line] of lines.entries()) {
       const isLastLine = index === lines.length - 1;
-      const nextLabel = isLastLine ? "v" : `v${index + 2}`;
+      const nextLabel = isLastLine
+        ? "v"
+        : hasImageOverlay
+          ? `v${index + 2}`
+          : `v${index + 1}`;
       const yPosition = config.y + index * lineHeight;
 
       // Securely escape text for FFmpeg drawtext filter
@@ -143,10 +149,11 @@ export class FFmpegService {
 
   /**
    * Compose video with overlay and text using configuration
+   * If overlayImagePath is null, creates text-only overlay
    */
   async composeVideo(
     videoPath: string,
-    overlayImagePath: string,
+    overlayImagePath: string | null,
     overlayText: string,
     outputPath: string,
     config: OverlayConfig,
@@ -166,21 +173,17 @@ export class FFmpegService {
         `[FFmpegService] Video: ${metadata.width}x${metadata.height}, ${metadata.duration}s`
       );
 
-      // Verify overlay image
-      await this.verifyOverlayImage(overlayImagePath);
+      const hasImage = overlayImagePath !== null;
+
+      // Verify overlay image if provided
+      if (hasImage) {
+        await this.verifyOverlayImage(overlayImagePath);
+      }
 
       // Calculate pixel positions from config
       const sponsorStartTime = Math.max(
         0,
         metadata.duration - config.animation.startTime
-      );
-
-      const imageOverlay = convertOverlayPosition(
-        config.image.x,
-        config.image.y,
-        config.image.width,
-        config.image.height,
-        videoDimensions
       );
 
       const textOverlay = convertTextPosition(
@@ -193,29 +196,55 @@ export class FFmpegService {
       console.log(
         `[FFmpegService] Sponsor overlay: ${sponsorStartTime}s - ${metadata.duration}s`
       );
-      console.log(
-        `[FFmpegService] Image: ${imageOverlay.position.x},${imageOverlay.position.y} (${imageOverlay.size.width}x${imageOverlay.size.height})`
-      );
+
+      if (hasImage) {
+        const imageOverlay = convertOverlayPosition(
+          config.image.x,
+          config.image.y,
+          config.image.width,
+          config.image.height,
+          videoDimensions
+        );
+        console.log(
+          `[FFmpegService] Image: ${imageOverlay.position.x},${imageOverlay.position.y} (${imageOverlay.size.width}x${imageOverlay.size.height})`
+        );
+      } else {
+        console.log("[FFmpegService] Text-only overlay (no image)");
+      }
+
       console.log(
         `[FFmpegService] Text: ${textOverlay.centerX},${textOverlay.y} (${textOverlay.fontSize}px)`
       );
 
       // Build filter chain
       const filterBuilder = new FFmpegFilterBuilder();
-      filterBuilder
-        .addImageOverlay({
+
+      if (hasImage) {
+        const imageOverlay = convertOverlayPosition(
+          config.image.x,
+          config.image.y,
+          config.image.width,
+          config.image.height,
+          videoDimensions
+        );
+        filterBuilder.addImageOverlay({
           position: imageOverlay.position,
           size: imageOverlay.size,
           startTime: sponsorStartTime,
-        })
-        .addTextOverlay({
+        });
+      }
+
+      filterBuilder.addTextOverlay(
+        {
           text: overlayText,
           centerX: textOverlay.centerX,
           y: textOverlay.y,
           fontSize: textOverlay.fontSize,
           color: config.text.color.replace("#", ""),
           startTime: sponsorStartTime,
-        });
+        },
+        hasImage
+      );
 
       const filterComplex = filterBuilder.build();
       console.log("[FFmpegService] Filter chain:", filterComplex);
@@ -266,19 +295,25 @@ export class FFmpegService {
 
   /**
    * Execute FFmpeg command with progress tracking
+   * If overlayImagePath is null, only uses video input (text-only overlay)
    */
   private async executeFFmpeg(
     videoPath: string,
-    overlayImagePath: string,
+    overlayImagePath: string | null,
     outputPath: string,
     filterComplex: string,
     duration: number,
     onProgress?: (progress: FFmpegProgress) => void
   ): Promise<void> {
     return new Promise((resolve, reject) => {
-      const command: FfmpegCommand = ffmpeg()
-        .input(videoPath)
-        .input(overlayImagePath)
+      let command: FfmpegCommand = ffmpeg().input(videoPath);
+
+      // Only add image input if provided
+      if (overlayImagePath !== null) {
+        command = command.input(overlayImagePath);
+      }
+
+      command
         .complexFilter(filterComplex)
         .map("[v]")
         .outputOptions([
