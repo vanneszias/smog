@@ -23,7 +23,7 @@ import { useDbReady } from "@/hooks/useDbReady";
 import "@/utils/i18n";
 
 // PostHog
-import { PostHogProvider } from "posthog-react-native";
+import { PostHogProvider, PostHogSurveyProvider } from "posthog-react-native";
 import posthog, {
   autocaptureConfig,
   initializeAnalytics,
@@ -290,15 +290,19 @@ export default function RootLayout() {
 
   return (
     <PostHogProvider autocapture={autocaptureConfig} client={posthog}>
-      <AppProviders>
-        {showSplash ? (
-          <RiveSplashScreen onAnimationComplete={() => setShowSplash(false)} />
-        ) : (
-          <BottomSheetModalProvider>
-            <RootLayoutNav />
-          </BottomSheetModalProvider>
-        )}
-      </AppProviders>
+      <PostHogSurveyProvider>
+        <AppProviders>
+          {showSplash ? (
+            <RiveSplashScreen
+              onAnimationComplete={() => setShowSplash(false)}
+            />
+          ) : (
+            <BottomSheetModalProvider>
+              <RootLayoutNav />
+            </BottomSheetModalProvider>
+          )}
+        </AppProviders>
+      </PostHogSurveyProvider>
     </PostHogProvider>
   );
 }
