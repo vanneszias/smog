@@ -174,7 +174,8 @@ export function PendingSponsorships() {
                       €{(selectedSponsorship.paymentAmount / 100).toFixed(2)}
                     </Badge>
                     <Badge variant="outline">
-                      {selectedSponsorship.durationWeeks} weeks
+                      {selectedSponsorship.durationYears} year
+                      {selectedSponsorship.durationYears !== 1 ? "s" : ""}
                     </Badge>
                   </div>
 

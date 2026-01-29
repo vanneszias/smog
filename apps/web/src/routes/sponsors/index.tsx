@@ -1,33 +1,68 @@
+import MuxPlayer from "@mux/mux-player-react";
 import { api } from "@smog/convex";
 import { useGestureFiltering } from "@smog/hooks";
-import { GestureFilters } from "@smog/ui";
+import type { GestureWithSponsorshipStatus } from "@smog/ui";
+import { SponsorshipFilters, SponsorshipList } from "@smog/ui";
 import { useQuery } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  useNavigate,
-  useSearch,
-} from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery as useConvexQuery } from "convex/react";
-import { Sparkles, Upload, User } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, CheckCircle, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { orpc } from "@/utils/orpc";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  calculateSimplifiedPrice,
+  formatPrice,
+  LOGO_ADDON_CENTS,
+  PRICE_PER_YEAR_CENTS,
+} from "@/lib/pricing";
+import { client, orpc } from "@/utils/orpc";
 
-interface SponsorSearch {
-  q?: string;
-  category?: string;
+type WizardStep = "select" | "configure" | "preview" | "contact" | "summary";
+
+interface SearchParams {
+  gestureId?: string;
 }
 
 export const Route = createFileRoute("/sponsors/")({
-  component: SponsorsComponent,
-  validateSearch: (search: Record<string, unknown>): SponsorSearch => ({
-    q: (search.q as string) || "",
-    category: (search.category as string) || "",
+  validateSearch: (search: Record<string, unknown>): SearchParams => ({
+    gestureId: (search.gestureId as string) || undefined,
   }),
+  component: SponsorsComponent,
 });
 
-function useSponsorsData() {
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Multi-step wizard requires complex state management
+function SponsorsComponent() {
+  const { t } = useTranslation();
+  const searchParams = Route.useSearch();
+
+  // Wizard state
+  const [currentStep, setCurrentStep] = useState<WizardStep>("select");
+
+  // Form state
+  const [selectedGestureIds, setSelectedGestureIds] = useState<string[]>([]);
+  const [sponsorName, setSponsorName] = useState("");
+  const [includeLogo, setIncludeLogo] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [contactFullName, setContactFullName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactCompany, setContactCompany] = useState("");
+  const [previewPlaybackId, setPreviewPlaybackId] = useState<string | null>(
+    null
+  );
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errors, setErrors] = useState<{
+    sponsorName?: string;
+    logo?: string;
+    contactFullName?: string;
+    contactEmail?: string;
+  }>({});
+
+  // Fetch gestures with sponsorship status
   const {
     data: gesturesWithSponsorship,
     isLoading,
@@ -37,6 +72,7 @@ function useSponsorsData() {
   // Fetch all categories using Convex
   const allCategories = useConvexQuery(api.categories.list) || [];
 
+  // Transform data to include categories
   const gesturesWithCategories = useMemo(() => {
     if (!gesturesWithSponsorship) {
       return [];
@@ -50,551 +86,689 @@ function useSponsorsData() {
     }));
   }, [gesturesWithSponsorship, allCategories]);
 
-  return {
-    gesturesWithSponsorship,
-    gesturesWithCategories,
-    isLoading,
-    error,
-  };
-}
+  // Transform to the format expected by SponsorshipList
+  const gesturesForList: GestureWithSponsorshipStatus[] = useMemo(() => {
+    return gesturesWithCategories.map((gesture) => {
+      let status: "available" | "sponsored" | "pending" = "available";
+      let sponsorName: string | undefined;
+      let endDate: number | undefined;
 
-function useGestureSelection(
-  gesturesWithSponsorship: Array<{
-    _id: string;
-    sponsorship?: { status: string };
-  }>
-) {
-  const [selectedGestureIds, setSelectedGestureIds] = useState<string[]>([]);
+      if (gesture.sponsorship) {
+        if (gesture.sponsorship.status === "active") {
+          status = "sponsored";
+          sponsorName = gesture.sponsorship.sponsorName;
+          endDate = gesture.sponsorship.endDate;
+        } else if (
+          gesture.sponsorship.status === "pending" ||
+          gesture.sponsorship.status === "pending_payment" ||
+          gesture.sponsorship.status === "pending_approval"
+        ) {
+          status = "pending";
+        }
+      }
 
-  const handleSelectGesture = (gestureId: string) => {
-    const gesture = gesturesWithSponsorship?.find((g) => g._id === gestureId);
-    const sponsorshipStatus = gesture?.sponsorship?.status;
-
-    // Prevent selection if gesture has active or any pending sponsorship
-    if (
-      sponsorshipStatus === "active" ||
-      sponsorshipStatus === "pending" ||
-      sponsorshipStatus === "pending_payment" ||
-      sponsorshipStatus === "pending_approval"
-    ) {
-      return;
-    }
-
-    setSelectedGestureIds((prev) =>
-      prev.includes(gestureId)
-        ? prev.filter((id) => id !== gestureId)
-        : [...prev, gestureId]
-    );
-  };
-
-  const clearSelection = () => setSelectedGestureIds([]);
-
-  return { selectedGestureIds, handleSelectGesture, clearSelection };
-}
-
-// Custom gesture list component with sponsorship information
-function SponsorGestureList({
-  gestures,
-  isLoading,
-  error,
-  selectedGestureIds,
-  onSelectGesture,
-  sortColumn,
-  sortDirection,
-  onSort,
-}: {
-  gestures: Array<{
-    _id: string;
-    name: string;
-    categories: Array<{ _id: string; name: string }>;
-    concept: string[];
-    sponsorship?: {
-      status: string;
-      sponsorName: string;
-      endDate: number;
-    } | null;
-    _isSelected?: boolean;
-  }>;
-  isLoading: boolean;
-  error?: Error | null;
-  selectedGestureIds: string[];
-  onSelectGesture: (gestureId: string) => void;
-  sortColumn?: "name" | "category" | "sponsorship";
-  sortDirection?: "asc" | "desc";
-  onSort?: (column: "name" | "category" | "sponsorship") => void;
-}) {
-  const { t } = useTranslation();
-
-  if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center p-6 text-center">
-        <div>
-          <p className="font-semibold text-red-600">
-            {t("ui.gestureList.errorLoading")}
-          </p>
-          <p className="mt-2 text-muted-foreground text-sm">
-            {t("ui.gestureList.errorTryAgain")}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (gestures.length === 0) {
-    return (
-      <div className="flex h-full items-center justify-center p-6 text-center">
-        <p className="text-muted-foreground">
-          {t("ui.gestureList.noGestures")}
-        </p>
-      </div>
-    );
-  }
-
-  const sortableClass = onSort
-    ? "cursor-pointer select-none hover:bg-muted/50"
-    : "";
-
-  const renderSortIndicator = (column: "name" | "category" | "sponsorship") => {
-    if (!onSort || sortColumn !== column) {
-      return null;
-    }
-    return (
-      <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
-    );
-  };
-
-  const formatDate = (timestamp: number) =>
-    new Date(timestamp).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+      return {
+        _id: gesture._id,
+        name: gesture.name,
+        playbackId: gesture.playbackId,
+        info: gesture.info,
+        categories: gesture.categories,
+        concept: gesture.concept,
+        status,
+        sponsorName,
+        endDate,
+      };
     });
+  }, [gesturesWithCategories]);
 
-  const renderSponsorshipStatus = (
-    gesture: (typeof gestures)[number],
-    isSponsored: boolean,
-    isPending: boolean,
-    hasSponsorship: boolean
-  ) => {
-    if (isSponsored && hasSponsorship) {
-      return (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 font-medium text-green-800 text-xs">
-              ✓ {t("web.sponsors.list.sponsored")}
-            </span>
-          </div>
-          {Boolean(gesture.sponsorship?.sponsorName) &&
-            Boolean(gesture.sponsorship?.endDate) && (
-              <div className="text-muted-foreground text-xs">
-                <div className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  <span>{gesture.sponsorship?.sponsorName}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  <span>
-                    {t("web.sponsors.list.availableAgainOn")}{" "}
-                    {formatDate(gesture.sponsorship!.endDate)}
-                  </span>
-                </div>
-              </div>
-            )}
-        </div>
-      );
-    }
-
-    if (isPending && hasSponsorship) {
-      return (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-1 font-medium text-xs text-yellow-800">
-              ⏳ {t("web.sponsors.list.pending")}
-            </span>
-          </div>
-          {Boolean(gesture.sponsorship?.sponsorName) && (
-            <div className="text-muted-foreground text-xs">
-              <div className="flex items-center gap-1">
-                <User className="h-3 w-3" />
-                <span>{gesture.sponsorship?.sponsorName}</span>
-              </div>
-              <p className="mt-1">
-                {t("web.sponsors.list.pendingDescription")}
-              </p>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 font-medium text-blue-800 text-xs">
-        {t("web.sponsors.list.available")}
-      </span>
-    );
-  };
-
-  const handleNameClick = onSort ? () => onSort("name") : undefined;
-  const handleCategoryClick = onSort ? () => onSort("category") : undefined;
-  const handleSponsorshipClick = onSort
-    ? () => onSort("sponsorship")
-    : undefined;
-
-  return (
-    <div className="relative h-full w-full overflow-auto px-4">
-      <table className="w-full caption-bottom text-sm">
-        <thead className="sticky top-0 z-10 bg-background">
-          <tr className="border-b">
-            <th
-              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
-              onClick={handleNameClick}
-            >
-              <div className="flex items-center gap-1">
-                {t("ui.gestureList.name")}
-                {renderSortIndicator("name")}
-              </div>
-            </th>
-            <th
-              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
-              onClick={handleCategoryClick}
-            >
-              <div className="flex items-center gap-1">
-                {t("ui.gestureList.category")}
-                {renderSortIndicator("category")}
-              </div>
-            </th>
-            <th className="h-12 px-4 text-left align-middle font-medium">
-              {t("ui.gestureList.concepts")}
-            </th>
-            <th
-              className={`h-12 px-4 text-left align-middle font-medium ${sortableClass}`}
-              onClick={handleSponsorshipClick}
-            >
-              <div className="flex items-center gap-1">
-                {t("web.sponsors.sponsorshipStatus", "Sponsorship Status")}
-                {renderSortIndicator("sponsorship")}
-              </div>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {gestures.map((gesture) => {
-            const isSelected = selectedGestureIds.includes(gesture._id);
-            const sponsorshipStatus = gesture.sponsorship?.status;
-            const isSponsored = sponsorshipStatus === "active";
-            const isPending =
-              sponsorshipStatus === "pending" ||
-              sponsorshipStatus === "pending_payment" ||
-              sponsorshipStatus === "pending_approval";
-            const isUnavailable = isSponsored || isPending;
-            const hasSponsorship = Boolean(gesture.sponsorship);
-
-            return (
-              <tr
-                className={`border-b transition-colors ${
-                  isUnavailable
-                    ? "cursor-not-allowed opacity-60"
-                    : "cursor-pointer hover:bg-muted/50"
-                } ${isSelected ? "bg-primary/10" : ""}`}
-                key={gesture._id}
-                onClick={() => onSelectGesture(gesture._id)}
-              >
-                <td className="p-4 font-medium">{gesture.name}</td>
-                <td className="p-4">
-                  <div className="flex flex-wrap gap-1">
-                    {gesture.categories
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((cat) => (
-                        <span
-                          className="rounded-full bg-secondary px-2 py-0.5 text-xs"
-                          key={cat._id}
-                        >
-                          {cat.name}
-                        </span>
-                      ))}
-                    {gesture.categories.length > 2 && (
-                      <span className="text-muted-foreground text-xs">
-                        +{gesture.categories.length - 2}
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="max-w-xs truncate p-4 text-muted-foreground text-sm">
-                  {gesture.concept.join(", ")}
-                </td>
-                <td className="p-4">
-                  {renderSponsorshipStatus(
-                    gesture,
-                    isSponsored,
-                    isPending,
-                    hasSponsorship
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function SponsorsComponent() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const searchParams = useSearch({ from: "/sponsors/" });
-
-  const { gesturesWithSponsorship, gesturesWithCategories, isLoading, error } =
-    useSponsorsData();
-
-  const simplifiedGesturesWithSponsorship = useMemo(
-    () =>
-      (gesturesWithSponsorship || []).map((g) => ({
-        _id: g._id,
-        sponsorship: g.sponsorship
-          ? { status: g.sponsorship.status }
-          : undefined,
-      })),
-    [gesturesWithSponsorship]
-  );
-
-  const { selectedGestureIds, handleSelectGesture, clearSelection } =
-    useGestureSelection(simplifiedGesturesWithSponsorship);
-
+  // Gesture filtering
   const {
     searchQuery,
     setSearchQuery,
     selectedCategories,
     handleCategoryToggle,
-    clearFilters,
-    sortDirection: baseSortDirection,
-    handleSort: baseHandleSort,
-    allCategories,
+    allCategories: categoryNames,
     filteredGestures,
   } = useGestureFiltering({
-    gestures: gesturesWithCategories,
-    initialSearchQuery: searchParams.q || "",
-    initialCategories: searchParams.category
-      ? searchParams.category.split(",")
-      : [],
+    gestures: gesturesForList,
   });
 
-  // Extended sorting to support sponsorship column
-  const [sponsorSortColumn, setSponsorSortColumn] = useState<
-    "name" | "category" | "sponsorship"
-  >("name");
-  const [sponsorSortDirection, setSponsorSortDirection] = useState<
-    "asc" | "desc"
-  >("asc");
+  // Get selected gestures for form display
+  const selectedGestures = useMemo(() => {
+    return gesturesForList.filter((g) => selectedGestureIds.includes(g._id));
+  }, [gesturesForList, selectedGestureIds]);
 
-  const handleSponsorSort = (column: "name" | "category" | "sponsorship") => {
-    if (column === "sponsorship") {
-      // Handle sponsorship sorting separately
-      if (sponsorSortColumn === column) {
-        setSponsorSortDirection(
-          sponsorSortDirection === "asc" ? "desc" : "asc"
-        );
-      } else {
-        setSponsorSortColumn(column);
-        setSponsorSortDirection("asc");
-      }
-    } else {
-      // Use base sorting for name and category
-      setSponsorSortColumn(column);
-      setSponsorSortDirection(baseSortDirection);
-      baseHandleSort(column);
-    }
-  };
+  // Calculate pricing
+  const pricing = useMemo(() => {
+    return calculateSimplifiedPrice(selectedGestureIds.length, includeLogo);
+  }, [selectedGestureIds.length, includeLogo]);
 
-  // Apply sponsorship sorting if needed
-  const sortedGestures = useMemo(() => {
-    // Join filtered gestures with sponsorship data
-    const gesturesWithSponsorshipStatus = filteredGestures.map((g) => {
-      const gestureWithSponsorship = gesturesWithSponsorship?.find(
-        (gs) => gs._id === g._id
-      );
-      return {
-        ...g,
-        sponsorship: gestureWithSponsorship?.sponsorship,
-      };
-    });
-
-    if (sponsorSortColumn === "sponsorship") {
-      return gesturesWithSponsorshipStatus.sort((a, b) => {
-        const aSponsored = a.sponsorship?.status === "active" ? 1 : 0;
-        const bSponsored = b.sponsorship?.status === "active" ? 1 : 0;
-        const comparison = aSponsored - bSponsored;
-        return sponsorSortDirection === "asc" ? comparison : -comparison;
-      });
-    }
-    return gesturesWithSponsorshipStatus;
-  }, [
-    filteredGestures,
-    gesturesWithSponsorship,
-    sponsorSortColumn,
-    sponsorSortDirection,
-  ]);
-
+  // Handle URL query param for pre-selection
   useEffect(() => {
-    navigate({
-      to: "/sponsors/",
-      search: {
-        ...(searchQuery ? { q: searchQuery } : {}),
-        ...(selectedCategories.length > 0
-          ? { category: selectedCategories.join(",") }
-          : {}),
-      },
-      replace: true,
-    });
-  }, [searchQuery, selectedCategories, navigate]);
+    if (
+      searchParams.gestureId &&
+      gesturesForList.length > 0 &&
+      selectedGestureIds.length === 0
+    ) {
+      const gesture = gesturesForList.find(
+        (g) => g._id === searchParams.gestureId
+      );
+      if (gesture && gesture.status === "available") {
+        setSelectedGestureIds([searchParams.gestureId]);
+      }
+    }
+  }, [searchParams.gestureId, gesturesForList, selectedGestureIds.length]);
 
-  const handleContinue = () => {
-    if (selectedGestureIds.length > 0) {
-      navigate({
-        to: "/sponsors/create",
-        search: { gestureIds: selectedGestureIds.join(",") },
+  // Toggle gesture selection
+  const handleToggleSelection = useCallback((gestureId: string) => {
+    setSelectedGestureIds((prev) =>
+      prev.includes(gestureId)
+        ? prev.filter((id) => id !== gestureId)
+        : [...prev, gestureId]
+    );
+  }, []);
+
+  // Remove gesture from selection
+  const handleRemoveGesture = useCallback((gestureId: string) => {
+    setSelectedGestureIds((prev) => prev.filter((id) => id !== gestureId));
+  }, []);
+
+  // Clear filters
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery("");
+    for (const cat of selectedCategories) {
+      handleCategoryToggle(cat);
+    }
+  }, [setSearchQuery, selectedCategories, handleCategoryToggle]);
+
+  // Generate preview video
+  const handleGeneratePreview = async () => {
+    // Validate
+    const newErrors: typeof errors = {};
+
+    if (!sponsorName.trim()) {
+      newErrors.sponsorName = t(
+        "web.sponsors.new.validation.sponsorNameRequired"
+      );
+    } else if (sponsorName.length > 10) {
+      newErrors.sponsorName = t(
+        "web.sponsors.new.validation.sponsorNameTooLong"
+      );
+    }
+
+    if (includeLogo && !logoFile) {
+      newErrors.logo = t("web.sponsors.new.validation.logoRequired");
+    }
+
+    if (logoFile && logoFile.size > 2 * 1024 * 1024) {
+      newErrors.logo = t("web.sponsors.new.validation.logoTooLarge");
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+
+    setIsGeneratingPreview(true);
+
+    try {
+      // Convert logo to base64 if present
+      let logoBase64: string | undefined;
+      if (logoFile) {
+        logoBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(logoFile);
+        });
+      }
+
+      // Generate preview for first gesture
+      const firstGesture = selectedGestures[0];
+      if (!firstGesture) {
+        throw new Error("No gesture selected");
+      }
+
+      const result = await client.sponsorships.generatePreview({
+        gestureId: firstGesture._id,
+        sponsorName,
+        logoImage: logoBase64,
+        overlayText: `Met de warme steun van:\n${sponsorName}`,
       });
+
+      setPreviewPlaybackId(result.playbackId);
+      setCurrentStep("preview");
+    } catch (error) {
+      console.error("Failed to generate preview:", error);
+      toast.error("Failed to generate preview. Please try again.");
+    } finally {
+      setIsGeneratingPreview(false);
     }
   };
 
-  const enhancedGestures = useMemo(
-    () =>
-      sortedGestures.map((g) => {
-        const gestureWithSponsorship = gesturesWithSponsorship?.find(
-          (gs) => gs._id === g._id
-        );
-        const sponsorship = gestureWithSponsorship?.sponsorship;
-        return {
-          ...g,
-          categories: g.categories.filter(
-            (c): c is { _id: string; name: string } => c !== undefined
-          ),
-          sponsorship: sponsorship
-            ? {
-                status: sponsorship.status,
-                sponsorName: sponsorship.sponsorName,
-                endDate: sponsorship.endDate,
-              }
-            : null,
-          _isSelected: selectedGestureIds.includes(g._id),
-        };
-      }),
-    [sortedGestures, gesturesWithSponsorship, selectedGestureIds]
-  );
+  // Handle final submission
+  const handleProceedToPayment = async () => {
+    setIsProcessing(true);
+
+    try {
+      // Convert logo to base64 if present
+      let logoBase64: string | undefined;
+      if (logoFile) {
+        logoBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(logoFile);
+        });
+      }
+
+      // Create sponsorships
+      const result = await client.sponsorships.createBulkSponsorshipsSimplified(
+        {
+          gestureIds: selectedGestureIds,
+          sponsorName,
+          sponsorEmail: contactEmail,
+          contactFullName,
+          contactCompany: contactCompany || undefined,
+          overlayText: `Met de warme steun van:\n${sponsorName}`,
+          logoImage: logoBase64,
+          includeLogo,
+          durationYears: 1,
+          previewVideoPlaybackId: previewPlaybackId || "",
+        }
+      );
+
+      // Create payment
+      const payment = await client.sponsorships.createBulkPayment({
+        sponsorshipIds: result.sponsorshipIds,
+        amount: pricing.totalCents,
+      });
+
+      // Redirect to Mollie
+      window.location.href = payment.checkoutUrl;
+    } catch (error) {
+      console.error("Failed to create sponsorships:", error);
+      toast.error("Failed to proceed to payment. Please try again.");
+      setIsProcessing(false);
+    }
+  };
+
+  // Validate contact form
+  const validateContact = (): boolean => {
+    const newErrors: typeof errors = {};
+
+    if (!contactFullName.trim()) {
+      newErrors.contactFullName = "Full name is required";
+    }
+
+    if (!contactEmail.trim()) {
+      newErrors.contactEmail = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+      newErrors.contactEmail = "Invalid email format";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="bg-background px-6">
-        <div className="mx-auto max-w-7xl">
-          {selectedGestureIds.length > 0 && (
-            <div className="mt-6 space-y-3 rounded-lg border-2 border-primary bg-primary/5 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <span className="font-bold text-lg">
-                      {selectedGestureIds.length}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-bold text-lg">
-                      {t("web.sponsors.list.selectedForSponsoring")}
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      {selectedGestureIds.length === 1
-                        ? t("web.sponsors.list.gestureSelected")
-                        : t("web.sponsors.list.gesturesSelected", {
-                            count: selectedGestureIds.length,
-                          })}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button onClick={handleContinue} size="lg">
-                    <Upload className="mr-2 h-4 w-4" />
-                    {t("web.sponsors.list.continue")}
-                  </Button>
-                  <Button onClick={clearSelection} size="lg" variant="outline">
-                    {t("web.sponsors.list.clearSelection")}
-                  </Button>
-                </div>
-              </div>
-              <div className="border-t pt-3">
-                <p className="mb-2 font-semibold text-sm">
-                  {t("web.sponsors.list.selectedGestures")}
+    <div className="flex h-screen flex-col">
+      {/* Header */}
+      <header className="shrink-0 border-border border-b bg-background px-6 py-4">
+        <h1 className="font-bold text-2xl">{t("web.sponsors.new.title")}</h1>
+        <p className="mt-1 text-muted-foreground">
+          {t("web.sponsors.new.subtitle")}
+        </p>
+
+        {/* Step indicator */}
+        {currentStep !== "select" && (
+          <div className="mt-4 flex items-center gap-2">
+            <Button
+              onClick={() => {
+                if (currentStep === "configure") {
+                  setCurrentStep("select");
+                } else if (currentStep === "preview") {
+                  setCurrentStep("configure");
+                } else if (currentStep === "contact") {
+                  setCurrentStep("preview");
+                } else if (currentStep === "summary") {
+                  setCurrentStep("contact");
+                }
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <div className="flex-1 text-muted-foreground text-sm">
+              Step{" "}
+              {currentStep === "configure"
+                ? "2"
+                : currentStep === "preview"
+                  ? "3"
+                  : currentStep === "contact"
+                    ? "4"
+                    : "5"}{" "}
+              of 5
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Main content */}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {/* Step 1: Select Gestures */}
+        {currentStep === "select" && (
+          <>
+            {/* Left panel - Gesture list */}
+            <div className="flex min-w-0 flex-1 flex-col md:w-2/3">
+              <SponsorshipFilters
+                allCategories={categoryNames}
+                onCategoryToggle={handleCategoryToggle}
+                onClearFilters={
+                  selectedCategories.length > 0 ? handleClearFilters : undefined
+                }
+                onSearchChange={setSearchQuery}
+                searchQuery={searchQuery}
+                selectedCategories={selectedCategories}
+              />
+              <SponsorshipList
+                error={error as Error | null}
+                gestures={
+                  filteredGestures as unknown as GestureWithSponsorshipStatus[]
+                }
+                isLoading={isLoading}
+                onToggleSelection={handleToggleSelection}
+                selectedGestureIds={selectedGestureIds}
+              />
+            </div>
+
+            {/* Right panel - Continue button */}
+            <div
+              className={`${
+                selectedGestureIds.length === 0 ? "hidden md:flex" : "flex"
+              } w-full flex-col border-border border-l bg-muted/20 p-6 md:w-1/3`}
+            >
+              <div className="space-y-4">
+                <h2 className="font-semibold text-xl">Selected Gestures</h2>
+                <p className="text-muted-foreground text-sm">
+                  {selectedGestureIds.length} gesture
+                  {selectedGestureIds.length !== 1 ? "s" : ""} selected
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedGestureIds.map((id) => {
-                    const gesture = gesturesWithSponsorship?.find(
-                      (g) => g._id === id
-                    );
-                    return (
-                      <div
-                        className="inline-flex items-center gap-2 rounded-md bg-background px-3 py-1.5 font-medium text-sm shadow-sm"
-                        key={id}
+
+                <div className="space-y-2">
+                  {selectedGestures.map((gesture) => (
+                    <div
+                      className="flex items-center justify-between rounded-md border bg-background p-3"
+                      key={gesture._id}
+                    >
+                      <span className="font-medium text-sm">
+                        {gesture.name}
+                      </span>
+                      <Button
+                        onClick={() => handleRemoveGesture(gesture._id)}
+                        size="sm"
+                        variant="ghost"
                       >
-                        <Sparkles className="h-3.5 w-3.5 text-primary" />
-                        <span>{gesture?.name || id}</span>
-                      </div>
-                    );
-                  })}
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
                 </div>
+
+                <Button
+                  className="w-full"
+                  disabled={selectedGestureIds.length === 0}
+                  onClick={() => setCurrentStep("configure")}
+                  size="lg"
+                >
+                  Continue
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </div>
             </div>
-          )}
-        </div>
-      </div>
+          </>
+        )}
 
-      <GestureFilters
-        allCategories={allCategories}
-        onCategoryToggle={handleCategoryToggle}
-        onClearFilters={clearFilters}
-        onSearchChange={setSearchQuery}
-        searchPlaceholder={t("web.sponsors.list.searchPlaceholder")}
-        searchQuery={searchQuery}
-        selectedCategories={selectedCategories}
-      />
-
-      <div className="min-h-0 flex-1">
-        {isLoading ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
-        ) : filteredGestures.length === 0 ? (
-          <div className="flex h-full items-center justify-center p-6 text-center">
+        {/* Step 2: Configure Details */}
+        {currentStep === "configure" && (
+          <div className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-6">
             <div>
-              <Sparkles className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-              <h2 className="mb-2 font-bold text-xl">
-                {searchQuery || selectedCategories.length > 0
-                  ? t("web.sponsors.list.noResultsWithFilters")
-                  : t("web.sponsors.list.noGestures")}
+              <h2 className="mb-2 font-semibold text-xl">
+                Configure Your Sponsorship
               </h2>
-              <p className="text-muted-foreground">
-                {searchQuery || selectedCategories.length > 0
-                  ? t("web.sponsors.list.tryDifferentFilters")
-                  : t("web.sponsors.list.noGesturesDescription")}
+              <p className="text-muted-foreground text-sm">
+                All {selectedGestureIds.length} selected gestures will display:
+                "Met de warme steun van: {sponsorName || "[Your Name]"}"
               </p>
             </div>
+
+            {/* Sponsor Name */}
+            <div className="space-y-2">
+              <Label htmlFor="sponsor-name">Sponsor Name *</Label>
+              <Input
+                id="sponsor-name"
+                maxLength={10}
+                onChange={(e) => setSponsorName(e.target.value)}
+                placeholder="e.g., Acme Corp"
+                value={sponsorName}
+              />
+              {errors.sponsorName && (
+                <p className="text-destructive text-sm">{errors.sponsorName}</p>
+              )}
+              <p className="text-muted-foreground text-xs">
+                Maximum 10 characters ({sponsorName.length}/10)
+              </p>
+            </div>
+
+            {/* Logo Upload */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  checked={includeLogo}
+                  id="include-logo"
+                  onChange={(e) => setIncludeLogo(e.target.checked)}
+                  type="checkbox"
+                />
+                <Label htmlFor="include-logo">
+                  Add logo (+{formatPrice(LOGO_ADDON_CENTS)})
+                </Label>
+              </div>
+
+              {includeLogo && (
+                <div className="space-y-2">
+                  <Input
+                    accept="image/*"
+                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                    type="file"
+                  />
+                  {errors.logo && (
+                    <p className="text-destructive text-sm">{errors.logo}</p>
+                  )}
+                  <p className="text-muted-foreground text-xs">
+                    Square image recommended (400x400px, max 2MB)
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Price Summary */}
+            <div className="rounded-lg border bg-muted p-4">
+              <h3 className="mb-3 font-semibold">Price Summary</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {selectedGestureIds.length} gesture
+                    {selectedGestureIds.length !== 1 ? "s" : ""} × 1 year
+                  </span>
+                  <span>
+                    {formatPrice(
+                      selectedGestureIds.length * PRICE_PER_YEAR_CENTS
+                    )}
+                  </span>
+                </div>
+                {includeLogo && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Logo addon</span>
+                    <span>{formatPrice(LOGO_ADDON_CENTS)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between border-t pt-2 font-semibold">
+                  <span>Total</span>
+                  <span>{formatPrice(pricing.totalCents)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Generate Preview Button */}
+            <Button
+              className="w-full"
+              disabled={
+                !sponsorName.trim() ||
+                (includeLogo && !logoFile) ||
+                isGeneratingPreview
+              }
+              onClick={handleGeneratePreview}
+              size="lg"
+            >
+              {isGeneratingPreview ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating Preview...
+                </>
+              ) : (
+                <>
+                  Generate Preview
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
           </div>
-        ) : (
-          <SponsorGestureList
-            error={error}
-            gestures={enhancedGestures}
-            isLoading={isLoading}
-            onSelectGesture={handleSelectGesture}
-            onSort={handleSponsorSort}
-            selectedGestureIds={selectedGestureIds}
-            sortColumn={sponsorSortColumn}
-            sortDirection={sponsorSortDirection}
-          />
+        )}
+
+        {/* Step 3: Preview Video */}
+        {currentStep === "preview" && previewPlaybackId && (
+          <div className="mx-auto w-full max-w-3xl space-y-6 overflow-y-auto p-6">
+            <div>
+              <h2 className="mb-2 font-semibold text-xl">Preview Your Video</h2>
+              <p className="text-muted-foreground text-sm">
+                This is how your sponsorship will appear on all{" "}
+                {selectedGestureIds.length} selected gestures
+              </p>
+            </div>
+
+            {/* Video Player */}
+            <div className="overflow-hidden rounded-lg border">
+              <MuxPlayer
+                accentColor="#10b981"
+                playbackId={previewPlaybackId}
+                streamType="on-demand"
+                style={{ width: "100%", aspectRatio: "16/9" }}
+              />
+            </div>
+
+            {/* Summary */}
+            <div className="rounded-lg border bg-muted p-4">
+              <h3 className="mb-3 font-semibold">Sponsorship Details</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Gestures</span>
+                  <span>{selectedGestureIds.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Duration</span>
+                  <span>1 year</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Sponsor Name</span>
+                  <span>{sponsorName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Logo</span>
+                  <span>{includeLogo ? "Yes" : "No"}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2 font-semibold">
+                  <span>Total</span>
+                  <span>{formatPrice(pricing.totalCents)}</span>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={() => setCurrentStep("contact")}
+              size="lg"
+            >
+              Continue to Contact Info
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Step 4: Contact Information */}
+        {currentStep === "contact" && (
+          <div className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-6">
+            <div>
+              <h2 className="mb-2 font-semibold text-xl">
+                Contact Information
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                We'll use this to contact you about your sponsorship
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Full Name */}
+              <div className="space-y-2">
+                <Label htmlFor="contact-name">Full Name *</Label>
+                <Input
+                  id="contact-name"
+                  onChange={(e) => setContactFullName(e.target.value)}
+                  placeholder="John Doe"
+                  value={contactFullName}
+                />
+                {errors.contactFullName && (
+                  <p className="text-destructive text-sm">
+                    {errors.contactFullName}
+                  </p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="contact-email">Email *</Label>
+                <Input
+                  id="contact-email"
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="john@example.com"
+                  type="email"
+                  value={contactEmail}
+                />
+                {errors.contactEmail && (
+                  <p className="text-destructive text-sm">
+                    {errors.contactEmail}
+                  </p>
+                )}
+              </div>
+
+              {/* Company (optional) */}
+              <div className="space-y-2">
+                <Label htmlFor="contact-company">Company (Optional)</Label>
+                <Input
+                  id="contact-company"
+                  onChange={(e) => setContactCompany(e.target.value)}
+                  placeholder="Acme Inc."
+                  value={contactCompany}
+                />
+              </div>
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={() => {
+                if (validateContact()) {
+                  setCurrentStep("summary");
+                }
+              }}
+              size="lg"
+            >
+              Continue to Summary
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Step 5: Payment Summary */}
+        {currentStep === "summary" && (
+          <div className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-6">
+            <div>
+              <h2 className="mb-2 font-semibold text-xl">Review & Pay</h2>
+              <p className="text-muted-foreground text-sm">
+                Please review your sponsorship details before proceeding to
+                payment
+              </p>
+            </div>
+
+            {/* Full Summary */}
+            <div className="space-y-4 rounded-lg border p-6">
+              <div>
+                <h3 className="mb-3 font-semibold">Sponsorship Details</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Gestures</span>
+                    <span>
+                      {selectedGestureIds.length} gesture
+                      {selectedGestureIds.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Duration</span>
+                    <span>1 year</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Sponsor Name</span>
+                    <span>{sponsorName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Logo</span>
+                    <span>{includeLogo ? "Yes" : "No"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="mb-3 font-semibold">Contact Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Name</span>
+                    <span>{contactFullName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Email</span>
+                    <span>{contactEmail}</span>
+                  </div>
+                  {contactCompany && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Company</span>
+                      <span>{contactCompany}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="flex justify-between font-semibold text-lg">
+                  <span>Total Amount</span>
+                  <span>{formatPrice(pricing.totalCents)}</span>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className="w-full"
+              disabled={isProcessing}
+              onClick={handleProceedToPayment}
+              size="lg"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Proceed to Payment
+                </>
+              )}
+            </Button>
+
+            <p className="text-center text-muted-foreground text-xs">
+              You'll be redirected to Mollie for secure payment processing
+            </p>
+          </div>
         )}
       </div>
     </div>

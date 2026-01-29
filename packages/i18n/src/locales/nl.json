@@ -361,6 +361,73 @@
       }
     },
     "sponsors": {
+      "new": {
+        "title": "Sponsor gebarentaalgebaren",
+        "subtitle": "Steun de gemeenschap en promoot je merk",
+        "selectGestures": "Selecteer gebaren om te sponsoren",
+        "selectedGestures": "Geselecteerde gebaren ({{count}})",
+        "sponsorName": "Sponsor naam",
+        "sponsorNamePlaceholder": "Max 10 tekens",
+        "sponsorNameHelp": "Deze naam verschijnt in de video: 'Met de warme steun van:\n{{name}}'",
+        "includeLogo": "Logo toevoegen (+€10 per gebaar)",
+        "uploadLogo": "Logo uploaden",
+        "logoHelp": "Aanbevolen: 400x400px, max 2MB",
+        "duration": "Duur",
+        "fixedDuration": "1 jaar",
+        "pricing": {
+          "perGesture": "€50 per gebaar per jaar",
+          "perGestureWithLogo": "€60 per gebaar per jaar (met logo)",
+          "subtotal": "Subtotaal",
+          "logoAddon": "Logo toevoeging ({{count}} × €10)",
+          "total": "Totaal"
+        },
+        "proceedToPayment": "Doorgaan naar betaling",
+        "validation": {
+          "selectGesture": "Selecteer minimaal één gebaar",
+          "sponsorNameRequired": "Sponsor naam is verplicht",
+          "sponsorNameTooLong": "Sponsor naam mag maximaal 10 tekens bevatten",
+          "logoRequired": "Upload een logo of vink de optie uit",
+          "logoTooLarge": "Afbeelding moet kleiner zijn dan 2MB",
+          "logoInvalidFormat": "Ongeldig afbeeldingsformaat. Gebruik PNG, JPG of SVG"
+        },
+        "preview": {
+          "title": "Betaling geslaagd!",
+          "subtitle": "Je gesponsorde gebaren worden verwerkt",
+          "videoStatus": {
+            "processing": "Verwerken... ({{progress}}%)",
+            "ready": "Klaar voor beoordeling",
+            "failed": "Mislukt - Neem contact op met support"
+          },
+          "contactInfo": "Vul je contactgegevens in",
+          "fullName": "Volledige naam",
+          "email": "E-mailadres",
+          "company": "Bedrijf (Optioneel)",
+          "submit": "Verzenden"
+        },
+        "success": {
+          "title": "Bedankt voor je sponsoring!",
+          "subtitle": "Je aanvraag is succesvol ingediend",
+          "whatNext": "Wat gebeurt er nu:",
+          "step1": "Ons team bekijkt je gesponsorde video's",
+          "step2": "Je ontvangt binnen 5 werkdagen een e-mail",
+          "step3": "Na goedkeuring gaat je sponsoring live!",
+          "summary": "Samenvatting",
+          "gestures": "Gebaren",
+          "sponsor": "Sponsor",
+          "duration": "Duur",
+          "total": "Totaal betaald",
+          "actions": {
+            "viewSponsorships": "Mijn sponsoringen bekijken",
+            "backHome": "Terug naar home"
+          }
+        },
+        "status": {
+          "available": "Beschikbaar",
+          "sponsored": "Gesponsord door {{name}}",
+          "pending": "In afwachting van goedkeuring",
+          "endsOn": "Eindigt {{date}}"
+        }
+      },
       "list": {
         "title": "Sponsor gebaren",
         "searchPlaceholder": "Zoek gebaren om te sponsoren...",

@@ -97,6 +97,20 @@
     "gesture": "geste",
     "gestures": "gestes"
   },
+  "accessibility": {
+    "skipToContent": "Aller au contenu",
+    "skipToNav": "Aller à la navigation",
+    "menu": {
+      "open": "Ouvrir le menu",
+      "close": "Fermer le menu"
+    },
+    "logo": {
+      "alt": "Logo SMOG"
+    },
+    "keys": {
+      "escape": "Échap"
+    }
+  },
   "account": {
     "title": "Paramètres du compte",
     "accountInfo": "Informations du compte",
@@ -203,6 +217,73 @@
       }
     },
     "sponsors": {
+      "new": {
+        "title": "Parrainer des gestes en langue des signes",
+        "subtitle": "Soutenez la communauté et promouvez votre marque",
+        "selectGestures": "Sélectionnez les gestes à parrainer",
+        "selectedGestures": "Gestes sélectionnés ({{count}})",
+        "sponsorName": "Nom du sponsor",
+        "sponsorNamePlaceholder": "Max 10 caractères",
+        "sponsorNameHelp": "Ce nom apparaîtra dans la vidéo: 'Met de warme steun van:\n{{name}}'",
+        "includeLogo": "Inclure le logo (+€10 par geste)",
+        "uploadLogo": "Télécharger le logo",
+        "logoHelp": "Recommandé: 400x400px, max 2MB",
+        "duration": "Durée",
+        "fixedDuration": "1 an",
+        "pricing": {
+          "perGesture": "€50 par geste par an",
+          "perGestureWithLogo": "€60 par geste par an (avec logo)",
+          "subtotal": "Sous-total",
+          "logoAddon": "Ajout de logo ({{count}} × €10)",
+          "total": "Total"
+        },
+        "proceedToPayment": "Procéder au paiement",
+        "validation": {
+          "selectGesture": "Veuillez sélectionner au moins un geste",
+          "sponsorNameRequired": "Le nom du sponsor est requis",
+          "sponsorNameTooLong": "Le nom du sponsor doit contenir 10 caractères ou moins",
+          "logoRequired": "Veuillez télécharger un logo ou décocher l'option",
+          "logoTooLarge": "L'image doit être inférieure à 2MB",
+          "logoInvalidFormat": "Format d'image invalide. Veuillez utiliser PNG, JPG ou SVG"
+        },
+        "preview": {
+          "title": "Paiement réussi!",
+          "subtitle": "Vos gestes parrainés sont en cours de traitement",
+          "videoStatus": {
+            "processing": "Traitement... ({{progress}}%)",
+            "ready": "Prêt pour examen",
+            "failed": "Échec - Contactez le support"
+          },
+          "contactInfo": "Veuillez fournir vos coordonnées",
+          "fullName": "Nom complet",
+          "email": "Adresse e-mail",
+          "company": "Entreprise (Optionnel)",
+          "submit": "Soumettre"
+        },
+        "success": {
+          "title": "Merci pour votre parrainage!",
+          "subtitle": "Votre demande a été soumise avec succès",
+          "whatNext": "Que se passe-t-il ensuite:",
+          "step1": "Notre équipe examinera vos vidéos parrainées",
+          "step2": "Vous recevrez un e-mail dans les 5 jours ouvrables",
+          "step3": "Une fois approuvé, votre parrainage sera en ligne!",
+          "summary": "Résumé",
+          "gestures": "Gestes",
+          "sponsor": "Sponsor",
+          "duration": "Durée",
+          "total": "Total payé",
+          "actions": {
+            "viewSponsorships": "Voir mes parrainages",
+            "backHome": "Retour à l'accueil"
+          }
+        },
+        "status": {
+          "available": "Disponible",
+          "sponsored": "Parrainé par {{name}}",
+          "pending": "En attente d'approbation",
+          "endsOn": "Se termine le {{date}}"
+        }
+      },
       "list": {
         "title": "Parrainer des gestes",
         "searchPlaceholder": "Rechercher des gestes à parrainer...",
@@ -725,5 +806,44 @@
       "analyticsEnabled": "Activé",
       "analyticsDisabled": "Désactivé"
     }
+  },
+  "admin": {
+    "gestures": {
+      "updated": "Geste mis à jour avec succès",
+      "searchPlaceholder": "Rechercher par nom, description ou concept...",
+      "status": {
+        "active": "Actif",
+        "inactive": "Inactif"
+      }
+    },
+    "sponsorships": {
+      "unknown": "Inconnu",
+      "unknownGesture": "Geste inconnu",
+      "sponsoredVideo": "Vidéo sponsorisée",
+      "originalVideo": "Vidéo originale",
+      "expiring": "Expiration...",
+      "forceExpire": "Forcer l'expiration du parrainage",
+      "expired": "Parrainage expiré avec succès",
+      "searchPlaceholder": "Rechercher par geste, nom du sponsor ou e-mail...",
+      "overlay": {
+        "alt": "Superposition"
+      },
+      "playbackId": {
+        "notAvailable": "N/D"
+      }
+    },
+    "pending": {
+      "approved": "Parrainage approuvé avec succès",
+      "rejected": "Parrainage rejeté",
+      "searchPlaceholder": "Rechercher par geste, nom du sponsor ou e-mail...",
+      "rejectionPlaceholder": "Raison du rejet..."
+    }
+  },
+  "seo": {
+    "defaultTitle": "SMOG - Apprendre la langue des signes",
+    "defaultDescription": "Découvrez et maîtrisez les gestes de la langue des signes avec notre bibliothèque vidéo complète. Recherchez, apprenez et pratiquez à votre rythme.",
+    "keywords": "langue des signes, apprentissage de la langue des signes, SMOG, gestes, dictionnaire de langue des signes, apprendre à signer, vidéo de langue des signes, éducation des sourds",
+    "ogType": "website",
+    "twitterCard": "summary_large_image"
   }
 }

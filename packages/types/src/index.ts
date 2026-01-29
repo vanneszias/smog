@@ -91,9 +91,13 @@ export interface Sponsorship {
   sponsoredVideoPlaybackId?: string;
   originalVideoPlaybackId: string;
   sponsoredVideoStorageId?: string;
+  previewVideoPlaybackId?: string;
   startDate: number;
   endDate: number;
-  durationWeeks: number;
+  durationYears: number;
+  hasLogo?: boolean;
+  contactFullName: string;
+  contactCompany?: string;
   status: SponsorshipStatus;
   molliePaymentId?: string;
   paymentAmount: number;
@@ -109,15 +113,12 @@ export interface CreateSponsorshipInput {
   gestureId: string;
   sponsorName: string;
   sponsorEmail: string;
-  overlayImageFile: File;
+  contactFullName: string;
+  contactCompany?: string;
+  overlayImageFile?: File;
   overlayText: string;
-  durationWeeks: number;
-}
-
-export interface SponsorshipPricing {
-  pricePerWeekCents: number;
-  weeks: number;
-  totalCents: number;
+  durationYears: number;
+  includeLogo: boolean;
 }
 
 // Overlay configuration for video sponsorships

@@ -1,23 +1,44 @@
-import type { SponsorshipPricing } from "@smog/types";
+/**
+ * Simplified sponsorship pricing
+ * Fixed pricing: €50 per gesture per year, +€10 for logo
+ */
 
-export const PRICE_PER_WEEK_CENTS = 5000; // €50.00 per week
+export const PRICE_PER_YEAR_CENTS = 5000; // €50.00 per year per gesture
+export const LOGO_ADDON_CENTS = 1000; // €10.00 for logo addon
+export const FIXED_DURATION_YEARS = 1; // Always 1 year
 
-export const DURATION_OPTIONS = [
-  { label: "1 Week", weeks: 1 },
-  { label: "2 Weeks", weeks: 2 },
-  { label: "4 Weeks (1 Month)", weeks: 4 },
-  { label: "8 Weeks (2 Months)", weeks: 8 },
-  { label: "12 Weeks (3 Months)", weeks: 12 },
-] as const;
+export interface SponsorshipPricing {
+  gestureCount: number;
+  includeLogo: boolean;
+  pricePerGestureCents: number;
+  logoAddonCents: number;
+  subtotalCents: number;
+  totalCents: number;
+  durationYears: number;
+}
 
 /**
  * Calculate sponsorship pricing
  */
-export function calculatePrice(weeks: number): SponsorshipPricing {
+export function calculateSimplifiedPrice(
+  gestureCount: number,
+  includeLogo: boolean
+): SponsorshipPricing {
+  const pricePerGesture = includeLogo
+    ? PRICE_PER_YEAR_CENTS + LOGO_ADDON_CENTS
+    : PRICE_PER_YEAR_CENTS;
+
+  const subtotal = PRICE_PER_YEAR_CENTS * gestureCount;
+  const logoTotal = includeLogo ? LOGO_ADDON_CENTS * gestureCount : 0;
+
   return {
-    pricePerWeekCents: PRICE_PER_WEEK_CENTS,
-    weeks,
-    totalCents: PRICE_PER_WEEK_CENTS * weeks,
+    gestureCount,
+    includeLogo,
+    pricePerGestureCents: pricePerGesture,
+    logoAddonCents: logoTotal,
+    subtotalCents: subtotal,
+    totalCents: subtotal + logoTotal,
+    durationYears: FIXED_DURATION_YEARS,
   };
 }
 
@@ -30,12 +51,4 @@ export function formatPrice(cents: number): string {
     style: "currency",
     currency: "EUR",
   }).format(euros);
-}
-
-/**
- * Get price breakdown string
- */
-export function getPriceBreakdown(weeks: number): string {
-  const pricing = calculatePrice(weeks);
-  return `${formatPrice(pricing.pricePerWeekCents)}/week × ${weeks} weeks = ${formatPrice(pricing.totalCents)} total`;
 }

@@ -17,6 +17,7 @@
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
     "@smog/convex": "workspace:*",
+    "@smog/types": "workspace:*",
     "convex": "^1.31.0",
     "dotenv": "catalog:",
     "hono": "catalog:",

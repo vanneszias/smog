@@ -31,13 +31,13 @@ interface Sponsorship {
   gestureName?: string;
   sponsorName: string;
   sponsorEmail: string;
-  overlayImageStorageId: string;
+  overlayImageStorageId?: string; // Optional: only present if logo included
   overlayText: string;
   sponsoredVideoPlaybackId?: string;
-  originalVideoPlaybackId: string;
+  originalVideoPlaybackId?: string;
   startDate: number;
   endDate: number;
-  durationWeeks: number;
+  durationYears: number;
   status: string;
   molliePaymentId?: string;
   paymentAmount: number;
@@ -133,7 +133,7 @@ function SponsorshipDetailsPanel({
           <div>
             <p className="font-medium text-sm">Duration</p>
             <p className="text-muted-foreground text-sm">
-              {sponsorship.durationWeeks} weeks
+              {sponsorship.durationYears} year(s)
             </p>
           </div>
         </div>
@@ -290,7 +290,7 @@ function SponsorshipDetailsDialog({
               <div>
                 <p className="font-medium text-sm">Duration</p>
                 <p className="text-muted-foreground text-sm">
-                  {sponsorship.durationWeeks} weeks
+                  {sponsorship.durationYears} year(s)
                 </p>
               </div>
               {!!sponsorship.molliePaymentId && (
@@ -420,7 +420,7 @@ export function SponsorshipsManagement() {
         sponsorship.sponsoredVideoPlaybackId ||
         sponsorship.originalVideoPlaybackId,
       concept: [sponsorship.sponsorName, sponsorship.status.replace("_", " ")],
-      info: `€${(sponsorship.paymentAmount / 100).toFixed(2)} | ${sponsorship.durationWeeks}w`,
+      info: `€${(sponsorship.paymentAmount / 100).toFixed(2)} | ${sponsorship.durationYears}w`,
       categories: [],
     }));
   }, [sponsorships]);

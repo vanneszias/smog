@@ -49,33 +49,17 @@ export default defineSchema({
     gestureId: v.id("gestures"),
     sponsorName: v.string(),
     sponsorEmail: v.string(),
-    overlayImageStorageId: v.string(),
+    overlayImageStorageId: v.optional(v.string()), // Optional: only if logo is included
     overlayText: v.string(),
     sponsoredVideoPlaybackId: v.optional(v.string()),
     originalVideoPlaybackId: v.string(),
-    overlayConfig: v.optional(
-      v.object({
-        image: v.object({
-          x: v.number(),
-          y: v.number(),
-          width: v.number(),
-          height: v.number(),
-        }),
-        text: v.object({
-          x: v.number(),
-          y: v.number(),
-          fontSize: v.number(),
-          color: v.string(),
-        }),
-        animation: v.object({
-          startTime: v.number(),
-          fadeInDuration: v.number(),
-        }),
-      })
-    ),
+    previewVideoPlaybackId: v.optional(v.string()), // Preview video from wizard
     startDate: v.number(),
     endDate: v.number(),
-    durationWeeks: v.number(),
+    durationYears: v.number(), // Always 1 in simplified flow
+    hasLogo: v.optional(v.boolean()), // Whether user paid for logo
+    contactFullName: v.string(), // Full name collected before payment
+    contactCompany: v.optional(v.string()), // Company name (optional)
     status: v.string(),
     molliePaymentId: v.optional(v.string()),
     paymentAmount: v.number(),

@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
   useNavigate,
@@ -6,10 +7,13 @@ import {
 import { Check } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import type { SponsorshipWithGesture } from "@/types/sponsorship";
+import { client } from "@/utils/orpc";
 
 interface SuccessSearch {
   sponsorshipId?: string;
   sponsorshipIds?: string;
+  paymentId?: string;
 }
 
 export const Route = createFileRoute("/sponsors/success")({
@@ -17,25 +21,32 @@ export const Route = createFileRoute("/sponsors/success")({
   validateSearch: (search: Record<string, unknown>): SuccessSearch => ({
     sponsorshipId: (search.sponsorshipId as string) || undefined,
     sponsorshipIds: (search.sponsorshipIds as string) || undefined,
+    paymentId: (search.paymentId as string) || undefined,
   }),
 });
 
 function SuccessComponent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { sponsorshipId, sponsorshipIds } = useSearch({
+  const { paymentId } = useSearch({
     from: "/sponsors/success",
   });
 
-  const sponsorshipCount = sponsorshipIds
-    ? sponsorshipIds.split(",").length
-    : 1;
+  // Fetch sponsorships if paymentId is provided
+  const { data: sponsorships } = useQuery<SponsorshipWithGesture[]>({
+    queryKey: ["sponsorships", paymentId],
+    queryFn: () =>
+      client.sponsorships.getSponsorshipsByPaymentId({
+        paymentId: paymentId!,
+      }),
+    enabled: !!paymentId,
+  });
 
   useEffect(() => {
-    // Auto-redirect after 5 seconds
+    // Auto-redirect after 10 seconds
     const timer = setTimeout(() => {
       navigate({ to: "/sponsors" });
-    }, 5000);
+    }, 10_000);
 
     return () => clearTimeout(timer);
   }, [navigate]);
@@ -57,57 +68,98 @@ function SuccessComponent() {
           {t("web.sponsors.success.title")}
         </h1>
 
-        <p className="mb-6 text-lg" style={{ color: "var(--text-light)" }}>
-          {sponsorshipCount > 1
-            ? t("web.sponsors.success.multipleDescription", {
-                count: sponsorshipCount,
-              })
-            : t("web.sponsors.success.singleDescription")}
+        <p className="mb-2 text-lg" style={{ color: "var(--text-light)" }}>
+          {t("web.sponsors.new.success.subtitle")}
         </p>
 
-        {sponsorshipId || sponsorshipIds ? (
-          <p className="mb-6 text-sm" style={{ color: "var(--text-light)" }}>
-            {sponsorshipCount > 1
-              ? t("web.sponsors.success.sponsorshipsCreated", {
-                  count: sponsorshipCount,
-                })
-              : t("web.sponsors.success.sponsorshipId", { id: sponsorshipId })}
-          </p>
-        ) : null}
+        {/* Sponsorship summary */}
+        {sponsorships && (
+          <div className="mt-4 mb-6 rounded-lg bg-muted p-4 text-left">
+            <h3 className="mb-2 font-semibold text-sm">
+              {t("web.sponsors.new.success.summary")}
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  {t("web.sponsors.new.success.gestures")}:
+                </span>
+                <span className="font-medium">
+                  {sponsorships.map((s) => s.gestureName).join(", ")}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  {t("web.sponsors.new.success.sponsor")}:
+                </span>
+                <span className="font-medium">
+                  {sponsorships[0]?.sponsorName}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  {t("web.sponsors.new.success.duration")}:
+                </span>
+                <span className="font-medium">
+                  {sponsorships[0]?.durationYears || 1} year
+                </span>
+              </div>
+              <div className="flex justify-between border-border border-t pt-2">
+                <span className="text-muted-foreground">
+                  {t("web.sponsors.new.success.total")}:
+                </span>
+                <span className="font-semibold">
+                  €
+                  {(
+                    sponsorships.reduce(
+                      (sum: number, s) => sum + s.paymentAmount,
+                      0
+                    ) / 100
+                  ).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
-        <div className="mb-6 rounded-lg bg-blue-50 p-4 text-left text-sm">
-          <p className="font-medium text-blue-900">
-            {t("web.sponsors.success.whatNext")}
+        <div className="mb-6 rounded-lg bg-blue-50 p-4 text-left text-sm dark:bg-blue-950">
+          <p className="font-medium text-blue-900 dark:text-blue-100">
+            {t("web.sponsors.new.success.whatNext")}
           </p>
-          <ul className="mt-2 space-y-1 text-blue-800">
-            <li>• {t("web.sponsors.success.steps.confirmed")}</li>
-            <li>
-              •{" "}
-              {sponsorshipCount > 1
-                ? t("web.sponsors.success.steps.uploadingMultiple")
-                : t("web.sponsors.success.steps.uploadingSingle")}
+          <ul className="mt-3 space-y-2 text-blue-800 dark:text-blue-200">
+            <li className="flex items-start gap-2">
+              <span className="font-bold">1.</span>
+              <span>{t("web.sponsors.new.success.step1")}</span>
             </li>
-            <li>
-              •{" "}
-              {sponsorshipCount > 1
-                ? t("web.sponsors.success.steps.liveMultiple")
-                : t("web.sponsors.success.steps.liveSingle")}
+            <li className="flex items-start gap-2">
+              <span className="font-bold">2.</span>
+              <span>{t("web.sponsors.new.success.step2")}</span>
             </li>
-            <li>• {t("web.sponsors.success.steps.email")}</li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold">3.</span>
+              <span>{t("web.sponsors.new.success.step3")}</span>
+            </li>
           </ul>
         </div>
 
-        <button
-          className="w-full rounded py-3 font-semibold text-white"
-          onClick={() => navigate({ to: "/sponsors" })}
-          style={{ backgroundColor: "var(--primary)" }}
-          type="button"
-        >
-          {t("web.sponsors.success.backToSponsors")}
-        </button>
+        <div className="flex gap-3">
+          <button
+            className="flex-1 rounded-md border border-border py-3 font-medium transition-colors hover:bg-muted"
+            onClick={() => navigate({ to: "/" })}
+            type="button"
+          >
+            {t("web.sponsors.new.success.actions.backHome")}
+          </button>
+          <button
+            className="flex-1 rounded-md bg-primary py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            onClick={() => navigate({ to: "/sponsors" })}
+            type="button"
+          >
+            {t("web.sponsors.new.success.actions.viewSponsorships")}
+          </button>
+        </div>
 
         <p className="mt-4 text-xs" style={{ color: "var(--text-light)" }}>
-          {t("web.sponsors.success.redirecting")}
+          Automatically redirecting in 10 seconds...
         </p>
       </div>
     </div>

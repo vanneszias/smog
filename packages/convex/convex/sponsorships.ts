@@ -56,18 +56,20 @@ export const create = mutation({
 
     // Create sponsorship with pending status
     const endDate = Date.now() + args.durationWeeks * 7 * 24 * 60 * 60 * 1000;
+    const durationYears = Math.ceil(args.durationWeeks / 52); // Convert weeks to years
 
     return await ctx.db.insert("sponsorships", {
       gestureId: args.gestureId,
       sponsorName: args.sponsorName,
       sponsorEmail: args.sponsorEmail,
+      contactFullName: args.sponsorName, // Legacy: use sponsor name as contact
       overlayImageStorageId: args.overlayImageStorageId,
       overlayText: args.overlayText,
       sponsoredVideoPlaybackId: args.sponsoredVideoPlaybackId,
       originalVideoPlaybackId: gesture.playbackId,
       startDate: 0, // Set after payment
       endDate,
-      durationWeeks: args.durationWeeks,
+      durationYears,
       status: "pending",
       paymentAmount: args.paymentAmount,
       createdAt: Date.now(),
@@ -159,20 +161,134 @@ export const createBulk = mutation({
         // Create sponsorship with pending status
         const endDate =
           Date.now() + args.durationWeeks * 7 * 24 * 60 * 60 * 1000;
+        const durationYears = Math.ceil(args.durationWeeks / 52); // Convert weeks to years
 
         const sponsorshipId = await ctx.db.insert("sponsorships", {
           gestureId,
           sponsorName: args.sponsorName,
           sponsorEmail: args.sponsorEmail,
+          contactFullName: args.sponsorName, // Legacy: use sponsor name as contact
           overlayImageStorageId: args.overlayImageStorageId,
           overlayText: args.overlayText,
           sponsoredVideoPlaybackId,
           originalVideoPlaybackId: gesture.playbackId,
           startDate: 0, // Set after payment
           endDate,
-          durationWeeks: args.durationWeeks,
+          durationYears,
           status: "pending",
           paymentAmount: args.paymentAmountPerGesture,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+
+        sponsorshipIds.push(sponsorshipId);
+      } catch (error) {
+        errors.push(
+          `Error creating sponsorship for gesture ${gestureId}: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }
+
+    if (errors.length > 0) {
+      throw new Error(
+        `Failed to create ${errors.length} sponsorship(s): ${errors.join("; ")}`
+      );
+    }
+
+    return sponsorshipIds;
+  },
+});
+
+// Create multiple sponsorships for simplified flow (no video composition before payment)
+export const createBulkSimplified = mutation({
+  args: {
+    gestureIds: v.array(v.id("gestures")),
+    sponsorName: v.string(),
+    sponsorEmail: v.string(),
+    contactFullName: v.string(),
+    contactCompany: v.optional(v.string()),
+    logoImage: v.optional(v.string()), // base64 data URL
+    overlayText: v.string(),
+    includeLogo: v.boolean(),
+    durationYears: v.number(), // Always 1
+    previewVideoPlaybackId: v.string(),
+  },
+  returns: v.array(v.id("sponsorships")),
+  handler: async (ctx, args) => {
+    // biome-ignore lint/suspicious/noExplicitAny: Convex ID type
+    const sponsorshipIds: any[] = [];
+    const errors: string[] = [];
+
+    // Calculate payment amount (€50 per gesture + €10 if logo)
+    const PRICE_PER_YEAR_CENTS = 5000;
+    const LOGO_ADDON_CENTS = 1000;
+    const paymentAmountPerGesture = args.includeLogo
+      ? PRICE_PER_YEAR_CENTS + LOGO_ADDON_CENTS
+      : PRICE_PER_YEAR_CENTS;
+
+    for (const gestureId of args.gestureIds) {
+      try {
+        // Get gesture to backup original playbackId
+        const gesture = await ctx.db.get(gestureId);
+        if (!gesture) {
+          errors.push(`Gesture ${gestureId} not found`);
+          continue;
+        }
+
+        // Check if gesture already has an active or pending sponsorship
+        const existingActive = await ctx.db
+          .query("sponsorships")
+          .withIndex("by_gesture_and_status", (q) =>
+            q.eq("gestureId", gestureId).eq("status", "active")
+          )
+          .first();
+
+        if (existingActive) {
+          errors.push(
+            `Gesture "${gesture.name}" is already sponsored until ${new Date(existingActive.endDate).toLocaleDateString()}`
+          );
+          continue;
+        }
+
+        // Check for pending/pending_payment/pending_approval sponsorships
+        const existingPending = await ctx.db
+          .query("sponsorships")
+          .withIndex("by_gesture", (q) => q.eq("gestureId", gestureId))
+          .filter((q) =>
+            q.or(
+              q.eq(q.field("status"), "pending_payment"),
+              q.eq(q.field("status"), "pending_approval")
+            )
+          )
+          .first();
+
+        if (existingPending) {
+          errors.push(
+            `Gesture "${gesture.name}" already has a pending sponsorship`
+          );
+          continue;
+        }
+
+        // Calculate end date (1 year from now)
+        const endDate =
+          Date.now() + args.durationYears * 365 * 24 * 60 * 60 * 1000;
+
+        const sponsorshipId = await ctx.db.insert("sponsorships", {
+          gestureId,
+          sponsorName: args.sponsorName,
+          sponsorEmail: args.sponsorEmail,
+          contactFullName: args.contactFullName,
+          contactCompany: args.contactCompany,
+          overlayImageStorageId: args.logoImage,
+          overlayText: args.overlayText,
+          originalVideoPlaybackId: gesture.playbackId,
+          previewVideoPlaybackId: args.previewVideoPlaybackId,
+          hasLogo: args.includeLogo,
+          durationYears: args.durationYears,
+          startDate: 0, // Set after payment is confirmed
+          endDate,
+          status: "pending_payment", // Will be updated to pending_approval after payment
+          paymentAmount: paymentAmountPerGesture,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         });
@@ -211,7 +327,7 @@ export const updateAfterPayment = mutation({
 
     const startDate = Date.now();
     const endDate =
-      startDate + sponsorship.durationWeeks * 7 * 24 * 60 * 60 * 1000;
+      startDate + (sponsorship.durationYears || 1) * 365 * 24 * 60 * 60 * 1000;
 
     await ctx.db.patch(args.sponsorshipId, {
       molliePaymentId: args.molliePaymentId,
@@ -233,28 +349,6 @@ export const updateAfterPayment = mutation({
 // Get sponsorship by payment ID (for webhook)
 export const getByPaymentId = query({
   args: { molliePaymentId: v.string() },
-  returns: v.union(
-    v.object({
-      _id: v.id("sponsorships"),
-      _creationTime: v.number(),
-      gestureId: v.id("gestures"),
-      sponsorName: v.string(),
-      sponsorEmail: v.string(),
-      overlayImageStorageId: v.string(),
-      overlayText: v.string(),
-      sponsoredVideoPlaybackId: v.optional(v.string()),
-      originalVideoPlaybackId: v.string(),
-      startDate: v.number(),
-      endDate: v.number(),
-      durationWeeks: v.number(),
-      status: v.string(),
-      molliePaymentId: v.optional(v.string()),
-      paymentAmount: v.number(),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-    }),
-    v.null()
-  ),
   handler: async (ctx, args) =>
     await ctx.db
       .query("sponsorships")
@@ -264,59 +358,76 @@ export const getByPaymentId = query({
       .first(),
 });
 
+// Get all sponsorships by payment ID (for simplified flow with multiple gestures)
+export const getAllByPaymentId = query({
+  args: { molliePaymentId: v.string() },
+  handler: async (ctx, args) => {
+    const sponsorships = await ctx.db
+      .query("sponsorships")
+      .withIndex("by_payment_id", (q) =>
+        q.eq("molliePaymentId", args.molliePaymentId)
+      )
+      .collect();
+
+    // Enrich with gesture names
+    const enriched = await Promise.all(
+      sponsorships.map(async (s) => {
+        const gesture = await ctx.db.get(s.gestureId);
+        return {
+          ...s,
+          gestureName: gesture?.name,
+        };
+      })
+    );
+
+    return enriched;
+  },
+});
+
+// Update contact info for sponsorships after payment
+export const updateContactInfo = mutation({
+  args: {
+    molliePaymentId: v.string(),
+    fullName: v.string(),
+    email: v.string(),
+    company: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const sponsorships = await ctx.db
+      .query("sponsorships")
+      .withIndex("by_payment_id", (q) =>
+        q.eq("molliePaymentId", args.molliePaymentId)
+      )
+      .collect();
+
+    if (sponsorships.length === 0) {
+      throw new Error("No sponsorships found for this payment ID");
+    }
+
+    // Update all sponsorships with contact info
+    for (const sponsorship of sponsorships) {
+      await ctx.db.patch(sponsorship._id, {
+        contactFullName: args.fullName,
+        sponsorEmail: args.email,
+        contactCompany: args.company,
+        updatedAt: Date.now(),
+      });
+    }
+
+    return null;
+  },
+});
+
 // Get sponsorship by ID
 export const getById = query({
   args: { id: v.id("sponsorships") },
-  returns: v.union(
-    v.object({
-      _id: v.id("sponsorships"),
-      _creationTime: v.number(),
-      gestureId: v.id("gestures"),
-      sponsorName: v.string(),
-      sponsorEmail: v.string(),
-      overlayImageStorageId: v.string(),
-      overlayText: v.string(),
-      sponsoredVideoPlaybackId: v.optional(v.string()),
-      originalVideoPlaybackId: v.string(),
-      startDate: v.number(),
-      endDate: v.number(),
-      durationWeeks: v.number(),
-      status: v.string(),
-      molliePaymentId: v.optional(v.string()),
-      paymentAmount: v.number(),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-    }),
-    v.null()
-  ),
   handler: async (ctx, args) => await ctx.db.get(args.id),
 });
 
 // Get active sponsorship for a gesture
 export const getActiveByGesture = query({
   args: { gestureId: v.id("gestures") },
-  returns: v.union(
-    v.object({
-      _id: v.id("sponsorships"),
-      _creationTime: v.number(),
-      gestureId: v.id("gestures"),
-      sponsorName: v.string(),
-      sponsorEmail: v.string(),
-      overlayImageStorageId: v.string(),
-      overlayText: v.string(),
-      sponsoredVideoPlaybackId: v.optional(v.string()),
-      originalVideoPlaybackId: v.string(),
-      startDate: v.number(),
-      endDate: v.number(),
-      durationWeeks: v.number(),
-      status: v.string(),
-      molliePaymentId: v.optional(v.string()),
-      paymentAmount: v.number(),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-    }),
-    v.null()
-  ),
   handler: async (ctx, args) =>
     await ctx.db
       .query("sponsorships")
@@ -329,64 +440,6 @@ export const getActiveByGesture = query({
 // List all gestures with their sponsorship status
 export const listGesturesWithSponsorship = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("gestures"),
-      _creationTime: v.number(),
-      name: v.string(),
-      categoryIds: v.array(v.id("categories")),
-      playbackId: v.string(),
-      concept: v.array(v.string()),
-      info: v.string(),
-      isActive: v.boolean(),
-      lastUpdated: v.number(),
-      sponsorship: v.union(
-        v.object({
-          _id: v.id("sponsorships"),
-          _creationTime: v.number(),
-          gestureId: v.id("gestures"),
-          sponsorName: v.string(),
-          sponsorEmail: v.string(),
-          overlayImageStorageId: v.string(),
-          overlayText: v.string(),
-          sponsoredVideoPlaybackId: v.optional(v.string()),
-          originalVideoPlaybackId: v.string(),
-          overlayConfig: v.optional(
-            v.object({
-              image: v.object({
-                x: v.number(),
-                y: v.number(),
-                width: v.number(),
-                height: v.number(),
-              }),
-              text: v.object({
-                x: v.number(),
-                y: v.number(),
-                fontSize: v.number(),
-                color: v.string(),
-              }),
-              animation: v.object({
-                startTime: v.number(),
-                fadeInDuration: v.number(),
-              }),
-            })
-          ),
-          startDate: v.number(),
-          endDate: v.number(),
-          durationWeeks: v.number(),
-          status: v.string(),
-          molliePaymentId: v.optional(v.string()),
-          paymentAmount: v.number(),
-          rejectionReason: v.optional(v.string()),
-          reviewedBy: v.optional(v.id("users")),
-          reviewedAt: v.optional(v.number()),
-          createdAt: v.number(),
-          updatedAt: v.number(),
-        }),
-        v.null()
-      ),
-    })
-  ),
   handler: async (ctx) => {
     const gestures = await ctx.db
       .query("gestures")
@@ -419,27 +472,6 @@ export const listGesturesWithSponsorship = query({
 // Get expired sponsorships (for scheduled job)
 export const getExpired = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("sponsorships"),
-      _creationTime: v.number(),
-      gestureId: v.id("gestures"),
-      sponsorName: v.string(),
-      sponsorEmail: v.string(),
-      overlayImageStorageId: v.string(),
-      overlayText: v.string(),
-      sponsoredVideoPlaybackId: v.optional(v.string()),
-      originalVideoPlaybackId: v.string(),
-      startDate: v.number(),
-      endDate: v.number(),
-      durationWeeks: v.number(),
-      status: v.string(),
-      molliePaymentId: v.optional(v.string()),
-      paymentAmount: v.number(),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-    })
-  ),
   handler: async (ctx) => {
     const now = Date.now();
     const activeSponsors = await ctx.db
@@ -492,6 +524,27 @@ export const updatePaymentId = mutation({
   },
 });
 
+// Update sponsorship with composed video playback ID (called by webhook after video composition)
+export const updateVideoPlaybackId = mutation({
+  args: {
+    sponsorshipId: v.id("sponsorships"),
+    sponsoredVideoPlaybackId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const sponsorship = await ctx.db.get(args.sponsorshipId);
+    if (!sponsorship) {
+      throw new Error("Sponsorship not found");
+    }
+
+    await ctx.db.patch(args.sponsorshipId, {
+      sponsoredVideoPlaybackId: args.sponsoredVideoPlaybackId,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
 // Mark sponsorship as paid and awaiting approval (called by webhook after payment confirmation)
 export const markAsAwaitingApproval = mutation({
   args: {
@@ -526,31 +579,6 @@ export const listAll = query({
     status: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("sponsorships"),
-      _creationTime: v.number(),
-      gestureId: v.id("gestures"),
-      gestureName: v.optional(v.string()),
-      sponsorName: v.string(),
-      sponsorEmail: v.string(),
-      overlayImageStorageId: v.string(),
-      overlayText: v.string(),
-      sponsoredVideoPlaybackId: v.optional(v.string()),
-      originalVideoPlaybackId: v.string(),
-      startDate: v.number(),
-      endDate: v.number(),
-      durationWeeks: v.number(),
-      status: v.string(),
-      molliePaymentId: v.optional(v.string()),
-      paymentAmount: v.number(),
-      rejectionReason: v.optional(v.string()),
-      reviewedBy: v.optional(v.id("users")),
-      reviewedAt: v.optional(v.number()),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-    })
-  ),
   handler: async (ctx, args) => {
     const limit = args.limit || 100;
 
@@ -580,28 +608,6 @@ export const listAll = query({
 // Admin: List pending payment sponsorships (paid but not approved yet)
 export const listPendingApproval = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("sponsorships"),
-      _creationTime: v.number(),
-      gestureId: v.id("gestures"),
-      gestureName: v.optional(v.string()),
-      sponsorName: v.string(),
-      sponsorEmail: v.string(),
-      overlayImageStorageId: v.string(),
-      overlayText: v.string(),
-      sponsoredVideoPlaybackId: v.optional(v.string()),
-      originalVideoPlaybackId: v.string(),
-      startDate: v.number(),
-      endDate: v.number(),
-      durationWeeks: v.number(),
-      status: v.string(),
-      molliePaymentId: v.optional(v.string()),
-      paymentAmount: v.number(),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-    })
-  ),
   handler: async (ctx) => {
     const sponsorships = await ctx.db
       .query("sponsorships")
@@ -649,7 +655,7 @@ export const approve = mutation({
 
     const startDate = Date.now();
     const endDate =
-      startDate + sponsorship.durationWeeks * 7 * 24 * 60 * 60 * 1000;
+      startDate + (sponsorship.durationYears || 1) * 365 * 24 * 60 * 60 * 1000;
 
     // Update sponsorship status
     await ctx.db.patch(args.sponsorshipId, {

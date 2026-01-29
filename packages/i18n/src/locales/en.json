@@ -187,7 +187,7 @@
     "dark": "Dark",
     "dataSource": "Data Source",
     "mockData": "Mock Data",
-    "realDataw": "Real Data",
+    "realData": "Real Data",
     "production": "Production",
     "mock": "Test Data",
     "openDeveloperTools": "Open Developer Tools",
@@ -392,6 +392,73 @@
       }
     },
     "sponsors": {
+      "new": {
+        "title": "Sponsor Sign Language Gestures",
+        "subtitle": "Support the community and promote your brand",
+        "selectGestures": "Select Gestures to Sponsor",
+        "selectedGestures": "Selected Gestures ({{count}})",
+        "sponsorName": "Sponsor Name",
+        "sponsorNamePlaceholder": "Max 10 characters",
+        "sponsorNameHelp": "This name will appear on the video: 'Met de warme steun van:\n{{name}}'",
+        "includeLogo": "Include logo (+€10 per gesture)",
+        "uploadLogo": "Upload Logo",
+        "logoHelp": "Recommended: 400x400px, max 2MB",
+        "duration": "Duration",
+        "fixedDuration": "1 year",
+        "pricing": {
+          "perGesture": "€50 per gesture per year",
+          "perGestureWithLogo": "€60 per gesture per year (with logo)",
+          "subtotal": "Subtotal",
+          "logoAddon": "Logo addon ({{count}} × €10)",
+          "total": "Total"
+        },
+        "proceedToPayment": "Proceed to Payment",
+        "validation": {
+          "selectGesture": "Please select at least one gesture",
+          "sponsorNameRequired": "Sponsor name is required",
+          "sponsorNameTooLong": "Sponsor name must be 10 characters or less",
+          "logoRequired": "Please upload a logo or uncheck the option",
+          "logoTooLarge": "Image must be smaller than 2MB",
+          "logoInvalidFormat": "Invalid image format. Please use PNG, JPG, or SVG"
+        },
+        "preview": {
+          "title": "Payment Successful!",
+          "subtitle": "Your sponsored gestures are being processed",
+          "videoStatus": {
+            "processing": "Processing... ({{progress}}%)",
+            "ready": "Ready for review",
+            "failed": "Failed - Contact support"
+          },
+          "contactInfo": "Please provide your contact information",
+          "fullName": "Full Name",
+          "email": "Email Address",
+          "company": "Company (Optional)",
+          "submit": "Submit"
+        },
+        "success": {
+          "title": "Thank You for Your Sponsorship!",
+          "subtitle": "Your request has been submitted successfully",
+          "whatNext": "What happens next:",
+          "step1": "Our team will review your sponsored videos",
+          "step2": "You'll receive an email within 5 working days",
+          "step3": "Once approved, your sponsorship goes live!",
+          "summary": "Summary",
+          "gestures": "Gestures",
+          "sponsor": "Sponsor",
+          "duration": "Duration",
+          "total": "Total Paid",
+          "actions": {
+            "viewSponsorships": "View My Sponsorships",
+            "backHome": "Back to Home"
+          }
+        },
+        "status": {
+          "available": "Available",
+          "sponsored": "Sponsored by {{name}}",
+          "pending": "Pending Approval",
+          "endsOn": "Ends {{date}}"
+        }
+      },
       "list": {
         "title": "Sponsor Gestures",
         "searchPlaceholder": "Search gestures to sponsor...",
@@ -502,87 +569,6 @@
       },
       "dataCollect": {
         "title": "3. Data We Collect",
-        "sponsors": {
-          "list": {
-            "title": "Sponsor Gestures",
-            "searchPlaceholder": "Search gestures to sponsor...",
-            "sponsored": "Sponsored",
-            "pending": "Pending",
-            "available": "Available to sponsor",
-            "availableAgainOn": "Available again:",
-            "pendingDescription": "This sponsorship is being processed",
-            "selectedForSponsoring": "Selected for Sponsoring",
-            "gestureSelected": "1 gesture selected",
-            "gesturesSelected": "{{count}} gestures selected",
-            "continue": "Continue to Upload",
-            "clearSelection": "Clear Selection",
-            "selectedGestures": "Selected Gestures:",
-            "noResultsWithFilters": "No gestures found",
-            "noGestures": "No gestures available",
-            "tryDifferentFilters": "Try adjusting your search or filters",
-            "noGesturesDescription": "Check back later for available gestures to sponsor."
-          },
-          "create": {
-            "title": "Create Sponsorship",
-            "overlayImage": "Overlay Image",
-            "imageDescription": "Upload a square image (recommended 400x400px, max 2MB)",
-            "chooseImage": "Choose Image",
-            "duration": "Sponsorship Duration",
-            "durationDescription": "This outro will be applied to all selected videos",
-            "previewVideo": "Preview Video",
-            "previewTitle": "Preview Your Sponsored Video",
-            "previewDescription": "This outro will be applied to all selected videos",
-            "campaignSummary": "Campaign Summary",
-            "gestures": "Gestures",
-            "totalCost": "Total Cost",
-            "yourDetails": "Your Details",
-            "name": "Name / Company",
-            "namePlaceholder": "Enter your name or company",
-            "email": "Email",
-            "emailPlaceholder": "your.email@example.com",
-            "paymentSummary": "Payment Summary",
-            "processing": "Processing...",
-            "proceedToPayment": "Proceed to Payment",
-            "composingVideos": "Composing videos: {{current}} of {{total}}",
-            "currentlyComposing": "Currently composing: {{name}}",
-            "steps": {
-              "upload": "Upload",
-              "preview": "Preview",
-              "details": "Details"
-            },
-            "composition": {
-              "idle": "Ready to start",
-              "preparing": "Converting your image to the right format...",
-              "uploading": "Sending your composition request to the server...",
-              "queued": "Waiting for an available worker to process your video...",
-              "downloading": "Worker is downloading the original video from Mux...",
-              "processingImage": "Worker is processing and resizing your overlay image...",
-              "composing": "FFmpeg is composing the video with your overlay...",
-              "uploadingResult": "Uploading the final composed video back to Mux...",
-              "completed": "Your video is ready!",
-              "failed": "Something went wrong. Please try again.",
-              "default": "Processing..."
-            }
-          },
-          "success": {
-            "title": "Payment Successful!",
-            "singleDescription": "Your sponsorship is being processed. Your video will go live shortly!",
-            "multipleDescription": "Your {{count}} sponsorships are being processed. Your videos will go live shortly!",
-            "sponsorshipId": "Sponsorship ID: {{id}}",
-            "sponsorshipsCreated": "{{count}} Sponsorships Created",
-            "whatNext": "What happens next?",
-            "steps": {
-              "confirmed": "Your payment has been confirmed",
-              "uploadingSingle": "We're uploading your video to our servers",
-              "uploadingMultiple": "We're uploading your videos to our servers",
-              "liveSingle": "Your sponsored video will be live in 2-5 minutes",
-              "liveMultiple": "Your sponsored videos will be live in 2-5 minutes",
-              "email": "You'll receive a confirmation email shortly"
-            },
-            "backToSponsors": "Back to Sponsors",
-            "redirecting": "Redirecting automatically in 5 seconds..."
-          }
-        },
         "account": {
           "title": "3.1 Account Information",
           "items": {
