@@ -95,8 +95,11 @@ export class FFmpegFilterBuilder {
       // This prevents filter parsing errors and command injection attacks
       const escapedLine = escapeFFmpegText(line);
 
+      // Per FFmpeg docs: text parameter value should NOT be wrapped in quotes
+      // The escaping handles special characters directly without quote wrapping
+      // See: https://ffmpeg.org/ffmpeg-filters.html#Notes-on-filtergraph-escaping
       this.filters.push(
-        `[${currentLabel}]drawtext=text='${escapedLine}':fontfile=${fontPath}:fontsize=${config.fontSize}:fontcolor=0x${config.color}:x=${config.centerX}-text_w/2:y=${yPosition}:enable='gte(t,${config.startTime})'[${nextLabel}]`
+        `[${currentLabel}]drawtext=text=${escapedLine}:fontfile=${fontPath}:fontsize=${config.fontSize}:fontcolor=0x${config.color}:x=${config.centerX}-text_w/2:y=${yPosition}:enable='gte(t,${config.startTime})'[${nextLabel}]`
       );
 
       currentLabel = nextLabel;
