@@ -12,7 +12,11 @@ import {
   convertTextPosition,
   type VideoDimensions,
 } from "../utils/coordinates";
-import { calculateLineHeight, splitTextIntoLines } from "../utils/text";
+import {
+  calculateLineHeight,
+  escapeFFmpegText,
+  splitTextIntoLines,
+} from "../utils/text";
 
 export interface VideoMetadata {
   duration: number;
@@ -87,8 +91,9 @@ export class FFmpegFilterBuilder {
       const nextLabel = isLastLine ? "v" : `v${index + 2}`;
       const yPosition = config.y + index * lineHeight;
 
-      // Escape single quotes for FFmpeg
-      const escapedLine = line.replace(/'/g, "'\\''");
+      // Securely escape text for FFmpeg drawtext filter
+      // This prevents filter parsing errors and command injection attacks
+      const escapedLine = escapeFFmpegText(line);
 
       this.filters.push(
         `[${currentLabel}]drawtext=text='${escapedLine}':fontfile=${fontPath}:fontsize=${config.fontSize}:fontcolor=0x${config.color}:x=${config.centerX}-text_w/2:y=${yPosition}:enable='gte(t,${config.startTime})'[${nextLabel}]`
