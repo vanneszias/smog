@@ -952,6 +952,7 @@
     },
     "gestureFilters": {
       "searchPlaceholder": "Search gestures...",
+      "filters": "Filters",
       "results": "{{count}} result",
       "results_other": "{{count}} results",
       "clearFilters": "Clear filters"

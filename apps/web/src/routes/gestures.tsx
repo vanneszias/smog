@@ -113,14 +113,12 @@ function GesturesComponent() {
       <div className="shrink-0">
         <GestureFilters
           allCategories={allCategories}
-          filteredCount={filteredGestures.length}
           onCategoryToggle={handleCategoryToggle}
           onClearFilters={clearFilters}
           onSearchChange={setSearchQuery}
           searchPlaceholder={t("web.gestures.searchPlaceholder")}
           searchQuery={searchQuery}
           selectedCategories={selectedCategories}
-          showResultCount={true}
         />
       </div>
 

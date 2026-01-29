@@ -665,6 +665,7 @@
     },
     "gestureFilters": {
       "searchPlaceholder": "Rechercher des gestes...",
+      "filters": "Filtres",
       "results": "{{count}} résultat",
       "results_other": "{{count}} résultats",
       "clearFilters": "Effacer les filtres"

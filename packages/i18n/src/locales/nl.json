@@ -840,6 +840,7 @@
     },
     "gestureFilters": {
       "searchPlaceholder": "Zoek gebaren...",
+      "filters": "Filters",
       "results": "{{count}} resultaat",
       "results_other": "{{count}} resultaten",
       "clearFilters": "Filters wissen"
