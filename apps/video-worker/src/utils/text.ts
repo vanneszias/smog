@@ -55,32 +55,44 @@ export const splitTextIntoLines = (text: string): string[] => text.split("\n");
 /**
  * Escape text for safe use in FFmpeg drawtext filter
  *
- * FFmpeg's drawtext filter requires specific character escaping to prevent:
- * 1. Filter parsing errors (single quotes, colons, backslashes)
- * 2. Format string injection (percent signs)
- * 3. Command injection attacks
+ * FFmpeg requires multiple levels of escaping as documented at:
+ * https://ffmpeg.org/ffmpeg-filters.html#drawtext-1
+ *
+ * Level 1: Filter option value escaping (for text parameter)
+ * - Escape ' and : with backslash
+ *
+ * Level 2: Filtergraph description escaping
+ * - Double the backslashes from level 1
+ * - Also escape , (comma) which is a filter separator
+ *
+ * This function applies both levels since fluent-ffmpeg passes
+ * the filter complex string as a command-line argument.
  *
  * Security considerations:
- * - Escapes all special characters that have meaning in FFmpeg filters
- * - Prevents command injection by proper escaping
+ * - Sanitizes control characters
+ * - Prevents filter injection through proper escaping
  * - Handles Unicode characters safely
  *
- * @param text - The text to escape
- * @returns Safely escaped text for FFmpeg drawtext filter
+ * Example from FFmpeg docs:
+ * - Input: "this is a 'string': may contain"
+ * - Output: "this is a \\\'string\\\'\\: may contain"
  *
- * @see https://ffmpeg.org/ffmpeg-filters.html#drawtext-1
+ * @param text - The text to escape
+ * @returns Safely escaped text for FFmpeg drawtext filter in filtergraph
  */
 export const escapeFFmpegText = (text: string): string => {
   // Validate input - only allow printable characters and newlines
+  // Remove control characters except newline
   const sanitized = text.replace(/[^\x20-\x7E\u00A0-\uFFFF\n]/g, "");
 
-  // Escape special characters for FFmpeg drawtext filter
-  // Order is important: escape backslash first, then other characters
+  // Apply both level 1 and level 2 escaping as per FFmpeg documentation
+  // Order is critical: backslash first, then other special characters
   return sanitized
-    .replace(/\\/g, "\\\\\\\\") // Backslash needs double escaping for both shell and FFmpeg
-    .replace(/'/g, "'\\\\\\''") // Single quote: close quote, escape, reopen
-    .replace(/:/g, "\\\\:") // Colon is a parameter separator in FFmpeg
-    .replace(/%/g, "\\\\%") // Percent signs are format specifiers
-    .replace(/\[/g, "\\\\[") // Square brackets have special meaning
-    .replace(/\]/g, "\\\\]"); // Square brackets have special meaning
+    .replace(/\\/g, "\\\\\\\\") // Backslash: \\ (level 1) -> \\\\ (level 2)
+    .replace(/'/g, "\\\\\\'") // Single quote: \' (level 1) -> \\\' (level 2)
+    .replace(/:/g, "\\\\:") // Colon: \: (level 1) -> \\: (level 2)
+    .replace(/,/g, "\\\\,") // Comma: needs escaping at filtergraph level
+    .replace(/%/g, "\\\\%") // Percent: format specifier
+    .replace(/\[/g, "\\\\[") // Square bracket: filtergraph syntax
+    .replace(/\]/g, "\\\\]"); // Square bracket: filtergraph syntax
 };
