@@ -96,8 +96,6 @@
     "typescript": "^5.9.3"
   },
   "resolutions": {
-    "@babel/core": "~7.24.0",
-    "@babel/generator": "~7.24.0",
-    "@babel/traverse": "~7.24.0"
+    "@babel/*": "~7.24.0"
   }
 }
