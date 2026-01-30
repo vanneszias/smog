@@ -35,7 +35,8 @@
     "native:android:release": "turbo -F native android -- --variant release",
     "convex:codegen": "turbo -F @smog/convex codegen",
     "convex:dev": "turbo -F @smog/convex dev",
-    "convex:deploy": "turbo -F @smog/convex deploy"
+    "convex:deploy": "turbo -F @smog/convex deploy",
+    "postinstall": "node apps/native/scripts/remove-babel-8.js"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
@@ -50,9 +51,9 @@
   },
   "packageManager": "bun@1.3.4",
   "resolutions": {
-    "@babel/*": "~7.24.0"
+    "@babel/*": ">=7.24.0 <8.0.0"
   },
   "overrides": {
-    "@babel/*": "~7.24.0"
+    "@babel/*": ">=7.24.0 <8.0.0"
   }
 }
