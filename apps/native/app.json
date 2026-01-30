@@ -7,7 +7,7 @@
     "icon": "./assets/images/adaptive-icon.png",
     "scheme": "smog",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "be.zias.smog",
