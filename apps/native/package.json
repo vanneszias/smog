@@ -81,6 +81,9 @@
     "whatwg-fetch": "^3.6.20"
   },
   "devDependencies": {
+    "@babel/core": "~7.27.0",
+    "@babel/generator": "~7.27.0",
+    "@babel/traverse": "~7.27.0",
     "@types/jest": "29.5.14",
     "@types/react": "~19.1.10",
     "@types/react-test-renderer": "~19.1.0",
@@ -91,5 +94,10 @@
     "react-refresh": "^0.18.0",
     "react-test-renderer": "~19.1.2",
     "typescript": "^5.9.3"
+  },
+  "resolutions": {
+    "@babel/core": "~7.27.0",
+    "@babel/generator": "~7.27.0",
+    "@babel/traverse": "~7.27.0"
   }
 }
