@@ -10,14 +10,9 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.vanneszias.smog",
+      "bundleIdentifier": "be.zias.smog",
       "icon": "./assets/images/smog.icon",
-      "associatedDomains": [
-        "applinks:smog.zias.be",
-        "applinks:smog.zias.be",
-        "applinks:smog.zias.be",
-        "applinks:smog.zias.be"
-      ],
+      "associatedDomains": ["applinks:app.smog.vlaanderen"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -44,7 +39,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "smog.zias.be"
+              "host": "app.smog.vlaanderen"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
@@ -65,13 +60,13 @@
           "data": [
             {
               "scheme": "https",
-              "host": "smog.zias.be"
+              "host": "app.smog.vlaanderen"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
         }
       ],
-      "package": "com.vanneszias.smog"
+      "package": "be.zias.smog"
     },
     "web": {
       "bundler": "metro",

@@ -23,7 +23,7 @@ export const useScreenshotDetection = ({
     }
 
     const subscription = addScreenshotListener(() => {
-      const gestureUrl = `https://smog.zias.be/gestures/${gestureId}`;
+      const gestureUrl = `https://app.smog.vlaanderen/gestures/${gestureId}`;
 
       Alert.alert(
         t("screenshot.sharePrompt.title"),

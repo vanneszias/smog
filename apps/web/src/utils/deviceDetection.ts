@@ -70,7 +70,7 @@ export function openInApp(path: string): void {
   // This will trigger Universal Links (iOS) or App Links (Android)
   setTimeout(() => {
     // If we're still on the page, try the https URL
-    const httpsUrl = `https://smog.zias.be${path}`;
+    const httpsUrl = `https://app.smog.vlaanderen${path}`;
     window.location.href = httpsUrl;
   }, 500);
 }
