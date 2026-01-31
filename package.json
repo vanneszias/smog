@@ -37,7 +37,8 @@
     "convex:dev": "turbo -F @smog/convex dev",
     "convex:deploy": "turbo -F @smog/convex deploy",
     "postinstall": "node apps/native/scripts/remove-babel-8.js",
-    "upload": "bun run upload/upload-script.ts"
+    "upload": "bun run upload/upload-script.ts",
+    "delete-mux": "bun run upload/delete-all-mux-assets.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
