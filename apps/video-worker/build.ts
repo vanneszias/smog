@@ -18,12 +18,9 @@ const result = await Bun.build({
   minify: false,
   sourcemap: "external",
   external: [
-    // Keep native dependencies external
+    // Only keep sharp external because it has native bindings
+    // All other dependencies can be safely bundled
     "sharp",
-    "ioredis",
-    "bullmq",
-    "fluent-ffmpeg",
-    "@mux/mux-node",
   ],
 });
 
