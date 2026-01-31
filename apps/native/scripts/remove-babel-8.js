@@ -24,7 +24,7 @@ function findMonorepoRoot(startDir) {
         if (pkg.workspaces) {
           return currentDir;
         }
-      } catch (err) {
+      } catch (_err) {
         // Continue searching
       }
     }
@@ -70,13 +70,10 @@ function findBabel8Packages(nodeModulesPath) {
           const packageJson = JSON.parse(
             fs.readFileSync(packageJsonPath, "utf8")
           );
-          if (
-            packageJson.version &&
-            packageJson.version.startsWith("8.0.0-beta")
-          ) {
+          if (packageJson.version?.startsWith("8.0.0-beta")) {
             babel8Packages.push(pkgPath);
           }
-        } catch (err) {
+        } catch (_err) {
           // Skip invalid package.json files
         }
       }
