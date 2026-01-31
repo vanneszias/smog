@@ -6,8 +6,8 @@
   "main": "src/server.ts",
   "scripts": {
     "dev": "bun run --hot src/server.ts",
-    "build": "tsdown",
-    "start": "bun run dist/server.mjs",
+    "build": "bun run build.ts",
+    "start": "bun run dist/server.js",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
@@ -29,7 +29,6 @@
     "@types/bun": "^1.2.6",
     "@types/fluent-ffmpeg": "^2.1.28",
     "@types/uuid": "^11.0.0",
-    "tsdown": "^0.16.5",
     "typescript": "^5.8.2"
   }
 }

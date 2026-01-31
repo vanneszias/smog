@@ -3,6 +3,7 @@
     "name": "SMOG & Co",
     "slug": "smog",
     "version": "0.1.1",
+    "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/adaptive-icon.png",
     "scheme": "smog",
@@ -23,27 +24,6 @@
         "backgroundColor": "#00805F"
       },
       "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "smog"
-            }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        },
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "app.smog.vlaanderen"
-            }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        },
         {
           "action": "VIEW",
           "autoVerify": true,

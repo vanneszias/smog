@@ -3,11 +3,11 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "build": "tsdown",
+    "build": "bun run build.ts",
     "check-types": "tsc -b",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "dev": "bun run --env-file ../../.env --hot src/index.ts",
-    "start": "bun run dist/index.mjs"
+    "start": "bun run dist/index.js"
   },
   "dependencies": {
     "@mux/mux-node": "^12.8.1",
@@ -29,7 +29,6 @@
     "@smog/config": "workspace:*",
     "@types/bun": "^1.2.6",
     "@types/node-cron": "^3.0.11",
-    "tsdown": "^0.20.1",
     "typescript": "^5.8.2"
   }
 }
