@@ -36,7 +36,8 @@
     "convex:codegen": "turbo -F @smog/convex codegen",
     "convex:dev": "turbo -F @smog/convex dev",
     "convex:deploy": "turbo -F @smog/convex deploy",
-    "postinstall": "node apps/native/scripts/remove-babel-8.js"
+    "postinstall": "node apps/native/scripts/remove-babel-8.js",
+    "upload": "bun run upload/upload-script.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
