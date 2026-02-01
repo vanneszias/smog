@@ -24,7 +24,7 @@
   },
   "extends": ["ultracite/core", "ultracite/react"],
   "javascript": {
-    "globals": ["__DEV__"]
+    "globals": ["__DEV__", "Bun"]
   },
   "linter": {
     "rules": {

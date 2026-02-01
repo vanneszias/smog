@@ -54,7 +54,7 @@ export const useOptimizedSearch = (
     cacheHit: false,
   });
 
-  const debounceRef = useRef<number | null>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const lastQueryRef = useRef<string>("");
   const lastCategoriesRef = useRef<string[] | undefined>(undefined);
   const searchStartTimeRef = useRef<number>(0);
