@@ -205,6 +205,10 @@ export default function Header() {
             >
               {t("web.footer.privacy", "Privacy")}
             </Link>
+          </div>
+
+          {/* Credits */}
+          <div className="flex justify-center text-center text-muted-foreground text-sm md:justify-start">
             <a
               className="hover:text-primary hover:underline"
               href="https://zias.be"
