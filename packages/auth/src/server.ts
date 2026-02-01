@@ -53,21 +53,30 @@ function transformUser(workosUser: WorkOSAuthResponse["user"]): WorkOSUser {
  * @param code - Authorization code from OAuth callback
  * @param clientId - WorkOS client ID
  * @param clientSecret - WorkOS client secret (server-side only!)
+ * @param codeVerifier - Optional PKCE code verifier (required for native apps)
  */
 export async function exchangeCodeForTokens(
   code: string,
   clientId: string,
-  clientSecret: string
+  clientSecret: string,
+  codeVerifier?: string
 ): Promise<TokenResponse> {
+  const body: Record<string, string> = {
+    client_id: clientId,
+    client_secret: clientSecret,
+    code,
+    grant_type: "authorization_code",
+  };
+
+  // Include PKCE code_verifier if provided (for native apps)
+  if (codeVerifier) {
+    body.code_verifier = codeVerifier;
+  }
+
   const response = await fetch(WORKOS_ENDPOINTS.authenticate, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: clientId,
-      client_secret: clientSecret,
-      code,
-      grant_type: "authorization_code",
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

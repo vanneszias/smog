@@ -62,7 +62,7 @@ app.use(
 app.post("/auth/workos/callback", async (c) => {
   try {
     const body = await c.req.json();
-    const { code } = body;
+    const { code, codeVerifier } = body;
 
     if (!code) {
       return c.json({ error: "Authorization code is required" }, 400);
@@ -73,10 +73,12 @@ app.post("/auth/workos/callback", async (c) => {
     }
 
     // Exchange code for tokens using shared auth logic
+    // Pass codeVerifier for PKCE flow (native apps)
     const result = await exchangeCodeForTokens(
       code,
       workosConfig.clientId,
-      workosConfig.clientSecret
+      workosConfig.clientSecret,
+      codeVerifier
     );
 
     // Store refresh token in httpOnly cookie (for web clients)

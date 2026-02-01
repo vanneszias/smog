@@ -167,12 +167,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const exchangeCode = async () => {
       try {
+        // Get code_verifier from the auth request for PKCE flow
+        const codeVerifier = request?.codeVerifier;
+
         const exchangeResponse = await fetch(
           `${serverUrl}/auth/workos/callback`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code }),
+            body: JSON.stringify({ code, codeVerifier }),
           }
         );
 
@@ -207,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     exchangeCode();
-  }, [response]);
+  }, [response, request]);
 
   // Restore session on mount
   useEffect(() => {
