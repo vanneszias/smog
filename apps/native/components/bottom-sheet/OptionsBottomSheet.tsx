@@ -1,7 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BORDER_RADIUS, ICON_SIZE, SHADOWS, SPACING } from "@smog/styles";
 import type React from "react";
-import { StyleSheet, Text, TouchableOpacity } from "react-native";
+import {
+  Linking,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import BottomSheet from "@/components/bottom-sheet/BottomSheet";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
@@ -28,6 +34,10 @@ const OptionsBottomSheet: React.FC<OptionsBottomSheetProps> = ({
   const handleButtonPress = (action: () => void) => {
     action();
     onClose(); // Simply call the onClose prop to dismiss
+  };
+
+  const handleFooterLinkPress = () => {
+    Linking.openURL("https://zias.be");
   };
 
   return (
@@ -93,6 +103,14 @@ const OptionsBottomSheet: React.FC<OptionsBottomSheetProps> = ({
           {t("contact.title")}
         </Text>
       </TouchableOpacity>
+
+      <View style={styles.footerContainer}>
+        <TouchableOpacity activeOpacity={0.7} onPress={handleFooterLinkPress}>
+          <Text style={[styles.footerLink, { color: theme.textLight }]}>
+            Gemaakt met ♡ door zias.be
+          </Text>
+        </TouchableOpacity>
+      </View>
     </BottomSheet>
   );
 };
@@ -110,6 +128,16 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     marginVertical: SPACING.xs,
     gap: SPACING.sm,
+  },
+  footerContainer: {
+    marginTop: SPACING.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  footerLink: {
+    fontSize: 14,
+    textDecorationLine: "underline",
+    textAlign: "center",
   },
 });
 

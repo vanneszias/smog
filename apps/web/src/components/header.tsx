@@ -205,6 +205,14 @@ export default function Header() {
             >
               {t("web.footer.privacy", "Privacy")}
             </Link>
+            <a
+              className="hover:text-primary hover:underline"
+              href="https://zias.be"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Gemaakt met ♡ door zias.be
+            </a>
           </div>
         </div>
       </aside>
