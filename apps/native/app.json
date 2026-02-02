@@ -48,11 +48,6 @@
       ],
       "package": "be.zias.smog"
     },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/smog.icon/Assets/logo.svg"
-    },
     "plugins": [
       "expo-router",
       "expo-localization",
