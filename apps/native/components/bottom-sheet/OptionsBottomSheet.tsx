@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   footerContainer: {
-    marginTop: SPACING.md,
+    marginVertical: SPACING.md,
     alignItems: "center",
     justifyContent: "center",
   },
