@@ -361,6 +361,65 @@
       }
     },
     "sponsors": {
+      "wizard": {
+        "back": "Terug",
+        "step": "Stap {{current}} van {{total}}",
+        "selectedGestures": "Geselecteerde gebaren",
+        "gesturesSelected": "{{count}} gebaar{{plural}} geselecteerd",
+        "gesture": "gebaar",
+        "gestures": "gebaren",
+        "remove": "Verwijderen",
+        "continue": "Doorgaan",
+        "configureTitle": "Configureer je sponsoring",
+        "configureSubtitle": "Alle {{count}} geselecteerde gebaren tonen:\n\"{{message}}\"",
+        "sponsorNameLabel": "Sponsor naam *",
+        "sponsorNamePlaceholder": "Bijv. Acme Corp",
+        "maxCharacters": "Maximaal 10 tekens ({{current}}/10)",
+        "includeLogo": "Logo toevoegen (+{{price}})",
+        "uploadLogo": "Logo uploaden",
+        "logoHelp": "Vierkante afbeelding aanbevolen (400x400px, max 2MB)",
+        "priceSummary": "Prijs overzicht",
+        "basePrice": "{{count}} gebaar{{plural}} × 1 jaar",
+        "logoAddon": "Logo toevoeging",
+        "total": "Totaal",
+        "generatingPreview": "Voorbeeld genereren...",
+        "generatePreview": "Genereer voorbeeld",
+        "previewTitle": "Bekijk je video",
+        "previewSubtitle": "Zo verschijnt je sponsoring op alle {{count}} geselecteerde gebaren",
+        "sponsorshipDetails": "Sponsoring details",
+        "duration": "Duur",
+        "durationValue": "1 jaar",
+        "logo": "Logo",
+        "yes": "Ja",
+        "no": "Nee",
+        "continueToContact": "Doorgaan naar contactgegevens",
+        "contactTitle": "Contactgegevens",
+        "contactSubtitle": "We gebruiken dit om je te contacteren over je sponsoring",
+        "fullNameLabel": "Volledige naam *",
+        "fullNamePlaceholder": "Jan Jansen",
+        "emailLabel": "E-mail *",
+        "emailPlaceholder": "jan@voorbeeld.nl",
+        "companyLabel": "Bedrijf (Optioneel)",
+        "companyPlaceholder": "Acme B.V.",
+        "continueToSummary": "Doorgaan naar overzicht",
+        "reviewTitle": "Controleren & betalen",
+        "reviewSubtitle": "Controleer je sponsoring details voordat je verdergaat naar betaling",
+        "contactInfo": "Contactgegevens",
+        "name": "Naam",
+        "email": "E-mail",
+        "company": "Bedrijf",
+        "totalAmount": "Totaalbedrag",
+        "proceedToPayment": "Doorgaan naar betaling",
+        "processing": "Verwerken...",
+        "redirectMessage": "Je wordt doorgestuurd naar Mollie voor veilige betaling",
+        "errors": {
+          "fullNameRequired": "Volledige naam is verplicht",
+          "emailRequired": "E-mail is verplicht",
+          "emailInvalid": "Ongeldig e-mail formaat",
+          "previewFailed": "Voorbeeld genereren mislukt. Probeer het opnieuw.",
+          "paymentFailed": "Doorgaan naar betaling mislukt. Probeer het opnieuw."
+        }
+      },
       "new": {
         "title": "Sponsor een gebaar!",
         "subtitle": "Steun SMOG en promoot je merk",
@@ -505,7 +564,27 @@
           "email": "U ontvangt binnenkort een bevestigingsmail"
         },
         "backToSponsors": "Terug naar Sponsors",
-        "redirecting": "Automatisch doorverwijzen over 5 seconden..."
+        "redirecting": "Automatisch doorverwijzen over 5 seconden...",
+        "noPaymentId": {
+          "title": "Geen betalings-ID gevonden",
+          "description": "Controleer uw e-mail voor bevestiging of neem contact op met support."
+        },
+        "loading": "Sponsoring details laden...",
+        "error": {
+          "title": "Laden van sponsoring details mislukt",
+          "tryAgain": "Opnieuw proberen"
+        },
+        "processing": {
+          "title": "Uw betaling wordt verwerkt...",
+          "description": "Betaling ontvangen! De details van uw sponsoring verschijnen hier binnenkort. Deze pagina wordt automatisch bijgewerkt.",
+          "attempt": "Poging {{current}} van {{max}}"
+        },
+        "timeout": {
+          "title": "Details duren langer dan verwacht",
+          "description": "Uw betaling is ontvangen, maar de details worden nog verwerkt. U ontvangt binnenkort een bevestigingsmail.",
+          "checkAgain": "Opnieuw controleren"
+        },
+        "redirectingIn": "Automatisch doorverwijzen over {{seconds}} seconden..."
       }
     },
     "theme": {

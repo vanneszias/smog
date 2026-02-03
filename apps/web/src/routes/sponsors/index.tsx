@@ -245,7 +245,7 @@ function SponsorsComponent() {
       setCurrentStep("preview");
     } catch (error) {
       console.error("[Sponsors] Failed to generate preview:", error);
-      toast.error("Failed to generate preview. Please try again.");
+      toast.error(t("web.sponsors.wizard.errors.previewFailed"));
     } finally {
       setIsGeneratingPreview(false);
     }
@@ -293,7 +293,7 @@ function SponsorsComponent() {
       window.location.href = payment.checkoutUrl;
     } catch (error) {
       console.error("Failed to create sponsorships:", error);
-      toast.error("Failed to proceed to payment. Please try again.");
+      toast.error(t("web.sponsors.wizard.errors.paymentFailed"));
       setIsProcessing(false);
     }
   };
@@ -303,13 +303,15 @@ function SponsorsComponent() {
     const newErrors: typeof errors = {};
 
     if (!contactFullName.trim()) {
-      newErrors.contactFullName = "Full name is required";
+      newErrors.contactFullName = t(
+        "web.sponsors.wizard.errors.fullNameRequired"
+      );
     }
 
     if (!contactEmail.trim()) {
-      newErrors.contactEmail = "Email is required";
+      newErrors.contactEmail = t("web.sponsors.wizard.errors.emailRequired");
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
-      newErrors.contactEmail = "Invalid email format";
+      newErrors.contactEmail = t("web.sponsors.wizard.errors.emailInvalid");
     }
 
     setErrors(newErrors);
@@ -344,18 +346,20 @@ function SponsorsComponent() {
               variant="ghost"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              {t("web.sponsors.wizard.back")}
             </Button>
             <div className="flex-1 text-muted-foreground text-sm">
-              Step{" "}
-              {currentStep === "configure"
-                ? "2"
-                : currentStep === "preview"
-                  ? "3"
-                  : currentStep === "contact"
-                    ? "4"
-                    : "5"}{" "}
-              of 5
+              {t("web.sponsors.wizard.step", {
+                current:
+                  currentStep === "configure"
+                    ? "2"
+                    : currentStep === "preview"
+                      ? "3"
+                      : currentStep === "contact"
+                        ? "4"
+                        : "5",
+                total: "5",
+              })}
             </div>
           </div>
         )}
@@ -396,10 +400,14 @@ function SponsorsComponent() {
               } w-full flex-col border-border border-l bg-muted/20 p-6 md:w-1/3`}
             >
               <div className="space-y-4">
-                <h2 className="font-semibold text-xl">Selected Gestures</h2>
+                <h2 className="font-semibold text-xl">
+                  {t("web.sponsors.wizard.selectedGestures")}
+                </h2>
                 <p className="text-muted-foreground text-sm">
-                  {selectedGestureIds.length} gesture
-                  {selectedGestureIds.length !== 1 ? "s" : ""} selected
+                  {t("web.sponsors.wizard.gesturesSelected", {
+                    count: selectedGestureIds.length,
+                    plural: selectedGestureIds.length !== 1 ? "s" : "",
+                  })}
                 </p>
 
                 <div className="space-y-2">
@@ -416,7 +424,7 @@ function SponsorsComponent() {
                         size="sm"
                         variant="ghost"
                       >
-                        Remove
+                        {t("web.sponsors.wizard.remove")}
                       </Button>
                     </div>
                   ))}
@@ -428,7 +436,7 @@ function SponsorsComponent() {
                   onClick={() => setCurrentStep("configure")}
                   size="lg"
                 >
-                  Continue
+                  {t("web.sponsors.wizard.continue")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -441,29 +449,35 @@ function SponsorsComponent() {
           <div className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-6">
             <div>
               <h2 className="mb-2 font-semibold text-xl">
-                Configure Your Sponsorship
+                {t("web.sponsors.wizard.configureTitle")}
               </h2>
               <p className="text-muted-foreground text-sm">
-                All {selectedGestureIds.length} selected gestures will display:
-                "Met de warme steun van: {sponsorName || "[Your Name]"}"
+                {t("web.sponsors.wizard.configureSubtitle", {
+                  count: selectedGestureIds.length,
+                  message: `Met de warme steun van: ${sponsorName || "[Your Name]"}`,
+                })}
               </p>
             </div>
 
             {/* Sponsor Name */}
             <div className="space-y-2">
-              <Label htmlFor="sponsor-name">Sponsor Name *</Label>
+              <Label htmlFor="sponsor-name">
+                {t("web.sponsors.wizard.sponsorNameLabel")}
+              </Label>
               <Input
                 id="sponsor-name"
                 maxLength={10}
                 onChange={(e) => setSponsorName(e.target.value)}
-                placeholder="e.g., Acme Corp"
+                placeholder={t("web.sponsors.wizard.sponsorNamePlaceholder")}
                 value={sponsorName}
               />
               {errors.sponsorName && (
                 <p className="text-destructive text-sm">{errors.sponsorName}</p>
               )}
               <p className="text-muted-foreground text-xs">
-                Maximum 10 characters ({sponsorName.length}/10)
+                {t("web.sponsors.wizard.maxCharacters", {
+                  current: sponsorName.length,
+                })}
               </p>
             </div>
 
@@ -477,7 +491,9 @@ function SponsorsComponent() {
                   type="checkbox"
                 />
                 <Label htmlFor="include-logo">
-                  Add logo (+{formatPrice(LOGO_ADDON_CENTS)})
+                  {t("web.sponsors.wizard.includeLogo", {
+                    price: formatPrice(LOGO_ADDON_CENTS),
+                  })}
                 </Label>
               </div>
 
@@ -492,7 +508,7 @@ function SponsorsComponent() {
                     <p className="text-destructive text-sm">{errors.logo}</p>
                   )}
                   <p className="text-muted-foreground text-xs">
-                    Square image recommended (400x400px, max 2MB)
+                    {t("web.sponsors.wizard.logoHelp")}
                   </p>
                 </div>
               )}
@@ -500,12 +516,16 @@ function SponsorsComponent() {
 
             {/* Price Summary */}
             <div className="rounded-lg border bg-muted p-4">
-              <h3 className="mb-3 font-semibold">Price Summary</h3>
+              <h3 className="mb-3 font-semibold">
+                {t("web.sponsors.wizard.priceSummary")}
+              </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
-                    {selectedGestureIds.length} gesture
-                    {selectedGestureIds.length !== 1 ? "s" : ""} × 1 year
+                    {t("web.sponsors.wizard.basePrice", {
+                      count: selectedGestureIds.length,
+                      plural: selectedGestureIds.length !== 1 ? "s" : "",
+                    })}
                   </span>
                   <span>
                     {formatPrice(
@@ -515,12 +535,14 @@ function SponsorsComponent() {
                 </div>
                 {includeLogo && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Logo addon</span>
+                    <span className="text-muted-foreground">
+                      {t("web.sponsors.wizard.logoAddon")}
+                    </span>
                     <span>{formatPrice(LOGO_ADDON_CENTS)}</span>
                   </div>
                 )}
                 <div className="flex justify-between border-t pt-2 font-semibold">
-                  <span>Total</span>
+                  <span>{t("web.sponsors.wizard.total")}</span>
                   <span>{formatPrice(pricing.totalCents)}</span>
                 </div>
               </div>
@@ -540,11 +562,11 @@ function SponsorsComponent() {
               {isGeneratingPreview ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating Preview...
+                  {t("web.sponsors.wizard.generatingPreview")}
                 </>
               ) : (
                 <>
-                  Generate Preview
+                  {t("web.sponsors.wizard.generatePreview")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
@@ -556,10 +578,13 @@ function SponsorsComponent() {
         {currentStep === "preview" && previewPlaybackId && (
           <div className="mx-auto w-full max-w-3xl space-y-6 overflow-y-auto p-6">
             <div>
-              <h2 className="mb-2 font-semibold text-xl">Preview Your Video</h2>
+              <h2 className="mb-2 font-semibold text-xl">
+                {t("web.sponsors.wizard.previewTitle")}
+              </h2>
               <p className="text-muted-foreground text-sm">
-                This is how your sponsorship will appear on all{" "}
-                {selectedGestureIds.length} selected gestures
+                {t("web.sponsors.wizard.previewSubtitle", {
+                  count: selectedGestureIds.length,
+                })}
               </p>
             </div>
 
@@ -575,26 +600,40 @@ function SponsorsComponent() {
 
             {/* Summary */}
             <div className="rounded-lg border bg-muted p-4">
-              <h3 className="mb-3 font-semibold">Sponsorship Details</h3>
+              <h3 className="mb-3 font-semibold">
+                {t("web.sponsors.wizard.sponsorshipDetails")}
+              </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Gestures</span>
+                  <span className="text-muted-foreground">
+                    {t("web.sponsors.new.success.gestures")}
+                  </span>
                   <span>{selectedGestureIds.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Duration</span>
-                  <span>1 year</span>
+                  <span className="text-muted-foreground">
+                    {t("web.sponsors.wizard.duration")}
+                  </span>
+                  <span>{t("web.sponsors.wizard.durationValue")}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Sponsor Name</span>
+                  <span className="text-muted-foreground">
+                    {t("web.sponsors.new.sponsorName")}
+                  </span>
                   <span>{sponsorName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Logo</span>
-                  <span>{includeLogo ? "Yes" : "No"}</span>
+                  <span className="text-muted-foreground">
+                    {t("web.sponsors.wizard.logo")}
+                  </span>
+                  <span>
+                    {includeLogo
+                      ? t("web.sponsors.wizard.yes")
+                      : t("web.sponsors.wizard.no")}
+                  </span>
                 </div>
                 <div className="flex justify-between border-t pt-2 font-semibold">
-                  <span>Total</span>
+                  <span>{t("web.sponsors.wizard.total")}</span>
                   <span>{formatPrice(pricing.totalCents)}</span>
                 </div>
               </div>
@@ -605,7 +644,7 @@ function SponsorsComponent() {
               onClick={() => setCurrentStep("contact")}
               size="lg"
             >
-              Continue to Contact Info
+              {t("web.sponsors.wizard.continueToContact")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -616,21 +655,23 @@ function SponsorsComponent() {
           <div className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-6">
             <div>
               <h2 className="mb-2 font-semibold text-xl">
-                Contact Information
+                {t("web.sponsors.wizard.contactTitle")}
               </h2>
               <p className="text-muted-foreground text-sm">
-                We'll use this to contact you about your sponsorship
+                {t("web.sponsors.wizard.contactSubtitle")}
               </p>
             </div>
 
             <div className="space-y-4">
               {/* Full Name */}
               <div className="space-y-2">
-                <Label htmlFor="contact-name">Full Name *</Label>
+                <Label htmlFor="contact-name">
+                  {t("web.sponsors.wizard.fullNameLabel")}
+                </Label>
                 <Input
                   id="contact-name"
                   onChange={(e) => setContactFullName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder={t("web.sponsors.wizard.fullNamePlaceholder")}
                   value={contactFullName}
                 />
                 {errors.contactFullName && (
@@ -642,11 +683,13 @@ function SponsorsComponent() {
 
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="contact-email">Email *</Label>
+                <Label htmlFor="contact-email">
+                  {t("web.sponsors.wizard.emailLabel")}
+                </Label>
                 <Input
                   id="contact-email"
                   onChange={(e) => setContactEmail(e.target.value)}
-                  placeholder="john@example.com"
+                  placeholder={t("web.sponsors.wizard.emailPlaceholder")}
                   type="email"
                   value={contactEmail}
                 />
@@ -659,11 +702,13 @@ function SponsorsComponent() {
 
               {/* Company (optional) */}
               <div className="space-y-2">
-                <Label htmlFor="contact-company">Company (Optional)</Label>
+                <Label htmlFor="contact-company">
+                  {t("web.sponsors.wizard.companyLabel")}
+                </Label>
                 <Input
                   id="contact-company"
                   onChange={(e) => setContactCompany(e.target.value)}
-                  placeholder="Acme Inc."
+                  placeholder={t("web.sponsors.wizard.companyPlaceholder")}
                   value={contactCompany}
                 />
               </div>
@@ -678,7 +723,7 @@ function SponsorsComponent() {
               }}
               size="lg"
             >
-              Continue to Summary
+              {t("web.sponsors.wizard.continueToSummary")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -688,54 +733,78 @@ function SponsorsComponent() {
         {currentStep === "summary" && (
           <div className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-6">
             <div>
-              <h2 className="mb-2 font-semibold text-xl">Review & Pay</h2>
+              <h2 className="mb-2 font-semibold text-xl">
+                {t("web.sponsors.wizard.reviewTitle")}
+              </h2>
               <p className="text-muted-foreground text-sm">
-                Please review your sponsorship details before proceeding to
-                payment
+                {t("web.sponsors.wizard.reviewSubtitle")}
               </p>
             </div>
 
             {/* Full Summary */}
             <div className="space-y-4 rounded-lg border p-6">
               <div>
-                <h3 className="mb-3 font-semibold">Sponsorship Details</h3>
+                <h3 className="mb-3 font-semibold">
+                  {t("web.sponsors.wizard.sponsorshipDetails")}
+                </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Gestures</span>
+                    <span className="text-muted-foreground">
+                      {t("web.sponsors.new.success.gestures")}
+                    </span>
                     <span>
-                      {selectedGestureIds.length} gesture
+                      {selectedGestureIds.length}{" "}
+                      {t("web.sponsors.wizard.gesture")}
                       {selectedGestureIds.length !== 1 ? "s" : ""}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Duration</span>
-                    <span>1 year</span>
+                    <span className="text-muted-foreground">
+                      {t("web.sponsors.wizard.duration")}
+                    </span>
+                    <span>{t("web.sponsors.wizard.durationValue")}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Sponsor Name</span>
+                    <span className="text-muted-foreground">
+                      {t("web.sponsors.new.sponsorName")}
+                    </span>
                     <span>{sponsorName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Logo</span>
-                    <span>{includeLogo ? "Yes" : "No"}</span>
+                    <span className="text-muted-foreground">
+                      {t("web.sponsors.wizard.logo")}
+                    </span>
+                    <span>
+                      {includeLogo
+                        ? t("web.sponsors.wizard.yes")
+                        : t("web.sponsors.wizard.no")}
+                    </span>
                   </div>
                 </div>
               </div>
 
               <div className="border-t pt-4">
-                <h3 className="mb-3 font-semibold">Contact Information</h3>
+                <h3 className="mb-3 font-semibold">
+                  {t("web.sponsors.wizard.contactInfo")}
+                </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Name</span>
+                    <span className="text-muted-foreground">
+                      {t("web.sponsors.wizard.name")}
+                    </span>
                     <span>{contactFullName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Email</span>
+                    <span className="text-muted-foreground">
+                      {t("web.sponsors.wizard.email")}
+                    </span>
                     <span>{contactEmail}</span>
                   </div>
                   {contactCompany && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Company</span>
+                      <span className="text-muted-foreground">
+                        {t("web.sponsors.wizard.company")}
+                      </span>
                       <span>{contactCompany}</span>
                     </div>
                   )}
@@ -744,7 +813,7 @@ function SponsorsComponent() {
 
               <div className="border-t pt-4">
                 <div className="flex justify-between font-semibold text-lg">
-                  <span>Total Amount</span>
+                  <span>{t("web.sponsors.wizard.totalAmount")}</span>
                   <span>{formatPrice(pricing.totalCents)}</span>
                 </div>
               </div>
@@ -759,18 +828,18 @@ function SponsorsComponent() {
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  {t("web.sponsors.wizard.processing")}
                 </>
               ) : (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  Proceed to Payment
+                  {t("web.sponsors.wizard.proceedToPayment")}
                 </>
               )}
             </Button>
 
             <p className="text-center text-muted-foreground text-xs">
-              You'll be redirected to Mollie for secure payment processing
+              {t("web.sponsors.wizard.redirectMessage")}
             </p>
           </div>
         )}

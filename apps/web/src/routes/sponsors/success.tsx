@@ -115,10 +115,10 @@ function SuccessComponent() {
               <AlertCircle className="h-5 w-5 shrink-0 text-orange-600 dark:text-orange-400" />
               <div>
                 <p className="font-medium text-orange-900 text-sm dark:text-orange-100">
-                  No payment ID found
+                  {t("web.sponsors.success.noPaymentId.title")}
                 </p>
                 <p className="mt-1 text-orange-800 text-xs dark:text-orange-200">
-                  Please check your email for confirmation or contact support.
+                  {t("web.sponsors.success.noPaymentId.description")}
                 </p>
               </div>
             </div>
@@ -130,7 +130,7 @@ function SuccessComponent() {
           <div className="mt-4 rounded-lg bg-muted p-4 text-center">
             <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin text-primary" />
             <p className="text-muted-foreground text-sm">
-              Loading sponsorship details...
+              {t("web.sponsors.success.loading")}
             </p>
           </div>
         )}
@@ -142,7 +142,7 @@ function SuccessComponent() {
               <AlertCircle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
               <div className="flex-1">
                 <p className="font-medium text-red-900 text-sm dark:text-red-100">
-                  Failed to load sponsorship details
+                  {t("web.sponsors.success.error.title")}
                 </p>
                 <p className="mt-1 text-red-800 text-xs dark:text-red-200">
                   {error instanceof Error ? error.message : "Unknown error"}
@@ -152,7 +152,7 @@ function SuccessComponent() {
                   onClick={() => refetch()}
                   type="button"
                 >
-                  Try again
+                  {t("web.sponsors.success.error.tryAgain")}
                 </button>
               </div>
             </div>
@@ -170,14 +170,16 @@ function SuccessComponent() {
                 <Loader2 className="h-5 w-5 shrink-0 animate-spin text-yellow-600 dark:text-yellow-400" />
                 <div>
                   <p className="font-medium text-sm text-yellow-900 dark:text-yellow-100">
-                    Processing your payment...
+                    {t("web.sponsors.success.processing.title")}
                   </p>
                   <p className="mt-1 text-xs text-yellow-800 dark:text-yellow-200">
-                    Payment received! Your sponsorship details will appear here
-                    shortly. This page will update automatically.
+                    {t("web.sponsors.success.processing.description")}
                   </p>
                   <p className="mt-2 text-xs text-yellow-700 dark:text-yellow-300">
-                    Attempt {pollingAttempts} of {maxPollingAttempts}
+                    {t("web.sponsors.success.processing.attempt", {
+                      current: pollingAttempts,
+                      max: maxPollingAttempts,
+                    })}
                   </p>
                 </div>
               </div>
@@ -195,12 +197,10 @@ function SuccessComponent() {
                 <AlertCircle className="h-5 w-5 shrink-0 text-orange-600 dark:text-orange-400" />
                 <div>
                   <p className="font-medium text-orange-900 text-sm dark:text-orange-100">
-                    Details taking longer than expected
+                    {t("web.sponsors.success.timeout.title")}
                   </p>
                   <p className="mt-1 text-orange-800 text-xs dark:text-orange-200">
-                    Your payment has been received, but the details are still
-                    being processed. You'll receive a confirmation email
-                    shortly.
+                    {t("web.sponsors.success.timeout.description")}
                   </p>
                   <button
                     className="mt-2 text-orange-900 text-sm underline dark:text-orange-100"
@@ -210,7 +210,7 @@ function SuccessComponent() {
                     }}
                     type="button"
                   >
-                    Check again
+                    {t("web.sponsors.success.timeout.checkAgain")}
                   </button>
                 </div>
               </div>
@@ -245,7 +245,7 @@ function SuccessComponent() {
                   {t("web.sponsors.new.success.duration")}:
                 </span>
                 <span className="font-medium">
-                  {sponsorships[0]?.durationYears || 1} year
+                  {sponsorships[0]?.durationYears || 1} {t("common.week")}
                 </span>
               </div>
               <div className="flex justify-between border-border border-t pt-2">
@@ -304,7 +304,7 @@ function SuccessComponent() {
         </div>
 
         <p className="mt-4 text-xs" style={{ color: "var(--text-light)" }}>
-          Automatically redirecting in 10 seconds...
+          {t("web.sponsors.success.redirectingIn", { seconds: "10" })}
         </p>
       </div>
     </div>

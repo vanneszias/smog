@@ -217,6 +217,65 @@
       }
     },
     "sponsors": {
+      "wizard": {
+        "back": "Retour",
+        "step": "Étape {{current}} sur {{total}}",
+        "selectedGestures": "Gestes sélectionnés",
+        "gesturesSelected": "{{count}} geste{{plural}} sélectionné{{plural}}",
+        "gesture": "geste",
+        "gestures": "gestes",
+        "remove": "Supprimer",
+        "continue": "Continuer",
+        "configureTitle": "Configurer votre parrainage",
+        "configureSubtitle": "Tous les {{count}} gestes sélectionnés afficheront :\n\"{{message}}\"",
+        "sponsorNameLabel": "Nom du sponsor *",
+        "sponsorNamePlaceholder": "Ex: Acme Corp",
+        "maxCharacters": "Maximum 10 caractères ({{current}}/10)",
+        "includeLogo": "Ajouter un logo (+{{price}})",
+        "uploadLogo": "Télécharger le logo",
+        "logoHelp": "Image carrée recommandée (400x400px, max 2MB)",
+        "priceSummary": "Résumé du prix",
+        "basePrice": "{{count}} geste{{plural}} × 1 an",
+        "logoAddon": "Ajout de logo",
+        "total": "Total",
+        "generatingPreview": "Génération de l'aperçu...",
+        "generatePreview": "Générer l'aperçu",
+        "previewTitle": "Aperçu de votre vidéo",
+        "previewSubtitle": "Voici comment votre parrainage apparaîtra sur les {{count}} gestes sélectionnés",
+        "sponsorshipDetails": "Détails du parrainage",
+        "duration": "Durée",
+        "durationValue": "1 an",
+        "logo": "Logo",
+        "yes": "Oui",
+        "no": "Non",
+        "continueToContact": "Continuer vers les coordonnées",
+        "contactTitle": "Coordonnées",
+        "contactSubtitle": "Nous utiliserons ces informations pour vous contacter à propos de votre parrainage",
+        "fullNameLabel": "Nom complet *",
+        "fullNamePlaceholder": "Jean Dupont",
+        "emailLabel": "E-mail *",
+        "emailPlaceholder": "jean@exemple.com",
+        "companyLabel": "Entreprise (Optionnel)",
+        "companyPlaceholder": "Acme Inc.",
+        "continueToSummary": "Continuer vers le résumé",
+        "reviewTitle": "Vérifier et payer",
+        "reviewSubtitle": "Veuillez vérifier les détails de votre parrainage avant de procéder au paiement",
+        "contactInfo": "Coordonnées",
+        "name": "Nom",
+        "email": "E-mail",
+        "company": "Entreprise",
+        "totalAmount": "Montant total",
+        "proceedToPayment": "Procéder au paiement",
+        "processing": "Traitement...",
+        "redirectMessage": "Vous serez redirigé vers Mollie pour un paiement sécurisé",
+        "errors": {
+          "fullNameRequired": "Le nom complet est requis",
+          "emailRequired": "L'e-mail est requis",
+          "emailInvalid": "Format d'e-mail invalide",
+          "previewFailed": "Échec de la génération de l'aperçu. Veuillez réessayer.",
+          "paymentFailed": "Échec du passage au paiement. Veuillez réessayer."
+        }
+      },
       "new": {
         "title": "Parrainer des gestes en langue des signes",
         "subtitle": "Soutenez la communauté et promouvez votre marque",
@@ -361,7 +420,27 @@
           "email": "Vous recevrez un e-mail de confirmation sous peu"
         },
         "backToSponsors": "Retour aux parrainages",
-        "redirecting": "Redirection automatique dans 5 secondes..."
+        "redirecting": "Redirection automatique dans 5 secondes...",
+        "noPaymentId": {
+          "title": "Aucun ID de paiement trouvé",
+          "description": "Veuillez vérifier votre e-mail pour confirmation ou contacter le support."
+        },
+        "loading": "Chargement des détails du parrainage...",
+        "error": {
+          "title": "Échec du chargement des détails du parrainage",
+          "tryAgain": "Réessayer"
+        },
+        "processing": {
+          "title": "Traitement de votre paiement...",
+          "description": "Paiement reçu! Les détails de votre parrainage apparaîtront ici sous peu. Cette page se mettra à jour automatiquement.",
+          "attempt": "Tentative {{current}} sur {{max}}"
+        },
+        "timeout": {
+          "title": "Les détails prennent plus de temps que prévu",
+          "description": "Votre paiement a été reçu, mais les détails sont encore en cours de traitement. Vous recevrez un e-mail de confirmation sous peu.",
+          "checkAgain": "Vérifier à nouveau"
+        },
+        "redirectingIn": "Redirection automatique dans {{seconds}} secondes..."
       }
     },
     "privacy": {

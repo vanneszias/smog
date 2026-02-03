@@ -392,6 +392,65 @@
       }
     },
     "sponsors": {
+      "wizard": {
+        "back": "Back",
+        "step": "Step {{current}} of {{total}}",
+        "selectedGestures": "Selected Gestures",
+        "gesturesSelected": "{{count}} gesture{{plural}} selected",
+        "gesture": "gesture",
+        "gestures": "gestures",
+        "remove": "Remove",
+        "continue": "Continue",
+        "configureTitle": "Configure Your Sponsorship",
+        "configureSubtitle": "All {{count}} selected gestures will display:\n\"{{message}}\"",
+        "sponsorNameLabel": "Sponsor Name *",
+        "sponsorNamePlaceholder": "e.g., Acme Corp",
+        "maxCharacters": "Maximum 10 characters ({{current}}/10)",
+        "includeLogo": "Add logo (+{{price}})",
+        "uploadLogo": "Upload Logo",
+        "logoHelp": "Square image recommended (400x400px, max 2MB)",
+        "priceSummary": "Price Summary",
+        "basePrice": "{{count}} gesture{{plural}} × 1 year",
+        "logoAddon": "Logo addon",
+        "total": "Total",
+        "generatingPreview": "Generating Preview...",
+        "generatePreview": "Generate Preview",
+        "previewTitle": "Preview Your Video",
+        "previewSubtitle": "This is how your sponsorship will appear on all {{count}} selected gestures",
+        "sponsorshipDetails": "Sponsorship Details",
+        "duration": "Duration",
+        "durationValue": "1 year",
+        "logo": "Logo",
+        "yes": "Yes",
+        "no": "No",
+        "continueToContact": "Continue to Contact Info",
+        "contactTitle": "Contact Information",
+        "contactSubtitle": "We'll use this to contact you about your sponsorship",
+        "fullNameLabel": "Full Name *",
+        "fullNamePlaceholder": "John Doe",
+        "emailLabel": "Email *",
+        "emailPlaceholder": "john@example.com",
+        "companyLabel": "Company (Optional)",
+        "companyPlaceholder": "Acme Inc.",
+        "continueToSummary": "Continue to Summary",
+        "reviewTitle": "Review & Pay",
+        "reviewSubtitle": "Please review your sponsorship details before proceeding to payment",
+        "contactInfo": "Contact Information",
+        "name": "Name",
+        "email": "Email",
+        "company": "Company",
+        "totalAmount": "Total Amount",
+        "proceedToPayment": "Proceed to Payment",
+        "processing": "Processing...",
+        "redirectMessage": "You'll be redirected to Mollie for secure payment processing",
+        "errors": {
+          "fullNameRequired": "Full name is required",
+          "emailRequired": "Email is required",
+          "emailInvalid": "Invalid email format",
+          "previewFailed": "Failed to generate preview. Please try again.",
+          "paymentFailed": "Failed to proceed to payment. Please try again."
+        }
+      },
       "new": {
         "title": "Sponsor Sign Language Gestures",
         "subtitle": "Support the community and promote your brand",
@@ -536,7 +595,27 @@
           "email": "You'll receive a confirmation email shortly"
         },
         "backToSponsors": "Back to Sponsors",
-        "redirecting": "Redirecting automatically in 5 seconds..."
+        "redirecting": "Redirecting automatically in 5 seconds...",
+        "noPaymentId": {
+          "title": "No payment ID found",
+          "description": "Please check your email for confirmation or contact support."
+        },
+        "loading": "Loading sponsorship details...",
+        "error": {
+          "title": "Failed to load sponsorship details",
+          "tryAgain": "Try again"
+        },
+        "processing": {
+          "title": "Processing your payment...",
+          "description": "Payment received! Your sponsorship details will appear here shortly. This page will update automatically.",
+          "attempt": "Attempt {{current}} of {{max}}"
+        },
+        "timeout": {
+          "title": "Details taking longer than expected",
+          "description": "Your payment has been received, but the details are still being processed. You'll receive a confirmation email shortly.",
+          "checkAgain": "Check again"
+        },
+        "redirectingIn": "Automatically redirecting in {{seconds}} seconds..."
       }
     },
     "theme": {
