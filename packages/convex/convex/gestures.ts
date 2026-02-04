@@ -1,6 +1,7 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireAdminAuth } from "./lib/adminAuth";
 
 export const list = query({
   args: {
@@ -154,6 +155,8 @@ export const updateGesture = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAdminAuth(ctx, "updateGesture");
+
     const { gestureId, ...updates } = args;
 
     if (Object.keys(updates).length === 0) {
@@ -182,6 +185,8 @@ export const bulkUpdate = mutation({
     updated: v.number(),
   }),
   handler: async (ctx, args) => {
+    await requireAdminAuth(ctx, "bulkUpdate");
+
     if (Object.keys(args.updates).length === 0) {
       throw new Error("No fields to update");
     }
@@ -208,6 +213,8 @@ export const toggleActive = mutation({
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
+    await requireAdminAuth(ctx, "toggleActive");
+
     const gesture = await ctx.db.get(args.gestureId);
     if (!gesture) {
       throw new Error("Gesture not found");
@@ -232,6 +239,8 @@ export const updatePlaybackId = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireAdminAuth(ctx, "updatePlaybackId");
+
     await ctx.db.patch(args.gestureId, {
       playbackId: args.playbackId,
       lastUpdated: Date.now(),
@@ -253,6 +262,8 @@ export const create = mutation({
   },
   returns: v.id("gestures"),
   handler: async (ctx, args) => {
+    await requireAdminAuth(ctx, "create");
+
     const now = Date.now();
 
     return await ctx.db.insert("gestures", {

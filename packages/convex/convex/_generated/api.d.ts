@@ -15,6 +15,7 @@ import type * as favorites from "../favorites.js";
 import type * as gdpr from "../gdpr.js";
 import type * as gdprCron from "../gdprCron.js";
 import type * as gestures from "../gestures.js";
+import type * as lib_adminAuth from "../lib/adminAuth.js";
 import type * as sponsorships from "../sponsorships.js";
 import type * as users from "../users.js";
 
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   gdpr: typeof gdpr;
   gdprCron: typeof gdprCron;
   gestures: typeof gestures;
+  "lib/adminAuth": typeof lib_adminAuth;
   sponsorships: typeof sponsorships;
   users: typeof users;
 }>;

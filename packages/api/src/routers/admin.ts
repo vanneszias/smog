@@ -3,8 +3,55 @@ import type { Id } from "@smog/convex/dataModel";
 import { z } from "zod";
 import { adminProcedure } from "../index";
 import { convexClient } from "../lib/convex";
+import {
+  createMuxDirectUpload,
+  getAssetStatus,
+  getMuxUploadStatus,
+  listMuxAssets,
+} from "../lib/mux";
 
 export const adminRouter = {
+  // Mux video management
+  mux: {
+    listAssets: adminProcedure
+      .input(
+        z
+          .object({
+            limit: z.number().optional(),
+            page: z.number().optional(),
+          })
+          .optional()
+          .default({})
+      )
+      .handler(async ({ input }) => {
+        return listMuxAssets(input);
+      }),
+
+    createDirectUpload: adminProcedure.handler(async () => {
+      return createMuxDirectUpload();
+    }),
+
+    getUploadStatus: adminProcedure
+      .input(
+        z.object({
+          uploadId: z.string(),
+        })
+      )
+      .handler(async ({ input }) => {
+        return getMuxUploadStatus(input.uploadId);
+      }),
+
+    getAssetStatus: adminProcedure
+      .input(
+        z.object({
+          assetId: z.string(),
+        })
+      )
+      .handler(async ({ input }) => {
+        return getAssetStatus(input.assetId);
+      }),
+  },
+
   // Verify user is admin
   verifyAdmin: adminProcedure.handler(async ({ context }) => {
     const user = await convexClient.query(api.users.getUserByWorkOSId, {
