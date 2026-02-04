@@ -437,6 +437,37 @@ export const getActiveByGesture = query({
       .first(),
 });
 
+// Get active sponsorships for multiple gestures (batch query)
+export const getActiveByGestures = query({
+  args: { gestureIds: v.array(v.id("gestures")) },
+  handler: async (ctx, args) => {
+    // Get all active sponsorships
+    const activeSponserships = await ctx.db
+      .query("sponsorships")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
+
+    // Create a map of gestureId -> sponsorship for the requested gestures
+    const gestureIdSet = new Set(args.gestureIds);
+    const sponsorshipMap: Record<
+      string,
+      { status: string; sponsorName?: string; endDate: number }
+    > = {};
+
+    for (const sponsorship of activeSponserships) {
+      if (gestureIdSet.has(sponsorship.gestureId)) {
+        sponsorshipMap[sponsorship.gestureId] = {
+          status: sponsorship.status,
+          sponsorName: sponsorship.sponsorName,
+          endDate: sponsorship.endDate,
+        };
+      }
+    }
+
+    return sponsorshipMap;
+  },
+});
+
 // List all gestures with their sponsorship status
 export const listGesturesWithSponsorship = query({
   args: {},

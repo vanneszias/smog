@@ -2,17 +2,25 @@ import MuxPlayer from "@mux/mux-player-react";
 import { api } from "@smog/convex";
 import { useGestureFiltering } from "@smog/hooks";
 import type { GestureWithSponsorshipStatus } from "@smog/ui";
-import { SponsorshipFilters, SponsorshipList } from "@smog/ui";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery as useConvexQuery } from "convex/react";
-import { ArrowLeft, ArrowRight, CheckCircle, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Heart,
+  Loader2,
+  Search,
+  Sparkles,
+  Upload,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   calculateSimplifiedPrice,
   formatPrice,
@@ -21,7 +29,7 @@ import {
 } from "@/lib/pricing";
 import { client, orpc } from "@/utils/orpc";
 
-type WizardStep = "select" | "configure" | "preview" | "contact" | "summary";
+type WizardStep = "select" | "details" | "preview";
 
 interface SearchParams {
   gestureId?: string;
@@ -34,12 +42,169 @@ export const Route = createFileRoute("/sponsors/")({
   component: SponsorsComponent,
 });
 
+// Gesture card for mobile
+function GestureCard({
+  gesture,
+  isSelected,
+  onToggle,
+  isDisabled,
+}: {
+  gesture: GestureWithSponsorshipStatus;
+  isSelected: boolean;
+  onToggle: () => void;
+  isDisabled: boolean;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <button
+      className={`group relative w-full overflow-hidden rounded-2xl border-2 p-4 text-left transition-all duration-300 ${
+        isDisabled
+          ? "cursor-not-allowed border-border/50 bg-card/30 opacity-60"
+          : isSelected
+            ? "border-primary bg-primary/5 shadow-lg shadow-primary/20"
+            : "border-border bg-card hover:border-primary/50 hover:shadow-md active:scale-[0.98]"
+      }`}
+      disabled={isDisabled}
+      onClick={onToggle}
+      type="button"
+    >
+      {/* Selection indicator */}
+      <div
+        className={`absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+          isSelected
+            ? "border-primary bg-primary"
+            : "border-muted-foreground/30 bg-background group-hover:border-primary/50"
+        }`}
+      >
+        {isSelected && <Check className="h-4 w-4 text-white" />}
+      </div>
+
+      {/* Status badge */}
+      {gesture.status !== "available" && (
+        <div className="absolute top-3 left-3">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium text-xs ${
+              gesture.status === "sponsored"
+                ? "bg-secondary/30 text-primary"
+                : "bg-accent/20 text-accent"
+            }`}
+          >
+            {gesture.status === "sponsored" ? (
+              <>
+                <Heart className="h-3 w-3" />
+                {gesture.sponsorName}
+              </>
+            ) : (
+              t("web.sponsors.new.status.pending")
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className={gesture.status !== "available" ? "mt-6" : ""}>
+        <h3 className="pr-8 font-semibold text-lg leading-tight">
+          {gesture.name}
+        </h3>
+
+        {/* Categories as subtle chips */}
+        {gesture.categories.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {gesture.categories.slice(0, 2).map((cat) => (
+              <span
+                className="rounded-full bg-secondary/30 px-2 py-0.5 text-primary text-xs"
+                key={cat._id}
+              >
+                {cat.name}
+              </span>
+            ))}
+            {gesture.categories.length > 2 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">
+                +{gesture.categories.length - 2}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Concepts preview */}
+        {gesture.concept.length > 0 && (
+          <p className="mt-2 line-clamp-1 text-muted-foreground text-sm">
+            {gesture.concept.slice(0, 3).join(" · ")}
+          </p>
+        )}
+      </div>
+
+      {/* Subtle glow on selection */}
+      {isSelected && (
+        <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
+      )}
+    </button>
+  );
+}
+
+// Floating selection bar for mobile
+function SelectionBar({
+  count,
+  total,
+  onContinue,
+}: {
+  count: number;
+  total: number;
+  onContinue: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div
+      className={`fixed right-0 bottom-0 left-0 z-50 transform transition-all duration-500 ease-out ${
+        count > 0
+          ? "translate-y-0 opacity-100"
+          : "pointer-events-none translate-y-full opacity-0"
+      }`}
+    >
+      {/* Backdrop blur */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-transparent" />
+
+      {/* Content */}
+      <div className="relative px-4 pt-4 pb-safe-bottom">
+        <div className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-card/80 p-3 shadow-2xl shadow-primary/10 backdrop-blur-xl">
+          {/* Count badge */}
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary font-bold text-lg text-white">
+            {count}
+          </div>
+
+          {/* Info */}
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-foreground">
+              {t("web.sponsors.wizard.gesturesSelected", { count })}
+            </p>
+            <p className="text-muted-foreground text-sm">
+              {formatPrice(count * PRICE_PER_YEAR_CENTS)}
+            </p>
+          </div>
+
+          {/* Continue button */}
+          <Button
+            className="shrink-0 gap-2 rounded-xl px-5"
+            onClick={onContinue}
+            size="lg"
+          >
+            {t("web.sponsors.wizard.continue")}
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Multi-step wizard requires complex state management
 function SponsorsComponent() {
   const { t } = useTranslation();
   const searchParams = Route.useSearch();
 
-  // Wizard state
+  // Wizard state - simplified to 3 steps
   const [currentStep, setCurrentStep] = useState<WizardStep>("select");
 
   // Form state
@@ -47,6 +212,7 @@ function SponsorsComponent() {
   const [sponsorName, setSponsorName] = useState("");
   const [includeLogo, setIncludeLogo] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [contactFullName, setContactFullName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactCompany, setContactCompany] = useState("");
@@ -61,6 +227,10 @@ function SponsorsComponent() {
     contactFullName?: string;
     contactEmail?: string;
   }>({});
+
+  // Filter state
+  const [showFilters, setShowFilters] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch gestures with sponsorship status
   const {
@@ -86,7 +256,7 @@ function SponsorsComponent() {
     }));
   }, [gesturesWithSponsorship, allCategories]);
 
-  // Transform to the format expected by SponsorshipList
+  // Transform to the format expected by filtering
   const gesturesForList: GestureWithSponsorshipStatus[] = useMemo(() => {
     return gesturesWithCategories.map((gesture) => {
       let status: "available" | "sponsored" | "pending" = "available";
@@ -168,10 +338,28 @@ function SponsorsComponent() {
     );
   }, []);
 
-  // Remove gesture from selection
-  const handleRemoveGesture = useCallback((gestureId: string) => {
-    setSelectedGestureIds((prev) => prev.filter((id) => id !== gestureId));
-  }, []);
+  // Handle logo upload
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setErrors((prev) => ({
+          ...prev,
+          logo: t("web.sponsors.new.validation.logoTooLarge"),
+        }));
+        return;
+      }
+
+      setLogoFile(file);
+      setErrors((prev) => ({ ...prev, logo: undefined }));
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Clear filters
   const handleClearFilters = useCallback(() => {
@@ -181,9 +369,8 @@ function SponsorsComponent() {
     }
   }, [setSearchQuery, selectedCategories, handleCategoryToggle]);
 
-  // Generate preview video
-  const handleGeneratePreview = async () => {
-    // Validate
+  // Validate details form
+  const validateDetails = (): boolean => {
     const newErrors: typeof errors = {};
 
     if (!sponsorName.trim()) {
@@ -196,111 +383,9 @@ function SponsorsComponent() {
       );
     }
 
-    // Logo is only required if includeLogo is true
     if (includeLogo && !logoFile) {
       newErrors.logo = t("web.sponsors.new.validation.logoRequired");
     }
-
-    // Validate file size if logo is provided
-    if (logoFile && logoFile.size > 2 * 1024 * 1024) {
-      newErrors.logo = t("web.sponsors.new.validation.logoTooLarge");
-    }
-
-    setErrors(newErrors);
-
-    if (Object.keys(newErrors).length > 0) {
-      return;
-    }
-
-    setIsGeneratingPreview(true);
-
-    try {
-      // Convert logo to base64 if present and includeLogo is true
-      let logoBase64: string | undefined;
-      if (includeLogo && logoFile) {
-        logoBase64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(logoFile);
-        });
-      }
-
-      // Generate preview for first gesture
-      const firstGesture = selectedGestures[0];
-      if (!firstGesture) {
-        throw new Error("No gesture selected");
-      }
-
-      console.log("[Sponsors] Generating preview for:", firstGesture.name);
-      const result = await client.sponsorships.generatePreview({
-        gestureId: firstGesture._id,
-        sponsorName,
-        logoImage: logoBase64, // Will be undefined if no logo
-        overlayText: `Met de warme steun van:\n${sponsorName}`,
-      });
-
-      console.log("[Sponsors] Preview generated:", result.playbackId);
-      setPreviewPlaybackId(result.playbackId);
-      setCurrentStep("preview");
-    } catch (error) {
-      console.error("[Sponsors] Failed to generate preview:", error);
-      toast.error(t("web.sponsors.wizard.errors.previewFailed"));
-    } finally {
-      setIsGeneratingPreview(false);
-    }
-  };
-
-  // Handle final submission
-  const handleProceedToPayment = async () => {
-    setIsProcessing(true);
-
-    try {
-      // Convert logo to base64 if present and includeLogo is true
-      let logoBase64: string | undefined;
-      if (includeLogo && logoFile) {
-        logoBase64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(logoFile);
-        });
-      }
-
-      // Create sponsorships
-      const result = await client.sponsorships.createBulkSponsorshipsSimplified(
-        {
-          gestureIds: selectedGestureIds,
-          sponsorName,
-          sponsorEmail: contactEmail,
-          contactFullName,
-          contactCompany: contactCompany || undefined,
-          overlayText: `Met de warme steun van:\n${sponsorName}`,
-          logoImage: logoBase64, // Will be undefined if no logo
-          includeLogo,
-          durationYears: 1,
-          previewVideoPlaybackId: previewPlaybackId || "",
-        }
-      );
-
-      // Create payment
-      const payment = await client.sponsorships.createBulkPayment({
-        sponsorshipIds: result.sponsorshipIds,
-        amount: pricing.totalCents,
-      });
-
-      // Redirect to Mollie
-      window.location.href = payment.checkoutUrl;
-    } catch (error) {
-      console.error("Failed to create sponsorships:", error);
-      toast.error(t("web.sponsors.wizard.errors.paymentFailed"));
-      setIsProcessing(false);
-    }
-  };
-
-  // Validate contact form
-  const validateContact = (): boolean => {
-    const newErrors: typeof errors = {};
 
     if (!contactFullName.trim()) {
       newErrors.contactFullName = t(
@@ -318,530 +403,675 @@ function SponsorsComponent() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Generate preview and proceed
+  const handleGeneratePreviewAndProceed = async () => {
+    if (!validateDetails()) return;
+
+    setIsGeneratingPreview(true);
+
+    try {
+      let logoBase64: string | undefined;
+      if (includeLogo && logoFile) {
+        logoBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(logoFile);
+        });
+      }
+
+      const firstGesture = selectedGestures[0];
+      if (!firstGesture) {
+        throw new Error("No gesture selected");
+      }
+
+      const result = await client.sponsorships.generatePreview({
+        gestureId: firstGesture._id,
+        sponsorName,
+        logoImage: logoBase64,
+        overlayText: `Met de warme steun van:\n${sponsorName}`,
+      });
+
+      setPreviewPlaybackId(result.playbackId);
+      setCurrentStep("preview");
+    } catch (error) {
+      console.error("[Sponsors] Failed to generate preview:", error);
+      toast.error(t("web.sponsors.wizard.errors.previewFailed"));
+    } finally {
+      setIsGeneratingPreview(false);
+    }
+  };
+
+  // Handle final submission
+  const handleProceedToPayment = async () => {
+    setIsProcessing(true);
+
+    try {
+      let logoBase64: string | undefined;
+      if (includeLogo && logoFile) {
+        logoBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(logoFile);
+        });
+      }
+
+      const result = await client.sponsorships.createBulkSponsorshipsSimplified(
+        {
+          gestureIds: selectedGestureIds,
+          sponsorName,
+          sponsorEmail: contactEmail,
+          contactFullName,
+          contactCompany: contactCompany || undefined,
+          overlayText: `Met de warme steun van:\n${sponsorName}`,
+          logoImage: logoBase64,
+          includeLogo,
+          durationYears: 1,
+          previewVideoPlaybackId: previewPlaybackId || "",
+        }
+      );
+
+      const payment = await client.sponsorships.createBulkPayment({
+        sponsorshipIds: result.sponsorshipIds,
+        amount: pricing.totalCents,
+      });
+
+      window.location.href = payment.checkoutUrl;
+    } catch (error) {
+      console.error("Failed to create sponsorships:", error);
+      toast.error(t("web.sponsors.wizard.errors.paymentFailed"));
+      setIsProcessing(false);
+    }
+  };
+
+  // Available gestures count
+  const availableCount = filteredGestures.filter(
+    (g) => g.status === "available"
+  ).length;
+
   return (
-    <div className="flex h-screen flex-col">
-      {/* Header */}
-      <header className="shrink-0 border-border border-b bg-background px-6 py-4">
-        <h1 className="font-bold text-2xl">{t("web.sponsors.new.title")}</h1>
-        <p className="mt-1 text-muted-foreground">
-          {t("web.sponsors.new.subtitle")}
-        </p>
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
+      {/* CSS for float animation */}
+      <style>
+        {`
+          @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-20px) scale(1.05); }
+          }
+          .pb-safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+        `}
+      </style>
 
-        {/* Step indicator */}
-        {currentStep !== "select" && (
-          <div className="mt-4 flex items-center gap-2">
-            <Button
-              onClick={() => {
-                if (currentStep === "configure") {
-                  setCurrentStep("select");
-                } else if (currentStep === "preview") {
-                  setCurrentStep("configure");
-                } else if (currentStep === "contact") {
-                  setCurrentStep("preview");
-                } else if (currentStep === "summary") {
-                  setCurrentStep("contact");
-                }
-              }}
-              size="sm"
-              variant="ghost"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              {t("web.sponsors.wizard.back")}
-            </Button>
-            <div className="flex-1 text-muted-foreground text-sm">
-              {t("web.sponsors.wizard.step", {
-                current:
-                  currentStep === "configure"
-                    ? "2"
-                    : currentStep === "preview"
-                      ? "3"
-                      : currentStep === "contact"
-                        ? "4"
-                        : "5",
-                total: "5",
-              })}
+      {/* Step 1: Select Gestures */}
+      {currentStep === "select" && (
+        <>
+          {/* Header */}
+          <header className="relative z-10 shrink-0 px-4 pt-safe-top">
+            <div className="py-6">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-6 w-6 text-accent" />
+                <span className="font-medium text-accent text-sm uppercase tracking-wider">
+                  {t("web.sponsors.new.title")}
+                </span>
+              </div>
+              <h1 className="mt-2 font-bold text-3xl tracking-tight md:text-4xl">
+                Steun een gebaar
+              </h1>
+              <p className="mt-2 text-muted-foreground">
+                {t("web.sponsors.new.subtitle")}
+              </p>
             </div>
+
+            {/* Search bar */}
+            <div className="pb-4">
+              <div className="relative">
+                <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  className="h-14 w-full rounded-2xl border-2 border-border bg-card/80 pr-4 pl-12 text-base backdrop-blur-sm transition-all placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t("web.sponsors.list.searchPlaceholder")}
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                />
+                {searchQuery && (
+                  <button
+                    className="absolute top-1/2 right-4 -translate-y-1/2 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    onClick={() => setSearchQuery("")}
+                    type="button"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter toggle */}
+              <button
+                className={`mt-3 flex items-center gap-2 rounded-xl px-4 py-2 font-medium text-sm transition-all ${
+                  showFilters || selectedCategories.length > 0
+                    ? "bg-primary/10 text-primary"
+                    : "bg-card text-muted-foreground hover:bg-muted"
+                }`}
+                onClick={() => setShowFilters(!showFilters)}
+                type="button"
+              >
+                Filters
+                {selectedCategories.length > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-white text-xs">
+                    {selectedCategories.length}
+                  </span>
+                )}
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${showFilters ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {/* Category filters */}
+              {showFilters && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {categoryNames.map((category) => {
+                    const isSelected = selectedCategories.includes(category);
+                    return (
+                      <button
+                        className={`rounded-full px-3 py-1.5 font-medium text-sm transition-all ${
+                          isSelected
+                            ? "bg-primary text-white shadow-md"
+                            : "bg-card text-foreground hover:bg-muted"
+                        }`}
+                        key={category}
+                        onClick={() => handleCategoryToggle(category)}
+                        type="button"
+                      >
+                        {category}
+                        {isSelected && <X className="ml-1.5 inline h-3 w-3" />}
+                      </button>
+                    );
+                  })}
+                  {selectedCategories.length > 0 && (
+                    <button
+                      className="text-primary text-sm hover:underline"
+                      onClick={handleClearFilters}
+                      type="button"
+                    >
+                      {t("ui.gestureFilters.clearFilters")}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </header>
+
+          {/* Results count */}
+          <div className="relative z-10 shrink-0 px-4 pb-2">
+            <p className="text-muted-foreground text-sm">
+              {availableCount} beschikbaar
+              {selectedGestureIds.length > 0 && (
+                <span className="ml-2 font-semibold text-primary">
+                  · {selectedGestureIds.length} geselecteerd
+                </span>
+              )}
+            </p>
           </div>
-        )}
-      </header>
 
-      {/* Main content */}
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        {/* Step 1: Select Gestures */}
-        {currentStep === "select" && (
-          <>
-            {/* Left panel - Gesture list */}
-            <div className="flex min-w-0 flex-1 flex-col md:w-2/3">
-              <SponsorshipFilters
-                allCategories={categoryNames}
-                onCategoryToggle={handleCategoryToggle}
-                onClearFilters={
-                  selectedCategories.length > 0 ? handleClearFilters : undefined
-                }
-                onSearchChange={setSearchQuery}
-                searchQuery={searchQuery}
-                selectedCategories={selectedCategories}
-              />
-              <SponsorshipList
-                error={error as Error | null}
-                gestures={
-                  filteredGestures as unknown as GestureWithSponsorshipStatus[]
-                }
-                isLoading={isLoading}
-                onToggleSelection={handleToggleSelection}
-                selectedGestureIds={selectedGestureIds}
-              />
-            </div>
+          {/* Gesture grid */}
+          <div className="relative z-10 min-h-0 flex-1 overflow-y-auto px-4 pb-32">
+            {isLoading ? (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : error ? (
+              <div className="flex h-64 flex-col items-center justify-center text-center">
+                <p className="font-semibold text-destructive">
+                  {t("ui.gestureList.errorLoading")}
+                </p>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  {t("ui.gestureList.errorTryAgain")}
+                </p>
+              </div>
+            ) : filteredGestures.length === 0 ? (
+              <div className="flex h-64 items-center justify-center">
+                <p className="text-muted-foreground">
+                  {t("ui.gestureList.noGestures")}
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredGestures.map((gesture) => {
+                  const isDisabled =
+                    gesture.status === "sponsored" ||
+                    gesture.status === "pending";
+                  const isSelected = selectedGestureIds.includes(gesture._id);
 
-            {/* Right panel - Continue button */}
-            <div
-              className={`${
-                selectedGestureIds.length === 0 ? "hidden md:flex" : "flex"
-              } w-full flex-col border-border border-l bg-muted/20 p-6 md:w-1/3`}
+                  return (
+                    <GestureCard
+                      gesture={gesture}
+                      isDisabled={isDisabled}
+                      isSelected={isSelected}
+                      key={gesture._id}
+                      onToggle={() => {
+                        if (!isDisabled) {
+                          handleToggleSelection(gesture._id);
+                        }
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Floating selection bar */}
+          <SelectionBar
+            count={selectedGestureIds.length}
+            onContinue={() => setCurrentStep("details")}
+            total={pricing.totalCents}
+          />
+        </>
+      )}
+
+      {/* Step 2: Details (combined configure + contact) */}
+      {currentStep === "details" && (
+        <div className="relative z-10 flex min-h-screen flex-col">
+          {/* Header */}
+          <header className="shrink-0 border-border border-b px-4 py-4">
+            <button
+              className="mb-3 flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => setCurrentStep("select")}
+              type="button"
             >
-              <div className="space-y-4">
-                <h2 className="font-semibold text-xl">
-                  {t("web.sponsors.wizard.selectedGestures")}
-                </h2>
+              <ArrowRight className="h-4 w-4 rotate-180" />
+              <span className="text-sm">{t("web.sponsors.wizard.back")}</span>
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary font-bold text-white">
+                2
+              </div>
+              <div>
+                <h1 className="font-bold text-xl">
+                  {t("web.sponsors.wizard.configureTitle")}
+                </h1>
                 <p className="text-muted-foreground text-sm">
                   {t("web.sponsors.wizard.gesturesSelected", {
                     count: selectedGestureIds.length,
                   })}
                 </p>
-
-                <div className="space-y-2">
-                  {selectedGestures.map((gesture) => (
-                    <div
-                      className="flex items-center justify-between rounded-md border bg-background p-3"
-                      key={gesture._id}
-                    >
-                      <span className="font-medium text-sm">
-                        {gesture.name}
-                      </span>
-                      <Button
-                        onClick={() => handleRemoveGesture(gesture._id)}
-                        size="sm"
-                        variant="ghost"
-                      >
-                        {t("web.sponsors.wizard.remove")}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-
-                <Button
-                  className="w-full"
-                  disabled={selectedGestureIds.length === 0}
-                  onClick={() => setCurrentStep("configure")}
-                  size="lg"
-                >
-                  {t("web.sponsors.wizard.continue")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
               </div>
             </div>
-          </>
-        )}
+          </header>
 
-        {/* Step 2: Configure Details */}
-        {currentStep === "configure" && (
-          <div className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-6">
-            <div>
-              <h2 className="mb-2 font-semibold text-xl">
-                {t("web.sponsors.wizard.configureTitle")}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {t("web.sponsors.wizard.configureSubtitle", {
-                  count: selectedGestureIds.length,
-                  message: `Met de warme steun van: ${sponsorName || "[Your Name]"}`,
-                })}
-              </p>
-            </div>
-
-            {/* Sponsor Name */}
-            <div className="space-y-2">
-              <Label htmlFor="sponsor-name">
-                {t("web.sponsors.wizard.sponsorNameLabel")}
-              </Label>
-              <Input
-                id="sponsor-name"
-                maxLength={10}
-                onChange={(e) => setSponsorName(e.target.value)}
-                placeholder={t("web.sponsors.wizard.sponsorNamePlaceholder")}
-                value={sponsorName}
-              />
-              {errors.sponsorName && (
-                <p className="text-destructive text-sm">{errors.sponsorName}</p>
-              )}
-              <p className="text-muted-foreground text-xs">
-                {t("web.sponsors.wizard.maxCharacters", {
-                  current: sponsorName.length,
-                })}
-              </p>
-            </div>
-
-            {/* Logo Upload */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  checked={includeLogo}
-                  id="include-logo"
-                  onChange={(e) => setIncludeLogo(e.target.checked)}
-                  type="checkbox"
+          {/* Form content */}
+          <div className="flex-1 overflow-y-auto px-4 py-6">
+            <div className="mx-auto max-w-lg space-y-6">
+              {/* Sponsor Name */}
+              <div className="space-y-2">
+                <label className="font-semibold text-sm" htmlFor="sponsor-name">
+                  {t("web.sponsors.wizard.sponsorNameLabel")}
+                </label>
+                <Input
+                  className={`h-14 rounded-xl text-base ${errors.sponsorName ? "border-destructive" : ""}`}
+                  id="sponsor-name"
+                  maxLength={10}
+                  onChange={(e) => {
+                    setSponsorName(e.target.value);
+                    setErrors((prev) => ({ ...prev, sponsorName: undefined }));
+                  }}
+                  placeholder={t("web.sponsors.wizard.sponsorNamePlaceholder")}
+                  value={sponsorName}
                 />
-                <Label htmlFor="include-logo">
-                  {t("web.sponsors.wizard.includeLogo", {
-                    price: formatPrice(LOGO_ADDON_CENTS),
-                  })}
-                </Label>
+                <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground text-xs">
+                    {sponsorName.length}/10
+                  </p>
+                  {errors.sponsorName && (
+                    <p className="text-destructive text-xs">
+                      {errors.sponsorName}
+                    </p>
+                  )}
+                </div>
+                <p className="rounded-xl bg-secondary/20 p-3 text-sm">
+                  <span className="text-muted-foreground">Voorbeeld: </span>
+                  <span className="font-medium">
+                    "Met de warme steun van: {sponsorName || "..."}"
+                  </span>
+                </p>
               </div>
 
-              {includeLogo && (
-                <div className="space-y-2">
-                  <Input
-                    accept="image/*"
-                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                    type="file"
+              {/* Logo option */}
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-border bg-card p-4 transition-all hover:border-primary/50">
+                  <input
+                    checked={includeLogo}
+                    className="mt-1 h-5 w-5 rounded accent-primary"
+                    onChange={(e) => setIncludeLogo(e.target.checked)}
+                    type="checkbox"
                   />
-                  {errors.logo && (
-                    <p className="text-destructive text-sm">{errors.logo}</p>
-                  )}
-                  <p className="text-muted-foreground text-xs">
-                    {t("web.sponsors.wizard.logoHelp")}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Price Summary */}
-            <div className="rounded-lg border bg-muted p-4">
-              <h3 className="mb-3 font-semibold">
-                {t("web.sponsors.wizard.priceSummary")}
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    {t("web.sponsors.wizard.basePrice", {
-                      count: selectedGestureIds.length,
-                    })}
-                  </span>
-                  <span>
-                    {formatPrice(
-                      selectedGestureIds.length * PRICE_PER_YEAR_CENTS
-                    )}
-                  </span>
-                </div>
-                {includeLogo && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      {t("web.sponsors.wizard.logoAddon")}
+                  <div className="flex-1">
+                    <span className="font-semibold">
+                      {t("web.sponsors.wizard.includeLogo", {
+                        price: formatPrice(LOGO_ADDON_CENTS),
+                      })}
                     </span>
-                    <span>{formatPrice(LOGO_ADDON_CENTS)}</span>
+                    <p className="mt-1 text-muted-foreground text-sm">
+                      {t("web.sponsors.wizard.logoHelp")}
+                    </p>
+                  </div>
+                </label>
+
+                {includeLogo && (
+                  <div className="space-y-2">
+                    {logoPreview ? (
+                      <div className="relative inline-block">
+                        <img
+                          alt="Logo preview"
+                          className="h-24 w-24 rounded-xl border object-cover"
+                          src={logoPreview}
+                        />
+                        <button
+                          className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-white shadow-lg"
+                          onClick={() => {
+                            setLogoFile(null);
+                            setLogoPreview(null);
+                          }}
+                          type="button"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label
+                        className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 transition-all hover:border-primary hover:bg-primary/5 ${
+                          errors.logo ? "border-destructive" : "border-border"
+                        }`}
+                        htmlFor="logo-upload"
+                      >
+                        <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
+                        <span className="text-center text-muted-foreground text-sm">
+                          {t("web.sponsors.new.uploadLogo")}
+                        </span>
+                        <input
+                          accept="image/png,image/jpeg,image/svg+xml"
+                          className="hidden"
+                          id="logo-upload"
+                          onChange={handleLogoUpload}
+                          type="file"
+                        />
+                      </label>
+                    )}
+                    {errors.logo && (
+                      <p className="text-destructive text-xs">{errors.logo}</p>
+                    )}
                   </div>
                 )}
-                <div className="flex justify-between border-t pt-2 font-semibold">
-                  <span>{t("web.sponsors.wizard.total")}</span>
-                  <span>{formatPrice(pricing.totalCents)}</span>
+              </div>
+
+              {/* Divider */}
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-border border-t" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-background px-3 text-muted-foreground text-sm">
+                    {t("web.sponsors.wizard.contactInfo")}
+                  </span>
                 </div>
               </div>
-            </div>
 
-            {/* Generate Preview Button */}
-            <Button
-              className="w-full"
-              disabled={
-                !sponsorName.trim() ||
-                (includeLogo && !logoFile) ||
-                isGeneratingPreview
-              }
-              onClick={handleGeneratePreview}
-              size="lg"
-            >
-              {isGeneratingPreview ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("web.sponsors.wizard.generatingPreview")}
-                </>
-              ) : (
-                <>
-                  {t("web.sponsors.wizard.generatePreview")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </div>
-        )}
-
-        {/* Step 3: Preview Video */}
-        {currentStep === "preview" && previewPlaybackId && (
-          <div className="mx-auto w-full max-w-3xl space-y-6 overflow-y-auto p-6">
-            <div>
-              <h2 className="mb-2 font-semibold text-xl">
-                {t("web.sponsors.wizard.previewTitle")}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {t("web.sponsors.wizard.previewSubtitle", {
-                  count: selectedGestureIds.length,
-                })}
-              </p>
-            </div>
-
-            {/* Video Player */}
-            <div className="overflow-hidden rounded-lg border">
-              <MuxPlayer
-                accentColor="#10b981"
-                playbackId={previewPlaybackId}
-                streamType="on-demand"
-                style={{ width: "100%", aspectRatio: "16/9" }}
-              />
-            </div>
-
-            {/* Summary */}
-            <div className="rounded-lg border bg-muted p-4">
-              <h3 className="mb-3 font-semibold">
-                {t("web.sponsors.wizard.sponsorshipDetails")}
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    {t("web.sponsors.new.success.gestures")}
-                  </span>
-                  <span>{selectedGestureIds.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    {t("web.sponsors.wizard.duration")}
-                  </span>
-                  <span>{t("web.sponsors.wizard.durationValue")}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    {t("web.sponsors.new.sponsorName")}
-                  </span>
-                  <span>{sponsorName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    {t("web.sponsors.wizard.logo")}
-                  </span>
-                  <span>
-                    {includeLogo
-                      ? t("web.sponsors.wizard.yes")
-                      : t("web.sponsors.wizard.no")}
-                  </span>
-                </div>
-                <div className="flex justify-between border-t pt-2 font-semibold">
-                  <span>{t("web.sponsors.wizard.total")}</span>
-                  <span>{formatPrice(pricing.totalCents)}</span>
-                </div>
-              </div>
-            </div>
-
-            <Button
-              className="w-full"
-              onClick={() => setCurrentStep("contact")}
-              size="lg"
-            >
-              {t("web.sponsors.wizard.continueToContact")}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        {/* Step 4: Contact Information */}
-        {currentStep === "contact" && (
-          <div className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-6">
-            <div>
-              <h2 className="mb-2 font-semibold text-xl">
-                {t("web.sponsors.wizard.contactTitle")}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {t("web.sponsors.wizard.contactSubtitle")}
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {/* Full Name */}
+              {/* Contact: Full Name */}
               <div className="space-y-2">
-                <Label htmlFor="contact-name">
+                <label className="font-semibold text-sm" htmlFor="contact-name">
                   {t("web.sponsors.wizard.fullNameLabel")}
-                </Label>
+                </label>
                 <Input
+                  className={`h-14 rounded-xl text-base ${errors.contactFullName ? "border-destructive" : ""}`}
                   id="contact-name"
-                  onChange={(e) => setContactFullName(e.target.value)}
+                  onChange={(e) => {
+                    setContactFullName(e.target.value);
+                    setErrors((prev) => ({
+                      ...prev,
+                      contactFullName: undefined,
+                    }));
+                  }}
                   placeholder={t("web.sponsors.wizard.fullNamePlaceholder")}
                   value={contactFullName}
                 />
                 {errors.contactFullName && (
-                  <p className="text-destructive text-sm">
+                  <p className="text-destructive text-xs">
                     {errors.contactFullName}
                   </p>
                 )}
               </div>
 
-              {/* Email */}
+              {/* Contact: Email */}
               <div className="space-y-2">
-                <Label htmlFor="contact-email">
+                <label
+                  className="font-semibold text-sm"
+                  htmlFor="contact-email"
+                >
                   {t("web.sponsors.wizard.emailLabel")}
-                </Label>
+                </label>
                 <Input
+                  className={`h-14 rounded-xl text-base ${errors.contactEmail ? "border-destructive" : ""}`}
                   id="contact-email"
-                  onChange={(e) => setContactEmail(e.target.value)}
+                  onChange={(e) => {
+                    setContactEmail(e.target.value);
+                    setErrors((prev) => ({ ...prev, contactEmail: undefined }));
+                  }}
                   placeholder={t("web.sponsors.wizard.emailPlaceholder")}
                   type="email"
                   value={contactEmail}
                 />
                 {errors.contactEmail && (
-                  <p className="text-destructive text-sm">
+                  <p className="text-destructive text-xs">
                     {errors.contactEmail}
                   </p>
                 )}
               </div>
 
-              {/* Company (optional) */}
+              {/* Contact: Company (optional) */}
               <div className="space-y-2">
-                <Label htmlFor="contact-company">
-                  {t("web.sponsors.wizard.companyLabel")}
-                </Label>
+                <label
+                  className="font-semibold text-sm"
+                  htmlFor="contact-company"
+                >
+                  {t("web.sponsors.wizard.companyLabel")}{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (optioneel)
+                  </span>
+                </label>
                 <Input
+                  className="h-14 rounded-xl text-base"
                   id="contact-company"
                   onChange={(e) => setContactCompany(e.target.value)}
                   placeholder={t("web.sponsors.wizard.companyPlaceholder")}
                   value={contactCompany}
                 />
               </div>
-            </div>
 
-            <Button
-              className="w-full"
-              onClick={() => {
-                if (validateContact()) {
-                  setCurrentStep("summary");
-                }
-              }}
-              size="lg"
-            >
-              {t("web.sponsors.wizard.continueToSummary")}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        {/* Step 5: Payment Summary */}
-        {currentStep === "summary" && (
-          <div className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-6">
-            <div>
-              <h2 className="mb-2 font-semibold text-xl">
-                {t("web.sponsors.wizard.reviewTitle")}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {t("web.sponsors.wizard.reviewSubtitle")}
-              </p>
-            </div>
-
-            {/* Full Summary */}
-            <div className="space-y-4 rounded-lg border p-6">
-              <div>
+              {/* Price summary */}
+              <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-4">
                 <h3 className="mb-3 font-semibold">
-                  {t("web.sponsors.wizard.sponsorshipDetails")}
+                  {t("web.sponsors.wizard.priceSummary")}
                 </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
-                      {t("web.sponsors.new.success.gestures")}
+                      {t("web.sponsors.wizard.basePrice", {
+                        count: selectedGestureIds.length,
+                      })}
                     </span>
                     <span>
-                      {selectedGestureIds.length}{" "}
-                      {t("web.sponsors.wizard.gesture")}
-                      {selectedGestureIds.length !== 1 ? "s" : ""}
+                      {formatPrice(
+                        selectedGestureIds.length * PRICE_PER_YEAR_CENTS
+                      )}
+                    </span>
+                  </div>
+                  {includeLogo && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("web.sponsors.wizard.logoAddon")}
+                      </span>
+                      <span>{formatPrice(LOGO_ADDON_CENTS)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-primary/20 border-t pt-2 font-bold text-lg">
+                    <span>{t("web.sponsors.wizard.total")}</span>
+                    <span className="text-primary">
+                      {formatPrice(pricing.totalCents)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="shrink-0 border-border border-t bg-background/80 px-4 py-4 backdrop-blur-sm">
+            <div className="mx-auto max-w-lg">
+              <Button
+                className="h-14 w-full rounded-xl font-semibold text-base"
+                disabled={isGeneratingPreview}
+                onClick={handleGeneratePreviewAndProceed}
+                size="lg"
+              >
+                {isGeneratingPreview ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    {t("web.sponsors.wizard.generatingPreview")}
+                  </>
+                ) : (
+                  <>
+                    {t("web.sponsors.wizard.generatePreview")}
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Preview & Pay (combined preview + summary) */}
+      {currentStep === "preview" && previewPlaybackId && (
+        <div className="relative z-10 flex min-h-screen flex-col">
+          {/* Header */}
+          <header className="shrink-0 border-border border-b bg-background/80 px-4 py-4 backdrop-blur-sm">
+            <button
+              className="mb-3 flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => setCurrentStep("details")}
+              type="button"
+            >
+              <ArrowRight className="h-4 w-4 rotate-180" />
+              <span className="text-sm">{t("web.sponsors.wizard.back")}</span>
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary font-bold text-white">
+                3
+              </div>
+              <div>
+                <h1 className="font-bold text-xl">
+                  {t("web.sponsors.wizard.previewTitle")}
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Laatste stap voor je betaling
+                </p>
+              </div>
+            </div>
+          </header>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-4 py-6">
+            <div className="mx-auto max-w-lg space-y-6">
+              {/* Video Player */}
+              <div className="overflow-hidden rounded-2xl border-2 border-border shadow-xl">
+                <MuxPlayer
+                  accentColor="#00805f"
+                  playbackId={previewPlaybackId}
+                  streamType="on-demand"
+                  style={{ width: "100%", aspectRatio: "9/16" }}
+                />
+              </div>
+
+              {/* Summary card */}
+              <div className="space-y-4 rounded-2xl border-2 border-primary/20 bg-card p-5">
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">
+                    {t("web.sponsors.wizard.sponsorshipDetails")}
+                  </h3>
+                </div>
+
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Gebaren</span>
+                    <span className="font-medium">
+                      {selectedGestureIds.length}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
                       {t("web.sponsors.wizard.duration")}
                     </span>
-                    <span>{t("web.sponsors.wizard.durationValue")}</span>
+                    <span className="font-medium">
+                      {t("web.sponsors.wizard.durationValue")}
+                    </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      {t("web.sponsors.new.sponsorName")}
-                    </span>
-                    <span>{sponsorName}</span>
+                    <span className="text-muted-foreground">Naam in video</span>
+                    <span className="font-medium">{sponsorName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      {t("web.sponsors.wizard.logo")}
+                    <span className="text-muted-foreground">Logo</span>
+                    <span className="font-medium">
+                      {includeLogo ? "Ja" : "Nee"}
                     </span>
-                    <span>
-                      {includeLogo
-                        ? t("web.sponsors.wizard.yes")
-                        : t("web.sponsors.wizard.no")}
-                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Contact</span>
+                    <span className="truncate font-medium">{contactEmail}</span>
                   </div>
                 </div>
-              </div>
 
-              <div className="border-t pt-4">
-                <h3 className="mb-3 font-semibold">
-                  {t("web.sponsors.wizard.contactInfo")}
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      {t("web.sponsors.wizard.name")}
+                <div className="border-primary/20 border-t pt-4">
+                  <div className="flex justify-between font-bold text-xl">
+                    <span>{t("web.sponsors.wizard.totalAmount")}</span>
+                    <span className="text-primary">
+                      {formatPrice(pricing.totalCents)}
                     </span>
-                    <span>{contactFullName}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      {t("web.sponsors.wizard.email")}
-                    </span>
-                    <span>{contactEmail}</span>
-                  </div>
-                  {contactCompany && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("web.sponsors.wizard.company")}
-                      </span>
-                      <span>{contactCompany}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <div className="flex justify-between font-semibold text-lg">
-                  <span>{t("web.sponsors.wizard.totalAmount")}</span>
-                  <span>{formatPrice(pricing.totalCents)}</span>
                 </div>
               </div>
             </div>
-
-            <Button
-              className="w-full"
-              disabled={isProcessing}
-              onClick={handleProceedToPayment}
-              size="lg"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("web.sponsors.wizard.processing")}
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  {t("web.sponsors.wizard.proceedToPayment")}
-                </>
-              )}
-            </Button>
-
-            <p className="text-center text-muted-foreground text-xs">
-              {t("web.sponsors.wizard.redirectMessage")}
-            </p>
           </div>
-        )}
-      </div>
+
+          {/* Footer */}
+          <div className="shrink-0 border-border border-t bg-background/80 px-4 py-4 backdrop-blur-sm">
+            <div className="mx-auto max-w-lg space-y-3">
+              <Button
+                className="h-14 w-full rounded-xl font-semibold text-base"
+                disabled={isProcessing}
+                onClick={handleProceedToPayment}
+                size="lg"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    {t("web.sponsors.wizard.processing")}
+                  </>
+                ) : (
+                  <>
+                    <Heart className="mr-2 h-5 w-5" />
+                    {t("web.sponsors.wizard.proceedToPayment")}
+                  </>
+                )}
+              </Button>
+              <p className="text-center text-muted-foreground text-xs">
+                {t("web.sponsors.wizard.redirectMessage")}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -33,22 +33,27 @@ export const gesturesRouter = {
         ...new Set(result.page.flatMap((g: Gesture) => g.categoryIds)),
       ];
 
-      // Fetch categories
-      const categories = await convexClient.query(api.categories.getByIds, {
-        ids: categoryIds,
-      });
+      // Fetch categories and sponsorships in parallel
+      const gestureIds = result.page.map((g: Gesture) => g._id);
+      const [categories, sponsorshipMap] = await Promise.all([
+        convexClient.query(api.categories.getByIds, { ids: categoryIds }),
+        convexClient.query(api.sponsorships.getActiveByGestures, {
+          gestureIds,
+        }),
+      ]);
 
       // Create a map for quick lookup
       const categoryMap = new Map(
         categories.map((cat: Category) => [cat._id, cat])
       );
 
-      // Enrich gestures with category names
+      // Enrich gestures with category names and sponsorship status
       const enrichedGestures = result.page.map((gesture: Gesture) => ({
         ...gesture,
         categories: gesture.categoryIds
           .map((id) => categoryMap.get(id))
           .filter(Boolean),
+        sponsorship: sponsorshipMap[gesture._id] || null,
       }));
 
       return {

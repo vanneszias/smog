@@ -64,55 +64,6 @@ function SponsorshipCTA({
   );
 }
 
-function SponsorshipInfo({
-  sponsorship,
-  t,
-}: {
-  sponsorship: { sponsorName?: string; endDate?: number };
-  t: (key: string, fallback: string) => string;
-}) {
-  return (
-    <div
-      className="rounded-xl border border-border p-6"
-      style={{ backgroundColor: "var(--card)" }}
-    >
-      <div className="flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100">
-          <Sparkles className="h-6 w-6 text-green-600" />
-        </div>
-        <div className="flex-1">
-          <h2
-            className="mb-2 font-semibold text-xl"
-            style={{ color: "var(--text)" }}
-          >
-            {t("ui.gestureDetail.currentlySponsored", "Currently Sponsored")}
-          </h2>
-          <p className="text-muted-foreground leading-relaxed">
-            {sponsorship.sponsorName
-              ? t(
-                  "ui.gestureDetail.sponsoredBy",
-                  `This gesture is sponsored by ${sponsorship.sponsorName}.`
-                )
-              : t(
-                  "ui.gestureDetail.sponsored",
-                  "This gesture is currently sponsored."
-                )}
-            {sponsorship.endDate ? (
-              <>
-                {" "}
-                {t(
-                  "ui.gestureDetail.availableFrom",
-                  `It will be available for sponsorship again from ${new Date(sponsorship.endDate).toLocaleDateString()}.`
-                )}
-              </>
-            ) : null}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function GestureDetail({
   gesture,
   isFavorite = false,
@@ -151,8 +102,6 @@ export function GestureDetail({
     !gesture.sponsorship ||
     gesture.sponsorship.status === "available" ||
     gesture.sponsorship.status === "expired";
-
-  const isActiveSponsorship = gesture.sponsorship?.status === "active";
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -336,15 +285,9 @@ export function GestureDetail({
             </div>
           ) : null}
 
-          {/* Sponsorship Section */}
+          {/* Sponsorship Section - only show CTA when available, hide entirely when sponsored */}
           {isAvailableForSponsorship ? (
             <SponsorshipCTA gestureId={gesture._id} t={t} />
-          ) : null}
-
-          {isActiveSponsorship === true &&
-          gesture.sponsorship !== null &&
-          gesture.sponsorship !== undefined ? (
-            <SponsorshipInfo sponsorship={gesture.sponsorship} t={t} />
           ) : null}
         </div>
       </div>
