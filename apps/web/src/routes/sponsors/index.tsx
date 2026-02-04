@@ -406,7 +406,6 @@ function SponsorsComponent() {
                 <p className="text-muted-foreground text-sm">
                   {t("web.sponsors.wizard.gesturesSelected", {
                     count: selectedGestureIds.length,
-                    plural: selectedGestureIds.length !== 1 ? "s" : "",
                   })}
                 </p>
 
@@ -524,7 +523,6 @@ function SponsorsComponent() {
                   <span className="text-muted-foreground">
                     {t("web.sponsors.wizard.basePrice", {
                       count: selectedGestureIds.length,
-                      plural: selectedGestureIds.length !== 1 ? "s" : "",
                     })}
                   </span>
                   <span>
