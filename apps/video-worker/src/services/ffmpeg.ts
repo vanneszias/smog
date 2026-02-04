@@ -316,6 +316,7 @@ export class FFmpegService {
       command
         .complexFilter(filterComplex)
         .map("[v]")
+        .map("0:a?") // Include audio from original video (? makes it optional if no audio)
         .outputOptions([
           "-c:v libx264", // H.264 codec
           "-preset medium", // Balanced speed/quality
