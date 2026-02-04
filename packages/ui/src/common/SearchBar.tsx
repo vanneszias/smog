@@ -54,7 +54,7 @@ export default function SearchBar({
   };
 
   return (
-    <div className={`flex gap-2 ${className}`}>
+    <div className={`flex flex-col gap-2 md:flex-row ${className}`}>
       <div className="relative flex-1">
         <Search className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -76,7 +76,11 @@ export default function SearchBar({
         )}
       </div>
       {Boolean(onSubmit) && (
-        <Button className="h-12 px-6" onClick={handleSearchClick} type="button">
+        <Button
+          className="h-12 w-full px-6 md:w-auto"
+          onClick={handleSearchClick}
+          type="button"
+        >
           <Search className="mr-2 h-5 w-5" />
           {buttonLabel}
         </Button>

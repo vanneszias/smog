@@ -24,7 +24,13 @@ export function GestureFilters({
   searchPlaceholder,
 }: GestureFiltersProps) {
   const { t } = useTranslation();
-  const [isExpanded, setIsExpanded] = useState(true);
+  // Default to collapsed on mobile (< 768px)
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
   const activeFilterCount = selectedCategories.length;
 
   return (

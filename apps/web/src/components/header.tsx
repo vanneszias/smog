@@ -46,7 +46,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-[60] bg-background/95 backdrop-blur-sm">
         <div className="mx-auto flex items-center justify-between px-6 py-6 pt-6 lg:px-12">
           {/* Logo */}
           <Link className="shrink-0" to="/">
@@ -134,20 +134,31 @@ export default function Header() {
         </div>
       </header>
 
+      {/* Backdrop overlay - click to dismiss */}
+      <div
+        aria-hidden="true"
+        className={`fixed inset-0 z-40 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${
+          sidebarOpen
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
+        }`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
       {/* Full Screen Sidebar - Slides from top on mobile, right on desktop */}
       <aside
-        className={`fixed inset-0 z-40 flex flex-col bg-sidebar transition-transform duration-500 ease-out md:left-auto md:w-[500px] ${
+        className={`fixed inset-0 z-50 flex flex-col bg-sidebar transition-transform duration-500 ease-out md:left-auto md:w-[500px] ${
           sidebarOpen
             ? "translate-x-0 translate-y-0"
             : "-translate-y-full md:translate-x-full md:translate-y-0"
         }`}
       >
         {/* Sidebar Navigation */}
-        <div className="flex flex-1 flex-col justify-center overflow-y-auto">
-          <nav className="flex max-w-2xl flex-col gap-6 md:pl-24">
+        <div className="flex flex-1 flex-col justify-center overflow-y-auto pt-20 md:pt-0">
+          <nav className="flex max-w-2xl flex-col gap-4 px-6 md:gap-6 md:px-0 md:pl-24">
             {sidebarLinks.map((link, index) => (
               <Link
-                className="text-center font-normal text-3xl text-primary hover:underline md:text-left md:text-4xl"
+                className="text-center font-normal text-2xl text-primary hover:underline md:text-left md:text-4xl"
                 key={link.to}
                 onClick={() => setSidebarOpen(false)}
                 style={{
@@ -161,7 +172,7 @@ export default function Header() {
               </Link>
             ))}
             <Link
-              className="mt-8 inline-flex items-center justify-center self-center rounded-full bg-primary px-8 py-4 text-base text-white uppercase transition-all hover:scale-105 hover:bg-primary/90 md:self-start md:text-lg"
+              className="mt-4 inline-flex items-center justify-center self-center rounded-full bg-primary px-6 py-3 text-sm text-white uppercase transition-all hover:scale-105 hover:bg-primary/90 md:mt-8 md:self-start md:px-8 md:py-4 md:text-lg"
               onClick={() => setSidebarOpen(false)}
               style={{
                 animation: sidebarOpen
@@ -176,7 +187,7 @@ export default function Header() {
         </div>
 
         {/* Sidebar Footer */}
-        <div className="bottom-0 mb-8 flex flex-col gap-4 md:pl-24">
+        <div className="bottom-0 mb-6 flex shrink-0 flex-col gap-3 px-6 md:mb-8 md:gap-4 md:px-0 md:pl-24">
           {/* User Menu - Mobile only */}
           <div className="flex justify-center md:justify-start xl:hidden">
             <UserMenu />
