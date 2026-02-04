@@ -61,7 +61,8 @@
         {
           "assetsPaths": ["./assets/"]
         }
-      ]
+      ],
+      "./plugins/withScreenCapturePermissions.js"
     ],
     "experiments": {
       "typedRoutes": true
