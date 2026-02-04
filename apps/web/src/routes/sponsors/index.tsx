@@ -701,8 +701,8 @@ function SponsorsComponent() {
           </header>
 
           {/* Form content */}
-          <div className="flex-1 overflow-y-auto px-4 py-6">
-            <div className="mx-auto max-w-lg space-y-6">
+          <div className="flex-1 overflow-y-auto px-4 py-6 pb-24">
+            <div className="mx-auto max-w-lg space-y-6 pb-4">
               {/* Sponsor Name */}
               <div className="space-y-2">
                 <label className="font-semibold text-sm" htmlFor="sponsor-name">
@@ -926,7 +926,7 @@ function SponsorsComponent() {
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 border-border border-t bg-background/80 px-4 py-4 backdrop-blur-sm">
+          <div className="fixed right-0 bottom-0 left-0 z-50 shrink-0 border-border border-t bg-background/95 px-4 py-4 shadow-lg backdrop-blur-md">
             <div className="mx-auto max-w-lg">
               <Button
                 className="h-14 w-full rounded-xl font-semibold text-base"

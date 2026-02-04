@@ -315,7 +315,8 @@
     },
     "success": {
       "title": "Payment Successful!",
-      "checkoutId": "Checkout ID: "
+      "reviewMessage": "Your sponsorship will go live within 5 working days after being reviewed. We'll send you an email once it's approved.",
+      "backToHome": "Back to Home"
     },
     "userMenu": {
       "myAccount": "My Account",

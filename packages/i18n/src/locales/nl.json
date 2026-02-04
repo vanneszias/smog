@@ -284,7 +284,8 @@
     },
     "success": {
       "title": "Betaling Geslaagd!",
-      "checkoutId": "Afrekening ID: "
+      "reviewMessage": "Je sponsoring gaat binnen 5 werkdagen live na controle. We sturen je een e-mail zodra deze is goedgekeurd.",
+      "backToHome": "Terug naar Home"
     },
     "userMenu": {
       "myAccount": "Mijn Account",

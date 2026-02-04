@@ -216,6 +216,11 @@
         "deleteFailed": "Échec de la suppression du compte. Veuillez réessayer."
       }
     },
+    "success": {
+      "title": "Paiement réussi!",
+      "reviewMessage": "Votre parrainage sera en ligne dans les 5 jours ouvrables après vérification. Nous vous enverrons un e-mail une fois approuvé.",
+      "backToHome": "Retour à l'accueil"
+    },
     "sponsors": {
       "wizard": {
         "back": "Retour",
