@@ -200,6 +200,8 @@ export const sponsorshipsRouter = {
           "[SponsorshipsRouter] Creating simplified bulk sponsorships..."
         );
 
+        // Note: logoImage is not passed to the mutation - it's already baked
+        // into the preview video and storing large base64 data would exceed limits
         const sponsorshipIds = await convex.mutation(
           api.sponsorships.createBulkSimplified,
           {
@@ -209,7 +211,6 @@ export const sponsorshipsRouter = {
             contactFullName: input.contactFullName,
             contactCompany: input.contactCompany,
             overlayText: input.overlayText,
-            logoImage: input.logoImage,
             includeLogo: input.includeLogo,
             durationYears: input.durationYears,
             previewVideoPlaybackId: input.previewVideoPlaybackId,

@@ -207,11 +207,11 @@ export const createBulkSimplified = mutation({
     sponsorEmail: v.string(),
     contactFullName: v.string(),
     contactCompany: v.optional(v.string()),
-    logoImage: v.optional(v.string()), // base64 data URL
     overlayText: v.string(),
     includeLogo: v.boolean(),
     durationYears: v.number(), // Always 1
     previewVideoPlaybackId: v.string(),
+    // Note: logoImage is not stored - it's already baked into previewVideoPlaybackId
   },
   returns: v.array(v.id("sponsorships")),
   handler: async (ctx, args) => {
@@ -273,13 +273,14 @@ export const createBulkSimplified = mutation({
         const endDate =
           Date.now() + args.durationYears * 365 * 24 * 60 * 60 * 1000;
 
+        // Note: We don't store the base64 logo image to avoid exceeding Convex's
+        // document size limits. The logo is already baked into the preview video.
         const sponsorshipId = await ctx.db.insert("sponsorships", {
           gestureId,
           sponsorName: args.sponsorName,
           sponsorEmail: args.sponsorEmail,
           contactFullName: args.contactFullName,
           contactCompany: args.contactCompany,
-          overlayImageStorageId: args.logoImage,
           overlayText: args.overlayText,
           originalVideoPlaybackId: gesture.playbackId,
           previewVideoPlaybackId: args.previewVideoPlaybackId,
