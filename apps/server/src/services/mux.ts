@@ -36,7 +36,6 @@ export async function uploadVideoToMux(
     const asset = await mux.video.assets.create({
       inputs: [{ url: options.videoUrl }],
       playback_policy: ["public"],
-      mp4_support: "standard",
       master_access: "temporary",
       test: process.env.NODE_ENV === "development",
     });
@@ -349,7 +348,6 @@ export async function createMuxDirectUpload(): Promise<DirectUploadResult> {
       cors_origin: "*",
       new_asset_settings: {
         playback_policy: ["public"],
-        mp4_support: "standard",
         master_access: "temporary",
         test: process.env.NODE_ENV === "development",
       },
@@ -419,7 +417,6 @@ export async function uploadVideoFromUrl(videoUrl: string): Promise<{
     const asset = await mux.video.assets.create({
       inputs: [{ url: videoUrl }],
       playback_policy: ["public"],
-      mp4_support: "standard",
       master_access: "temporary",
       test: process.env.NODE_ENV === "development",
     });

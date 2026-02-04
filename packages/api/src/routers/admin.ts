@@ -108,7 +108,13 @@ export const adminRouter = {
           .default({})
       )
       .handler(async ({ input }) => {
-        const gestures = await convexClient.query(api.gestures.listAll, input);
+        // Always use listAllForAdmin which returns ALL gestures (including hidden)
+        const gestures = await convexClient.query(
+          api.gestures.listAllForAdmin,
+          {
+            limit: input.limit,
+          }
+        );
         return gestures;
       }),
 

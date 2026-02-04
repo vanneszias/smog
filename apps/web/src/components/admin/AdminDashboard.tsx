@@ -1,12 +1,4 @@
-import {
-  CheckCircle,
-  Clock,
-  Hand,
-  LayoutDashboard,
-  Settings,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { Clock, Hand, Settings, Sparkles, Users } from "lucide-react";
 import { useState } from "react";
 import { GesturesManagement } from "./GesturesManagement";
 import { PendingSponsorships } from "./PendingSponsorships";

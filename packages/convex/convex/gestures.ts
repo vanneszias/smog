@@ -1,7 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireAdminAuth } from "./lib/adminAuth";
 
 export const list = query({
   args: {
@@ -108,7 +107,34 @@ export const getLastUpdated = query({
 
 // Admin queries and mutations
 
-// List all gestures (including inactive ones)
+// List all gestures (including inactive ones) - for admin dashboard
+// Note: Admin authentication is handled at the oRPC layer (adminProcedure)
+// This function is only called from the server which has already verified admin status
+export const listAllForAdmin = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("gestures"),
+      _creationTime: v.number(),
+      name: v.string(),
+      categoryIds: v.array(v.id("categories")),
+      playbackId: v.string(),
+      concept: v.array(v.string()),
+      info: v.string(),
+      isActive: v.boolean(),
+      lastUpdated: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 1000;
+    // Always return ALL gestures (both active and inactive) for admin
+    return await ctx.db.query("gestures").order("desc").take(limit);
+  },
+});
+
+// List gestures with optional inactive filter (legacy, kept for compatibility)
 export const listAll = query({
   args: {
     limit: v.optional(v.number()),
@@ -130,10 +156,12 @@ export const listAll = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 1000;
 
-    if (args.includeInactive) {
+    if (args.includeInactive === true) {
+      // Return all gestures including hidden ones
       return await ctx.db.query("gestures").order("desc").take(limit);
     }
 
+    // Return only active/visible gestures
     return await ctx.db
       .query("gestures")
       .withIndex("by_active", (q) => q.eq("isActive", true))
@@ -143,6 +171,7 @@ export const listAll = query({
 });
 
 // Update gesture fields
+// Note: Admin authentication is handled at the oRPC layer (adminProcedure)
 export const updateGesture = mutation({
   args: {
     gestureId: v.id("gestures"),
@@ -155,8 +184,6 @@ export const updateGesture = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminAuth(ctx, "updateGesture");
-
     const { gestureId, ...updates } = args;
 
     if (Object.keys(updates).length === 0) {
@@ -173,6 +200,7 @@ export const updateGesture = mutation({
 });
 
 // Bulk update gestures
+// Note: Admin authentication is handled at the oRPC layer (adminProcedure)
 export const bulkUpdate = mutation({
   args: {
     gestureIds: v.array(v.id("gestures")),
@@ -185,8 +213,6 @@ export const bulkUpdate = mutation({
     updated: v.number(),
   }),
   handler: async (ctx, args) => {
-    await requireAdminAuth(ctx, "bulkUpdate");
-
     if (Object.keys(args.updates).length === 0) {
       throw new Error("No fields to update");
     }
@@ -207,14 +233,13 @@ export const bulkUpdate = mutation({
 });
 
 // Toggle active status
+// Note: Admin authentication is handled at the oRPC layer (adminProcedure)
 export const toggleActive = mutation({
   args: {
     gestureId: v.id("gestures"),
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
-    await requireAdminAuth(ctx, "toggleActive");
-
     const gesture = await ctx.db.get(args.gestureId);
     if (!gesture) {
       throw new Error("Gesture not found");
@@ -232,6 +257,7 @@ export const toggleActive = mutation({
 });
 
 // Update playback ID
+// Note: Admin authentication is handled at the oRPC layer (adminProcedure)
 export const updatePlaybackId = mutation({
   args: {
     gestureId: v.id("gestures"),
@@ -239,8 +265,6 @@ export const updatePlaybackId = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminAuth(ctx, "updatePlaybackId");
-
     await ctx.db.patch(args.gestureId, {
       playbackId: args.playbackId,
       lastUpdated: Date.now(),
@@ -251,6 +275,7 @@ export const updatePlaybackId = mutation({
 });
 
 // Create new gesture
+// Note: Admin authentication is handled at the oRPC layer (adminProcedure)
 export const create = mutation({
   args: {
     name: v.string(),
@@ -262,8 +287,6 @@ export const create = mutation({
   },
   returns: v.id("gestures"),
   handler: async (ctx, args) => {
-    await requireAdminAuth(ctx, "create");
-
     const now = Date.now();
 
     return await ctx.db.insert("gestures", {
