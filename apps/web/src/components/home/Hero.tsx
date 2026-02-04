@@ -31,12 +31,12 @@ export function Hero({ onSearch }: HeroProps) {
   };
 
   return (
-    <section className="flex min-h-[50vh] flex-col justify-center md:min-h-[80vh]">
+    <section className="flex min-h-[60vh] flex-col justify-center py-8 md:min-h-[80vh] md:py-0">
       <div>
-        <div className="relative mx-auto flex max-w-7xl flex-col justify-center gap-8 px-6">
+        <div className="relative mx-auto flex max-w-7xl flex-col justify-center gap-4 px-6 md:gap-8">
           <div className="relative">
-            {/* Hand illustration 1 - left side pointing hand */}
-            <div className="ml-auto flex w-[clamp(1.5rem,6vw,10rem)] justify-end">
+            {/* Hand illustration 1 - left side pointing hand (hidden on mobile) */}
+            <div className="ml-auto hidden w-[clamp(1.5rem,6vw,10rem)] justify-end md:flex">
               <svg
                 aria-hidden="true"
                 className="text-primary"
@@ -50,8 +50,8 @@ export function Hero({ onSearch }: HeroProps) {
 
             <HeroTitle />
 
-            {/* Hand illustration 2 - top right pointing finger */}
-            <div className="absolute top-1/2 left-0 w-[clamp(1.5rem,6vw,10rem)]">
+            {/* Hand illustration 2 - top right pointing finger (hidden on mobile) */}
+            <div className="absolute top-1/2 left-0 hidden w-[clamp(1.5rem,6vw,10rem)] md:block">
               <svg
                 aria-hidden="true"
                 className="text-primary"
@@ -63,8 +63,8 @@ export function Hero({ onSearch }: HeroProps) {
               </svg>
             </div>
 
-            {/* Hand illustration 3 - bottom right open hand */}
-            <div className="bottom-0 z-0 mr-24 ml-auto flex w-[clamp(1.5rem,6vw,10rem)] justify-end">
+            {/* Hand illustration 3 - bottom right open hand (hidden on mobile) */}
+            <div className="bottom-0 z-0 mr-24 ml-auto hidden w-[clamp(1.5rem,6vw,10rem)] justify-end md:flex">
               <svg
                 aria-hidden="true"
                 className="text-primary"
@@ -78,7 +78,7 @@ export function Hero({ onSearch }: HeroProps) {
             <SearchBar
               autoFocus={true}
               buttonLabel={t("search.button", "Zoeken")}
-              className="py-4 md:py-12"
+              className="pt-2 md:py-12"
               onChange={setSearchQuery}
               onClear={handleClear}
               onSubmit={handleSearchSubmit}
