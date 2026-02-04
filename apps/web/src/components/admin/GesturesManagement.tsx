@@ -188,6 +188,23 @@ function GestureDetailPanel({
           </div>
         )}
 
+        {/* Concepts */}
+        {gesture.concept.length > 0 && (
+          <div>
+            <p className="mb-2 flex items-center gap-1.5 font-medium text-[var(--admin-text-muted)] text-xs uppercase tracking-wide">
+              <Sparkles className="h-3 w-3" />
+              Concepts
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {gesture.concept.map((concept) => (
+                <Badge key={concept} variant="outline">
+                  {concept}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Description */}
         {gesture.info && (
           <div>
@@ -229,6 +246,7 @@ export function GesturesManagement() {
   const [showInactiveOnly, setShowInactiveOnly] = useState(false);
   const [editDialog, setEditDialog] = useState<Gesture | null>(null);
   const [editForm, setEditForm] = useState<Partial<Gesture>>({});
+  const [conceptInput, setConceptInput] = useState("");
 
   const { data: gestures, isLoading } = useQuery(
     orpc.admin.gestures.listAll.queryOptions({
@@ -266,6 +284,25 @@ export function GesturesManagement() {
       concept: gesture.concept,
       isActive: gesture.isActive,
     });
+    setConceptInput("");
+  };
+
+  const handleAddConcept = () => {
+    const trimmed = conceptInput.trim();
+    if (trimmed && !editForm.concept?.includes(trimmed)) {
+      setEditForm((prev) => ({
+        ...prev,
+        concept: [...(prev.concept || []), trimmed],
+      }));
+      setConceptInput("");
+    }
+  };
+
+  const handleRemoveConcept = (concept: string) => {
+    setEditForm((prev) => ({
+      ...prev,
+      concept: (prev.concept || []).filter((c) => c !== concept),
+    }));
   };
 
   const handleSaveEdit = () => {
@@ -499,6 +536,44 @@ export function GesturesManagement() {
                 rows={4}
                 value={editForm.info || ""}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Concepts / Keywords</Label>
+              <div className="flex gap-2">
+                <Input
+                  onChange={(e) => setConceptInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddConcept();
+                    }
+                  }}
+                  placeholder="Add a concept and press Enter"
+                  value={conceptInput}
+                />
+                <Button
+                  onClick={handleAddConcept}
+                  type="button"
+                  variant="outline"
+                >
+                  Add
+                </Button>
+              </div>
+              {(editForm.concept?.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {editForm.concept?.map((concept) => (
+                    <Badge
+                      className="cursor-pointer pr-1"
+                      key={concept}
+                      onClick={() => handleRemoveConcept(concept)}
+                      variant="secondary"
+                    >
+                      {concept}
+                      <span className="ml-1 text-xs">×</span>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex items-center justify-between rounded-lg border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
               <div>
