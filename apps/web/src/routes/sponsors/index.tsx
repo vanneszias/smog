@@ -762,7 +762,7 @@ function SponsorsComponent() {
 
           {/* Form content */}
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
-            <div className="mx-auto max-w-lg space-y-6 pb-4">
+            <div className="mx-auto max-w-lg space-y-6 pb-24">
               {/* Sponsor Name */}
               <div className="space-y-2">
                 <label className="font-semibold text-sm" htmlFor="sponsor-name">
@@ -988,8 +988,8 @@ function SponsorsComponent() {
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 border-border border-t bg-background/95 px-4 py-4 shadow-lg backdrop-blur-md">
-            <div className="mx-auto max-w-lg pb-safe-bottom">
+          <div className="shrink-0 border-border border-t bg-background/95 px-4 py-4 pb-safe-bottom shadow-lg backdrop-blur-md">
+            <div className="mx-auto max-w-lg">
               <Button
                 className="progress-button h-14 w-full rounded-xl font-semibold text-base"
                 data-progress={isGeneratingPreview ? "true" : undefined}
@@ -1127,8 +1127,8 @@ function SponsorsComponent() {
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 border-border border-t bg-background/95 px-4 py-4 shadow-lg backdrop-blur-md">
-            <div className="mx-auto max-w-lg space-y-3 pb-safe-bottom">
+          <div className="shrink-0 border-border border-t bg-background/95 px-4 py-4 pb-safe-bottom shadow-lg backdrop-blur-md">
+            <div className="mx-auto max-w-lg space-y-3">
               <Button
                 className="progress-button h-14 w-full rounded-xl font-semibold text-base"
                 data-progress={isProcessing ? "true" : undefined}
