@@ -1,5 +1,4 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth";
@@ -80,7 +79,6 @@ export default function UserMenu() {
               onClick={() => setIsOpen(false)}
               to="/account"
             >
-              <Settings className="h-5 w-5" />
               {t("web.userMenu.accountSettings")}
             </Link>
             <button
