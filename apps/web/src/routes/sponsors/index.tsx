@@ -539,7 +539,7 @@ function SponsorsComponent() {
   ).length;
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
+    <div className="relative flex h-full flex-col overflow-hidden bg-background">
       {/* CSS for float animation */}
       <style>
         {`
@@ -739,7 +739,7 @@ function SponsorsComponent() {
 
       {/* Step 2: Details (combined configure + contact) */}
       {currentStep === "details" && (
-        <div className="relative z-10 flex h-screen max-h-screen flex-col overflow-hidden">
+        <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
           {/* Header */}
           <header className="shrink-0 border-border border-b px-4 py-4">
             <button
@@ -768,8 +768,32 @@ function SponsorsComponent() {
           </header>
 
           {/* Form content */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
-            <div className="mx-auto max-w-lg space-y-6 pb-24">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 pb-24">
+            <div className="mx-auto max-w-lg space-y-6">
+              {/* Selected gestures */}
+              <div className="space-y-2">
+                <label className="font-semibold text-sm">
+                  {t("web.sponsors.wizard.selectedGestures")}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {selectedGestures.map((gesture) => (
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-primary text-sm"
+                      key={gesture._id}
+                    >
+                      {gesture.name}
+                      <button
+                        className="rounded-full p-0.5 transition-colors hover:bg-primary/20"
+                        onClick={() => handleToggleSelection(gesture._id)}
+                        type="button"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
               {/* Sponsor Name */}
               <div className="space-y-2">
                 <label className="font-semibold text-sm" htmlFor="sponsor-name">
@@ -994,8 +1018,8 @@ function SponsorsComponent() {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="shrink-0 border-border border-t bg-background/95 px-4 py-4 pb-safe-bottom shadow-lg backdrop-blur-md">
+          {/* Footer - Fixed at bottom */}
+          <div className="fixed right-0 bottom-0 left-0 z-50 border-border border-t bg-background/95 px-4 py-4 shadow-lg backdrop-blur-md">
             <div className="mx-auto max-w-lg">
               <Button
                 className="progress-button h-14 w-full rounded-xl font-semibold text-base"
@@ -1042,7 +1066,7 @@ function SponsorsComponent() {
 
       {/* Step 3: Preview & Pay (combined preview + summary) */}
       {currentStep === "preview" && previewPlaybackId && (
-        <div className="relative z-10 flex h-screen max-h-screen flex-col overflow-hidden">
+        <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
           {/* Header */}
           <header className="shrink-0 border-border border-b bg-background/80 px-4 py-4 backdrop-blur-sm">
             <button
@@ -1070,7 +1094,7 @@ function SponsorsComponent() {
 
           {/* Content */}
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
-            <div className="mx-auto max-w-lg space-y-6 pb-4">
+            <div className="mx-auto max-w-lg space-y-6 pb-32">
               {/* Video Player */}
               <div className="overflow-hidden rounded-2xl border-2 border-border shadow-xl">
                 <MuxPlayer
@@ -1133,8 +1157,8 @@ function SponsorsComponent() {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="shrink-0 border-border border-t bg-background/95 px-4 py-4 pb-safe-bottom shadow-lg backdrop-blur-md">
+          {/* Footer - Fixed at bottom */}
+          <div className="fixed right-0 bottom-0 left-0 z-50 border-border border-t bg-background/95 px-4 py-4 pb-safe-bottom shadow-lg backdrop-blur-md">
             <div className="mx-auto max-w-lg space-y-3">
               <Button
                 className="progress-button h-14 w-full rounded-xl font-semibold text-base"
