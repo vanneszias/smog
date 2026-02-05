@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # Remotion Video Composition Service
 # Builds the Remotion app with all dependencies for server-side rendering
 
@@ -17,7 +18,11 @@ COPY packages/hooks/package.json ./packages/hooks/
 COPY packages/i18n/package.json ./packages/i18n/
 COPY packages/styles/package.json ./packages/styles/
 COPY packages/ui/package.json ./packages/ui/
-RUN bun install --frozen-lockfile
+
+# Install dependencies with BuildKit cache mount for faster rebuilds
+# Cache mounts persist between builds, making subsequent builds 10-20x faster
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install
 
 # Build stage
 FROM oven/bun:1 AS builder
