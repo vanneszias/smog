@@ -415,14 +415,18 @@ function SponsorsComponent() {
     setPreviewProgress(0);
 
     // Progress simulation - video generation takes time
+    // Uses decelerating progress that slows as it approaches 90%
     const progressInterval = setInterval(() => {
       setPreviewProgress((prev) => {
         if (prev >= 0.9) {
           return prev;
         }
-        return prev + 0.05 + Math.random() * 0.05;
+        // Slower progress as we get closer to 90%
+        const remaining = 0.9 - prev;
+        const increment = remaining * 0.08 * (0.3 + Math.random() * 0.7);
+        return Math.min(prev + increment, 0.9);
       });
-    }, 500);
+    }, 800);
 
     try {
       let logoBase64: string | undefined;
@@ -469,15 +473,18 @@ function SponsorsComponent() {
     setIsProcessing(true);
     setPaymentProgress(0);
 
-    // Progress simulation
+    // Progress simulation - uses decelerating progress
     const progressInterval = setInterval(() => {
       setPaymentProgress((prev) => {
         if (prev >= 0.9) {
           return prev;
         }
-        return prev + 0.08 + Math.random() * 0.05;
+        // Slower progress as we get closer to 90%
+        const remaining = 0.9 - prev;
+        const increment = remaining * 0.1 * (0.3 + Math.random() * 0.7);
+        return Math.min(prev + increment, 0.9);
       });
-    }, 300);
+    }, 600);
 
     try {
       let logoBase64: string | undefined;
