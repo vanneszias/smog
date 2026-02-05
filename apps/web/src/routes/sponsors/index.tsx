@@ -220,7 +220,9 @@ function SponsorsComponent() {
     null
   );
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [previewProgress, setPreviewProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentProgress, setPaymentProgress] = useState(0);
   const [errors, setErrors] = useState<{
     sponsorName?: string;
     logo?: string;
@@ -410,10 +412,22 @@ function SponsorsComponent() {
     }
 
     setIsGeneratingPreview(true);
+    setPreviewProgress(0);
+
+    // Progress simulation - video generation takes time
+    const progressInterval = setInterval(() => {
+      setPreviewProgress((prev) => {
+        if (prev >= 0.9) {
+          return prev;
+        }
+        return prev + 0.05 + Math.random() * 0.05;
+      });
+    }, 500);
 
     try {
       let logoBase64: string | undefined;
       if (includeLogo && logoFile) {
+        setPreviewProgress(0.1);
         logoBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
@@ -427,6 +441,7 @@ function SponsorsComponent() {
         throw new Error("No gesture selected");
       }
 
+      setPreviewProgress(0.2);
       const result = await client.sponsorships.generatePreview({
         gestureId: firstGesture._id,
         sponsorName,
@@ -434,23 +449,40 @@ function SponsorsComponent() {
         overlayText: sponsorName,
       });
 
+      setPreviewProgress(1);
+      clearInterval(progressInterval);
+
       setPreviewPlaybackId(result.playbackId);
       setCurrentStep("preview");
     } catch (error) {
       console.error("[Sponsors] Failed to generate preview:", error);
       toast.error(t("web.sponsors.wizard.errors.previewFailed"));
     } finally {
+      clearInterval(progressInterval);
       setIsGeneratingPreview(false);
+      setPreviewProgress(0);
     }
   };
 
   // Handle final submission
   const handleProceedToPayment = async () => {
     setIsProcessing(true);
+    setPaymentProgress(0);
+
+    // Progress simulation
+    const progressInterval = setInterval(() => {
+      setPaymentProgress((prev) => {
+        if (prev >= 0.9) {
+          return prev;
+        }
+        return prev + 0.08 + Math.random() * 0.05;
+      });
+    }, 300);
 
     try {
       let logoBase64: string | undefined;
       if (includeLogo && logoFile) {
+        setPaymentProgress(0.15);
         logoBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
@@ -459,6 +491,7 @@ function SponsorsComponent() {
         });
       }
 
+      setPaymentProgress(0.3);
       const result = await client.sponsorships.createBulkSponsorshipsSimplified(
         {
           gestureIds: selectedGestureIds,
@@ -474,16 +507,22 @@ function SponsorsComponent() {
         }
       );
 
+      setPaymentProgress(0.7);
       const payment = await client.sponsorships.createBulkPayment({
         sponsorshipIds: result.sponsorshipIds,
         amount: pricing.totalCents,
       });
 
+      setPaymentProgress(1);
+      clearInterval(progressInterval);
+
       window.location.href = payment.checkoutUrl;
     } catch (error) {
       console.error("Failed to create sponsorships:", error);
       toast.error(t("web.sponsors.wizard.errors.paymentFailed"));
+      clearInterval(progressInterval);
       setIsProcessing(false);
+      setPaymentProgress(0);
     }
   };
 
@@ -502,6 +541,25 @@ function SponsorsComponent() {
             50% { transform: translateY(-20px) scale(1.05); }
           }
           .pb-safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+          @keyframes progress-fill {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(0); }
+          }
+          .progress-button {
+            position: relative;
+            overflow: hidden;
+          }
+          .progress-button::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.15) 100%);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-out;
+          }
+          .progress-button[data-progress]::before {
+            transform: translateX(calc(-100% + var(--progress, 0) * 100%));
+          }
         `}
       </style>
 
@@ -674,7 +732,7 @@ function SponsorsComponent() {
 
       {/* Step 2: Details (combined configure + contact) */}
       {currentStep === "details" && (
-        <div className="relative z-10 flex min-h-screen flex-col">
+        <div className="relative z-10 flex h-screen max-h-screen flex-col overflow-hidden">
           {/* Header */}
           <header className="shrink-0 border-border border-b px-4 py-4">
             <button
@@ -703,7 +761,7 @@ function SponsorsComponent() {
           </header>
 
           {/* Form content */}
-          <div className="flex-1 overflow-y-auto px-4 py-6 pb-24">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
             <div className="mx-auto max-w-lg space-y-6 pb-4">
               {/* Sponsor Name */}
               <div className="space-y-2">
@@ -930,25 +988,45 @@ function SponsorsComponent() {
           </div>
 
           {/* Footer */}
-          <div className="fixed right-0 bottom-0 left-0 z-50 shrink-0 border-border border-t bg-background/95 px-4 py-4 shadow-lg backdrop-blur-md">
-            <div className="mx-auto max-w-lg">
+          <div className="shrink-0 border-border border-t bg-background/95 px-4 py-4 shadow-lg backdrop-blur-md">
+            <div className="mx-auto max-w-lg pb-safe-bottom">
               <Button
-                className="h-14 w-full rounded-xl font-semibold text-base"
+                className="progress-button h-14 w-full rounded-xl font-semibold text-base"
+                data-progress={isGeneratingPreview ? "true" : undefined}
                 disabled={isGeneratingPreview}
                 onClick={handleGeneratePreviewAndProceed}
                 size="lg"
+                style={
+                  isGeneratingPreview
+                    ? ({ "--progress": previewProgress } as React.CSSProperties)
+                    : undefined
+                }
               >
-                {isGeneratingPreview ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    {t("web.sponsors.wizard.generatingPreview")}
-                  </>
-                ) : (
-                  <>
-                    {t("web.sponsors.wizard.generatePreview")}
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </>
+                {/* Progress fill overlay */}
+                {isGeneratingPreview && (
+                  <div
+                    className="pointer-events-none absolute inset-0 bg-white/20 transition-transform duration-300 ease-out"
+                    style={{
+                      transform: `translateX(${(previewProgress - 1) * 100}%)`,
+                    }}
+                  />
                 )}
+                <span className="relative z-10 flex items-center">
+                  {isGeneratingPreview ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      {t("web.sponsors.wizard.generatingPreview")}
+                      <span className="ml-2 tabular-nums">
+                        {Math.round(previewProgress * 100)}%
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      {t("web.sponsors.wizard.generatePreview")}
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </>
+                  )}
+                </span>
               </Button>
             </div>
           </div>
@@ -957,7 +1035,7 @@ function SponsorsComponent() {
 
       {/* Step 3: Preview & Pay (combined preview + summary) */}
       {currentStep === "preview" && previewPlaybackId && (
-        <div className="relative z-10 flex min-h-screen flex-col">
+        <div className="relative z-10 flex h-screen max-h-screen flex-col overflow-hidden">
           {/* Header */}
           <header className="shrink-0 border-border border-b bg-background/80 px-4 py-4 backdrop-blur-sm">
             <button
@@ -984,15 +1062,15 @@ function SponsorsComponent() {
           </header>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-4 py-6">
-            <div className="mx-auto max-w-lg space-y-6">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
+            <div className="mx-auto max-w-lg space-y-6 pb-4">
               {/* Video Player */}
               <div className="overflow-hidden rounded-2xl border-2 border-border shadow-xl">
                 <MuxPlayer
                   accentColor="#00805f"
                   playbackId={previewPlaybackId}
                   streamType="on-demand"
-                  style={{ width: "100%", aspectRatio: "9/16" }}
+                  style={{ width: "100%", aspectRatio: "810/1080" }}
                 />
               </div>
 
@@ -1049,25 +1127,45 @@ function SponsorsComponent() {
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 border-border border-t bg-background/80 px-4 py-4 backdrop-blur-sm">
-            <div className="mx-auto max-w-lg space-y-3">
+          <div className="shrink-0 border-border border-t bg-background/95 px-4 py-4 shadow-lg backdrop-blur-md">
+            <div className="mx-auto max-w-lg space-y-3 pb-safe-bottom">
               <Button
-                className="h-14 w-full rounded-xl font-semibold text-base"
+                className="progress-button h-14 w-full rounded-xl font-semibold text-base"
+                data-progress={isProcessing ? "true" : undefined}
                 disabled={isProcessing}
                 onClick={handleProceedToPayment}
                 size="lg"
+                style={
+                  isProcessing
+                    ? ({ "--progress": paymentProgress } as React.CSSProperties)
+                    : undefined
+                }
               >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    {t("web.sponsors.wizard.processing")}
-                  </>
-                ) : (
-                  <>
-                    <Heart className="mr-2 h-5 w-5" />
-                    {t("web.sponsors.wizard.proceedToPayment")}
-                  </>
+                {/* Progress fill overlay */}
+                {isProcessing && (
+                  <div
+                    className="pointer-events-none absolute inset-0 bg-white/20 transition-transform duration-300 ease-out"
+                    style={{
+                      transform: `translateX(${(paymentProgress - 1) * 100}%)`,
+                    }}
+                  />
                 )}
+                <span className="relative z-10 flex items-center">
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      {t("web.sponsors.wizard.processing")}
+                      <span className="ml-2 tabular-nums">
+                        {Math.round(paymentProgress * 100)}%
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Heart className="mr-2 h-5 w-5" />
+                      {t("web.sponsors.wizard.proceedToPayment")}
+                    </>
+                  )}
+                </span>
               </Button>
               <p className="text-center text-muted-foreground text-xs">
                 {t("web.sponsors.wizard.redirectMessage")}

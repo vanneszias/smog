@@ -270,38 +270,19 @@ function SuccessComponent() {
           <p className="font-medium text-blue-900 dark:text-blue-100">
             {t("web.sponsors.new.success.whatNext")}
           </p>
-          <ul className="mt-3 space-y-2 text-blue-800 dark:text-blue-200">
-            <li className="flex items-start gap-2">
-              <span className="font-bold">1.</span>
-              <span>{t("web.sponsors.new.success.step1")}</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="font-bold">2.</span>
-              <span>{t("web.sponsors.new.success.step2")}</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="font-bold">3.</span>
-              <span>{t("web.sponsors.new.success.step3")}</span>
-            </li>
-          </ul>
+          <p className="mt-3 text-blue-800 dark:text-blue-200">
+            Je sponsoring wordt binnen 5 werkdagen beoordeeld door een
+            beheerder. Je ontvangt een e-mail zodra je sponsoring online staat.
+          </p>
         </div>
 
-        <div className="flex gap-3">
-          <button
-            className="flex-1 rounded-md border border-border py-3 font-medium transition-colors hover:bg-muted"
-            onClick={() => navigate({ to: "/" })}
-            type="button"
-          >
-            {t("web.sponsors.new.success.actions.backHome")}
-          </button>
-          <button
-            className="flex-1 rounded-md bg-primary py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-            onClick={() => navigate({ to: "/sponsors" })}
-            type="button"
-          >
-            {t("web.sponsors.new.success.actions.viewSponsorships")}
-          </button>
-        </div>
+        <button
+          className="w-full rounded-md bg-primary py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          onClick={() => navigate({ to: "/" })}
+          type="button"
+        >
+          {t("web.sponsors.new.success.actions.backHome")}
+        </button>
 
         <p className="mt-4 text-xs" style={{ color: "var(--text-light)" }}>
           {t("web.sponsors.success.redirectingIn", { seconds: "10" })}
