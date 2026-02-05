@@ -290,19 +290,17 @@ export default function RootLayout() {
 
   return (
     <PostHogProvider autocapture={autocaptureConfig} client={posthog}>
-      <PostHogSurveyProvider>
-        <AppProviders>
-          {showSplash ? (
-            <RiveSplashScreen
-              onAnimationComplete={() => setShowSplash(false)}
-            />
-          ) : (
+      <AppProviders>
+        {showSplash ? (
+          <RiveSplashScreen onAnimationComplete={() => setShowSplash(false)} />
+        ) : (
+          <PostHogSurveyProvider>
             <BottomSheetModalProvider>
               <RootLayoutNav />
             </BottomSheetModalProvider>
-          )}
-        </AppProviders>
-      </PostHogSurveyProvider>
+          </PostHogSurveyProvider>
+        )}
+      </AppProviders>
     </PostHogProvider>
   );
 }
