@@ -3,6 +3,7 @@
     "name": "SMOG & Co",
     "slug": "smog",
     "version": "0.1.4",
+    "runtimeVersion": "0.1.4",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/adaptive-icon.png",
@@ -74,9 +75,6 @@
       }
     },
     "owner": "smog-and-co",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
     "updates": {
       "url": "https://u.expo.dev/9fa68b63-dfa5-498a-9196-5eba93ecac29"
     }
