@@ -37,7 +37,7 @@ services:
       - "443:443"
     depends_on:
       - server
-      - video-worker
+      - remotion
     networks:
       - app-network
     restart: unless-stopped
@@ -59,8 +59,8 @@ services:
       - CONVEX_URL=${CONVEX_URL}
       - MUX_TOKEN_ID=${MUX_TOKEN_ID}
       - MUX_TOKEN_SECRET=${MUX_TOKEN_SECRET}
-      - VIDEO_WORKER_URL=${VIDEO_WORKER_URL:-http://video-worker:3002}
-      - VIDEO_WORKER_API_KEY=${VIDEO_WORKER_API_KEY:-dev-secret-key}
+      - REMOTION_URL=${REMOTION_URL:-http://remotion:3002}
+      - REMOTION_API_KEY=${REMOTION_API_KEY:-dev-secret-key}
       - REDIS_HOST=redis-session
       - REDIS_PORT=6379
     depends_on:
@@ -76,43 +76,36 @@ services:
       retries: 3
       start_period: 40s
 
-  # Video Worker Service with FFmpeg
-  video-worker:
+  # Remotion Video Composition Service
+  remotion:
     build:
       context: .
-      dockerfile: apps/video-worker/Dockerfile
+      dockerfile: apps/remotion/Dockerfile
     environment:
       - NODE_ENV=production
-      - CONVEX_URL=${CONVEX_URL}
       - MUX_TOKEN_ID=${MUX_TOKEN_ID}
       - MUX_TOKEN_SECRET=${MUX_TOKEN_SECRET}
-      - REDIS_HOST=redis-queue
-      - REDIS_PORT=6379
-      - VIDEO_COMPOSITION_CONCURRENCY=${VIDEO_COMPOSITION_CONCURRENCY:-2}
-      - VIDEO_WORKER_API_KEY=${VIDEO_WORKER_API_KEY:-dev-secret-key}
+      - REMOTION_API_KEY=${REMOTION_API_KEY:-dev-secret-key}
       - SERVER_URL=${SERVER_URL:-http://server:3000}
-    depends_on:
-      redis-queue:
-        condition: service_healthy
     networks:
       - app-network
     restart: unless-stopped
     volumes:
-      - video-temp:/tmp/video-processing
+      - remotion-temp:/app/apps/remotion/temp
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
     deploy:
       resources:
         limits:
-          cpus: "2.0"
-          memory: 2G
+          cpus: "4.0"
+          memory: 4G
         reservations:
-          cpus: "0.5"
-          memory: 512M
+          cpus: "1.0"
+          memory: 1G
 
   # Redis for session storage
   redis-session:
@@ -123,21 +116,6 @@ services:
       - app-network
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Redis for video job queue
-  redis-queue:
-    image: redis:7-alpine
-    volumes:
-      - redis-queue-data:/data
-    networks:
-      - app-network
-    restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy noeviction
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -165,9 +143,7 @@ volumes:
     driver: local
   redis-session-data:
     driver: local
-  redis-queue-data:
-    driver: local
-  video-temp:
+  remotion-temp:
     driver: local
   # convex-data:
   #   driver: local

@@ -5,7 +5,7 @@ set -euo pipefail
 readonly GIT_SHA=$(git rev-parse --short HEAD)
 readonly VERSION="v0.1.0"
 readonly DOCKER_USERNAME="vanneszias"
-readonly IMAGES=("smog-web" "smog-server" "smog-video-worker")
+readonly IMAGES=("smog-web" "smog-server" "smog-remotion")
 readonly TAGS=("latest" "${VERSION}" "sha-${GIT_SHA}")
 
 # Colors for output

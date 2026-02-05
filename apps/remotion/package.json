@@ -1,0 +1,35 @@
+{
+  "name": "remotion",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/server/index.ts",
+    "dev:studio": "remotion studio",
+    "build": "remotion bundle",
+    "check-types": "tsc --noEmit",
+    "render": "remotion render SponsoredVideo out/video.mp4",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@mux/mux-node": "^12.8.1",
+    "dotenv": "catalog:",
+    "@remotion/bundler": "^4.0.0",
+    "@remotion/cli": "^4.0.0",
+    "@remotion/media": "^4.0.0",
+    "@remotion/renderer": "^4.0.0",
+    "@remotion/zod-types": "^4.0.0",
+    "@smog/types": "workspace:*",
+    "hono": "catalog:",
+    "mediabunny": "^1.32.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.0",
+    "zod": "3.22.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.7.2"
+  }
+}

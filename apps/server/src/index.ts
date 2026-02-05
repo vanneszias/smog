@@ -180,13 +180,13 @@ app.post("/auth/token/clear", async (c) => {
 /**
  * Secure video master access endpoint
  * Provides temporary download URLs for video files
- * Only accessible by authenticated services (video-worker)
+ * Only accessible by authenticated services (Remotion)
  */
 app.post("/api/video/master-access", async (c) => {
   try {
     // Basic authentication check
     const authHeader = c.req.header("Authorization");
-    const expectedToken = process.env.VIDEO_WORKER_API_KEY || "dev-secret-key";
+    const expectedToken = process.env.REMOTION_API_KEY || "dev-secret-key";
 
     if (authHeader !== `Bearer ${expectedToken}`) {
       return c.json({ error: "Unauthorized" }, 401);

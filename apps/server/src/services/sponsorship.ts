@@ -12,7 +12,7 @@ export interface ProcessPaymentOptions {
 }
 
 /**
- * Trigger video composition for a sponsorship
+ * Trigger video composition for a sponsorship using Remotion
  */
 async function triggerVideoComposition(sponsorship: {
   _id: Id<"sponsorships">;
@@ -23,8 +23,7 @@ async function triggerVideoComposition(sponsorship: {
   hasLogo?: boolean;
   originalVideoPlaybackId?: string;
 }): Promise<string> {
-  const videoWorkerUrl =
-    process.env.VIDEO_WORKER_URL || "http://localhost:3002";
+  const remotionUrl = process.env.REMOTION_URL || "http://localhost:3002";
 
   if (!sponsorship.originalVideoPlaybackId) {
     throw new Error("Original video playback ID is missing");
@@ -49,8 +48,8 @@ async function triggerVideoComposition(sponsorship: {
     }
   );
 
-  // Call video-worker to compose video
-  const response = await fetch(`${videoWorkerUrl}/api/compose`, {
+  // Call Remotion service to compose video
+  const response = await fetch(`${remotionUrl}/api/compose`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -85,7 +84,7 @@ async function triggerVideoComposition(sponsorship: {
     attempts++;
 
     const statusResponse = await fetch(
-      `${videoWorkerUrl}/api/compose/status/${jobId}`
+      `${remotionUrl}/api/compose/status/${jobId}`
     );
     if (!statusResponse.ok) {
       console.error(

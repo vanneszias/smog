@@ -45,8 +45,8 @@ bun -F web dev
 # Server
 bun -F server dev
 
-# Video Worker
-bun -F video-worker dev
+# Remotion (Video Composition)
+bun -F remotion dev
 
 # Convex
 bun -F @smog/convex dev
@@ -60,7 +60,7 @@ apps/
 ├── native/          # React Native mobile app
 ├── web/             # React web app
 ├── server/          # Hono API server
-└── video-worker/    # FFmpeg video composition
+└── remotion/        # Remotion video composition
 
 packages/
 ├── api/             # API layer

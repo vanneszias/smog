@@ -33,11 +33,11 @@ bun -F server build          # Build with tsdown
 bun -F server check-types    # Typecheck with tsc
 ```
 
-### Video Worker (Bun)
+### Remotion (Video Composition)
 ```bash
-bun -F video-worker dev      # Start worker dev server
-bun -F video-worker build    # Build with tsdown
-bun -F video-worker check-types  # Typecheck with tsc
+bun -F remotion dev          # Start Remotion server (port 3002)
+bun -F remotion dev:studio   # Start Remotion Studio for visual preview
+bun -F remotion check-types  # Typecheck with tsc
 ```
 
 ### Convex (Backend)
@@ -89,7 +89,7 @@ try {
 ```
 
 ## Project Structure
-- `apps/*`: Application code (native, web, server, video-worker)
+- `apps/*`: Application code (native, web, server, remotion)
 - `packages/*`: Shared packages (api, auth, convex, ui, styles, etc.)
 
 ## Linting

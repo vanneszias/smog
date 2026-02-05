@@ -1,0 +1,12 @@
+# Build output
+out/
+dist/
+
+# Node modules
+node_modules/
+
+# Remotion cache
+.remotion/
+
+# Bun
+*.bun

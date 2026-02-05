@@ -28,9 +28,8 @@ const SPONSOR_OVERLAY_CONFIG = {
 // Initialize Convex client for server-side operations
 const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 
-// Get video worker URL from environment
-const VIDEO_WORKER_URL =
-  process.env.VIDEO_WORKER_URL || "http://localhost:3002";
+// Get Remotion service URL from environment
+const REMOTION_URL = process.env.REMOTION_URL || "http://localhost:3002";
 
 export const sponsorshipsRouter = {
   /**
@@ -85,8 +84,8 @@ export const sponsorshipsRouter = {
         // Use fixed sponsor overlay config
         const overlayConfig = SPONSOR_OVERLAY_CONFIG;
 
-        // Call video-worker service to compose video
-        const response = await fetch(`${VIDEO_WORKER_URL}/api/compose`, {
+        // Call Remotion service to compose video
+        const response = await fetch(`${REMOTION_URL}/api/compose`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -99,7 +98,9 @@ export const sponsorshipsRouter = {
 
         if (!response.ok) {
           const error = await response.text();
-          throw new Error(`Video worker returned ${response.status}: ${error}`);
+          throw new Error(
+            `Remotion service returned ${response.status}: ${error}`
+          );
         }
 
         const result = (await response.json()) as {
@@ -123,7 +124,7 @@ export const sponsorshipsRouter = {
           attempts++;
 
           const statusResponse = await fetch(
-            `${VIDEO_WORKER_URL}/api/compose/status/${result.jobId}`
+            `${REMOTION_URL}/api/compose/status/${result.jobId}`
           );
 
           if (statusResponse.ok) {

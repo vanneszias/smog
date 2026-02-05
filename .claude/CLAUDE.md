@@ -32,8 +32,8 @@ bun -F web build         # Build for production
 # Server (port 3000)
 bun -F server dev        # Start Hono server
 
-# Video Worker (port 3002)
-bun -F video-worker dev  # Start FFmpeg worker
+# Remotion (port 3002)
+bun -F remotion dev      # Start Remotion video composition server
 
 # Convex Backend
 bun -F @smog/convex dev      # Start Convex dev server
@@ -47,7 +47,7 @@ bun -F @smog/convex deploy   # Deploy to production
 - **native**: React Native + Expo mobile app (iOS/Android) with Expo Router
 - **web**: React + Vite SPA with TanStack Router and Tailwind CSS v4
 - **server**: Hono API server with oRPC, Mux video integration, cron jobs
-- **video-worker**: FFmpeg video composition service with BullMQ/Redis queue
+- **remotion**: Remotion video composition service for sponsor overlays
 
 ### Shared Packages (`packages/`)
 - **@smog/api**: oRPC API layer (server procedures, client, OpenAPI)
@@ -66,7 +66,7 @@ bun -F @smog/convex deploy   # Deploy to production
 - **WorkOS**: Authentication/SSO
 - **Mollie**: Payment processing
 - **PostHog**: Analytics (web and native)
-- **Redis**: Session storage and job queue (Docker-managed)
+- **Redis**: Session storage (Docker-managed)
 
 ## Code Style
 
