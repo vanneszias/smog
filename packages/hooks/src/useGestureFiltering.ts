@@ -10,17 +10,17 @@ export interface GestureCardData {
   categories: Array<{ _id: string; name: string } | undefined>;
 }
 
-export interface UseGestureFilteringOptions {
-  gestures: GestureCardData[] | undefined;
+export interface UseGestureFilteringOptions<T extends GestureCardData> {
+  gestures: T[] | undefined;
   initialSearchQuery?: string;
   initialCategories?: string[];
 }
 
-export function useGestureFiltering({
+export function useGestureFiltering<T extends GestureCardData>({
   gestures,
   initialSearchQuery = "",
   initialCategories = [],
-}: UseGestureFilteringOptions) {
+}: UseGestureFilteringOptions<T>) {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [selectedCategories, setSelectedCategories] =
     useState<string[]>(initialCategories);
@@ -42,12 +42,12 @@ export function useGestureFiltering({
     return Array.from(categorySet).sort();
   }, [gestures]);
 
-  const filteredGestures = useMemo(() => {
+  const filteredGestures = useMemo((): T[] => {
     if (!gestures) {
       return [];
     }
 
-    let filtered = gestures;
+    let filtered: T[] = gestures;
 
     // Filter by categories first if any are selected
     if (selectedCategories.length > 0) {
@@ -65,7 +65,7 @@ export function useGestureFiltering({
       filtered = searchGestures(
         filtered as SearchableGesture[],
         searchQuery
-      ) as GestureCardData[];
+      ) as T[];
     }
 
     // Apply sorting if no search query (search results are already ranked by relevance)

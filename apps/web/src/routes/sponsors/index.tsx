@@ -146,11 +146,11 @@ function GestureCard({
 // Floating selection bar for mobile
 function SelectionBar({
   count,
-  total,
+  _total,
   onContinue,
 }: {
   count: number;
-  total: number;
+  _total: number;
   onContinue: () => void;
 }) {
   const { t } = useTranslation();
@@ -405,7 +405,9 @@ function SponsorsComponent() {
 
   // Generate preview and proceed
   const handleGeneratePreviewAndProceed = async () => {
-    if (!validateDetails()) return;
+    if (!validateDetails()) {
+      return;
+    }
 
     setIsGeneratingPreview(true);
 
@@ -663,9 +665,9 @@ function SponsorsComponent() {
 
           {/* Floating selection bar */}
           <SelectionBar
+            _total={pricing.totalCents}
             count={selectedGestureIds.length}
             onContinue={() => setCurrentStep("details")}
-            total={pricing.totalCents}
           />
         </>
       )}
@@ -765,7 +767,9 @@ function SponsorsComponent() {
                         <img
                           alt="Logo preview"
                           className="h-24 w-24 rounded-xl border object-cover"
+                          height={96}
                           src={logoPreview}
+                          width={96}
                         />
                         <button
                           className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-white shadow-lg"
