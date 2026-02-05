@@ -431,7 +431,7 @@ function SponsorsComponent() {
         gestureId: firstGesture._id,
         sponsorName,
         logoImage: logoBase64,
-        overlayText: `Met de warme steun van:\n${sponsorName}`,
+        overlayText: sponsorName,
       });
 
       setPreviewPlaybackId(result.playbackId);
@@ -466,7 +466,7 @@ function SponsorsComponent() {
           sponsorEmail: contactEmail,
           contactFullName,
           contactCompany: contactCompany || undefined,
-          overlayText: `Met de warme steun van:\n${sponsorName}`,
+          overlayText: sponsorName,
           logoImage: logoBase64,
           includeLogo,
           durationYears: 1,
