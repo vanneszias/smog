@@ -139,13 +139,14 @@ async function triggerVideoComposition(sponsorship: {
  * 4. Admin reviews and approves/rejects
  * 5. If approved, sponsorship becomes "active" and gesture video is swapped
  *
- * SIMPLIFIED FLOW (no sponsoredVideoPlaybackId):
- * 1. User creates sponsorship (NO video composition yet)
- * 2. User completes payment
- * 3. Webhook triggers video composition
- * 4. Webhook marks sponsorship as "pending_approval"
- * 5. Admin reviews and approves/rejects
- * 6. If approved, sponsorship becomes "active" and gesture video is swapped
+ * SIMPLIFIED FLOW (previewVideoPlaybackId exists):
+ * 1. User generates preview video (logo already baked in)
+ * 2. User creates sponsorship with previewVideoPlaybackId
+ * 3. User completes payment
+ * 4. Webhook uses previewVideoPlaybackId as sponsoredVideoPlaybackId (no re-composition)
+ * 5. Webhook marks sponsorship as "pending_approval"
+ * 6. Admin reviews and approves/rejects
+ * 7. If approved, sponsorship becomes "active" and gesture video is swapped
  */
 export async function processSuccessfulPayment(
   options: ProcessPaymentOptions
@@ -184,22 +185,41 @@ export async function processSuccessfulPayment(
 
     // Check if this is simplified flow (no sponsoredVideoPlaybackId yet)
     if (!sponsorship.sponsoredVideoPlaybackId) {
-      console.log(
-        "[Sponsorship] Simplified flow detected - triggering video composition"
-      );
+      // In the simplified flow, the preview video already has the logo baked in.
+      // We should use the previewVideoPlaybackId directly instead of re-composing.
+      if (sponsorship.previewVideoPlaybackId) {
+        console.log(
+          "[Sponsorship] Simplified flow detected - using preview video as sponsored video"
+        );
 
-      // Trigger video composition
-      const newPlaybackId = await triggerVideoComposition(sponsorship);
+        // Use the preview video (which already has the logo) as the sponsored video
+        await convex.mutation(api.sponsorships.updateVideoPlaybackId, {
+          sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
+          sponsoredVideoPlaybackId: sponsorship.previewVideoPlaybackId,
+        });
 
-      // Update sponsorship with new playback ID
-      await convex.mutation(api.sponsorships.updateVideoPlaybackId, {
-        sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
-        sponsoredVideoPlaybackId: newPlaybackId,
-      });
+        console.log(
+          `[Sponsorship] Using preview video: ${sponsorship.previewVideoPlaybackId}`
+        );
+      } else {
+        // Legacy flow - no preview video, need to compose
+        console.log(
+          "[Sponsorship] Legacy flow detected - triggering video composition"
+        );
 
-      console.log(
-        `[Sponsorship] Video composed successfully: ${newPlaybackId}`
-      );
+        // Trigger video composition
+        const newPlaybackId = await triggerVideoComposition(sponsorship);
+
+        // Update sponsorship with new playback ID
+        await convex.mutation(api.sponsorships.updateVideoPlaybackId, {
+          sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
+          sponsoredVideoPlaybackId: newPlaybackId,
+        });
+
+        console.log(
+          `[Sponsorship] Video composed successfully: ${newPlaybackId}`
+        );
+      }
     }
 
     console.log(
