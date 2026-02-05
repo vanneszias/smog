@@ -772,9 +772,9 @@ function SponsorsComponent() {
             <div className="mx-auto max-w-lg space-y-6">
               {/* Selected gestures */}
               <div className="space-y-2">
-                <label className="font-semibold text-sm">
+                <span className="font-semibold text-sm">
                   {t("web.sponsors.wizard.selectedGestures")}
-                </label>
+                </span>
                 <div className="flex flex-wrap gap-2">
                   {selectedGestures.map((gesture) => (
                     <span
