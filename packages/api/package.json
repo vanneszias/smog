@@ -1,5 +1,6 @@
 {
   "name": "@smog/api",
+  "version": "0.2.0",
   "exports": {
     ".": {
       "default": "./src/index.ts"

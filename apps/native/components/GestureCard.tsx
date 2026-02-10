@@ -54,7 +54,7 @@ const GestureCard = ({
 
   // Track taps for double tap detection
   const lastTapRef = useRef<number>(0);
-  const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useImperativeHandle(ref, () => ({
     close: () => {

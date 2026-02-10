@@ -18,7 +18,7 @@ class ConvexSyncService {
   private isInitialized = false;
   private isInitialSyncComplete = false;
   private lastSyncAttempt: Date | null = null;
-  private syncInterval: NodeJS.Timeout | null = null;
+  private syncInterval: ReturnType<typeof setInterval> | null = null;
 
   // Sync configuration
   private readonly SYNC_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours

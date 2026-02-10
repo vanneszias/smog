@@ -2,8 +2,8 @@
   "expo": {
     "name": "SMOG & Co",
     "slug": "smog",
-    "version": "0.1.4",
-    "runtimeVersion": "0.1.4",
+    "version": "0.2.0",
+    "runtimeVersion": "0.2.0",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/adaptive-icon.png",
@@ -17,7 +17,8 @@
       "associatedDomains": ["applinks:app.smog.vlaanderen"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
@@ -47,7 +48,8 @@
           "category": ["BROWSABLE", "DEFAULT"]
         }
       ],
-      "package": "be.zias.smog"
+      "package": "be.zias.smog",
+      "versionCode": 2
     },
     "plugins": [
       "expo-router",

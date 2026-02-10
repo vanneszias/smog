@@ -23,8 +23,8 @@ const GlobalOfflineBanner: React.FC = () => {
   >("hidden");
   const [hasShownOfflineBanner, setHasShownOfflineBanner] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const onlineTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onlineTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousOfflineState = useRef<boolean | null>(null);
   const appStartTime = useRef(Date.now());
 
