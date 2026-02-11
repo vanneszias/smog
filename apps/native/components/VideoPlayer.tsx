@@ -42,6 +42,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState<number>(0);
   const isFocused = useIsFocused();
   const pausedByNavigationRef = useRef(false);
+  const isUnmountingRef = useRef(false);
 
   // Construct MUX streaming URL
   const videoUrl = `https://stream.mux.com/${playbackId}.m3u8`;
@@ -56,9 +57,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Pause video when screen loses focus (navigation away)
   useEffect(() => {
-    if (!isFocused && player.playing) {
-      pausedByNavigationRef.current = true;
-      player.pause();
+    if (!(isFocused || isUnmountingRef.current)) {
+      try {
+        if (player.playing) {
+          pausedByNavigationRef.current = true;
+          player.pause();
+        }
+      } catch (error) {
+        console.error("[VideoPlayer] Failed to pause on focus loss:", error);
+      }
     }
   }, [isFocused, player]);
 
@@ -177,8 +184,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Cleanup: pause video on unmount
   useEffect(() => {
     return () => {
-      if (player.playing) {
-        player.pause();
+      isUnmountingRef.current = true;
+      try {
+        // Only attempt to pause if the player is in a valid state
+        if (player?.playing) {
+          player.pause();
+        }
+      } catch (error) {
+        // Silently handle errors during cleanup - player may already be disposed
+        console.error("[VideoPlayer] Failed to pause on unmount:", error);
       }
     };
   }, [player]);
