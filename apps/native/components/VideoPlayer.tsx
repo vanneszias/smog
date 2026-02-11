@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
 import { BORDER_RADIUS, ICON_SIZE, SPACING } from "@smog/styles";
 import { useVideoPlayer, VideoView } from "expo-video";
 import type React from "react";
@@ -39,6 +40,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [hasTrackedPlayerOpen, setHasTrackedPlayerOpen] = useState(false);
   const playbackStartTimeRef = useRef<number | null>(null);
   const [duration, setDuration] = useState<number>(0);
+  const isFocused = useIsFocused();
+  const pausedByNavigationRef = useRef(false);
 
   // Construct MUX streaming URL
   const videoUrl = `https://stream.mux.com/${playbackId}.m3u8`;
@@ -50,6 +53,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       videoPlayer.play();
     }
   });
+
+  // Pause video when screen loses focus (navigation away)
+  useEffect(() => {
+    if (!isFocused && player.playing) {
+      pausedByNavigationRef.current = true;
+      player.pause();
+    }
+  }, [isFocused, player]);
 
   // Handle playing state changes
   const handlePlayingChange = useCallback(
@@ -69,10 +80,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         );
         playbackStartTimeRef.current = Date.now();
       } else {
-        const watchTime = playbackStartTimeRef.current
-          ? (Date.now() - playbackStartTimeRef.current) / 1000
-          : undefined;
-        trackVideoPlaybackPaused(gestureId, gestureName, watchTime);
+        // Only track user-initiated pauses, not navigation-triggered ones
+        if (!pausedByNavigationRef.current) {
+          const watchTime = playbackStartTimeRef.current
+            ? (Date.now() - playbackStartTimeRef.current) / 1000
+            : undefined;
+          trackVideoPlaybackPaused(gestureId, gestureName, watchTime);
+        }
+        pausedByNavigationRef.current = false; // Reset flag
         playbackStartTimeRef.current = null;
       }
     },
@@ -158,6 +173,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     handleTimeUpdate,
     handlePlayToEnd,
   ]);
+
+  // Cleanup: pause video on unmount
+  useEffect(() => {
+    return () => {
+      if (player.playing) {
+        player.pause();
+      }
+    };
+  }, [player]);
 
   const togglePlayPause = () => {
     if (isPlaying) {
