@@ -425,7 +425,7 @@
       },
       "new": {
         "title": "Sponsor een gebaar!",
-        "subtitle": "Steun SMOG en promoot je merk",
+        "subtitle": "Wordt peter of meter van een gebaar",
         "selectGestures": "Selecteer gebaren om te sponsoren",
         "selectedGestures": "Geselecteerde gebaren ({{count}})",
         "sponsorName": "Sponsor naam",

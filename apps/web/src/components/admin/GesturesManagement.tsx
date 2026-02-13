@@ -283,6 +283,7 @@ export function GesturesManagement() {
       playbackId: gesture.playbackId,
       concept: gesture.concept,
       isActive: gesture.isActive,
+      categoryIds: gesture.categoryIds,
     });
     setConceptInput("");
   };
@@ -302,6 +303,15 @@ export function GesturesManagement() {
     setEditForm((prev) => ({
       ...prev,
       concept: (prev.concept || []).filter((c) => c !== concept),
+    }));
+  };
+
+  const handleToggleCategory = (categoryId: string) => {
+    setEditForm((prev) => ({
+      ...prev,
+      categoryIds: prev.categoryIds?.includes(categoryId)
+        ? prev.categoryIds.filter((id) => id !== categoryId)
+        : [...(prev.categoryIds || []), categoryId],
     }));
   };
 
@@ -573,6 +583,31 @@ export function GesturesManagement() {
                     </Badge>
                   ))}
                 </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Categories</Label>
+              <div className="flex flex-wrap gap-2">
+                {categories?.map((category) => {
+                  const isSelected = editForm.categoryIds?.includes(
+                    category._id
+                  );
+                  return (
+                    <Badge
+                      className="cursor-pointer"
+                      key={category._id}
+                      onClick={() => handleToggleCategory(category._id)}
+                      variant={isSelected ? "default" : "outline"}
+                    >
+                      {category.name}
+                    </Badge>
+                  );
+                })}
+              </div>
+              {(editForm.categoryIds?.length ?? 0) === 0 && (
+                <p className="text-[var(--admin-text-muted)] text-sm">
+                  Select at least one category
+                </p>
               )}
             </div>
             <div className="flex items-center justify-between rounded-lg border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">

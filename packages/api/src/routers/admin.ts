@@ -246,6 +246,90 @@ export const adminRouter = {
       }),
   },
 
+  // Category management
+  categories: {
+    listAll: adminProcedure.handler(async () => {
+      const categories = await convexClient.query(
+        api.categories.listAllForAdmin
+      );
+      return categories;
+    }),
+
+    create: adminProcedure
+      .input(
+        z.object({
+          name: z.string(),
+          isActive: z.boolean().optional(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        const categoryId = await convexClient.mutation(api.categories.create, {
+          name: input.name,
+          isActive: input.isActive,
+        });
+
+        // Log action
+        await convexClient.mutation(api.adminLogs.logAction, {
+          userId: context.userId,
+          action: "create_category",
+          targetId: categoryId,
+          targetType: "category",
+          metadata: input,
+        });
+
+        return { categoryId };
+      }),
+
+    update: adminProcedure
+      .input(
+        z.object({
+          categoryId: z.string(),
+          name: z.string().optional(),
+          isActive: z.boolean().optional(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        await convexClient.mutation(api.categories.update, {
+          categoryId: input.categoryId as Id<"categories">,
+          name: input.name,
+          isActive: input.isActive,
+        });
+
+        // Log action
+        await convexClient.mutation(api.adminLogs.logAction, {
+          userId: context.userId,
+          action: "update_category",
+          targetId: input.categoryId,
+          targetType: "category",
+          metadata: input,
+        });
+
+        return { success: true };
+      }),
+
+    delete: adminProcedure
+      .input(
+        z.object({
+          categoryId: z.string(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        await convexClient.mutation(api.categories.deleteCategory, {
+          categoryId: input.categoryId as Id<"categories">,
+        });
+
+        // Log action
+        await convexClient.mutation(api.adminLogs.logAction, {
+          userId: context.userId,
+          action: "delete_category",
+          targetId: input.categoryId,
+          targetType: "category",
+        });
+
+        return { success: true };
+      }),
+  },
+
   // Sponsorship management
   sponsorships: {
     listAll: adminProcedure
