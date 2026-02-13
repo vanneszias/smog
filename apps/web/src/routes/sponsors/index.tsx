@@ -52,8 +52,6 @@ function GestureCard({
   onToggle: () => void;
   isDisabled: boolean;
 }) {
-  const { t } = useTranslation();
-
   return (
     <button
       className={`group relative w-full overflow-hidden rounded-xl border bg-card p-4 text-left transition-all ${
@@ -153,8 +151,6 @@ function SelectionBar({
   _total: number;
   onContinue: () => void;
 }) {
-  const { t } = useTranslation();
-
   return (
     <div
       className={`fixed right-0 bottom-0 left-0 z-50 transform border-border border-t bg-background/95 shadow-2xl backdrop-blur-lg transition-all duration-300 ${

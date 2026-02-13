@@ -237,6 +237,7 @@ function GestureDetailPanel({
   );
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex state management for gesture admin UI
 export function GesturesManagement() {
   const queryClient = useQueryClient();
   const [selectedGestureId, setSelectedGestureId] = useState<string | null>(
