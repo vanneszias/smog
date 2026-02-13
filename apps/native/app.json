@@ -2,23 +2,29 @@
   "expo": {
     "name": "SMOG & Co",
     "slug": "smog",
-    "version": "0.2.0",
-    "runtimeVersion": "0.2.0",
+    "version": "0.2.1",
+    "runtimeVersion": "0.2.1",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/adaptive-icon.png",
     "scheme": "smog",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "developmentClient": {
+      "silentLaunch": true
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "be.zias.smog",
       "icon": "./assets/images/smog.icon",
-      "associatedDomains": ["applinks:app.smog.vlaanderen"],
+      "associatedDomains": [
+        "applinks:app.smog.vlaanderen"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "4"
+      "buildNumber": "7",
+      "appleTeamId": "96XKP6MU2A"
     },
     "android": {
       "adaptiveIcon": {
@@ -34,7 +40,10 @@
               "scheme": "smog"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         },
         {
           "action": "VIEW",
@@ -45,11 +54,14 @@
               "host": "app.smog.vlaanderen"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "package": "be.zias.smog",
-      "versionCode": 38
+      "versionCode": 42
     },
     "plugins": [
       "expo-router",
@@ -62,7 +74,9 @@
       [
         "expo-custom-assets",
         {
-          "assetsPaths": ["./assets/"]
+          "assetsPaths": [
+            "./assets/"
+          ]
         }
       ],
       "./plugins/withScreenCapturePermissions.js"

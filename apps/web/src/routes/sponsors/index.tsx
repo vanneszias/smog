@@ -623,7 +623,7 @@ function SponsorsComponent() {
             </div>
 
             {/* Search and filter section */}
-            <div className="mx-auto lg:px-8 px-2 pb-6">
+            <div className="mx-auto px-2 pb-6 lg:px-8">
               {/* Search bar */}
               <div className="relative">
                 <Search className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -700,7 +700,7 @@ function SponsorsComponent() {
           </header>
 
           {/* Results count and sorting */}
-          <div className="mx-auto md:px-12 px-4 py-4">
+          <div className="mx-auto px-4 py-4 md:px-12">
             <div className="flex items-center justify-between">
               <p className="text-muted-foreground text-sm">
                 <span className="font-semibold text-foreground">
@@ -721,7 +721,7 @@ function SponsorsComponent() {
 
           {/* Gesture grid */}
           <div className="pb-32">
-            <div className="mx-auto md:px-12 px-4">
+            <div className="mx-auto px-4 md:px-12">
               {isLoading ? (
                 <div className="flex h-64 items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -779,7 +779,7 @@ function SponsorsComponent() {
 
       {/* Step 2: Details (combined configure + contact) */}
       {currentStep === "details" && (
-        <div className="relative z-10 lg:px-12 px-4 flex flex-1 flex-col bg-muted/20">
+        <div className="relative z-10 flex flex-1 flex-col bg-muted/20 px-4 lg:px-12">
           {/* Header */}
           <header className="sticky top-0 z-10 shrink-0 border-border border-b bg-background px-4 py-6">
             <div>
@@ -1133,7 +1133,7 @@ function SponsorsComponent() {
       )}
       {/* Step 3: Preview & Pay (combined preview + summary) */}
       {currentStep === "preview" && previewPlaybackId && (
-        <div className="relative z-10 lg:px-12 px-4 flex flex-1 flex-col bg-muted/20">
+        <div className="relative z-10 flex flex-1 flex-col bg-muted/20 px-4 lg:px-12">
           {/* Header */}
           <header className="sticky top-0 z-10 shrink-0 border-border border-b bg-background px-4 py-6">
             <div>

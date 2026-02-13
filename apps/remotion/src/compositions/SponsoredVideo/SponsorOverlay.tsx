@@ -45,7 +45,7 @@ export const SponsorOverlay: React.FC<SponsorOverlayProps> = ({
   const logoWidth = (config.image.width / 100) * width;
   const logoHeight = (config.image.height / 100) * height;
 
-  const textX = (config.text.x / 100) * width;
+  const _textX = (config.text.x / 100) * width;
   const textY = (config.text.y / 100) * height;
   const fontSize = (config.text.fontSize / 100) * height;
   const lineHeight = fontSize * 1.2; // 20% larger than font size for spacing

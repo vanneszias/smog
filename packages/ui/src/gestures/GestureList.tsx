@@ -45,7 +45,7 @@ function GestureRow({
 
   return (
     <button
-      className={`group flex min-h-[60px] w-full cursor-pointer items-center gap-4 border-border border-b lg:px-12 px-4 py-3 text-left transition-colors hover:bg-muted/30 ${
+      className={`group flex min-h-[60px] w-full cursor-pointer items-center gap-4 border-border border-b px-4 py-3 text-left transition-colors hover:bg-muted/30 lg:px-12 ${
         isSelected
           ? "border-l-4 border-l-primary bg-primary/5"
           : "border-l-4 border-l-transparent"
