@@ -307,10 +307,19 @@
         "validation": {
           "selectGesture": "Veuillez sélectionner au moins un geste",
           "sponsorNameRequired": "Le nom du sponsor est requis",
-          "sponsorNameTooLong": "Le nom du sponsor doit contenir 10 caractères ou moins",
+          "sponsorNameTooLong": "Le nom du sponsor doit contenir 40 caractères ou moins",
           "logoRequired": "Veuillez télécharger un logo ou décocher l'option",
           "logoTooLarge": "L'image doit être inférieure à 2MB",
           "logoInvalidFormat": "Format d'image invalide. Veuillez utiliser PNG, JPG ou SVG"
+        },
+        "logoGuidelines": {
+          "title": "Directives pour le logo",
+          "format": "Format: PNG avec fond transparent (recommandé) ou SVG",
+          "dimensions": "Dimensions: Minimum 800x800px pour une meilleure qualité",
+          "aspectRatio": "Ratio d'aspect: Carré (1:1) recommandé",
+          "fileSize": "Taille de fichier: Maximum 2MB",
+          "style": "Style: Les logos simples et à contraste élevé fonctionnent le mieux",
+          "avoid": "Éviter: Les logos très détaillés ou les lignes fines"
         },
         "preview": {
           "title": "Paiement réussi!",

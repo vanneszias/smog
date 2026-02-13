@@ -76,7 +76,7 @@ export function SponsorshipForm({
   const canProceed =
     selectedGestures.length > 0 &&
     sponsorName.trim().length > 0 &&
-    sponsorName.length <= 10 &&
+    sponsorName.length <= 40 &&
     (!includeLogo || logoFile !== null);
 
   return (
@@ -142,14 +142,14 @@ export function SponsorshipForm({
               errors.sponsorName ? "border-red-500" : "border-border"
             } bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary`}
             id="sponsor-name"
-            maxLength={10}
+            maxLength={40}
             onChange={(e) => onSponsorNameChange(e.target.value)}
             placeholder={t("web.sponsors.new.sponsorNamePlaceholder")}
             type="text"
             value={sponsorName}
           />
           <p className="mt-1 text-muted-foreground text-xs">
-            {sponsorName.length}/10 characters
+            {sponsorName.length}/40 characters
           </p>
           {errors.sponsorName && (
             <p className="mt-1 text-red-500 text-xs">{errors.sponsorName}</p>
@@ -224,6 +224,21 @@ export function SponsorshipForm({
             {errors.logo && (
               <p className="mt-1 text-red-500 text-xs">{errors.logo}</p>
             )}
+
+            {/* Logo Guidelines */}
+            <div className="mt-3 space-y-2 rounded-md border border-border bg-muted/30 p-3">
+              <p className="font-medium text-sm">
+                {t("web.sponsors.new.logoGuidelines.title")}
+              </p>
+              <ul className="space-y-1 text-muted-foreground text-xs">
+                <li>• {t("web.sponsors.new.logoGuidelines.format")}</li>
+                <li>• {t("web.sponsors.new.logoGuidelines.dimensions")}</li>
+                <li>• {t("web.sponsors.new.logoGuidelines.aspectRatio")}</li>
+                <li>• {t("web.sponsors.new.logoGuidelines.fileSize")}</li>
+                <li>• {t("web.sponsors.new.logoGuidelines.style")}</li>
+                <li>• {t("web.sponsors.new.logoGuidelines.avoid")}</li>
+              </ul>
+            </div>
           </div>
         )}
 

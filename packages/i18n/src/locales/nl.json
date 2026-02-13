@@ -447,10 +447,19 @@
         "validation": {
           "selectGesture": "Selecteer minimaal één gebaar",
           "sponsorNameRequired": "Sponsor naam is verplicht",
-          "sponsorNameTooLong": "Sponsor naam mag maximaal 10 tekens bevatten",
+          "sponsorNameTooLong": "Sponsor naam mag maximaal 40 tekens bevatten",
           "logoRequired": "Upload een logo of vink de optie uit",
           "logoTooLarge": "Afbeelding moet kleiner zijn dan 2MB",
           "logoInvalidFormat": "Ongeldig afbeeldingsformaat. Gebruik PNG, JPG of SVG"
+        },
+        "logoGuidelines": {
+          "title": "Logo richtlijnen",
+          "format": "Formaat: PNG met transparante achtergrond (aanbevolen) of SVG",
+          "dimensions": "Afmetingen: Minimaal 800x800px voor beste kwaliteit",
+          "aspectRatio": "Bestandsverhouding: Vierkant (1:1) aanbevolen",
+          "fileSize": "Bestandsgrootte: Maximaal 2MB",
+          "style": "Stijl: Eenvoudige, contrastrijke logo's werken het beste",
+          "avoid": "Vermijd: Zeer gedetailleerde logo's of dunne lijnen"
         },
         "preview": {
           "title": "Betaling geslaagd!",

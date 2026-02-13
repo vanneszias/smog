@@ -148,20 +148,21 @@ export interface OverlayConfig {
 }
 
 // Default configuration matching current hardcoded values
-// Image: 200px on 1080p centered, 220px from bottom
-// Text: 48px on 1080p centered, 180px from bottom
+// Updated for enhanced sponsor visibility
+// Image: ~238px on 1080p centered (22% width)
+// Text: Two-line layout with adjusted positioning
 export const DEFAULT_OVERLAY_CONFIG: OverlayConfig = {
   image: {
     x: 50, // Center horizontally
-    y: 79, // 220px from bottom on 1080p = ~79%
-    width: 18, // 200px on 1080p width (1920) = ~10.4%, but using 18% for better visibility
-    height: 18, // 200px on 1080p height = ~18.5%
+    y: 76, // moved up from 79 for better balance with two-line text
+    width: 22, // increased from 18 to 22 for better logo clarity
+    height: 22, // increased from 18 to 22
   },
   text: {
     x: 50, // Center horizontally
-    y: 83, // 180px from bottom on 1080p = ~83%
-    fontSize: 4.4, // 48px on 1080p = ~4.4%
-    color: "#000000",
+    y: 87, // adjusted for two-line layout (moved down from 83)
+    fontSize: 3.8, // slightly reduced from 4.4 to fit two lines
+    color: "#00805f",
   },
   animation: {
     startTime: 5, // Last 5 seconds

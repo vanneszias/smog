@@ -379,7 +379,7 @@ function SponsorsComponent() {
       newErrors.sponsorName = t(
         "web.sponsors.new.validation.sponsorNameRequired"
       );
-    } else if (sponsorName.length > 10) {
+    } else if (sponsorName.length > 40) {
       newErrors.sponsorName = t(
         "web.sponsors.new.validation.sponsorNameTooLong"
       );
@@ -802,7 +802,7 @@ function SponsorsComponent() {
                 <Input
                   className={`h-14 rounded-xl text-base ${errors.sponsorName ? "border-destructive" : ""}`}
                   id="sponsor-name"
-                  maxLength={10}
+                  maxLength={40}
                   onChange={(e) => {
                     setSponsorName(e.target.value);
                     setErrors((prev) => ({ ...prev, sponsorName: undefined }));
@@ -812,7 +812,7 @@ function SponsorsComponent() {
                 />
                 <div className="flex items-center justify-between">
                   <p className="text-muted-foreground text-xs">
-                    {sponsorName.length}/10
+                    {sponsorName.length}/40
                   </p>
                   {errors.sponsorName && (
                     <p className="text-destructive text-xs">
@@ -894,6 +894,27 @@ function SponsorsComponent() {
                     {errors.logo && (
                       <p className="text-destructive text-xs">{errors.logo}</p>
                     )}
+
+                    {/* Logo Guidelines */}
+                    <div className="mt-3 space-y-2 rounded-xl bg-secondary/20 p-3">
+                      <p className="font-semibold text-sm">
+                        {t("web.sponsors.new.logoGuidelines.title")}
+                      </p>
+                      <ul className="space-y-1 text-muted-foreground text-xs">
+                        <li>• {t("web.sponsors.new.logoGuidelines.format")}</li>
+                        <li>
+                          • {t("web.sponsors.new.logoGuidelines.dimensions")}
+                        </li>
+                        <li>
+                          • {t("web.sponsors.new.logoGuidelines.aspectRatio")}
+                        </li>
+                        <li>
+                          • {t("web.sponsors.new.logoGuidelines.fileSize")}
+                        </li>
+                        <li>• {t("web.sponsors.new.logoGuidelines.style")}</li>
+                        <li>• {t("web.sponsors.new.logoGuidelines.avoid")}</li>
+                      </ul>
+                    </div>
                   </div>
                 )}
               </div>

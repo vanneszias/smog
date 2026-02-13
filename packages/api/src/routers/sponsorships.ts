@@ -8,15 +8,15 @@ import { publicProcedure } from "../index";
 // Fixed sponsor overlay configuration
 const SPONSOR_OVERLAY_CONFIG = {
   image: {
-    x: 50,
-    y: 78,
-    width: 15,
-    height: 15,
+    x: 50, // centered
+    y: 76, // moved up from 78 for better balance
+    width: 22, // increased from 15 to 22 (47% larger)
+    height: 22, // increased from 15 to 22
   },
   text: {
     x: 50,
-    y: 85,
-    fontSize: 4,
+    y: 87, // adjusted for two-line layout
+    fontSize: 3.8, // slightly reduced from 4 to fit two lines
     color: "#00805f",
   },
   animation: {
@@ -60,7 +60,7 @@ export const sponsorshipsRouter = {
     .input(
       z.object({
         gestureId: z.string(),
-        sponsorName: z.string().max(10),
+        sponsorName: z.string().max(40),
         logoImage: z.string().optional(), // base64 data URL
         overlayText: z.string().max(100),
       })
@@ -184,7 +184,7 @@ export const sponsorshipsRouter = {
     .input(
       z.object({
         gestureIds: z.array(z.string()),
-        sponsorName: z.string().max(10),
+        sponsorName: z.string().max(40),
         sponsorEmail: z.string().email(),
         contactFullName: z.string(),
         contactCompany: z.string().optional(),

@@ -48,6 +48,7 @@ export const SponsorOverlay: React.FC<SponsorOverlayProps> = ({
   const textX = (config.text.x / 100) * width;
   const textY = (config.text.y / 100) * height;
   const fontSize = (config.text.fontSize / 100) * height;
+  const lineHeight = fontSize * 1.2; // 20% larger than font size for spacing
 
   // Slide up animation combined with fade
   const translateY = interpolate(animationProgress, [0, 1], [30, 0]);
@@ -81,22 +82,38 @@ export const SponsorOverlay: React.FC<SponsorOverlayProps> = ({
         />
       )}
 
-      {/* Sponsor Text */}
+      {/* Sponsor Text Line 1: Introduction */}
       <div
         style={{
           position: "absolute",
-          left: textX,
+          left: "50%",
           top: textY,
           transform: "translateX(-50%)",
           fontSize,
           color: config.text.color,
           fontWeight: 600,
-          textAlign: "center",
-          whiteSpace: "nowrap",
           fontFamily: "system-ui, sans-serif",
+          whiteSpace: "nowrap",
         }}
       >
-        Met de warme steun van: {sponsorName}
+        Met de warme steun van:
+      </div>
+
+      {/* Sponsor Text Line 2: Sponsor Name */}
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: textY + lineHeight + fontSize * 0.3,
+          transform: "translateX(-50%)",
+          fontSize,
+          color: config.text.color,
+          fontWeight: 600,
+          fontFamily: "system-ui, sans-serif",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {sponsorName}
       </div>
     </div>
   );

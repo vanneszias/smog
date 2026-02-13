@@ -478,10 +478,19 @@
         "validation": {
           "selectGesture": "Please select at least one gesture",
           "sponsorNameRequired": "Sponsor name is required",
-          "sponsorNameTooLong": "Sponsor name must be 10 characters or less",
+          "sponsorNameTooLong": "Sponsor name must be 40 characters or less",
           "logoRequired": "Please upload a logo or uncheck the option",
           "logoTooLarge": "Image must be smaller than 2MB",
           "logoInvalidFormat": "Invalid image format. Please use PNG, JPG, or SVG"
+        },
+        "logoGuidelines": {
+          "title": "Logo Guidelines",
+          "format": "Format: PNG with transparent background (recommended) or SVG",
+          "dimensions": "Dimensions: Minimum 800x800px for best quality",
+          "aspectRatio": "Aspect Ratio: Square (1:1) recommended",
+          "fileSize": "File Size: Maximum 2MB",
+          "style": "Style: Simple, high-contrast logos work best",
+          "avoid": "Avoid: Highly detailed logos or thin lines"
         },
         "preview": {
           "title": "Payment Successful!",
