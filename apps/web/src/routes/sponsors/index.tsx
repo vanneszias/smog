@@ -8,11 +8,9 @@ import { useQuery as useConvexQuery } from "convex/react";
 import {
   ArrowRight,
   Check,
-  ChevronDown,
   Heart,
   Loader2,
   Search,
-  Sparkles,
   Upload,
   X,
 } from "lucide-react";
@@ -42,7 +40,7 @@ export const Route = createFileRoute("/sponsors/")({
   component: SponsorsComponent,
 });
 
-// Gesture card for mobile
+// Gesture card - clean and conversion-focused
 function GestureCard({
   gesture,
   isSelected,
@@ -58,69 +56,71 @@ function GestureCard({
 
   return (
     <button
-      className={`group relative w-full overflow-hidden rounded-2xl border-2 p-4 text-left transition-all duration-300 ${
+      className={`group relative w-full overflow-hidden rounded-xl border bg-card p-4 text-left transition-all ${
         isDisabled
-          ? "cursor-not-allowed border-border/50 bg-card/30 opacity-60"
+          ? "cursor-not-allowed border-border/50 opacity-50"
           : isSelected
-            ? "border-primary bg-primary/5 shadow-lg shadow-primary/20"
-            : "border-border bg-card hover:border-primary/50 hover:shadow-md active:scale-[0.98]"
+            ? "border-primary shadow-lg shadow-primary/10 ring-2 ring-primary/20"
+            : "border-border hover:border-primary/50 hover:shadow-md"
       }`}
       disabled={isDisabled}
       onClick={onToggle}
       type="button"
     >
-      {/* Selection indicator */}
-      <div
-        className={`absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all duration-300 ${
-          isSelected
-            ? "border-primary bg-primary"
-            : "border-muted-foreground/30 bg-background group-hover:border-primary/50"
-        }`}
-      >
-        {isSelected && <Check className="h-4 w-4 text-white" />}
-      </div>
-
-      {/* Status badge */}
+      {/* Status badge - top left */}
       {gesture.status !== "available" && (
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-2 left-2">
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium text-xs ${
+            className={`inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-xs ${
               gesture.status === "sponsored"
-                ? "bg-secondary/30 text-primary"
-                : "bg-accent/20 text-accent"
+                ? "bg-primary/10 text-primary"
+                : "bg-muted text-muted-foreground"
             }`}
           >
             {gesture.status === "sponsored" ? (
               <>
-                <Heart className="h-3 w-3" />
-                {gesture.sponsorName}
+                <Heart className="h-3 w-3 fill-current" />
+                Gesponsord
               </>
             ) : (
-              t("web.sponsors.new.status.pending")
+              "In behandeling"
             )}
           </span>
         </div>
       )}
 
+      {/* Selection checkbox - top right */}
+      {!isDisabled && (
+        <div
+          className={`absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-md border-2 transition-all ${
+            isSelected
+              ? "border-primary bg-primary"
+              : "border-muted-foreground/30 bg-background group-hover:border-primary/50"
+          }`}
+        >
+          {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+        </div>
+      )}
+
       {/* Content */}
-      <div className={gesture.status !== "available" ? "mt-6" : ""}>
-        <h3 className="pr-8 font-semibold text-lg leading-tight">
+      <div className={gesture.status !== "available" ? "mt-8" : "mt-0"}>
+        <h3 className="pr-8 font-semibold text-base leading-tight">
           {gesture.name}
         </h3>
 
-        {/* Categories as subtle chips */}
+        {/* Categories */}
         {gesture.categories.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {gesture.categories.slice(0, 2).map((cat) => (
               <span
-                className="rounded-full bg-secondary/30 px-2 py-0.5 text-primary text-xs"
+                className="rounded-md bg-muted px-2 py-0.5 text-muted-foreground text-xs"
                 key={cat._id}
               >
                 {cat.name}
               </span>
             ))}
             {gesture.categories.length > 2 && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">
+              <span className="rounded-md bg-muted px-2 py-0.5 text-muted-foreground text-xs">
                 +{gesture.categories.length - 2}
               </span>
             )}
@@ -129,21 +129,21 @@ function GestureCard({
 
         {/* Concepts preview */}
         {gesture.concept.length > 0 && (
-          <p className="mt-2 line-clamp-1 text-muted-foreground text-sm">
+          <p className="mt-2 line-clamp-2 text-muted-foreground text-xs leading-relaxed">
             {gesture.concept.slice(0, 3).join(" · ")}
           </p>
         )}
       </div>
 
-      {/* Subtle glow on selection */}
+      {/* Selection highlight */}
       {isSelected && (
-        <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
+        <div className="pointer-events-none absolute inset-0 rounded-xl bg-primary/5" />
       )}
     </button>
   );
 }
 
-// Floating selection bar for mobile
+// Floating selection bar - clean and prominent
 function SelectionBar({
   count,
   _total,
@@ -157,40 +157,36 @@ function SelectionBar({
 
   return (
     <div
-      className={`fixed right-0 bottom-0 left-0 z-50 transform transition-all duration-500 ease-out ${
+      className={`fixed right-0 bottom-0 left-0 z-50 transform border-border border-t bg-background/95 shadow-2xl backdrop-blur-lg transition-all duration-300 ${
         count > 0
           ? "translate-y-0 opacity-100"
           : "pointer-events-none translate-y-full opacity-0"
       }`}
     >
-      {/* Backdrop blur */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-transparent" />
-
-      {/* Content */}
-      <div className="relative px-4 pt-4 pb-safe-bottom">
-        <div className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-card/80 p-3 shadow-2xl shadow-primary/10 backdrop-blur-xl">
-          {/* Count badge */}
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary font-bold text-lg text-white">
-            {count}
-          </div>
-
-          {/* Info */}
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-foreground">
-              {t("web.sponsors.wizard.gesturesSelected", { count })}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              {formatPrice(count * PRICE_PER_YEAR_CENTS)}
-            </p>
+      <div className="mx-auto px-12 py-4">
+        <div className="flex items-center justify-between gap-4">
+          {/* Selection info */}
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary font-bold text-white">
+              {count}
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">
+                {count} {count === 1 ? "gebaar" : "gebaren"} geselecteerd
+              </p>
+              <p className="text-muted-foreground text-sm">
+                Totaal: {formatPrice(count * PRICE_PER_YEAR_CENTS)}
+              </p>
+            </div>
           </div>
 
           {/* Continue button */}
           <Button
-            className="shrink-0 gap-2 rounded-xl px-5"
+            className="h-12 gap-2 rounded-lg px-8 font-semibold shadow-lg"
             onClick={onContinue}
             size="lg"
           >
-            {t("web.sponsors.wizard.continue")}
+            Doorgaan
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
@@ -539,8 +535,8 @@ function SponsorsComponent() {
   ).length;
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden bg-background">
-      {/* CSS for float animation */}
+    <div className="relative min-h-full bg-background">
+      {/* CSS for animations and utilities */}
       <style>
         {`
           @keyframes float {
@@ -567,6 +563,13 @@ function SponsorsComponent() {
           .progress-button[data-progress]::before {
             transform: translateX(calc(-100% + var(--progress, 0) * 100%));
           }
+          .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
         `}
       </style>
 
@@ -574,158 +577,195 @@ function SponsorsComponent() {
       {currentStep === "select" && (
         <>
           {/* Header */}
-          <header className="relative z-10 shrink-0 px-4 pt-safe-top">
-            <div className="py-6">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-6 w-6 text-accent" />
-                <span className="font-medium text-accent text-sm uppercase tracking-wider">
-                  {t("web.sponsors.new.title")}
-                </span>
+          <header className="border-border border-b bg-gradient-to-b from-background to-muted/20 px-4 pt-safe-top">
+            <div className="mx-auto max-w-6xl py-8">
+              {/* Main heading with icon */}
+              <div className="mb-6 text-center">
+                <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+                  <Heart className="h-8 w-8 fill-primary text-primary" />
+                </div>
+                <h1 className="font-bold text-4xl tracking-tight md:text-5xl">
+                  Steun een gebaar
+                </h1>
+                <p className="mx-auto mt-3 max-w-2xl text-lg text-muted-foreground">
+                  Wordt peter of meter van een gebaar. Jouw naam verschijnt in
+                  de video en ondersteunt het SMOG-project voor 1 jaar.
+                </p>
               </div>
-              <h1 className="mt-2 font-bold text-3xl tracking-tight md:text-4xl">
-                Steun een gebaar
-              </h1>
-              <p className="mt-2 text-muted-foreground">
-                {t("web.sponsors.new.subtitle")}
-              </p>
+
+              {/* Value props */}
+              <div className="mb-8 grid gap-4 sm:grid-cols-3">
+                <div className="rounded-xl border border-border bg-card p-4 text-center">
+                  <div className="mb-2 font-bold text-2xl text-primary">
+                    €50
+                  </div>
+                  <div className="text-muted-foreground text-sm">
+                    Per gebaar per jaar
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-4 text-center">
+                  <div className="mb-2 font-bold text-2xl text-primary">
+                    5 sec
+                  </div>
+                  <div className="text-muted-foreground text-sm">
+                    Jouw naam in elke video
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-4 text-center">
+                  <div className="mb-2 font-bold text-2xl text-primary">
+                    +€10
+                  </div>
+                  <div className="text-muted-foreground text-sm">
+                    Voeg je logo toe (optioneel)
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Search bar */}
-            <div className="pb-4">
+            {/* Search and filter section */}
+            <div className="mx-auto lg:px-8 px-2 pb-6">
+              {/* Search bar */}
               <div className="relative">
-                <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Search className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <input
-                  className="h-14 w-full rounded-2xl border-2 border-border bg-card/80 pr-4 pl-12 text-base backdrop-blur-sm transition-all placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                  className="h-12 w-full rounded-xl border border-border bg-background pr-4 pl-12 text-base shadow-sm transition-all placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t("web.sponsors.list.searchPlaceholder")}
+                  placeholder="Zoek op naam, concept of categorie..."
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
                 />
                 {searchQuery && (
                   <button
-                    className="absolute top-1/2 right-4 -translate-y-1/2 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     onClick={() => setSearchQuery("")}
                     type="button"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
 
-              {/* Filter toggle */}
-              <button
-                className={`mt-3 flex items-center gap-2 rounded-xl px-4 py-2 font-medium text-sm transition-all ${
-                  showFilters || selectedCategories.length > 0
-                    ? "bg-primary/10 text-primary"
-                    : "bg-card text-muted-foreground hover:bg-muted"
-                }`}
-                onClick={() => setShowFilters(!showFilters)}
-                type="button"
-              >
-                Filters
-                {selectedCategories.length > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-white text-xs">
-                    {selectedCategories.length}
-                  </span>
-                )}
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform ${showFilters ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {/* Category filters */}
-              {showFilters && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {categoryNames.map((category) => {
-                    const isSelected = selectedCategories.includes(category);
-                    return (
+              {/* Category filters - always visible */}
+              {categoryNames.length > 0 && (
+                <div className="mt-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="font-medium text-sm">Categorieën:</span>
+                    {selectedCategories.length > 0 && (
                       <button
-                        className={`rounded-full px-3 py-1.5 font-medium text-sm transition-all ${
-                          isSelected
-                            ? "bg-primary text-white shadow-md"
-                            : "bg-card text-foreground hover:bg-muted"
-                        }`}
-                        key={category}
-                        onClick={() => handleCategoryToggle(category)}
+                        className="text-primary text-sm hover:underline"
+                        onClick={handleClearFilters}
                         type="button"
                       >
-                        {category}
-                        {isSelected && <X className="ml-1.5 inline h-3 w-3" />}
+                        Wis filters
                       </button>
-                    );
-                  })}
-                  {selectedCategories.length > 0 && (
-                    <button
-                      className="text-primary text-sm hover:underline"
-                      onClick={handleClearFilters}
-                      type="button"
-                    >
-                      {t("ui.gestureFilters.clearFilters")}
-                    </button>
-                  )}
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {categoryNames
+                      .slice(0, showFilters ? undefined : 8)
+                      .map((category) => {
+                        const isSelected =
+                          selectedCategories.includes(category);
+                        return (
+                          <button
+                            className={`rounded-lg px-3 py-1.5 font-medium text-sm transition-all ${
+                              isSelected
+                                ? "bg-primary text-white shadow-sm"
+                                : "border border-border bg-background hover:border-primary/50"
+                            }`}
+                            key={category}
+                            onClick={() => handleCategoryToggle(category)}
+                            type="button"
+                          >
+                            {category}
+                          </button>
+                        );
+                      })}
+                    {categoryNames.length > 8 && (
+                      <button
+                        className="rounded-lg border border-border bg-background px-3 py-1.5 font-medium text-sm hover:border-primary/50"
+                        onClick={() => setShowFilters(!showFilters)}
+                        type="button"
+                      >
+                        {showFilters
+                          ? "Minder"
+                          : `+${categoryNames.length - 8} meer`}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           </header>
 
-          {/* Results count */}
-          <div className="relative z-10 shrink-0 px-4 pb-2">
-            <p className="text-muted-foreground text-sm">
-              {availableCount} beschikbaar
-              {selectedGestureIds.length > 0 && (
-                <span className="ml-2 font-semibold text-primary">
-                  · {selectedGestureIds.length} geselecteerd
-                </span>
-              )}
-            </p>
+          {/* Results count and sorting */}
+          <div className="mx-auto md:px-12 px-4 py-4">
+            <div className="flex items-center justify-between">
+              <p className="text-muted-foreground text-sm">
+                <span className="font-semibold text-foreground">
+                  {availableCount}
+                </span>{" "}
+                beschikbare gebaren
+                {selectedGestureIds.length > 0 && (
+                  <>
+                    {" · "}
+                    <span className="font-semibold text-primary">
+                      {selectedGestureIds.length} geselecteerd
+                    </span>
+                  </>
+                )}
+              </p>
+            </div>
           </div>
 
           {/* Gesture grid */}
-          <div className="relative z-10 min-h-0 flex-1 overflow-y-auto px-4 pb-32">
-            {isLoading ? (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : error ? (
-              <div className="flex h-64 flex-col items-center justify-center text-center">
-                <p className="font-semibold text-destructive">
-                  {t("ui.gestureList.errorLoading")}
-                </p>
-                <p className="mt-2 text-muted-foreground text-sm">
-                  {t("ui.gestureList.errorTryAgain")}
-                </p>
-              </div>
-            ) : filteredGestures.length === 0 ? (
-              <div className="flex h-64 items-center justify-center">
-                <p className="text-muted-foreground">
-                  {t("ui.gestureList.noGestures")}
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredGestures.map((gesture) => {
-                  const isDisabled =
-                    gesture.status === "sponsored" ||
-                    gesture.status === "pending";
-                  const isSelected = selectedGestureIds.includes(gesture._id);
+          <div className="pb-32">
+            <div className="mx-auto md:px-12 px-4">
+              {isLoading ? (
+                <div className="flex h-64 items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : error ? (
+                <div className="flex h-64 flex-col items-center justify-center text-center">
+                  <p className="font-semibold text-destructive">
+                    {t("ui.gestureList.errorLoading")}
+                  </p>
+                  <p className="mt-2 text-muted-foreground text-sm">
+                    {t("ui.gestureList.errorTryAgain")}
+                  </p>
+                </div>
+              ) : filteredGestures.length === 0 ? (
+                <div className="flex h-64 items-center justify-center">
+                  <p className="text-muted-foreground">
+                    {t("ui.gestureList.noGestures")}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredGestures.map((gesture) => {
+                    const isDisabled =
+                      gesture.status === "sponsored" ||
+                      gesture.status === "pending";
+                    const isSelected = selectedGestureIds.includes(gesture._id);
 
-                  return (
-                    <GestureCard
-                      gesture={gesture}
-                      isDisabled={isDisabled}
-                      isSelected={isSelected}
-                      key={gesture._id}
-                      onToggle={() => {
-                        if (!isDisabled) {
-                          handleToggleSelection(gesture._id);
-                        }
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            )}
+                    return (
+                      <GestureCard
+                        gesture={gesture}
+                        isDisabled={isDisabled}
+                        isSelected={isSelected}
+                        key={gesture._id}
+                        onToggle={() => {
+                          if (!isDisabled) {
+                            handleToggleSelection(gesture._id);
+                          }
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Floating selection bar */}
@@ -739,37 +779,44 @@ function SponsorsComponent() {
 
       {/* Step 2: Details (combined configure + contact) */}
       {currentStep === "details" && (
-        <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+        <div className="relative z-10 lg:px-12 px-4 flex flex-1 flex-col bg-muted/20">
           {/* Header */}
-          <header className="shrink-0 border-border border-b px-4 py-4">
-            <button
-              className="mb-3 flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-              onClick={() => setCurrentStep("select")}
-              type="button"
-            >
-              <ArrowRight className="h-4 w-4 rotate-180" />
-              <span className="text-sm">{t("web.sponsors.wizard.back")}</span>
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary font-bold text-white">
-                2
+          <header className="sticky top-0 z-10 shrink-0 border-border border-b bg-background px-4 py-6">
+            <div>
+              <button
+                className="mb-4 flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => setCurrentStep("select")}
+                type="button"
+              >
+                <ArrowRight className="h-4 w-4 rotate-180" />
+                <span className="font-medium text-sm">Terug naar selectie</span>
+              </button>
+
+              {/* Progress indicator */}
+              <div className="mb-4 flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-semibold text-sm text-white">
+                  2
+                </div>
+                <div className="h-1 w-12 rounded-full bg-primary/20">
+                  <div className="h-full w-2/3 rounded-full bg-primary" />
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-border bg-background font-semibold text-muted-foreground text-sm">
+                  3
+                </div>
               </div>
-              <div>
-                <h1 className="font-bold text-xl">
-                  {t("web.sponsors.wizard.configureTitle")}
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  {t("web.sponsors.wizard.gesturesSelected", {
-                    count: selectedGestureIds.length,
-                  })}
-                </p>
-              </div>
+
+              <h1 className="font-bold text-2xl">Configureer je sponsoring</h1>
+              <p className="mt-2 text-muted-foreground">
+                {selectedGestureIds.length}{" "}
+                {selectedGestureIds.length === 1 ? "gebaar" : "gebaren"}{" "}
+                geselecteerd
+              </p>
             </div>
           </header>
 
           {/* Form content */}
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 pb-24">
-            <div className="mx-auto max-w-lg space-y-6">
+            <div className="mx-auto space-y-6">
               {/* Selected gestures */}
               <div className="space-y-2">
                 <span className="font-semibold text-sm">
@@ -1084,38 +1131,46 @@ function SponsorsComponent() {
           </div>
         </div>
       )}
-
       {/* Step 3: Preview & Pay (combined preview + summary) */}
       {currentStep === "preview" && previewPlaybackId && (
-        <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+        <div className="relative z-10 lg:px-12 px-4 flex flex-1 flex-col bg-muted/20">
           {/* Header */}
-          <header className="shrink-0 border-border border-b bg-background/80 px-4 py-4 backdrop-blur-sm">
-            <button
-              className="mb-3 flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-              onClick={() => setCurrentStep("details")}
-              type="button"
-            >
-              <ArrowRight className="h-4 w-4 rotate-180" />
-              <span className="text-sm">{t("web.sponsors.wizard.back")}</span>
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary font-bold text-white">
-                3
+          <header className="sticky top-0 z-10 shrink-0 border-border border-b bg-background px-4 py-6">
+            <div>
+              <button
+                className="mb-4 flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => setCurrentStep("details")}
+                type="button"
+              >
+                <ArrowRight className="h-4 w-4 rotate-180" />
+                <span className="font-medium text-sm">Terug naar details</span>
+              </button>
+
+              {/* Progress indicator */}
+              <div className="mb-4 flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 font-semibold text-primary text-sm">
+                  <Check className="h-4 w-4" />
+                </div>
+                <div className="h-1 w-12 rounded-full bg-primary" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 font-semibold text-primary text-sm">
+                  <Check className="h-4 w-4" />
+                </div>
+                <div className="h-1 w-12 rounded-full bg-primary" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-semibold text-sm text-white">
+                  3
+                </div>
               </div>
-              <div>
-                <h1 className="font-bold text-xl">
-                  {t("web.sponsors.wizard.previewTitle")}
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  Laatste stap voor je betaling
-                </p>
-              </div>
+
+              <h1 className="font-bold text-2xl">Bekijk je preview</h1>
+              <p className="mt-2 text-muted-foreground">
+                Laatste stap voordat je naar de betaling gaat
+              </p>
             </div>
           </header>
 
           {/* Content */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
-            <div className="mx-auto max-w-lg space-y-6 pb-32">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 pb-24">
+            <div className="mx-auto space-y-6">
               {/* Video Player */}
               <div className="overflow-hidden rounded-2xl border-2 border-border shadow-xl">
                 <MuxPlayer
@@ -1180,7 +1235,7 @@ function SponsorsComponent() {
 
           {/* Footer - Fixed at bottom */}
           <div className="fixed right-0 bottom-0 left-0 z-50 border-border border-t bg-background/95 px-4 py-4 pb-safe-bottom shadow-lg backdrop-blur-md">
-            <div className="mx-auto max-w-lg space-y-3">
+            <div className="mx-auto max-w-lg">
               <Button
                 className="progress-button h-14 w-full rounded-xl font-semibold text-base"
                 data-progress={isProcessing ? "true" : undefined}

@@ -34,7 +34,7 @@ export function GestureFilters({
   const activeFilterCount = selectedCategories.length;
 
   return (
-    <div className="shrink-0 border-border border-b bg-background px-6 py-4">
+    <div className="shrink-0 border-border border-b bg-background lg:px-12 px-4 py-4">
       <div className="mb-3 flex items-center gap-2">
         <SearchBar
           className="flex-1"
