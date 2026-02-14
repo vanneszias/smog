@@ -1166,7 +1166,7 @@ function SponsorsComponent() {
 
           {/* Content */}
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 pb-24">
-            <div className="mx-auto space-y-6">
+            <div className="mx-auto max-w-md space-y-6">
               {/* Video Player */}
               <div className="overflow-hidden rounded-2xl border-2 border-border shadow-xl">
                 <MuxPlayer
