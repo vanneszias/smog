@@ -1,5 +1,6 @@
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
+import * as NavigationBar from "expo-navigation-bar";
 import { SplashScreen, Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
@@ -42,6 +43,16 @@ function AuthenticatedLayout() {
 
   // Auto-sync when app comes to foreground
   useAutoSync();
+
+  // Set Android navigation bar color to match theme
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      NavigationBar.setBackgroundColorAsync(theme.card);
+      NavigationBar.setButtonStyleAsync(
+        theme.statusBar === "light" ? "light" : "dark"
+      );
+    }
+  }, [theme]);
 
   return (
     <>

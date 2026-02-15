@@ -2,14 +2,8 @@ import { FONT_SIZE, FONT_WEIGHT, SPACING } from "@smog/styles";
 import { useRouter } from "expo-router";
 import type React from "react";
 import { useCallback } from "react";
-import {
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import HomeScreenBottomSheetButton from "@/components/bottom-sheet/HomeScreenBottomSheetButton";
 import OptionsBottomSheet from "@/components/bottom-sheet/OptionsBottomSheet";
 import SearchResults from "@/components/search/SearchResults";
@@ -101,7 +95,6 @@ const FavoritesScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   topBar: {
     flexDirection: "row",

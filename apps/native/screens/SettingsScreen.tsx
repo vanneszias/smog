@@ -3,13 +3,8 @@ import type { ThemeMode } from "@smog/styles";
 import { FONT_SIZE, ICON_SIZE, SPACING } from "@smog/styles";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import {
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import BottomSheet from "@/components/bottom-sheet/BottomSheet";
 import { useTheme } from "@/context/ThemeContext";
 import { type Language, useTranslation } from "@/context/TranslationContext";

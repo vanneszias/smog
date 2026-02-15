@@ -7,7 +7,6 @@ import { Stack, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   Platform,
-  SafeAreaView,
   ScrollView,
   Share,
   StyleSheet,
@@ -16,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import BottomSheet from "@/components/bottom-sheet/BottomSheet";
 import BaseButton from "@/components/common/BaseButton";
 import { useAuth } from "@/context/AuthProvider";

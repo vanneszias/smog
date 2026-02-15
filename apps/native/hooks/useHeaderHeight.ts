@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { ViewStyle } from "react-native";
-import { Platform, StatusBar, type View } from "react-native";
+import type { View, ViewStyle } from "react-native";
 import {
   Easing,
   type SharedValue,
@@ -48,7 +47,6 @@ export const useHeaderHeight = (
   const {
     additionalTopPadding = 0,
     additionalBottomPadding = 0,
-    includeStatusBar = false,
     enableAutoHide = true,
     hideThreshold = 50,
     showThreshold = 10,
@@ -71,13 +69,8 @@ export const useHeaderHeight = (
     if (headerRef.current) {
       headerRef.current.measureInWindow((_x, _y, _width, height) => {
         // Calculate total header height including all paddings and margins
-        let totalHeight =
+        const totalHeight =
           height + additionalTopPadding + additionalBottomPadding;
-
-        // Add status bar height if needed (for Android)
-        if (includeStatusBar && Platform.OS === "android") {
-          totalHeight += StatusBar.currentHeight || 0;
-        }
 
         setHeaderHeight(totalHeight);
         setIsHeaderMeasured(true);
@@ -88,12 +81,7 @@ export const useHeaderHeight = (
         );
       });
     }
-  }, [
-    additionalTopPadding,
-    additionalBottomPadding,
-    includeStatusBar,
-    paddingTop,
-  ]);
+  }, [additionalTopPadding, additionalBottomPadding, paddingTop]);
 
   const animateHeaderHide = useCallback(
     (currentScrollY: number) => {

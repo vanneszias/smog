@@ -5,7 +5,6 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  SafeAreaView,
   ScrollView,
   Share,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import ToastContainer from "@/components/ToastContainer";
 import { LogContext } from "@/context/logs/LogProvider";
 import { useTheme } from "@/context/ThemeContext";

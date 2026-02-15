@@ -6,12 +6,12 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   CategoryRow,
   ConceptSection,

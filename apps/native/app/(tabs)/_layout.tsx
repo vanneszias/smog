@@ -1,12 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
 export default function TabLayout() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+
+  const TAB_BAR_BASE_HEIGHT = Platform.OS === "ios" ? 70 : 52;
+  const bottomInset = insets.bottom;
 
   return (
     <Tabs
@@ -17,8 +22,8 @@ export default function TabLayout() {
           backgroundColor: theme.card,
           borderTopColor: theme.border,
           borderTopWidth: Platform.OS === "ios" ? 0.5 : 1,
-          paddingBottom: Platform.OS === "ios" ? 20 : 8,
-          height: Platform.OS === "ios" ? 90 : 60,
+          paddingBottom: bottomInset || (Platform.OS === "ios" ? 20 : 8),
+          height: TAB_BAR_BASE_HEIGHT + bottomInset,
           ...Platform.select({
             ios: {
               shadowColor: "#000",

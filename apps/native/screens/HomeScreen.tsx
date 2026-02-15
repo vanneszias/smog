@@ -2,15 +2,8 @@ import { SPACING } from "@smog/styles";
 import { useRouter } from "expo-router";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Keyboard,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  type TextInput,
-  View,
-} from "react-native";
+import { Keyboard, StyleSheet, type TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import HomeScreenBottomSheetButton from "@/components/bottom-sheet/HomeScreenBottomSheetButton";
 import OptionsBottomSheet from "@/components/bottom-sheet/OptionsBottomSheet";
 import Logo from "@/components/Logo";
@@ -243,7 +236,6 @@ const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: "row",

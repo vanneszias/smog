@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
@@ -17,6 +18,7 @@ const GlobalOfflineBanner: React.FC = () => {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const { isOffline } = useNetworkStatus();
+  const insets = useSafeAreaInsets();
 
   const [bannerState, setBannerState] = useState<
     "hidden" | "offline" | "online"
@@ -174,7 +176,7 @@ const GlobalOfflineBanner: React.FC = () => {
         },
       ]}
     >
-      <View style={styles.content}>
+      <View style={[styles.content, { paddingTop: insets.top + SPACING.sm }]}>
         <Ionicons
           color={theme.background}
           name={iconName}
@@ -207,7 +209,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: SPACING.lg,
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xxl, // Extra padding for status bar and visibility
   },
   text: {
     marginLeft: SPACING.sm,
