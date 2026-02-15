@@ -271,6 +271,7 @@ const SearchScreen = () => {
 
   return (
     <SafeAreaView
+      edges={["top"]}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       <View style={styles.content}>

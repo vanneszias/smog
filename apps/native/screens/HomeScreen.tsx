@@ -176,6 +176,7 @@ const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView
+      edges={["top"]}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       {/* Header */}

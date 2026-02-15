@@ -10,8 +10,10 @@ export default function TabLayout() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
-  const TAB_BAR_BASE_HEIGHT = Platform.OS === "ios" ? 70 : 52;
-  const bottomInset = insets.bottom;
+  const TAB_BAR_BASE_HEIGHT = Platform.OS === "ios" ? 50 : 52;
+  // On iOS, the Tabs navigator natively handles the bottom safe area.
+  // Only apply the inset manually on Android.
+  const bottomInset = Platform.OS === "android" ? insets.bottom : 0;
 
   return (
     <Tabs
@@ -22,8 +24,11 @@ export default function TabLayout() {
           backgroundColor: theme.card,
           borderTopColor: theme.border,
           borderTopWidth: Platform.OS === "ios" ? 0.5 : 1,
-          paddingBottom: bottomInset || (Platform.OS === "ios" ? 20 : 8),
-          height: TAB_BAR_BASE_HEIGHT + bottomInset,
+          paddingBottom: Platform.OS === "ios" ? 0 : bottomInset || 8,
+          height:
+            Platform.OS === "ios"
+              ? undefined
+              : TAB_BAR_BASE_HEIGHT + bottomInset,
           ...Platform.select({
             ios: {
               shadowColor: "#000",
