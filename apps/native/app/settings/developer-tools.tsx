@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import ToastContainer from "@/components/ToastContainer";
 import { LogContext } from "@/context/logs/LogProvider";
 import { useTheme } from "@/context/ThemeContext";
@@ -155,9 +154,7 @@ const DeveloperToolsScreen: React.FC = () => {
   }, [fetchCacheStats]);
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
         options={{
           title: "Developer Tools",
@@ -339,7 +336,7 @@ const DeveloperToolsScreen: React.FC = () => {
         </View>
       </ScrollView>
       <ToastContainer />
-    </SafeAreaView>
+    </View>
   );
 };
 

@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   CategoryRow,
   ConceptSection,
@@ -244,9 +243,7 @@ const GestureScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
         options={{
           title: gesture.name,
@@ -294,7 +291,7 @@ const GestureScreen: React.FC = () => {
 
         <RelatedGesturesSection relatedGestures={relatedGestures} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

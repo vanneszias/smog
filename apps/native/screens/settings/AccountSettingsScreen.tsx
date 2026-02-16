@@ -15,7 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import BottomSheet from "@/components/bottom-sheet/BottomSheet";
 import BaseButton from "@/components/common/BaseButton";
 import { useAuth } from "@/context/AuthProvider";
@@ -214,9 +213,7 @@ export default function AccountSettingsScreen() {
 
   if (!user) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: theme.background }]}
-      >
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <Stack.Screen
           options={{
             title: t("account.title"),
@@ -249,14 +246,12 @@ export default function AccountSettingsScreen() {
             title={t("auth.welcome.signInSignUp")}
           />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
         options={{
           title: t("account.title"),
@@ -498,7 +493,7 @@ export default function AccountSettingsScreen() {
           </View>
         </View>
       </BottomSheet>
-    </SafeAreaView>
+    </View>
   );
 }
 

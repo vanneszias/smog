@@ -4,7 +4,6 @@ import { FONT_SIZE, ICON_SIZE, SPACING } from "@smog/styles";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import BottomSheet from "@/components/bottom-sheet/BottomSheet";
 import { useTheme } from "@/context/ThemeContext";
 import { type Language, useTranslation } from "@/context/TranslationContext";
@@ -79,9 +78,7 @@ const SettingsScreen = () => {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
         options={{
           title: t("settings.title"),
@@ -328,7 +325,7 @@ const SettingsScreen = () => {
           />
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
