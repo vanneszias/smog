@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { MenuView } from "@react-native-menu/menu";
 import { ICON_SIZE, SPACING } from "@smog/styles";
 import { useRouter } from "expo-router";
 import type React from "react";
@@ -6,12 +7,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Keyboard,
   Linking,
+  Platform,
   StyleSheet,
   type TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as DropdownMenu from "zeego/dropdown-menu";
 import Logo from "@/components/Logo";
 import RecentSearches from "@/components/search/RecentSearches";
 import SearchBar from "@/components/search/SearchBar";
@@ -166,46 +167,54 @@ const HomeScreen: React.FC = () => {
     >
       {/* Header with native context menu */}
       <View style={styles.header}>
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger>
-            <View style={[styles.menuButton, { backgroundColor: theme.card }]}>
-              <Ionicons
-                color={theme.text}
-                name="ellipsis-horizontal"
-                size={ICON_SIZE.md}
-              />
-            </View>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content>
-            <DropdownMenu.Item key="settings" onSelect={navigateToSettings}>
-              <DropdownMenu.ItemTitle>
-                {t("settings.title")}
-              </DropdownMenu.ItemTitle>
-              <DropdownMenu.ItemIcon
-                androidIconName="ic_menu_preferences"
-                ios={{ name: "gearshape" }}
-              />
-            </DropdownMenu.Item>
-            <DropdownMenu.Item key="about" onSelect={handleAboutPress}>
-              <DropdownMenu.ItemTitle>
-                {t("about.title")}
-              </DropdownMenu.ItemTitle>
-              <DropdownMenu.ItemIcon
-                androidIconName="ic_menu_info_details"
-                ios={{ name: "info.circle" }}
-              />
-            </DropdownMenu.Item>
-            <DropdownMenu.Item key="contact" onSelect={handleContactPress}>
-              <DropdownMenu.ItemTitle>
-                {t("contact.title")}
-              </DropdownMenu.ItemTitle>
-              <DropdownMenu.ItemIcon
-                androidIconName="ic_menu_call"
-                ios={{ name: "phone" }}
-              />
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
+        <MenuView
+          actions={[
+            {
+              id: "settings",
+              title: t("settings.title"),
+              image: Platform.select({
+                ios: "gearshape",
+                android: "ic_menu_preferences",
+              }),
+            },
+            {
+              id: "about",
+              title: t("about.title"),
+              image: Platform.select({
+                ios: "info.circle",
+                android: "ic_menu_info_details",
+              }),
+            },
+            {
+              id: "contact",
+              title: t("contact.title"),
+              image: Platform.select({
+                ios: "phone",
+                android: "ic_menu_call",
+              }),
+            },
+          ]}
+          onPressAction={({ nativeEvent }) => {
+            if (nativeEvent.event === "settings") {
+              navigateToSettings();
+            }
+            if (nativeEvent.event === "about") {
+              handleAboutPress();
+            }
+            if (nativeEvent.event === "contact") {
+              handleContactPress();
+            }
+          }}
+          shouldOpenOnLongPress={false}
+        >
+          <View style={[styles.menuButton, { backgroundColor: theme.card }]}>
+            <Ionicons
+              color={theme.text}
+              name="ellipsis-horizontal"
+              size={ICON_SIZE.md}
+            />
+          </View>
+        </MenuView>
       </View>
 
       {/* Logo */}

@@ -81,8 +81,8 @@
     "react-native-worklets": "0.5.1",
     "regenerator-runtime": "^0.14.1",
     "rive-react-native": "^9.7.0",
-    "whatwg-fetch": "^3.6.20",
-    "zeego": "^3.0.6"
+    "@react-native-menu/menu": "^2.0.0",
+    "whatwg-fetch": "^3.6.20"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",

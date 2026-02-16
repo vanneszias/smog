@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
+import { MenuView } from "@react-native-menu/menu";
 import { ICON_SIZE, SPACING } from "@smog/styles";
 import { Stack, useRouter } from "expo-router";
 import type React from "react";
 import { useCallback } from "react";
 import { Linking, Platform, StyleSheet, View } from "react-native";
-import * as DropdownMenu from "zeego/dropdown-menu";
 import SearchResults from "@/components/search/SearchResults";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -38,6 +38,48 @@ const FavoritesScreen: React.FC = () => {
 
   const isIOS = Platform.OS === "ios";
 
+  const menuActions = [
+    {
+      id: "settings",
+      title: t("settings.title"),
+      image: Platform.select({
+        ios: "gearshape",
+        android: "ic_menu_preferences",
+      }),
+    },
+    {
+      id: "about",
+      title: t("about.title"),
+      image: Platform.select({
+        ios: "info.circle",
+        android: "ic_menu_info_details",
+      }),
+    },
+    {
+      id: "contact",
+      title: t("contact.title"),
+      image: Platform.select({
+        ios: "phone",
+        android: "ic_menu_call",
+      }),
+    },
+  ];
+
+  const handleMenuAction = useCallback(
+    ({ nativeEvent }: { nativeEvent: { event: string } }) => {
+      if (nativeEvent.event === "settings") {
+        navigateToSettings();
+      }
+      if (nativeEvent.event === "about") {
+        handleAboutPress();
+      }
+      if (nativeEvent.event === "contact") {
+        handleContactPress();
+      }
+    },
+    [navigateToSettings, handleAboutPress, handleContactPress]
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
@@ -56,55 +98,17 @@ const FavoritesScreen: React.FC = () => {
                 headerBlurEffect: "systemChromeMaterial",
                 headerShadowVisible: false,
                 headerRight: () => (
-                  <DropdownMenu.Root>
-                    <DropdownMenu.Trigger>
-                      <View>
-                        <Ionicons
-                          color={theme.primary}
-                          name="ellipsis-horizontal-circle"
-                          size={ICON_SIZE.md}
-                        />
-                      </View>
-                    </DropdownMenu.Trigger>
-                    <DropdownMenu.Content>
-                      <DropdownMenu.Item
-                        key="settings"
-                        onSelect={navigateToSettings}
-                      >
-                        <DropdownMenu.ItemTitle>
-                          {t("settings.title")}
-                        </DropdownMenu.ItemTitle>
-                        <DropdownMenu.ItemIcon
-                          androidIconName="ic_menu_preferences"
-                          ios={{ name: "gearshape" }}
-                        />
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Item
-                        key="about"
-                        onSelect={handleAboutPress}
-                      >
-                        <DropdownMenu.ItemTitle>
-                          {t("about.title")}
-                        </DropdownMenu.ItemTitle>
-                        <DropdownMenu.ItemIcon
-                          androidIconName="ic_menu_info_details"
-                          ios={{ name: "info.circle" }}
-                        />
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Item
-                        key="contact"
-                        onSelect={handleContactPress}
-                      >
-                        <DropdownMenu.ItemTitle>
-                          {t("contact.title")}
-                        </DropdownMenu.ItemTitle>
-                        <DropdownMenu.ItemIcon
-                          androidIconName="ic_menu_call"
-                          ios={{ name: "phone" }}
-                        />
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Root>
+                  <MenuView
+                    actions={menuActions}
+                    onPressAction={handleMenuAction}
+                    shouldOpenOnLongPress={false}
+                  >
+                    <Ionicons
+                      color={theme.primary}
+                      name="ellipsis-horizontal-circle"
+                      size={ICON_SIZE.md}
+                    />
+                  </MenuView>
                 ),
               }
             : {
@@ -117,55 +121,19 @@ const FavoritesScreen: React.FC = () => {
                   fontSize: 20,
                 },
                 headerRight: () => (
-                  <DropdownMenu.Root>
-                    <DropdownMenu.Trigger>
-                      <View style={styles.androidMenuButton}>
-                        <Ionicons
-                          color={theme.background}
-                          name="ellipsis-vertical"
-                          size={ICON_SIZE.md}
-                        />
-                      </View>
-                    </DropdownMenu.Trigger>
-                    <DropdownMenu.Content>
-                      <DropdownMenu.Item
-                        key="settings"
-                        onSelect={navigateToSettings}
-                      >
-                        <DropdownMenu.ItemTitle>
-                          {t("settings.title")}
-                        </DropdownMenu.ItemTitle>
-                        <DropdownMenu.ItemIcon
-                          androidIconName="ic_menu_preferences"
-                          ios={{ name: "gearshape" }}
-                        />
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Item
-                        key="about"
-                        onSelect={handleAboutPress}
-                      >
-                        <DropdownMenu.ItemTitle>
-                          {t("about.title")}
-                        </DropdownMenu.ItemTitle>
-                        <DropdownMenu.ItemIcon
-                          androidIconName="ic_menu_info_details"
-                          ios={{ name: "info.circle" }}
-                        />
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Item
-                        key="contact"
-                        onSelect={handleContactPress}
-                      >
-                        <DropdownMenu.ItemTitle>
-                          {t("contact.title")}
-                        </DropdownMenu.ItemTitle>
-                        <DropdownMenu.ItemIcon
-                          androidIconName="ic_menu_call"
-                          ios={{ name: "phone" }}
-                        />
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Root>
+                  <MenuView
+                    actions={menuActions}
+                    onPressAction={handleMenuAction}
+                    shouldOpenOnLongPress={false}
+                  >
+                    <View style={styles.androidMenuButton}>
+                      <Ionicons
+                        color={theme.background}
+                        name="ellipsis-vertical"
+                        size={ICON_SIZE.md}
+                      />
+                    </View>
+                  </MenuView>
                 ),
               }),
         }}
