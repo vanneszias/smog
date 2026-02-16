@@ -1,26 +1,27 @@
-import { SPACING } from "@smog/styles";
+import { Ionicons } from "@expo/vector-icons";
+import { ICON_SIZE, SPACING } from "@smog/styles";
 import { useRouter } from "expo-router";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Keyboard, StyleSheet, type TextInput, View } from "react-native";
+import {
+  Keyboard,
+  Linking,
+  StyleSheet,
+  type TextInput,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import HomeScreenBottomSheetButton from "@/components/bottom-sheet/HomeScreenBottomSheetButton";
-import OptionsBottomSheet from "@/components/bottom-sheet/OptionsBottomSheet";
+import * as DropdownMenu from "zeego/dropdown-menu";
 import Logo from "@/components/Logo";
 import RecentSearches from "@/components/search/RecentSearches";
-// Components
 import SearchBar from "@/components/search/SearchBar";
 import SearchResults from "@/components/search/SearchResults";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useRecentSearches } from "@/context/RecentSearchesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
-import { useBottomSheet } from "@/hooks/useBottomSheet";
 import { useOptimizedSearch } from "@/hooks/useOptimizedSearch";
-import { useSettingsModal } from "@/hooks/useSettingsModal";
 import {
-  trackBottomSheetClosed,
-  trackBottomSheetOpened,
   trackRecentSearchSelected,
   trackSearchCleared,
   trackSearchPerformed,
@@ -46,8 +47,6 @@ const HomeScreen: React.FC = () => {
   });
 
   const { addRecentSearch, recentSearches } = useRecentSearches();
-  const bottomSheetHook = useBottomSheet();
-  const settingsModalHook = useSettingsModal();
 
   // Navigation handlers
   const navigateToSettings = useCallback(() => {
@@ -64,7 +63,6 @@ const HomeScreen: React.FC = () => {
   // Track search results when they change
   useEffect(() => {
     if (searchTerm && searchHook.results.length >= 0) {
-      // Only track if we have a search term and got results
       const searchDuration = searchHook.searchStats.searchTime;
       trackSearchPerformed(
         searchTerm,
@@ -99,21 +97,18 @@ const HomeScreen: React.FC = () => {
     [addRecentSearch]
   );
 
-  // Handler for selecting a recent search
   const handleRecentSearchSelect = useCallback(
     (query: string) => {
       setSearchTerm(query);
       searchHook.search(query);
       addRecentSearch(query);
 
-      // Track recent search selection
       const position = recentSearches.indexOf(query);
       trackRecentSearchSelected(query, position >= 0 ? position : 0);
     },
     [searchHook, addRecentSearch, recentSearches]
   );
 
-  // Control RecentSearches visibility: show only when searchTerm is empty
   const recentSearchesVisible = searchTerm.length === 0;
 
   const handleClearSearch = useCallback(() => {
@@ -123,7 +118,6 @@ const HomeScreen: React.FC = () => {
     trackSearchCleared(previousQuery);
   }, [searchHook.clearSearch, searchTerm]);
 
-  // Search focus handlers
   const handleSearchFocus = useCallback(() => {
     setIsSearchFocused(true);
   }, []);
@@ -136,23 +130,15 @@ const HomeScreen: React.FC = () => {
     setIsSearchFocused(false);
   }, []);
 
-  // Bottom sheet handlers
-  const handleSettingsPress = useCallback(() => {
-    settingsModalHook.handleSettingsPress(navigateToSettings);
-  }, [settingsModalHook.handleSettingsPress, navigateToSettings]);
+  // Menu handlers
+  const handleAboutPress = useCallback(() => {
+    Linking.openURL("https://smog.vlaanderen");
+  }, []);
 
-  // Track bottom sheet interactions
-  const handleBottomSheetOpen = useCallback(() => {
-    trackBottomSheetOpened("options");
-    bottomSheetHook.showBottomSheet();
-  }, [bottomSheetHook.showBottomSheet]);
+  const handleContactPress = useCallback(() => {
+    Linking.openURL("mailto:hello@smog.vlaanderen");
+  }, []);
 
-  const handleBottomSheetClose = useCallback(() => {
-    trackBottomSheetClosed("options");
-    bottomSheetHook.hideBottomSheet();
-  }, [bottomSheetHook.hideBottomSheet]);
-
-  // Render helpers
   const renderEmptyState = () => <></>;
 
   const renderSearchResults = () => (
@@ -171,7 +157,6 @@ const HomeScreen: React.FC = () => {
     />
   );
 
-  // Ref for SearchBar to control focus/blur
   const searchBarRef = useRef<TextInput>(null);
 
   return (
@@ -179,9 +164,48 @@ const HomeScreen: React.FC = () => {
       edges={["top"]}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      {/* Header */}
+      {/* Header with native context menu */}
       <View style={styles.header}>
-        <HomeScreenBottomSheetButton onPress={handleBottomSheetOpen} />
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            <View style={[styles.menuButton, { backgroundColor: theme.card }]}>
+              <Ionicons
+                color={theme.text}
+                name="ellipsis-horizontal"
+                size={ICON_SIZE.md}
+              />
+            </View>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content>
+            <DropdownMenu.Item key="settings" onSelect={navigateToSettings}>
+              <DropdownMenu.ItemTitle>
+                {t("settings.title")}
+              </DropdownMenu.ItemTitle>
+              <DropdownMenu.ItemIcon
+                androidIconName="ic_menu_preferences"
+                ios={{ name: "gearshape" }}
+              />
+            </DropdownMenu.Item>
+            <DropdownMenu.Item key="about" onSelect={handleAboutPress}>
+              <DropdownMenu.ItemTitle>
+                {t("about.title")}
+              </DropdownMenu.ItemTitle>
+              <DropdownMenu.ItemIcon
+                androidIconName="ic_menu_info_details"
+                ios={{ name: "info.circle" }}
+              />
+            </DropdownMenu.Item>
+            <DropdownMenu.Item key="contact" onSelect={handleContactPress}>
+              <DropdownMenu.ItemTitle>
+                {t("contact.title")}
+              </DropdownMenu.ItemTitle>
+              <DropdownMenu.ItemIcon
+                androidIconName="ic_menu_call"
+                ios={{ name: "phone" }}
+              />
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
       </View>
 
       {/* Logo */}
@@ -209,8 +233,8 @@ const HomeScreen: React.FC = () => {
         <RecentSearches
           onSelect={(query) => {
             handleRecentSearchSelect(query);
-            searchBarRef.current?.blur(); // Remove focus from the search bar
-            Keyboard.dismiss(); // Dismiss the keyboard
+            searchBarRef.current?.blur();
+            Keyboard.dismiss();
           }}
           searchTerm={searchTerm}
           visible={recentSearchesVisible}
@@ -221,15 +245,6 @@ const HomeScreen: React.FC = () => {
           {searchTerm.length === 0 ? renderEmptyState() : renderSearchResults()}
         </View>
       </View>
-
-      {/* Bottom sheet */}
-      <OptionsBottomSheet
-        onAboutPress={settingsModalHook.handleAboutPress}
-        onClose={handleBottomSheetClose}
-        onContactPress={settingsModalHook.handleContactPress}
-        onSettingsPress={handleSettingsPress}
-        visible={bottomSheetHook.isVisible}
-      />
     </SafeAreaView>
   );
 };
@@ -245,6 +260,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
   },
+  menuButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   logoContainer: {
     marginVertical: SPACING.lg,
   },
@@ -258,11 +280,6 @@ const styles = StyleSheet.create({
   },
   searchResults: {
     flex: 1,
-  },
-  recentSearchesContainer: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.md,
-    backgroundColor: "transparent",
   },
 });
 

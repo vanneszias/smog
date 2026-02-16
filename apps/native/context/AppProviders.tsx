@@ -1,3 +1,4 @@
+import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import {
   ConvexProvider,
   ConvexProviderWithAuth,
@@ -63,7 +64,11 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
                     <FavoritesProvider>
                       <RecentSearchesProvider>
                         <GestureHandlerRootView>
-                          <SafeAreaProvider>{children}</SafeAreaProvider>
+                          <SafeAreaProvider>
+                            <ActionSheetProvider>
+                              {children}
+                            </ActionSheetProvider>
+                          </SafeAreaProvider>
                         </GestureHandlerRootView>
                       </RecentSearchesProvider>
                     </FavoritesProvider>

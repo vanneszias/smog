@@ -38,8 +38,45 @@ const INACTIVE_OR_BACKGROUND_REGEX = /inactive|background/;
 // Keep the default splash visible while we load resources
 SplashScreen.preventAutoHideAsync();
 
+// Shared header configuration per platform
+function useHeaderOptions() {
+  const { theme } = useTheme();
+  const isIOS = Platform.OS === "ios";
+
+  // iOS: translucent blur headers (automatic liquid glass on iOS 26)
+  // Android: opaque Material-style colored headers
+  const defaultScreenOptions = isIOS
+    ? {
+        headerTransparent: true,
+        headerBlurEffect: "systemChromeMaterial" as const,
+        headerShadowVisible: false,
+        headerTintColor: theme.primary,
+        headerTitleStyle: {
+          fontWeight: "600" as const,
+          fontSize: 17,
+          color: theme.text,
+        },
+        headerStyle: {
+          backgroundColor: "transparent",
+        },
+      }
+    : {
+        headerStyle: {
+          backgroundColor: theme.primary,
+        },
+        headerTintColor: theme.background,
+        headerTitleStyle: {
+          fontWeight: "bold" as const,
+          fontSize: 20,
+        },
+      };
+
+  return { defaultScreenOptions, isIOS };
+}
+
 function AuthenticatedLayout() {
   const { theme } = useTheme();
+  const { defaultScreenOptions, isIOS } = useHeaderOptions();
 
   // Auto-sync when app comes to foreground
   useAutoSync();
@@ -62,45 +99,24 @@ function AuthenticatedLayout() {
         <Stack.Screen
           name="gestures/[id]"
           options={{
-            headerStyle: {
-              backgroundColor: theme.primary,
-            },
-            headerTintColor: theme.background,
-            headerTitleStyle: {
-              fontWeight: Platform.OS === "ios" ? "600" : "bold",
-              fontSize: Platform.OS === "ios" ? 17 : 20,
-            },
-            presentation: Platform.OS === "ios" ? "card" : "modal",
+            ...defaultScreenOptions,
+            presentation: isIOS ? "card" : "modal",
             gestureEnabled: true,
           }}
         />
         <Stack.Screen
           name="settings/index"
           options={{
-            headerStyle: {
-              backgroundColor: theme.primary,
-            },
-            headerTintColor: theme.background,
-            headerTitleStyle: {
-              fontWeight: Platform.OS === "ios" ? "600" : "bold",
-              fontSize: Platform.OS === "ios" ? 17 : 20,
-            },
-            presentation: Platform.OS === "ios" ? "card" : "modal",
+            ...defaultScreenOptions,
+            presentation: isIOS ? "card" : "modal",
             gestureEnabled: true,
           }}
         />
         <Stack.Screen
           name="settings/developer-tools"
           options={{
-            headerStyle: {
-              backgroundColor: theme.primary,
-            },
-            headerTintColor: theme.background,
-            headerTitleStyle: {
-              fontWeight: Platform.OS === "ios" ? "600" : "bold",
-              fontSize: Platform.OS === "ios" ? 17 : 20,
-            },
-            presentation: Platform.OS === "ios" ? "card" : "modal",
+            ...defaultScreenOptions,
+            presentation: isIOS ? "card" : "modal",
             gestureEnabled: true,
             title: "Developer Tools",
           }}
@@ -108,15 +124,8 @@ function AuthenticatedLayout() {
         <Stack.Screen
           name="settings/account"
           options={{
-            headerStyle: {
-              backgroundColor: theme.primary,
-            },
-            headerTintColor: theme.background,
-            headerTitleStyle: {
-              fontWeight: Platform.OS === "ios" ? "600" : "bold",
-              fontSize: Platform.OS === "ios" ? 17 : 20,
-            },
-            presentation: Platform.OS === "ios" ? "card" : "modal",
+            ...defaultScreenOptions,
+            presentation: isIOS ? "card" : "modal",
             gestureEnabled: true,
           }}
         />

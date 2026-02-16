@@ -1,17 +1,17 @@
 import { SPACING } from "@smog/styles";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Keyboard, StyleSheet, View } from "react-native";
-import Animated from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
-import EmptyState from "@/components/common/EmptyState";
-import SearchHeader from "@/components/search/SearchHeader";
+import { Keyboard, Platform, StyleSheet, View } from "react-native";
+import CategoryListBottomSheet from "@/components/bottom-sheet/CategoryListBottomSheet";
+import { CircularButton, EmptyState } from "@/components/common";
+import CategoryFilters from "@/components/search/CategoryFilters";
+import RecentSearches from "@/components/search/RecentSearches";
+import SearchBar from "@/components/search/SearchBar";
 import SearchResults from "@/components/search/SearchResults";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useRecentSearches } from "@/context/RecentSearchesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
-import { useHeaderHeight } from "@/hooks/useHeaderHeight";
 import { useOptimizedSearch } from "@/hooks/useOptimizedSearch";
 import {
   trackBottomSheetClosed,
@@ -44,9 +44,6 @@ const SearchScreen = () => {
   const [categorySheetVisible, setCategorySheetVisible] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Screen tracking is now handled automatically by PostHog autocapture
-
-  // Remove a category from selectedCategories
   const handleRemoveCategory = useCallback(
     (category: string) => {
       const newCategories = selectedCategories.filter((c) => c !== category);
@@ -82,25 +79,10 @@ const SearchScreen = () => {
     enableCache: true,
   });
 
-  // Use custom hook for header height calculation
-  const {
-    headerRef,
-    onHeaderLayout,
-    onScroll,
-    animatedHeaderStyle,
-    animatedContentStyle,
-  } = useHeaderHeight({
-    additionalBottomPadding: SPACING.md, // contentArea paddingTop
-    enableAutoHide: true,
-    hideThreshold: 50,
-    showThreshold: 10,
-  });
-
   useEffect(() => {
     gestureService.getCategories().then(setCategories);
   }, []);
 
-  // Only initialize selectedCategories from initialCategory once
   useEffect(() => {
     if (!hasInitialized) {
       if (initialCategory) {
@@ -110,10 +92,8 @@ const SearchScreen = () => {
     }
   }, [initialCategory, hasInitialized]);
 
-  // Trigger search when searchTerm or selectedCategories change (but only after init)
   useEffect(() => {
     if (hasInitialized) {
-      // Always trigger search when categories change, even if searchTerm is empty
       if (searchTerm.length === 0) {
         search("", selectedCategories);
       } else if (searchTerm.length >= 1) {
@@ -124,10 +104,8 @@ const SearchScreen = () => {
     }
   }, [searchTerm, selectedCategories, hasInitialized, search, clearSearch]);
 
-  // Track search results when they change
   useEffect(() => {
     if (hasInitialized && (searchTerm || selectedCategories.length > 0)) {
-      // Only track if we have a search term or categories and got results
       const searchDuration = searchStats.searchTime;
       trackSearchPerformed(
         searchTerm,
@@ -192,7 +170,6 @@ const SearchScreen = () => {
     });
   }, [clearSearch, router, searchTerm]);
 
-  // Multi-category handler for CategoryListBottomSheet
   const handleCategoryChange = useCallback(
     (categoryList: string[]) => {
       const previousCategories = selectedCategories;
@@ -203,7 +180,6 @@ const SearchScreen = () => {
         (c) => !categoryList.includes(c)
       );
 
-      // Track category changes
       for (const category of addedCategories) {
         trackSearchCategoryAdded(category, categoryList.length);
       }
@@ -269,66 +245,123 @@ const SearchScreen = () => {
     }
   }, [refresh, searchTerm]);
 
-  return (
-    <SafeAreaView
-      edges={["top"]}
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
-      <View style={styles.content}>
-        {/* Header - positioned absolutely at top */}
-        <Animated.View
-          onLayout={onHeaderLayout}
-          ref={headerRef}
-          style={[styles.headerContainer, animatedHeaderStyle]}
-        >
-          <SearchHeader
-            categories={categories}
-            categorySheetVisible={categorySheetVisible}
-            isLoading={isLoading}
-            isSearchBarFocused={isSearchBarFocused}
-            onBlur={handleBlur}
-            onCategoryChange={handleCategoryChange}
-            onClear={handleClear}
-            onFocus={handleFocus}
-            onHideCategorySheet={handleHideCategorySheet}
-            onRecentSearchSelect={handleRecentSearchSelect}
-            onRemoveCategory={handleRemoveCategory}
-            onSearchChange={handleSearchChange}
-            onSearchSubmit={handleSearchSubmit}
-            onShowCategorySheet={handleShowCategorySheet}
-            recentSearches={recentSearches}
-            searchTerm={searchTerm}
-            selectedCategories={selectedCategories}
-          />
-        </Animated.View>
+  const isIOS = Platform.OS === "ios";
 
-        {/* Search Content - expands to full space when header hidden */}
-        <Animated.View
-          style={[styles.searchContentContainer, animatedContentStyle]}
-        >
-          {!isLoading && results.length === 0 ? (
-            <EmptyState
-              message={t("search.noResults", { query: searchTerm })}
+  return (
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Native search bar on iOS via headerSearchBarOptions */}
+      <Stack.Screen
+        options={{
+          title: t("tabs.search"),
+          ...(isIOS
+            ? {
+                headerLargeTitle: true,
+                headerLargeTitleStyle: {
+                  color: theme.text,
+                },
+                headerStyle: {
+                  backgroundColor: theme.background,
+                },
+                headerTransparent: true,
+                headerBlurEffect: "systemChromeMaterial",
+                headerShadowVisible: false,
+                headerSearchBarOptions: {
+                  placeholder: t("search.placeholder"),
+                  autoCapitalize: "none",
+                  hideWhenScrolling: false,
+                  onChangeText: (e) => handleSearchChange(e.nativeEvent.text),
+                  onCancelButtonPress: handleClear,
+                  onSearchButtonPress: (e) =>
+                    handleSearchSubmit(e.nativeEvent.text),
+                  tintColor: theme.primary,
+                },
+                headerRight: () => (
+                  <CircularButton
+                    icon="filter"
+                    onPress={handleShowCategorySheet}
+                    size="small"
+                  />
+                ),
+              }
+            : {
+                headerShown: false,
+              }),
+        }}
+      />
+
+      {/* Android-only custom search bar */}
+      {!isIOS && (
+        <View style={styles.androidHeader}>
+          <View style={styles.androidSearchRow}>
+            <CircularButton
+              icon="filter"
+              onPress={handleShowCategorySheet}
+              size="large"
             />
-          ) : (
-            <SearchResults
-              hasMore={hasMore}
-              initialQuery={searchTerm}
-              isFavorite={isFavorite}
-              isLoading={isLoading}
-              isRefreshing={isSearching}
-              onGesturePress={handleGesturePress}
-              onLoadMore={loadMore}
-              onRefresh={handleRefresh}
-              onScroll={onScroll}
-              onToggleFavorite={toggleFavorite}
-              results={results}
-              style={styles.searchResults}
+            <View style={styles.androidSearchBarWrapper}>
+              <SearchBar
+                isLoading={isLoading}
+                onBlur={handleBlur}
+                onClear={handleClear}
+                onFocus={handleFocus}
+                onSearch={handleSearchChange}
+                onSubmit={handleSearchSubmit}
+                placeholder={t("search.placeholder")}
+                value={searchTerm}
+              />
+            </View>
+            <CircularButton
+              icon="search"
+              onPress={() => handleSearchSubmit(searchTerm)}
+              size="large"
             />
-          )}
-        </Animated.View>
+          </View>
+          <RecentSearches
+            onSelect={handleRecentSearchSelect}
+            searchTerm={searchTerm}
+            visible={isSearchBarFocused}
+          />
+        </View>
+      )}
+
+      {/* Category filter chips */}
+      <View style={styles.filtersContainer}>
+        <CategoryFilters
+          onRemoveCategory={handleRemoveCategory}
+          selectedCategories={selectedCategories}
+        />
       </View>
-    </SafeAreaView>
+
+      {/* Search results */}
+      <View style={styles.resultsContainer}>
+        {!isLoading && results.length === 0 ? (
+          <EmptyState message={t("search.noResults", { query: searchTerm })} />
+        ) : (
+          <SearchResults
+            hasMore={hasMore}
+            initialQuery={searchTerm}
+            isFavorite={isFavorite}
+            isLoading={isLoading}
+            isRefreshing={isSearching}
+            onGesturePress={handleGesturePress}
+            onLoadMore={loadMore}
+            onRefresh={handleRefresh}
+            onToggleFavorite={toggleFavorite}
+            results={results}
+            style={styles.searchResults}
+          />
+        )}
+      </View>
+
+      {/* Category bottom sheet (kept — no native equivalent for multi-select) */}
+      <CategoryListBottomSheet
+        categories={categories}
+        onCategoryChange={handleCategoryChange}
+        onClose={handleHideCategorySheet}
+        selectedCategories={selectedCategories}
+        visible={categorySheetVisible}
+      />
+    </View>
   );
 };
 
@@ -336,49 +369,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-  },
-  headerContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    backgroundColor: "transparent",
+  androidHeader: {
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.sm,
   },
-  searchContentContainer: {
+  androidSearchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    columnGap: SPACING.sm,
+  },
+  androidSearchBarWrapper: {
+    flex: 1,
+  },
+  filtersContainer: {
+    paddingHorizontal: SPACING.md,
+  },
+  resultsContainer: {
     flex: 1,
     paddingHorizontal: SPACING.md,
   },
   searchResults: {
     flex: 1,
-  },
-  demoButtons: {
-    position: "absolute",
-    bottom: 100,
-    right: SPACING.md,
-    zIndex: 1001,
-  },
-  demoButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: 8,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  demoButtonText: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 14,
   },
 });
 

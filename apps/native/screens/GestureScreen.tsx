@@ -270,7 +270,10 @@ const GestureScreen: React.FC = () => {
         }}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        contentInsetAdjustmentBehavior="automatic"
+      >
         <View style={styles.videoContainer}>
           <VideoPlayer
             gestureId={gesture.id}

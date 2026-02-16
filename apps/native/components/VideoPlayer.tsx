@@ -1,7 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { BORDER_RADIUS, ICON_SIZE, SPACING } from "@smog/styles";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useVideoPlayer, VideoView } from "expo-video";
+
+const useGlass = isLiquidGlassAvailable();
+
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -223,10 +227,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       <TouchableOpacity
         onPress={togglePlayPause}
-        style={[styles.controlButton, { backgroundColor: theme.primary }]}
+        style={[
+          styles.controlButton,
+          !useGlass && { backgroundColor: theme.primary },
+        ]}
       >
+        {useGlass && (
+          <GlassView
+            glassEffectStyle="regular"
+            style={StyleSheet.absoluteFill}
+          />
+        )}
         <Ionicons
-          color={theme.background}
+          color={useGlass ? theme.text : theme.background}
           name={isPlaying ? "pause" : "play"}
           size={ICON_SIZE.md}
         />
@@ -262,6 +275,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
 });
 

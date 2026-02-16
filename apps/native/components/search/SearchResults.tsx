@@ -6,6 +6,7 @@ import { useCallback, useRef } from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  Platform,
   type StyleProp,
   View,
   type ViewStyle,
@@ -93,8 +94,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   return (
     <View style={[{ flex: 1 }, style]}>
       <FlashList
+        contentInsetAdjustmentBehavior={
+          Platform.OS === "ios" ? "automatic" : undefined
+        }
         data={uniqueResults}
         extraData={extraData}
+        keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         keyExtractor={keyExtractor}
         onEndReached={hasMore ? onLoadMore : null}

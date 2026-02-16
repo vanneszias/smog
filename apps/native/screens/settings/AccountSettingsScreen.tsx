@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
+  Alert,
   Platform,
   ScrollView,
   Share,
@@ -15,7 +16,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import BottomSheet from "@/components/bottom-sheet/BottomSheet";
 import BaseButton from "@/components/common/BaseButton";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
@@ -43,8 +43,6 @@ export default function AccountSettingsScreen() {
 
   const [analyticsEnabled, setAnalyticsEnabled] = useState(isAnalyticsActive());
   const [isExporting, setIsExporting] = useState(false);
-  const [showDeleteConfirmSheet, setShowDeleteConfirmSheet] = useState(false);
-  const [showSignOutConfirmSheet, setShowSignOutConfirmSheet] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -141,75 +139,111 @@ export default function AccountSettingsScreen() {
 
   const handleSignOutPress = useCallback(() => {
     triggerHaptic("medium");
-    setShowSignOutConfirmSheet(true);
-  }, [triggerHaptic]);
-
-  const handleSignOutConfirm = useCallback(async () => {
-    try {
-      setIsSigningOut(true);
-      setShowSignOutConfirmSheet(false);
-      triggerHaptic("success");
-
-      await signOut();
-
-      showToast({
-        type: "success",
-        message: "Successfully signed out",
-      });
-
-      router.replace("/welcome");
-    } catch (error) {
-      console.error("[AccountSettings] Failed to sign out:", error);
-      showToast({
-        type: "error",
-        message: t("account.logoutError"),
-      });
-    } finally {
-      setIsSigningOut(false);
-    }
-  }, [signOut, router, triggerHaptic, showToast, t]);
+    Alert.alert(
+      t("account.logoutConfirmTitle"),
+      t("account.logoutConfirmMessage"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("account.logout"),
+          onPress: async () => {
+            try {
+              setIsSigningOut(true);
+              triggerHaptic("success");
+              await signOut();
+              showToast({
+                type: "success",
+                message: "Successfully signed out",
+              });
+              router.replace("/welcome");
+            } catch (error) {
+              console.error("[AccountSettings] Failed to sign out:", error);
+              showToast({
+                type: "error",
+                message: t("account.logoutError"),
+              });
+            } finally {
+              setIsSigningOut(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [triggerHaptic, signOut, router, showToast, t]);
 
   const handleDeletePress = useCallback(() => {
     triggerHaptic("heavy");
-    setShowDeleteConfirmSheet(true);
-  }, [triggerHaptic]);
+    Alert.alert(
+      t("gdpr.account.deleteConfirmTitle"),
+      t("gdpr.account.deleteConfirmMessage"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("gdpr.account.deleteConfirmButton"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsDeleting(true);
 
-  const handleDeleteConfirm = useCallback(async () => {
-    try {
-      setIsDeleting(true);
-      setShowDeleteConfirmSheet(false);
+              await deleteAccount({ confirmDelete: true });
 
-      await deleteAccount({ confirmDelete: true });
+              await AsyncStorage.multiRemove([
+                "@smog_gdpr_consent",
+                "@smog_analytics_consent",
+                "@smog_consent_version",
+                "@smog_consent_date",
+                "@smog_user",
+                "@smog_guest_id",
+                "@smog_guest_mode",
+              ]);
 
-      await AsyncStorage.multiRemove([
-        "@smog_gdpr_consent",
-        "@smog_analytics_consent",
-        "@smog_consent_version",
-        "@smog_consent_date",
-        "@smog_user",
-        "@smog_guest_id",
-        "@smog_guest_mode",
-      ]);
+              await signOut();
+              triggerHaptic("success");
 
-      await signOut();
+              showToast({
+                type: "success",
+                message: t("gdpr.account.deleteSuccess"),
+              });
 
-      triggerHaptic("success");
+              router.replace("/welcome");
+            } catch (error) {
+              console.error(
+                "[AccountSettings] Failed to delete account:",
+                error
+              );
+              showToast({
+                type: "error",
+                message: t("gdpr.account.deleteFailed"),
+              });
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [triggerHaptic, deleteAccount, signOut, router, showToast, t]);
 
-      showToast({
-        type: "success",
-        message: t("gdpr.account.deleteSuccess"),
-      });
-
-      router.replace("/welcome");
-    } catch (error) {
-      console.error("[AccountSettings] Failed to delete account:", error);
-      showToast({
-        type: "error",
-        message: t("gdpr.account.deleteFailed"),
-      });
-      setIsDeleting(false);
-    }
-  }, [deleteAccount, signOut, router, triggerHaptic, showToast, t]);
+  const nativeHeaderOptions =
+    Platform.OS === "ios"
+      ? {
+          headerTransparent: true,
+          headerBlurEffect: "systemChromeMaterial" as const,
+          headerShadowVisible: false,
+          headerTintColor: theme.primary,
+          headerTitleStyle: {
+            fontWeight: "600" as const,
+            color: theme.text,
+          },
+        }
+      : {
+          headerStyle: {
+            backgroundColor: theme.primary,
+          },
+          headerTintColor: theme.background,
+          headerTitleStyle: {
+            fontWeight: FONT_WEIGHT.bold,
+          },
+        };
 
   if (!user) {
     return (
@@ -217,14 +251,8 @@ export default function AccountSettingsScreen() {
         <Stack.Screen
           options={{
             title: t("account.title"),
-            headerStyle: {
-              backgroundColor: theme.primary,
-            },
             headerBackButtonDisplayMode: "minimal",
-            headerTintColor: theme.background,
-            headerTitleStyle: {
-              fontWeight: FONT_WEIGHT.bold,
-            },
+            ...nativeHeaderOptions,
           }}
         />
         <View style={styles.emptyContainer}>
@@ -255,19 +283,14 @@ export default function AccountSettingsScreen() {
       <Stack.Screen
         options={{
           title: t("account.title"),
-          headerStyle: {
-            backgroundColor: theme.primary,
-          },
           headerBackButtonDisplayMode: "minimal",
-          headerTintColor: theme.background,
-          headerTitleStyle: {
-            fontWeight: FONT_WEIGHT.bold,
-          },
+          ...nativeHeaderOptions,
         }}
       />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
         {/* Account Information */}
@@ -420,79 +443,7 @@ export default function AccountSettingsScreen() {
         </View>
       </ScrollView>
 
-      {/* Sign Out Confirmation Bottom Sheet */}
-      <BottomSheet
-        contentContainerStyle={styles.bottomSheetContent}
-        onClose={() => setShowSignOutConfirmSheet(false)}
-        snapPoints={["35%"]}
-        visible={showSignOutConfirmSheet}
-      >
-        <View style={styles.confirmContainer}>
-          <Ionicons
-            color={theme.textLight}
-            name="log-out-outline"
-            size={ICON_SIZE.xl}
-          />
-          <Text style={[styles.confirmTitle, { color: theme.text }]}>
-            {t("account.logoutConfirmTitle")}
-          </Text>
-          <Text style={[styles.confirmMessage, { color: theme.textLight }]}>
-            {t("account.logoutConfirmMessage")}
-          </Text>
-          <View style={styles.confirmButtons}>
-            <BaseButton
-              onPress={() => setShowSignOutConfirmSheet(false)}
-              size="large"
-              style={styles.confirmButton}
-              title={t("common.cancel")}
-              variant="outline"
-            />
-            <BaseButton
-              onPress={handleSignOutConfirm}
-              size="large"
-              style={[styles.confirmButton, { backgroundColor: theme.primary }]}
-              title={t("account.logout")}
-            />
-          </View>
-        </View>
-      </BottomSheet>
-
-      {/* Delete Account Confirmation Bottom Sheet */}
-      <BottomSheet
-        contentContainerStyle={styles.bottomSheetContent}
-        onClose={() => setShowDeleteConfirmSheet(false)}
-        snapPoints={["40%"]}
-        visible={showDeleteConfirmSheet}
-      >
-        <View style={styles.confirmContainer}>
-          <Ionicons
-            color="#EF4444"
-            name="warning-outline"
-            size={ICON_SIZE.xl}
-          />
-          <Text style={[styles.confirmTitle, { color: "#EF4444" }]}>
-            {t("gdpr.account.deleteConfirmTitle")}
-          </Text>
-          <Text style={[styles.confirmMessage, { color: theme.textLight }]}>
-            {t("gdpr.account.deleteConfirmMessage")}
-          </Text>
-          <View style={styles.confirmButtons}>
-            <BaseButton
-              onPress={() => setShowDeleteConfirmSheet(false)}
-              size="large"
-              style={styles.confirmButton}
-              title={t("common.cancel")}
-              variant="outline"
-            />
-            <BaseButton
-              onPress={handleDeleteConfirm}
-              size="large"
-              style={[styles.confirmButton, { backgroundColor: "#EF4444" }]}
-              title={t("gdpr.account.deleteConfirmButton")}
-            />
-          </View>
-        </View>
-      </BottomSheet>
+      {/* Confirmation dialogs now use native Alert.alert() — see handleSignOutPress and handleDeletePress */}
     </View>
   );
 }
@@ -567,32 +518,5 @@ const styles = StyleSheet.create({
   deleteRow: {
     borderColor: "#FEE2E2",
     borderWidth: 1,
-  },
-  bottomSheetContent: {
-    padding: SPACING.lg,
-  },
-  confirmContainer: {
-    alignItems: "center",
-  },
-  confirmTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.bold,
-    marginTop: SPACING.md,
-    marginBottom: SPACING.sm,
-    textAlign: "center",
-  },
-  confirmMessage: {
-    fontSize: FONT_SIZE.md,
-    textAlign: "center",
-    marginBottom: SPACING.xl,
-    lineHeight: 22,
-  },
-  confirmButtons: {
-    flexDirection: "row",
-    gap: SPACING.md,
-    width: "100%",
-  },
-  confirmButton: {
-    flex: 1,
   },
 });

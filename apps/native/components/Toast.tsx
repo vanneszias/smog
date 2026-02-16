@@ -6,6 +6,7 @@ import {
   SHADOWS,
   SPACING,
 } from "@smog/styles";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
 import {
@@ -17,6 +18,9 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
+
+const useGlass = isLiquidGlassAvailable();
+
 import { useToast } from "@/context/ToastContext";
 import {
   trackToastActionPressed,
@@ -144,14 +148,22 @@ export const Toast: React.FC<ToastProps> = ({
           style={[
             styles.toast,
             {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
+              backgroundColor: useGlass ? "transparent" : theme.card,
+              borderColor: useGlass ? "transparent" : theme.border,
+              borderWidth: useGlass ? 0 : 1,
               opacity: fadeAnim,
               transform: [{ translateY: translateYAnim }],
+              overflow: "hidden",
             },
-            SHADOWS.medium,
+            !useGlass && SHADOWS.medium,
           ]}
         >
+          {useGlass && (
+            <GlassView
+              glassEffectStyle="regular"
+              style={StyleSheet.absoluteFill}
+            />
+          )}
           <View style={styles.content}>
             <View style={styles.iconContainer}>
               <Ionicons

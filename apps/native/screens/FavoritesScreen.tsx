@@ -1,40 +1,21 @@
-import { FONT_SIZE, FONT_WEIGHT, SPACING } from "@smog/styles";
-import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { ICON_SIZE, SPACING } from "@smog/styles";
+import { Stack, useRouter } from "expo-router";
 import type React from "react";
 import { useCallback } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import HomeScreenBottomSheetButton from "@/components/bottom-sheet/HomeScreenBottomSheetButton";
-import OptionsBottomSheet from "@/components/bottom-sheet/OptionsBottomSheet";
+import { Linking, Platform, StyleSheet, View } from "react-native";
+import * as DropdownMenu from "zeego/dropdown-menu";
 import SearchResults from "@/components/search/SearchResults";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
-import { useBottomSheet } from "@/hooks/useBottomSheet";
-import { useSettingsModal } from "@/hooks/useSettingsModal";
-import {
-  trackBottomSheetClosed,
-  trackBottomSheetOpened,
-} from "@/services/analyticsService";
 import type { Gesture } from "@/types";
-
-// TODO: when the user clicks on heart, make the gesture card go away more slowly. (or maybe add swipe animations/gestures?)
 
 const FavoritesScreen: React.FC = () => {
   const router = useRouter();
   const { theme } = useTheme();
   const { favoriteGestures, toggleFavorite, isFavorite } = useFavorites();
   const { t } = useTranslation();
-
-  const {
-    isVisible: isModalVisible,
-    showBottomSheet: showHomeScreenModal,
-    hideBottomSheet: hideHomeScreenModal,
-  } = useBottomSheet();
-
-  // This hook provides the action handlers for the modal buttons
-  const { handleSettingsPress, handleAboutPress, handleContactPress } =
-    useSettingsModal();
 
   const handleGesturePress = useCallback(
     (gesture: Gesture) => {
@@ -47,37 +28,147 @@ const FavoritesScreen: React.FC = () => {
     router.push("/settings");
   }, [router]);
 
-  // Track bottom sheet interactions
-  const handleBottomSheetOpen = useCallback(() => {
-    trackBottomSheetOpened("options");
-    showHomeScreenModal();
-  }, [showHomeScreenModal]);
+  const handleAboutPress = useCallback(() => {
+    Linking.openURL("https://smog.vlaanderen");
+  }, []);
 
-  const handleBottomSheetClose = useCallback(() => {
-    trackBottomSheetClosed("options");
-    hideHomeScreenModal();
-  }, [hideHomeScreenModal]);
+  const handleContactPress = useCallback(() => {
+    Linking.openURL("mailto:hello@smog.vlaanderen");
+  }, []);
+
+  const isIOS = Platform.OS === "ios";
 
   return (
-    <SafeAreaView
-      edges={["top"]}
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
-      <View style={styles.topBar}>
-        <HomeScreenBottomSheetButton onPress={handleBottomSheetOpen} />
-        <View style={styles.absoluteTitleContainer}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>
-            {t("tabs.favorites")}
-          </Text>
-        </View>
-      </View>
-
-      <OptionsBottomSheet
-        onAboutPress={handleAboutPress}
-        onClose={handleBottomSheetClose}
-        onContactPress={handleContactPress}
-        onSettingsPress={() => handleSettingsPress(navigateToSettings)}
-        visible={isModalVisible}
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Stack.Screen
+        options={{
+          title: t("tabs.favorites"),
+          ...(isIOS
+            ? {
+                headerLargeTitle: true,
+                headerLargeTitleStyle: {
+                  color: theme.text,
+                },
+                headerStyle: {
+                  backgroundColor: theme.background,
+                },
+                headerTransparent: true,
+                headerBlurEffect: "systemChromeMaterial",
+                headerShadowVisible: false,
+                headerRight: () => (
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger>
+                      <View>
+                        <Ionicons
+                          color={theme.primary}
+                          name="ellipsis-horizontal-circle"
+                          size={ICON_SIZE.md}
+                        />
+                      </View>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content>
+                      <DropdownMenu.Item
+                        key="settings"
+                        onSelect={navigateToSettings}
+                      >
+                        <DropdownMenu.ItemTitle>
+                          {t("settings.title")}
+                        </DropdownMenu.ItemTitle>
+                        <DropdownMenu.ItemIcon
+                          androidIconName="ic_menu_preferences"
+                          ios={{ name: "gearshape" }}
+                        />
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        key="about"
+                        onSelect={handleAboutPress}
+                      >
+                        <DropdownMenu.ItemTitle>
+                          {t("about.title")}
+                        </DropdownMenu.ItemTitle>
+                        <DropdownMenu.ItemIcon
+                          androidIconName="ic_menu_info_details"
+                          ios={{ name: "info.circle" }}
+                        />
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        key="contact"
+                        onSelect={handleContactPress}
+                      >
+                        <DropdownMenu.ItemTitle>
+                          {t("contact.title")}
+                        </DropdownMenu.ItemTitle>
+                        <DropdownMenu.ItemIcon
+                          androidIconName="ic_menu_call"
+                          ios={{ name: "phone" }}
+                        />
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Root>
+                ),
+              }
+            : {
+                headerStyle: {
+                  backgroundColor: theme.primary,
+                },
+                headerTintColor: theme.background,
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                  fontSize: 20,
+                },
+                headerRight: () => (
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger>
+                      <View style={styles.androidMenuButton}>
+                        <Ionicons
+                          color={theme.background}
+                          name="ellipsis-vertical"
+                          size={ICON_SIZE.md}
+                        />
+                      </View>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content>
+                      <DropdownMenu.Item
+                        key="settings"
+                        onSelect={navigateToSettings}
+                      >
+                        <DropdownMenu.ItemTitle>
+                          {t("settings.title")}
+                        </DropdownMenu.ItemTitle>
+                        <DropdownMenu.ItemIcon
+                          androidIconName="ic_menu_preferences"
+                          ios={{ name: "gearshape" }}
+                        />
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        key="about"
+                        onSelect={handleAboutPress}
+                      >
+                        <DropdownMenu.ItemTitle>
+                          {t("about.title")}
+                        </DropdownMenu.ItemTitle>
+                        <DropdownMenu.ItemIcon
+                          androidIconName="ic_menu_info_details"
+                          ios={{ name: "info.circle" }}
+                        />
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        key="contact"
+                        onSelect={handleContactPress}
+                      >
+                        <DropdownMenu.ItemTitle>
+                          {t("contact.title")}
+                        </DropdownMenu.ItemTitle>
+                        <DropdownMenu.ItemIcon
+                          androidIconName="ic_menu_call"
+                          ios={{ name: "phone" }}
+                        />
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Root>
+                ),
+              }),
+        }}
       />
 
       <SearchResults
@@ -89,7 +180,7 @@ const FavoritesScreen: React.FC = () => {
         source="favorites_screen"
         style={styles.resultList}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -97,29 +188,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    position: "relative",
-  },
-  absoluteTitleContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    pointerEvents: "none",
-  },
-  headerTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.bold,
-    textAlign: "center",
-  },
   resultList: {
-    marginTop: SPACING.sm,
     paddingHorizontal: SPACING.md,
+  },
+  androidMenuButton: {
+    padding: SPACING.sm,
   },
 });
 

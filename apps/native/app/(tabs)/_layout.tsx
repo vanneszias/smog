@@ -15,9 +15,10 @@ export default function TabLayout() {
 
   return (
     <NativeTabs
-      backgroundColor={theme.card}
-      blurEffect={Platform.OS === "ios" ? "systemDefault" : undefined}
+      backgroundColor={Platform.OS === "ios" ? "transparent" : theme.card}
+      blurEffect={Platform.OS === "ios" ? "systemChromeMaterial" : undefined}
       labelStyle={{ color: theme.textLight }}
+      minimizeBehavior="onScrollDown"
       tintColor={theme.primary}
     >
       <NativeTabs.Trigger name="index">
@@ -31,7 +32,7 @@ export default function TabLayout() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="search">
+      <NativeTabs.Trigger name="search" role="search">
         <Label>{t("tabs.search")}</Label>
         <Icon
           androidSrc={<VectorIcon family={Ionicons} name="search-outline" />}
