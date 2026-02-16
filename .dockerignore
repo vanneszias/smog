@@ -65,5 +65,6 @@ Dockerfile
 
 # CI/CD
 .github
+.gitea
 .gitlab-ci.yml
 .travis.yml

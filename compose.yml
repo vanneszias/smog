@@ -1,19 +1,20 @@
 # Docker Compose configuration for Smog - Production Deployment
 #
-# This configuration uses pre-built images from Docker Hub
-# Images are pulled from: vanneszias/smog-*
+# This configuration uses pre-built images from the Gitea container registry
+# Images are pulled from: git.zias.be/zias/smog-*
 #
 # To deploy:
-#   1. Configure environment variables in .env file
-#   2. Pull images: docker compose pull
-#   3. Start services: docker compose up -d
-#   4. View logs: docker compose logs -f
-#   5. Stop services: docker compose down
+#   1. Log in to registry: docker login git.zias.be
+#   2. Configure environment variables in .env file
+#   3. Pull images: docker compose pull
+#   4. Start services: docker compose up -d
+#   5. View logs: docker compose logs -f
+#   6. Stop services: docker compose down
 
 services:
   # Web application with Caddy reverse proxy
   web:
-    image: vanneszias/smog-web:latest
+    image: git.zias.be/zias/smog-web:latest
     ports:
       - "80:80"
       - "443:443"
@@ -29,7 +30,7 @@ services:
 
   # API Server
   server:
-    image: vanneszias/smog-server:latest
+    image: git.zias.be/zias/smog-server:latest
     environment:
       - NODE_ENV=production
       - WORKOS_CLIENT_ID=${WORKOS_CLIENT_ID}
@@ -58,7 +59,7 @@ services:
 
   # Remotion Video Composition Service
   remotion:
-    image: vanneszias/smog-remotion:latest
+    image: git.zias.be/zias/smog-remotion:latest
     environment:
       - NODE_ENV=production
       - MUX_TOKEN_ID=${MUX_TOKEN_ID}
