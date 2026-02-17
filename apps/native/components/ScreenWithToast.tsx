@@ -16,7 +16,7 @@ const ScreenWithToast: React.FC<ScreenWithToastProps> = ({
   children,
   style,
 }) => (
-  <View style={[{ flex: 1 }, style]}>
+  <View collapsable={false} style={[{ flex: 1 }, style]}>
     {children}
     <ToastContainer />
   </View>

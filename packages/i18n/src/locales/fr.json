@@ -19,6 +19,7 @@
     "noGesturesFound": "Aucun geste trouvé"
   },
   "favorites": {
+    "emptyTitle": "Pas encore de favoris",
     "emptyMessage": "Pour ajouter un geste à vos favoris, appuyez sur le bouton étoile dans la vue du geste.",
     "added": "Ajouté aux favoris",
     "removed": "Retiré des favoris",

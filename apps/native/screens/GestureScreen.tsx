@@ -6,6 +6,7 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -247,21 +248,42 @@ const GestureScreen: React.FC = () => {
       <Stack.Screen
         options={{
           title: gesture.name,
-          headerStyle: {
-            backgroundColor: theme.primary,
-          },
           headerBackButtonDisplayMode: "minimal",
-          headerTintColor: theme.background,
-          headerTitleStyle: {
-            fontWeight: "bold",
-          },
+          ...(Platform.OS === "ios"
+            ? {
+                // iOS: translucent blur header (liquid glass on iOS 26+)
+                // The defaultScreenOptions from root layout already set
+                // headerTransparent + headerBlurEffect, so we only override
+                // title styling and tint to work against a blur background.
+                headerTintColor: theme.primary,
+                headerTitleStyle: {
+                  fontWeight: "600" as const,
+                  color: theme.text,
+                },
+              }
+            : {
+                // Android: opaque Material-style colored header
+                headerStyle: {
+                  backgroundColor: theme.primary,
+                },
+                headerTintColor: theme.background,
+                headerTitleStyle: {
+                  fontWeight: "bold" as const,
+                },
+              }),
           headerRight: () => (
             <TouchableOpacity
               onPress={handleToggleFavorite}
               style={styles.favoriteButton}
             >
               <Ionicons
-                color={favoriteStatus ? theme.error : theme.background}
+                color={
+                  favoriteStatus
+                    ? theme.liked
+                    : Platform.OS === "ios"
+                      ? theme.primary
+                      : theme.background
+                }
                 name={favoriteStatus ? "heart" : "heart-outline"}
                 size={24}
               />

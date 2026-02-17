@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { MenuView } from "@react-native-menu/menu";
-import { ICON_SIZE, SPACING } from "@smog/styles";
+import { FONT_SIZE, ICON_SIZE, SPACING } from "@smog/styles";
 import { Stack, useRouter } from "expo-router";
 import type React from "react";
 import { useCallback } from "react";
-import { Linking, Platform, StyleSheet, View } from "react-native";
+import { Linking, Platform, StyleSheet, Text, View } from "react-native";
 import SearchResults from "@/components/search/SearchResults";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -81,7 +81,10 @@ const FavoritesScreen: React.FC = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View
+      collapsable={false}
+      style={[styles.container, { backgroundColor: theme.background }]}
+    >
       <Stack.Screen
         options={{
           title: t("tabs.favorites"),
@@ -139,15 +142,32 @@ const FavoritesScreen: React.FC = () => {
         }}
       />
 
-      <SearchResults
-        isFavorite={isFavorite}
-        isLoading={false}
-        onGesturePress={handleGesturePress}
-        onToggleFavorite={toggleFavorite}
-        results={favoriteGestures}
-        source="favorites_screen"
-        style={styles.resultList}
-      />
+      {favoriteGestures.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons
+            color={theme.textLight}
+            name="heart-outline"
+            size={64}
+            style={styles.emptyIcon}
+          />
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>
+            {t("favorites.emptyTitle")}
+          </Text>
+          <Text style={[styles.emptyMessage, { color: theme.textLight }]}>
+            {t("favorites.emptyMessage")}
+          </Text>
+        </View>
+      ) : (
+        <SearchResults
+          isFavorite={isFavorite}
+          isLoading={false}
+          onGesturePress={handleGesturePress}
+          onToggleFavorite={toggleFavorite}
+          results={favoriteGestures}
+          source="favorites_screen"
+          style={styles.resultList}
+        />
+      )}
     </View>
   );
 };
@@ -158,6 +178,27 @@ const styles = StyleSheet.create({
   },
   resultList: {
     paddingHorizontal: SPACING.md,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: SPACING.xl,
+  },
+  emptyIcon: {
+    marginBottom: SPACING.lg,
+    opacity: 0.4,
+  },
+  emptyTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: "600",
+    marginBottom: SPACING.sm,
+    textAlign: "center",
+  },
+  emptyMessage: {
+    fontSize: FONT_SIZE.md,
+    textAlign: "center",
+    lineHeight: 22,
   },
   androidMenuButton: {
     padding: SPACING.sm,

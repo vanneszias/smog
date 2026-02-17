@@ -19,6 +19,7 @@
     "noGesturesFound": "No gestures found"
   },
   "favorites": {
+    "emptyTitle": "No favorites yet",
     "emptyMessage": "To add a gesture to your favorites, tap the heart icon on a gesture.",
     "added": "Added to favorites",
     "removed": "Removed from favorites",

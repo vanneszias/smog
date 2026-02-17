@@ -248,7 +248,10 @@ const SearchScreen = () => {
   const isIOS = Platform.OS === "ios";
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View
+      collapsable={false}
+      style={[styles.container, { backgroundColor: theme.background }]}
+    >
       {/* Native search bar on iOS via headerSearchBarOptions */}
       <Stack.Screen
         options={{

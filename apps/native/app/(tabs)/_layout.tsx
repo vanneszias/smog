@@ -17,6 +17,7 @@ export default function TabLayout() {
     <NativeTabs
       backgroundColor={Platform.OS === "ios" ? "transparent" : theme.card}
       blurEffect={Platform.OS === "ios" ? "systemChromeMaterial" : undefined}
+      disableTransparentOnScrollEdge
       labelStyle={{ color: theme.textLight }}
       minimizeBehavior="onScrollDown"
       tintColor={theme.primary}
