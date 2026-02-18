@@ -452,7 +452,12 @@ export function AdminTable() {
     ) => {
       const results: { success: boolean }[] = [];
       for (const change of changes) {
-        results.push(await client.admin.gestures.update(change));
+        results.push(
+          await client.admin.gestures.update({
+            gestureId: change.gestureId,
+            ...change.updates,
+          })
+        );
       }
       return results;
     },
