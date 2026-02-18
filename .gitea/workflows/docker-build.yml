@@ -55,8 +55,7 @@ jobs:
             VITE_CONVEX_URL=${{ secrets.VITE_CONVEX_URL }}
             VITE_PUBLIC_POSTHOG_API_KEY=${{ secrets.VITE_PUBLIC_POSTHOG_API_KEY }}
             VITE_PUBLIC_POSTHOG_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
 
   build-server:
     runs-on: ubuntu-latest
@@ -93,8 +92,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
 
   build-remotion:
     runs-on: ubuntu-latest
@@ -131,5 +129,4 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
