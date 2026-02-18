@@ -133,10 +133,9 @@ const SearchScreen = () => {
   const handleClear = useCallback(() => {
     const previousQuery = searchTerm;
     setSearchTerm("");
-    clearSearch();
     setIsSearchBarFocused(true);
     trackSearchCleared(previousQuery);
-  }, [clearSearch, searchTerm]);
+  }, [searchTerm]);
 
   const handleCategoryChange = useCallback(
     (categoryList: string[]) => {
