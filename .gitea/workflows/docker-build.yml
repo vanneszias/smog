@@ -27,7 +27,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.OWNER }}
-          password: ${{ secrets.GITEA_TOKEN }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Extract metadata
         id: meta
@@ -73,7 +73,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.OWNER }}
-          password: ${{ secrets.GITEA_TOKEN }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Extract metadata
         id: meta
@@ -111,7 +111,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.OWNER }}
-          password: ${{ secrets.GITEA_TOKEN }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Extract metadata
         id: meta
