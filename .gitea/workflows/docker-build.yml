@@ -49,12 +49,12 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VITE_SERVER_URL=${{ secrets.VITE_SERVER_URL }}
+            VITE_SERVER_URL=https://app.smog.vlaanderen/api
             VITE_WORKOS_CLIENT_ID=${{ secrets.VITE_WORKOS_CLIENT_ID }}
-            VITE_WORKOS_REDIRECT_URI=${{ secrets.VITE_WORKOS_REDIRECT_URI }}
+            VITE_WORKOS_REDIRECT_URI=https://app.smog.vlaanderen/auth/callback
             VITE_CONVEX_URL=${{ secrets.VITE_CONVEX_URL }}
             VITE_PUBLIC_POSTHOG_API_KEY=${{ secrets.VITE_PUBLIC_POSTHOG_API_KEY }}
-            VITE_PUBLIC_POSTHOG_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
+            VITE_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 
 
   build-server:
