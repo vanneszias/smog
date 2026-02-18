@@ -1,5 +1,14 @@
-import { Clock, Hand, Settings, Sparkles, Tag, Users } from "lucide-react";
+import {
+  Clock,
+  Hand,
+  Settings,
+  Sparkles,
+  Table2,
+  Tag,
+  Users,
+} from "lucide-react";
 import { useState } from "react";
+import { AdminTable } from "./AdminTable";
 import { CategoriesManagement } from "./CategoriesManagement";
 import { GesturesManagement } from "./GesturesManagement";
 import { PendingSponsorships } from "./PendingSponsorships";
@@ -13,7 +22,12 @@ export interface AdminDashboardProps {
   };
 }
 
-type TabValue = "pending" | "sponsorships" | "gestures" | "categories";
+type TabValue =
+  | "pending"
+  | "sponsorships"
+  | "gestures"
+  | "categories"
+  | "table";
 
 const navigation: Array<{
   id: TabValue;
@@ -38,6 +52,12 @@ const navigation: Array<{
     label: "Gestures",
     icon: Hand,
     description: "Gesture library management",
+  },
+  {
+    id: "table",
+    label: "Table Editor",
+    icon: Table2,
+    description: "Fast Excel-like editing",
   },
   {
     id: "categories",
@@ -163,6 +183,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
             {activeTab === "pending" && <PendingSponsorships />}
             {activeTab === "sponsorships" && <SponsorshipsManagement />}
             {activeTab === "gestures" && <GesturesManagement />}
+            {activeTab === "table" && <AdminTable />}
             {activeTab === "categories" && <CategoriesManagement />}
           </div>
         </div>
