@@ -5,6 +5,7 @@ import { FONT_SIZE, ICON_SIZE, SPACING } from "@smog/styles";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -236,6 +237,18 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Attribution */}
+        <View style={styles.attributionContainer}>
+          <TouchableOpacity
+            activeOpacity={0.6}
+            onPress={() => Linking.openURL("https://zias.be")}
+          >
+            <Text style={[styles.attributionText, { color: theme.textLight }]}>
+              Gemaakt met ♡ door zias.be
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Developer Tools button at bottom, requires 5 taps */}
         <View style={styles.devToolsContainer}>
           <TouchableOpacity
@@ -341,6 +354,16 @@ const styles = StyleSheet.create({
   },
   devToolsButton: {
     marginTop: SPACING.lg,
+  },
+  attributionContainer: {
+    marginTop: SPACING.xxl,
+    alignItems: "center",
+    paddingHorizontal: SPACING.md,
+  },
+  attributionText: {
+    fontSize: FONT_SIZE.xs,
+    textAlign: "center",
+    letterSpacing: 0.2,
   },
 });
 

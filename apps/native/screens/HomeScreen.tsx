@@ -1,6 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
-import { MenuView } from "@react-native-menu/menu";
-import { ICON_SIZE, SPACING } from "@smog/styles";
+import { SPACING } from "@smog/styles";
 import { useRouter } from "expo-router";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -8,11 +6,14 @@ import {
   Keyboard,
   Linking,
   Platform,
+  Text as RNText,
   StyleSheet,
   type TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { HeaderMenuButton } from "@/components/common";
 import Logo from "@/components/Logo";
 import RecentSearches from "@/components/search/RecentSearches";
 import SearchBar from "@/components/search/SearchBar";
@@ -140,7 +141,18 @@ const HomeScreen: React.FC = () => {
     Linking.openURL("mailto:hello@smog.vlaanderen");
   }, []);
 
-  const renderEmptyState = () => <></>;
+  const renderEmptyState = () => (
+    <View style={styles.attribution}>
+      <TouchableOpacity
+        activeOpacity={0.6}
+        onPress={() => Linking.openURL("https://zias.be")}
+      >
+        <RNText style={[styles.attributionText, { color: theme.textLight }]}>
+          Gemaakt met ♡ door zias.be
+        </RNText>
+      </TouchableOpacity>
+    </View>
+  );
 
   const renderSearchResults = () => (
     <SearchResults
@@ -167,7 +179,7 @@ const HomeScreen: React.FC = () => {
     >
       {/* Header with native context menu */}
       <View style={styles.header}>
-        <MenuView
+        <HeaderMenuButton
           actions={[
             {
               id: "settings",
@@ -194,27 +206,18 @@ const HomeScreen: React.FC = () => {
               }),
             },
           ]}
-          onPressAction={({ nativeEvent }) => {
-            if (nativeEvent.event === "settings") {
+          onPressAction={(event) => {
+            if (event === "settings") {
               navigateToSettings();
             }
-            if (nativeEvent.event === "about") {
+            if (event === "about") {
               handleAboutPress();
             }
-            if (nativeEvent.event === "contact") {
+            if (event === "contact") {
               handleContactPress();
             }
           }}
-          shouldOpenOnLongPress={false}
-        >
-          <View style={[styles.menuButton, { backgroundColor: theme.card }]}>
-            <Ionicons
-              color={theme.text}
-              name="ellipsis-horizontal"
-              size={ICON_SIZE.md}
-            />
-          </View>
-        </MenuView>
+        />
       </View>
 
       {/* Logo */}
@@ -264,17 +267,10 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "flex-start",
+    justifyContent: "flex-end",
     alignItems: "center",
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-  },
-  menuButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
   },
   logoContainer: {
     marginVertical: SPACING.lg,
@@ -289,6 +285,17 @@ const styles = StyleSheet.create({
   },
   searchResults: {
     flex: 1,
+  },
+  attribution: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingBottom: SPACING.xl,
+  },
+  attributionText: {
+    fontSize: 13,
+    textAlign: "center",
+    letterSpacing: 0.2,
   },
 });
 

@@ -49,15 +49,8 @@ const SearchScreen = () => {
       const newCategories = selectedCategories.filter((c) => c !== category);
       setSelectedCategories(newCategories);
       trackSearchCategoryRemoved(category, newCategories.length);
-      router.push({
-        pathname: "/search",
-        params: {
-          query: searchTerm,
-          ...(newCategories[0] ? { category: newCategories[0] } : {}),
-        },
-      });
     },
-    [selectedCategories, searchTerm, router]
+    [selectedCategories]
   );
 
   const { recentSearches, addRecentSearch } = useRecentSearches();
@@ -122,21 +115,9 @@ const SearchScreen = () => {
     hasInitialized,
   ]);
 
-  const handleSearchChange = useCallback(
-    (query: string) => {
-      setSearchTerm(query);
-      router.push({
-        pathname: "/search",
-        params: {
-          query,
-          ...(selectedCategories.length > 0
-            ? { category: selectedCategories.join(",") }
-            : {}),
-        },
-      });
-    },
-    [selectedCategories, router]
-  );
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchTerm(query);
+  }, []);
 
   const handleSearchSubmit = useCallback(
     (query: string) => {
@@ -144,18 +125,9 @@ const SearchScreen = () => {
         addRecentSearch(query.trim());
         setIsSearchBarFocused(false);
         Keyboard.dismiss();
-        router.push({
-          pathname: "/search",
-          params: {
-            query,
-            ...(selectedCategories.length > 0
-              ? { category: selectedCategories.join(",") }
-              : {}),
-          },
-        });
       }
     },
-    [addRecentSearch, selectedCategories, router]
+    [addRecentSearch]
   );
 
   const handleClear = useCallback(() => {
@@ -164,11 +136,7 @@ const SearchScreen = () => {
     clearSearch();
     setIsSearchBarFocused(true);
     trackSearchCleared(previousQuery);
-    router.push({
-      pathname: "/search",
-      params: {},
-    });
-  }, [clearSearch, router, searchTerm]);
+  }, [clearSearch, searchTerm]);
 
   const handleCategoryChange = useCallback(
     (categoryList: string[]) => {
@@ -190,17 +158,8 @@ const SearchScreen = () => {
       setSelectedCategories(categoryList);
       setCategorySheetVisible(false);
       trackBottomSheetClosed("category_selection");
-      router.push({
-        pathname: "/search",
-        params: {
-          query: searchTerm,
-          ...(categoryList.length > 0
-            ? { category: categoryList.join(",") }
-            : {}),
-        },
-      });
     },
-    [searchTerm, router, selectedCategories]
+    [selectedCategories]
   );
 
   const handleRecentSearchSelect = useCallback(
@@ -210,15 +169,8 @@ const SearchScreen = () => {
       setIsSearchBarFocused(false);
       Keyboard.dismiss();
       trackRecentSearchSelected(query, recentSearches.indexOf(query));
-      router.push({
-        pathname: "/search",
-        params: {
-          query,
-          ...(selectedCategories[0] ? { category: selectedCategories[0] } : {}),
-        },
-      });
     },
-    [addRecentSearch, selectedCategories, router, recentSearches]
+    [addRecentSearch, recentSearches]
   );
 
   const handleFocus = useCallback(() => setIsSearchBarFocused(true), []);

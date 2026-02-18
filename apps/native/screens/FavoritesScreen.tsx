@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { MenuView } from "@react-native-menu/menu";
-import { FONT_SIZE, ICON_SIZE, SPACING } from "@smog/styles";
+import { FONT_SIZE, SPACING } from "@smog/styles";
 import { Stack, useRouter } from "expo-router";
 import type React from "react";
 import { useCallback } from "react";
 import { Linking, Platform, StyleSheet, Text, View } from "react-native";
+import { HeaderMenuButton } from "@/components/common";
 import SearchResults from "@/components/search/SearchResults";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -101,17 +101,12 @@ const FavoritesScreen: React.FC = () => {
                 headerBlurEffect: "systemChromeMaterial",
                 headerShadowVisible: false,
                 headerRight: () => (
-                  <MenuView
+                  <HeaderMenuButton
                     actions={menuActions}
-                    onPressAction={handleMenuAction}
-                    shouldOpenOnLongPress={false}
-                  >
-                    <Ionicons
-                      color={theme.primary}
-                      name="ellipsis-horizontal-circle"
-                      size={ICON_SIZE.md}
-                    />
-                  </MenuView>
+                    onPressAction={(event) =>
+                      handleMenuAction({ nativeEvent: { event } })
+                    }
+                  />
                 ),
               }
             : {
@@ -124,19 +119,12 @@ const FavoritesScreen: React.FC = () => {
                   fontSize: 20,
                 },
                 headerRight: () => (
-                  <MenuView
+                  <HeaderMenuButton
                     actions={menuActions}
-                    onPressAction={handleMenuAction}
-                    shouldOpenOnLongPress={false}
-                  >
-                    <View style={styles.androidMenuButton}>
-                      <Ionicons
-                        color={theme.background}
-                        name="ellipsis-vertical"
-                        size={ICON_SIZE.md}
-                      />
-                    </View>
-                  </MenuView>
+                    onPressAction={(event) =>
+                      handleMenuAction({ nativeEvent: { event } })
+                    }
+                  />
                 ),
               }),
         }}
@@ -199,9 +187,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.md,
     textAlign: "center",
     lineHeight: 22,
-  },
-  androidMenuButton: {
-    padding: SPACING.sm,
   },
 });
 
