@@ -45,6 +45,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [hasTrackedPlayerOpen, setHasTrackedPlayerOpen] = useState(false);
   const playbackStartTimeRef = useRef<number | null>(null);
+  const hasTriggeredOnCompleteRef = useRef(false);
   const [duration, setDuration] = useState<number>(0);
   const isFocused = useIsFocused();
   const pausedByNavigationRef = useRef(false);
@@ -132,8 +133,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         return;
       }
 
-      const timeLeft = duration - event.currentTime;
-      if (timeLeft <= 5 && timeLeft > 4) {
+      const { currentTime } = event;
+      const timeLeft = duration - currentTime;
+
+      // Reset flag when video loops back to start
+      if (currentTime < 1 && hasTriggeredOnCompleteRef.current) {
+        hasTriggeredOnCompleteRef.current = false;
+      }
+
+      // Trigger onComplete once in the last 5 seconds
+      if (timeLeft <= 5 && !hasTriggeredOnCompleteRef.current) {
+        hasTriggeredOnCompleteRef.current = true;
         if (gestureId && gestureName) {
           trackVideoAlmostCompleted(gestureId, gestureName);
         }
