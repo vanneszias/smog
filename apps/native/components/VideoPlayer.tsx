@@ -129,12 +129,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Handle time updates
   const handleTimeUpdate = useCallback(
     (event: { currentTime: number }) => {
-      if (duration <= 0) {
+      const currentDuration = duration || player.duration || 0;
+      if (currentDuration <= 0) {
         return;
       }
 
       const { currentTime } = event;
-      const timeLeft = duration - currentTime;
+      const timeLeft = currentDuration - currentTime;
 
       // Reset flag when video loops back to start
       if (currentTime < 1 && hasTriggeredOnCompleteRef.current) {
@@ -150,7 +151,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onComplete?.();
       }
     },
-    [duration, gestureId, gestureName, onComplete]
+    [duration, player.duration, gestureId, gestureName, onComplete]
   );
 
   // Handle play to end
@@ -201,13 +202,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => {
       isUnmountingRef.current = true;
       try {
-        // Only attempt to pause if the player is in a valid state
         if (player?.playing) {
           player.pause();
         }
-      } catch (error) {
-        // Silently handle errors during cleanup - player may already be disposed
-        console.error("[VideoPlayer] Failed to pause on unmount:", error);
+      } catch {
+        // Expected when native player is already disposed during navigation
       }
     };
   }, [player]);
