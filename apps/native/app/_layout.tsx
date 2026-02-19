@@ -13,7 +13,6 @@ import {
   Text,
   View,
 } from "react-native";
-import GlobalOfflineBanner from "@/components/common/GlobalOfflineBanner";
 import RiveSplashScreen from "@/components/RiveSplashScreen";
 import AppProviders from "@/context/AppProviders";
 import { useAuth } from "@/context/AuthProvider";
@@ -93,7 +92,6 @@ function AuthenticatedLayout() {
 
   return (
     <>
-      <GlobalOfflineBanner />
       <Stack initialRouteName="(tabs)">
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen

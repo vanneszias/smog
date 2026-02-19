@@ -237,18 +237,6 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Attribution */}
-        <View style={styles.attributionContainer}>
-          <TouchableOpacity
-            activeOpacity={0.6}
-            onPress={() => Linking.openURL("https://zias.be")}
-          >
-            <Text style={[styles.attributionText, { color: theme.textLight }]}>
-              Gemaakt met ♡ door zias.be
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Developer Tools button at bottom, requires 5 taps */}
         <View style={styles.devToolsContainer}>
           <TouchableOpacity
@@ -310,6 +298,18 @@ const SettingsScreen = () => {
               name="chevron-forward"
               size={ICON_SIZE.sm}
             />
+          </TouchableOpacity>
+        </View>
+
+        {/* Attribution */}
+        <View style={styles.attributionContainer}>
+          <TouchableOpacity
+            activeOpacity={0.6}
+            onPress={() => Linking.openURL("https://zias.be")}
+          >
+            <Text style={[styles.attributionText, { color: theme.textLight }]}>
+              Gemaakt met ♡ door zias.be
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

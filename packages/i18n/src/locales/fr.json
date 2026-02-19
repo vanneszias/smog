@@ -78,7 +78,8 @@
     "production": "Production",
     "mock": "Données de test",
     "auth": "Authentification",
-    "manageAccount": "Gérer le compte"
+    "manageAccount": "Gérer le compte",
+    "openDeveloperTools": "Ouvrir les outils développeur"
   },
   "about": {
     "title": "À propos",

@@ -5,6 +5,5 @@ export { default as BaseCard } from "./BaseCard";
 export { default as BaseInput } from "./BaseInput";
 export { default as CircularButton } from "./CircularButton";
 export { default as EmptyState } from "./EmptyState";
-export { default as GlobalOfflineBanner } from "./GlobalOfflineBanner";
 export type { MenuAction } from "./HeaderMenuButton";
 export { default as HeaderMenuButton } from "./HeaderMenuButton";

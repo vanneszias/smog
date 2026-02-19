@@ -1,10 +1,12 @@
-import { FONT_SIZE, SPACING } from "@smog/styles";
+import { Ionicons } from "@expo/vector-icons";
+import { FONT_SIZE, ICON_SIZE, SPACING } from "@smog/styles";
 import { Stack } from "expo-router";
 import type React from "react";
 import { useCallback, useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -158,181 +160,276 @@ const DeveloperToolsScreen: React.FC = () => {
       <Stack.Screen
         options={{
           title: "Developer Tools",
-          headerStyle: { backgroundColor: theme.primary },
-          headerTintColor: theme.background,
-          headerTitleStyle: { fontWeight: "700" },
+          headerBackButtonDisplayMode: "minimal",
+          ...(Platform.OS === "ios"
+            ? {
+                headerLargeTitle: true,
+                headerLargeTitleStyle: { color: theme.text },
+                headerTransparent: true,
+                headerBlurEffect: "systemChromeMaterial",
+                headerShadowVisible: false,
+                headerTintColor: theme.primary,
+                headerTitleStyle: {
+                  fontWeight: "600",
+                  color: theme.text,
+                },
+              }
+            : {
+                headerStyle: { backgroundColor: theme.primary },
+                headerTintColor: theme.background,
+                headerTitleStyle: { fontWeight: "700" },
+              }),
         }}
       />
 
-      <ScrollView contentContainerStyle={styles.contentContainer}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
-          Cache Management
-        </Text>
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
-          <Text style={[styles.label, { color: theme.text }]}>
-            Cache Size:{" "}
-            <Text style={{ fontWeight: "bold" }}>
-              {cacheStats ? cacheStats.size : "Loading..."}
-            </Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior={
+          Platform.OS === "ios" ? "automatic" : undefined
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Cache Management */}
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionLabel, { color: theme.text }]}>
+            Cache
           </Text>
-          <Text style={[styles.label, { color: theme.text }]}>
-            DB Gestures:{" "}
-            <Text style={{ fontWeight: "bold" }}>
-              {dbStats ? dbStats.gestureCount : "Loading..."}
-            </Text>
-          </Text>
-          <Text style={[styles.label, { color: theme.text }]}>
-            Last Sync:{" "}
-            <Text style={{ fontSize: FONT_SIZE.sm }}>
-              {dbStats?.lastSync ? dbStats.lastSync.toLocaleString() : "Never"}
-            </Text>
-          </Text>
-          <Text style={[styles.label, { color: theme.text }]}>
-            Keys:{" "}
-            <Text style={{ fontSize: FONT_SIZE.sm }}>
-              {cacheStats ? cacheStats.keys.join(", ") : "Loading..."}
-            </Text>
-          </Text>
+
+          <View
+            style={[
+              styles.infoCard,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}
+          >
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoKey, { color: theme.textLight }]}>
+                Cache size
+              </Text>
+              <Text style={[styles.infoValue, { color: theme.text }]}>
+                {cacheStats ? cacheStats.size : "—"}
+              </Text>
+            </View>
+            <View
+              style={[styles.separator, { backgroundColor: theme.border }]}
+            />
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoKey, { color: theme.textLight }]}>
+                DB gestures
+              </Text>
+              <Text style={[styles.infoValue, { color: theme.text }]}>
+                {dbStats ? dbStats.gestureCount : "—"}
+              </Text>
+            </View>
+            <View
+              style={[styles.separator, { backgroundColor: theme.border }]}
+            />
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoKey, { color: theme.textLight }]}>
+                Last sync
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={[styles.infoValue, { color: theme.text }]}
+              >
+                {dbStats?.lastSync
+                  ? dbStats.lastSync.toLocaleString()
+                  : "Never"}
+              </Text>
+            </View>
+            {cacheStats && cacheStats.keys.length > 0 && (
+              <>
+                <View
+                  style={[styles.separator, { backgroundColor: theme.border }]}
+                />
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoKey, { color: theme.textLight }]}>
+                    Keys
+                  </Text>
+                  <Text
+                    numberOfLines={2}
+                    style={[
+                      styles.infoValue,
+                      { color: theme.text, flexShrink: 1 },
+                    ]}
+                  >
+                    {cacheStats.keys.join(", ")}
+                  </Text>
+                </View>
+              </>
+            )}
+          </View>
+
           <TouchableOpacity
             activeOpacity={0.8}
             disabled={isRefreshing}
             onPress={handleRefreshData}
-            style={[styles.button, { backgroundColor: theme.primary }]}
+            style={[
+              styles.actionRow,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}
           >
             {isRefreshing ? (
-              <ActivityIndicator color={theme.background} />
+              <ActivityIndicator color={theme.primary} style={styles.rowIcon} />
             ) : (
-              <Text style={[styles.buttonText, { color: theme.background }]}>
-                Refresh Data (Clear Cache)
-              </Text>
+              <Ionicons
+                color={theme.primary}
+                name="refresh"
+                size={ICON_SIZE.sm}
+                style={styles.rowIcon}
+              />
             )}
+            <Text style={[styles.actionLabel, { color: theme.primary }]}>
+              Refresh Data (Clear Cache)
+            </Text>
+            <Ionicons
+              color={theme.textLight}
+              name="chevron-forward"
+              size={ICON_SIZE.sm}
+            />
           </TouchableOpacity>
+
           <TouchableOpacity
             activeOpacity={0.8}
             disabled={isCheckingUpdates}
             onPress={handleCheckForUpdates}
             style={[
-              styles.button,
-              { backgroundColor: theme.accent || theme.primary },
+              styles.actionRow,
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
             {isCheckingUpdates ? (
-              <ActivityIndicator color={theme.background} />
+              <ActivityIndicator color={theme.primary} style={styles.rowIcon} />
             ) : (
-              <Text style={[styles.buttonText, { color: theme.background }]}>
-                Check for Updates
-              </Text>
+              <Ionicons
+                color={theme.primary}
+                name="cloud-download"
+                size={ICON_SIZE.sm}
+                style={styles.rowIcon}
+              />
             )}
+            <Text style={[styles.actionLabel, { color: theme.primary }]}>
+              Check for Updates
+            </Text>
+            <Ionicons
+              color={theme.textLight}
+              name="chevron-forward"
+              size={ICON_SIZE.sm}
+            />
           </TouchableOpacity>
         </View>
 
-        <Text
-          style={[
-            styles.sectionTitle,
-            { color: theme.text, marginTop: SPACING.xl },
-          ]}
-        >
-          Logs
-        </Text>
-        <View style={[styles.card, { backgroundColor: theme.card }]}>
-          <Text
-            style={[
-              styles.label,
-              {
-                color: theme.text,
-                fontWeight: "700",
-                marginBottom: SPACING.sm,
-              },
-            ]}
-          >
-            Log Actions
-          </Text>
+        {/* Logs */}
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionLabel, { color: theme.text }]}>Logs</Text>
+
           <TouchableOpacity
             activeOpacity={0.8}
             disabled={isExportingLogs}
             onPress={handleExportLogs}
             style={[
-              styles.button,
-              {
-                backgroundColor: theme.accent || theme.primary,
-                marginBottom: SPACING.sm,
-              },
+              styles.actionRow,
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
             {isExportingLogs ? (
-              <ActivityIndicator color={theme.background} />
+              <ActivityIndicator color={theme.primary} style={styles.rowIcon} />
             ) : (
-              <Text style={[styles.buttonText, { color: theme.background }]}>
-                Export Logs
-              </Text>
+              <Ionicons
+                color={theme.primary}
+                name="share"
+                size={ICON_SIZE.sm}
+                style={styles.rowIcon}
+              />
             )}
+            <Text style={[styles.actionLabel, { color: theme.primary }]}>
+              Export Logs
+            </Text>
+            <Ionicons
+              color={theme.textLight}
+              name="chevron-forward"
+              size={ICON_SIZE.sm}
+            />
           </TouchableOpacity>
+
           <TouchableOpacity
             activeOpacity={0.8}
             disabled={isSavingLogs}
             onPress={handleSaveLogsToDevice}
             style={[
-              styles.button,
-              {
-                borderWidth: 1,
-                borderColor: theme.primary,
-                backgroundColor: theme.card,
-                marginBottom: SPACING.sm,
-              },
+              styles.actionRow,
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
             {isSavingLogs ? (
-              <ActivityIndicator color={theme.primary} />
+              <ActivityIndicator color={theme.primary} style={styles.rowIcon} />
             ) : (
-              <Text style={[styles.buttonText, { color: theme.primary }]}>
-                Save Logs to Device
-              </Text>
+              <Ionicons
+                color={theme.primary}
+                name="save"
+                size={ICON_SIZE.sm}
+                style={styles.rowIcon}
+              />
             )}
+            <Text style={[styles.actionLabel, { color: theme.primary }]}>
+              Save Logs to Device
+            </Text>
+            <Ionicons
+              color={theme.textLight}
+              name="chevron-forward"
+              size={ICON_SIZE.sm}
+            />
           </TouchableOpacity>
+
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleClearLogs}
             style={[
-              styles.button,
-              { backgroundColor: theme.primary, marginBottom: SPACING.sm },
+              styles.actionRow,
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
-            <Text style={[styles.buttonText, { color: theme.background }]}>
+            <Ionicons
+              color={theme.error ?? "#e53e3e"}
+              name="trash"
+              size={ICON_SIZE.sm}
+              style={styles.rowIcon}
+            />
+            <Text
+              style={[styles.actionLabel, { color: theme.error ?? "#e53e3e" }]}
+            >
               Clear Logs
             </Text>
           </TouchableOpacity>
         </View>
-        <View
-          style={[styles.card, { backgroundColor: theme.card, minHeight: 200 }]}
-        >
-          <Text
-            style={[
-              styles.label,
-              {
-                color: theme.text,
-                fontWeight: "700",
-                marginBottom: SPACING.sm,
-              },
-            ]}
-          >
+
+        {/* Log output */}
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionLabel, { color: theme.text }]}>
             Log Output
           </Text>
-          <ScrollView style={styles.logContainer}>
-            {logs.length === 0 ? (
-              <Text style={{ color: theme.textLight, fontStyle: "italic" }}>
-                No logs yet.
-              </Text>
-            ) : (
-              logs.map((log) => (
-                <Text
-                  key={log.id}
-                  style={{ color: theme.textLight, fontSize: FONT_SIZE.sm }}
-                >
-                  {log.message}
+          <View
+            style={[
+              styles.logCard,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}
+          >
+            <ScrollView nestedScrollEnabled style={styles.logScroll}>
+              {logs.length === 0 ? (
+                <Text style={{ color: theme.textLight, fontStyle: "italic" }}>
+                  No logs yet.
                 </Text>
-              ))
-            )}
-          </ScrollView>
+              ) : (
+                logs.map((log) => (
+                  <Text
+                    key={log.id}
+                    style={{ color: theme.textLight, fontSize: FONT_SIZE.sm }}
+                  >
+                    {log.message}
+                  </Text>
+                ))
+              )}
+            </ScrollView>
+          </View>
         </View>
       </ScrollView>
       <ToastContainer />
@@ -344,41 +441,70 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  contentContainer: {
-    padding: SPACING.md,
+  scrollContent: {
+    paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.xl,
   },
-  sectionTitle: {
+  sectionContainer: {
+    marginTop: SPACING.xl,
+    paddingHorizontal: SPACING.md,
+  },
+  sectionLabel: {
     fontSize: FONT_SIZE.lg,
     fontWeight: "700",
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
-  card: {
-    borderRadius: 10,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  label: {
-    fontSize: FONT_SIZE.md,
-    marginBottom: SPACING.sm,
-  },
-  button: {
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
+  infoCard: {
     borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: SPACING.sm,
+    overflow: "hidden",
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: SPACING.sm,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    minHeight: 44,
   },
-  buttonText: {
-    fontWeight: "700",
+  infoKey: {
     fontSize: FONT_SIZE.md,
+    flex: 1,
   },
-  logContainer: {
+  infoValue: {
+    fontSize: FONT_SIZE.md,
+    flex: 2,
+    textAlign: "right",
+    fontWeight: "600",
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: SPACING.md,
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    borderRadius: 8,
+    borderWidth: 1,
+    minHeight: 44,
+    marginBottom: SPACING.sm,
+  },
+  rowIcon: {
+    marginRight: SPACING.sm,
+  },
+  actionLabel: {
+    fontSize: FONT_SIZE.md,
+    flex: 1,
+  },
+  logCard: {
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: SPACING.md,
+  },
+  logScroll: {
     maxHeight: 300,
   },
 });

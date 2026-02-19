@@ -169,7 +169,8 @@
     "mock": "Testgegevens",
     "realDataw": "Echte Data",
     "auth": "Authenticatie",
-    "manageAccount": "Account beheren"
+    "manageAccount": "Account beheren",
+    "openDeveloperTools": "Ontwikkelaarstools openen"
   },
   "about": {
     "title": "Over ons",
