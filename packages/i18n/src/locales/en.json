@@ -169,6 +169,14 @@
       "6": "Want to know more about SMOG and its origin? Click here.",
       "7": "Want to know more about SMOG? Send an email to info@smog.vlaanderen"
     },
+    "disclaimer": {
+      "title": "Important notice",
+      "titleNl": "Belangrijke mededeling",
+      "message": "These videos are a guideline and not a replacement for the official SMOG courses at smog.vlaanderen.",
+      "messageNl": "Deze video's zijn een richtlijn en geen vervanging voor de officiële SMOG-cursussen op smog.vlaanderen.",
+      "dismiss": "Understood",
+      "dismissNl": "Begrepen"
+    },
     "concepts": "{{name}} has these concept(s): {{concepts}}",
     "infoLabel": "This is important to know:",
     "conceptsLabel": "This gesture has these concepts:",

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { DisclaimerBanner } from "@/components/DisclaimerBanner";
 import {
   CategoryRow,
   ConceptSection,
@@ -47,6 +48,7 @@ const GestureScreen: React.FC = () => {
   const [relatedGestures, setRelatedGestures] = useState<Gesture[]>([]);
   const lastToastTimeRef = useRef<number>(0);
   const [hasTrackedView, setHasTrackedView] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   // Enable screenshot detection for sharing gesture links
   useScreenshotDetection({
@@ -300,10 +302,18 @@ const GestureScreen: React.FC = () => {
           <VideoPlayer
             gestureId={gesture.id}
             gestureName={gesture.name}
-            onComplete={handleVideoComplete}
+            onComplete={() => {
+              handleVideoComplete();
+              setShowDisclaimer(true);
+            }}
             playbackId={gesture.playbackId}
           />
         </View>
+
+        <DisclaimerBanner
+          onDismiss={() => setShowDisclaimer(false)}
+          visible={showDisclaimer}
+        />
 
         <CategoryRow
           categories={gesture.category}

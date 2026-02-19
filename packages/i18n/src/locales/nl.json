@@ -141,6 +141,14 @@
       "6": "Wil je meer weten over SMOG en het ontstaan. Klik hier.",
       "7": "Wil je meer weten over SMOG stuur een mail naar info@smog.vlaanderen"
     },
+    "disclaimer": {
+      "title": "Belangrijke mededeling",
+      "titleNl": "Belangrijke mededeling",
+      "message": "Deze video's zijn een richtlijn en geen vervanging voor de officiële SMOG-cursussen op smog.vlaanderen.",
+      "messageNl": "Deze video's zijn een richtlijn en geen vervanging voor de officiële SMOG-cursussen op smog.vlaanderen.",
+      "dismiss": "Begrepen",
+      "dismissNl": "Begrepen"
+    },
     "concepts": "{{name}} heeft deze concepten: {{concepts}}",
     "infoLabel": "Dit is belangrijk om te weten:",
     "conceptsLabel": "Dit gebaar heeft deze concepten:",

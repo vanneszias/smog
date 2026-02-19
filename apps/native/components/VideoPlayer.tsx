@@ -27,6 +27,7 @@ interface VideoPlayerProps {
   playbackId: string;
   autoPlay?: boolean;
   onComplete?: () => void;
+  onPlayToEnd?: () => void;
   gestureId?: string;
   gestureName?: string;
 }
@@ -35,6 +36,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   playbackId,
   autoPlay = true,
   onComplete,
+  onPlayToEnd,
   gestureId,
   gestureName,
 }) => {
@@ -143,15 +145,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Handle play to end
   const handlePlayToEnd = useCallback(() => {
-    if (!(gestureId && gestureName)) {
-      return;
+    if (gestureId && gestureName) {
+      const watchTime = playbackStartTimeRef.current
+        ? (Date.now() - playbackStartTimeRef.current) / 1000
+        : undefined;
+      trackVideoPlaybackCompleted(gestureId, gestureName, watchTime);
     }
-
-    const watchTime = playbackStartTimeRef.current
-      ? (Date.now() - playbackStartTimeRef.current) / 1000
-      : undefined;
-    trackVideoPlaybackCompleted(gestureId, gestureName, watchTime);
-  }, [gestureId, gestureName]);
+    onPlayToEnd?.();
+  }, [gestureId, gestureName, onPlayToEnd]);
 
   useEffect(() => {
     const subscription = player.addListener(

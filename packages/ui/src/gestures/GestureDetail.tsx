@@ -1,6 +1,13 @@
 import MuxPlayer from "@mux/mux-player-react";
-import { ArrowLeft, Heart, Smartphone, Sparkles } from "lucide-react";
-import { Suspense } from "react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Heart,
+  Smartphone,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { Suspense, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ShimmerSkeleton } from "../common/Skeleton";
 import type { GestureCardData } from "./GestureCard";
@@ -73,6 +80,8 @@ export function GestureDetail({
   onOpenInApp,
 }: GestureDetailProps) {
   const { t } = useTranslation();
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const disclaimerFiredRef = useRef(false);
 
   // Debug logging
   console.debug("GestureDetail render:", {
@@ -225,6 +234,23 @@ export function GestureDetail({
                 <MuxPlayer
                   accentColor="var(--primary)"
                   key={gesture._id}
+                  onEnded={() => {
+                    // Reset the ref so the disclaimer fires again next play-through
+                    disclaimerFiredRef.current = false;
+                  }}
+                  onTimeUpdate={(e) => {
+                    const el = e.currentTarget as HTMLVideoElement;
+                    const timeLeft = el.duration - el.currentTime;
+                    if (
+                      !disclaimerFiredRef.current &&
+                      Number.isFinite(timeLeft) &&
+                      timeLeft <= 5 &&
+                      timeLeft > 0
+                    ) {
+                      disclaimerFiredRef.current = true;
+                      setShowDisclaimer(true);
+                    }
+                  }}
                   playbackId={gesture.playbackId}
                   streamType="on-demand"
                   style={{
@@ -237,6 +263,74 @@ export function GestureDetail({
               </Suspense>
             </div>
           </div>
+
+          {/* Disclaimer Banner */}
+          {showDisclaimer && (
+            <div
+              className="fade-in slide-in-from-top-2 mb-6 animate-in rounded-xl border duration-300"
+              style={{
+                borderColor: "rgba(240, 200, 20, 0.35)",
+                backgroundColor: "rgba(240, 200, 20, 0.07)",
+              }}
+            >
+              <div className="flex items-start gap-3 p-4">
+                {/* Amber accent left bar */}
+                <div
+                  className="mt-0.5 shrink-0 self-stretch rounded-full"
+                  style={{
+                    width: 3,
+                    backgroundColor: "#F0C814",
+                    minHeight: 20,
+                  }}
+                />
+
+                {/* Icon */}
+                <AlertTriangle
+                  className="mt-0.5 shrink-0"
+                  size={18}
+                  style={{ color: "#C49A00" }}
+                />
+
+                {/* Text */}
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="mb-0.5 font-semibold text-sm leading-snug"
+                    style={{ color: "var(--text)" }}
+                  >
+                    Belangrijke mededeling
+                  </p>
+                  <p
+                    className="text-sm leading-relaxed"
+                    style={{ color: "var(--text)" }}
+                  >
+                    Deze video's zijn een richtlijn en{" "}
+                    <span className="font-semibold">geen vervanging</span> voor
+                    de officiële SMOG-cursussen.{" "}
+                    <a
+                      className="underline underline-offset-2 transition-opacity hover:opacity-70"
+                      href="https://smog.vlaanderen/volg-een-cursus"
+                      rel="noopener noreferrer"
+                      style={{ color: "var(--primary)" }}
+                      target="_blank"
+                    >
+                      Volg een cursus op smog.vlaanderen
+                    </a>
+                    .
+                  </p>
+                </div>
+
+                {/* Dismiss button */}
+                <button
+                  aria-label="Dismiss disclaimer"
+                  className="shrink-0 rounded-lg p-1 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
+                  onClick={() => setShowDisclaimer(false)}
+                  type="button"
+                >
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Description Section */}
           {gesture.info ? (
