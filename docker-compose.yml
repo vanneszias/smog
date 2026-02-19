@@ -28,7 +28,7 @@ services:
       args:
         - VITE_SERVER_URL=${VITE_SERVER_URL:-http://localhost:3000}
         - VITE_WORKOS_CLIENT_ID=${VITE_WORKOS_CLIENT_ID}
-        - VITE_WORKOS_REDIRECT_URI=${VITE_WORKOS_REDIRECT_URI:-http://localhost/auth/callback}
+        - VITE_WORKOS_REDIRECT_URI=${VITE_WORKOS_REDIRECT_URI:-http://localhost/callback}
         - VITE_CONVEX_URL=${VITE_CONVEX_URL}
         - VITE_PUBLIC_POSTHOG_API_KEY=${VITE_PUBLIC_POSTHOG_API_KEY}
         - VITE_PUBLIC_POSTHOG_HOST=${VITE_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}
