@@ -259,6 +259,7 @@ const SearchScreen = () => {
                 },
                 headerRight: () => (
                   <CircularButton
+                    badgeCount={selectedCategories.length}
                     icon="filter"
                     onPress={handleShowCategorySheet}
                     size="small"
@@ -276,6 +277,7 @@ const SearchScreen = () => {
         <View style={styles.androidHeader}>
           <View style={styles.androidSearchRow}>
             <CircularButton
+              badgeCount={selectedCategories.length}
               icon="filter"
               onPress={handleShowCategorySheet}
               size="large"

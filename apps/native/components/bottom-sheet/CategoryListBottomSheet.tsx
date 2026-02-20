@@ -67,13 +67,18 @@ const CategoryListBottomSheet: React.FC<CategoryListBottomSheetProps> = ({
           style={[
             styles.categoryItem,
             {
-              backgroundColor: isSelected ? theme.secondary : theme.card,
-              borderColor: isSelected ? `${theme.secondary}99` : theme.border,
+              backgroundColor: isSelected ? theme.primary : theme.card,
+              borderColor: theme.border,
             },
             SHADOWS.small,
           ]}
         >
-          <Text style={[typography.body, { color: theme.text }]}>
+          <Text
+            style={[
+              typography.body,
+              { color: isSelected ? theme.background : theme.text },
+            ]}
+          >
             {category}
           </Text>
         </TouchableOpacity>
