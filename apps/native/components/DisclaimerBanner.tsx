@@ -9,7 +9,7 @@ import {
   SPACING,
 } from "@smog/styles";
 import type React from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Linking,
@@ -34,9 +34,15 @@ export const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
   const { theme } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(16)).current;
+  // Track whether the banner has ever been shown so we don't render DOM nodes
+  // until needed, while still allowing the exit animation to play.
+  const [hasBeenVisible, setHasBeenVisible] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     if (visible) {
+      setHasBeenVisible(true);
+      setIsMounted(true);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -50,7 +56,8 @@ export const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
           stiffness: 180,
         }),
       ]).start();
-    } else {
+    } else if (hasBeenVisible) {
+      // Play exit animation then unmount
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
@@ -62,11 +69,13 @@ export const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
           duration: ANIMATION_DURATION.fast,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        setIsMounted(false);
+      });
     }
-  }, [visible, fadeAnim, translateYAnim]);
+  }, [visible, hasBeenVisible, fadeAnim, translateYAnim]);
 
-  if (!visible) {
+  if (!isMounted) {
     return null;
   }
 

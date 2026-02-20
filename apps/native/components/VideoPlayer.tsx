@@ -46,10 +46,25 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [hasTrackedPlayerOpen, setHasTrackedPlayerOpen] = useState(false);
   const playbackStartTimeRef = useRef<number | null>(null);
   const hasTriggeredOnCompleteRef = useRef(false);
-  const [duration, setDuration] = useState<number>(0);
+  // Keep refs for values used inside event callbacks to avoid stale closures
+  const durationRef = useRef<number>(0);
+  const onCompleteRef = useRef<(() => void) | undefined>(onComplete);
+  const gestureIdRef = useRef<string | undefined>(gestureId);
+  const gestureNameRef = useRef<string | undefined>(gestureName);
   const isFocused = useIsFocused();
   const pausedByNavigationRef = useRef(false);
   const isUnmountingRef = useRef(false);
+
+  // Keep refs in sync with latest prop values so event callbacks are never stale
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+  useEffect(() => {
+    gestureIdRef.current = gestureId;
+  }, [gestureId]);
+  useEffect(() => {
+    gestureNameRef.current = gestureName;
+  }, [gestureName]);
 
   // Construct MUX streaming URL
   const videoUrl = `https://stream.mux.com/${playbackId}.m3u8`;
@@ -115,7 +130,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         return;
       }
 
-      setDuration(player.duration || 0);
+      const d = player.duration || 0;
+      durationRef.current = d;
       setIsLoading(false);
 
       if (!hasTrackedPlayerOpen && gestureId && gestureName) {
@@ -126,16 +142,25 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     [player.duration, hasTrackedPlayerOpen, gestureId, gestureName, autoPlay]
   );
 
-  // Handle time updates
+  // Handle time updates — use refs so this callback never goes stale and
+  // never needs to be re-registered when props change.
   const handleTimeUpdate = useCallback(
     (event: { currentTime: number }) => {
-      const currentDuration = duration || player.duration || 0;
+      // Prefer the ref value (set when readyToPlay fires) then fall back to
+      // the live player.duration property. This avoids the React-state lag
+      // that previously caused every timeUpdate to early-return with duration=0.
+      const currentDuration = durationRef.current || player.duration || 0;
       if (currentDuration <= 0) {
         return;
       }
 
       const { currentTime } = event;
       const timeLeft = currentDuration - currentTime;
+
+      // Guard: timeLeft must be a real finite positive number
+      if (!Number.isFinite(timeLeft) || timeLeft <= 0) {
+        return;
+      }
 
       // Reset flag when video loops back to start
       if (currentTime < 1 && hasTriggeredOnCompleteRef.current) {
@@ -145,13 +170,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // Trigger onComplete once in the last 5 seconds
       if (timeLeft <= 5 && !hasTriggeredOnCompleteRef.current) {
         hasTriggeredOnCompleteRef.current = true;
-        if (gestureId && gestureName) {
-          trackVideoAlmostCompleted(gestureId, gestureName);
+        const gId = gestureIdRef.current;
+        const gName = gestureNameRef.current;
+        if (gId && gName) {
+          trackVideoAlmostCompleted(gId, gName);
         }
-        onComplete?.();
+        onCompleteRef.current?.();
       }
     },
-    [duration, player.duration, gestureId, gestureName, onComplete]
+    // Only player is needed — all other values are read from refs
+    [player]
   );
 
   // Handle play to end

@@ -3,7 +3,7 @@ import { CommonActions, useNavigation } from "@react-navigation/native";
 import { BORDER_RADIUS, SPACING } from "@smog/styles";
 import { Stack, useLocalSearchParams } from "expo-router";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -49,6 +49,9 @@ const GestureScreen: React.FC = () => {
   const lastToastTimeRef = useRef<number>(0);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  // Mirrors the web's disclaimerFiredRef: ensures the banner shows exactly
+  // once per playthrough and resets when the video loops back.
+  const disclaimerFiredRef = useRef(false);
 
   // Enable screenshot detection for sharing gesture links
   useScreenshotDetection({
@@ -119,6 +122,45 @@ const GestureScreen: React.FC = () => {
     }
   }, [gesture, hasTrackedView]);
 
+  const getInfoToastMessage = useCallback(() => {
+    const messages = [
+      t("gesture.videoComplete.1"),
+      t("gesture.videoComplete.2"),
+      t("gesture.videoComplete.3"),
+      t("gesture.videoComplete.4"),
+      t("gesture.videoComplete.5"),
+      t("gesture.videoComplete.6"),
+      t("gesture.videoComplete.7"),
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  }, [t]);
+
+  const handleVideoComplete = useCallback(() => {
+    if (gesture) {
+      trackVideoAlmostCompleted(gesture.id, gesture.name);
+    }
+
+    const now = Date.now();
+    // Prevent showing multiple toasts within 10 seconds
+    if (now - lastToastTimeRef.current < 10_000) {
+      return;
+    }
+
+    lastToastTimeRef.current = now;
+    showToast({
+      message: getInfoToastMessage(),
+      type: "info",
+      duration: 5000,
+    });
+
+    // Show disclaimer once per playthrough; VideoPlayer's hasTriggeredOnCompleteRef
+    // already resets on loop, but we guard here too for clarity.
+    if (!disclaimerFiredRef.current) {
+      disclaimerFiredRef.current = true;
+      setShowDisclaimer(true);
+    }
+  }, [gesture, showToast, getInfoToastMessage]);
+
   if (isLoading || !gesture) {
     return (
       <View
@@ -153,38 +195,6 @@ const GestureScreen: React.FC = () => {
         })
       );
     }
-  };
-
-  const getInfoToastMessage = () => {
-    const messages = [
-      t("gesture.videoComplete.1"),
-      t("gesture.videoComplete.2"),
-      t("gesture.videoComplete.3"),
-      t("gesture.videoComplete.4"),
-      t("gesture.videoComplete.5"),
-      t("gesture.videoComplete.6"),
-      t("gesture.videoComplete.7"),
-    ];
-    return messages[Math.floor(Math.random() * messages.length)];
-  };
-
-  const handleVideoComplete = () => {
-    if (gesture) {
-      trackVideoAlmostCompleted(gesture.id, gesture.name);
-    }
-
-    const now = Date.now();
-    // Prevent showing multiple toasts within 10 seconds
-    if (now - lastToastTimeRef.current < 10_000) {
-      return;
-    }
-
-    lastToastTimeRef.current = now;
-    showToast({
-      message: getInfoToastMessage(),
-      type: "info",
-      duration: 5000,
-    });
   };
 
   const handleToggleFavorite = () => {
@@ -302,16 +312,16 @@ const GestureScreen: React.FC = () => {
           <VideoPlayer
             gestureId={gesture.id}
             gestureName={gesture.name}
-            onComplete={() => {
-              handleVideoComplete();
-              setShowDisclaimer(true);
-            }}
+            onComplete={handleVideoComplete}
             playbackId={gesture.playbackId}
           />
         </View>
 
         <DisclaimerBanner
-          onDismiss={() => setShowDisclaimer(false)}
+          onDismiss={() => {
+            disclaimerFiredRef.current = false;
+            setShowDisclaimer(false);
+          }}
           visible={showDisclaimer}
         />
 
