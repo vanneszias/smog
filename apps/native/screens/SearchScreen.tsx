@@ -1,6 +1,6 @@
 import { SPACING } from "@smog/styles";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Keyboard, Platform, StyleSheet, View } from "react-native";
 import CategoryListBottomSheet from "@/components/bottom-sheet/CategoryListBottomSheet";
 import { CircularButton, EmptyState } from "@/components/common";
@@ -42,16 +42,31 @@ const SearchScreen = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [isSearchBarFocused, setIsSearchBarFocused] = useState(false);
   const [categorySheetVisible, setCategorySheetVisible] = useState(false);
+  // Tracks the last category param we acted on so we only react to genuine
+  // changes (e.g. navigation from GestureScreen) and not spurious re-renders.
+  const prevCategoryParamRef = useRef<string | undefined>(
+    initialCategory ?? undefined
+  );
+  // True once the first search effect has been allowed to fire.
   const [hasInitialized, setHasInitialized] = useState(false);
 
   const handleRemoveCategory = useCallback(
     (category: string) => {
       const newCategories = selectedCategories.filter((c) => c !== category);
       setSelectedCategories(newCategories);
+      prevCategoryParamRef.current = undefined; // reset so nav can set again
       trackSearchCategoryRemoved(category, newCategories.length);
     },
     [selectedCategories]
   );
+
+  const handleClearCategories = useCallback(() => {
+    for (const category of selectedCategories) {
+      trackSearchCategoryRemoved(category, 0);
+    }
+    setSelectedCategories([]);
+    prevCategoryParamRef.current = undefined; // reset so nav can set again
+  }, [selectedCategories]);
 
   const { recentSearches, addRecentSearch } = useRecentSearches();
 
@@ -76,12 +91,25 @@ const SearchScreen = () => {
     gestureService.getCategories().then(setCategories);
   }, []);
 
+  // React to category params arriving from navigation (e.g. tapping a category
+  // tag in GestureScreen). The search tab is kept mounted by NativeTabs, so
+  // the component is never remounted — only the route params change.
+  // We compare against prevCategoryParamRef so we only update when the param
+  // genuinely changes, never overwriting a user's manual selection on spurious
+  // re-renders where initialCategory is still undefined.
   useEffect(() => {
     if (!hasInitialized) {
-      if (initialCategory) {
-        setSelectedCategories([initialCategory]);
-      }
+      // First mount: prime the ref and allow the search effect to run.
+      prevCategoryParamRef.current = initialCategory ?? undefined;
       setHasInitialized(true);
+      return;
+    }
+    if (
+      initialCategory !== undefined &&
+      initialCategory !== prevCategoryParamRef.current
+    ) {
+      prevCategoryParamRef.current = initialCategory;
+      setSelectedCategories([initialCategory]);
     }
   }, [initialCategory, hasInitialized]);
 
@@ -281,6 +309,7 @@ const SearchScreen = () => {
       {/* Category filter chips */}
       <View style={styles.filtersContainer}>
         <CategoryFilters
+          onClearCategories={handleClearCategories}
           onRemoveCategory={handleRemoveCategory}
           selectedCategories={selectedCategories}
         />

@@ -1,10 +1,4 @@
-import {
-  BORDER_RADIUS,
-  FONT_SIZE,
-  FONT_WEIGHT,
-  SHADOWS,
-  SPACING,
-} from "@smog/styles";
+import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SPACING } from "@smog/styles";
 import type React from "react";
 import {
   ScrollView,
@@ -34,11 +28,15 @@ const CategoryRow: React.FC<CategoryRowProps> = ({
             <View key={category} style={styles.categoryContainer}>
               <TouchableOpacity
                 onPress={() => onCategoryPress(category)}
-                style={[styles.category, { backgroundColor: theme.primary }]}
+                style={[
+                  styles.category,
+                  {
+                    backgroundColor: theme.secondary,
+                    borderColor: `${theme.secondary}99`,
+                  },
+                ]}
               >
-                <Text
-                  style={[styles.categoryText, { color: theme.background }]}
-                >
+                <Text style={[styles.categoryText, { color: theme.text }]}>
                   {category}
                 </Text>
               </TouchableOpacity>
@@ -64,17 +62,18 @@ const styles = StyleSheet.create({
   category: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    marginRight: SPACING.sm,
+    paddingHorizontal: SPACING.sm + 4,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.round,
+    borderWidth: 1,
+    marginRight: SPACING.xs,
     marginBottom: 0,
     alignSelf: "flex-start",
-    ...SHADOWS.small,
   },
   categoryText: {
     fontSize: FONT_SIZE.xs,
     fontWeight: FONT_WEIGHT.medium,
+    fontFamily: "Onest-Medium",
   },
 });
 
