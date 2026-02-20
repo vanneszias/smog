@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { CommonActions, useNavigation } from "@react-navigation/native";
 import { BORDER_RADIUS, SPACING } from "@smog/styles";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -37,7 +36,7 @@ import gestureService from "@/services/gestureService";
 import type { Gesture } from "@/types";
 
 const GestureScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -176,24 +175,11 @@ const GestureScreen: React.FC = () => {
   const handleCategoryPress = (category: string) => {
     if (gesture) {
       trackCategoryPressed(category, "gesture_detail");
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [
-            {
-              name: "(tabs)",
-              state: {
-                routes: [
-                  {
-                    name: "search",
-                    params: { category },
-                  },
-                ],
-              },
-            },
-          ],
-        })
-      );
+      router.dismiss();
+      router.navigate({
+        pathname: "/(tabs)/search",
+        params: { category },
+      });
     }
   };
 
