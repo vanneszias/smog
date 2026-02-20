@@ -99,6 +99,7 @@
     "react-native-svg-transformer": "^1.5.2",
     "react-refresh": "^0.18.0",
     "react-test-renderer": "~19.1.2",
+    "sharp": "^0.34.5",
     "typescript": "^5.9.3"
   }
 }
