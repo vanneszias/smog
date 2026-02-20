@@ -139,6 +139,12 @@ const GestureScreen: React.FC = () => {
       trackVideoAlmostCompleted(gesture.id, gesture.name);
     }
 
+    // Show disclaimer once per playthrough — independent of toast throttle.
+    if (!disclaimerFiredRef.current) {
+      disclaimerFiredRef.current = true;
+      setShowDisclaimer(true);
+    }
+
     const now = Date.now();
     // Prevent showing multiple toasts within 10 seconds
     if (now - lastToastTimeRef.current < 10_000) {
@@ -151,13 +157,6 @@ const GestureScreen: React.FC = () => {
       type: "info",
       duration: 5000,
     });
-
-    // Show disclaimer once per playthrough; VideoPlayer's hasTriggeredOnCompleteRef
-    // already resets on loop, but we guard here too for clarity.
-    if (!disclaimerFiredRef.current) {
-      disclaimerFiredRef.current = true;
-      setShowDisclaimer(true);
-    }
   }, [gesture, showToast, getInfoToastMessage]);
 
   if (isLoading || !gesture) {

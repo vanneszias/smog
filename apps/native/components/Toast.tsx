@@ -17,6 +17,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 
 const useGlass = isLiquidGlassAvailable();
@@ -49,6 +50,7 @@ export const Toast: React.FC<ToastProps> = ({
 }) => {
   const { theme } = useTheme();
   const { registerHideCallback } = useToast();
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(100)).current;
   const isHidingRef = useRef(false);
@@ -143,7 +145,9 @@ export const Toast: React.FC<ToastProps> = ({
 
   return (
     <TouchableWithoutFeedback onPress={handleHide}>
-      <View style={styles.container}>
+      <View
+        style={[styles.container, { paddingBottom: SPACING.md + bottomInset }]}
+      >
         <Animated.View
           style={[
             styles.toast,
@@ -211,7 +215,7 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
     justifyContent: "flex-end",
-    padding: SPACING.md,
+    paddingHorizontal: SPACING.md,
     pointerEvents: "box-none",
   },
   toast: {

@@ -6,10 +6,8 @@ import {
   Keyboard,
   Linking,
   Platform,
-  Text as RNText,
   StyleSheet,
   type TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -141,19 +139,6 @@ const HomeScreen: React.FC = () => {
     Linking.openURL("mailto:hello@smog.vlaanderen");
   }, []);
 
-  const renderEmptyState = () => (
-    <View style={styles.attribution}>
-      <TouchableOpacity
-        activeOpacity={0.6}
-        onPress={() => Linking.openURL("https://zias.be")}
-      >
-        <RNText style={[styles.attributionText, { color: theme.textLight }]}>
-          Gemaakt met ♡ door zias.be
-        </RNText>
-      </TouchableOpacity>
-    </View>
-  );
-
   const renderSearchResults = () => (
     <SearchResults
       hasMore={searchHook.hasMore}
@@ -254,7 +239,7 @@ const HomeScreen: React.FC = () => {
 
         {/* Content area */}
         <View style={styles.contentArea}>
-          {searchTerm.length === 0 ? renderEmptyState() : renderSearchResults()}
+          {searchTerm.length > 0 && renderSearchResults()}
         </View>
       </View>
     </SafeAreaView>
@@ -285,17 +270,6 @@ const styles = StyleSheet.create({
   },
   searchResults: {
     flex: 1,
-  },
-  attribution: {
-    flex: 1,
-    justifyContent: "flex-end",
-    alignItems: "center",
-    paddingBottom: SPACING.xl,
-  },
-  attributionText: {
-    fontSize: 13,
-    textAlign: "center",
-    letterSpacing: 0.2,
   },
 });
 
