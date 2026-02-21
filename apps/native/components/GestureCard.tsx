@@ -11,12 +11,9 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useTheme } from "@/context/ThemeContext";
-import { useToast } from "@/context/ToastContext";
-import { useTranslation } from "@/context/TranslationContext";
 import {
   trackFavoriteAdded,
   trackFavoriteRemoved,
-  trackFavoriteUndoAction,
   trackGestureLiked,
   trackGestureUnliked,
 } from "@/services/analyticsService";
@@ -44,8 +41,6 @@ const GestureCard = ({
   ref,
 }: GestureCardProps & { ref?: React.Ref<GestureCardRef> }) => {
   const { theme } = useTheme();
-  const { showToast } = useToast();
-  const { t } = useTranslation();
 
   // Animation values for like feedback
   const scale = useSharedValue(1);
@@ -110,40 +105,6 @@ const GestureCard = ({
           "button_tap"
         );
       }
-
-      // Show toast with undo functionality
-      const message = wasLiked ? t("favorites.removed") : t("favorites.added");
-
-      showToast({
-        message,
-        type: wasLiked ? "info" : "success",
-        duration: 3000,
-        action: {
-          label: t("favorites.undo"),
-          onPress: () => {
-            // Undo the favorite toggle
-            onToggleFavorite(gesture.id);
-            // Track the undo action
-            if (wasLiked) {
-              trackFavoriteUndoAction(gesture.id, gesture.name, "undo_remove");
-              trackGestureLiked(
-                gesture.id,
-                gesture.name,
-                gesture.category,
-                "undo"
-              );
-            } else {
-              trackFavoriteUndoAction(gesture.id, gesture.name, "undo_add");
-              trackGestureUnliked(
-                gesture.id,
-                gesture.name,
-                gesture.category,
-                "undo"
-              );
-            }
-          },
-        },
-      });
     }
   };
 

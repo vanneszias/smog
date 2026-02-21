@@ -21,8 +21,6 @@ import {
 import VideoPlayer from "@/components/VideoPlayer";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useTheme } from "@/context/ThemeContext";
-import { useToast } from "@/context/ToastContext";
-import { useTranslation } from "@/context/TranslationContext";
 import { useScreenshotDetection } from "@/hooks/useScreenshotDetection";
 import {
   trackCategoryPressed,
@@ -39,13 +37,10 @@ const GestureScreen: React.FC = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme } = useTheme();
-  const { t } = useTranslation();
-  const { showToast } = useToast();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [gesture, setGesture] = useState<Gesture | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [relatedGestures, setRelatedGestures] = useState<Gesture[]>([]);
-  const lastToastTimeRef = useRef<number>(0);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   // Mirrors the web's disclaimerFiredRef: ensures the banner shows exactly
@@ -121,43 +116,17 @@ const GestureScreen: React.FC = () => {
     }
   }, [gesture, hasTrackedView]);
 
-  const getInfoToastMessage = useCallback(() => {
-    const messages = [
-      t("gesture.videoComplete.1"),
-      t("gesture.videoComplete.2"),
-      t("gesture.videoComplete.3"),
-      t("gesture.videoComplete.4"),
-      t("gesture.videoComplete.5"),
-      t("gesture.videoComplete.6"),
-      t("gesture.videoComplete.7"),
-    ];
-    return messages[Math.floor(Math.random() * messages.length)];
-  }, [t]);
-
   const handleVideoComplete = useCallback(() => {
     if (gesture) {
       trackVideoAlmostCompleted(gesture.id, gesture.name);
     }
 
-    // Show disclaimer once per playthrough — independent of toast throttle.
+    // Show disclaimer once per playthrough.
     if (!disclaimerFiredRef.current) {
       disclaimerFiredRef.current = true;
       setShowDisclaimer(true);
     }
-
-    const now = Date.now();
-    // Prevent showing multiple toasts within 10 seconds
-    if (now - lastToastTimeRef.current < 10_000) {
-      return;
-    }
-
-    lastToastTimeRef.current = now;
-    showToast({
-      message: getInfoToastMessage(),
-      type: "info",
-      duration: 5000,
-    });
-  }, [gesture, showToast, getInfoToastMessage]);
+  }, [gesture]);
 
   if (isLoading || !gesture) {
     return (
@@ -206,38 +175,6 @@ const GestureScreen: React.FC = () => {
         "button_tap"
       );
     }
-
-    // Show toast with undo functionality
-    const message = wasLiked ? t("favorites.removed") : t("favorites.added");
-
-    showToast({
-      message,
-      type: wasLiked ? "info" : "success",
-      duration: 3000,
-      action: {
-        label: t("favorites.undo"),
-        onPress: () => {
-          // Undo the favorite toggle
-          toggleFavorite(gesture.id, gesture.name);
-          // Track the undo action
-          if (wasLiked) {
-            trackGestureLiked(
-              gesture.id,
-              gesture.name,
-              gesture.category,
-              "undo"
-            );
-          } else {
-            trackGestureUnliked(
-              gesture.id,
-              gesture.name,
-              gesture.category,
-              "undo"
-            );
-          }
-        },
-      },
-    });
   };
 
   return (

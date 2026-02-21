@@ -19,7 +19,6 @@ import {
 import BaseButton from "@/components/common/BaseButton";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
-import { useToast } from "@/context/ToastContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { useNativeInteractions } from "@/hooks/useNativeInteractions";
 import {
@@ -32,7 +31,6 @@ export default function AccountSettingsScreen() {
   const { user, signOut } = useAuth();
   const { theme } = useTheme();
   const { t } = useTranslation();
-  const { showToast } = useToast();
   const router = useRouter();
   const { triggerHaptic } = useNativeInteractions();
 
@@ -71,24 +69,15 @@ export default function AccountSettingsScreen() {
             );
           }
         }
-
-        showToast({
-          type: "success",
-          message: t("gdpr.consent.updated"),
-        });
       } catch (error) {
         console.error(
           "[AccountSettings] Failed to update analytics consent:",
           error
         );
-        showToast({
-          type: "error",
-          message: t("gdpr.consent.failed"),
-        });
         setAnalyticsEnabled(!value);
       }
     },
-    [user, updateConsent, triggerHaptic, showToast, t]
+    [user, updateConsent, triggerHaptic]
   );
 
   const handleExportData = useCallback(async () => {
@@ -97,10 +86,6 @@ export default function AccountSettingsScreen() {
       setIsExporting(true);
 
       if (!exportData) {
-        showToast({
-          type: "error",
-          message: t("gdpr.account.exportFailed"),
-        });
         return;
       }
 
@@ -121,21 +106,12 @@ export default function AccountSettingsScreen() {
           title: fileName,
         });
       }
-
-      showToast({
-        type: "success",
-        message: t("gdpr.account.exportSuccess"),
-      });
     } catch (error) {
       console.error("[AccountSettings] Failed to export data:", error);
-      showToast({
-        type: "error",
-        message: t("gdpr.account.exportFailed"),
-      });
     } finally {
       setIsExporting(false);
     }
-  }, [exportData, triggerHaptic, showToast, t]);
+  }, [exportData, triggerHaptic]);
 
   const handleSignOutPress = useCallback(() => {
     triggerHaptic("medium");
@@ -151,17 +127,9 @@ export default function AccountSettingsScreen() {
               setIsSigningOut(true);
               triggerHaptic("success");
               await signOut();
-              showToast({
-                type: "success",
-                message: "Successfully signed out",
-              });
               router.replace("/welcome");
             } catch (error) {
               console.error("[AccountSettings] Failed to sign out:", error);
-              showToast({
-                type: "error",
-                message: t("account.logoutError"),
-              });
             } finally {
               setIsSigningOut(false);
             }
@@ -169,7 +137,7 @@ export default function AccountSettingsScreen() {
         },
       ]
     );
-  }, [triggerHaptic, signOut, router, showToast, t]);
+  }, [triggerHaptic, signOut, router, t]);
 
   const handleDeletePress = useCallback(() => {
     triggerHaptic("heavy");
@@ -200,28 +168,19 @@ export default function AccountSettingsScreen() {
               await signOut();
               triggerHaptic("success");
 
-              showToast({
-                type: "success",
-                message: t("gdpr.account.deleteSuccess"),
-              });
-
               router.replace("/welcome");
             } catch (error) {
               console.error(
                 "[AccountSettings] Failed to delete account:",
                 error
               );
-              showToast({
-                type: "error",
-                message: t("gdpr.account.deleteFailed"),
-              });
               setIsDeleting(false);
             }
           },
         },
       ]
     );
-  }, [triggerHaptic, deleteAccount, signOut, router, showToast, t]);
+  }, [triggerHaptic, deleteAccount, signOut, router, t]);
 
   const nativeHeaderOptions =
     Platform.OS === "ios"
