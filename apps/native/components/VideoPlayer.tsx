@@ -72,6 +72,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Create video player instance
   const player = useVideoPlayer(videoUrl, (videoPlayer) => {
     videoPlayer.loop = true;
+    // Must be > 0 for the timeUpdate event to fire; 0 (the default) disables it entirely.
+    videoPlayer.timeUpdateEventInterval = 0.5;
     if (autoPlay) {
       videoPlayer.play();
     }
@@ -202,6 +204,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       "statusChange",
       handleStatusChange
     );
+    // sourceLoad fires when the player finishes loading metadata and includes
+    // the video duration in its payload — more reliable than reading
+    // player.duration inside statusChange.
+    const sourceLoadSubscription = player.addListener(
+      "sourceLoad",
+      (event: { duration: number }) => {
+        if (event.duration > 0) {
+          durationRef.current = event.duration;
+        }
+      }
+    );
     const timeUpdateSubscription = player.addListener(
       "timeUpdate",
       handleTimeUpdate
@@ -214,6 +227,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => {
       subscription?.remove();
       statusSubscription?.remove();
+      sourceLoadSubscription?.remove();
       timeUpdateSubscription?.remove();
       playToEndSubscription?.remove();
     };
