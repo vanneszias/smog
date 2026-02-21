@@ -39,6 +39,8 @@ interface ToastProps {
   onHide: () => void;
   action?: ToastAction;
   type?: "info" | "success" | "warning" | "error";
+  /** Extra bottom offset to clear a tab bar or other overlapping UI. */
+  extraBottomOffset?: number;
 }
 
 export const Toast: React.FC<ToastProps> = ({
@@ -47,6 +49,7 @@ export const Toast: React.FC<ToastProps> = ({
   onHide,
   action,
   type = "info",
+  extraBottomOffset = 0,
 }) => {
   const { theme } = useTheme();
   const { registerHideCallback } = useToast();
@@ -146,7 +149,10 @@ export const Toast: React.FC<ToastProps> = ({
   return (
     <TouchableWithoutFeedback onPress={handleHide}>
       <View
-        style={[styles.container, { paddingBottom: SPACING.md + bottomInset }]}
+        style={[
+          styles.container,
+          { paddingBottom: SPACING.xl + bottomInset + extraBottomOffset },
+        ]}
       >
         <Animated.View
           style={[
