@@ -33,6 +33,7 @@ export interface TranslationKeys {
     added: string;
     removed: string;
     undo: string;
+    error: string;
   };
   common: {
     back: string;

@@ -23,7 +23,8 @@
     "emptyMessage": "To add a gesture to your favorites, tap the heart icon on a gesture.",
     "added": "Added to favorites",
     "removed": "Removed from favorites",
-    "undo": "Undo"
+    "undo": "Undo",
+    "error": "Failed to update favorite"
   },
   "auth": {
     "welcome": {

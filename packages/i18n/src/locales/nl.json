@@ -23,7 +23,8 @@
     "emptyMessage": "Om favorieten toe te voegen, klik op het hartje in de rechterbovenhoek van een gebaar.",
     "added": "Toegevoegd aan favorieten",
     "removed": "Verwijderd uit favorieten",
-    "undo": "Ongedaan maken"
+    "undo": "Ongedaan maken",
+    "error": "Favoriet bijwerken mislukt"
   },
   "auth": {
     "welcome": {

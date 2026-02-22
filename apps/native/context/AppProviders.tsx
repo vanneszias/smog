@@ -7,6 +7,7 @@ import {
 import type React from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import ToastContainer from "@/components/ToastContainer";
 import { useConvexInit } from "@/hooks/useConvexInit";
 import { AuthProvider, useAuthForConvex } from "./AuthProvider";
 import { ConvexUserSync } from "./ConvexUserSync";
@@ -65,6 +66,7 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
                       <RecentSearchesProvider>
                         <GestureHandlerRootView>
                           <SafeAreaProvider>
+                            <ToastContainer />
                             <ActionSheetProvider>
                               {children}
                             </ActionSheetProvider>

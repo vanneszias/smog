@@ -23,7 +23,8 @@
     "emptyMessage": "Pour ajouter un geste à vos favoris, appuyez sur le bouton étoile dans la vue du geste.",
     "added": "Ajouté aux favoris",
     "removed": "Retiré des favoris",
-    "undo": "Annuler"
+    "undo": "Annuler",
+    "error": "Échec de la mise à jour du favori"
   },
   "auth": {
     "welcome": {
