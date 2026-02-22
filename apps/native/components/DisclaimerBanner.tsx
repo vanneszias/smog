@@ -9,7 +9,7 @@ import {
   SPACING,
 } from "@smog/styles";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Linking,
@@ -19,8 +19,13 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "@/context/TranslationContext";
 
+const VIDEO_COMPLETE_COUNT = 7;
 const COURSE_URL = "https://smog.vlaanderen/volg-een-cursus";
+
+// Link phrases that should be clickable in the video complete messages
+const LINK_PHRASES = ["Klik hier", "klik dan hier"];
 
 interface DisclaimerBannerProps {
   visible: boolean;
@@ -32,12 +37,84 @@ export const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
   onDismiss,
 }) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(16)).current;
   // Track whether the banner has ever been shown so we don't render DOM nodes
   // until needed, while still allowing the exit animation to play.
   const [hasBeenVisible, setHasBeenVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Randomly select a message index (1-7) when component mounts
+  const messageIndex = useMemo(
+    () => Math.floor(Math.random() * VIDEO_COMPLETE_COUNT) + 1,
+    []
+  );
+
+  // Render message with clickable links
+  const renderMessageWithLinks = (message: string) => {
+    const parts: React.ReactNode[] = [];
+    let remainingText = message;
+    let keyIndex = 0;
+
+    while (remainingText.length > 0) {
+      let earliestMatch: { phrase: string; index: number } | null = null;
+
+      // Find the earliest occurrence of any link phrase
+      for (const phrase of LINK_PHRASES) {
+        const index = remainingText.indexOf(phrase);
+        if (
+          index !== -1 &&
+          (earliestMatch === null || index < earliestMatch.index)
+        ) {
+          earliestMatch = { phrase, index };
+        }
+      }
+
+      if (earliestMatch) {
+        // Add text before the link
+        if (earliestMatch.index > 0) {
+          parts.push(
+            <Text
+              key={keyIndex++}
+              style={[styles.messageNl, { color: theme.text }]}
+            >
+              {remainingText.slice(0, earliestMatch.index)}
+            </Text>
+          );
+        }
+
+        // Add the clickable link
+        parts.push(
+          <Text
+            key={keyIndex++}
+            onPress={() => Linking.openURL(COURSE_URL)}
+            style={[styles.link, { color: theme.primary }]}
+          >
+            {earliestMatch.phrase}
+          </Text>
+        );
+
+        // Continue with remaining text
+        remainingText = remainingText.slice(
+          earliestMatch.index + earliestMatch.phrase.length
+        );
+      } else {
+        // No more links, add remaining text
+        parts.push(
+          <Text
+            key={keyIndex++}
+            style={[styles.messageNl, { color: theme.text }]}
+          >
+            {remainingText}
+          </Text>
+        );
+        break;
+      }
+    }
+
+    return parts;
+  };
 
   useEffect(() => {
     if (visible) {
@@ -114,19 +191,10 @@ export const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
         {/* Text content */}
         <View style={styles.textWrapper}>
           <Text style={[styles.titleNl, { color: theme.text }]}>
-            Belangrijke mededeling
+            {t("gesture.disclaimer.titleNl")}
           </Text>
           <Text style={[styles.messageNl, { color: theme.text }]}>
-            Deze video's zijn een richtlijn en{" "}
-            <Text style={styles.emphasis}>geen vervanging</Text> voor de
-            officiële SMOG-cursussen.{" "}
-            <Text
-              onPress={() => Linking.openURL(COURSE_URL)}
-              style={[styles.link, { color: theme.primary }]}
-            >
-              Volg een cursus op smog.vlaanderen
-            </Text>
-            .
+            {renderMessageWithLinks(t(`gesture.videoComplete.${messageIndex}`))}
           </Text>
         </View>
 
