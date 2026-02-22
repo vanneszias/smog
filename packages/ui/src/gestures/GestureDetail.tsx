@@ -7,8 +7,15 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+const VIDEO_COMPLETE_COUNT = 7;
+const COURSE_URL = "https://smog.vlaanderen/volg-een-cursus";
+
+// Link phrases that should be clickable in the video complete messages
+const LINK_PHRASES = ["Klik hier", "klik dan hier"];
+
 import { ShimmerSkeleton } from "../common/Skeleton";
 import type { GestureCardData } from "./GestureCard";
 
@@ -82,6 +89,70 @@ export function GestureDetail({
   const { t } = useTranslation();
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const disclaimerFiredRef = useRef(false);
+
+  // Randomly select a message index (1-7) when component mounts
+  const messageIndex = useMemo(
+    () => Math.floor(Math.random() * VIDEO_COMPLETE_COUNT) + 1,
+    []
+  );
+
+  // Render message with clickable links
+  const renderMessageWithLinks = (message: string) => {
+    const parts: React.ReactNode[] = [];
+    let remainingText = message;
+    let keyIndex = 0;
+
+    while (remainingText.length > 0) {
+      let earliestMatch: { phrase: string; index: number } | null = null;
+
+      // Find the earliest occurrence of any link phrase
+      for (const phrase of LINK_PHRASES) {
+        const index = remainingText.indexOf(phrase);
+        if (
+          index !== -1 &&
+          (earliestMatch === null || index < earliestMatch.index)
+        ) {
+          earliestMatch = { phrase, index };
+        }
+      }
+
+      if (earliestMatch) {
+        // Add text before the link
+        if (earliestMatch.index > 0) {
+          parts.push(
+            <span key={keyIndex++}>
+              {remainingText.slice(0, earliestMatch.index)}
+            </span>
+          );
+        }
+
+        // Add the clickable link
+        parts.push(
+          <a
+            className="underline underline-offset-2 transition-opacity hover:opacity-70"
+            href={COURSE_URL}
+            key={keyIndex++}
+            rel="noopener noreferrer"
+            style={{ color: "var(--primary)" }}
+            target="_blank"
+          >
+            {earliestMatch.phrase}
+          </a>
+        );
+
+        // Continue with remaining text
+        remainingText = remainingText.slice(
+          earliestMatch.index + earliestMatch.phrase.length
+        );
+      } else {
+        // No more links, add remaining text
+        parts.push(<span key={keyIndex++}>{remainingText}</span>);
+        break;
+      }
+    }
+
+    return parts;
+  };
 
   // Debug logging
   console.debug("GestureDetail render:", {
@@ -297,25 +368,15 @@ export function GestureDetail({
                     className="mb-0.5 font-semibold text-sm leading-snug"
                     style={{ color: "var(--text)" }}
                   >
-                    Belangrijke mededeling
+                    {t("gesture.disclaimer.titleNl")}
                   </p>
                   <p
                     className="text-sm leading-relaxed"
                     style={{ color: "var(--text)" }}
                   >
-                    Deze video's zijn een richtlijn en{" "}
-                    <span className="font-semibold">geen vervanging</span> voor
-                    de officiële SMOG-cursussen.{" "}
-                    <a
-                      className="underline underline-offset-2 transition-opacity hover:opacity-70"
-                      href="https://smog.vlaanderen/volg-een-cursus"
-                      rel="noopener noreferrer"
-                      style={{ color: "var(--primary)" }}
-                      target="_blank"
-                    >
-                      Volg een cursus op smog.vlaanderen
-                    </a>
-                    .
+                    {renderMessageWithLinks(
+                      t(`gesture.videoComplete.${messageIndex}`)
+                    )}
                   </p>
                 </div>
 
