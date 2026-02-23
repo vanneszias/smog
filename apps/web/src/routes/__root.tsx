@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { GDPRConsentBanner } from "@/components/gdpr-consent-banner";
 import Header from "@/components/header";
 import { AppStoreBanner } from "@/components/home/AppStoreBanner";
+import { NotFoundComponent } from "@/components/NotFoundPage";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { trackPageView } from "@/lib/analytics";
@@ -30,6 +31,7 @@ export interface RouterAppContext {
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
+  notFoundComponent: NotFoundComponent,
 });
 
 function RootComponent() {

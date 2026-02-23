@@ -53,6 +53,7 @@ const router = createRouter({
   defaultPreload: "intent",
   defaultPendingComponent: () => <Loader />,
   context: { orpc, queryClient },
+  notFoundMode: "fuzzy",
   Wrap({ children }: { children: React.ReactNode }) {
     return (
       <AuthProvider>
