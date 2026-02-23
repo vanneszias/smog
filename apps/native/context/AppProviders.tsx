@@ -7,7 +7,6 @@ import {
 import type React from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import ToastContainer from "@/components/ToastContainer";
 import { useConvexInit } from "@/hooks/useConvexInit";
 import { AuthProvider, useAuthForConvex } from "./AuthProvider";
 import { ConvexUserSync } from "./ConvexUserSync";
@@ -15,7 +14,6 @@ import FavoritesProvider from "./FavoritesContext";
 import { LogProvider } from "./logs/LogProvider";
 import RecentSearchesProvider from "./RecentSearchesContext";
 import ThemeProvider from "./ThemeContext";
-import { ToastProvider } from "./ToastContext";
 import { TranslationProvider } from "./TranslationContext";
 
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
@@ -61,20 +59,15 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
             <ConvexProviderWithAuth client={convex} useAuth={useAuthForConvex}>
               <ConvexUserSync>
                 <TranslationProvider>
-                  <ToastProvider>
-                    <FavoritesProvider>
-                      <RecentSearchesProvider>
-                        <GestureHandlerRootView>
-                          <SafeAreaProvider>
-                            <ToastContainer />
-                            <ActionSheetProvider>
-                              {children}
-                            </ActionSheetProvider>
-                          </SafeAreaProvider>
-                        </GestureHandlerRootView>
-                      </RecentSearchesProvider>
-                    </FavoritesProvider>
-                  </ToastProvider>
+                  <FavoritesProvider>
+                    <RecentSearchesProvider>
+                      <GestureHandlerRootView>
+                        <SafeAreaProvider>
+                          <ActionSheetProvider>{children}</ActionSheetProvider>
+                        </SafeAreaProvider>
+                      </GestureHandlerRootView>
+                    </RecentSearchesProvider>
+                  </FavoritesProvider>
                 </TranslationProvider>
               </ConvexUserSync>
             </ConvexProviderWithAuth>

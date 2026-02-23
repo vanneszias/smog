@@ -430,24 +430,6 @@ export function trackBottomSheetClosed(
   });
 }
 
-export function trackToastShown(
-  message: string,
-  type: "info" | "success" | "warning" | "error",
-  hasAction: boolean
-) {
-  trackEvent("Toast Shown", {
-    toast_type: type,
-    has_action: hasAction,
-    message_length: message.length,
-  });
-}
-
-export function trackToastActionPressed(actionType: string) {
-  trackEvent("Toast Action Pressed", {
-    action_type: actionType,
-  });
-}
-
 // ===== SETTINGS EVENTS =====
 
 export function trackSettingsOptionSelected(option: string) {

@@ -14,7 +14,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import ToastContainer from "@/components/ToastContainer";
 import { LogContext } from "@/context/logs/LogProvider";
 import { useTheme } from "@/context/ThemeContext";
 import { convexSyncService } from "@/services/convexSyncService";
@@ -432,7 +431,6 @@ const DeveloperToolsScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
-      <ToastContainer />
     </View>
   );
 };

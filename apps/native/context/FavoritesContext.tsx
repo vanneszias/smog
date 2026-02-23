@@ -11,8 +11,6 @@ import {
   useState,
 } from "react";
 import { useConvexUserId } from "@/context/ConvexUserSync";
-import { useToast } from "@/context/ToastContext";
-import { useTranslation } from "@/context/TranslationContext";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import gestureService from "@/services/gestureService";
 import offlineFavoritesService, {
@@ -52,8 +50,6 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
 }) => {
   const userId = useConvexUserId();
   const { isOffline } = useNetworkStatus();
-  const { showToast } = useToast();
-  const { t } = useTranslation();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [favoriteGestures, setFavoriteGestures] = useState<Gesture[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -302,25 +298,11 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
       // Update local state immediately for instant UI feedback
       await updateLocalState(gestureId, wasAdded);
 
-      // Show toast notification
-      showToast({
-        message: wasAdded
-          ? t("gesture.addedToFavoritesShort")
-          : t("gesture.removedFromFavoritesShort"),
-        type: wasAdded ? "success" : "info",
-        duration: 2000,
-      });
-
       // Update pending operations count
       const pending = await offlineFavoritesService.getPendingOperationsCount();
       setPendingOperations(pending);
     } catch (error) {
       logger.error("Failed to toggle favorite:", error);
-      showToast({
-        message: t("favorites.error"),
-        type: "error",
-        duration: 2000,
-      });
     }
   };
 
