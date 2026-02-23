@@ -48,6 +48,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
           build-args: |
             VITE_SERVER_URL=https://app.smog.vlaanderen/api
             VITE_WORKOS_CLIENT_ID=${{ secrets.VITE_WORKOS_CLIENT_ID }}
