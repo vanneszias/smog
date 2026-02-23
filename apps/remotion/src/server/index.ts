@@ -51,6 +51,16 @@ app.post("/api/compose", async (c) => {
       );
     }
 
+    // Validate sponsor name length
+    if (overlayText.length > 35) {
+      return c.json(
+        {
+          error: "Sponsor name must be 35 characters or less",
+        },
+        400
+      );
+    }
+
     // Create job
     const job = createJob({
       playbackId,

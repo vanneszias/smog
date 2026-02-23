@@ -371,7 +371,7 @@ function SponsorsComponent() {
       newErrors.sponsorName = t(
         "web.sponsors.new.validation.sponsorNameRequired"
       );
-    } else if (sponsorName.length > 40) {
+    } else if (sponsorName.length > 35) {
       newErrors.sponsorName = t(
         "web.sponsors.new.validation.sponsorNameTooLong"
       );
@@ -845,7 +845,7 @@ function SponsorsComponent() {
                 <Input
                   className={`h-14 rounded-xl text-base ${errors.sponsorName ? "border-destructive" : ""}`}
                   id="sponsor-name"
-                  maxLength={40}
+                  maxLength={35}
                   onChange={(e) => {
                     setSponsorName(e.target.value);
                     setErrors((prev) => ({ ...prev, sponsorName: undefined }));
@@ -855,7 +855,7 @@ function SponsorsComponent() {
                 />
                 <div className="flex items-center justify-between">
                   <p className="text-muted-foreground text-xs">
-                    {sponsorName.length}/40
+                    {sponsorName.length}/35
                   </p>
                   {errors.sponsorName && (
                     <p className="text-destructive text-xs">

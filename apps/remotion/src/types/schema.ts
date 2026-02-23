@@ -41,7 +41,10 @@ export const SponsoredVideoSchema = z.object({
     .url()
     .describe("URL of the source video (Mux playback URL)"),
   logoUrl: z.string().optional().describe("URL of the sponsor logo (optional)"),
-  sponsorName: z.string().describe("Name of the sponsor"),
+  sponsorName: z
+    .string()
+    .max(35, "Sponsor name must be 35 characters or less")
+    .describe("Name of the sponsor"),
   overlayConfig: OverlayConfigSchema.optional(),
 });
 
