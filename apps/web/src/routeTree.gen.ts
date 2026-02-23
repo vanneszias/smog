@@ -20,6 +20,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SponsorsIndexRouteImport } from './routes/sponsors/index'
+import { Route as SponsorIndexRouteImport } from './routes/sponsor/index'
 import { Route as SponsorsSuccessRouteImport } from './routes/sponsors/success'
 import { Route as GesturesIdRouteImport } from './routes/gestures_.$id'
 
@@ -78,6 +79,11 @@ const SponsorsIndexRoute = SponsorsIndexRouteImport.update({
   path: '/sponsors/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SponsorIndexRoute = SponsorIndexRouteImport.update({
+  id: '/sponsor/',
+  path: '/sponsor/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SponsorsSuccessRoute = SponsorsSuccessRouteImport.update({
   id: '/sponsors/success',
   path: '/sponsors/success',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/gestures/$id': typeof GesturesIdRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
+  '/sponsor/': typeof SponsorIndexRoute
   '/sponsors/': typeof SponsorsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/gestures/$id': typeof GesturesIdRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
+  '/sponsor': typeof SponsorIndexRoute
   '/sponsors': typeof SponsorsIndexRoute
 }
 export interface FileRoutesById {
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/gestures_/$id': typeof GesturesIdRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
+  '/sponsor/': typeof SponsorIndexRoute
   '/sponsors/': typeof SponsorsIndexRoute
 }
 export interface FileRouteTypes {
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/gestures/$id'
     | '/sponsors/success'
+    | '/sponsor/'
     | '/sponsors/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/gestures/$id'
     | '/sponsors/success'
+    | '/sponsor'
     | '/sponsors'
   id:
     | '__root__'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/gestures_/$id'
     | '/sponsors/success'
+    | '/sponsor/'
     | '/sponsors/'
   fileRoutesById: FileRoutesById
 }
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   GesturesIdRoute: typeof GesturesIdRoute
   SponsorsSuccessRoute: typeof SponsorsSuccessRoute
+  SponsorIndexRoute: typeof SponsorIndexRoute
   SponsorsIndexRoute: typeof SponsorsIndexRoute
 }
 
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SponsorsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sponsor/': {
+      id: '/sponsor/'
+      path: '/sponsor'
+      fullPath: '/sponsor/'
+      preLoaderRoute: typeof SponsorIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sponsors/success': {
       id: '/sponsors/success'
       path: '/sponsors/success'
@@ -308,6 +328,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   GesturesIdRoute: GesturesIdRoute,
   SponsorsSuccessRoute: SponsorsSuccessRoute,
+  SponsorIndexRoute: SponsorIndexRoute,
   SponsorsIndexRoute: SponsorsIndexRoute,
 }
 export const routeTree = rootRouteImport
