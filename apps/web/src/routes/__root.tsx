@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { GDPRConsentBanner } from "@/components/gdpr-consent-banner";
 import Header from "@/components/header";
+import { AppStoreBanner } from "@/components/home/AppStoreBanner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { trackPageView } from "@/lib/analytics";
@@ -57,8 +58,9 @@ function RootComponent() {
             disableTransitionOnChange
             storageKey="vite-ui-theme"
           >
-            <div className="grid h-svh grid-rows-[auto_1fr] overflow-hidden">
+            <div className="grid h-svh grid-rows-[auto_auto_1fr] overflow-hidden">
               <Header />
+              {location.pathname === "/" && <AppStoreBanner />}
               <main className="min-h-0 overflow-y-auto" id="main-content">
                 <Outlet />
               </main>
