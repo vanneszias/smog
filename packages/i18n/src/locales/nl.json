@@ -9,6 +9,7 @@
     "backOnline": "Je bent terug online!",
     "recentSearches": "Recente zoekopdrachten",
     "clear": "Wissen",
+    "clearAll": "Alles wissen",
     "foundResults": "{{count}} resultaten gevonden in {{time}}ms",
     "searching": "Zoeken...",
     "retry": "Opnieuw proberen",

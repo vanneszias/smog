@@ -2,7 +2,7 @@ import { GestureCard } from "@components/common";
 import type { GestureCardRef } from "@components/GestureCard";
 import { FlashList } from "@shopify/flash-list";
 import type React from "react";
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -12,6 +12,9 @@ import {
   type ViewStyle,
 } from "react-native";
 import type { Gesture } from "@/types";
+
+// Special marker for header item
+type ListItem = Gesture | { __isHeader: true };
 
 interface SearchResultsProps {
   isLoading?: boolean;
@@ -27,7 +30,12 @@ interface SearchResultsProps {
   style?: StyleProp<ViewStyle>;
   onScroll?: (scrollY: number) => void;
   source?: "search_results" | "favorites_screen" | "related_gestures";
+  ListHeaderComponent?: React.ReactElement | null;
 }
+
+const isHeaderItem = (item: ListItem): item is { __isHeader: true } => {
+  return "__isHeader" in item;
+};
 
 const SearchResults: React.FC<SearchResultsProps> = ({
   results,
@@ -41,6 +49,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   style,
   onScroll,
   source = "search_results",
+  ListHeaderComponent,
 }) => {
   const gestureRefs = useRef<(GestureCardRef | null)[]>([]);
 
@@ -52,44 +61,62 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     }
   }, []);
 
+  // Prepend header item to data for sticky header support
+  const data = useMemo(() => {
+    // Deduplicate results by gesture ID
+    const uniqueResults = results.filter(
+      (gesture, index, arr) =>
+        arr.findIndex((item) => item.id === gesture.id) === index
+    );
+
+    if (ListHeaderComponent) {
+      return [{ __isHeader: true }, ...uniqueResults] as ListItem[];
+    }
+    return uniqueResults as ListItem[];
+  }, [results, ListHeaderComponent]);
+
   const renderItem = useCallback(
-    ({ item, index }: { item: Gesture; index: number }) => (
-      <GestureCard
-        gesture={item}
-        isFavorite={isFavorite(item.id)}
-        onPress={onGesturePress}
-        onToggleFavorite={onToggleFavorite}
-        ref={(ref: GestureCardRef | null) => {
-          gestureRefs.current[index] = ref;
-        }}
-        source={source}
-      />
-    ),
-    [isFavorite, onToggleFavorite, onGesturePress, source]
+    ({ item, index }: { item: ListItem; index: number }) => {
+      // Handle header item
+      if (isHeaderItem(item)) {
+        return ListHeaderComponent as React.ReactElement;
+      }
+
+      // Handle gesture item - adjust index for gesture refs since header takes index 0
+      const gestureIndex = ListHeaderComponent ? index - 1 : index;
+      return (
+        <GestureCard
+          gesture={item}
+          isFavorite={isFavorite(item.id)}
+          onPress={onGesturePress}
+          onToggleFavorite={onToggleFavorite}
+          ref={(ref: GestureCardRef | null) => {
+            gestureRefs.current[gestureIndex] = ref;
+          }}
+          source={source}
+        />
+      );
+    },
+    [isFavorite, onToggleFavorite, onGesturePress, source, ListHeaderComponent]
   );
 
   const handleScrollEvent = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const scrollY = event.nativeEvent.contentOffset.y;
-      // Simple, direct scroll position reporting for stable header animation
       onScroll?.(scrollY);
     },
     [onScroll]
   );
 
-  const keyExtractor = useCallback(
-    (item: Gesture, index: number) => `${item.id}-${index}`,
-    []
-  );
+  const keyExtractor = useCallback((item: ListItem, index: number) => {
+    if (isHeaderItem(item)) {
+      return "header";
+    }
+    return `${item.id}-${index}`;
+  }, []);
 
   // Create extraData to force re-render when favorites change
   const extraData = results.map((item) => isFavorite(item.id)).join(",");
-
-  // Deduplicate results by gesture ID to prevent duplicate items in the list
-  const uniqueResults = results.filter(
-    (gesture, index, arr) =>
-      arr.findIndex((item) => item.id === gesture.id) === index
-  );
 
   return (
     <View style={[{ flex: 1 }, style]}>
@@ -97,7 +124,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         contentInsetAdjustmentBehavior={
           Platform.OS === "ios" ? "automatic" : undefined
         }
-        data={uniqueResults}
+        data={data}
         extraData={extraData}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
@@ -111,6 +138,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         renderItem={renderItem}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={ListHeaderComponent ? [0] : undefined}
       />
     </View>
   );

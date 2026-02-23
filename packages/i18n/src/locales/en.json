@@ -9,6 +9,7 @@
     "backOnline": "You're back online!",
     "recentSearches": "Recent searches",
     "clear": "Clear",
+    "clearAll": "Clear all",
     "foundResults": "Found {{count}} results in {{time}}ms",
     "searching": "Searching...",
     "retry": "Retry",

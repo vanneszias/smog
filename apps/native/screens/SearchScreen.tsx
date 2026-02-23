@@ -244,8 +244,6 @@ const SearchScreen = () => {
                 headerStyle: {
                   backgroundColor: theme.background,
                 },
-                headerTransparent: true,
-                headerBlurEffect: "systemChromeMaterial",
                 headerShadowVisible: false,
                 headerSearchBarOptions: {
                   placeholder: t("search.placeholder"),
@@ -308,19 +306,19 @@ const SearchScreen = () => {
         </View>
       )}
 
-      {/* Category filter chips */}
-      <View style={styles.filtersContainer}>
-        <CategoryFilters
-          onClearCategories={handleClearCategories}
-          onRemoveCategory={handleRemoveCategory}
-          selectedCategories={selectedCategories}
-        />
-      </View>
-
-      {/* Search results */}
-      <View style={styles.resultsContainer}>
+      {/* Search results with category filters as header */}
+      <View style={styles.contentContainer}>
         {!isLoading && results.length === 0 ? (
-          <EmptyState message={t("search.noResults", { query: searchTerm })} />
+          <>
+            <CategoryFilters
+              onClearCategories={handleClearCategories}
+              onRemoveCategory={handleRemoveCategory}
+              selectedCategories={selectedCategories}
+            />
+            <EmptyState
+              message={t("search.noResults", { query: searchTerm })}
+            />
+          </>
         ) : (
           <SearchResults
             hasMore={hasMore}
@@ -328,6 +326,13 @@ const SearchScreen = () => {
             isFavorite={isFavorite}
             isLoading={isLoading}
             isRefreshing={isSearching}
+            ListHeaderComponent={
+              <CategoryFilters
+                onClearCategories={handleClearCategories}
+                onRemoveCategory={handleRemoveCategory}
+                selectedCategories={selectedCategories}
+              />
+            }
             onGesturePress={handleGesturePress}
             onLoadMore={loadMore}
             onRefresh={handleRefresh}
@@ -366,10 +371,7 @@ const styles = StyleSheet.create({
   androidSearchBarWrapper: {
     flex: 1,
   },
-  filtersContainer: {
-    paddingHorizontal: SPACING.md,
-  },
-  resultsContainer: {
+  contentContainer: {
     flex: 1,
     paddingHorizontal: SPACING.md,
   },

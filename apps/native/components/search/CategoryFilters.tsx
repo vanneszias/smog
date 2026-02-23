@@ -9,6 +9,7 @@ import {
 import type React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "@/context/TranslationContext";
 
 interface CategoryFiltersProps {
   selectedCategories: string[];
@@ -22,6 +23,7 @@ const CategoryFilters: React.FC<CategoryFiltersProps> = ({
   onClearCategories,
 }) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   if (selectedCategories.length === 0) {
     return null;
@@ -64,7 +66,7 @@ const CategoryFilters: React.FC<CategoryFiltersProps> = ({
         >
           <Ionicons color={theme.textLight} name="close" size={13} />
           <Text style={[styles.clearText, { color: theme.textLight }]}>
-            Clear all
+            {t("search.clearAll")}
           </Text>
         </TouchableOpacity>
       )}
@@ -75,7 +77,6 @@ const CategoryFilters: React.FC<CategoryFiltersProps> = ({
 const styles = StyleSheet.create({
   content: {
     gap: SPACING.xs,
-    paddingTop: SPACING.sm,
     paddingBottom: SPACING.xs,
     paddingHorizontal: 2,
   },

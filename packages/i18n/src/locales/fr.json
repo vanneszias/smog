@@ -9,6 +9,7 @@
     "backOnline": "Vous êtes de nouveau en ligne!",
     "recentSearches": "Recherches récentes",
     "clear": "Effacer",
+    "clearAll": "Tout effacer",
     "foundResults": "{{count}} résultats trouvés en {{time}}ms",
     "searching": "Recherche...",
     "retry": "Réessayer",
