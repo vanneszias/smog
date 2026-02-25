@@ -54,4 +54,46 @@ export interface TranslationKeys {
     light: string;
     dark: string;
   };
+  notFound: {
+    title: string;
+    robotAriaLabel: string;
+    speechBubble: {
+      normal: string;
+      success: string;
+    };
+    systemError: string;
+    suggestion: string;
+    heading: string;
+    description: string;
+    buttons: {
+      takeMeHome: string;
+      tryAgain: string;
+    };
+    selfDestruct: {
+      label: string;
+      labelWithCount: string;
+      sequenceTitle: string;
+      joke: string;
+    };
+    footer: {
+      blameText: string;
+      tellZias: string;
+    };
+    help: {
+      hint: string;
+      terminalTitle: string;
+      terminalIntro: string;
+      analyzing: string;
+      availableCommands: string;
+      commands: {
+        home: string;
+        konami: string;
+        zias: string;
+        retry: string;
+        panic: string;
+      };
+      closeHint: string;
+      closeButton: string;
+    };
+  };
 }

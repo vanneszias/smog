@@ -1,10 +1,17 @@
 import { Link } from "@tanstack/react-router";
 import { Bomb, Home, RotateCcw, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
 // Robot Face Component with eye tracking
-function RobotFace({ mousePos }: { mousePos: { x: number; y: number } }) {
+function RobotFace({
+  mousePos,
+  ariaLabel,
+}: {
+  mousePos: { x: number; y: number };
+  ariaLabel: string;
+}) {
   const leftEyeRef = useRef<SVGCircleElement>(null);
   const rightEyeRef = useRef<SVGCircleElement>(null);
   const containerRef = useRef<SVGSVGElement>(null);
@@ -45,7 +52,7 @@ function RobotFace({ mousePos }: { mousePos: { x: number; y: number } }) {
 
   return (
     <svg
-      aria-label="A confused robot with glowing eyes"
+      aria-label={ariaLabel}
       className="h-44 w-48 md:h-56 md:w-64"
       ref={containerRef}
       role="img"
@@ -329,9 +336,11 @@ function BinaryRain() {
 function TerminalEasterEgg({
   isVisible,
   onClose,
+  t,
 }: {
   isVisible: boolean;
   onClose: () => void;
+  t: (key: string) => string;
 }) {
   if (!isVisible) {
     return null;
@@ -347,27 +356,27 @@ function TerminalEasterEgg({
             <div className="h-3 w-3 rounded-full bg-[#00805f]" />
           </div>
           <span className="font-mono text-[#666] text-sm">
-            system_terminal.exe
+            {t("notFound.help.terminalTitle")}
           </span>
         </div>
         <div className="space-y-2 font-mono text-[#00ff88] text-sm">
-          <p>{"❯ HELP REQUESTED..."}</p>
-          <p>{"❯ ANALYZING ERROR..."}</p>
-          <p className="text-white">{"❯ AVAILABLE COMMANDS:"}</p>
+          <p>{t("notFound.help.terminalIntro")}</p>
+          <p>{t("notFound.help.analyzing")}</p>
+          <p className="text-white">{t("notFound.help.availableCommands")}</p>
           <ul className="ml-4 space-y-1 text-[#97c699]">
-            <li>{`• "home" - Return to safety`}</li>
-            <li>{`• "konami" - Unlock secret mode`}</li>
-            <li>{`• "zias" - Contact the human`}</li>
-            <li>{`• "retry" - Attempt recovery`}</li>
-            <li>{`• "panic" - ...don't`}</li>
+            <li>{`• "home" - ${t("notFound.help.commands.home")}`}</li>
+            <li>{`• "konami" - ${t("notFound.help.commands.konami")}`}</li>
+            <li>{`• "zias" - ${t("notFound.help.commands.zias")}`}</li>
+            <li>{`• "retry" - ${t("notFound.help.commands.retry")}`}</li>
+            <li>{`• "panic" - ${t("notFound.help.commands.panic")}`}</li>
           </ul>
-          <p className="mt-4 text-[#666]">{"❯ Press ESC to close terminal"}</p>
+          <p className="mt-4 text-[#666]">{t("notFound.help.closeHint")}</p>
         </div>
         <Button
           className="mt-6 bg-[#00ff88] font-mono text-black hover:bg-[#00cc6a]"
           onClick={onClose}
         >
-          CLOSE_TERMINAL
+          {t("notFound.help.closeButton")}
         </Button>
       </div>
     </div>
@@ -469,6 +478,7 @@ function Confetti({ isActive }: { isActive: boolean }) {
 
 // Main Not Found Component
 export function NotFoundComponent() {
+  const { t } = useTranslation();
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showTerminal, setShowTerminal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -552,20 +562,24 @@ export function NotFoundComponent() {
       <TerminalEasterEgg
         isVisible={showTerminal}
         onClose={() => setShowTerminal(false)}
+        t={t}
       />
 
       {/* Main Content */}
       <div className="relative z-20 flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center px-4 py-12">
         {/* Robot */}
         <div className="relative mb-8">
-          <RobotFace mousePos={mousePos} />
+          <RobotFace
+            ariaLabel={t("notFound.robotAriaLabel")}
+            mousePos={mousePos}
+          />
 
           {/* Speech bubble */}
           <div className="absolute -top-4 -right-4 max-w-[200px] animate-bounce rounded-2xl rounded-bl-none bg-white p-3 text-black text-sm shadow-lg md:-right-12">
             <p className="font-medium">
               {showConfetti
-                ? "OMG YOU DID IT! 🎉"
-                : "I think I broke something..."}
+                ? t("notFound.speechBubble.success")
+                : t("notFound.speechBubble.normal")}
             </p>
           </div>
         </div>
@@ -574,22 +588,19 @@ export function NotFoundComponent() {
         <div className="mb-6 text-center">
           <Glitch404 />
           <p className="mt-4 font-mono text-lg text-primary md:text-xl">
-            {"❯ SYSTEM ERROR: PAGE_NOT_FOUND"}
+            {t("notFound.systemError")}
           </p>
           <p className="mt-2 font-mono text-muted-foreground text-sm">
-            {"❯ SUGGESTION: Check your spelling or blame the human"}
+            {t("notFound.suggestion")}
           </p>
         </div>
 
         {/* Error Message */}
         <div className="mb-8 max-w-md space-y-2 text-center">
           <h2 className="font-bold text-2xl text-foreground">
-            Houston, we have a problem
+            {t("notFound.heading")}
           </h2>
-          <p className="text-muted-foreground">
-            The page you're looking for has vanished into the digital void.
-            Either it never existed, or I've made a spectacular mistake.
-          </p>
+          <p className="text-muted-foreground">{t("notFound.description")}</p>
         </div>
 
         {/* Action Buttons */}
@@ -600,7 +611,7 @@ export function NotFoundComponent() {
               size="lg"
             >
               <Home className="h-4 w-4 transition-transform group-hover:scale-110" />
-              Take Me Home
+              {t("notFound.buttons.takeMeHome")}
             </Button>
           </Link>
 
@@ -611,7 +622,7 @@ export function NotFoundComponent() {
             variant="outline"
           >
             <RotateCcw className="h-4 w-4" />
-            Try Again
+            {t("notFound.buttons.tryAgain")}
           </Button>
         </div>
 
@@ -624,8 +635,10 @@ export function NotFoundComponent() {
           >
             <Bomb className="h-3 w-3" />
             {selfDestructClicks > 0
-              ? `SELF-DESTRUCT (${3 - selfDestructClicks})`
-              : "SELF-DESTRUCT"}
+              ? t("notFound.selfDestruct.labelWithCount", {
+                  count: 3 - selfDestructClicks,
+                })
+              : t("notFound.selfDestruct.label")}
           </button>
         </div>
 
@@ -635,10 +648,10 @@ export function NotFoundComponent() {
             <div className="p-8 text-center">
               <Sparkles className="mx-auto mb-4 h-16 w-16 animate-spin text-[#ee971c]" />
               <p className="mb-2 font-bold text-2xl text-white">
-                SELF-DESTRUCT SEQUENCE INITIATED
+                {t("notFound.selfDestruct.sequenceTitle")}
               </p>
               <p className="font-mono text-[#666]">
-                Just kidding! Everything is fine. Probably.
+                {t("notFound.selfDestruct.joke")}
               </p>
             </div>
           </div>
@@ -647,18 +660,18 @@ export function NotFoundComponent() {
         {/* Footer with link to zias.be */}
         <div className="mt-16 text-center">
           <div className="inline-flex items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground">
-            <span>Think this is my fault?</span>
+            <span>{t("notFound.footer.blameText")}</span>
             <a
               className="font-medium text-primary underline underline-offset-4 hover:text-primary/80"
               href="https://zias.be"
               rel="noopener noreferrer"
               target="_blank"
             >
-              Tell Zias about it →
+              {t("notFound.footer.tellZias")}
             </a>
           </div>
           <p className="mt-2 font-mono text-muted-foreground text-xs">
-            Type "help" for assistance • Try the Konami code
+            {t("notFound.help.hint")}
           </p>
         </div>
       </div>

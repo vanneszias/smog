@@ -162,6 +162,48 @@
       "extra": "Autre"
     }
   },
+  "notFound": {
+    "title": "404",
+    "robotAriaLabel": "Un robot confus avec des yeux lumineux",
+    "speechBubble": {
+      "normal": "Je crois que j'ai cassé quelque chose...",
+      "success": "OMG TU L'AS FAIT ! 🎉"
+    },
+    "systemError": "❯ ERREUR SYSTÈME : PAGE_NON_TROUVÉE",
+    "suggestion": "❯ SUGGESTION : Vérifiez votre orthographe ou blâmez l'humain",
+    "heading": "Houston, nous avons un problème",
+    "description": "La page que vous cherchez a disparu dans le néant numérique. Elle n'a soit jamais existé, soit j'ai fait une erreur spectaculaire.",
+    "buttons": {
+      "takeMeHome": "Ramenez-moi à l'accueil",
+      "tryAgain": "Réessayer"
+    },
+    "selfDestruct": {
+      "label": "AUTO-DESTRUCTION",
+      "labelWithCount": "AUTO-DESTRUCTION ({{count}})",
+      "sequenceTitle": "SÉQUENCE D'AUTO-DESTRUCTION INITIÉE",
+      "joke": "Je plaisante ! Tout va bien. Probablement."
+    },
+    "footer": {
+      "blameText": "Vous pensez que c'est ma faute ?",
+      "tellZias": "En parler à Zias →"
+    },
+    "help": {
+      "hint": "Tapez \"help\" pour de l'aide • Essayez le code Konami",
+      "terminalTitle": "system_terminal.exe",
+      "terminalIntro": "❯ AIDE DEMANDÉE...",
+      "analyzing": "❯ ANALYSE DE L'ERREUR...",
+      "availableCommands": "❯ COMMANDES DISPONIBLES :",
+      "commands": {
+        "home": "home - Retourner en sécurité",
+        "konami": "konami - Débloquer le mode secret",
+        "zias": "zias - Contacter l'humain",
+        "retry": "retry - Tenter une récupération",
+        "panic": "panic - ...ne le faites pas"
+      },
+      "closeHint": "❯ Appuyez sur ÉCHAP pour fermer le terminal",
+      "closeButton": "FERMER_TERMINAL"
+    }
+  },
   "web": {
     "account": {
       "loading": {

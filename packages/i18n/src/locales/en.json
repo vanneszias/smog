@@ -240,6 +240,48 @@
       "extra": "Extra"
     }
   },
+  "notFound": {
+    "title": "404",
+    "robotAriaLabel": "A confused robot with glowing eyes",
+    "speechBubble": {
+      "normal": "I think I broke something...",
+      "success": "OMG YOU DID IT! 🎉"
+    },
+    "systemError": "❯ SYSTEM ERROR: PAGE_NOT_FOUND",
+    "suggestion": "❯ SUGGESTION: Check your spelling or blame the human",
+    "heading": "Houston, we have a problem",
+    "description": "The page you're looking for has vanished into the digital void. Either it never existed, or I've made a spectacular mistake.",
+    "buttons": {
+      "takeMeHome": "Take Me Home",
+      "tryAgain": "Try Again"
+    },
+    "selfDestruct": {
+      "label": "SELF-DESTRUCT",
+      "labelWithCount": "SELF-DESTRUCT ({{count}})",
+      "sequenceTitle": "SELF-DESTRUCT SEQUENCE INITIATED",
+      "joke": "Just kidding! Everything is fine. Probably."
+    },
+    "footer": {
+      "blameText": "Think this is my fault?",
+      "tellZias": "Tell Zias about it →"
+    },
+    "help": {
+      "hint": "Type \"help\" for assistance • Try the Konami code",
+      "terminalTitle": "system_terminal.exe",
+      "terminalIntro": "❯ HELP REQUESTED...",
+      "analyzing": "❯ ANALYZING ERROR...",
+      "availableCommands": "❯ AVAILABLE COMMANDS:",
+      "commands": {
+        "home": "home - Return to safety",
+        "konami": "konami - Unlock secret mode",
+        "zias": "zias - Contact the human",
+        "retry": "retry - Attempt recovery",
+        "panic": "panic - ...don't"
+      },
+      "closeHint": "❯ Press ESC to close terminal",
+      "closeButton": "CLOSE_TERMINAL"
+    }
+  },
   "web": {
     "home": {
       "header": {

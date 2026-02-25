@@ -214,6 +214,48 @@
       "extra": "Extra"
     }
   },
+  "notFound": {
+    "title": "404",
+    "robotAriaLabel": "Een verwarde robot met gloeiende ogen",
+    "speechBubble": {
+      "normal": "Ik denk dat ik iets heb kapot gemaakt...",
+      "success": "OMG JE HEBT HET GEDAAN! 🎉"
+    },
+    "systemError": "❯ SYSTEEMFOUT: PAGINA_NIET_GEVONDEN",
+    "suggestion": "❯ SUGGESTIE: Controleer je spelling, of blame de mensheid",
+    "heading": "Houston, we have a problem",
+    "description": "De pagina die je zoekt is verdwenen in een digitale void. Of die heeft nooit bestaan, of ik heb een spectaculaire fout gemaakt.",
+    "buttons": {
+      "takeMeHome": "Breng me naar huis",
+      "tryAgain": "Opnieuw proberen"
+    },
+    "selfDestruct": {
+      "label": "ZELFVERNIETIGING",
+      "labelWithCount": "ZELFVERNIETIGING ({{count}})",
+      "sequenceTitle": "ZELFVERNIETIGINGSSEQUENTIE GESTART",
+      "joke": "Ik maakte maar een grapje! Alles is goed. Waarschijnlijk."
+    },
+    "footer": {
+      "blameText": "Denk je dat dit mijn fout is?",
+      "tellZias": "Zeg het tegen Zias →"
+    },
+    "help": {
+      "hint": "Typ \"help\" voor hulp • Probeer de Konami code",
+      "terminalTitle": "system_terminal.exe",
+      "terminalIntro": "❯ HULP GEVRAAGD...",
+      "analyzing": "❯ FOUT ANALYSEREN...",
+      "availableCommands": "❯ BESCHIKBARE COMMANDO'S:",
+      "commands": {
+        "home": "home - Terug naar veiligheid",
+        "konami": "konami - Ontgrendel geheime modus",
+        "zias": "zias - Contacteer de mens",
+        "retry": "retry - Poging tot herstel",
+        "panic": "panic - ...doe maar niet"
+      },
+      "closeHint": "❯ Druk op ESC om terminal te sluiten",
+      "closeButton": "TERMINAL_SLUITEN"
+    }
+  },
   "web": {
     "home": {
       "title": "Leer SMOG",
