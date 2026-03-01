@@ -735,6 +735,154 @@ export const reject = mutation({
   },
 });
 
+// Admin: Set a re-edit token so the sponsor can resubmit video without paying
+// Status transitions: pending_approval → pending_resubmission
+export const setReEditToken = mutation({
+  args: {
+    sponsorshipId: v.id("sponsorships"),
+    token: v.string(),
+    expiresAt: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const sponsorship = await ctx.db.get(args.sponsorshipId);
+    if (!sponsorship) {
+      throw new Error("Sponsorship not found");
+    }
+
+    const allowedStatuses = [
+      "pending_approval",
+      "pending_resubmission",
+      "rejected",
+    ];
+    if (!allowedStatuses.includes(sponsorship.status)) {
+      throw new Error(
+        `Cannot generate re-edit link for sponsorship with status: ${sponsorship.status}`
+      );
+    }
+
+    await ctx.db.patch(args.sponsorshipId, {
+      status: "pending_resubmission",
+      reEditToken: args.token,
+      reEditTokenExpiresAt: args.expiresAt,
+      updatedAt: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+// Get a sponsorship by its re-edit token (public — token is the secret)
+export const getByReEditToken = query({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const sponsorship = await ctx.db
+      .query("sponsorships")
+      .withIndex("by_re_edit_token", (q) => q.eq("reEditToken", args.token))
+      .first();
+
+    if (!sponsorship) {
+      return null;
+    }
+
+    // Check expiry
+    if (
+      sponsorship.reEditTokenExpiresAt &&
+      Date.now() > sponsorship.reEditTokenExpiresAt
+    ) {
+      return { expired: true as const };
+    }
+
+    // Enrich with gesture info
+    const gesture = await ctx.db.get(sponsorship.gestureId);
+
+    return {
+      expired: false as const,
+      sponsorship: {
+        _id: sponsorship._id,
+        gestureId: sponsorship.gestureId,
+        gestureName: gesture?.name,
+        sponsorName: sponsorship.sponsorName,
+        sponsorEmail: sponsorship.sponsorEmail,
+        contactFullName: sponsorship.contactFullName,
+        contactCompany: sponsorship.contactCompany,
+        overlayText: sponsorship.overlayText,
+        hasLogo: sponsorship.hasLogo,
+        originalVideoPlaybackId: sponsorship.originalVideoPlaybackId,
+        status: sponsorship.status,
+        reEditTokenExpiresAt: sponsorship.reEditTokenExpiresAt,
+      },
+    };
+  },
+});
+
+// Sponsor resubmits video using re-edit token (no payment required)
+// Status transitions: pending_resubmission → pending_approval
+export const reSubmitSponsorshipVideo = mutation({
+  args: {
+    token: v.string(),
+    previewVideoPlaybackId: v.string(),
+    sponsoredVideoPlaybackId: v.string(),
+    // Optional editable fields the sponsor may have changed
+    overlayText: v.optional(v.string()),
+    sponsorName: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const sponsorship = await ctx.db
+      .query("sponsorships")
+      .withIndex("by_re_edit_token", (q) => q.eq("reEditToken", args.token))
+      .first();
+
+    if (!sponsorship) {
+      throw new Error("Invalid re-edit token");
+    }
+
+    if (
+      sponsorship.reEditTokenExpiresAt &&
+      Date.now() > sponsorship.reEditTokenExpiresAt
+    ) {
+      throw new Error("Re-edit token has expired");
+    }
+
+    if (sponsorship.status !== "pending_resubmission") {
+      throw new Error(
+        `Cannot resubmit video for sponsorship with status: ${sponsorship.status}`
+      );
+    }
+
+    await ctx.db.patch(sponsorship._id, {
+      previewVideoPlaybackId: args.previewVideoPlaybackId,
+      sponsoredVideoPlaybackId: args.sponsoredVideoPlaybackId,
+      ...(args.overlayText !== undefined && { overlayText: args.overlayText }),
+      ...(args.sponsorName !== undefined && { sponsorName: args.sponsorName }),
+      status: "pending_approval",
+      // Clear the token once used
+      reEditToken: undefined,
+      reEditTokenExpiresAt: undefined,
+      updatedAt: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+// Admin: Retrieve the current re-edit link token for a sponsorship (to copy it again)
+export const getReEditLinkForAdmin = query({
+  args: { sponsorshipId: v.id("sponsorships") },
+  handler: async (ctx, args) => {
+    const sponsorship = await ctx.db.get(args.sponsorshipId);
+    if (!(sponsorship?.reEditToken && sponsorship.reEditTokenExpiresAt)) {
+      return null;
+    }
+    return {
+      token: sponsorship.reEditToken,
+      expiresAt: sponsorship.reEditTokenExpiresAt,
+      expired: Date.now() > sponsorship.reEditTokenExpiresAt,
+    };
+  },
+});
+
 // Admin: Manually expire a sponsorship
 export const forceExpire = mutation({
   args: {

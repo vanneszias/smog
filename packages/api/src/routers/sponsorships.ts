@@ -31,6 +31,78 @@ const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 // Get Remotion service URL from environment
 const REMOTION_URL = process.env.REMOTION_URL || "http://localhost:3002";
 
+// Poll Remotion until a composition job completes (max 2 minutes)
+async function pollCompositionJob(jobId: string): Promise<string> {
+  const maxAttempts = 120;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const statusResponse = await fetch(
+      `${REMOTION_URL}/api/compose/status/${jobId}`
+    );
+    if (!statusResponse.ok) {
+      continue;
+    }
+    const status = (await statusResponse.json()) as {
+      jobId: string;
+      state: string;
+      progress: number;
+      result?: {
+        success: boolean;
+        composedVideoPlaybackId?: string;
+        error?: string;
+      };
+    };
+    if (status.state === "completed" && status.result?.success) {
+      const playbackId = status.result.composedVideoPlaybackId;
+      if (!playbackId) {
+        throw new Error("Composition completed but returned no playback ID");
+      }
+      return playbackId;
+    }
+    if (status.state === "failed") {
+      throw new Error(
+        `Video composition failed: ${status.result?.error || "Unknown error"}`
+      );
+    }
+  }
+  throw new Error("Video composition timed out after 2 minutes");
+}
+
+// Call Remotion to compose a video and poll until done
+async function composeVideo({
+  playbackId,
+  logoImage,
+  overlayText,
+}: {
+  playbackId: string;
+  logoImage?: string;
+  overlayText: string;
+}): Promise<string> {
+  const response = await fetch(`${REMOTION_URL}/api/compose`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      playbackId,
+      overlayImageUrl: logoImage || "",
+      overlayText,
+      overlayConfig: SPONSOR_OVERLAY_CONFIG,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Remotion service returned ${response.status}: ${error}`);
+  }
+
+  const result = (await response.json()) as {
+    success: boolean;
+    jobId: string;
+    message: string;
+  };
+
+  return pollCompositionJob(result.jobId);
+}
+
 export const sponsorshipsRouter = {
   /**
    * List all gestures with their sponsorship status
@@ -114,51 +186,7 @@ export const sponsorshipsRouter = {
           result.jobId
         );
 
-        // Poll for completion (max 2 minutes)
-        const maxAttempts = 120; // 120 seconds = 2 minutes
-        let attempts = 0;
-        let composedPlaybackId: string | null = null;
-
-        while (attempts < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
-          attempts++;
-
-          const statusResponse = await fetch(
-            `${REMOTION_URL}/api/compose/status/${result.jobId}`
-          );
-
-          if (statusResponse.ok) {
-            const status = (await statusResponse.json()) as {
-              jobId: string;
-              state: string;
-              progress: number;
-              result?: {
-                success: boolean;
-                composedVideoPlaybackId?: string;
-                error?: string;
-              };
-            };
-
-            console.log(
-              `[SponsorshipsRouter] Job ${result.jobId} status: ${status.state} (${status.progress}%)`
-            );
-
-            if (status.state === "completed" && status.result?.success) {
-              composedPlaybackId =
-                status.result.composedVideoPlaybackId || null;
-              break;
-            }
-            if (status.state === "failed") {
-              throw new Error(
-                `Video composition failed: ${status.result?.error || "Unknown error"}`
-              );
-            }
-          }
-        }
-
-        if (!composedPlaybackId) {
-          throw new Error("Video composition timed out after 2 minutes");
-        }
+        const composedPlaybackId = await pollCompositionJob(result.jobId);
 
         console.log(
           "[SponsorshipsRouter] Preview video ready:",
@@ -333,6 +361,95 @@ export const sponsorshipsRouter = {
         );
         throw new Error(
           `Failed to get sponsorships: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }),
+
+  /**
+   * Get sponsorship data by re-edit token (for pre-filling the wizard)
+   * Token is the authentication — no user login required
+   */
+  getByReEditToken: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .handler(async ({ input }) => {
+      try {
+        const result = await convex.query(api.sponsorships.getByReEditToken, {
+          token: input.token,
+        });
+        return result;
+      } catch (error) {
+        console.error(
+          "[SponsorshipsRouter] Get by re-edit token error:",
+          error
+        );
+        throw new Error(
+          `Failed to validate re-edit token: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }),
+
+  /**
+   * Resubmit a sponsorship video using a re-edit token (no payment required)
+   * Generates a new preview, then submits it back for admin review
+   */
+  reSubmitSponsorship: publicProcedure
+    .input(
+      z.object({
+        token: z.string(),
+        gestureId: z.string(),
+        logoImage: z.string().optional(), // base64 data URL
+        overlayText: z.string().max(100),
+        sponsorName: z.string().max(40).optional(),
+      })
+    )
+    .handler(async ({ input }) => {
+      try {
+        console.log("[SponsorshipsRouter] Resubmitting sponsorship with token");
+
+        // Validate token and fetch sponsorship data
+        const tokenResult = await convex.query(
+          api.sponsorships.getByReEditToken,
+          { token: input.token }
+        );
+
+        if (!tokenResult) {
+          throw new Error("Invalid re-edit token");
+        }
+        if (tokenResult.expired) {
+          throw new Error("Re-edit token has expired");
+        }
+
+        const { sponsorship } = tokenResult;
+
+        // Compose new video via Remotion using the original gesture video as base
+        const composedPlaybackId = await composeVideo({
+          playbackId: sponsorship.originalVideoPlaybackId,
+          logoImage: input.logoImage,
+          overlayText: input.overlayText,
+        });
+
+        console.log(
+          "[SponsorshipsRouter] Re-edit video ready:",
+          composedPlaybackId
+        );
+
+        // Save to Convex — clears token and transitions status → pending_approval
+        await convex.mutation(api.sponsorships.reSubmitSponsorshipVideo, {
+          token: input.token,
+          previewVideoPlaybackId: composedPlaybackId,
+          sponsoredVideoPlaybackId: composedPlaybackId,
+          overlayText: input.overlayText,
+          sponsorName: input.sponsorName,
+        });
+
+        return { success: true, playbackId: composedPlaybackId };
+      } catch (error) {
+        console.error(
+          "[SponsorshipsRouter] Re-submit sponsorship error:",
+          error
+        );
+        throw new Error(
+          `Failed to resubmit sponsorship: ${error instanceof Error ? error.message : "Unknown error"}`
         );
       }
     }),

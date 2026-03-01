@@ -7,6 +7,7 @@ import {
   Euro,
   Image,
   Inbox,
+  Link,
   Mail,
   Search,
   User,
@@ -133,6 +134,23 @@ export function PendingSponsorships() {
     },
     onError: (error) => {
       toast.error(`Failed to approve: ${error.message}`);
+    },
+  });
+
+  const generateReEditLinkMutation = useMutation({
+    mutationFn: (sponsorshipId: string) =>
+      client.admin.sponsorships.generateReEditLink({ sponsorshipId }),
+    onSuccess: (data) => {
+      navigator.clipboard.writeText(data.url).catch(() => {
+        // fallback: show the URL
+        toast.info("Link generated", { description: data.url });
+      });
+      toast.success("Re-edit link copied to clipboard!", {
+        description: "Expires in 7 days",
+      });
+    },
+    onError: (error) => {
+      toast.error(`Failed to generate re-edit link: ${error.message}`);
     },
   });
 
@@ -422,6 +440,19 @@ export function PendingSponsorships() {
                 >
                   <XCircle className="h-4 w-4" />
                   Reject
+                </Button>
+                <Button
+                  className="w-full gap-2"
+                  disabled={generateReEditLinkMutation.isPending}
+                  onClick={() =>
+                    generateReEditLinkMutation.mutate(selectedSponsorship._id)
+                  }
+                  variant="outline"
+                >
+                  <Link className="h-4 w-4" />
+                  {generateReEditLinkMutation.isPending
+                    ? "Generating..."
+                    : "Let Sponsor Re-edit"}
                 </Button>
               </div>
             </div>

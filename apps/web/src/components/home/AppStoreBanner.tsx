@@ -2,7 +2,7 @@ import { Smartphone, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-const APP_STORE_URL = "https://testflight.apple.com/join/s6xTCfsz";
+const APP_STORE_URL = "https://apps.apple.com/app/smog-co/id6758547774";
 const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=be.zias.smog";
 const STORAGE_KEY = "app-store-banner-dismissed";

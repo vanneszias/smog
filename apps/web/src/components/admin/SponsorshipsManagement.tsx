@@ -6,17 +6,20 @@ import {
   Calendar,
   CheckCircle,
   Clock,
+  Copy,
   Euro,
   Eye,
   Filter,
+  Link,
   Mail,
+  RefreshCcw,
   Search,
   Timer,
   User,
   Users,
   XCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -105,6 +108,12 @@ const statusConfig: Record<
     bgColor: "bg-red-500/10",
     icon: XCircle,
   },
+  pending_resubmission: {
+    label: "Awaiting Re-edit",
+    color: "text-purple-600",
+    bgColor: "bg-purple-500/10",
+    icon: RefreshCcw,
+  },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -190,16 +199,91 @@ function SponsorshipCard({
   );
 }
 
+function ReEditLinkBox({ sponsorshipId }: { sponsorshipId: string }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { data: linkData, isLoading } = useQuery({
+    queryKey: ["admin", "sponsorships", "reEditLink", sponsorshipId],
+    queryFn: () => client.admin.sponsorships.getReEditLink({ sponsorshipId }),
+    // Refresh when the panel is mounted (when user selects this sponsorship)
+    staleTime: 0,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg bg-purple-50 px-3 py-2.5 text-purple-600 text-xs dark:bg-purple-950/30">
+        <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
+        Loading re-edit link…
+      </div>
+    );
+  }
+
+  if (!linkData || linkData.expired) {
+    return (
+      <div className="rounded-lg bg-[var(--admin-card)] px-3 py-2.5 text-[var(--admin-text-muted)] text-xs">
+        {linkData?.expired
+          ? "Re-edit link expired. Generate a new one below."
+          : "No active re-edit link."}
+      </div>
+    );
+  }
+
+  const daysLeft = Math.max(
+    0,
+    Math.ceil((linkData.expiresAt - Date.now()) / (1000 * 60 * 60 * 24))
+  );
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(linkData.url).catch(() => {
+      inputRef.current?.select();
+      document.execCommand("copy");
+    });
+    toast.success("Re-edit link copied!");
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <p className="flex items-center gap-1.5 font-medium text-[var(--admin-text-muted)] text-xs uppercase tracking-wide">
+        <Link className="h-3 w-3" />
+        Active Re-edit Link
+        <span className="ml-auto font-normal normal-case">
+          {daysLeft}d left
+        </span>
+      </p>
+      <div className="flex gap-1.5">
+        <input
+          className="min-w-0 flex-1 truncate rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-2.5 py-1.5 font-mono text-[var(--admin-text-secondary)] text-xs outline-none"
+          readOnly
+          ref={inputRef}
+          value={linkData.url}
+        />
+        <Button
+          className="shrink-0 gap-1.5 px-3"
+          onClick={handleCopy}
+          size="sm"
+          variant="outline"
+        >
+          <Copy className="h-3.5 w-3.5" />
+          Copy
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function SponsorshipDetailsPanel({
   sponsorship,
   onViewDetails,
   onForceExpire,
+  onGenerateReEditLink,
   isExpiring,
+  isGeneratingReEditLink,
 }: {
   sponsorship: Sponsorship;
   onViewDetails: () => void;
   onForceExpire: () => void;
+  onGenerateReEditLink: () => void;
   isExpiring: boolean;
+  isGeneratingReEditLink: boolean;
 }) {
   return (
     <div className="sticky top-24 space-y-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
@@ -281,6 +365,11 @@ function SponsorshipDetailsPanel({
           </div>
         )}
 
+        {/* Re-edit link box — shown when awaiting resubmission */}
+        {sponsorship.status === "pending_resubmission" && (
+          <ReEditLinkBox sponsorshipId={sponsorship._id} />
+        )}
+
         {/* Rejection Reason */}
         {sponsorship.rejectionReason && (
           <div className="rounded-lg bg-red-50 p-3 dark:bg-red-950/30">
@@ -325,6 +414,24 @@ function SponsorshipDetailsPanel({
           >
             <Timer className="h-4 w-4" />
             {isExpiring ? "Expiring..." : "Force Expire"}
+          </Button>
+        )}
+
+        {(sponsorship.status === "pending_approval" ||
+          sponsorship.status === "pending_resubmission" ||
+          sponsorship.status === "rejected") && (
+          <Button
+            className="w-full gap-2"
+            disabled={isGeneratingReEditLink}
+            onClick={onGenerateReEditLink}
+            variant="outline"
+          >
+            <Link className="h-4 w-4" />
+            {isGeneratingReEditLink
+              ? "Generating..."
+              : sponsorship.status === "pending_resubmission"
+                ? "Regenerate Re-edit Link"
+                : "Let Sponsor Re-edit"}
           </Button>
         )}
       </div>
@@ -554,6 +661,23 @@ export function SponsorshipsManagement() {
     },
   });
 
+  const generateReEditLinkMutation = useMutation({
+    mutationFn: (sponsorshipId: string) =>
+      client.admin.sponsorships.generateReEditLink({ sponsorshipId }),
+    onSuccess: (data) => {
+      navigator.clipboard.writeText(data.url).catch(() => {
+        toast.info("Re-edit link generated", { description: data.url });
+      });
+      toast.success("Re-edit link copied to clipboard!", {
+        description: "Expires in 7 days",
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin", "sponsorships"] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to generate re-edit link: ${error.message}`);
+    },
+  });
+
   // Filter by search query
   const filteredSponsorships = useMemo(() => {
     if (!sponsorships) {
@@ -657,6 +781,9 @@ export function SponsorshipsManagement() {
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="pending_payment">Awaiting Payment</SelectItem>
               <SelectItem value="pending_approval">Pending Approval</SelectItem>
+              <SelectItem value="pending_resubmission">
+                Awaiting Re-edit
+              </SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="expired">Expired</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
@@ -698,8 +825,12 @@ export function SponsorshipsManagement() {
           {selectedSponsorship ? (
             <SponsorshipDetailsPanel
               isExpiring={forceExpireMutation.isPending}
+              isGeneratingReEditLink={generateReEditLinkMutation.isPending}
               onForceExpire={() =>
                 setConfirmExpireDialog(selectedSponsorship._id)
+              }
+              onGenerateReEditLink={() =>
+                generateReEditLinkMutation.mutate(selectedSponsorship._id)
               }
               onViewDetails={() => setDetailsDialog(selectedSponsorship)}
               sponsorship={selectedSponsorship}

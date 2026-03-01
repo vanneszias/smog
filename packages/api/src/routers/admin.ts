@@ -494,6 +494,56 @@ export const adminRouter = {
 
         return { success: true };
       }),
+
+    generateReEditLink: adminProcedure
+      .input(
+        z.object({
+          sponsorshipId: z.string(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        const token = crypto.randomUUID();
+        const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+
+        await convexClient.mutation(api.sponsorships.setReEditToken, {
+          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+          token,
+          expiresAt,
+        });
+
+        // Log action
+        await convexClient.mutation(api.adminLogs.logAction, {
+          userId: context.userId,
+          action: "generate_re_edit_link",
+          targetId: input.sponsorshipId,
+          targetType: "sponsorship",
+          metadata: { expiresAt },
+        });
+
+        const baseUrl = process.env.CORS_ORIGIN || "http://localhost:3001";
+        return {
+          url: `${baseUrl}/sponsors/re-edit?token=${token}`,
+          expiresAt,
+        };
+      }),
+
+    getReEditLink: adminProcedure
+      .input(z.object({ sponsorshipId: z.string() }))
+      .handler(async ({ input }) => {
+        const result = await convexClient.query(
+          api.sponsorships.getReEditLinkForAdmin,
+          { sponsorshipId: input.sponsorshipId as Id<"sponsorships"> }
+        );
+        if (!result) {
+          return null;
+        }
+        const baseUrl = process.env.CORS_ORIGIN || "http://localhost:3001";
+        return {
+          url: `${baseUrl}/sponsors/re-edit?token=${result.token}`,
+          expiresAt: result.expiresAt,
+          expired: result.expired,
+        };
+      }),
   },
 
   // Admin logs

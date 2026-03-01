@@ -22,6 +22,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SponsorsIndexRouteImport } from './routes/sponsors/index'
 import { Route as SponsorIndexRouteImport } from './routes/sponsor/index'
 import { Route as SponsorsSuccessRouteImport } from './routes/sponsors/success'
+import { Route as SponsorsReEditRouteImport } from './routes/sponsors/re-edit'
 import { Route as GesturesIdRouteImport } from './routes/gestures_.$id'
 
 const TermsRoute = TermsRouteImport.update({
@@ -89,6 +90,11 @@ const SponsorsSuccessRoute = SponsorsSuccessRouteImport.update({
   path: '/sponsors/success',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SponsorsReEditRoute = SponsorsReEditRouteImport.update({
+  id: '/sponsors/re-edit',
+  path: '/sponsors/re-edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GesturesIdRoute = GesturesIdRouteImport.update({
   id: '/gestures_/$id',
   path: '/gestures/$id',
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
   '/gestures/$id': typeof GesturesIdRoute
+  '/sponsors/re-edit': typeof SponsorsReEditRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsor/': typeof SponsorIndexRoute
   '/sponsors/': typeof SponsorsIndexRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
   '/gestures/$id': typeof GesturesIdRoute
+  '/sponsors/re-edit': typeof SponsorsReEditRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsor': typeof SponsorIndexRoute
   '/sponsors': typeof SponsorsIndexRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
   '/gestures_/$id': typeof GesturesIdRoute
+  '/sponsors/re-edit': typeof SponsorsReEditRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsor/': typeof SponsorIndexRoute
   '/sponsors/': typeof SponsorsIndexRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/terms'
     | '/gestures/$id'
+    | '/sponsors/re-edit'
     | '/sponsors/success'
     | '/sponsor/'
     | '/sponsors/'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/terms'
     | '/gestures/$id'
+    | '/sponsors/re-edit'
     | '/sponsors/success'
     | '/sponsor'
     | '/sponsors'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/terms'
     | '/gestures_/$id'
+    | '/sponsors/re-edit'
     | '/sponsors/success'
     | '/sponsor/'
     | '/sponsors/'
@@ -207,6 +219,7 @@ export interface RootRouteChildren {
   SuccessRoute: typeof SuccessRoute
   TermsRoute: typeof TermsRoute
   GesturesIdRoute: typeof GesturesIdRoute
+  SponsorsReEditRoute: typeof SponsorsReEditRoute
   SponsorsSuccessRoute: typeof SponsorsSuccessRoute
   SponsorIndexRoute: typeof SponsorIndexRoute
   SponsorsIndexRoute: typeof SponsorsIndexRoute
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SponsorsSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sponsors/re-edit': {
+      id: '/sponsors/re-edit'
+      path: '/sponsors/re-edit'
+      fullPath: '/sponsors/re-edit'
+      preLoaderRoute: typeof SponsorsReEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gestures_/$id': {
       id: '/gestures_/$id'
       path: '/gestures/$id'
@@ -327,6 +347,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuccessRoute: SuccessRoute,
   TermsRoute: TermsRoute,
   GesturesIdRoute: GesturesIdRoute,
+  SponsorsReEditRoute: SponsorsReEditRoute,
   SponsorsSuccessRoute: SponsorsSuccessRoute,
   SponsorIndexRoute: SponsorIndexRoute,
   SponsorsIndexRoute: SponsorsIndexRoute,

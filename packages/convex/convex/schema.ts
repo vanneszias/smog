@@ -60,12 +60,15 @@ export default defineSchema({
     hasLogo: v.optional(v.boolean()), // Whether user paid for logo
     contactFullName: v.string(), // Full name collected before payment
     contactCompany: v.optional(v.string()), // Company name (optional)
-    status: v.string(),
+    status: v.string(), // pending | pending_payment | pending_approval | pending_resubmission | active | expired | rejected
     molliePaymentId: v.optional(v.string()),
     paymentAmount: v.number(),
     rejectionReason: v.optional(v.string()),
     reviewedBy: v.optional(v.id("users")),
     reviewedAt: v.optional(v.number()),
+    // Re-edit token: set by admin to let sponsor resubmit video without paying
+    reEditToken: v.optional(v.string()),
+    reEditTokenExpiresAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -73,7 +76,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_gesture_and_status", ["gestureId", "status"])
     .index("by_end_date", ["endDate"])
-    .index("by_payment_id", ["molliePaymentId"]),
+    .index("by_payment_id", ["molliePaymentId"])
+    .index("by_re_edit_token", ["reEditToken"]),
 
   adminLogs: defineTable({
     userId: v.id("users"),
