@@ -1,212 +1,312 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/terms")({
   component: TermsOfServicePage,
 });
 
 function TermsOfServicePage() {
-  const { t } = useTranslation();
-
   return (
     <div className="container overflow-y-auto px-12 py-8">
-      <h1 className="mb-6 font-bold text-4xl">{t("web.terms.title")}</h1>
-      <p className="mb-4">
-        {t("web.terms.lastUpdated", {
-          date: new Date().toLocaleDateString(),
-        })}
-      </p>
+      <h1 className="mb-6 font-bold text-4xl">Servicevoorwaarden</h1>
+      <p className="mb-4">Laatst bijgewerkt: 03 maart 2026</p>
 
       <div className="space-y-6">
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.acceptance.title")}
+            1. Acceptatie van voorwaarden
           </h2>
-          <p>{t("web.terms.acceptance.body")}</p>
+          <p>
+            Door toegang te krijgen tot en gebruik te maken van SMOG&Co ("de
+            Dienst"), beheerd door SMOG&Co VZW (België), aanvaardt u de
+            voorwaarden van deze overeenkomst en gaat u ermee akkoord. Als u
+            niet akkoord gaat met deze Servicevoorwaarden, gebruik de Dienst dan
+            niet.
+          </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.description.title")}
+            2. Beschrijving van de dienst
           </h2>
-          <p>{t("web.terms.description.intro")}</p>
+          <p>
+            SMOG&Co is een applicatie voor het leren van gebarentaal die het
+            volgende biedt:
+          </p>
           <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.terms.description.items.library")}</li>
-            <li>{t("web.terms.description.items.search")}</li>
-            <li>{t("web.terms.description.items.favorites")}</li>
-            <li>{t("web.terms.description.items.sync")}</li>
-            <li>{t("web.terms.description.items.guest")}</li>
+            <li>Toegang tot een bibliotheek met gebarentaalvideo's</li>
+            <li>Zoeken en categoriseren van gebaren</li>
+            <li>Mogelijkheid om favoriete gebaren op te slaan</li>
+            <li>
+              Synchronisatie tussen apparaten voor geregistreerde gebruikers
+            </li>
+            <li>Gastmodus voor tijdelijke toegang zonder registratie</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">3. Gebruikersaccounts</h2>
+
+          <h3 className="mt-4 mb-2 font-semibold text-xl">
+            3.1 Account aanmaken
+          </h3>
+          <p>
+            U kunt een account aanmaken via WorkOS-authenticatie. U bent
+            verantwoordelijk voor het vertrouwelijk houden van uw
+            accountgegevens en voor alle activiteiten onder uw account.
+          </p>
+
+          <h3 className="mt-4 mb-2 font-semibold text-xl">3.2 Gastmodus</h3>
+          <p>
+            U kunt de Dienst als gast gebruiken zonder een account aan te maken.
+            Gastgegevens worden lokaal op uw apparaat opgeslagen en na 12
+            maanden inactiviteit automatisch verwijderd.
+          </p>
+
+          <h3 className="mt-4 mb-2 font-semibold text-xl">
+            3.3 Account beëindiging
+          </h3>
+          <p>
+            U kunt uw account op elk moment verwijderen via de
+            instellingenpagina. Na verwijdering worden al uw persoonsgegevens
+            binnen 30 dagen definitief verwijderd.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">4. Gebruikersgedrag</h2>
+          <p>U stemt ermee in NIET:</p>
+          <ul className="ml-6 list-disc space-y-1">
+            <li>De Dienst te gebruiken voor illegale doeleinden</li>
+            <li>
+              Te proberen ongeautoriseerde toegang te verkrijgen tot enig deel
+              van de Dienst
+            </li>
+            <li>
+              De Dienst of servers/netwerken die ermee verbonden zijn te
+              verstoren
+            </li>
+            <li>
+              Geautomatiseerde systemen te gebruiken om toegang te krijgen tot
+              de Dienst zonder onze voorafgaande schriftelijke toestemming
+            </li>
+            <li>
+              Een deel van de Dienst te reproduceren, dupliceren, kopiëren of
+              door te verkopen
+            </li>
+            <li>
+              Auteursrecht-, merk- of eigendomsvermeldingen te verwijderen of te
+              wijzigen
+            </li>
           </ul>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.accounts.title")}
+            5. Intellectuele eigendom
           </h2>
 
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.terms.accounts.create.title")}
-          </h3>
-          <p>{t("web.terms.accounts.create.body")}</p>
+          <h3 className="mt-4 mb-2 font-semibold text-xl">5.1 Onze inhoud</h3>
+          <p>
+            Alle inhoud die via de Dienst wordt aangeboden, waaronder
+            gebarenvideo's, tekst, grafieken, logo's en software, is eigendom
+            van SMOG&Co of haar licentiegevers en wordt beschermd door
+            auteursrecht en andere wetten inzake intellectuele eigendom.
+          </p>
+
+          <h3 className="mt-4 mb-2 font-semibold text-xl">5.2 Licentie</h3>
+          <p>
+            Wij verlenen u een beperkte, niet-exclusieve, niet-overdraagbare
+            licentie om de Dienst te gebruiken voor persoonlijk,
+            niet-commercieel gebruik. Deze licentie omvat geen rechten om:
+          </p>
+          <ul className="ml-6 list-disc space-y-1">
+            <li>
+              Gebarenvideo's te downloaden of te kopiëren (behalve via normale
+              caching)
+            </li>
+            <li>Wijzigingen aan te brengen of afgeleide werken te maken</li>
+            <li>De inhoud openbaar te tonen of uit te voeren</li>
+            <li>De inhoud voor commerciële doeleinden te gebruiken</li>
+          </ul>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.terms.accounts.guest.title")}
+            5.3 Educatief gebruik
           </h3>
-          <p>{t("web.terms.accounts.guest.body")}</p>
+          <p>
+            De Dienst is bedoeld voor educatieve doeleinden om gebruikers
+            gebarentaal te leren. Gebruikers worden aangemoedigd de opgedane
+            kennis te gebruiken om te communiceren en anderen te onderwijzen.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">6. Privacy</h2>
+          <p>
+            Uw gebruik van de Dienst wordt ook beheerst door ons Privacybeleid.
+            Door de Dienst te gebruiken, stemt u in met het verzamelen en
+            gebruiken van uw informatie zoals beschreven in het Privacybeleid.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">7. Disclaimers</h2>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.terms.accounts.termination.title")}
+            7.1 Beschikbaarheid van de dienst
           </h3>
-          <p>{t("web.terms.accounts.termination.body")}</p>
+          <p>
+            De Dienst wordt geleverd "zoals deze is" en "zoals beschikbaar"
+            zonder enige garanties. We garanderen niet dat de Dienst
+            ononderbroken, tijdig, veilig of foutloos zal zijn.
+          </p>
+
+          <h3 className="mt-4 mb-2 font-semibold text-xl">
+            7.2 Educatieve inhoud
+          </h3>
+          <p>
+            Hoewel we streven naar correcte gebarendemonstraties, garanderen we
+            niet de nauwkeurigheid, volledigheid of bruikbaarheid van de inhoud.
+            Gebarentaal kan per regio en context verschillen.
+          </p>
+
+          <h3 className="mt-4 mb-2 font-semibold text-xl">
+            7.3 Geen professioneel advies
+          </h3>
+          <p>
+            De Dienst is uitsluitend bedoeld voor educatieve doeleinden en vormt
+            geen professioneel gebarentaalonderwijs of certificering.
+          </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.conduct.title")}
+            8. Beperking van aansprakelijkheid
           </h2>
-          <p>{t("web.terms.conduct.intro")}</p>
+          <p>
+            Voor zover wettelijk toegestaan is SMOG&Co niet aansprakelijk voor
+            indirecte, incidentele, bijzondere, gevolg- of punitieve schade, of
+            verlies van winst, inkomsten, gegevens, gebruik, goodwill of andere
+            immateriële verliezen die voortvloeien uit:
+          </p>
           <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.terms.conduct.items.unlawful")}</li>
-            <li>{t("web.terms.conduct.items.access")}</li>
-            <li>{t("web.terms.conduct.items.disrupt")}</li>
-            <li>{t("web.terms.conduct.items.automated")}</li>
-            <li>{t("web.terms.conduct.items.resell")}</li>
-            <li>{t("web.terms.conduct.items.notices")}</li>
+            <li>
+              Uw toegang tot of gebruik van, of het onvermogen om toegang te
+              krijgen tot of gebruik te maken van de Dienst
+            </li>
+            <li>Het gedrag of de inhoud van derden op de Dienst</li>
+            <li>Inhoud verkregen via de Dienst</li>
+            <li>
+              Ongeautoriseerde toegang, gebruik of wijziging van uw transmissies
+              of inhoud
+            </li>
           </ul>
         </section>
 
         <section>
+          <h2 className="mb-3 font-semibold text-2xl">9. Vrijwaring</h2>
+          <p>
+            U stemt ermee in SMOG&Co, haar bestuurders, werknemers en agenten te
+            vrijwaren voor claims, schade, verplichtingen, verliezen,
+            aansprakelijkheden, kosten of uitgaven die voortvloeien uit: (i) uw
+            gebruik van de Dienst; (ii) uw schending van deze voorwaarden; of
+            (iii) uw schending van rechten van derden.
+          </p>
+        </section>
+
+        <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.intellectual.title")}
+            10. Wijzigingen aan de dienst
           </h2>
+          <p>
+            Wij behouden ons het recht voor om de Dienst (of een deel daarvan)
+            tijdelijk of permanent te wijzigen of stop te zetten, met of zonder
+            voorafgaande kennisgeving. Wij zijn niet aansprakelijk voor enige
+            wijziging, opschorting of stopzetting van de Dienst.
+          </p>
+        </section>
 
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.terms.intellectual.ours.title")}
-          </h3>
-          <p>{t("web.terms.intellectual.ours.body")}</p>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.terms.intellectual.license.title")}
-          </h3>
-          <p>{t("web.terms.intellectual.license.intro")}</p>
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            11. Wijzigingen van voorwaarden
+          </h2>
+          <p>
+            Wij behouden ons het recht voor om deze voorwaarden op elk moment
+            bij te werken of te wijzigen. We zullen u op de hoogte stellen van
+            belangrijke wijzigingen door:
+          </p>
           <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.terms.intellectual.license.items.download")}</li>
-            <li>{t("web.terms.intellectual.license.items.modify")}</li>
-            <li>{t("web.terms.intellectual.license.items.display")}</li>
-            <li>{t("web.terms.intellectual.license.items.commercial")}</li>
+            <li>De datum "Laatst bijgewerkt" hierboven bij te werken</li>
+            <li>Een in-app melding weer te geven</li>
+            <li>
+              Acceptatie van nieuwe voorwaarden te vereisen bij de volgende
+              aanmelding
+            </li>
           </ul>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.terms.intellectual.education.title")}
-          </h3>
-          <p>{t("web.terms.intellectual.education.body")}</p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.privacy.title")}
-          </h2>
-          <p>{t("web.terms.privacy.body")}</p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.disclaimers.title")}
-          </h2>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.terms.disclaimers.availability.title")}
-          </h3>
-          <p>{t("web.terms.disclaimers.availability.body")}</p>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.terms.disclaimers.educational.title")}
-          </h3>
-          <p>{t("web.terms.disclaimers.educational.body")}</p>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.terms.disclaimers.noAdvice.title")}
-          </h3>
-          <p>{t("web.terms.disclaimers.noAdvice.body")}</p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.liability.title")}
-          </h2>
-          <p>{t("web.terms.liability.intro")}</p>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.terms.liability.items.access")}</li>
-            <li>{t("web.terms.liability.items.content")}</li>
-            <li>{t("web.terms.liability.items.materials")}</li>
-            <li>{t("web.terms.liability.items.security")}</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.indemnification.title")}
-          </h2>
-          <p>{t("web.terms.indemnification.body")}</p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.modifications.title")}
-          </h2>
-          <p>{t("web.terms.modifications.body")}</p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.changes.title")}
-          </h2>
-          <p>{t("web.terms.changes.intro")}</p>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.terms.changes.items.updated")}</li>
-            <li>{t("web.terms.changes.items.notification")}</li>
-            <li>{t("web.terms.changes.items.acceptance")}</li>
-          </ul>
-          <p className="mt-2">{t("web.terms.changes.closing")}</p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.governing.title")}
-          </h2>
-          <p>{t("web.terms.governing.body")}</p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.severability.title")}
-          </h2>
-          <p>{t("web.terms.severability.body")}</p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.entire.title")}
-          </h2>
-          <p>{t("web.terms.entire.body")}</p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.terms.contact.title")}
-          </h2>
-          <p>{t("web.terms.contact.intro")}</p>
           <p className="mt-2">
-            <strong>{t("web.terms.contact.emailLabel")}:</strong>{" "}
-            {t("web.terms.contact.emailValue")}
+            Als u de Dienst blijft gebruiken na dergelijke wijzigingen, betekent
+            dit dat u de nieuwe voorwaarden accepteert.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            12. Toepasselijk recht
+          </h2>
+          <p>
+            Deze voorwaarden worden beheerst door het Belgisch recht, zonder
+            rekening te houden met conflicterende rechtsregels. U stemt ermee in
+            dat de rechtbanken in België exclusief bevoegd zijn voor het
+            oplossen van geschillen.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">13. Scheidbaarheid</h2>
+          <p>
+            Als een bepaling van deze voorwaarden niet afdwingbaar of ongeldig
+            wordt bevonden, wordt die bepaling beperkt of verwijderd tot het
+            minimum dat nodig is zodat deze voorwaarden verder volledig van
+            kracht blijven.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            14. Volledige overeenkomst
+          </h2>
+          <p>
+            Deze voorwaarden vormen samen met het Privacybeleid de volledige
+            overeenkomst tussen u en SMOG&Co met betrekking tot het gebruik van
+            de Dienst en vervangen alle eerdere overeenkomsten en afspraken.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">15. Contactgegevens</h2>
+          <p>
+            Als u vragen heeft over deze voorwaarden, neem dan contact met ons
+            op via:
+          </p>
+          <p className="mt-2">
+            <strong>E-mail:</strong> info@smog.vlaanderen
             <br />
-            <strong>{t("web.terms.contact.addressLabel")}:</strong>{" "}
-            {t("web.terms.contact.addressValue")}
+            <strong>Adres:</strong> SMOG & CO vzw
+            <br />
+            Arthur Goemaerelei 66
+            <br />
+            2018 Antwerpen
+            <br />
+            <strong>Tel:</strong> 03/216 29 90
+            <br />
+            <strong>Ondernemings Nummer:</strong> O.N. 1009 954 991
           </p>
         </section>
 
         <section className="border-gray-300 border-t pt-6">
-          <p className="text-sm">{t("web.terms.footer")}</p>
+          <p className="text-sm">
+            Door SMOG&Co te gebruiken, bevestigt u dat u deze Servicevoorwaarden
+            hebt gelezen, begrepen en ermee akkoord gaat.
+          </p>
         </section>
       </div>
     </div>

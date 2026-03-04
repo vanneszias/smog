@@ -1,350 +1,389 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Trans, useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/privacy")({
   component: PrivacyPolicyPage,
 });
 
 function PrivacyPolicyPage() {
-  const { t } = useTranslation();
-
   return (
     <div className="container overflow-y-auto px-12 py-8">
-      <h1 className="mb-6 font-bold text-4xl">{t("web.privacy.title")}</h1>
-      <p className="mb-4 text-sm">
-        {t("web.privacy.lastUpdated", {
-          date: new Date().toLocaleDateString(),
-        })}
-      </p>
+      <h1 className="mb-6 font-bold text-4xl">Privacybeleid</h1>
+      <p className="mb-4 text-sm">Laatst bijgewerkt: 03 maart 2026</p>
 
       <div className="space-y-6">
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.introduction.title")}
-          </h2>
-          <p>{t("web.privacy.introduction.body")}</p>
+          <h2 className="mb-3 font-semibold text-2xl">1. Inleiding</h2>
+          <p>
+            Welkom bij SMOG&Co ("we", "ons" of "onze"). We zetten ons in voor de
+            bescherming van uw persoonsgegevens en respecteren uw privacy. Dit
+            Privacybeleid legt uit hoe we uw informatie verzamelen, gebruiken en
+            beschermen wanneer u onze applicatie voor het leren van gebarentaal
+            gebruikt.
+          </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.controller.title")}
+            2. Informatie over de verwerkingsverantwoordelijke
           </h2>
-          <p>{t("web.privacy.controller.body")}</p>
+          <p>
+            De verwerkingsverantwoordelijke voor uw persoonsgegevens is SMOG&Co
+            VZW (België). Voor privacyvragen kunt u contact opnemen via
+            info@smog.vlaanderen.
+          </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.dataCollect.title")}
+            3. Gegevens die wij verzamelen
           </h2>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.privacy.dataCollect.account.title")}
+            3.1 Accountgegevens
           </h3>
           <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.privacy.dataCollect.account.items.email")}</li>
-            <li>{t("web.privacy.dataCollect.account.items.name")}</li>
-            <li>{t("web.privacy.dataCollect.account.items.userId")}</li>
-            <li>{t("web.privacy.dataCollect.account.items.timestamps")}</li>
+            <li>E-mailadres (via WorkOS-authenticatie)</li>
+            <li>Voor- en achternaam (via WorkOS-authenticatie)</li>
+            <li>Gebruikers-ID (unieke identificator)</li>
+            <li>Tijdstippen van accountaanmaak en laatste activiteit</li>
           </ul>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.privacy.dataCollect.usage.title")}
+            3.2 Gebruiksgegevens (als u toestemming geeft voor analyse)
           </h3>
           <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.privacy.dataCollect.usage.items.gestures")}</li>
-            <li>{t("web.privacy.dataCollect.usage.items.searches")}</li>
-            <li>{t("web.privacy.dataCollect.usage.items.navigation")}</li>
-            <li>{t("web.privacy.dataCollect.usage.items.device")}</li>
-            <li>{t("web.privacy.dataCollect.usage.items.session")}</li>
-            <li>{t("web.privacy.dataCollect.usage.items.video")}</li>
+            <li>Gebaren die u bekijkt en favoriet maakt</li>
+            <li>Zoekopdrachten die u uitvoert</li>
+            <li>Navigatiepatronen in de app</li>
+            <li>Apparaatinformatie (type, OS-versie)</li>
+            <li>Sessieduur en -frequentie</li>
+            <li>Interacties met videoweergave</li>
           </ul>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.privacy.dataCollect.preferences.title")}
+            3.3 Gebruikersvoorkeuren
           </h3>
           <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.privacy.dataCollect.preferences.items.favorites")}</li>
+            <li>Favoriete gebaren</li>
+            <li>Zoekgeschiedenis (lokaal opgeslagen op uw apparaat)</li>
+            <li>Taal- en themavoorkeuren</li>
+          </ul>
+
+          <h3 className="mt-4 mb-2 font-semibold text-xl">
+            3.4 Gastmodusgegevens
+          </h3>
+          <ul className="ml-6 list-disc space-y-1">
+            <li>Anonieme gast-id (bij gebruik van gastmodus)</li>
             <li>
-              {t("web.privacy.dataCollect.preferences.items.searchHistory")}
+              Gastgegevens worden na 12 maanden inactiviteit verwijderd als
+              onderdeel van ons bewaarbeleid
             </li>
-            <li>{t("web.privacy.dataCollect.preferences.items.settings")}</li>
-          </ul>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.privacy.dataCollect.guest.title")}
-          </h3>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.privacy.dataCollect.guest.items.identifier")}</li>
-            <li>{t("web.privacy.dataCollect.guest.items.retention")}</li>
           </ul>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.legalBasis.title")}
+            4. Rechtsgrond voor verwerking (GDPR)
           </h2>
           <ul className="ml-6 list-disc space-y-2">
             <li>
-              <strong>
-                {t("web.privacy.legalBasis.items.contract.label")}:
-              </strong>{" "}
-              {t("web.privacy.legalBasis.items.contract.text")}
+              <strong>Uitvoering van de overeenkomst:</strong> Het verwerken van
+              uw accountinformatie is noodzakelijk om onze diensten te leveren
             </li>
             <li>
-              <strong>
-                {t("web.privacy.legalBasis.items.consent.label")}:
-              </strong>{" "}
-              {t("web.privacy.legalBasis.items.consent.text")}
+              <strong>Toestemming:</strong> Analyse en marketingcommunicatie (u
+              kunt uw toestemming op elk moment intrekken in de instellingen)
             </li>
             <li>
-              <strong>
-                {t("web.privacy.legalBasis.items.legitimate.label")}:
-              </strong>{" "}
-              {t("web.privacy.legalBasis.items.legitimate.text")}
+              <strong>Gerechtvaardigd belang:</strong> Beveiliging,
+              fraudepreventie en verbetering van de dienst
             </li>
             <li>
-              <strong>{t("web.privacy.legalBasis.items.legal.label")}:</strong>{" "}
-              {t("web.privacy.legalBasis.items.legal.text")}
+              <strong>Wettelijke verplichting:</strong> Naleving van
+              toepasselijke wet- en regelgeving
             </li>
           </ul>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.useData.title")}
+            5. Hoe wij uw gegevens gebruiken
           </h2>
           <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.privacy.useData.items.provide")}</li>
-            <li>{t("web.privacy.useData.items.authenticate")}</li>
-            <li>{t("web.privacy.useData.items.sync")}</li>
-            <li>{t("web.privacy.useData.items.analytics")}</li>
-            <li>{t("web.privacy.useData.items.personalize")}</li>
-            <li>{t("web.privacy.useData.items.support")}</li>
-            <li>{t("web.privacy.useData.items.legal")}</li>
+            <li>Om onze dienst te leveren en te onderhouden</li>
+            <li>Om uw account te authenticeren (via WorkOS)</li>
+            <li>Om uw favorieten tussen apparaten te synchroniseren</li>
+            <li>
+              Om onze app te verbeteren via gebruiksanalyse (alleen indien u
+              toestemt)
+            </li>
+            <li>Om uw leerervaring te personaliseren</li>
+            <li>Om klantenondersteuning te bieden</li>
+            <li>Om aan wettelijke verplichtingen te voldoen</li>
           </ul>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.thirdParty.title")}
+            6. Diensten van derden
           </h2>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.privacy.thirdParty.workos.title")}
+            6.1 Authenticatie - WorkOS
           </h3>
           <p>
-            <Trans
-              components={{
-                link: (
-                  <a
-                    className="text-blue-600 underline"
-                    href="https://workos.com/privacy"
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    https://workos.com/privacy
-                  </a>
-                ),
-              }}
-              i18nKey="web.privacy.thirdParty.workos.body"
-            />
+            We gebruiken WorkOS voor veilige authenticatie. WorkOS verwerkt uw
+            e-mailadres en naam om uw account aan te maken en te beheren. Zie
+            het privacybeleid van WorkOS op:{" "}
+            <a
+              className="text-blue-600 underline"
+              href="https://workos.com/privacy"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              https://workos.com/privacy
+            </a>
           </p>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.privacy.thirdParty.posthog.title")}
+            6.2 Analyse - PostHog (optioneel)
           </h3>
           <p>
-            <Trans
-              components={{
-                link: (
-                  <a
-                    className="text-blue-600 underline"
-                    href="https://posthog.com/privacy"
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    https://posthog.com/privacy
-                  </a>
-                ),
-              }}
-              i18nKey="web.privacy.thirdParty.posthog.body"
-            />
+            Als u toestemt, gebruiken we PostHog (gehost in de EU) voor
+            gebruiksanalyse op zowel onze web- als native toepassingen. PostHog
+            helpt ons te begrijpen hoe gebruikers onze app gebruiken. U kunt op
+            elk moment afmelden in de instellingen. Zie het privacybeleid van
+            PostHog op:{" "}
+            <a
+              className="text-blue-600 underline"
+              href="https://posthog.com/privacy"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              https://posthog.com/privacy
+            </a>
           </p>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.privacy.thirdParty.mux.title")}
+            6.3 Videohosting - Mux
           </h3>
           <p>
-            <Trans
-              components={{
-                link: (
-                  <a
-                    className="text-blue-600 underline"
-                    href="https://mux.com/privacy"
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    https://mux.com/privacy
-                  </a>
-                ),
-              }}
-              i18nKey="web.privacy.thirdParty.mux.body"
-            />
+            We gebruiken Mux voor het hosten en streamen van
+            demonstratievideo's. Mux kan technische gegevens verzamelen die
+            nodig zijn voor videolevering. Zie het privacybeleid van Mux op:{" "}
+            <a
+              className="text-blue-600 underline"
+              href="https://mux.com/privacy"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              https://mux.com/privacy
+            </a>
           </p>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            {t("web.privacy.thirdParty.convex.title")}
+            6.4 Database - Convex
           </h3>
-          <p>{t("web.privacy.thirdParty.convex.body")}</p>
+          <p>
+            We gebruiken Convex om uw accountgegevens, favorieten en
+            gebruikersvoorkeuren op te slaan. Convex is onze
+            backend-databaseprovider.
+          </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.storage.title")}
-          </h2>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.privacy.storage.items.encryption")}</li>
-            <li>{t("web.privacy.storage.items.analytics")}</li>
-            <li>{t("web.privacy.storage.items.measures")}</li>
-            <li>{t("web.privacy.storage.items.access")}</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.retention.title")}
+            7. Gegevensopslag en beveiliging
           </h2>
           <ul className="ml-6 list-disc space-y-1">
             <li>
-              <strong>{t("web.privacy.retention.items.active.label")}:</strong>{" "}
-              {t("web.privacy.retention.items.active.text")}
+              Uw gegevens worden veilig opgeslagen met
+              industriestandaard-encryptie
             </li>
             <li>
-              <strong>{t("web.privacy.retention.items.guest.label")}:</strong>{" "}
-              {t("web.privacy.retention.items.guest.text")}
+              Analysegegevens worden opgeslagen op PostHog-servers in de
+              Europese Unie
             </li>
             <li>
-              <strong>{t("web.privacy.retention.items.logs.label")}:</strong>{" "}
-              {t("web.privacy.retention.items.logs.text")}
+              Wij nemen passende technische en organisatorische maatregelen om
+              uw gegevens te beschermen
             </li>
             <li>
-              <strong>{t("web.privacy.retention.items.deleted.label")}:</strong>{" "}
-              {t("web.privacy.retention.items.deleted.text")}
+              Toegang tot uw persoonsgegevens is beperkt tot geautoriseerd
+              personeel
             </li>
           </ul>
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.rights.title")}
-          </h2>
-          <p className="mb-2">{t("web.privacy.rights.intro")}</p>
+          <h2 className="mb-3 font-semibold text-2xl">8. Bewaartermijnen</h2>
+          <ul className="ml-6 list-disc space-y-1">
+            <li>
+              <strong>Actieve accounts:</strong> Gegevens worden bewaard zolang
+              uw account actief is
+            </li>
+            <li>
+              <strong>Gastaccounts:</strong> Automatisch verwijderd na 12
+              maanden inactiviteit
+            </li>
+            <li>
+              <strong>Beheerlogs:</strong> 3 jaar bewaard voor auditdoeleinden
+            </li>
+            <li>
+              <strong>Verwijderde accounts:</strong> Alle persoonsgegevens
+              worden binnen 30 dagen na verwijderingsverzoek verwijderd
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">9. Uw rechten (GDPR)</h2>
+          <p className="mb-2">U hebt de volgende rechten:</p>
           <ul className="ml-6 list-disc space-y-2">
             <li>
-              <strong>{t("web.privacy.rights.items.access.label")}:</strong>{" "}
-              {t("web.privacy.rights.items.access.text")}
+              <strong>Recht op inzage:</strong> Vraag een kopie van uw
+              persoonsgegevens op (beschikbaar in Instellingen → Mijn gegevens
+              downloaden)
             </li>
             <li>
-              <strong>
-                {t("web.privacy.rights.items.rectification.label")}:
-              </strong>{" "}
-              {t("web.privacy.rights.items.rectification.text")}
+              <strong>Recht op rectificatie:</strong> Corrigeer onjuiste
+              gegevens via uw accountinstellingen
             </li>
             <li>
-              <strong>{t("web.privacy.rights.items.erasure.label")}:</strong>{" "}
-              {t("web.privacy.rights.items.erasure.text")}
+              <strong>Recht op wissing:</strong> Verwijder uw account en alle
+              bijbehorende gegevens (Instellingen → Mijn account verwijderen)
             </li>
             <li>
-              <strong>{t("web.privacy.rights.items.restrict.label")}:</strong>{" "}
-              {t("web.privacy.rights.items.restrict.text")}
+              <strong>Recht op beperking van verwerking:</strong> Beperk hoe wij
+              uw gegevens verwerken
             </li>
             <li>
-              <strong>
-                {t("web.privacy.rights.items.portability.label")}:
-              </strong>{" "}
-              {t("web.privacy.rights.items.portability.text")}
+              <strong>Recht op gegevensoverdraagbaarheid:</strong> Ontvang uw
+              gegevens in een machineleesbaar formaat
             </li>
             <li>
-              <strong>{t("web.privacy.rights.items.object.label")}:</strong>{" "}
-              {t("web.privacy.rights.items.object.text")}
+              <strong>Recht van bezwaar:</strong> Maak bezwaar tegen verwerking
+              op basis van gerechtvaardigd belang
             </li>
             <li>
-              <strong>{t("web.privacy.rights.items.withdraw.label")}:</strong>{" "}
-              {t("web.privacy.rights.items.withdraw.text")}
+              <strong>Recht om toestemming in te trekken:</strong> Schakel
+              analyse op elk moment uit
             </li>
           </ul>
-          <p className="mt-3">{t("web.privacy.rights.closing")}</p>
+          <p className="mt-3">
+            Om deze rechten uit te oefenen, gebruikt u de opties in uw
+            accountinstellingen of neemt u rechtstreeks contact met ons op.
+          </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.children.title")}
+            10. Privacy van kinderen
           </h2>
-          <p>{t("web.privacy.children.body")}</p>
+          <p>
+            Onze dienst is bedoeld voor gebruikers van 13 jaar en ouder (of de
+            leeftijd van digitale toestemming in uw land). We verzamelen niet
+            bewust gegevens van kinderen onder deze leeftijd. Als u denkt dat we
+            gegevens van een kind hebben verzameld, neem dan onmiddellijk
+            contact met ons op.
+          </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.transfers.title")}
+            11. Internationale gegevensoverdrachten
           </h2>
-          <p>{t("web.privacy.transfers.intro")}</p>
+          <p>
+            Uw gegevens kunnen worden overgedragen naar en verwerkt in landen
+            buiten de EER/VK. We zorgen voor passende waarborgen, waaronder:
+          </p>
           <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.privacy.transfers.items.euHosting")}</li>
-            <li>{t("web.privacy.transfers.items.scc")}</li>
-            <li>{t("web.privacy.transfers.items.adequacy")}</li>
+            <li>Analyse gehost in de EU (PostHog)</li>
+            <li>
+              Standaard contractuele clausules met externe verwerkers waar van
+              toepassing
+            </li>
+            <li>
+              Toereikendheidsbesluiten van de Europese Commissie waar van
+              toepassing
+            </li>
           </ul>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.cookies.title")}
+            12. Cookies en lokale opslag
           </h2>
-          <p>{t("web.privacy.cookies.intro")}</p>
+          <p>
+            We gebruiken cookies en lokale opslag om het volgende op te slaan:
+          </p>
           <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.privacy.cookies.items.auth")}</li>
-            <li>{t("web.privacy.cookies.items.consent")}</li>
-            <li>{t("web.privacy.cookies.items.preferences")}</li>
-            <li>{t("web.privacy.cookies.items.search")}</li>
-            <li>{t("web.privacy.cookies.items.cache")}</li>
+            <li>Strikt noodzakelijke cookies voor authenticatiesessies</li>
+            <li>Toestemmingskeuzes voor analyse- en marketingvoorkeuren</li>
+            <li>Gebruikersvoorkeuren (taal, thema)</li>
+            <li>
+              Recente zoekopdrachten (lokaal, niet naar servers verzonden)
+            </li>
+            <li>Gecachte gebaren voor offline toegang</li>
           </ul>
-          <p className="mt-2">{t("web.privacy.cookies.closing")}</p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.changes.title")}
-          </h2>
-          <p>{t("web.privacy.changes.intro")}</p>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>{t("web.privacy.changes.items.updated")}</li>
-            <li>{t("web.privacy.changes.items.notification")}</li>
-            <li>{t("web.privacy.changes.items.renewal")}</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.contact.title")}
-          </h2>
-          <p>{t("web.privacy.contact.intro")}</p>
           <p className="mt-2">
-            <strong>{t("web.privacy.contact.emailLabel")}:</strong>{" "}
-            {t("web.privacy.contact.emailValue")}
-            <br />
-            <strong>{t("web.privacy.contact.addressLabel")}:</strong>{" "}
-            {t("web.privacy.contact.addressValue")}
+            U kunt deze gegevens op elk moment wissen via uw
+            apparaat-/browserinstellingen. U kunt uw toestemmingsvoorkeuren ook
+            aanpassen in de accountinstellingen.
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            {t("web.privacy.authority.title")}
+            13. Wijzigingen in dit beleid
           </h2>
-          <p>{t("web.privacy.authority.body")}</p>
+          <p>
+            We kunnen dit Privacybeleid van tijd tot tijd bijwerken. We
+            informeren u over belangrijke wijzigingen door:
+          </p>
+          <ul className="ml-6 list-disc space-y-1">
+            <li>De datum "Laatst bijgewerkt" te actualiseren</li>
+            <li>Een in-app melding weer te geven</li>
+            <li>Waar wettelijk vereist opnieuw toestemming te vragen</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">14. Contact</h2>
+          <p>
+            Voor privacyvragen, het uitoefenen van uw rechten of zorgen over
+            gegevensbescherming kunt u contact opnemen via:
+          </p>
+          <p className="mt-2">
+            <strong>E-mail:</strong> info@smog.vlaanderen
+            <br />
+            <strong>Adres:</strong> SMOG & CO vzw, Arthur Goemaerelei 66, 2018
+            Antwerpen
+            <br />
+            <strong>Tel:</strong> 03/216 29 90
+            <br />
+            <strong>Ondernemings Nummer:</strong> O.N. 1009 954 991
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            15. Toezichthoudende autoriteit
+          </h2>
+          <p>
+            Als u zich in België bevindt, hebt u het recht om een klacht in te
+            dienen bij de Belgische Gegevensbeschermingsautoriteit (GBA/APD).
+            Als u zich elders in de EER of het VK bevindt, kunt u contact
+            opnemen met uw lokale gegevensbeschermingsautoriteit.
+          </p>
         </section>
 
         <section className="border-gray-300 border-t pt-6">
-          <p className="text-sm">{t("web.privacy.footer")}</p>
+          <p className="text-sm">
+            Dit privacybeleid is opgesteld om te voldoen aan de GDPR en de
+            Belgische gegevensbeschermingswetgeving. Door onze dienst te
+            gebruiken, bevestigt u dat u dit beleid hebt gelezen en begrepen.
+          </p>
         </section>
       </div>
     </div>
