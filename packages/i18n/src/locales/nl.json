@@ -479,7 +479,7 @@
       },
       "new": {
         "title": "Sponsor een gebaar!",
-        "subtitle": "Wordt peter of meter van een gebaar",
+        "subtitle": "Word peter of meter van een gebaar",
         "selectGestures": "Selecteer gebaren om te sponsoren",
         "selectedGestures": "Geselecteerde gebaren ({{count}})",
         "sponsorName": "Sponsor naam",
@@ -1043,7 +1043,7 @@
       "betterExperience": "Krijg een betere ervaring met onze mobiele app",
       "open": "Openen",
       "sponsorThisGesture": "Sponsor dit Gebaar",
-      "sponsorDescription": "Wordt peter of meter van dit gebaar.",
+      "sponsorDescription": "Word peter of meter van dit gebaar.",
       "sponsorNow": "Nu Sponsoren",
       "currentlySponsored": "Momenteel Gesponsord",
       "sponsoredBy": "Dit gebaar wordt gesponsord door {{sponsorName}}.",

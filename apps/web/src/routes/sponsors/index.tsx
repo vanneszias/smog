@@ -584,8 +584,8 @@ function SponsorsComponent() {
                   Steun een gebaar
                 </h1>
                 <p className="mx-auto mt-3 max-w-2xl text-lg text-muted-foreground">
-                  Wordt peter of meter van een gebaar. Jouw naam verschijnt in
-                  de video en ondersteunt het SMOG-project voor 1 jaar.
+                  Word peter of meter van een gebaar. Jouw naam verschijnt in de
+                  video en ondersteunt het SMOG-project voor 1 jaar.
                 </p>
               </div>
 
