@@ -527,6 +527,28 @@ export const adminRouter = {
         };
       }),
 
+    markPaidManually: adminProcedure
+      .input(
+        z.object({
+          sponsorshipId: z.string(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        await convexClient.mutation(api.sponsorships.markAsAwaitingApproval, {
+          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+        });
+
+        // Log action
+        await convexClient.mutation(api.adminLogs.logAction, {
+          userId: context.userId,
+          action: "mark_paid_manually",
+          targetId: input.sponsorshipId,
+          targetType: "sponsorship",
+        });
+
+        return { success: true };
+      }),
+
     getReEditLink: adminProcedure
       .input(z.object({ sponsorshipId: z.string() }))
       .handler(async ({ input }) => {

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   AlertTriangle,
+  Banknote,
   Calendar,
   CheckCircle,
   Clock,
@@ -275,15 +276,19 @@ function SponsorshipDetailsPanel({
   onViewDetails,
   onForceExpire,
   onGenerateReEditLink,
+  onMarkPaidManually,
   isExpiring,
   isGeneratingReEditLink,
+  isMarkingPaid,
 }: {
   sponsorship: Sponsorship;
   onViewDetails: () => void;
   onForceExpire: () => void;
   onGenerateReEditLink: () => void;
+  onMarkPaidManually: () => void;
   isExpiring: boolean;
   isGeneratingReEditLink: boolean;
+  isMarkingPaid: boolean;
 }) {
   return (
     <div className="sticky top-24 space-y-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
@@ -404,6 +409,17 @@ function SponsorshipDetailsPanel({
           <Eye className="h-4 w-4" />
           View Full Details
         </Button>
+
+        {sponsorship.status === "pending_payment" && (
+          <Button
+            className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
+            disabled={isMarkingPaid}
+            onClick={onMarkPaidManually}
+          >
+            <Banknote className="h-4 w-4" />
+            {isMarkingPaid ? "Marking as Paid..." : "Mark as Paid Manually"}
+          </Button>
+        )}
 
         {sponsorship.status === "active" && (
           <Button
@@ -634,6 +650,9 @@ export function SponsorshipsManagement() {
   const [confirmExpireDialog, setConfirmExpireDialog] = useState<string | null>(
     null
   );
+  const [confirmMarkPaidDialog, setConfirmMarkPaidDialog] = useState<
+    string | null
+  >(null);
   const queryClient = useQueryClient();
 
   const { data: sponsorships, isLoading } = useQuery({
@@ -675,6 +694,26 @@ export function SponsorshipsManagement() {
     },
     onError: (error) => {
       toast.error(`Failed to generate re-edit link: ${error.message}`);
+    },
+  });
+
+  const markPaidManuallyMutation = useMutation({
+    mutationFn: (sponsorshipId: string) =>
+      client.admin.sponsorships.markPaidManually({ sponsorshipId }),
+    onSuccess: () => {
+      toast.success("Sponsorship marked as paid — now pending approval");
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "sponsorships"],
+      });
+      queryClient.invalidateQueries({
+        queryKey:
+          orpc.admin.sponsorships.listPendingApproval.queryOptions().queryKey,
+      });
+      setSelectedSponsorshipId(null);
+      setConfirmMarkPaidDialog(null);
+    },
+    onError: (error) => {
+      toast.error(`Failed to mark as paid: ${error.message}`);
     },
   });
 
@@ -826,11 +865,15 @@ export function SponsorshipsManagement() {
             <SponsorshipDetailsPanel
               isExpiring={forceExpireMutation.isPending}
               isGeneratingReEditLink={generateReEditLinkMutation.isPending}
+              isMarkingPaid={markPaidManuallyMutation.isPending}
               onForceExpire={() =>
                 setConfirmExpireDialog(selectedSponsorship._id)
               }
               onGenerateReEditLink={() =>
                 generateReEditLinkMutation.mutate(selectedSponsorship._id)
+              }
+              onMarkPaidManually={() =>
+                setConfirmMarkPaidDialog(selectedSponsorship._id)
               }
               onViewDetails={() => setDetailsDialog(selectedSponsorship)}
               sponsorship={selectedSponsorship}
@@ -891,6 +934,48 @@ export function SponsorshipsManagement() {
               {forceExpireMutation.isPending
                 ? "Expiring..."
                 : "Force Expire Sponsorship"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Mark Paid Manually Dialog */}
+      <Dialog
+        onOpenChange={() => setConfirmMarkPaidDialog(null)}
+        open={!!confirmMarkPaidDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-blue-500" />
+              Mark as Paid Manually
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to mark this sponsorship as manually paid?
+              This will move it to "Pending Approval" so it can be reviewed and
+              activated. Only do this if you have confirmed payment was received
+              outside of the automated system (e.g. bank transfer).
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setConfirmMarkPaidDialog(null)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={markPaidManuallyMutation.isPending}
+              onClick={() => {
+                if (confirmMarkPaidDialog) {
+                  markPaidManuallyMutation.mutate(confirmMarkPaidDialog);
+                }
+              }}
+            >
+              {markPaidManuallyMutation.isPending
+                ? "Marking as Paid..."
+                : "Yes, Mark as Paid"}
             </Button>
           </DialogFooter>
         </DialogContent>
