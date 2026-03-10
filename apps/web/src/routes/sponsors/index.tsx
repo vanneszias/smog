@@ -29,6 +29,19 @@ import { client, orpc } from "@/utils/orpc";
 
 type WizardStep = "select" | "details" | "preview";
 
+/**
+ * Validate a Belgian ondernemingsnummer (company registration number).
+ * Format: 10 digits. The last 2 digits = 97 - (first 8 digits % 97).
+ * Spaces and dots are stripped before validation.
+ */
+function validateVatNumber(value: string): boolean {
+  const digits = value.replace(/[\s.]/g, "");
+  if (!/^\d{10}$/.test(digits)) return false;
+  const first8 = Number.parseInt(digits.slice(0, 8), 10);
+  const checkDigits = Number.parseInt(digits.slice(8), 10);
+  return 97 - (first8 % 97) === checkDigits;
+}
+
 interface SearchParams {
   gestureId?: string;
 }
@@ -208,6 +221,11 @@ function SponsorsComponent() {
   const [contactFullName, setContactFullName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactCompany, setContactCompany] = useState("");
+  // Invoice fields
+  const [invoiceRequested, setInvoiceRequested] = useState(false);
+  const [invoiceName, setInvoiceName] = useState("");
+  const [invoiceVatNumber, setInvoiceVatNumber] = useState("");
+  const [invoiceEmail, setInvoiceEmail] = useState("");
   const [previewPlaybackId, setPreviewPlaybackId] = useState<string | null>(
     null
   );
@@ -220,6 +238,9 @@ function SponsorsComponent() {
     logo?: string;
     contactFullName?: string;
     contactEmail?: string;
+    invoiceName?: string;
+    invoiceVatNumber?: string;
+    invoiceEmail?: string;
   }>({});
 
   // Filter state
@@ -393,6 +414,34 @@ function SponsorsComponent() {
       newErrors.contactEmail = t("web.sponsors.wizard.errors.emailInvalid");
     }
 
+    if (invoiceRequested) {
+      if (!invoiceName.trim()) {
+        newErrors.invoiceName = t(
+          "web.sponsors.wizard.errors.invoiceNameRequired"
+        );
+      }
+
+      if (!invoiceVatNumber.trim()) {
+        newErrors.invoiceVatNumber = t(
+          "web.sponsors.wizard.errors.invoiceVatRequired"
+        );
+      } else if (!validateVatNumber(invoiceVatNumber)) {
+        newErrors.invoiceVatNumber = t(
+          "web.sponsors.wizard.errors.invoiceVatInvalid"
+        );
+      }
+
+      if (!invoiceEmail.trim()) {
+        newErrors.invoiceEmail = t(
+          "web.sponsors.wizard.errors.invoiceEmailRequired"
+        );
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invoiceEmail)) {
+        newErrors.invoiceEmail = t(
+          "web.sponsors.wizard.errors.invoiceEmailInvalid"
+        );
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -503,6 +552,12 @@ function SponsorsComponent() {
           includeLogo,
           durationYears: 1,
           previewVideoPlaybackId: previewPlaybackId || "",
+          invoiceRequested: invoiceRequested || undefined,
+          invoiceName: invoiceRequested ? invoiceName || undefined : undefined,
+          invoiceVatNumber: invoiceRequested
+            ? invoiceVatNumber || undefined
+            : undefined,
+          invoiceEmail: invoiceRequested ? invoiceEmail || undefined : undefined,
         }
       );
 
@@ -1043,6 +1098,127 @@ function SponsorsComponent() {
                   placeholder={t("web.sponsors.wizard.companyPlaceholder")}
                   value={contactCompany}
                 />
+              </div>
+
+              {/* Invoice request */}
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-border bg-card p-4 transition-all hover:border-primary/50">
+                  <input
+                    checked={invoiceRequested}
+                    className="mt-1 h-5 w-5 rounded accent-primary"
+                    onChange={(e) => {
+                      setInvoiceRequested(e.target.checked);
+                      // Pre-fill invoice email with contact email when enabling
+                      if (e.target.checked && !invoiceEmail) {
+                        setInvoiceEmail(contactEmail);
+                      }
+                    }}
+                    type="checkbox"
+                  />
+                  <div className="flex-1">
+                    <span className="font-semibold">
+                      {t("web.sponsors.wizard.invoiceCheckbox")}
+                    </span>
+                    <p className="mt-1 text-muted-foreground text-sm">
+                      {t("web.sponsors.wizard.invoiceSection")}
+                    </p>
+                  </div>
+                </label>
+
+                {invoiceRequested && (
+                  <div className="space-y-4 rounded-xl border border-border bg-muted/30 p-4">
+                    {/* Invoice: Name */}
+                    <div className="space-y-2">
+                      <label
+                        className="font-semibold text-sm"
+                        htmlFor="invoice-name"
+                      >
+                        {t("web.sponsors.wizard.invoiceNameLabel")} *
+                      </label>
+                      <Input
+                        className={`h-14 rounded-xl text-base ${errors.invoiceName ? "border-destructive" : ""}`}
+                        id="invoice-name"
+                        onChange={(e) => {
+                          setInvoiceName(e.target.value);
+                          setErrors((prev) => ({
+                            ...prev,
+                            invoiceName: undefined,
+                          }));
+                        }}
+                        placeholder={t(
+                          "web.sponsors.wizard.invoiceNamePlaceholder"
+                        )}
+                        value={invoiceName}
+                      />
+                      {errors.invoiceName && (
+                        <p className="text-destructive text-xs">
+                          {errors.invoiceName}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Invoice: VAT / Ondernemingsnummer */}
+                    <div className="space-y-2">
+                      <label
+                        className="font-semibold text-sm"
+                        htmlFor="invoice-vat"
+                      >
+                        {t("web.sponsors.wizard.invoiceVatLabel")} *
+                      </label>
+                      <Input
+                        className={`h-14 rounded-xl text-base ${errors.invoiceVatNumber ? "border-destructive" : ""}`}
+                        id="invoice-vat"
+                        onChange={(e) => {
+                          setInvoiceVatNumber(e.target.value);
+                          setErrors((prev) => ({
+                            ...prev,
+                            invoiceVatNumber: undefined,
+                          }));
+                        }}
+                        placeholder={t(
+                          "web.sponsors.wizard.invoiceVatPlaceholder"
+                        )}
+                        value={invoiceVatNumber}
+                      />
+                      {errors.invoiceVatNumber && (
+                        <p className="text-destructive text-xs">
+                          {errors.invoiceVatNumber}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Invoice: Email */}
+                    <div className="space-y-2">
+                      <label
+                        className="font-semibold text-sm"
+                        htmlFor="invoice-email"
+                      >
+                        {t("web.sponsors.wizard.invoiceEmailLabel")} *
+                      </label>
+                      <Input
+                        className={`h-14 rounded-xl text-base ${errors.invoiceEmail ? "border-destructive" : ""}`}
+                        id="invoice-email"
+                        onChange={(e) => {
+                          setInvoiceEmail(e.target.value);
+                          setErrors((prev) => ({
+                            ...prev,
+                            invoiceEmail: undefined,
+                          }));
+                        }}
+                        placeholder={t(
+                          "web.sponsors.wizard.invoiceEmailPlaceholder"
+                        )}
+                        type="email"
+                        value={invoiceEmail}
+                      />
+                      {errors.invoiceEmail && (
+                        <p className="text-destructive text-xs">
+                          {errors.invoiceEmail}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Price summary */}

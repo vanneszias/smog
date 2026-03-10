@@ -5,6 +5,7 @@ import {
   CheckCircle,
   Clock,
   Euro,
+  FileText,
   Image,
   Inbox,
   Link,
@@ -41,6 +42,10 @@ interface PendingSponsorship {
   paymentAmount: number;
   durationYears: number;
   createdAt: number;
+  invoiceRequested?: boolean;
+  invoiceName?: string;
+  invoiceVatNumber?: string;
+  invoiceEmail?: string;
 }
 
 function SponsorshipCard({
@@ -330,6 +335,48 @@ export function PendingSponsorships() {
                     </span>
                   </div>
                 </div>
+
+                {/* Invoice Info */}
+                {selectedSponsorship.invoiceRequested && (
+                  <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                    <p className="flex items-center gap-1.5 font-medium text-amber-600 text-xs uppercase tracking-wide">
+                      <FileText className="h-3.5 w-3.5" />
+                      Factuur gevraagd
+                    </p>
+                    <div className="space-y-1 text-sm">
+                      {selectedSponsorship.invoiceName && (
+                        <div className="flex items-start gap-2">
+                          <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                            Naam
+                          </span>
+                          <span className="text-[var(--admin-text)]">
+                            {selectedSponsorship.invoiceName}
+                          </span>
+                        </div>
+                      )}
+                      {selectedSponsorship.invoiceVatNumber && (
+                        <div className="flex items-start gap-2">
+                          <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                            Ond.nr.
+                          </span>
+                          <span className="font-mono text-[var(--admin-text)]">
+                            {selectedSponsorship.invoiceVatNumber}
+                          </span>
+                        </div>
+                      )}
+                      {selectedSponsorship.invoiceEmail && (
+                        <div className="flex items-start gap-2">
+                          <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                            E-mail
+                          </span>
+                          <span className="text-[var(--admin-text)]">
+                            {selectedSponsorship.invoiceEmail}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Payment Info */}
                 <div className="flex gap-2">

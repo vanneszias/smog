@@ -504,8 +504,21 @@
           "emailRequired": "Email is required",
           "emailInvalid": "Invalid email format",
           "previewFailed": "Failed to generate preview. Please try again.",
-          "paymentFailed": "Failed to proceed to payment. Please try again."
-        }
+          "paymentFailed": "Failed to proceed to payment. Please try again.",
+          "invoiceNameRequired": "Name is required",
+          "invoiceVatRequired": "Company number is required",
+          "invoiceVatInvalid": "Invalid company registration number",
+          "invoiceEmailRequired": "Invoice email address is required",
+          "invoiceEmailInvalid": "Invalid email address"
+        },
+        "invoiceSection": "Invoice details",
+        "invoiceCheckbox": "I would like to receive an invoice",
+        "invoiceNameLabel": "Name",
+        "invoiceNamePlaceholder": "Name or company name",
+        "invoiceVatLabel": "Company registration number",
+        "invoiceVatPlaceholder": "0566988259",
+        "invoiceEmailLabel": "Invoice email address",
+        "invoiceEmailPlaceholder": "invoice@example.com"
       },
       "new": {
         "title": "Sponsor Sign Language Gestures",

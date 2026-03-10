@@ -221,6 +221,11 @@ export const sponsorshipsRouter = {
         includeLogo: z.boolean(),
         durationYears: z.literal(1),
         previewVideoPlaybackId: z.string(),
+        // Invoice fields
+        invoiceRequested: z.boolean().optional(),
+        invoiceName: z.string().optional(),
+        invoiceVatNumber: z.string().optional(),
+        invoiceEmail: z.string().email().optional(),
       })
     )
     .handler(async ({ input }) => {
@@ -243,6 +248,10 @@ export const sponsorshipsRouter = {
             includeLogo: input.includeLogo,
             durationYears: input.durationYears,
             previewVideoPlaybackId: input.previewVideoPlaybackId,
+            invoiceRequested: input.invoiceRequested,
+            invoiceName: input.invoiceName,
+            invoiceVatNumber: input.invoiceVatNumber,
+            invoiceEmail: input.invoiceEmail,
           }
         );
 

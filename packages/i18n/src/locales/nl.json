@@ -474,8 +474,21 @@
           "emailRequired": "E-mail is verplicht",
           "emailInvalid": "Ongeldig e-mail formaat",
           "previewFailed": "Voorbeeld genereren mislukt. Probeer het opnieuw.",
-          "paymentFailed": "Doorgaan naar betaling mislukt. Probeer het opnieuw."
-        }
+          "paymentFailed": "Doorgaan naar betaling mislukt. Probeer het opnieuw.",
+          "invoiceNameRequired": "Naam is verplicht",
+          "invoiceVatRequired": "Ondernemingsnummer is verplicht",
+          "invoiceVatInvalid": "Ongeldig ondernemingsnummer",
+          "invoiceEmailRequired": "E-mailadres voor factuur is verplicht",
+          "invoiceEmailInvalid": "Ongeldig e-mailadres"
+        },
+        "invoiceSection": "Factuurgegevens",
+        "invoiceCheckbox": "Ik wens een factuur",
+        "invoiceNameLabel": "Naam",
+        "invoiceNamePlaceholder": "Naam of bedrijfsnaam",
+        "invoiceVatLabel": "Ondernemingsnummer",
+        "invoiceVatPlaceholder": "0566988259",
+        "invoiceEmailLabel": "E-mailadres voor factuur",
+        "invoiceEmailPlaceholder": "factuur@voorbeeld.be"
       },
       "new": {
         "title": "Sponsor een gebaar!",

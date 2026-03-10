@@ -212,6 +212,11 @@ export const createBulkSimplified = mutation({
     durationYears: v.number(), // Always 1
     previewVideoPlaybackId: v.string(),
     // Note: logoImage is not stored - it's already baked into previewVideoPlaybackId
+    // Invoice fields: collected when sponsor requests a factuur
+    invoiceRequested: v.optional(v.boolean()),
+    invoiceName: v.optional(v.string()),
+    invoiceVatNumber: v.optional(v.string()),
+    invoiceEmail: v.optional(v.string()),
   },
   returns: v.array(v.id("sponsorships")),
   handler: async (ctx, args) => {
@@ -290,6 +295,10 @@ export const createBulkSimplified = mutation({
           endDate,
           status: "pending_payment", // Will be updated to pending_approval after payment
           paymentAmount: paymentAmountPerGesture,
+          invoiceRequested: args.invoiceRequested,
+          invoiceName: args.invoiceName,
+          invoiceVatNumber: args.invoiceVatNumber,
+          invoiceEmail: args.invoiceEmail,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         });

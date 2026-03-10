@@ -69,6 +69,11 @@ export default defineSchema({
     // Re-edit token: set by admin to let sponsor resubmit video without paying
     reEditToken: v.optional(v.string()),
     reEditTokenExpiresAt: v.optional(v.number()),
+    // Invoice fields: collected when sponsor requests a factuur
+    invoiceRequested: v.optional(v.boolean()),
+    invoiceName: v.optional(v.string()),
+    invoiceVatNumber: v.optional(v.string()),
+    invoiceEmail: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

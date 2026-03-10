@@ -334,8 +334,21 @@
           "emailRequired": "L'e-mail est requis",
           "emailInvalid": "Format d'e-mail invalide",
           "previewFailed": "Échec de la génération de l'aperçu. Veuillez réessayer.",
-          "paymentFailed": "Échec du passage au paiement. Veuillez réessayer."
-        }
+          "paymentFailed": "Échec du passage au paiement. Veuillez réessayer.",
+          "invoiceNameRequired": "Le nom est requis",
+          "invoiceVatRequired": "Le numéro d'entreprise est requis",
+          "invoiceVatInvalid": "Numéro d'entreprise invalide",
+          "invoiceEmailRequired": "L'adresse e-mail de facturation est requise",
+          "invoiceEmailInvalid": "Adresse e-mail invalide"
+        },
+        "invoiceSection": "Données de facturation",
+        "invoiceCheckbox": "Je souhaite recevoir une facture",
+        "invoiceNameLabel": "Nom",
+        "invoiceNamePlaceholder": "Nom ou raison sociale",
+        "invoiceVatLabel": "Numéro d'entreprise",
+        "invoiceVatPlaceholder": "0566988259",
+        "invoiceEmailLabel": "Adresse e-mail de facturation",
+        "invoiceEmailPlaceholder": "facture@exemple.com"
       },
       "new": {
         "title": "Parrainer des gestes en langue des signes",
