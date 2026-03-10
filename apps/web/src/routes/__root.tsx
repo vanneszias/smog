@@ -19,8 +19,6 @@ import { NotFoundComponent } from "@/components/NotFoundPage";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { trackPageView } from "@/lib/analytics";
-import { AuthProvider } from "@/lib/auth";
-import { FavoritesProvider } from "@/lib/favorites-context";
 import { link, type orpc } from "@/utils/orpc";
 import "../index.css";
 
@@ -52,26 +50,22 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <AuthProvider>
-        <FavoritesProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            disableTransitionOnChange
-            storageKey="vite-ui-theme"
-          >
-            <div className="grid h-svh grid-rows-[auto_auto_1fr] overflow-hidden">
-              <Header />
-              {location.pathname === "/" && <AppStoreBanner />}
-              <main className="min-h-0 overflow-y-auto" id="main-content">
-                <Outlet />
-              </main>
-            </div>
-            <GDPRConsentBanner />
-            <Toaster richColors />
-          </ThemeProvider>
-        </FavoritesProvider>
-      </AuthProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        disableTransitionOnChange
+        storageKey="vite-ui-theme"
+      >
+        <div className="grid h-svh grid-rows-[auto_auto_1fr] overflow-hidden">
+          <Header />
+          {location.pathname === "/" && <AppStoreBanner />}
+          <main className="min-h-0 overflow-y-auto" id="main-content">
+            <Outlet />
+          </main>
+        </div>
+        <GDPRConsentBanner />
+        <Toaster richColors />
+      </ThemeProvider>
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
     </>
