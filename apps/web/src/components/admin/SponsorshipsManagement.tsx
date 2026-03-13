@@ -10,6 +10,7 @@ import {
   Copy,
   Euro,
   Eye,
+  FileText,
   Filter,
   Link,
   Mail,
@@ -62,6 +63,10 @@ interface Sponsorship {
   reviewedAt?: number;
   createdAt: number;
   updatedAt: number;
+  invoiceRequested?: boolean;
+  invoiceName?: string;
+  invoiceVatNumber?: string;
+  invoiceEmail?: string;
 }
 
 const statusConfig: Record<
@@ -354,6 +359,48 @@ function SponsorshipDetailsPanel({
           </div>
         </div>
 
+        {/* Invoice Info */}
+        {sponsorship.invoiceRequested && (
+          <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+            <p className="flex items-center gap-1.5 font-medium text-amber-600 text-xs uppercase tracking-wide">
+              <FileText className="h-3.5 w-3.5" />
+              Factuur gevraagd
+            </p>
+            <div className="space-y-1 text-sm">
+              {sponsorship.invoiceName && (
+                <div className="flex items-start gap-2">
+                  <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                    Naam
+                  </span>
+                  <span className="text-[var(--admin-text)]">
+                    {sponsorship.invoiceName}
+                  </span>
+                </div>
+              )}
+              {sponsorship.invoiceVatNumber && (
+                <div className="flex items-start gap-2">
+                  <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                    Ond.nr.
+                  </span>
+                  <span className="font-mono text-[var(--admin-text)]">
+                    {sponsorship.invoiceVatNumber}
+                  </span>
+                </div>
+              )}
+              {sponsorship.invoiceEmail && (
+                <div className="flex items-start gap-2">
+                  <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                    E-mail
+                  </span>
+                  <span className="text-[var(--admin-text)]">
+                    {sponsorship.invoiceEmail}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Expiration for active */}
         {sponsorship.status === "active" && (
           <div className="rounded-lg bg-[var(--admin-card)] p-3">
@@ -579,6 +626,48 @@ function SponsorshipDetailsDialog({
                   </p>
                 </div>
               </div>
+
+              {/* Invoice Info */}
+              {sponsorship.invoiceRequested && (
+                <div className="col-span-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                  <p className="mb-2 flex items-center gap-1.5 font-medium text-amber-600 text-xs uppercase tracking-wide">
+                    <FileText className="h-3.5 w-3.5" />
+                    Factuur gevraagd
+                  </p>
+                  <div className="space-y-1.5 text-sm">
+                    {sponsorship.invoiceName && (
+                      <div className="flex items-start gap-2">
+                        <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                          Naam
+                        </span>
+                        <span className="text-[var(--admin-text)]">
+                          {sponsorship.invoiceName}
+                        </span>
+                      </div>
+                    )}
+                    {sponsorship.invoiceVatNumber && (
+                      <div className="flex items-start gap-2">
+                        <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                          Ond.nr.
+                        </span>
+                        <span className="font-mono text-[var(--admin-text)]">
+                          {sponsorship.invoiceVatNumber}
+                        </span>
+                      </div>
+                    )}
+                    {sponsorship.invoiceEmail && (
+                      <div className="flex items-start gap-2">
+                        <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                          E-mail
+                        </span>
+                        <span className="text-[var(--admin-text)]">
+                          {sponsorship.invoiceEmail}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {sponsorship.molliePaymentId && (
                 <div>
