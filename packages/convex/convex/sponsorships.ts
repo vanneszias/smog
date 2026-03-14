@@ -210,8 +210,10 @@ export const createBulkSimplified = mutation({
     overlayText: v.string(),
     includeLogo: v.boolean(),
     durationYears: v.number(), // Always 1
-    previewVideoPlaybackId: v.string(),
-    // Note: logoImage is not stored - it's already baked into previewVideoPlaybackId
+    // One pre-composed preview playback ID per gesture, in the same order as gestureIds.
+    // Each entry is the Mux playback ID for that gesture's composed preview video.
+    previewVideoPlaybackIds: v.array(v.string()),
+    // Note: logoImage is not stored - it's already baked into the preview videos
     // Invoice fields: collected when sponsor requests a factuur
     invoiceRequested: v.optional(v.boolean()),
     invoiceName: v.optional(v.string()),
@@ -231,7 +233,9 @@ export const createBulkSimplified = mutation({
       ? PRICE_PER_YEAR_CENTS + LOGO_ADDON_CENTS
       : PRICE_PER_YEAR_CENTS;
 
-    for (const gestureId of args.gestureIds) {
+    for (let i = 0; i < args.gestureIds.length; i++) {
+      const gestureId = args.gestureIds[i] as (typeof args.gestureIds)[number];
+      const previewVideoPlaybackId = args.previewVideoPlaybackIds[i] ?? "";
       try {
         // Get gesture to backup original playbackId
         const gesture = await ctx.db.get(gestureId);
@@ -288,7 +292,7 @@ export const createBulkSimplified = mutation({
           contactCompany: args.contactCompany,
           overlayText: args.overlayText,
           originalVideoPlaybackId: gesture.playbackId,
-          previewVideoPlaybackId: args.previewVideoPlaybackId,
+          previewVideoPlaybackId,
           hasLogo: args.includeLogo,
           durationYears: args.durationYears,
           startDate: 0, // Set after payment is confirmed

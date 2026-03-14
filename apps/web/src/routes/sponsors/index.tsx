@@ -226,9 +226,8 @@ function SponsorsComponent() {
   const [invoiceName, setInvoiceName] = useState("");
   const [invoiceVatNumber, setInvoiceVatNumber] = useState("");
   const [invoiceEmail, setInvoiceEmail] = useState("");
-  const [previewPlaybackId, setPreviewPlaybackId] = useState<string | null>(
-    null
-  );
+  // One preview playback ID per selected gesture, in the same order as selectedGestures
+  const [previewPlaybackIds, setPreviewPlaybackIds] = useState<string[]>([]);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [previewProgress, setPreviewProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -452,27 +451,17 @@ function SponsorsComponent() {
       return;
     }
 
+    if (selectedGestures.length === 0) {
+      return;
+    }
+
     setIsGeneratingPreview(true);
     setPreviewProgress(0);
-
-    // Progress simulation - video generation takes time
-    // Uses decelerating progress that slows as it approaches 90%
-    const progressInterval = setInterval(() => {
-      setPreviewProgress((prev) => {
-        if (prev >= 0.9) {
-          return prev;
-        }
-        // Slower progress as we get closer to 90%
-        const remaining = 0.9 - prev;
-        const increment = remaining * 0.08 * (0.3 + Math.random() * 0.7);
-        return Math.min(prev + increment, 0.9);
-      });
-    }, 800);
 
     try {
       let logoBase64: string | undefined;
       if (includeLogo && logoFile) {
-        setPreviewProgress(0.1);
+        setPreviewProgress(0.05);
         logoBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
@@ -481,29 +470,55 @@ function SponsorsComponent() {
         });
       }
 
-      const firstGesture = selectedGestures[0];
-      if (!firstGesture) {
-        throw new Error("No gesture selected");
+      // Track per-gesture progress so the overall bar reflects real work.
+      // Each gesture starts at 0 and moves independently toward 0.9.
+      const perGestureProgress = selectedGestures.map(() => 0);
+      const updateOverallProgress = () => {
+        const avg =
+          perGestureProgress.reduce((sum, v) => sum + v, 0) /
+          perGestureProgress.length;
+        setPreviewProgress(avg);
+      };
+
+      // Start a decelerating ticker that advances every gesture's simulated progress.
+      const progressInterval = setInterval(() => {
+        for (let i = 0; i < perGestureProgress.length; i++) {
+          const current = perGestureProgress[i] ?? 0;
+          if (current < 0.9) {
+            const remaining = 0.9 - current;
+            perGestureProgress[i] =
+              current + remaining * 0.08 * (0.3 + Math.random() * 0.7);
+          }
+        }
+        updateOverallProgress();
+      }, 800);
+
+      try {
+        // Fire all gesture previews in parallel — Remotion handles them concurrently
+        // and this gives the best UX (total wait ≈ time for the slowest single video).
+        const results = await Promise.all(
+          selectedGestures.map((gesture) =>
+            client.sponsorships.generatePreview({
+              gestureId: gesture._id,
+              sponsorName,
+              logoImage: logoBase64,
+              overlayText: sponsorName,
+            })
+          )
+        );
+
+        clearInterval(progressInterval);
+        setPreviewProgress(1);
+
+        setPreviewPlaybackIds(results.map((r) => r.playbackId));
+        setCurrentStep("preview");
+      } finally {
+        clearInterval(progressInterval);
       }
-
-      setPreviewProgress(0.2);
-      const result = await client.sponsorships.generatePreview({
-        gestureId: firstGesture._id,
-        sponsorName,
-        logoImage: logoBase64,
-        overlayText: sponsorName,
-      });
-
-      setPreviewProgress(1);
-      clearInterval(progressInterval);
-
-      setPreviewPlaybackId(result.playbackId);
-      setCurrentStep("preview");
     } catch (error) {
       console.error("[Sponsors] Failed to generate preview:", error);
       toast.error(t("web.sponsors.wizard.errors.previewFailed"));
     } finally {
-      clearInterval(progressInterval);
       setIsGeneratingPreview(false);
       setPreviewProgress(0);
     }
@@ -551,13 +566,17 @@ function SponsorsComponent() {
           logoImage: logoBase64,
           includeLogo,
           durationYears: 1,
-          previewVideoPlaybackId: previewPlaybackId || "",
+          // Each gesture has its own pre-composed preview video, in the same order
+          // as gestureIds / selectedGestures.
+          previewVideoPlaybackIds: previewPlaybackIds,
           invoiceRequested: invoiceRequested || undefined,
           invoiceName: invoiceRequested ? invoiceName || undefined : undefined,
           invoiceVatNumber: invoiceRequested
             ? invoiceVatNumber || undefined
             : undefined,
-          invoiceEmail: invoiceRequested ? invoiceEmail || undefined : undefined,
+          invoiceEmail: invoiceRequested
+            ? invoiceEmail || undefined
+            : undefined,
         }
       );
 
@@ -1304,7 +1323,7 @@ function SponsorsComponent() {
         </div>
       )}
       {/* Step 3: Preview & Pay (combined preview + summary) */}
-      {currentStep === "preview" && previewPlaybackId && (
+      {currentStep === "preview" && previewPlaybackIds.length > 0 && (
         <div className="relative z-10 flex flex-1 flex-col bg-muted/20 px-4 lg:px-12">
           {/* Header */}
           <header className="sticky top-0 z-10 shrink-0 border-border border-b bg-background px-4 py-6">
@@ -1343,15 +1362,25 @@ function SponsorsComponent() {
           {/* Content */}
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 pb-24">
             <div className="mx-auto max-w-md space-y-6">
-              {/* Video Player */}
-              <div className="overflow-hidden rounded-2xl border-2 border-border shadow-xl">
-                <MuxPlayer
-                  accentColor="#00805f"
-                  playbackId={previewPlaybackId}
-                  streamType="on-demand"
-                  style={{ width: "100%", aspectRatio: "810/1080" }}
-                />
-              </div>
+              {/* One video player per gesture */}
+              {selectedGestures.map((gesture, index) => {
+                const playbackId = previewPlaybackIds[index];
+                return playbackId ? (
+                  <div className="space-y-2" key={gesture._id}>
+                    {selectedGestures.length > 1 && (
+                      <p className="font-medium text-sm">{gesture.name}</p>
+                    )}
+                    <div className="overflow-hidden rounded-2xl border-2 border-border shadow-xl">
+                      <MuxPlayer
+                        accentColor="#00805f"
+                        playbackId={playbackId}
+                        streamType="on-demand"
+                        style={{ width: "100%", aspectRatio: "810/1080" }}
+                      />
+                    </div>
+                  </div>
+                ) : null;
+              })}
 
               {/* Summary card */}
               <div className="space-y-4 rounded-2xl border-2 border-primary/20 bg-card p-5">

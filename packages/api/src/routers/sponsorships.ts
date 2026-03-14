@@ -220,7 +220,8 @@ export const sponsorshipsRouter = {
         logoImage: z.string().optional(), // base64
         includeLogo: z.boolean(),
         durationYears: z.literal(1),
-        previewVideoPlaybackId: z.string(),
+        // One pre-composed preview playback ID per gesture, parallel to gestureIds.
+        previewVideoPlaybackIds: z.array(z.string()),
         // Invoice fields
         invoiceRequested: z.boolean().optional(),
         invoiceName: z.string().optional(),
@@ -235,7 +236,7 @@ export const sponsorshipsRouter = {
         );
 
         // Note: logoImage is not passed to the mutation - it's already baked
-        // into the preview video and storing large base64 data would exceed limits
+        // into the preview videos and storing large base64 data would exceed limits
         const sponsorshipIds = await convex.mutation(
           api.sponsorships.createBulkSimplified,
           {
@@ -247,7 +248,7 @@ export const sponsorshipsRouter = {
             overlayText: input.overlayText,
             includeLogo: input.includeLogo,
             durationYears: input.durationYears,
-            previewVideoPlaybackId: input.previewVideoPlaybackId,
+            previewVideoPlaybackIds: input.previewVideoPlaybackIds,
             invoiceRequested: input.invoiceRequested,
             invoiceName: input.invoiceName,
             invoiceVatNumber: input.invoiceVatNumber,
