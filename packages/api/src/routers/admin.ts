@@ -3,6 +3,7 @@ import type { Id } from "@smog/convex/dataModel";
 import { z } from "zod";
 import { adminProcedure } from "../index";
 import { convexClient } from "../lib/convex";
+import { buildCsvString } from "../lib/csv";
 import {
   createMuxDirectUpload,
   getAssetStatus,
@@ -565,6 +566,70 @@ export const adminRouter = {
           expiresAt: result.expiresAt,
           expired: result.expired,
         };
+      }),
+
+    exportToCsv: adminProcedure
+      .input(
+        z.object({
+          status: z
+            .enum([
+              "all",
+              "active",
+              "expired",
+              "pending",
+              "pending_payment",
+              "pending_approval",
+              "pending_resubmission",
+              "rejected",
+            ])
+            .default("all"),
+          from: z.number().optional(),
+          to: z.number().optional(),
+        })
+      )
+      .handler(async ({ input }) => {
+        const sponsorships = await convexClient.query(
+          api.sponsorships.listAll,
+          {
+            status: input.status === "all" ? undefined : input.status,
+            limit: 10_000,
+          }
+        );
+
+        // Apply date filters if provided
+        const filtered = sponsorships.filter((s) => {
+          if (input.from && s.createdAt < input.from) {
+            return false;
+          }
+          if (input.to && s.createdAt > input.to) {
+            return false;
+          }
+          return true;
+        });
+
+        // Map to CSV format with all requested columns
+        const rows = filtered.map((s) => ({
+          ID: s._id,
+          Status: s.status,
+          "Sponsor name": s.sponsorName,
+          "Sponsor email": s.sponsorEmail,
+          "Contact name": s.contactFullName,
+          Company: s.contactCompany || "",
+          "Invoice name": s.invoiceName || "",
+          "VAT number": s.invoiceVatNumber || "",
+          "Invoice email": s.invoiceEmail || "",
+          "Invoice requested": s.invoiceRequested ? "Yes" : "No",
+          "Has logo": s.hasLogo ? "Yes" : "No",
+          "Payment amount (€)": (s.paymentAmount / 100).toFixed(2),
+          "Mollie payment ID": s.molliePaymentId || "",
+          "Start date": new Date(s.startDate).toISOString(),
+          "End date": new Date(s.endDate).toISOString(),
+          "Duration (years)": s.durationYears,
+          "Gesture ID": s.gestureId,
+          "Created at": new Date(s.createdAt).toISOString(),
+        }));
+
+        return { csv: buildCsvString(rows) };
       }),
   },
 

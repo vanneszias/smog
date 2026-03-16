@@ -8,6 +8,7 @@ import {
   CheckCircle,
   Clock,
   Copy,
+  Download,
   Euro,
   Eye,
   FileText,
@@ -806,6 +807,37 @@ export function SponsorshipsManagement() {
     },
   });
 
+  const exportCsvMutation = useMutation({
+    mutationFn: () =>
+      client.admin.sponsorships.exportToCsv({
+        status: statusFilter as
+          | "all"
+          | "active"
+          | "expired"
+          | "pending"
+          | "pending_payment"
+          | "pending_approval"
+          | "pending_resubmission"
+          | "rejected",
+      }),
+    onSuccess: (data: { csv: string }) => {
+      // Create blob and trigger download
+      const blob = new Blob([data.csv], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `sponsorships-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("CSV exported successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to export CSV: ${error.message}`);
+    },
+  });
+
   // Filter by search query
   const filteredSponsorships = useMemo(() => {
     if (!sponsorships) {
@@ -918,6 +950,15 @@ export function SponsorshipsManagement() {
             </SelectContent>
           </Select>
         </div>
+        <Button
+          className="h-11"
+          disabled={exportCsvMutation.isPending}
+          onClick={() => exportCsvMutation.mutate()}
+          variant="outline"
+        >
+          <Download className="mr-2 h-4 w-4" />
+          {exportCsvMutation.isPending ? "Exporting..." : "Export CSV"}
+        </Button>
       </div>
 
       {/* Main Content */}
