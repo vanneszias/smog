@@ -4,6 +4,7 @@ import { z } from "zod";
 import { adminProcedure } from "../index";
 import { convexClient } from "../lib/convex";
 import { buildCsvString } from "../lib/csv";
+import { categoriesCache, logCacheOperation } from "../lib/categoriesCache";
 import {
   createMuxDirectUpload,
   getAssetStatus,
@@ -278,6 +279,10 @@ export const adminRouter = {
           metadata: input,
         });
 
+        // Invalidate category cache since data has changed
+        categoriesCache.invalidate();
+        logCacheOperation("create_category", `invalidated after creating ${categoryId}`);
+
         return { categoryId };
       }),
 
@@ -305,6 +310,10 @@ export const adminRouter = {
           metadata: input,
         });
 
+        // Invalidate category cache since data has changed
+        categoriesCache.invalidate();
+        logCacheOperation("update_category", `invalidated after updating ${input.categoryId}`);
+
         return { success: true };
       }),
 
@@ -326,6 +335,10 @@ export const adminRouter = {
           targetId: input.categoryId,
           targetType: "category",
         });
+
+        // Invalidate category cache since data has changed
+        categoriesCache.invalidate();
+        logCacheOperation("delete_category", `invalidated after deleting ${input.categoryId}`);
 
         return { success: true };
       }),
