@@ -896,6 +896,45 @@ export const getReEditLinkForAdmin = query({
   },
 });
 
+// Query active sponsorships expiring within the given number of days
+// that haven't had a renewal reminder sent yet
+export const getExpiringSoon = query({
+  args: {
+    daysUntilExpiry: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const cutoff = now + args.daysUntilExpiry * 24 * 60 * 60 * 1000;
+
+    return await ctx.db
+      .query("sponsorships")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .filter((q) =>
+        q.and(
+          q.gt(q.field("endDate"), now),
+          q.lte(q.field("endDate"), cutoff),
+          q.eq(q.field("renewalReminderSentAt"), undefined)
+        )
+      )
+      .collect();
+  },
+});
+
+// Mark that a renewal reminder email has been sent for a sponsorship
+export const markRenewalReminderSent = mutation({
+  args: {
+    sponsorshipId: v.id("sponsorships"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sponsorshipId, {
+      renewalReminderSentAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
 // Admin: Manually expire a sponsorship
 export const forceExpire = mutation({
   args: {

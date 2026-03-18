@@ -17,6 +17,7 @@ const userReturnType = v.object({
   _creationTime: v.number(),
   workosId: v.optional(v.string()),
   guestId: v.optional(v.string()),
+  email: v.optional(v.string()),
   role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
   createdAt: v.number(),
   lastActiveAt: v.number(),
@@ -72,6 +73,7 @@ export const createUser = mutation({
   args: {
     workosId: v.optional(v.string()),
     guestId: v.optional(v.string()),
+    email: v.optional(v.string()),
   },
   returns: v.id("users"),
   handler: async (ctx, args) => {
@@ -79,6 +81,7 @@ export const createUser = mutation({
     return await ctx.db.insert("users", {
       workosId: args.workosId,
       guestId: args.guestId,
+      email: args.email,
       createdAt: now,
       lastActiveAt: now,
     });
@@ -93,6 +96,7 @@ export const migrateGuestToUser = mutation({
   args: {
     guestId: v.string(),
     workosId: v.string(),
+    email: v.optional(v.string()),
   },
   returns: v.id("users"),
   handler: async (ctx, args) => {
@@ -105,9 +109,10 @@ export const migrateGuestToUser = mutation({
       .unique();
 
     if (guestUser) {
-      // Update existing guest with WorkOS ID
+      // Update existing guest with WorkOS ID and email
       await ctx.db.patch(guestUser._id, {
         workosId: args.workosId,
+        ...(args.email !== undefined && { email: args.email }),
         lastActiveAt: now,
       });
       return guestUser._id;
@@ -117,6 +122,7 @@ export const migrateGuestToUser = mutation({
     return await ctx.db.insert("users", {
       workosId: args.workosId,
       guestId: args.guestId,
+      email: args.email,
       createdAt: now,
       lastActiveAt: now,
     });

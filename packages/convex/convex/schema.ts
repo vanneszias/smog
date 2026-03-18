@@ -28,6 +28,7 @@ export default defineSchema({
   users: defineTable({
     workosId: v.optional(v.string()),
     guestId: v.optional(v.string()),
+    email: v.optional(v.string()),
     role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
     createdAt: v.number(),
     lastActiveAt: v.number(),
@@ -74,6 +75,8 @@ export default defineSchema({
     invoiceName: v.optional(v.string()),
     invoiceVatNumber: v.optional(v.string()),
     invoiceEmail: v.optional(v.string()),
+    // Renewal reminder tracking: set when a reminder email has been sent
+    renewalReminderSentAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
