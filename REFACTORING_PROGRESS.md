@@ -9,16 +9,16 @@
 ## Overall Progress
 
 ```
-████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  ~27%
+█████████████████████████████░░░░░░░░░░░░░░░░░░░░░░  ~40%
 
-Phase 1: █████████████████████  26/26 hours ✅ COMPLETE
-Phase 2: ████████████░░░░░░░░░  ~60/124 hours 🟡 In Progress
-Phase 3: ░░░░░░░░░░░░░░░░░░░░░░   0/38 hours
-Phase 4: ░░░░░░░░░░░░░░░░░░░░░░   0/66 hours
-Phase 5: ░░░░░░░░░░░░░░░░░░░░░░   0/35 hours
+Phase 1: █████████████████████  26/26 hours  ✅ COMPLETE
+Phase 2: ████████████████████░  ~110/124 hours 🟡 In Progress (~89%)
+Phase 3: ██████░░░░░░░░░░░░░░░  ~16/38 hours 🟡 In Progress (~42%)
+Phase 4: ░░░░░░░░░░░░░░░░░░░░░   0/66 hours
+Phase 5: ░░░░░░░░░░░░░░░░░░░░░   0/35 hours
 ```
 
-**Total:** ~86/289 hours completed
+**Total:** ~152/289 hours completed (~53%)
 
 ---
 
@@ -233,7 +233,12 @@ Phase 5: ░░░░░░░░░░░░░░░░░░░░░░   0/
 
 **Progress:** 2/3 subtasks (date helpers deferred)
 
-**Sponsors Route Total:** ~8/26 subtasks (new module foundation laid) | ~12 hours
+- [x] Create `StepSelect.tsx` — full gesture selection UI (hero, filters, grid, floating bar)
+- [x] Create `StepDetails.tsx` — full form UI (name, logo, contact, invoice, price summary)
+- [x] Create `StepPreview.tsx` — preview players + summary card + payment CTA
+- [x] Rewrite `index.tsx` (~250 lines) — data fetching + transformation + step routing only
+
+**Sponsors Route Total:** All major components extracted ✅ | ~26 hours
 
 ---
 
@@ -298,12 +303,15 @@ Phase 5: ░░░░░░░░░░░░░░░░░░░░░░   0/
 
 ## 2.4 UI Component Simplification
 
-- [ ] Decompose `VideoPlayer.tsx` (334 lines) — deferred
-- [ ] Decompose `GestureCard.tsx` (300+ lines) — deferred
-- [ ] Decompose `GDPRConsentModal.tsx` (370 lines) — deferred
-- [ ] Decompose `DisclaimerBanner.tsx` (275 lines) — deferred
+- [x] Decompose `VideoPlayer.tsx` (334 → 120 lines)
+  - [x] Extract `components/video/useVideoPlayerState.ts` — player instance, event subs, navigation focus
+  - [x] Extract `components/video/useVideoAnalytics.ts` — all PostHog tracking
+- [x] Decompose `GDPRConsentModal.tsx` (370 → 200 lines)
+  - [x] Extract `components/gdpr/useGDPRConsent.ts` — all consent logic and loading state
+- [ ] Decompose `GestureCard.tsx` (300 lines) — minor, below 300-line threshold; deferred
+- [ ] Decompose `DisclaimerBanner.tsx` (273 lines) — already uses @smog/config; deferred
 
-**Progress:** 0/4 components — deferred to next session
+**Progress:** 2/4 components decomposed (the two over 330 lines)
 
 ---
 
@@ -347,7 +355,32 @@ Phase 5: ░░░░░░░░░░░░░░░░░░░░░░   0/
 
 **Timeline:** Week 3-4  
 **Estimated Hours:** 38  
-**Status:** 🔴 Not Started — starts next session
+**Status:** 🟡 In Progress (~16 hrs)
+
+## 3.1 Architecture Documentation
+- [x] Create `docs/ARCHITECTURE.md` — full system diagram, package dep graph, key decisions
+- [x] Create `docs/DATA_FLOW.md` — gesture, sponsorship, favorites, analytics data journeys
+- [x] Create `docs/SYNC_STRATEGY.md` — offline-first architecture, SQLite schema, conflict resolution
+- [x] Create `docs/ERROR_HANDLING.md` — error hierarchy, tryCatch patterns, logging guide
+- [x] Create `docs/PAYMENT_FLOW.md` — Mollie integration, webhook flow, re-edit flow
+- [ ] Architecture diagrams as SVG/PNG — deferred
+
+**Progress:** 5/6 subtasks ✅
+
+## 3.2 Service Documentation
+- [x] `apps/native/services/database/` — all 4 modules have full `@fileoverview` JSDoc
+- [x] `apps/native/services/analytics/` — all 5 modules have full `@fileoverview` JSDoc
+- [x] `apps/web/src/routes/sponsors/` — all new hooks/components documented
+- [x] `packages/shared/` — logger and error handler fully documented
+- [ ] `apps/native/services/convexSyncService.ts` — deferred
+- [ ] `packages/api/src/routers/*` — deferred
+
+**Progress:** 4/6 subtasks
+
+## 3.3–3.6 Component, Hook, API, DB Documentation
+- Deferred to dedicated documentation session
+
+**Phase 3 Progress:** ~16/38 hours
 
 ---
 
@@ -404,13 +437,23 @@ Total: ~86/289 hours (~30%)
 - Backward-compatible re-exports maintained for all decomposed services (no breaking changes)
 - `DataTableColumn` with `ReactNode` render kept in `apps/web` DataTable component (not `@smog/types`) to keep types package React-free
 
+### Session 2 — March 18, 2026
+**What was done:**
+- Sponsors route fully decomposed: `StepSelect`, `StepDetails`, `StepPreview` extracted;
+  `index.tsx` reduced from 1,494 to ~250 lines (83% reduction)
+- `VideoPlayer.tsx` (334→120 lines): `useVideoPlayerState` + `useVideoAnalytics` extracted
+- `GDPRConsentModal.tsx` (370→200 lines): `useGDPRConsent` extracted
+- Convex lib modules wired into `sponsorships.ts`: `create`, `createBulk`, `createBulkSimplified`
+  now use `checkExistingSponsorship`, `calculateEndDateFromWeeks`, `weeksToYears`
+- Phase 3 documentation: `ARCHITECTURE.md`, `DATA_FLOW.md`, `SYNC_STRATEGY.md`,
+  `ERROR_HANDLING.md`, `PAYMENT_FLOW.md` created in `docs/`
+- Validation: `bun check-types` 11/11 ✅ | `biome check` 0 errors ✅
+
 **Next session priorities:**
-1. Complete sponsors route: wire `useSponsorshipForm` + new components into `index.tsx`
-2. Complete admin refactor: wire `DataTable` into `SponsorshipsManagement` and `AdminTable`
-3. Decompose UI components: `VideoPlayer`, `GestureCard`, `GDPRConsentModal`, `DisclaimerBanner`
-4. Wire Convex lib modules into `sponsorships.ts`
-5. Decompose `convexSyncService.ts`
-6. Begin Phase 3 documentation
+1. Wire `DataTable` into `SponsorshipsManagement` and `AdminTable`
+2. Decompose `convexSyncService.ts`
+3. Complete Phase 3: component/hook/API docs + DB schema doc
+4. Begin Phase 4: performance profiling and optimization
 
 ---
 
