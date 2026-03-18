@@ -1,6 +1,7 @@
 import {
   Clock,
   Hand,
+  Mail,
   Settings,
   Sparkles,
   Table2,
@@ -10,6 +11,7 @@ import {
 import { useState } from "react";
 import { AdminTable } from "./AdminTable";
 import { CategoriesManagement } from "./CategoriesManagement";
+import { EmailPreview } from "./EmailPreview";
 import { GesturesManagement } from "./GesturesManagement";
 import { PendingSponsorships } from "./PendingSponsorships";
 import { SponsorshipsManagement } from "./SponsorshipsManagement";
@@ -27,7 +29,8 @@ type TabValue =
   | "sponsorships"
   | "gestures"
   | "categories"
-  | "table";
+  | "table"
+  | "emails";
 
 const navigation: Array<{
   id: TabValue;
@@ -64,6 +67,12 @@ const navigation: Array<{
     label: "Categories",
     icon: Tag,
     description: "Manage gesture categories",
+  },
+  {
+    id: "emails",
+    label: "E-mails",
+    icon: Mail,
+    description: "Bekijk e-mailsjablonen",
   },
 ];
 
@@ -185,6 +194,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
             {activeTab === "gestures" && <GesturesManagement />}
             {activeTab === "table" && <AdminTable />}
             {activeTab === "categories" && <CategoriesManagement />}
+            {activeTab === "emails" && <EmailPreview />}
           </div>
         </div>
       </main>

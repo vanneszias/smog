@@ -36,7 +36,9 @@ type WizardStep = "select" | "details" | "preview";
  */
 function validateVatNumber(value: string): boolean {
   const digits = value.replace(/[\s.]/g, "");
-  if (!/^\d{10}$/.test(digits)) return false;
+  if (!/^\d{10}$/.test(digits)) {
+    return false;
+  }
   const first8 = Number.parseInt(digits.slice(0, 8), 10);
   const checkDigits = Number.parseInt(digits.slice(8), 10);
   return 97 - (first8 % 97) === checkDigits;
@@ -383,9 +385,38 @@ function SponsorsComponent() {
     }
   }, [setSearchQuery, selectedCategories, handleCategoryToggle]);
 
+  // Validate invoice fields — extracted to keep validateDetails below complexity limit
+  const validateInvoiceFields = (
+    newErrors: Record<string, string | undefined>
+  ) => {
+    if (!invoiceName.trim()) {
+      newErrors.invoiceName = t(
+        "web.sponsors.wizard.errors.invoiceNameRequired"
+      );
+    }
+    if (!invoiceVatNumber.trim()) {
+      newErrors.invoiceVatNumber = t(
+        "web.sponsors.wizard.errors.invoiceVatRequired"
+      );
+    } else if (!validateVatNumber(invoiceVatNumber)) {
+      newErrors.invoiceVatNumber = t(
+        "web.sponsors.wizard.errors.invoiceVatInvalid"
+      );
+    }
+    if (!invoiceEmail.trim()) {
+      newErrors.invoiceEmail = t(
+        "web.sponsors.wizard.errors.invoiceEmailRequired"
+      );
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invoiceEmail)) {
+      newErrors.invoiceEmail = t(
+        "web.sponsors.wizard.errors.invoiceEmailInvalid"
+      );
+    }
+  };
+
   // Validate details form
   const validateDetails = (): boolean => {
-    const newErrors: typeof errors = {};
+    const newErrors: Record<string, string | undefined> = {};
 
     if (!sponsorName.trim()) {
       newErrors.sponsorName = t(
@@ -414,31 +445,7 @@ function SponsorsComponent() {
     }
 
     if (invoiceRequested) {
-      if (!invoiceName.trim()) {
-        newErrors.invoiceName = t(
-          "web.sponsors.wizard.errors.invoiceNameRequired"
-        );
-      }
-
-      if (!invoiceVatNumber.trim()) {
-        newErrors.invoiceVatNumber = t(
-          "web.sponsors.wizard.errors.invoiceVatRequired"
-        );
-      } else if (!validateVatNumber(invoiceVatNumber)) {
-        newErrors.invoiceVatNumber = t(
-          "web.sponsors.wizard.errors.invoiceVatInvalid"
-        );
-      }
-
-      if (!invoiceEmail.trim()) {
-        newErrors.invoiceEmail = t(
-          "web.sponsors.wizard.errors.invoiceEmailRequired"
-        );
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invoiceEmail)) {
-        newErrors.invoiceEmail = t(
-          "web.sponsors.wizard.errors.invoiceEmailInvalid"
-        );
-      }
+      validateInvoiceFields(newErrors);
     }
 
     setErrors(newErrors);

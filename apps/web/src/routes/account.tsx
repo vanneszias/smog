@@ -1,12 +1,6 @@
 import { api } from "@smog/convex";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Authenticated,
-  AuthLoading,
-  Unauthenticated,
-  useMutation,
-  useQuery,
-} from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Download, Loader2, Settings, Trash2, User } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -31,19 +25,17 @@ export const Route = createFileRoute("/account")({
 });
 
 function AccountPage() {
-  return (
-    <>
-      <AuthLoading>
-        <LoadingState />
-      </AuthLoading>
-      <Unauthenticated>
-        <UnauthenticatedState />
-      </Unauthenticated>
-      <Authenticated>
-        <AccountContent />
-      </Authenticated>
-    </>
-  );
+  const { isLoading, isAuthenticated } = useAuth();
+
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  if (!isAuthenticated) {
+    return <UnauthenticatedState />;
+  }
+
+  return <AccountContent />;
 }
 
 function LoadingState() {

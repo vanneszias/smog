@@ -113,6 +113,23 @@ function SponsorshipCard({
   );
 }
 
+function filterSponsorships(
+  sponsorships: PendingSponsorship[],
+  searchQuery: string
+): PendingSponsorship[] {
+  if (!searchQuery.trim()) {
+    return sponsorships;
+  }
+  const query = searchQuery.toLowerCase();
+  return sponsorships.filter(
+    (s) =>
+      s.gestureName?.toLowerCase().includes(query) ||
+      s.sponsorName.toLowerCase().includes(query) ||
+      s.sponsorEmail.toLowerCase().includes(query)
+  );
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Admin panel with list + detail panel + reject dialog requires inherent branching
 export function PendingSponsorships() {
   const queryClient = useQueryClient();
   const [selectedSponsorshipId, setSelectedSponsorshipId] = useState<
@@ -126,34 +143,37 @@ export function PendingSponsorships() {
     orpc.admin.sponsorships.listPendingApproval.queryOptions()
   );
 
+  const handleApproveSuccess = () => {
+    toast.success("Sponsorship approved successfully");
+    queryClient.invalidateQueries({
+      queryKey:
+        orpc.admin.sponsorships.listPendingApproval.queryOptions().queryKey,
+    });
+    setSelectedSponsorshipId(null);
+  };
+
   const approveMutation = useMutation({
     mutationFn: (sponsorshipId: string) =>
       client.admin.sponsorships.approve({ sponsorshipId }),
-    onSuccess: () => {
-      toast.success("Sponsorship approved successfully");
-      queryClient.invalidateQueries({
-        queryKey:
-          orpc.admin.sponsorships.listPendingApproval.queryOptions().queryKey,
-      });
-      setSelectedSponsorshipId(null);
-    },
+    onSuccess: handleApproveSuccess,
     onError: (error) => {
       toast.error(`Failed to approve: ${error.message}`);
     },
   });
 
+  const handleReEditLinkSuccess = (data: { url: string }) => {
+    navigator.clipboard.writeText(data.url).catch(() => {
+      toast.info("Link generated", { description: data.url });
+    });
+    toast.success("Re-edit link copied to clipboard!", {
+      description: "Expires in 7 days",
+    });
+  };
+
   const generateReEditLinkMutation = useMutation({
     mutationFn: (sponsorshipId: string) =>
       client.admin.sponsorships.generateReEditLink({ sponsorshipId }),
-    onSuccess: (data) => {
-      navigator.clipboard.writeText(data.url).catch(() => {
-        // fallback: show the URL
-        toast.info("Link generated", { description: data.url });
-      });
-      toast.success("Re-edit link copied to clipboard!", {
-        description: "Expires in 7 days",
-      });
-    },
+    onSuccess: handleReEditLinkSuccess,
     onError: (error) => {
       toast.error(`Failed to generate re-edit link: ${error.message}`);
     },
@@ -183,22 +203,10 @@ export function PendingSponsorships() {
   });
 
   // Filter sponsorships
-  const filteredSponsorships = useMemo(() => {
-    if (!sponsorships) {
-      return [];
-    }
-    if (!searchQuery.trim()) {
-      return sponsorships;
-    }
-
-    const query = searchQuery.toLowerCase();
-    return sponsorships.filter(
-      (s) =>
-        s.gestureName?.toLowerCase().includes(query) ||
-        s.sponsorName.toLowerCase().includes(query) ||
-        s.sponsorEmail.toLowerCase().includes(query)
-    );
-  }, [sponsorships, searchQuery]);
+  const filteredSponsorships = useMemo(
+    () => filterSponsorships(sponsorships ?? [], searchQuery),
+    [sponsorships, searchQuery]
+  );
 
   const selectedSponsorship = sponsorships?.find(
     (s) => s._id === selectedSponsorshipId
