@@ -23,7 +23,7 @@
   },
   "scripts": {
     "check": "biome check --write .",
-    "dev": "turbo dev",
+    "dev": "docker run -d --name smog-redis -p 6379:6379 --rm redis:7-alpine 2>/dev/null; turbo dev",
     "build": "turbo build",
     "check-types": "turbo check-types",
     "dev:native": "turbo -F native dev",
