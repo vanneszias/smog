@@ -51,9 +51,9 @@ export interface SponsorDetailsFormData {
   invoiceEmail: string;
 }
 
-/** Field-level error map for the sponsor details form. */
+/** Field-level error map for the sponsor details form. Includes 'logo' for the file upload field. */
 export type SponsorDetailsErrors = Partial<
-  Record<keyof SponsorDetailsFormData, string>
+  Record<keyof SponsorDetailsFormData | "logo", string>
 >;
 
 /**

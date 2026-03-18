@@ -1,13 +1,31 @@
+/**
+ * @fileoverview VideoPlayer component for gesture video playback.
+ *
+ * A full-width video player that:
+ * - Streams from MUX via HLS
+ * - Triggers `onComplete` callback 5 seconds before the video ends
+ * - Pauses automatically when the screen loses focus
+ * - Tracks playback analytics via PostHog (see `useVideoAnalytics`)
+ * - Renders a play/pause button with optional Liquid Glass effect
+ *
+ * Logic is split across two hooks:
+ * - `useVideoPlayerState` — player instance, event subscriptions, state
+ * - `useVideoAnalytics`   — PostHog event tracking
+ *
+ * @example
+ * <VideoPlayer
+ *   playbackId="abc123"
+ *   gestureId={gesture.id}
+ *   gestureName={gesture.name}
+ *   onComplete={handleComplete}
+ * />
+ */
+
 import { Ionicons } from "@expo/vector-icons";
-import { useIsFocused } from "@react-navigation/native";
 import { BORDER_RADIUS, ICON_SIZE, SPACING } from "@smog/styles";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import { useVideoPlayer, VideoView } from "expo-video";
-
-const useGlass = isLiquidGlassAvailable();
-
+import { VideoView } from "expo-video";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -15,23 +33,28 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import {
-  trackVideoAlmostCompleted,
-  trackVideoPlaybackCompleted,
-  trackVideoPlaybackPaused,
-  trackVideoPlaybackStarted,
-  trackVideoPlayerOpened,
-} from "@/services/analyticsService";
+import { useVideoPlayerState } from "./video/useVideoPlayerState";
+
+const useGlass = isLiquidGlassAvailable();
 
 interface VideoPlayerProps {
+  /** MUX playback ID for the gesture video. */
   playbackId: string;
+  /** Whether to start playing immediately. Defaults to `true`. */
   autoPlay?: boolean;
+  /** Called when the video reaches the last 5 seconds (triggers once per loop). */
   onComplete?: () => void;
+  /** Called when the video plays to its end. */
   onPlayToEnd?: () => void;
+  /** Gesture ID for analytics tracking. */
   gestureId?: string;
+  /** Gesture name for analytics tracking. */
   gestureName?: string;
 }
 
+/**
+ * MUX HLS video player with analytics, focus handling, and Liquid Glass UI.
+ */
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
   playbackId,
   autoPlay = true,
@@ -41,225 +64,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   gestureName,
 }) => {
   const { theme } = useTheme();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(autoPlay);
-  const [hasTrackedPlayerOpen, setHasTrackedPlayerOpen] = useState(false);
-  const playbackStartTimeRef = useRef<number | null>(null);
-  const hasTriggeredOnCompleteRef = useRef(false);
-  // Keep refs for values used inside event callbacks to avoid stale closures
-  const durationRef = useRef<number>(0);
-  const onCompleteRef = useRef<(() => void) | undefined>(onComplete);
-  const gestureIdRef = useRef<string | undefined>(gestureId);
-  const gestureNameRef = useRef<string | undefined>(gestureName);
-  const isFocused = useIsFocused();
-  const pausedByNavigationRef = useRef(false);
-  const isUnmountingRef = useRef(false);
-
-  // Keep refs in sync with latest prop values so event callbacks are never stale
-  useEffect(() => {
-    onCompleteRef.current = onComplete;
-  }, [onComplete]);
-  useEffect(() => {
-    gestureIdRef.current = gestureId;
-  }, [gestureId]);
-  useEffect(() => {
-    gestureNameRef.current = gestureName;
-  }, [gestureName]);
-
-  // Construct MUX streaming URL
-  const videoUrl = `https://stream.mux.com/${playbackId}.m3u8`;
-
-  // Create video player instance
-  const player = useVideoPlayer(videoUrl, (videoPlayer) => {
-    videoPlayer.loop = true;
-    // Must be > 0 for the timeUpdate event to fire; 0 (the default) disables it entirely.
-    videoPlayer.timeUpdateEventInterval = 0.5;
-    if (autoPlay) {
-      videoPlayer.play();
+  const { player, isLoading, isPlaying, togglePlayPause } = useVideoPlayerState(
+    {
+      playbackId,
+      autoPlay,
+      gestureId,
+      gestureName,
+      onComplete,
+      onPlayToEnd,
     }
-  });
-
-  // Pause video when screen loses focus (navigation away)
-  useEffect(() => {
-    if (!(isFocused || isUnmountingRef.current)) {
-      try {
-        if (player.playing) {
-          pausedByNavigationRef.current = true;
-          player.pause();
-        }
-      } catch (error) {
-        console.error("[VideoPlayer] Failed to pause on focus loss:", error);
-      }
-    }
-  }, [isFocused, player]);
-
-  // Handle playing state changes
-  const handlePlayingChange = useCallback(
-    (event: { isPlaying: boolean }) => {
-      const playing = event.isPlaying;
-      setIsPlaying(playing);
-
-      if (!(gestureId && gestureName)) {
-        return;
-      }
-
-      if (playing) {
-        trackVideoPlaybackStarted(
-          gestureId,
-          gestureName,
-          autoPlay ? "autoplay" : "manual_play"
-        );
-        playbackStartTimeRef.current = Date.now();
-      } else {
-        // Only track user-initiated pauses, not navigation-triggered ones
-        if (!pausedByNavigationRef.current) {
-          const watchTime = playbackStartTimeRef.current
-            ? (Date.now() - playbackStartTimeRef.current) / 1000
-            : undefined;
-          trackVideoPlaybackPaused(gestureId, gestureName, watchTime);
-        }
-        pausedByNavigationRef.current = false; // Reset flag
-        playbackStartTimeRef.current = null;
-      }
-    },
-    [gestureId, gestureName, autoPlay]
   );
-
-  // Handle status changes
-  const handleStatusChange = useCallback(
-    (event: { status: string }) => {
-      if (event.status !== "readyToPlay") {
-        return;
-      }
-
-      const d = player.duration || 0;
-      durationRef.current = d;
-      setIsLoading(false);
-
-      if (!hasTrackedPlayerOpen && gestureId && gestureName) {
-        trackVideoPlayerOpened(gestureId, gestureName, autoPlay);
-        setHasTrackedPlayerOpen(true);
-      }
-    },
-    [player.duration, hasTrackedPlayerOpen, gestureId, gestureName, autoPlay]
-  );
-
-  // Handle time updates — use refs so this callback never goes stale and
-  // never needs to be re-registered when props change.
-  const handleTimeUpdate = useCallback(
-    (event: { currentTime: number }) => {
-      // Prefer the ref value (set when readyToPlay fires) then fall back to
-      // the live player.duration property. This avoids the React-state lag
-      // that previously caused every timeUpdate to early-return with duration=0.
-      const currentDuration = durationRef.current || player.duration || 0;
-      if (currentDuration <= 0) {
-        return;
-      }
-
-      const { currentTime } = event;
-      const timeLeft = currentDuration - currentTime;
-
-      // Guard: timeLeft must be a real finite positive number
-      if (!Number.isFinite(timeLeft) || timeLeft <= 0) {
-        return;
-      }
-
-      // Reset flag when video loops back to start
-      if (currentTime < 1 && hasTriggeredOnCompleteRef.current) {
-        hasTriggeredOnCompleteRef.current = false;
-      }
-
-      // Trigger onComplete once in the last 5 seconds
-      if (timeLeft <= 5 && !hasTriggeredOnCompleteRef.current) {
-        hasTriggeredOnCompleteRef.current = true;
-        const gId = gestureIdRef.current;
-        const gName = gestureNameRef.current;
-        if (gId && gName) {
-          trackVideoAlmostCompleted(gId, gName);
-        }
-        onCompleteRef.current?.();
-      }
-    },
-    // Only player is needed — all other values are read from refs
-    [player]
-  );
-
-  // Handle play to end
-  const handlePlayToEnd = useCallback(() => {
-    if (gestureId && gestureName) {
-      const watchTime = playbackStartTimeRef.current
-        ? (Date.now() - playbackStartTimeRef.current) / 1000
-        : undefined;
-      trackVideoPlaybackCompleted(gestureId, gestureName, watchTime);
-    }
-    onPlayToEnd?.();
-  }, [gestureId, gestureName, onPlayToEnd]);
-
-  useEffect(() => {
-    const subscription = player.addListener(
-      "playingChange",
-      handlePlayingChange
-    );
-    const statusSubscription = player.addListener(
-      "statusChange",
-      handleStatusChange
-    );
-    // sourceLoad fires when the player finishes loading metadata and includes
-    // the video duration in its payload — more reliable than reading
-    // player.duration inside statusChange.
-    const sourceLoadSubscription = player.addListener(
-      "sourceLoad",
-      (event: { duration: number }) => {
-        if (event.duration > 0) {
-          durationRef.current = event.duration;
-        }
-      }
-    );
-    const timeUpdateSubscription = player.addListener(
-      "timeUpdate",
-      handleTimeUpdate
-    );
-    const playToEndSubscription = player.addListener(
-      "playToEnd",
-      handlePlayToEnd
-    );
-
-    return () => {
-      subscription?.remove();
-      statusSubscription?.remove();
-      sourceLoadSubscription?.remove();
-      timeUpdateSubscription?.remove();
-      playToEndSubscription?.remove();
-    };
-  }, [
-    player,
-    handlePlayingChange,
-    handleStatusChange,
-    handleTimeUpdate,
-    handlePlayToEnd,
-  ]);
-
-  // Cleanup: pause video on unmount
-  useEffect(() => {
-    return () => {
-      isUnmountingRef.current = true;
-      try {
-        if (player?.playing) {
-          player.pause();
-        }
-      } catch {
-        // Expected when native player is already disposed during navigation
-      }
-    };
-  }, [player]);
-
-  const togglePlayPause = () => {
-    if (isPlaying) {
-      player.pause();
-    } else {
-      player.play();
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -271,11 +85,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         style={styles.video}
       />
 
-      {isLoading ? (
+      {isLoading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={theme.primary} size="large" />
         </View>
-      ) : null}
+      )}
 
       <TouchableOpacity
         onPress={togglePlayPause}
