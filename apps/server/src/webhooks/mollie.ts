@@ -1,6 +1,12 @@
 import { mollieClient } from "@smog/auth/server";
+import { api } from "@smog/convex";
+import type { Id } from "@smog/convex/dataModel";
+import { ConvexHttpClient } from "convex/browser";
 import type { Context } from "hono";
+import { enqueueEmail } from "../services/emailQueue";
 import { processSuccessfulPayment } from "../services/sponsorship";
+
+const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 
 /**
  * Handle Mollie payment webhook
@@ -71,13 +77,13 @@ export async function handleMollieWebhook(c: Context) {
         `[Mollie Webhook] Processing ${sponsorshipIds.length} sponsorships`
       );
 
-      // Process all sponsorships
+      // Process all sponsorships and enqueue emails for each
       await Promise.all(
         sponsorshipIds.map((id) =>
           processSuccessfulPayment({
             sponsorshipId: id,
             molliePaymentId: paymentId,
-          })
+          }).then(() => enqueuePaymentEmails(id))
         )
       );
 
@@ -101,6 +107,11 @@ export async function handleMollieWebhook(c: Context) {
       molliePaymentId: paymentId,
     });
 
+    // Enqueue payment confirmation emails (fire-and-forget to not delay webhook response)
+    enqueuePaymentEmails(sponsorshipId).catch((err: unknown) => {
+      console.error("[Mollie Webhook] Failed to enqueue payment emails:", err);
+    });
+
     console.log("[Mollie Webhook] Payment processed successfully");
     return c.json({ status: "success" }, 200);
   } catch (error) {
@@ -109,4 +120,54 @@ export async function handleMollieWebhook(c: Context) {
       error instanceof Error ? error.message : "Unknown error";
     return c.json({ error: errorMessage }, 500);
   }
+}
+
+/**
+ * Fetch the sponsorship from Convex and enqueue the post-payment emails:
+ * - sponsorship_submitted: confirms we received the sponsorship
+ * - payment_confirmed: receipt / payment acknowledgement
+ */
+async function enqueuePaymentEmails(sponsorshipId: string): Promise<void> {
+  const sponsorship = await convex.query(api.sponsorships.getById, {
+    id: sponsorshipId as Id<"sponsorships">,
+  });
+
+  if (!sponsorship) {
+    console.warn(
+      `[Mollie Webhook] Sponsorship ${sponsorshipId} not found for email, skipping`
+    );
+    return;
+  }
+
+  // Fetch the gesture name for the email
+  const gestureName = await convex
+    .query(api.gestures.getById, { id: sponsorship.gestureId })
+    .then((g) => g?.name ?? "your gesture")
+    .catch(() => "your gesture");
+
+  const to = sponsorship.sponsorEmail;
+  const sponsorName = sponsorship.contactFullName || sponsorship.sponsorName;
+
+  // Enqueue both emails with deterministic IDs to prevent duplicates
+  await Promise.all([
+    enqueueEmail(
+      {
+        type: "sponsorship_submitted",
+        to,
+        sponsorName,
+        gestureName,
+      },
+      `sponsorship_submitted:${sponsorshipId}`
+    ),
+    enqueueEmail(
+      {
+        type: "payment_confirmed",
+        to,
+        sponsorName,
+        gestureName,
+        paymentAmount: sponsorship.paymentAmount,
+      },
+      `payment_confirmed:${sponsorshipId}`
+    ),
+  ]);
 }

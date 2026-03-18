@@ -15,21 +15,28 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "@react-email/components": "^0.0.36",
+    "@react-email/render": "^1.0.5",
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
     "@smog/convex": "workspace:*",
     "@smog/types": "workspace:*",
+    "bullmq": "^5.56.0",
     "convex": "^1.31.0",
     "dotenv": "catalog:",
     "hono": "catalog:",
+    "ioredis": "5.9.3",
     "node-cron": "^4.2.1",
     "nodemailer": "^6.9.16",
+    "react": "^19.1.0",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@smog/config": "workspace:*",
     "@types/bun": "^1.2.6",
     "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^6.4.17",
+    "@types/react": "^19.1.0",
     "typescript": "^5.8.2"
   }
 }
