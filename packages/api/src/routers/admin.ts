@@ -2,9 +2,10 @@ import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
 import { z } from "zod";
 import { adminProcedure } from "../index";
+import { categoriesCache, logCacheOperation } from "../lib/categoriesCache";
 import { convexClient } from "../lib/convex";
 import { buildCsvString } from "../lib/csv";
-import { categoriesCache, logCacheOperation } from "../lib/categoriesCache";
+import { triggerEmail } from "../lib/emailTrigger";
 import {
   createMuxDirectUpload,
   getAssetStatus,
@@ -281,7 +282,10 @@ export const adminRouter = {
 
         // Invalidate category cache since data has changed
         categoriesCache.invalidate();
-        logCacheOperation("create_category", `invalidated after creating ${categoryId}`);
+        logCacheOperation(
+          "create_category",
+          `invalidated after creating ${categoryId}`
+        );
 
         return { categoryId };
       }),
@@ -312,7 +316,10 @@ export const adminRouter = {
 
         // Invalidate category cache since data has changed
         categoriesCache.invalidate();
-        logCacheOperation("update_category", `invalidated after updating ${input.categoryId}`);
+        logCacheOperation(
+          "update_category",
+          `invalidated after updating ${input.categoryId}`
+        );
 
         return { success: true };
       }),
@@ -338,7 +345,10 @@ export const adminRouter = {
 
         // Invalidate category cache since data has changed
         categoriesCache.invalidate();
-        logCacheOperation("delete_category", `invalidated after deleting ${input.categoryId}`);
+        logCacheOperation(
+          "delete_category",
+          `invalidated after deleting ${input.categoryId}`
+        );
 
         return { success: true };
       }),
@@ -378,6 +388,11 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
+        // Fetch sponsorship before approval to get email + gesture info for the notification
+        const sponsorship = await convexClient.query(api.sponsorships.getById, {
+          id: input.sponsorshipId as Id<"sponsorships">,
+        });
+
         await convexClient.mutation(api.sponsorships.approve, {
           sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
           adminUserId: context.userId,
@@ -390,6 +405,28 @@ export const adminRouter = {
           targetId: input.sponsorshipId,
           targetType: "sponsorship",
         });
+
+        // Trigger "sponsorship live" email (fire-and-forget)
+        if (sponsorship) {
+          const gestureName = await convexClient
+            .query(api.gestures.getById, { id: sponsorship.gestureId })
+            .then((g) => g?.name ?? "your gesture")
+            .catch(() => "your gesture");
+
+          triggerEmail({
+            type: "sponsorship_live",
+            to: sponsorship.sponsorEmail,
+            sponsorName: sponsorship.contactFullName || sponsorship.sponsorName,
+            gestureName,
+            startDate: Date.now(),
+            endDate: sponsorship.endDate,
+          }).catch((err: unknown) => {
+            console.error(
+              "[Admin] Failed to trigger sponsorship_live email:",
+              err
+            );
+          });
+        }
 
         return { success: true };
       }),
