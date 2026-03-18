@@ -43,6 +43,8 @@ import {
 } from "@/components/ui/select";
 import { client, orpc } from "@/utils/orpc";
 
+// Local Sponsorship type matching what the admin API / Convex query returns.
+// This is intentionally permissive to handle both old and new API response shapes.
 interface Sponsorship {
   _id: string;
   gestureId: string;
@@ -53,6 +55,7 @@ interface Sponsorship {
   overlayText: string;
   sponsoredVideoPlaybackId?: string;
   originalVideoPlaybackId?: string;
+  previewVideoPlaybackId?: string;
   startDate: number;
   endDate: number;
   durationYears: number;
@@ -68,6 +71,9 @@ interface Sponsorship {
   invoiceName?: string;
   invoiceVatNumber?: string;
   invoiceEmail?: string;
+  contactFullName?: string;
+  contactCompany?: string;
+  hasLogo?: boolean;
 }
 
 const statusConfig: Record<

@@ -1,4 +1,24 @@
+/**
+ * @fileoverview Convex mutations and queries for the sponsorships table.
+ *
+ * Implements the full sponsorship lifecycle:
+ * - create / createBulk — new sponsorship records (pending state)
+ * - Payment linking (Mollie payment ID)
+ * - Admin approval / rejection / re-edit flows
+ * - Status expiry and cleanup (triggered by cron)
+ * - Sponsor re-submission flow
+ *
+ * Status machine:
+ *   pending → pending_payment → pending_approval → active → expired
+ *                                               ↘ rejected
+ *                                               ↘ pending_resubmission → pending_approval
+ *
+ * @see packages/convex/convex/cron.ts for scheduled expiry jobs
+ * @see packages/api/src/routers/sponsorships.ts for HTTP API wrappers
+ */
+
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 
 // Create a new sponsorship (called from web app after video composition)
@@ -98,8 +118,7 @@ export const createBulk = mutation({
       );
     }
 
-    // biome-ignore lint/suspicious/noExplicitAny: Convex ID type
-    const sponsorshipIds: any[] = [];
+    const sponsorshipIds: Id<"sponsorships">[] = [];
     const errors: string[] = [];
 
     for (let i = 0; i < args.gestureIds.length; i++) {
@@ -222,11 +241,11 @@ export const createBulkSimplified = mutation({
   },
   returns: v.array(v.id("sponsorships")),
   handler: async (ctx, args) => {
-    // biome-ignore lint/suspicious/noExplicitAny: Convex ID type
-    const sponsorshipIds: any[] = [];
+    const sponsorshipIds: Id<"sponsorships">[] = [];
     const errors: string[] = [];
 
-    // Calculate payment amount (€50 per gesture + €10 if logo)
+    // Pricing constants — kept local to avoid adding a dependency on @smog/config
+    // inside Convex functions (which run server-side in the Convex runtime).
     const PRICE_PER_YEAR_CENTS = 5000;
     const LOGO_ADDON_CENTS = 1000;
     const paymentAmountPerGesture = args.includeLogo

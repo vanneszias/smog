@@ -33,9 +33,11 @@
         "@react-navigation/native": "^7.1.8",
         "@shopify/flash-list": "2.0.2",
         "@smog/auth": "workspace:*",
+        "@smog/config": "workspace:*",
         "@smog/convex": "workspace:*",
         "@smog/hooks": "workspace:*",
         "@smog/i18n": "workspace:*",
+        "@smog/shared": "workspace:*",
         "@smog/styles": "workspace:*",
         "@smog/types": "workspace:*",
         "@smog/ui": "workspace:*",
@@ -182,9 +184,11 @@
         "@radix-ui/react-tabs": "^1.1.13",
         "@smog/api": "workspace:*",
         "@smog/auth": "workspace:*",
+        "@smog/config": "workspace:*",
         "@smog/convex": "workspace:*",
         "@smog/hooks": "workspace:*",
         "@smog/i18n": "workspace:*",
+        "@smog/shared": "workspace:*",
         "@smog/styles": "workspace:*",
         "@smog/types": "workspace:*",
         "@smog/ui": "workspace:*",
@@ -266,6 +270,9 @@
     "packages/config": {
       "name": "@smog/config",
       "version": "0.2.4",
+      "devDependencies": {
+        "typescript": "^5.8.2",
+      },
     },
     "packages/convex": {
       "name": "@smog/convex",
@@ -299,6 +306,14 @@
     },
     "packages/i18n": {
       "name": "@smog/i18n",
+      "version": "0.2.4",
+      "devDependencies": {
+        "@smog/config": "workspace:*",
+        "typescript": "^5.8.2",
+      },
+    },
+    "packages/shared": {
+      "name": "@smog/shared",
       "version": "0.2.4",
       "devDependencies": {
         "@smog/config": "workspace:*",
@@ -1319,6 +1334,8 @@
     "@smog/hooks": ["@smog/hooks@workspace:packages/hooks"],
 
     "@smog/i18n": ["@smog/i18n@workspace:packages/i18n"],
+
+    "@smog/shared": ["@smog/shared@workspace:packages/shared"],
 
     "@smog/styles": ["@smog/styles@workspace:packages/styles"],
 

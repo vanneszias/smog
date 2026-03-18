@@ -1,30 +1,35 @@
+/**
+ * @fileoverview SQLite database management with offline-first sync.
+ *
+ * This service is the primary data access layer for the native app. It
+ * implements an offline-first architecture where:
+ * - All gesture/category data is stored locally in SQLite
+ * - Reads are served from local storage immediately
+ * - Data is synced from Convex in the background by `convexSyncService`
+ *
+ * Architecture:
+ * ```
+ * Component → gestureService → databaseService (SQLite)
+ *                          ↑
+ *             convexSyncService (background sync from Convex)
+ * ```
+ *
+ * @see convexSyncService for sync orchestration
+ * @see gestureService for higher-level gesture operations
+ */
+
+import {
+  DATABASE_TARGET_VERSION,
+  SQLITE_DATABASE_NAME,
+} from "@smog/config/constants";
 import * as SQLite from "expo-sqlite";
 import type { Gesture } from "@/types";
 import logger from "@/utils/logger";
-
-interface DatabaseGesture {
-  id: string;
-  name: string;
-  category: string; // JSON string of array
-  playbackId: string;
-  concept: string; // JSON string of array
-  info: string;
-  createdAt: string;
-  updatedAt: string;
-  lastSyncAt?: string;
-  convexId?: string;
-}
-
-interface DatabaseCategory {
-  id: string;
-  name: string;
-  description?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  lastSyncAt?: string;
-  convexId?: string;
-}
+import type {
+  DatabaseCategory,
+  DatabaseGesture,
+  TableInfoRow,
+} from "./database/types";
 
 class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
@@ -36,7 +41,7 @@ class DatabaseService {
     }
 
     try {
-      this.db = await SQLite.openDatabaseAsync("gestures.db");
+      this.db = await SQLite.openDatabaseAsync(SQLITE_DATABASE_NAME);
 
       // Check database version and force clean migration if needed
       await this.checkDatabaseVersion();
@@ -75,7 +80,7 @@ class DatabaseService {
         }
       }
 
-      const targetVersion = 3; // New version with favorites tables
+      const targetVersion = DATABASE_TARGET_VERSION;
 
       if (currentVersion < targetVersion) {
         logger.log(
@@ -171,9 +176,7 @@ class DatabaseService {
     }
   }
 
-  private checkGestureTableNeedsMigration(
-    tableInfo: Array<{ name: string }>
-  ): boolean {
+  private checkGestureTableNeedsMigration(tableInfo: TableInfoRow[]): boolean {
     if (tableInfo.length === 0) {
       return false;
     }
@@ -191,9 +194,7 @@ class DatabaseService {
     return needsMigration;
   }
 
-  private checkCategoryTableNeedsMigration(
-    tableInfo: Array<{ name: string }>
-  ): boolean {
+  private checkCategoryTableNeedsMigration(tableInfo: TableInfoRow[]): boolean {
     if (tableInfo.length === 0) {
       return false;
     }
@@ -310,16 +311,7 @@ class DatabaseService {
     `);
   }
 
-  private async getTableInfo(tableName: string): Promise<
-    Array<{
-      cid: number;
-      name: string;
-      type: string;
-      notnull: number;
-      dflt_value: string | number | null;
-      pk: number;
-    }>
-  > {
+  private async getTableInfo(tableName: string): Promise<TableInfoRow[]> {
     if (!this.db) {
       throw new Error("Database not initialized");
     }
@@ -327,14 +319,7 @@ class DatabaseService {
     try {
       const result = (await this.db.getAllAsync(
         `PRAGMA table_info(${tableName});`
-      )) as Array<{
-        cid: number;
-        name: string;
-        type: string;
-        notnull: number;
-        dflt_value: string | number | null;
-        pk: number;
-      }>;
+      )) as TableInfoRow[];
       return result;
     } catch (_error) {
       // Table doesn't exist
@@ -542,8 +527,8 @@ class DatabaseService {
           allCategories.add(cat);
         }
       } catch (_error) {
-        console.error(
-          "[databaseService] Failed to parse category:",
+        logger.error(
+          "[databaseService] Failed to parse category",
           row.category
         );
       }
