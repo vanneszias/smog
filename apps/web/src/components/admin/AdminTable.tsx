@@ -1,3 +1,23 @@
+/**
+ * @fileoverview Admin gesture management table.
+ *
+ * An inline-editable data table for managing all gestures in the admin portal.
+ * Supports:
+ * - Inline editing of name, description, playback ID, concepts, and categories
+ * - Active/inactive toggle per gesture
+ * - Search by name, description, or concept
+ * - Filter to show only inactive gestures
+ * - Bulk save with before/after confirmation dialog
+ * - Creating new gestures via the `CreateGestureDialog`
+ *
+ * Architecture — this component owns only layout and API wiring:
+ * - `gestures/useGestureTableEditing` — pending-changes state machine
+ * - `gestures/EditableCell` — inline input/textarea
+ * - `gestures/ConceptsCell` — inline concept tag editor
+ * - `gestures/CategoriesCell` — inline category multi-select
+ * - `gestures/ChangesConfirmationDialog` — review-and-confirm modal
+ */
+
 import {
   Table,
   TableBody,
@@ -8,7 +28,6 @@ import {
 } from "@smog/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Check,
   Eye,
   EyeOff,
   Filter,
@@ -18,424 +37,32 @@ import {
   Tag,
   X,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { client, orpc } from "@/utils/orpc";
 import { CreateGestureDialog } from "./CreateGestureDialog";
+import { CategoriesCell } from "./gestures/CategoriesCell";
+import { ChangesConfirmationDialog } from "./gestures/ChangesConfirmationDialog";
+import { ConceptsCell } from "./gestures/ConceptsCell";
+import { EditableCell } from "./gestures/EditableCell";
+import type { AdminGesture } from "./gestures/types";
+import { useGestureTableEditing } from "./gestures/useGestureTableEditing";
+import { useAdminFilters } from "./hooks/useAdminFilters";
 
-interface Gesture {
-  _id: string;
-  name: string;
-  info: string;
-  playbackId: string;
-  concept: string[];
-  isActive: boolean;
-  categoryIds: string[];
-}
-
-interface Category {
-  _id: string;
-  name: string;
-  isActive: boolean;
-}
-
-interface EditableCellProps {
-  value: string;
-  onChange: (value: string) => void;
-  onBlur: () => void;
-  multiline?: boolean;
-  className?: string;
-}
-
-function EditableCell({
-  value,
-  onChange,
-  onBlur,
-  multiline = false,
-  className = "",
-}: EditableCellProps) {
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-
-  if (multiline) {
-    return (
-      <textarea
-        autoFocus
-        className={`min-h-[60px] w-full resize-none rounded border border-[var(--admin-accent)] bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-accent)]/20 ${className}`}
-        onBlur={onBlur}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            onBlur();
-          }
-          if (e.key === "Escape") {
-            onBlur();
-          }
-        }}
-        ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-        value={value}
-      />
-    );
-  }
-
-  return (
-    <input
-      autoFocus
-      className={`w-full rounded border border-[var(--admin-accent)] bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--admin-accent)]/20 ${className}`}
-      onBlur={onBlur}
-      onChange={(e) => onChange(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          onBlur();
-        }
-        if (e.key === "Escape") {
-          onBlur();
-        }
-      }}
-      ref={inputRef as React.RefObject<HTMLInputElement>}
-      type="text"
-      value={value}
-    />
-  );
-}
-
-interface ConceptsCellProps {
-  concepts: string[];
-  onChange: (concepts: string[]) => void;
-}
-
-function ConceptsCell({ concepts, onChange }: ConceptsCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [newConcept, setNewConcept] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleAdd = () => {
-    const trimmed = newConcept.trim();
-    if (trimmed && !concepts.includes(trimmed)) {
-      onChange([...concepts, trimmed]);
-      setNewConcept("");
-    }
-  };
-
-  const handleRemove = (concept: string) => {
-    onChange(concepts.filter((c) => c !== concept));
-  };
-
-  if (isEditing) {
-    return (
-      <div className="min-w-[200px] space-y-2">
-        <div className="flex flex-wrap gap-1">
-          {concepts.map((concept) => (
-            <button
-              className="inline-flex items-center gap-1 rounded-full border-transparent bg-secondary px-2 py-0.5 font-medium text-secondary-foreground text-xs transition-colors hover:bg-secondary/80"
-              key={concept}
-              onClick={() => handleRemove(concept)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleRemove(concept);
-                }
-              }}
-              type="button"
-            >
-              {concept}
-              <span aria-hidden="true" className="text-xs">
-                ×
-              </span>
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-1">
-          <Input
-            autoFocus
-            className="h-7 text-xs"
-            onChange={(e) => setNewConcept(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleAdd();
-              }
-              if (e.key === "Escape") {
-                setIsEditing(false);
-              }
-            }}
-            placeholder="Add concept..."
-            ref={inputRef}
-            value={newConcept}
-          />
-        </div>
-        <div className="flex gap-1">
-          <Button
-            className="h-6 px-2 text-xs"
-            onClick={handleAdd}
-            size="sm"
-            variant="ghost"
-          >
-            <Check className="mr-1 h-3 w-3" />
-            Add
-          </Button>
-          <Button
-            className="h-6 px-2 text-xs"
-            onClick={() => setIsEditing(false)}
-            size="sm"
-            variant="ghost"
-          >
-            <X className="mr-1 h-3 w-3" />
-            Done
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <button
-      className="flex min-w-[120px] cursor-pointer flex-wrap gap-1 text-left hover:opacity-70"
-      onClick={() => setIsEditing(true)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          setIsEditing(true);
-        }
-      }}
-      type="button"
-    >
-      {concepts.length === 0 ? (
-        <span className="text-[var(--admin-text-muted)] text-xs italic">
-          Click to add...
-        </span>
-      ) : (
-        concepts.map((concept) => (
-          <Badge className="text-xs" key={concept} variant="outline">
-            {concept}
-          </Badge>
-        ))
-      )}
-    </button>
-  );
-}
-
-interface CategoriesCellProps {
-  categoryIds: string[];
-  categories: Category[];
-  onChange: (categoryIds: string[]) => void;
-}
-
-function CategoriesCell({
-  categoryIds,
-  categories,
-  onChange,
-}: CategoriesCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
-
-  const toggleCategory = (categoryId: string) => {
-    if (categoryIds.includes(categoryId)) {
-      onChange(categoryIds.filter((id) => id !== categoryId));
-    } else {
-      onChange([...categoryIds, categoryId]);
-    }
-  };
-
-  const selectedCategories = categories.filter((c) =>
-    categoryIds.includes(c._id)
-  );
-
-  if (isEditing) {
-    return (
-      <div className="min-w-[200px] space-y-2">
-        <div className="flex max-h-[150px] flex-wrap gap-1 overflow-y-auto">
-          {categories
-            .filter((c) => c.isActive)
-            .map((category) => {
-              const isSelected = categoryIds.includes(category._id);
-              return (
-                <button
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 font-medium text-xs transition-colors ${
-                    isSelected
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "border border-input bg-background hover:bg-accent hover:text-accent-foreground"
-                  }`}
-                  key={category._id}
-                  onClick={() => toggleCategory(category._id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      toggleCategory(category._id);
-                    }
-                  }}
-                  type="button"
-                >
-                  {isSelected && <Check className="mr-1 h-3 w-3" />}
-                  {category.name}
-                </button>
-              );
-            })}
-        </div>
-        <Button
-          className="h-6 px-2 text-xs"
-          onClick={() => setIsEditing(false)}
-          size="sm"
-          variant="ghost"
-        >
-          <Check className="mr-1 h-3 w-3" />
-          Done
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <button
-      className="flex min-w-[120px] cursor-pointer flex-wrap gap-1 text-left hover:opacity-70"
-      onClick={() => setIsEditing(true)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          setIsEditing(true);
-        }
-      }}
-      type="button"
-    >
-      {selectedCategories.length === 0 ? (
-        <span className="text-[var(--admin-text-muted)] text-xs italic">
-          Click to select...
-        </span>
-      ) : (
-        selectedCategories.map((cat) => (
-          <Badge className="text-xs" key={cat._id} variant="secondary">
-            {cat.name}
-          </Badge>
-        ))
-      )}
-    </button>
-  );
-}
-
-interface ChangesConfirmationDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  changes: GestureChange[];
-  isSubmitting: boolean;
-}
-
-interface GestureChange {
-  gesture: Gesture;
-  changes: Record<string, { old: unknown; new: unknown }>;
-}
-
-function ChangesConfirmationDialog({
-  isOpen,
-  onClose,
-  onConfirm,
-  changes,
-  isSubmitting,
-}: ChangesConfirmationDialogProps) {
-  return (
-    <Dialog onOpenChange={onClose} open={isOpen}>
-      <DialogContent className="flex max-h-[80vh] max-w-3xl flex-col overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Save className="h-5 w-5 text-[var(--admin-accent)]" />
-            Confirm Changes
-          </DialogTitle>
-          <DialogDescription>
-            Review all the changes before saving. {changes.length} gesture
-            {changes.length !== 1 ? "s" : ""} will be updated.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex-1 space-y-4 overflow-y-auto py-4">
-          {changes.map(({ gesture, changes: gestureChanges }) => (
-            <div
-              className="rounded-lg border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4"
-              key={gesture._id}
-            >
-              <h4 className="mb-2 font-semibold text-[var(--admin-text)]">
-                {gesture.name}
-              </h4>
-              <div className="space-y-2">
-                {Object.entries(gestureChanges).map(
-                  ([field, { old, new: newValue }]) => (
-                    <div className="text-sm" key={field}>
-                      <span className="font-medium text-[var(--admin-text-muted)] capitalize">
-                        {field}:
-                      </span>
-                      <div className="mt-1 ml-4 space-y-1">
-                        <div className="flex items-start gap-2">
-                          <span className="text-[var(--admin-text-muted)]">
-                            →
-                          </span>
-                          <span className="text-[var(--admin-error)] line-through">
-                            {Array.isArray(old)
-                              ? old.join(", ") || "(empty)"
-                              : String(old) || "(empty)"}
-                          </span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="text-[var(--admin-accent)]">→</span>
-                          <span className="font-medium text-[var(--admin-success)]">
-                            {Array.isArray(newValue)
-                              ? newValue.join(", ") || "(empty)"
-                              : String(newValue) || "(empty)"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <DialogFooter className="border-[var(--admin-border)] border-t pt-4">
-          <Button disabled={isSubmitting} onClick={onClose} variant="outline">
-            Cancel
-          </Button>
-          <Button className="gap-2" disabled={isSubmitting} onClick={onConfirm}>
-            {isSubmitting ? (
-              <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                Save All Changes
-              </>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
+/**
+ * Inline-editable gesture admin table.
+ *
+ * All changes are buffered locally via `useGestureTableEditing` until the
+ * admin explicitly saves. The confirmation dialog shows a diff before committing.
+ */
 export function AdminTable() {
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showInactiveOnly, setShowInactiveOnly] = useState(false);
-  const [editingCell, setEditingCell] = useState<{
-    gestureId: string;
-    field: string;
-  } | null>(null);
-  const [pendingChanges, setPendingChanges] = useState<
-    Record<string, Partial<Gesture>>
-  >({});
-  const [showConfirmation, setShowConfirmation] = useState(false);
+  const { searchQuery, setSearchQuery } = useAdminFilters();
+  const [localShowInactiveOnly, setLocalShowInactiveOnly] = useState(false);
 
   const { data: gestures, isLoading } = useQuery(
     orpc.admin.gestures.listAll.queryOptions({
@@ -448,7 +75,10 @@ export function AdminTable() {
 
   const bulkUpdateMutation = useMutation({
     mutationFn: async (
-      changes: { gestureId: string; updates: Partial<Gesture> }[]
+      changes: {
+        gestureId: string;
+        updates: Partial<AdminGesture>;
+      }[]
     ) => {
       const results: { success: boolean }[] = [];
       for (const change of changes) {
@@ -463,8 +93,7 @@ export function AdminTable() {
     },
     onSuccess: () => {
       toast.success("All changes saved successfully");
-      setPendingChanges({});
-      setShowConfirmation(false);
+      editing.clearAfterSave();
       queryClient.invalidateQueries({
         queryKey: orpc.admin.gestures.listAll.queryOptions({
           includeInactive: true,
@@ -477,97 +106,40 @@ export function AdminTable() {
     },
   });
 
-  const getGestureWithChanges = (gesture: Gesture): Gesture => {
-    return {
-      ...gesture,
-      ...pendingChanges[gesture._id],
-    };
-  };
+  const editing = useGestureTableEditing({
+    gestures,
+    onSave: (changes) => bulkUpdateMutation.mutate(changes),
+  });
 
-  const updatePendingChange = (
-    gestureId: string,
-    field: keyof Gesture,
-    value: unknown
-  ) => {
-    setPendingChanges((prev) => ({
-      ...prev,
-      [gestureId]: {
-        ...prev[gestureId],
-        [field]: value,
-      },
-    }));
-  };
+  // ─── Filter logic ─────────────────────────────────────────────────────────
 
-  const hasChanges = Object.keys(pendingChanges).length > 0;
-
-  const getChangesForConfirmation = (): GestureChange[] => {
-    return Object.entries(pendingChanges).map(([gestureId, changes]) => {
-      const originalGesture = gestures?.find((g) => g._id === gestureId);
-      const gestureChanges: Record<string, { old: unknown; new: unknown }> = {};
-
-      for (const [field, newValue] of Object.entries(changes)) {
-        const oldValue = originalGesture?.[field as keyof Gesture];
-        if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-          gestureChanges[field] = { old: oldValue, new: newValue };
-        }
-      }
-
-      return {
-        gesture: originalGesture!,
-        changes: gestureChanges,
-      };
-    });
-  };
-
-  const handleSaveChanges = () => {
-    const changes = Object.entries(pendingChanges).map(
-      ([gestureId, updates]) => ({
-        gestureId,
-        updates,
-      })
-    );
-    bulkUpdateMutation.mutate(changes);
-  };
-
-  const discardChanges = () => {
-    setPendingChanges({});
-    toast.info("Changes discarded");
-  };
-
-  // Filter gestures
   const filteredGestures = useMemo(() => {
     if (!gestures) {
       return [];
     }
-
     let filtered = gestures;
-
-    if (showInactiveOnly) {
+    if (localShowInactiveOnly) {
       filtered = filtered.filter((g) => !g.isActive);
     }
-
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (gesture) =>
-          gesture.name.toLowerCase().includes(query) ||
-          gesture.info.toLowerCase().includes(query) ||
-          gesture.concept.some((c) => c.toLowerCase().includes(query))
+        (g) =>
+          g.name.toLowerCase().includes(q) ||
+          g.info.toLowerCase().includes(q) ||
+          g.concept.some((c) => c.toLowerCase().includes(q))
       );
     }
-
     return filtered;
-  }, [gestures, searchQuery, showInactiveOnly]);
+  }, [gestures, searchQuery, localShowInactiveOnly]);
 
-  // Stats
   const stats = useMemo(() => {
     if (!gestures) {
       return { total: 0, active: 0, inactive: 0 };
     }
     const total = gestures.length;
     const active = gestures.filter((g) => g.isActive).length;
-    const inactive = total - active;
-    return { total, active, inactive };
+    return { total, active, inactive: total - active };
   }, [gestures]);
 
   if (isLoading) {
@@ -585,7 +157,7 @@ export function AdminTable() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Header with stats */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
@@ -615,20 +187,23 @@ export function AdminTable() {
         </div>
 
         <div className="flex items-center gap-2">
-          {hasChanges && (
+          {editing.hasChanges && (
             <>
               <Button
                 className="gap-2"
-                onClick={discardChanges}
+                onClick={() => {
+                  editing.discardChanges();
+                  toast.info("Changes discarded");
+                }}
                 size="sm"
                 variant="outline"
               >
                 <X className="h-4 w-4" />
-                Discard ({Object.keys(pendingChanges).length})
+                Discard ({editing.pendingCount})
               </Button>
               <Button
                 className="gap-2"
-                onClick={() => setShowConfirmation(true)}
+                onClick={() => editing.setShowConfirmation(true)}
                 size="sm"
               >
                 <Save className="h-4 w-4" />
@@ -652,17 +227,17 @@ export function AdminTable() {
           />
         </div>
         <Button
-          className={`h-10 gap-2 ${showInactiveOnly ? "bg-[var(--admin-accent)] text-white hover:bg-[var(--admin-accent-dark)]" : ""}`}
-          onClick={() => setShowInactiveOnly(!showInactiveOnly)}
+          className={`h-10 gap-2 ${localShowInactiveOnly ? "bg-[var(--admin-accent)] text-white hover:bg-[var(--admin-accent-dark)]" : ""}`}
+          onClick={() => setLocalShowInactiveOnly(!localShowInactiveOnly)}
           size="sm"
-          variant={showInactiveOnly ? "default" : "outline"}
+          variant={localShowInactiveOnly ? "default" : "outline"}
         >
           <Filter className="h-4 w-4" />
-          {showInactiveOnly ? "Showing Hidden" : "Show Hidden"}
+          {localShowInactiveOnly ? "Showing Hidden" : "Show Hidden"}
           {stats.inactive > 0 && (
             <Badge
               className="ml-1"
-              variant={showInactiveOnly ? "secondary" : "outline"}
+              variant={localShowInactiveOnly ? "secondary" : "outline"}
             >
               {stats.inactive}
             </Badge>
@@ -710,21 +285,21 @@ export function AdminTable() {
                 </TableRow>
               ) : (
                 filteredGestures.map((gesture) => {
-                  const displayGesture = getGestureWithChanges(gesture);
-                  const hasPendingChanges = !!pendingChanges[gesture._id];
+                  const display = editing.getGestureWithChanges(gesture);
+                  const isPending = !!editing.pendingChanges[gesture._id];
 
                   return (
                     <TableRow
-                      className={`group ${hasPendingChanges ? "bg-[var(--admin-accent)]/5" : ""} ${displayGesture.isActive ? "" : "opacity-60"}`}
+                      className={`group ${isPending ? "bg-[var(--admin-accent)]/5" : ""} ${display.isActive ? "" : "opacity-60"}`}
                       key={gesture._id}
                     >
-                      {/* Active Toggle */}
+                      {/* Active toggle */}
                       <TableCell>
                         <Switch
-                          checked={displayGesture.isActive}
+                          checked={display.isActive}
                           className="scale-75"
                           onCheckedChange={(checked) =>
-                            updatePendingChange(
+                            editing.updateField(
                               gesture._id,
                               "isActive",
                               checked
@@ -735,20 +310,20 @@ export function AdminTable() {
 
                       {/* Name */}
                       <TableCell className="font-medium">
-                        {editingCell?.gestureId === gesture._id &&
-                        editingCell?.field === "name" ? (
+                        {editing.editingCell?.gestureId === gesture._id &&
+                        editing.editingCell.field === "name" ? (
                           <EditableCell
-                            onBlur={() => setEditingCell(null)}
-                            onChange={(value) =>
-                              updatePendingChange(gesture._id, "name", value)
+                            onBlur={() => editing.setEditingCell(null)}
+                            onChange={(v) =>
+                              editing.updateField(gesture._id, "name", v)
                             }
-                            value={displayGesture.name}
+                            value={display.name}
                           />
                         ) : (
                           <button
                             className="text-left hover:text-[var(--admin-accent)]"
                             onClick={() =>
-                              setEditingCell({
+                              editing.setEditingCell({
                                 gestureId: gesture._id,
                                 field: "name",
                               })
@@ -756,7 +331,7 @@ export function AdminTable() {
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                                setEditingCell({
+                                editing.setEditingCell({
                                   gestureId: gesture._id,
                                   field: "name",
                                 });
@@ -764,7 +339,7 @@ export function AdminTable() {
                             }}
                             type="button"
                           >
-                            {displayGesture.name}
+                            {display.name}
                           </button>
                         )}
                       </TableCell>
@@ -772,14 +347,10 @@ export function AdminTable() {
                       {/* Categories */}
                       <TableCell>
                         <CategoriesCell
-                          categories={categories || []}
-                          categoryIds={displayGesture.categoryIds}
-                          onChange={(categoryIds) =>
-                            updatePendingChange(
-                              gesture._id,
-                              "categoryIds",
-                              categoryIds
-                            )
+                          categories={categories ?? []}
+                          categoryIds={display.categoryIds}
+                          onChange={(ids) =>
+                            editing.updateField(gesture._id, "categoryIds", ids)
                           }
                         />
                       </TableCell>
@@ -787,34 +358,30 @@ export function AdminTable() {
                       {/* Concepts */}
                       <TableCell>
                         <ConceptsCell
-                          concepts={displayGesture.concept}
-                          onChange={(concepts) =>
-                            updatePendingChange(
-                              gesture._id,
-                              "concept",
-                              concepts
-                            )
+                          concepts={display.concept}
+                          onChange={(c) =>
+                            editing.updateField(gesture._id, "concept", c)
                           }
                         />
                       </TableCell>
 
-                      {/* Info/Description */}
+                      {/* Description */}
                       <TableCell>
-                        {editingCell?.gestureId === gesture._id &&
-                        editingCell?.field === "info" ? (
+                        {editing.editingCell?.gestureId === gesture._id &&
+                        editing.editingCell.field === "info" ? (
                           <EditableCell
                             multiline
-                            onBlur={() => setEditingCell(null)}
-                            onChange={(value) =>
-                              updatePendingChange(gesture._id, "info", value)
+                            onBlur={() => editing.setEditingCell(null)}
+                            onChange={(v) =>
+                              editing.updateField(gesture._id, "info", v)
                             }
-                            value={displayGesture.info}
+                            value={display.info}
                           />
                         ) : (
                           <button
                             className="line-clamp-2 max-w-[300px] text-left text-sm hover:text-[var(--admin-accent)]"
                             onClick={() =>
-                              setEditingCell({
+                              editing.setEditingCell({
                                 gestureId: gesture._id,
                                 field: "info",
                               })
@@ -822,7 +389,7 @@ export function AdminTable() {
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                                setEditingCell({
+                                editing.setEditingCell({
                                   gestureId: gesture._id,
                                   field: "info",
                                 });
@@ -830,7 +397,7 @@ export function AdminTable() {
                             }}
                             type="button"
                           >
-                            {displayGesture.info || (
+                            {display.info || (
                               <span className="text-[var(--admin-text-muted)] italic">
                                 Click to add description...
                               </span>
@@ -841,25 +408,21 @@ export function AdminTable() {
 
                       {/* Playback ID */}
                       <TableCell>
-                        {editingCell?.gestureId === gesture._id &&
-                        editingCell?.field === "playbackId" ? (
+                        {editing.editingCell?.gestureId === gesture._id &&
+                        editing.editingCell.field === "playbackId" ? (
                           <EditableCell
                             className="font-mono text-xs"
-                            onBlur={() => setEditingCell(null)}
-                            onChange={(value) =>
-                              updatePendingChange(
-                                gesture._id,
-                                "playbackId",
-                                value
-                              )
+                            onBlur={() => editing.setEditingCell(null)}
+                            onChange={(v) =>
+                              editing.updateField(gesture._id, "playbackId", v)
                             }
-                            value={displayGesture.playbackId}
+                            value={display.playbackId}
                           />
                         ) : (
                           <button
                             className="rounded bg-[var(--admin-bg)] px-2 py-1 font-mono text-xs hover:text-[var(--admin-accent)]"
                             onClick={() =>
-                              setEditingCell({
+                              editing.setEditingCell({
                                 gestureId: gesture._id,
                                 field: "playbackId",
                               })
@@ -867,7 +430,7 @@ export function AdminTable() {
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                                setEditingCell({
+                                editing.setEditingCell({
                                   gestureId: gesture._id,
                                   field: "playbackId",
                                 });
@@ -875,7 +438,7 @@ export function AdminTable() {
                             }}
                             type="button"
                           >
-                            {displayGesture.playbackId.slice(0, 12)}...
+                            {display.playbackId.slice(0, 12)}...
                           </button>
                         )}
                       </TableCell>
@@ -888,13 +451,13 @@ export function AdminTable() {
         </div>
       </div>
 
-      {/* Confirmation Dialog */}
+      {/* Confirmation dialog */}
       <ChangesConfirmationDialog
-        changes={getChangesForConfirmation()}
-        isOpen={showConfirmation}
+        changes={editing.getChangesForConfirmation()}
+        isOpen={editing.showConfirmation}
         isSubmitting={bulkUpdateMutation.isPending}
-        onClose={() => setShowConfirmation(false)}
-        onConfirm={handleSaveChanges}
+        onClose={() => editing.setShowConfirmation(false)}
+        onConfirm={editing.handleSave}
       />
     </div>
   );
