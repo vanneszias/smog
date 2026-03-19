@@ -13,6 +13,7 @@ COPY packages/config/package.json  ./packages/config/
 COPY packages/convex/package.json  ./packages/convex/
 COPY packages/hooks/package.json   ./packages/hooks/
 COPY packages/i18n/package.json    ./packages/i18n/
+COPY packages/shared/package.json    ./packages/shared/
 COPY packages/styles/package.json  ./packages/styles/
 COPY packages/types/package.json   ./packages/types/
 COPY packages/ui/package.json      ./packages/ui/
