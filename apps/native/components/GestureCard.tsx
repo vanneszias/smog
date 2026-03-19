@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BORDER_RADIUS, ICON_SIZE, SHADOWS, SPACING } from "@smog/styles";
 import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
-import { useEffect, useImperativeHandle, useRef } from "react";
+import { memo, useEffect, useImperativeHandle, useRef } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -297,4 +297,12 @@ const styles = StyleSheet.create({
   },
 });
 
-export default GestureCard;
+/**
+ * Memoised export — prevents unnecessary re-renders when the parent
+ * (e.g. a FlatList) re-renders but the gesture data and callbacks haven't changed.
+ *
+ * The comparison is shallow by default. Because `gesture` is an object, the
+ * parent should avoid creating new gesture references on each render (use
+ * `useMemo` or stable references from the gesture service).
+ */
+export default memo(GestureCard);

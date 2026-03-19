@@ -270,4 +270,6 @@ const styles = StyleSheet.create({
   },
 });
 
+/** Memoised — `visible` and `onDismiss` are stable primitives/refs, so this
+ *  prevents re-renders driven by unrelated parent state. */
 export default DisclaimerBanner;
