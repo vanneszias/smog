@@ -1,7 +1,10 @@
+import { createLogger } from "@smog/shared";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { useAuth } from "@/lib/auth";
 import { client } from "@/utils/orpc";
+
+const logger = createLogger("admin");
 
 export const Route = createFileRoute("/admin")({
   component: RouteComponent,
@@ -10,7 +13,7 @@ export const Route = createFileRoute("/admin")({
     try {
       await client.admin.verifyAdmin();
     } catch (error) {
-      console.error("Admin verification failed:", error);
+      logger.error("Admin verification failed:", error);
       throw redirect({
         to: "/",
       });

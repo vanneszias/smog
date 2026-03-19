@@ -19,6 +19,7 @@ import {
   useState,
 } from "react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import logger from "@/utils/logger";
 import { useAuth } from "./AuthProvider";
 
 const GUEST_ID_KEY = "@smog_guest_id";
@@ -80,7 +81,7 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
           : await createUser({ workosId });
         setUserId(newUserId);
       } catch (error) {
-        console.error("[ConvexUserSync] Failed to sync user:", error);
+        logger.error("[ConvexUserSync] Failed to sync user:", error);
       } finally {
         setIsInitializing(false);
       }
@@ -106,7 +107,7 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
         const newUserId = await createUser({ guestId });
         setUserId(newUserId);
       } catch (error) {
-        console.error("[ConvexUserSync] Failed to create guest:", error);
+        logger.error("[ConvexUserSync] Failed to create guest:", error);
       } finally {
         setIsInitializing(false);
       }

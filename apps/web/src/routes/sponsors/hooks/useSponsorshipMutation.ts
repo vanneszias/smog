@@ -6,9 +6,13 @@
  * so the wizard step components remain focused on UI only.
  */
 
+import { createLogger } from "@smog/shared";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { client } from "@/utils/orpc";
+
+const logger = createLogger("useSponsorshipMutation");
+
 import {
   createProgressTicker,
   readFileAsBase64,
@@ -90,7 +94,7 @@ export function useGeneratePreview({
         clearInterval(progressInterval);
       }
     } catch (error) {
-      console.error("[Sponsors] Failed to generate preview:", error);
+      logger.error("Failed to generate preview", error);
       toast.error(t("web.sponsors.wizard.errors.previewFailed"));
     } finally {
       form.setIsGeneratingPreview(false);
@@ -174,7 +178,7 @@ export function useCreateSponsorship({
 
       window.location.href = payment.checkoutUrl;
     } catch (error) {
-      console.error("Failed to create sponsorships:", error);
+      logger.error("Failed to create sponsorships", error);
       toast.error(t("web.sponsors.wizard.errors.paymentFailed"));
       clearInterval(progressInterval);
       form.setIsProcessing(false);

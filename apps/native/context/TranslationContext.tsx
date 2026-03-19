@@ -3,6 +3,7 @@ import { createContext, useContext } from "react";
 import { useTranslation as useI18nTranslation } from "react-i18next";
 import type { Language } from "@/utils/i18n";
 import { AVAILABLE_LANGUAGES } from "@/utils/i18n";
+import logger from "@/utils/logger";
 
 // Define context type
 interface TranslationContextType {
@@ -29,7 +30,7 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       await i18nInstance.changeLanguage(newLanguage);
     } catch (error) {
-      console.error("Failed to change language:", error);
+      logger.error("Failed to change language:", error);
     }
   };
 

@@ -16,7 +16,7 @@ import {
   trackFavoriteRemoved,
   trackGestureLiked,
   trackGestureUnliked,
-} from "@/services/analyticsService";
+} from "@/services/analytics";
 import type { Gesture } from "@/types";
 import { typography } from "@/utils/typography";
 

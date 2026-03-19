@@ -1,3 +1,4 @@
+import { createLogger } from "@smog/shared";
 import {
   createContext,
   useCallback,
@@ -11,6 +12,8 @@ import { toast } from "sonner";
 import { client } from "../utils/orpc";
 import { useAuth } from "./auth";
 import { useConvexUserId } from "./convex-user-sync";
+
+const logger = createLogger("favoritesContext");
 
 interface FavoritesContextType {
   favoriteIds: string[];
@@ -43,7 +46,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       const ids = await client.favorites.getUserFavorites({ convexUserId });
       setFavoriteIds(ids);
     } catch (error) {
-      console.error("Failed to fetch favorites:", error);
+      logger.error("Failed to fetch favorites:", error);
       toast.error(t("web.favorites.failedToLoad"));
     } finally {
       setIsLoading(false);
@@ -97,7 +100,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
           );
         }
       } catch (error) {
-        console.error("Failed to toggle favorite:", error);
+        logger.error("Failed to toggle favorite:", error);
         toast.error(t("web.favorites.failedToUpdate"));
       }
     },

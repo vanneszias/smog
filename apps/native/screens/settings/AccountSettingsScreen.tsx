@@ -25,7 +25,8 @@ import {
   disableAnalytics,
   enableAnalytics,
   isAnalyticsActive,
-} from "@/services/analyticsService";
+} from "@/services/analytics";
+import logger from "@/utils/logger";
 
 export default function AccountSettingsScreen() {
   const { user, signOut } = useAuth();
@@ -63,14 +64,14 @@ export default function AccountSettingsScreen() {
             await updateConsent({ analyticsConsent: value });
           } catch (syncError) {
             // Log but don't fail the entire operation if server sync fails
-            console.warn(
+            logger.warn(
               "[AccountSettings] Failed to sync consent to server:",
               syncError
             );
           }
         }
       } catch (error) {
-        console.error(
+        logger.error(
           "[AccountSettings] Failed to update analytics consent:",
           error
         );
@@ -107,7 +108,7 @@ export default function AccountSettingsScreen() {
         });
       }
     } catch (error) {
-      console.error("[AccountSettings] Failed to export data:", error);
+      logger.error("[AccountSettings] Failed to export data:", error);
     } finally {
       setIsExporting(false);
     }
@@ -129,7 +130,7 @@ export default function AccountSettingsScreen() {
               await signOut();
               router.replace("/welcome");
             } catch (error) {
-              console.error("[AccountSettings] Failed to sign out:", error);
+              logger.error("[AccountSettings] Failed to sign out:", error);
             } finally {
               setIsSigningOut(false);
             }
@@ -170,7 +171,7 @@ export default function AccountSettingsScreen() {
 
               router.replace("/welcome");
             } catch (error) {
-              console.error(
+              logger.error(
                 "[AccountSettings] Failed to delete account:",
                 error
               );

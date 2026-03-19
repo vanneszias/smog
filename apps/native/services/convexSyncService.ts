@@ -29,7 +29,7 @@ import {
 import type { SyncResult } from "@smog/types";
 import type { ConvexReactClient } from "convex/react";
 import { convexService } from "@/services/convexService";
-import { databaseService } from "@/services/databaseService";
+import { databaseService } from "@/services/database";
 import { NetworkService } from "@/services/networkService";
 import logger from "@/utils/logger";
 

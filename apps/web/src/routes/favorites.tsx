@@ -1,3 +1,4 @@
+import { createLogger } from "@smog/shared";
 import type { GestureCardData } from "@smog/ui";
 import { GestureList } from "@smog/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -8,6 +9,8 @@ import { useAuth } from "@/lib/auth";
 import { useConvexUserId } from "@/lib/convex-user-sync";
 import { useFavorites } from "@/lib/favorites-context";
 import { client } from "@/utils/orpc";
+
+const logger = createLogger("favorites");
 
 export const Route = createFileRoute("/favorites")({
   component: FavoritesComponent,
@@ -39,7 +42,7 @@ function FavoritesComponent() {
         });
         setFavoriteGestures(gestures);
       } catch (error) {
-        console.error("Failed to load favorite gestures:", error);
+        logger.error("Failed to load favorite gestures:", error);
       } finally {
         setIsLoading(false);
       }

@@ -1,6 +1,7 @@
 import type { NetInfoState } from "@react-native-community/netinfo";
 import { useCallback, useEffect, useState } from "react";
 import { networkService } from "@/services/networkService";
+import logger from "@/utils/logger";
 
 interface NetworkStatus {
   isConnected: boolean;
@@ -73,7 +74,7 @@ export const useNetworkStatus = () => {
       updateStatus();
       return state.isConnected && state.isInternetReachable;
     } catch (error) {
-      console.error("Error checking connectivity:", error);
+      logger.error("Error checking connectivity:", error);
       return false;
     }
   }, [updateStatus]);

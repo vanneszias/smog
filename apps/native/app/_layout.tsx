@@ -24,12 +24,14 @@ import "@/utils/i18n";
 
 // PostHog
 import { PostHogProvider, PostHogSurveyProvider } from "posthog-react-native";
-import posthog, {
+import {
   autocaptureConfig,
   initializeAnalytics,
+  posthog,
   trackAppBackgrounded,
   trackAppOpened,
-} from "@/services/analyticsService";
+} from "@/services/analytics";
+import logger from "@/utils/logger";
 
 // Regex patterns for app state detection
 const INACTIVE_OR_BACKGROUND_REGEX = /inactive|background/;
@@ -148,7 +150,7 @@ function RootLayoutNav() {
 
   // Only log when auth mode actually changes
   if (prevAuthMode.current !== authMode) {
-    console.log(
+    logger.log(
       "RootLayoutNav - authMode changed:",
       prevAuthMode.current,
       "->",
@@ -162,14 +164,14 @@ function RootLayoutNav() {
     if (!(isLoading || hasNavigated)) {
       if (isAuthenticated || isGuest) {
         if (dbReady) {
-          console.log(
+          logger.log(
             "User is authenticated/guest and db is ready - initial navigation to tabs"
           );
           router.replace("/(tabs)");
           setHasNavigated(true);
         }
       } else {
-        console.log("User is not authenticated - initial navigation to auth");
+        logger.log("User is not authenticated - initial navigation to auth");
         router.replace("/welcome");
         setHasNavigated(true);
       }
@@ -191,7 +193,7 @@ function RootLayoutNav() {
       !hasNavigated &&
       !isLoading
     ) {
-      console.log("DB became ready - navigating to tabs");
+      logger.log("DB became ready - navigating to tabs");
       router.replace("/(tabs)");
       setHasNavigated(true);
     }

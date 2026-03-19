@@ -2,6 +2,7 @@ import { addScreenshotListener } from "expo-screen-capture";
 import { useEffect } from "react";
 import { Alert, Platform, Share } from "react-native";
 import { useTranslation } from "@/context/TranslationContext";
+import logger from "@/utils/logger";
 
 interface UseScreenshotDetectionOptions {
   gestureId: string | null;
@@ -50,7 +51,7 @@ export const useScreenshotDetection = ({
                   }),
                 });
               } catch (error) {
-                console.error("Error sharing:", error);
+                logger.error("Error sharing:", error);
               }
             },
           },

@@ -1,4 +1,5 @@
 import { api } from "@smog/convex";
+import { createLogger } from "@smog/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
 import { Download, Loader2, Settings, Trash2, User } from "lucide-react";
@@ -19,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { onConsentChange } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth";
+
+const logger = createLogger("account");
 
 export const Route = createFileRoute("/account")({
   component: AccountPage,
@@ -105,7 +108,7 @@ function AccountContent() {
           : t("web.account.toast.analyticsDisabled")
       );
     } catch (error) {
-      console.error("Failed to update consent:", error);
+      logger.error("Failed to update consent:", error);
       toast.error(t("web.account.toast.analyticsUpdateFailed"));
     }
   };
@@ -145,7 +148,7 @@ function AccountContent() {
 
       toast.success(t("web.account.toast.exportSuccess"));
     } catch (error) {
-      console.error("Failed to export data:", error);
+      logger.error("Failed to export data:", error);
       toast.error(t("web.account.toast.exportFailed"));
     } finally {
       setIsExporting(false);
@@ -165,7 +168,7 @@ function AccountContent() {
       // Sign out and redirect
       signOut();
     } catch (error) {
-      console.error("Failed to delete account:", error);
+      logger.error("Failed to delete account:", error);
       toast.error(t("web.account.toast.deleteFailed"));
       setIsDeleting(false);
     }

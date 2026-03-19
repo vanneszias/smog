@@ -39,7 +39,6 @@ function GesturesComponent() {
   // Re-check on mount to handle SSR
   useEffect(() => {
     const isMobile = isMobileDevice();
-    console.log("Setting showOpenInApp to:", isMobile);
     setShowOpenInApp(isMobile);
   }, []);
 

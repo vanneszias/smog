@@ -17,7 +17,7 @@ import {
   trackVideoPlaybackPaused,
   trackVideoPlaybackStarted,
   trackVideoPlayerOpened,
-} from "@/services/analyticsService";
+} from "@/services/analytics";
 
 interface UseVideoAnalyticsOptions {
   gestureId?: string;
