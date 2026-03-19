@@ -90,8 +90,12 @@ export function formatSponsorshipDate(
  * @param endDate - End Unix timestamp (ms).
  * @returns E.g. "18/3/2026 – 18/3/2027".
  */
-export function formatDateRange(startDate: number, endDate: number): string {
-  const start = startDate > 0 ? formatSponsorshipDate(startDate) : "–";
-  const end = formatSponsorshipDate(endDate);
+export function formatDateRange(
+  startDate: number,
+  endDate: number,
+  locale = "nl-BE"
+): string {
+  const start = startDate > 0 ? formatSponsorshipDate(startDate, locale) : "–";
+  const end = formatSponsorshipDate(endDate, locale);
   return `${start} – ${end}`;
 }

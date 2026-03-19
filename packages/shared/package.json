@@ -10,10 +10,13 @@
     "./errors": "./src/errorHandler.ts"
   },
   "scripts": {
-    "check-types": "tsc -b"
+    "check-types": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "typescript": "^5.8.2",
-    "@smog/config": "workspace:*"
+    "@smog/config": "workspace:*",
+    "vitest": "^2.0.0"
   }
 }

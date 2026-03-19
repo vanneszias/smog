@@ -12,13 +12,16 @@
   "scripts": {
     "codegen": "convex codegen",
     "dev": "convex dev",
-    "deploy": "convex deploy"
+    "deploy": "convex deploy",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "convex": "^1.31.0"
   },
   "devDependencies": {
     "@smog/config": "workspace:*",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^2.0.0"
   }
 }
