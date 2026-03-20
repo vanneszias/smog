@@ -53,8 +53,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-web:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-web:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
           build-args: |
             VITE_SERVER_URL=https://app.smog.vlaanderen/api
             VITE_WORKOS_CLIENT_ID=${{ secrets.VITE_WORKOS_CLIENT_ID }}
@@ -99,8 +99,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-server:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-server:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
 
   build-remotion:
     runs-on: ubuntu-latest
@@ -138,5 +138,5 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-remotion:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-remotion:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
