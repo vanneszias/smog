@@ -3,7 +3,12 @@
  * Replaces the FFmpeg-based video-worker with Remotion rendering
  */
 
-import "dotenv/config";
+import { resolve } from "node:path";
+import { config } from "dotenv";
+
+// Load env vars from root .env (shared across all apps)
+config({ path: resolve(import.meta.dirname, "../../../../.env") });
+
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";

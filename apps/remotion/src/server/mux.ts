@@ -5,21 +5,18 @@
 import * as fs from "node:fs/promises";
 import Mux from "@mux/mux-node";
 
-const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID || "";
-const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET || "";
-const SERVER_URL = process.env.SERVER_URL || "http://localhost:3000";
-const REMOTION_API_KEY = process.env.REMOTION_API_KEY || "dev-secret-key";
-
 let muxClient: Mux | null = null;
 
 function getMuxClient(): Mux {
   if (!muxClient) {
-    if (!(MUX_TOKEN_ID && MUX_TOKEN_SECRET)) {
+    const tokenId = process.env.MUX_TOKEN_ID;
+    const tokenSecret = process.env.MUX_TOKEN_SECRET;
+    if (!(tokenId && tokenSecret)) {
       throw new Error("MUX_TOKEN_ID and MUX_TOKEN_SECRET must be set");
     }
     muxClient = new Mux({
-      tokenId: MUX_TOKEN_ID,
-      tokenSecret: MUX_TOKEN_SECRET,
+      tokenId,
+      tokenSecret,
     });
   }
   return muxClient;
@@ -32,11 +29,13 @@ function getMuxClient(): Mux {
 export async function getVideoSourceUrl(playbackId: string): Promise<string> {
   console.log(`[Mux] Getting source URL for playback ID: ${playbackId}`);
 
-  const response = await fetch(`${SERVER_URL}/api/video/master-access`, {
+  const serverUrl = process.env.SERVER_URL || "http://localhost:3000";
+  const apiKey = process.env.REMOTION_API_KEY || "dev-secret-key";
+  const response = await fetch(`${serverUrl}/api/video/master-access`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${REMOTION_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({ playbackId }),
   });
