@@ -39,8 +39,7 @@ WORKDIR /app
 
 RUN apk add --no-cache curl
 
-# Install only the external runtime dependency
-COPY apps/server/package.json ./package.json
+# Install only the external runtime dependency (no workspace/catalog context needed)
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun add nodemailer
 
