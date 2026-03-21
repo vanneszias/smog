@@ -2,7 +2,7 @@
 # Web application (Vite/React → Caddy static file server)
 
 # ── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM oven/bun:1-alpine AS deps
+FROM --platform=$BUILDPLATFORM oven/bun:1-alpine AS deps
 WORKDIR /app
 
 COPY package.json bun.lock bunfig.toml ./
@@ -29,7 +29,7 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
     || (echo "ERROR: required node_modules directories are missing" && exit 1)
 
 # ── Stage 2: builder ─────────────────────────────────────────────────────────
-FROM oven/bun:1-alpine AS builder
+FROM --platform=$BUILDPLATFORM oven/bun:1-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app ./
