@@ -48,7 +48,7 @@ export function EmailLayout({
           {/* ── Branded footer bar ── */}
           <Section style={S.footerBar}>
             <Text style={S.footerBarText}>
-              © {new Date().getFullYear()} SMOG&amp;Co VZW · België
+              © {new Date().getFullYear()} SMOG & CO vzw · België
             </Text>
             <Text style={{ ...S.footerBarText, marginTop: "4px" }}>
               SMOG — Spreken Met Ondersteuning van Gebaren

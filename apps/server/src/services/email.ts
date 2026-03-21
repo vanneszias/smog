@@ -56,11 +56,13 @@ export interface SendEmailOptions {
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
   const from = process.env.SMTP_FROM ?? "Smog <no-reply@smog.app>";
+  const replyTo = process.env.SMTP_REPLY_TO ?? "info@smog.vlaanderen";
   const transporter = getTransporter();
 
   try {
     const info = await transporter.sendMail({
       from,
+      replyTo,
       to: options.to,
       subject: options.subject,
       html: options.html,

@@ -31,10 +31,11 @@ export function WelcomeEmail({ name }: WelcomeEmailProps) {
       <Text style={S.text}>{greeting},</Text>
 
       <Text style={S.text}>
-        Bedankt dat je je hebt aangemeld bij SMOG! We bouwen een platform dat
-        gebarentaal toegankelijker en zichtbaarder maakt. Met jouw account kun
-        je gebaren verkennen, je favorieten bewaren en de gebarentaalgemeenschap
-        ondersteunen via sponsoringen.
+        Bedankt dat je je hebt aangemeld bij SMOG & CO! We bouwen een platform
+        dat SMOG toegankelijker en zichtbaarder maakt. Met jouw account kun je
+        gebaren verkennen, je favorieten bewaren en de SMOG-community
+        ondersteunen door de sponsoring van je favoriete gebaar via{" "}
+        <a href={`${webUrl}/sponsor`}>{webUrl}/sponsor</a>
       </Text>
 
       <Section style={S.buttonSection}>

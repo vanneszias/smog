@@ -43,7 +43,7 @@ export function RenewalReminderEmail({
 
       <Text style={S.text}>
         Dit is een vriendelijke herinnering dat je sponsoring van het gebaar{" "}
-        <strong>{gestureName}</strong> op SMOG afloopt op{" "}
+        <strong>{gestureName}</strong> op de SMOG & CO app afloopt op{" "}
         <strong>{expiryDate}</strong>.
       </Text>
 
@@ -52,21 +52,26 @@ export function RenewalReminderEmail({
         jouw uitstraling niet langer getoond aan bezoekers.
       </Text>
 
-      <Section style={S.buttonSection}>
-        <Button href={webUrl} style={S.button}>
-          Verleng je sponsoring
-        </Button>
-      </Section>
+      <Text style={S.text}>
+        Door de sponsoring te verlengen, blijft het gebaar jouw uitstraling
+        tonen en blijf je ons steunen om SMOG & CO verder uit te bouwen in
+        België.
+      </Text>
 
       <Text style={S.text}>
-        Bedankt voor je steun aan de gebarentaalgemeenschap. We hopen je te
-        mogen blijven verwelkomen als sponsor van {gestureName}!
+        We hopen je te mogen blijven verwelkomen als sponsor van {gestureName}!
       </Text>
+
+      <Section style={S.buttonSection}>
+        <Button href={webUrl} style={S.button}>
+          Verlengen kan via deze link
+        </Button>
+      </Section>
 
       <Hr style={S.hr} />
 
       <Text style={S.footer}>
-        Je ontvangt deze e-mail omdat je sponsoring over ongeveer 30 dagen
+        Je ontvangt deze e-mail omdat je sponsoring over ongeveer 7 dagen
         afloopt. Heb je al verlengd? Dan kun je deze e-mail negeren.
       </Text>
     </EmailLayout>

@@ -28,8 +28,9 @@ export function SponsorshipSubmittedEmail({
 
       <Text style={S.text}>
         Bedankt voor het sponsoren van het gebaar <strong>{gestureName}</strong>{" "}
-        op SMOG! We hebben je aanvraag ontvangen en ons team zal deze binnenkort
-        beoordelen.
+        op SMOG & CO! Dankzij jouw steun kunnen we de app gratis blijven
+        aanbieden voor iedereen. We hebben je aanvraag ontvangen en ons team zal
+        deze binnenkort beoordelen.
       </Text>
 
       <Section style={S.infoBox}>
@@ -52,14 +53,15 @@ export function SponsorshipSubmittedEmail({
       </Section>
 
       <Text style={S.text}>
-        Heb je in de tussentijd vragen? Neem gerust contact met ons op.
+        Heb je in de tussentijd vragen? Neem gerust contact met ons op via{" "}
+        <a href="mailto:info@smog.vlaanderen">info@smog.vlaanderen</a>.
       </Text>
 
       <Hr style={S.hr} />
 
       <Text style={S.footer}>
         Je ontvangt deze e-mail omdat je onlangs een sponsoring hebt ingediend
-        via SMOG.
+        via SMOG & CO.
       </Text>
     </EmailLayout>
   );

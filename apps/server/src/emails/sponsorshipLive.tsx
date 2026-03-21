@@ -48,8 +48,8 @@ export function SponsorshipLiveEmail({
 
       <Text style={S.text}>
         Goed nieuws — je sponsoring voor het gebaar{" "}
-        <strong>{gestureName}</strong> is goedgekeurd en staat nu live op SMOG.
-        Bezoekers die dit gebaar opzoeken, zien nu jouw uitstraling.
+        <strong>{gestureName}</strong> is goedgekeurd en staat nu live op SMOG &
+        CO. Bezoekers die dit gebaar opzoeken, zien nu jouw uitstraling.
       </Text>
 
       <Section style={S.receiptBox}>
@@ -74,15 +74,16 @@ export function SponsorshipLiveEmail({
       </Section>
 
       <Text style={S.text}>
-        Bedankt dat je de gebarentaalgemeenschap ondersteunt via SMOG. Je
-        sponsoring maakt echt een verschil.
+        Bedankt dat je de SMOG-community ondersteunt via een gebaar. Je
+        sponsoring maakt echt een verschil en maakt het voor ons mogelijk om de
+        app gratis aan te bieden voor iedereen.
       </Text>
 
       <Hr style={S.hr} />
 
       <Text style={S.footer}>
         Je ontvangt een herinnering voordat je sponsoring afloopt, zodat je deze
-        eventueel kunt verlengen.
+        eventueel kan verlengen.
       </Text>
     </EmailLayout>
   );
