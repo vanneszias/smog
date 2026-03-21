@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   createProgressTicker,
   readFileAsBase64,
-} from "../routes/sponsors/utils/sponsorshipHelpers";
+} from "../routes/sponsors/utils/-sponsorshipHelpers";
 
 describe("createProgressTicker", () => {
   it("advances progress toward maxProgress", () => {

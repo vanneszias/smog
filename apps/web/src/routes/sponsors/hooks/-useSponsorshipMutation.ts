@@ -16,8 +16,8 @@ const logger = createLogger("useSponsorshipMutation");
 import {
   createProgressTicker,
   readFileAsBase64,
-} from "../utils/sponsorshipHelpers";
-import type { SponsorshipFormState } from "./useSponsorshipForm";
+} from "../utils/-sponsorshipHelpers";
+import type { SponsorshipFormState } from "./-useSponsorshipForm";
 
 // ─── Generate preview ─────────────────────────────────────────────────────────
 

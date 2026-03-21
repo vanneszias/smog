@@ -10,8 +10,8 @@ import { Loader2, Search, X } from "lucide-react";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { PRICE_PER_YEAR_CENTS } from "@/lib/pricing";
-import { SelectionBar } from "./SelectionBar";
-import { SponsorGestureCard } from "./SponsorGestureCard";
+import { SelectionBar } from "./-SelectionBar";
+import { SponsorGestureCard } from "./-SponsorGestureCard";
 
 interface StepSelectProps {
   filteredGestures: GestureWithSponsorshipStatus[];

@@ -12,7 +12,7 @@ import type React from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/pricing";
-import type { SponsorshipFormState } from "../hooks/useSponsorshipForm";
+import type { SponsorshipFormState } from "../hooks/-useSponsorshipForm";
 
 interface StepPreviewProps {
   form: SponsorshipFormState;

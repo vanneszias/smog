@@ -16,7 +16,7 @@ import {
   LOGO_ADDON_CENTS,
   PRICE_PER_YEAR_CENTS,
 } from "@/lib/pricing";
-import type { SponsorshipFormState } from "../hooks/useSponsorshipForm";
+import type { SponsorshipFormState } from "../hooks/-useSponsorshipForm";
 
 interface StepDetailsProps {
   form: SponsorshipFormState;

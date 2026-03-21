@@ -54,7 +54,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: false
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-web:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-web:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}/smog-web:buildcache,mode=max,image-manifest=true,oci-mediatypes=true', env.REGISTRY, env.OWNER) || '' }}
           build-args: |
             VITE_SERVER_URL=https://app.smog.vlaanderen/api
             VITE_WORKOS_CLIENT_ID=${{ secrets.VITE_WORKOS_CLIENT_ID }}
@@ -100,7 +100,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: false
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-server:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-server:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}/smog-server:buildcache,mode=max,image-manifest=true,oci-mediatypes=true', env.REGISTRY, env.OWNER) || '' }}
 
   build-remotion:
     runs-on: ubuntu-latest
@@ -139,4 +139,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: false
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-remotion:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/smog-remotion:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}/{1}/smog-remotion:buildcache,mode=max,image-manifest=true,oci-mediatypes=true', env.REGISTRY, env.OWNER) || '' }}

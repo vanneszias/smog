@@ -11,8 +11,8 @@
  */
 
 import { useCallback, useState } from "react";
-import type { SponsorDetailsErrors } from "../utils/validation";
-import { validateDetails } from "../utils/validation";
+import type { SponsorDetailsErrors } from "../utils/-validation";
+import { validateDetails } from "../utils/-validation";
 
 export type WizardStep = "select" | "details" | "preview";
 

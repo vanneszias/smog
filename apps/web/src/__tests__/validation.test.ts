@@ -9,7 +9,7 @@ import {
   validateDetails,
   validateEmail,
   validateVatNumber,
-} from "../routes/sponsors/utils/validation";
+} from "../routes/sponsors/utils/-validation";
 
 // ─── validateVatNumber ────────────────────────────────────────────────────────
 

@@ -31,14 +31,14 @@ import { useQuery as useConvexQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { calculateSimplifiedPrice } from "@/lib/pricing";
 import { orpc } from "@/utils/orpc";
-import { StepDetails } from "./components/StepDetails";
-import { StepPreview } from "./components/StepPreview";
-import { StepSelect } from "./components/StepSelect";
-import { useSponsorshipForm } from "./hooks/useSponsorshipForm";
+import { StepDetails } from "./components/-StepDetails";
+import { StepPreview } from "./components/-StepPreview";
+import { StepSelect } from "./components/-StepSelect";
+import { useSponsorshipForm } from "./hooks/-useSponsorshipForm";
 import {
   useCreateSponsorship,
   useGeneratePreview,
-} from "./hooks/useSponsorshipMutation";
+} from "./hooks/-useSponsorshipMutation";
 
 // ─── Route definition ─────────────────────────────────────────────────────────
 
