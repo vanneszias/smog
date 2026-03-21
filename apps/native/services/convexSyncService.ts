@@ -1,15 +1,37 @@
+/**
+ * @fileoverview Convex ↔ SQLite sync orchestration service.
+ *
+ * Responsible for keeping the local SQLite database up to date with
+ * the Convex backend. Implements:
+ * - Initial sync on app startup (if data is stale or missing)
+ * - Periodic background sync every {@link SYNC_INTERVAL_MS}
+ * - Network-aware sync (skips on poor connections)
+ * - Exponential back-off retry logic (max {@link MAX_SYNC_RETRIES} attempts)
+ *
+ * Architecture:
+ * ```
+ * AppProviders → convexSyncService.initialize(convexClient)
+ *                    ↓
+ *             convexService (fetch from Convex)
+ *                    ↓
+ *             databaseService (write to SQLite)
+ * ```
+ *
+ * @see databaseService for the SQLite layer
+ * @see convexService for Convex HTTP client usage
+ */
+
+import {
+  MAX_SYNC_RETRIES,
+  SYNC_INTERVAL_MS,
+  SYNC_RETRY_DELAY_MS,
+} from "@smog/config/constants";
+import type { SyncResult } from "@smog/types";
 import type { ConvexReactClient } from "convex/react";
 import { convexService } from "@/services/convexService";
-import { databaseService } from "@/services/databaseService";
+import { databaseService } from "@/services/database";
 import { NetworkService } from "@/services/networkService";
 import logger from "@/utils/logger";
-
-interface SyncResult {
-  success: boolean;
-  synced: number;
-  errors: string[];
-  timestamp: Date;
-}
 
 class ConvexSyncService {
   private static instance: ConvexSyncService;
@@ -20,10 +42,10 @@ class ConvexSyncService {
   private lastSyncAttempt: Date | null = null;
   private syncInterval: ReturnType<typeof setInterval> | null = null;
 
-  // Sync configuration
-  private readonly SYNC_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
-  private readonly SYNC_RETRY_DELAY = 5 * 60 * 1000; // 5 minutes
-  private readonly MAX_SYNC_RETRIES = 3;
+  // Sync configuration — values sourced from @smog/config/constants
+  private readonly syncIntervalMs = SYNC_INTERVAL_MS;
+  private readonly syncRetryDelay = SYNC_RETRY_DELAY_MS;
+  private readonly maxSyncRetries = MAX_SYNC_RETRIES;
 
   static getInstance(): ConvexSyncService {
     if (!ConvexSyncService.instance) {
@@ -66,7 +88,7 @@ class ConvexSyncService {
 
       logger.log("[convexSyncService] Sync service initialized");
     } catch (error) {
-      console.error("[convexSyncService] Failed to initialize:", error);
+      logger.error("[convexSyncService] Failed to initialize:", error);
       throw error;
     } finally {
       this.isInitializing = false;
@@ -141,7 +163,7 @@ class ConvexSyncService {
 
     this.syncInterval = setInterval(() => {
       this.syncIfNeeded();
-    }, this.SYNC_INTERVAL_MS);
+    }, this.syncIntervalMs);
 
     logger.log("[convexSyncService] Periodic sync started");
   }
@@ -213,7 +235,7 @@ class ConvexSyncService {
     const now = new Date();
     const timeSinceLastSync = now.getTime() - lastSync.getTime();
 
-    if (timeSinceLastSync < this.SYNC_INTERVAL_MS) {
+    if (timeSinceLastSync < this.syncIntervalMs) {
       logger.log("[convexSyncService] Sync not needed - within time interval");
       return false;
     }
@@ -311,7 +333,7 @@ class ConvexSyncService {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
     result.errors.push(errorMessage);
-    console.error("[convexSyncService] Sync failed:", error);
+    logger.error("[convexSyncService] Sync failed:", error);
 
     this.scheduleRetryIfPossible();
   }
@@ -321,13 +343,13 @@ class ConvexSyncService {
     if (networkService.isConnected()) {
       setTimeout(() => {
         this.retrySync();
-      }, this.SYNC_RETRY_DELAY);
+      }, this.syncRetryDelay);
     }
   }
 
   private async retrySync(attempt = 1): Promise<void> {
-    if (attempt > this.MAX_SYNC_RETRIES) {
-      console.error("[convexSyncService] Max sync retries exceeded");
+    if (attempt > this.maxSyncRetries) {
+      logger.error("[convexSyncService] Max sync retries exceeded");
       return;
     }
 
@@ -339,7 +361,7 @@ class ConvexSyncService {
       );
       setTimeout(() => {
         this.retrySync(attempt + 1);
-      }, this.SYNC_RETRY_DELAY * attempt); // Exponential backoff
+      }, this.syncRetryDelay * attempt); // Exponential backoff
     }
   }
 
@@ -360,7 +382,7 @@ class ConvexSyncService {
   }> {
     const lastSync = await databaseService.getLastSyncTime();
     const nextSync = lastSync
-      ? new Date(lastSync.getTime() + this.SYNC_INTERVAL_MS)
+      ? new Date(lastSync.getTime() + this.syncIntervalMs)
       : null;
 
     return {

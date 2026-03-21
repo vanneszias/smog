@@ -1,68 +1,62 @@
-# Enable BuildKit for faster builds with cache mounts
-# BuildKit provides better caching, parallelization, and performance
-x-buildkit: &buildkit
-  DOCKER_BUILDKIT: 1
-  BUILDKIT_PROGRESS: plain
-
-# Docker Compose configuration for Smog
+# Docker Compose — Production
 #
-# IMPORTANT: This configuration requires Docker BuildKit for optimized builds
-# Enable it by setting: export DOCKER_BUILDKIT=1
-# Or use: docker compose build --build-arg BUILDKIT_INLINE_CACHE=1
+# Uses pre-built images from the Gitea registry (built by CI).
+# For local development use:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 #
-# BuildKit provides:
-# - Faster builds with cache mounts (10-20x faster subsequent builds)
-# - Better layer caching and parallelization
-# - Progress output with --progress=plain
-#
-# To build with BuildKit: DOCKER_BUILDKIT=1 docker compose build
-# To run: docker compose up --build
+# Requires: REGISTRY_IMAGE_PREFIX env var or defaults to git.zias.be/zias
+# Quick start:
+#   cp .env.example .env   # fill in secrets
+#   docker compose pull
+#   docker compose up -d
 
 services:
-  # Web application with Caddy reverse proxy
   web:
+    image: ${REGISTRY_IMAGE_PREFIX:-git.zias.be/zias}/smog-web:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: apps/web/Dockerfile
       target: production
       args:
-        - VITE_SERVER_URL=${VITE_SERVER_URL:-http://localhost:3000}
-        - VITE_WORKOS_CLIENT_ID=${VITE_WORKOS_CLIENT_ID}
-        - VITE_WORKOS_REDIRECT_URI=${VITE_WORKOS_REDIRECT_URI:-http://localhost/callback}
-        - VITE_CONVEX_URL=${VITE_CONVEX_URL}
-        - VITE_PUBLIC_POSTHOG_API_KEY=${VITE_PUBLIC_POSTHOG_API_KEY}
-        - VITE_PUBLIC_POSTHOG_HOST=${VITE_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}
+        VITE_SERVER_URL:          ${VITE_SERVER_URL:-http://localhost/api}
+        VITE_WORKOS_CLIENT_ID:    ${VITE_WORKOS_CLIENT_ID}
+        VITE_WORKOS_REDIRECT_URI: ${VITE_WORKOS_REDIRECT_URI:-http://localhost/callback}
+        VITE_CONVEX_URL:          ${VITE_CONVEX_URL}
+        VITE_PUBLIC_POSTHOG_API_KEY: ${VITE_PUBLIC_POSTHOG_API_KEY}
+        VITE_PUBLIC_POSTHOG_HOST: ${VITE_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}
     ports:
       - "80:80"
       - "443:443"
-    depends_on:
-      - server
-      - remotion
-    networks:
-      - app-network
-    restart: unless-stopped
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+    depends_on:
+      server:
+        condition: service_healthy
+      remotion:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
 
-  # API Server
   server:
+    image: ${REGISTRY_IMAGE_PREFIX:-git.zias.be/zias}/smog-server:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: apps/server/Dockerfile
+      target: production
     environment:
-      - NODE_ENV=production
-      - WORKOS_CLIENT_ID=${WORKOS_CLIENT_ID}
-      - WORKOS_CLIENT_SECRET=${WORKOS_CLIENT_SECRET}
-      - MOLLIE_API_KEY=${MOLLIE_API_KEY}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost}
-      - CONVEX_URL=${CONVEX_URL}
-      - MUX_TOKEN_ID=${MUX_TOKEN_ID}
-      - MUX_TOKEN_SECRET=${MUX_TOKEN_SECRET}
-      - REMOTION_URL=${REMOTION_URL:-http://remotion:3002}
-      - REMOTION_API_KEY=${REMOTION_API_KEY:-dev-secret-key}
-      - REDIS_HOST=redis-session
-      - REDIS_PORT=6379
+      NODE_ENV:          production
+      WORKOS_CLIENT_ID:  ${WORKOS_CLIENT_ID}
+      WORKOS_CLIENT_SECRET: ${WORKOS_CLIENT_SECRET}
+      MOLLIE_API_KEY:    ${MOLLIE_API_KEY}
+      CORS_ORIGIN:       ${CORS_ORIGIN:-http://localhost}
+      CONVEX_URL:        ${CONVEX_URL}
+      MUX_TOKEN_ID:      ${MUX_TOKEN_ID}
+      MUX_TOKEN_SECRET:  ${MUX_TOKEN_SECRET}
+      REMOTION_URL:      ${REMOTION_URL:-http://remotion:3002}
+      REMOTION_API_KEY:  ${REMOTION_API_KEY:-dev-secret-key}
+      REDIS_HOST:        redis-session
+      REDIS_PORT:        6379
     depends_on:
       redis-session:
         condition: service_healthy
@@ -70,28 +64,29 @@ services:
       - app-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
-  # Remotion Video Composition Service
   remotion:
+    image: ${REGISTRY_IMAGE_PREFIX:-git.zias.be/zias}/smog-remotion:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: apps/remotion/Dockerfile
+      target: production
     environment:
-      - NODE_ENV=production
-      - MUX_TOKEN_ID=${MUX_TOKEN_ID}
-      - MUX_TOKEN_SECRET=${MUX_TOKEN_SECRET}
-      - REMOTION_API_KEY=${REMOTION_API_KEY:-dev-secret-key}
-      - SERVER_URL=${SERVER_URL:-http://server:3000}
+      NODE_ENV:         production
+      MUX_TOKEN_ID:     ${MUX_TOKEN_ID}
+      MUX_TOKEN_SECRET: ${MUX_TOKEN_SECRET}
+      REMOTION_API_KEY: ${REMOTION_API_KEY:-dev-secret-key}
+      SERVER_URL:       ${SERVER_URL:-http://server:3000}
+    volumes:
+      - remotion-temp:/app/apps/remotion/temp
     networks:
       - app-network
     restart: unless-stopped
-    volumes:
-      - remotion-temp:/app/apps/remotion/temp
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
       interval: 30s
@@ -107,7 +102,6 @@ services:
           cpus: "1.0"
           memory: 1G
 
-  # Redis for session storage
   redis-session:
     image: redis:7-alpine
     volumes:
@@ -115,38 +109,22 @@ services:
     networks:
       - app-network
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Convex Backend (Optional - Self-hosted)
-  # Uncomment to use self-hosted Convex instead of cloud
-  # convex:
-  #   image: convex/convex-backend:latest
-  #   ports:
-  #     - "3210:3210"
-  #   environment:
-  #     - CONVEX_SITE_URL=${CONVEX_SITE_URL:-http://localhost:3210}
-  #   volumes:
-  #     - convex-data:/var/convex
-  #   networks:
-  #     - app-network
-  #   restart: unless-stopped
-
 volumes:
   caddy_data:
-    driver: local
   caddy_config:
-    driver: local
   redis-session-data:
-    driver: local
   remotion-temp:
-    driver: local
-  # convex-data:
-  #   driver: local
 
 networks:
   app-network:

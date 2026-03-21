@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo, { type NetInfoState } from "@react-native-community/netinfo";
+import logger from "@/utils/logger";
 
 interface NetworkMetrics {
   lastConnected: Date | null;
@@ -52,9 +53,9 @@ class NetworkService {
       }
 
       this.isInitialized = true;
-      console.log("✅ Network service initialized");
+      logger.log("✅ Network service initialized");
     } catch (error) {
-      console.error("❌ Failed to initialize network service:", error);
+      logger.error("❌ Failed to initialize network service:", error);
     }
   }
 
@@ -107,7 +108,7 @@ class NetworkService {
 
       await this.saveNetworkMetrics(metrics);
     } catch (error) {
-      console.error("Failed to update network metrics:", error);
+      logger.error("Failed to update network metrics:", error);
     }
   }
 
@@ -194,7 +195,7 @@ class NetworkService {
       });
       await AsyncStorage.setItem(this.OFFLINE_QUEUE_KEY, JSON.stringify(queue));
     } catch (error) {
-      console.error("Failed to queue offline action:", error);
+      logger.error("Failed to queue offline action:", error);
     }
   }
 
@@ -206,21 +207,21 @@ class NetworkService {
         return;
       }
 
-      console.log(`Processing ${queue.length} queued offline actions`);
+      logger.log(`Processing ${queue.length} queued offline actions`);
 
       // Process each queued action
       for (const item of queue) {
         try {
           await this.processQueuedAction(item);
         } catch (error) {
-          console.error("Failed to process queued action:", error);
+          logger.error("Failed to process queued action:", error);
         }
       }
 
       // Clear the queue
       await AsyncStorage.removeItem(this.OFFLINE_QUEUE_KEY);
     } catch (error) {
-      console.error("Failed to process offline queue:", error);
+      logger.error("Failed to process offline queue:", error);
     }
   }
 
@@ -229,7 +230,7 @@ class NetworkService {
   ): Promise<void> {
     // This would be implemented based on your specific needs
     // For example, syncing favorites, uploading data, etc.
-    console.log("Processing queued action:", item.action);
+    logger.log("Processing queued action:", item.action);
   }
 
   // Get network metrics
@@ -246,7 +247,7 @@ class NetworkService {
         };
       }
     } catch (error) {
-      console.error("Failed to get network metrics:", error);
+      logger.error("Failed to get network metrics:", error);
     }
 
     return {
@@ -266,7 +267,7 @@ class NetworkService {
         JSON.stringify(metrics)
       );
     } catch (error) {
-      console.error("Failed to save network metrics:", error);
+      logger.error("Failed to save network metrics:", error);
     }
   }
 
@@ -276,7 +277,7 @@ class NetworkService {
       const stored = await AsyncStorage.getItem(this.OFFLINE_QUEUE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
-      console.error("Failed to get offline queue:", error);
+      logger.error("Failed to get offline queue:", error);
       return [];
     }
   }
@@ -289,7 +290,7 @@ class NetworkService {
         this.OFFLINE_QUEUE_KEY,
       ]);
     } catch (error) {
-      console.error("Failed to clear network data:", error);
+      logger.error("Failed to clear network data:", error);
     }
   }
 
@@ -329,7 +330,7 @@ class NetworkService {
       this.networkState = await NetInfo.fetch();
       return this.networkState;
     } catch (error) {
-      console.error("Failed to refresh network state:", error);
+      logger.error("Failed to refresh network state:", error);
       throw error;
     }
   }

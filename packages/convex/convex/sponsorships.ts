@@ -1,5 +1,33 @@
+/**
+ * @fileoverview Convex mutations and queries for the sponsorships table.
+ *
+ * Implements the full sponsorship lifecycle:
+ * - create / createBulk — new sponsorship records (pending state)
+ * - Payment linking (Mollie payment ID)
+ * - Admin approval / rejection / re-edit flows
+ * - Status expiry and cleanup (triggered by cron)
+ * - Sponsor re-submission flow
+ *
+ * Status machine:
+ *   pending → pending_payment → pending_approval → active → expired
+ *                                               ↘ rejected
+ *                                               ↘ pending_resubmission → pending_approval
+ *
+ * @see packages/convex/convex/cron.ts for scheduled expiry jobs
+ * @see packages/api/src/routers/sponsorships.ts for HTTP API wrappers
+ */
+
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import {
+  calculateEndDateFromWeeks,
+  weeksToYears,
+} from "./lib/sponsorshipDates";
+import {
+  checkExistingSponsorship,
+  checkExistingSponsorshipStrict,
+} from "./lib/sponsorshipValidation";
 
 // Create a new sponsorship (called from web app after video composition)
 export const create = mutation({
@@ -21,42 +49,18 @@ export const create = mutation({
       throw new Error("Gesture not found");
     }
 
-    // Check if gesture already has an active or pending sponsorship
-    const existingActive = await ctx.db
-      .query("sponsorships")
-      .withIndex("by_gesture_and_status", (q) =>
-        q.eq("gestureId", args.gestureId).eq("status", "active")
-      )
-      .first();
-
-    if (existingActive) {
-      throw new Error(
-        `This gesture is already sponsored until ${new Date(existingActive.endDate).toLocaleDateString()}`
-      );
-    }
-
-    // Check for pending/pending_payment/pending_approval sponsorships
-    const existingPending = await ctx.db
-      .query("sponsorships")
-      .withIndex("by_gesture", (q) => q.eq("gestureId", args.gestureId))
-      .filter((q) =>
-        q.or(
-          q.eq(q.field("status"), "pending"),
-          q.eq(q.field("status"), "pending_payment"),
-          q.eq(q.field("status"), "pending_approval")
-        )
-      )
-      .first();
-
-    if (existingPending) {
-      throw new Error(
-        "This gesture already has a pending sponsorship. Please wait for it to be processed or contact support."
-      );
+    // Check if gesture already has a conflicting sponsorship
+    const conflictError = await checkExistingSponsorshipStrict(
+      ctx.db,
+      args.gestureId
+    );
+    if (conflictError) {
+      throw new Error(conflictError);
     }
 
     // Create sponsorship with pending status
-    const endDate = Date.now() + args.durationWeeks * 7 * 24 * 60 * 60 * 1000;
-    const durationYears = Math.ceil(args.durationWeeks / 52); // Convert weeks to years
+    const endDate = calculateEndDateFromWeeks(args.durationWeeks);
+    const durationYears = weeksToYears(args.durationWeeks);
 
     return await ctx.db.insert("sponsorships", {
       gestureId: args.gestureId,
@@ -98,8 +102,7 @@ export const createBulk = mutation({
       );
     }
 
-    // biome-ignore lint/suspicious/noExplicitAny: Convex ID type
-    const sponsorshipIds: any[] = [];
+    const sponsorshipIds: Id<"sponsorships">[] = [];
     const errors: string[] = [];
 
     for (let i = 0; i < args.gestureIds.length; i++) {
@@ -123,45 +126,20 @@ export const createBulk = mutation({
           continue;
         }
 
-        // Check if gesture already has an active or pending sponsorship
-        const existingActive = await ctx.db
-          .query("sponsorships")
-          .withIndex("by_gesture_and_status", (q) =>
-            q.eq("gestureId", gestureId).eq("status", "active")
-          )
-          .first();
-
-        if (existingActive) {
-          errors.push(
-            `Gesture "${gesture.name}" is already sponsored until ${new Date(existingActive.endDate).toLocaleDateString()}`
-          );
-          continue;
-        }
-
-        // Check for pending/pending_payment/pending_approval sponsorships
-        const existingPending = await ctx.db
-          .query("sponsorships")
-          .withIndex("by_gesture", (q) => q.eq("gestureId", gestureId))
-          .filter((q) =>
-            q.or(
-              q.eq(q.field("status"), "pending"),
-              q.eq(q.field("status"), "pending_payment"),
-              q.eq(q.field("status"), "pending_approval")
-            )
-          )
-          .first();
-
-        if (existingPending) {
-          errors.push(
-            `Gesture "${gesture.name}" already has a pending sponsorship`
-          );
+        // Check if gesture already has a conflicting sponsorship
+        const conflictError = await checkExistingSponsorship(
+          ctx.db,
+          gestureId,
+          gesture.name
+        );
+        if (conflictError) {
+          errors.push(conflictError);
           continue;
         }
 
         // Create sponsorship with pending status
-        const endDate =
-          Date.now() + args.durationWeeks * 7 * 24 * 60 * 60 * 1000;
-        const durationYears = Math.ceil(args.durationWeeks / 52); // Convert weeks to years
+        const endDate = calculateEndDateFromWeeks(args.durationWeeks);
+        const durationYears = weeksToYears(args.durationWeeks);
 
         const sponsorshipId = await ctx.db.insert("sponsorships", {
           gestureId,
@@ -222,11 +200,11 @@ export const createBulkSimplified = mutation({
   },
   returns: v.array(v.id("sponsorships")),
   handler: async (ctx, args) => {
-    // biome-ignore lint/suspicious/noExplicitAny: Convex ID type
-    const sponsorshipIds: any[] = [];
+    const sponsorshipIds: Id<"sponsorships">[] = [];
     const errors: string[] = [];
 
-    // Calculate payment amount (€50 per gesture + €10 if logo)
+    // Pricing constants — kept local to avoid adding a dependency on @smog/config
+    // inside Convex functions (which run server-side in the Convex runtime).
     const PRICE_PER_YEAR_CENTS = 5000;
     const LOGO_ADDON_CENTS = 1000;
     const paymentAmountPerGesture = args.includeLogo
@@ -244,41 +222,18 @@ export const createBulkSimplified = mutation({
           continue;
         }
 
-        // Check if gesture already has an active or pending sponsorship
-        const existingActive = await ctx.db
-          .query("sponsorships")
-          .withIndex("by_gesture_and_status", (q) =>
-            q.eq("gestureId", gestureId).eq("status", "active")
-          )
-          .first();
-
-        if (existingActive) {
-          errors.push(
-            `Gesture "${gesture.name}" is already sponsored until ${new Date(existingActive.endDate).toLocaleDateString()}`
-          );
+        // Check if gesture already has a conflicting sponsorship
+        const conflictError = await checkExistingSponsorship(
+          ctx.db,
+          gestureId,
+          gesture.name
+        );
+        if (conflictError) {
+          errors.push(conflictError);
           continue;
         }
 
-        // Check for pending/pending_payment/pending_approval sponsorships
-        const existingPending = await ctx.db
-          .query("sponsorships")
-          .withIndex("by_gesture", (q) => q.eq("gestureId", gestureId))
-          .filter((q) =>
-            q.or(
-              q.eq(q.field("status"), "pending_payment"),
-              q.eq(q.field("status"), "pending_approval")
-            )
-          )
-          .first();
-
-        if (existingPending) {
-          errors.push(
-            `Gesture "${gesture.name}" already has a pending sponsorship`
-          );
-          continue;
-        }
-
-        // Calculate end date (1 year from now)
+        // Calculate end date (durationYears from now)
         const endDate =
           Date.now() + args.durationYears * 365 * 24 * 60 * 60 * 1000;
 
@@ -893,6 +848,45 @@ export const getReEditLinkForAdmin = query({
       expiresAt: sponsorship.reEditTokenExpiresAt,
       expired: Date.now() > sponsorship.reEditTokenExpiresAt,
     };
+  },
+});
+
+// Query active sponsorships expiring within the given number of days
+// that haven't had a renewal reminder sent yet
+export const getExpiringSoon = query({
+  args: {
+    daysUntilExpiry: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const cutoff = now + args.daysUntilExpiry * 24 * 60 * 60 * 1000;
+
+    return await ctx.db
+      .query("sponsorships")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .filter((q) =>
+        q.and(
+          q.gt(q.field("endDate"), now),
+          q.lte(q.field("endDate"), cutoff),
+          q.eq(q.field("renewalReminderSentAt"), undefined)
+        )
+      )
+      .collect();
+  },
+});
+
+// Mark that a renewal reminder email has been sent for a sponsorship
+export const markRenewalReminderSent = mutation({
+  args: {
+    sponsorshipId: v.id("sponsorships"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sponsorshipId, {
+      renewalReminderSentAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    return null;
   },
 });
 

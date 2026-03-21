@@ -1,5 +1,5 @@
 import { convexSyncService } from "@/services/convexSyncService";
-import { databaseService } from "@/services/databaseService";
+import { databaseService } from "@/services/database";
 import type { Gesture } from "@/types";
 import logger from "@/utils/logger";
 

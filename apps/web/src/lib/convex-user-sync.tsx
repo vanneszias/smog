@@ -7,6 +7,7 @@
 
 import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
+import { createLogger } from "@smog/shared";
 import { useMutation, useQuery } from "convex/react";
 import {
   createContext,
@@ -17,6 +18,8 @@ import {
   useState,
 } from "react";
 import { useAuth } from "./auth";
+
+const logger = createLogger("convexUserSync");
 
 interface ConvexUserContextType {
   userId: Id<"users"> | null;
@@ -72,7 +75,7 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
           const newUserId = await createUser({ workosId: user.id });
           setUserId(newUserId);
         } catch (error) {
-          console.error("[ConvexUserSync] Failed to create user:", error);
+          logger.error("[ConvexUserSync] Failed to create user:", error);
         } finally {
           setIsInitializing(false);
         }

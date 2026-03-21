@@ -309,6 +309,7 @@ export const sponsorshipsRouter = {
       }
 
       const baseUrl = process.env.CORS_ORIGIN || "http://localhost:3001";
+      const isLocalDev = baseUrl.includes("localhost");
 
       // Create Mollie payment with all sponsorship IDs in metadata
       const payment = await mollieClient.payments.create({
@@ -318,7 +319,7 @@ export const sponsorshipsRouter = {
         },
         description: `Sponsorship for ${input.sponsorshipIds.length} gesture(s)`,
         redirectUrl: `${baseUrl}/sponsors/success?paymentId={id}`,
-        webhookUrl: `${baseUrl}/webhooks/mollie`,
+        ...(isLocalDev ? {} : { webhookUrl: `${baseUrl}/webhooks/mollie` }),
         metadata: {
           sponsorshipIds: JSON.stringify(input.sponsorshipIds),
           isBulkPayment: "true",

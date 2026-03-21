@@ -1,0 +1,71 @@
+# Docker Compose — Development override
+#
+# Extends docker-compose.yml with local builds, hot-reload bind mounts,
+# and relaxed settings suited for development.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Or add a .env with COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml
+# so plain `docker compose up --build` works.
+
+services:
+  web:
+    # Build the development stage instead of pulling an image
+    image: smog-web:dev
+    build:
+      target: development
+      args:
+        VITE_SERVER_URL:          ${VITE_SERVER_URL:-http://localhost:3000}
+        VITE_WORKOS_CLIENT_ID:    ${VITE_WORKOS_CLIENT_ID}
+        VITE_WORKOS_REDIRECT_URI: ${VITE_WORKOS_REDIRECT_URI:-http://localhost/callback}
+        VITE_CONVEX_URL:          ${VITE_CONVEX_URL}
+        VITE_PUBLIC_POSTHOG_API_KEY: ${VITE_PUBLIC_POSTHOG_API_KEY}
+        VITE_PUBLIC_POSTHOG_HOST: ${VITE_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}
+    ports:
+      - "5173:5173"
+    volumes:
+      # Bind-mount source so Vite HMR picks up changes instantly.
+      # node_modules comes from the image (not overwritten).
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+    # Override: no Caddy in dev — Vite's dev server handles everything
+    depends_on: {}
+
+  server:
+    image: smog-server:dev
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/server/node_modules
+    # Override: don't wait for redis health in dev — start immediately
+    depends_on:
+      - redis-session
+
+  remotion:
+    image: smog-remotion:dev
+    # Remotion always uses the production-stage image (bookworm + Chrome Headless Shell).
+    # We bind-mount source for live edits without rebuilding the heavy Chrome layer.
+    build:
+      target: production
+    environment:
+      NODE_ENV: development
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./apps/remotion/src:/app/apps/remotion/src
+      - ./packages:/app/packages
+    depends_on: {}
+    # Relax resource limits for dev
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 4G

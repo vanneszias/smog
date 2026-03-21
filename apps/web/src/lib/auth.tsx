@@ -16,6 +16,7 @@ import {
   isTokenExpired,
   type WorkOSUser,
 } from "@smog/auth";
+import { createLogger } from "@smog/shared";
 import {
   createContext,
   type ReactNode,
@@ -27,6 +28,8 @@ import {
   useState,
 } from "react";
 import { setORPCAccessTokenProvider } from "../utils/orpc";
+
+const logger = createLogger("auth");
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const clientId = import.meta.env.VITE_WORKOS_CLIENT_ID;
@@ -61,7 +64,7 @@ async function refreshSession(): Promise<{
       };
     }
   } catch (error) {
-    console.error("[Auth] Session refresh failed:", error);
+    logger.error("[Auth] Session refresh failed:", error);
   }
   return null;
 }
@@ -117,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (error) {
-        console.error("[Auth] OAuth callback failed:", error);
+        logger.error("[Auth] OAuth callback failed:", error);
       }
     };
 
@@ -165,7 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         credentials: "include",
       });
     } catch (error) {
-      console.error("[Auth] Sign out failed:", error);
+      logger.error("[Auth] Sign out failed:", error);
     }
     accessToken = null;
     tokenExpiry = null;

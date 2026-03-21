@@ -21,7 +21,7 @@ import {
   trackSearchCategoryRemoved,
   trackSearchCleared,
   trackSearchPerformed,
-} from "@/services/analyticsService";
+} from "@/services/analytics";
 import { gestureService } from "@/services/gestureService";
 
 const SearchScreen = () => {

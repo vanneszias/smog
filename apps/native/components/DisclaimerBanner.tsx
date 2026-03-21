@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { COURSE_URL, VIDEO_COMPLETE_COUNT } from "@smog/config";
 import {
   ANIMATION_DURATION,
   BORDER_RADIUS,
@@ -20,9 +21,6 @@ import {
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
-
-const VIDEO_COMPLETE_COUNT = 7;
-const COURSE_URL = "https://smog.vlaanderen/volg-een-cursus";
 
 // Link phrases that should be clickable in the video complete messages
 const LINK_PHRASES = ["Klik hier", "klik dan hier"];
@@ -272,4 +270,6 @@ const styles = StyleSheet.create({
   },
 });
 
+/** Memoised — `visible` and `onDismiss` are stable primitives/refs, so this
+ *  prevents re-renders driven by unrelated parent state. */
 export default DisclaimerBanner;

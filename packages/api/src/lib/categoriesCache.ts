@@ -19,9 +19,9 @@ interface CacheEntry {
 const DEFAULT_TTL_MS = 1000 * 60 * 60; // 1 hour
 
 class CategoriesCache {
-  private cache: Map<string, CacheEntry> = new Map();
-  private ttlMs: number;
-  private allCategoriesKey = "_all_categories";
+  private readonly cache: Map<string, CacheEntry> = new Map();
+  private readonly ttlMs: number;
+  private readonly allCategoriesKey = "_all_categories";
 
   constructor(ttlMs: number = DEFAULT_TTL_MS) {
     this.ttlMs = ttlMs;

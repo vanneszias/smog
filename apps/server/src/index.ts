@@ -4,6 +4,7 @@ import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
+import { render } from "@react-email/render";
 import { createContext } from "@smog/api/context";
 import { appRouter } from "@smog/api/routers/index";
 import {
@@ -11,11 +12,21 @@ import {
   getWorkOSConfig,
   refreshAccessToken,
 } from "@smog/auth/server";
+import { api } from "@smog/convex";
+import { ConvexHttpClient } from "convex/browser";
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { startExpirationCronJob } from "./cron";
+import { startExpirationCronJob, startRenewalReminderCronJob } from "./cron";
+import {
+  PaymentConfirmedEmail,
+  RenewalReminderEmail,
+  SponsorshipLiveEmail,
+  SponsorshipSubmittedEmail,
+  WelcomeEmail,
+} from "./emails";
+import { enqueueEmail, startEmailWorker } from "./services/emailQueue";
 import { getMasterDownloadUrl } from "./services/mux";
 import { handleMollieWebhook } from "./webhooks/mollie";
 
@@ -35,8 +46,15 @@ if (!(workosConfig.clientId && workosConfig.clientSecret)) {
   );
 }
 
+// Convex client for server-side queries (e.g. new user detection in callback)
+const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
+
 // Start cron jobs
 startExpirationCronJob();
+startRenewalReminderCronJob();
+
+// Start email queue worker
+startEmailWorker();
 
 const app = new Hono();
 
@@ -89,6 +107,24 @@ app.post("/auth/workos/callback", async (c) => {
       path: "/",
       maxAge: 60 * 60 * 24 * 30, // 30 days
     });
+
+    // Check if this is a new user and send welcome email (fire-and-forget)
+    // We intentionally don't await this — it must not delay the auth response
+    convex
+      .query(api.users.getUserByWorkOSId, { workosId: result.user.id })
+      .then(async (existingUser) => {
+        if (!existingUser) {
+          await enqueueEmail({
+            type: "welcome",
+            to: result.user.email,
+            name: result.user.firstName ?? undefined,
+          });
+        }
+      })
+      .catch((err: unknown) => {
+        // Non-critical — log but don't fail the auth response
+        console.error("[Auth] Failed to enqueue welcome email:", err);
+      });
 
     // Return tokens and user info
     // Web clients use cookies, native clients use the returned tokens
@@ -221,6 +257,102 @@ app.post("/api/video/master-access", async (c) => {
 // ==============================================
 
 app.post("/webhooks/mollie", handleMollieWebhook);
+
+// ==============================================
+// Internal Email Trigger Endpoint
+// Used by Convex actions (e.g. welcome email on user creation)
+// ==============================================
+
+/**
+ * Internal email trigger endpoint
+ * Accepts a POST request from trusted internal services (Convex actions)
+ * to enqueue transactional emails.
+ *
+ * Secured with INTERNAL_API_KEY env var (same mechanism as REMOTION_API_KEY)
+ */
+app.post("/api/email/trigger", async (c) => {
+  try {
+    const authHeader = c.req.header("Authorization");
+    const expectedKey = process.env.INTERNAL_API_KEY ?? "dev-internal-secret";
+
+    if (authHeader !== `Bearer ${expectedKey}`) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const job = await c.req.json();
+
+    if (!(job?.type && job?.to)) {
+      return c.json({ error: "Invalid email job payload" }, 400);
+    }
+
+    await enqueueEmail(job);
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("[Email Trigger] Error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return c.json({ error: message }, 500);
+  }
+});
+
+// ==============================================
+// Email Preview Endpoint (admin only)
+// ==============================================
+
+/**
+ * Render an email template with sample data and return the HTML.
+ * Read-only endpoint with hardcoded sample data — no sensitive information.
+ * CORS middleware already restricts this to CORS_ORIGIN.
+ *
+ * GET /api/email/preview/:template
+ */
+
+const EMAIL_PREVIEW_SAMPLES = {
+  welcome: () => WelcomeEmail({ name: "Jan Janssen" }),
+  sponsorship_submitted: () =>
+    SponsorshipSubmittedEmail({
+      sponsorName: "Acme BV",
+      gestureName: "Hond",
+    }),
+  payment_confirmed: () =>
+    PaymentConfirmedEmail({
+      sponsorName: "Acme BV",
+      gestureName: "Hond",
+      paymentAmount: 5000, // €50.00 in cents
+    }),
+  sponsorship_live: () =>
+    SponsorshipLiveEmail({
+      sponsorName: "Acme BV",
+      gestureName: "Hond",
+      startDate: Date.now(),
+      endDate: Date.now() + 365 * 24 * 60 * 60 * 1000,
+    }),
+  renewal_reminder: () =>
+    RenewalReminderEmail({
+      sponsorName: "Acme BV",
+      gestureName: "Hond",
+      endDate: Date.now() + 30 * 24 * 60 * 60 * 1000,
+    }),
+} as const;
+
+type EmailPreviewTemplate = keyof typeof EMAIL_PREVIEW_SAMPLES;
+
+app.get("/api/email/preview/:template", async (c) => {
+  const template = c.req.param("template") as EmailPreviewTemplate;
+
+  if (!(template in EMAIL_PREVIEW_SAMPLES)) {
+    return c.json(
+      {
+        error: `Unknown template "${template}". Valid templates: ${Object.keys(EMAIL_PREVIEW_SAMPLES).join(", ")}`,
+      },
+      400
+    );
+  }
+
+  const html = await render(EMAIL_PREVIEW_SAMPLES[template]());
+
+  return c.html(html);
+});
 
 // ==============================================
 // API Routes (oRPC)

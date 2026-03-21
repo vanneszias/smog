@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useAuth } from "@/context/AuthProvider";
+import logger from "@/utils/logger";
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -17,12 +18,12 @@ export default function AuthCallback() {
 
     const handleAuthCallback = async () => {
       try {
-        console.log("[AuthCallback] Starting auth callback process");
-        console.log("[AuthCallback] Current user:", !!user);
+        logger.log("[AuthCallback] Starting auth callback process");
+        logger.log("[AuthCallback] Current user:", !!user);
 
         // Clear any existing guest mode since user just authenticated
         if (user) {
-          console.log("[AuthCallback] Clearing guest mode");
+          logger.log("[AuthCallback] Clearing guest mode");
           await AsyncStorage.removeItem("@smog_guest_mode");
           await AsyncStorage.removeItem("@smog_guest_id");
         }
@@ -31,16 +32,14 @@ export default function AuthCallback() {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         if (user) {
-          console.log("[AuthCallback] User is signed in, navigating to tabs");
+          logger.log("[AuthCallback] User is signed in, navigating to tabs");
           router.replace("/(tabs)");
         } else {
-          console.log(
-            "[AuthCallback] User not signed in, returning to welcome"
-          );
+          logger.log("[AuthCallback] User not signed in, returning to welcome");
           router.replace("/welcome");
         }
       } catch (error) {
-        console.error("[AuthCallback] Error handling auth callback:", error);
+        logger.error("[AuthCallback] Error handling auth callback:", error);
         router.replace("/welcome");
       } finally {
         setIsProcessing(false);

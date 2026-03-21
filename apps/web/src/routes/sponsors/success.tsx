@@ -44,7 +44,6 @@ function SuccessComponent() {
   } = useQuery<SponsorshipWithGesture[]>({
     queryKey: ["sponsorships", paymentId],
     queryFn: () => {
-      console.log("[Success] Fetching sponsorships for payment:", paymentId);
       return client.sponsorships.getSponsorshipsByPaymentId({
         paymentId: paymentId!,
       });
@@ -68,15 +67,6 @@ function SuccessComponent() {
     },
     refetchIntervalInBackground: true,
   });
-
-  // Debug logging
-  useEffect(() => {
-    console.log("[Success] Payment ID:", paymentId);
-    console.log("[Success] Sponsorships:", sponsorships);
-    console.log("[Success] Loading:", isLoading);
-    console.log("[Success] Error:", error);
-    console.log("[Success] Polling attempts:", pollingAttempts);
-  }, [paymentId, sponsorships, isLoading, error, pollingAttempts]);
 
   useEffect(() => {
     // Auto-redirect after 10 seconds

@@ -1,4 +1,5 @@
 import MuxPlayer from "@mux/mux-player-react";
+import { createLogger } from "@smog/shared";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -16,6 +17,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { client } from "@/utils/orpc";
+
+const logger = createLogger("sponsorsReEdit");
 
 interface SearchParams {
   token: string;
@@ -146,7 +149,7 @@ function ReEditComponent() {
       });
       setPreviewPlaybackId(result.playbackId);
     } catch (err) {
-      console.error("[ReEdit] Failed to generate preview:", err);
+      logger.error("[ReEdit] Failed to generate preview:", err);
       toast.error("Failed to generate preview. Please try again.");
     } finally {
       setIsGeneratingPreview(false);
@@ -177,7 +180,7 @@ function ReEditComponent() {
       });
       setSubmitted(true);
     } catch (err) {
-      console.error("[ReEdit] Failed to submit:", err);
+      logger.error("[ReEdit] Failed to submit:", err);
       toast.error(
         `Failed to submit: ${err instanceof Error ? err.message : "Unknown error"}`
       );

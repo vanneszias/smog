@@ -4,6 +4,7 @@ import { en, fr, nl } from "@smog/i18n";
 import { getLocales } from "expo-localization";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import logger from "@/utils/logger";
 
 // Define available languages
 export type Language = "en" | "fr" | "nl";
@@ -50,7 +51,7 @@ const languageDetector = {
       const deviceLanguage = getDeviceLanguage();
       callback(deviceLanguage);
     } catch (error) {
-      console.error("Error detecting language:", error);
+      logger.error("Error detecting language:", error);
       callback(DEFAULT_LANGUAGE);
     }
   },
@@ -61,7 +62,7 @@ const languageDetector = {
     try {
       await AsyncStorage.setItem("userLanguage", lng);
     } catch (error) {
-      console.error("Error saving language:", error);
+      logger.error("Error saving language:", error);
     }
   },
 };

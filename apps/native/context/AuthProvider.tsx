@@ -32,6 +32,7 @@ import {
 } from "react";
 import { networkService } from "@/services/networkService";
 import { generateGuestId } from "@/services/userService";
+import logger from "@/utils/logger";
 
 maybeCompleteAuthSession();
 
@@ -62,7 +63,7 @@ async function storeRefreshToken(token: string): Promise<void> {
   try {
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
   } catch (error) {
-    console.error("[Auth] Failed to store refresh token:", error);
+    logger.error("[Auth] Failed to store refresh token:", error);
   }
 }
 
@@ -73,7 +74,7 @@ async function getRefreshToken(): Promise<string | null> {
   try {
     return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
   } catch (error) {
-    console.error("[Auth] Failed to get refresh token:", error);
+    logger.error("[Auth] Failed to get refresh token:", error);
     return null;
   }
 }
@@ -85,7 +86,7 @@ async function clearRefreshToken(): Promise<void> {
   try {
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
   } catch (error) {
-    console.error("[Auth] Failed to clear refresh token:", error);
+    logger.error("[Auth] Failed to clear refresh token:", error);
   }
 }
 
@@ -118,7 +119,7 @@ async function refreshSession(): Promise<{
       };
     }
   } catch (error) {
-    console.error("[Auth] Session refresh failed:", error);
+    logger.error("[Auth] Session refresh failed:", error);
   }
   return null;
 }
@@ -128,7 +129,7 @@ async function isNetworkAvailable(): Promise<boolean> {
     const state = await networkService.refresh();
     return Boolean(state.isConnected && state.isInternetReachable !== false);
   } catch (error) {
-    console.error("[Auth] Failed to refresh network state:", error);
+    logger.error("[Auth] Failed to refresh network state:", error);
     return networkService.isConnected();
   }
 }
@@ -180,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
 
         if (!exchangeResponse.ok) {
-          console.error("[Auth] Code exchange failed");
+          logger.error("[Auth] Code exchange failed");
           return;
         }
 
@@ -205,7 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setGuestId(null);
         setAuthMode("authenticated");
       } catch (error) {
-        console.error("[Auth] OAuth callback error:", error);
+        logger.error("[Auth] OAuth callback error:", error);
       }
     };
 
@@ -271,7 +272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const mode = await restoreAuthenticatedSession(storedUser);
         finalizeRestore(mode);
       } catch (error) {
-        console.error("[Auth] Session restore error:", error);
+        logger.error("[Auth] Session restore error:", error);
         finalizeRestore("unauthenticated");
       }
     };
@@ -321,7 +322,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (request) {
       promptAsync();
     } else {
-      console.error("[Auth] OAuth request not ready");
+      logger.error("[Auth] OAuth request not ready");
     }
   }, [request, promptAsync]);
 

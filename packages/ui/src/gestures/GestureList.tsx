@@ -44,14 +44,22 @@ function GestureRow({
   };
 
   return (
-    <button
+    // biome-ignore lint/a11y/useSemanticElements: cannot use <button> here — contains a nested <button> for the favorite toggle
+    <div
       className={`group flex min-h-[60px] w-full cursor-pointer items-center gap-4 border-border border-b px-4 py-3 text-left transition-colors hover:bg-muted/30 lg:px-12 ${
         isSelected
           ? "border-l-4 border-l-primary bg-primary/5"
           : "border-l-4 border-l-transparent"
       }`}
       onClick={onClick}
-      type="button"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      role="button"
+      tabIndex={0}
     >
       {/* Main content */}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -119,7 +127,7 @@ function GestureRow({
           />
         </button>
       )}
-    </button>
+    </div>
   );
 }
 

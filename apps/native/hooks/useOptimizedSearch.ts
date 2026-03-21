@@ -2,6 +2,9 @@ import { searchGestures } from "@smog/hooks";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gestureService } from "@/services/gestureService";
 import type { Gesture } from "@/types";
+import logger from "@/utils/logger";
+
+const log = logger; // scoped alias for this module
 
 interface UseOptimizedSearchOptions {
   debounceMs?: number;
@@ -65,14 +68,10 @@ export const useOptimizedSearch = (
       setIsLoading(true);
       try {
         const allData = await gestureService.getAllGestures();
-        console.log(
-          "[useOptimizedSearch] Loaded",
-          allData.length,
-          "total gestures"
-        );
+        log.log(`[useOptimizedSearch] Loaded ${allData.length} total gestures`);
         setAllGestures(allData);
       } catch (error) {
-        console.error("[useOptimizedSearch] Error loading gestures:", error);
+        log.error("[useOptimizedSearch] Error loading gestures:", error);
         setAllGestures([]);
       } finally {
         setIsLoading(false);
@@ -142,12 +141,8 @@ export const useOptimizedSearch = (
           const filtered = filterGestures(query, categories);
           const searchTime = Date.now() - searchStartTimeRef.current;
 
-          console.log(
-            "[useOptimizedSearch] Filtered",
-            filtered.length,
-            "gestures from",
-            allGestures.length,
-            "total"
+          log.log(
+            `[useOptimizedSearch] Filtered ${filtered.length} gestures from ${allGestures.length} total`
           );
 
           setFilteredGestures(filtered);
@@ -160,7 +155,7 @@ export const useOptimizedSearch = (
             cacheHit: true, // Always cache hit since we work with local data
           });
         } catch (error) {
-          console.error("[useOptimizedSearch] Filter error:", error);
+          log.error("[useOptimizedSearch] Filter error:", error);
           setFilteredGestures([]);
           setSearchStats({
             totalResults: allGestures.length,
@@ -274,7 +269,7 @@ export const useOptimizedSearch = (
         search(lastQueryRef.current, lastCategoriesRef.current);
       }
     } catch (error) {
-      console.error("[useOptimizedSearch] Refresh error:", error);
+      log.error("[useOptimizedSearch] Refresh error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -339,7 +334,7 @@ export const useCategorySearch = (category?: string) => {
           await gestureService.getGesturesByCategory(targetCategory);
         setResults(categoryResults);
       } catch (error) {
-        console.error("Category search error:", error);
+        log.error("[useOptimizedSearch] Category search error:", error);
         setResults([]);
       } finally {
         setIsLoading(false);

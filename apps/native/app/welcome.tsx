@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { useDbReady } from "@/hooks/useDbReady";
+import logger from "@/utils/logger";
 
 const { height: screenHeight } = Dimensions.get("window");
 const isSmallScreen = screenHeight < 700;
@@ -68,10 +69,10 @@ export default function WelcomeScreen() {
         return;
       }
 
-      console.log("[Welcome] Starting WorkOS sign-in");
+      logger.log("[Welcome] Starting WorkOS sign-in");
       signIn();
     } catch (error) {
-      console.error("[Welcome] Sign-in error:", error);
+      logger.error("[Welcome] Sign-in error:", error);
       Alert.alert(t("common.error"), "Failed to sign in. Please try again.");
     }
   };
@@ -128,7 +129,7 @@ export default function WelcomeScreen() {
 
       setPendingAction(null);
     } catch (error) {
-      console.error("[Welcome] Failed to save consent:", error);
+      logger.error("[Welcome] Failed to save consent:", error);
       Alert.alert(t("common.error"), t("gdpr.consent.failed"));
     }
   };

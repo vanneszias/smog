@@ -29,9 +29,10 @@ import {
   trackGestureUnliked,
   trackGestureViewed,
   trackVideoAlmostCompleted,
-} from "@/services/analyticsService";
+} from "@/services/analytics";
 import gestureService from "@/services/gestureService";
 import type { Gesture } from "@/types";
+import logger from "@/utils/logger";
 
 const GestureScreen: React.FC = () => {
   const router = useRouter();
@@ -74,7 +75,7 @@ const GestureScreen: React.FC = () => {
             });
           }
         } catch (error) {
-          console.error(error);
+          logger.error(error);
         } finally {
           setIsLoading(false);
         }

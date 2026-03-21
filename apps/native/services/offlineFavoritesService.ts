@@ -47,7 +47,7 @@ class OfflineFavoritesService {
         "[offlineFavoritesService] Service initialized - offline cache mode"
       );
     } catch (error) {
-      console.error("[offlineFavoritesService] Failed to initialize:", error);
+      logger.error("[offlineFavoritesService] Failed to initialize:", error);
       throw error;
     }
   }
@@ -92,7 +92,7 @@ class OfflineFavoritesService {
         `[offlineFavoritesService] Updated local cache: ${gestureId} = ${isFavorite}`
       );
     } catch (error) {
-      console.error(
+      logger.error(
         "[offlineFavoritesService] Failed to update local cache:",
         error
       );
@@ -136,7 +136,7 @@ class OfflineFavoritesService {
         `[offlineFavoritesService] Synced ${convexFavorites.length} favorites from Convex to local cache`
       );
     } catch (error) {
-      console.error(
+      logger.error(
         "[offlineFavoritesService] Failed to sync from Convex:",
         error
       );
@@ -199,7 +199,7 @@ class OfflineFavoritesService {
 
       return isNewFavorite;
     } catch (error) {
-      console.error(
+      logger.error(
         "[offlineFavoritesService] Failed to toggle favorite offline:",
         error
       );
@@ -224,10 +224,7 @@ class OfflineFavoritesService {
 
       return favorites.map((f) => f.gesture_id);
     } catch (error) {
-      console.error(
-        "[offlineFavoritesService] Failed to get favorites:",
-        error
-      );
+      logger.error("[offlineFavoritesService] Failed to get favorites:", error);
       return [];
     }
   }
@@ -248,7 +245,7 @@ class OfflineFavoritesService {
 
       return favorite ? favorite.is_favorite === 1 : false;
     } catch (error) {
-      console.error(
+      logger.error(
         "[offlineFavoritesService] Failed to check favorite:",
         error
       );
@@ -318,14 +315,14 @@ class OfflineFavoritesService {
             [new Date().toISOString(), String(error), op.operation_id]
           );
 
-          console.error(
+          logger.error(
             `[offlineFavoritesService] Failed to sync operation ${op.operation_id}:`,
             error
           );
         }
       }
     } catch (error) {
-      console.error("[offlineFavoritesService] Sync process failed:", error);
+      logger.error("[offlineFavoritesService] Sync process failed:", error);
     } finally {
       this.syncInProgress = false;
     }
@@ -391,7 +388,7 @@ class OfflineFavoritesService {
         `[offlineFavoritesService] Migrated ${legacyFavorites.length} legacy favorites (queued for sync to Convex)`
       );
     } catch (error) {
-      console.error(
+      logger.error(
         "[offlineFavoritesService] Failed to migrate legacy favorites:",
         error
       );
@@ -418,7 +415,7 @@ class OfflineFavoritesService {
         `[offlineFavoritesService] Cleared local cache for user: ${userId}`
       );
     } catch (error) {
-      console.error(
+      logger.error(
         "[offlineFavoritesService] Failed to clear user favorites:",
         error
       );
@@ -438,7 +435,7 @@ class OfflineFavoritesService {
 
       return result.count;
     } catch (error) {
-      console.error(
+      logger.error(
         "[offlineFavoritesService] Failed to get pending operations count:",
         error
       );

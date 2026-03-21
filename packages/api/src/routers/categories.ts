@@ -2,8 +2,8 @@ import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
 import { z } from "zod";
 import { publicProcedure } from "../index";
-import { convexClient } from "../lib/convex";
 import { categoriesCache, logCacheOperation } from "../lib/categoriesCache";
+import { convexClient } from "../lib/convex";
 
 export const categoriesRouter = {
   list: publicProcedure.handler(async () => {

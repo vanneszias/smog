@@ -25,7 +25,7 @@ import {
   trackRecentSearchSelected,
   trackSearchCleared,
   trackSearchPerformed,
-} from "@/services/analyticsService";
+} from "@/services/analytics";
 import type { Gesture } from "@/types";
 
 const HomeScreen: React.FC = () => {
