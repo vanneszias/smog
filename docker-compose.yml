@@ -53,10 +53,15 @@ services:
       CONVEX_URL:        ${CONVEX_URL}
       MUX_TOKEN_ID:      ${MUX_TOKEN_ID}
       MUX_TOKEN_SECRET:  ${MUX_TOKEN_SECRET}
-      REMOTION_URL:      ${REMOTION_URL:-http://remotion:3002}
+      REMOTION_URL:      http://remotion:3002
       REMOTION_API_KEY:  ${REMOTION_API_KEY:-dev-secret-key}
-      REDIS_HOST:        redis-session
-      REDIS_PORT:        6379
+      INTERNAL_API_KEY:  ${INTERNAL_API_KEY:-dev-internal-secret}
+      SMTP_HOST:         ${SMTP_HOST}
+      SMTP_PORT:         ${SMTP_PORT:-587}
+      SMTP_USER:         ${SMTP_USER}
+      SMTP_PASS:         ${SMTP_PASS}
+      SMTP_FROM:         ${SMTP_FROM}
+      REDIS_URL:         redis://redis-session:6379/1
     depends_on:
       redis-session:
         condition: service_healthy
@@ -81,7 +86,7 @@ services:
       MUX_TOKEN_ID:     ${MUX_TOKEN_ID}
       MUX_TOKEN_SECRET: ${MUX_TOKEN_SECRET}
       REMOTION_API_KEY: ${REMOTION_API_KEY:-dev-secret-key}
-      SERVER_URL:       ${SERVER_URL:-http://server:3000}
+      SERVER_URL:       http://server:3000
     volumes:
       - remotion-temp:/app/apps/remotion/temp
     networks:
