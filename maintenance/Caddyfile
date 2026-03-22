@@ -1,0 +1,16 @@
+{$DOMAIN:localhost} {
+    root * /srv
+    encode gzip zstd
+
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    handle /health {
+        respond "OK" 200
+    }
+
+    file_server
+}

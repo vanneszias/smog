@@ -1,0 +1,26 @@
+# Maintenance page — bring up manually during upgrades:
+#
+#   cd /opt/smog
+#   docker compose -f maintenance/compose.yml up -d
+#
+# Take down:
+#   docker compose -f maintenance/compose.yml down
+
+services:
+  maintenance:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN:-app.smog.vlaanderen}
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
