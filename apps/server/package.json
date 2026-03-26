@@ -20,6 +20,7 @@
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
     "@smog/convex": "workspace:*",
+    "@smog/shared": "workspace:*",
     "@smog/types": "workspace:*",
     "bullmq": "^5.56.0",
     "convex": "^1.31.0",
@@ -27,6 +28,7 @@
     "hono": "catalog:",
     "ioredis": "5.9.3",
     "node-cron": "^4.2.1",
+    "imapflow": "^1.0.190",
     "nodemailer": "^6.9.16",
     "react": "^19.1.0",
     "zod": "catalog:"
