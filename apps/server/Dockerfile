@@ -15,6 +15,7 @@ COPY packages/types/package.json   ./packages/types/
 COPY packages/styles/package.json  ./packages/styles/
 COPY packages/hooks/package.json   ./packages/hooks/
 COPY packages/i18n/package.json    ./packages/i18n/
+COPY packages/shared/package.json  ./packages/shared/
 COPY packages/ui/package.json      ./packages/ui/
 COPY apps/server/package.json      ./apps/server/
 
