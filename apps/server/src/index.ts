@@ -1,4 +1,10 @@
 import "dotenv/config";
+import { initOtel } from "@smog/shared/otel";
+
+// Must be called before any loggers are first used so the provider is
+// registered before the first log emission hits the OTel API.
+initOtel();
+
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";

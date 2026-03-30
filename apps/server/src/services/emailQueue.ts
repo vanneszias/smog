@@ -10,6 +10,7 @@ import { render } from "@react-email/render";
 import { Queue, Worker } from "bullmq";
 import IORedis from "ioredis";
 import {
+  AdminNewSponsorshipEmail,
   PaymentConfirmedEmail,
   RenewalReminderEmail,
   SponsorshipLiveEmail,
@@ -71,12 +72,21 @@ export interface RenewalReminderEmailJob {
   endDate: number;
 }
 
+export interface AdminNewSponsorshipEmailJob {
+  type: "admin_new_sponsorship";
+  to: string;
+  sponsorName: string;
+  sponsorEmail: string;
+  gestureNames: string[];
+}
+
 export type EmailJob =
   | WelcomeEmailJob
   | SponsorshipSubmittedEmailJob
   | PaymentConfirmedEmailJob
   | SponsorshipLiveEmailJob
-  | RenewalReminderEmailJob;
+  | RenewalReminderEmailJob
+  | AdminNewSponsorshipEmailJob;
 
 // =============================================================================
 // Queue (producer)
@@ -166,6 +176,17 @@ async function processEmailJob(job: EmailJob): Promise<void> {
           sponsorName: job.sponsorName,
           gestureName: job.gestureName,
           endDate: job.endDate,
+        })
+      );
+      break;
+    }
+    case "admin_new_sponsorship": {
+      subject = `Nieuwe sponsoring van ${job.sponsorName}`;
+      html = await render(
+        AdminNewSponsorshipEmail({
+          sponsorName: job.sponsorName,
+          sponsorEmail: job.sponsorEmail,
+          gestureNames: job.gestureNames,
         })
       );
       break;

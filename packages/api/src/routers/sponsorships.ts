@@ -4,6 +4,7 @@ import type { Id } from "@smog/convex/dataModel";
 import { ConvexHttpClient } from "convex/browser";
 import { z } from "zod";
 import { publicProcedure } from "../index";
+import { triggerEmail } from "../lib/emailTrigger";
 
 // Fixed sponsor overlay configuration
 const SPONSOR_OVERLAY_CONFIG = {
@@ -259,6 +260,42 @@ export const sponsorshipsRouter = {
         console.log(
           `[SponsorshipsRouter] Created ${sponsorshipIds.length} sponsorships`
         );
+
+        // Notify all admins about the new sponsorship (fire-and-forget)
+        Promise.all([
+          Promise.all(
+            input.gestureIds.map((id) =>
+              convex
+                .query(api.gestures.getById, { id: id as Id<"gestures"> })
+                .then((g) => g?.name ?? id)
+                .catch(() => id)
+            )
+          ),
+          convex.query(api.users.listAdmins),
+        ])
+          .then(([gestureNames, admins]) => {
+            const adminEmails = admins
+              .map((a) => a.email)
+              .filter((e): e is string => Boolean(e));
+
+            return Promise.all(
+              adminEmails.map((email) =>
+                triggerEmail({
+                  type: "admin_new_sponsorship",
+                  to: email,
+                  sponsorName: input.sponsorName,
+                  sponsorEmail: input.sponsorEmail,
+                  gestureNames,
+                })
+              )
+            );
+          })
+          .catch((err) => {
+            console.error(
+              "[SponsorshipsRouter] Failed to notify admins of new sponsorship:",
+              err
+            );
+          });
 
         return {
           success: true,

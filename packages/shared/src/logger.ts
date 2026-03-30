@@ -7,7 +7,7 @@
  * - Four log levels: DEBUG, INFO, WARN, ERROR
  * - Environment-aware filtering (DEBUG suppressed in production)
  * - Consistent `[module]` prefix format
- * - Optional context / extra data attachment
+ * - OpenTelemetry emission (no-op when no provider is registered)
  *
  * @example
  * import { createLogger } from "@smog/shared/logger";
@@ -16,6 +16,7 @@
  * logger.error("Query failed", error);
  */
 
+import { logs, SeverityNumber } from "@opentelemetry/api-logs";
 import type { LogEntry, LoggerConfig } from "./types/logger";
 import { LogLevel } from "./types/logger";
 
@@ -28,6 +29,20 @@ const isDevelopment =
 const DEFAULT_CONFIG: LoggerConfig = {
   minLevel: isDevelopment ? LogLevel.DEBUG : LogLevel.INFO,
   includeTimestamp: false,
+};
+
+const SEVERITY_NUMBER: Record<LogLevel, SeverityNumber> = {
+  [LogLevel.DEBUG]: SeverityNumber.DEBUG,
+  [LogLevel.INFO]: SeverityNumber.INFO,
+  [LogLevel.WARN]: SeverityNumber.WARN,
+  [LogLevel.ERROR]: SeverityNumber.ERROR,
+};
+
+const SEVERITY_TEXT: Record<LogLevel, string> = {
+  [LogLevel.DEBUG]: "DEBUG",
+  [LogLevel.INFO]: "INFO",
+  [LogLevel.WARN]: "WARN",
+  [LogLevel.ERROR]: "ERROR",
 };
 
 function formatMessage(entry: LogEntry): string {
@@ -77,8 +92,10 @@ export function createLogger(
       return;
     }
 
+    const now = Date.now();
+
     const entry: LogEntry = {
-      timestamp: resolvedConfig.includeTimestamp ? Date.now() : 0,
+      timestamp: resolvedConfig.includeTimestamp ? now : 0,
       level,
       module,
       message,
@@ -87,6 +104,7 @@ export function createLogger(
 
     const formatted = formatMessage(entry);
 
+    // ── Console output ──────────────────────────────────────────────────────
     switch (level) {
       case LogLevel.DEBUG:
       case LogLevel.INFO:
@@ -111,6 +129,24 @@ export function createLogger(
         }
         break;
     }
+
+    // ── OpenTelemetry emission ──────────────────────────────────────────────
+    // getLogger() is called on every log so it picks up the provider even if
+    // initOtel() was called after this logger was created. No-op when no
+    // provider is registered (i.e. in development without OTLP configured).
+    const attributes: Record<string, string> = { module };
+    if (context !== undefined) {
+      attributes["log.context"] =
+        typeof context === "string" ? context : JSON.stringify(context);
+    }
+
+    logs.getLogger(module).emit({
+      severityNumber: SEVERITY_NUMBER[level],
+      severityText: SEVERITY_TEXT[level],
+      body: message,
+      attributes,
+      timestamp: now,
+    });
   }
 
   return {

@@ -104,6 +104,9 @@ async function appendToSentFolder(rawMessage: Buffer): Promise<void> {
     secure: port === 993,
     auth: { user, pass },
     logger: false,
+    tls: {
+      rejectUnauthorized: process.env.IMAP_TLS_REJECT_UNAUTHORIZED !== "false",
+    },
   });
 
   try {
