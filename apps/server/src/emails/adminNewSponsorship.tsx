@@ -23,7 +23,7 @@ export function AdminNewSponsorshipEmail({
   adminPanelUrl,
 }: AdminNewSponsorshipEmailProps) {
   const webUrl = process.env.CORS_ORIGIN ?? "https://app.smog.vlaanderen";
-  const panelUrl = adminPanelUrl ?? `${webUrl}/admin/sponsorships`;
+  const panelUrl = adminPanelUrl ?? `${webUrl}/admin`;
   const gestureCount = gestureNames.length;
   const gestureLabel =
     gestureCount === 1 ? gestureNames[0]! : `${gestureCount} gebaren`;
