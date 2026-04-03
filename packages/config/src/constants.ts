@@ -80,6 +80,14 @@ export const SYNC_RETRY_DELAY_MS = 5 * 60 * 1000;
  */
 export const MAX_SYNC_RETRIES = 3;
 
+/**
+ * If more than this amount of time has passed since the last sync, force a
+ * full sync regardless of the remote timestamp comparison. Acts as a catch-all
+ * for devices that got stuck due to a partial or stale sync.
+ * 1 day = 1 × 24 × 60 × 60 × 1000 ms.
+ */
+export const FORCE_SYNC_INTERVAL_MS = 1 * 24 * 60 * 60 * 1000;
+
 // ─── Analytics Storage Keys ───────────────────────────────────────────────────
 
 /**

@@ -22,6 +22,7 @@
  */
 
 import {
+  FORCE_SYNC_INTERVAL_MS,
   MAX_SYNC_RETRIES,
   SYNC_INTERVAL_MS,
   SYNC_RETRY_DELAY_MS,
@@ -206,6 +207,16 @@ class ConvexSyncService {
         return true; // No local sync time, need to sync
       }
 
+      // Force a full sync if the device hasn't successfully synced in a long
+      // time — catches devices stuck due to a partial or stale prior sync.
+      const timeSinceLastSync = Date.now() - localLastSync.getTime();
+      if (timeSinceLastSync > FORCE_SYNC_INTERVAL_MS) {
+        logger.log(
+          "[convexSyncService] Force sync - more than 7 days since last sync"
+        );
+        return true;
+      }
+
       // Check if remote data is newer than local sync
       const shouldSync = remoteLastUpdated > localLastSync.getTime();
 
@@ -310,12 +321,17 @@ class ConvexSyncService {
       await databaseService.clearAllGestures();
     }
 
-    // Gestures already have resolved categories from convexService
-    for (const { gesture, convexId } of gesturesData) {
-      await databaseService.insertGesture(gesture, convexId);
-    }
+    // Insert all gestures in a single transaction so a partial failure cannot
+    // leave the database in a half-updated state that advances the sync clock.
+    await databaseService.insertGestures(gesturesData);
 
-    await databaseService.setLastSyncTime(new Date());
+    // Store the Convex-side timestamp (not Date.now()) so the next staleness
+    // check is accurate: if remoteLastUpdated is later bumped, the comparison
+    // remoteLastUpdated > localLastSync will catch it correctly.
+    const remoteLastUpdated = await convexService.getLastUpdated();
+    await databaseService.setLastSyncTime(
+      remoteLastUpdated ? new Date(remoteLastUpdated) : new Date()
+    );
 
     if (isInitialSync) {
       this.isInitialSyncComplete = true;
