@@ -14,6 +14,13 @@ interface AdminNewSponsorshipEmailProps {
   sponsorEmail: string;
   gestureNames: string[];
   adminPanelUrl?: string;
+  contactFullName: string;
+  contactCompany?: string;
+  invoiceRequested?: boolean;
+  invoiceName?: string;
+  invoiceVatNumber?: string;
+  invoiceEmail?: string;
+  durationYears?: number;
 }
 
 export function AdminNewSponsorshipEmail({
@@ -21,6 +28,13 @@ export function AdminNewSponsorshipEmail({
   sponsorEmail,
   gestureNames,
   adminPanelUrl,
+  contactFullName,
+  contactCompany,
+  invoiceRequested,
+  invoiceName,
+  invoiceVatNumber,
+  invoiceEmail,
+  durationYears,
 }: AdminNewSponsorshipEmailProps) {
   const webUrl = process.env.CORS_ORIGIN ?? "https://app.smog.vlaanderen";
   const panelUrl = adminPanelUrl ?? `${webUrl}/admin`;
@@ -60,6 +74,41 @@ export function AdminNewSponsorshipEmail({
           <strong>{gestureCount === 1 ? "Gebaar" : "Gebaren"}:</strong>{" "}
           {gestureNames.join(", ")}
         </Text>
+      </Section>
+
+      <Section style={{ ...S.infoBox, marginTop: "12px" }}>
+        <Text
+          style={{ ...S.textSmall, fontWeight: "700", marginBottom: "10px" }}
+        >
+          Facturatie
+        </Text>
+        <Text style={S.textSmall}>
+          <strong>Contactpersoon:</strong> {contactFullName}
+          {contactCompany ? ` (${contactCompany})` : ""}
+        </Text>
+        <Text style={S.textSmall}>
+          <strong>Looptijd:</strong> {durationYears ?? 1} jaar
+        </Text>
+        <Text style={S.textSmall}>
+          <strong>Factuur gevraagd:</strong> {invoiceRequested ? "Ja" : "Nee"}
+        </Text>
+        {invoiceRequested && (
+          <>
+            {invoiceName && (
+              <Text style={S.textSmall}>
+                <strong>Factuurnaam:</strong> {invoiceName}
+              </Text>
+            )}
+            {invoiceVatNumber && (
+              <Text style={S.textSmall}>
+                <strong>BTW-nummer:</strong> {invoiceVatNumber}
+              </Text>
+            )}
+            <Text style={{ ...S.textSmall, margin: "0" }}>
+              <strong>Factuur e-mail:</strong> {invoiceEmail ?? sponsorEmail}
+            </Text>
+          </>
+        )}
       </Section>
 
       <Section style={S.buttonSection}>

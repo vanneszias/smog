@@ -78,6 +78,13 @@ export interface AdminNewSponsorshipEmailJob {
   sponsorName: string;
   sponsorEmail: string;
   gestureNames: string[];
+  contactFullName: string;
+  contactCompany?: string;
+  invoiceRequested?: boolean;
+  invoiceName?: string;
+  invoiceVatNumber?: string;
+  invoiceEmail?: string;
+  durationYears?: number;
 }
 
 export type EmailJob =
@@ -187,6 +194,13 @@ async function processEmailJob(job: EmailJob): Promise<void> {
           sponsorName: job.sponsorName,
           sponsorEmail: job.sponsorEmail,
           gestureNames: job.gestureNames,
+          contactFullName: job.contactFullName,
+          contactCompany: job.contactCompany,
+          invoiceRequested: job.invoiceRequested,
+          invoiceName: job.invoiceName,
+          invoiceVatNumber: job.invoiceVatNumber,
+          invoiceEmail: job.invoiceEmail,
+          durationYears: job.durationYears,
         })
       );
       break;

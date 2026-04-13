@@ -88,6 +88,19 @@ export function SponsorshipDetailsPanel({
               {sponsorship.sponsorEmail}
             </span>
           </div>
+          {sponsorship.contactFullName && (
+            <div className="border-[var(--admin-border)] border-t pt-2 text-sm">
+              <p className="mb-0.5 text-[var(--admin-text-muted)] text-xs">
+                Contactpersoon
+              </p>
+              <p className="text-[var(--admin-text)]">
+                {sponsorship.contactFullName}
+                {sponsorship.contactCompany
+                  ? ` — ${sponsorship.contactCompany}`
+                  : ""}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2">
@@ -110,12 +123,24 @@ export function SponsorshipDetailsPanel({
           </div>
         </div>
 
-        {sponsorship.invoiceRequested && (
-          <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-            <p className="flex items-center gap-1.5 font-medium text-amber-600 text-xs uppercase tracking-wide">
-              <FileText className="h-3.5 w-3.5" />
-              Factuur gevraagd
-            </p>
+        <div
+          className={`space-y-2 rounded-lg border p-3 ${
+            sponsorship.invoiceRequested
+              ? "border-amber-500/30 bg-amber-500/5"
+              : "border-[var(--admin-border)] bg-[var(--admin-card)]"
+          }`}
+        >
+          <p
+            className={`flex items-center gap-1.5 font-medium text-xs uppercase tracking-wide ${
+              sponsorship.invoiceRequested
+                ? "text-amber-600"
+                : "text-[var(--admin-text-muted)]"
+            }`}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            {sponsorship.invoiceRequested ? "Factuur gevraagd" : "Geen factuur"}
+          </p>
+          {sponsorship.invoiceRequested && (
             <div className="space-y-1 text-sm">
               {sponsorship.invoiceName && (
                 <div className="flex items-start gap-2">
@@ -137,19 +162,17 @@ export function SponsorshipDetailsPanel({
                   </span>
                 </div>
               )}
-              {sponsorship.invoiceEmail && (
-                <div className="flex items-start gap-2">
-                  <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
-                    E-mail
-                  </span>
-                  <span className="text-[var(--admin-text)]">
-                    {sponsorship.invoiceEmail}
-                  </span>
-                </div>
-              )}
+              <div className="flex items-start gap-2">
+                <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                  E-mail
+                </span>
+                <span className="text-[var(--admin-text)]">
+                  {sponsorship.invoiceEmail || sponsorship.sponsorEmail}
+                </span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {sponsorship.status === "active" && (
           <div className="rounded-lg bg-[var(--admin-card)] p-3">

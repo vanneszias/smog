@@ -286,6 +286,13 @@ export const sponsorshipsRouter = {
                   sponsorName: input.sponsorName,
                   sponsorEmail: input.sponsorEmail,
                   gestureNames,
+                  contactFullName: input.contactFullName,
+                  contactCompany: input.contactCompany,
+                  invoiceRequested: input.invoiceRequested,
+                  invoiceName: input.invoiceName,
+                  invoiceVatNumber: input.invoiceVatNumber,
+                  invoiceEmail: input.invoiceEmail,
+                  durationYears: input.durationYears,
                 })
               )
             );
