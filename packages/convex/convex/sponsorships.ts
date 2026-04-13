@@ -890,6 +890,47 @@ export const markRenewalReminderSent = mutation({
   },
 });
 
+// Get stale pending_payment sponsorships (for scheduled cleanup job)
+// A sponsorship is considered stale if it has been in pending_payment for more than 24 hours
+export const getStalePendingPayments = query({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const pending = await ctx.db
+      .query("sponsorships")
+      .withIndex("by_status", (q) => q.eq("status", "pending_payment"))
+      .collect();
+    return pending.filter((s) => s.updatedAt < cutoff);
+  },
+});
+
+// Cancel a pending_payment sponsorship (no payment was received)
+export const cancelPendingPayment = mutation({
+  args: {
+    sponsorshipId: v.id("sponsorships"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const sponsorship = await ctx.db.get(args.sponsorshipId);
+    if (!sponsorship) {
+      throw new Error("Sponsorship not found");
+    }
+
+    if (sponsorship.status !== "pending_payment") {
+      throw new Error(
+        `Cannot cancel sponsorship with status: ${sponsorship.status}`
+      );
+    }
+
+    await ctx.db.patch(args.sponsorshipId, {
+      status: "cancelled",
+      updatedAt: Date.now(),
+    });
+
+    return null;
+  },
+});
+
 // Admin: Manually expire a sponsorship
 export const forceExpire = mutation({
   args: {

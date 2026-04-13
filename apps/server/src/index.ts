@@ -24,7 +24,11 @@ import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { startExpirationCronJob, startRenewalReminderCronJob } from "./cron";
+import {
+  startExpirationCronJob,
+  startRenewalReminderCronJob,
+  startStalePendingPaymentCleanupJob,
+} from "./cron";
 import {
   PaymentConfirmedEmail,
   RenewalReminderEmail,
@@ -58,6 +62,7 @@ const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 // Start cron jobs
 startExpirationCronJob();
 startRenewalReminderCronJob();
+startStalePendingPaymentCleanupJob();
 
 // Start email queue worker
 startEmailWorker();

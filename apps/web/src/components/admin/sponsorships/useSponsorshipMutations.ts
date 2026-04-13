@@ -13,6 +13,7 @@ interface UseSponsorshipMutationsOptions {
   statusFilter: string;
   onExpireSuccess: () => void;
   onMarkPaidSuccess: () => void;
+  onCancelSuccess: () => void;
 }
 
 /**
@@ -26,6 +27,7 @@ export function useSponsorshipMutations({
   statusFilter,
   onExpireSuccess,
   onMarkPaidSuccess,
+  onCancelSuccess,
 }: UseSponsorshipMutationsOptions) {
   const queryClient = useQueryClient();
 
@@ -80,6 +82,19 @@ export function useSponsorshipMutations({
     },
   });
 
+  const cancelPendingPayment = useMutation({
+    mutationFn: (sponsorshipId: string) =>
+      client.admin.sponsorships.cancelPendingPayment({ sponsorshipId }),
+    onSuccess: () => {
+      toast.success("Sponsorship cancelled — gesture is now available again");
+      invalidateSponsorships();
+      onCancelSuccess();
+    },
+    onError: (error) => {
+      toast.error(`Failed to cancel sponsorship: ${error.message}`);
+    },
+  });
+
   const exportCsv = useMutation({
     mutationFn: () =>
       client.admin.sponsorships.exportToCsv({
@@ -108,5 +123,11 @@ export function useSponsorshipMutations({
     },
   });
 
-  return { forceExpire, generateReEditLink, markPaidManually, exportCsv };
+  return {
+    forceExpire,
+    generateReEditLink,
+    markPaidManually,
+    cancelPendingPayment,
+    exportCsv,
+  };
 }

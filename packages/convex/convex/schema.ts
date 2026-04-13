@@ -61,7 +61,7 @@ export default defineSchema({
     hasLogo: v.optional(v.boolean()), // Whether user paid for logo
     contactFullName: v.string(), // Full name collected before payment
     contactCompany: v.optional(v.string()), // Company name (optional)
-    status: v.string(), // pending | pending_payment | pending_approval | pending_resubmission | active | expired | rejected
+    status: v.string(), // pending | pending_payment | pending_approval | pending_resubmission | active | expired | rejected | cancelled
     molliePaymentId: v.optional(v.string()),
     paymentAmount: v.number(),
     rejectionReason: v.optional(v.string()),

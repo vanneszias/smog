@@ -3,6 +3,7 @@
  */
 
 import {
+  Ban,
   CheckCircle,
   Clock,
   Euro,
@@ -58,5 +59,11 @@ export const statusConfig: Record<string, StatusDisplayConfig> = {
     color: "text-purple-600",
     bgColor: "bg-purple-500/10",
     icon: RefreshCcw,
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "text-gray-500",
+    bgColor: "bg-gray-500/10",
+    icon: Ban,
   },
 };

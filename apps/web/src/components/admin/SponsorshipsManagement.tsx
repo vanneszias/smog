@@ -76,19 +76,27 @@ export function SponsorshipsManagement() {
     refetchOnMount: true,
   });
 
-  const { forceExpire, generateReEditLink, markPaidManually, exportCsv } =
-    useSponsorshipMutations({
-      statusFilter,
-      onExpireSuccess: () => {
-        setSelectedSponsorshipId(null);
-        setDetailsDialog(null);
-        setConfirmExpireDialog(null);
-      },
-      onMarkPaidSuccess: () => {
-        setSelectedSponsorshipId(null);
-        setConfirmMarkPaidDialog(null);
-      },
-    });
+  const {
+    forceExpire,
+    generateReEditLink,
+    markPaidManually,
+    cancelPendingPayment,
+    exportCsv,
+  } = useSponsorshipMutations({
+    statusFilter,
+    onExpireSuccess: () => {
+      setSelectedSponsorshipId(null);
+      setDetailsDialog(null);
+      setConfirmExpireDialog(null);
+    },
+    onMarkPaidSuccess: () => {
+      setSelectedSponsorshipId(null);
+      setConfirmMarkPaidDialog(null);
+    },
+    onCancelSuccess: () => {
+      setSelectedSponsorshipId(null);
+    },
+  });
 
   const filteredSponsorships = useMemo(() => {
     if (!sponsorships) {
@@ -242,9 +250,13 @@ export function SponsorshipsManagement() {
         <div className="w-96 shrink-0">
           {selectedSponsorship ? (
             <SponsorshipDetailsPanel
+              isCancelling={cancelPendingPayment.isPending}
               isExpiring={forceExpire.isPending}
               isGeneratingReEditLink={generateReEditLink.isPending}
               isMarkingPaid={markPaidManually.isPending}
+              onCancelPendingPayment={() =>
+                cancelPendingPayment.mutate(selectedSponsorship._id)
+              }
               onForceExpire={() =>
                 setConfirmExpireDialog(selectedSponsorship._id)
               }

@@ -578,6 +578,27 @@ export const adminRouter = {
         };
       }),
 
+    cancelPendingPayment: adminProcedure
+      .input(
+        z.object({
+          sponsorshipId: z.string(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        await convexClient.mutation(api.sponsorships.cancelPendingPayment, {
+          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+        });
+
+        await convexClient.mutation(api.adminLogs.logAction, {
+          userId: context.userId,
+          action: "cancel_pending_payment",
+          targetId: input.sponsorshipId,
+          targetType: "sponsorship",
+        });
+
+        return { success: true };
+      }),
+
     markPaidManually: adminProcedure
       .input(
         z.object({
@@ -631,6 +652,7 @@ export const adminRouter = {
               "pending_approval",
               "pending_resubmission",
               "rejected",
+              "cancelled",
             ])
             .default("all"),
           from: z.number().optional(),

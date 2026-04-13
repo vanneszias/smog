@@ -14,6 +14,7 @@ import {
   Link,
   Mail,
   Timer,
+  Trash2,
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,9 +28,11 @@ interface SponsorshipDetailsPanelProps {
   onForceExpire: () => void;
   onGenerateReEditLink: () => void;
   onMarkPaidManually: () => void;
+  onCancelPendingPayment: () => void;
   isExpiring: boolean;
   isGeneratingReEditLink: boolean;
   isMarkingPaid: boolean;
+  isCancelling: boolean;
 }
 
 /**
@@ -41,9 +44,11 @@ export function SponsorshipDetailsPanel({
   onForceExpire,
   onGenerateReEditLink,
   onMarkPaidManually,
+  onCancelPendingPayment,
   isExpiring,
   isGeneratingReEditLink,
   isMarkingPaid,
+  isCancelling,
 }: SponsorshipDetailsPanelProps) {
   return (
     <div className="sticky top-24 space-y-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
@@ -198,14 +203,25 @@ export function SponsorshipDetailsPanel({
         </Button>
 
         {sponsorship.status === "pending_payment" && (
-          <Button
-            className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
-            disabled={isMarkingPaid}
-            onClick={onMarkPaidManually}
-          >
-            <Banknote className="h-4 w-4" />
-            {isMarkingPaid ? "Marking as Paid..." : "Mark as Paid Manually"}
-          </Button>
+          <>
+            <Button
+              className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
+              disabled={isMarkingPaid}
+              onClick={onMarkPaidManually}
+            >
+              <Banknote className="h-4 w-4" />
+              {isMarkingPaid ? "Marking as Paid..." : "Mark as Paid Manually"}
+            </Button>
+            <Button
+              className="w-full gap-2"
+              disabled={isCancelling}
+              onClick={onCancelPendingPayment}
+              variant="destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              {isCancelling ? "Cancelling..." : "Cancel (No Payment)"}
+            </Button>
+          </>
         )}
 
         {sponsorship.status === "active" && (

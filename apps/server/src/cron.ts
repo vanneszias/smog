@@ -135,3 +135,54 @@ export function startRenewalReminderCronJob() {
 
   console.log("[Cron] Renewal reminder job scheduled (daily at 08:00)");
 }
+
+/**
+ * Cancel pending_payment sponsorships that have been waiting for more than 24 hours
+ * Runs every hour so gesture slots are freed up promptly
+ */
+export function startStalePendingPaymentCleanupJob() {
+  cron.schedule("0 * * * *", async () => {
+    try {
+      console.log("[Cron] Running stale pending-payment cleanup job...");
+
+      const stale = await convex.query(
+        api.sponsorships.getStalePendingPayments,
+        {}
+      );
+
+      if (stale.length === 0) {
+        console.log("[Cron] No stale pending-payment sponsorships found");
+        return;
+      }
+
+      console.log(
+        `[Cron] Found ${stale.length} stale pending-payment sponsorship(s)`
+      );
+
+      for (const sponsorship of stale) {
+        try {
+          await convex.mutation(api.sponsorships.cancelPendingPayment, {
+            sponsorshipId: sponsorship._id,
+          });
+          console.log(
+            `[Cron] Cancelled stale pending-payment sponsorship ${sponsorship._id}`
+          );
+        } catch (error) {
+          console.error(
+            `[Cron] Error cancelling sponsorship ${sponsorship._id}:`,
+            error
+          );
+        }
+      }
+
+      console.log("[Cron] Stale pending-payment cleanup job completed");
+    } catch (error) {
+      console.error(
+        "[Cron] Error in stale pending-payment cleanup job:",
+        error
+      );
+    }
+  });
+
+  console.log("[Cron] Stale pending-payment cleanup job scheduled (hourly)");
+}
