@@ -23,11 +23,15 @@ import { sendEmail } from "./email";
 // Redis connection
 // =============================================================================
 
-const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379/1";
+const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379/1";
 
 // Shared connection reused by both the Queue producer and the Worker consumer
 const connection = new IORedis(REDIS_URL, {
   maxRetriesPerRequest: null, // Required by BullMQ
+});
+
+connection.on("error", (err) => {
+  console.error("[Redis] Connection error:", err.message);
 });
 
 // =============================================================================
