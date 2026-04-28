@@ -78,9 +78,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   return (
     <View style={styles.container}>
       <VideoView
-        allowsFullscreen={false}
         allowsPictureInPicture={false}
         contentFit="contain"
+        fullscreenOptions={{ enable: false }}
         player={player}
         style={styles.video}
       />

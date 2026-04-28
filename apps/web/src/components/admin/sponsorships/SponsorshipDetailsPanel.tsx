@@ -35,6 +35,60 @@ interface SponsorshipDetailsPanelProps {
   isCancelling: boolean;
 }
 
+function InvoiceBlock({ sponsorship }: { sponsorship: Sponsorship }) {
+  const hasInvoice = sponsorship.invoiceRequested;
+  return (
+    <div
+      className={`space-y-2 rounded-lg border p-3 ${
+        hasInvoice
+          ? "border-amber-500/30 bg-amber-500/5"
+          : "border-[var(--admin-border)] bg-[var(--admin-card)]"
+      }`}
+    >
+      <p
+        className={`flex items-center gap-1.5 font-medium text-xs uppercase tracking-wide ${
+          hasInvoice ? "text-amber-600" : "text-[var(--admin-text-muted)]"
+        }`}
+      >
+        <FileText className="h-3.5 w-3.5" />
+        {hasInvoice ? "Factuur gevraagd" : "Geen factuur"}
+      </p>
+      {hasInvoice && (
+        <div className="space-y-1 text-sm">
+          {sponsorship.invoiceName && (
+            <div className="flex items-start gap-2">
+              <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                Naam
+              </span>
+              <span className="text-[var(--admin-text)]">
+                {sponsorship.invoiceName}
+              </span>
+            </div>
+          )}
+          {sponsorship.invoiceVatNumber && (
+            <div className="flex items-start gap-2">
+              <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+                Ond.nr.
+              </span>
+              <span className="font-mono text-[var(--admin-text)]">
+                {sponsorship.invoiceVatNumber}
+              </span>
+            </div>
+          )}
+          <div className="flex items-start gap-2">
+            <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
+              E-mail
+            </span>
+            <span className="text-[var(--admin-text)]">
+              {sponsorship.invoiceEmail || sponsorship.sponsorEmail}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Sticky right-column panel showing the selected sponsorship's details and actions.
  */
@@ -123,56 +177,7 @@ export function SponsorshipDetailsPanel({
           </div>
         </div>
 
-        <div
-          className={`space-y-2 rounded-lg border p-3 ${
-            sponsorship.invoiceRequested
-              ? "border-amber-500/30 bg-amber-500/5"
-              : "border-[var(--admin-border)] bg-[var(--admin-card)]"
-          }`}
-        >
-          <p
-            className={`flex items-center gap-1.5 font-medium text-xs uppercase tracking-wide ${
-              sponsorship.invoiceRequested
-                ? "text-amber-600"
-                : "text-[var(--admin-text-muted)]"
-            }`}
-          >
-            <FileText className="h-3.5 w-3.5" />
-            {sponsorship.invoiceRequested ? "Factuur gevraagd" : "Geen factuur"}
-          </p>
-          {sponsorship.invoiceRequested && (
-            <div className="space-y-1 text-sm">
-              {sponsorship.invoiceName && (
-                <div className="flex items-start gap-2">
-                  <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
-                    Naam
-                  </span>
-                  <span className="text-[var(--admin-text)]">
-                    {sponsorship.invoiceName}
-                  </span>
-                </div>
-              )}
-              {sponsorship.invoiceVatNumber && (
-                <div className="flex items-start gap-2">
-                  <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
-                    Ond.nr.
-                  </span>
-                  <span className="font-mono text-[var(--admin-text)]">
-                    {sponsorship.invoiceVatNumber}
-                  </span>
-                </div>
-              )}
-              <div className="flex items-start gap-2">
-                <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
-                  E-mail
-                </span>
-                <span className="text-[var(--admin-text)]">
-                  {sponsorship.invoiceEmail || sponsorship.sponsorEmail}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+        <InvoiceBlock sponsorship={sponsorship} />
 
         {sponsorship.status === "active" && (
           <div className="rounded-lg bg-[var(--admin-card)] p-3">

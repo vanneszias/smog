@@ -16,14 +16,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@opentelemetry/api-logs": "^0.57.0",
-    "@opentelemetry/exporter-logs-otlp-http": "^0.57.0",
-    "@opentelemetry/resources": "^1.30.0",
-    "@opentelemetry/sdk-logs": "^0.57.0"
+    "@opentelemetry/api-logs": "^0.57.2",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.57.2",
+    "@opentelemetry/resources": "^1.30.1",
+    "@opentelemetry/sdk-logs": "^0.57.2"
   },
   "devDependencies": {
-    "typescript": "^5.8.2",
+    "typescript": "^5.9.3",
     "@smog/config": "workspace:*",
-    "vitest": "^2.0.0"
+    "vitest": "^2.1.9"
   }
 }

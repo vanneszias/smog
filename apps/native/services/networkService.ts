@@ -285,10 +285,11 @@ class NetworkService {
   // Clear all network data
   async clearNetworkData(): Promise<void> {
     try {
-      await AsyncStorage.multiRemove([
-        this.NETWORK_METRICS_KEY,
-        this.OFFLINE_QUEUE_KEY,
-      ]);
+      await Promise.all(
+        [this.NETWORK_METRICS_KEY, this.OFFLINE_QUEUE_KEY].map((k) =>
+          AsyncStorage.removeItem(k)
+        )
+      );
     } catch (error) {
       logger.error("Failed to clear network data:", error);
     }

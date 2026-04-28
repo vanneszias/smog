@@ -7,7 +7,7 @@
  */
 
 import { render } from "@react-email/render";
-import { Queue, Worker } from "bullmq";
+import { type ConnectionOptions, Queue, Worker } from "bullmq";
 import IORedis from "ioredis";
 import {
   AdminNewSponsorshipEmail,
@@ -95,14 +95,16 @@ export type EmailJob =
   | RenewalReminderEmailJob
   | AdminNewSponsorshipEmailJob;
 
+type EmailJobName = EmailJob["type"];
+
 // =============================================================================
 // Queue (producer)
 // =============================================================================
 
 const EMAIL_QUEUE = "email";
 
-const emailQueue = new Queue<EmailJob, void, string>(EMAIL_QUEUE, {
-  connection,
+const emailQueue = new Queue<EmailJob, void, EmailJobName>(EMAIL_QUEUE, {
+  connection: connection as unknown as ConnectionOptions,
 });
 
 /**
@@ -217,7 +219,7 @@ async function processEmailJob(job: EmailJob): Promise<void> {
 }
 
 export function startEmailWorker(): void {
-  const worker = new Worker<EmailJob, void, string>(
+  const worker = new Worker<EmailJob, void, EmailJobName>(
     EMAIL_QUEUE,
     async (bullJob) => {
       console.log(
@@ -225,7 +227,7 @@ export function startEmailWorker(): void {
       );
       await processEmailJob(bullJob.data);
     },
-    { connection }
+    { connection: connection as unknown as ConnectionOptions }
   );
 
   worker.on("completed", (bullJob) => {

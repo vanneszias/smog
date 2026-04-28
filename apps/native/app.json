@@ -4,7 +4,7 @@
     "slug": "smog",
     "version": "0.2.3",
     "runtimeVersion": "0.2.2",
-    "sdkVersion": "54.0.0",
+    "sdkVersion": "55.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "smog",

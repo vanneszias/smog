@@ -202,7 +202,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Clear guest mode
-        await AsyncStorage.multiRemove([GUEST_MODE_KEY, GUEST_ID_KEY]);
+        await Promise.all(
+          [GUEST_MODE_KEY, GUEST_ID_KEY].map((k) => AsyncStorage.removeItem(k))
+        );
         setGuestId(null);
         setAuthMode("authenticated");
       } catch (error) {
@@ -329,7 +331,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     accessToken = null;
     await clearRefreshToken();
-    await AsyncStorage.multiRemove([USER_KEY, GUEST_MODE_KEY, GUEST_ID_KEY]);
+    await Promise.all(
+      [USER_KEY, GUEST_MODE_KEY, GUEST_ID_KEY].map((k) =>
+        AsyncStorage.removeItem(k)
+      )
+    );
     setUser(null);
     setGuestId(null);
     setAuthMode("unauthenticated");

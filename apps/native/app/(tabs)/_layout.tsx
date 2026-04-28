@@ -1,10 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import {
-  Icon,
-  Label,
-  NativeTabs,
-  VectorIcon,
-} from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { Platform } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
@@ -23,32 +18,53 @@ export default function TabLayout() {
       tintColor={theme.primary}
     >
       <NativeTabs.Trigger name="index">
-        <Label>{t("tabs.home")}</Label>
-        <Icon
-          androidSrc={{
-            default: <VectorIcon family={Ionicons} name="home-outline" />,
-            selected: <VectorIcon family={Ionicons} name="home" />,
-          }}
+        <NativeTabs.Trigger.Label>{t("tabs.home")}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
           sf={{ default: "house", selected: "house.fill" }}
+          src={{
+            default: (
+              <NativeTabs.Trigger.VectorIcon
+                family={Ionicons}
+                name="home-outline"
+              />
+            ),
+            selected: (
+              <NativeTabs.Trigger.VectorIcon family={Ionicons} name="home" />
+            ),
+          }}
         />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="search" role="search">
-        <Label>{t("tabs.search")}</Label>
-        <Icon
-          androidSrc={<VectorIcon family={Ionicons} name="search-outline" />}
+        <NativeTabs.Trigger.Label>{t("tabs.search")}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
           sf="magnifyingglass"
+          src={
+            <NativeTabs.Trigger.VectorIcon
+              family={Ionicons}
+              name="search-outline"
+            />
+          }
         />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="favorites">
-        <Label>{t("tabs.favorites")}</Label>
-        <Icon
-          androidSrc={{
-            default: <VectorIcon family={Ionicons} name="heart-outline" />,
-            selected: <VectorIcon family={Ionicons} name="heart" />,
-          }}
+        <NativeTabs.Trigger.Label>
+          {t("tabs.favorites")}
+        </NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
           sf={{ default: "heart", selected: "heart.fill" }}
+          src={{
+            default: (
+              <NativeTabs.Trigger.VectorIcon
+                family={Ionicons}
+                name="heart-outline"
+              />
+            ),
+            selected: (
+              <NativeTabs.Trigger.VectorIcon family={Ionicons} name="heart" />
+            ),
+          }}
         />
       </NativeTabs.Trigger>
     </NativeTabs>

@@ -156,15 +156,17 @@ export default function AccountSettingsScreen() {
 
               await deleteAccount({ confirmDelete: true });
 
-              await AsyncStorage.multiRemove([
-                "@smog_gdpr_consent",
-                "@smog_analytics_consent",
-                "@smog_consent_version",
-                "@smog_consent_date",
-                "@smog_user",
-                "@smog_guest_id",
-                "@smog_guest_mode",
-              ]);
+              await Promise.all(
+                [
+                  "@smog_gdpr_consent",
+                  "@smog_analytics_consent",
+                  "@smog_consent_version",
+                  "@smog_consent_date",
+                  "@smog_user",
+                  "@smog_guest_id",
+                  "@smog_guest_mode",
+                ].map((k) => AsyncStorage.removeItem(k))
+              );
 
               await signOut();
               triggerHaptic("success");
