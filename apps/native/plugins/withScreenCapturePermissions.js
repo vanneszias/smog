@@ -32,10 +32,15 @@ const withScreenCapturePermissions = (config) => {
       "android.permission.READ_EXTERNAL_STORAGE",
     ];
 
-    // Add removal directives for each permission
-    // This tells the Android manifest merger to remove these permissions
-    // even if they're declared in library manifests
     for (const permission of permissionsToRemove) {
+      // Remove any existing entries for this permission (added by other plugins)
+      // to avoid duplicate entries that fail the manifest merger.
+      androidManifest.manifest["uses-permission"] = androidManifest.manifest[
+        "uses-permission"
+      ].filter((p) => p.$?.["android:name"] !== permission);
+
+      // Add a single tools:node="remove" directive so the merger removes it
+      // from any library manifests (e.g. expo-screen-capture's AAR) as well.
       androidManifest.manifest["uses-permission"].push({
         $: {
           "android:name": permission,

@@ -2,14 +2,13 @@
   "expo": {
     "name": "SMOG & Co",
     "slug": "smog",
-    "version": "0.2.3",
+    "version": "1.0.1",
     "runtimeVersion": "0.2.2",
     "sdkVersion": "55.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "smog",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "developmentClient": {
       "silentLaunch": true
     },
@@ -21,7 +20,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "33",
+      "buildNumber": "35",
       "appleTeamId": "96XKP6MU2A"
     },
     "android": {
@@ -53,7 +52,7 @@
         }
       ],
       "package": "be.zias.smog",
-      "versionCode": 62
+      "versionCode": 65
     },
     "plugins": [
       "expo-router",
