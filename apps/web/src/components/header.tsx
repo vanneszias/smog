@@ -32,14 +32,14 @@ export default function Header() {
 
   // Top header navigation - only key actions
   const headerLinks = [
-    { to: "/favorites", label: t("web.header.favorites", "Favorieten") },
+    { to: "/favorites", label: t("web.header.lists", "Lijsten") },
     { to: "/sponsors", label: t("web.header.sponsor", "Sponsor") },
   ];
 
   // Sidebar navigation - all pages
   const sidebarLinks = [
     { to: "/gestures", label: t("web.header.search", "Zoek") },
-    { to: "/favorites", label: t("web.header.favorites", "Favorieten") },
+    { to: "/favorites", label: t("web.header.lists", "Lijsten") },
     { to: "/account", label: t("web.header.account", "Account") },
     { to: "/sponsors", label: t("web.header.sponsor", "Sponsor") },
   ];

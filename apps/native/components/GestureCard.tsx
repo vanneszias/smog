@@ -11,12 +11,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useTheme } from "@/context/ThemeContext";
-import {
-  trackFavoriteAdded,
-  trackFavoriteRemoved,
-  trackGestureLiked,
-  trackGestureUnliked,
-} from "@/services/analytics";
+import { trackFavoriteAdded, trackGestureLiked } from "@/services/analytics";
 import type { Gesture } from "@/types";
 import { typography } from "@/utils/typography";
 
@@ -35,7 +30,7 @@ export interface GestureCardRef {
 const GestureCard = ({
   gesture,
   onPress,
-  isFavorite = false,
+  isFavorite: _isFavorite = false,
   onToggleFavorite,
   source = "search_results",
   ref,
@@ -79,32 +74,15 @@ const GestureCard = ({
     if (onToggleFavorite) {
       impactAsync(ImpactFeedbackStyle.Medium);
 
-      const wasLiked = isFavorite;
       onToggleFavorite(gesture.id);
 
-      // Track the favorite action
-      if (wasLiked) {
-        trackFavoriteRemoved(
-          gesture.id,
-          gesture.name,
-          gesture.category,
-          source
-        );
-        trackGestureUnliked(
-          gesture.id,
-          gesture.name,
-          gesture.category,
-          "button_tap"
-        );
-      } else {
-        trackFavoriteAdded(gesture.id, gesture.name, gesture.category, source);
-        trackGestureLiked(
-          gesture.id,
-          gesture.name,
-          gesture.category,
-          "button_tap"
-        );
-      }
+      trackFavoriteAdded(gesture.id, gesture.name, gesture.category, source);
+      trackGestureLiked(
+        gesture.id,
+        gesture.name,
+        gesture.category,
+        "button_tap"
+      );
     }
   };
 
@@ -143,15 +121,12 @@ const GestureCard = ({
       }
       if (onToggleFavorite) {
         // Track double tap interaction
-        const wasLiked = isFavorite;
-        if (!wasLiked) {
-          trackGestureLiked(
-            gesture.id,
-            gesture.name,
-            gesture.category,
-            "double_tap"
-          );
-        }
+        trackGestureLiked(
+          gesture.id,
+          gesture.name,
+          gesture.category,
+          "double_tap"
+        );
         handleLike();
         showLikeAnimation();
       }
@@ -221,11 +196,7 @@ const GestureCard = ({
               onPress={handleLikeButtonPress}
               style={styles.favoriteButton}
             >
-              <Ionicons
-                color={isFavorite ? theme.liked : theme.primary}
-                name={isFavorite ? "heart" : "heart-outline"}
-                size={ICON_SIZE.md}
-              />
+              <Ionicons color={theme.primary} name="add" size={ICON_SIZE.md} />
             </TouchableOpacity>
           ) : null}
 
@@ -240,11 +211,7 @@ const GestureCard = ({
                 { backgroundColor: theme.background },
               ]}
             >
-              <Ionicons
-                color={theme.liked}
-                name={isFavorite ? "heart" : "heart-outline"}
-                size={ICON_SIZE.xl}
-              />
+              <Ionicons color={theme.primary} name="add" size={ICON_SIZE.xl} />
             </View>
           </Animated.View>
         </Animated.View>

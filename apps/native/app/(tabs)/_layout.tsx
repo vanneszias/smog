@@ -49,20 +49,18 @@ export default function TabLayout() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="favorites">
-        <NativeTabs.Trigger.Label>
-          {t("tabs.favorites")}
-        </NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t("tabs.lists")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          sf={{ default: "heart", selected: "heart.fill" }}
+          sf={{ default: "list.bullet", selected: "list.bullet" }}
           src={{
             default: (
               <NativeTabs.Trigger.VectorIcon
                 family={Ionicons}
-                name="heart-outline"
+                name="list-outline"
               />
             ),
             selected: (
-              <NativeTabs.Trigger.VectorIcon family={Ionicons} name="heart" />
+              <NativeTabs.Trigger.VectorIcon family={Ionicons} name="list" />
             ),
           }}
         />

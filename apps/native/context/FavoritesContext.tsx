@@ -52,7 +52,8 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
     api.favorites.getUserFavoriteGesturesForNative,
     userId ? { userId } : "skip"
   ) as Gesture[] | undefined;
-  const toggleUserFavorite = useMutation(api.favorites.toggleUserFavorite);
+  const initializeUserLists = useMutation(api.lists.initializeUserLists);
+  const addGestureToLatestList = useMutation(api.lists.addGestureToLatestList);
   const [optimisticFavorites, setOptimisticFavorites] = useState<
     string[] | null
   >(null);
@@ -62,6 +63,16 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
       setOptimisticFavorites(null);
     }
   }, [convexFavoriteIds]);
+
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+
+    initializeUserLists({ userId }).catch((error) => {
+      logger.error("Failed to initialize lists:", error);
+    });
+  }, [initializeUserLists, userId]);
 
   const serverFavorites = useMemo(
     () => convexFavoriteIds?.map((id) => id as string) ?? [],
@@ -92,13 +103,13 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
 
       const previousFavorites = favorites;
       const nextFavorites = previousFavorites.includes(gestureId)
-        ? previousFavorites.filter((id) => id !== gestureId)
+        ? previousFavorites
         : [...previousFavorites, gestureId];
 
       setOptimisticFavorites(nextFavorites);
 
       try {
-        await toggleUserFavorite({
+        await addGestureToLatestList({
           userId,
           gestureId: gestureId as Id<"gestures">,
         });
@@ -107,7 +118,7 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
         logger.error("Failed to toggle favorite:", error);
       }
     },
-    [favorites, toggleUserFavorite, userId]
+    [addGestureToLatestList, favorites, userId]
   );
 
   return (

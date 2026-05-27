@@ -1,4 +1,4 @@
-import { Heart } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GestureCardData } from "./GestureCard";
 
@@ -25,7 +25,6 @@ function GestureRow({
   gesture,
   isSelected,
   onClick,
-  isFavorite,
   onToggleFavorite,
 }: {
   gesture: GestureCardData;
@@ -109,22 +108,12 @@ function GestureRow({
       {/* Favorite button */}
       {onToggleFavorite && (
         <button
-          aria-label={
-            isFavorite
-              ? t("ui.gestureList.removeFromFavorites")
-              : t("ui.gestureList.addToFavorites")
-          }
+          aria-label={t("ui.gestureList.addToList", "Add to list")}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-muted"
           onClick={handleFavoriteClick}
           type="button"
         >
-          <Heart
-            className={`h-6 w-6 transition-all ${
-              isFavorite
-                ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
-                : "fill-none stroke-primary hover:fill-primary/20"
-            }`}
-          />
+          <Plus className="h-6 w-6 stroke-primary transition-all hover:stroke-primary/80" />
         </button>
       )}
     </div>

@@ -50,6 +50,44 @@ export const exportUserData = query({
       })
     );
 
+    const lists = await ctx.db
+      .query("gesture_lists")
+      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
+      .collect();
+
+    const listsWithDetails = await Promise.all(
+      lists.map(async (list) => {
+        const items = await ctx.db
+          .query("gesture_list_items")
+          .withIndex("by_list_position", (q) => q.eq("listId", list._id))
+          .collect();
+
+        const gestures = await Promise.all(
+          items.map(async (item) => {
+            const gesture = await ctx.db.get(item.gestureId);
+            return {
+              gestureId: item.gestureId,
+              gestureName: gesture?.name ?? "Unknown",
+              position: item.position,
+              addedAt: new Date(item.createdAt).toISOString(),
+            };
+          })
+        );
+
+        return {
+          listId: list._id,
+          name: list.name,
+          description: list.description ?? null,
+          visibility: list.visibility,
+          allowSharedEditing: list.allowSharedEditing,
+          isDefaultFavorites: list.isDefaultFavorites,
+          createdAt: new Date(list.createdAt).toISOString(),
+          updatedAt: new Date(list.updatedAt).toISOString(),
+          gestures,
+        };
+      })
+    );
+
     // Get consent history
     const consents = await ctx.db
       .query("user_consents")
@@ -85,6 +123,7 @@ export const exportUserData = query({
         lastActive: new Date(user.lastActiveAt).toISOString(),
       },
       favorites: favoritesWithDetails,
+      lists: listsWithDetails,
       consents: consents.map((c) => ({
         analyticsConsent: c.analyticsConsent,
         marketingConsent: c.marketingConsent ?? false,
@@ -98,7 +137,7 @@ export const exportUserData = query({
       dataProcessing: {
         purposes: [
           "Account management",
-          "Favorites synchronization",
+          "Gesture list and favorites synchronization",
           "Usage analytics (if consented)",
         ],
         thirdParties: ["WorkOS (Authentication)", "PostHog (Analytics)"],
@@ -145,6 +184,25 @@ export const deleteUserAccount = mutation({
 
     for (const fav of favorites) {
       await ctx.db.delete(fav._id);
+    }
+
+    // Delete owned lists and their items
+    const lists = await ctx.db
+      .query("gesture_lists")
+      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
+      .collect();
+
+    for (const list of lists) {
+      const items = await ctx.db
+        .query("gesture_list_items")
+        .withIndex("by_list", (q) => q.eq("listId", list._id))
+        .collect();
+
+      for (const item of items) {
+        await ctx.db.delete(item._id);
+      }
+
+      await ctx.db.delete(list._id);
     }
 
     // Delete consent records

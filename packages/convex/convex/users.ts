@@ -7,6 +7,7 @@
 
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { ensureDefaultFavoritesList } from "./lists";
 
 // =============================================================================
 // User Type (for return values)
@@ -78,13 +79,15 @@ export const createUser = mutation({
   returns: v.id("users"),
   handler: async (ctx, args) => {
     const now = Date.now();
-    return await ctx.db.insert("users", {
+    const userId = await ctx.db.insert("users", {
       workosId: args.workosId,
       guestId: args.guestId,
       email: args.email,
       createdAt: now,
       lastActiveAt: now,
     });
+    await ensureDefaultFavoritesList(ctx, userId);
+    return userId;
   },
 });
 
@@ -115,17 +118,20 @@ export const migrateGuestToUser = mutation({
         ...(args.email !== undefined && { email: args.email }),
         lastActiveAt: now,
       });
+      await ensureDefaultFavoritesList(ctx, guestUser._id);
       return guestUser._id;
     }
 
     // No guest found - create new user with both IDs
-    return await ctx.db.insert("users", {
+    const userId = await ctx.db.insert("users", {
       workosId: args.workosId,
       guestId: args.guestId,
       email: args.email,
       createdAt: now,
       lastActiveAt: now,
     });
+    await ensureDefaultFavoritesList(ctx, userId);
+    return userId;
   },
 });
 

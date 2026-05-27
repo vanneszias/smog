@@ -1,6 +1,6 @@
 import MuxPlayer from "@mux/mux-player-react";
 import { Link } from "@tanstack/react-router";
-import { Heart } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -21,7 +21,7 @@ interface GestureCardProps {
 
 export function GestureCard({
   gesture,
-  isFavorite = false,
+  isFavorite: _isFavorite = false,
   onToggleFavorite,
 }: GestureCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -71,22 +71,12 @@ export function GestureCard({
           {/* Favorite Button Overlay */}
           {onToggleFavorite ? (
             <button
-              aria-label={
-                isFavorite
-                  ? t("ui.gestureList.removeFromFavorites")
-                  : t("ui.gestureList.addToFavorites")
-              }
+              aria-label={t("ui.gestureList.addToList", "Add to list")}
               className="absolute top-3 right-3 rounded-full bg-background/80 p-2 backdrop-blur-sm transition-all hover:scale-110 hover:bg-background"
               onClick={handleFavoriteClick}
               type="button"
             >
-              <Heart
-                className={`h-5 w-5 transition-all ${
-                  isFavorite
-                    ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
-                    : "fill-none stroke-[var(--primary)] hover:fill-[var(--primary)]/20"
-                }`}
-              />
+              <Plus className="h-5 w-5 stroke-[var(--primary)] transition-all hover:stroke-[var(--primary)]/80" />
             </button>
           ) : null}
         </div>

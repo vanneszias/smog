@@ -27,6 +27,10 @@
     "undo": "Ongedaan maken",
     "error": "Favoriet bijwerken mislukt"
   },
+  "lists": {
+    "emptyTitle": "Nog geen gebaren in je lijsten",
+    "emptyMessage": "Gebruik de plusknop bij een gebaar om het aan je nieuwste lijst toe te voegen."
+  },
   "auth": {
     "welcome": {
       "title": "Welkom bij SMOG",
@@ -126,7 +130,8 @@
   "tabs": {
     "home": "Home",
     "search": "Zoeken",
-    "favorites": "Favorieten"
+    "favorites": "Favorieten",
+    "lists": "Lijsten"
   },
   "gesture": {
     "loadFailed": "Het laden van dit gebaar is mislukt",
@@ -1043,7 +1048,8 @@
       "errorTryAgain": "Probeer het later opnieuw.",
       "noGestures": "Geen gebaren gevonden.",
       "addToFavorites": "Toevoegen aan favorieten",
-      "removeFromFavorites": "Verwijderen uit favorieten"
+      "removeFromFavorites": "Verwijderen uit favorieten",
+      "addToList": "Toevoegen aan lijst"
     },
     "gestureDetail": {
       "backToGestures": "Terug naar Gebaren",

@@ -27,6 +27,10 @@
     "undo": "Undo",
     "error": "Failed to update favorite"
   },
+  "lists": {
+    "emptyTitle": "No gestures in your lists yet",
+    "emptyMessage": "Use the plus button on a gesture to add it to your latest list."
+  },
   "auth": {
     "welcome": {
       "title": "Welcome to SMOG",
@@ -153,7 +157,8 @@
   "tabs": {
     "home": "Home",
     "search": "Search",
-    "favorites": "Favorites"
+    "favorites": "Favorites",
+    "lists": "Lists"
   },
   "gesture": {
     "loadFailed": "Failed to load gesture",
@@ -1073,7 +1078,8 @@
       "errorTryAgain": "Please try again later.",
       "noGestures": "No gestures found.",
       "addToFavorites": "Add to favorites",
-      "removeFromFavorites": "Remove from favorites"
+      "removeFromFavorites": "Remove from favorites",
+      "addToList": "Add to list"
     },
     "gestureDetail": {
       "backToGestures": "Back to Gestures",

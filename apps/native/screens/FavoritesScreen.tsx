@@ -87,7 +87,7 @@ const FavoritesScreen: React.FC = () => {
     >
       <Stack.Screen
         options={{
-          title: t("tabs.favorites"),
+          title: t("tabs.lists"),
           ...(isIOS
             ? {
                 headerLargeTitle: true,
@@ -134,15 +134,15 @@ const FavoritesScreen: React.FC = () => {
         <View style={styles.emptyContainer}>
           <Ionicons
             color={theme.textLight}
-            name="heart-outline"
+            name="list-outline"
             size={64}
             style={styles.emptyIcon}
           />
           <Text style={[styles.emptyTitle, { color: theme.text }]}>
-            {t("favorites.emptyTitle")}
+            {t("lists.emptyTitle")}
           </Text>
           <Text style={[styles.emptyMessage, { color: theme.textLight }]}>
-            {t("favorites.emptyMessage")}
+            {t("lists.emptyMessage")}
           </Text>
         </View>
       ) : (

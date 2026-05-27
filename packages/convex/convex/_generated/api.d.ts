@@ -19,6 +19,7 @@ import type * as lib_adminAuth from "../lib/adminAuth.js";
 import type * as lib_sponsorshipDates from "../lib/sponsorshipDates.js";
 import type * as lib_sponsorshipStatus from "../lib/sponsorshipStatus.js";
 import type * as lib_sponsorshipValidation from "../lib/sponsorshipValidation.js";
+import type * as lists from "../lists.js";
 import type * as sponsorships from "../sponsorships.js";
 import type * as users from "../users.js";
 
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   "lib/sponsorshipDates": typeof lib_sponsorshipDates;
   "lib/sponsorshipStatus": typeof lib_sponsorshipStatus;
   "lib/sponsorshipValidation": typeof lib_sponsorshipValidation;
+  lists: typeof lists;
   sponsorships: typeof sponsorships;
   users: typeof users;
 }>;
