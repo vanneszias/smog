@@ -15,14 +15,10 @@ SMOG is a sign language learning app that helps users discover, learn, and pract
 
 ### Backend
 - Convex (real-time database)
-- SQLite (local storage)
-- Custom sync service
 
 ## Key Services
 
-- `gestureService.ts` - Gesture data & search
-- `databaseService.ts` - SQLite operations
-- `convexSyncService.ts` - Data sync
+- `hooks/useGestureData.ts` - Fresh Convex gesture data & search hooks
 - `analyticsService.ts` - PostHog events
 
 ## Commands

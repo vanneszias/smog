@@ -18,7 +18,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import logger from "@/utils/logger";
 import { useAuth } from "./AuthProvider";
 
@@ -39,7 +38,6 @@ const ConvexUserContext = createContext<ConvexUserContextType>({
  * Must be rendered inside ConvexProviderWithAuth and AuthProvider
  */
 export function ConvexUserSync({ children }: { children: ReactNode }) {
-  const { isOffline } = useNetworkStatus();
   const { authMode, user, guestId, isLoading: isAuthLoading } = useAuth();
   const [userId, setUserId] = useState<Id<"users"> | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
@@ -116,7 +114,7 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
 
   // Handle auth state changes
   useEffect(() => {
-    if (isAuthLoading || isInitializing || isOffline) {
+    if (isAuthLoading || isInitializing) {
       return;
     }
 
@@ -130,7 +128,6 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
   }, [
     authMode,
     isAuthLoading,
-    isOffline,
     isInitializing,
     syncAuthenticatedUser,
     syncGuestUser,

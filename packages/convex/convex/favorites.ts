@@ -1,5 +1,47 @@
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
+
+const nativeGestureValidator = v.object({
+  id: v.id("gestures"),
+  name: v.string(),
+  category: v.array(v.string()),
+  playbackId: v.string(),
+  concept: v.array(v.string()),
+  info: v.string(),
+});
+
+async function getCategoryNames(
+  ctx: QueryCtx,
+  categoryIds: Id<"categories">[]
+) {
+  const categories = await Promise.all(categoryIds.map((id) => ctx.db.get(id)));
+  return categories
+    .filter((category) => category?.isActive)
+    .map((category) => category!.name);
+}
+
+async function toNativeGesture(
+  ctx: QueryCtx,
+  gesture: {
+    _id: Id<"gestures">;
+    name: string;
+    categoryIds: Id<"categories">[];
+    playbackId: string;
+    concept: string[];
+    info: string;
+  }
+) {
+  return {
+    id: gesture._id,
+    name: gesture.name,
+    category: await getCategoryNames(ctx, gesture.categoryIds),
+    playbackId: gesture.playbackId,
+    concept: gesture.concept,
+    info: gesture.info,
+  };
+}
 
 export const getUserFavorites = query({
   args: { userId: v.id("users") },
@@ -41,6 +83,27 @@ export const getUserFavoriteGestures = query({
     return gestures
       .filter((gesture) => gesture?.isActive)
       .map((gesture) => gesture!);
+  },
+});
+
+export const getUserFavoriteGesturesForNative = query({
+  args: { userId: v.id("users") },
+  returns: v.array(nativeGestureValidator),
+  handler: async (ctx, args) => {
+    const favorites = await ctx.db
+      .query("user_favorites")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const gestures = await Promise.all(
+      favorites.map((favorite) => ctx.db.get(favorite.gestureId))
+    );
+
+    return await Promise.all(
+      gestures
+        .filter((gesture) => gesture?.isActive)
+        .map((gesture) => toNativeGesture(ctx, gesture!))
+    );
   },
 });
 

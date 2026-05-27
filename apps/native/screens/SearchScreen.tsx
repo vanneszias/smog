@@ -12,6 +12,7 @@ import { useFavorites } from "@/context/FavoritesContext";
 import { useRecentSearches } from "@/context/RecentSearchesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
+import { useCategories } from "@/hooks/useGestureData";
 import { useOptimizedSearch } from "@/hooks/useOptimizedSearch";
 import {
   trackBottomSheetClosed,
@@ -22,7 +23,6 @@ import {
   trackSearchCleared,
   trackSearchPerformed,
 } from "@/services/analytics";
-import { gestureService } from "@/services/gestureService";
 
 const SearchScreen = () => {
   const router = useRouter();
@@ -39,7 +39,7 @@ const SearchScreen = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     initialCategory ? [initialCategory] : []
   );
-  const [categories, setCategories] = useState<string[]>([]);
+  const categories = useCategories() ?? [];
   const [isSearchBarFocused, setIsSearchBarFocused] = useState(false);
   const [categorySheetVisible, setCategorySheetVisible] = useState(false);
   // Tracks the last category param we acted on so we only react to genuine
@@ -86,10 +86,6 @@ const SearchScreen = () => {
     displayPageSize: 20,
     enableCache: true,
   });
-
-  useEffect(() => {
-    gestureService.getCategories().then(setCategories);
-  }, []);
 
   // React to category params arriving from navigation (e.g. tapping a category
   // tag in GestureScreen). The search tab is kept mounted by NativeTabs, so

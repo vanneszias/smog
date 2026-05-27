@@ -1,6 +1,103 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
+
+const nativeGestureValidator = v.object({
+  id: v.id("gestures"),
+  name: v.string(),
+  category: v.array(v.string()),
+  playbackId: v.string(),
+  concept: v.array(v.string()),
+  info: v.string(),
+});
+
+async function getCategoryNames(
+  ctx: QueryCtx,
+  categoryIds: Id<"categories">[]
+) {
+  const categories = await Promise.all(categoryIds.map((id) => ctx.db.get(id)));
+  return categories
+    .filter((category) => category?.isActive)
+    .map((category) => category!.name);
+}
+
+async function toNativeGesture(
+  ctx: QueryCtx,
+  gesture: {
+    _id: Id<"gestures">;
+    name: string;
+    categoryIds: Id<"categories">[];
+    playbackId: string;
+    concept: string[];
+    info: string;
+  }
+) {
+  return {
+    id: gesture._id,
+    name: gesture.name,
+    category: await getCategoryNames(ctx, gesture.categoryIds),
+    playbackId: gesture.playbackId,
+    concept: gesture.concept,
+    info: gesture.info,
+  };
+}
+
+function normalizeSearchText(value: string) {
+  return value.trim().toLocaleLowerCase();
+}
+
+function matchesSearch(
+  gesture: { name: string; concept: string[]; info: string },
+  categories: string[],
+  queryText: string
+) {
+  if (!queryText) {
+    return true;
+  }
+
+  return [gesture.name, gesture.info, ...gesture.concept, ...categories].some(
+    (value) => value.toLocaleLowerCase().includes(queryText)
+  );
+}
+
+function scoreSearchResult(
+  gesture: { name: string; concept: string[]; info: string },
+  categories: string[],
+  queryText: string
+) {
+  if (!queryText) {
+    return 0;
+  }
+
+  const name = gesture.name.toLocaleLowerCase();
+  if (name === queryText) {
+    return 1000;
+  }
+  if (name.startsWith(queryText)) {
+    return 750;
+  }
+  if (name.includes(queryText)) {
+    return 500;
+  }
+  if (
+    gesture.concept.some((value) =>
+      value.toLocaleLowerCase().includes(queryText)
+    )
+  ) {
+    return 300;
+  }
+  if (
+    categories.some((value) => value.toLocaleLowerCase().includes(queryText))
+  ) {
+    return 200;
+  }
+  if (gesture.info.toLocaleLowerCase().includes(queryText)) {
+    return 100;
+  }
+  return 0;
+}
 
 export const list = query({
   args: {
@@ -58,6 +155,130 @@ export const getByIds = query({
     return gestures
       .filter((gesture) => gesture?.isActive)
       .map((gesture) => gesture!);
+  },
+});
+
+export const listForNative = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(nativeGestureValidator),
+  handler: async (ctx, args) => {
+    const gestures = await ctx.db
+      .query("gestures")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .order("desc")
+      .take(args.limit ?? 200);
+
+    return await Promise.all(
+      gestures.map((gesture) => toNativeGesture(ctx, gesture))
+    );
+  },
+});
+
+export const getByIdForNative = query({
+  args: { id: v.id("gestures") },
+  returns: v.union(nativeGestureValidator, v.null()),
+  handler: async (ctx, args) => {
+    const gesture = await ctx.db.get(args.id);
+    if (!gesture?.isActive) {
+      return null;
+    }
+
+    return await toNativeGesture(ctx, gesture);
+  },
+});
+
+export const getByIdsForNative = query({
+  args: { ids: v.array(v.id("gestures")) },
+  returns: v.array(nativeGestureValidator),
+  handler: async (ctx, args) => {
+    const gestures = await Promise.all(args.ids.map((id) => ctx.db.get(id)));
+    return await Promise.all(
+      gestures
+        .filter((gesture) => gesture?.isActive)
+        .map((gesture) => toNativeGesture(ctx, gesture!))
+    );
+  },
+});
+
+export const searchForNative = query({
+  args: {
+    searchText: v.string(),
+    categories: v.optional(v.array(v.string())),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(nativeGestureValidator),
+  handler: async (ctx, args) => {
+    const queryText = normalizeSearchText(args.searchText);
+    const selectedCategories = args.categories ?? [];
+    const limit = args.limit ?? 50;
+
+    const gestures = await ctx.db
+      .query("gestures")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+
+    const results = await Promise.all(
+      gestures.map(async (gesture) => {
+        const categories = await getCategoryNames(ctx, gesture.categoryIds);
+        return { gesture, categories };
+      })
+    );
+
+    return await Promise.all(
+      results
+        .filter(({ gesture, categories }) => {
+          const categoryMatch =
+            selectedCategories.length === 0 ||
+            categories.some((category) =>
+              selectedCategories.includes(category)
+            );
+          return categoryMatch && matchesSearch(gesture, categories, queryText);
+        })
+        .sort(
+          (a, b) =>
+            scoreSearchResult(b.gesture, b.categories, queryText) -
+              scoreSearchResult(a.gesture, a.categories, queryText) ||
+            a.gesture.name.localeCompare(b.gesture.name)
+        )
+        .slice(0, limit)
+        .map(({ gesture }) => toNativeGesture(ctx, gesture))
+    );
+  },
+});
+
+export const relatedForNative = query({
+  args: {
+    gestureId: v.id("gestures"),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(nativeGestureValidator),
+  handler: async (ctx, args) => {
+    const gesture = await ctx.db.get(args.gestureId);
+    if (!gesture?.isActive || gesture.categoryIds.length === 0) {
+      return [];
+    }
+
+    const categoryIds = new Set(gesture.categoryIds);
+    const gestures = await ctx.db
+      .query("gestures")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+
+    const related = gestures
+      .filter(
+        (candidate) =>
+          candidate._id !== args.gestureId &&
+          candidate.categoryIds.some((categoryId) =>
+            categoryIds.has(categoryId)
+          )
+      )
+      .slice(0, args.limit ?? 5);
+
+    return await Promise.all(
+      related.map((candidate) => toNativeGesture(ctx, candidate))
+    );
   },
 });
 

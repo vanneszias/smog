@@ -21,6 +21,7 @@ import {
 import VideoPlayer from "@/components/VideoPlayer";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useGesture, useRelatedGestures } from "@/hooks/useGestureData";
 import { useScreenshotDetection } from "@/hooks/useScreenshotDetection";
 import {
   trackCategoryPressed,
@@ -30,18 +31,14 @@ import {
   trackGestureViewed,
   trackVideoAlmostCompleted,
 } from "@/services/analytics";
-import gestureService from "@/services/gestureService";
-import type { Gesture } from "@/types";
-import logger from "@/utils/logger";
 
 const GestureScreen: React.FC = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme } = useTheme();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const [gesture, setGesture] = useState<Gesture | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [relatedGestures, setRelatedGestures] = useState<Gesture[]>([]);
+  const gesture = useGesture(id);
+  const relatedGestures = useRelatedGestures(id) ?? [];
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   // Mirrors the web's disclaimerFiredRef: ensures the banner shows exactly
@@ -56,37 +53,14 @@ const GestureScreen: React.FC = () => {
   });
 
   useEffect(() => {
-    if (id) {
-      const loadGesture = async () => {
-        setIsLoading(true);
-        try {
-          const result = await gestureService.getGesturesByIds([id]);
-          if (result.length > 0) {
-            const gestureData = result[0];
-            setGesture(gestureData);
-
-            // Supplement autocapture with gesture-specific properties
-            // Screen tracking is handled automatically by PostHog autocapture
-            trackEvent("Gesture Detail Viewed", {
-              gesture_id: gestureData.id,
-              gesture_name: gestureData.name,
-              gesture_categories: gestureData.category,
-              categories_count: gestureData.category.length,
-            });
-          }
-        } catch (error) {
-          logger.error(error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      loadGesture();
-    }
-  }, [id]);
-
-  useEffect(() => {
     if (gesture) {
+      trackEvent("Gesture Detail Viewed", {
+        gesture_id: gesture.id,
+        gesture_name: gesture.name,
+        gesture_categories: gesture.category,
+        categories_count: gesture.category.length,
+      });
+
       // Track gesture viewed (only once per visit)
       if (!hasTrackedView) {
         trackGestureViewed(
@@ -97,23 +71,6 @@ const GestureScreen: React.FC = () => {
         );
         setHasTrackedView(true);
       }
-
-      const fetchRelated = async () => {
-        let related: Gesture[] = [];
-        for (const category of gesture.category) {
-          const gesturesInCategory =
-            await gestureService.getGesturesByCategory(category);
-          related = related.concat(gesturesInCategory);
-        }
-        // Remove duplicates and the current gesture
-        const uniqueRelated = Array.from(
-          new Map(
-            related.filter((g) => g.id !== gesture.id).map((g) => [g.id, g])
-          ).values()
-        ).slice(0, 5);
-        setRelatedGestures(uniqueRelated);
-      };
-      fetchRelated();
     }
   }, [gesture, hasTrackedView]);
 
@@ -129,7 +86,7 @@ const GestureScreen: React.FC = () => {
     }
   }, [gesture]);
 
-  if (isLoading || !gesture) {
+  if (gesture === undefined || !gesture) {
     return (
       <View
         style={[styles.loadingContainer, { backgroundColor: theme.background }]}

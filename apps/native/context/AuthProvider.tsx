@@ -30,7 +30,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { networkService } from "@/services/networkService";
 import { generateGuestId } from "@/services/userService";
 import logger from "@/utils/logger";
 
@@ -126,11 +125,11 @@ async function refreshSession(): Promise<{
 
 async function isNetworkAvailable(): Promise<boolean> {
   try {
-    const state = await networkService.refresh();
-    return Boolean(state.isConnected && state.isInternetReachable !== false);
+    const response = await fetch(`${serverUrl}/health`, { method: "HEAD" });
+    return response.ok;
   } catch (error) {
-    logger.error("[Auth] Failed to refresh network state:", error);
-    return networkService.isConnected();
+    logger.error("[Auth] Network check failed:", error);
+    return false;
   }
 }
 

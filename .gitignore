@@ -87,3 +87,6 @@ android/build
 *.apk
 *.aab
 local.properties
+
+# opencode
+.opencode

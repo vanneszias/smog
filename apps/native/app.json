@@ -59,7 +59,6 @@
       "expo-localization",
       "expo-font",
       "expo-secure-store",
-      "expo-sqlite",
       "expo-video",
       "expo-web-browser",
       [

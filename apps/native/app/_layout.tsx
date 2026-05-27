@@ -17,8 +17,6 @@ import RiveSplashScreen from "@/components/RiveSplashScreen";
 import AppProviders from "@/context/AppProviders";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
-import { useAutoSync } from "@/hooks/useAutoSync";
-import { useDbReady } from "@/hooks/useDbReady";
 // Initialize i18n configuration
 import "@/utils/i18n";
 
@@ -78,9 +76,6 @@ function useHeaderOptions() {
 function AuthenticatedLayout() {
   const { theme } = useTheme();
   const { defaultScreenOptions, isIOS } = useHeaderOptions();
-
-  // Auto-sync when app comes to foreground
-  useAutoSync();
 
   // Set Android navigation bar color to match theme
   useEffect(() => {
@@ -144,7 +139,6 @@ function AuthenticatedLayout() {
 function RootLayoutNav() {
   const { isLoading, isAuthenticated, isGuest, authMode } = useAuth();
   const router = useRouter();
-  const { isReady: dbReady } = useDbReady();
   const [hasNavigated, setHasNavigated] = useState(false);
   const prevAuthMode = useRef(authMode);
 
@@ -163,20 +157,16 @@ function RootLayoutNav() {
   useEffect(() => {
     if (!(isLoading || hasNavigated)) {
       if (isAuthenticated || isGuest) {
-        if (dbReady) {
-          logger.log(
-            "User is authenticated/guest and db is ready - initial navigation to tabs"
-          );
-          router.replace("/(tabs)");
-          setHasNavigated(true);
-        }
+        logger.log("User is authenticated/guest - initial navigation to tabs");
+        router.replace("/(tabs)");
+        setHasNavigated(true);
       } else {
         logger.log("User is not authenticated - initial navigation to auth");
         router.replace("/welcome");
         setHasNavigated(true);
       }
     }
-  }, [isLoading, isAuthenticated, isGuest, dbReady, router, hasNavigated]);
+  }, [isLoading, isAuthenticated, isGuest, router, hasNavigated]);
 
   // Reset navigation flag when auth mode actually changes (not immediately)
   useEffect(() => {
@@ -184,20 +174,6 @@ function RootLayoutNav() {
       setHasNavigated(false);
     }
   }, [authMode]);
-
-  // Navigate to tabs when db becomes ready for authenticated/guest users
-  useEffect(() => {
-    if (
-      (isAuthenticated || isGuest) &&
-      dbReady &&
-      !hasNavigated &&
-      !isLoading
-    ) {
-      logger.log("DB became ready - navigating to tabs");
-      router.replace("/(tabs)");
-      setHasNavigated(true);
-    }
-  }, [dbReady, isAuthenticated, isGuest, hasNavigated, isLoading, router]);
 
   // Show loading while determining auth state
   if (isLoading) {

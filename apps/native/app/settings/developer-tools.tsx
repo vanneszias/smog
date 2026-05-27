@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { FONT_SIZE, ICON_SIZE, SPACING } from "@smog/styles";
 import { Stack } from "expo-router";
 import type React from "react";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,62 +16,13 @@ import {
 } from "react-native";
 import { LogContext } from "@/context/logs/LogProvider";
 import { useTheme } from "@/context/ThemeContext";
-import { convexSyncService } from "@/services/convexSyncService";
-import gestureService from "@/services/gestureService";
 import logger, { exportLogsToFile } from "@/utils/logger";
 
 const DeveloperToolsScreen: React.FC = () => {
   const { theme } = useTheme();
   const { logs, clearLogs, exportLogs } = useContext(LogContext);
-  const [cacheStats, setCacheStats] = useState<{
-    size: number;
-    keys: string[];
-  } | null>(null);
-  const [dbStats, setDbStats] = useState<{
-    gestureCount: number;
-    lastSync: Date | null;
-    databaseSize: string;
-  } | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [isSavingLogs, setIsSavingLogs] = useState(false);
   const [isExportingLogs, setIsExportingLogs] = useState(false);
-
-  const fetchCacheStats = useCallback(async () => {
-    try {
-      const stats = await gestureService.getCacheStats();
-      setCacheStats(stats);
-
-      const dbStatsData = await gestureService.getDatabaseStats();
-      setDbStats(dbStatsData);
-
-      logger.log(`[DevTools] Cache stats: ${stats.size} items`);
-      logger.log(
-        `[DevTools] DB stats: ${dbStatsData.gestureCount} gestures, last sync: ${dbStatsData.lastSync}`
-      );
-    } catch (_error) {
-      setCacheStats(null);
-      setDbStats(null);
-      Alert.alert("Error", "Failed to fetch stats.");
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCacheStats();
-  }, [fetchCacheStats]);
-
-  const handleRefreshData = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await gestureService.refreshData();
-      await fetchCacheStats();
-      Alert.alert("Success", "Data refreshed and cache cleared.");
-    } catch {
-      Alert.alert("Error", "Failed to refresh data.");
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [fetchCacheStats]);
 
   const handleClearLogs = useCallback(() => {
     clearLogs();
@@ -124,36 +75,6 @@ const DeveloperToolsScreen: React.FC = () => {
     }
   }, []);
 
-  const handleCheckForUpdates = useCallback(async () => {
-    setIsCheckingUpdates(true);
-    try {
-      const result = await convexSyncService.checkForUpdates();
-      if (result?.success) {
-        Alert.alert(
-          "Success",
-          `Updated ${result.synced} gestures from backend.`
-        );
-      } else if (result === null) {
-        Alert.alert(
-          "Info",
-          "No updates available - data is already up to date."
-        );
-      } else {
-        Alert.alert("Info", "Check completed but no updates were needed.");
-      }
-      await fetchCacheStats();
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        `Failed to check for updates: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
-    } finally {
-      setIsCheckingUpdates(false);
-    }
-  }, [fetchCacheStats]);
-
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
@@ -188,135 +109,6 @@ const DeveloperToolsScreen: React.FC = () => {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Cache Management */}
-        <View style={styles.sectionContainer}>
-          <Text style={[styles.sectionLabel, { color: theme.text }]}>
-            Cache
-          </Text>
-
-          <View
-            style={[
-              styles.infoCard,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoKey, { color: theme.textLight }]}>
-                Cache size
-              </Text>
-              <Text style={[styles.infoValue, { color: theme.text }]}>
-                {cacheStats ? cacheStats.size : "—"}
-              </Text>
-            </View>
-            <View
-              style={[styles.separator, { backgroundColor: theme.border }]}
-            />
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoKey, { color: theme.textLight }]}>
-                DB gestures
-              </Text>
-              <Text style={[styles.infoValue, { color: theme.text }]}>
-                {dbStats ? dbStats.gestureCount : "—"}
-              </Text>
-            </View>
-            <View
-              style={[styles.separator, { backgroundColor: theme.border }]}
-            />
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoKey, { color: theme.textLight }]}>
-                Last sync
-              </Text>
-              <Text
-                numberOfLines={1}
-                style={[styles.infoValue, { color: theme.text }]}
-              >
-                {dbStats?.lastSync
-                  ? dbStats.lastSync.toLocaleString()
-                  : "Never"}
-              </Text>
-            </View>
-            {cacheStats && cacheStats.keys.length > 0 && (
-              <>
-                <View
-                  style={[styles.separator, { backgroundColor: theme.border }]}
-                />
-                <View style={styles.infoRow}>
-                  <Text style={[styles.infoKey, { color: theme.textLight }]}>
-                    Keys
-                  </Text>
-                  <Text
-                    numberOfLines={2}
-                    style={[
-                      styles.infoValue,
-                      { color: theme.text, flexShrink: 1 },
-                    ]}
-                  >
-                    {cacheStats.keys.join(", ")}
-                  </Text>
-                </View>
-              </>
-            )}
-          </View>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            disabled={isRefreshing}
-            onPress={handleRefreshData}
-            style={[
-              styles.actionRow,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            {isRefreshing ? (
-              <ActivityIndicator color={theme.primary} style={styles.rowIcon} />
-            ) : (
-              <Ionicons
-                color={theme.primary}
-                name="refresh"
-                size={ICON_SIZE.sm}
-                style={styles.rowIcon}
-              />
-            )}
-            <Text style={[styles.actionLabel, { color: theme.primary }]}>
-              Refresh Data (Clear Cache)
-            </Text>
-            <Ionicons
-              color={theme.textLight}
-              name="chevron-forward"
-              size={ICON_SIZE.sm}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            disabled={isCheckingUpdates}
-            onPress={handleCheckForUpdates}
-            style={[
-              styles.actionRow,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            {isCheckingUpdates ? (
-              <ActivityIndicator color={theme.primary} style={styles.rowIcon} />
-            ) : (
-              <Ionicons
-                color={theme.primary}
-                name="cloud-download"
-                size={ICON_SIZE.sm}
-                style={styles.rowIcon}
-              />
-            )}
-            <Text style={[styles.actionLabel, { color: theme.primary }]}>
-              Check for Updates
-            </Text>
-            <Ionicons
-              color={theme.textLight}
-              name="chevron-forward"
-              size={ICON_SIZE.sm}
-            />
-          </TouchableOpacity>
-        </View>
-
         {/* Logs */}
         <View style={styles.sectionContainer}>
           <Text style={[styles.sectionLabel, { color: theme.text }]}>Logs</Text>
@@ -451,34 +243,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.lg,
     fontWeight: "700",
     marginBottom: SPACING.lg,
-  },
-  infoCard: {
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: SPACING.sm,
-    overflow: "hidden",
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    minHeight: 44,
-  },
-  infoKey: {
-    fontSize: FONT_SIZE.md,
-    flex: 1,
-  },
-  infoValue: {
-    fontSize: FONT_SIZE.md,
-    flex: 2,
-    textAlign: "right",
-    fontWeight: "600",
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    marginHorizontal: SPACING.md,
   },
   actionRow: {
     flexDirection: "row",
