@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalMutation, mutation, query } from "./_generated/server";
+import { toPublicSharedList } from "./lib/listSharing";
 
 const DEFAULT_FAVORITES_NAME = "Favorites";
 
@@ -211,21 +212,6 @@ async function getSharedListByToken(ctx: ListQueryCtx, shareToken: string) {
   return null;
 }
 
-function toPublicList(list: Doc<"gesture_lists">, canEdit: boolean) {
-  return {
-    _id: list._id,
-    _creationTime: list._creationTime,
-    name: list.name,
-    description: list.description,
-    visibility: "shared" as const,
-    allowSharedEditing: list.allowSharedEditing,
-    canEdit,
-    isDefaultFavorites: list.isDefaultFavorites,
-    createdAt: list.createdAt,
-    updatedAt: list.updatedAt,
-  };
-}
-
 async function getListItems(ctx: ListQueryCtx, listId: Id<"gesture_lists">) {
   return await ctx.db
     .query("gesture_list_items")
@@ -367,7 +353,7 @@ export const getSharedList = query({
   returns: v.union(publicListValidator, v.null()),
   handler: async (ctx, args) => {
     const result = await getSharedListByToken(ctx, args.shareToken);
-    return result ? toPublicList(result.list, result.canEdit) : null;
+    return result ? toPublicSharedList(result.list, result.canEdit) : null;
   },
 });
 
