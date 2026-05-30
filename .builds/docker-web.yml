@@ -1,0 +1,80 @@
+image: debian/stable
+packages:
+  - ca-certificates
+  - curl
+  - docker-buildx
+  - docker-cli
+  - docker.io
+  - git
+secrets:
+  - a6cc8145-1053-45cb-85fe-918e5e612c85
+  # Add a builds.sr.ht secret-file UUID here. It should install:
+  # ~/smog-registry.env
+  - 680cddc6-1a13-4dbb-80cd-065329b693c8
+sources:
+  - git@git.sr.ht:~zias/smog
+environment:
+  BUILDKIT_PROGRESS: plain
+  CI: "true"
+  DOCKER_BUILDKIT: "1"
+tasks:
+  - publish-web: |
+      cd smog
+
+      if [ ! -f "$HOME/smog-registry.env" ]; then
+        echo "Missing registry env secret at ~/smog-registry.env" >&2
+        echo "Create a builds.sr.ht secret file with REGISTRY_USERNAME and REGISTRY_PASSWORD, then add its UUID to this manifest." >&2
+        exit 1
+      fi
+
+      set +x
+      . "$HOME/smog-registry.env"
+
+      : "${REGISTRY_IMAGE_PREFIX:=vanneszias}"
+      : "${REGISTRY_HOST:=docker.io}"
+      : "${REGISTRY_USERNAME:?REGISTRY_USERNAME is required}"
+      : "${REGISTRY_PASSWORD:?REGISTRY_PASSWORD is required}"
+      set -x
+
+      short_sha="$(git rev-parse --short=12 HEAD)"
+      image="$REGISTRY_IMAGE_PREFIX/smog-web"
+      image_tag="${IMAGE_TAG:-$short_sha}"
+      if [ "${GIT_REF:-}" != "${GIT_REF#refs/tags/}" ]; then
+        tag_name="$(printf '%s' "${GIT_REF#refs/tags/}" | tr -c 'A-Za-z0-9_.-' '-')"
+        image_tag="${IMAGE_TAG:-$tag_name}"
+      fi
+
+      sudo dockerd --host=unix:///var/run/docker.sock > "$HOME/dockerd.log" 2>&1 &
+      for _ in $(seq 1 30); do
+        sudo docker info >/dev/null 2>&1 && break
+        sleep 1
+      done
+      sudo docker info
+
+      set +x
+      printf '%s' "$REGISTRY_PASSWORD" | sudo docker login "$REGISTRY_HOST" --username "$REGISTRY_USERNAME" --password-stdin
+      set -x
+
+      sudo env DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build \
+        --target production \
+        --build-arg "VITE_SERVER_URL=${VITE_SERVER_URL:-}" \
+        --build-arg "VITE_WORKOS_CLIENT_ID=${VITE_WORKOS_CLIENT_ID:-}" \
+        --build-arg "VITE_WORKOS_REDIRECT_URI=${VITE_WORKOS_REDIRECT_URI:-}" \
+        --build-arg "VITE_CONVEX_URL=${VITE_CONVEX_URL:-}" \
+        --build-arg "VITE_PUBLIC_POSTHOG_API_KEY=${VITE_PUBLIC_POSTHOG_API_KEY:-}" \
+        --build-arg "VITE_PUBLIC_POSTHOG_HOST=${VITE_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}" \
+        -f apps/web/Dockerfile \
+        -t "$image:$image_tag" \
+        .
+
+      sudo docker push "$image:$image_tag"
+      if [ "${GIT_REF:-}" = "refs/heads/master" ]; then
+        sudo docker tag "$image:$image_tag" "$image:latest"
+        sudo docker push "$image:latest"
+      fi
+submitter:
+  git.sr.ht:
+    enabled: true
+    allow-refs:
+      - refs/heads/master
+      - "refs/tags/*"
