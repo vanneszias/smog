@@ -23,6 +23,7 @@ import { Route as SponsorsIndexRouteImport } from './routes/sponsors/index'
 import { Route as SponsorIndexRouteImport } from './routes/sponsor/index'
 import { Route as SponsorsSuccessRouteImport } from './routes/sponsors/success'
 import { Route as SponsorsReEditRouteImport } from './routes/sponsors/re-edit'
+import { Route as ListsShareTokenRouteImport } from './routes/lists_.$shareToken'
 import { Route as GesturesIdRouteImport } from './routes/gestures_.$id'
 
 const TermsRoute = TermsRouteImport.update({
@@ -95,6 +96,11 @@ const SponsorsReEditRoute = SponsorsReEditRouteImport.update({
   path: '/sponsors/re-edit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ListsShareTokenRoute = ListsShareTokenRouteImport.update({
+  id: '/lists_/$shareToken',
+  path: '/lists/$shareToken',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GesturesIdRoute = GesturesIdRouteImport.update({
   id: '/gestures_/$id',
   path: '/gestures/$id',
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
   '/gestures/$id': typeof GesturesIdRoute
+  '/lists/$shareToken': typeof ListsShareTokenRoute
   '/sponsors/re-edit': typeof SponsorsReEditRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsor/': typeof SponsorIndexRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
   '/gestures/$id': typeof GesturesIdRoute
+  '/lists/$shareToken': typeof ListsShareTokenRoute
   '/sponsors/re-edit': typeof SponsorsReEditRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsor': typeof SponsorIndexRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
   '/gestures_/$id': typeof GesturesIdRoute
+  '/lists_/$shareToken': typeof ListsShareTokenRoute
   '/sponsors/re-edit': typeof SponsorsReEditRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsor/': typeof SponsorIndexRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/terms'
     | '/gestures/$id'
+    | '/lists/$shareToken'
     | '/sponsors/re-edit'
     | '/sponsors/success'
     | '/sponsor/'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/terms'
     | '/gestures/$id'
+    | '/lists/$shareToken'
     | '/sponsors/re-edit'
     | '/sponsors/success'
     | '/sponsor'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/terms'
     | '/gestures_/$id'
+    | '/lists_/$shareToken'
     | '/sponsors/re-edit'
     | '/sponsors/success'
     | '/sponsor/'
@@ -219,6 +231,7 @@ export interface RootRouteChildren {
   SuccessRoute: typeof SuccessRoute
   TermsRoute: typeof TermsRoute
   GesturesIdRoute: typeof GesturesIdRoute
+  ListsShareTokenRoute: typeof ListsShareTokenRoute
   SponsorsReEditRoute: typeof SponsorsReEditRoute
   SponsorsSuccessRoute: typeof SponsorsSuccessRoute
   SponsorIndexRoute: typeof SponsorIndexRoute
@@ -325,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SponsorsReEditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lists_/$shareToken': {
+      id: '/lists_/$shareToken'
+      path: '/lists/$shareToken'
+      fullPath: '/lists/$shareToken'
+      preLoaderRoute: typeof ListsShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gestures_/$id': {
       id: '/gestures_/$id'
       path: '/gestures/$id'
@@ -347,6 +367,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuccessRoute: SuccessRoute,
   TermsRoute: TermsRoute,
   GesturesIdRoute: GesturesIdRoute,
+  ListsShareTokenRoute: ListsShareTokenRoute,
   SponsorsReEditRoute: SponsorsReEditRoute,
   SponsorsSuccessRoute: SponsorsSuccessRoute,
   SponsorIndexRoute: SponsorIndexRoute,

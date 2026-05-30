@@ -27,6 +27,7 @@ const publicListValidator = v.object({
   description: v.optional(v.string()),
   visibility: v.literal("shared"),
   allowSharedEditing: v.boolean(),
+  canEdit: v.boolean(),
   isDefaultFavorites: v.boolean(),
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -195,7 +196,7 @@ async function getSharedListByToken(ctx: ListQueryCtx, shareToken: string) {
     .unique();
 
   if (viewList?.visibility === "shared") {
-    return viewList;
+    return { list: viewList, canEdit: false };
   }
 
   const editList = await ctx.db
@@ -204,13 +205,13 @@ async function getSharedListByToken(ctx: ListQueryCtx, shareToken: string) {
     .unique();
 
   if (editList?.visibility === "shared") {
-    return editList;
+    return { list: editList, canEdit: editList.allowSharedEditing };
   }
 
   return null;
 }
 
-function toPublicList(list: Doc<"gesture_lists">) {
+function toPublicList(list: Doc<"gesture_lists">, canEdit: boolean) {
   return {
     _id: list._id,
     _creationTime: list._creationTime,
@@ -218,6 +219,7 @@ function toPublicList(list: Doc<"gesture_lists">) {
     description: list.description,
     visibility: "shared" as const,
     allowSharedEditing: list.allowSharedEditing,
+    canEdit,
     isDefaultFavorites: list.isDefaultFavorites,
     createdAt: list.createdAt,
     updatedAt: list.updatedAt,
@@ -364,8 +366,8 @@ export const getSharedList = query({
   args: { shareToken: v.string() },
   returns: v.union(publicListValidator, v.null()),
   handler: async (ctx, args) => {
-    const list = await getSharedListByToken(ctx, args.shareToken);
-    return list ? toPublicList(list) : null;
+    const result = await getSharedListByToken(ctx, args.shareToken);
+    return result ? toPublicList(result.list, result.canEdit) : null;
   },
 });
 
@@ -373,13 +375,13 @@ export const getSharedListGestures = query({
   args: { shareToken: v.string() },
   returns: v.array(gestureValidator),
   handler: async (ctx, args) => {
-    const list = await getSharedListByToken(ctx, args.shareToken);
+    const result = await getSharedListByToken(ctx, args.shareToken);
 
-    if (!list) {
+    if (!result) {
       return [];
     }
 
-    return await getListGestureDocs(ctx, list._id);
+    return await getListGestureDocs(ctx, result.list._id);
   },
 });
 

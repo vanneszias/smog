@@ -79,7 +79,11 @@ function FavoritesComponent() {
   );
 
   const shareUrl = activeList?.viewShareToken
-    ? `${window.location.origin}/lists/${activeList.viewShareToken}`
+    ? `${window.location.origin}/lists/${
+        activeList.allowSharedEditing && activeList.editShareToken
+          ? activeList.editShareToken
+          : activeList.viewShareToken
+      }`
     : "";
 
   const loadLists = useCallback(
@@ -93,7 +97,7 @@ function FavoritesComponent() {
       setIsLoadingLists(true);
       try {
         await client.lists.initialize();
-        const userLists = await client.lists.getMyLists();
+        const userLists = (await client.lists.getMyLists()) as ListRecord[];
         setLists(userLists);
         setActiveListId((current) => {
           if (
