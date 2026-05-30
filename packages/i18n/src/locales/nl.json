@@ -29,7 +29,14 @@
   },
   "lists": {
     "emptyTitle": "Nog geen gebaren in je lijsten",
-    "emptyMessage": "Gebruik de plusknop bij een gebaar om het aan je nieuwste lijst toe te voegen."
+    "emptyMessage": "Gebruik Gebaren toevoegen om gebaren in deze lijst te zetten.",
+    "newListPlaceholder": "Nieuwe lijstnaam",
+    "create": "Maken",
+    "add": "Toevoegen",
+    "doneAdding": "Klaar",
+    "searchToAdd": "Zoek gebaren om toe te voegen",
+    "deleteTitle": "Lijst verwijderen",
+    "deleteMessage": "Dit verwijdert de lijst en alle opgeslagen gebaren erin."
   },
   "auth": {
     "welcome": {
@@ -94,6 +101,7 @@
     "success": "Succes",
     "comingSoon": "Binnenkort beschikbaar",
     "edit": "Bewerken",
+    "delete": "Verwijderen",
     "continue": "Doorgaan",
     "total": "Totaal",
     "week": "week",

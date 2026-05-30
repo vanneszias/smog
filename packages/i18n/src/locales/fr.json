@@ -29,7 +29,14 @@
   },
   "lists": {
     "emptyTitle": "Aucun geste dans vos listes",
-    "emptyMessage": "Utilisez le bouton plus sur un geste pour l'ajouter à votre liste la plus récente."
+    "emptyMessage": "Utilisez Ajouter des gestes pour remplir cette liste.",
+    "newListPlaceholder": "Nom de la nouvelle liste",
+    "create": "Créer",
+    "add": "Ajouter",
+    "doneAdding": "Terminé",
+    "searchToAdd": "Rechercher des gestes à ajouter",
+    "deleteTitle": "Supprimer la liste",
+    "deleteMessage": "Cela supprime la liste et tous les gestes enregistrés."
   },
   "auth": {
     "welcome": {
@@ -107,6 +114,7 @@
     "success": "Succès",
     "comingSoon": "Bientôt disponible",
     "edit": "Modifier",
+    "delete": "Supprimer",
     "continue": "Continuer",
     "total": "Total",
     "week": "semaine",

@@ -29,7 +29,14 @@
   },
   "lists": {
     "emptyTitle": "No gestures in your lists yet",
-    "emptyMessage": "Use the plus button on a gesture to add it to your latest list."
+    "emptyMessage": "Use Add gestures to put signs in this list.",
+    "newListPlaceholder": "New list name",
+    "create": "Create",
+    "add": "Add",
+    "doneAdding": "Done",
+    "searchToAdd": "Search gestures to add",
+    "deleteTitle": "Delete list",
+    "deleteMessage": "This removes the list and all of its saved gestures."
   },
   "auth": {
     "welcome": {
@@ -121,6 +128,7 @@
     "success": "Success",
     "comingSoon": "Coming Soon",
     "edit": "Edit",
+    "delete": "Delete",
     "continue": "Continue",
     "total": "Total",
     "week": "week",
