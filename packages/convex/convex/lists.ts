@@ -20,6 +20,18 @@ const listValidator = v.object({
   updatedAt: v.number(),
 });
 
+const publicListValidator = v.object({
+  _id: v.id("gesture_lists"),
+  _creationTime: v.number(),
+  name: v.string(),
+  description: v.optional(v.string()),
+  visibility: v.literal("shared"),
+  allowSharedEditing: v.boolean(),
+  isDefaultFavorites: v.boolean(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
 const gestureValidator = v.object({
   _id: v.id("gestures"),
   _creationTime: v.number(),
@@ -176,6 +188,42 @@ async function requireSharedEditableList(
   return list;
 }
 
+async function getSharedListByToken(ctx: ListQueryCtx, shareToken: string) {
+  const viewList = await ctx.db
+    .query("gesture_lists")
+    .withIndex("by_view_share_token", (q) => q.eq("viewShareToken", shareToken))
+    .unique();
+
+  if (viewList?.visibility === "shared") {
+    return viewList;
+  }
+
+  const editList = await ctx.db
+    .query("gesture_lists")
+    .withIndex("by_edit_share_token", (q) => q.eq("editShareToken", shareToken))
+    .unique();
+
+  if (editList?.visibility === "shared") {
+    return editList;
+  }
+
+  return null;
+}
+
+function toPublicList(list: Doc<"gesture_lists">) {
+  return {
+    _id: list._id,
+    _creationTime: list._creationTime,
+    name: list.name,
+    description: list.description,
+    visibility: "shared" as const,
+    allowSharedEditing: list.allowSharedEditing,
+    isDefaultFavorites: list.isDefaultFavorites,
+    createdAt: list.createdAt,
+    updatedAt: list.updatedAt,
+  };
+}
+
 async function getListItems(ctx: ListQueryCtx, listId: Id<"gesture_lists">) {
   return await ctx.db
     .query("gesture_list_items")
@@ -314,16 +362,10 @@ export const getListGesturesForNative = query({
 
 export const getSharedList = query({
   args: { shareToken: v.string() },
-  returns: v.union(listValidator, v.null()),
+  returns: v.union(publicListValidator, v.null()),
   handler: async (ctx, args) => {
-    const list = await ctx.db
-      .query("gesture_lists")
-      .withIndex("by_view_share_token", (q) =>
-        q.eq("viewShareToken", args.shareToken)
-      )
-      .unique();
-
-    return list?.visibility === "shared" ? list : null;
+    const list = await getSharedListByToken(ctx, args.shareToken);
+    return list ? toPublicList(list) : null;
   },
 });
 
@@ -331,14 +373,9 @@ export const getSharedListGestures = query({
   args: { shareToken: v.string() },
   returns: v.array(gestureValidator),
   handler: async (ctx, args) => {
-    const list = await ctx.db
-      .query("gesture_lists")
-      .withIndex("by_view_share_token", (q) =>
-        q.eq("viewShareToken", args.shareToken)
-      )
-      .unique();
+    const list = await getSharedListByToken(ctx, args.shareToken);
 
-    if (!(list && list.visibility === "shared")) {
+    if (!list) {
       return [];
     }
 
