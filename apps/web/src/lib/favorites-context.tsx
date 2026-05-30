@@ -79,20 +79,27 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        await client.lists.addGestureToLatest({
+        const wasAdded = await client.favorites.toggleFavorite({
+          convexUserId,
           gestureId,
         });
 
-        setFavoriteIds((prev) =>
-          prev.includes(gestureId) ? prev : [...prev, gestureId]
-        );
-        toast.success(
-          gestureName
-            ? t("web.lists.addedToList", { name: gestureName })
-            : t("web.lists.addedToListShort", "Added to list")
-        );
+        setFavoriteIds((prev) => {
+          if (wasAdded) {
+            return prev.includes(gestureId) ? prev : [...prev, gestureId];
+          }
+          return prev.filter((id) => id !== gestureId);
+        });
+
+        if (wasAdded) {
+          toast.success(
+            gestureName
+              ? t("web.lists.addedToList", { name: gestureName })
+              : t("web.lists.addedToListShort", "Added to list")
+          );
+        }
       } catch (error) {
-        logger.error("Failed to add gesture to list:", error);
+        logger.error("Failed to toggle favorite:", error);
         toast.error(t("web.favorites.failedToUpdate"));
       }
     },
