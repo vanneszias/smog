@@ -1,5 +1,7 @@
 # SMOG
 
+[![builds.sr.ht status](https://builds.sr.ht/~zias/smog/commits/feat/lists/.build.yml.svg)](https://builds.sr.ht/~zias/smog/commits/feat/lists/.build.yml?)
+
 Sign language learning platform with mobile, web, and server components.
 
 ## Tech Stack
