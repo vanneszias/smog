@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
+  Check,
   Copy,
   Eye,
   Globe2,
@@ -13,6 +14,7 @@ import {
   Plus,
   RotateCcw,
   Save,
+  Search,
   Trash2,
   X,
 } from "lucide-react";
@@ -22,6 +24,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { useGestures } from "@/hooks/useGestures";
 import { useAuth } from "@/lib/auth";
 import { useConvexUserId } from "@/lib/convex-user-sync";
 import { useFavorites } from "@/lib/favorites-context";
@@ -58,12 +61,15 @@ function getListTone(
   return t("web.lists.private", "Private");
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This route coordinates list CRUD, sharing, ordering, and adding in one screen.
 function FavoritesComponent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const convexUserId = useConvexUserId();
   const { refetch: refetchFavorites } = useFavorites();
+  const { gestures: allGestures, isLoading: isLoadingAllGestures } =
+    useGestures();
   const [lists, setLists] = useState<ListRecord[]>([]);
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [newListName, setNewListName] = useState("");
@@ -72,6 +78,8 @@ function FavoritesComponent() {
   const [isLoadingGestures, setIsLoadingGestures] = useState(false);
   const [editingListId, setEditingListId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [isAddingGestures, setIsAddingGestures] = useState(false);
+  const [gestureSearch, setGestureSearch] = useState("");
 
   const activeList = useMemo(
     () => lists.find((list) => list._id === activeListId) ?? null,
@@ -85,6 +93,33 @@ function FavoritesComponent() {
           : activeList.viewShareToken
       }`
     : "";
+
+  const activeGestureIds = useMemo(
+    () => new Set(activeGestures.map((gesture) => gesture._id)),
+    [activeGestures]
+  );
+
+  const addableGestures = useMemo(() => {
+    const query = gestureSearch.trim().toLowerCase();
+    return allGestures
+      .filter((gesture) => !activeGestureIds.has(gesture._id))
+      .filter((gesture) => {
+        if (!query) {
+          return true;
+        }
+        return [
+          gesture.name,
+          gesture.info,
+          ...gesture.concept,
+          ...gesture.categories
+            .filter(Boolean)
+            .map((category) => category?.name ?? ""),
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(query);
+      });
+  }, [activeGestureIds, allGestures, gestureSearch]);
 
   const loadLists = useCallback(
     async (preferredListId?: string) => {
@@ -300,6 +335,31 @@ function FavoritesComponent() {
     } catch (error) {
       logger.error("Failed to remove gesture from list:", error);
       toast.error(t("web.lists.removeFailed", "Could not remove gesture"));
+    }
+  };
+
+  const addGesture = async (gesture: GestureCardData) => {
+    if (!activeList) {
+      return;
+    }
+
+    try {
+      await client.lists.addGestureToList({
+        listId: activeList._id,
+        gestureId: gesture._id,
+      });
+      setActiveGestures((current) =>
+        current.some((item) => item._id === gesture._id)
+          ? current
+          : [...current, gesture]
+      );
+      if (activeList.isDefaultFavorites) {
+        await refetchFavorites();
+      }
+      toast.success(t("web.lists.gestureAdded", "Gesture added"));
+    } catch (error) {
+      logger.error("Failed to add gesture to list:", error);
+      toast.error(t("web.lists.addFailed", "Could not add gesture"));
     }
   };
 
@@ -585,6 +645,21 @@ function FavoritesComponent() {
                   {t("web.lists.delete", "Delete list")}
                 </Button>
               )}
+              <Button
+                className="w-full"
+                onClick={() => setIsAddingGestures((current) => !current)}
+                type="button"
+                variant={isAddingGestures ? "secondary" : "default"}
+              >
+                {isAddingGestures ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                {isAddingGestures
+                  ? t("web.lists.doneAdding", "Done adding")
+                  : t("web.lists.addGestures", "Add gestures")}
+              </Button>
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">
@@ -594,7 +669,84 @@ function FavoritesComponent() {
         </aside>
 
         <div className="min-h-0 overflow-y-auto">
-          {isLoadingGestures ? (
+          {isAddingGestures ? (
+            <div className="flex h-full flex-col overflow-hidden">
+              <div className="shrink-0 border-border border-b p-4 lg:px-8">
+                <div className="relative">
+                  <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    onChange={(event) => setGestureSearch(event.target.value)}
+                    placeholder={t(
+                      "web.lists.searchToAdd",
+                      "Search gestures to add"
+                    )}
+                    value={gestureSearch}
+                  />
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {isLoadingAllGestures ? (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  </div>
+                ) : addableGestures.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+                    <Check className="mb-4 h-16 w-16 text-muted-foreground" />
+                    <h2 className="mb-2 font-bold text-xl">
+                      {t("web.lists.noAddableGestures", "Nothing to add")}
+                    </h2>
+                    <p className="text-muted-foreground">
+                      {t(
+                        "web.lists.noAddableGesturesDescription",
+                        "All matching gestures are already in this list."
+                      )}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {addableGestures.map((gesture) => (
+                      <div
+                        className="flex min-h-[72px] items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40 lg:px-8"
+                        key={gesture._id}
+                      >
+                        <button
+                          className="min-w-0 flex-1 text-left"
+                          onClick={() => handleSelectGesture(gesture._id)}
+                          type="button"
+                        >
+                          <p className="truncate font-medium">{gesture.name}</p>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {gesture.categories
+                              .filter(Boolean)
+                              .slice(0, 3)
+                              .map((category) =>
+                                category ? (
+                                  <span
+                                    className="rounded-full bg-secondary px-2 py-0.5 text-xs"
+                                    key={category._id}
+                                  >
+                                    {category.name}
+                                  </span>
+                                ) : null
+                              )}
+                          </div>
+                        </button>
+                        <Button
+                          onClick={() => addGesture(gesture)}
+                          type="button"
+                          variant="outline"
+                        >
+                          <Plus className="h-4 w-4" />
+                          {t("web.lists.add", "Add")}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : isLoadingGestures ? (
             <div className="flex h-full items-center justify-center">
               <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
