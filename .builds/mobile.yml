@@ -1,0 +1,38 @@
+image: debian/stable
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - nodejs
+  - unzip
+secrets:
+  - a6cc8145-1053-45cb-85fe-918e5e612c85
+sources:
+  - git@git.sr.ht:~zias/smog
+environment:
+  CI: "true"
+  TURBO_TELEMETRY_DISABLED: "1"
+tasks:
+  - setup: |
+      export BUN_INSTALL="$HOME/.bun"
+      export PATH="$BUN_INSTALL/bin:$PATH"
+      sudo fallocate -l 4G /swapfile
+      sudo chmod 600 /swapfile
+      sudo mkswap /swapfile
+      sudo swapon /swapfile
+      curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.11"
+      {
+        echo 'export BUN_INSTALL="$HOME/.bun"'
+        echo 'export PATH="$BUN_INSTALL/bin:$PATH"'
+      } >> ~/.buildenv
+      cd smog
+      bun install --frozen-lockfile --linker hoisted --network-concurrency 8 --concurrent-scripts 1 --no-progress
+  - check-types: |
+      cd smog
+      ./node_modules/.bin/turbo -F native check-types
+  - build-mobile: |
+      cd smog
+      ./node_modules/.bin/turbo -F native build
+submitter:
+  git.sr.ht:
+    enabled: true

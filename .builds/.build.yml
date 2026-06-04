@@ -2,6 +2,9 @@ image: debian/stable
 packages:
   - ca-certificates
   - curl
+  - docker-buildx
+  - docker-cli
+  - docker.io
   - git
   - nodejs
   - unzip
@@ -36,6 +39,38 @@ tasks:
   - build: |
       cd smog
       bun run build
+  - docker-images: |
+      cd smog
+
+      sudo dockerd --host=unix:///var/run/docker.sock > "$HOME/dockerd.log" 2>&1 &
+      for _ in $(seq 1 30); do
+        sudo docker info >/dev/null 2>&1 && break
+        sleep 1
+      done
+      sudo docker info
+
+      short_sha="$(git rev-parse --short=12 HEAD)"
+      sudo env DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build \
+        --target production \
+        --build-arg "VITE_SERVER_URL=${VITE_SERVER_URL:-}" \
+        --build-arg "VITE_WORKOS_CLIENT_ID=${VITE_WORKOS_CLIENT_ID:-}" \
+        --build-arg "VITE_WORKOS_REDIRECT_URI=${VITE_WORKOS_REDIRECT_URI:-}" \
+        --build-arg "VITE_CONVEX_URL=${VITE_CONVEX_URL:-}" \
+        --build-arg "VITE_PUBLIC_POSTHOG_API_KEY=${VITE_PUBLIC_POSTHOG_API_KEY:-}" \
+        --build-arg "VITE_PUBLIC_POSTHOG_HOST=${VITE_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}" \
+        -f apps/web/Dockerfile \
+        -t "smog-web:$short_sha" \
+        .
+      sudo env DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build \
+        --target production \
+        -f apps/server/Dockerfile \
+        -t "smog-server:$short_sha" \
+        .
+      sudo env DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build \
+        --target production \
+        -f apps/remotion/Dockerfile \
+        -t "smog-remotion:$short_sha" \
+        .
 submitter:
   git.sr.ht:
     enabled: true
