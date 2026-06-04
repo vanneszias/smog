@@ -25,6 +25,9 @@
       "cache": false,
       "persistent": true
     },
+    "release:eas": {
+      "cache": false
+    },
     "test": {
       "cache": false
     },

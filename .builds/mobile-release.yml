@@ -1,0 +1,50 @@
+image: debian/stable
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - nodejs
+  - unzip
+secrets:
+  - a6cc8145-1053-45cb-85fe-918e5e612c85
+  - fba847b6-0c6a-4490-9671-9dc82588a44f
+sources:
+  - git@git.sr.ht:~zias/smog
+environment:
+  CI: "true"
+  TURBO_TELEMETRY_DISABLED: "1"
+tasks:
+  - setup: |
+      export BUN_INSTALL="$HOME/.bun"
+      export PATH="$BUN_INSTALL/bin:$PATH"
+      sudo fallocate -l 4G /swapfile
+      sudo chmod 600 /swapfile
+      sudo mkswap /swapfile
+      sudo swapon /swapfile
+      curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.11"
+      {
+        echo 'export BUN_INSTALL="$HOME/.bun"'
+        echo 'export PATH="$BUN_INSTALL/bin:$PATH"'
+      } >> ~/.buildenv
+      cd smog
+      bun install --frozen-lockfile --linker hoisted --network-concurrency 8 --concurrent-scripts 1 --no-progress
+  - release-mobile: |
+      if [ ! -f "$HOME/smog-eas.env" ]; then
+        echo "Missing EAS env secret at ~/smog-eas.env" >&2
+        echo "Create a builds.sr.ht secret file with EXPO_TOKEN, then add its UUID to this manifest." >&2
+        exit 1
+      fi
+
+      set +x
+      . "$HOME/smog-eas.env"
+      : "${EXPO_TOKEN:?EXPO_TOKEN is required}"
+      set -x
+
+      cd smog
+      bun run native:release:eas
+submitter:
+  git.sr.ht:
+    enabled: true
+    allow-refs:
+      - refs/heads/master
+      - "refs/tags/*"

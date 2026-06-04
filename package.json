@@ -34,6 +34,7 @@
     "native:ios:debug": "turbo -F native ios -- --configuration Debug",
     "native:android": "turbo -F native android --",
     "native:android:release": "turbo -F native android -- --variant release",
+    "native:release:eas": "turbo -F native release:eas",
     "convex:codegen": "turbo -F @smog/convex codegen",
     "convex:dev": "turbo -F @smog/convex dev",
     "convex:deploy": "turbo -F @smog/convex deploy",

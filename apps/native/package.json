@@ -12,6 +12,7 @@
     "web": "expo start --web",
     "export:ios": "expo export --platform ios --output-dir dist/ios",
     "export:android": "expo export --platform android --output-dir dist/android",
+    "release:eas": "bunx eas-cli@16.32.0 build --platform all --profile production --non-interactive --wait",
     "test": "jest --watchAll",
     "check-types": "tsc --noEmit"
   },
