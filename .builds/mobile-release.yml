@@ -38,6 +38,7 @@ tasks:
       set +x
       . "$HOME/smog-eas.env"
       : "${EXPO_TOKEN:?EXPO_TOKEN is required}"
+      export EXPO_TOKEN
       set -x
 
       cd smog
