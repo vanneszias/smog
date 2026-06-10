@@ -463,13 +463,9 @@
       },
       "privacy": {
         "title": "Privacy & Gegevens",
-        "analytics": {
-          "title": "Gebruiksanalyse",
-          "description": "Help ons SMOG te verbeteren door anonieme gebruiksgegevens te delen. Dit bevat geen persoonlijke informatie."
-        },
         "export": {
           "title": "Uw gegevens downloaden",
-          "description": "Exporteer al uw accountgegevens inclusief favorieten, voorkeuren en toestemmingsgeschiedenis in JSON-formaat.",
+          "description": "Exporteer al uw accountgegevens, inclusief favorieten en voorkeuren, in JSON-formaat.",
           "button": "Gegevens downloaden",
           "exporting": "Exporteren..."
         },
@@ -491,7 +487,6 @@
         "listItems": {
           "accountInfo": "Uw accountinformatie",
           "favorites": "Alle opgeslagen gebarenlijsten",
-          "consentHistory": "Uw toestemmingsgeschiedenis",
           "adminLogs": "Eventuele beheeractiviteitenlogboeken"
         },
         "cancel": "Annuleren",
@@ -499,9 +494,6 @@
         "deleting": "Verwijderen..."
       },
       "toast": {
-        "analyticsEnabled": "Analyse ingeschakeld. Bedankt voor uw hulp bij het verbeteren!",
-        "analyticsDisabled": "Analyse uitgeschakeld. Uw gegevens worden niet meer verzameld.",
-        "analyticsUpdateFailed": "Analysevoorkeuren bijwerken mislukt. Probeer het opnieuw.",
         "exportUnavailable": "Kan gegevens niet exporteren. Probeer het opnieuw.",
         "exportSuccess": "Uw gegevens zijn succesvol gedownload",
         "exportFailed": "Exporteren van gegevens mislukt. Probeer het opnieuw.",
@@ -799,19 +791,8 @@
             "timestamps": "Tijdstippen van accountaanmaak en laatste activiteit"
           }
         },
-        "usage": {
-          "title": "3.2 Gebruiksgegevens (als u toestemming geeft voor analyse)",
-          "items": {
-            "gestures": "Gebaren die u bekijkt en favoriet maakt",
-            "searches": "Zoekopdrachten die u uitvoert",
-            "navigation": "Navigatiepatronen in de app",
-            "device": "Apparaatinformatie (type, OS-versie)",
-            "session": "Sessieduur en -frequentie",
-            "video": "Interacties met videoweergave"
-          }
-        },
         "preferences": {
-          "title": "3.3 Gebruikersvoorkeuren",
+          "title": "3.2 Gebruikersvoorkeuren",
           "items": {
             "favorites": "Favoriete gebaren",
             "searchHistory": "Zoekgeschiedenis (lokaal opgeslagen op uw apparaat)",
@@ -819,7 +800,7 @@
           }
         },
         "guest": {
-          "title": "3.4 Gastmodusgegevens",
+          "title": "3.3 Gastmodusgegevens",
           "items": {
             "identifier": "Anonieme gast-id (bij gebruik van gastmodus)",
             "retention": "Gastgegevens worden na 12 maanden inactiviteit verwijderd als onderdeel van ons bewaarbeleid"
@@ -832,10 +813,6 @@
           "contract": {
             "label": "Uitvoering van de overeenkomst",
             "text": "Het verwerken van uw accountinformatie is noodzakelijk om onze diensten te leveren"
-          },
-          "consent": {
-            "label": "Toestemming",
-            "text": "Analyse en marketingcommunicatie (u kunt uw toestemming op elk moment intrekken in de instellingen)"
           },
           "legitimate": {
             "label": "Gerechtvaardigd belang",
@@ -853,7 +830,6 @@
           "provide": "Om onze dienst te leveren en te onderhouden",
           "authenticate": "Om uw account te authenticeren (via WorkOS)",
           "sync": "Om uw favorieten tussen apparaten te synchroniseren",
-          "analytics": "Om onze app te verbeteren via gebruiksanalyse (alleen indien u toestemt)",
           "personalize": "Om uw leerervaring te personaliseren",
           "support": "Om klantenondersteuning te bieden",
           "legal": "Om aan wettelijke verplichtingen te voldoen"
@@ -865,16 +841,12 @@
           "title": "6.1 Authenticatie - WorkOS",
           "body": "We gebruiken WorkOS voor veilige authenticatie. WorkOS verwerkt uw e-mailadres en naam om uw account aan te maken en te beheren. Zie het privacybeleid van WorkOS op: <link>https://workos.com/privacy</link>"
         },
-        "posthog": {
-          "title": "6.2 Analyse - PostHog (optioneel)",
-          "body": "Als u toestemt, gebruiken we PostHog (gehost in de EU) voor gebruiksanalyse op zowel onze web- als native toepassingen. PostHog helpt ons te begrijpen hoe gebruikers onze app gebruiken. U kunt op elk moment afmelden in de instellingen. Zie het privacybeleid van PostHog op: <link>https://posthog.com/privacy</link>"
-        },
         "mux": {
-          "title": "6.3 Videohosting - Mux",
+          "title": "6.2 Videohosting - Mux",
           "body": "We gebruiken Mux voor het hosten en streamen van demonstratievideo's. Mux kan technische gegevens verzamelen die nodig zijn voor videolevering. Zie het privacybeleid van Mux op: <link>https://mux.com/privacy</link>"
         },
         "convex": {
-          "title": "6.4 Database - Convex",
+          "title": "6.3 Database - Convex",
           "body": "We gebruiken Convex om uw accountgegevens, favorieten en gebruikersvoorkeuren op te slaan. Convex is onze backend-databaseprovider."
         }
       },
@@ -882,7 +854,6 @@
         "title": "7. Gegevensopslag en beveiliging",
         "items": {
           "encryption": "Uw gegevens worden veilig opgeslagen met industriestandaard-encryptie",
-          "analytics": "Analysegegevens worden opgeslagen op PostHog-servers in de Europese Unie",
           "measures": "Wij nemen passende technische en organisatorische maatregelen om uw gegevens te beschermen",
           "access": "Toegang tot uw persoonsgegevens is beperkt tot geautoriseerd personeel"
         }
@@ -935,10 +906,6 @@
           "object": {
             "label": "Recht van bezwaar",
             "text": "Maak bezwaar tegen verwerking op basis van gerechtvaardigd belang"
-          },
-          "withdraw": {
-            "label": "Recht om toestemming in te trekken",
-            "text": "Schakel analyse op elk moment uit"
           }
         },
         "closing": "Om deze rechten uit te oefenen, gebruikt u de opties in uw accountinstellingen of neemt u rechtstreeks contact met ons op."
@@ -951,7 +918,6 @@
         "title": "11. Internationale gegevensoverdrachten",
         "intro": "Uw gegevens kunnen worden overgedragen naar en verwerkt in landen buiten de EER/VK. We zorgen voor passende waarborgen, waaronder:",
         "items": {
-          "euHosting": "Analyse gehost in de EU (PostHog)",
           "scc": "Standaard contractuele clausules met externe verwerkers waar van toepassing",
           "adequacy": "Toereikendheidsbesluiten van de Europese Commissie waar van toepassing"
         }
@@ -961,12 +927,11 @@
         "intro": "We gebruiken cookies en lokale opslag om het volgende op te slaan:",
         "items": {
           "auth": "Strikt noodzakelijke cookies voor authenticatiesessies",
-          "consent": "Toestemmingskeuzes voor analyse- en marketingvoorkeuren",
           "preferences": "Gebruikersvoorkeuren (taal, thema)",
           "search": "Recente zoekopdrachten (lokaal, niet naar servers verzonden)",
           "cache": "Gecachte gebaren voor offline toegang"
         },
-        "closing": "U kunt deze gegevens op elk moment wissen via uw apparaat-/browserinstellingen. U kunt uw toestemmingsvoorkeuren ook aanpassen in de accountinstellingen."
+        "closing": "U kunt deze gegevens op elk moment wissen via de instellingen van uw apparaat of browser."
       },
       "changes": {
         "title": "13. Wijzigingen in dit beleid",
@@ -1185,24 +1150,6 @@
     }
   },
   "gdpr": {
-    "consent": {
-      "title": "Privacy & gegevensgebruik",
-      "description": "We respecteren uw privacy en zijn toegewijd aan het beschermen van uw persoonlijke gegevens.",
-      "analyticsTitle": "Gebruiksanalyse",
-      "analyticsDescription": "Help ons de app te verbeteren door anonieme gebruiksgegevens te delen",
-      "requiredTitle": "Vereist",
-      "requiredDescription": "Accountbeheer en kernfunctionaliteit van de app",
-      "acceptAll": "Alles accepteren",
-      "acceptRequired": "Alleen vereiste accepteren",
-      "customize": "Aanpassen",
-      "learnMore": "Meer informatie in ons",
-      "privacyPolicy": "Privacybeleid",
-      "and": "en",
-      "termsOfService": "Servicevoorwaarden",
-      "consentRequired": "U moet ons Privacybeleid en onze Servicevoorwaarden accepteren om door te gaan",
-      "updated": "Voorkeuren bijgewerkt",
-      "failed": "Voorkeuren bijwerken mislukt"
-    },
     "account": {
       "manageData": "Beheer uw gegevens",
       "exportData": "Mijn gegevens downloaden",
@@ -1219,11 +1166,7 @@
       "deleteConfirmButton": "Ja, verwijder mijn account",
       "deleting": "Verwijderen...",
       "deleteSuccess": "Account succesvol verwijderd",
-      "deleteFailed": "Account verwijderen mislukt",
-      "analytics": "Analyse",
-      "analyticsDescription": "Deel gebruiksgegevens om ons te helpen de app te verbeteren",
-      "analyticsEnabled": "Ingeschakeld",
-      "analyticsDisabled": "Uitgeschakeld"
+      "deleteFailed": "Account verwijderen mislukt"
     }
   },
   "accessibility": {

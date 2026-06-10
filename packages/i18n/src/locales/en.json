@@ -493,13 +493,9 @@
       },
       "privacy": {
         "title": "Privacy & Data",
-        "analytics": {
-          "title": "Usage Analytics",
-          "description": "Help us improve SMOG by sharing anonymous usage data. This does not include any personal information."
-        },
         "export": {
           "title": "Download Your Data",
-          "description": "Export all your account data including favorites, preferences, and consent history in JSON format.",
+          "description": "Export all your account data including favorites and preferences in JSON format.",
           "button": "Download Data",
           "exporting": "Exporting..."
         },
@@ -521,7 +517,6 @@
         "listItems": {
           "accountInfo": "Your account information",
           "favorites": "All saved gesture lists",
-          "consentHistory": "Your consent history",
           "adminLogs": "Any admin activity logs"
         },
         "cancel": "Cancel",
@@ -529,9 +524,6 @@
         "deleting": "Deleting..."
       },
       "toast": {
-        "analyticsEnabled": "Analytics enabled. Thank you for helping us improve!",
-        "analyticsDisabled": "Analytics disabled. Your data will no longer be collected.",
-        "analyticsUpdateFailed": "Failed to update analytics preference. Please try again.",
         "exportUnavailable": "Unable to export data. Please try again.",
         "exportSuccess": "Your data has been downloaded successfully",
         "exportFailed": "Failed to export data. Please try again.",
@@ -829,19 +821,8 @@
             "timestamps": "Account creation and last activity timestamps"
           }
         },
-        "usage": {
-          "title": "3.2 Usage Data (if you consent to analytics)",
-          "items": {
-            "gestures": "Gestures you view and favorite",
-            "searches": "Search queries you perform",
-            "navigation": "App navigation patterns",
-            "device": "Device information (type, OS version)",
-            "session": "Session duration and frequency",
-            "video": "Video playback interactions"
-          }
-        },
         "preferences": {
-          "title": "3.3 User Preferences",
+          "title": "3.2 User Preferences",
           "items": {
             "favorites": "Favorite gestures",
             "searchHistory": "Search history (stored locally on your device)",
@@ -849,7 +830,7 @@
           }
         },
         "guest": {
-          "title": "3.4 Guest Mode Data",
+          "title": "3.3 Guest Mode Data",
           "items": {
             "identifier": "Anonymous guest identifier (if using guest mode)",
             "retention": "Guest data is deleted after 12 months of inactivity as part of our data retention policy"
@@ -862,10 +843,6 @@
           "contract": {
             "label": "Contract Performance",
             "text": "Processing your account information is necessary to provide you with our services"
-          },
-          "consent": {
-            "label": "Consent",
-            "text": "Analytics and marketing communications (you can withdraw consent at any time in settings)"
           },
           "legitimate": {
             "label": "Legitimate Interest",
@@ -883,7 +860,6 @@
           "provide": "To provide and maintain our service",
           "authenticate": "To authenticate your account (via WorkOS)",
           "sync": "To sync your favorites across devices",
-          "analytics": "To improve our app through usage analytics (only if you consent)",
           "personalize": "To personalize your learning experience",
           "support": "To provide customer support",
           "legal": "To comply with legal obligations"
@@ -895,16 +871,12 @@
           "title": "6.1 Authentication - WorkOS",
           "body": "We use WorkOS for secure authentication. WorkOS processes your email address and name to create and manage your account. See WorkOS Privacy Policy at: <link>https://workos.com/privacy</link>"
         },
-        "posthog": {
-          "title": "6.2 Analytics - PostHog (optional)",
-          "body": "If you consent, we use PostHog (EU-hosted) for usage analytics on both our web and native applications. PostHog helps us understand how users interact with our app. You can opt out at any time in settings. See PostHog Privacy Policy at: <link>https://posthog.com/privacy</link>"
-        },
         "mux": {
-          "title": "6.3 Video Hosting - Mux",
+          "title": "6.2 Video Hosting - Mux",
           "body": "We use Mux to host and stream gesture demonstration videos. Mux may collect technical data necessary for video delivery. See Mux Privacy Policy at: <link>https://mux.com/privacy</link>"
         },
         "convex": {
-          "title": "6.4 Database - Convex",
+          "title": "6.3 Database - Convex",
           "body": "We use Convex to store your account data, favorites, and user preferences. Convex is our backend database provider."
         }
       },
@@ -912,7 +884,6 @@
         "title": "7. Data Storage and Security",
         "items": {
           "encryption": "Your data is stored securely using industry-standard encryption",
-          "analytics": "Analytics data is stored on PostHog servers in the European Union",
           "measures": "We implement appropriate technical and organizational measures to protect your data",
           "access": "Access to your personal data is restricted to authorized personnel only"
         }
@@ -965,10 +936,6 @@
           "object": {
             "label": "Right to Object",
             "text": "Object to processing based on legitimate interests"
-          },
-          "withdraw": {
-            "label": "Right to Withdraw Consent",
-            "text": "Opt out of analytics at any time"
           }
         },
         "closing": "To exercise these rights, use the options in your account settings or contact us directly."
@@ -981,7 +948,6 @@
         "title": "11. International Data Transfers",
         "intro": "Your data may be transferred to and processed in countries outside the EEA/UK. We ensure appropriate safeguards are in place, including:",
         "items": {
-          "euHosting": "EU-hosted analytics (PostHog)",
           "scc": "Standard Contractual Clauses with third-party processors where applicable",
           "adequacy": "Adequacy decisions by the European Commission where applicable"
         }
@@ -991,12 +957,11 @@
         "intro": "We use cookies and local storage to store:",
         "items": {
           "auth": "Strictly necessary cookies for authentication sessions",
-          "consent": "Consent choices for analytics and marketing preferences",
           "preferences": "User preferences (language, theme)",
           "search": "Recent searches (local only, not sent to servers)",
           "cache": "Cached gesture data for offline access"
         },
-        "closing": "You can clear this data at any time through your device/browser settings. You can also update consent preferences in account settings."
+        "closing": "You can clear this data at any time through your device/browser settings."
       },
       "changes": {
         "title": "13. Changes to This Policy",
@@ -1215,24 +1180,6 @@
     }
   },
   "gdpr": {
-    "consent": {
-      "title": "Privacy & Data Usage",
-      "description": "We respect your privacy and are committed to protecting your personal data.",
-      "analyticsTitle": "Usage Analytics",
-      "analyticsDescription": "Help us improve the app by sharing anonymous usage data",
-      "requiredTitle": "Required",
-      "requiredDescription": "Account management and core app functionality",
-      "acceptAll": "Accept All",
-      "acceptRequired": "Accept Required Only",
-      "customize": "Customize",
-      "learnMore": "Learn more in our",
-      "privacyPolicy": "Privacy Policy",
-      "and": "and",
-      "termsOfService": "Terms of Service",
-      "consentRequired": "You must accept our Privacy Policy and Terms of Service to continue",
-      "updated": "Preferences updated",
-      "failed": "Failed to update preferences"
-    },
     "account": {
       "manageData": "Manage Your Data",
       "exportData": "Download My Data",
@@ -1249,11 +1196,7 @@
       "deleteConfirmButton": "Yes, Delete My Account",
       "deleting": "Deleting...",
       "deleteSuccess": "Account deleted successfully",
-      "deleteFailed": "Failed to delete account",
-      "analytics": "Analytics",
-      "analyticsDescription": "Share usage data to help us improve the app",
-      "analyticsEnabled": "Enabled",
-      "analyticsDisabled": "Disabled"
+      "deleteFailed": "Failed to delete account"
     }
   },
   "accessibility": {

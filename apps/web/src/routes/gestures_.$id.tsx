@@ -9,7 +9,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGestures } from "@/hooks/useGestures";
-import { trackGestureViewed } from "@/lib/analytics";
 import { useLists } from "@/lib/lists-context";
 import { isMobileDevice, openInApp } from "@/utils/deviceDetection";
 
@@ -61,20 +60,6 @@ function GesturesComponent() {
     }
     return allGestures.find((g) => g._id === id);
   }, [id, allGestures]);
-
-  useEffect(() => {
-    if (selectedGesture) {
-      const categories: string[] = (selectedGesture.categories || [])
-        .filter((c): c is Exclude<typeof c, null | undefined> => Boolean(c))
-        .map((c) => (typeof c === "string" ? c : c.name));
-      trackGestureViewed(
-        selectedGesture._id,
-        selectedGesture.name,
-        categories,
-        "search_results"
-      );
-    }
-  }, [selectedGesture]);
 
   const showSkeleton = isLoading && !!id;
 

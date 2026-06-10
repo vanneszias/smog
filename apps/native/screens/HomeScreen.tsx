@@ -1,7 +1,7 @@
 import { SPACING } from "@smog/styles";
 import { useRouter } from "expo-router";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Keyboard,
   Linking,
@@ -21,11 +21,6 @@ import { useRecentSearches } from "@/context/RecentSearchesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { useOptimizedSearch } from "@/hooks/useOptimizedSearch";
-import {
-  trackRecentSearchSelected,
-  trackSearchCleared,
-  trackSearchPerformed,
-} from "@/services/analytics";
 import type { Gesture } from "@/types";
 
 const HomeScreen: React.FC = () => {
@@ -46,7 +41,7 @@ const HomeScreen: React.FC = () => {
     enableCache: true,
   });
 
-  const { addRecentSearch, recentSearches } = useRecentSearches();
+  const { addRecentSearch } = useRecentSearches();
 
   // Navigation handlers
   const navigateToSettings = useCallback(() => {
@@ -59,19 +54,6 @@ const HomeScreen: React.FC = () => {
     },
     [router]
   );
-
-  // Track search results when they change
-  useEffect(() => {
-    if (searchTerm && searchHook.results.length >= 0) {
-      const searchDuration = searchHook.searchStats.searchTime;
-      trackSearchPerformed(
-        searchTerm,
-        [],
-        searchHook.results.length,
-        searchDuration
-      );
-    }
-  }, [searchHook.results, searchHook.searchStats.searchTime, searchTerm]);
 
   // Search handlers
   const handleSearch = useCallback(
@@ -102,21 +84,16 @@ const HomeScreen: React.FC = () => {
       setSearchTerm(query);
       searchHook.search(query);
       addRecentSearch(query);
-
-      const position = recentSearches.indexOf(query);
-      trackRecentSearchSelected(query, position >= 0 ? position : 0);
     },
-    [searchHook, addRecentSearch, recentSearches]
+    [searchHook, addRecentSearch]
   );
 
   const recentSearchesVisible = searchTerm.length === 0;
 
   const handleClearSearch = useCallback(() => {
-    const previousQuery = searchTerm;
     setSearchTerm("");
     searchHook.clearSearch();
-    trackSearchCleared(previousQuery);
-  }, [searchHook.clearSearch, searchTerm]);
+  }, [searchHook.clearSearch]);
 
   const handleSearchFocus = useCallback(() => {
     setIsSearchFocused(true);

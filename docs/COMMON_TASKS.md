@@ -1,7 +1,7 @@
 # Common Development Tasks
 
 > Step-by-step guides for the most frequent development tasks.  
-> Last updated: March 18, 2026
+> Last updated: June 10, 2026
 
 ---
 
@@ -28,29 +28,6 @@ export default function MyScreen() {
 ```typescript
 import { router } from "expo-router";
 router.push("/my-screen");
-```
-
----
-
-### Add a new analytics event
-
-1. Add a typed tracking function to `apps/native/services/analytics/tracking.ts`:
-```typescript
-/** Track when the user taps the share button on a gesture. */
-export function trackGestureShared(gestureId: string, gestureName: string): void {
-  trackEvent("Gesture Shared", { gesture_id: gestureId, gesture_name: gestureName });
-}
-```
-
-2. Re-export from `apps/native/services/analytics/index.ts`:
-```typescript
-export { trackGestureShared } from "./tracking";
-```
-
-3. Use in a component:
-```typescript
-import { trackGestureShared } from "@/services/analyticsService";
-trackGestureShared(gesture.id, gesture.name);
 ```
 
 ---

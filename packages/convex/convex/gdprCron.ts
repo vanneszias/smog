@@ -49,16 +49,6 @@ export const cleanupInactiveGuests = internalMutation({
         await ctx.db.delete(list._id);
       }
 
-      // Delete consents
-      const consents = await ctx.db
-        .query("user_consents")
-        .withIndex("by_user", (q) => q.eq("userId", guest._id))
-        .collect();
-
-      for (const consent of consents) {
-        await ctx.db.delete(consent._id);
-      }
-
       // Delete guest user
       await ctx.db.delete(guest._id);
       deletedCount++;

@@ -61,8 +61,6 @@ tasks:
         --build-arg "VITE_WORKOS_CLIENT_ID=${VITE_WORKOS_CLIENT_ID:-}" \
         --build-arg "VITE_WORKOS_REDIRECT_URI=${VITE_WORKOS_REDIRECT_URI:-}" \
         --build-arg "VITE_CONVEX_URL=${VITE_CONVEX_URL:-}" \
-        --build-arg "VITE_PUBLIC_POSTHOG_API_KEY=${VITE_PUBLIC_POSTHOG_API_KEY:-}" \
-        --build-arg "VITE_PUBLIC_POSTHOG_HOST=${VITE_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}" \
         -f apps/web/Dockerfile \
         -t "$image:$image_tag" \
         .

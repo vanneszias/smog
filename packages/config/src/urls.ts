@@ -23,15 +23,6 @@ export const MUX_IMAGE_DOMAIN = "image.mux.com";
  */
 export const MUX_STREAM_DOMAIN = "stream.mux.com";
 
-// ─── Analytics ────────────────────────────────────────────────────────────────
-
-/**
- * PostHog EU datacenter host.
- * Override with `EXPO_PUBLIC_POSTHOG_HOST` / `VITE_POSTHOG_HOST` for
- * US or self-hosted instances.
- */
-export const POSTHOG_DEFAULT_HOST = "https://eu.i.posthog.com";
-
 // ─── SMOG Website ─────────────────────────────────────────────────────────────
 
 /**

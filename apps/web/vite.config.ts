@@ -27,9 +27,6 @@ export default defineConfig({
           if (!id.includes("node_modules")) {
             return;
           }
-          if (id.includes("posthog-js")) {
-            return "analytics";
-          }
           if (id.includes("i18next")) {
             return "i18n";
           }

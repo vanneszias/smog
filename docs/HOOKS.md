@@ -1,6 +1,6 @@
 # Hooks Documentation
 
-> Last updated: March 18, 2026  
+> Last updated: June 10, 2026
 > See also: [COMPONENTS.md](./COMPONENTS.md), [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ## Overview
@@ -40,20 +40,10 @@ const {
 
 ---
 
-### `useAnalyticsConsent`
-**File:** `useAnalyticsConsent.ts`  
-**Purpose:** React hook wrapping the analytics consent state.
-
-```typescript
-const { isEnabled, enable, disable } = useAnalyticsConsent();
-```
-
----
-
 ## Native Hooks (`apps/native/hooks/`)
 
 ### `useOptimizedSearch`
-**Purpose:** Debounced search with performance tracking.
+**Purpose:** Debounced gesture search.
 
 ```typescript
 const {
@@ -204,37 +194,8 @@ editing.showConfirmation; editing.setShowConfirmation(v);
 
 ```typescript
 const { player, isLoading, isPlaying, togglePlayPause } = useVideoPlayerState({
-  playbackId, autoPlay, gestureId, gestureName, onComplete, onPlayToEnd,
+  playbackId, autoPlay, onComplete, onPlayToEnd,
 });
-```
-
-### `useVideoAnalytics`
-**Purpose:** PostHog analytics tracking for `VideoPlayer`. Returns event callback functions.
-
-```typescript
-const analytics = useVideoAnalytics({ gestureId, gestureName, autoPlay });
-analytics.onPlayerReady();
-analytics.onPlaybackStarted();
-analytics.onPlaybackPaused();
-analytics.onPlaybackCompleted();
-analytics.onAlmostCompleted();
-```
-
----
-
-## GDPR Hooks (`apps/native/components/gdpr/`)
-
-### `useGDPRConsent`
-**Purpose:** State and action handlers for `GDPRConsentModal`.
-
-```typescript
-const consent = useGDPRConsent({ onAcceptAll, onAcceptRequired, t });
-consent.analyticsConsent;         // boolean
-consent.setAnalyticsConsent(v);
-consent.loading;                  // boolean
-consent.handleAcceptAll();        // async
-consent.handleAcceptRequired();   // async
-consent.handleCustomAccept();     // async — uses current toggle value
 ```
 
 ---

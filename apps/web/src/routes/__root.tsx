@@ -15,10 +15,8 @@ import { useTranslation } from "react-i18next";
 import Header from "@/components/header";
 import { AppStoreBanner } from "@/components/home/AppStoreBanner";
 import { NotFoundComponent } from "@/components/NotFoundPage";
-import { GDPRConsentBanner } from "@/components/privacy-consent-banner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { trackPageView } from "@/lib/analytics";
 import { link, type orpc } from "@/utils/orpc";
 import "../index.css";
 
@@ -36,10 +34,6 @@ function RootComponent() {
   const [client] = useState<AppRouterClient>(() => createORPCClient(link));
   const [_orpcUtils] = useState(() => createTanstackQueryUtils(client));
   const location = useLocation();
-
-  useEffect(() => {
-    trackPageView(location.pathname);
-  }, [location.pathname]);
 
   // Update document language attribute based on i18n
   const { i18n: i18nInstance } = useTranslation();
@@ -63,7 +57,6 @@ function RootComponent() {
             <Outlet />
           </main>
         </div>
-        <GDPRConsentBanner />
         <Toaster richColors />
       </ThemeProvider>
       <TanStackRouterDevtools position="bottom-left" />

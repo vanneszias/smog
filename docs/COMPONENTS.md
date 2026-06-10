@@ -34,7 +34,7 @@ The following shadcn/ui components are re-exported from `@smog/ui`:
 
 ### `VideoPlayer`
 **File:** `VideoPlayer.tsx` (120 lines)  
-**Purpose:** MUX HLS gesture video player with analytics and Liquid Glass UI.
+**Purpose:** MUX HLS gesture video player with Liquid Glass UI.
 
 ```typescript
 interface VideoPlayerProps {
@@ -42,18 +42,14 @@ interface VideoPlayerProps {
   autoPlay?: boolean;        // Default: true
   onComplete?: () => void;   // Called 5s before video end
   onPlayToEnd?: () => void;  // Called when video reaches end
-  gestureId?: string;        // For analytics
-  gestureName?: string;      // For analytics
 }
 ```
 
 **Architecture:**
 - `video/useVideoPlayerState` — expo-video player instance, event subscriptions
-- `video/useVideoAnalytics` — PostHog event tracking
 
 **Key behaviours:**
 - Pauses automatically when screen loses focus (navigation away)
-- Tracks `Video Player Opened`, `Video Playback Started/Paused/Completed/Almost Completed`
 - Shows `ActivityIndicator` while loading
 - Play/pause button uses Liquid Glass effect on supported devices
 
@@ -69,7 +65,6 @@ interface GestureCardProps {
   onPress: (gesture: Gesture) => void;
   isFavorite?: boolean;
   onToggleFavorite?: (gestureId: string) => void;
-  source?: "search_results" | "favorites_screen" | "related_gestures";
 }
 ```
 
@@ -79,28 +74,6 @@ interface GestureCardProps {
 - Long press: opens options bottom sheet
 - Haptic feedback on favourite toggle
 - Animated scale + heart overlay on like action
-
----
-
-### `GDPRConsentModal`
-**File:** `GDPRConsentModal.tsx` (200 lines)  
-**Purpose:** GDPR consent modal shown on first app launch.
-
-```typescript
-interface GDPRConsentModalProps {
-  visible: boolean;
-  onAcceptAll: (analyticsConsent: boolean) => Promise<void>;
-  onAcceptRequired: () => Promise<void>;
-}
-```
-
-**Architecture:**
-- `gdpr/useGDPRConsent` — state, loading flag, error handling for all three action paths
-
-**Consent paths:**
-1. "Accept all" → calls `onAcceptAll(true)`
-2. "Customise + save" → calls `onAcceptAll(analyticsConsent)` (toggle value)
-3. "Accept required only" → calls `onAcceptRequired()`
 
 ---
 

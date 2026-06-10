@@ -9,11 +9,6 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import EmptyState from "@/components/EmptyState";
 import { useGestures } from "@/hooks/useGestures";
-import {
-  trackSearchCategoryAdded,
-  trackSearchCategoryRemoved,
-  trackSearchPerformed,
-} from "@/lib/analytics";
 import { useLists } from "@/lib/lists-context";
 
 interface GestureSearch {
@@ -60,28 +55,7 @@ function GesturesComponent() {
       : [],
   });
 
-  const handleCategoryToggle = (category: string) => {
-    if (selectedCategories.includes(category)) {
-      trackSearchCategoryRemoved(category, selectedCategories.length - 1);
-    } else {
-      trackSearchCategoryAdded(category, selectedCategories.length + 1);
-    }
-    baseHandleCategoryToggle(category);
-  };
-
-  // Track search when query changes
-  useEffect(() => {
-    const startTime = performance.now();
-    const timer = setTimeout(() => {
-      trackSearchPerformed(
-        searchQuery,
-        selectedCategories,
-        filteredGestures.length,
-        performance.now() - startTime
-      );
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery, selectedCategories, filteredGestures.length]);
+  const handleCategoryToggle = baseHandleCategoryToggle;
 
   // Sync URL with search query changes
   useEffect(() => {

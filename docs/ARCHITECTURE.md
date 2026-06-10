@@ -1,6 +1,6 @@
 # SMOG Architecture
 
-> Last updated: March 18, 2026
+> Last updated: June 10, 2026
 
 ## Overview
 
@@ -25,7 +25,6 @@ All apps live in a **Turborepo monorepo** managed with **Bun**.
 │  apps/native ──────────────────────────────────────────────┐   │
 │  (Expo/React Native)                                        │   │
 │  ├─ Offline-first SQLite (databaseService)                  │   │
-│  ├─ PostHog analytics (analyticsService)                    │   │
 │  ├─ Convex real-time sync (convexSyncService)               │   │
 │  └─ Gesture video playback (VideoPlayer → expo-video)       │   │
 │                                              │ Convex SDK   │   │
@@ -149,7 +148,6 @@ See [PAYMENT_FLOW.md](./PAYMENT_FLOW.md) for the full flow.
 | Payments | Mollie | v3 |
 | Video | MUX + expo-video | latest |
 | Composition | Remotion | v4 |
-| Analytics | PostHog | latest |
 | Monorepo | Turborepo + Bun | latest |
 | Types | TypeScript | 5.8+ |
 | Linting | Biome | latest |

@@ -149,44 +149,7 @@ Clears processed items from favorites_sync_queue
 
 ---
 
-## 4. Analytics Data Flow
-
-### Event Tracking (Native App)
-
-```
-User action (e.g., watch video, search, favorite)
-    ↓
-Component calls typed tracking function
-  (e.g., trackVideoPlaybackStarted(gestureId, gestureName, "autoplay"))
-    ↓
-analyticsService/tracking.ts checks isAnalyticsEnabled
-    ↓ (if enabled)
-posthogInstance.capture(eventName, properties)
-    ↓
-PostHog SDK buffers events
-    ↓
-Flushes to PostHog EU datacenter (https://eu.i.posthog.com)
-```
-
-### GDPR Consent Flow
-
-```
-First app launch
-    ↓
-GDPRConsentModal shown
-    ↓
-User accepts all / customises / accepts required only
-    ↓
-Consent stored in AsyncStorage (key: @smog_analytics_consent)
-    ↓
-initializeAnalytics() reads stored consent
-    ↓
-posthogInstance.optIn() or optOut()
-```
-
----
-
-## 5. Real-Time Updates
+## 4. Real-Time Updates
 
 ### Convex Subscriptions
 

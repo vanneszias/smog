@@ -1,8 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { api } from "@smog/convex";
-import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -12,7 +8,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import GDPRConsentModal from "@/components/GDPRConsentModal";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
@@ -28,36 +23,8 @@ export default function WelcomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const [showConsent, setShowConsent] = useState(false);
-  const [hasCheckedConsent, setHasCheckedConsent] = useState(false);
-  const [pendingAction, setPendingAction] = useState<"guest" | "signin" | null>(
-    null
-  );
-
-  const recordGuestConsent = useMutation(api.gdpr.recordGuestConsent);
-
-  useEffect(() => {
-    const checkConsentStatus = async () => {
-      const consent = await AsyncStorage.getItem("@smog_gdpr_consent");
-      setHasCheckedConsent(true);
-      if (!consent) {
-        // Will show consent on first action
-        return;
-      }
-    };
-
-    checkConsentStatus();
-  }, []);
-
   const handleSignInSignUp = async () => {
     try {
-      const consent = await AsyncStorage.getItem("@smog_gdpr_consent");
-      if (!consent) {
-        setPendingAction("signin");
-        setShowConsent(true);
-        return;
-      }
-
       logger.log("[Welcome] Starting WorkOS sign-in");
       signIn();
     } catch (error) {
@@ -67,70 +34,14 @@ export default function WelcomeScreen() {
   };
 
   const handleGuestAccess = async () => {
-    const consent = await AsyncStorage.getItem("@smog_gdpr_consent");
-    if (!consent) {
-      setPendingAction("guest");
-      setShowConsent(true);
-      return;
-    }
-
     await continueAsGuest?.();
     router.replace("/(tabs)");
-  };
-
-  const handleAcceptAll = async (analyticsConsent: boolean) => {
-    try {
-      await AsyncStorage.setItem("@smog_gdpr_consent", "accepted");
-      await AsyncStorage.setItem(
-        "@smog_analytics_consent",
-        analyticsConsent.toString()
-      );
-      await AsyncStorage.setItem("@smog_consent_version", "1.0");
-      await AsyncStorage.setItem(
-        "@smog_consent_date",
-        new Date().toISOString()
-      );
-
-      setShowConsent(false);
-
-      // Execute pending action
-      if (pendingAction === "guest") {
-        // Generate guest ID if not exists
-        let guestId = await AsyncStorage.getItem("@smog_guest_id");
-        if (!guestId) {
-          const { randomUUID } = await import("expo-crypto");
-          guestId = `guest_${randomUUID().replace(/-/g, "")}`;
-          await AsyncStorage.setItem("@smog_guest_id", guestId);
-        }
-
-        // Record consent in backend
-        await recordGuestConsent({ guestId, analyticsConsent });
-
-        await continueAsGuest?.();
-        router.replace("/(tabs)");
-      } else if (pendingAction === "signin") {
-        signIn();
-      }
-
-      setPendingAction(null);
-    } catch (error) {
-      logger.error("[Welcome] Failed to save consent:", error);
-      Alert.alert(t("common.error"), t("gdpr.consent.failed"));
-    }
-  };
-
-  const handleAcceptRequired = async () => {
-    await handleAcceptAll(false);
   };
 
   // If user is already signed in, redirect them
   if (user) {
     router.replace("/(tabs)");
     return null;
-  }
-
-  if (!hasCheckedConsent) {
-    return null; // Loading state
   }
 
   return (
@@ -192,12 +103,6 @@ export default function WelcomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
-
-      <GDPRConsentModal
-        onAcceptAll={handleAcceptAll}
-        onAcceptRequired={handleAcceptRequired}
-        visible={showConsent}
-      />
     </SafeAreaView>
   );
 }

@@ -17,11 +17,6 @@
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.6.0"
   },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "typescript": "^5.9.3",
     "@smog/config": "workspace:*",

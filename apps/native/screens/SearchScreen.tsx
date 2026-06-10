@@ -14,15 +14,6 @@ import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { useCategories } from "@/hooks/useGestureData";
 import { useOptimizedSearch } from "@/hooks/useOptimizedSearch";
-import {
-  trackBottomSheetClosed,
-  trackBottomSheetOpened,
-  trackRecentSearchSelected,
-  trackSearchCategoryAdded,
-  trackSearchCategoryRemoved,
-  trackSearchCleared,
-  trackSearchPerformed,
-} from "@/services/analytics";
 
 const SearchScreen = () => {
   const router = useRouter();
@@ -55,20 +46,16 @@ const SearchScreen = () => {
       const newCategories = selectedCategories.filter((c) => c !== category);
       setSelectedCategories(newCategories);
       prevCategoryParamRef.current = undefined; // reset so nav can set again
-      trackSearchCategoryRemoved(category, newCategories.length);
     },
     [selectedCategories]
   );
 
   const handleClearCategories = useCallback(() => {
-    for (const category of selectedCategories) {
-      trackSearchCategoryRemoved(category, 0);
-    }
     setSelectedCategories([]);
     prevCategoryParamRef.current = undefined; // reset so nav can set again
-  }, [selectedCategories]);
+  }, []);
 
-  const { recentSearches, addRecentSearch } = useRecentSearches();
+  const { addRecentSearch } = useRecentSearches();
 
   const {
     results,
@@ -79,7 +66,6 @@ const SearchScreen = () => {
     refresh,
     hasMore,
     loadMore,
-    searchStats,
   } = useOptimizedSearch({
     debounceMs: 300,
     minSearchLength: 1,
@@ -121,24 +107,6 @@ const SearchScreen = () => {
     }
   }, [searchTerm, selectedCategories, hasInitialized, search, clearSearch]);
 
-  useEffect(() => {
-    if (hasInitialized && (searchTerm || selectedCategories.length > 0)) {
-      const searchDuration = searchStats.searchTime;
-      trackSearchPerformed(
-        searchTerm,
-        selectedCategories,
-        results.length,
-        searchDuration
-      );
-    }
-  }, [
-    results,
-    searchStats.searchTime,
-    searchTerm,
-    selectedCategories,
-    hasInitialized,
-  ]);
-
   const handleSearchChange = useCallback((query: string) => {
     setSearchTerm(query);
   }, []);
@@ -155,35 +123,14 @@ const SearchScreen = () => {
   );
 
   const handleClear = useCallback(() => {
-    const previousQuery = searchTerm;
     setSearchTerm("");
     setIsSearchBarFocused(true);
-    trackSearchCleared(previousQuery);
-  }, [searchTerm]);
+  }, []);
 
-  const handleCategoryChange = useCallback(
-    (categoryList: string[]) => {
-      const previousCategories = selectedCategories;
-      const addedCategories = categoryList.filter(
-        (c) => !previousCategories.includes(c)
-      );
-      const removedCategories = previousCategories.filter(
-        (c) => !categoryList.includes(c)
-      );
-
-      for (const category of addedCategories) {
-        trackSearchCategoryAdded(category, categoryList.length);
-      }
-      for (const category of removedCategories) {
-        trackSearchCategoryRemoved(category, categoryList.length);
-      }
-
-      setSelectedCategories(categoryList);
-      setCategorySheetVisible(false);
-      trackBottomSheetClosed("category_selection");
-    },
-    [selectedCategories]
-  );
+  const handleCategoryChange = useCallback((categoryList: string[]) => {
+    setSelectedCategories(categoryList);
+    setCategorySheetVisible(false);
+  }, []);
 
   const handleRecentSearchSelect = useCallback(
     (query: string) => {
@@ -191,19 +138,16 @@ const SearchScreen = () => {
       addRecentSearch(query);
       setIsSearchBarFocused(false);
       Keyboard.dismiss();
-      trackRecentSearchSelected(query, recentSearches.indexOf(query));
     },
-    [addRecentSearch, recentSearches]
+    [addRecentSearch]
   );
 
   const handleFocus = useCallback(() => setIsSearchBarFocused(true), []);
   const handleBlur = useCallback(() => setIsSearchBarFocused(false), []);
   const handleShowCategorySheet = useCallback(() => {
-    trackBottomSheetOpened("category_selection");
     setCategorySheetVisible(true);
   }, []);
   const handleHideCategorySheet = useCallback(() => {
-    trackBottomSheetClosed("category_selection");
     setCategorySheetVisible(false);
   }, []);
 

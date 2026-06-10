@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { BORDER_RADIUS, SPACING } from "@smog/styles";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -23,14 +23,6 @@ import { useFavorites } from "@/context/FavoritesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useGesture, useRelatedGestures } from "@/hooks/useGestureData";
 import { useScreenshotDetection } from "@/hooks/useScreenshotDetection";
-import {
-  trackCategoryPressed,
-  trackEvent,
-  trackGestureLiked,
-  trackGestureUnliked,
-  trackGestureViewed,
-  trackVideoAlmostCompleted,
-} from "@/services/analytics";
 
 const GestureScreen: React.FC = () => {
   const router = useRouter();
@@ -39,7 +31,6 @@ const GestureScreen: React.FC = () => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const gesture = useGesture(id);
   const relatedGestures = useRelatedGestures(id) ?? [];
-  const [hasTrackedView, setHasTrackedView] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   // Mirrors the web's disclaimerFiredRef: ensures the banner shows exactly
   // once per playthrough and resets when the video loops back.
@@ -52,39 +43,13 @@ const GestureScreen: React.FC = () => {
     enabled: true,
   });
 
-  useEffect(() => {
-    if (gesture) {
-      trackEvent("Gesture Detail Viewed", {
-        gesture_id: gesture.id,
-        gesture_name: gesture.name,
-        gesture_categories: gesture.category,
-        categories_count: gesture.category.length,
-      });
-
-      // Track gesture viewed (only once per visit)
-      if (!hasTrackedView) {
-        trackGestureViewed(
-          gesture.id,
-          gesture.name,
-          gesture.category,
-          "search_results"
-        );
-        setHasTrackedView(true);
-      }
-    }
-  }, [gesture, hasTrackedView]);
-
   const handleVideoComplete = useCallback(() => {
-    if (gesture) {
-      trackVideoAlmostCompleted(gesture.id, gesture.name);
-    }
-
     // Show disclaimer once per playthrough.
     if (!disclaimerFiredRef.current) {
       disclaimerFiredRef.current = true;
       setShowDisclaimer(true);
     }
-  }, [gesture]);
+  }, []);
 
   if (gesture === undefined || !gesture) {
     return (
@@ -100,7 +65,6 @@ const GestureScreen: React.FC = () => {
 
   const handleCategoryPress = (category: string) => {
     if (gesture) {
-      trackCategoryPressed(category, "gesture_detail");
       router.dismiss();
       router.navigate({
         pathname: "/(tabs)/search",
@@ -115,21 +79,6 @@ const GestureScreen: React.FC = () => {
     }
 
     toggleFavorite(gesture.id, gesture.name);
-    if (favoriteStatus) {
-      trackGestureUnliked(
-        gesture.id,
-        gesture.name,
-        gesture.category,
-        "button_tap"
-      );
-    } else {
-      trackGestureLiked(
-        gesture.id,
-        gesture.name,
-        gesture.category,
-        "button_tap"
-      );
-    }
   };
 
   return (
@@ -187,8 +136,6 @@ const GestureScreen: React.FC = () => {
       >
         <View style={styles.videoContainer}>
           <VideoPlayer
-            gestureId={gesture.id}
-            gestureName={gesture.name}
             onComplete={handleVideoComplete}
             playbackId={gesture.playbackId}
           />

@@ -11,12 +11,6 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useTheme } from "@/context/ThemeContext";
-import {
-  trackFavoriteAdded,
-  trackFavoriteRemoved,
-  trackGestureLiked,
-  trackGestureUnliked,
-} from "@/services/analytics";
 import type { Gesture } from "@/types";
 import { typography } from "@/utils/typography";
 
@@ -25,7 +19,6 @@ interface GestureCardProps {
   onPress: (gesture: Gesture) => void;
   isFavorite?: boolean;
   onToggleFavorite?: (gestureId: string) => void;
-  source?: "search_results" | "favorites_screen" | "related_gestures";
 }
 
 export interface GestureCardRef {
@@ -37,7 +30,6 @@ const GestureCard = ({
   onPress,
   isFavorite = false,
   onToggleFavorite,
-  source = "search_results",
   ref,
 }: GestureCardProps & { ref?: React.Ref<GestureCardRef> }) => {
   const { theme } = useTheme();
@@ -80,29 +72,6 @@ const GestureCard = ({
       impactAsync(ImpactFeedbackStyle.Medium);
 
       onToggleFavorite(gesture.id);
-
-      if (isFavorite) {
-        trackFavoriteRemoved(
-          gesture.id,
-          gesture.name,
-          gesture.category,
-          source
-        );
-        trackGestureUnliked(
-          gesture.id,
-          gesture.name,
-          gesture.category,
-          "button_tap"
-        );
-      } else {
-        trackFavoriteAdded(gesture.id, gesture.name, gesture.category, source);
-        trackGestureLiked(
-          gesture.id,
-          gesture.name,
-          gesture.category,
-          "button_tap"
-        );
-      }
     }
   };
 
@@ -140,14 +109,6 @@ const GestureCard = ({
         tapTimeoutRef.current = null;
       }
       if (onToggleFavorite) {
-        if (!isFavorite) {
-          trackGestureLiked(
-            gesture.id,
-            gesture.name,
-            gesture.category,
-            "double_tap"
-          );
-        }
         handleLike();
         showLikeAnimation();
       }

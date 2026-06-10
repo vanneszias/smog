@@ -36,7 +36,6 @@ cp apps/native/.env.example apps/native/.env
 **`apps/web/.env`**
 ```env
 VITE_CONVEX_URL=https://your-project.convex.cloud
-VITE_POSTHOG_API_KEY=phc_xxx
 ```
 
 **`apps/server/.env`**
@@ -50,7 +49,6 @@ WORKOS_CLIENT_ID=client_xxx
 **`apps/native/.env`**
 ```env
 EXPO_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
-EXPO_PUBLIC_POSTHOG_API_KEY=phc_xxx
 ```
 
 ## 3. Start Development Servers
@@ -90,8 +88,7 @@ swift-forest/
 │   │   ├── context/     # React contexts
 │   │   ├── hooks/       # Custom hooks
 │   │   └── services/    # Business logic
-│   │       ├── database/      # SQLite layer
-│   │       └── analytics/     # PostHog tracking
+│   │       └── database/      # SQLite layer
 │   ├── web/             # Vite/React web app
 │   │   └── src/
 │   │       ├── components/admin/  # Admin dashboard

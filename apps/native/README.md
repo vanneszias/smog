@@ -9,7 +9,6 @@ Sign language learning mobile app built with React Native and Expo.
 - Favorites system
 - Offline support
 - Multilingual (EN, FR, NL)
-- Learning analytics
 
 ## Tech Stack
 
@@ -18,7 +17,6 @@ Sign language learning mobile app built with React Native and Expo.
 - **State**: React Context
 - **Backend**: Convex (real-time)
 - **Local**: SQLite (offline)
-- **Analytics**: PostHog
 
 ## Commands
 

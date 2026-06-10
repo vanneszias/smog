@@ -17,8 +17,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { onConsentChange } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth";
 
 const logger = createLogger("account");
@@ -88,42 +86,8 @@ function AccountContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Get consent status from Convex - this will work because we're inside <Authenticated>
-  const consentStatus = useQuery(api.gdpr.getConsentStatus);
-  const updateConsent = useMutation(api.gdpr.updateConsent);
   const deleteUserAccount = useMutation(api.gdpr.deleteUserAccount);
   const exportUserData = useQuery(api.gdpr.exportUserData);
-
-  const handleAnalyticsToggle = async (checked: boolean) => {
-    try {
-      if (checked) {
-        await updateAnalyticsConsent(true);
-      } else {
-        await updateAnalyticsConsent(false);
-      }
-
-      toast.success(
-        checked
-          ? t("web.account.toast.analyticsEnabled")
-          : t("web.account.toast.analyticsDisabled")
-      );
-    } catch (error) {
-      logger.error("Failed to update consent:", error);
-      toast.error(t("web.account.toast.analyticsUpdateFailed"));
-    }
-  };
-
-  async function updateAnalyticsConsent(enabled: boolean) {
-    await updateConsent({
-      analyticsConsent: enabled,
-      marketingConsent: consentStatus?.marketingConsent ?? false,
-    });
-    onConsentChange({
-      hasConsent: true,
-      analyticsConsent: enabled,
-      marketingConsent: false,
-    });
-  }
 
   const handleExportData = async () => {
     if (!exportUserData) {
@@ -216,22 +180,6 @@ function AccountContent() {
         <h2 className="mb-4 font-semibold text-xl">
           {t("web.account.privacy.title")}
         </h2>
-        {/* Analytics Consent */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex-1">
-            <Label className="font-medium text-base">
-              {t("web.account.privacy.analytics.title")}
-            </Label>
-            <p className="mt-1 text-muted-foreground text-sm">
-              {t("web.account.privacy.analytics.description")}
-            </p>
-          </div>
-          <Switch
-            checked={consentStatus?.analyticsConsent ?? false}
-            disabled={!consentStatus}
-            onCheckedChange={handleAnalyticsToggle}
-          />
-        </div>
         {/* Data Export */}
         <div className="mb-6">
           <Label className="mb-2 block font-medium text-base">
@@ -310,9 +258,6 @@ function AccountContent() {
               <ul className="mt-2 ml-4 list-disc space-y-1">
                 <li>{t("web.account.deleteDialog.listItems.accountInfo")}</li>
                 <li>{t("web.account.deleteDialog.listItems.favorites")}</li>
-                <li>
-                  {t("web.account.deleteDialog.listItems.consentHistory")}
-                </li>
                 <li>{t("web.account.deleteDialog.listItems.adminLogs")}</li>
               </ul>
             </DialogDescription>

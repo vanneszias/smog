@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreFiles": [".agents/**"],
+  "workspaces": {
+    "apps/native": {
+      "entry": ["plugins/*.js"],
+      "ignoreDependencies": ["expo-splash-screen"]
+    },
+    "apps/remotion": {
+      "entry": ["remotion.config.ts", "src/index.ts"],
+      "ignoreDependencies": ["remotion"]
+    },
+    "packages/api": {
+      "ignoreDependencies": ["@smog/config"]
+    },
+    "packages/auth": {
+      "ignoreDependencies": ["@smog/config"]
+    }
+  }
+}

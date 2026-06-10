@@ -8,7 +8,7 @@ function PrivacyPolicyPage() {
   return (
     <div className="container overflow-y-auto px-12 py-8">
       <h1 className="mb-6 font-bold text-4xl">Privacybeleid</h1>
-      <p className="mb-4 text-sm">Laatst bijgewerkt: 03 maart 2026</p>
+      <p className="mb-4 text-sm">Laatst bijgewerkt: 10 juni 2026</p>
 
       <div className="space-y-6">
         <section>
@@ -49,19 +49,7 @@ function PrivacyPolicyPage() {
           </ul>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.2 Gebruiksgegevens (als u toestemming geeft voor analyse)
-          </h3>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>Gebaren die u bekijkt en favoriet maakt</li>
-            <li>Zoekopdrachten die u uitvoert</li>
-            <li>Navigatiepatronen in de app</li>
-            <li>Apparaatinformatie (type, OS-versie)</li>
-            <li>Sessieduur en -frequentie</li>
-            <li>Interacties met videoweergave</li>
-          </ul>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.3 Gebruikersvoorkeuren
+            3.2 Gebruikersvoorkeuren
           </h3>
           <ul className="ml-6 list-disc space-y-1">
             <li>Favoriete gebaren</li>
@@ -70,7 +58,7 @@ function PrivacyPolicyPage() {
           </ul>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.4 Gastmodusgegevens
+            3.3 Gastmodusgegevens
           </h3>
           <ul className="ml-6 list-disc space-y-1">
             <li>Anonieme gast-id (bij gebruik van gastmodus)</li>
@@ -91,10 +79,6 @@ function PrivacyPolicyPage() {
               uw accountinformatie is noodzakelijk om onze diensten te leveren
             </li>
             <li>
-              <strong>Toestemming:</strong> Analyse en marketingcommunicatie (u
-              kunt uw toestemming op elk moment intrekken in de instellingen)
-            </li>
-            <li>
               <strong>Gerechtvaardigd belang:</strong> Beveiliging,
               fraudepreventie en verbetering van de dienst
             </li>
@@ -113,10 +97,6 @@ function PrivacyPolicyPage() {
             <li>Om onze dienst te leveren en te onderhouden</li>
             <li>Om uw account te authenticeren (via WorkOS)</li>
             <li>Om uw favorieten tussen apparaten te synchroniseren</li>
-            <li>
-              Om onze app te verbeteren via gebruiksanalyse (alleen indien u
-              toestemt)
-            </li>
             <li>Om uw leerervaring te personaliseren</li>
             <li>Om klantenondersteuning te bieden</li>
             <li>Om aan wettelijke verplichtingen te voldoen</li>
@@ -146,26 +126,7 @@ function PrivacyPolicyPage() {
           </p>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.2 Analyse - PostHog (optioneel)
-          </h3>
-          <p>
-            Als u toestemt, gebruiken we PostHog (gehost in de EU) voor
-            gebruiksanalyse op zowel onze web- als native toepassingen. PostHog
-            helpt ons te begrijpen hoe gebruikers onze app gebruiken. U kunt op
-            elk moment afmelden in de instellingen. Zie het privacybeleid van
-            PostHog op:{" "}
-            <a
-              className="text-blue-600 underline"
-              href="https://posthog.com/privacy"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              https://posthog.com/privacy
-            </a>
-          </p>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.3 Videohosting - Mux
+            6.2 Videohosting - Mux
           </h3>
           <p>
             We gebruiken Mux voor het hosten en streamen van
@@ -182,7 +143,7 @@ function PrivacyPolicyPage() {
           </p>
 
           <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.4 Database - Convex
+            6.3 Database - Convex
           </h3>
           <p>
             We gebruiken Convex om uw accountgegevens, favorieten en
@@ -199,10 +160,6 @@ function PrivacyPolicyPage() {
             <li>
               Uw gegevens worden veilig opgeslagen met
               industriestandaard-encryptie
-            </li>
-            <li>
-              Analysegegevens worden opgeslagen op PostHog-servers in de
-              Europese Unie
             </li>
             <li>
               Wij nemen passende technische en organisatorische maatregelen om
@@ -265,10 +222,6 @@ function PrivacyPolicyPage() {
               <strong>Recht van bezwaar:</strong> Maak bezwaar tegen verwerking
               op basis van gerechtvaardigd belang
             </li>
-            <li>
-              <strong>Recht om toestemming in te trekken:</strong> Schakel
-              analyse op elk moment uit
-            </li>
           </ul>
           <p className="mt-3">
             Om deze rechten uit te oefenen, gebruikt u de opties in uw
@@ -298,7 +251,6 @@ function PrivacyPolicyPage() {
             buiten de EER/VK. We zorgen voor passende waarborgen, waaronder:
           </p>
           <ul className="ml-6 list-disc space-y-1">
-            <li>Analyse gehost in de EU (PostHog)</li>
             <li>
               Standaard contractuele clausules met externe verwerkers waar van
               toepassing
@@ -319,7 +271,6 @@ function PrivacyPolicyPage() {
           </p>
           <ul className="ml-6 list-disc space-y-1">
             <li>Strikt noodzakelijke cookies voor authenticatiesessies</li>
-            <li>Toestemmingskeuzes voor analyse- en marketingvoorkeuren</li>
             <li>Gebruikersvoorkeuren (taal, thema)</li>
             <li>
               Recente zoekopdrachten (lokaal, niet naar servers verzonden)
@@ -328,8 +279,7 @@ function PrivacyPolicyPage() {
           </ul>
           <p className="mt-2">
             U kunt deze gegevens op elk moment wissen via uw
-            apparaat-/browserinstellingen. U kunt uw toestemmingsvoorkeuren ook
-            aanpassen in de accountinstellingen.
+            apparaat-/browserinstellingen.
           </p>
         </section>
 

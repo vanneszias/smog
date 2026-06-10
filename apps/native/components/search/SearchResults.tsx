@@ -29,7 +29,6 @@ interface SearchResultsProps {
   isRefreshing?: boolean;
   style?: StyleProp<ViewStyle>;
   onScroll?: (scrollY: number) => void;
-  source?: "search_results" | "favorites_screen" | "related_gestures";
   ListHeaderComponent?: React.ReactElement | null;
 }
 
@@ -48,7 +47,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   isRefreshing = false,
   style,
   onScroll,
-  source = "search_results",
   ListHeaderComponent,
 }) => {
   const gestureRefs = useRef<(GestureCardRef | null)[]>([]);
@@ -93,11 +91,10 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           ref={(ref: GestureCardRef | null) => {
             gestureRefs.current[gestureIndex] = ref;
           }}
-          source={source}
         />
       );
     },
-    [isFavorite, onToggleFavorite, onGesturePress, source, ListHeaderComponent]
+    [isFavorite, onToggleFavorite, onGesturePress, ListHeaderComponent]
   );
 
   const handleScrollEvent = useCallback(

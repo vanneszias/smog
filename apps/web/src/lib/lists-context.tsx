@@ -29,10 +29,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { client } from "../utils/orpc";
-import {
-  trackGestureRemovedFromList,
-  trackGestureSavedToList,
-} from "./analytics";
 import { useAuth } from "./auth";
 import { useConvexUserId } from "./convex-user-sync";
 
@@ -157,7 +153,7 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
 
       setIsAddingGesture(true);
       try {
-        const wasAdded = await client.lists.addGestureToList({
+        await client.lists.addGestureToList({
           gestureId: pendingGesture.gestureId,
           listId,
         });
@@ -171,13 +167,6 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
           previous.includes(listId) ? previous : [...previous, listId]
         );
 
-        if (wasAdded) {
-          trackGestureSavedToList(
-            pendingGesture.gestureId,
-            pendingGesture.gestureName ?? "",
-            pendingGesture.categories ?? []
-          );
-        }
         window.dispatchEvent(
           new CustomEvent(LIST_GESTURE_ADDED_EVENT, {
             detail: {
@@ -212,7 +201,7 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
 
       setIsAddingGesture(true);
       try {
-        const wasRemoved = await client.lists.removeGestureFromList({
+        await client.lists.removeGestureFromList({
           gestureId: pendingGesture.gestureId,
           listId,
         });
@@ -233,14 +222,6 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
             },
           })
         );
-        if (wasRemoved) {
-          trackGestureRemovedFromList(
-            pendingGesture.gestureId,
-            pendingGesture.gestureName ?? "",
-            pendingGesture.categories ?? []
-          );
-        }
-
         toast.success(t("web.lists.gestureRemoved", "Gesture removed"));
         setIsPickerOpen(false);
         setPendingGesture(null);
@@ -287,11 +268,6 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
       );
       setGestureListIds((previous) =>
         previous.includes(listId) ? previous : [...previous, listId]
-      );
-      trackGestureSavedToList(
-        pendingGesture.gestureId,
-        pendingGesture.gestureName ?? "",
-        pendingGesture.categories ?? []
       );
       window.dispatchEvent(
         new CustomEvent(LIST_GESTURE_ADDED_EVENT, {

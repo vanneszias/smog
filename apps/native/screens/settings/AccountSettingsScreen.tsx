@@ -11,7 +11,6 @@ import {
   ScrollView,
   Share,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -21,11 +20,6 @@ import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { useNativeInteractions } from "@/hooks/useNativeInteractions";
-import {
-  disableAnalytics,
-  enableAnalytics,
-  isAnalyticsActive,
-} from "@/services/analytics";
 import logger from "@/utils/logger";
 
 export default function AccountSettingsScreen() {
@@ -35,51 +29,12 @@ export default function AccountSettingsScreen() {
   const router = useRouter();
   const { triggerHaptic } = useNativeInteractions();
 
-  const _consentStatus = useQuery(api.gdpr.getConsentStatus);
   const exportData = useQuery(api.gdpr.exportUserData);
   const deleteAccount = useMutation(api.gdpr.deleteUserAccount);
-  const updateConsent = useMutation(api.gdpr.updateConsent);
 
-  const [analyticsEnabled, setAnalyticsEnabled] = useState(isAnalyticsActive());
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-
-  const handleAnalyticsToggle = useCallback(
-    async (value: boolean) => {
-      try {
-        triggerHaptic("light");
-        setAnalyticsEnabled(value);
-
-        // Update analytics locally
-        if (value) {
-          await enableAnalytics();
-        } else {
-          await disableAnalytics();
-        }
-
-        // Try to sync with server if authenticated
-        if (user) {
-          try {
-            await updateConsent({ analyticsConsent: value });
-          } catch (syncError) {
-            // Log but don't fail the entire operation if server sync fails
-            logger.warn(
-              "[AccountSettings] Failed to sync consent to server:",
-              syncError
-            );
-          }
-        }
-      } catch (error) {
-        logger.error(
-          "[AccountSettings] Failed to update analytics consent:",
-          error
-        );
-        setAnalyticsEnabled(!value);
-      }
-    },
-    [user, updateConsent, triggerHaptic]
-  );
 
   const handleExportData = useCallback(async () => {
     try {
@@ -157,15 +112,9 @@ export default function AccountSettingsScreen() {
               await deleteAccount({ confirmDelete: true });
 
               await Promise.all(
-                [
-                  "@smog_gdpr_consent",
-                  "@smog_analytics_consent",
-                  "@smog_consent_version",
-                  "@smog_consent_date",
-                  "@smog_user",
-                  "@smog_guest_id",
-                  "@smog_guest_mode",
-                ].map((k) => AsyncStorage.removeItem(k))
+                ["@smog_user", "@smog_guest_id", "@smog_guest_mode"].map((k) =>
+                  AsyncStorage.removeItem(k)
+                )
               );
 
               await signOut();
@@ -281,45 +230,6 @@ export default function AccountSettingsScreen() {
               </Text>
             </View>
           </TouchableOpacity>
-        </View>
-
-        {/* Privacy Settings */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            {t("gdpr.account.analytics")}
-          </Text>
-          <View
-            style={[
-              styles.settingRow,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ]}
-          >
-            <Ionicons
-              color={theme.text}
-              name="analytics-outline"
-              size={ICON_SIZE.md}
-            />
-            <View style={styles.settingContent}>
-              <Text style={[styles.settingValue, { color: theme.text }]}>
-                {t("gdpr.consent.analyticsTitle")}
-              </Text>
-              <Text
-                style={[styles.settingDescription, { color: theme.textLight }]}
-              >
-                {t("gdpr.account.analyticsDescription")}
-              </Text>
-            </View>
-            <Switch
-              ios_backgroundColor={theme.border}
-              onValueChange={handleAnalyticsToggle}
-              thumbColor={theme.background}
-              trackColor={{
-                false: theme.border,
-                true: theme.primary,
-              }}
-              value={analyticsEnabled}
-            />
-          </View>
         </View>
 
         {/* Data Management */}

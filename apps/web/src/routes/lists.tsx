@@ -33,10 +33,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useGestures } from "@/hooks/useGestures";
-import {
-  trackGestureRemovedFromList,
-  trackGestureSavedToList,
-} from "@/lib/analytics";
 import { useAuth } from "@/lib/auth";
 import { useConvexUserId } from "@/lib/convex-user-sync";
 import {
@@ -357,7 +353,7 @@ function ListsComponent() {
     }
 
     try {
-      const wasRemoved = await client.lists.removeGestureFromList({
+      await client.lists.removeGestureFromList({
         gestureId,
         listId: activeList._id,
       });
@@ -365,23 +361,6 @@ function ListsComponent() {
         current.filter((gesture) => gesture._id !== gestureId)
       );
       await refetchSavedGestures();
-      const removedGesture = activeGestures.find(
-        (gesture) => gesture._id === gestureId
-      );
-      if (wasRemoved && removedGesture) {
-        trackGestureRemovedFromList(
-          gestureId,
-          removedGesture.name,
-          removedGesture.categories
-            .filter(
-              (
-                category
-              ): category is Exclude<typeof category, null | undefined> =>
-                Boolean(category)
-            )
-            .map((category) => category.name)
-        );
-      }
       toast.success(t("web.lists.gestureRemoved", "Gesture removed"));
     } catch (error) {
       logger.error("Failed to remove gesture from list:", error);
@@ -395,7 +374,7 @@ function ListsComponent() {
     }
 
     try {
-      const wasAdded = await client.lists.addGestureToList({
+      await client.lists.addGestureToList({
         gestureId: gesture._id,
         listId: activeList._id,
       });
@@ -405,20 +384,6 @@ function ListsComponent() {
           : [...current, gesture]
       );
       await refetchSavedGestures();
-      if (wasAdded) {
-        trackGestureSavedToList(
-          gesture._id,
-          gesture.name,
-          gesture.categories
-            .filter(
-              (
-                category
-              ): category is Exclude<typeof category, null | undefined> =>
-                Boolean(category)
-            )
-            .map((category) => category.name)
-        );
-      }
       toast.success(t("web.lists.gestureAdded", "Gesture added"));
     } catch (error) {
       logger.error("Failed to add gesture to list:", error);

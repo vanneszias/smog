@@ -2,15 +2,12 @@
  * @fileoverview Core playback state hook for the VideoPlayer component.
  *
  * Manages the expo-video player instance, player event subscriptions,
- * loading state, and play/pause logic. Delegates analytics tracking to
- * `useVideoAnalytics`.
+ * loading state, and play/pause logic.
  *
  * @example
  * const { player, isLoading, isPlaying, togglePlayPause } = useVideoPlayerState({
  *   playbackId,
  *   autoPlay,
- *   gestureId,
- *   gestureName,
  *   onComplete,
  *   onPlayToEnd,
  * });
@@ -20,13 +17,10 @@ import { useIsFocused } from "@react-navigation/native";
 import { MUX_STREAM_DOMAIN } from "@smog/config/urls";
 import { useVideoPlayer } from "expo-video";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useVideoAnalytics } from "./useVideoAnalytics";
 
 interface UseVideoPlayerStateOptions {
   playbackId: string;
   autoPlay: boolean;
-  gestureId?: string;
-  gestureName?: string;
   onComplete?: () => void;
   onPlayToEnd?: () => void;
 }
@@ -45,8 +39,6 @@ interface UseVideoPlayerStateOptions {
 export function useVideoPlayerState({
   playbackId,
   autoPlay,
-  gestureId,
-  gestureName,
   onComplete,
   onPlayToEnd,
 }: UseVideoPlayerStateOptions) {
@@ -58,12 +50,9 @@ export function useVideoPlayerState({
   const durationRef = useRef<number>(0);
   const onCompleteRef = useRef(onComplete);
   const hasTriggeredOnCompleteRef = useRef(false);
-  const pausedByNavigationRef = useRef(false);
   const isUnmountingRef = useRef(false);
 
   onCompleteRef.current = onComplete;
-
-  const analytics = useVideoAnalytics({ gestureId, gestureName, autoPlay });
 
   const videoUrl = `https://${MUX_STREAM_DOMAIN}/${playbackId}.m3u8`;
 
@@ -80,7 +69,6 @@ export function useVideoPlayerState({
     if (!(isFocused || isUnmountingRef.current)) {
       try {
         if (player.playing) {
-          pausedByNavigationRef.current = true;
           player.pause();
         }
       } catch {
@@ -90,19 +78,9 @@ export function useVideoPlayerState({
   }, [isFocused, player]);
 
   // Playing state changes
-  const handlePlayingChange = useCallback(
-    (event: { isPlaying: boolean }) => {
-      const playing = event.isPlaying;
-      setIsPlaying(playing);
-      if (playing) {
-        analytics.onPlaybackStarted();
-      } else if (!pausedByNavigationRef.current) {
-        analytics.onPlaybackPaused();
-      }
-      pausedByNavigationRef.current = false;
-    },
-    [analytics]
-  );
+  const handlePlayingChange = useCallback((event: { isPlaying: boolean }) => {
+    setIsPlaying(event.isPlaying);
+  }, []);
 
   // Status changes (readyToPlay)
   const handleStatusChange = useCallback(
@@ -112,9 +90,8 @@ export function useVideoPlayerState({
       }
       durationRef.current = player.duration || 0;
       setIsLoading(false);
-      analytics.onPlayerReady();
     },
-    [player.duration, analytics]
+    [player.duration]
   );
 
   // Source load — captures duration from metadata
@@ -146,18 +123,16 @@ export function useVideoPlayerState({
 
       if (timeLeft <= 5 && !hasTriggeredOnCompleteRef.current) {
         hasTriggeredOnCompleteRef.current = true;
-        analytics.onAlmostCompleted();
         onCompleteRef.current?.();
       }
     },
-    [player, analytics]
+    [player]
   );
 
   // Play-to-end event
   const handlePlayToEnd = useCallback(() => {
-    analytics.onPlaybackCompleted();
     onPlayToEnd?.();
-  }, [analytics, onPlayToEnd]);
+  }, [onPlayToEnd]);
 
   // Register / clean up event subscriptions
   useEffect(() => {

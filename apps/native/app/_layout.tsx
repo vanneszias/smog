@@ -4,15 +4,7 @@ import * as NavigationBar from "expo-navigation-bar";
 import { SplashScreen, Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import {
-  AppState,
-  type AppStateStatus,
-  Image,
-  Platform,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Image, Platform, StyleSheet, Text, View } from "react-native";
 import RiveSplashScreen from "@/components/RiveSplashScreen";
 import AppProviders from "@/context/AppProviders";
 import { useAuth } from "@/context/AuthProvider";
@@ -20,19 +12,7 @@ import { useTheme } from "@/context/ThemeContext";
 // Initialize i18n configuration
 import "@/utils/i18n";
 
-// PostHog
-import { PostHogProvider, PostHogSurveyProvider } from "posthog-react-native";
-import {
-  autocaptureConfig,
-  initializeAnalytics,
-  posthog,
-  trackAppBackgrounded,
-  trackAppOpened,
-} from "@/services/analytics";
 import logger from "@/utils/logger";
-
-// Regex patterns for app state detection
-const INACTIVE_OR_BACKGROUND_REGEX = /inactive|background/;
 
 // Keep the default splash visible while we load resources
 SplashScreen.preventAutoHideAsync();
@@ -210,94 +190,28 @@ export default function RootLayout() {
 
   const [showSplash, setShowSplash] = useState(true);
 
-  // App lifecycle tracking
-  const appStateRef = useRef(AppState.currentState);
-  const sessionStartTimeRef = useRef<number | null>(null);
-  const lastActiveTimeRef = useRef<number>(Date.now());
-  const isFirstLaunchRef = useRef(true);
-
   useEffect(() => {
     if (fontsLoaded) {
       // Don't automatically hide splash after timeout anymore
       // Let the Rive animation control when to hide
       SplashScreen.hideAsync();
-
-      // Initialize analytics based on user consent
-      initializeAnalytics();
-
-      // Track app opened on first load
-      if (isFirstLaunchRef.current) {
-        trackAppOpened(true);
-        sessionStartTimeRef.current = Date.now();
-        isFirstLaunchRef.current = false;
-      }
     }
   }, [fontsLoaded]);
-
-  // App state change tracking
-  useEffect(() => {
-    const handleAppToForeground = (currentTime: number) => {
-      if (!isFirstLaunchRef.current) {
-        const timeSinceLastActive = currentTime - lastActiveTimeRef.current;
-        trackAppOpened(false, Math.round(timeSinceLastActive / 1000 / 60));
-      }
-      sessionStartTimeRef.current = currentTime;
-    };
-
-    const handleAppToBackground = (currentTime: number) => {
-      if (sessionStartTimeRef.current) {
-        const sessionDuration = Math.round(
-          (currentTime - sessionStartTimeRef.current) / 1000
-        );
-        trackAppBackgrounded(sessionDuration);
-      }
-      lastActiveTimeRef.current = currentTime;
-    };
-
-    const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      const currentTime = Date.now();
-      const isComingToForeground =
-        appStateRef.current.match(INACTIVE_OR_BACKGROUND_REGEX) &&
-        nextAppState === "active";
-      const isGoingToBackground =
-        appStateRef.current === "active" &&
-        nextAppState.match(INACTIVE_OR_BACKGROUND_REGEX);
-
-      if (isComingToForeground) {
-        handleAppToForeground(currentTime);
-      } else if (isGoingToBackground) {
-        handleAppToBackground(currentTime);
-      }
-
-      appStateRef.current = nextAppState;
-    };
-
-    const subscription = AppState.addEventListener(
-      "change",
-      handleAppStateChange
-    );
-
-    return () => subscription?.remove();
-  }, []);
 
   if (!fontsLoaded) {
     return null;
   }
 
   return (
-    <PostHogProvider autocapture={autocaptureConfig} client={posthog}>
-      <AppProviders>
-        {showSplash ? (
-          <RiveSplashScreen onAnimationComplete={() => setShowSplash(false)} />
-        ) : (
-          <PostHogSurveyProvider>
-            <BottomSheetModalProvider>
-              <RootLayoutNav />
-            </BottomSheetModalProvider>
-          </PostHogSurveyProvider>
-        )}
-      </AppProviders>
-    </PostHogProvider>
+    <AppProviders>
+      {showSplash ? (
+        <RiveSplashScreen onAnimationComplete={() => setShowSplash(false)} />
+      ) : (
+        <BottomSheetModalProvider>
+          <RootLayoutNav />
+        </BottomSheetModalProvider>
+      )}
+    </AppProviders>
   );
 }
 

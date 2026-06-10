@@ -353,7 +353,6 @@ const FavoritesScreen: React.FC = () => {
           onGesturePress={handleGesturePress}
           onToggleFavorite={addGesture}
           results={addableGestures}
-          source="favorites_screen"
           style={styles.resultList}
         />
       ) : (activeGestures ?? []).length === 0 ? (
@@ -385,7 +384,6 @@ const FavoritesScreen: React.FC = () => {
           onGesturePress={handleGesturePress}
           onToggleFavorite={removeGesture}
           results={activeGestures ?? []}
-          source="favorites_screen"
           style={styles.resultList}
         />
       )}

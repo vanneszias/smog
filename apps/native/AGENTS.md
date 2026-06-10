@@ -19,7 +19,6 @@ SMOG is a sign language learning app that helps users discover, learn, and pract
 ## Key Services
 
 - `hooks/useGestureData.ts` - Fresh Convex gesture data & search hooks
-- `analyticsService.ts` - PostHog events
 
 ## Commands
 
@@ -50,11 +49,3 @@ Schema in `convex/` with tables for `categories` and `gestures`.
 bun convex dev      # Local dev
 bun convex deploy   # Production
 ```
-
-## Analytics
-
-Events tracked via PostHog:
-- Search Performed
-- Gesture Viewed
-- Favorite Added/Removed
-- Video Playback Started/Completed

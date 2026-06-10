@@ -237,13 +237,9 @@
       },
       "privacy": {
         "title": "Confidentialité et données",
-        "analytics": {
-          "title": "Analyse d'utilisation",
-          "description": "Aidez-nous à améliorer SMOG en partageant des données d'utilisation anonymes. Cela n'inclut aucune information personnelle."
-        },
         "export": {
           "title": "Télécharger vos données",
-          "description": "Exportez toutes les données de votre compte, y compris les favoris, les préférences et l'historique des consentements au format JSON.",
+          "description": "Exportez toutes les données de votre compte, y compris les favoris et les préférences, au format JSON.",
           "button": "Télécharger les données",
           "exporting": "Exportation..."
         },
@@ -265,7 +261,6 @@
         "listItems": {
           "accountInfo": "Les informations de votre compte",
           "favorites": "Toutes les listes de gestes enregistrées",
-          "consentHistory": "Votre historique de consentement",
           "adminLogs": "Tous les journaux d'activité administrateur"
         },
         "cancel": "Annuler",
@@ -273,9 +268,6 @@
         "deleting": "Suppression..."
       },
       "toast": {
-        "analyticsEnabled": "Analyse activée. Merci de nous aider à améliorer !",
-        "analyticsDisabled": "Analyse désactivée. Vos données ne seront plus collectées.",
-        "analyticsUpdateFailed": "Échec de la mise à jour des préférences d'analyse. Veuillez réessayer.",
         "exportUnavailable": "Impossible d'exporter les données. Veuillez réessayer.",
         "exportSuccess": "Vos données ont été téléchargées avec succès",
         "exportFailed": "Échec de l'exportation des données. Veuillez réessayer.",
@@ -561,19 +553,8 @@
             "timestamps": "Horodatages de création de compte et de dernière activité"
           }
         },
-        "usage": {
-          "title": "3.2 Données d'utilisation (si vous consentez à l'analyse)",
-          "items": {
-            "gestures": "Gestes que vous consultez et ajoutez en favoris",
-            "searches": "Requêtes de recherche que vous effectuez",
-            "navigation": "Schémas de navigation dans l'application",
-            "device": "Informations sur l'appareil (type, version du système)",
-            "session": "Durée et fréquence des sessions",
-            "video": "Interactions de lecture vidéo"
-          }
-        },
         "preferences": {
-          "title": "3.3 Préférences utilisateur",
+          "title": "3.2 Préférences utilisateur",
           "items": {
             "favorites": "Gestes favoris",
             "searchHistory": "Historique de recherche (stocké localement sur votre appareil)",
@@ -581,7 +562,7 @@
           }
         },
         "guest": {
-          "title": "3.4 Données du mode invité",
+          "title": "3.3 Données du mode invité",
           "items": {
             "identifier": "Identifiant invité anonyme (si vous utilisez le mode invité)",
             "retention": "Les données invitées sont supprimées après 12 mois d'inactivité conformément à notre politique de conservation"
@@ -594,10 +575,6 @@
           "contract": {
             "label": "Exécution du contrat",
             "text": "Le traitement de vos informations de compte est nécessaire pour vous fournir nos services"
-          },
-          "consent": {
-            "label": "Consentement",
-            "text": "Analyse et communications marketing (vous pouvez retirer votre consentement à tout moment dans les paramètres)"
           },
           "legitimate": {
             "label": "Intérêt légitime",
@@ -615,7 +592,6 @@
           "provide": "Pour fournir et maintenir notre service",
           "authenticate": "Pour authentifier votre compte (via WorkOS)",
           "sync": "Pour synchroniser vos favoris entre appareils",
-          "analytics": "Pour améliorer notre application grâce à l'analyse d'utilisation (uniquement si vous y consentez)",
           "personalize": "Pour personnaliser votre expérience d'apprentissage",
           "support": "Pour fournir l'assistance client",
           "legal": "Pour respecter nos obligations légales"
@@ -627,16 +603,12 @@
           "title": "6.1 Authentification - WorkOS",
           "body": "Nous utilisons WorkOS pour l'authentification sécurisée. WorkOS traite votre adresse e-mail et votre nom pour créer et gérer votre compte. Consultez la politique de confidentialité de WorkOS : <link>https://workos.com/privacy</link>"
         },
-        "posthog": {
-          "title": "6.2 Analyse - PostHog (optionnel)",
-          "body": "Si vous y consentez, nous utilisons PostHog (hébergé dans l'UE) pour l'analyse d'utilisation sur nos applications web et natives. PostHog nous aide à comprendre comment les utilisateurs interagissent avec notre application. Vous pouvez vous désinscrire à tout moment dans les paramètres. Consultez la politique de confidentialité de PostHog : <link>https://posthog.com/privacy</link>"
-        },
         "mux": {
-          "title": "6.3 Hébergement vidéo - Mux",
+          "title": "6.2 Hébergement vidéo - Mux",
           "body": "Nous utilisons Mux pour héberger et diffuser les vidéos de démonstration de gestes. Mux peut collecter des données techniques nécessaires à la diffusion vidéo. Consultez la politique de confidentialité de Mux : <link>https://mux.com/privacy</link>"
         },
         "convex": {
-          "title": "6.4 Base de données - Convex",
+          "title": "6.3 Base de données - Convex",
           "body": "Nous utilisons Convex pour stocker vos données de compte, favoris et préférences utilisateur. Convex est notre fournisseur de base de données backend."
         }
       },
@@ -644,7 +616,6 @@
         "title": "7. Stockage et sécurité des données",
         "items": {
           "encryption": "Vos données sont stockées de manière sécurisée grâce à un chiffrement conforme aux normes de l'industrie",
-          "analytics": "Les données d'analyse sont stockées sur des serveurs PostHog dans l'Union européenne",
           "measures": "Nous mettons en place des mesures techniques et organisationnelles appropriées pour protéger vos données",
           "access": "L'accès à vos données personnelles est limité au personnel autorisé"
         }
@@ -697,10 +668,6 @@
           "object": {
             "label": "Droit d'opposition",
             "text": "Vous opposer au traitement fondé sur l'intérêt légitime"
-          },
-          "withdraw": {
-            "label": "Droit de retirer votre consentement",
-            "text": "Désactiver l'analyse à tout moment"
           }
         },
         "closing": "Pour exercer ces droits, utilisez les options dans vos paramètres de compte ou contactez-nous directement."
@@ -713,7 +680,6 @@
         "title": "11. Transferts internationaux de données",
         "intro": "Vos données peuvent être transférées et traitées dans des pays en dehors de l'EEE/Royaume-Uni. Nous mettons en place des garanties appropriées, notamment :",
         "items": {
-          "euHosting": "Analyse hébergée dans l'UE (PostHog)",
           "scc": "Clauses contractuelles types avec des sous-traitants tiers le cas échéant",
           "adequacy": "Décisions d'adéquation de la Commission européenne le cas échéant"
         }
@@ -723,12 +689,11 @@
         "intro": "Nous utilisons des cookies et le stockage local pour conserver :",
         "items": {
           "auth": "Cookies strictement nécessaires pour les sessions d'authentification",
-          "consent": "Choix de consentement pour les préférences d'analyse et de marketing",
           "preferences": "Préférences utilisateur (langue, thème)",
           "search": "Recherches récentes (locales uniquement, non envoyées aux serveurs)",
           "cache": "Données de gestes mises en cache pour un accès hors ligne"
         },
-        "closing": "Vous pouvez effacer ces données à tout moment via les paramètres de votre appareil ou navigateur. Vous pouvez également mettre à jour vos préférences de consentement dans les paramètres du compte."
+        "closing": "Vous pouvez effacer ces données à tout moment via les paramètres de votre appareil ou de votre navigateur."
       },
       "changes": {
         "title": "13. Modifications de cette politique",
@@ -1028,24 +993,6 @@
     }
   },
   "gdpr": {
-    "consent": {
-      "title": "Confidentialité et utilisation des données",
-      "description": "Nous respectons votre vie privée et nous nous engageons à protéger vos données personnelles.",
-      "analyticsTitle": "Analyse d'utilisation",
-      "analyticsDescription": "Aidez-nous à améliorer l'application en partageant des données d'utilisation anonymes",
-      "requiredTitle": "Requis",
-      "requiredDescription": "Gestion de compte et fonctionnalités essentielles de l'application",
-      "acceptAll": "Tout accepter",
-      "acceptRequired": "Accepter uniquement les requis",
-      "customize": "Personnaliser",
-      "learnMore": "En savoir plus dans notre",
-      "privacyPolicy": "Politique de confidentialité",
-      "and": "et",
-      "termsOfService": "Conditions de service",
-      "consentRequired": "Vous devez accepter notre Politique de confidentialité et nos Conditions de service pour continuer",
-      "updated": "Préférences mises à jour",
-      "failed": "Échec de la mise à jour des préférences"
-    },
     "account": {
       "manageData": "Gérer vos données",
       "exportData": "Télécharger mes données",
@@ -1062,11 +1009,7 @@
       "deleteConfirmButton": "Oui, supprimer mon compte",
       "deleting": "Suppression en cours...",
       "deleteSuccess": "Compte supprimé avec succès",
-      "deleteFailed": "Échec de la suppression du compte",
-      "analytics": "Analyse",
-      "analyticsDescription": "Partagez des données d'utilisation pour nous aider à améliorer l'application",
-      "analyticsEnabled": "Activé",
-      "analyticsDisabled": "Désactivé"
+      "deleteFailed": "Échec de la suppression du compte"
     }
   },
   "admin": {
