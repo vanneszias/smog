@@ -10,13 +10,22 @@ import {
   useLocation,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import Header from "@/components/header";
 import { AppStoreBanner } from "@/components/home/AppStoreBanner";
 import { NotFoundComponent } from "@/components/NotFoundPage";
+import { PrivacyConsentBanner } from "@/components/privacy-consent-banner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { useAuth } from "@/lib/auth";
+import {
+  clearAnalyticsIdentity,
+  getAnalyticsConsent,
+  identifyAnalyticsUser,
+  subscribeAnalyticsConsent,
+  trackScreenView,
+} from "@/lib/openpanel";
 import { link, type orpc } from "@/utils/orpc";
 import "../index.css";
 
@@ -34,12 +43,49 @@ function RootComponent() {
   const [client] = useState<AppRouterClient>(() => createORPCClient(link));
   const [_orpcUtils] = useState(() => createTanstackQueryUtils(client));
   const location = useLocation();
+  const { isLoading: isAuthLoading, user } = useAuth();
+  const identifiedProfileId = useRef<string | null>(null);
+  const analyticsConsent = useSyncExternalStore(
+    subscribeAnalyticsConsent,
+    getAnalyticsConsent,
+    getAnalyticsConsent
+  );
 
   // Update document language attribute based on i18n
   const { i18n: i18nInstance } = useTranslation();
   useEffect(() => {
     document.documentElement.lang = i18nInstance.language;
   }, [i18nInstance.language]);
+
+  useEffect(() => {
+    if (analyticsConsent !== true) {
+      identifiedProfileId.current = null;
+      return;
+    }
+    if (isAuthLoading) {
+      return;
+    }
+
+    const nextProfileId = user?.id ?? null;
+    if (identifiedProfileId.current === nextProfileId) {
+      return;
+    }
+    if (identifiedProfileId.current) {
+      clearAnalyticsIdentity();
+    }
+
+    // Signed-out web visitors remain anonymous OpenPanel device profiles.
+    if (user) {
+      identifyAnalyticsUser(user);
+    }
+    identifiedProfileId.current = nextProfileId;
+  }, [analyticsConsent, isAuthLoading, user]);
+
+  useEffect(() => {
+    if (analyticsConsent === true && !isAuthLoading) {
+      trackScreenView(location.href);
+    }
+  }, [analyticsConsent, isAuthLoading, location.href]);
 
   return (
     <>
@@ -58,6 +104,7 @@ function RootComponent() {
           </main>
         </div>
         <Toaster richColors />
+        <PrivacyConsentBanner />
       </ThemeProvider>
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />

@@ -14,6 +14,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { useCategories } from "@/hooks/useGestureData";
 import { useOptimizedSearch } from "@/hooks/useOptimizedSearch";
+import { trackAnalyticsEvent } from "@/lib/openpanel";
 
 const SearchScreen = () => {
   const router = useRouter();
@@ -115,11 +116,18 @@ const SearchScreen = () => {
     (query: string) => {
       if (query.trim()) {
         addRecentSearch(query.trim());
+        trackAnalyticsEvent("search_performed", {
+          category_count: selectedCategories.length,
+          has_results: results.length > 0,
+          query_length: query.trim().length,
+          result_count: results.length,
+          source: "submit",
+        });
         setIsSearchBarFocused(false);
         Keyboard.dismiss();
       }
     },
-    [addRecentSearch]
+    [addRecentSearch, results.length, selectedCategories.length]
   );
 
   const handleClear = useCallback(() => {
@@ -136,10 +144,17 @@ const SearchScreen = () => {
     (query: string) => {
       setSearchTerm(query);
       addRecentSearch(query);
+      trackAnalyticsEvent("search_performed", {
+        category_count: selectedCategories.length,
+        has_results: results.length > 0,
+        query_length: query.length,
+        result_count: results.length,
+        source: "recent_search",
+      });
       setIsSearchBarFocused(false);
       Keyboard.dismiss();
     },
-    [addRecentSearch]
+    [addRecentSearch, results.length, selectedCategories.length]
   );
 
   const handleFocus = useCallback(() => setIsSearchBarFocused(true), []);
@@ -156,6 +171,12 @@ const SearchScreen = () => {
       router.push(`/gestures/${gesture.id}`);
     },
     [router]
+  );
+  const handleToggleFavorite = useCallback(
+    (gestureId: string) => {
+      toggleFavorite(gestureId, undefined, "search_results");
+    },
+    [toggleFavorite]
   );
 
   const handleRefresh = useCallback(() => {
@@ -276,7 +297,7 @@ const SearchScreen = () => {
             onGesturePress={handleGesturePress}
             onLoadMore={loadMore}
             onRefresh={handleRefresh}
-            onToggleFavorite={toggleFavorite}
+            onToggleFavorite={handleToggleFavorite}
             results={results}
             style={styles.searchResults}
           />

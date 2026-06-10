@@ -20,6 +20,8 @@ services:
         VITE_WORKOS_CLIENT_ID:    ${VITE_WORKOS_CLIENT_ID}
         VITE_WORKOS_REDIRECT_URI: ${VITE_WORKOS_REDIRECT_URI:-http://localhost/callback}
         VITE_CONVEX_URL:          ${VITE_CONVEX_URL}
+        VITE_OPENPANEL_API_URL:   ${VITE_OPENPANEL_API_URL:-https://analytics.zias.be}
+        VITE_OPENPANEL_CLIENT_ID: ${VITE_OPENPANEL_CLIENT_ID}
     ports:
       - "5173:5173"
     volumes:

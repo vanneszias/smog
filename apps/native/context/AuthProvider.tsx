@@ -30,6 +30,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { clearAnalyticsIdentity } from "@/lib/openpanel";
 import { generateGuestId } from "@/services/userService";
 import logger from "@/utils/logger";
 
@@ -328,6 +329,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [request, promptAsync]);
 
   const signOut = useCallback(async () => {
+    clearAnalyticsIdentity();
     accessToken = null;
     await clearRefreshToken();
     await Promise.all(

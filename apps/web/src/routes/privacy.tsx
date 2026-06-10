@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AnalyticsConsentControl } from "@/components/analytics-consent-control";
 
 export const Route = createFileRoute("/privacy")({
   component: PrivacyPolicyPage,
@@ -67,6 +68,16 @@ function PrivacyPolicyPage() {
               onderdeel van ons bewaarbeleid
             </li>
           </ul>
+
+          <h3 className="mt-4 mb-2 font-semibold text-xl">
+            3.4 Optionele gebruiksanalytics
+          </h3>
+          <p>
+            Alleen na uw toestemming verzamelen we schermweergaven en beperkte
+            interactiegegevens, zoals de lengte van een zoekopdracht, het aantal
+            resultaten en welke gebaren of lijsten worden gebruikt. We
+            verzamelen geen ingevoerde zoektermen en maken geen sessie-opnames.
+          </p>
         </section>
 
         <section>
@@ -85,6 +96,10 @@ function PrivacyPolicyPage() {
             <li>
               <strong>Wettelijke verplichting:</strong> Naleving van
               toepasselijke wet- en regelgeving
+            </li>
+            <li>
+              <strong>Toestemming:</strong> Optionele gebruiksanalytics worden
+              uitsluitend verwerkt nadat u daarvoor toestemming hebt gegeven
             </li>
           </ul>
         </section>
@@ -149,6 +164,16 @@ function PrivacyPolicyPage() {
             We gebruiken Convex om uw accountgegevens, favorieten en
             gebruikersvoorkeuren op te slaan. Convex is onze
             backend-databaseprovider.
+          </p>
+
+          <h3 className="mt-4 mb-2 font-semibold text-xl">
+            6.4 Gebruiksanalytics - OpenPanel
+          </h3>
+          <p>
+            Met uw toestemming gebruiken we een zelfgehoste
+            OpenPanel-installatie op analytics.zias.be om geaggregeerd gebruik
+            van de app te begrijpen. OpenPanel ontvangt een anonieme apparaat-id
+            of, wanneer u bent aangemeld, uw account-id en basisprofielgegevens.
           </p>
         </section>
 
@@ -276,11 +301,13 @@ function PrivacyPolicyPage() {
               Recente zoekopdrachten (lokaal, niet naar servers verzonden)
             </li>
             <li>Gecachte gebaren voor offline toegang</li>
+            <li>Uw keuze voor optionele gebruiksanalytics</li>
           </ul>
           <p className="mt-2">
-            U kunt deze gegevens op elk moment wissen via uw
-            apparaat-/browserinstellingen.
+            U kunt uw toestemming op elk moment hieronder wijzigen. Intrekking
+            heeft geen gevolgen voor de rechtmatigheid van eerdere verwerking.
           </p>
+          <AnalyticsConsentControl />
         </section>
 
         <section>

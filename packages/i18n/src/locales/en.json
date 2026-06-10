@@ -219,7 +219,14 @@
     "refreshNow": "Refresh Now",
     "refreshing": "Refreshing...",
     "auth": "Authentication",
-    "manageAccount": "Manage Account"
+    "manageAccount": "Manage Account",
+    "analyticsTitle": "Usage analytics",
+    "analyticsDescription": "Share limited usage data to help us improve SMOG. Search terms and session recordings are never collected.",
+    "analyticsPromptTitle": "Help improve SMOG",
+    "analyticsPromptDescription": "With your permission, we collect limited usage data through our self-hosted analytics service. Tracking is off until you choose.",
+    "analyticsAllow": "Allow analytics",
+    "analyticsRequiredOnly": "Required only",
+    "privacyPolicy": "Read the privacy policy"
   },
   "about": {
     "title": "About Us",

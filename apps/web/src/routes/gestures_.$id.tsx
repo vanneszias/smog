@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGestures } from "@/hooks/useGestures";
 import { useLists } from "@/lib/lists-context";
+import { trackAnalyticsEvent } from "@/lib/openpanel";
 import { isMobileDevice, openInApp } from "@/utils/deviceDetection";
 
 export const Route = createFileRoute("/gestures_/$id")({
@@ -62,6 +63,16 @@ function GesturesComponent() {
   }, [id, allGestures]);
 
   const showSkeleton = isLoading && !!id;
+  const selectedGestureId = selectedGesture?._id;
+
+  useEffect(() => {
+    if (selectedGestureId) {
+      trackAnalyticsEvent("gesture_viewed", {
+        gesture_id: selectedGestureId,
+        source: "direct",
+      });
+    }
+  }, [selectedGestureId]);
 
   const handleSelectGesture = (gestureId: string) => {
     navigate({ to: "/gestures/$id", params: { id: gestureId } });
@@ -80,6 +91,7 @@ function GesturesComponent() {
       categories,
       gestureId,
       gestureName: gesture?.name,
+      source: "gesture_list",
     });
   };
 
@@ -151,6 +163,7 @@ function GesturesComponent() {
                     .map((category) => category.name),
                   gestureId: selectedGesture._id,
                   gestureName: selectedGesture.name,
+                  source: "gesture_detail",
                 })
               }
               showOpenInApp={showOpenInApp}

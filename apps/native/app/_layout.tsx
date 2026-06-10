@@ -1,14 +1,24 @@
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
 import * as NavigationBar from "expo-navigation-bar";
-import { SplashScreen, Stack, useRouter } from "expo-router";
+import { SplashScreen, Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Image, Platform, StyleSheet, Text, View } from "react-native";
+import { AnalyticsConsentPrompt } from "@/components/AnalyticsConsentPrompt";
 import RiveSplashScreen from "@/components/RiveSplashScreen";
 import AppProviders from "@/context/AppProviders";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
+import {
+  clearAnalyticsIdentity,
+  getAnalyticsConsent,
+  identifyAnalyticsGuest,
+  identifyAnalyticsUser,
+  initializeOpenPanel,
+  subscribeAnalyticsConsent,
+  trackScreenView,
+} from "@/lib/openpanel";
 // Initialize i18n configuration
 import "@/utils/i18n";
 
@@ -16,6 +26,63 @@ import logger from "@/utils/logger";
 
 // Keep the default splash visible while we load resources
 SplashScreen.preventAutoHideAsync();
+
+function NativeAnalytics({
+  showConsentPrompt,
+}: {
+  showConsentPrompt: boolean;
+}) {
+  const pathname = usePathname();
+  const { guestId, isGuest, isLoading, user } = useAuth();
+  const [isInitialized, setIsInitialized] = useState(false);
+  const identifiedProfileId = useRef<string | null>(null);
+  const analyticsConsent = useSyncExternalStore(
+    subscribeAnalyticsConsent,
+    getAnalyticsConsent,
+    getAnalyticsConsent
+  );
+
+  useEffect(() => {
+    initializeOpenPanel().finally(() => setIsInitialized(true));
+  }, []);
+
+  useEffect(() => {
+    if (!(isInitialized && analyticsConsent === true)) {
+      identifiedProfileId.current = null;
+      return;
+    }
+    if (isLoading) {
+      return;
+    }
+
+    const nextProfileId = user?.id ?? (isGuest && guestId ? guestId : null);
+    if (identifiedProfileId.current === nextProfileId) {
+      return;
+    }
+    if (identifiedProfileId.current) {
+      clearAnalyticsIdentity();
+    }
+
+    if (user) {
+      identifyAnalyticsUser(user);
+    } else if (isGuest && guestId) {
+      identifyAnalyticsGuest(guestId);
+    }
+    identifiedProfileId.current = nextProfileId;
+  }, [analyticsConsent, guestId, isGuest, isInitialized, isLoading, user]);
+
+  useEffect(() => {
+    if (isInitialized && analyticsConsent === true && !isLoading) {
+      trackScreenView(pathname);
+    }
+  }, [analyticsConsent, isInitialized, isLoading, pathname]);
+
+  return (
+    <AnalyticsConsentPrompt
+      visible={showConsentPrompt && isInitialized && analyticsConsent === null}
+    />
+  );
+}
 
 // Shared header configuration per platform
 function useHeaderOptions() {
@@ -204,6 +271,7 @@ export default function RootLayout() {
 
   return (
     <AppProviders>
+      <NativeAnalytics showConsentPrompt={!showSplash} />
       {showSplash ? (
         <RiveSplashScreen onAnimationComplete={() => setShowSplash(false)} />
       ) : (

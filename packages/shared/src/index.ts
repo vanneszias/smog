@@ -8,6 +8,7 @@
  * import { createLogger, tryCatch, DatabaseError } from "@smog/shared";
  */
 
+export type { AnalyticsEventMap, AnalyticsEventName } from "./analytics";
 export {
   AppError,
   ConvexError,

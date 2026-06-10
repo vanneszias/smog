@@ -28,6 +28,7 @@ import {
   useState,
 } from "react";
 import { setORPCAccessTokenProvider } from "../utils/orpc";
+import { clearAnalyticsIdentity } from "./openpanel";
 
 const logger = createLogger("auth");
 
@@ -170,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       logger.error("[Auth] Sign out failed:", error);
     }
+    clearAnalyticsIdentity();
     accessToken = null;
     tokenExpiry = null;
     setUser(null);

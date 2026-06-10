@@ -3,18 +3,30 @@ import { Ionicons } from "@expo/vector-icons";
 import type { ThemeMode } from "@smog/styles";
 import { FONT_SIZE, ICON_SIZE, SPACING } from "@smog/styles";
 import { Stack, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   Linking,
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { type Language, useTranslation } from "@/context/TranslationContext";
+import {
+  getAnalyticsConsent,
+  setAnalyticsConsent,
+  subscribeAnalyticsConsent,
+} from "@/lib/openpanel";
 
 type RNGlobal = typeof globalThis & {
   Alert?: {
@@ -27,6 +39,11 @@ const SettingsScreen = () => {
   const { language, setLanguage, availableLanguages, t } = useTranslation();
   const router = useRouter();
   const { showActionSheetWithOptions } = useActionSheet();
+  const analyticsConsent = useSyncExternalStore(
+    subscribeAnalyticsConsent,
+    getAnalyticsConsent,
+    getAnalyticsConsent
+  );
 
   const [selectedLanguage, setSelectedLanguage] = useState(language);
 
@@ -237,6 +254,45 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.settingContainer}>
+          <Text style={[styles.settingLabel, { color: theme.text }]}>
+            {t("settings.analyticsTitle")}
+          </Text>
+          <View
+            style={[
+              styles.settingRow,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}
+          >
+            <View style={styles.analyticsCopy}>
+              <Text style={[styles.settingValue, { color: theme.text }]}>
+                {t("settings.analyticsTitle")}
+              </Text>
+              <Text
+                style={[styles.settingDescription, { color: theme.textLight }]}
+              >
+                {t("settings.analyticsDescription")}
+              </Text>
+            </View>
+            <Switch
+              onValueChange={async (enabled) => {
+                await setAnalyticsConsent(enabled);
+              }}
+              trackColor={{ true: theme.primary }}
+              value={analyticsConsent === true}
+            />
+          </View>
+          <TouchableOpacity
+            onPress={() =>
+              Linking.openURL("https://app.smog.vlaanderen/privacy")
+            }
+          >
+            <Text style={[styles.privacyLink, { color: theme.primary }]}>
+              {t("settings.privacyPolicy")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Developer Tools button at bottom, requires 5 taps */}
         <View style={styles.devToolsContainer}>
           <TouchableOpacity
@@ -347,6 +403,21 @@ const styles = StyleSheet.create({
   settingValue: {
     fontSize: FONT_SIZE.md,
     flex: 1,
+  },
+  settingDescription: {
+    fontSize: FONT_SIZE.sm,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  analyticsCopy: {
+    flex: 1,
+    paddingRight: SPACING.md,
+  },
+  privacyLink: {
+    fontSize: FONT_SIZE.sm,
+    marginTop: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    textDecorationLine: "underline",
   },
   devToolsContainer: {
     marginTop: SPACING.xxl,

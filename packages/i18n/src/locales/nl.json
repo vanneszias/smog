@@ -193,7 +193,14 @@
     "realDataw": "Echte Data",
     "auth": "Authenticatie",
     "manageAccount": "Account beheren",
-    "openDeveloperTools": "Ontwikkelaarstools openen"
+    "openDeveloperTools": "Ontwikkelaarstools openen",
+    "analyticsTitle": "Gebruiksanalytics",
+    "analyticsDescription": "Deel beperkte gebruiksgegevens om SMOG te verbeteren. Zoektermen en sessie-opnames worden nooit verzameld.",
+    "analyticsPromptTitle": "Help SMOG verbeteren",
+    "analyticsPromptDescription": "Met uw toestemming verzamelen we beperkte gebruiksgegevens via onze zelfgehoste analyticsdienst. Tracking blijft uit tot u kiest.",
+    "analyticsAllow": "Analytics toestaan",
+    "analyticsRequiredOnly": "Alleen noodzakelijk",
+    "privacyPolicy": "Lees het privacybeleid"
   },
   "about": {
     "title": "Over ons",

@@ -31,6 +31,7 @@ import {
 import { client } from "../utils/orpc";
 import { useAuth } from "./auth";
 import { useConvexUserId } from "./convex-user-sync";
+import { trackAnalyticsEvent } from "./openpanel";
 
 const logger = createLogger("listsContext");
 export const LIST_GESTURE_ADDED_EVENT = "smog:list-gesture-added";
@@ -40,6 +41,7 @@ interface SaveGestureRequest {
   categories?: string[];
   gestureId: string;
   gestureName?: string;
+  source: "gesture_detail" | "gesture_list";
 }
 
 interface ListsContextType {
@@ -175,6 +177,12 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
             },
           })
         );
+        trackAnalyticsEvent("gesture_collection_changed", {
+          action: "added",
+          collection: "list",
+          gesture_id: pendingGesture.gestureId,
+          source: pendingGesture.source,
+        });
 
         toast.success(
           pendingGesture.gestureName
@@ -222,6 +230,12 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
             },
           })
         );
+        trackAnalyticsEvent("gesture_collection_changed", {
+          action: "removed",
+          collection: "list",
+          gesture_id: pendingGesture.gestureId,
+          source: pendingGesture.source,
+        });
         toast.success(t("web.lists.gestureRemoved", "Gesture removed"));
         setIsPickerOpen(false);
         setPendingGesture(null);
@@ -277,6 +291,12 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
           },
         })
       );
+      trackAnalyticsEvent("gesture_collection_changed", {
+        action: "added",
+        collection: "list",
+        gesture_id: pendingGesture.gestureId,
+        source: pendingGesture.source,
+      });
       toast.success(
         pendingGesture.gestureName
           ? t("web.lists.addedToList", { name: pendingGesture.gestureName })

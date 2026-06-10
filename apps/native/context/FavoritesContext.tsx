@@ -11,13 +11,18 @@ import {
   useState,
 } from "react";
 import { useConvexUserId } from "@/context/ConvexUserSync";
+import { trackAnalyticsEvent } from "@/lib/openpanel";
 import type { Gesture } from "@/types";
 import logger from "@/utils/logger";
 
 export interface FavoritesContextType {
   favorites: string[];
   favoriteGestures: Gesture[];
-  toggleFavorite: (gestureId: string, _gestureName?: string) => void;
+  toggleFavorite: (
+    gestureId: string,
+    _gestureName?: string,
+    source?: "gesture_detail" | "gesture_list" | "search_results"
+  ) => void;
   isFavorite: (gestureId: string) => boolean;
   isLoading: boolean;
   pendingOperations: number;
@@ -94,7 +99,14 @@ const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }) => {
   );
 
   const toggleFavorite = useCallback(
-    async (gestureId: string, _gestureName?: string) => {
+    async (
+      gestureId: string,
+      _gestureName?: string,
+      source:
+        | "gesture_detail"
+        | "gesture_list"
+        | "search_results" = "gesture_list"
+    ) => {
       if (!userId) {
         logger.warn("Cannot toggle favorite: user not available");
         return;
@@ -111,6 +123,12 @@ const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }) => {
         const wasAdded = await toggleUserFavorite({
           userId,
           gestureId: gestureId as Id<"gestures">,
+        });
+        trackAnalyticsEvent("gesture_collection_changed", {
+          action: wasAdded ? "added" : "removed",
+          collection: "favorites",
+          gesture_id: gestureId,
+          source,
         });
         setOptimisticFavorites((current) => {
           if (!current) {

@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { BORDER_RADIUS, SPACING } from "@smog/styles";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import type React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -23,6 +23,7 @@ import { useFavorites } from "@/context/FavoritesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useGesture, useRelatedGestures } from "@/hooks/useGestureData";
 import { useScreenshotDetection } from "@/hooks/useScreenshotDetection";
+import { trackAnalyticsEvent } from "@/lib/openpanel";
 
 const GestureScreen: React.FC = () => {
   const router = useRouter();
@@ -43,6 +44,17 @@ const GestureScreen: React.FC = () => {
     enabled: true,
   });
 
+  const gestureId = gesture?.id;
+
+  useEffect(() => {
+    if (gestureId) {
+      trackAnalyticsEvent("gesture_viewed", {
+        gesture_id: gestureId,
+        source: "direct",
+      });
+    }
+  }, [gestureId]);
+
   const handleVideoComplete = useCallback(() => {
     // Show disclaimer once per playthrough.
     if (!disclaimerFiredRef.current) {
@@ -50,6 +62,14 @@ const GestureScreen: React.FC = () => {
       setShowDisclaimer(true);
     }
   }, []);
+
+  const handleVideoPlayToEnd = useCallback(() => {
+    if (gesture) {
+      trackAnalyticsEvent("video_playback_completed", {
+        gesture_id: gesture.id,
+      });
+    }
+  }, [gesture]);
 
   if (gesture === undefined || !gesture) {
     return (
@@ -78,7 +98,7 @@ const GestureScreen: React.FC = () => {
       return;
     }
 
-    toggleFavorite(gesture.id, gesture.name);
+    toggleFavorite(gesture.id, gesture.name, "gesture_detail");
   };
 
   return (
@@ -137,6 +157,7 @@ const GestureScreen: React.FC = () => {
         <View style={styles.videoContainer}>
           <VideoPlayer
             onComplete={handleVideoComplete}
+            onPlayToEnd={handleVideoPlayToEnd}
             playbackId={gesture.playbackId}
           />
         </View>

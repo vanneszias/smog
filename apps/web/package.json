@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@mux/mux-player-react": "^3.12.0",
+    "@openpanel/web": "^1.4.1",
     "@orpc/client": "catalog:",
     "@orpc/tanstack-query": "^1.14.0",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -24,9 +25,9 @@
     "@smog/auth": "workspace:*",
     "@smog/config": "workspace:*",
     "@smog/convex": "workspace:*",
-    "@smog/shared": "workspace:*",
     "@smog/hooks": "workspace:*",
     "@smog/i18n": "workspace:*",
+    "@smog/shared": "workspace:*",
     "@smog/types": "workspace:*",
     "@smog/ui": "workspace:*",
     "@tailwindcss/vite": "^4.2.4",

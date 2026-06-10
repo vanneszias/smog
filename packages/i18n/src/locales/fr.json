@@ -101,7 +101,14 @@
     "mock": "Données de test",
     "auth": "Authentification",
     "manageAccount": "Gérer le compte",
-    "openDeveloperTools": "Ouvrir les outils développeur"
+    "openDeveloperTools": "Ouvrir les outils développeur",
+    "analyticsTitle": "Analyse d'utilisation",
+    "analyticsDescription": "Partagez des données d'utilisation limitées pour améliorer SMOG. Les termes de recherche et les enregistrements de session ne sont jamais collectés.",
+    "analyticsPromptTitle": "Aidez-nous à améliorer SMOG",
+    "analyticsPromptDescription": "Avec votre autorisation, nous collectons des données d'utilisation limitées via notre service d'analyse auto-hébergé. Le suivi reste désactivé jusqu'à votre choix.",
+    "analyticsAllow": "Autoriser l'analyse",
+    "analyticsRequiredOnly": "Nécessaire uniquement",
+    "privacyPolicy": "Lire la politique de confidentialité"
   },
   "about": {
     "title": "À propos",

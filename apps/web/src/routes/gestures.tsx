@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import EmptyState from "@/components/EmptyState";
 import { useGestures } from "@/hooks/useGestures";
 import { useLists } from "@/lib/lists-context";
+import { trackAnalyticsEvent } from "@/lib/openpanel";
 
 interface GestureSearch {
   q?: string;
@@ -71,6 +72,29 @@ function GesturesComponent() {
     });
   }, [searchQuery, selectedCategories, navigate]);
 
+  useEffect(() => {
+    if (isLoading || !(searchQuery || selectedCategories.length > 0)) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      trackAnalyticsEvent("search_performed", {
+        category_count: selectedCategories.length,
+        has_results: filteredGestures.length > 0,
+        query_length: searchQuery.trim().length,
+        result_count: filteredGestures.length,
+        source: "filter_change",
+      });
+    }, 700);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    filteredGestures.length,
+    isLoading,
+    searchQuery,
+    selectedCategories.length,
+  ]);
+
   const handleSelectGesture = (gestureId: string) => {
     setSelectedGestureId(gestureId);
     navigate({ to: "/gestures/$id", params: { id: gestureId } });
@@ -87,6 +111,7 @@ function GesturesComponent() {
         .map((category) => category.name),
       gestureId,
       gestureName: gesture?.name,
+      source: "gesture_list",
     });
   };
 
