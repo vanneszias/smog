@@ -13,353 +13,365 @@ function PrivacyPolicyPage() {
 
       <div className="space-y-6">
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">1. Inleiding</h2>
+          <h2 className="mb-3 font-semibold text-2xl">1. Toepassingsgebied</h2>
           <p>
-            Welkom bij SMOG&Co ("we", "ons" of "onze"). We zetten ons in voor de
-            bescherming van uw persoonsgegevens en respecteren uw privacy. Dit
-            Privacybeleid legt uit hoe we uw informatie verzamelen, gebruiken en
-            beschermen wanneer u onze applicatie voor het leren van gebarentaal
-            gebruikt.
+            Dit privacybeleid beschrijft hoe SMOG & CO vzw persoonsgegevens
+            verwerkt wanneer u de SMOG&Co-website, mobiele app, accounts,
+            gedeelde lijsten, sponsoring en bijbehorende ondersteuning gebruikt
+            (samen: de "Dienst").
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            2. Informatie over de verwerkingsverantwoordelijke
+            2. Verwerkingsverantwoordelijke
           </h2>
           <p>
-            De verwerkingsverantwoordelijke voor uw persoonsgegevens is SMOG&Co
-            VZW (België). Voor privacyvragen kunt u contact opnemen via
-            info@smog.vlaanderen.
+            SMOG & CO vzw, Arthur Goemaerelei 66, 2018 Antwerpen, België, O.N.
+            1009 954 991, is de verwerkingsverantwoordelijke. Privacyvragen kunt
+            u sturen naar{" "}
+            <a
+              className="text-blue-600 underline"
+              href="mailto:info@smog.vlaanderen"
+            >
+              info@smog.vlaanderen
+            </a>
+            .
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            3. Gegevens die wij verzamelen
-          </h2>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.1 Accountgegevens
-          </h3>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>E-mailadres (via WorkOS-authenticatie)</li>
-            <li>Voor- en achternaam (via WorkOS-authenticatie)</li>
-            <li>Gebruikers-ID (unieke identificator)</li>
-            <li>Tijdstippen van accountaanmaak en laatste activiteit</li>
-          </ul>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.2 Gebruikersvoorkeuren
-          </h3>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>Favoriete gebaren</li>
-            <li>Zoekgeschiedenis (lokaal opgeslagen op uw apparaat)</li>
-            <li>Taal- en themavoorkeuren</li>
-          </ul>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.3 Gastmodusgegevens
-          </h3>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>Anonieme gast-id (bij gebruik van gastmodus)</li>
-            <li>
-              Gastgegevens worden na 12 maanden inactiviteit verwijderd als
-              onderdeel van ons bewaarbeleid
-            </li>
-          </ul>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.4 Optionele gebruiksanalytics
-          </h3>
-          <p>
-            Alleen na uw toestemming verzamelen we schermweergaven en beperkte
-            interactiegegevens, zoals de lengte van een zoekopdracht, het aantal
-            resultaten en welke gebaren of lijsten worden gebruikt. We
-            verzamelen geen ingevoerde zoektermen en maken geen sessie-opnames.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            4. Rechtsgrond voor verwerking (GDPR)
+            3. Welke gegevens wij verwerken
           </h2>
           <ul className="ml-6 list-disc space-y-2">
             <li>
-              <strong>Uitvoering van de overeenkomst:</strong> Het verwerken van
-              uw accountinformatie is noodzakelijk om onze diensten te leveren
+              <strong>Account en authenticatie:</strong> WorkOS-gebruikers-ID,
+              e-mailadres, naam, rol, sessie- en accounttijdstippen.
             </li>
             <li>
-              <strong>Gerechtvaardigd belang:</strong> Beveiliging,
-              fraudepreventie en verbetering van de dienst
+              <strong>Gastgebruik:</strong> een willekeurige gast-ID, laatste
+              activiteit, favorieten en lijsten. Deze gegevens worden in Convex
+              opgeslagen om de Dienst te laten werken.
             </li>
             <li>
-              <strong>Wettelijke verplichting:</strong> Naleving van
-              toepasselijke wet- en regelgeving
+              <strong>Leerfuncties:</strong> favoriete gebaren, lijsten,
+              lijstbeschrijvingen, deelinstellingen en deelcodes. Recente
+              zoektermen blijven lokaal op uw apparaat.
             </li>
             <li>
-              <strong>Toestemming:</strong> Optionele gebruiksanalytics worden
-              uitsluitend verwerkt nadat u daarvoor toestemming hebt gegeven
+              <strong>Sponsoring:</strong> contactnaam, sponsor- of
+              bedrijfsnaam, e-mail, gekozen gebaren, overlaytekst, optioneel
+              logo, voorbeeldvideo's, status, betaalreferentie en looptijd.
+            </li>
+            <li>
+              <strong>Facturatie:</strong> factuurnaam, btw- of
+              ondernemingsnummer en factuur-e-mailadres wanneer u een factuur
+              vraagt. Mollie verwerkt de betaalgegevens; SMOG&Co ontvangt geen
+              volledige kaart- of bankgegevens.
+            </li>
+            <li>
+              <strong>Technische gegevens:</strong> IP-adres, apparaat-,
+              browser- en appgegevens, beveiligingslogs, foutinformatie en
+              gegevens die nodig zijn voor video- en netwerklevering.
+            </li>
+            <li>
+              <strong>Optionele analytics:</strong> alleen na toestemming:
+              schermpad, platform, beperkte gebeurtenisgegevens,
+              gebaar-ID&apos;s, resultaat- en categorietellingen, lengte van een
+              zoekopdracht en voltooid afspelen. We sturen geen zoektermen en
+              maken geen sessie-opnames.
             </li>
           </ul>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            5. Hoe wij uw gegevens gebruiken
+            4. Doeleinden en rechtsgronden
           </h2>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>Om onze dienst te leveren en te onderhouden</li>
-            <li>Om uw account te authenticeren (via WorkOS)</li>
-            <li>Om uw favorieten tussen apparaten te synchroniseren</li>
-            <li>Om uw leerervaring te personaliseren</li>
-            <li>Om klantenondersteuning te bieden</li>
-            <li>Om aan wettelijke verplichtingen te voldoen</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            6. Diensten van derden
-          </h2>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.1 Authenticatie - WorkOS
-          </h3>
-          <p>
-            We gebruiken WorkOS voor veilige authenticatie. WorkOS verwerkt uw
-            e-mailadres en naam om uw account aan te maken en te beheren. Zie
-            het privacybeleid van WorkOS op:{" "}
-            <a
-              className="text-blue-600 underline"
-              href="https://workos.com/privacy"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              https://workos.com/privacy
-            </a>
-          </p>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.2 Videohosting - Mux
-          </h3>
-          <p>
-            We gebruiken Mux voor het hosten en streamen van
-            demonstratievideo's. Mux kan technische gegevens verzamelen die
-            nodig zijn voor videolevering. Zie het privacybeleid van Mux op:{" "}
-            <a
-              className="text-blue-600 underline"
-              href="https://mux.com/privacy"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              https://mux.com/privacy
-            </a>
-          </p>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.3 Database - Convex
-          </h3>
-          <p>
-            We gebruiken Convex om uw accountgegevens, favorieten en
-            gebruikersvoorkeuren op te slaan. Convex is onze
-            backend-databaseprovider.
-          </p>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            6.4 Gebruiksanalytics - OpenPanel
-          </h3>
-          <p>
-            Met uw toestemming gebruiken we een zelfgehoste
-            OpenPanel-installatie op analytics.zias.be om geaggregeerd gebruik
-            van de app te begrijpen. OpenPanel ontvangt een anonieme apparaat-id
-            of, wanneer u bent aangemeld, uw account-id en basisprofielgegevens.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            7. Gegevensopslag en beveiliging
-          </h2>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>
-              Uw gegevens worden veilig opgeslagen met
-              industriestandaard-encryptie
-            </li>
-            <li>
-              Wij nemen passende technische en organisatorische maatregelen om
-              uw gegevens te beschermen
-            </li>
-            <li>
-              Toegang tot uw persoonsgegevens is beperkt tot geautoriseerd
-              personeel
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">8. Bewaartermijnen</h2>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>
-              <strong>Actieve accounts:</strong> Gegevens worden bewaard zolang
-              uw account actief is
-            </li>
-            <li>
-              <strong>Gastaccounts:</strong> Automatisch verwijderd na 12
-              maanden inactiviteit
-            </li>
-            <li>
-              <strong>Beheerlogs:</strong> 3 jaar bewaard voor auditdoeleinden
-            </li>
-            <li>
-              <strong>Verwijderde accounts:</strong> Alle persoonsgegevens
-              worden binnen 30 dagen na verwijderingsverzoek verwijderd
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">9. Uw rechten (GDPR)</h2>
-          <p className="mb-2">U hebt de volgende rechten:</p>
           <ul className="ml-6 list-disc space-y-2">
             <li>
-              <strong>Recht op inzage:</strong> Vraag een kopie van uw
-              persoonsgegevens op (beschikbaar in Instellingen → Mijn gegevens
-              downloaden)
+              <strong>Overeenkomst:</strong> accounts, gastmodus, favorieten,
+              lijsten, gedeelde lijsten, sponsoring, betalingen, videoverwerking
+              en transactionele communicatie leveren.
             </li>
             <li>
-              <strong>Recht op rectificatie:</strong> Corrigeer onjuiste
-              gegevens via uw accountinstellingen
+              <strong>Wettelijke verplichting:</strong> boekhouding, facturatie,
+              fiscale verplichtingen en beantwoording van geldige wettelijke
+              verzoeken.
             </li>
             <li>
-              <strong>Recht op wissing:</strong> Verwijder uw account en alle
-              bijbehorende gegevens (Instellingen → Mijn account verwijderen)
+              <strong>Gerechtvaardigd belang:</strong> beveiliging,
+              fraudepreventie, beheer, misbruikonderzoek, foutdiagnose en
+              verbetering van de betrouwbaarheid van de Dienst. U kunt hiertegen
+              bezwaar maken.
             </li>
             <li>
-              <strong>Recht op beperking van verwerking:</strong> Beperk hoe wij
-              uw gegevens verwerken
+              <strong>Toestemming:</strong> optionele OpenPanel-analytics. U
+              kunt weigeren of later intrekken zonder dat basisfuncties
+              wegvallen.
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            5. Ontvangers en dienstverleners
+          </h2>
+          <p className="mb-2">
+            Alleen bevoegde medewerkers en dienstverleners die de Dienst
+            ondersteunen krijgen toegang voor zover dat nodig is:
+          </p>
+          <ul className="ml-6 list-disc space-y-2">
+            <li>
+              <strong>WorkOS:</strong> authenticatie en accountidentiteit.{" "}
+              <a
+                className="text-blue-600 underline"
+                href="https://workos.com/privacy"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Privacybeleid
+              </a>
             </li>
             <li>
-              <strong>Recht op gegevensoverdraagbaarheid:</strong> Ontvang uw
-              gegevens in een machineleesbaar formaat
+              <strong>Convex:</strong> database, serverfuncties en
+              bestandsopslag.{" "}
+              <a
+                className="text-blue-600 underline"
+                href="https://www.convex.dev/legal/privacy"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Privacybeleid
+              </a>
             </li>
             <li>
-              <strong>Recht van bezwaar:</strong> Maak bezwaar tegen verwerking
-              op basis van gerechtvaardigd belang
+              <strong>Mux:</strong> opslag, verwerking en streaming van gebaren-
+              en sponsorvideo&apos;s.{" "}
+              <a
+                className="text-blue-600 underline"
+                href="https://www.mux.com/privacy"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Privacybeleid
+              </a>
+            </li>
+            <li>
+              <strong>Mollie:</strong> gehoste betaalafhandeling en
+              betaalstatus.{" "}
+              <a
+                className="text-blue-600 underline"
+                href="https://www.mollie.com/legal/privacy"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Privacybeleid
+              </a>
+            </li>
+            <li>
+              <strong>Expo:</strong> distributie en updates van de mobiele app.{" "}
+              <a
+                className="text-blue-600 underline"
+                href="https://expo.dev/privacy"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Privacybeleid
+              </a>
+            </li>
+            <li>
+              <strong>E-mail- en queue-infrastructuur:</strong> verzending en
+              tijdelijke wachtrijverwerking van transactionele e-mails.
+            </li>
+            <li>
+              <strong>OpenPanel:</strong> zelfgehoste analysesoftware op
+              analytics.zias.be, uitsluitend na analytics-toestemming. De
+              OpenPanel-cloud wordt niet gebruikt voor onze gebeurtenisdata.
+            </li>
+          </ul>
+          <p className="mt-2">
+            Persoonsgegevens worden niet verkocht. We delen ze alleen op grond
+            van een overeenkomst, wettelijke verplichting of ander geldig
+            juridisch kader.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            6. Analytics en identificatie
+          </h2>
+          <p>
+            Analytics staat standaard uit. Na toestemming gebruikt de website
+            een anoniem apparaatprofiel totdat u zich aanmeldt. De mobiele app
+            kan een gastprofiel gebruiken. Na aanmelding kan het profiel worden
+            gekoppeld aan uw WorkOS-ID, naam en e-mailadres. Bij uitloggen wordt
+            de actieve analytics-identiteit gewist. Intrekken stopt nieuwe
+            metingen; eerder rechtmatig verzamelde gegevens worden daardoor niet
+            automatisch verwijderd. U kunt verwijdering aanvragen via ons
+            contactadres.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            7. Cookies en lokale opslag
+          </h2>
+          <ul className="ml-6 list-disc space-y-2">
+            <li>
+              Noodzakelijke authenticatiecookies en beveiligde tokens houden uw
+              sessie actief.
+            </li>
+            <li>
+              Lokale opslag bewaart onder meer taal, thema, gastmodus, recente
+              zoekopdrachten, appcache en uw analyticskeuze.
+            </li>
+            <li>
+              Na analytics-toestemming kan OpenPanel lokale identificatie- en
+              wachtrijgegevens bewaren om gebeurtenissen af te leveren.
             </li>
           </ul>
           <p className="mt-3">
-            Om deze rechten uit te oefenen, gebruikt u de opties in uw
-            accountinstellingen of neemt u rechtstreeks contact met ons op.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            10. Privacy van kinderen
-          </h2>
-          <p>
-            Onze dienst is bedoeld voor gebruikers van 13 jaar en ouder (of de
-            leeftijd van digitale toestemming in uw land). We verzamelen niet
-            bewust gegevens van kinderen onder deze leeftijd. Als u denkt dat we
-            gegevens van een kind hebben verzameld, neem dan onmiddellijk
-            contact met ons op.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            11. Internationale gegevensoverdrachten
-          </h2>
-          <p>
-            Uw gegevens kunnen worden overgedragen naar en verwerkt in landen
-            buiten de EER/VK. We zorgen voor passende waarborgen, waaronder:
-          </p>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>
-              Standaard contractuele clausules met externe verwerkers waar van
-              toepassing
-            </li>
-            <li>
-              Toereikendheidsbesluiten van de Europese Commissie waar van
-              toepassing
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            12. Cookies en lokale opslag
-          </h2>
-          <p>
-            We gebruiken cookies en lokale opslag om het volgende op te slaan:
-          </p>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>Strikt noodzakelijke cookies voor authenticatiesessies</li>
-            <li>Gebruikersvoorkeuren (taal, thema)</li>
-            <li>
-              Recente zoekopdrachten (lokaal, niet naar servers verzonden)
-            </li>
-            <li>Gecachte gebaren voor offline toegang</li>
-            <li>Uw keuze voor optionele gebruiksanalytics</li>
-          </ul>
-          <p className="mt-2">
-            U kunt uw toestemming op elk moment hieronder wijzigen. Intrekking
-            heeft geen gevolgen voor de rechtmatigheid van eerdere verwerking.
+            U kunt uw analyticskeuze hieronder op elk moment wijzigen:
           </p>
           <AnalyticsConsentControl />
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">
-            13. Wijzigingen in dit beleid
-          </h2>
-          <p>
-            We kunnen dit Privacybeleid van tijd tot tijd bijwerken. We
-            informeren u over belangrijke wijzigingen door:
-          </p>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>De datum "Laatst bijgewerkt" te actualiseren</li>
-            <li>Een in-app melding weer te geven</li>
-            <li>Waar wettelijk vereist opnieuw toestemming te vragen</li>
+          <h2 className="mb-3 font-semibold text-2xl">8. Bewaartermijnen</h2>
+          <ul className="ml-6 list-disc space-y-2">
+            <li>
+              Accountgegevens, favorieten en lijsten blijven bewaard zolang uw
+              account bestaat of totdat u ze verwijdert.
+            </li>
+            <li>
+              Gastaccounts met favorieten en lijsten worden na 12 maanden
+              inactiviteit verwijderd.
+            </li>
+            <li>Beheerlogs worden maximaal 3 jaar bewaard.</li>
+            <li>
+              Niet-betaalde sponsoraanvragen worden na 24 uur geannuleerd.
+              Onderliggende technische bestanden kunnen volgens operationele
+              back-up- en opschooncycli later verdwijnen.
+            </li>
+            <li>
+              Betaal-, sponsor- en factuurgegevens worden bewaard zolang dat
+              nodig is voor de overeenkomst en maximaal 10 jaar wanneer de
+              Belgische boekhoud- of fiscale regels dat vereisen.
+            </li>
+            <li>
+              Analyticsgegevens worden bewaard volgens de ingestelde
+              bewaartermijn van onze OpenPanel-installatie en niet langer dan
+              nodig voor productanalyse.
+            </li>
           </ul>
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">14. Contact</h2>
+          <h2 className="mb-3 font-semibold text-2xl">
+            9. Accountverwijdering
+          </h2>
           <p>
-            Voor privacyvragen, het uitoefenen van uw rechten of zorgen over
-            gegevensbescherming kunt u contact opnemen via:
+            De verwijderfunctie verwijdert het account, favorieten en eigen
+            lijsten uit Convex en maakt relevante beheerreferenties los of
+            anoniem. WorkOS-sessies en gegevens bij afzonderlijke
+            dienstverleners kunnen hun eigen verwijdercyclus volgen. Sponsor-,
+            betaal- en factuurgegevens die niet rechtstreeks aan het account
+            zijn gekoppeld of wettelijk moeten worden bewaard, worden niet
+            noodzakelijk door accountverwijdering gewist.
           </p>
-          <p className="mt-2">
-            <strong>E-mail:</strong> info@smog.vlaanderen
-            <br />
-            <strong>Adres:</strong> SMOG & CO vzw, Arthur Goemaerelei 66, 2018
-            Antwerpen
-            <br />
-            <strong>Tel:</strong> 03/216 29 90
-            <br />
-            <strong>Ondernemings Nummer:</strong> O.N. 1009 954 991
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">10. Uw rechten</h2>
+          <p>
+            Onder de GDPR kunt u, afhankelijk van de omstandigheden, inzage,
+            rectificatie, wissing, beperking, overdraagbaarheid of bezwaar
+            vragen. U kunt toestemming altijd intrekken en een klacht indienen
+            bij een toezichthouder. De accountpagina biedt een machineleesbare
+            export en accountverwijdering. Voor andere verzoeken mailt u{" "}
+            <a
+              className="text-blue-600 underline"
+              href="mailto:info@smog.vlaanderen"
+            >
+              info@smog.vlaanderen
+            </a>
+            . We kunnen informatie vragen om uw identiteit te verifiëren.
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            15. Toezichthoudende autoriteit
+            11. Internationale doorgiften
           </h2>
           <p>
-            Als u zich in België bevindt, hebt u het recht om een klacht in te
-            dienen bij de Belgische Gegevensbeschermingsautoriteit (GBA/APD).
-            Als u zich elders in de EER of het VK bevindt, kunt u contact
-            opnemen met uw lokale gegevensbeschermingsautoriteit.
+            Sommige dienstverleners kunnen persoonsgegevens buiten de Europese
+            Economische Ruimte verwerken. Waar nodig gebruiken we een
+            adequaatheidsbesluit, standaardcontractbepalingen of een ander
+            rechtsgeldig doorgiftemechanisme en passende aanvullende
+            beveiligingsmaatregelen.
           </p>
         </section>
 
-        <section className="border-gray-300 border-t pt-6">
-          <p className="text-sm">
-            Dit privacybeleid is opgesteld om te voldoen aan de GDPR en de
-            Belgische gegevensbeschermingswetgeving. Door onze dienst te
-            gebruiken, bevestigt u dat u dit beleid hebt gelezen en begrepen.
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            12. Beveiliging en incidenten
+          </h2>
+          <p>
+            We gebruiken passende technische en organisatorische maatregelen,
+            waaronder toegangsbeperking, versleutelde verbindingen en
+            afgeschermde secrets. Geen systeem is volledig risicoloos. Bij een
+            meldingsplichtig incident informeren we de bevoegde autoriteit en,
+            wanneer vereist, betrokken personen.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">13. Kinderen</h2>
+          <p>
+            In België kan een kind vanaf 13 jaar zelf toestemming geven voor een
+            rechtstreeks aangeboden online dienst. Is volgens het toepasselijke
+            recht toestemming van een ouder of voogd nodig, dan moet die worden
+            verkregen. Neem contact op wanneer u denkt dat gegevens van een kind
+            onrechtmatig zijn verwerkt.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">14. Wijzigingen</h2>
+          <p>
+            We kunnen dit beleid bijwerken wanneer de Dienst, leveranciers of
+            wetgeving wijzigen. De datum bovenaan wordt aangepast en bij
+            belangrijke wijzigingen informeren we gebruikers in de app of via
+            een passend kanaal. Waar nodig vragen we opnieuw toestemming.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">15. Contact en klacht</h2>
+          <p>
+            SMOG & CO vzw
+            <br />
+            Arthur Goemaerelei 66, 2018 Antwerpen, België
+            <br />
+            E-mail: info@smog.vlaanderen
+            <br />
+            Tel.: 03/216 29 90
+            <br />
+            O.N. 1009 954 991
+          </p>
+          <p className="mt-3">
+            U kunt ook een klacht indienen bij de{" "}
+            <a
+              className="text-blue-600 underline"
+              href="https://www.gegevensbeschermingsautoriteit.be/burger/acties/klacht-indienen"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Belgische Gegevensbeschermingsautoriteit
+            </a>{" "}
+            of bij uw lokale toezichthouder.
           </p>
         </section>
       </div>

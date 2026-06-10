@@ -43,49 +43,26 @@ const {
 ## Native Hooks (`apps/native/hooks/`)
 
 ### `useOptimizedSearch`
-**Purpose:** Debounced gesture search.
+**Purpose:** Debounces input and executes server-side Convex gesture search.
 
 ```typescript
 const {
-  query,
-  setQuery,
   results,
+  isLoading,
   isSearching,
-  searchDuration,
-} = useOptimizedSearch({ gestures, debounceMs: 300 });
+  search,
+  clearSearch,
+  refresh,
+  hasMore,
+  loadMore,
+  searchStats,
+} = useOptimizedSearch({ debounceMs: 300 });
+
+search("hello", ["category"]);
 ```
 
----
-
-### `useSyncStatus`
-**Purpose:** Exposes the current sync state from `convexSyncService`.
-
-```typescript
-const {
-  isSyncing,
-  lastSync,
-  lastAttempt,
-  nextSync,
-} = useSyncStatus();
-```
-
----
-
-### `useBottomSheet`
-**Purpose:** Controls bottom sheet open/close state with animation.
-
-```typescript
-const { isOpen, open, close, toggle } = useBottomSheet();
-```
-
----
-
-### `useAutoSync`
-**Purpose:** Triggers background sync on app foreground with configurable interval.
-
-```typescript
-useAutoSync({ intervalMs: SYNC_INTERVAL_MS, onSync: handleSync });
-```
+`useGestureData.ts` contains the lower-level Convex query hooks for categories,
+single gestures, related gestures, and search.
 
 ---
 

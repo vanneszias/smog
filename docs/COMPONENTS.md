@@ -1,6 +1,6 @@
 # Component Documentation
 
-> Last updated: March 18, 2026  
+> Last updated: June 10, 2026
 > See also: [HOOKS.md](./HOOKS.md), [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ## Overview
@@ -96,6 +96,14 @@ interface DisclaimerBannerProps {
 
 ---
 
+### `AnalyticsConsentPrompt`
+**Purpose:** First-choice prompt for optional native analytics.
+
+It links to the public privacy policy and offers equally visible allow and
+required-only actions. It is shown while consent is unknown.
+
+---
+
 ## Web Admin Components (`apps/web/src/components/admin/`)
 
 ### `AdminTable`
@@ -118,9 +126,9 @@ interface DisclaimerBannerProps {
 ---
 
 ### `SponsorshipsManagement`
-**File:** `SponsorshipsManagement.tsx` (1099 lines)  
-**Status:** Partially refactored — type issues fixed, imports restored. Full refactor with `DataTable` deferred.  
-**Purpose:** Admin view for managing sponsorship lifecycle (approve, reject, expire, re-edit).
+**File:** `SponsorshipsManagement.tsx`
+**Purpose:** Admin view for managing sponsorship lifecycle (approve, reject,
+expire, cancel, and re-edit).
 
 ---
 
@@ -139,13 +147,14 @@ interface DisclaimerBannerProps {
 
 | Component | File | Responsibility |
 |-----------|------|---------------|
-| `StepSelect` | `StepSelect.tsx` (~230 lines) | Step 1: Browse + select gestures |
-| `StepDetails` | `StepDetails.tsx` (~280 lines) | Step 2: Sponsor info, contact, invoice |
-| `StepPreview` | `StepPreview.tsx` (~180 lines) | Step 3: Preview videos + payment CTA |
-| `SponsorGestureCard` | `SponsorGestureCard.tsx` | Gesture card for selection grid |
-| `SelectionBar` | `SelectionBar.tsx` | Floating selection summary bar |
+| `StepSelect` | `-StepSelect.tsx` | Step 1: Browse + select gestures |
+| `StepDetails` | `-StepDetails.tsx` | Step 2: Sponsor info, contact, invoice |
+| `StepPreview` | `-StepPreview.tsx` | Step 3: Preview videos + payment CTA |
+| `SponsorGestureCard` | `-SponsorGestureCard.tsx` | Gesture card for selection grid |
+| `SelectionBar` | `-SelectionBar.tsx` | Floating selection summary bar |
 
-All state is managed in `index.tsx` and passed as props.
+Form state lives in `hooks/-useSponsorshipForm.ts`; network actions live in
+`hooks/-useSponsorshipMutation.ts`.
 
 ---
 

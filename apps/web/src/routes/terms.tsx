@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/terms")({
   component: TermsOfServicePage,
@@ -8,304 +8,251 @@ function TermsOfServicePage() {
   return (
     <div className="container overflow-y-auto px-12 py-8">
       <h1 className="mb-6 font-bold text-4xl">Servicevoorwaarden</h1>
-      <p className="mb-4">Laatst bijgewerkt: 03 maart 2026</p>
+      <p className="mb-4">Laatst bijgewerkt: 10 juni 2026</p>
 
       <div className="space-y-6">
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            1. Acceptatie van voorwaarden
+            1. Toepassing en aanbieder
           </h2>
           <p>
-            Door toegang te krijgen tot en gebruik te maken van SMOG&Co ("de
-            Dienst"), beheerd door SMOG&Co VZW (België), aanvaardt u de
-            voorwaarden van deze overeenkomst en gaat u ermee akkoord. Als u
-            niet akkoord gaat met deze Servicevoorwaarden, gebruik de Dienst dan
-            niet.
+            Deze voorwaarden gelden voor de SMOG&Co-website, mobiele app,
+            accounts, lijsten, sponsoring en bijbehorende diensten (de
+            "Dienst"), aangeboden door SMOG & CO vzw, Arthur Goemaerelei 66,
+            2018 Antwerpen, België, O.N. 1009 954 991. Door de Dienst te
+            gebruiken gaat u akkoord met deze voorwaarden. Dwingend
+            consumentenrecht blijft altijd gelden.
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            2. Beschrijving van de dienst
+            2. Beschrijving van de Dienst
           </h2>
           <p>
-            SMOG&Co is een applicatie voor het leren van gebarentaal die het
-            volgende biedt:
-          </p>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>Toegang tot een bibliotheek met gebarentaalvideo's</li>
-            <li>Zoeken en categoriseren van gebaren</li>
-            <li>Mogelijkheid om favoriete gebaren op te slaan</li>
-            <li>
-              Synchronisatie tussen apparaten voor geregistreerde gebruikers
-            </li>
-            <li>Gastmodus voor tijdelijke toegang zonder registratie</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">3. Gebruikersaccounts</h2>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.1 Account aanmaken
-          </h3>
-          <p>
-            U kunt een account aanmaken via WorkOS-authenticatie. U bent
-            verantwoordelijk voor het vertrouwelijk houden van uw
-            accountgegevens en voor alle activiteiten onder uw account.
-          </p>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">3.2 Gastmodus</h3>
-          <p>
-            U kunt de Dienst als gast gebruiken zonder een account aan te maken.
-            Gastgegevens worden lokaal op uw apparaat opgeslagen en na 12
-            maanden inactiviteit automatisch verwijderd.
-          </p>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            3.3 Account beëindiging
-          </h3>
-          <p>
-            U kunt uw account op elk moment verwijderen via de
-            instellingenpagina. Na verwijdering worden al uw persoonsgegevens
-            binnen 30 dagen definitief verwijderd.
+            De Dienst biedt een bibliotheek met gebarenvideo&apos;s, zoeken en
+            filteren, favorieten, eigen en gedeelde lijsten, gastgebruik,
+            accountsynchronisatie en de mogelijkheid om een gebaar te sponsoren.
+            Functies kunnen per platform verschillen.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">4. Gebruikersgedrag</h2>
-          <p>U stemt ermee in NIET:</p>
+          <h2 className="mb-3 font-semibold text-2xl">
+            3. Accounts en gastmodus
+          </h2>
+          <p>
+            Accounts worden via WorkOS aangemaakt. U moet correcte informatie
+            verstrekken, uw account beveiligen en misbruik melden. In gastmodus
+            wordt een willekeurige gast-ID aangemaakt en worden favorieten en
+            lijsten in onze backend bewaard. Inactieve gastgegevens worden na 12
+            maanden verwijderd. U kunt een account verwijderen via de
+            instellingen; wettelijke bewaarplichten en afzonderlijke
+            sponsortransacties kunnen verdere bewaring vereisen.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">4. Toegestaan gebruik</h2>
+          <p>U mag de Dienst niet gebruiken om:</p>
           <ul className="ml-6 list-disc space-y-1">
-            <li>De Dienst te gebruiken voor illegale doeleinden</li>
+            <li>de wet of rechten van anderen te schenden;</li>
             <li>
-              Te proberen ongeautoriseerde toegang te verkrijgen tot enig deel
-              van de Dienst
+              ongeautoriseerde toegang te verkrijgen of beveiliging te omzeilen;
             </li>
             <li>
-              De Dienst of servers/netwerken die ermee verbonden zijn te
-              verstoren
+              de Dienst, infrastructuur of andere gebruikers te verstoren;
             </li>
             <li>
-              Geautomatiseerde systemen te gebruiken om toegang te krijgen tot
-              de Dienst zonder onze voorafgaande schriftelijke toestemming
+              zonder toestemming geautomatiseerd grote hoeveelheden inhoud op te
+              vragen, te kopiëren of door te verkopen;
             </li>
             <li>
-              Een deel van de Dienst te reproduceren, dupliceren, kopiëren of
-              door te verkopen
-            </li>
-            <li>
-              Auteursrecht-, merk- of eigendomsvermeldingen te verwijderen of te
-              wijzigen
+              misleidende, schadelijke of inbreukmakende sponsorinhoud aan te
+              leveren.
             </li>
           </ul>
+          <p className="mt-2">
+            We kunnen toegang beperken of beëindigen wanneer dat redelijk nodig
+            is voor beveiliging, wettelijke naleving of een ernstige schending.
+          </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
             5. Intellectuele eigendom
           </h2>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">5.1 Onze inhoud</h3>
           <p>
-            Alle inhoud die via de Dienst wordt aangeboden, waaronder
-            gebarenvideo's, tekst, grafieken, logo's en software, is eigendom
-            van SMOG&Co of haar licentiegevers en wordt beschermd door
-            auteursrecht en andere wetten inzake intellectuele eigendom.
+            De Dienst, software, teksten, vormgeving en gebarenvideo&apos;s zijn
+            eigendom van SMOG&Co of haar licentiegevers. U krijgt een beperkte,
+            herroepbare, niet-exclusieve en niet-overdraagbare licentie voor
+            persoonlijk en educatief gebruik. Normale browser- of appcaching is
+            toegestaan; downloaden, herpubliceren, wijzigen, commercieel
+            exploiteren of een afgeleid videoproduct maken vereist voorafgaande
+            toestemming, behalve waar de wet dit uitdrukkelijk toestaat.
           </p>
+        </section>
 
-          <h3 className="mt-4 mb-2 font-semibold text-xl">5.2 Licentie</h3>
-          <p>
-            Wij verlenen u een beperkte, niet-exclusieve, niet-overdraagbare
-            licentie om de Dienst te gebruiken voor persoonlijk,
-            niet-commercieel gebruik. Deze licentie omvat geen rechten om:
-          </p>
-          <ul className="ml-6 list-disc space-y-1">
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">6. Sponsoring</h2>
+          <ul className="ml-6 list-disc space-y-2">
             <li>
-              Gebarenvideo's te downloaden of te kopiëren (behalve via normale
-              caching)
+              Een sponsoring koppelt de gekozen sponsornaam, tekst en eventueel
+              logo gedurende de getoonde looptijd aan een of meer
+              gebarenvideo&apos;s.
             </li>
-            <li>Wijzigingen aan te brengen of afgeleide werken te maken</li>
-            <li>De inhoud openbaar te tonen of uit te voeren</li>
-            <li>De inhoud voor commerciële doeleinden te gebruiken</li>
+            <li>
+              De prijs, looptijd en eventuele logo-opslag worden vóór betaling
+              getoond. De server controleert het verschuldigde bedrag. Een
+              sponsoraanvraag is pas betaald nadat Mollie de betaling bevestigt.
+            </li>
+            <li>
+              SMOG&Co beoordeelt de aanvraag vóór publicatie en kan inhoud
+              weigeren die onwettig, misleidend, schadelijk, ongepast of
+              technisch onbruikbaar is. We nemen bij afwijzing contact op over
+              aanpassing of een passende afhandeling van de betaling.
+            </li>
+            <li>
+              U garandeert dat u de nodige rechten en toestemmingen bezit voor
+              namen, merken, logo&apos;s, tekst en andere aangeleverde inhoud. U
+              verleent SMOG&Co voor de uitvoering van de sponsoring een
+              niet-exclusieve licentie om die inhoud te verwerken, te renderen,
+              te hosten en te tonen.
+            </li>
+            <li>
+              Voorbeeld- en eindvideo&apos;s kunnen technisch worden aangepast
+              voor formaat, leesbaarheid en streaming. Een door SMOG&Co
+              verstrekte herbewerkingslink is persoonlijk, tijdelijk en mag niet
+              worden gedeeld.
+            </li>
+            <li>
+              Onbetaalde aanvragen kunnen na 24 uur worden geannuleerd. Voor
+              annulering, terugbetaling of een foutieve betaling neemt u contact
+              op; wettelijke consumentenrechten blijven van toepassing.
+            </li>
           </ul>
+        </section>
 
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            5.3 Educatief gebruik
-          </h3>
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            7. Betaling en facturatie
+          </h2>
           <p>
-            De Dienst is bedoeld voor educatieve doeleinden om gebruikers
-            gebarentaal te leren. Gebruikers worden aangemoedigd de opgedane
-            kennis te gebruiken om te communiceren en anderen te onderwijzen.
+            Betalingen verlopen via de gehoste betaalomgeving van Mollie en zijn
+            onderworpen aan de voorwaarden van de gekozen betaalmethode. U bent
+            verantwoordelijk voor correcte contact- en factuurgegevens.
+            Eventuele belastingen worden toegepast zoals wettelijk vereist. Bij
+            een betwiste, teruggedraaide of frauduleuze betaling mogen we de
+            sponsoring opschorten terwijl de zaak wordt onderzocht.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">6. Privacy</h2>
+          <h2 className="mb-3 font-semibold text-2xl">8. Privacy</h2>
           <p>
-            Uw gebruik van de Dienst wordt ook beheerst door ons Privacybeleid.
-            Door de Dienst te gebruiken, stemt u in met het verzamelen en
-            gebruiken van uw informatie zoals beschreven in het Privacybeleid.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">7. Disclaimers</h2>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            7.1 Beschikbaarheid van de dienst
-          </h3>
-          <p>
-            De Dienst wordt geleverd "zoals deze is" en "zoals beschikbaar"
-            zonder enige garanties. We garanderen niet dat de Dienst
-            ononderbroken, tijdig, veilig of foutloos zal zijn.
-          </p>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            7.2 Educatieve inhoud
-          </h3>
-          <p>
-            Hoewel we streven naar correcte gebarendemonstraties, garanderen we
-            niet de nauwkeurigheid, volledigheid of bruikbaarheid van de inhoud.
-            Gebarentaal kan per regio en context verschillen.
-          </p>
-
-          <h3 className="mt-4 mb-2 font-semibold text-xl">
-            7.3 Geen professioneel advies
-          </h3>
-          <p>
-            De Dienst is uitsluitend bedoeld voor educatieve doeleinden en vormt
-            geen professioneel gebarentaalonderwijs of certificering.
+            Ons{" "}
+            <Link className="text-blue-600 underline" to="/privacy">
+              privacybeleid
+            </Link>{" "}
+            legt uit welke gegevens nodig zijn voor de Dienst en welke
+            verwerking op een andere rechtsgrond berust. Optionele analytics
+            wordt alleen na afzonderlijke toestemming ingeschakeld; gebruik van
+            de Dienst geldt niet als analytics-toestemming.
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            8. Beperking van aansprakelijkheid
+            9. Beschikbaarheid en educatieve inhoud
           </h2>
+          <p>
+            We streven naar een betrouwbare en correcte Dienst, maar garanderen
+            geen ononderbroken beschikbaarheid of foutloze inhoud.
+            Gebarengebruik kan per regio, persoon en context verschillen. De
+            Dienst is een educatief hulpmiddel en geen professionele
+            certificering, medische dienst of vervanging voor persoonlijk
+            advies.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">10. Aansprakelijkheid</h2>
           <p>
             Voor zover wettelijk toegestaan is SMOG&Co niet aansprakelijk voor
-            indirecte, incidentele, bijzondere, gevolg- of punitieve schade, of
-            verlies van winst, inkomsten, gegevens, gebruik, goodwill of andere
-            immateriële verliezen die voortvloeien uit:
-          </p>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>
-              Uw toegang tot of gebruik van, of het onvermogen om toegang te
-              krijgen tot of gebruik te maken van de Dienst
-            </li>
-            <li>Het gedrag of de inhoud van derden op de Dienst</li>
-            <li>Inhoud verkregen via de Dienst</li>
-            <li>
-              Ongeautoriseerde toegang, gebruik of wijziging van uw transmissies
-              of inhoud
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">9. Vrijwaring</h2>
-          <p>
-            U stemt ermee in SMOG&Co, haar bestuurders, werknemers en agenten te
-            vrijwaren voor claims, schade, verplichtingen, verliezen,
-            aansprakelijkheden, kosten of uitgaven die voortvloeien uit: (i) uw
-            gebruik van de Dienst; (ii) uw schending van deze voorwaarden; of
-            (iii) uw schending van rechten van derden.
+            indirecte schade, gevolgschade of verlies dat niet redelijk
+            voorzienbaar was. Niets in deze voorwaarden beperkt
+            aansprakelijkheid die wettelijk niet kan worden uitgesloten,
+            waaronder aansprakelijkheid voor opzet of zware fout waar het
+            toepasselijke recht dat bepaalt. Consumenten behouden hun
+            dwingendrechtelijke remedies.
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            10. Wijzigingen aan de dienst
+            11. Inhoud van gebruikers en schadeloosstelling
           </h2>
           <p>
-            Wij behouden ons het recht voor om de Dienst (of een deel daarvan)
-            tijdelijk of permanent te wijzigen of stop te zetten, met of zonder
-            voorafgaande kennisgeving. Wij zijn niet aansprakelijk voor enige
-            wijziging, opschorting of stopzetting van de Dienst.
+            U blijft verantwoordelijk voor inhoud die u aanlevert. Voor zover
+            wettelijk toegestaan, vergoedt een zakelijke gebruiker SMOG&Co voor
+            aanspraken van derden die rechtstreeks voortvloeien uit opzettelijk
+            onrechtmatig gebruik of uit aangeleverde sponsorinhoud waarvoor die
+            gebruiker de vereiste rechten niet bezit. Deze bepaling beperkt geen
+            wettelijke consumentenbescherming.
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            11. Wijzigingen van voorwaarden
+            12. Wijzigingen en stopzetting
           </h2>
           <p>
-            Wij behouden ons het recht voor om deze voorwaarden op elk moment
-            bij te werken of te wijzigen. We zullen u op de hoogte stellen van
-            belangrijke wijzigingen door:
-          </p>
-          <ul className="ml-6 list-disc space-y-1">
-            <li>De datum "Laatst bijgewerkt" hierboven bij te werken</li>
-            <li>Een in-app melding weer te geven</li>
-            <li>
-              Acceptatie van nieuwe voorwaarden te vereisen bij de volgende
-              aanmelding
-            </li>
-          </ul>
-          <p className="mt-2">
-            Als u de Dienst blijft gebruiken na dergelijke wijzigingen, betekent
-            dit dat u de nieuwe voorwaarden accepteert.
+            We kunnen functies wijzigen, onderhouden of stopzetten. Bij een
+            belangrijke wijziging die een lopende betaalde sponsoring wezenlijk
+            raakt, zoeken we een redelijke oplossing. We kunnen deze voorwaarden
+            aanpassen en vermelden steeds de nieuwe datum. Voor wezenlijke
+            wijzigingen informeren we gebruikers via de Dienst of een passend
+            contactkanaal.
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            12. Toepasselijk recht
+            13. Toepasselijk recht en geschillen
           </h2>
           <p>
-            Deze voorwaarden worden beheerst door het Belgisch recht, zonder
-            rekening te houden met conflicterende rechtsregels. U stemt ermee in
-            dat de rechtbanken in België exclusief bevoegd zijn voor het
-            oplossen van geschillen.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 font-semibold text-2xl">13. Scheidbaarheid</h2>
-          <p>
-            Als een bepaling van deze voorwaarden niet afdwingbaar of ongeldig
-            wordt bevonden, wordt die bepaling beperkt of verwijderd tot het
-            minimum dat nodig is zodat deze voorwaarden verder volledig van
-            kracht blijven.
+            Belgisch recht is van toepassing. Geschillen behoren tot de bevoegde
+            Belgische rechtbanken, behalve wanneer dwingend consumentenrecht u
+            het recht geeft een andere bevoegde rechtbank te kiezen. Probeer een
+            probleem eerst via info@smog.vlaanderen met ons op te lossen.
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            14. Volledige overeenkomst
+            14. Overige bepalingen
           </h2>
           <p>
-            Deze voorwaarden vormen samen met het Privacybeleid de volledige
-            overeenkomst tussen u en SMOG&Co met betrekking tot het gebruik van
-            de Dienst en vervangen alle eerdere overeenkomsten en afspraken.
+            Als een bepaling ongeldig of onafdwingbaar is, blijven de overige
+            bepalingen gelden. Het niet onmiddellijk afdwingen van een recht is
+            geen afstand daarvan. Deze voorwaarden en het privacybeleid vormen
+            de afspraken over het gebruik van de Dienst, naast specifieke
+            informatie die bij een aankoop wordt getoond.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">15. Contactgegevens</h2>
+          <h2 className="mb-3 font-semibold text-2xl">15. Contact</h2>
           <p>
-            Als u vragen heeft over deze voorwaarden, neem dan contact met ons
-            op via:
-          </p>
-          <p className="mt-2">
-            <strong>E-mail:</strong> info@smog.vlaanderen
+            SMOG & CO vzw
             <br />
-            <strong>Adres:</strong> SMOG & CO vzw
+            Arthur Goemaerelei 66, 2018 Antwerpen, België
             <br />
-            Arthur Goemaerelei 66
+            E-mail: info@smog.vlaanderen
             <br />
-            2018 Antwerpen
+            Tel.: 03/216 29 90
             <br />
-            <strong>Tel:</strong> 03/216 29 90
-            <br />
-            <strong>Ondernemings Nummer:</strong> O.N. 1009 954 991
-          </p>
-        </section>
-
-        <section className="border-gray-300 border-t pt-6">
-          <p className="text-sm">
-            Door SMOG&Co te gebruiken, bevestigt u dat u deze Servicevoorwaarden
-            hebt gelezen, begrepen en ermee akkoord gaat.
+            O.N. 1009 954 991
           </p>
         </section>
       </div>

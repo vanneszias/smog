@@ -1,6 +1,6 @@
 # Code Style Guide
 
-> Last updated: March 18, 2026  
+> Last updated: June 10, 2026
 > Enforced by: Biome (see `biome.json` + `ultracite` presets)
 
 ## Quick Reference
@@ -30,7 +30,7 @@ import type { Gesture } from "@smog/types";
 
 // 3. App-internal (@/ alias)
 import { useTheme } from "@/context/ThemeContext";
-import { databaseService } from "@/services/database";
+import { useTheme } from "@/context/ThemeContext";
 ```
 
 ### Type-only imports
@@ -52,8 +52,8 @@ import { Gesture } from "@smog/types";
 |------|-----------|---------|
 | Components | PascalCase | `GestureCard`, `StepDetails` |
 | Hooks | camelCase + `use` prefix | `useSponsorshipForm`, `useAdminFilters` |
-| Services (instances) | camelCase | `databaseService`, `gestureService` |
-| Service classes | PascalCase | `DatabaseService`, `ConvexSyncService` |
+| Services (instances) | camelCase | `mollieClient`, `convexClient` |
+| Service classes | PascalCase | `OpenPanel`, `ConvexHttpClient` |
 | Types/interfaces | PascalCase | `Gesture`, `SponsorshipFormState` |
 | Constants | UPPER_SNAKE_CASE | `PRICE_PER_YEAR_CENTS`, `VIDEO_COMPLETE_COUNT` |
 | Files (components) | PascalCase | `GestureCard.tsx`, `StepSelect.tsx` |
@@ -112,25 +112,19 @@ export function calculatePrice(count: number, hasLogo: boolean) {
 
 ## Error Handling
 
-### Use `tryCatch` for async operations
+### Handle async failures at the owning boundary
 ```typescript
-import { tryCatch, DatabaseError } from "@smog/shared";
-
-// Good
-const [err, gestures] = await tryCatch(
-  () => databaseService.getAllGestures(),
-  () => new DatabaseError("Failed to load gestures")
-);
-if (err) return;
-// gestures is typed as Gesture[] here
-
-// Bad — untyped catch
 try {
-  const gestures = await databaseService.getAllGestures();
+  await toggleFavorite({ userId, gestureId });
 } catch (error) {
-  console.error(error); // No type info, no structured error
+  logger.error("Failed to toggle favorite", error);
+  throw error;
 }
 ```
+
+`tryCatch` from `@smog/shared` is useful when tuple-style recovery makes the
+caller clearer. Plain `try/catch` is preferred for service methods that must log
+and rethrow.
 
 ### Use the logger, not console
 ```typescript
@@ -138,12 +132,12 @@ import { createLogger } from "@smog/shared";
 const logger = createLogger("myModule");
 
 // Good
-logger.info("Gesture sync started");
-logger.error("Sync failed", error);
+logger.info("Sponsorship render started");
+logger.error("Sponsorship render failed", error);
 
 // Bad
-console.log("[myModule] Gesture sync started");
-console.error("[myModule] Sync failed:", error);
+console.log("[myModule] Sponsorship render started");
+console.error("[myModule] Sponsorship render failed:", error);
 ```
 
 ---

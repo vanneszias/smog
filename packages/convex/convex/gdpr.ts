@@ -8,7 +8,8 @@ import { mutation, query } from "./_generated/server";
  * Security Notes:
  * - All data export and deletion functions require authentication
  * - Authentication is validated via JWT tokens from WorkOS
- * - Guest users cannot export or delete data (their data is auto-removed after 12 months)
+ * - Guest users cannot use the authenticated export/delete endpoints
+ * - Inactive guest data is automatically removed after 12 months
  * - The client must use <Authenticated> wrappers to ensure proper auth state
  */
 
@@ -126,9 +127,16 @@ export const exportUserData = query({
         purposes: [
           "Account management",
           "Gesture list and favorites synchronization",
+          "Security and service operation",
         ],
-        thirdParties: ["WorkOS (Authentication)"],
-        dataRetention: "Account data retained until deletion request",
+        thirdParties: [
+          "WorkOS (authentication)",
+          "Convex (database and application functions)",
+          "Mux (video delivery)",
+          "OpenPanel (optional analytics after consent)",
+        ],
+        dataRetention:
+          "Account, favorites, and lists are retained until account deletion; legally required transaction records follow separate retention rules.",
       },
     };
   },
@@ -230,7 +238,8 @@ export const deleteUserAccount = mutation({
     return {
       success: true,
       deletedAt: new Date().toISOString(),
-      message: "Account and all associated data deleted successfully",
+      message:
+        "Account, favorites, and owned lists deleted. Legally required transaction records may be retained separately.",
     };
   },
 });
