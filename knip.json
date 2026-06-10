@@ -3,8 +3,7 @@
   "ignoreFiles": [".agents/**"],
   "workspaces": {
     "apps/native": {
-      "entry": ["plugins/*.js"],
-      "ignoreDependencies": ["expo-splash-screen"]
+      "entry": ["plugins/*.js"]
     },
     "apps/remotion": {
       "entry": ["remotion.config.ts", "src/index.ts"],

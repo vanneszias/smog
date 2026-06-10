@@ -1,12 +1,11 @@
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
 import * as NavigationBar from "expo-navigation-bar";
-import { SplashScreen, Stack, usePathname, useRouter } from "expo-router";
+import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Image, Platform, StyleSheet, Text, View } from "react-native";
 import { AnalyticsConsentPrompt } from "@/components/AnalyticsConsentPrompt";
-import RiveSplashScreen from "@/components/RiveSplashScreen";
 import AppProviders from "@/context/AppProviders";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
@@ -23,9 +22,6 @@ import {
 import "@/utils/i18n";
 
 import logger from "@/utils/logger";
-
-// Keep the default splash visible while we load resources
-SplashScreen.preventAutoHideAsync();
 
 function NativeAnalytics({
   showConsentPrompt,
@@ -225,7 +221,7 @@ function RootLayoutNav() {
   // Show loading while determining auth state
   if (isLoading) {
     return (
-      <View style={styles.splashContainer}>
+      <View style={styles.loadingContainer}>
         <Image
           resizeMode="contain"
           source={require("@/assets/images/adaptive-icon.png")}
@@ -255,36 +251,22 @@ export default function RootLayout() {
     "SpaceMono-Regular": require("@/assets/fonts/SpaceMono-Regular.ttf"),
   });
 
-  const [showSplash, setShowSplash] = useState(true);
-
-  useEffect(() => {
-    if (fontsLoaded) {
-      // Don't automatically hide splash after timeout anymore
-      // Let the Rive animation control when to hide
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
-
   if (!fontsLoaded) {
     return null;
   }
 
   return (
     <AppProviders>
-      <NativeAnalytics showConsentPrompt={!showSplash} />
-      {showSplash ? (
-        <RiveSplashScreen onAnimationComplete={() => setShowSplash(false)} />
-      ) : (
-        <BottomSheetModalProvider>
-          <RootLayoutNav />
-        </BottomSheetModalProvider>
-      )}
+      <NativeAnalytics showConsentPrompt />
+      <BottomSheetModalProvider>
+        <RootLayoutNav />
+      </BottomSheetModalProvider>
     </AppProviders>
   );
 }
 
 const styles = StyleSheet.create({
-  splashContainer: {
+  loadingContainer: {
     flex: 1,
     backgroundColor: "#22805F",
     justifyContent: "center",

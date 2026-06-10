@@ -35,6 +35,8 @@ tmp
 upload/videos
 
 # Native build artifacts and credentials
+apps/native/ios
+apps/native/android
 **/ios/Pods
 **/ios/build
 **/android/app/build
