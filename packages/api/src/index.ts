@@ -3,7 +3,7 @@ import { api } from "@smog/convex";
 import type { Context } from "./context";
 import { convexClient } from "./lib/convex";
 
-export const o = os.$context<Context>();
+const o = os.$context<Context>();
 
 export const publicProcedure = o;
 

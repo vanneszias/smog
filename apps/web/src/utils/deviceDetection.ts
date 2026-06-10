@@ -21,30 +21,6 @@ export function isMobileDevice(): boolean {
 }
 
 /**
- * Detects if the user is on iOS
- */
-export function isIOS(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const userAgent = window.navigator.userAgent.toLowerCase();
-  return /iphone|ipad|ipod/.test(userAgent);
-}
-
-/**
- * Detects if the user is on Android
- */
-export function isAndroid(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const userAgent = window.navigator.userAgent.toLowerCase();
-  return /android/.test(userAgent);
-}
-
-/**
  * Attempts to open the app using deep link
  * @param path - The path to open in the app (e.g., "/gestures/123")
  */

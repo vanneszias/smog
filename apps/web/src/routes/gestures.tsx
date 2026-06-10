@@ -14,7 +14,7 @@ import {
   trackSearchCategoryRemoved,
   trackSearchPerformed,
 } from "@/lib/analytics";
-import { useFavorites } from "@/lib/favorites-context";
+import { useLists } from "@/lib/lists-context";
 
 interface GestureSearch {
   q?: string;
@@ -33,7 +33,7 @@ function GesturesComponent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const searchParams = useSearch({ from: "/gestures" });
-  const { favoriteIds, toggleFavorite } = useFavorites();
+  const { openSaveGestureDialog, savedGestureIds } = useLists();
   const [selectedGestureId, setSelectedGestureId] = useState<string | null>(
     null
   );
@@ -102,9 +102,18 @@ function GesturesComponent() {
     navigate({ to: "/gestures/$id", params: { id: gestureId } });
   };
 
-  const handleToggleFavorite = (gestureId: string) => {
+  const handleToggleSaved = (gestureId: string) => {
     const gesture = allGestures.find((g) => g._id === gestureId);
-    toggleFavorite(gestureId, gesture?.name);
+    openSaveGestureDialog({
+      categories: (gesture?.categories ?? [])
+        .filter(
+          (category): category is Exclude<typeof category, null | undefined> =>
+            Boolean(category)
+        )
+        .map((category) => category.name),
+      gestureId,
+      gestureName: gesture?.name,
+    });
   };
 
   return (
@@ -139,12 +148,12 @@ function GesturesComponent() {
         ) : (
           <GestureList
             error={error}
-            favoriteGestureIds={favoriteIds}
             gestures={filteredGestures}
             isLoading={isLoading}
             onSelectGesture={handleSelectGesture}
             onSort={handleSort}
-            onToggleFavorite={handleToggleFavorite}
+            onToggleSaved={handleToggleSaved}
+            savedGestureIds={savedGestureIds}
             selectedGestureId={selectedGestureId}
             sortColumn={sortColumn}
             sortDirection={sortDirection}

@@ -11,5 +11,3 @@ export const colors = {
   error: "#FF3B30", // Red for errors
   shadow: "#00805F", // Primary green for shadows
 } as const;
-
-export default colors;

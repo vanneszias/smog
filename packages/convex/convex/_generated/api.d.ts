@@ -16,6 +16,8 @@ import type * as gdpr from "../gdpr.js";
 import type * as gdprCron from "../gdprCron.js";
 import type * as gestures from "../gestures.js";
 import type * as lib_adminAuth from "../lib/adminAuth.js";
+import type * as lib_listSharing from "../lib/listSharing.js";
+import type * as lib_listValidation from "../lib/listValidation.js";
 import type * as lib_sponsorshipDates from "../lib/sponsorshipDates.js";
 import type * as lib_sponsorshipStatus from "../lib/sponsorshipStatus.js";
 import type * as lib_sponsorshipValidation from "../lib/sponsorshipValidation.js";
@@ -38,6 +40,8 @@ declare const fullApi: ApiFromModules<{
   gdprCron: typeof gdprCron;
   gestures: typeof gestures;
   "lib/adminAuth": typeof lib_adminAuth;
+  "lib/listSharing": typeof lib_listSharing;
+  "lib/listValidation": typeof lib_listValidation;
   "lib/sponsorshipDates": typeof lib_sponsorshipDates;
   "lib/sponsorshipStatus": typeof lib_sponsorshipStatus;
   "lib/sponsorshipValidation": typeof lib_sponsorshipValidation;

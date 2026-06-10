@@ -17,7 +17,7 @@ if (storedVersion !== CACHE_VERSION) {
 }
 
 // Create a persister that uses localStorage
-export const persister: Persister = {
+const persister: Persister = {
   persistClient: async (client: PersistedClient) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(client));
   },
@@ -37,7 +37,7 @@ export const persistOptions = {
   persister,
   maxAge: MAX_AGE,
   buster: CACHE_VERSION,
-  // Only persist gestures list query (not auth, not favorites)
+  // Only persist the gesture catalog query, not auth or user list state.
   dehydrateOptions: {
     shouldDehydrateQuery: (query: Query) =>
       query.queryKey[0] === "gestures" && query.queryKey[1] === "list",

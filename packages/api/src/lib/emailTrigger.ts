@@ -23,14 +23,17 @@ export async function triggerEmail(
   payload: EmailTriggerPayload
 ): Promise<void> {
   const serverUrl = process.env.SERVER_URL ?? "http://localhost:3000";
-  const apiKey = process.env.INTERNAL_API_KEY ?? "dev-internal-secret";
 
   try {
+    const apiKey = process.env.INTERNAL_API_KEY;
+    if (!apiKey && process.env.NODE_ENV === "production") {
+      throw new Error("INTERNAL_API_KEY must be set in production");
+    }
     const response = await fetch(`${serverUrl}/api/email/trigger`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey ?? "dev-internal-secret"}`,
       },
       body: JSON.stringify(payload),
     });

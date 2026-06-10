@@ -19,14 +19,10 @@
   },
   "dependencies": {
     "@mux/mux-node": "^12.8.1",
-    "@orpc/client": "catalog:",
-    "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
-    "@orpc/zod": "catalog:",
     "@smog/auth": "workspace:*",
     "@smog/convex": "workspace:*",
     "convex": "^1.36.1",
-    "dotenv": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"
   }

@@ -12,7 +12,7 @@ import type * as React from "react";
 // Brand tokens (inlined to avoid a runtime workspace dep in the server)
 // =============================================================================
 
-export const BRAND = {
+const BRAND = {
   primary: "#00805F", // Dark green — main brand color
   primaryDark: "#006B4F", // Darker green for hover states
   secondary: "#97C699", // Light green

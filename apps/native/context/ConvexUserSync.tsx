@@ -149,13 +149,6 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
 }
 
 /**
- * Hook to get the current Convex user context
- */
-export function useConvexUser() {
-  return useContext(ConvexUserContext);
-}
-
-/**
  * Hook to get just the Convex user ID
  */
 export function useConvexUserId(): Id<"users"> | null {

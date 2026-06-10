@@ -56,20 +56,18 @@ export const listsRouter = {
     return await convexClient.query(api.lists.listUserLists, { userId });
   }),
 
-  getDefaultAddTargetList: protectedProcedure.handler(async ({ context }) => {
+  getSavedGestureIds: protectedProcedure.handler(async ({ context }) => {
     const userId = await getCurrentUserId(context.workosId);
-    return await convexClient.query(api.lists.getDefaultAddTargetList, {
-      userId,
-    });
+    return await convexClient.query(api.lists.getSavedGestureIds, { userId });
   }),
 
-  getListGestureIds: protectedProcedure
-    .input(z.object({ listId: z.string() }))
+  getGestureListIds: protectedProcedure
+    .input(z.object({ gestureId: z.string() }))
     .handler(async ({ context, input }) => {
       const userId = await getCurrentUserId(context.workosId);
-      return await convexClient.query(api.lists.getListGestureIds, {
+      return await convexClient.query(api.lists.getGestureListIds, {
         userId,
-        listId: input.listId as Id<"gesture_lists">,
+        gestureId: input.gestureId as Id<"gestures">,
       });
     }),
 
@@ -170,16 +168,6 @@ export const listsRouter = {
       return await convexClient.mutation(api.lists.deleteList, {
         userId,
         listId: input.listId as Id<"gesture_lists">,
-      });
-    }),
-
-  addGestureToLatest: protectedProcedure
-    .input(z.object({ gestureId: z.string() }))
-    .handler(async ({ context, input }) => {
-      const userId = await getCurrentUserId(context.workosId);
-      return await convexClient.mutation(api.lists.addGestureToLatestList, {
-        userId,
-        gestureId: input.gestureId as Id<"gestures">,
       });
     }),
 

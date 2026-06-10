@@ -12,10 +12,10 @@ import {
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { GDPRConsentBanner } from "@/components/gdpr-consent-banner";
 import Header from "@/components/header";
 import { AppStoreBanner } from "@/components/home/AppStoreBanner";
 import { NotFoundComponent } from "@/components/NotFoundPage";
+import { GDPRConsentBanner } from "@/components/privacy-consent-banner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { trackPageView } from "@/lib/analytics";

@@ -45,7 +45,6 @@ const FavoritesScreen: React.FC = () => {
   const [isAddingGestures, setIsAddingGestures] = useState(false);
   const [searchText, setSearchText] = useState("");
 
-  const initializeUserLists = useMutation(api.lists.initializeUserLists);
   const createList = useMutation(api.lists.createList);
   const deleteList = useMutation(api.lists.deleteList);
   const addGestureToList = useMutation(api.lists.addGestureToList);
@@ -92,15 +91,6 @@ const FavoritesScreen: React.FC = () => {
           .includes(query);
       });
   }, [activeGestureIds, allGestures, searchText]);
-
-  useEffect(() => {
-    if (!userId) {
-      return;
-    }
-    initializeUserLists({ userId }).catch(() => {
-      // The existing provider also initializes lists; this is just a screen-level safety net.
-    });
-  }, [initializeUserLists, userId]);
 
   useEffect(() => {
     if (!(lists && lists.length > 0)) {

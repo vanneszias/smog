@@ -416,4 +416,3 @@ export function useAuthForConvex() {
 }
 
 // Re-export for backwards compatibility
-export { useAuth as useSecureAuth };

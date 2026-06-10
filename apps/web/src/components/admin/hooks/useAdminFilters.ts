@@ -11,7 +11,7 @@
 
 import { useCallback, useState } from "react";
 
-export interface AdminFilters {
+interface AdminFilters {
   searchQuery: string;
   statusFilter: string;
   dateFrom: string;

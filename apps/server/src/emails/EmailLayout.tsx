@@ -59,5 +59,3 @@ export function EmailLayout({
     </Html>
   );
 }
-
-export default EmailLayout;

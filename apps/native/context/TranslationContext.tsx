@@ -15,9 +15,9 @@ interface TranslationContextType {
 }
 
 // Create context
-export const TranslationContext = createContext<
-  TranslationContextType | undefined
->(undefined);
+const TranslationContext = createContext<TranslationContextType | undefined>(
+  undefined
+);
 
 // Create provider component
 export const TranslationProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -67,6 +67,5 @@ export const useTranslation = () => {
   return context;
 };
 
-// Export types and constants for backward compatibility
+// Export the language type for settings screens.
 export type { Language } from "@/utils/i18n";
-export { AVAILABLE_LANGUAGES } from "@/utils/i18n";

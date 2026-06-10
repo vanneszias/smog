@@ -4,7 +4,7 @@ import { ICON_SIZE } from "@smog/styles";
 import { Platform, StyleSheet, View } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 
-export interface MenuAction {
+interface MenuAction {
   id: string;
   title: string;
   image?: string;

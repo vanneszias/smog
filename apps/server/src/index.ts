@@ -69,6 +69,26 @@ startEmailWorker();
 
 const app = new Hono();
 
+function getServiceSecret(
+  name: "INTERNAL_API_KEY" | "REMOTION_API_KEY",
+  developmentFallback: string
+) {
+  const value = process.env[name];
+  if (value) {
+    return value;
+  }
+  if (isProduction) {
+    throw new Error(`${name} must be set in production`);
+  }
+  return developmentFallback;
+}
+
+const internalApiKey = getServiceSecret(
+  "INTERNAL_API_KEY",
+  "dev-internal-secret"
+);
+const remotionApiKey = getServiceSecret("REMOTION_API_KEY", "dev-secret-key");
+
 app.use(logger());
 
 app.use(
@@ -233,9 +253,7 @@ app.post("/api/video/master-access", async (c) => {
   try {
     // Basic authentication check
     const authHeader = c.req.header("Authorization");
-    const expectedToken = process.env.REMOTION_API_KEY || "dev-secret-key";
-
-    if (authHeader !== `Bearer ${expectedToken}`) {
+    if (authHeader !== `Bearer ${remotionApiKey}`) {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
@@ -284,9 +302,7 @@ app.post("/webhooks/mollie", handleMollieWebhook);
 app.post("/api/email/trigger", async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
-    const expectedKey = process.env.INTERNAL_API_KEY ?? "dev-internal-secret";
-
-    if (authHeader !== `Bearer ${expectedKey}`) {
+    if (authHeader !== `Bearer ${internalApiKey}`) {
       return c.json({ error: "Unauthorized" }, 401);
     }
 

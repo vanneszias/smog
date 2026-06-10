@@ -23,14 +23,6 @@ export function useGesture(
   ) as Gesture | null | undefined;
 }
 
-export function useGesturesByIds(ids: string[]): Gesture[] | undefined {
-  const stableIds = useMemo(() => ids.map((id) => id as Id<"gestures">), [ids]);
-  return useQuery(
-    api.gestures.getByIdsForNative,
-    stableIds.length > 0 ? { ids: stableIds } : "skip"
-  ) as Gesture[] | undefined;
-}
-
 export function useRelatedGestures(
   gestureId: string | undefined,
   limit = 5

@@ -9,7 +9,7 @@ import { z } from "zod";
 export type { OverlayConfig } from "@smog/types";
 
 // Zod schema matching @smog/types OverlayConfig
-export const OverlayConfigSchema = z.object({
+const OverlayConfigSchema = z.object({
   image: z.object({
     x: z.number().min(0).max(100).describe("X position as % (0-100)"),
     y: z.number().min(0).max(100).describe("Y position as % (0-100)"),

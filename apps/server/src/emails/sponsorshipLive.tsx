@@ -88,5 +88,3 @@ export function SponsorshipLiveEmail({
     </EmailLayout>
   );
 }
-
-export default SponsorshipLiveEmail;

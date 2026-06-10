@@ -9,7 +9,7 @@
  * Generic analytics property value type.
  * Mirrors PostHog's accepted property value types.
  */
-export type AnalyticsPropertyValue =
+type AnalyticsPropertyValue =
   | string
   | number
   | boolean

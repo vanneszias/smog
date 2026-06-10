@@ -21,8 +21,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@mollie/api-client": "^4.5.0",
-    "dotenv": "catalog:",
-    "zod": "catalog:"
+    "@mollie/api-client": "^4.5.0"
   }
 }

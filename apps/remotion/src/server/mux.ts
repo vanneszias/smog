@@ -30,12 +30,15 @@ export async function getVideoSourceUrl(playbackId: string): Promise<string> {
   console.log(`[Mux] Getting source URL for playback ID: ${playbackId}`);
 
   const serverUrl = process.env.SERVER_URL || "http://localhost:3000";
-  const apiKey = process.env.REMOTION_API_KEY || "dev-secret-key";
+  const apiKey = process.env.REMOTION_API_KEY;
+  if (!apiKey && process.env.NODE_ENV === "production") {
+    throw new Error("REMOTION_API_KEY must be set in production");
+  }
   const response = await fetch(`${serverUrl}/api/video/master-access`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey ?? "dev-secret-key"}`,
     },
     body: JSON.stringify({ playbackId }),
   });

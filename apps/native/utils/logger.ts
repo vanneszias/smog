@@ -1,6 +1,6 @@
 import { Directory, File, Paths } from "expo-file-system";
 
-export type LogLevel = "log" | "info" | "warn" | "error" | "debug";
+type LogLevel = "log" | "info" | "warn" | "error" | "debug";
 
 export interface LogRecord {
   id: string;

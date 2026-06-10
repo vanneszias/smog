@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { DisclaimerBanner } from "@/components/DisclaimerBanner";
+import DisclaimerBanner from "@/components/DisclaimerBanner";
 import {
   CategoryRow,
   ConceptSection,
@@ -27,6 +27,7 @@ import {
   trackCategoryPressed,
   trackEvent,
   trackGestureLiked,
+  trackGestureUnliked,
   trackGestureViewed,
   trackVideoAlmostCompleted,
 } from "@/services/analytics";
@@ -35,7 +36,7 @@ const GestureScreen: React.FC = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme } = useTheme();
-  const { toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const gesture = useGesture(id);
   const relatedGestures = useRelatedGestures(id) ?? [];
   const [hasTrackedView, setHasTrackedView] = useState(false);
@@ -95,6 +96,8 @@ const GestureScreen: React.FC = () => {
     );
   }
 
+  const favoriteStatus = isFavorite(gesture.id);
+
   const handleCategoryPress = (category: string) => {
     if (gesture) {
       trackCategoryPressed(category, "gesture_detail");
@@ -112,7 +115,21 @@ const GestureScreen: React.FC = () => {
     }
 
     toggleFavorite(gesture.id, gesture.name);
-    trackGestureLiked(gesture.id, gesture.name, gesture.category, "button_tap");
+    if (favoriteStatus) {
+      trackGestureUnliked(
+        gesture.id,
+        gesture.name,
+        gesture.category,
+        "button_tap"
+      );
+    } else {
+      trackGestureLiked(
+        gesture.id,
+        gesture.name,
+        gesture.category,
+        "button_tap"
+      );
+    }
   };
 
   return (
@@ -149,8 +166,14 @@ const GestureScreen: React.FC = () => {
               style={styles.favoriteButton}
             >
               <Ionicons
-                color={Platform.OS === "ios" ? theme.primary : theme.background}
-                name="add"
+                color={
+                  favoriteStatus
+                    ? theme.liked
+                    : Platform.OS === "ios"
+                      ? theme.primary
+                      : theme.background
+                }
+                name={favoriteStatus ? "checkmark" : "add"}
                 size={24}
               />
             </TouchableOpacity>

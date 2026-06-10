@@ -1,7 +1,7 @@
 {
-  "name": null,
-  "short_name": null,
-  "description": null,
+  "name": "SMOG&Co",
+  "short_name": "SMOG&Co",
+  "description": "Mensen gaan van nature hun spraak ondersteunen met gebaren.",
   "dir": "auto",
   "lang": "en-US",
   "display": "standalone",

@@ -2,7 +2,8 @@ import MuxPlayer from "@mux/mux-player-react";
 import {
   AlertTriangle,
   ArrowLeft,
-  Heart,
+  Check,
+  ListPlus,
   Smartphone,
   Sparkles,
   X,
@@ -17,7 +18,7 @@ const COURSE_URL = "https://smog.vlaanderen/volg-een-cursus";
 const LINK_PHRASES = ["Klik hier", "klik dan hier"];
 
 import { ShimmerSkeleton } from "../common/Skeleton";
-import type { GestureCardData } from "./GestureCard";
+import type { GestureCardData } from "./types";
 
 export type GestureDetailData = GestureCardData & {
   sponsorship?: {
@@ -29,8 +30,8 @@ export type GestureDetailData = GestureCardData & {
 
 interface GestureDetailProps {
   gesture: GestureDetailData;
-  isFavorite?: boolean;
-  onToggleFavorite?: (gestureId: string) => void;
+  isSaved?: boolean;
+  onToggleSaved?: (gestureId: string) => void;
   onBack?: () => void;
   showOpenInApp?: boolean;
   onOpenInApp?: () => void;
@@ -80,8 +81,8 @@ function SponsorshipCTA({
 
 export function GestureDetail({
   gesture,
-  isFavorite = false,
-  onToggleFavorite,
+  isSaved = false,
+  onToggleSaved,
   onBack,
   showOpenInApp = false,
   onOpenInApp,
@@ -161,9 +162,9 @@ export function GestureDetail({
     willShowBanner: !!showOpenInApp && !!onOpenInApp,
   });
 
-  const handleFavoriteClick = () => {
-    if (onToggleFavorite) {
-      onToggleFavorite(gesture._id);
+  const handleSaveClick = () => {
+    if (onToggleSaved) {
+      onToggleSaved(gesture._id);
     }
   };
 
@@ -211,29 +212,33 @@ export function GestureDetail({
             {gesture.name}
           </h1>
 
-          {/* Favorite button */}
-          {onToggleFavorite && (
+          {/* Save-to-list button */}
+          {onToggleSaved && (
             <button
               aria-label={
-                isFavorite
-                  ? t("ui.gestureDetail.removeFromFavorites")
-                  : t("ui.gestureDetail.addToFavorites")
+                isSaved
+                  ? t(
+                      "ui.gestureDetail.addToAnotherList",
+                      "Add to another list"
+                    )
+                  : t("ui.gestureDetail.addToList", "Add to list")
               }
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-background transition-all hover:scale-105 hover:bg-card md:h-auto md:w-auto md:gap-2 md:px-4 md:py-2"
-              onClick={handleFavoriteClick}
+              onClick={handleSaveClick}
               type="button"
             >
-              <Heart
-                className={`h-5 w-5 transition-all ${
-                  isFavorite
-                    ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
-                    : "fill-none stroke-primary"
-                }`}
-              />
+              {isSaved ? (
+                <Check className="h-5 w-5 stroke-primary" />
+              ) : (
+                <ListPlus className="h-5 w-5 stroke-primary" />
+              )}
               <span className="hidden font-medium md:inline">
-                {isFavorite
-                  ? t("ui.gestureDetail.removeFromFavorites")
-                  : t("ui.gestureDetail.addToFavorites")}
+                {isSaved
+                  ? t(
+                      "ui.gestureDetail.addToAnotherList",
+                      "Add to another list"
+                    )
+                  : t("ui.gestureDetail.addToList", "Add to list")}
               </span>
             </button>
           )}

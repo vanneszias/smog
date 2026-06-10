@@ -13,6 +13,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SuccessRouteImport } from './routes/success'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ListsRouteImport } from './routes/lists'
 import { Route as GesturesRouteImport } from './routes/gestures'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as CallbackRouteImport } from './routes/callback'
@@ -44,6 +45,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListsRoute = ListsRouteImport.update({
+  id: '/lists',
+  path: '/lists',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GesturesRoute = GesturesRouteImport.update({
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/callback': typeof CallbackRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
+  '/lists': typeof ListsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/callback': typeof CallbackRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
+  '/lists': typeof ListsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/callback': typeof CallbackRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
+  '/lists': typeof ListsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/favorites'
     | '/gestures'
+    | '/lists'
     | '/login'
     | '/privacy'
     | '/success'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/favorites'
     | '/gestures'
+    | '/lists'
     | '/login'
     | '/privacy'
     | '/success'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/favorites'
     | '/gestures'
+    | '/lists'
     | '/login'
     | '/privacy'
     | '/success'
@@ -226,6 +238,7 @@ export interface RootRouteChildren {
   CallbackRoute: typeof CallbackRoute
   FavoritesRoute: typeof FavoritesRoute
   GesturesRoute: typeof GesturesRoute
+  ListsRoute: typeof ListsRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   SuccessRoute: typeof SuccessRoute
@@ -266,6 +279,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lists': {
+      id: '/lists'
+      path: '/lists'
+      fullPath: '/lists'
+      preLoaderRoute: typeof ListsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gestures': {
@@ -362,6 +382,7 @@ const rootRouteChildren: RootRouteChildren = {
   CallbackRoute: CallbackRoute,
   FavoritesRoute: FavoritesRoute,
   GesturesRoute: GesturesRoute,
+  ListsRoute: ListsRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   SuccessRoute: SuccessRoute,

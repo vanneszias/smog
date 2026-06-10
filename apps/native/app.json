@@ -3,7 +3,7 @@
     "name": "SMOG & Co",
     "slug": "smog",
     "version": "1.0.1",
-    "runtimeVersion": "0.2.2",
+    "runtimeVersion": "1.0.1",
     "sdkVersion": "55.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -20,7 +20,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "35",
+      "buildNumber": "39",
       "appleTeamId": "96XKP6MU2A"
     },
     "android": {
@@ -52,7 +52,7 @@
         }
       ],
       "package": "be.zias.smog",
-      "versionCode": 65
+      "versionCode": 70
     },
     "plugins": [
       "expo-router",

@@ -13,8 +13,6 @@
   "peerDependencies": {
     "react": "^19.0.0",
     "@mux/mux-player-react": "^3.10.1",
-    "@tanstack/react-query": "^5.85.5",
-    "@tanstack/react-router": "^1.114.25",
     "lucide-react": "^0.473.0",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.6.0"
@@ -27,12 +25,8 @@
   "devDependencies": {
     "typescript": "^5.9.3",
     "@smog/config": "workspace:*",
-    "@smog/styles": "workspace:*",
-    "@smog/types": "workspace:*",
     "@types/react": "~19.1.17",
     "@mux/mux-player-react": "^3.12.0",
-    "@tanstack/react-query": "^5.100.5",
-    "@tanstack/react-router": "^1.168.25",
     "lucide-react": "^0.473.0",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.6.1"

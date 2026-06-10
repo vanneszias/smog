@@ -3,6 +3,11 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { toPublicSharedList } from "./lib/listSharing";
+import {
+  normalizeListDescription,
+  normalizeListName,
+  validateReorderPayload,
+} from "./lib/listValidation";
 
 const DEFAULT_FAVORITES_NAME = "Favorites";
 
@@ -129,35 +134,33 @@ export async function ensureDefaultFavoritesList(
   const sortedFavorites = legacyFavorites.toSorted(
     (a, b) => a.createdAt - b.createdAt
   );
+  const existingItems = await getListItems(ctx, listId);
+  const existingGestureIds = new Set(
+    existingItems.map((item) => item.gestureId)
+  );
+  let nextPosition =
+    existingItems.reduce(
+      (highest, item) => Math.max(highest, item.position),
+      -1
+    ) + 1;
 
-  for (const [index, favorite] of sortedFavorites.entries()) {
-    const existingItem = await ctx.db
-      .query("gesture_list_items")
-      .withIndex("by_list_gesture", (q) =>
-        q.eq("listId", listId).eq("gestureId", favorite.gestureId)
-      )
-      .unique();
-
-    if (!existingItem) {
+  for (const favorite of sortedFavorites) {
+    if (!existingGestureIds.has(favorite.gestureId)) {
       await ctx.db.insert("gesture_list_items", {
         listId,
         gestureId: favorite.gestureId,
         addedBy: userId,
-        position: index,
+        position: nextPosition,
         createdAt: favorite.createdAt,
       });
+      existingGestureIds.add(favorite.gestureId);
+      nextPosition++;
     }
+
+    await ctx.db.delete(favorite._id);
   }
 
   return listId;
-}
-
-async function getLatestList(ctx: ListQueryCtx, userId: Id<"users">) {
-  return await ctx.db
-    .query("gesture_lists")
-    .withIndex("by_owner_created_at", (q) => q.eq("ownerId", userId))
-    .order("desc")
-    .first();
 }
 
 async function requireOwnedList(
@@ -249,6 +252,11 @@ async function addGestureToListInternal(
   gestureId: Id<"gestures">,
   addedBy: Id<"users">
 ) {
+  const gesture = await ctx.db.get(gestureId);
+  if (!gesture?.isActive) {
+    throw new Error("Gesture not found");
+  }
+
   const existing = await ctx.db
     .query("gesture_list_items")
     .withIndex("by_list_gesture", (q) =>
@@ -311,19 +319,39 @@ export const listUserLists = query({
       .collect(),
 });
 
-export const getDefaultAddTargetList = query({
+export const getSavedGestureIds = query({
   args: { userId: v.id("users") },
-  returns: v.union(listValidator, v.null()),
-  handler: async (ctx, args) => await getLatestList(ctx, args.userId),
-});
-
-export const getListGestureIds = query({
-  args: { userId: v.id("users"), listId: v.id("gesture_lists") },
   returns: v.array(v.id("gestures")),
   handler: async (ctx, args) => {
-    await requireOwnedList(ctx, args.userId, args.listId);
-    const items = await getListItems(ctx, args.listId);
-    return items.map((item) => item.gestureId);
+    const lists = await ctx.db
+      .query("gesture_lists")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.userId))
+      .collect();
+    const itemGroups = await Promise.all(
+      lists.map((list) => getListItems(ctx, list._id))
+    );
+    return [
+      ...new Set(
+        itemGroups.flatMap((items) => items.map((item) => item.gestureId))
+      ),
+    ];
+  },
+});
+
+export const getGestureListIds = query({
+  args: { userId: v.id("users"), gestureId: v.id("gestures") },
+  returns: v.array(v.id("gesture_lists")),
+  handler: async (ctx, args) => {
+    const items = await ctx.db
+      .query("gesture_list_items")
+      .withIndex("by_gesture", (q) => q.eq("gestureId", args.gestureId))
+      .collect();
+    const lists = await Promise.all(
+      items.map((item) => ctx.db.get(item.listId))
+    );
+    return lists
+      .filter((list) => list?.ownerId === args.userId)
+      .map((list) => list!._id);
   },
 });
 
@@ -387,8 +415,8 @@ export const createList = mutation({
 
     return await ctx.db.insert("gesture_lists", {
       ownerId: args.userId,
-      name: args.name.trim(),
-      description: args.description?.trim(),
+      name: normalizeListName(args.name),
+      description: normalizeListDescription(args.description),
       visibility: args.visibility,
       viewShareToken: isShared ? createShareToken() : undefined,
       editShareToken: isShared ? createShareToken() : undefined,
@@ -410,7 +438,7 @@ export const renameList = mutation({
   handler: async (ctx, args) => {
     await requireOwnedList(ctx, args.userId, args.listId);
     await ctx.db.patch(args.listId, {
-      name: args.name.trim(),
+      name: normalizeListName(args.name),
       updatedAt: Date.now(),
     });
     return null;
@@ -482,25 +510,6 @@ export const deleteList = mutation({
     }
     await ctx.db.delete(args.listId);
     return null;
-  },
-});
-
-export const addGestureToLatestList = mutation({
-  args: { userId: v.id("users"), gestureId: v.id("gestures") },
-  returns: v.id("gesture_lists"),
-  handler: async (ctx, args) => {
-    await ensureDefaultFavoritesList(ctx, args.userId);
-    const latestList = await getLatestList(ctx, args.userId);
-    if (!latestList) {
-      throw new Error("List not found");
-    }
-    await addGestureToListInternal(
-      ctx,
-      latestList._id,
-      args.gestureId,
-      args.userId
-    );
-    return latestList._id;
   },
 });
 
@@ -583,10 +592,10 @@ export const reorderListItems = mutation({
     const itemByGestureId = new Map(
       items.map((item) => [item.gestureId, item] as const)
     );
-
-    if (itemByGestureId.size !== args.gestureIds.length) {
-      throw new Error("Reorder payload must include every list item");
-    }
+    validateReorderPayload(
+      items.map((item) => item.gestureId),
+      args.gestureIds
+    );
 
     for (const [position, gestureId] of args.gestureIds.entries()) {
       const item = itemByGestureId.get(gestureId);
@@ -660,8 +669,26 @@ export async function isDefaultFavoriteGesture(
   userId: Id<"users">,
   gestureId: Id<"gestures">
 ) {
-  const gestureIds = await getDefaultFavoriteGestureIdsForUser(ctx, userId);
-  return gestureIds.some((id) => id === gestureId);
+  const defaultList = await getDefaultFavoritesList(ctx, userId);
+  if (!defaultList) {
+    return Boolean(
+      await ctx.db
+        .query("user_favorites")
+        .withIndex("by_user_gesture", (q) =>
+          q.eq("userId", userId).eq("gestureId", gestureId)
+        )
+        .unique()
+    );
+  }
+
+  return Boolean(
+    await ctx.db
+      .query("gesture_list_items")
+      .withIndex("by_list_gesture", (q) =>
+        q.eq("listId", defaultList._id).eq("gestureId", gestureId)
+      )
+      .unique()
+  );
 }
 
 export async function addDefaultFavoriteGesture(

@@ -19,9 +19,7 @@ COPY packages/types/package.json   ./packages/types/
 COPY packages/ui/package.json      ./packages/ui/
 COPY apps/web/package.json         ./apps/web/
 
-# canvas is an optional native dep of fabric/jest — it will fail to build on
-# Alpine without extra tooling, which is fine: the browser uses its own Canvas
-# API. --frozen-lockfile ensures reproducible installs.
+# Install workspace dependencies with a cached Bun package store.
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install \
     && test -d node_modules \

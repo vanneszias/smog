@@ -1,35 +1,45 @@
 import { getStoredConsent, isAnalyticsEnabled } from "@smog/hooks";
-import posthog from "posthog-js";
 
 const POSTHOG_API_KEY = import.meta.env.VITE_PUBLIC_POSTHOG_API_KEY || "";
 const POSTHOG_HOST =
   import.meta.env.VITE_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com";
 
 let consent: ReturnType<typeof getStoredConsent> = null;
+let posthogPromise: Promise<typeof import("posthog-js").default | null> | null =
+  null;
 
 function getAnalyticsEnabled(): boolean {
   return isAnalyticsEnabled(consent);
 }
 
-export const initializeAnalytics = () => {
-  consent = getStoredConsent();
-  const enabled = getAnalyticsEnabled();
+function reportAnalyticsError(error: unknown) {
+  console.error("[Analytics] Failed to load PostHog:", error);
+}
 
+function getPostHog() {
   if (!POSTHOG_API_KEY) {
-    console.log("[Analytics] PostHog skipped - no API key configured");
-    return;
+    return Promise.resolve(null);
   }
 
-  posthog.init(POSTHOG_API_KEY, {
-    api_host: POSTHOG_HOST,
-    capture_pageview: false,
-    capture_pageleave: true,
-    persistence: "localStorage",
-    disable_session_recording: true,
-    opt_out_capturing_by_default: !enabled,
+  posthogPromise ??= import("posthog-js").then(({ default: posthog }) => {
+    posthog.init(POSTHOG_API_KEY, {
+      api_host: POSTHOG_HOST,
+      capture_pageview: false,
+      capture_pageleave: true,
+      persistence: "localStorage",
+      disable_session_recording: true,
+    });
+    return posthog;
   });
 
-  console.log("[Analytics] PostHog initialized", { enabled });
+  return posthogPromise;
+}
+
+export const initializeAnalytics = () => {
+  consent = getStoredConsent();
+  if (getAnalyticsEnabled()) {
+    getPostHog().catch(reportAnalyticsError);
+  }
 };
 
 export const onConsentChange = (
@@ -39,18 +49,18 @@ export const onConsentChange = (
   const enabled = getAnalyticsEnabled();
 
   if (enabled) {
-    posthog.opt_in_capturing();
-  } else {
-    posthog.opt_out_capturing();
-    posthog.reset();
+    getPostHog()
+      .then((posthog) => posthog?.opt_in_capturing())
+      .catch(reportAnalyticsError);
+  } else if (posthogPromise) {
+    posthogPromise
+      .then((posthog) => {
+        posthog?.opt_out_capturing();
+        posthog?.reset();
+      })
+      .catch(reportAnalyticsError);
   }
-
-  console.log("[Analytics] Consent changed", { enabled });
 };
-
-export function isAnalyticsActive(): boolean {
-  return getAnalyticsEnabled();
-}
 
 type AnalyticsProperties = Record<
   string,
@@ -78,40 +88,34 @@ const baseProperties: AnalyticsProperties = {
   platform: "web",
 };
 
-export function trackEvent(event: string, properties?: AnalyticsProperties) {
+function trackEvent(event: string, properties?: AnalyticsProperties) {
   if (!getAnalyticsEnabled()) {
     return;
   }
-  posthog.capture(event, {
-    ...baseProperties,
-    ...filterProperties(properties),
-  });
-}
-
-export function identifyUser(
-  distinctId: string,
-  properties?: AnalyticsProperties
-) {
-  if (!getAnalyticsEnabled()) {
-    return;
-  }
-  posthog.identify(distinctId, filterProperties(properties));
-}
-
-export function getDistinctId(): string {
-  return posthog.get_distinct_id();
+  getPostHog()
+    .then((posthog) =>
+      posthog?.capture(event, {
+        ...baseProperties,
+        ...filterProperties(properties),
+      })
+    )
+    .catch(reportAnalyticsError);
 }
 
 export function trackPageView(path: string, properties?: AnalyticsProperties) {
   if (!getAnalyticsEnabled()) {
     return;
   }
-  posthog.capture("$pageview", {
-    ...baseProperties,
-    $current_url: window.location.href,
-    path,
-    ...properties,
-  });
+  getPostHog()
+    .then((posthog) =>
+      posthog?.capture("$pageview", {
+        ...baseProperties,
+        $current_url: window.location.href,
+        path,
+        ...properties,
+      })
+    )
+    .catch(reportAnalyticsError);
 }
 
 export function trackSearchPerformed(
@@ -129,13 +133,6 @@ export function trackSearchPerformed(
     results_count: resultsCount,
     has_results: resultsCount > 0,
     search_duration_ms: searchDuration,
-  });
-}
-
-export function trackSearchCleared(previousQuery?: string) {
-  trackEvent("Search Cleared", {
-    had_previous_query: !!previousQuery,
-    previous_query_length: previousQuery?.length || 0,
   });
 }
 
@@ -173,140 +170,26 @@ export function trackGestureViewed(
   });
 }
 
-export function trackGestureLiked(
-  gestureId: string,
-  gestureName: string,
-  categories: string[],
-  interactionType: "button_tap" | "undo"
-) {
-  trackEvent("Gesture Liked", {
-    gesture_id: gestureId,
-    gesture_name: gestureName,
-    gesture_categories: categories,
-    interaction_type: interactionType,
-  });
-}
-
-export function trackGestureUnliked(
-  gestureId: string,
-  gestureName: string,
-  categories: string[],
-  interactionType: "button_tap" | "undo"
-) {
-  trackEvent("Gesture Unliked", {
-    gesture_id: gestureId,
-    gesture_name: gestureName,
-    gesture_categories: categories,
-    interaction_type: interactionType,
-  });
-}
-
-export function trackVideoPlaybackStarted(
-  gestureId: string,
-  gestureName: string,
-  autoplay: boolean
-) {
-  trackEvent("Video Playback Started", {
-    gesture_id: gestureId,
-    gesture_name: gestureName,
-    autoplay_enabled: autoplay,
-  });
-}
-
-export function trackVideoPlaybackPaused(
-  gestureId: string,
-  gestureName: string,
-  watchTime: number
-) {
-  trackEvent("Video Playback Paused", {
-    gesture_id: gestureId,
-    gesture_name: gestureName,
-    watch_time_ms: watchTime,
-  });
-}
-
-export function trackVideoPlaybackCompleted(
-  gestureId: string,
-  gestureName: string,
-  watchTime: number,
-  loopCount: number
-) {
-  trackEvent("Video Playback Completed", {
-    gesture_id: gestureId,
-    gesture_name: gestureName,
-    watch_time_ms: watchTime,
-    loop_count: loopCount,
-  });
-}
-
-export function trackVideoAlmostCompleted(
-  gestureId: string,
-  gestureName: string,
-  watchTime: number
-) {
-  trackEvent("Video Almost Completed", {
-    gesture_id: gestureId,
-    gesture_name: gestureName,
-    watch_time_ms: watchTime,
-  });
-}
-
-export function trackFavoriteAdded(
+export function trackGestureSavedToList(
   gestureId: string,
   gestureName: string,
   categories: string[]
 ) {
-  trackEvent("Favorite Added", {
+  trackEvent("Gesture Saved To List", {
+    gesture_categories: categories,
     gesture_id: gestureId,
     gesture_name: gestureName,
-    gesture_categories: categories,
   });
 }
 
-export function trackFavoriteRemoved(
+export function trackGestureRemovedFromList(
   gestureId: string,
   gestureName: string,
   categories: string[]
 ) {
-  trackEvent("Favorite Removed", {
-    gesture_id: gestureId,
-    gesture_name: gestureName,
+  trackEvent("Gesture Removed From List", {
     gesture_categories: categories,
-  });
-}
-
-export function trackFavoriteUndoAction(
-  gestureId: string,
-  gestureName: string,
-  action: "add" | "remove"
-) {
-  trackEvent("Favorite Undo Action", {
     gesture_id: gestureId,
     gesture_name: gestureName,
-    action,
-  });
-}
-
-export function trackCategoryPressed(
-  categoryName: string,
-  totalGestures: number,
-  source: string
-) {
-  trackEvent("Category Pressed", {
-    category_name: categoryName,
-    total_gestures: totalGestures,
-    source,
-  });
-}
-
-export function trackUserEngagement(
-  sessionDuration: number,
-  gestureViews: number,
-  searchCount: number
-) {
-  trackEvent("User Engagement", {
-    session_duration_ms: sessionDuration,
-    gesture_views: gestureViews,
-    search_count: searchCount,
   });
 }

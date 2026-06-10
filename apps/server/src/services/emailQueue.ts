@@ -38,20 +38,20 @@ connection.on("error", (err) => {
 // Job payload types
 // =============================================================================
 
-export interface WelcomeEmailJob {
+interface WelcomeEmailJob {
   type: "welcome";
   to: string;
   name?: string;
 }
 
-export interface SponsorshipSubmittedEmailJob {
+interface SponsorshipSubmittedEmailJob {
   type: "sponsorship_submitted";
   to: string;
   sponsorName: string;
   gestureName: string;
 }
 
-export interface PaymentConfirmedEmailJob {
+interface PaymentConfirmedEmailJob {
   type: "payment_confirmed";
   to: string;
   sponsorName: string;
@@ -59,7 +59,7 @@ export interface PaymentConfirmedEmailJob {
   paymentAmount: number;
 }
 
-export interface SponsorshipLiveEmailJob {
+interface SponsorshipLiveEmailJob {
   type: "sponsorship_live";
   to: string;
   sponsorName: string;
@@ -68,7 +68,7 @@ export interface SponsorshipLiveEmailJob {
   endDate: number;
 }
 
-export interface RenewalReminderEmailJob {
+interface RenewalReminderEmailJob {
   type: "renewal_reminder";
   to: string;
   sponsorName: string;
@@ -76,7 +76,7 @@ export interface RenewalReminderEmailJob {
   endDate: number;
 }
 
-export interface AdminNewSponsorshipEmailJob {
+interface AdminNewSponsorshipEmailJob {
   type: "admin_new_sponsorship";
   to: string;
   sponsorName: string;

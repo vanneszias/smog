@@ -1,5 +1,5 @@
-import { GestureCard } from "@components/common";
 import type { GestureCardRef } from "@components/GestureCard";
+import GestureCard from "@components/GestureCard";
 import { FlashList } from "@shopify/flash-list";
 import type React from "react";
 import { useCallback, useMemo, useRef } from "react";

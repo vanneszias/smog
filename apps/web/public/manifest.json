@@ -75,10 +75,10 @@
       ]
     },
     {
-      "name": "View Favorites",
-      "short_name": "Favorites",
-      "description": "View your saved favorite gestures",
-      "url": "/favorites",
+      "name": "View Lists",
+      "short_name": "Lists",
+      "description": "View your saved gesture lists",
+      "url": "/lists",
       "icons": [
         {
           "src": "/icon-512x512.png",

@@ -125,5 +125,3 @@ export function AdminNewSponsorshipEmail({
     </EmailLayout>
   );
 }
-
-export default AdminNewSponsorshipEmail;

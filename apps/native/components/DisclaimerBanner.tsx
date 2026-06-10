@@ -30,7 +30,7 @@ interface DisclaimerBannerProps {
   onDismiss: () => void;
 }
 
-export const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
+const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
   visible,
   onDismiss,
 }) => {

@@ -40,9 +40,7 @@ interface FavoritesProviderProps {
   children: React.ReactNode;
 }
 
-export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
-  children,
-}) => {
+const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }) => {
   const userId = useConvexUserId();
   const convexFavoriteIds = useQuery(
     api.favorites.getUserFavorites,
@@ -79,6 +77,7 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
     [convexFavoriteIds]
   );
   const favorites = optimisticFavorites ?? serverFavorites;
+  const favoriteIdSet = useMemo(() => new Set(favorites), [favorites]);
 
   const favoriteGestures = useMemo(() => {
     const gestureMap = new Map(
@@ -90,8 +89,8 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
   }, [convexFavoriteGestures, favorites]);
 
   const isFavorite = useCallback(
-    (gestureId: string) => favorites.includes(gestureId),
-    [favorites]
+    (gestureId: string) => favoriteIdSet.has(gestureId),
+    [favoriteIdSet]
   );
 
   const toggleFavorite = useCallback(
