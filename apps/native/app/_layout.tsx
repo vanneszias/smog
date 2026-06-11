@@ -257,8 +257,8 @@ export default function RootLayout() {
 
   return (
     <AppProviders>
-      <NativeAnalytics showConsentPrompt />
       <BottomSheetModalProvider>
+        <NativeAnalytics showConsentPrompt />
         <RootLayoutNav />
       </BottomSheetModalProvider>
     </AppProviders>
