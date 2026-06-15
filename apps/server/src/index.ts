@@ -332,7 +332,7 @@ app.post("/analytics/track", async (c) => {
   try {
     const body = await c.req.json();
 
-    if (!isRecord(body) || !isString(body.type) || !isRecord(body.payload)) {
+    if (!(isRecord(body) && isString(body.type) && isRecord(body.payload))) {
       return c.json({ error: "Invalid analytics payload" }, 400);
     }
 
