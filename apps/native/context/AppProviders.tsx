@@ -7,10 +7,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import logger from "@/utils/logger";
 import { AuthProvider, useAuthForConvex } from "./AuthProvider";
 import { ConvexUserSync } from "./ConvexUserSync";
-import FavoritesProvider from "./FavoritesContext";
+import { ListsProvider } from "./ListsContext";
 import { LogProvider } from "./logs/LogProvider";
 import RecentSearchesProvider from "./RecentSearchesContext";
 import ThemeProvider from "./ThemeContext";
+import { ToastProvider } from "./ToastContext";
 import { TranslationProvider } from "./TranslationContext";
 
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
@@ -74,15 +75,17 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
           <ConvexProviderWithAuth client={convex} useAuth={useAuthForConvex}>
             <ConvexUserSync>
               <TranslationProvider>
-                <FavoritesProvider>
-                  <RecentSearchesProvider>
-                    <GestureHandlerRootView style={styles.root}>
-                      <SafeAreaProvider>
-                        <ActionSheetProvider>{children}</ActionSheetProvider>
-                      </SafeAreaProvider>
-                    </GestureHandlerRootView>
-                  </RecentSearchesProvider>
-                </FavoritesProvider>
+                <SafeAreaProvider>
+                  <ToastProvider>
+                    <ListsProvider>
+                      <RecentSearchesProvider>
+                        <GestureHandlerRootView style={styles.root}>
+                          <ActionSheetProvider>{children}</ActionSheetProvider>
+                        </GestureHandlerRootView>
+                      </RecentSearchesProvider>
+                    </ListsProvider>
+                  </ToastProvider>
+                </SafeAreaProvider>
               </TranslationProvider>
             </ConvexUserSync>
           </ConvexProviderWithAuth>

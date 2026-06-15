@@ -1,140 +1,32 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BORDER_RADIUS, ICON_SIZE, SHADOWS, SPACING } from "@smog/styles";
-import { ImpactFeedbackStyle, impactAsync } from "expo-haptics";
-import { memo, useEffect, useImperativeHandle, useRef } from "react";
+import { memo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "@/context/TranslationContext";
 import type { Gesture } from "@/types";
 import { typography } from "@/utils/typography";
 
 interface GestureCardProps {
   gesture: Gesture;
   onPress: (gesture: Gesture) => void;
-  isFavorite?: boolean;
-  onToggleFavorite?: (gestureId: string) => void;
-}
-
-export interface GestureCardRef {
-  close: () => void;
+  isSaved?: boolean;
+  onOpenListPicker?: (gesture: Gesture) => void;
 }
 
 const GestureCard = ({
   gesture,
   onPress,
-  isFavorite = false,
-  onToggleFavorite,
-  ref,
-}: GestureCardProps & { ref?: React.Ref<GestureCardRef> }) => {
+  isSaved = false,
+  onOpenListPicker,
+}: GestureCardProps) => {
   const { theme } = useTheme();
-
-  // Animation values for like feedback
-  const scale = useSharedValue(1);
-  const heartScale = useSharedValue(0);
-  const heartOpacity = useSharedValue(0);
-
-  // Track taps for double tap detection
-  const lastTapRef = useRef<number>(0);
-  const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useImperativeHandle(ref, () => ({
-    close: () => {
-      // Reset animations
-      scale.value = 1;
-      heartScale.value = 0;
-      heartOpacity.value = 0;
-      // Clear any pending timeouts
-      if (tapTimeoutRef.current) {
-        clearTimeout(tapTimeoutRef.current);
-        tapTimeoutRef.current = null;
-      }
-    },
-  }));
-
-  // Cleanup timeout on unmount
-  useEffect(
-    () => () => {
-      if (tapTimeoutRef.current) {
-        clearTimeout(tapTimeoutRef.current);
-      }
-    },
-    []
-  );
-
-  const handleLike = () => {
-    if (onToggleFavorite) {
-      impactAsync(ImpactFeedbackStyle.Medium);
-
-      onToggleFavorite(gesture.id);
-    }
-  };
-
-  const handleLikeButtonPress = () => {
-    handleLike();
-    showLikeAnimation();
-  };
-
-  const showLikeAnimation = () => {
-    // Animate heart appearance with a more pronounced effect
-    heartScale.value = withSequence(
-      withSpring(1.3, { damping: 8, stiffness: 150 }),
-      withSpring(1, { damping: 12, stiffness: 250 })
-    );
-    heartOpacity.value = withSequence(
-      withTiming(1, { duration: 150 }),
-      withTiming(0, { duration: 900 })
-    );
-
-    // Animate card scale for feedback - use timing for more predictable behavior
-    scale.value = withSequence(
-      withTiming(0.95, { duration: 100 }),
-      withTiming(1, { duration: 200 })
-    );
-  };
-
-  const handleCardPress = () => {
-    const now = Date.now();
-    const timeDiff = now - lastTapRef.current;
-
-    if (timeDiff < 300) {
-      // Double tap detected
-      if (tapTimeoutRef.current) {
-        clearTimeout(tapTimeoutRef.current);
-        tapTimeoutRef.current = null;
-      }
-      if (onToggleFavorite) {
-        handleLike();
-        showLikeAnimation();
-      }
-    } else {
-      // Single tap - wait to see if there's a second tap
-      lastTapRef.current = now;
-      tapTimeoutRef.current = setTimeout(() => {
-        onPress(gesture);
-        tapTimeoutRef.current = null;
-      }, 300);
-    }
-  };
-
-  const animatedCardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const animatedHeartStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: heartScale.value }],
-    opacity: heartOpacity.value,
-  }));
+  const { t } = useTranslation();
 
   return (
     <View style={styles.wrapper}>
-      <TouchableOpacity activeOpacity={0.8} onPress={handleCardPress}>
-        <Animated.View
+      <TouchableOpacity activeOpacity={0.8} onPress={() => onPress(gesture)}>
+        <View
           style={[
             styles.container,
             {
@@ -142,7 +34,6 @@ const GestureCard = ({
               borderColor: theme.border,
             },
             SHADOWS.medium,
-            animatedCardStyle,
           ]}
         >
           <View style={styles.cardContent}>
@@ -171,40 +62,24 @@ const GestureCard = ({
             </View>
           </View>
 
-          {onToggleFavorite ? (
+          {onOpenListPicker ? (
             <TouchableOpacity
+              accessibilityLabel={
+                isSaved ? t("lists.manageGestureLists") : t("lists.addToList")
+              }
               activeOpacity={0.8}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              onPress={handleLikeButtonPress}
-              style={styles.favoriteButton}
+              onPress={() => onOpenListPicker(gesture)}
+              style={styles.listButton}
             >
               <Ionicons
-                color={isFavorite ? theme.liked : theme.primary}
-                name={isFavorite ? "checkmark" : "add"}
+                color={theme.primary}
+                name={isSaved ? "checkmark-circle" : "list-outline"}
                 size={ICON_SIZE.md}
               />
             </TouchableOpacity>
           ) : null}
-
-          {/* Like animation overlay */}
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.heartOverlay, animatedHeartStyle]}
-          >
-            <View
-              style={[
-                styles.heartContainer,
-                { backgroundColor: theme.background },
-              ]}
-            >
-              <Ionicons
-                color={isFavorite ? theme.liked : theme.primary}
-                name={isFavorite ? "checkmark" : "add"}
-                size={ICON_SIZE.xl}
-              />
-            </View>
-          </Animated.View>
-        </Animated.View>
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -234,23 +109,9 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: SPACING.xs,
   },
-  favoriteButton: {
+  listButton: {
     padding: SPACING.sm,
     marginLeft: SPACING.sm,
-  },
-  heartOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 10,
-  },
-  heartContainer: {
-    width: ICON_SIZE.xl + SPACING.lg,
-    height: ICON_SIZE.xl + SPACING.lg,
-    borderRadius: BORDER_RADIUS.round,
-    justifyContent: "center",
-    alignItems: "center",
-    ...SHADOWS.large,
   },
 });
 

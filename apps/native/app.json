@@ -18,11 +18,13 @@
       "supportsTablet": true,
       "bundleIdentifier": "be.zias.smog",
       "icon": "./assets/images/smog.icon",
-      "associatedDomains": ["applinks:app.smog.vlaanderen"],
+      "associatedDomains": [
+        "applinks:app.smog.vlaanderen"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "42",
+      "buildNumber": "47",
       "appleTeamId": "96XKP6MU2A"
     },
     "android": {
@@ -39,7 +41,10 @@
               "scheme": "smog"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         },
         {
           "action": "VIEW",
@@ -50,7 +55,10 @@
               "host": "app.smog.vlaanderen"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "package": "be.zias.smog",

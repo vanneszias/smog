@@ -19,8 +19,9 @@ import {
   RelatedGesturesSection,
 } from "@/components/gesture";
 import VideoPlayer from "@/components/VideoPlayer";
-import { useFavorites } from "@/context/FavoritesContext";
+import { useLists } from "@/context/ListsContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "@/context/TranslationContext";
 import { useGesture, useRelatedGestures } from "@/hooks/useGestureData";
 import { useScreenshotDetection } from "@/hooks/useScreenshotDetection";
 import { trackAnalyticsEvent } from "@/lib/openpanel";
@@ -29,7 +30,8 @@ const GestureScreen: React.FC = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme } = useTheme();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { t } = useTranslation();
+  const { isGestureSaved, openListPicker } = useLists();
   const gesture = useGesture(id);
   const relatedGestures = useRelatedGestures(id) ?? [];
   const [showDisclaimer, setShowDisclaimer] = useState(false);
@@ -81,7 +83,7 @@ const GestureScreen: React.FC = () => {
     );
   }
 
-  const favoriteStatus = isFavorite(gesture.id);
+  const isSaved = isGestureSaved(gesture.id);
 
   const handleCategoryPress = (category: string) => {
     if (gesture) {
@@ -93,12 +95,16 @@ const GestureScreen: React.FC = () => {
     }
   };
 
-  const handleToggleFavorite = () => {
+  const handleOpenListPicker = () => {
     if (!gesture) {
       return;
     }
 
-    toggleFavorite(gesture.id, gesture.name, "gesture_detail");
+    openListPicker({
+      gestureId: gesture.id,
+      gestureName: gesture.name,
+      source: "gesture_detail",
+    });
   };
 
   return (
@@ -131,18 +137,15 @@ const GestureScreen: React.FC = () => {
               }),
           headerRight: () => (
             <TouchableOpacity
-              onPress={handleToggleFavorite}
-              style={styles.favoriteButton}
+              accessibilityLabel={
+                isSaved ? t("lists.manageGestureLists") : t("lists.addToList")
+              }
+              onPress={handleOpenListPicker}
+              style={styles.listButton}
             >
               <Ionicons
-                color={
-                  favoriteStatus
-                    ? theme.liked
-                    : Platform.OS === "ios"
-                      ? theme.primary
-                      : theme.background
-                }
-                name={favoriteStatus ? "checkmark" : "add"}
+                color={Platform.OS === "ios" ? theme.primary : theme.background}
+                name={isSaved ? "checkmark-circle" : "list-outline"}
                 size={24}
               />
             </TouchableOpacity>
@@ -202,7 +205,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     overflow: "hidden",
   },
-  favoriteButton: {
+  listButton: {
     paddingHorizontal: SPACING.sm,
   },
 });

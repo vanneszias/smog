@@ -11,7 +11,7 @@ import type { AnalyticsEventMap, AnalyticsEventName } from "@smog/shared";
 import logger from "@/utils/logger";
 
 const OPENPANEL_API_URL =
-  process.env.EXPO_PUBLIC_OPENPANEL_API_URL || "https://analytics.zias.be";
+  process.env.EXPO_PUBLIC_OPENPANEL_API_URL || "https://analytics.zias.be/api";
 const OPENPANEL_CLIENT_ID = process.env.EXPO_PUBLIC_OPENPANEL_CLIENT_ID || "";
 const OPENPANEL_CLIENT_SECRET =
   process.env.EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET || "";

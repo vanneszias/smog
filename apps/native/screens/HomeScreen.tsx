@@ -16,7 +16,7 @@ import Logo from "@/components/Logo";
 import RecentSearches from "@/components/search/RecentSearches";
 import SearchBar from "@/components/search/SearchBar";
 import SearchResults from "@/components/search/SearchResults";
-import { useFavorites } from "@/context/FavoritesContext";
+import { useLists } from "@/context/ListsContext";
 import { useRecentSearches } from "@/context/RecentSearchesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
@@ -26,7 +26,7 @@ import type { Gesture } from "@/types";
 const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { theme } = useTheme();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isGestureSaved, openListPicker } = useLists();
   const { t } = useTranslation();
 
   // Search state
@@ -53,6 +53,17 @@ const HomeScreen: React.FC = () => {
       router.push(`/gestures/${gesture.id}`);
     },
     [router]
+  );
+
+  const handleOpenListPicker = useCallback(
+    (gesture: Gesture) => {
+      openListPicker({
+        gestureId: gesture.id,
+        gestureName: gesture.name,
+        source: "search_results",
+      });
+    },
+    [openListPicker]
   );
 
   // Search handlers
@@ -120,13 +131,13 @@ const HomeScreen: React.FC = () => {
     <SearchResults
       hasMore={searchHook.hasMore}
       initialQuery={searchTerm}
-      isFavorite={isFavorite}
       isLoading={searchHook.isLoading}
       isRefreshing={searchHook.isSearching}
+      isSaved={isGestureSaved}
       onGesturePress={handleGesturePress}
       onLoadMore={searchHook.loadMore}
+      onOpenListPicker={handleOpenListPicker}
       onRefresh={searchHook.refresh}
-      onToggleFavorite={toggleFavorite}
       results={searchHook.results}
       style={styles.searchResults}
     />

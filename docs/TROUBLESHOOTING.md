@@ -64,8 +64,10 @@ IMAP affects sent-mail archiving, not delivery.
 
 ### No events
 
-Confirm the platform client ID is present, the user granted consent, and the API
-URL is `https://analytics.zias.be`. Tracking intentionally does nothing before
+Confirm the user granted consent. For web, check the server has
+`OPENPANEL_CLIENT_ID`, `OPENPANEL_CLIENT_SECRET`, and
+`OPENPANEL_API_URL=https://analytics.zias.be/api`. For native, check the
+`EXPO_PUBLIC_OPENPANEL_*` values. Tracking intentionally does nothing before
 consent.
 
 ### Native SDK initialization warning
@@ -78,7 +80,8 @@ warning as fatal.
 
 1. Clear site/app storage.
 2. Confirm no OpenPanel requests before a choice.
-3. Grant consent and navigate.
+3. Grant consent and navigate. Web should call `/analytics/track`; native should
+   call OpenPanel directly.
 4. Withdraw consent from privacy/settings.
 5. Confirm navigation no longer produces events.
 

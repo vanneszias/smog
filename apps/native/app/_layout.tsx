@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Image, Platform, StyleSheet, Text, View } from "react-native";
 import { AnalyticsConsentPrompt } from "@/components/AnalyticsConsentPrompt";
+import { ListPickerBottomSheet } from "@/components/lists/ListPickerBottomSheet";
 import AppProviders from "@/context/AppProviders";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
@@ -260,6 +261,7 @@ export default function RootLayout() {
       <BottomSheetModalProvider>
         <NativeAnalytics showConsentPrompt />
         <RootLayoutNav />
+        <ListPickerBottomSheet />
       </BottomSheetModalProvider>
     </AppProviders>
   );

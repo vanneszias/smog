@@ -84,8 +84,8 @@ the result to Mux.
 ## Security Boundaries
 
 - WorkOS and Mollie secrets exist only on the server.
-- The web receives only public `VITE_*` configuration and never an OpenPanel
-  client secret.
+- The web sends analytics through the server relay and never receives an
+  OpenPanel client secret.
 - Native OpenPanel uses a separate least-privileged client credential.
 - Internal email and Remotion routes require service bearer tokens.
 - Convex validates WorkOS JWTs for authenticated functions.

@@ -88,6 +88,90 @@ const internalApiKey = getServiceSecret(
   "dev-internal-secret"
 );
 const remotionApiKey = getServiceSecret("REMOTION_API_KEY", "dev-secret-key");
+const openPanelApiUrl =
+  process.env.OPENPANEL_API_URL ||
+  process.env.VITE_OPENPANEL_API_URL ||
+  process.env.EXPO_PUBLIC_OPENPANEL_API_URL ||
+  "https://analytics.zias.be/api";
+const openPanelClientId =
+  process.env.OPENPANEL_CLIENT_ID ||
+  process.env.EXPO_PUBLIC_OPENPANEL_CLIENT_ID ||
+  process.env.VITE_OPENPANEL_CLIENT_ID ||
+  "";
+const openPanelClientSecret =
+  process.env.OPENPANEL_CLIENT_SECRET ||
+  process.env.EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET ||
+  "";
+
+const ANALYTICS_TRACK_EVENTS = new Set([
+  "gesture_collection_changed",
+  "gesture_viewed",
+  "screen_view",
+  "search_performed",
+  "video_playback_completed",
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= 512;
+}
+
+function getClientIp(headers: Headers): string | null {
+  const forwardedFor = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return (
+    headers.get("cf-connecting-ip") ||
+    headers.get("true-client-ip") ||
+    forwardedFor ||
+    headers.get("x-real-ip") ||
+    null
+  );
+}
+
+async function forwardToOpenPanel(
+  body: Record<string, unknown>,
+  requestHeaders: Headers
+): Promise<void> {
+  if (!(openPanelClientId && openPanelClientSecret)) {
+    console.warn("[openpanel] Relay credentials are not configured");
+    return;
+  }
+
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    "openpanel-client-id": openPanelClientId,
+    "openpanel-client-secret": openPanelClientSecret,
+    "openpanel-sdk-name": "smog-server-relay",
+    "openpanel-sdk-version": "1.0.0",
+  });
+  const clientIp = getClientIp(requestHeaders);
+  const userAgent = requestHeaders.get("user-agent");
+  if (clientIp) {
+    headers.set("x-client-ip", clientIp);
+  }
+  if (userAgent) {
+    headers.set("user-agent", userAgent);
+  }
+
+  try {
+    const response = await fetch(`${openPanelApiUrl}/track`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    if (!(response.status === 200 || response.status === 202)) {
+      console.error(
+        `[openpanel] Relay failed with status ${response.status}:`,
+        await response.text()
+      );
+    }
+  } catch (error) {
+    console.error("[openpanel] Relay request failed:", error);
+  }
+}
 
 app.use(logger());
 
@@ -238,6 +322,48 @@ app.post("/auth/token/refresh", async (c) => {
 app.post("/auth/token/clear", async (c) => {
   deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: "/" });
   return c.json({ success: true });
+});
+
+// ==============================================
+// Analytics Relay
+// ==============================================
+
+app.post("/analytics/track", async (c) => {
+  try {
+    const body = await c.req.json();
+
+    if (!isRecord(body) || !isString(body.type) || !isRecord(body.payload)) {
+      return c.json({ error: "Invalid analytics payload" }, 400);
+    }
+
+    if (body.type === "track") {
+      const { name } = body.payload;
+      if (!(isString(name) && ANALYTICS_TRACK_EVENTS.has(name))) {
+        return c.json({ error: "Unknown analytics event" }, 400);
+      }
+      await forwardToOpenPanel(
+        { type: body.type, payload: body.payload },
+        c.req.raw.headers
+      );
+      return c.json({ success: true }, 202);
+    }
+
+    if (body.type === "identify") {
+      if (!isString(body.payload.profileId)) {
+        return c.json({ error: "Invalid analytics profile" }, 400);
+      }
+      await forwardToOpenPanel(
+        { type: body.type, payload: body.payload },
+        c.req.raw.headers
+      );
+      return c.json({ success: true }, 202);
+    }
+
+    return c.json({ error: "Unsupported analytics payload" }, 400);
+  } catch (error) {
+    console.error("[openpanel] Failed to handle analytics payload:", error);
+    return c.json({ success: true }, 202);
+  }
 });
 
 // ==============================================

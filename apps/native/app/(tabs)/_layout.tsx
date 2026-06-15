@@ -48,7 +48,7 @@ export default function TabLayout() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="favorites">
+      <NativeTabs.Trigger name="lists">
         <NativeTabs.Trigger.Label>{t("tabs.lists")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: "list.bullet", selected: "list.bullet" }}

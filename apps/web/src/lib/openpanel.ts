@@ -1,15 +1,12 @@
-import { OpenPanel } from "@openpanel/web";
 import type { WorkOSUser } from "@smog/auth";
 import type { AnalyticsEventMap, AnalyticsEventName } from "@smog/shared";
 
-const OPENPANEL_API_URL =
-  import.meta.env.VITE_OPENPANEL_API_URL || "https://analytics.zias.be";
-const OPENPANEL_CLIENT_ID = import.meta.env.VITE_OPENPANEL_CLIENT_ID || "";
 const ANALYTICS_CONSENT_KEY = "smog_analytics_consent";
+const ANALYTICS_RELAY_URL = `${import.meta.env.VITE_SERVER_URL}/analytics/track`;
 
 const consentListeners = new Set<() => void>();
 let inMemoryConsent: boolean | null | undefined;
-let op: OpenPanel | null = null;
+let currentProfileId: string | null = null;
 
 export function getAnalyticsConsent(): boolean | null {
   if (inMemoryConsent !== undefined) {
@@ -33,22 +30,23 @@ export function subscribeAnalyticsConsent(listener: () => void): () => void {
   return () => consentListeners.delete(listener);
 }
 
-function getOpenPanel(): OpenPanel | null {
-  if (getAnalyticsConsent() !== true || !OPENPANEL_CLIENT_ID) {
-    return null;
+function sendAnalyticsPayload(payload: {
+  payload: Record<string, unknown>;
+  type: "identify" | "track";
+}): void {
+  if (getAnalyticsConsent() !== true) {
+    return;
   }
 
-  op ??= new OpenPanel({
-    apiUrl: OPENPANEL_API_URL,
-    clientId: OPENPANEL_CLIENT_ID,
-    filter: () => getAnalyticsConsent() === true,
-    sessionReplay: { enabled: false },
-    trackAttributes: false,
-    trackOutgoingLinks: false,
-    trackScreenViews: false,
+  fetch(ANALYTICS_RELAY_URL, {
+    body: JSON.stringify(payload),
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    keepalive: payload.type === "track",
+    method: "POST",
+  }).catch((error) => {
+    console.warn("[openpanel] Failed to send analytics payload:", error);
   });
-
-  return op;
 }
 
 export function setAnalyticsConsent(enabled: boolean): void {
@@ -58,10 +56,8 @@ export function setAnalyticsConsent(enabled: boolean): void {
   } catch {
     // Consent remains active for this session when storage is unavailable.
   }
-  if (enabled) {
-    getOpenPanel();
-  } else {
-    op?.clear();
+  if (!enabled) {
+    currentProfileId = null;
   }
   for (const listener of consentListeners) {
     listener();
@@ -69,23 +65,35 @@ export function setAnalyticsConsent(enabled: boolean): void {
 }
 
 export function identifyAnalyticsUser(user: WorkOSUser): void {
-  getOpenPanel()?.identify({
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    profileId: user.id,
-    properties: { auth_mode: "authenticated", platform: "web" },
+  currentProfileId = user.id;
+  sendAnalyticsPayload({
+    type: "identify",
+    payload: {
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profileId: user.id,
+      properties: { auth_mode: "authenticated", platform: "web" },
+    },
   });
 }
 
 export function clearAnalyticsIdentity(): void {
-  op?.clear();
+  currentProfileId = null;
 }
 
 export function trackScreenView(path: string): void {
-  getOpenPanel()?.screenView(path, {
-    platform: "web",
-    url: window.location.href,
+  sendAnalyticsPayload({
+    type: "track",
+    payload: {
+      name: "screen_view",
+      properties: {
+        __path: path,
+        platform: "web",
+        url: window.location.href,
+      },
+      ...(currentProfileId ? { profileId: currentProfileId } : {}),
+    },
   });
 }
 
@@ -93,8 +101,15 @@ export function trackAnalyticsEvent<EventName extends AnalyticsEventName>(
   eventName: EventName,
   properties: AnalyticsEventMap[EventName]
 ): void {
-  getOpenPanel()?.track(eventName, {
-    ...properties,
-    platform: "web",
+  sendAnalyticsPayload({
+    type: "track",
+    payload: {
+      name: eventName,
+      properties: {
+        ...properties,
+        platform: "web",
+      },
+      ...(currentProfileId ? { profileId: currentProfileId } : {}),
+    },
   });
 }

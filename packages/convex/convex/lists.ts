@@ -368,7 +368,11 @@ export const getListGesturesForNative = query({
   args: { userId: v.id("users"), listId: v.id("gesture_lists") },
   returns: v.array(nativeGestureValidator),
   handler: async (ctx, args) => {
-    await requireOwnedList(ctx, args.userId, args.listId);
+    const list = await ctx.db.get(args.listId);
+    if (!list || list.ownerId !== args.userId) {
+      return [];
+    }
+
     const gestures = await getListGestureDocs(ctx, args.listId);
     return await Promise.all(
       gestures.map((gesture) => toNativeGesture(ctx, gesture))

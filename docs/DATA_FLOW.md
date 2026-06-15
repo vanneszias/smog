@@ -62,7 +62,8 @@ term; a reminder is queued 30 days before expiry.
 
 ## Analytics
 
-Web and native initialize OpenPanel only after stored consent is `true`.
-Navigation and the typed events in `packages/shared/src/analytics.ts` are sent
-to `https://analytics.zias.be`. See
+Web sends analytics to the server relay only after stored consent is `true`;
+native initializes OpenPanel directly after consent. Navigation and the typed
+events in `packages/shared/src/analytics.ts` are forwarded to the OpenPanel API
+at `https://analytics.zias.be/api`. See
 [Privacy and Analytics](./PRIVACY_AND_ANALYTICS.md).

@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@mux/mux-player-react": "^3.12.0",
-    "@openpanel/web": "^1.4.1",
     "@orpc/client": "catalog:",
     "@orpc/tanstack-query": "^1.14.0",
     "@radix-ui/react-dialog": "^1.1.15",

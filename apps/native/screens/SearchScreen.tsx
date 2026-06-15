@@ -8,7 +8,7 @@ import CategoryFilters from "@/components/search/CategoryFilters";
 import RecentSearches from "@/components/search/RecentSearches";
 import SearchBar from "@/components/search/SearchBar";
 import SearchResults from "@/components/search/SearchResults";
-import { useFavorites } from "@/context/FavoritesContext";
+import { useLists } from "@/context/ListsContext";
 import { useRecentSearches } from "@/context/RecentSearchesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
@@ -24,7 +24,7 @@ const SearchScreen = () => {
       category?: string;
     }>();
   const { theme } = useTheme();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isGestureSaved, openListPicker } = useLists();
   const { t } = useTranslation();
 
   const [searchTerm, setSearchTerm] = useState(initialQuery || "");
@@ -58,21 +58,13 @@ const SearchScreen = () => {
 
   const { addRecentSearch } = useRecentSearches();
 
-  const {
-    results,
-    isLoading,
-    isSearching,
-    search,
-    clearSearch,
-    refresh,
-    hasMore,
-    loadMore,
-  } = useOptimizedSearch({
-    debounceMs: 300,
-    minSearchLength: 1,
-    displayPageSize: 20,
-    enableCache: true,
-  });
+  const { results, isLoading, search, clearSearch, hasMore, loadMore } =
+    useOptimizedSearch({
+      debounceMs: 300,
+      minSearchLength: 0,
+      displayPageSize: 20,
+      enableCache: true,
+    });
 
   // React to category params arriving from navigation (e.g. tapping a category
   // tag in GestureScreen). The search tab is kept mounted by NativeTabs, so
@@ -172,18 +164,16 @@ const SearchScreen = () => {
     },
     [router]
   );
-  const handleToggleFavorite = useCallback(
-    (gestureId: string) => {
-      toggleFavorite(gestureId, undefined, "search_results");
+  const handleOpenListPicker = useCallback(
+    (gesture: { id: string; name: string }) => {
+      openListPicker({
+        gestureId: gesture.id,
+        gestureName: gesture.name,
+        source: "search_results",
+      });
     },
-    [toggleFavorite]
+    [openListPicker]
   );
-
-  const handleRefresh = useCallback(() => {
-    if (searchTerm.length >= 2) {
-      refresh();
-    }
-  }, [refresh, searchTerm]);
 
   const isIOS = Platform.OS === "ios";
 
@@ -198,10 +188,7 @@ const SearchScreen = () => {
           title: t("tabs.search"),
           ...(isIOS
             ? {
-                headerLargeTitle: true,
-                headerLargeTitleStyle: {
-                  color: theme.text,
-                },
+                headerLargeTitle: false,
                 headerStyle: {
                   backgroundColor: theme.background,
                 },
@@ -284,9 +271,8 @@ const SearchScreen = () => {
           <SearchResults
             hasMore={hasMore}
             initialQuery={searchTerm}
-            isFavorite={isFavorite}
             isLoading={isLoading}
-            isRefreshing={isSearching}
+            isSaved={isGestureSaved}
             ListHeaderComponent={
               <CategoryFilters
                 onClearCategories={handleClearCategories}
@@ -296,8 +282,7 @@ const SearchScreen = () => {
             }
             onGesturePress={handleGesturePress}
             onLoadMore={loadMore}
-            onRefresh={handleRefresh}
-            onToggleFavorite={handleToggleFavorite}
+            onOpenListPicker={handleOpenListPicker}
             results={results}
             style={styles.searchResults}
           />

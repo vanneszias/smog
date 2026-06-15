@@ -43,20 +43,23 @@ CORS_ORIGIN=http://localhost:3001
 For sponsorship development, also configure Mux, Mollie, Remotion, SMTP, and
 Redis values from `.env.example`.
 
-OpenPanel is optional in development. Analytics remains disabled when client
-credentials are absent:
+OpenPanel is optional in development. Web analytics is relayed through the
+server so the client secret is never exposed to the browser. Analytics remains
+disabled when client credentials are absent:
 
 ```env
-VITE_OPENPANEL_API_URL=https://analytics.zias.be
-VITE_OPENPANEL_CLIENT_ID=
-EXPO_PUBLIC_OPENPANEL_API_URL=https://analytics.zias.be
+OPENPANEL_API_URL=https://analytics.zias.be/api
+OPENPANEL_CLIENT_ID=
+OPENPANEL_CLIENT_SECRET=
+
+EXPO_PUBLIC_OPENPANEL_API_URL=https://analytics.zias.be/api
 EXPO_PUBLIC_OPENPANEL_CLIENT_ID=
 EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET=
 ```
 
-Never expose a client secret through a `VITE_*` variable. The native SDK
+Never expose a client secret through a `VITE_*` variable. The native SDK still
 requires a native client secret in the compiled app; use a separate,
-least-privileged OpenPanel client.
+least-privileged OpenPanel client for native.
 
 ## Start Services
 

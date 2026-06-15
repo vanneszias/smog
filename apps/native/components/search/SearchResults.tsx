@@ -1,8 +1,7 @@
-import type { GestureCardRef } from "@components/GestureCard";
 import GestureCard from "@components/GestureCard";
 import { FlashList } from "@shopify/flash-list";
 import type React from "react";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -21,8 +20,8 @@ interface SearchResultsProps {
   results: Gesture[];
   initialQuery?: string;
   onGesturePress: (gesture: Gesture) => void;
-  isFavorite: (gestureId: string) => boolean;
-  onToggleFavorite: (gestureId: string) => void;
+  isSaved: (gestureId: string) => boolean;
+  onOpenListPicker: (gesture: Gesture) => void;
   onRefresh?: () => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
@@ -39,8 +38,8 @@ const isHeaderItem = (item: ListItem): item is { __isHeader: true } => {
 const SearchResults: React.FC<SearchResultsProps> = ({
   results,
   onGesturePress,
-  isFavorite,
-  onToggleFavorite,
+  isSaved,
+  onOpenListPicker,
   onRefresh,
   onLoadMore,
   hasMore,
@@ -49,16 +48,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   onScroll,
   ListHeaderComponent,
 }) => {
-  const gestureRefs = useRef<(GestureCardRef | null)[]>([]);
-
-  const closeAllGestures = useCallback(() => {
-    for (const ref of gestureRefs.current) {
-      if (ref) {
-        ref.close();
-      }
-    }
-  }, []);
-
   // Prepend header item to data for sticky header support
   const data = useMemo(() => {
     // Deduplicate results by gesture ID
@@ -74,27 +63,22 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   }, [results, ListHeaderComponent]);
 
   const renderItem = useCallback(
-    ({ item, index }: { item: ListItem; index: number }) => {
+    ({ item }: { item: ListItem }) => {
       // Handle header item
       if (isHeaderItem(item)) {
         return ListHeaderComponent as React.ReactElement;
       }
 
-      // Handle gesture item - adjust index for gesture refs since header takes index 0
-      const gestureIndex = ListHeaderComponent ? index - 1 : index;
       return (
         <GestureCard
           gesture={item}
-          isFavorite={isFavorite(item.id)}
+          isSaved={isSaved(item.id)}
+          onOpenListPicker={onOpenListPicker}
           onPress={onGesturePress}
-          onToggleFavorite={onToggleFavorite}
-          ref={(ref: GestureCardRef | null) => {
-            gestureRefs.current[gestureIndex] = ref;
-          }}
         />
       );
     },
-    [isFavorite, onToggleFavorite, onGesturePress, ListHeaderComponent]
+    [isSaved, onOpenListPicker, onGesturePress, ListHeaderComponent]
   );
 
   const handleScrollEvent = useCallback(
@@ -112,8 +96,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     return `${item.id}-${index}`;
   }, []);
 
-  // Create extraData to force re-render when favorites change
-  const extraData = results.map((item) => isFavorite(item.id)).join(",");
+  // Force rows to refresh when their saved state changes.
+  const extraData = results.map((item) => isSaved(item.id)).join(",");
 
   return (
     <View style={[{ flex: 1 }, style]}>
@@ -130,7 +114,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         onEndReachedThreshold={0.5}
         onRefresh={onRefresh}
         onScroll={handleScrollEvent}
-        onScrollBeginDrag={closeAllGestures}
         refreshing={isRefreshing}
         renderItem={renderItem}
         scrollEventThrottle={16}

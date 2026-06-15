@@ -16,7 +16,7 @@ interface HeaderMenuButtonProps {
 }
 
 /**
- * Consistent menu button used in the header of Home, Favorites, and Search screens.
+ * Consistent menu button used in app screen headers.
  * Renders a 36×36 rounded icon button with `ellipsis-horizontal` on all platforms.
  */
 const HeaderMenuButton = ({

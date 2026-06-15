@@ -70,17 +70,19 @@ stable IDs, enums, booleans, and counts.
 ## Configuration
 
 ```env
-VITE_OPENPANEL_API_URL=https://analytics.zias.be
-VITE_OPENPANEL_CLIENT_ID=
+OPENPANEL_API_URL=https://analytics.zias.be/api
+OPENPANEL_CLIENT_ID=
+OPENPANEL_CLIENT_SECRET=
 
-EXPO_PUBLIC_OPENPANEL_API_URL=https://analytics.zias.be
+EXPO_PUBLIC_OPENPANEL_API_URL=https://analytics.zias.be/api
 EXPO_PUBLIC_OPENPANEL_CLIENT_ID=
 EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET=
 ```
 
-The web must never receive a client secret. Use separate web/native OpenPanel
-clients. Treat the native secret as extractable from the compiled application
-and scope it accordingly.
+The web sends consent-gated analytics to the SMOG server relay, which forwards
+events to OpenPanel with server-only credentials. Use separate web/native
+OpenPanel clients. Treat the native secret as extractable from the compiled
+application and scope it accordingly.
 
 ## Retention
 
@@ -107,7 +109,7 @@ Changing a retention setting requires updating the public policy and this file.
 
 ## Verification
 
-1. Confirm no OpenPanel request before consent.
+1. Confirm no analytics relay or OpenPanel request before consent.
 2. Grant consent and navigate on web/native.
 3. Verify screen and typed events in OpenPanel real-time view.
 4. Confirm search terms and session replay are absent.
