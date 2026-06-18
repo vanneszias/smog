@@ -1,0 +1,58 @@
+# Signing JWTs
+
+**Source:** https://mux.com/docs/_guides/developer/signing-jwts
+
+What is a JWT?
+JWTs are made up of a header, a payload, and a signature. The header contains metadata useful for decrypting the rest of the token. The payload contains configuration options. And the signature is generated from a signing key-pair. More information can be found at jwt.io.
+
+In order to sign the JWT you must create a signing key. Signing keys can be created from the Signing Keys section of the Mux Dashboard or via the Mux System API. This key-pair will be used by a cryptographic function to sign JWTs.
+
+Signing JWTs during Development
+
+While developing an app, you may want an easy way to generate JWTs locally because you're not yet ready to set up a full blown production system that signs JWTs for client-side applications. There are a few different options for generating these JWTs.
+
+Web Based JWT Signer
+
+Pasting credentials into a web browser is generally a bad practice. This web-based tool signs JWTs on the client which means your credentials never leave your machine. This is a tool designed by Mux, intended to be used with Mux credentials, and will always be hosted on a Mux domain. Never use a tool like this if it is hosted on a non-Mux domain.
+
+Mux provides a web based JWT Signer at https://jwt.mux.dev. Simply input the Signing key-pair and configure the claims you wish to test your app with. Then, copy the JWT into your application code and run it.
+
+<Image
+  src="/docs/images/jwt-signer.gif"
+  width={600}
+  height={440}
+  alt="Mux's JWT Signer"
+/>
+
+Node based CLI
+Mux provides a Node.js based CLI for performing common tasks including signing JWTs for playback IDs.
+
+After installing Node.js, the Mux CLI must be initialized with an Access Token. Follow this guide to create an Access Token. With your newly created Access Token, initialize the Mux CLI.
+
+
+```
+npx @mux/cli init
+```
+
+
+Now that the Mux CLI is initialized with your credentials, you can sign a JWT for Video Playback.
+
+
+```
+npx @mux/cli sign PLAYBACK-ID
+```
+
+
+For more details, refer to https://github.com/muxinc/cli.
+
+You should only sign a JWT on the server, where you can keep your signing key secret. You should not put your signing key in the client itself.
+
+Setup a REST endpoint behind your own authentication system that provides your client-side code with signed JWTs. That way, the sensitive secret from the signing key-pair stays on the server instead of being included in the client.
+
+Signing JWTs for Production
+
+Once you're ready for customers to start using your app, you need a way to sign JWTs securely at-scale. Use the code examples below depending on which Mux product you would like to sign JWTs for.
+
+Sign Video Playback JWTs
+
+Sign Data JWTs

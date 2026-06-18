@@ -1,0 +1,97 @@
+# Control recording resolution
+
+**Source:** https://mux.com/docs/_guides/developer/control-recording-resolution
+
+Android
+The way you control the resolution of a recorded video depends on the API used to record or encode it. All of Google's major camera and recording APIs have a method for setting either the exact or maximum resolution of the videos they create.
+
+CameraX
+With the CameraX library provide a QualitySelector that doesn't allow for resolutions beyond 720p (1280x720).
+
+```kotlin
+// Selects only Standard HD (720p) and Standard Definition (480p)
+val selector = QualitySelector.fromOrderedList(
+  listOf(Quality.HD, Quality.SD),
+  FallbackStrategy.lowerQualityOrHigherThan(Quality.SD)
+ )
+
+val recorder = Recorder.Builder()
+  .setQualitySelector(selector)
+  ...
+  .build()
+```
+
+
+MediaCodec
+If you are encoding video yourself via the MediaCodec API, you can set the encoder's output resolution by setting it in the input MediaFormat. For more information on how to configure and use MediaCodec, try the docs
+
+```kotlin
+val mediaCodec = MediaCodec.createByCodecName(codecName)
+val encodeFormat = MediaFormat().apply {
+  setInteger(MediaFormat.KEY_FRAME_RATE, myExampleFrameRate)
+  //... Other required params
+  // Output 720p
+  setInteger(MediaFormat.KEY_HEIGHT, 720)
+  setInteger(MediaFormat.KEY_WIDTH, 1280)
+}
+mediaCodec.configure(
+  encodeFormat,
+  myInputSurface,
+  null,
+  MediaCodec.CONFIGURE_FLAG_ENCODE
+)
+```
+
+
+Camera2
+Camera2 doesn't have an API to set the video resolution directly, but it infers it from the input surface. You have to call SurfaceHolder.setFixedSize() on your capture requests' targets. This can only be done on Lollipop/API 21 or higher. Please refer to the camera2 docs) for more information
+
+```kotlin
+val supportedCameraResolutions = streamConfigMap.getOutputSizes(ImageFormat.NV21)
+val size =
+  supportedCameraResolutions.toList().sortedBy { it.height }.findLast { it.height <= 720 && it.width <= 1280 }
+size?.let { cameraSurfaceHolder.setFixedSize(it.width, it.height) }
+cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
+  .apply { addTarget(cameraSurfaceHolder.surface) }
+  // ...
+  .build()
+cameraDevice.createCaptureSession(...)
+```
+
+
+MediaRecord
+MediaRecord's output size can be configured by calling MediaRecord.setVideoSize() before calling prepare().
+
+```kotlin
+mediaRecord.setVideoSize(1280, 720)
+mediaRecord.prepare()
+```
+
+
+iOS and iPadOS
+
+This guide covers setting maximum video resolution when recording video on iOS and iPadOS. The directions and code examples on this page assume you are using AVFoundation to setup and configure your camera. If you’ve never used AVFoundation before we recommend you brush up on the basics before proceeding further, see the official Apple documentation for a quick introduction and sample code.
+
+Video recording on iOS is managed using AVCaptureSession. The resolution for video output from AVCaptureSession can be configured using a settings preset and this example shows how to configure VCaptureSession to output video at a resolution of 720p (1280 x 720 pixels).
+
+
+```swift
+let session = fetchYourCaptureSession()
+session.beginConfiguration()
+
+let updatedSessionPreset = AVCaptureSession.hd1280x720
+if session.canSetSessionPreset(updatedSessionPreset) {
+    session.sessionPreset = updatedSessionPreset
+}
+
+session.commitConfiguration()
+```
+
+
+Don’t forget to call beginConfiguration() before applying any configuration changes. When all the configuration changes have been applied, make sure your implementation calls commitConfiguration().
+
+It is best for any work that is done in-between calls to beginConfiguration() and commitConfiguration() to be synchronous. If you need to perform any asynchronous tasks, such as fetching the preferred resolution from your backend, make sure those are complete before you begin to configure AVCaptureSession.
+
+OBS
+
+Streams initiated via OBS can be configured in Settings > Video > Output (Scaled) Resolution.

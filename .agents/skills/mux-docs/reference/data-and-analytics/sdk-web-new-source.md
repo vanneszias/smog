@@ -1,0 +1,12 @@
+# _guides/snippets/sdk-web-new-source
+
+**Source:** https://mux.com/docs/_guides/snippets/sdk-web-new-source
+
+If your application plays multiple videos back-to-back in the same video player, you need to signal when a new video starts to the Mux SDK. Examples of when this is needed are:
+
+ The player advances to the next video in a playlist
+ The user selects a different video to play
+
+In order to signal the Mux SDK that a new view is starting, you will need to emit a videochange event, along with metadata about the new video. See metadata in Make your data actionable for the full list of video details you can provide. You can include any metadata when changing the video but you should only need to update the values that start with video_.
+
+It's best to change the video info immediately after telling the player which new source to play.

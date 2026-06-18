@@ -1,0 +1,19 @@
+# _guides/snippets/cms-integration-guide-cards
+
+**Source:** https://mux.com/docs/_guides/snippets/cms-integration-guide-cards
+
+<GuideCard
+    title="Set up playback"
+    description="Set up your iOS application, Android application or web application to start playing your Mux assets"
+    links={[{ title: 'Read the guide', href: '/docs/guides/play-your-videos' }]}
+  />
+  <GuideCard
+    title="Preview your video"
+    description="Now that you have Mux assets, build rich experiences into your application by extracting images from your videos"
+    links={[{ title: 'Read the guide', href: '/docs/guides/get-images-from-a-video' }]}
+  />
+  <GuideCard
+    title="Integrate Mux Data"
+    description="Add the Mux Data SDK to your player and start collecting playback performance metrics."
+    links={[{ title: 'Read the guide', href: '/docs/guides/track-your-video-performance' }]}
+  />
