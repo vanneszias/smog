@@ -1,4 +1,23 @@
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { GestureCardData } from "@smog/ui";
+import { GripVertical } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { GestureRowAction } from "./types";
@@ -6,21 +25,27 @@ import type { GestureRowAction } from "./types";
 function GestureRow({
   actions,
   className,
+  dragHandle,
   gesture,
   onSelect,
 }: {
   actions: GestureRowAction[];
   className?: string;
+  dragHandle?: ReactNode;
   gesture: GestureCardData;
   onSelect: () => void;
 }) {
   return (
     <div
       className={cn(
-        "group grid min-h-[64px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-border border-b px-4 py-2.5 transition-colors hover:bg-muted/30 lg:px-5",
+        "group grid min-h-[64px] items-center gap-3 border-border border-b px-4 py-2.5 transition-colors hover:bg-muted/30 lg:px-5",
+        dragHandle
+          ? "grid-cols-[auto_minmax(0,1fr)_auto]"
+          : "grid-cols-[minmax(0,1fr)_auto]",
         className
       )}
     >
+      {dragHandle}
       <button className="min-w-0 text-left" onClick={onSelect} type="button">
         <p className="truncate font-semibold text-base leading-tight">
           {gesture.name}
@@ -63,18 +88,121 @@ function GestureRow({
   );
 }
 
+function SortableGestureRow({
+  actions,
+  dragHandleLabel,
+  gesture,
+  onSelect,
+}: {
+  actions: GestureRowAction[];
+  dragHandleLabel: string;
+  gesture: GestureCardData;
+  onSelect: () => void;
+}) {
+  const {
+    attributes,
+    isDragging,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: gesture._id });
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <GestureRow
+        actions={actions}
+        className={cn(isDragging && "relative z-10 bg-muted/70 shadow-sm")}
+        dragHandle={
+          <button
+            aria-label={dragHandleLabel}
+            className="flex h-9 w-8 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
+            ref={setActivatorNodeRef}
+            type="button"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        }
+        gesture={gesture}
+        onSelect={onSelect}
+      />
+    </div>
+  );
+}
+
 export function GestureRows({
   actionsForGesture,
+  dragHandleLabel = "Drag to reorder",
   gestures,
   onSelectGesture,
+  onReorder,
 }: {
   actionsForGesture: (
     gesture: GestureCardData,
     index: number
   ) => GestureRowAction[];
+  dragHandleLabel?: string;
   gestures: GestureCardData[];
   onSelectGesture: (gestureId: string) => void;
+  onReorder?: (gestures: GestureCardData[]) => void;
 }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!(over && active.id !== over.id && onReorder)) {
+      return;
+    }
+
+    const oldIndex = gestures.findIndex((gesture) => gesture._id === active.id);
+    const newIndex = gestures.findIndex((gesture) => gesture._id === over.id);
+    if (oldIndex < 0 || newIndex < 0) {
+      return;
+    }
+    onReorder(arrayMove(gestures, oldIndex, newIndex));
+  };
+
+  if (onReorder) {
+    return (
+      <DndContext
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+        sensors={sensors}
+      >
+        <SortableContext
+          items={gestures.map((gesture) => gesture._id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="divide-y-0">
+            {gestures.map((gesture, index) => (
+              <SortableGestureRow
+                actions={actionsForGesture(gesture, index)}
+                dragHandleLabel={dragHandleLabel}
+                gesture={gesture}
+                key={gesture._id}
+                onSelect={() => onSelectGesture(gesture._id)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    );
+  }
+
   return (
     <div className="divide-y-0">
       {gestures.map((gesture, index) => (

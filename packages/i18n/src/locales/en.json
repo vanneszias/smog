@@ -38,6 +38,7 @@
     "deleteFailed": "Could not delete the list",
     "deleteMessage": "This removes the list and all of its saved gestures.",
     "deleteTitle": "Delete list",
+    "dragToReorder": "Drag to reorder",
     "emptyTitle": "This list is ready for its first gesture",
     "emptyMessage": "Add gestures you want to revisit, practise, or share.",
     "exploreGestures": "Explore gestures",

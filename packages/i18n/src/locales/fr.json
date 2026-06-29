@@ -38,6 +38,7 @@
     "deleteFailed": "Impossible de supprimer la liste",
     "deleteMessage": "Cela supprime la liste et tous les gestes enregistrés.",
     "deleteTitle": "Supprimer la liste",
+    "dragToReorder": "Faire glisser pour réordonner",
     "emptyTitle": "Cette liste est prête pour son premier geste",
     "emptyMessage": "Ajoutez les gestes que vous souhaitez revoir, pratiquer ou partager.",
     "exploreGestures": "Explorer les gestes",

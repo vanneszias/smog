@@ -391,6 +391,34 @@ function ListsComponent() {
     }
   };
 
+  const reorderGestures = async (nextGestures: GestureCardData[]) => {
+    if (!activeList) {
+      return;
+    }
+    if (
+      nextGestures.every(
+        (gesture, index) => gesture._id === activeGestures[index]?._id
+      )
+    ) {
+      return;
+    }
+
+    const previousGestures = activeGestures;
+    setActiveGestures(nextGestures);
+
+    try {
+      await client.lists.reorderItems({
+        gestureIds: nextGestures.map((item) => item._id),
+        listId: activeList._id,
+      });
+    } catch (error) {
+      logger.error("Failed to reorder list:", error);
+      setActiveGestures(previousGestures);
+      toast.error(t("web.lists.reorderFailed", "Could not reorder list"));
+      await loadActiveGestures();
+    }
+  };
+
   const moveGesture = async (gestureId: string, direction: -1 | 1) => {
     if (!activeList) {
       return;
@@ -413,18 +441,7 @@ function ListsComponent() {
       return;
     }
     nextGestures.splice(nextIndex, 0, gesture);
-    setActiveGestures(nextGestures);
-
-    try {
-      await client.lists.reorderItems({
-        gestureIds: nextGestures.map((item) => item._id),
-        listId: activeList._id,
-      });
-    } catch (error) {
-      logger.error("Failed to reorder list:", error);
-      toast.error(t("web.lists.reorderFailed", "Could not reorder list"));
-      await loadActiveGestures();
-    }
+    await reorderGestures(nextGestures);
   };
 
   const actionsForActiveGesture = (
@@ -610,7 +627,12 @@ function ListsComponent() {
               ) : (
                 <GestureRows
                   actionsForGesture={actionsForActiveGesture}
+                  dragHandleLabel={t(
+                    "web.lists.dragToReorder",
+                    "Drag to reorder"
+                  )}
                   gestures={activeGestures}
+                  onReorder={reorderGestures}
                   onSelectGesture={handleSelectGesture}
                 />
               )

@@ -14,13 +14,15 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import DraggableFlatList, {
+  type RenderItemParams,
+} from "react-native-draggable-flatlist";
 import { useConvexUserId } from "@/context/ConvexUserSync";
 import { useLists } from "@/context/ListsContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -43,6 +45,7 @@ export default function ListDetailScreen() {
   const { triggerHaptic, triggerSelection } = useNativeInteractions();
   const [orderedGestures, setOrderedGestures] = useState<Gesture[]>([]);
   const [pendingGestureId, setPendingGestureId] = useState<string | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
 
   const list = useMemo(
     () => lists?.find((candidate) => candidate._id === listId) ?? null,
@@ -65,9 +68,46 @@ export default function ListDetailScreen() {
     }
   }, [serverGestures]);
 
+  const persistGestureOrder = useCallback(
+    async (nextGestures: Gesture[], previousGestures: Gesture[]) => {
+      if (!(userId && list) || isReordering) {
+        return;
+      }
+
+      setIsReordering(true);
+      try {
+        await reorderListItems({
+          userId,
+          listId: list._id,
+          gestureIds: nextGestures.map(
+            (candidate) => candidate.id as Id<"gestures">
+          ),
+        });
+        triggerSelection();
+      } catch (error) {
+        logger.error("[lists] Failed to reorder gestures:", error);
+        setOrderedGestures(previousGestures);
+        triggerHaptic("error");
+        showToast(t("lists.reorderFailed"));
+      } finally {
+        setIsReordering(false);
+      }
+    },
+    [
+      isReordering,
+      list,
+      reorderListItems,
+      showToast,
+      t,
+      triggerHaptic,
+      triggerSelection,
+      userId,
+    ]
+  );
+
   const removeGesture = useCallback(
     async (gesture: Gesture) => {
-      if (!(userId && list) || pendingGestureId) {
+      if (!(userId && list) || pendingGestureId || isReordering) {
         return;
       }
 
@@ -89,6 +129,7 @@ export default function ListDetailScreen() {
       }
     },
     [
+      isReordering,
       list,
       pendingGestureId,
       removeGestureFromList,
@@ -102,7 +143,7 @@ export default function ListDetailScreen() {
 
   const moveGesture = useCallback(
     async (gesture: Gesture, direction: -1 | 1) => {
-      if (!(userId && list) || pendingGestureId) {
+      if (!(userId && list) || pendingGestureId || isReordering) {
         return;
       }
 
@@ -125,45 +166,58 @@ export default function ListDetailScreen() {
 
       setOrderedGestures(nextGestures);
       setPendingGestureId(gesture.id);
-      try {
-        await reorderListItems({
-          userId,
-          listId: list._id,
-          gestureIds: nextGestures.map(
-            (candidate) => candidate.id as Id<"gestures">
-          ),
-        });
-        triggerSelection();
-      } catch (error) {
-        logger.error("[lists] Failed to reorder gestures:", error);
-        setOrderedGestures(previousGestures);
-        triggerHaptic("error");
-        showToast(t("lists.reorderFailed"));
-      } finally {
-        setPendingGestureId(null);
-      }
+      await persistGestureOrder(nextGestures, previousGestures);
+      setPendingGestureId(null);
     },
     [
+      isReordering,
       list,
       orderedGestures,
       pendingGestureId,
-      reorderListItems,
-      showToast,
-      t,
-      triggerHaptic,
-      triggerSelection,
+      persistGestureOrder,
+      userId,
+    ]
+  );
+
+  const handleDragEnd = useCallback(
+    async ({ data }: { data: Gesture[] }) => {
+      if (!(userId && list) || pendingGestureId || isReordering) {
+        return;
+      }
+      if (
+        data.every(
+          (gesture, index) => gesture.id === orderedGestures[index]?.id
+        )
+      ) {
+        return;
+      }
+
+      const previousGestures = orderedGestures;
+      setOrderedGestures(data);
+      await persistGestureOrder(data, previousGestures);
+    },
+    [
+      isReordering,
+      list,
+      orderedGestures,
+      pendingGestureId,
+      persistGestureOrder,
       userId,
     ]
   );
 
   const renderGesture = useCallback(
-    ({ item, index }: { item: Gesture; index: number }) => {
+    ({ drag, getIndex, isActive, item }: RenderItemParams<Gesture>) => {
+      const index =
+        getIndex() ??
+        orderedGestures.findIndex((candidate) => candidate.id === item.id);
       const isPending = pendingGestureId === item.id;
       return (
         <View
           style={[
             styles.gestureRow,
             { backgroundColor: theme.card, borderColor: theme.border },
+            isActive ? styles.gestureRowActive : null,
           ]}
         >
           <TouchableOpacity
@@ -196,6 +250,26 @@ export default function ListDetailScreen() {
                   t("lists.uncategorized")}
               </Text>
             </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            accessibilityLabel={t("lists.dragToReorder")}
+            accessibilityRole="button"
+            disabled={isActive || isReordering || Boolean(pendingGestureId)}
+            hitSlop={HIT_SLOP.md}
+            onLongPress={drag}
+            style={[
+              styles.dragHandle,
+              isActive || isReordering || pendingGestureId
+                ? styles.dragHandleDisabled
+                : null,
+            ]}
+          >
+            <Ionicons
+              color={theme.textLight}
+              name="reorder-three-outline"
+              size={24}
+            />
           </TouchableOpacity>
 
           {isPending ? (
@@ -261,8 +335,9 @@ export default function ListDetailScreen() {
       );
     },
     [
+      isReordering,
       moveGesture,
-      orderedGestures.length,
+      orderedGestures,
       pendingGestureId,
       removeGesture,
       router,
@@ -328,7 +403,7 @@ export default function ListDetailScreen() {
           <ActivityIndicator color={theme.primary} size="large" />
         </View>
       ) : (
-        <FlatList
+        <DraggableFlatList
           contentContainerStyle={[
             styles.content,
             orderedGestures.length === 0 ? styles.emptyContent : null,
@@ -339,6 +414,7 @@ export default function ListDetailScreen() {
           data={orderedGestures}
           keyExtractor={(gesture) => gesture.id}
           ListEmptyComponent={renderEmpty}
+          onDragEnd={handleDragEnd}
           renderItem={renderGesture}
           showsVerticalScrollIndicator={false}
         />
@@ -372,6 +448,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
     minHeight: 72,
   },
+  gestureRowActive: {
+    opacity: 0.92,
+  },
   gestureMain: {
     alignItems: "center",
     flex: 1,
@@ -401,6 +480,15 @@ const styles = StyleSheet.create({
   gestureMeta: {
     fontSize: FONT_SIZE.xs,
     marginTop: 4,
+  },
+  dragHandle: {
+    alignItems: "center",
+    height: 60,
+    justifyContent: "center",
+    width: 44,
+  },
+  dragHandleDisabled: {
+    opacity: 0.45,
   },
   rowAction: {
     alignItems: "center",
