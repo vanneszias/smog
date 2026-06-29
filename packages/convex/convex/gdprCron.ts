@@ -30,6 +30,15 @@ export const cleanupInactiveGuests = internalMutation({
         await ctx.db.delete(fav._id);
       }
 
+      const consents = await ctx.db
+        .query("user_consents")
+        .withIndex("by_user", (q) => q.eq("userId", guest._id))
+        .collect();
+
+      for (const consent of consents) {
+        await ctx.db.delete(consent._id);
+      }
+
       // Delete owned lists and their items
       const lists = await ctx.db
         .query("gesture_lists")

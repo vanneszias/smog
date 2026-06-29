@@ -129,4 +129,16 @@ export default defineSchema({
     .index("by_action", ["action"])
     .index("by_target", ["targetType", "targetId"])
     .index("by_created_at", ["createdAt"]),
+
+  user_consents: defineTable({
+    userId: v.id("users"),
+    analyticsConsent: v.boolean(),
+    marketingConsent: v.optional(v.boolean()),
+    consentVersion: v.string(),
+    consentDate: v.number(),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_consent_date", ["consentDate"]),
 });

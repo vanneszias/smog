@@ -51,6 +51,11 @@ export const exportUserData = query({
       })
     );
 
+    const consents = await ctx.db
+      .query("user_consents")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
     const lists = await ctx.db
       .query("gesture_lists")
       .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
@@ -118,6 +123,12 @@ export const exportUserData = query({
         lastActive: new Date(user.lastActiveAt).toISOString(),
       },
       favorites: favoritesWithDetails,
+      consents: consents.map((consent) => ({
+        analyticsConsent: consent.analyticsConsent,
+        marketingConsent: consent.marketingConsent ?? false,
+        consentVersion: consent.consentVersion,
+        consentDate: new Date(consent.consentDate).toISOString(),
+      })),
       lists: listsWithDetails,
       adminActivity: {
         logsCount: adminLogs.length,
@@ -181,6 +192,15 @@ export const deleteUserAccount = mutation({
       await ctx.db.delete(fav._id);
     }
 
+    const consents = await ctx.db
+      .query("user_consents")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    for (const consent of consents) {
+      await ctx.db.delete(consent._id);
+    }
+
     // Delete owned lists and their items
     const lists = await ctx.db
       .query("gesture_lists")
@@ -240,6 +260,200 @@ export const deleteUserAccount = mutation({
       deletedAt: new Date().toISOString(),
       message:
         "Account, favorites, and owned lists deleted. Legally required transaction records may be retained separately.",
+    };
+  },
+});
+
+// Compatibility API for app versions deployed before privacy consent moved local.
+export const recordConsent = mutation({
+  args: {
+    analyticsConsent: v.boolean(),
+    marketingConsent: v.optional(v.boolean()),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error(
+        "Authentication required. Please sign in to update consent preferences."
+      );
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_workos_id", (q) => q.eq("workosId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.insert("user_consents", {
+      userId: user._id,
+      analyticsConsent: args.analyticsConsent,
+      marketingConsent: args.marketingConsent ?? false,
+      consentVersion: "1.0",
+      consentDate: Date.now(),
+      ipAddress: args.ipAddress,
+      userAgent: args.userAgent,
+    });
+
+    return { success: true };
+  },
+});
+
+export const recordGuestConsent = mutation({
+  args: {
+    guestId: v.string(),
+    analyticsConsent: v.boolean(),
+    marketingConsent: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    let user = await ctx.db
+      .query("users")
+      .withIndex("by_guest_id", (q) => q.eq("guestId", args.guestId))
+      .unique();
+
+    if (!user) {
+      const userId = await ctx.db.insert("users", {
+        guestId: args.guestId,
+        createdAt: Date.now(),
+        lastActiveAt: Date.now(),
+      });
+      user = await ctx.db.get(userId);
+      if (!user) {
+        throw new Error("Failed to create user");
+      }
+    }
+
+    await ctx.db.insert("user_consents", {
+      userId: user._id,
+      analyticsConsent: args.analyticsConsent,
+      marketingConsent: args.marketingConsent ?? false,
+      consentVersion: "1.0",
+      consentDate: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const updateConsent = mutation({
+  args: {
+    analyticsConsent: v.boolean(),
+    marketingConsent: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error(
+        "Authentication required. Please sign in to update consent preferences."
+      );
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_workos_id", (q) => q.eq("workosId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.insert("user_consents", {
+      userId: user._id,
+      analyticsConsent: args.analyticsConsent,
+      marketingConsent: args.marketingConsent ?? false,
+      consentVersion: "1.0",
+      consentDate: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const getConsentStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_workos_id", (q) => q.eq("workosId", identity.subject))
+      .unique();
+
+    if (!user) {
+      return null;
+    }
+
+    const consents = await ctx.db
+      .query("user_consents")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .order("desc")
+      .take(1);
+
+    const latestConsent = consents[0];
+
+    if (!latestConsent) {
+      return {
+        hasConsent: false,
+        analyticsConsent: false,
+        marketingConsent: false,
+      };
+    }
+
+    return {
+      hasConsent: true,
+      analyticsConsent: latestConsent.analyticsConsent,
+      marketingConsent: latestConsent.marketingConsent ?? false,
+      consentDate: new Date(latestConsent.consentDate).toISOString(),
+    };
+  },
+});
+
+export const getGuestConsentStatus = query({
+  args: {
+    guestId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_guest_id", (q) => q.eq("guestId", args.guestId))
+      .unique();
+
+    if (!user) {
+      return {
+        hasConsent: false,
+        analyticsConsent: false,
+        marketingConsent: false,
+      };
+    }
+
+    const consents = await ctx.db
+      .query("user_consents")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .order("desc")
+      .take(1);
+
+    const latestConsent = consents[0];
+
+    if (!latestConsent) {
+      return {
+        hasConsent: false,
+        analyticsConsent: false,
+        marketingConsent: false,
+      };
+    }
+
+    return {
+      hasConsent: true,
+      analyticsConsent: latestConsent.analyticsConsent,
+      marketingConsent: latestConsent.marketingConsent ?? false,
+      consentDate: new Date(latestConsent.consentDate).toISOString(),
     };
   },
 });
