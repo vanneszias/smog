@@ -19,7 +19,7 @@ COPY packages/styles/package.json  ./packages/styles/
 COPY packages/ui/package.json      ./packages/ui/
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install
+    bun install --frozen-lockfile
 
 # ── Stage 2: builder ─────────────────────────────────────────────────────────
 FROM oven/bun:1-alpine AS builder

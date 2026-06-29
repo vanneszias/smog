@@ -15,14 +15,12 @@ const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 export async function handleMollieWebhook(c: Context) {
   try {
     console.log("[Mollie Webhook] Received webhook");
-    console.log("[Mollie Webhook] Content-Type:", c.req.header("content-type"));
 
     // Try to parse body - Mollie sends JSON
     let body: { id?: string } = {};
 
     try {
       const rawBody = await c.req.text();
-      console.log("[Mollie Webhook] Raw body:", rawBody);
 
       // Try parsing as JSON first
       try {
@@ -48,8 +46,6 @@ export async function handleMollieWebhook(c: Context) {
       );
       return c.json({ error: "Payment ID required" }, 400);
     }
-
-    console.log("[Mollie Webhook] Payment ID:", paymentId);
 
     // Get payment details from Mollie
     const payment = await mollieClient.payments.get(paymentId);

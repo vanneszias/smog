@@ -5,6 +5,17 @@ import { ConvexHttpClient } from "convex/browser";
 
 const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 
+function getRemotionHeaders() {
+  const apiKey = process.env.REMOTION_API_KEY;
+  if (!apiKey) {
+    throw new Error("REMOTION_API_KEY must be set");
+  }
+  return {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+}
+
 export interface ProcessPaymentOptions {
   sponsorshipId: string;
   molliePaymentId: string;
@@ -51,7 +62,7 @@ async function triggerVideoComposition(sponsorship: {
   // Call Remotion service to compose video
   const response = await fetch(`${remotionUrl}/api/compose`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getRemotionHeaders(),
     body: JSON.stringify({
       playbackId: sponsorship.originalVideoPlaybackId,
       overlayImageUrl: overlayImageUrl || "", // Empty string if no logo
@@ -84,7 +95,8 @@ async function triggerVideoComposition(sponsorship: {
     attempts++;
 
     const statusResponse = await fetch(
-      `${remotionUrl}/api/compose/status/${jobId}`
+      `${remotionUrl}/api/compose/status/${jobId}`,
+      { headers: getRemotionHeaders() }
     );
     if (!statusResponse.ok) {
       console.error(

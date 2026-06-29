@@ -97,5 +97,5 @@ For repository verification:
 bun check
 bun check-types
 bun run build
-bunx knip --no-progress
+knip --no-progress --no-config-hints
 ```

@@ -34,6 +34,10 @@ tasks:
       : "${REGISTRY_HOST:=docker.io}"
       : "${REGISTRY_USERNAME:?REGISTRY_USERNAME is required}"
       : "${REGISTRY_PASSWORD:?REGISTRY_PASSWORD is required}"
+      : "${VITE_SERVER_URL:?VITE_SERVER_URL is required}"
+      : "${VITE_WORKOS_CLIENT_ID:?VITE_WORKOS_CLIENT_ID is required}"
+      : "${VITE_WORKOS_REDIRECT_URI:?VITE_WORKOS_REDIRECT_URI is required}"
+      : "${VITE_CONVEX_URL:?VITE_CONVEX_URL is required}"
       set -x
 
       short_sha="$(git rev-parse --short=12 HEAD)"

@@ -155,13 +155,6 @@ export function GestureDetail({
     return parts;
   };
 
-  // Debug logging
-  console.debug("GestureDetail render:", {
-    showOpenInApp,
-    hasOnOpenInApp: !!onOpenInApp,
-    willShowBanner: !!showOpenInApp && !!onOpenInApp,
-  });
-
   const handleSaveClick = () => {
     if (onToggleSaved) {
       onToggleSaved(gesture._id);

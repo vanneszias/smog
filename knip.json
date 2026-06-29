@@ -1,9 +1,22 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "ignoreFiles": [".agents/**"],
+  "ignoreIssues": {
+    "apps/native/context/ListsContext.tsx": ["types"],
+    "apps/remotion/src/server/jobs.ts": ["types"],
+    "apps/remotion/src/utils/get-media-metadata.ts": ["types"],
+    "apps/server/src/services/email.ts": ["types"],
+    "apps/server/src/services/emailQueue.ts": ["types"],
+    "apps/server/src/services/mux.ts": ["types"],
+    "apps/server/src/services/sponsorship.ts": ["types"],
+    "apps/web/src/components/admin/AdminDashboard.tsx": ["types"],
+    "apps/web/src/components/admin/hooks/useAdminFilters.ts": ["types"],
+    "apps/web/src/routes/__root.tsx": ["types"]
+  },
   "workspaces": {
     "apps/native": {
-      "entry": ["plugins/*.js"]
+      "entry": ["app/**/*.{ts,tsx}", "metro.config.js", "plugins/*.js"],
+      "ignoreDependencies": ["@babel/core"]
     },
     "apps/remotion": {
       "entry": ["remotion.config.ts", "src/index.ts"],

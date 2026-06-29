@@ -11,6 +11,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "@/lib/auth";
 
 // =============================================================================
 // Template definitions
@@ -83,6 +84,7 @@ type PreviewMode = "desktop" | "mobile";
 
 export function EmailPreview() {
   const serverUrl = import.meta.env.VITE_SERVER_URL ?? "http://localhost:3000";
+  const { getAccessToken } = useAuth();
 
   const [selected, setSelected] = useState<TemplateId>("welcome");
   const [html, setHtml] = useState<string>("");
@@ -91,26 +93,40 @@ export function EmailPreview() {
   const [mode, setMode] = useState<PreviewMode>("desktop");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const fetchPreview = useCallback(async (templateId: TemplateId) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${serverUrl}/api/email/preview/${templateId}`, {
-        credentials: "include",
-      });
-      if (!res.ok) {
-        throw new Error(`Server antwoordde met ${res.status}`);
+  const fetchPreview = useCallback(
+    async (templateId: TemplateId) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          throw new Error("Geen geldige sessie gevonden");
+        }
+
+        const res = await fetch(
+          `${serverUrl}/api/email/preview/${templateId}`,
+          {
+            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        if (!res.ok) {
+          throw new Error(`Server antwoordde met ${res.status}`);
+        }
+        const text = await res.text();
+        setHtml(text);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Onbekende fout opgetreden"
+        );
+      } finally {
+        setLoading(false);
       }
-      const text = await res.text();
-      setHtml(text);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Onbekende fout opgetreden"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [getAccessToken]
+  );
 
   // Fetch on mount and when selection changes
   useEffect(() => {

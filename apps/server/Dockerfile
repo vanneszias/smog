@@ -20,7 +20,7 @@ COPY packages/ui/package.json      ./packages/ui/
 COPY apps/server/package.json      ./apps/server/
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install
+    bun install --frozen-lockfile
 
 # ── Stage 2: builder ─────────────────────────────────────────────────────────
 FROM oven/bun:1-alpine AS builder
@@ -40,12 +40,9 @@ WORKDIR /app
 
 RUN apk add --no-cache curl
 
-# Install only the external runtime dependency (no workspace/catalog context needed)
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun add nodemailer
-
 # Copy the bundled output
 COPY --from=builder /app/apps/server/dist ./dist
+COPY --from=deps /app/node_modules/nodemailer ./node_modules/nodemailer
 
 RUN addgroup -g 1001 -S nodejs \
     && adduser -S nodejs -u 1001 \

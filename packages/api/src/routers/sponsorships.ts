@@ -32,13 +32,25 @@ const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 // Get Remotion service URL from environment
 const REMOTION_URL = process.env.REMOTION_URL || "http://localhost:3002";
 
+function getRemotionHeaders() {
+  const apiKey = process.env.REMOTION_API_KEY;
+  if (!apiKey) {
+    throw new Error("REMOTION_API_KEY must be set");
+  }
+  return {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+}
+
 // Poll Remotion until a composition job completes (max 2 minutes)
 async function pollCompositionJob(jobId: string): Promise<string> {
   const maxAttempts = 120;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const statusResponse = await fetch(
-      `${REMOTION_URL}/api/compose/status/${jobId}`
+      `${REMOTION_URL}/api/compose/status/${jobId}`,
+      { headers: getRemotionHeaders() }
     );
     if (!statusResponse.ok) {
       continue;
@@ -81,7 +93,7 @@ async function composeVideo({
 }): Promise<string> {
   const response = await fetch(`${REMOTION_URL}/api/compose`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getRemotionHeaders(),
     body: JSON.stringify({
       playbackId,
       overlayImageUrl: logoImage || "",
@@ -160,7 +172,7 @@ export const sponsorshipsRouter = {
         // Call Remotion service to compose video
         const response = await fetch(`${REMOTION_URL}/api/compose`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getRemotionHeaders(),
           body: JSON.stringify({
             playbackId: gesture.playbackId,
             overlayImageUrl: input.logoImage || "",

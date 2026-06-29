@@ -20,7 +20,7 @@ import {
 } from "@smog/auth/server";
 import { api } from "@smog/convex";
 import { ConvexHttpClient } from "convex/browser";
-import { Hono } from "hono";
+import { Hono, type Context as HonoContext } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -49,7 +49,38 @@ const isProduction = process.env.NODE_ENV === "production";
 // Get WorkOS config from environment
 const workosConfig = getWorkOSConfig(process.env);
 
-// Validate required config
+function requireProductionEnv(names: string[]): void {
+  if (!isProduction) {
+    return;
+  }
+
+  const missing = names.filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required production environment variables: ${missing.join(", ")}`
+    );
+  }
+}
+
+requireProductionEnv([
+  "CONVEX_URL",
+  "WORKOS_CLIENT_ID",
+  "WORKOS_CLIENT_SECRET",
+  "MOLLIE_API_KEY",
+  "CORS_ORIGIN",
+  "MUX_TOKEN_ID",
+  "MUX_TOKEN_SECRET",
+  "REMOTION_URL",
+  "REMOTION_API_KEY",
+  "INTERNAL_API_KEY",
+  "SERVER_URL",
+  "REDIS_URL",
+  "SMTP_HOST",
+  "SMTP_USER",
+  "SMTP_PASS",
+  "SMTP_FROM",
+]);
+
 if (!(workosConfig.clientId && workosConfig.clientSecret)) {
   console.warn(
     "[Auth] WorkOS credentials not configured - auth endpoints will fail"
@@ -69,25 +100,18 @@ startEmailWorker();
 
 const app = new Hono();
 
-function getServiceSecret(
-  name: "INTERNAL_API_KEY" | "REMOTION_API_KEY",
-  developmentFallback: string
+function getRequiredServiceSecret(
+  name: "INTERNAL_API_KEY" | "REMOTION_API_KEY"
 ) {
   const value = process.env[name];
-  if (value) {
-    return value;
+  if (!value) {
+    throw new Error(`${name} must be set`);
   }
-  if (isProduction) {
-    throw new Error(`${name} must be set in production`);
-  }
-  return developmentFallback;
+  return value;
 }
 
-const internalApiKey = getServiceSecret(
-  "INTERNAL_API_KEY",
-  "dev-internal-secret"
-);
-const remotionApiKey = getServiceSecret("REMOTION_API_KEY", "dev-secret-key");
+const internalApiKey = getRequiredServiceSecret("INTERNAL_API_KEY");
+const remotionApiKey = getRequiredServiceSecret("REMOTION_API_KEY");
 const openPanelApiUrl =
   process.env.OPENPANEL_API_URL ||
   process.env.VITE_OPENPANEL_API_URL ||
@@ -454,8 +478,7 @@ app.post("/api/email/trigger", async (c) => {
 
 /**
  * Render an email template with sample data and return the HTML.
- * Read-only endpoint with hardcoded sample data — no sensitive information.
- * CORS middleware already restricts this to CORS_ORIGIN.
+ * Read-only endpoint with hardcoded sample data, restricted to admins.
  *
  * GET /api/email/preview/:template
  */
@@ -490,7 +513,24 @@ const EMAIL_PREVIEW_SAMPLES = {
 
 type EmailPreviewTemplate = keyof typeof EMAIL_PREVIEW_SAMPLES;
 
+async function isAdminRequest(c: HonoContext): Promise<boolean> {
+  const context = await createContext({ context: c });
+  if (!context.workosId) {
+    return false;
+  }
+
+  const user = await convex.query(api.users.getUserByWorkOSId, {
+    workosId: context.workosId,
+  });
+
+  return user?.role === "admin";
+}
+
 app.get("/api/email/preview/:template", async (c) => {
+  if (!(await isAdminRequest(c))) {
+    return c.json({ error: "Admin access required" }, 403);
+  }
+
   const template = c.req.param("template") as EmailPreviewTemplate;
 
   if (!(template in EMAIL_PREVIEW_SAMPLES)) {

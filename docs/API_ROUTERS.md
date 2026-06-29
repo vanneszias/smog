@@ -85,7 +85,7 @@ context; admin procedures additionally verify the Convex user role.
 | `POST` | `/webhooks/mollie` | Verify payment update |
 | `POST` | `/api/video/master-access` | Temporary Mux source URL |
 | `POST` | `/api/email/trigger` | Authenticated internal email job |
-| `GET` | `/api/email/preview/:template` | Render a sample email |
+| `GET` | `/api/email/preview/:template` | Render an admin-only sample email |
 
 See [Payment Flow](./PAYMENT_FLOW.md) and
 [Privacy and Analytics](./PRIVACY_AND_ANALYTICS.md).

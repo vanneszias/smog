@@ -21,7 +21,7 @@ COPY apps/web/package.json         ./apps/web/
 
 # Install workspace dependencies with a cached Bun package store.
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install \
+    bun install --frozen-lockfile \
     && test -d node_modules \
     && test -d apps/web/node_modules \
     || (echo "ERROR: required node_modules directories are missing" && exit 1)
@@ -47,6 +47,12 @@ ENV VITE_SERVER_URL=$VITE_SERVER_URL \
     VITE_CONVEX_URL=$VITE_CONVEX_URL \
     VITE_OPENPANEL_API_URL=$VITE_OPENPANEL_API_URL \
     VITE_OPENPANEL_CLIENT_ID=$VITE_OPENPANEL_CLIENT_ID
+
+RUN test -n "$VITE_SERVER_URL" \
+    && test -n "$VITE_WORKOS_CLIENT_ID" \
+    && test -n "$VITE_WORKOS_REDIRECT_URI" \
+    && test -n "$VITE_CONVEX_URL" \
+    || (echo "ERROR: VITE_SERVER_URL, VITE_WORKOS_CLIENT_ID, VITE_WORKOS_REDIRECT_URI, and VITE_CONVEX_URL are required" && exit 1)
 
 RUN cd apps/web && bun run build
 

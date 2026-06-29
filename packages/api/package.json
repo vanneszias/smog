@@ -24,6 +24,7 @@
     "@smog/convex": "workspace:*",
     "convex": "^1.36.1",
     "hono": "catalog:",
+    "jose": "^6.1.3",
     "zod": "catalog:"
   }
 }

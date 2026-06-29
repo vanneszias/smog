@@ -63,5 +63,6 @@ docs/           Architecture and operating documentation
 ```
 
 Start with [Getting Started](./docs/GETTING_STARTED.md), then read
-[Architecture](./docs/ARCHITECTURE.md) and
-[Privacy and Analytics](./docs/PRIVACY_AND_ANALYTICS.md).
+[Architecture](./docs/ARCHITECTURE.md),
+[Privacy and Analytics](./docs/PRIVACY_AND_ANALYTICS.md), and the
+[Release Guide](./docs/RELEASE.md).

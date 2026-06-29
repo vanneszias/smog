@@ -19,7 +19,8 @@
       "!**/.svelte-kit",
       "!**/wrangler.jsonc",
       "!**/.source",
-      "!**/_generated"
+      "!**/_generated",
+      "!**/.agents"
     ]
   },
   "extends": ["ultracite/core", "ultracite/react"],

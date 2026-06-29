@@ -9,13 +9,19 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "jest --watchAll",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watchAll",
     "check-types": "tsc --noEmit"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(\\.bun/|\\.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base))",
+      "/node_modules/(\\.bun/.*/node_modules/)?react-native-reanimated/plugin/"
+    ]
   },
   "dependencies": {
+    "@babel/runtime": "^7.29.0",
     "@expo/metro-runtime": "~55.0.10",
     "@expo/react-native-action-sheet": "^4.1.1",
     "@expo/vector-icons": "^15.1.1",

@@ -104,7 +104,7 @@ bun -F @smog/convex test
 bun -F @smog/hooks test
 bun -F @smog/shared test
 bun run build
-bunx knip --no-progress
+knip --no-progress --no-config-hints
 ```
 
 See [Architecture](./ARCHITECTURE.md), [Data Flow](./DATA_FLOW.md),
