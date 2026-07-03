@@ -198,6 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {
       user,
       isLoading: authIsLoading,
+      isHandlingOAuthCallback: isHandlingCallback,
       isAuthenticated: !!user,
       authMode: authIsLoading
         ? "loading"

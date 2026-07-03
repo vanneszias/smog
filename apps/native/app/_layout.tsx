@@ -136,6 +136,7 @@ function AuthenticatedLayout() {
     <>
       <Stack initialRouteName="(tabs)">
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="auth-callback" options={{ headerShown: false }} />
         <Stack.Screen
           name="gestures/[id]"
           options={{
@@ -182,7 +183,13 @@ function AuthenticatedLayout() {
 }
 
 function RootLayoutNav() {
-  const { isLoading, isAuthenticated, isGuest, authMode } = useAuth();
+  const {
+    isLoading,
+    isHandlingOAuthCallback,
+    isAuthenticated,
+    isGuest,
+    authMode,
+  } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
   const [hasNavigated, setHasNavigated] = useState(false);
@@ -201,7 +208,7 @@ function RootLayoutNav() {
 
   // Force navigation when auth state changes - but only for initial load
   useEffect(() => {
-    if (!(isLoading || hasNavigated)) {
+    if (!(isLoading || isHandlingOAuthCallback || hasNavigated)) {
       if (isAuthenticated || isGuest) {
         logger.log("User is authenticated/guest - initial navigation to tabs");
         router.replace("/(tabs)");
@@ -212,7 +219,14 @@ function RootLayoutNav() {
         setHasNavigated(true);
       }
     }
-  }, [isLoading, isAuthenticated, isGuest, router, hasNavigated]);
+  }, [
+    isLoading,
+    isHandlingOAuthCallback,
+    isAuthenticated,
+    isGuest,
+    router,
+    hasNavigated,
+  ]);
 
   // Reset navigation flag when auth mode actually changes (not immediately)
   useEffect(() => {

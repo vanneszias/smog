@@ -43,6 +43,7 @@ export interface TokenResponse {
 export interface AuthState {
   user: WorkOSUser | null;
   isLoading: boolean;
+  isHandlingOAuthCallback: boolean;
   isAuthenticated: boolean;
   authMode: AuthMode;
   isGuest: boolean;

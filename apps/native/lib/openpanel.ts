@@ -125,44 +125,69 @@ export async function setAnalyticsConsent(enabled: boolean): Promise<void> {
 }
 
 export function identifyAnalyticsUser(user: WorkOSUser): void {
-  getOpenPanel()?.identify({
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    profileId: user.id,
-    properties: { auth_mode: "authenticated", platform: "native" },
-  });
+  try {
+    const payload: IdentifyPayload = {
+      email: user.email,
+      profileId: user.id,
+      properties: { auth_mode: "authenticated", platform: "native" },
+    };
+    if (user.firstName) {
+      payload.firstName = user.firstName;
+    }
+    if (user.lastName) {
+      payload.lastName = user.lastName;
+    }
+    getOpenPanel()?.identify(payload);
+  } catch (error) {
+    logger.error("[openpanel] Failed to identify user:", error);
+  }
 }
 
 export function identifyAnalyticsGuest(guestId: string): void {
-  getOpenPanel()?.identify({
-    profileId: `guest:${guestId}`,
-    properties: { auth_mode: "guest", platform: "native" },
-  });
+  try {
+    getOpenPanel()?.identify({
+      profileId: `guest:${guestId}`,
+      properties: { auth_mode: "guest", platform: "native" },
+    });
+  } catch (error) {
+    logger.error("[openpanel] Failed to identify guest:", error);
+  }
 }
 
 export function clearAnalyticsIdentity(): void {
-  op?.clear();
+  try {
+    op?.clear();
+  } catch (error) {
+    logger.error("[openpanel] Failed to clear identity:", error);
+  }
 }
 
 export function trackScreenView(path: string): void {
-  const client = getOpenPanel();
-  if (client?.screenView) {
-    client.screenView(path, { platform: "native" });
-    return;
+  try {
+    const client = getOpenPanel();
+    if (client?.screenView) {
+      client.screenView(path, { platform: "native" });
+      return;
+    }
+    client?.track("screen_view", {
+      __path: path,
+      platform: "native",
+    });
+  } catch (error) {
+    logger.error("[openpanel] Failed to track screen view:", error);
   }
-  client?.track("screen_view", {
-    __path: path,
-    platform: "native",
-  });
 }
 
 export function trackAnalyticsEvent<EventName extends AnalyticsEventName>(
   eventName: EventName,
   properties: AnalyticsEventMap[EventName]
 ): void {
-  getOpenPanel()?.track(eventName, {
-    ...properties,
-    platform: "native",
-  });
+  try {
+    getOpenPanel()?.track(eventName, {
+      ...properties,
+      platform: "native",
+    });
+  } catch (error) {
+    logger.error("[openpanel] Failed to track event:", error);
+  }
 }
