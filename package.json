@@ -50,7 +50,7 @@
     "test": "turbo test",
     "release:check": "bun run check:ci && bun run release:config-check && bun run check-types && bun run test && bun audit --production && bun run native:release-check && bun run build && knip --no-progress --no-config-hints",
     "release:config-check": "bun scripts/release-config-check.ts",
-    "native:release-check": "expo-doctor apps/native && bun -F native export",
+    "native:release-check": "bun scripts/native-release-check.ts",
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",

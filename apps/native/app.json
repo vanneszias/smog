@@ -18,7 +18,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "be.zias.smog",
       "icon": "./assets/images/smog.icon",
-      "associatedDomains": ["applinks:app.smog.vlaanderen"],
+      "associatedDomains": [
+        "applinks:app.smog.vlaanderen"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -39,7 +41,10 @@
               "scheme": "smog"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         },
         {
           "action": "VIEW",
@@ -50,11 +55,14 @@
               "host": "app.smog.vlaanderen"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "package": "be.zias.smog",
-      "versionCode": 72
+      "versionCode": 74
     },
     "plugins": [
       "expo-router",
