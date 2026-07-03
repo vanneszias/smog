@@ -9,14 +9,16 @@
       "distribution": "internal",
       "channel": "development",
       "env": {
-        "NODE_ENV": "development"
+        "NODE_ENV": "development",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       }
     },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       }
     },
     "production": {
@@ -25,7 +27,8 @@
       "autoIncrement": true,
       "channel": "production",
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "EXPO_USE_PRECOMPILED_MODULES": "0"
       }
     }
   },
