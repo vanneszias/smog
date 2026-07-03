@@ -8,6 +8,10 @@
     "offlineMode": "Vous êtes hors ligne. Certaines fonctionnalités peuvent être limitées.",
     "backOnline": "Vous êtes de nouveau en ligne!",
     "recentSearches": "Recherches récentes",
+    "button": "Rechercher",
+    "filterButton": "Filtrer par catégorie",
+    "removeCategory": "Supprimer le filtre {{category}}",
+    "inputLabel": "Rechercher un geste",
     "clear": "Effacer",
     "clearAll": "Tout effacer",
     "foundResults": "{{count}} résultats trouvés en {{time}}ms",
@@ -83,7 +87,8 @@
       "footer": "En continuant, vous acceptez nos Conditions de service et notre Politique de confidentialité",
       "signInSignUp": "Se connecter"
     },
-    "continueAsGuest": "Continuer en tant qu'invité"
+    "continueAsGuest": "Continuer en tant qu'invité",
+    "email": "E-mail"
   },
   "noGesturesFound": "Aucun geste trouvé",
   "tabs": {
@@ -162,18 +167,27 @@
     "edit": "Modifier",
     "delete": "Supprimer",
     "continue": "Continuer",
+    "initializing": "Démarrage de SMOG...",
+    "pause": "Mettre la vidéo en pause",
+    "play": "Lire la vidéo",
     "total": "Total",
     "week": "semaine",
     "weeks": "semaines",
+    "year": "{{count}} an",
+    "years": "{{count}} ans",
     "gesture": "geste",
-    "gestures": "gestes"
+    "gestures": "gestes",
+    "errors": {
+      "rootElementNotFound": "Élément racine introuvable"
+    }
   },
   "accessibility": {
     "skipToContent": "Aller au contenu",
     "skipToNav": "Aller à la navigation",
     "menu": {
       "open": "Ouvrir le menu",
-      "close": "Fermer le menu"
+      "close": "Fermer le menu",
+      "navigation": "Navigation principale"
     },
     "logo": {
       "alt": "Logo SMOG"
@@ -263,7 +277,31 @@
       "closeButton": "FERMER_TERMINAL"
     }
   },
+  "appStore": {
+    "new": "Nouveau",
+    "headline": "SMOG est maintenant disponible sur votre téléphone !",
+    "subheadline": "Téléchargez l’application et apprenez les gestes où que vous soyez",
+    "downloadOn": "Télécharger dans l’",
+    "getItOn": "Disponible sur",
+    "close": "Fermer la bannière de téléchargement"
+  },
   "web": {
+    "home": {
+      "title": "Apprendre SMOG",
+      "heroTitle": "Les personnes accompagnent naturellement leur parole de gestes",
+      "header": {
+        "search": "Rechercher",
+        "lists": "Listes",
+        "favorites": "Favoris",
+        "account": "Compte",
+        "sponsor": "Parrainer",
+        "discoverGestures": "Découvrir les gestes SMOG"
+      },
+      "footer": {
+        "terms": "Conditions",
+        "privacy": "Confidentialité"
+      }
+    },
     "account": {
       "loading": {
         "title": "Un instant...",
@@ -329,6 +367,8 @@
     "sponsors": {
       "wizard": {
         "back": "Retour",
+        "backToSelection": "Retour à la sélection",
+        "backToDetails": "Retour aux détails",
         "step": "Étape {{current}} sur {{total}}",
         "selectedGestures": "Gestes sélectionnés",
         "gesturesSelected": "{{count}} geste sélectionné",
@@ -336,7 +376,32 @@
         "gesture": "geste",
         "gestures": "gestes",
         "remove": "Supprimer",
+        "removeGestureLabel": "Supprimer {{name}}",
         "continue": "Continuer",
+        "sponsored": "Parrainé",
+        "inReview": "En cours d'examen",
+        "example": "Exemple",
+        "logoPreviewAlt": "Aperçu du logo",
+        "removeLogo": "Supprimer le logo",
+        "optional": "facultatif",
+        "previewFinalDescription": "La dernière étape avant le paiement sécurisé",
+        "videoName": "Nom dans la vidéo",
+        "contact": "Contact",
+        "selection": {
+          "title": "Parrainer un geste",
+          "description": "Soutenez un geste pendant un an. Votre nom apparaît dans sa vidéo tout en aidant le projet SMOG.",
+          "perGesture": "Par geste, par an",
+          "nameInVideo": "Votre nom dans chaque vidéo",
+          "optionalLogo": "Ajoutez votre logo (facultatif)",
+          "searchPlaceholder": "Rechercher par nom, concept ou catégorie...",
+          "categories": "Catégories",
+          "showLess": "Afficher moins",
+          "showMore": "+{{count}} de plus",
+          "available": "{{count}} geste disponible",
+          "available_other": "{{count}} gestes disponibles",
+          "selected": "{{count}} sélectionné",
+          "selected_other": "{{count}} sélectionnés"
+        },
         "configureTitle": "Configurer votre parrainage",
         "configureSubtitle": "Tous les {{count}} gestes sélectionnés afficheront :\n\"{{message}}\"",
         "sponsorNameLabel": "Nom du sponsor *",
@@ -401,6 +466,56 @@
         "invoiceEmailLabel": "Adresse e-mail de facturation",
         "invoiceEmailPlaceholder": "facture@exemple.com"
       },
+      "reEdit": {
+        "invalidTitle": "Lien invalide",
+        "invalidBody": "Il manque un code requis dans ce lien. Utilisez le lien fourni par l’administrateur.",
+        "loading": "Vérification de votre lien…",
+        "notFoundTitle": "Lien introuvable",
+        "notFoundBody": "Ce lien est invalide ou a déjà été utilisé. Contactez l’administrateur si vous pensez qu’il s’agit d’une erreur.",
+        "expiredTitle": "Lien expiré",
+        "expiredBody": "Ce lien a expiré. Demandez à l’administrateur d’en générer un nouveau.",
+        "submittedTitle": "Vidéo envoyée !",
+        "submittedBody": "Votre nouvelle vidéo est prête à être vérifiée. Aucun nouveau paiement n’est nécessaire ; nous vous contacterons bientôt.",
+        "backToSite": "Retour au site",
+        "eyebrow": "Modifier le parrainage",
+        "title": "Mettez votre vidéo à jour",
+        "gesture": "Geste",
+        "expires": "Le lien expire dans {{count}} jour",
+        "expires_other": "Le lien expire dans {{count}} jours",
+        "originalVideo": "Vidéo originale du geste",
+        "editDetails": "Modifiez vos informations",
+        "brandName": "Nom de la marque",
+        "brandPlaceholder": "Nom de votre marque ou entreprise",
+        "brandHelp": "Ce nom apparaît dans la vidéo.",
+        "overlayText": "Texte dans la vidéo",
+        "overlayPlaceholder": "Texte affiché sur la vidéo du geste",
+        "maxCharacters": "Maximum 100 caractères.",
+        "updateLogo": "Mettre le logo à jour",
+        "logoAlt": "Aperçu du logo",
+        "removeLogo": "Supprimer le logo",
+        "uploadLogo": "Choisir un nouveau logo",
+        "formats": "PNG, JPEG ou WebP · Max. 2 Mo",
+        "preview": "Aperçu",
+        "generating": "Génération…",
+        "regenerate": "Régénérer",
+        "generatePreview": "Générer l’aperçu",
+        "compositing": "Votre vidéo est en cours de composition… Cela prend environ une minute.",
+        "previewReady": "Le résultat vous convient ? Envoyez-le ci-dessous.",
+        "previewEmpty": "Sélectionnez « Générer l’aperçu » pour voir votre vidéo mise à jour.",
+        "submitting": "Envoi…",
+        "submitReview": "Envoyer pour vérification",
+        "noPayment": "Aucun nouveau paiement n’est nécessaire. Nous vérifions la modification avant sa publication.",
+        "errors": {
+          "logoTooLarge": "Le logo doit faire moins de 2 Mo.",
+          "logoInvalidFormat": "Utilisez une image PNG, JPEG ou WebP.",
+          "brandRequired": "Le nom de la marque est requis.",
+          "overlayRequired": "Le texte de la vidéo est requis.",
+          "previewFailed": "Impossible de générer l’aperçu. Veuillez réessayer.",
+          "generateFirst": "Générez d’abord un aperçu.",
+          "fillRequired": "Complétez tous les champs obligatoires.",
+          "submitFailed": "Impossible d’envoyer votre modification. Veuillez réessayer."
+        }
+      },
       "new": {
         "title": "Parrainer des gestes en langue des signes",
         "subtitle": "Soutenez la communauté et promouvez votre marque",
@@ -428,11 +543,11 @@
           "sponsorNameTooLong": "Le nom du sponsor doit contenir 40 caractères ou moins",
           "logoRequired": "Veuillez télécharger un logo ou décocher l'option",
           "logoTooLarge": "L'image doit être inférieure à 2MB",
-          "logoInvalidFormat": "Format d'image invalide. Veuillez utiliser PNG, JPG ou SVG"
+          "logoInvalidFormat": "Format d'image invalide. Veuillez utiliser PNG, JPEG ou WebP"
         },
         "logoGuidelines": {
           "title": "Directives pour le logo",
-          "format": "Format: PNG avec fond transparent (recommandé) ou SVG",
+          "format": "Format : PNG avec fond transparent (recommandé), JPEG ou WebP",
           "dimensions": "Dimensions: Minimum 800x800px pour une meilleure qualité",
           "aspectRatio": "Ratio d'aspect: Carré (1:1) recommandé",
           "fileSize": "Taille de fichier: Maximum 2MB",
@@ -562,8 +677,10 @@
         "loading": "Chargement des détails du parrainage...",
         "error": {
           "title": "Échec du chargement des détails du parrainage",
+          "description": "Nous ne pouvons pas encore charger les détails. Votre paiement n'est pas affecté.",
           "tryAgain": "Réessayer"
         },
+        "reviewDescription": "Un administrateur examinera votre parrainage dans les cinq jours ouvrables. Vous recevrez un e-mail dès sa mise en ligne.",
         "processing": {
           "title": "Traitement de votre paiement...",
           "description": "Paiement reçu! Les détails de votre parrainage apparaîtront ici sous peu. Cette page se mettra à jour automatiquement.",
@@ -657,6 +774,44 @@
       "viewGesture": "Voir le geste",
       "viewOnly": "Lecture seule",
       "yourLists": "Vos listes"
+    },
+    "auth": {
+      "authenticationWait": "Veuillez patienter pendant que nous terminons votre authentification.",
+      "signingIn": "Connexion en cours..."
+    },
+    "errors": {
+      "retry": "Réessayer"
+    },
+    "gestures": {
+      "searchPlaceholder": "Rechercher des gestes par nom, concept ou description...",
+      "errorLoading": "Impossible de charger les gestes. Vérifiez votre connexion et réessayez.",
+      "noResultsWithFilters": "Aucun geste ne correspond à votre recherche",
+      "noResults": "Aucun geste disponible",
+      "selectGesture": "Sélectionnez un geste pour afficher les détails"
+    },
+    "language": {
+      "toggle": "Changer de langue"
+    },
+    "signIn": {
+      "button": "Se connecter",
+      "link": "Se connecter",
+      "switchToSignUp": "Besoin d'un compte ? S'inscrire",
+      "title": "Bon retour"
+    },
+    "signUp": {
+      "button": "S'inscrire",
+      "switchToSignIn": "Vous avez déjà un compte ? Se connecter",
+      "title": "Créer un compte"
+    },
+    "theme": {
+      "dark": "Sombre",
+      "light": "Clair",
+      "system": "Système",
+      "toggle": "Changer de thème"
+    },
+    "userMenu": {
+      "accountSettings": "Paramètres du compte",
+      "signOut": "Se déconnecter"
     }
   },
   "ui": {
@@ -697,6 +852,8 @@
     },
     "gestureFilters": {
       "searchPlaceholder": "Rechercher des gestes...",
+      "searchLabel": "Rechercher des gestes",
+      "clearSearch": "Effacer la recherche",
       "filters": "Filtres",
       "results": "{{count}} résultat",
       "results_other": "{{count}} résultats",

@@ -16,7 +16,7 @@
  * />
  */
 
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { BORDER_RADIUS, ICON_SIZE, SPACING } from "@smog/styles";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { VideoView } from "expo-video";
@@ -28,6 +28,7 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "@/context/TranslationContext";
 import { useVideoPlayerState } from "./video/useVideoPlayerState";
 
 const useGlass = isLiquidGlassAvailable();
@@ -53,6 +54,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onPlayToEnd,
 }) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { player, isLoading, isPlaying, togglePlayPause } = useVideoPlayerState(
     {
       playbackId,
@@ -79,6 +81,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )}
 
       <TouchableOpacity
+        accessibilityLabel={t(isPlaying ? "common.pause" : "common.play")}
+        accessibilityRole="button"
         onPress={togglePlayPause}
         style={[
           styles.controlButton,

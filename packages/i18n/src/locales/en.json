@@ -8,6 +8,10 @@
     "offlineMode": "You're offline. Some features may be limited.",
     "backOnline": "You're back online!",
     "recentSearches": "Recent searches",
+    "button": "Search",
+    "filterButton": "Filter by category",
+    "removeCategory": "Remove {{category}} filter",
+    "inputLabel": "Search for a gesture",
     "clear": "Clear",
     "clearAll": "Clear all",
     "foundResults": "Found {{count}} results in {{time}}ms",
@@ -169,9 +173,14 @@
     "edit": "Edit",
     "delete": "Delete",
     "continue": "Continue",
+    "initializing": "Starting SMOG...",
+    "pause": "Pause video",
+    "play": "Play video",
     "total": "Total",
     "week": "week",
     "weeks": "weeks",
+    "year": "{{count}} year",
+    "years": "{{count}} years",
     "gesture": "gesture",
     "gestures": "gestures",
     "errors": {
@@ -341,16 +350,26 @@
       "closeButton": "CLOSE_TERMINAL"
     }
   },
+  "appStore": {
+    "new": "New",
+    "headline": "SMOG is now available on your phone!",
+    "subheadline": "Download the app and learn gestures wherever you are",
+    "downloadOn": "Download on the",
+    "getItOn": "Get it on",
+    "close": "Close app download banner"
+  },
   "web": {
     "home": {
       "header": {
         "search": "Search",
+        "lists": "Lists",
         "favorites": "Favorites",
         "account": "Account",
         "sponsor": "Sponsor",
         "discoverGestures": "Discover SMOG Gestures"
       },
       "title": "Learn Sign Language",
+      "heroTitle": "People naturally support their speech with gestures",
       "footer": {
         "terms": "Terms",
         "privacy": "Privacy"
@@ -377,6 +396,7 @@
     },
     "gestures": {
       "searchPlaceholder": "Search gestures by name, concept, or description...",
+      "errorLoading": "We couldn't load the gestures. Check your connection and try again.",
       "noResultsWithFilters": "No gestures found matching your search",
       "noResults": "No gestures available",
       "loading": "Loading gestures...",
@@ -580,6 +600,8 @@
     "sponsors": {
       "wizard": {
         "back": "Back",
+        "backToSelection": "Back to selection",
+        "backToDetails": "Back to details",
         "step": "Step {{current}} of {{total}}",
         "selectedGestures": "Selected Gestures",
         "gesturesSelected": "{{count}} gesture selected",
@@ -587,7 +609,32 @@
         "gesture": "gesture",
         "gestures": "gestures",
         "remove": "Remove",
+        "removeGestureLabel": "Remove {{name}}",
         "continue": "Continue",
+        "sponsored": "Sponsored",
+        "inReview": "In review",
+        "example": "Example",
+        "logoPreviewAlt": "Logo preview",
+        "removeLogo": "Remove logo",
+        "optional": "optional",
+        "previewFinalDescription": "The final step before secure payment",
+        "videoName": "Name in video",
+        "contact": "Contact",
+        "selection": {
+          "title": "Sponsor a gesture",
+          "description": "Support a gesture for one year. Your name appears in its video while helping the SMOG project.",
+          "perGesture": "Per gesture, per year",
+          "nameInVideo": "Your name in every video",
+          "optionalLogo": "Add your logo (optional)",
+          "searchPlaceholder": "Search by name, concept, or category...",
+          "categories": "Categories",
+          "showLess": "Show less",
+          "showMore": "+{{count}} more",
+          "available": "{{count}} available gesture",
+          "available_other": "{{count}} available gestures",
+          "selected": "{{count}} selected",
+          "selected_other": "{{count}} selected"
+        },
         "configureTitle": "Configure Your Sponsorship",
         "configureSubtitle": "All {{count}} selected gestures will display:\n\"{{message}}\"",
         "sponsorNameLabel": "Sponsor Name *",
@@ -652,6 +699,56 @@
         "invoiceEmailLabel": "Invoice email address",
         "invoiceEmailPlaceholder": "invoice@example.com"
       },
+      "reEdit": {
+        "invalidTitle": "Invalid link",
+        "invalidBody": "This link is missing a required token. Please use the link provided by the administrator.",
+        "loading": "Validating your link…",
+        "notFoundTitle": "Link not found",
+        "notFoundBody": "This re-edit link is invalid or has already been used. Contact the administrator if you think this is a mistake.",
+        "expiredTitle": "Link expired",
+        "expiredBody": "This re-edit link has expired. Ask the administrator to generate a new one.",
+        "submittedTitle": "Video submitted!",
+        "submittedBody": "Your new video is ready for review. No payment is needed; we will contact you soon.",
+        "backToSite": "Back to site",
+        "eyebrow": "Re-edit sponsorship",
+        "title": "Update your video",
+        "gesture": "Gesture",
+        "expires": "Link expires in {{count}} day",
+        "expires_other": "Link expires in {{count}} days",
+        "originalVideo": "Original gesture video",
+        "editDetails": "Edit your details",
+        "brandName": "Brand name",
+        "brandPlaceholder": "Your brand or company name",
+        "brandHelp": "Shown in the overlay on the video.",
+        "overlayText": "Overlay text",
+        "overlayPlaceholder": "Text shown on top of the gesture video",
+        "maxCharacters": "Maximum 100 characters.",
+        "updateLogo": "Update logo",
+        "logoAlt": "Logo preview",
+        "removeLogo": "Remove logo",
+        "uploadLogo": "Choose a new logo",
+        "formats": "PNG, JPEG or WebP · Max 2 MB",
+        "preview": "Preview",
+        "generating": "Generating…",
+        "regenerate": "Regenerate",
+        "generatePreview": "Generate preview",
+        "compositing": "Compositing your video… This takes about a minute.",
+        "previewReady": "Looks good? Submit it below when you are ready.",
+        "previewEmpty": "Select “Generate preview” to see your updated video.",
+        "submitting": "Submitting…",
+        "submitReview": "Submit for review",
+        "noPayment": "No payment is required. We review the update before it goes live.",
+        "errors": {
+          "logoTooLarge": "The logo must be smaller than 2 MB.",
+          "logoInvalidFormat": "Use a PNG, JPEG or WebP image.",
+          "brandRequired": "Brand name is required.",
+          "overlayRequired": "Overlay text is required.",
+          "previewFailed": "We could not generate the preview. Please try again.",
+          "generateFirst": "Generate a preview first.",
+          "fillRequired": "Complete all required fields.",
+          "submitFailed": "We could not submit your update. Please try again."
+        }
+      },
       "new": {
         "title": "Sponsor Sign Language Gestures",
         "subtitle": "Support the community and promote your brand",
@@ -679,11 +776,11 @@
           "sponsorNameTooLong": "Sponsor name must be 40 characters or less",
           "logoRequired": "Please upload a logo or uncheck the option",
           "logoTooLarge": "Image must be smaller than 2MB",
-          "logoInvalidFormat": "Invalid image format. Please use PNG, JPG, or SVG"
+          "logoInvalidFormat": "Invalid image format. Please use PNG, JPEG, or WebP"
         },
         "logoGuidelines": {
           "title": "Logo Guidelines",
-          "format": "Format: PNG with transparent background (recommended) or SVG",
+          "format": "Format: PNG with transparent background (recommended), JPEG, or WebP",
           "dimensions": "Dimensions: Minimum 800x800px for best quality",
           "aspectRatio": "Aspect Ratio: Square (1:1) recommended",
           "fileSize": "File Size: Maximum 2MB",
@@ -813,8 +910,10 @@
         "loading": "Loading sponsorship details...",
         "error": {
           "title": "Failed to load sponsorship details",
+          "description": "We couldn't load the details yet. Your payment is not affected.",
           "tryAgain": "Try again"
         },
+        "reviewDescription": "An administrator will review your sponsorship within five working days. You'll receive an email as soon as it is live.",
         "processing": {
           "title": "Processing your payment...",
           "description": "Payment received! Your sponsorship details will appear here shortly. This page will update automatically.",
@@ -884,6 +983,8 @@
     },
     "gestureFilters": {
       "searchPlaceholder": "Search gestures...",
+      "searchLabel": "Search gestures",
+      "clearSearch": "Clear search",
       "filters": "Filters",
       "results": "{{count}} result",
       "results_other": "{{count}} results",
@@ -928,7 +1029,8 @@
     "skipToNav": "Skip to navigation",
     "menu": {
       "open": "Open menu",
-      "close": "Close menu"
+      "close": "Close menu",
+      "navigation": "Main navigation"
     },
     "logo": {
       "alt": "SMOG Logo"

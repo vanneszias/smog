@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { MenuView } from "@react-native-menu/menu";
 import { ICON_SIZE } from "@smog/styles";
 import { Platform, StyleSheet, View } from "react-native";

@@ -38,7 +38,7 @@ SMTP_HOST=<smtp-host>
 SMTP_PORT=587
 SMTP_USER=<smtp-user>
 SMTP_PASS=<smtp-password>
-SMTP_FROM="Smog <no-reply@example.com>"
+SMTP_FROM="SMOG & Co <no-reply@smog.vlaanderen>"
 ```
 
 Optional runtime values:
@@ -79,7 +79,15 @@ EXPO_PUBLIC_OPENPANEL_CLIENT_ID=<native-openpanel-client-id>
 EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET=<native-openpanel-client-secret>
 ```
 
-Convex production also needs its deployment environment configured for authentication and any server-called functions. At minimum, set `WORKOS_CLIENT_ID` for Convex auth.
+Convex production also needs its deployment environment configured for authentication and server-only functions. `INTERNAL_API_KEY` must be the exact same high-entropy value used by the server:
+
+```bash
+cd packages/convex
+bunx convex env set WORKOS_CLIENT_ID "<workos-client-id>"
+bunx convex env set INTERNAL_API_KEY "<internal-service-secret>"
+```
+
+In WorkOS, allow `https://app.smog.vlaanderen/callback` and the native callback URI used by the production EAS profile. In Mollie, confirm the live profile and webhook domain are enabled before accepting real payments.
 
 ## Preflight
 
@@ -90,7 +98,7 @@ bun install
 bun run release:check
 ```
 
-`release:check` runs Biome, TypeScript, all configured tests, the full build, and `knip`. It suppresses Expo configuration hints but still fails on real unused-code or dependency issues. If a test package is unavailable for the release branch, record that in the release notes before continuing.
+`release:check` runs Biome, TypeScript, all configured tests, a production dependency audit, Expo Doctor, production exports for iOS/Android/web, every workspace build, and `knip`.
 
 ## Convex
 
@@ -144,6 +152,8 @@ docker compose ps
 
 The root compose stack starts Redis, Remotion, server, and web/Caddy. Web is the only public service and binds ports `80` and `443`.
 
+`IMAGE_TAG` is intentionally required. Always deploy an immutable release tag or commit SHA; the production compose file does not fall back to `latest`.
+
 ## EAS Native
 
 After backend and web are live, build and submit native apps:
@@ -155,6 +165,17 @@ eas submit --platform all --profile production
 ```
 
 Use a new binary release for native dependency, config, permission, or SDK changes. Use an EAS Update only for compatible JavaScript/assets changes on the current runtime version.
+
+Before submission, verify universal/app links:
+
+```bash
+curl -fsS https://app.smog.vlaanderen/.well-known/apple-app-site-association
+curl -fsS https://app.smog.vlaanderen/.well-known/assetlinks.json
+```
+
+The Apple application identifier must remain `96XKP6MU2A.be.zias.smog`. Android `assetlinks.json` must contain the Google Play **app-signing** SHA-256 certificate. If Play App Signing uses a different certificate from the EAS build credential, replace or add that fingerprint before release.
+
+Complete the App Store privacy details and Google Play Data Safety form so they match `docs/PRIVACY_AND_ANALYTICS.md`, including consent-gated OpenPanel analytics and account deletion.
 
 ## Verification
 

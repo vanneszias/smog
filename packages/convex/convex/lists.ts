@@ -8,6 +8,7 @@ import {
   normalizeListName,
   validateReorderPayload,
 } from "./lib/listValidation";
+import { isValidServiceToken } from "./lib/serviceAuth";
 
 const DEFAULT_FAVORITES_NAME = "Favorites";
 
@@ -65,6 +66,35 @@ type ListQueryCtx = Pick<QueryCtx, "db">;
 
 function createShareToken() {
   return crypto.randomUUID().replaceAll("-", "");
+}
+
+async function requireUserAccess(
+  ctx: MutationCtx | QueryCtx,
+  userId: Id<"users">,
+  serviceToken?: string
+): Promise<void> {
+  if (isValidServiceToken(serviceToken)) {
+    return;
+  }
+
+  const user = await ctx.db.get(userId);
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+
+  if (user.workosId) {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity || identity.subject !== user.workosId) {
+      throw new Error("Unauthorized");
+    }
+    return;
+  }
+
+  // Guest Convex IDs are only returned to the device that owns the random
+  // guest token and are treated as unguessable capabilities.
+  if (!user.guestId) {
+    throw new Error("Unauthorized");
+  }
 }
 
 async function getCategoryNames(
@@ -302,27 +332,41 @@ async function removeGestureFromListInternal(
 }
 
 export const initializeUserLists = mutation({
-  args: { userId: v.id("users") },
+  args: {
+    userId: v.id("users"),
+    serviceToken: v.optional(v.string()),
+  },
   returns: v.id("gesture_lists"),
-  handler: async (ctx, args) =>
-    await ensureDefaultFavoritesList(ctx, args.userId),
+  handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
+    return await ensureDefaultFavoritesList(ctx, args.userId);
+  },
 });
 
 export const listUserLists = query({
-  args: { userId: v.id("users") },
+  args: {
+    userId: v.id("users"),
+    serviceToken: v.optional(v.string()),
+  },
   returns: v.array(listValidator),
-  handler: async (ctx, args) =>
-    await ctx.db
+  handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
+    return await ctx.db
       .query("gesture_lists")
       .withIndex("by_owner_created_at", (q) => q.eq("ownerId", args.userId))
       .order("desc")
-      .collect(),
+      .collect();
+  },
 });
 
 export const getSavedGestureIds = query({
-  args: { userId: v.id("users") },
+  args: {
+    userId: v.id("users"),
+    serviceToken: v.optional(v.string()),
+  },
   returns: v.array(v.id("gestures")),
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     const lists = await ctx.db
       .query("gesture_lists")
       .withIndex("by_owner", (q) => q.eq("ownerId", args.userId))
@@ -339,9 +383,14 @@ export const getSavedGestureIds = query({
 });
 
 export const getGestureListIds = query({
-  args: { userId: v.id("users"), gestureId: v.id("gestures") },
+  args: {
+    userId: v.id("users"),
+    gestureId: v.id("gestures"),
+    serviceToken: v.optional(v.string()),
+  },
   returns: v.array(v.id("gesture_lists")),
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     const items = await ctx.db
       .query("gesture_list_items")
       .withIndex("by_gesture", (q) => q.eq("gestureId", args.gestureId))
@@ -356,18 +405,28 @@ export const getGestureListIds = query({
 });
 
 export const getListGestures = query({
-  args: { userId: v.id("users"), listId: v.id("gesture_lists") },
+  args: {
+    userId: v.id("users"),
+    listId: v.id("gesture_lists"),
+    serviceToken: v.optional(v.string()),
+  },
   returns: v.array(gestureValidator),
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     await requireOwnedList(ctx, args.userId, args.listId);
     return await getListGestureDocs(ctx, args.listId);
   },
 });
 
 export const getListGesturesForNative = query({
-  args: { userId: v.id("users"), listId: v.id("gesture_lists") },
+  args: {
+    userId: v.id("users"),
+    listId: v.id("gesture_lists"),
+    serviceToken: v.optional(v.string()),
+  },
   returns: v.array(nativeGestureValidator),
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     const list = await ctx.db.get(args.listId);
     if (!list || list.ownerId !== args.userId) {
       return [];
@@ -410,9 +469,11 @@ export const createList = mutation({
     description: v.optional(v.string()),
     visibility: v.union(v.literal("private"), v.literal("shared")),
     allowSharedEditing: v.boolean(),
+    serviceToken: v.optional(v.string()),
   },
   returns: v.id("gesture_lists"),
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     await ensureDefaultFavoritesList(ctx, args.userId);
     const now = Date.now();
     const isShared = args.visibility === "shared";
@@ -437,9 +498,11 @@ export const renameList = mutation({
     userId: v.id("users"),
     listId: v.id("gesture_lists"),
     name: v.string(),
+    serviceToken: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     await requireOwnedList(ctx, args.userId, args.listId);
     await ctx.db.patch(args.listId, {
       name: normalizeListName(args.name),
@@ -455,9 +518,11 @@ export const updateListSharing = mutation({
     listId: v.id("gesture_lists"),
     visibility: v.union(v.literal("private"), v.literal("shared")),
     allowSharedEditing: v.boolean(),
+    serviceToken: v.optional(v.string()),
   },
   returns: listValidator,
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     const list = await requireOwnedList(ctx, args.userId, args.listId);
     const isShared = args.visibility === "shared";
 
@@ -482,9 +547,14 @@ export const updateListSharing = mutation({
 });
 
 export const regenerateShareTokens = mutation({
-  args: { userId: v.id("users"), listId: v.id("gesture_lists") },
+  args: {
+    userId: v.id("users"),
+    listId: v.id("gesture_lists"),
+    serviceToken: v.optional(v.string()),
+  },
   returns: listValidator,
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     await requireOwnedList(ctx, args.userId, args.listId);
     await ctx.db.patch(args.listId, {
       viewShareToken: createShareToken(),
@@ -500,9 +570,14 @@ export const regenerateShareTokens = mutation({
 });
 
 export const deleteList = mutation({
-  args: { userId: v.id("users"), listId: v.id("gesture_lists") },
+  args: {
+    userId: v.id("users"),
+    listId: v.id("gesture_lists"),
+    serviceToken: v.optional(v.string()),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     const list = await requireOwnedList(ctx, args.userId, args.listId);
     if (list.isDefaultFavorites) {
       throw new Error("Default Favorites list cannot be deleted");
@@ -522,9 +597,11 @@ export const addGestureToList = mutation({
     userId: v.id("users"),
     listId: v.id("gesture_lists"),
     gestureId: v.id("gestures"),
+    serviceToken: v.optional(v.string()),
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     await requireOwnedList(ctx, args.userId, args.listId);
     return await addGestureToListInternal(
       ctx,
@@ -540,9 +617,11 @@ export const removeGestureFromList = mutation({
     userId: v.id("users"),
     listId: v.id("gesture_lists"),
     gestureId: v.id("gestures"),
+    serviceToken: v.optional(v.string()),
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     await requireOwnedList(ctx, args.userId, args.listId);
     return await removeGestureFromListInternal(
       ctx,
@@ -588,9 +667,11 @@ export const reorderListItems = mutation({
     userId: v.id("users"),
     listId: v.id("gesture_lists"),
     gestureIds: v.array(v.id("gestures")),
+    serviceToken: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     await requireOwnedList(ctx, args.userId, args.listId);
     const items = await getListItems(ctx, args.listId);
     const itemByGestureId = new Map(

@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
+import { requireServiceAuth } from "./lib/serviceAuth";
 
 const nativeGestureValidator = v.object({
   id: v.id("gestures"),
@@ -150,6 +151,9 @@ export const getByIds = query({
     })
   ),
   handler: async (ctx, args) => {
+    if (args.ids.length > 200) {
+      throw new Error("Too many gesture IDs");
+    }
     const gestures = await Promise.all(args.ids.map((id) => ctx.db.get(id)));
 
     return gestures
@@ -164,11 +168,12 @@ export const listForNative = query({
   },
   returns: v.array(nativeGestureValidator),
   handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 200, 1), 500);
     const gestures = await ctx.db
       .query("gestures")
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .order("desc")
-      .take(args.limit ?? 200);
+      .take(limit);
 
     return await Promise.all(
       gestures.map((gesture) => toNativeGesture(ctx, gesture))
@@ -193,6 +198,9 @@ export const getByIdsForNative = query({
   args: { ids: v.array(v.id("gestures")) },
   returns: v.array(nativeGestureValidator),
   handler: async (ctx, args) => {
+    if (args.ids.length > 200) {
+      throw new Error("Too many gesture IDs");
+    }
     const gestures = await Promise.all(args.ids.map((id) => ctx.db.get(id)));
     return await Promise.all(
       gestures
@@ -212,12 +220,12 @@ export const searchForNative = query({
   handler: async (ctx, args) => {
     const queryText = normalizeSearchText(args.searchText);
     const selectedCategories = args.categories ?? [];
-    const limit = args.limit ?? 50;
+    const limit = Math.min(Math.max(args.limit ?? 50, 1), 100);
 
     const gestures = await ctx.db
       .query("gestures")
       .withIndex("by_active", (q) => q.eq("isActive", true))
-      .collect();
+      .take(2000);
 
     const results = await Promise.all(
       gestures.map(async (gesture) => {
@@ -261,10 +269,11 @@ export const relatedForNative = query({
     }
 
     const categoryIds = new Set(gesture.categoryIds);
+    const limit = Math.min(Math.max(args.limit ?? 5, 1), 20);
     const gestures = await ctx.db
       .query("gestures")
       .withIndex("by_active", (q) => q.eq("isActive", true))
-      .collect();
+      .take(2000);
 
     const related = gestures
       .filter(
@@ -274,7 +283,7 @@ export const relatedForNative = query({
             categoryIds.has(categoryId)
           )
       )
-      .slice(0, args.limit ?? 5);
+      .slice(0, limit);
 
     return await Promise.all(
       related.map((candidate) => toNativeGesture(ctx, candidate))
@@ -301,7 +310,7 @@ export const search = query({
     })
   ),
   handler: async (ctx, args) => {
-    const limit = args.limit || 50;
+    const limit = Math.min(Math.max(args.limit || 50, 1), 100);
 
     return await ctx.db
       .query("gestures")
@@ -334,6 +343,7 @@ export const getLastUpdated = query({
 export const listAllForAdmin = query({
   args: {
     limit: v.optional(v.number()),
+    serviceToken: v.string(),
   },
   returns: v.array(
     v.object({
@@ -349,7 +359,8 @@ export const listAllForAdmin = query({
     })
   ),
   handler: async (ctx, args) => {
-    const limit = args.limit || 1000;
+    requireServiceAuth(args.serviceToken, "gestures.listAllForAdmin");
+    const limit = Math.min(Math.max(args.limit || 1000, 1), 2000);
     // Always return ALL gestures (both active and inactive) for admin
     return await ctx.db.query("gestures").order("desc").take(limit);
   },
@@ -360,6 +371,7 @@ export const listAll = query({
   args: {
     limit: v.optional(v.number()),
     includeInactive: v.optional(v.boolean()),
+    serviceToken: v.string(),
   },
   returns: v.array(
     v.object({
@@ -375,7 +387,8 @@ export const listAll = query({
     })
   ),
   handler: async (ctx, args) => {
-    const limit = args.limit || 1000;
+    requireServiceAuth(args.serviceToken, "gestures.listAll");
+    const limit = Math.min(Math.max(args.limit || 1000, 1), 2000);
 
     if (args.includeInactive === true) {
       // Return all gestures including hidden ones
@@ -402,10 +415,12 @@ export const updateGesture = mutation({
     concept: v.optional(v.array(v.string())),
     info: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { gestureId, ...updates } = args;
+    requireServiceAuth(args.serviceToken, "gestures.updateGesture");
+    const { gestureId, serviceToken: _serviceToken, ...updates } = args;
 
     if (Object.keys(updates).length === 0) {
       throw new Error("No fields to update");
@@ -429,11 +444,13 @@ export const bulkUpdate = mutation({
       isActive: v.optional(v.boolean()),
       categoryIds: v.optional(v.array(v.id("categories"))),
     }),
+    serviceToken: v.string(),
   },
   returns: v.object({
     updated: v.number(),
   }),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "gestures.bulkUpdate");
     if (Object.keys(args.updates).length === 0) {
       throw new Error("No fields to update");
     }
@@ -458,9 +475,11 @@ export const bulkUpdate = mutation({
 export const toggleActive = mutation({
   args: {
     gestureId: v.id("gestures"),
+    serviceToken: v.string(),
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "gestures.toggleActive");
     const gesture = await ctx.db.get(args.gestureId);
     if (!gesture) {
       throw new Error("Gesture not found");
@@ -483,9 +502,11 @@ export const updatePlaybackId = mutation({
   args: {
     gestureId: v.id("gestures"),
     playbackId: v.string(),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "gestures.updatePlaybackId");
     await ctx.db.patch(args.gestureId, {
       playbackId: args.playbackId,
       lastUpdated: Date.now(),
@@ -505,9 +526,11 @@ export const create = mutation({
     concept: v.array(v.string()),
     info: v.string(),
     isActive: v.optional(v.boolean()),
+    serviceToken: v.string(),
   },
   returns: v.id("gestures"),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "gestures.create");
     const now = Date.now();
 
     return await ctx.db.insert("gestures", {

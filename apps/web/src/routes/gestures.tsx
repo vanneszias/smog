@@ -35,7 +35,7 @@ function GesturesComponent() {
   );
 
   // Use shared gestures hook
-  const { gestures: allGestures, isLoading, error } = useGestures();
+  const { gestures: allGestures, isLoading, error, refetch } = useGestures();
 
   const {
     searchQuery,
@@ -136,6 +136,16 @@ function GesturesComponent() {
           <div className="flex h-full items-center justify-center">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
+        ) : error ? (
+          <EmptyState
+            action={{
+              label: t("web.errors.retry"),
+              onClick: () => {
+                refetch();
+              },
+            }}
+            message={t("web.gestures.errorLoading")}
+          />
         ) : filteredGestures.length === 0 ? (
           <EmptyState
             message={

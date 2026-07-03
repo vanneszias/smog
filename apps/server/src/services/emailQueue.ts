@@ -128,7 +128,7 @@ export async function enqueueEmail(
       removeOnComplete: { count: 100 },
       removeOnFail: { count: 50 },
     });
-    console.log(`[EmailQueue] Enqueued job type="${job.type}" to=${job.to}`);
+    console.log(`[EmailQueue] Enqueued job type="${job.type}"`);
   } catch (error) {
     console.error("[EmailQueue] Failed to enqueue job:", error);
     throw error;

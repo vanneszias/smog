@@ -76,9 +76,10 @@ export function Hero({ onSearch }: HeroProps) {
               </svg>
             </div>
             <SearchBar
-              autoFocus={true}
               buttonLabel={t("search.button", "Zoeken")}
               className="pt-2 md:py-12"
+              clearLabel={t("search.clear", "Wissen")}
+              inputLabel={t("search.inputLabel", "Zoek naar een gebaar")}
               onChange={setSearchQuery}
               onClear={handleClear}
               onSubmit={handleSearchSubmit}

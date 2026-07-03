@@ -66,8 +66,10 @@ export function AdminTable() {
 
   const { data: gestures, isLoading } = useQuery(
     orpc.admin.gestures.listAll.queryOptions({
-      includeInactive: true,
-      limit: 500,
+      input: {
+        includeInactive: true,
+        limit: 500,
+      },
     })
   );
 
@@ -96,8 +98,10 @@ export function AdminTable() {
       editing.clearAfterSave();
       queryClient.invalidateQueries({
         queryKey: orpc.admin.gestures.listAll.queryOptions({
-          includeInactive: true,
-          limit: 500,
+          input: {
+            includeInactive: true,
+            limit: 500,
+          },
         }).queryKey,
       });
     },

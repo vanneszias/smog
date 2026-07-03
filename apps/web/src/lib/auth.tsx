@@ -35,6 +35,7 @@ const logger = createLogger("auth");
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const clientId = import.meta.env.VITE_WORKOS_CLIENT_ID;
 const redirectUri = import.meta.env.VITE_WORKOS_REDIRECT_URI;
+const OAUTH_STATE_KEY = "smog_oauth_state";
 
 // In-memory token storage (never persisted)
 let accessToken: string | null = null;
@@ -73,6 +74,9 @@ async function refreshSession(): Promise<{
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<WorkOSUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHandlingCallback, setIsHandlingCallback] = useState(() =>
+    new URL(window.location.href).searchParams.has("code")
+  );
   const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
 
   // Restore session on mount
@@ -95,8 +99,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleCallback = async () => {
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
+      const returnedState = url.searchParams.get("state");
 
       if (!code) {
+        setIsHandlingCallback(false);
         return;
       }
 
@@ -104,6 +110,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.history.replaceState({}, "", url.pathname);
 
       try {
+        const expectedState = sessionStorage.getItem(OAUTH_STATE_KEY);
+        sessionStorage.removeItem(OAUTH_STATE_KEY);
+        if (!(expectedState && returnedState === expectedState)) {
+          throw new Error("OAuth state validation failed");
+        }
+
         const response = await fetch(`${serverUrl}/auth/workos/callback`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -122,6 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         logger.error("[Auth] OAuth callback failed:", error);
+      } finally {
+        setIsHandlingCallback(false);
       }
     };
 
@@ -158,7 +172,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(() => {
-    const authUrl = buildAuthorizationUrl({ clientId, redirectUri });
+    const state = crypto.randomUUID();
+    sessionStorage.setItem(OAUTH_STATE_KEY, state);
+    const authUrl = buildAuthorizationUrl({ clientId, redirectUri, state });
     window.location.assign(authUrl);
   }, []);
 
@@ -177,12 +193,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const value = useMemo(
-    (): WebAuthContextType => ({
+  const value = useMemo((): WebAuthContextType => {
+    const authIsLoading = isLoading || isHandlingCallback;
+    return {
       user,
-      isLoading,
+      isLoading: authIsLoading,
       isAuthenticated: !!user,
-      authMode: isLoading
+      authMode: authIsLoading
         ? "loading"
         : user
           ? "authenticated"
@@ -192,9 +209,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signOut,
       getAccessToken,
-    }),
-    [user, isLoading, signIn, signOut, getAccessToken]
-  );
+    };
+  }, [user, isLoading, isHandlingCallback, signIn, signOut, getAccessToken]);
 
   // Register access token provider for ORPC client
   useEffect(() => {

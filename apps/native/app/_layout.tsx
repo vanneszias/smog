@@ -10,6 +10,7 @@ import { ListPickerBottomSheet } from "@/components/lists/ListPickerBottomSheet"
 import AppProviders from "@/context/AppProviders";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "@/context/TranslationContext";
 import {
   clearAnalyticsIdentity,
   getAnalyticsConsent,
@@ -182,6 +183,7 @@ function AuthenticatedLayout() {
 
 function RootLayoutNav() {
   const { isLoading, isAuthenticated, isGuest, authMode } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [hasNavigated, setHasNavigated] = useState(false);
   const prevAuthMode = useRef(authMode);
@@ -228,7 +230,7 @@ function RootLayoutNav() {
           source={require("@/assets/images/adaptive-icon.png")}
           style={styles.logo}
         />
-        <Text style={styles.loading}>Initializing...</Text>
+        <Text style={styles.loading}>{t("common.initializing")}</Text>
       </View>
     );
   }

@@ -65,7 +65,7 @@ tasks:
         --build-arg "VITE_WORKOS_CLIENT_ID=${VITE_WORKOS_CLIENT_ID:-}" \
         --build-arg "VITE_WORKOS_REDIRECT_URI=${VITE_WORKOS_REDIRECT_URI:-}" \
         --build-arg "VITE_CONVEX_URL=${VITE_CONVEX_URL:-}" \
-        --build-arg "VITE_OPENPANEL_API_URL=${VITE_OPENPANEL_API_URL:-https://analytics.zias.be}" \
+        --build-arg "VITE_OPENPANEL_API_URL=${VITE_OPENPANEL_API_URL:-https://analytics.zias.be/api}" \
         --build-arg "VITE_OPENPANEL_CLIENT_ID=${VITE_OPENPANEL_CLIENT_ID:-}" \
         -f apps/web/Dockerfile \
         -t "$image:$image_tag" \

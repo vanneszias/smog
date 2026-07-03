@@ -47,11 +47,18 @@ export function calculateSimplifiedPrice(
  * Format a price in euro cents to a localised EUR string.
  *
  * @example
- * formatPrice(5000) // "€50.00"
+ * formatPrice(5000, "nl") // "€ 50,00"
  */
-export function formatPrice(cents: number): string {
+export function formatPrice(cents: number, language = "nl"): string {
   const euros = cents / 100;
-  return new Intl.NumberFormat("en-EU", {
+  const locale =
+    {
+      en: "en-BE",
+      fr: "fr-BE",
+      nl: "nl-BE",
+    }[language.split("-")[0]] ?? "nl-BE";
+
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
   }).format(euros);

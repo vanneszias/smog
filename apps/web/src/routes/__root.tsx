@@ -2,15 +2,20 @@ import { createORPCClient } from "@orpc/client";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import type { AppRouterClient } from "@smog/api/routers/index";
 import type { QueryClient } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
   createRootRouteWithContext,
   HeadContent,
   Outlet,
   useLocation,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useTranslation } from "react-i18next";
 import Header from "@/components/header";
 import { AppStoreBanner } from "@/components/home/AppStoreBanner";
@@ -28,6 +33,20 @@ import {
 } from "@/lib/openpanel";
 import { link, type orpc } from "@/utils/orpc";
 import "../index.css";
+
+const ReactQueryDevtools = import.meta.env.DEV
+  ? lazy(async () => {
+      const module = await import("@tanstack/react-query-devtools");
+      return { default: module.ReactQueryDevtools };
+    })
+  : null;
+
+const TanStackRouterDevtools = import.meta.env.DEV
+  ? lazy(async () => {
+      const module = await import("@tanstack/react-router-devtools");
+      return { default: module.TanStackRouterDevtools };
+    })
+  : null;
 
 export interface RouterAppContext {
   orpc: typeof orpc;
@@ -52,7 +71,7 @@ function RootComponent() {
   );
 
   // Update document language attribute based on i18n
-  const { i18n: i18nInstance } = useTranslation();
+  const { i18n: i18nInstance, t } = useTranslation();
   useEffect(() => {
     document.documentElement.lang = i18nInstance.language;
   }, [i18nInstance.language]);
@@ -96,6 +115,9 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
+        <a className="skip-link" href="#main-content">
+          {t("accessibility.skipToContent")}
+        </a>
         <div className="grid h-svh grid-rows-[auto_auto_1fr] overflow-hidden">
           <Header />
           {location.pathname === "/" && <AppStoreBanner />}
@@ -106,8 +128,12 @@ function RootComponent() {
         <Toaster richColors />
         <PrivacyConsentBanner />
       </ThemeProvider>
-      <TanStackRouterDevtools position="bottom-left" />
-      <ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
+      {ReactQueryDevtools && TanStackRouterDevtools ? (
+        <Suspense fallback={null}>
+          <TanStackRouterDevtools position="bottom-left" />
+          <ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
+        </Suspense>
+      ) : null}
     </>
   );
 }

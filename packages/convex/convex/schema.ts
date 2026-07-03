@@ -5,7 +5,9 @@ export default defineSchema({
   categories: defineTable({
     name: v.string(),
     isActive: v.boolean(),
-  }).index("by_name", ["name"]),
+  })
+    .index("by_name", ["name"])
+    .index("by_active", ["isActive"]),
 
   gestures: defineTable({
     name: v.string(),

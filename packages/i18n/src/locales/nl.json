@@ -8,6 +8,10 @@
     "offlineMode": "Je bent offline. Sommige functies kunnen beperkt zijn.",
     "backOnline": "Je bent terug online!",
     "recentSearches": "Recente zoekopdrachten",
+    "button": "Zoeken",
+    "filterButton": "Filteren op categorie",
+    "removeCategory": "Filter {{category}} verwijderen",
+    "inputLabel": "Zoek naar een gebaar",
     "clear": "Wissen",
     "clearAll": "Alles wissen",
     "foundResults": "{{count}} resultaten gevonden in {{time}}ms",
@@ -142,9 +146,14 @@
     "edit": "Bewerken",
     "delete": "Verwijderen",
     "continue": "Doorgaan",
+    "initializing": "SMOG starten...",
+    "pause": "Video pauzeren",
+    "play": "Video afspelen",
     "total": "Totaal",
     "week": "week",
     "weeks": "weken",
+    "year": "{{count}} jaar",
+    "years": "{{count}} jaar",
     "gesture": "gebaar",
     "gestures": "gebaren",
     "errors": {
@@ -229,7 +238,6 @@
     "realData": "Echte gegevens",
     "production": "Productie",
     "mock": "Testgegevens",
-    "realDataw": "Echte Data",
     "auth": "Authenticatie",
     "manageAccount": "Account beheren",
     "openDeveloperTools": "Ontwikkelaarstools openen",
@@ -315,11 +323,21 @@
       "closeButton": "TERMINAL_SLUITEN"
     }
   },
+  "appStore": {
+    "new": "Nieuw",
+    "headline": "SMOG is nu beschikbaar op je telefoon!",
+    "subheadline": "Download de app en leer gebaren waar je ook bent",
+    "downloadOn": "Download in de",
+    "getItOn": "Beschikbaar op",
+    "close": "Sluit de app-downloadbanner"
+  },
   "web": {
     "home": {
       "title": "Leer SMOG",
+      "heroTitle": "Mensen ondersteunen hun spraak van nature met gebaren",
       "header": {
         "search": "Zoeken",
+        "lists": "Lijsten",
         "favorites": "Favorieten",
         "account": "Account",
         "sponsor": "Sponsor",
@@ -343,10 +361,15 @@
         "description": "Filter gebaren op onderwerp en categorie om je te concentreren op wat je wilt leren.",
         "action": "Begin met leren"
       },
-      "footer": "© 2026 SMOG&Co. Alle rechten voorbehouden."
+      "footer": {
+        "terms": "Voorwaarden",
+        "privacy": "Privacy"
+      },
+      "copyright": "© 2026 SMOG&Co. Alle rechten voorbehouden."
     },
     "gestures": {
       "searchPlaceholder": "Zoek gebaren op naam, concept of beschrijving...",
+      "errorLoading": "We konden de gebaren niet laden. Controleer je verbinding en probeer opnieuw.",
       "noResultsWithFilters": "Geen gebaren gevonden die aan je zoekopdracht voldoen",
       "noResults": "Geen gebaren beschikbaar",
       "loading": "Gebaren laden...",
@@ -550,6 +573,8 @@
     "sponsors": {
       "wizard": {
         "back": "Terug",
+        "backToSelection": "Terug naar selectie",
+        "backToDetails": "Terug naar details",
         "step": "Stap {{current}} van {{total}}",
         "selectedGestures": "Geselecteerde gebaren",
         "gesturesSelected": "{{count}} gebaar geselecteerd",
@@ -557,7 +582,32 @@
         "gesture": "gebaar",
         "gestures": "gebaren",
         "remove": "Verwijderen",
+        "removeGestureLabel": "{{name}} verwijderen",
         "continue": "Doorgaan",
+        "sponsored": "Gesponsord",
+        "inReview": "In behandeling",
+        "example": "Voorbeeld",
+        "logoPreviewAlt": "Voorbeeld van het logo",
+        "removeLogo": "Logo verwijderen",
+        "optional": "optioneel",
+        "previewFinalDescription": "De laatste stap voor de veilige betaling",
+        "videoName": "Naam in video",
+        "contact": "Contact",
+        "selection": {
+          "title": "Steun een gebaar",
+          "description": "Steun een gebaar voor één jaar. Jouw naam verschijnt in de video en helpt het SMOG-project.",
+          "perGesture": "Per gebaar, per jaar",
+          "nameInVideo": "Jouw naam in elke video",
+          "optionalLogo": "Voeg je logo toe (optioneel)",
+          "searchPlaceholder": "Zoek op naam, begrip of categorie...",
+          "categories": "Categorieën",
+          "showLess": "Minder tonen",
+          "showMore": "+{{count}} meer",
+          "available": "{{count}} beschikbaar gebaar",
+          "available_other": "{{count}} beschikbare gebaren",
+          "selected": "{{count}} geselecteerd",
+          "selected_other": "{{count}} geselecteerd"
+        },
         "configureTitle": "Configureer je sponsoring",
         "configureSubtitle": "Alle {{count}} geselecteerde gebaren tonen:\n\"{{message}}\"",
         "sponsorNameLabel": "Sponsor naam *",
@@ -622,6 +672,56 @@
         "invoiceEmailLabel": "E-mailadres voor factuur",
         "invoiceEmailPlaceholder": "factuur@voorbeeld.be"
       },
+      "reEdit": {
+        "invalidTitle": "Ongeldige link",
+        "invalidBody": "Bij deze link ontbreekt een vereiste code. Gebruik de link die je van de beheerder hebt ontvangen.",
+        "loading": "Je link controleren…",
+        "notFoundTitle": "Link niet gevonden",
+        "notFoundBody": "Deze link is ongeldig of al gebruikt. Neem contact op met de beheerder als je denkt dat dit niet klopt.",
+        "expiredTitle": "Link verlopen",
+        "expiredBody": "Deze link is verlopen. Vraag de beheerder om een nieuwe link.",
+        "submittedTitle": "Video verzonden!",
+        "submittedBody": "Je nieuwe video staat klaar voor controle. Je hoeft niet opnieuw te betalen; we nemen snel contact met je op.",
+        "backToSite": "Terug naar de website",
+        "eyebrow": "Sponsoring aanpassen",
+        "title": "Werk je video bij",
+        "gesture": "Gebaar",
+        "expires": "Link verloopt over {{count}} dag",
+        "expires_other": "Link verloopt over {{count}} dagen",
+        "originalVideo": "Oorspronkelijke gebarenvideo",
+        "editDetails": "Pas je gegevens aan",
+        "brandName": "Merknaam",
+        "brandPlaceholder": "Naam van je merk of bedrijf",
+        "brandHelp": "Deze naam verschijnt in de video.",
+        "overlayText": "Tekst in de video",
+        "overlayPlaceholder": "Tekst die bovenop de gebarenvideo verschijnt",
+        "maxCharacters": "Maximaal 100 tekens.",
+        "updateLogo": "Logo bijwerken",
+        "logoAlt": "Voorbeeld van het logo",
+        "removeLogo": "Logo verwijderen",
+        "uploadLogo": "Kies een nieuw logo",
+        "formats": "PNG, JPEG of WebP · Max. 2 MB",
+        "preview": "Voorbeeld",
+        "generating": "Genereren…",
+        "regenerate": "Opnieuw genereren",
+        "generatePreview": "Voorbeeld genereren",
+        "compositing": "Je video wordt samengesteld… Dit duurt ongeveer één minuut.",
+        "previewReady": "Tevreden? Verstuur de video hieronder wanneer je klaar bent.",
+        "previewEmpty": "Kies ‘Voorbeeld genereren’ om je bijgewerkte video te bekijken.",
+        "submitting": "Verzenden…",
+        "submitReview": "Ter controle verzenden",
+        "noPayment": "Je hoeft niet opnieuw te betalen. We controleren de aanpassing voordat ze online gaat.",
+        "errors": {
+          "logoTooLarge": "Het logo moet kleiner zijn dan 2 MB.",
+          "logoInvalidFormat": "Gebruik een PNG-, JPEG- of WebP-afbeelding.",
+          "brandRequired": "De merknaam is verplicht.",
+          "overlayRequired": "De tekst in de video is verplicht.",
+          "previewFailed": "We konden het voorbeeld niet genereren. Probeer het opnieuw.",
+          "generateFirst": "Genereer eerst een voorbeeld.",
+          "fillRequired": "Vul alle verplichte velden in.",
+          "submitFailed": "We konden je aanpassing niet verzenden. Probeer het opnieuw."
+        }
+      },
       "new": {
         "title": "Sponsor een gebaar!",
         "subtitle": "Word peter of meter van een gebaar",
@@ -649,11 +749,11 @@
           "sponsorNameTooLong": "Sponsor naam mag maximaal 40 tekens bevatten",
           "logoRequired": "Upload een logo of vink de optie uit",
           "logoTooLarge": "Afbeelding moet kleiner zijn dan 2MB",
-          "logoInvalidFormat": "Ongeldig afbeeldingsformaat. Gebruik PNG, JPG of SVG"
+          "logoInvalidFormat": "Ongeldig afbeeldingsformaat. Gebruik PNG, JPEG of WebP"
         },
         "logoGuidelines": {
           "title": "Logo richtlijnen",
-          "format": "Formaat: PNG met transparante achtergrond (aanbevolen) of SVG",
+          "format": "Formaat: PNG met transparante achtergrond (aanbevolen), JPEG of WebP",
           "dimensions": "Afmetingen: Minimaal 800x800px voor beste kwaliteit",
           "aspectRatio": "Bestandsverhouding: Vierkant (1:1) aanbevolen",
           "fileSize": "Bestandsgrootte: Maximaal 2MB",
@@ -783,8 +883,10 @@
         "loading": "Sponsoring details laden...",
         "error": {
           "title": "Laden van sponsoring details mislukt",
+          "description": "We kunnen de details nog niet laden. Dit heeft geen invloed op uw betaling.",
           "tryAgain": "Opnieuw proberen"
         },
+        "reviewDescription": "Een beheerder beoordeelt uw sponsoring binnen vijf werkdagen. U ontvangt een e-mail zodra deze online staat.",
         "processing": {
           "title": "Uw betaling wordt verwerkt...",
           "description": "Betaling ontvangen! De details van uw sponsoring verschijnen hier binnenkort. Deze pagina wordt automatisch bijgewerkt.",
@@ -854,6 +956,8 @@
     },
     "gestureFilters": {
       "searchPlaceholder": "Zoek gebaren...",
+      "searchLabel": "Gebaren zoeken",
+      "clearSearch": "Zoekopdracht wissen",
       "filters": "Filters",
       "results": "{{count}} resultaat",
       "results_other": "{{count}} resultaten",
@@ -898,7 +1002,8 @@
     "skipToNav": "Spring naar navigatie",
     "menu": {
       "open": "Menu openen",
-      "close": "Menu sluiten"
+      "close": "Menu sluiten",
+      "navigation": "Hoofdnavigatie"
     },
     "logo": {
       "alt": "SMOG Logo"

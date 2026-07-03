@@ -5,7 +5,7 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SponsorshipWithGesture } from "@/types/sponsorship";
 import { client } from "@/utils/orpc";
@@ -39,7 +39,6 @@ function SuccessComponent() {
     data: sponsorships,
     isLoading,
     isError,
-    error,
     refetch,
   } = useQuery<SponsorshipWithGesture[]>({
     queryKey: ["sponsorships", paymentId],
@@ -67,15 +66,6 @@ function SuccessComponent() {
     },
     refetchIntervalInBackground: true,
   });
-
-  useEffect(() => {
-    // Auto-redirect after 10 seconds
-    const timer = setTimeout(() => {
-      navigate({ to: "/sponsors" });
-    }, 10_000);
-
-    return () => clearTimeout(timer);
-  }, [navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -117,12 +107,15 @@ function SuccessComponent() {
 
         {/* Loading state */}
         {paymentId && isLoading && (
-          <div className="mt-4 rounded-lg bg-muted p-4 text-center">
+          <output
+            aria-live="polite"
+            className="mt-4 rounded-lg bg-muted p-4 text-center"
+          >
             <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin text-primary" />
             <p className="text-muted-foreground text-sm">
               {t("web.sponsors.success.loading")}
             </p>
-          </div>
+          </output>
         )}
 
         {/* Error state */}
@@ -135,7 +128,7 @@ function SuccessComponent() {
                   {t("web.sponsors.success.error.title")}
                 </p>
                 <p className="mt-1 text-red-800 text-xs dark:text-red-200">
-                  {error instanceof Error ? error.message : "Unknown error"}
+                  {t("web.sponsors.success.error.description")}
                 </p>
                 <button
                   className="mt-2 text-red-900 text-sm underline dark:text-red-100"
@@ -235,7 +228,12 @@ function SuccessComponent() {
                   {t("web.sponsors.new.success.duration")}:
                 </span>
                 <span className="font-medium">
-                  {sponsorships[0]?.durationYears || 1} {t("common.week")}
+                  {t(
+                    (sponsorships[0]?.durationYears || 1) === 1
+                      ? "common.year"
+                      : "common.years",
+                    { count: sponsorships[0]?.durationYears || 1 }
+                  )}
                 </span>
               </div>
               <div className="flex justify-between border-border border-t pt-2">
@@ -261,8 +259,7 @@ function SuccessComponent() {
             {t("web.sponsors.new.success.whatNext")}
           </p>
           <p className="mt-3 text-blue-800 dark:text-blue-200">
-            Je sponsoring wordt binnen 5 werkdagen beoordeeld door een
-            beheerder. Je ontvangt een e-mail zodra je sponsoring online staat.
+            {t("web.sponsors.success.reviewDescription")}
           </p>
         </div>
 
@@ -273,10 +270,6 @@ function SuccessComponent() {
         >
           {t("web.sponsors.new.success.actions.backHome")}
         </button>
-
-        <p className="mt-4 text-xs" style={{ color: "var(--text-light)" }}>
-          {t("web.sponsors.success.redirectingIn", { seconds: "10" })}
-        </p>
       </div>
     </div>
   );

@@ -205,6 +205,7 @@ const SearchScreen = () => {
                 },
                 headerRight: () => (
                   <CircularButton
+                    accessibilityLabel={t("search.filterButton")}
                     badgeCount={selectedCategories.length}
                     icon="filter"
                     onPress={handleShowCategorySheet}
@@ -223,6 +224,7 @@ const SearchScreen = () => {
         <View style={styles.androidHeader}>
           <View style={styles.androidSearchRow}>
             <CircularButton
+              accessibilityLabel={t("search.filterButton")}
               badgeCount={selectedCategories.length}
               icon="filter"
               onPress={handleShowCategorySheet}
@@ -241,6 +243,7 @@ const SearchScreen = () => {
               />
             </View>
             <CircularButton
+              accessibilityLabel={t("search.button")}
               icon="search"
               onPress={() => handleSearchSubmit(searchTerm)}
               size="large"

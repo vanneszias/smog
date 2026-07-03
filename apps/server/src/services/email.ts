@@ -162,12 +162,10 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
     const info = await transporter.sendMail(mailOptions);
 
     if (info.messageId) {
-      logger.info(
-        `Sent "${options.subject}" to ${options.to} (id: ${info.messageId})`
-      );
+      logger.info(`Email sent successfully (id: ${info.messageId})`);
     }
   } catch (error) {
-    logger.error(`Failed to send "${options.subject}" to ${options.to}`, error);
+    logger.error("Failed to send email", error);
     throw error;
   }
 

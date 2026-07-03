@@ -1,4 +1,4 @@
-import MuxPlayer from "@mux/mux-player-react";
+import MuxPlayer from "@mux/mux-player-react/lazy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Upload, Video, X } from "lucide-react";
 import { useState } from "react";
@@ -58,8 +58,10 @@ export function CreateGestureDialog() {
       resetForm();
       queryClient.invalidateQueries({
         queryKey: orpc.admin.gestures.listAll.queryOptions({
-          includeInactive: true,
-          limit: 500,
+          input: {
+            includeInactive: true,
+            limit: 500,
+          },
         }).queryKey,
       });
     },

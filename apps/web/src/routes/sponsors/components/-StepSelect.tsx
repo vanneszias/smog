@@ -9,7 +9,11 @@ import type { GestureWithSponsorshipStatus } from "@smog/ui";
 import { Loader2, Search, X } from "lucide-react";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { PRICE_PER_YEAR_CENTS } from "@/lib/pricing";
+import {
+  formatPrice,
+  LOGO_ADDON_CENTS,
+  PRICE_PER_YEAR_CENTS,
+} from "@/lib/pricing";
 import { SelectionBar } from "./-SelectionBar";
 import { SponsorGestureCard } from "./-SponsorGestureCard";
 
@@ -57,7 +61,7 @@ export function StepSelect({
   totalCents,
   onContinue,
 }: StepSelectProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const availableCount = filteredGestures.filter(
@@ -81,32 +85,42 @@ export function StepSelect({
               </svg>
             </div>
             <h1 className="font-bold text-4xl tracking-tight md:text-5xl">
-              Steun een gebaar
+              {t("web.sponsors.wizard.selection.title")}
             </h1>
             <p className="mx-auto mt-3 max-w-2xl text-lg text-muted-foreground">
-              Word peter of meter van een gebaar. Jouw naam verschijnt in de
-              video en ondersteunt het SMOG-project voor 1 jaar.
+              {t("web.sponsors.wizard.selection.description")}
             </p>
           </div>
 
           {/* Value props */}
           <div className="mb-8 grid gap-4 sm:grid-cols-3">
             <div className="rounded-xl border border-border bg-card p-4 text-center">
-              <div className="mb-2 font-bold text-2xl text-primary">€50</div>
+              <div className="mb-2 font-bold text-2xl text-primary">
+                {formatPrice(
+                  PRICE_PER_YEAR_CENTS,
+                  i18n.resolvedLanguage ?? i18n.language
+                )}
+              </div>
               <div className="text-muted-foreground text-sm">
-                Per gebaar per jaar
+                {t("web.sponsors.wizard.selection.perGesture")}
               </div>
             </div>
             <div className="rounded-xl border border-border bg-card p-4 text-center">
               <div className="mb-2 font-bold text-2xl text-primary">5 sec</div>
               <div className="text-muted-foreground text-sm">
-                Jouw naam in elke video
+                {t("web.sponsors.wizard.selection.nameInVideo")}
               </div>
             </div>
             <div className="rounded-xl border border-border bg-card p-4 text-center">
-              <div className="mb-2 font-bold text-2xl text-primary">+€10</div>
+              <div className="mb-2 font-bold text-2xl text-primary">
+                +
+                {formatPrice(
+                  LOGO_ADDON_CENTS,
+                  i18n.resolvedLanguage ?? i18n.language
+                )}
+              </div>
               <div className="text-muted-foreground text-sm">
-                Voeg je logo toe (optioneel)
+                {t("web.sponsors.wizard.selection.optionalLogo")}
               </div>
             </div>
           </div>
@@ -117,15 +131,17 @@ export function StepSelect({
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <input
+              aria-label={t("search.inputLabel")}
               className="h-12 w-full rounded-xl border border-border bg-background pr-4 pl-12 text-base shadow-sm transition-all placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Zoek op naam, concept of categorie..."
+              placeholder={t("web.sponsors.wizard.selection.searchPlaceholder")}
               ref={searchInputRef}
               type="text"
               value={searchQuery}
             />
             {searchQuery && (
               <button
+                aria-label={t("search.clear")}
                 className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 onClick={() => setSearchQuery("")}
                 type="button"
@@ -138,14 +154,16 @@ export function StepSelect({
           {categoryNames.length > 0 && (
             <div className="mt-4">
               <div className="mb-2 flex items-center justify-between">
-                <span className="font-medium text-sm">Categorieën:</span>
+                <span className="font-medium text-sm">
+                  {t("web.sponsors.wizard.selection.categories")}
+                </span>
                 {selectedCategories.length > 0 && (
                   <button
                     className="text-primary text-sm hover:underline"
                     onClick={handleClearFilters}
                     type="button"
                   >
-                    Wis filters
+                    {t("ui.gestureFilters.clearFilters")}
                   </button>
                 )}
               </div>
@@ -176,8 +194,10 @@ export function StepSelect({
                     type="button"
                   >
                     {showFilters
-                      ? "Minder"
-                      : `+${categoryNames.length - 8} meer`}
+                      ? t("web.sponsors.wizard.selection.showLess")
+                      : t("web.sponsors.wizard.selection.showMore", {
+                          count: categoryNames.length - 8,
+                        })}
                   </button>
                 )}
               </div>
@@ -190,15 +210,16 @@ export function StepSelect({
       <div className="mx-auto px-4 py-4 md:px-12">
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground text-sm">
-            <span className="font-semibold text-foreground">
-              {availableCount}
-            </span>{" "}
-            beschikbare gebaren
+            {t("web.sponsors.wizard.selection.available", {
+              count: availableCount,
+            })}
             {selectedGestureIds.length > 0 && (
               <>
                 {" · "}
                 <span className="font-semibold text-primary">
-                  {selectedGestureIds.length} geselecteerd
+                  {t("web.sponsors.wizard.selection.selected", {
+                    count: selectedGestureIds.length,
+                  })}
                 </span>
               </>
             )}

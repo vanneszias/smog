@@ -1,10 +1,10 @@
 import { useRouter } from "expo-router";
 import {
   Alert,
-  Dimensions,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,14 +14,14 @@ import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 import logger from "@/utils/logger";
 
-const { height: screenHeight } = Dimensions.get("window");
-const isSmallScreen = screenHeight < 700;
-
 export default function WelcomeScreen() {
   const { continueAsGuest, signIn, user } = useAuth();
   const { theme } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
+  const { height, width } = useWindowDimensions();
+  const isSmallScreen = height < 700;
+  const shouldStackButtons = width < 420;
 
   const handleSignInSignUp = async () => {
     try {
@@ -29,7 +29,7 @@ export default function WelcomeScreen() {
       signIn();
     } catch (error) {
       logger.error("[Welcome] Sign-in error:", error);
-      Alert.alert(t("common.error"), "Failed to sign in. Please try again.");
+      Alert.alert(t("common.error"), t("auth.errors.signInFailed"));
     }
   };
 
@@ -63,9 +63,11 @@ export default function WelcomeScreen() {
           style={[
             styles.buttonContainer,
             isSmallScreen ? styles.buttonContainerSmall : null,
+            shouldStackButtons ? styles.buttonContainerStacked : null,
           ]}
         >
           <TouchableOpacity
+            accessibilityRole="button"
             onPress={handleGuestAccess}
             style={[
               styles.guestButton,
@@ -84,6 +86,7 @@ export default function WelcomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            accessibilityRole="button"
             onPress={handleSignInSignUp}
             style={[
               styles.primaryButton,
@@ -162,6 +165,9 @@ const styles = StyleSheet.create({
   buttonContainerSmall: {
     gap: 12,
     minHeight: 48,
+  },
+  buttonContainerStacked: {
+    flexDirection: "column",
   },
   primaryButton: {
     flex: 1,

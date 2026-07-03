@@ -2,7 +2,7 @@
 # API Server (Hono/Bun)
 
 # ── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM oven/bun:1-alpine AS deps
+FROM oven/bun:1.3.14-alpine AS deps
 WORKDIR /app
 
 COPY package.json bun.lock bunfig.toml ./
@@ -23,7 +23,7 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile
 
 # ── Stage 2: builder ─────────────────────────────────────────────────────────
-FROM oven/bun:1-alpine AS builder
+FROM oven/bun:1.3.14-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app ./
@@ -35,7 +35,7 @@ RUN cd apps/server && bun run build
 # The bun build bundles all @smog/* workspace packages and most npm deps into a
 # single ESM file. Only `nodemailer` is kept external (see build.ts), so we
 # install just that package instead of copying the full monorepo node_modules.
-FROM oven/bun:1-alpine AS production
+FROM oven/bun:1.3.14-alpine AS production
 WORKDIR /app
 
 RUN apk add --no-cache curl
@@ -59,7 +59,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 CMD ["bun", "run", "dist/index.js"]
 
 # ── Stage 4: development ──────────────────────────────────────────────────────
-FROM oven/bun:1-alpine AS development
+FROM oven/bun:1.3.14-alpine AS development
 WORKDIR /app
 
 COPY --from=deps /app ./

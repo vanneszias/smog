@@ -1,4 +1,4 @@
-import MuxPlayer from "@mux/mux-player-react";
+import MuxPlayer from "@mux/mux-player-react/lazy";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -15,7 +15,12 @@ const VIDEO_COMPLETE_COUNT = 7;
 const COURSE_URL = "https://smog.vlaanderen/volg-een-cursus";
 
 // Link phrases that should be clickable in the video complete messages
-const LINK_PHRASES = ["Klik hier", "klik dan hier"];
+const NL_LINK_PHRASES = ["Klik hier", "klik hier", "klik dan hier"];
+const LINK_PHRASES: Record<string, string[]> = {
+  en: ["Click here", "click here"],
+  fr: ["Cliquez ici", "cliquez ici"],
+  nl: NL_LINK_PHRASES,
+};
 
 import { ShimmerSkeleton } from "../common/Skeleton";
 import type { GestureCardData } from "./types";
@@ -87,7 +92,7 @@ export function GestureDetail({
   showOpenInApp = false,
   onOpenInApp,
 }: GestureDetailProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const disclaimerFiredRef = useRef(false);
 
@@ -96,6 +101,8 @@ export function GestureDetail({
     () => Math.floor(Math.random() * VIDEO_COMPLETE_COUNT) + 1,
     []
   );
+  const language = i18n.resolvedLanguage?.split("-")[0] ?? "nl";
+  const linkPhrases = LINK_PHRASES[language] ?? NL_LINK_PHRASES;
 
   // Render message with clickable links
   const renderMessageWithLinks = (message: string) => {
@@ -107,7 +114,7 @@ export function GestureDetail({
       let earliestMatch: { phrase: string; index: number } | null = null;
 
       // Find the earliest occurrence of any link phrase
-      for (const phrase of LINK_PHRASES) {
+      for (const phrase of linkPhrases) {
         const index = remainingText.indexOf(phrase);
         if (
           index !== -1 &&
@@ -366,7 +373,7 @@ export function GestureDetail({
                     className="mb-0.5 font-semibold text-sm leading-snug"
                     style={{ color: "var(--text)" }}
                   >
-                    {t("gesture.disclaimer.titleNl")}
+                    {t("gesture.disclaimer.title")}
                   </p>
                   <p
                     className="text-sm leading-relaxed"
@@ -380,7 +387,7 @@ export function GestureDetail({
 
                 {/* Dismiss button */}
                 <button
-                  aria-label="Dismiss disclaimer"
+                  aria-label={t("gesture.disclaimer.dismiss")}
                   className="shrink-0 rounded-lg p-1 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
                   onClick={() => setShowDisclaimer(false)}
                   type="button"

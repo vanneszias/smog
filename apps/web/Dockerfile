@@ -2,7 +2,7 @@
 # Web application (Vite/React → Caddy static file server)
 
 # ── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM oven/bun:1-alpine AS deps
+FROM --platform=$BUILDPLATFORM oven/bun:1.3.14-alpine AS deps
 WORKDIR /app
 
 COPY package.json bun.lock bunfig.toml ./
@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
     || (echo "ERROR: required node_modules directories are missing" && exit 1)
 
 # ── Stage 2: builder ─────────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM oven/bun:1-alpine AS builder
+FROM --platform=$BUILDPLATFORM oven/bun:1.3.14-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app ./
@@ -66,11 +66,14 @@ COPY apps/web/Caddyfile /etc/caddy/Caddyfile
 
 EXPOSE 80 443
 
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD wget -q --spider http://localhost/health || exit 1
+
 CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
 
 # ── Stage 4: development ──────────────────────────────────────────────────────
 # Used by docker-compose for local dev with hot-reload via volume mounts.
-FROM oven/bun:1-alpine AS development
+FROM oven/bun:1.3.14-alpine AS development
 WORKDIR /app
 
 COPY --from=deps /app ./

@@ -1,4 +1,4 @@
-import MuxPlayer from "@mux/mux-player-react";
+import MuxPlayer from "@mux/mux-player-react/lazy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Eye,
@@ -251,8 +251,10 @@ export function GesturesManagement() {
 
   const { data: gestures, isLoading } = useQuery(
     orpc.admin.gestures.listAll.queryOptions({
-      includeInactive: true,
-      limit: 500,
+      input: {
+        includeInactive: true,
+        limit: 500,
+      },
     })
   );
 
@@ -266,8 +268,10 @@ export function GesturesManagement() {
       setEditDialog(null);
       queryClient.invalidateQueries({
         queryKey: orpc.admin.gestures.listAll.queryOptions({
-          includeInactive: true,
-          limit: 500,
+          input: {
+            includeInactive: true,
+            limit: 500,
+          },
         }).queryKey,
       });
     },

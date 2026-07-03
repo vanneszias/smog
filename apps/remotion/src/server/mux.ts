@@ -78,6 +78,9 @@ export async function uploadToMux(
 
   console.log(`[Mux] Direct upload created: ${upload.id}`);
   onProgress?.(82);
+  if (!upload.url) {
+    throw new Error("Mux did not return a direct upload URL");
+  }
 
   // Read and upload the video file
   const videoBuffer = await fs.readFile(videoPath);

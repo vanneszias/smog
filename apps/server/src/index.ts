@@ -21,6 +21,7 @@ import {
 import { api } from "@smog/convex";
 import { ConvexHttpClient } from "convex/browser";
 import { Hono, type Context as HonoContext } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -38,6 +39,7 @@ import {
 } from "./emails";
 import { enqueueEmail, startEmailWorker } from "./services/emailQueue";
 import { getMasterDownloadUrl } from "./services/mux";
+import { rateLimit } from "./services/rateLimit";
 import { handleMollieWebhook } from "./webhooks/mollie";
 
 // ==============================================
@@ -197,6 +199,13 @@ async function forwardToOpenPanel(
   }
 }
 
+app.use(
+  "/*",
+  bodyLimit({
+    maxSize: 5 * 1024 * 1024,
+    onError: (c) => c.json({ error: "Request body too large" }, 413),
+  })
+);
 app.use(logger());
 
 app.use(
@@ -209,6 +218,34 @@ app.use(
   })
 );
 
+app.use(
+  "/auth/*",
+  rateLimit({ namespace: "auth", limit: 30, windowSeconds: 15 * 60 })
+);
+app.use("/auth/*", async (c, next) => {
+  c.header("Cache-Control", "no-store");
+  c.header("Pragma", "no-cache");
+  await next();
+});
+app.use(
+  "/analytics/track",
+  rateLimit({ namespace: "analytics", limit: 120, windowSeconds: 60 })
+);
+app.use("/rpc/*", async (c, next) => {
+  const isRenderOrPaymentRequest = [
+    "generatePreview",
+    "createBulkSponsorshipsSimplified",
+    "createBulkPayment",
+    "reSubmitSponsorship",
+  ].some((operation) => c.req.path.includes(operation));
+
+  return await rateLimit({
+    namespace: isRenderOrPaymentRequest ? "sponsorship" : "rpc",
+    limit: isRenderOrPaymentRequest ? 20 : 300,
+    windowSeconds: isRenderOrPaymentRequest ? 60 * 60 : 60,
+  })(c, next);
+});
+
 /**
  * WorkOS OAuth callback endpoint
  * Exchanges the authorization code for tokens
@@ -218,11 +255,22 @@ app.use(
  */
 app.post("/auth/workos/callback", async (c) => {
   try {
-    const body = await c.req.json();
+    const body: unknown = await c.req.json();
+    if (!isRecord(body)) {
+      return c.json({ error: "Invalid authentication request" }, 400);
+    }
     const { code, codeVerifier } = body;
 
-    if (!code) {
+    if (typeof code !== "string" || code.length === 0 || code.length > 4096) {
       return c.json({ error: "Authorization code is required" }, 400);
+    }
+    if (
+      codeVerifier !== undefined &&
+      (typeof codeVerifier !== "string" ||
+        codeVerifier.length < 43 ||
+        codeVerifier.length > 128)
+    ) {
+      return c.json({ error: "Invalid PKCE verifier" }, 400);
     }
 
     if (!(workosConfig.clientId && workosConfig.clientSecret)) {
@@ -238,19 +286,27 @@ app.post("/auth/workos/callback", async (c) => {
       codeVerifier
     );
 
-    // Store refresh token in httpOnly cookie (for web clients)
-    setCookie(c, REFRESH_TOKEN_COOKIE, result.refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "Lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    });
+    const isNativeClient = typeof codeVerifier === "string" && codeVerifier;
+
+    // Browser refresh tokens stay in an httpOnly cookie. Native clients use
+    // PKCE and receive the token for storage in the platform secure store.
+    if (!isNativeClient) {
+      setCookie(c, REFRESH_TOKEN_COOKIE, result.refreshToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "Lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+    }
 
     // Check if this is a new user and send welcome email (fire-and-forget)
     // We intentionally don't await this — it must not delay the auth response
     convex
-      .query(api.users.getUserByWorkOSId, { workosId: result.user.id })
+      .query(api.users.getUserByWorkOSId, {
+        workosId: result.user.id,
+        serviceToken: internalApiKey,
+      })
       .then(async (existingUser) => {
         if (!existingUser) {
           await enqueueEmail({
@@ -270,14 +326,12 @@ app.post("/auth/workos/callback", async (c) => {
     return c.json({
       success: true,
       accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
+      ...(isNativeClient && { refreshToken: result.refreshToken }),
       user: result.user,
     });
   } catch (error) {
     console.error("[Auth] Callback error:", error);
-    const message =
-      error instanceof Error ? error.message : "Authentication failed";
-    return c.json({ error: message }, 500);
+    return c.json({ error: "Authentication failed" }, 401);
   }
 });
 
@@ -291,12 +345,19 @@ app.post("/auth/token/refresh", async (c) => {
   try {
     // Try to get refresh token from cookie first (web), then from body (native)
     let refreshToken = getCookie(c, REFRESH_TOKEN_COOKIE);
+    const isWebSession = Boolean(refreshToken);
 
     if (!refreshToken) {
       // Try to get from request body (for native apps)
       try {
         const body = await c.req.json();
-        refreshToken = body.refreshToken;
+        if (
+          isRecord(body) &&
+          typeof body.refreshToken === "string" &&
+          body.refreshToken.length <= 8192
+        ) {
+          refreshToken = body.refreshToken;
+        }
       } catch {
         // No body or invalid JSON
       }
@@ -318,18 +379,20 @@ app.post("/auth/token/refresh", async (c) => {
     );
 
     // Update refresh token cookie (for web clients)
-    setCookie(c, REFRESH_TOKEN_COOKIE, result.refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "Lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    });
+    if (isWebSession) {
+      setCookie(c, REFRESH_TOKEN_COOKIE, result.refreshToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "Lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+    }
 
     // Return new tokens and user info
     return c.json({
       accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
+      ...(!isWebSession && { refreshToken: result.refreshToken }),
       user: result.user,
     });
   } catch (error) {
@@ -521,6 +584,7 @@ async function isAdminRequest(c: HonoContext): Promise<boolean> {
 
   const user = await convex.query(api.users.getUserByWorkOSId, {
     workosId: context.workosId,
+    serviceToken: internalApiKey,
   });
 
   return user?.role === "admin";

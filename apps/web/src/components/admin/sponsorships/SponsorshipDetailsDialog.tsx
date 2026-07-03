@@ -5,7 +5,7 @@
  * side-by-side plus all metadata in a structured grid.
  */
 
-import MuxPlayer from "@mux/mux-player-react";
+import MuxPlayer from "@mux/mux-player-react/lazy";
 import { Users } from "lucide-react";
 import {
   Dialog,

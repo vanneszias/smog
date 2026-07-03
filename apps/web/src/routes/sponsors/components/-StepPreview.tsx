@@ -6,7 +6,7 @@
  * flow via `useCreateSponsorship`.
  */
 
-import MuxPlayer from "@mux/mux-player-react";
+import MuxPlayer from "@mux/mux-player-react/lazy";
 import { ArrowRight, Check, Heart, Loader2 } from "lucide-react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
@@ -35,7 +35,7 @@ export function StepPreview({
   totalCents,
   onProceedToPayment,
 }: StepPreviewProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
 
   return (
     <div className="relative z-10 flex flex-1 flex-col bg-muted/20 px-4 lg:px-12">
@@ -47,7 +47,9 @@ export function StepPreview({
           type="button"
         >
           <ArrowRight className="h-4 w-4 rotate-180" />
-          <span className="font-medium text-sm">Terug naar details</span>
+          <span className="font-medium text-sm">
+            {t("web.sponsors.wizard.backToDetails")}
+          </span>
         </button>
 
         {/* Progress indicator — step 3 of 3 */}
@@ -65,9 +67,11 @@ export function StepPreview({
           </div>
         </div>
 
-        <h1 className="font-bold text-2xl">Bekijk je preview</h1>
+        <h1 className="font-bold text-2xl">
+          {t("web.sponsors.wizard.previewTitle")}
+        </h1>
         <p className="mt-2 text-muted-foreground">
-          Laatste stap voordat je naar de betaling gaat
+          {t("web.sponsors.wizard.previewFinalDescription")}
         </p>
       </header>
 
@@ -105,7 +109,9 @@ export function StepPreview({
 
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Gebaren</span>
+                <span className="text-muted-foreground">
+                  {t("web.sponsors.wizard.gestures")}
+                </span>
                 <span className="font-medium">
                   {form.selectedGestureIds.length}
                 </span>
@@ -119,17 +125,27 @@ export function StepPreview({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Naam in video</span>
+                <span className="text-muted-foreground">
+                  {t("web.sponsors.wizard.videoName")}
+                </span>
                 <span className="font-medium">{form.sponsorName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Logo</span>
+                <span className="text-muted-foreground">
+                  {t("web.sponsors.wizard.logo")}
+                </span>
                 <span className="font-medium">
-                  {form.includeLogo ? "Ja" : "Nee"}
+                  {t(
+                    form.includeLogo
+                      ? "web.sponsors.wizard.yes"
+                      : "web.sponsors.wizard.no"
+                  )}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Contact</span>
+                <span className="text-muted-foreground">
+                  {t("web.sponsors.wizard.contact")}
+                </span>
                 <span className="truncate font-medium">
                   {form.contactEmail}
                 </span>
@@ -139,7 +155,12 @@ export function StepPreview({
             <div className="border-primary/20 border-t pt-4">
               <div className="flex justify-between font-bold text-xl">
                 <span>{t("web.sponsors.wizard.totalAmount")}</span>
-                <span className="text-primary">{formatPrice(totalCents)}</span>
+                <span className="text-primary">
+                  {formatPrice(
+                    totalCents,
+                    i18n.resolvedLanguage ?? i18n.language
+                  )}
+                </span>
               </div>
             </div>
           </div>

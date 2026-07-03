@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { BORDER_RADIUS, ICON_SIZE, SHADOWS, SPACING } from "@smog/styles";
 import { memo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -25,7 +25,13 @@ const GestureCard = ({
 
   return (
     <View style={styles.wrapper}>
-      <TouchableOpacity activeOpacity={0.8} onPress={() => onPress(gesture)}>
+      <TouchableOpacity
+        accessibilityHint={gesture.category.join(", ")}
+        accessibilityLabel={gesture.name}
+        accessibilityRole="button"
+        activeOpacity={0.8}
+        onPress={() => onPress(gesture)}
+      >
         <View
           style={[
             styles.container,
@@ -67,6 +73,7 @@ const GestureCard = ({
               accessibilityLabel={
                 isSaved ? t("lists.manageGestureLists") : t("lists.addToList")
               }
+              accessibilityRole="button"
               activeOpacity={0.8}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               onPress={() => onOpenListPicker(gesture)}

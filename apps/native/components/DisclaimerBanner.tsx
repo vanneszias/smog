@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { COURSE_URL, VIDEO_COMPLETE_COUNT } from "@smog/config";
 import {
   ANIMATION_DURATION,
@@ -23,7 +23,12 @@ import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
 // Link phrases that should be clickable in the video complete messages
-const LINK_PHRASES = ["Klik hier", "klik dan hier"];
+const NL_LINK_PHRASES = ["Klik hier", "klik hier", "klik dan hier"];
+const LINK_PHRASES: Record<string, string[]> = {
+  en: ["Click here", "click here"],
+  fr: ["Cliquez ici", "cliquez ici"],
+  nl: NL_LINK_PHRASES,
+};
 
 interface DisclaimerBannerProps {
   visible: boolean;
@@ -35,7 +40,8 @@ const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
   onDismiss,
 }) => {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { language, t } = useTranslation();
+  const linkPhrases = LINK_PHRASES[language] ?? NL_LINK_PHRASES;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(16)).current;
   // Track whether the banner has ever been shown so we don't render DOM nodes
@@ -59,7 +65,7 @@ const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
       let earliestMatch: { phrase: string; index: number } | null = null;
 
       // Find the earliest occurrence of any link phrase
-      for (const phrase of LINK_PHRASES) {
+      for (const phrase of linkPhrases) {
         const index = remainingText.indexOf(phrase);
         if (
           index !== -1 &&
@@ -189,7 +195,7 @@ const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
         {/* Text content */}
         <View style={styles.textWrapper}>
           <Text style={[styles.titleNl, { color: theme.text }]}>
-            {t("gesture.disclaimer.titleNl")}
+            {t("gesture.disclaimer.title")}
           </Text>
           <Text style={[styles.messageNl, { color: theme.text }]}>
             {renderMessageWithLinks(t(`gesture.videoComplete.${messageIndex}`))}
@@ -198,6 +204,8 @@ const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
 
         {/* Dismiss button */}
         <TouchableOpacity
+          accessibilityLabel={t("gesture.disclaimer.dismiss")}
+          accessibilityRole="button"
           activeOpacity={0.6}
           hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           onPress={onDismiss}

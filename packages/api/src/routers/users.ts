@@ -1,7 +1,7 @@
 import { api } from "@smog/convex";
 import { z } from "zod";
 import { protectedProcedure } from "../index";
-import { convexClient } from "../lib/convex";
+import { convexClient, withServiceAuth } from "../lib/convex";
 
 export const usersRouter = {
   // Get or create Convex user by WorkOS ID
@@ -9,38 +9,42 @@ export const usersRouter = {
     const { workosId } = context;
 
     // Try to find existing user
-    const existingUser = await convexClient.query(api.users.getUserByWorkOSId, {
-      workosId,
-    });
+    const existingUser = await convexClient.query(
+      api.users.getUserByWorkOSId,
+      withServiceAuth({ workosId })
+    );
 
     if (existingUser) {
       // Update last active time
-      await convexClient.mutation(api.users.updateLastActive, {
-        userId: existingUser._id,
-      });
+      await convexClient.mutation(
+        api.users.updateLastActive,
+        withServiceAuth({ userId: existingUser._id })
+      );
       return existingUser;
     }
 
-    // Create new user
-    await convexClient.mutation(api.users.createUser, {
-      workosId,
-    });
+    await convexClient.mutation(
+      api.users.createUser,
+      withServiceAuth({ workosId })
+    );
 
-    // Fetch the newly created user
-    const newUser = await convexClient.query(api.users.getUserByWorkOSId, {
-      workosId,
-    });
-
-    return newUser;
+    return await convexClient.query(
+      api.users.getUserByWorkOSId,
+      withServiceAuth({ workosId })
+    );
   }),
 
   // Get user by WorkOS ID
   getByWorkOSId: protectedProcedure
     .input(z.object({ workosId: z.string() }))
-    .handler(async ({ input }) => {
-      const user = await convexClient.query(api.users.getUserByWorkOSId, {
-        workosId: input.workosId,
-      });
+    .handler(async ({ input, context }) => {
+      if (input.workosId !== context.workosId) {
+        return null;
+      }
+      const user = await convexClient.query(
+        api.users.getUserByWorkOSId,
+        withServiceAuth({ workosId: input.workosId })
+      );
       return user;
     }),
 };

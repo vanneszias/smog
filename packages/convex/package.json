@@ -17,11 +17,11 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "convex": "^1.36.1"
+    "convex": "^1.42.1"
   },
   "devDependencies": {
     "@smog/config": "workspace:*",
     "typescript": "^5.9.3",
-    "vitest": "^2.1.9"
+    "vitest": "^4.1.9"
   }
 }

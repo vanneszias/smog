@@ -12,19 +12,21 @@ services:
       retries: 3
 
   remotion:
-    image: ${REGISTRY_IMAGE_PREFIX:-vanneszias}/smog-remotion:${IMAGE_TAG:-latest}
-    env_file: .env
+    image: ${REGISTRY_IMAGE_PREFIX:-vanneszias}/smog-remotion:${IMAGE_TAG:?Set IMAGE_TAG to an immutable release tag}
     environment:
       NODE_ENV: production
       PORT: 3002
       SERVER_URL: http://server:3000
       CORS_ORIGIN: ${CORS_ORIGIN:-https://app.smog.vlaanderen}
+      MUX_TOKEN_ID: ${MUX_TOKEN_ID:?MUX_TOKEN_ID is required}
+      MUX_TOKEN_SECRET: ${MUX_TOKEN_SECRET:?MUX_TOKEN_SECRET is required}
+      REMOTION_API_KEY: ${REMOTION_API_KEY:?REMOTION_API_KEY is required}
     expose:
       - "3002"
     restart: unless-stopped
 
   server:
-    image: ${REGISTRY_IMAGE_PREFIX:-vanneszias}/smog-server:${IMAGE_TAG:-latest}
+    image: ${REGISTRY_IMAGE_PREFIX:-vanneszias}/smog-server:${IMAGE_TAG:?Set IMAGE_TAG to an immutable release tag}
     env_file: .env
     environment:
       NODE_ENV: production
@@ -42,7 +44,7 @@ services:
     restart: unless-stopped
 
   web:
-    image: ${REGISTRY_IMAGE_PREFIX:-vanneszias}/smog-web:${IMAGE_TAG:-latest}
+    image: ${REGISTRY_IMAGE_PREFIX:-vanneszias}/smog-web:${IMAGE_TAG:?Set IMAGE_TAG to an immutable release tag}
     ports:
       - "80:80"
       - "443:443"

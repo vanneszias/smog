@@ -13,6 +13,7 @@
  */
 
 import { ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/pricing";
 
@@ -36,6 +37,7 @@ export function SelectionBar({
   totalCents,
   onContinue,
 }: SelectionBarProps) {
+  const { i18n, t } = useTranslation();
   return (
     <div
       className={`fixed right-0 bottom-0 left-0 z-50 transform border-border border-t bg-background/95 shadow-2xl backdrop-blur-lg transition-all duration-300 ${
@@ -53,10 +55,14 @@ export function SelectionBar({
             </div>
             <div>
               <p className="font-semibold text-foreground">
-                {count} {count === 1 ? "gebaar" : "gebaren"} geselecteerd
+                {t("web.sponsors.wizard.gesturesSelected", { count })}
               </p>
               <p className="text-muted-foreground text-sm">
-                Totaal: {formatPrice(totalCents)}
+                {t("web.sponsors.wizard.total")}:{" "}
+                {formatPrice(
+                  totalCents,
+                  i18n.resolvedLanguage ?? i18n.language
+                )}
               </p>
             </div>
           </div>
@@ -67,7 +73,7 @@ export function SelectionBar({
             onClick={onContinue}
             size="lg"
           >
-            Doorgaan
+            {t("web.sponsors.wizard.continue")}
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>

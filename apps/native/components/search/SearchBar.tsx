@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   BORDER_RADIUS,
   FONT_SIZE,
@@ -118,9 +118,7 @@ const SearchBar = ({
     <View style={styles.wrapper}>
       <View style={styles.searchContainer}>
         <TouchableOpacity
-          accessibilityLabel={placeholderText}
-          accessibilityRole="search"
-          accessible={true}
+          accessible={false}
           activeOpacity={1}
           onPress={handleContainerPress}
           style={[
@@ -136,6 +134,7 @@ const SearchBar = ({
             style={styles.searchIcon}
           />
           <TextInput
+            accessibilityLabel={placeholderText}
             autoCapitalize="none"
             autoCorrect={true}
             autoFocus={autoFocus}
@@ -167,6 +166,8 @@ const SearchBar = ({
           )}
           {shouldShowClearButton ? (
             <TouchableOpacity
+              accessibilityLabel={t("search.clear")}
+              accessibilityRole="button"
               hitSlop={HIT_SLOP.md}
               onPress={handleClear}
               style={styles.clearButton}

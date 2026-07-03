@@ -112,6 +112,9 @@ export async function createMuxDirectUpload(): Promise<DirectUploadResult> {
     });
 
     console.log("[mux] Direct upload created:", upload.id);
+    if (!upload.url) {
+      throw new Error("Mux did not return a direct upload URL");
+    }
 
     return {
       uploadId: upload.id,

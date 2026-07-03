@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   FONT_SIZE,
   FONT_WEIGHT,
@@ -18,6 +18,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useNativeInteractions } from "@/hooks/useNativeInteractions";
 
 interface CircularButtonProps {
+  accessibilityLabel: string;
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   size?: "small" | "medium" | "large";
@@ -31,6 +32,7 @@ interface CircularButtonProps {
 }
 
 const CircularButton: React.FC<CircularButtonProps> = ({
+  accessibilityLabel,
   icon,
   onPress,
   size = "medium",
@@ -78,6 +80,9 @@ const CircularButton: React.FC<CircularButtonProps> = ({
   return (
     <View style={styles.wrapper}>
       <TouchableOpacity
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
         activeOpacity={0.8}
         disabled={disabled}
         hitSlop={HIT_SLOP.md}

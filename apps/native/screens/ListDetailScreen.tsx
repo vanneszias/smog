@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { MenuView } from "@react-native-menu/menu";
 import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
@@ -221,6 +221,7 @@ export default function ListDetailScreen() {
           ]}
         >
           <TouchableOpacity
+            accessibilityRole="button"
             activeOpacity={0.72}
             onPress={() => router.push(`/gestures/${item.id}`)}
             style={styles.gestureMain}
@@ -360,6 +361,7 @@ export default function ListDetailScreen() {
         {t("lists.emptyMessage")}
       </Text>
       <TouchableOpacity
+        accessibilityRole="button"
         onPress={() => router.navigate("/(tabs)/search")}
         style={[styles.exploreButton, { backgroundColor: theme.primary }]}
       >
@@ -380,6 +382,7 @@ export default function ListDetailScreen() {
           headerRight: () => (
             <TouchableOpacity
               accessibilityLabel={t("lists.listSettings")}
+              accessibilityRole="button"
               hitSlop={HIT_SLOP.md}
               onPress={() =>
                 router.push({

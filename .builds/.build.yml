@@ -20,7 +20,7 @@ tasks:
       sudo chmod 600 /swapfile
       sudo mkswap /swapfile
       sudo swapon /swapfile
-      curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.11"
+      curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.14"
       {
         echo 'export BUN_INSTALL="$HOME/.bun"'
         echo 'export PATH="$BUN_INSTALL/bin:$PATH"'

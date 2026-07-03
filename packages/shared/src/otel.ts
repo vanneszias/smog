@@ -36,7 +36,7 @@
 
 import { logs } from "@opentelemetry/api-logs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
-import { Resource } from "@opentelemetry/resources";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import {
   BatchLogRecordProcessor,
   LoggerProvider,
@@ -58,14 +58,16 @@ export function initOtel(): void {
 
   const serviceName = process.env.OTEL_SERVICE_NAME ?? "smog-server";
 
-  const resource = new Resource({ "service.name": serviceName });
+  const resource = resourceFromAttributes({ "service.name": serviceName });
 
   // OTLPLogExporter reads OTEL_EXPORTER_OTLP_ENDPOINT / OTEL_EXPORTER_OTLP_HEADERS
   // from the environment automatically when no options are passed.
   const exporter = new OTLPLogExporter();
 
-  const provider = new LoggerProvider({ resource });
-  provider.addLogRecordProcessor(new BatchLogRecordProcessor(exporter));
+  const provider = new LoggerProvider({
+    resource,
+    processors: [new BatchLogRecordProcessor(exporter)],
+  });
 
   logs.setGlobalLoggerProvider(provider);
 }

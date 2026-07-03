@@ -1,7 +1,7 @@
 import { ORPCError, os } from "@orpc/server";
 import { api } from "@smog/convex";
 import type { Context } from "./context";
-import { convexClient } from "./lib/convex";
+import { convexClient, withServiceAuth } from "./lib/convex";
 
 const o = os.$context<Context>();
 
@@ -27,7 +27,7 @@ const requireAdmin = o.middleware(async ({ context, next }) => {
 
   // Query Convex to get user role
   const user = await convexClient.query(api.users.getUserByWorkOSId, {
-    workosId: context.workosId,
+    ...withServiceAuth({ workosId: context.workosId }),
   });
 
   if (!user || user.role !== "admin") {

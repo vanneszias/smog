@@ -24,7 +24,14 @@ export function LanguageToggle() {
         {availableLocales.map((locale) => (
           <DropdownMenuItem
             key={locale}
-            onClick={() => i18n.changeLanguage(locale)}
+            onSelect={() => {
+              i18n.changeLanguage(locale).catch((error: unknown) => {
+                console.error(
+                  "[languageToggle] Failed to change language:",
+                  error
+                );
+              });
+            }}
           >
             {t(`languages.${locale}`)}
             {i18n.language === locale && " ✓"}

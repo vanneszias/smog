@@ -3,15 +3,16 @@ import { api } from "@smog/convex";
 import type { Doc, Id } from "@smog/convex/dataModel";
 import { z } from "zod";
 import { protectedProcedure, publicProcedure } from "../index";
-import { convexClient } from "../lib/convex";
+import { convexClient, withServiceAuth } from "../lib/convex";
 
 type Gesture = Doc<"gestures">;
 type Category = Doc<"categories">;
 
 async function getCurrentUserId(workosId: string) {
-  const user = await convexClient.query(api.users.getUserByWorkOSId, {
-    workosId,
-  });
+  const user = await convexClient.query(
+    api.users.getUserByWorkOSId,
+    withServiceAuth({ workosId })
+  );
 
   if (!user) {
     throw new ORPCError("UNAUTHORIZED", {
@@ -46,39 +47,52 @@ async function enrichGestures(gestures: Gesture[]) {
 export const listsRouter = {
   initialize: protectedProcedure.handler(async ({ context }) => {
     const userId = await getCurrentUserId(context.workosId);
-    return await convexClient.mutation(api.lists.initializeUserLists, {
-      userId,
-    });
+    return await convexClient.mutation(
+      api.lists.initializeUserLists,
+      withServiceAuth({ userId })
+    );
   }),
 
   getMyLists: protectedProcedure.handler(async ({ context }) => {
     const userId = await getCurrentUserId(context.workosId);
-    return await convexClient.query(api.lists.listUserLists, { userId });
+    return await convexClient.query(
+      api.lists.listUserLists,
+      withServiceAuth({ userId })
+    );
   }),
 
   getSavedGestureIds: protectedProcedure.handler(async ({ context }) => {
     const userId = await getCurrentUserId(context.workosId);
-    return await convexClient.query(api.lists.getSavedGestureIds, { userId });
+    return await convexClient.query(
+      api.lists.getSavedGestureIds,
+      withServiceAuth({ userId })
+    );
   }),
 
   getGestureListIds: protectedProcedure
     .input(z.object({ gestureId: z.string() }))
     .handler(async ({ context, input }) => {
       const userId = await getCurrentUserId(context.workosId);
-      return await convexClient.query(api.lists.getGestureListIds, {
-        userId,
-        gestureId: input.gestureId as Id<"gestures">,
-      });
+      return await convexClient.query(
+        api.lists.getGestureListIds,
+        withServiceAuth({
+          userId,
+          gestureId: input.gestureId as Id<"gestures">,
+        })
+      );
     }),
 
   getListGestures: protectedProcedure
     .input(z.object({ listId: z.string() }))
     .handler(async ({ context, input }) => {
       const userId = await getCurrentUserId(context.workosId);
-      const gestures = await convexClient.query(api.lists.getListGestures, {
-        userId,
-        listId: input.listId as Id<"gesture_lists">,
-      });
+      const gestures = await convexClient.query(
+        api.lists.getListGestures,
+        withServiceAuth({
+          userId,
+          listId: input.listId as Id<"gesture_lists">,
+        })
+      );
 
       return await enrichGestures(gestures);
     }),
@@ -116,21 +130,24 @@ export const listsRouter = {
     )
     .handler(async ({ context, input }) => {
       const userId = await getCurrentUserId(context.workosId);
-      return await convexClient.mutation(api.lists.createList, {
-        userId,
-        ...input,
-      });
+      return await convexClient.mutation(
+        api.lists.createList,
+        withServiceAuth({ userId, ...input })
+      );
     }),
 
   rename: protectedProcedure
     .input(z.object({ listId: z.string(), name: z.string().min(1).max(80) }))
     .handler(async ({ context, input }) => {
       const userId = await getCurrentUserId(context.workosId);
-      return await convexClient.mutation(api.lists.renameList, {
-        userId,
-        listId: input.listId as Id<"gesture_lists">,
-        name: input.name,
-      });
+      return await convexClient.mutation(
+        api.lists.renameList,
+        withServiceAuth({
+          userId,
+          listId: input.listId as Id<"gesture_lists">,
+          name: input.name,
+        })
+      );
     }),
 
   updateSharing: protectedProcedure
@@ -143,54 +160,69 @@ export const listsRouter = {
     )
     .handler(async ({ context, input }) => {
       const userId = await getCurrentUserId(context.workosId);
-      return await convexClient.mutation(api.lists.updateListSharing, {
-        userId,
-        listId: input.listId as Id<"gesture_lists">,
-        visibility: input.visibility,
-        allowSharedEditing: input.allowSharedEditing,
-      });
+      return await convexClient.mutation(
+        api.lists.updateListSharing,
+        withServiceAuth({
+          userId,
+          listId: input.listId as Id<"gesture_lists">,
+          visibility: input.visibility,
+          allowSharedEditing: input.allowSharedEditing,
+        })
+      );
     }),
 
   regenerateShareTokens: protectedProcedure
     .input(z.object({ listId: z.string() }))
     .handler(async ({ context, input }) => {
       const userId = await getCurrentUserId(context.workosId);
-      return await convexClient.mutation(api.lists.regenerateShareTokens, {
-        userId,
-        listId: input.listId as Id<"gesture_lists">,
-      });
+      return await convexClient.mutation(
+        api.lists.regenerateShareTokens,
+        withServiceAuth({
+          userId,
+          listId: input.listId as Id<"gesture_lists">,
+        })
+      );
     }),
 
   delete: protectedProcedure
     .input(z.object({ listId: z.string() }))
     .handler(async ({ context, input }) => {
       const userId = await getCurrentUserId(context.workosId);
-      return await convexClient.mutation(api.lists.deleteList, {
-        userId,
-        listId: input.listId as Id<"gesture_lists">,
-      });
+      return await convexClient.mutation(
+        api.lists.deleteList,
+        withServiceAuth({
+          userId,
+          listId: input.listId as Id<"gesture_lists">,
+        })
+      );
     }),
 
   addGestureToList: protectedProcedure
     .input(z.object({ listId: z.string(), gestureId: z.string() }))
     .handler(async ({ context, input }) => {
       const userId = await getCurrentUserId(context.workosId);
-      return await convexClient.mutation(api.lists.addGestureToList, {
-        userId,
-        listId: input.listId as Id<"gesture_lists">,
-        gestureId: input.gestureId as Id<"gestures">,
-      });
+      return await convexClient.mutation(
+        api.lists.addGestureToList,
+        withServiceAuth({
+          userId,
+          listId: input.listId as Id<"gesture_lists">,
+          gestureId: input.gestureId as Id<"gestures">,
+        })
+      );
     }),
 
   removeGestureFromList: protectedProcedure
     .input(z.object({ listId: z.string(), gestureId: z.string() }))
     .handler(async ({ context, input }) => {
       const userId = await getCurrentUserId(context.workosId);
-      return await convexClient.mutation(api.lists.removeGestureFromList, {
-        userId,
-        listId: input.listId as Id<"gesture_lists">,
-        gestureId: input.gestureId as Id<"gestures">,
-      });
+      return await convexClient.mutation(
+        api.lists.removeGestureFromList,
+        withServiceAuth({
+          userId,
+          listId: input.listId as Id<"gesture_lists">,
+          gestureId: input.gestureId as Id<"gestures">,
+        })
+      );
     }),
 
   addGestureToEditableSharedList: protectedProcedure
@@ -225,10 +257,13 @@ export const listsRouter = {
     .input(z.object({ listId: z.string(), gestureIds: z.array(z.string()) }))
     .handler(async ({ context, input }) => {
       const userId = await getCurrentUserId(context.workosId);
-      return await convexClient.mutation(api.lists.reorderListItems, {
-        userId,
-        listId: input.listId as Id<"gesture_lists">,
-        gestureIds: input.gestureIds as Id<"gestures">[],
-      });
+      return await convexClient.mutation(
+        api.lists.reorderListItems,
+        withServiceAuth({
+          userId,
+          listId: input.listId as Id<"gesture_lists">,
+          gestureIds: input.gestureIds as Id<"gestures">[],
+        })
+      );
     }),
 };

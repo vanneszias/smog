@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
 import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SPACING } from "@smog/styles";
@@ -205,6 +205,7 @@ export default function ListSettingsScreen() {
             </Text>
           </View>
           <Switch
+            accessibilityLabel={t("lists.shared")}
             disabled={isUpdatingSharing}
             onValueChange={(value) => {
               setShared(value);
