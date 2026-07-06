@@ -41,6 +41,14 @@ async function requireMatchingIdentity(
   }
 }
 
+async function hasMatchingIdentity(
+  ctx: MutationCtx | QueryCtx,
+  workosId: string
+): Promise<boolean> {
+  const identity = await ctx.auth.getUserIdentity();
+  return identity?.subject === workosId;
+}
+
 // =============================================================================
 // User Queries
 // =============================================================================
@@ -68,7 +76,9 @@ export const getUserByWorkOSId = query({
   returns: v.union(userReturnType, v.null()),
   handler: async (ctx, args) => {
     if (!isValidServiceToken(args.serviceToken)) {
-      await requireMatchingIdentity(ctx, args.workosId);
+      if (!(await hasMatchingIdentity(ctx, args.workosId))) {
+        return null;
+      }
     }
     return await ctx.db
       .query("users")

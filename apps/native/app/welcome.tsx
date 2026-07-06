@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useEffect } from "react";
 import {
   Alert,
   StyleSheet,
@@ -38,9 +39,14 @@ export default function WelcomeScreen() {
     router.replace("/(tabs)");
   };
 
+  useEffect(() => {
+    if (user) {
+      router.replace("/(tabs)");
+    }
+  }, [router, user]);
+
   // If user is already signed in, redirect them
   if (user) {
-    router.replace("/(tabs)");
     return null;
   }
 
