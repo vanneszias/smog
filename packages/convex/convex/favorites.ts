@@ -1,13 +1,13 @@
 import { v } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
-import { requireServiceAuth } from "./lib/serviceAuth";
 import {
   addDefaultFavoriteGesture,
   getDefaultFavoriteGestureIdsForUser,
   getDefaultFavoriteGesturesForUser,
   isDefaultFavoriteGesture,
   removeDefaultFavoriteGesture,
+  requireUserAccess,
   toggleDefaultFavoriteGesture,
   toNativeGesture,
 } from "./lists";
@@ -22,16 +22,16 @@ const nativeGestureValidator = v.object({
 });
 
 export const getUserFavorites = query({
-  args: { userId: v.id("users"), serviceToken: v.string() },
+  args: { userId: v.id("users"), serviceToken: v.optional(v.string()) },
   returns: v.array(v.id("gestures")),
   handler: async (ctx, args) => {
-    requireServiceAuth(args.serviceToken, "favorites.getUserFavorites");
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     return await getDefaultFavoriteGestureIdsForUser(ctx, args.userId);
   },
 });
 
 export const getUserFavoriteGestures = query({
-  args: { userId: v.id("users"), serviceToken: v.string() },
+  args: { userId: v.id("users"), serviceToken: v.optional(v.string()) },
   returns: v.array(
     v.object({
       _id: v.id("gestures"),
@@ -46,19 +46,16 @@ export const getUserFavoriteGestures = query({
     })
   ),
   handler: async (ctx, args) => {
-    requireServiceAuth(args.serviceToken, "favorites.getUserFavoriteGestures");
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     return await getDefaultFavoriteGesturesForUser(ctx, args.userId);
   },
 });
 
 export const getUserFavoriteGesturesForNative = query({
-  args: { userId: v.id("users"), serviceToken: v.string() },
+  args: { userId: v.id("users"), serviceToken: v.optional(v.string()) },
   returns: v.array(nativeGestureValidator),
   handler: async (ctx, args) => {
-    requireServiceAuth(
-      args.serviceToken,
-      "favorites.getUserFavoriteGesturesForNative"
-    );
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     const gestures = await getDefaultFavoriteGesturesForUser(ctx, args.userId);
     return await Promise.all(
       gestures.map((gesture) => toNativeGesture(ctx as QueryCtx, gesture))
@@ -70,11 +67,11 @@ export const toggleUserFavorite = mutation({
   args: {
     userId: v.id("users"),
     gestureId: v.id("gestures"),
-    serviceToken: v.string(),
+    serviceToken: v.optional(v.string()),
   },
   returns: v.boolean(), // true if added, false if removed
   handler: async (ctx, args) => {
-    requireServiceAuth(args.serviceToken, "favorites.toggleUserFavorite");
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     return await toggleDefaultFavoriteGesture(ctx, args.userId, args.gestureId);
   },
 });
@@ -83,11 +80,11 @@ export const addUserFavorite = mutation({
   args: {
     userId: v.id("users"),
     gestureId: v.id("gestures"),
-    serviceToken: v.string(),
+    serviceToken: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    requireServiceAuth(args.serviceToken, "favorites.addUserFavorite");
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     await addDefaultFavoriteGesture(ctx, args.userId, args.gestureId);
     return null;
   },
@@ -97,11 +94,11 @@ export const removeUserFavorite = mutation({
   args: {
     userId: v.id("users"),
     gestureId: v.id("gestures"),
-    serviceToken: v.string(),
+    serviceToken: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    requireServiceAuth(args.serviceToken, "favorites.removeUserFavorite");
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     await removeDefaultFavoriteGesture(ctx, args.userId, args.gestureId);
     return null;
   },
@@ -111,11 +108,11 @@ export const isFavorite = query({
   args: {
     userId: v.id("users"),
     gestureId: v.id("gestures"),
-    serviceToken: v.string(),
+    serviceToken: v.optional(v.string()),
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
-    requireServiceAuth(args.serviceToken, "favorites.isFavorite");
+    await requireUserAccess(ctx, args.userId, args.serviceToken);
     return await isDefaultFavoriteGesture(ctx, args.userId, args.gestureId);
   },
 });

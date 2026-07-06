@@ -68,7 +68,7 @@ function createShareToken() {
   return crypto.randomUUID().replaceAll("-", "");
 }
 
-async function requireUserAccess(
+export async function requireUserAccess(
   ctx: MutationCtx | QueryCtx,
   userId: Id<"users">,
   serviceToken?: string
