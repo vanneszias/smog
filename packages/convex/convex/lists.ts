@@ -133,6 +133,20 @@ async function getDefaultFavoritesList(ctx: ListQueryCtx, userId: Id<"users">) {
     .unique();
 }
 
+async function getLegacyFavoriteGestureIds(
+  ctx: ListQueryCtx,
+  userId: Id<"users">
+) {
+  const favorites = await ctx.db
+    .query("user_favorites")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+
+  return favorites
+    .toSorted((a, b) => a.createdAt - b.createdAt)
+    .map((favorite) => favorite.gestureId);
+}
+
 export async function ensureDefaultFavoritesList(
   ctx: ListMutationCtx,
   userId: Id<"users">
@@ -715,38 +729,30 @@ export async function getDefaultFavoriteGestureIdsForUser(
   ctx: ListQueryCtx,
   userId: Id<"users">
 ) {
+  const legacyGestureIds = await getLegacyFavoriteGestureIds(ctx, userId);
   const defaultList = await getDefaultFavoritesList(ctx, userId);
   if (!defaultList) {
-    const legacyFavorites = await ctx.db
-      .query("user_favorites")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    return legacyFavorites.map((favorite) => favorite.gestureId);
+    return legacyGestureIds;
   }
 
   const items = await getListItems(ctx, defaultList._id);
-  return items.map((item) => item.gestureId);
+  return [
+    ...new Set([
+      ...items.map((item) => item.gestureId),
+      ...legacyGestureIds,
+    ]),
+  ];
 }
 
 export async function getDefaultFavoriteGesturesForUser(
   ctx: ListQueryCtx,
   userId: Id<"users">
 ) {
-  const defaultList = await getDefaultFavoritesList(ctx, userId);
-  if (!defaultList) {
-    const legacyFavorites = await ctx.db
-      .query("user_favorites")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    const gestures = await Promise.all(
-      legacyFavorites.map((favorite) => ctx.db.get(favorite.gestureId))
-    );
-    return gestures.filter((gesture): gesture is Doc<"gestures"> =>
-      Boolean(gesture?.isActive)
-    );
-  }
-
-  return await getListGestureDocs(ctx, defaultList._id);
+  const gestureIds = await getDefaultFavoriteGestureIdsForUser(ctx, userId);
+  const gestures = await Promise.all(gestureIds.map((id) => ctx.db.get(id)));
+  return gestures.filter((gesture): gesture is Doc<"gestures"> =>
+    Boolean(gesture?.isActive)
+  );
 }
 
 export async function isDefaultFavoriteGesture(
@@ -754,16 +760,19 @@ export async function isDefaultFavoriteGesture(
   userId: Id<"users">,
   gestureId: Id<"gestures">
 ) {
+  const legacyFavorite = await ctx.db
+    .query("user_favorites")
+    .withIndex("by_user_gesture", (q) =>
+      q.eq("userId", userId).eq("gestureId", gestureId)
+    )
+    .unique();
+  if (legacyFavorite) {
+    return true;
+  }
+
   const defaultList = await getDefaultFavoritesList(ctx, userId);
   if (!defaultList) {
-    return Boolean(
-      await ctx.db
-        .query("user_favorites")
-        .withIndex("by_user_gesture", (q) =>
-          q.eq("userId", userId).eq("gestureId", gestureId)
-        )
-        .unique()
-    );
+    return false;
   }
 
   return Boolean(

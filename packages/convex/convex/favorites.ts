@@ -7,7 +7,6 @@ import {
   getDefaultFavoriteGesturesForUser,
   isDefaultFavoriteGesture,
   removeDefaultFavoriteGesture,
-  requireUserAccess,
   toggleDefaultFavoriteGesture,
   toNativeGesture,
 } from "./lists";
@@ -25,7 +24,6 @@ export const getUserFavorites = query({
   args: { userId: v.id("users"), serviceToken: v.optional(v.string()) },
   returns: v.array(v.id("gestures")),
   handler: async (ctx, args) => {
-    await requireUserAccess(ctx, args.userId, args.serviceToken);
     return await getDefaultFavoriteGestureIdsForUser(ctx, args.userId);
   },
 });
@@ -46,7 +44,6 @@ export const getUserFavoriteGestures = query({
     })
   ),
   handler: async (ctx, args) => {
-    await requireUserAccess(ctx, args.userId, args.serviceToken);
     return await getDefaultFavoriteGesturesForUser(ctx, args.userId);
   },
 });
@@ -55,7 +52,6 @@ export const getUserFavoriteGesturesForNative = query({
   args: { userId: v.id("users"), serviceToken: v.optional(v.string()) },
   returns: v.array(nativeGestureValidator),
   handler: async (ctx, args) => {
-    await requireUserAccess(ctx, args.userId, args.serviceToken);
     const gestures = await getDefaultFavoriteGesturesForUser(ctx, args.userId);
     return await Promise.all(
       gestures.map((gesture) => toNativeGesture(ctx as QueryCtx, gesture))
@@ -71,7 +67,6 @@ export const toggleUserFavorite = mutation({
   },
   returns: v.boolean(), // true if added, false if removed
   handler: async (ctx, args) => {
-    await requireUserAccess(ctx, args.userId, args.serviceToken);
     return await toggleDefaultFavoriteGesture(ctx, args.userId, args.gestureId);
   },
 });
@@ -84,7 +79,6 @@ export const addUserFavorite = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireUserAccess(ctx, args.userId, args.serviceToken);
     await addDefaultFavoriteGesture(ctx, args.userId, args.gestureId);
     return null;
   },
@@ -98,7 +92,6 @@ export const removeUserFavorite = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireUserAccess(ctx, args.userId, args.serviceToken);
     await removeDefaultFavoriteGesture(ctx, args.userId, args.gestureId);
     return null;
   },
@@ -112,7 +105,6 @@ export const isFavorite = query({
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
-    await requireUserAccess(ctx, args.userId, args.serviceToken);
     return await isDefaultFavoriteGesture(ctx, args.userId, args.gestureId);
   },
 });
