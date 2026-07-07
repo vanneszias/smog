@@ -34,6 +34,9 @@ services:
       REDIS_URL: redis://redis-session:6379/1
       REMOTION_URL: http://remotion:3002
       SERVER_URL: http://server:3000
+      OPENPANEL_API_URL: ${OPENPANEL_API_URL:-https://analytics.zias.be/api}
+      OPENPANEL_CLIENT_ID: ${OPENPANEL_CLIENT_ID:?OPENPANEL_CLIENT_ID is required}
+      OPENPANEL_CLIENT_SECRET: ${OPENPANEL_CLIENT_SECRET:?OPENPANEL_CLIENT_SECRET is required}
     expose:
       - "3000"
     depends_on:
