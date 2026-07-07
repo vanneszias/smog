@@ -8,7 +8,7 @@ if (!CONVEX_URL) {
 
 export const convexClient = new ConvexHttpClient(CONVEX_URL);
 
-export function getServiceToken(): string {
+function getServiceToken(): string {
   const serviceToken = process.env.INTERNAL_API_KEY;
   if (!serviceToken) {
     throw new Error("INTERNAL_API_KEY environment variable is required");
