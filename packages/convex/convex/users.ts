@@ -75,10 +75,13 @@ export const getUserByWorkOSId = query({
   },
   returns: v.union(userReturnType, v.null()),
   handler: async (ctx, args) => {
-    if (!isValidServiceToken(args.serviceToken)) {
-      if (!(await hasMatchingIdentity(ctx, args.workosId))) {
-        return null;
-      }
+    if (
+      !(
+        isValidServiceToken(args.serviceToken) ||
+        (await hasMatchingIdentity(ctx, args.workosId))
+      )
+    ) {
+      return null;
     }
     return await ctx.db
       .query("users")
@@ -121,8 +124,10 @@ export const createUser = mutation({
     if (Boolean(args.workosId) === Boolean(args.guestId)) {
       throw new Error("Provide exactly one user identity");
     }
-    if (args.workosId && !isValidServiceToken(args.serviceToken)) {
-      await requireMatchingIdentity(ctx, args.workosId);
+    if (args.workosId) {
+      if (!isValidServiceToken(args.serviceToken)) {
+        await requireMatchingIdentity(ctx, args.workosId);
+      }
     } else if (!args.guestId || args.guestId.length < 32) {
       throw new Error("Invalid guest identity");
     }

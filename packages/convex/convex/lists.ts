@@ -737,10 +737,7 @@ export async function getDefaultFavoriteGestureIdsForUser(
 
   const items = await getListItems(ctx, defaultList._id);
   return [
-    ...new Set([
-      ...items.map((item) => item.gestureId),
-      ...legacyGestureIds,
-    ]),
+    ...new Set([...items.map((item) => item.gestureId), ...legacyGestureIds]),
   ];
 }
 

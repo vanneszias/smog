@@ -22,7 +22,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "49",
+      "buildNumber": "50",
       "appleTeamId": "96XKP6MU2A"
     },
     "android": {
@@ -54,7 +54,7 @@
         }
       ],
       "package": "be.zias.smog",
-      "versionCode": 77
+      "versionCode": 78
     },
     "plugins": [
       "expo-router",

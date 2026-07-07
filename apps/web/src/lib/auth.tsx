@@ -45,13 +45,72 @@ type WebAuthContextType = Omit<AuthContextType, "continueAsGuest">;
 
 const AuthContext = createContext<WebAuthContextType | null>(null);
 
+interface SessionResult {
+  accessToken: string;
+  user: WorkOSUser;
+}
+
+interface OAuthCallbackParams {
+  code: string;
+  returnedState: string | null;
+}
+
+function storeSession(session: SessionResult): WorkOSUser {
+  accessToken = session.accessToken;
+  tokenExpiry = getTokenExpiry(session.accessToken);
+  return session.user;
+}
+
+function clearSession(): void {
+  accessToken = null;
+  tokenExpiry = null;
+}
+
+function readOAuthCallbackParams(): OAuthCallbackParams | null {
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get("code");
+  if (!code) {
+    return null;
+  }
+
+  window.history.replaceState({}, "", url.pathname);
+  return { code, returnedState: url.searchParams.get("state") };
+}
+
+function validateOAuthState(returnedState: string | null): void {
+  const expectedState = sessionStorage.getItem(OAUTH_STATE_KEY);
+  sessionStorage.removeItem(OAUTH_STATE_KEY);
+  if (!(expectedState && returnedState === expectedState)) {
+    throw new Error("OAuth state validation failed");
+  }
+}
+
+async function exchangeOAuthCode(code: string): Promise<SessionResult | null> {
+  const response = await fetch(`${serverUrl}/auth/workos/callback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ code }),
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const result = (await response.json()) as {
+    accessToken?: string;
+    user?: WorkOSUser;
+  };
+
+  return result.accessToken && result.user
+    ? { accessToken: result.accessToken, user: result.user }
+    : await refreshSession();
+}
+
 /**
  * Refresh session from server using httpOnly cookie
  */
-async function refreshSession(): Promise<{
-  accessToken: string;
-  user: WorkOSUser;
-} | null> {
+async function refreshSession(): Promise<SessionResult | null> {
   try {
     const response = await fetch(`${serverUrl}/auth/token/refresh`, {
       method: "POST",
@@ -84,9 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const restoreSession = async () => {
       const result = await refreshSession();
       if (result) {
-        accessToken = result.accessToken;
-        tokenExpiry = getTokenExpiry(result.accessToken);
-        setUser(result.user);
+        setUser(storeSession(result));
       }
       setIsLoading(false);
     };
@@ -97,40 +154,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Handle OAuth callback from URL
   useEffect(() => {
     const handleCallback = async () => {
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get("code");
-      const returnedState = url.searchParams.get("state");
+      const callbackParams = readOAuthCallbackParams();
 
-      if (!code) {
+      if (!callbackParams) {
         setIsHandlingCallback(false);
         return;
       }
 
-      // Clear URL params
-      window.history.replaceState({}, "", url.pathname);
-
       try {
-        const expectedState = sessionStorage.getItem(OAUTH_STATE_KEY);
-        sessionStorage.removeItem(OAUTH_STATE_KEY);
-        if (!(expectedState && returnedState === expectedState)) {
-          throw new Error("OAuth state validation failed");
-        }
-
-        const response = await fetch(`${serverUrl}/auth/workos/callback`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ code }),
-        });
-
-        if (response.ok) {
-          // Refresh session to get user data
-          const result = await refreshSession();
-          if (result) {
-            accessToken = result.accessToken;
-            tokenExpiry = getTokenExpiry(result.accessToken);
-            setUser(result.user);
-          }
+        validateOAuthState(callbackParams.returnedState);
+        const session = await exchangeOAuthCode(callbackParams.code);
+        if (session) {
+          setUser(storeSession(session));
         }
       } catch (error) {
         logger.error("[Auth] OAuth callback failed:", error);
@@ -157,11 +192,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const result = await refreshSession();
         if (result) {
-          accessToken = result.accessToken;
-          tokenExpiry = getTokenExpiry(result.accessToken);
-          setUser(result.user);
+          setUser(storeSession(result));
           return accessToken;
         }
+        clearSession();
+        setUser(null);
         return null;
       } finally {
         refreshPromiseRef.current = null;
@@ -188,8 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logger.error("[Auth] Sign out failed:", error);
     }
     clearAnalyticsIdentity();
-    accessToken = null;
-    tokenExpiry = null;
+    clearSession();
     setUser(null);
   }, []);
 
