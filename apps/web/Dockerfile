@@ -18,6 +18,9 @@ COPY packages/shared/package.json    ./packages/shared/
 COPY packages/styles/package.json  ./packages/styles/
 COPY packages/types/package.json   ./packages/types/
 COPY packages/ui/package.json      ./packages/ui/
+COPY apps/native/package.json      ./apps/native/
+COPY apps/remotion/package.json    ./apps/remotion/
+COPY apps/server/package.json      ./apps/server/
 COPY apps/web/package.json         ./apps/web/
 COPY upload/package.json           ./upload/
 
