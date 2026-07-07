@@ -170,7 +170,7 @@ async function forwardToOpenPanel(
     "openpanel-client-id": openPanelClientId,
     "openpanel-client-secret": openPanelClientSecret,
     "openpanel-sdk-name": "smog-server-relay",
-    "openpanel-sdk-version": "1.0.0",
+    "openpanel-sdk-version": "2.0.0",
   });
   const clientIp = getClientIp(requestHeaders);
   const userAgent = requestHeaders.get("user-agent");

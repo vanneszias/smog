@@ -8,6 +8,7 @@
     "packages/api/src/lib/mux.ts",
     "packages/auth/src/lib/payments.ts"
   ],
+  "ignoreDependencies": ["expo-doctor"],
   "ignoreIssues": {
     "apps/native/context/ListsContext.tsx": ["types"],
     "apps/remotion/src/server/jobs.ts": ["types"],
