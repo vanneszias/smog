@@ -7,6 +7,7 @@ WORKDIR /app
 
 COPY package.json bun.lock bunfig.toml ./
 COPY turbo.json ./
+COPY patches ./patches
 COPY apps/remotion/package.json    ./apps/remotion/
 COPY packages/types/package.json   ./packages/types/
 COPY packages/config/package.json  ./packages/config/
