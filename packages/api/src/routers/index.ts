@@ -4,6 +4,7 @@ import { adminRouter } from "./admin";
 import { categoriesRouter } from "./categories";
 import { favoritesRouter } from "./favorites";
 import { gesturesRouter } from "./gestures";
+import { listsRouter } from "./lists";
 import { sponsorshipsRouter } from "./sponsorships";
 import { usersRouter } from "./users";
 
@@ -16,6 +17,7 @@ export const appRouter = {
   gestures: gesturesRouter,
   categories: categoriesRouter,
   favorites: favoritesRouter,
+  lists: listsRouter,
   users: usersRouter,
   sponsorships: sponsorshipsRouter,
   admin: adminRouter,

@@ -77,5 +77,3 @@ export function RenewalReminderEmail({
     </EmailLayout>
   );
 }
-
-export default RenewalReminderEmail;

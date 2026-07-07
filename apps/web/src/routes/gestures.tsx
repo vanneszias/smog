@@ -9,12 +9,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import EmptyState from "@/components/EmptyState";
 import { useGestures } from "@/hooks/useGestures";
-import {
-  trackSearchCategoryAdded,
-  trackSearchCategoryRemoved,
-  trackSearchPerformed,
-} from "@/lib/analytics";
-import { useFavorites } from "@/lib/favorites-context";
+import { useLists } from "@/lib/lists-context";
+import { trackAnalyticsEvent } from "@/lib/openpanel";
 
 interface GestureSearch {
   q?: string;
@@ -33,13 +29,13 @@ function GesturesComponent() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const searchParams = useSearch({ from: "/gestures" });
-  const { favoriteIds, toggleFavorite } = useFavorites();
+  const { openSaveGestureDialog, savedGestureIds } = useLists();
   const [selectedGestureId, setSelectedGestureId] = useState<string | null>(
     null
   );
 
   // Use shared gestures hook
-  const { gestures: allGestures, isLoading, error } = useGestures();
+  const { gestures: allGestures, isLoading, error, refetch } = useGestures();
 
   const {
     searchQuery,
@@ -60,28 +56,7 @@ function GesturesComponent() {
       : [],
   });
 
-  const handleCategoryToggle = (category: string) => {
-    if (selectedCategories.includes(category)) {
-      trackSearchCategoryRemoved(category, selectedCategories.length - 1);
-    } else {
-      trackSearchCategoryAdded(category, selectedCategories.length + 1);
-    }
-    baseHandleCategoryToggle(category);
-  };
-
-  // Track search when query changes
-  useEffect(() => {
-    const startTime = performance.now();
-    const timer = setTimeout(() => {
-      trackSearchPerformed(
-        searchQuery,
-        selectedCategories,
-        filteredGestures.length,
-        performance.now() - startTime
-      );
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery, selectedCategories, filteredGestures.length]);
+  const handleCategoryToggle = baseHandleCategoryToggle;
 
   // Sync URL with search query changes
   useEffect(() => {
@@ -97,14 +72,47 @@ function GesturesComponent() {
     });
   }, [searchQuery, selectedCategories, navigate]);
 
+  useEffect(() => {
+    if (isLoading || !(searchQuery || selectedCategories.length > 0)) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      trackAnalyticsEvent("search_performed", {
+        category_count: selectedCategories.length,
+        has_results: filteredGestures.length > 0,
+        query_length: searchQuery.trim().length,
+        result_count: filteredGestures.length,
+        source: "filter_change",
+      });
+    }, 700);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    filteredGestures.length,
+    isLoading,
+    searchQuery,
+    selectedCategories.length,
+  ]);
+
   const handleSelectGesture = (gestureId: string) => {
     setSelectedGestureId(gestureId);
     navigate({ to: "/gestures/$id", params: { id: gestureId } });
   };
 
-  const handleToggleFavorite = (gestureId: string) => {
+  const handleToggleSaved = (gestureId: string) => {
     const gesture = allGestures.find((g) => g._id === gestureId);
-    toggleFavorite(gestureId, gesture?.name);
+    openSaveGestureDialog({
+      categories: (gesture?.categories ?? [])
+        .filter(
+          (category): category is Exclude<typeof category, null | undefined> =>
+            Boolean(category)
+        )
+        .map((category) => category.name),
+      gestureId,
+      gestureName: gesture?.name,
+      source: "gesture_list",
+    });
   };
 
   return (
@@ -128,6 +136,16 @@ function GesturesComponent() {
           <div className="flex h-full items-center justify-center">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
+        ) : error ? (
+          <EmptyState
+            action={{
+              label: t("web.errors.retry"),
+              onClick: () => {
+                refetch();
+              },
+            }}
+            message={t("web.gestures.errorLoading")}
+          />
         ) : filteredGestures.length === 0 ? (
           <EmptyState
             message={
@@ -139,12 +157,12 @@ function GesturesComponent() {
         ) : (
           <GestureList
             error={error}
-            favoriteGestureIds={favoriteIds}
             gestures={filteredGestures}
             isLoading={isLoading}
             onSelectGesture={handleSelectGesture}
             onSort={handleSort}
-            onToggleFavorite={handleToggleFavorite}
+            onToggleSaved={handleToggleSaved}
+            savedGestureIds={savedGestureIds}
             selectedGestureId={selectedGestureId}
             sortColumn={sortColumn}
             sortDirection={sortDirection}

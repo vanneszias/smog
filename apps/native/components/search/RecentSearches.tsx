@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   BORDER_RADIUS,
   FONT_SIZE,
@@ -127,7 +127,10 @@ const RecentSearches: React.FC<RecentSearchesProps> = ({
           <Text style={[styles.title, { color: theme.text }]}>
             {t("search.recentSearches")}
           </Text>
-          <TouchableOpacity onPress={clearRecentSearches}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={clearRecentSearches}
+          >
             <Text style={[styles.clearButton, { color: theme.primary }]}>
               {t("search.clear")}
             </Text>
@@ -137,6 +140,7 @@ const RecentSearches: React.FC<RecentSearchesProps> = ({
           {shown.map((query, i) => (
             <Animated.View key={query} style={itemAnimatedStyles[i]}>
               <TouchableOpacity
+                accessibilityRole="button"
                 activeOpacity={0.7}
                 onPress={() => onSelect(query)}
                 style={styles.item}

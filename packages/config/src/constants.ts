@@ -88,12 +88,10 @@ export const MAX_SYNC_RETRIES = 3;
  */
 export const FORCE_SYNC_INTERVAL_MS = 1 * 24 * 60 * 60 * 1000;
 
-// ─── Analytics Storage Keys ───────────────────────────────────────────────────
+// ─── Privacy / Analytics ─────────────────────────────────────────────────────
 
 /**
- * AsyncStorage key used to persist the user's analytics consent choice.
- *
- * Previously hardcoded in `apps/native/services/analyticsService.ts`.
+ * Stores the user's explicit analytics consent choice.
  */
 export const ANALYTICS_CONSENT_STORAGE_KEY = "@smog_analytics_consent";
 

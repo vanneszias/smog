@@ -5,23 +5,18 @@
  * - Streams from MUX via HLS
  * - Triggers `onComplete` callback 5 seconds before the video ends
  * - Pauses automatically when the screen loses focus
- * - Tracks playback analytics via PostHog (see `useVideoAnalytics`)
  * - Renders a play/pause button with optional Liquid Glass effect
  *
- * Logic is split across two hooks:
- * - `useVideoPlayerState` — player instance, event subscriptions, state
- * - `useVideoAnalytics`   — PostHog event tracking
+ * Playback state and event subscriptions are managed by `useVideoPlayerState`.
  *
  * @example
  * <VideoPlayer
  *   playbackId="abc123"
- *   gestureId={gesture.id}
- *   gestureName={gesture.name}
  *   onComplete={handleComplete}
  * />
  */
 
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { BORDER_RADIUS, ICON_SIZE, SPACING } from "@smog/styles";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { VideoView } from "expo-video";
@@ -33,6 +28,7 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "@/context/TranslationContext";
 import { useVideoPlayerState } from "./video/useVideoPlayerState";
 
 const useGlass = isLiquidGlassAvailable();
@@ -46,30 +42,23 @@ interface VideoPlayerProps {
   onComplete?: () => void;
   /** Called when the video plays to its end. */
   onPlayToEnd?: () => void;
-  /** Gesture ID for analytics tracking. */
-  gestureId?: string;
-  /** Gesture name for analytics tracking. */
-  gestureName?: string;
 }
 
 /**
- * MUX HLS video player with analytics, focus handling, and Liquid Glass UI.
+ * MUX HLS video player with focus handling and Liquid Glass UI.
  */
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
   playbackId,
   autoPlay = true,
   onComplete,
   onPlayToEnd,
-  gestureId,
-  gestureName,
 }) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { player, isLoading, isPlaying, togglePlayPause } = useVideoPlayerState(
     {
       playbackId,
       autoPlay,
-      gestureId,
-      gestureName,
       onComplete,
       onPlayToEnd,
     }
@@ -92,6 +81,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )}
 
       <TouchableOpacity
+        accessibilityLabel={t(isPlaying ? "common.pause" : "common.play")}
+        accessibilityRole="button"
         onPress={togglePlayPause}
         style={[
           styles.controlButton,

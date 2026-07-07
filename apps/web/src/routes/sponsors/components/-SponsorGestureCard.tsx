@@ -15,6 +15,7 @@
 
 import type { GestureWithSponsorshipStatus } from "@smog/ui";
 import { Check, Heart } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface SponsorGestureCardProps {
   gesture: GestureWithSponsorshipStatus;
@@ -43,6 +44,7 @@ export function SponsorGestureCard({
   onToggle,
   isDisabled,
 }: SponsorGestureCardProps) {
+  const { t } = useTranslation();
   return (
     <button
       className={`group relative w-full overflow-hidden rounded-xl border bg-card p-4 text-left transition-all ${
@@ -69,10 +71,10 @@ export function SponsorGestureCard({
             {gesture.status === "sponsored" ? (
               <>
                 <Heart className="h-3 w-3 fill-current" />
-                Gesponsord
+                {t("web.sponsors.wizard.sponsored")}
               </>
             ) : (
-              "In behandeling"
+              t("web.sponsors.wizard.inReview")
             )}
           </span>
         </div>

@@ -1,6 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { FONT_SIZE, ICON_SIZE, SPACING } from "@smog/styles";
-import { Stack } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import type React from "react";
 import { useCallback, useContext, useState } from "react";
 import {
@@ -74,6 +74,10 @@ const DeveloperToolsScreen: React.FC = () => {
       setIsSavingLogs(false);
     }
   }, []);
+
+  if (!__DEV__) {
+    return <Redirect href="/settings" />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>

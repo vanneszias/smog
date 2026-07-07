@@ -30,7 +30,10 @@ export async function getVideoSourceUrl(playbackId: string): Promise<string> {
   console.log(`[Mux] Getting source URL for playback ID: ${playbackId}`);
 
   const serverUrl = process.env.SERVER_URL || "http://localhost:3000";
-  const apiKey = process.env.REMOTION_API_KEY || "dev-secret-key";
+  const apiKey = process.env.REMOTION_API_KEY;
+  if (!apiKey) {
+    throw new Error("REMOTION_API_KEY must be set");
+  }
   const response = await fetch(`${serverUrl}/api/video/master-access`, {
     method: "POST",
     headers: {
@@ -75,6 +78,9 @@ export async function uploadToMux(
 
   console.log(`[Mux] Direct upload created: ${upload.id}`);
   onProgress?.(82);
+  if (!upload.url) {
+    throw new Error("Mux did not return a direct upload URL");
+  }
 
   // Read and upload the video file
   const videoBuffer = await fs.readFile(videoPath);

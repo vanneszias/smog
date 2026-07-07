@@ -1,3 +1,4 @@
+import { withServiceAuth } from "@smog/api/lib/convex";
 import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
 import { ConvexHttpClient } from "convex/browser";
@@ -18,7 +19,10 @@ export function startExpirationCronJob() {
       console.log("[Cron] Running sponsorship expiration job...");
 
       // Get all expired sponsorships from Convex
-      const expired = await convex.query(api.sponsorships.getExpired, {});
+      const expired = await convex.query(
+        api.sponsorships.getExpired,
+        withServiceAuth({})
+      );
 
       if (expired.length === 0) {
         console.log("[Cron] No expired sponsorships found");
@@ -35,9 +39,10 @@ export function startExpirationCronJob() {
           );
 
           // Expire the sponsorship (this also restores the original video)
-          await convex.mutation(api.sponsorships.expire, {
-            sponsorshipId: sponsorship._id,
-          });
+          await convex.mutation(
+            api.sponsorships.expire,
+            withServiceAuth({ sponsorshipId: sponsorship._id })
+          );
 
           // Delete the sponsored video from MUX to save costs
           if (sponsorship.sponsoredVideoPlaybackId) {
@@ -77,7 +82,7 @@ export function startRenewalReminderCronJob() {
       // Get active sponsorships expiring within 30 days that haven't had a reminder sent
       const expiringSoon = await convex.query(
         api.sponsorships.getExpiringSoon,
-        { daysUntilExpiry: 30 }
+        withServiceAuth({ daysUntilExpiry: 30 })
       );
 
       if (expiringSoon.length === 0) {
@@ -111,9 +116,10 @@ export function startRenewalReminderCronJob() {
           );
 
           // Mark the reminder as sent to prevent duplicate emails
-          await convex.mutation(api.sponsorships.markRenewalReminderSent, {
-            sponsorshipId: sponsorship._id,
-          });
+          await convex.mutation(
+            api.sponsorships.markRenewalReminderSent,
+            withServiceAuth({ sponsorshipId: sponsorship._id })
+          );
 
           console.log(
             `[Cron] Renewal reminder enqueued for sponsorship ${sponsorship._id}`
@@ -147,7 +153,7 @@ export function startStalePendingPaymentCleanupJob() {
 
       const stale = await convex.query(
         api.sponsorships.getStalePendingPayments,
-        {}
+        withServiceAuth({})
       );
 
       if (stale.length === 0) {
@@ -161,9 +167,10 @@ export function startStalePendingPaymentCleanupJob() {
 
       for (const sponsorship of stale) {
         try {
-          await convex.mutation(api.sponsorships.cancelPendingPayment, {
-            sponsorshipId: sponsorship._id,
-          });
+          await convex.mutation(
+            api.sponsorships.cancelPendingPayment,
+            withServiceAuth({ sponsorshipId: sponsorship._id })
+          );
           console.log(
             `[Cron] Cancelled stale pending-payment sponsorship ${sponsorship._id}`
           );

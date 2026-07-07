@@ -1,9 +1,21 @@
+import { withServiceAuth } from "@smog/api/lib/convex";
 import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
 import { getSponsorOverlayConfig } from "@smog/types";
 import { ConvexHttpClient } from "convex/browser";
 
 const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
+
+function getRemotionHeaders() {
+  const apiKey = process.env.REMOTION_API_KEY;
+  if (!apiKey) {
+    throw new Error("REMOTION_API_KEY must be set");
+  }
+  return {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+}
 
 export interface ProcessPaymentOptions {
   sponsorshipId: string;
@@ -51,7 +63,7 @@ async function triggerVideoComposition(sponsorship: {
   // Call Remotion service to compose video
   const response = await fetch(`${remotionUrl}/api/compose`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getRemotionHeaders(),
     body: JSON.stringify({
       playbackId: sponsorship.originalVideoPlaybackId,
       overlayImageUrl: overlayImageUrl || "", // Empty string if no logo
@@ -84,7 +96,8 @@ async function triggerVideoComposition(sponsorship: {
     attempts++;
 
     const statusResponse = await fetch(
-      `${remotionUrl}/api/compose/status/${jobId}`
+      `${remotionUrl}/api/compose/status/${jobId}`,
+      { headers: getRemotionHeaders() }
     );
     if (!statusResponse.ok) {
       console.error(
@@ -157,12 +170,21 @@ export async function processSuccessfulPayment(
     );
 
     // Get sponsorship details from Convex
-    const sponsorship = await convex.query(api.sponsorships.getById, {
-      id: options.sponsorshipId as Id<"sponsorships">,
-    });
+    const sponsorship = await convex.query(
+      api.sponsorships.getById,
+      withServiceAuth({
+        id: options.sponsorshipId as Id<"sponsorships">,
+      })
+    );
 
     if (!sponsorship) {
       throw new Error(`Sponsorship not found: ${options.sponsorshipId}`);
+    }
+
+    if (sponsorship.molliePaymentId !== options.molliePaymentId) {
+      throw new Error(
+        `Payment does not belong to sponsorship: ${options.sponsorshipId}`
+      );
     }
 
     // Allow idempotent webhook calls - if already pending_approval, payment was already processed
@@ -192,10 +214,13 @@ export async function processSuccessfulPayment(
         );
 
         // Use the preview video (which already has the logo) as the sponsored video
-        await convex.mutation(api.sponsorships.updateVideoPlaybackId, {
-          sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
-          sponsoredVideoPlaybackId: sponsorship.previewVideoPlaybackId,
-        });
+        await convex.mutation(
+          api.sponsorships.updateVideoPlaybackId,
+          withServiceAuth({
+            sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
+            sponsoredVideoPlaybackId: sponsorship.previewVideoPlaybackId,
+          })
+        );
 
         console.log(
           `[Sponsorship] Using preview video: ${sponsorship.previewVideoPlaybackId}`
@@ -210,10 +235,13 @@ export async function processSuccessfulPayment(
         const newPlaybackId = await triggerVideoComposition(sponsorship);
 
         // Update sponsorship with new playback ID
-        await convex.mutation(api.sponsorships.updateVideoPlaybackId, {
-          sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
-          sponsoredVideoPlaybackId: newPlaybackId,
-        });
+        await convex.mutation(
+          api.sponsorships.updateVideoPlaybackId,
+          withServiceAuth({
+            sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
+            sponsoredVideoPlaybackId: newPlaybackId,
+          })
+        );
 
         console.log(
           `[Sponsorship] Video composed successfully: ${newPlaybackId}`
@@ -227,9 +255,12 @@ export async function processSuccessfulPayment(
 
     // Mark sponsorship as paid - changes status from "pending_payment" to "pending_approval"
     // This makes it appear in the admin approval queue
-    await convex.mutation(api.sponsorships.markAsAwaitingApproval, {
-      sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
-    });
+    await convex.mutation(
+      api.sponsorships.markAsAwaitingApproval,
+      withServiceAuth({
+        sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
+      })
+    );
 
     console.log(
       "[Sponsorship] Sponsorship marked as pending approval:",

@@ -6,14 +6,14 @@
  * helper functions for price formatting and calculation.
  */
 
-import type { SponsorshipPricing } from "@smog/types";
-
-// Re-export from @smog/config so existing import sites don't need to change.
-export {
+import {
   FIXED_DURATION_YEARS,
   LOGO_ADDON_CENTS,
   PRICE_PER_YEAR_CENTS,
 } from "@smog/config/constants";
+import type { SponsorshipPricing } from "@smog/types";
+
+export { LOGO_ADDON_CENTS, PRICE_PER_YEAR_CENTS };
 
 /**
  * Calculate the full pricing breakdown for a sponsorship order.
@@ -25,10 +25,6 @@ export function calculateSimplifiedPrice(
   gestureCount: number,
   includeLogo: boolean
 ): SponsorshipPricing {
-  // Import inline to avoid circular reference with the re-exports above
-  const PRICE_PER_YEAR_CENTS = 5000;
-  const LOGO_ADDON_CENTS = 1000;
-
   const pricePerGesture = includeLogo
     ? PRICE_PER_YEAR_CENTS + LOGO_ADDON_CENTS
     : PRICE_PER_YEAR_CENTS;
@@ -43,7 +39,7 @@ export function calculateSimplifiedPrice(
     logoAddonCents: logoTotal,
     subtotalCents: subtotal,
     totalCents: subtotal + logoTotal,
-    durationYears: 1,
+    durationYears: FIXED_DURATION_YEARS,
   };
 }
 
@@ -51,11 +47,18 @@ export function calculateSimplifiedPrice(
  * Format a price in euro cents to a localised EUR string.
  *
  * @example
- * formatPrice(5000) // "€50.00"
+ * formatPrice(5000, "nl") // "€ 50,00"
  */
-export function formatPrice(cents: number): string {
+export function formatPrice(cents: number, language = "nl"): string {
   const euros = cents / 100;
-  return new Intl.NumberFormat("en-EU", {
+  const locale =
+    {
+      en: "en-BE",
+      fr: "fr-BE",
+      nl: "nl-BE",
+    }[language.split("-")[0]] ?? "nl-BE";
+
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
   }).format(euros);

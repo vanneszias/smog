@@ -53,5 +53,3 @@ export function WelcomeEmail({ name }: WelcomeEmailProps) {
     </EmailLayout>
   );
 }
-
-export default WelcomeEmail;

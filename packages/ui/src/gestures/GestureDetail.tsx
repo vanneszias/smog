@@ -1,8 +1,9 @@
-import MuxPlayer from "@mux/mux-player-react";
+import MuxPlayer from "@mux/mux-player-react/lazy";
 import {
   AlertTriangle,
   ArrowLeft,
-  Heart,
+  Check,
+  ListPlus,
   Smartphone,
   Sparkles,
   X,
@@ -14,10 +15,15 @@ const VIDEO_COMPLETE_COUNT = 7;
 const COURSE_URL = "https://smog.vlaanderen/volg-een-cursus";
 
 // Link phrases that should be clickable in the video complete messages
-const LINK_PHRASES = ["Klik hier", "klik dan hier"];
+const NL_LINK_PHRASES = ["Klik hier", "klik hier", "klik dan hier"];
+const LINK_PHRASES: Record<string, string[]> = {
+  en: ["Click here", "click here"],
+  fr: ["Cliquez ici", "cliquez ici"],
+  nl: NL_LINK_PHRASES,
+};
 
 import { ShimmerSkeleton } from "../common/Skeleton";
-import type { GestureCardData } from "./GestureCard";
+import type { GestureCardData } from "./types";
 
 export type GestureDetailData = GestureCardData & {
   sponsorship?: {
@@ -29,8 +35,8 @@ export type GestureDetailData = GestureCardData & {
 
 interface GestureDetailProps {
   gesture: GestureDetailData;
-  isFavorite?: boolean;
-  onToggleFavorite?: (gestureId: string) => void;
+  isSaved?: boolean;
+  onToggleSaved?: (gestureId: string) => void;
   onBack?: () => void;
   showOpenInApp?: boolean;
   onOpenInApp?: () => void;
@@ -80,13 +86,13 @@ function SponsorshipCTA({
 
 export function GestureDetail({
   gesture,
-  isFavorite = false,
-  onToggleFavorite,
+  isSaved = false,
+  onToggleSaved,
   onBack,
   showOpenInApp = false,
   onOpenInApp,
 }: GestureDetailProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const disclaimerFiredRef = useRef(false);
 
@@ -95,6 +101,8 @@ export function GestureDetail({
     () => Math.floor(Math.random() * VIDEO_COMPLETE_COUNT) + 1,
     []
   );
+  const language = i18n.resolvedLanguage?.split("-")[0] ?? "nl";
+  const linkPhrases = LINK_PHRASES[language] ?? NL_LINK_PHRASES;
 
   // Render message with clickable links
   const renderMessageWithLinks = (message: string) => {
@@ -106,7 +114,7 @@ export function GestureDetail({
       let earliestMatch: { phrase: string; index: number } | null = null;
 
       // Find the earliest occurrence of any link phrase
-      for (const phrase of LINK_PHRASES) {
+      for (const phrase of linkPhrases) {
         const index = remainingText.indexOf(phrase);
         if (
           index !== -1 &&
@@ -154,16 +162,9 @@ export function GestureDetail({
     return parts;
   };
 
-  // Debug logging
-  console.debug("GestureDetail render:", {
-    showOpenInApp,
-    hasOnOpenInApp: !!onOpenInApp,
-    willShowBanner: !!showOpenInApp && !!onOpenInApp,
-  });
-
-  const handleFavoriteClick = () => {
-    if (onToggleFavorite) {
-      onToggleFavorite(gesture._id);
+  const handleSaveClick = () => {
+    if (onToggleSaved) {
+      onToggleSaved(gesture._id);
     }
   };
 
@@ -211,29 +212,33 @@ export function GestureDetail({
             {gesture.name}
           </h1>
 
-          {/* Favorite button */}
-          {onToggleFavorite && (
+          {/* Save-to-list button */}
+          {onToggleSaved && (
             <button
               aria-label={
-                isFavorite
-                  ? t("ui.gestureDetail.removeFromFavorites")
-                  : t("ui.gestureDetail.addToFavorites")
+                isSaved
+                  ? t(
+                      "ui.gestureDetail.addToAnotherList",
+                      "Add to another list"
+                    )
+                  : t("ui.gestureDetail.addToList", "Add to list")
               }
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-background transition-all hover:scale-105 hover:bg-card md:h-auto md:w-auto md:gap-2 md:px-4 md:py-2"
-              onClick={handleFavoriteClick}
+              onClick={handleSaveClick}
               type="button"
             >
-              <Heart
-                className={`h-5 w-5 transition-all ${
-                  isFavorite
-                    ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
-                    : "fill-none stroke-primary"
-                }`}
-              />
+              {isSaved ? (
+                <Check className="h-5 w-5 stroke-primary" />
+              ) : (
+                <ListPlus className="h-5 w-5 stroke-primary" />
+              )}
               <span className="hidden font-medium md:inline">
-                {isFavorite
-                  ? t("ui.gestureDetail.removeFromFavorites")
-                  : t("ui.gestureDetail.addToFavorites")}
+                {isSaved
+                  ? t(
+                      "ui.gestureDetail.addToAnotherList",
+                      "Add to another list"
+                    )
+                  : t("ui.gestureDetail.addToList", "Add to list")}
               </span>
             </button>
           )}
@@ -368,7 +373,7 @@ export function GestureDetail({
                     className="mb-0.5 font-semibold text-sm leading-snug"
                     style={{ color: "var(--text)" }}
                   >
-                    {t("gesture.disclaimer.titleNl")}
+                    {t("gesture.disclaimer.title")}
                   </p>
                   <p
                     className="text-sm leading-relaxed"
@@ -382,7 +387,7 @@ export function GestureDetail({
 
                 {/* Dismiss button */}
                 <button
-                  aria-label="Dismiss disclaimer"
+                  aria-label={t("gesture.disclaimer.dismiss")}
                   className="shrink-0 rounded-lg p-1 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
                   onClick={() => setShowDisclaimer(false)}
                   type="button"

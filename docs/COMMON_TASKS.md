@@ -1,7 +1,7 @@
 # Common Development Tasks
 
 > Step-by-step guides for the most frequent development tasks.  
-> Last updated: March 18, 2026
+> Last updated: June 10, 2026
 
 ---
 
@@ -32,36 +32,17 @@ router.push("/my-screen");
 
 ---
 
-### Add a new analytics event
+### Add a tracked interaction
 
-1. Add a typed tracking function to `apps/native/services/analytics/tracking.ts`:
-```typescript
-/** Track when the user taps the share button on a gesture. */
-export function trackGestureShared(gestureId: string, gestureName: string): void {
-  trackEvent("Gesture Shared", { gesture_id: gestureId, gesture_name: gestureName });
-}
-```
-
-2. Re-export from `apps/native/services/analytics/index.ts`:
-```typescript
-export { trackGestureShared } from "./tracking";
-```
-
-3. Use in a component:
-```typescript
-import { trackGestureShared } from "@/services/analyticsService";
-trackGestureShared(gesture.id, gesture.name);
-```
-
----
-
-### Add a column to the SQLite gestures table
-
-1. Increment `DATABASE_TARGET_VERSION` in `packages/config/src/constants.ts`
-2. Add the column to `apps/native/services/database/schema.ts` in `createTablesWithCorrectSchema`
-3. Update `DatabaseGesture` type in `apps/native/services/database/types.ts`
-4. Update `mapRowToGesture` in `apps/native/services/database/operations.ts` if needed
-5. The next app launch will drop and recreate all tables + trigger a full re-sync
+1. Add the event and its property type to
+   `packages/shared/src/analytics.ts`.
+2. Call the platform `trackAnalyticsEvent` helper only after the user action
+   succeeds.
+3. Use stable IDs, enums, booleans, and counts. Never send search text,
+   authentication tokens, free-form sponsor data, or invoice/payment details.
+4. Verify that no request is sent before consent and that withdrawal stops new
+   events.
+5. Update `docs/PRIVACY_AND_ANALYTICS.md` when the data inventory changes.
 
 ---
 
@@ -69,9 +50,9 @@ trackGestureShared(gesture.id, gesture.name);
 
 ### Add a new admin page
 
-1. Create the route in `apps/web/src/routes/admin/[page].tsx`
-2. Register in the TanStack Router config
-3. Add a nav link in `apps/web/src/components/admin/AdminLayout.tsx`
+1. Add the view or tab to `apps/web/src/routes/admin.tsx`.
+2. Add feature components under `apps/web/src/components/admin/`.
+3. Protect server mutations with the existing admin authorization helpers.
 
 ---
 
@@ -135,16 +116,16 @@ The wizard is split into three step components:
 | File | Responsibility |
 |------|---------------|
 | `routes/sponsors/index.tsx` | Data fetching + step routing |
-| `components/StepSelect.tsx` | Step 1: gesture selection |
-| `components/StepDetails.tsx` | Step 2: sponsor details |
-| `components/StepPreview.tsx` | Step 3: preview + pay |
-| `hooks/useSponsorshipForm.ts` | All form state |
-| `hooks/useSponsorshipMutation.ts` | API calls |
+| `components/-StepSelect.tsx` | Step 1: gesture selection |
+| `components/-StepDetails.tsx` | Step 2: sponsor details |
+| `components/-StepPreview.tsx` | Step 3: preview + pay |
+| `hooks/-useSponsorshipForm.ts` | All form state |
+| `hooks/-useSponsorshipMutation.ts` | API calls |
 
 To add a new form field:
-1. Add to `SponsorshipFormState` in `useSponsorshipForm.ts`
+1. Add to `SponsorshipFormState` in `-useSponsorshipForm.ts`
 2. Add state + setter in `useSponsorshipForm`
-3. Add validation in `utils/validation.ts` if needed
+3. Add validation in `utils/-validation.ts` if needed
 4. Add the UI in the appropriate step component
 
 ---

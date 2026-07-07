@@ -1,0 +1,84 @@
+# Use Mux in AI Workflows
+
+**Source:** https://mux.com/docs/_guides/examples/ai-workflows
+
+The workflows below are all powered by @mux/ai, our open-source library that provides prebuilt workflows for common video AI tasks. It works with your favorite LLM provider (OpenAI, Anthropic, or Google). Check out the GitHub repository for more details!
+
+  <GuideCard
+    imageSrc="/docs/images/ai-chapters@2x.png"
+    imageWidth={536}
+    imageHeight={300}
+    title="AI Chapters"
+    description="Automatically generate chapters for your video using AI."
+    links={[
+      {
+        title: "View the Guide →",
+        href: "/docs/examples/ai-generated-chapters",
+      },
+    ]}
+  />
+  <GuideCard
+    imageSrc="/docs/images/ai-translation@2x.png"
+    imageWidth={536}
+    imageHeight={300}
+    title="AI Dubbing"
+    description="Automatically dub your video into different languages."
+    links={[
+      {
+        title: "View the Guide →",
+        href: "/docs/examples/ai-translation-dubbing",
+      },
+    ]}
+  />
+  <GuideCard
+    imageSrc="/docs/images/ai-summarizing@2x.png"
+    imageWidth={536}
+    imageHeight={300}
+    title="AI Summarization"
+    description="Automatically summarize your video using AI."
+    links={[
+      {
+        title: "View the Guide →",
+        href: "/docs/examples/ai-summarizing-and-tagging",
+      },
+    ]}
+  />
+  <GuideCard
+    imageSrc="/docs/images/ai-subtitle-translations@2x.png"
+    imageWidth={536}
+    imageHeight={300}
+    title="AI Subtitle Translation"
+    description="Automatically convert Mux's auto-generated captions into another language by leveraging the power of an LLM."
+    links={[
+      {
+        title: "View the Guide →",
+        href: "/docs/examples/ai-translation-subtitles",
+      },
+    ]}
+  />
+  <GuideCard
+    imageSrc="/docs/images/ai-recommendation-engine@2x.png"
+    imageWidth={536}
+    imageHeight={300}
+    title="AI Recommendation Engine"
+    description="Nearest neighbor search for similar videos"
+    links={[
+      {
+        title: "View the Guide →",
+        href: "/docs/examples/ai-recommendation-engine",
+      },
+    ]}
+  />
+  <GuideCard
+    imageSrc="/docs/images/ai-moderation@2x.png"
+    imageWidth={536}
+    imageHeight={300}
+    title="AI Moderation"
+    description="Automatically moderate video content using AI to detect violence or nudity."
+    links={[
+      {
+        title: "View the Guide →",
+        href: "/docs/examples/ai-moderation",
+      },
+    ]}
+  />

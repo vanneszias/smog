@@ -72,5 +72,3 @@ export function PaymentConfirmedEmail({
     </EmailLayout>
   );
 }
-
-export default PaymentConfirmedEmail;

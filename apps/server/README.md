@@ -1,99 +1,61 @@
-# Server API
+# SMOG Server
 
-Hono-based API server with ORPC for type-safe endpoints.
+Hono API running on Bun.
 
-## Features
+## Responsibilities
 
-- Secure video composition
-- Job queue with BullMQ
-- Type-safe APIs with ORPC
-- Docker support
+- oRPC and OpenAPI endpoints from `@smog/api`
+- WorkOS OAuth callback, refresh, and logout
+- Mollie payment webhook handling
+- Remotion master-video access
+- Transactional email rendering and BullMQ processing
+- Sponsorship expiry, renewal reminder, and stale-payment jobs
+- OpenTelemetry export when configured
 
-## Tech Stack
-
-- **Framework**: Hono
-- **API**: ORPC (end-to-end type-safe)
-- **Runtime**: Bun
-- **Queue**: BullMQ + Redis
-- **Video**: FFmpeg
+Video composition runs in `apps/remotion`; the API coordinates jobs but does
+not compose video with FFmpeg.
 
 ## Commands
 
 ```bash
-bun dev            # Start dev server
-bun build          # Build with tsdown
-bun check-types    # Typecheck
+bun -F server dev
+bun -F server build
+bun -F server check-types
 ```
 
 ## Environment
 
-Required:
-```
+See the root `.env.example`. Core server values include:
+
+```env
 CONVEX_URL=
-MUX_TOKEN_ID=
-MUX_TOKEN_SECRET=
 WORKOS_CLIENT_ID=
 WORKOS_CLIENT_SECRET=
 MOLLIE_API_KEY=
-CORS_ORIGIN=
+MUX_TOKEN_ID=
+MUX_TOKEN_SECRET=
+REMOTION_URL=http://localhost:3002
+REMOTION_API_KEY=
+INTERNAL_API_KEY=
+CORS_ORIGIN=http://localhost:3001
+REDIS_URL=redis://localhost:6379/1
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
 ```
 
-Optional:
-```
-REDIS_HOST=localhost
-REDIS_PORT=6379
-VIDEO_COMPOSITION_CONCURRENCY=2
-```
+Redis is required for queued email processing. IMAP settings are optional and
+used to save sent mail.
 
-## Development
+## Routes
 
-### Prerequisites
-- Bun >= 1.0
-- FFmpeg installed
-- Redis running
-
-```bash
-# Install FFmpeg (macOS)
-brew install ffmpeg
-
-# Start Redis
-brew services start redis
-
-# Start dev server
-bun dev
-```
-
-## Docker
-
-```bash
-docker-compose up -d
-docker-compose logs -f server
-docker-compose down
-```
-
-## Video Composition Flow
-
-1. Client uploads overlay to Convex
-2. Client requests composition via API
-3. Server adds job to Redis queue
-4. Worker processes:
-   - Downloads video from Mux
-   - Downloads overlay from Convex
-   - Composes with FFmpeg
-   - Uploads to Convex
-5. Client polls for completion
-6. Client retrieves composed video
-
-## API Endpoints
-
-### POST /rpc/sponsorships/composeVideo
-Start video composition job.
-
-### POST /rpc/sponsorships/getCompositionStatus
-Check job status.
-
-## Security
-
-- Mux URLs never exposed to client
-- Rate limiting (max 10 jobs/minute)
-- Job queue prevents overload (2 concurrent)
+- `/rpc/*`: oRPC procedures
+- `/api/*`: OpenAPI procedures
+- `/auth/workos/callback`: WorkOS code exchange
+- `/auth/token/refresh`: access-token refresh
+- `/auth/token/clear`: logout cookie cleanup
+- `/webhooks/mollie`: Mollie payment status
+- `/api/video/master-access`: authenticated Remotion source access
+- `/api/email/trigger`: authenticated internal email enqueueing

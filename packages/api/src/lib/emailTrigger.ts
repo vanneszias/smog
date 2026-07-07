@@ -23,9 +23,12 @@ export async function triggerEmail(
   payload: EmailTriggerPayload
 ): Promise<void> {
   const serverUrl = process.env.SERVER_URL ?? "http://localhost:3000";
-  const apiKey = process.env.INTERNAL_API_KEY ?? "dev-internal-secret";
 
   try {
+    const apiKey = process.env.INTERNAL_API_KEY;
+    if (!apiKey) {
+      throw new Error("INTERNAL_API_KEY must be set");
+    }
     const response = await fetch(`${serverUrl}/api/email/trigger`, {
       method: "POST",
       headers: {

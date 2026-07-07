@@ -15,7 +15,8 @@ out
 !.env.example
 
 # ── Native app (not deployed via Docker) ─────────────────────────────────────
-apps/native
+apps/native/**
+!apps/native/package.json
 
 # ── Development tooling ───────────────────────────────────────────────────────
 .vscode

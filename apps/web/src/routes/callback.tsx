@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useConvexAuth } from "convex/react";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/callback")({
   component: AuthCallback,
@@ -16,7 +17,8 @@ export const Route = createFileRoute("/callback")({
  */
 function AuthCallback() {
   const navigate = useNavigate();
-  const { isLoading } = useConvexAuth();
+  const { t } = useTranslation();
+  const { isLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
     // Wait for auth to finish loading
@@ -24,18 +26,23 @@ function AuthCallback() {
       return;
     }
 
-    navigate({ to: "/" });
-  }, [isLoading, navigate]);
+    navigate({ to: isAuthenticated ? "/" : "/login" });
+  }, [isAuthenticated, isLoading, navigate]);
 
   return (
-    <div className="flex h-screen items-center justify-center">
+    <output
+      aria-live="polite"
+      className="flex h-full items-center justify-center"
+    >
       <div className="text-center">
         <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary" />
-        <h2 className="mb-2 font-semibold text-2xl">Even wachten...</h2>
-        <p className="text-gray-600">
-          We zijn bijna klaar met je in te loggen.
+        <h1 className="mb-2 font-semibold text-2xl">
+          {t("web.auth.signingIn")}
+        </h1>
+        <p className="text-muted-foreground">
+          {t("web.auth.authenticationWait")}
         </p>
       </div>
-    </div>
+    </output>
   );
 }

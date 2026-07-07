@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { BORDER_RADIUS, SPACING } from "@smog/styles";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import type React from "react";
@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { DisclaimerBanner } from "@/components/DisclaimerBanner";
+import DisclaimerBanner from "@/components/DisclaimerBanner";
 import {
   CategoryRow,
   ConceptSection,
@@ -19,27 +19,21 @@ import {
   RelatedGesturesSection,
 } from "@/components/gesture";
 import VideoPlayer from "@/components/VideoPlayer";
-import { useFavorites } from "@/context/FavoritesContext";
+import { useLists } from "@/context/ListsContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "@/context/TranslationContext";
 import { useGesture, useRelatedGestures } from "@/hooks/useGestureData";
 import { useScreenshotDetection } from "@/hooks/useScreenshotDetection";
-import {
-  trackCategoryPressed,
-  trackEvent,
-  trackGestureLiked,
-  trackGestureUnliked,
-  trackGestureViewed,
-  trackVideoAlmostCompleted,
-} from "@/services/analytics";
+import { trackAnalyticsEvent } from "@/lib/openpanel";
 
 const GestureScreen: React.FC = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme } = useTheme();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { t } = useTranslation();
+  const { isGestureSaved, openListPicker } = useLists();
   const gesture = useGesture(id);
   const relatedGestures = useRelatedGestures(id) ?? [];
-  const [hasTrackedView, setHasTrackedView] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   // Mirrors the web's disclaimerFiredRef: ensures the banner shows exactly
   // once per playthrough and resets when the video loops back.
@@ -52,37 +46,30 @@ const GestureScreen: React.FC = () => {
     enabled: true,
   });
 
-  useEffect(() => {
-    if (gesture) {
-      trackEvent("Gesture Detail Viewed", {
-        gesture_id: gesture.id,
-        gesture_name: gesture.name,
-        gesture_categories: gesture.category,
-        categories_count: gesture.category.length,
-      });
+  const gestureId = gesture?.id;
 
-      // Track gesture viewed (only once per visit)
-      if (!hasTrackedView) {
-        trackGestureViewed(
-          gesture.id,
-          gesture.name,
-          gesture.category,
-          "search_results"
-        );
-        setHasTrackedView(true);
-      }
+  useEffect(() => {
+    if (gestureId) {
+      trackAnalyticsEvent("gesture_viewed", {
+        gesture_id: gestureId,
+        source: "direct",
+      });
     }
-  }, [gesture, hasTrackedView]);
+  }, [gestureId]);
 
   const handleVideoComplete = useCallback(() => {
-    if (gesture) {
-      trackVideoAlmostCompleted(gesture.id, gesture.name);
-    }
-
     // Show disclaimer once per playthrough.
     if (!disclaimerFiredRef.current) {
       disclaimerFiredRef.current = true;
       setShowDisclaimer(true);
+    }
+  }, []);
+
+  const handleVideoPlayToEnd = useCallback(() => {
+    if (gesture) {
+      trackAnalyticsEvent("video_playback_completed", {
+        gesture_id: gesture.id,
+      });
     }
   }, [gesture]);
 
@@ -96,11 +83,10 @@ const GestureScreen: React.FC = () => {
     );
   }
 
-  const favoriteStatus = isFavorite(gesture.id);
+  const isSaved = isGestureSaved(gesture.id);
 
   const handleCategoryPress = (category: string) => {
     if (gesture) {
-      trackCategoryPressed(category, "gesture_detail");
       router.dismiss();
       router.navigate({
         pathname: "/(tabs)/search",
@@ -109,30 +95,16 @@ const GestureScreen: React.FC = () => {
     }
   };
 
-  const handleToggleFavorite = () => {
+  const handleOpenListPicker = () => {
     if (!gesture) {
       return;
     }
 
-    const wasLiked = isFavorite(gesture.id);
-    toggleFavorite(gesture.id, gesture.name);
-
-    // Track the favorite action
-    if (wasLiked) {
-      trackGestureUnliked(
-        gesture.id,
-        gesture.name,
-        gesture.category,
-        "button_tap"
-      );
-    } else {
-      trackGestureLiked(
-        gesture.id,
-        gesture.name,
-        gesture.category,
-        "button_tap"
-      );
-    }
+    openListPicker({
+      gestureId: gesture.id,
+      gestureName: gesture.name,
+      source: "gesture_detail",
+    });
   };
 
   return (
@@ -165,18 +137,15 @@ const GestureScreen: React.FC = () => {
               }),
           headerRight: () => (
             <TouchableOpacity
-              onPress={handleToggleFavorite}
-              style={styles.favoriteButton}
+              accessibilityLabel={
+                isSaved ? t("lists.manageGestureLists") : t("lists.addToList")
+              }
+              onPress={handleOpenListPicker}
+              style={styles.listButton}
             >
               <Ionicons
-                color={
-                  favoriteStatus
-                    ? theme.liked
-                    : Platform.OS === "ios"
-                      ? theme.primary
-                      : theme.background
-                }
-                name={favoriteStatus ? "heart" : "heart-outline"}
+                color={Platform.OS === "ios" ? theme.primary : theme.background}
+                name={isSaved ? "checkmark-circle" : "list-outline"}
                 size={24}
               />
             </TouchableOpacity>
@@ -190,9 +159,8 @@ const GestureScreen: React.FC = () => {
       >
         <View style={styles.videoContainer}>
           <VideoPlayer
-            gestureId={gesture.id}
-            gestureName={gesture.name}
             onComplete={handleVideoComplete}
+            onPlayToEnd={handleVideoPlayToEnd}
             playbackId={gesture.playbackId}
           />
         </View>
@@ -237,7 +205,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     overflow: "hidden",
   },
-  favoriteButton: {
+  listButton: {
     paddingHorizontal: SPACING.sm,
   },
 });

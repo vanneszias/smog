@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchGestures } from "@/hooks/useGestureData";
 import type { Gesture } from "@/types";
 
+const MAX_SEARCH_RESULTS = 1000;
+
 interface UseOptimizedSearchOptions {
   debounceMs?: number;
   minSearchLength?: number;
@@ -56,7 +58,7 @@ export const useOptimizedSearch = (
   const { results, isLoading, isSearching } = useSearchGestures({
     query: debouncedQuery,
     categories: debouncedCategories,
-    limit: Math.max(visibleCount + displayPageSize, displayPageSize),
+    limit: MAX_SEARCH_RESULTS,
     minSearchLength,
   });
 

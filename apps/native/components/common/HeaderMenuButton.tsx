@@ -1,10 +1,10 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { MenuView } from "@react-native-menu/menu";
 import { ICON_SIZE } from "@smog/styles";
 import { Platform, StyleSheet, View } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 
-export interface MenuAction {
+interface MenuAction {
   id: string;
   title: string;
   image?: string;
@@ -16,7 +16,7 @@ interface HeaderMenuButtonProps {
 }
 
 /**
- * Consistent menu button used in the header of Home, Favorites, and Search screens.
+ * Consistent menu button used in app screen headers.
  * Renders a 36×36 rounded icon button with `ellipsis-horizontal` on all platforms.
  */
 const HeaderMenuButton = ({

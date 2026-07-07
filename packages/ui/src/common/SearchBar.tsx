@@ -12,6 +12,8 @@ interface SearchBarProps {
   autoFocus?: boolean;
   className?: string;
   buttonLabel?: string;
+  inputLabel?: string;
+  clearLabel?: string;
 }
 
 export default function SearchBar({
@@ -23,6 +25,8 @@ export default function SearchBar({
   autoFocus = false,
   className = "",
   buttonLabel = "Search",
+  inputLabel = "Search gestures",
+  clearLabel = "Clear search",
 }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -58,6 +62,7 @@ export default function SearchBar({
       <div className="relative flex-1">
         <Search className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
         <Input
+          aria-label={inputLabel}
           className="h-12 pr-10 pl-10 text-base"
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -67,6 +72,7 @@ export default function SearchBar({
         />
         {value.length > 0 && (
           <button
+            aria-label={clearLabel}
             className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
             onClick={handleClear}
             type="button"

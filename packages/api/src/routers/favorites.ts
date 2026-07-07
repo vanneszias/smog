@@ -1,22 +1,39 @@
+import { ORPCError } from "@orpc/server";
 import { api } from "@smog/convex";
 import type { Doc, Id } from "@smog/convex/dataModel";
 import { z } from "zod";
 import { protectedProcedure } from "../index";
-import { convexClient } from "../lib/convex";
+import { convexClient, withServiceAuth } from "../lib/convex";
 
 type Gesture = Doc<"gestures">;
 type Category = Doc<"categories">;
+
+async function requireCurrentUserId(
+  workosId: string,
+  requestedUserId: string
+): Promise<Id<"users">> {
+  const user = await convexClient.query(
+    api.users.getUserByWorkOSId,
+    withServiceAuth({ workosId })
+  );
+  if (!user || user._id !== requestedUserId) {
+    throw new ORPCError("FORBIDDEN");
+  }
+  return user._id;
+}
 
 export const favoritesRouter = {
   // Get user's favorite gesture IDs
   getUserFavorites: protectedProcedure
     .input(z.object({ convexUserId: z.string() }))
-    .handler(async ({ input }) => {
+    .handler(async ({ input, context }) => {
+      const userId = await requireCurrentUserId(
+        context.workosId,
+        input.convexUserId
+      );
       const favoriteIds = await convexClient.query(
         api.favorites.getUserFavorites,
-        {
-          userId: input.convexUserId as Id<"users">,
-        }
+        withServiceAuth({ userId })
       );
       return favoriteIds;
     }),
@@ -24,12 +41,14 @@ export const favoritesRouter = {
   // Get user's favorite gestures with full data
   getUserFavoriteGestures: protectedProcedure
     .input(z.object({ convexUserId: z.string() }))
-    .handler(async ({ input }) => {
+    .handler(async ({ input, context }) => {
+      const userId = await requireCurrentUserId(
+        context.workosId,
+        input.convexUserId
+      );
       const gestures = await convexClient.query(
         api.favorites.getUserFavoriteGestures,
-        {
-          userId: input.convexUserId as Id<"users">,
-        }
+        withServiceAuth({ userId })
       );
 
       // Get all unique category IDs
@@ -64,13 +83,17 @@ export const favoritesRouter = {
         gestureId: z.string(),
       })
     )
-    .handler(async ({ input }) => {
+    .handler(async ({ input, context }) => {
+      const userId = await requireCurrentUserId(
+        context.workosId,
+        input.convexUserId
+      );
       const result = await convexClient.mutation(
         api.favorites.toggleUserFavorite,
-        {
-          userId: input.convexUserId as Id<"users">,
+        withServiceAuth({
+          userId,
           gestureId: input.gestureId as Id<"gestures">,
-        }
+        })
       );
       return result; // true if added, false if removed
     }),
@@ -83,11 +106,18 @@ export const favoritesRouter = {
         gestureId: z.string(),
       })
     )
-    .handler(async ({ input }) => {
-      const isFavorited = await convexClient.query(api.favorites.isFavorite, {
-        userId: input.convexUserId as Id<"users">,
-        gestureId: input.gestureId as Id<"gestures">,
-      });
+    .handler(async ({ input, context }) => {
+      const userId = await requireCurrentUserId(
+        context.workosId,
+        input.convexUserId
+      );
+      const isFavorited = await convexClient.query(
+        api.favorites.isFavorite,
+        withServiceAuth({
+          userId,
+          gestureId: input.gestureId as Id<"gestures">,
+        })
+      );
       return isFavorited;
     }),
 };

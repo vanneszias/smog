@@ -50,6 +50,7 @@ coverage
 *.tgz
 .cache
 tmp
+packages/convex/.bak/
 
 # React Native / Expo
 .expo

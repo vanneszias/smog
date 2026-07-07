@@ -1,6 +1,10 @@
 import { Smartphone, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  getAnalyticsConsent,
+  subscribeAnalyticsConsent,
+} from "@/lib/openpanel";
 
 const APP_STORE_URL = "https://apps.apple.com/app/smog-co/id6758547774";
 const PLAY_STORE_URL =
@@ -21,6 +25,11 @@ export function AppStoreBanner() {
   const [isDismissed, setIsDismissed] = useState(false);
   const [hasAnimated, setHasAnimated] = useState(false);
   const [confetti, setConfetti] = useState<ConfettiPiece[]>([]);
+  const analyticsConsent = useSyncExternalStore(
+    subscribeAnalyticsConsent,
+    getAnalyticsConsent,
+    getAnalyticsConsent
+  );
 
   const generateConfetti = useCallback(() => {
     const pieces: ConfettiPiece[] = [];
@@ -39,6 +48,11 @@ export function AppStoreBanner() {
   }, []);
 
   useEffect(() => {
+    // Avoid stacking two prominent first-visit prompts. The app promotion can
+    // wait until the required privacy choice has been made.
+    if (analyticsConsent === null) {
+      return;
+    }
     const dismissed = localStorage.getItem(STORAGE_KEY);
     if (dismissed) {
       setIsDismissed(true);
@@ -51,7 +65,7 @@ export function AppStoreBanner() {
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [generateConfetti]);
+  }, [analyticsConsent, generateConfetti]);
 
   const handleDismiss = () => {
     localStorage.setItem(STORAGE_KEY, "true");
@@ -90,8 +104,8 @@ export function AppStoreBanner() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 py-3 pr-14 sm:px-6 sm:py-4 sm:pr-16 lg:px-8">
+        <div className="flex flex-col items-center justify-between gap-3 sm:flex-row sm:gap-4">
           {/* Text Content */}
           <div className="flex flex-col items-center gap-1 sm:flex-row sm:gap-4">
             {/* "New" Badge */}
@@ -117,10 +131,10 @@ export function AppStoreBanner() {
           </div>
 
           {/* Store Buttons */}
-          <div className="flex flex-col items-center gap-3 sm:flex-row">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* App Store Button */}
             <a
-              className="group flex items-center gap-2 rounded-xl border-2 border-white/20 bg-black/20 px-4 py-2.5 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-white/40 hover:bg-black/30"
+              className="group flex min-w-0 items-center gap-2 rounded-xl border-2 border-white/20 bg-black/20 px-3 py-2.5 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-white/40 hover:bg-black/30 sm:px-4"
               href={APP_STORE_URL}
               rel="noopener noreferrer"
               target="_blank"
@@ -147,7 +161,7 @@ export function AppStoreBanner() {
 
             {/* Play Store Button */}
             <a
-              className="group flex items-center gap-2 rounded-xl border-2 border-white/20 bg-black/20 px-4 py-2.5 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-white/40 hover:bg-black/30"
+              className="group flex min-w-0 items-center gap-2 rounded-xl border-2 border-white/20 bg-black/20 px-3 py-2.5 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-white/40 hover:bg-black/30 sm:px-4"
               href={PLAY_STORE_URL}
               rel="noopener noreferrer"
               target="_blank"
@@ -166,7 +180,7 @@ export function AppStoreBanner() {
             {/* Close Button */}
             <button
               aria-label={t("appStore.close", "Sluit banner")}
-              className="ml-0 flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all duration-200 hover:bg-white/20 hover:text-white sm:ml-2"
+              className="absolute top-2 right-2 flex h-11 w-11 items-center justify-center rounded-full text-white/80 transition-all duration-200 hover:bg-white/20 hover:text-white sm:top-1/2 sm:right-3 sm:-translate-y-1/2"
               onClick={handleDismiss}
               type="button"
             >

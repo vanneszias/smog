@@ -8,6 +8,10 @@
     "offlineMode": "Vous êtes hors ligne. Certaines fonctionnalités peuvent être limitées.",
     "backOnline": "Vous êtes de nouveau en ligne!",
     "recentSearches": "Recherches récentes",
+    "button": "Rechercher",
+    "filterButton": "Filtrer par catégorie",
+    "removeCategory": "Supprimer le filtre {{category}}",
+    "inputLabel": "Rechercher un geste",
     "clear": "Effacer",
     "clearAll": "Tout effacer",
     "foundResults": "{{count}} résultats trouvés en {{time}}ms",
@@ -27,6 +31,55 @@
     "undo": "Annuler",
     "error": "Échec de la mise à jour du favori"
   },
+  "lists": {
+    "addToList": "Ajouter à une liste",
+    "addedToList": "Ajouté à {{name}}",
+    "chooseList": "Choisissez une liste pour ce geste.",
+    "chooseListFor": "Choisissez une liste pour « {{name}} ».",
+    "createAndAdd": "Créer la liste et ajouter le geste",
+    "createNew": "Créer une nouvelle liste",
+    "createdAndAdded": "{{name}} créée et geste ajouté",
+    "deleteFailed": "Impossible de supprimer la liste",
+    "deleteMessage": "Cela supprime la liste et tous les gestes enregistrés.",
+    "deleteTitle": "Supprimer la liste",
+    "dragToReorder": "Faire glisser pour réordonner",
+    "emptyTitle": "Cette liste est prête pour son premier geste",
+    "emptyMessage": "Ajoutez les gestes que vous souhaitez revoir, pratiquer ou partager.",
+    "exploreGestures": "Explorer les gestes",
+    "favorites": "Favoris",
+    "favoritesCannotRename": "Les Favoris ne peuvent pas être renommés.",
+    "gestureRemoved": "Geste retiré de la liste",
+    "inThisList": "Dans cette liste",
+    "listCreated": "{{name}} créée",
+    "listDeleted": "Liste supprimée",
+    "listIsPrivate": "La liste est maintenant privée",
+    "listIsShared": "La liste est maintenant partagée",
+    "listRenamed": "Liste renommée",
+    "listSettings": "Réglages de la liste",
+    "manageGestureLists": "Gérer les listes du geste",
+    "moveDown": "Descendre",
+    "moveUp": "Monter",
+    "newList": "Nouvelle liste",
+    "newListPlaceholder": "Nom de la nouvelle liste",
+    "overviewDescription": "Ouvrez une liste pour consulter, réorganiser ou retirer ses gestes.",
+    "private": "Privée",
+    "addFailed": "Impossible d’ajouter le geste",
+    "removeFailed": "Impossible de retirer le geste",
+    "removeGesture": "Retirer le geste",
+    "removedFromList": "Retiré de {{name}}",
+    "rename": "Renommer la liste",
+    "reorderFailed": "Impossible de réorganiser la liste",
+    "saveFailed": "Impossible d’enregistrer la liste",
+    "share": "Partager la liste",
+    "shareFailed": "Impossible de partager la liste",
+    "shared": "Partagée",
+    "sharingDescription": "Toute personne disposant du lien peut consulter cette liste.",
+    "sharingFailed": "Impossible de modifier le partage",
+    "tapToAddToList": "Ajoute le geste à cette liste",
+    "tapToRemoveFromList": "Retire le geste de cette liste",
+    "uncategorized": "Sans catégorie",
+    "yourLists": "Vos listes"
+  },
   "auth": {
     "welcome": {
       "title": "Bienvenue à SMOG",
@@ -34,13 +87,15 @@
       "footer": "En continuant, vous acceptez nos Conditions de service et notre Politique de confidentialité",
       "signInSignUp": "Se connecter"
     },
-    "continueAsGuest": "Continuer en tant qu'invité"
+    "continueAsGuest": "Continuer en tant qu'invité",
+    "email": "E-mail"
   },
   "noGesturesFound": "Aucun geste trouvé",
   "tabs": {
     "home": "Accueil",
     "search": "Recherche",
-    "favorites": "Favoris"
+    "favorites": "Favoris",
+    "lists": "Listes"
   },
   "gesture": {
     "loadFailed": "Échec du chargement du geste",
@@ -89,7 +144,14 @@
     "mock": "Données de test",
     "auth": "Authentification",
     "manageAccount": "Gérer le compte",
-    "openDeveloperTools": "Ouvrir les outils développeur"
+    "openDeveloperTools": "Ouvrir les outils développeur",
+    "analyticsTitle": "Analyse d'utilisation",
+    "analyticsDescription": "Partagez des données d'utilisation limitées pour améliorer SMOG. Les termes de recherche et les enregistrements de session ne sont jamais collectés.",
+    "analyticsPromptTitle": "Aidez-nous à améliorer SMOG",
+    "analyticsPromptDescription": "Avec votre autorisation, nous collectons des données d'utilisation limitées via notre service d'analyse auto-hébergé. Le suivi reste désactivé jusqu'à votre choix.",
+    "analyticsAllow": "Autoriser l'analyse",
+    "analyticsRequiredOnly": "Nécessaire uniquement",
+    "privacyPolicy": "Lire la politique de confidentialité"
   },
   "about": {
     "title": "À propos",
@@ -98,23 +160,34 @@
   "common": {
     "back": "Retour",
     "cancel": "Annuler",
+    "save": "Enregistrer",
     "error": "Erreur",
     "success": "Succès",
     "comingSoon": "Bientôt disponible",
     "edit": "Modifier",
+    "delete": "Supprimer",
     "continue": "Continuer",
+    "initializing": "Démarrage de SMOG...",
+    "pause": "Mettre la vidéo en pause",
+    "play": "Lire la vidéo",
     "total": "Total",
     "week": "semaine",
     "weeks": "semaines",
+    "year": "{{count}} an",
+    "years": "{{count}} ans",
     "gesture": "geste",
-    "gestures": "gestes"
+    "gestures": "gestes",
+    "errors": {
+      "rootElementNotFound": "Élément racine introuvable"
+    }
   },
   "accessibility": {
     "skipToContent": "Aller au contenu",
     "skipToNav": "Aller à la navigation",
     "menu": {
       "open": "Ouvrir le menu",
-      "close": "Fermer le menu"
+      "close": "Fermer le menu",
+      "navigation": "Navigation principale"
     },
     "logo": {
       "alt": "Logo SMOG"
@@ -204,7 +277,31 @@
       "closeButton": "FERMER_TERMINAL"
     }
   },
+  "appStore": {
+    "new": "Nouveau",
+    "headline": "SMOG est maintenant disponible sur votre téléphone !",
+    "subheadline": "Téléchargez l’application et apprenez les gestes où que vous soyez",
+    "downloadOn": "Télécharger dans l’",
+    "getItOn": "Disponible sur",
+    "close": "Fermer la bannière de téléchargement"
+  },
   "web": {
+    "home": {
+      "title": "Apprendre SMOG",
+      "heroTitle": "Les personnes accompagnent naturellement leur parole de gestes",
+      "header": {
+        "search": "Rechercher",
+        "lists": "Listes",
+        "favorites": "Favoris",
+        "account": "Compte",
+        "sponsor": "Parrainer",
+        "discoverGestures": "Découvrir les gestes SMOG"
+      },
+      "footer": {
+        "terms": "Conditions",
+        "privacy": "Confidentialité"
+      }
+    },
     "account": {
       "loading": {
         "title": "Un instant...",
@@ -224,13 +321,9 @@
       },
       "privacy": {
         "title": "Confidentialité et données",
-        "analytics": {
-          "title": "Analyse d'utilisation",
-          "description": "Aidez-nous à améliorer SMOG en partageant des données d'utilisation anonymes. Cela n'inclut aucune information personnelle."
-        },
         "export": {
           "title": "Télécharger vos données",
-          "description": "Exportez toutes les données de votre compte, y compris les favoris, les préférences et l'historique des consentements au format JSON.",
+          "description": "Exportez toutes les données de votre compte, y compris les favoris et les préférences, au format JSON.",
           "button": "Télécharger les données",
           "exporting": "Exportation..."
         },
@@ -251,8 +344,7 @@
         "description": "Cette action ne peut pas être annulée. Cela supprimera définitivement votre compte et retirera toutes vos données de nos serveurs, y compris :",
         "listItems": {
           "accountInfo": "Les informations de votre compte",
-          "favorites": "Tous les favoris enregistrés",
-          "consentHistory": "Votre historique de consentement",
+          "favorites": "Toutes les listes de gestes enregistrées",
           "adminLogs": "Tous les journaux d'activité administrateur"
         },
         "cancel": "Annuler",
@@ -260,9 +352,6 @@
         "deleting": "Suppression..."
       },
       "toast": {
-        "analyticsEnabled": "Analyse activée. Merci de nous aider à améliorer !",
-        "analyticsDisabled": "Analyse désactivée. Vos données ne seront plus collectées.",
-        "analyticsUpdateFailed": "Échec de la mise à jour des préférences d'analyse. Veuillez réessayer.",
         "exportUnavailable": "Impossible d'exporter les données. Veuillez réessayer.",
         "exportSuccess": "Vos données ont été téléchargées avec succès",
         "exportFailed": "Échec de l'exportation des données. Veuillez réessayer.",
@@ -278,6 +367,8 @@
     "sponsors": {
       "wizard": {
         "back": "Retour",
+        "backToSelection": "Retour à la sélection",
+        "backToDetails": "Retour aux détails",
         "step": "Étape {{current}} sur {{total}}",
         "selectedGestures": "Gestes sélectionnés",
         "gesturesSelected": "{{count}} geste sélectionné",
@@ -285,7 +376,32 @@
         "gesture": "geste",
         "gestures": "gestes",
         "remove": "Supprimer",
+        "removeGestureLabel": "Supprimer {{name}}",
         "continue": "Continuer",
+        "sponsored": "Parrainé",
+        "inReview": "En cours d'examen",
+        "example": "Exemple",
+        "logoPreviewAlt": "Aperçu du logo",
+        "removeLogo": "Supprimer le logo",
+        "optional": "facultatif",
+        "previewFinalDescription": "La dernière étape avant le paiement sécurisé",
+        "videoName": "Nom dans la vidéo",
+        "contact": "Contact",
+        "selection": {
+          "title": "Parrainer un geste",
+          "description": "Soutenez un geste pendant un an. Votre nom apparaît dans sa vidéo tout en aidant le projet SMOG.",
+          "perGesture": "Par geste, par an",
+          "nameInVideo": "Votre nom dans chaque vidéo",
+          "optionalLogo": "Ajoutez votre logo (facultatif)",
+          "searchPlaceholder": "Rechercher par nom, concept ou catégorie...",
+          "categories": "Catégories",
+          "showLess": "Afficher moins",
+          "showMore": "+{{count}} de plus",
+          "available": "{{count}} geste disponible",
+          "available_other": "{{count}} gestes disponibles",
+          "selected": "{{count}} sélectionné",
+          "selected_other": "{{count}} sélectionnés"
+        },
         "configureTitle": "Configurer votre parrainage",
         "configureSubtitle": "Tous les {{count}} gestes sélectionnés afficheront :\n\"{{message}}\"",
         "sponsorNameLabel": "Nom du sponsor *",
@@ -350,6 +466,56 @@
         "invoiceEmailLabel": "Adresse e-mail de facturation",
         "invoiceEmailPlaceholder": "facture@exemple.com"
       },
+      "reEdit": {
+        "invalidTitle": "Lien invalide",
+        "invalidBody": "Il manque un code requis dans ce lien. Utilisez le lien fourni par l’administrateur.",
+        "loading": "Vérification de votre lien…",
+        "notFoundTitle": "Lien introuvable",
+        "notFoundBody": "Ce lien est invalide ou a déjà été utilisé. Contactez l’administrateur si vous pensez qu’il s’agit d’une erreur.",
+        "expiredTitle": "Lien expiré",
+        "expiredBody": "Ce lien a expiré. Demandez à l’administrateur d’en générer un nouveau.",
+        "submittedTitle": "Vidéo envoyée !",
+        "submittedBody": "Votre nouvelle vidéo est prête à être vérifiée. Aucun nouveau paiement n’est nécessaire ; nous vous contacterons bientôt.",
+        "backToSite": "Retour au site",
+        "eyebrow": "Modifier le parrainage",
+        "title": "Mettez votre vidéo à jour",
+        "gesture": "Geste",
+        "expires": "Le lien expire dans {{count}} jour",
+        "expires_other": "Le lien expire dans {{count}} jours",
+        "originalVideo": "Vidéo originale du geste",
+        "editDetails": "Modifiez vos informations",
+        "brandName": "Nom de la marque",
+        "brandPlaceholder": "Nom de votre marque ou entreprise",
+        "brandHelp": "Ce nom apparaît dans la vidéo.",
+        "overlayText": "Texte dans la vidéo",
+        "overlayPlaceholder": "Texte affiché sur la vidéo du geste",
+        "maxCharacters": "Maximum 100 caractères.",
+        "updateLogo": "Mettre le logo à jour",
+        "logoAlt": "Aperçu du logo",
+        "removeLogo": "Supprimer le logo",
+        "uploadLogo": "Choisir un nouveau logo",
+        "formats": "PNG, JPEG ou WebP · Max. 2 Mo",
+        "preview": "Aperçu",
+        "generating": "Génération…",
+        "regenerate": "Régénérer",
+        "generatePreview": "Générer l’aperçu",
+        "compositing": "Votre vidéo est en cours de composition… Cela prend environ une minute.",
+        "previewReady": "Le résultat vous convient ? Envoyez-le ci-dessous.",
+        "previewEmpty": "Sélectionnez « Générer l’aperçu » pour voir votre vidéo mise à jour.",
+        "submitting": "Envoi…",
+        "submitReview": "Envoyer pour vérification",
+        "noPayment": "Aucun nouveau paiement n’est nécessaire. Nous vérifions la modification avant sa publication.",
+        "errors": {
+          "logoTooLarge": "Le logo doit faire moins de 2 Mo.",
+          "logoInvalidFormat": "Utilisez une image PNG, JPEG ou WebP.",
+          "brandRequired": "Le nom de la marque est requis.",
+          "overlayRequired": "Le texte de la vidéo est requis.",
+          "previewFailed": "Impossible de générer l’aperçu. Veuillez réessayer.",
+          "generateFirst": "Générez d’abord un aperçu.",
+          "fillRequired": "Complétez tous les champs obligatoires.",
+          "submitFailed": "Impossible d’envoyer votre modification. Veuillez réessayer."
+        }
+      },
       "new": {
         "title": "Parrainer des gestes en langue des signes",
         "subtitle": "Soutenez la communauté et promouvez votre marque",
@@ -377,11 +543,11 @@
           "sponsorNameTooLong": "Le nom du sponsor doit contenir 40 caractères ou moins",
           "logoRequired": "Veuillez télécharger un logo ou décocher l'option",
           "logoTooLarge": "L'image doit être inférieure à 2MB",
-          "logoInvalidFormat": "Format d'image invalide. Veuillez utiliser PNG, JPG ou SVG"
+          "logoInvalidFormat": "Format d'image invalide. Veuillez utiliser PNG, JPEG ou WebP"
         },
         "logoGuidelines": {
           "title": "Directives pour le logo",
-          "format": "Format: PNG avec fond transparent (recommandé) ou SVG",
+          "format": "Format : PNG avec fond transparent (recommandé), JPEG ou WebP",
           "dimensions": "Dimensions: Minimum 800x800px pour une meilleure qualité",
           "aspectRatio": "Ratio d'aspect: Carré (1:1) recommandé",
           "fileSize": "Taille de fichier: Maximum 2MB",
@@ -480,7 +646,7 @@
           "queued": "En attente d'un worker disponible pour traiter votre vidéo...",
           "downloading": "Le worker télécharge la vidéo originale depuis Mux...",
           "processingImage": "Le worker traite et redimensionne votre image de superposition...",
-          "composing": "FFmpeg compose la vidéo avec votre superposition...",
+          "composing": "Le service vidéo compose votre vidéo avec la superposition...",
           "uploadingResult": "Téléchargement de la vidéo composée finale vers Mux...",
           "completed": "Votre vidéo est prête!",
           "failed": "Quelque chose s'est mal passé. Veuillez réessayer.",
@@ -511,8 +677,10 @@
         "loading": "Chargement des détails du parrainage...",
         "error": {
           "title": "Échec du chargement des détails du parrainage",
+          "description": "Nous ne pouvons pas encore charger les détails. Votre paiement n'est pas affecté.",
           "tryAgain": "Réessayer"
         },
+        "reviewDescription": "Un administrateur examinera votre parrainage dans les cinq jours ouvrables. Vous recevrez un e-mail dès sa mise en ligne.",
         "processing": {
           "title": "Traitement de votre paiement...",
           "description": "Paiement reçu! Les détails de votre parrainage apparaîtront ici sous peu. Cette page se mettra à jour automatiquement.",
@@ -526,354 +694,124 @@
         "redirectingIn": "Redirection automatique dans {{seconds}} secondes..."
       }
     },
-    "privacy": {
-      "title": "Politique de confidentialité",
-      "lastUpdated": "Dernière mise à jour : {{date}}",
-      "introduction": {
-        "title": "1. Introduction",
-        "body": "Bienvenue chez SMOG&Co (\"nous\", \"notre\" ou \"nos\"). Nous nous engageons à protéger vos données personnelles et à respecter votre vie privée. Cette Politique de confidentialité explique comment nous collectons, utilisons et protégeons vos informations lorsque vous utilisez notre application d'apprentissage des gestes en langue des signes."
-      },
-      "controller": {
-        "title": "2. Informations sur le responsable du traitement",
-        "body": "Le responsable du traitement de vos données personnelles est SMOG&Co ASBL (Belgique). Pour toute question relative à la confidentialité, contactez-nous à : [Your Privacy Contact Email]"
-      },
-      "dataCollect": {
-        "title": "3. Données que nous collectons",
-        "account": {
-          "title": "3.1 Informations de compte",
-          "items": {
-            "email": "Adresse e-mail (via l'authentification WorkOS)",
-            "name": "Prénom et nom (via l'authentification WorkOS)",
-            "userId": "Identifiant utilisateur (identifiant unique)",
-            "timestamps": "Horodatages de création de compte et de dernière activité"
-          }
-        },
-        "usage": {
-          "title": "3.2 Données d'utilisation (si vous consentez à l'analyse)",
-          "items": {
-            "gestures": "Gestes que vous consultez et ajoutez en favoris",
-            "searches": "Requêtes de recherche que vous effectuez",
-            "navigation": "Schémas de navigation dans l'application",
-            "device": "Informations sur l'appareil (type, version du système)",
-            "session": "Durée et fréquence des sessions",
-            "video": "Interactions de lecture vidéo"
-          }
-        },
-        "preferences": {
-          "title": "3.3 Préférences utilisateur",
-          "items": {
-            "favorites": "Gestes favoris",
-            "searchHistory": "Historique de recherche (stocké localement sur votre appareil)",
-            "settings": "Préférences de langue et de thème"
-          }
-        },
-        "guest": {
-          "title": "3.4 Données du mode invité",
-          "items": {
-            "identifier": "Identifiant invité anonyme (si vous utilisez le mode invité)",
-            "retention": "Les données invitées sont supprimées après 12 mois d'inactivité conformément à notre politique de conservation"
-          }
-        }
-      },
-      "legalBasis": {
-        "title": "4. Base juridique du traitement (RGPD)",
-        "items": {
-          "contract": {
-            "label": "Exécution du contrat",
-            "text": "Le traitement de vos informations de compte est nécessaire pour vous fournir nos services"
-          },
-          "consent": {
-            "label": "Consentement",
-            "text": "Analyse et communications marketing (vous pouvez retirer votre consentement à tout moment dans les paramètres)"
-          },
-          "legitimate": {
-            "label": "Intérêt légitime",
-            "text": "Sécurité, prévention de la fraude et amélioration du service"
-          },
-          "legal": {
-            "label": "Obligation légale",
-            "text": "Respect des lois et réglementations applicables"
-          }
-        }
-      },
-      "useData": {
-        "title": "5. Comment nous utilisons vos données",
-        "items": {
-          "provide": "Pour fournir et maintenir notre service",
-          "authenticate": "Pour authentifier votre compte (via WorkOS)",
-          "sync": "Pour synchroniser vos favoris entre appareils",
-          "analytics": "Pour améliorer notre application grâce à l'analyse d'utilisation (uniquement si vous y consentez)",
-          "personalize": "Pour personnaliser votre expérience d'apprentissage",
-          "support": "Pour fournir l'assistance client",
-          "legal": "Pour respecter nos obligations légales"
-        }
-      },
-      "thirdParty": {
-        "title": "6. Services tiers",
-        "workos": {
-          "title": "6.1 Authentification - WorkOS",
-          "body": "Nous utilisons WorkOS pour l'authentification sécurisée. WorkOS traite votre adresse e-mail et votre nom pour créer et gérer votre compte. Consultez la politique de confidentialité de WorkOS : <link>https://workos.com/privacy</link>"
-        },
-        "posthog": {
-          "title": "6.2 Analyse - PostHog (optionnel)",
-          "body": "Si vous y consentez, nous utilisons PostHog (hébergé dans l'UE) pour l'analyse d'utilisation sur nos applications web et natives. PostHog nous aide à comprendre comment les utilisateurs interagissent avec notre application. Vous pouvez vous désinscrire à tout moment dans les paramètres. Consultez la politique de confidentialité de PostHog : <link>https://posthog.com/privacy</link>"
-        },
-        "mux": {
-          "title": "6.3 Hébergement vidéo - Mux",
-          "body": "Nous utilisons Mux pour héberger et diffuser les vidéos de démonstration de gestes. Mux peut collecter des données techniques nécessaires à la diffusion vidéo. Consultez la politique de confidentialité de Mux : <link>https://mux.com/privacy</link>"
-        },
-        "convex": {
-          "title": "6.4 Base de données - Convex",
-          "body": "Nous utilisons Convex pour stocker vos données de compte, favoris et préférences utilisateur. Convex est notre fournisseur de base de données backend."
-        }
-      },
-      "storage": {
-        "title": "7. Stockage et sécurité des données",
-        "items": {
-          "encryption": "Vos données sont stockées de manière sécurisée grâce à un chiffrement conforme aux normes de l'industrie",
-          "analytics": "Les données d'analyse sont stockées sur des serveurs PostHog dans l'Union européenne",
-          "measures": "Nous mettons en place des mesures techniques et organisationnelles appropriées pour protéger vos données",
-          "access": "L'accès à vos données personnelles est limité au personnel autorisé"
-        }
-      },
-      "retention": {
-        "title": "8. Conservation des données",
-        "items": {
-          "active": {
-            "label": "Comptes actifs",
-            "text": "Données conservées tant que votre compte est actif"
-          },
-          "guest": {
-            "label": "Comptes invités",
-            "text": "Supprimés automatiquement après 12 mois d'inactivité"
-          },
-          "logs": {
-            "label": "Journaux administratifs",
-            "text": "Conservés pendant 3 ans à des fins d'audit"
-          },
-          "deleted": {
-            "label": "Comptes supprimés",
-            "text": "Toutes les données personnelles supprimées dans les 30 jours suivant la demande de suppression"
-          }
-        }
-      },
-      "rights": {
-        "title": "9. Vos droits (RGPD)",
-        "intro": "Vous disposez des droits suivants :",
-        "items": {
-          "access": {
-            "label": "Droit d'accès",
-            "text": "Demander une copie de vos données personnelles (disponible dans Paramètres → Télécharger mes données)"
-          },
-          "rectification": {
-            "label": "Droit de rectification",
-            "text": "Corriger les données inexactes via vos paramètres de compte"
-          },
-          "erasure": {
-            "label": "Droit à l'effacement",
-            "text": "Supprimer votre compte et toutes les données associées (Paramètres → Supprimer mon compte)"
-          },
-          "restrict": {
-            "label": "Droit à la limitation du traitement",
-            "text": "Limiter la manière dont nous traitons vos données"
-          },
-          "portability": {
-            "label": "Droit à la portabilité des données",
-            "text": "Recevoir vos données dans un format lisible par machine"
-          },
-          "object": {
-            "label": "Droit d'opposition",
-            "text": "Vous opposer au traitement fondé sur l'intérêt légitime"
-          },
-          "withdraw": {
-            "label": "Droit de retirer votre consentement",
-            "text": "Désactiver l'analyse à tout moment"
-          }
-        },
-        "closing": "Pour exercer ces droits, utilisez les options dans vos paramètres de compte ou contactez-nous directement."
-      },
-      "children": {
-        "title": "10. Confidentialité des enfants",
-        "body": "Notre service est destiné aux utilisateurs âgés de 13 ans et plus (ou l'âge du consentement numérique dans votre pays). Nous ne collectons pas sciemment de données auprès d'enfants en dessous de cet âge. Si vous pensez que nous avons collecté des données d'un enfant, contactez-nous immédiatement."
-      },
-      "transfers": {
-        "title": "11. Transferts internationaux de données",
-        "intro": "Vos données peuvent être transférées et traitées dans des pays en dehors de l'EEE/Royaume-Uni. Nous mettons en place des garanties appropriées, notamment :",
-        "items": {
-          "euHosting": "Analyse hébergée dans l'UE (PostHog)",
-          "scc": "Clauses contractuelles types avec des sous-traitants tiers le cas échéant",
-          "adequacy": "Décisions d'adéquation de la Commission européenne le cas échéant"
-        }
-      },
-      "cookies": {
-        "title": "12. Cookies et stockage local",
-        "intro": "Nous utilisons des cookies et le stockage local pour conserver :",
-        "items": {
-          "auth": "Cookies strictement nécessaires pour les sessions d'authentification",
-          "consent": "Choix de consentement pour les préférences d'analyse et de marketing",
-          "preferences": "Préférences utilisateur (langue, thème)",
-          "search": "Recherches récentes (locales uniquement, non envoyées aux serveurs)",
-          "cache": "Données de gestes mises en cache pour un accès hors ligne"
-        },
-        "closing": "Vous pouvez effacer ces données à tout moment via les paramètres de votre appareil ou navigateur. Vous pouvez également mettre à jour vos préférences de consentement dans les paramètres du compte."
-      },
-      "changes": {
-        "title": "13. Modifications de cette politique",
-        "intro": "Nous pouvons mettre à jour cette Politique de confidentialité de temps à autre. Nous vous informerons des changements importants en :",
-        "items": {
-          "updated": "Mettant à jour la date « Dernière mise à jour »",
-          "notification": "Affichant une notification dans l'application",
-          "renewal": "Demandant un nouveau consentement lorsque la loi l'exige"
-        }
-      },
-      "contact": {
-        "title": "14. Contact",
-        "intro": "Pour toute question relative à la confidentialité, à l'exercice de vos droits ou à la protection des données, contactez-nous à :",
-        "emailLabel": "E-mail",
-        "emailValue": "[Your Privacy Contact Email]",
-        "addressLabel": "Adresse",
-        "addressValue": "[SMOG&Co VZW Registered Address, Belgium]"
-      },
-      "authority": {
-        "title": "15. Autorité de contrôle",
-        "body": "Si vous êtes en Belgique, vous avez le droit de déposer une plainte auprès de l'Autorité de protection des données belge (APD/GBA). Si vous êtes ailleurs dans l'EEE ou au Royaume-Uni, vous pouvez contacter votre autorité locale de protection des données."
-      },
-      "footer": "Cette politique de confidentialité est conçue pour être conforme au RGPD et au droit belge de la protection des données. En utilisant notre service, vous reconnaissez avoir lu et compris cette politique."
+    "lists": {
+      "add": "Ajouter",
+      "addFailed": "Impossible d'ajouter le geste",
+      "addGestures": "Ajouter des gestes",
+      "addedToList": "\"{{name}}\" ajouté à la liste",
+      "addedToListShort": "Ajouté à la liste",
+      "adding": "Ajout...",
+      "addToSelected": "Ajouter à la sélection",
+      "alreadyInList": "Déjà dans la liste",
+      "allowEditing": "Autoriser la modification",
+      "browseGestures": "Voir les gestes",
+      "cancelRename": "Annuler le renommage",
+      "copyFailed": "Impossible de copier le lien",
+      "copyLink": "Copier",
+      "create": "Créer",
+      "createAndAdd": "Créer et ajouter",
+      "createDialogDescription": "Donnez un nom à la collection que vous voulez créer.",
+      "createDialogTitle": "Nouvelle liste",
+      "createFailed": "Impossible de créer la liste",
+      "created": "Liste créée",
+      "defaultList": "Liste par défaut",
+      "delete": "Supprimer la liste",
+      "deleteConfirm": "Supprimer cette liste ?",
+      "deleteFailed": "Impossible de supprimer la liste",
+      "deleted": "Liste supprimée",
+      "doneAdding": "Terminer l'ajout",
+      "editable": "Modifiable",
+      "failedToLoad": "Impossible de charger les listes",
+      "failedToLoadGestures": "Impossible de charger la liste",
+      "gestureAdded": "Geste ajouté",
+      "gestureRemoved": "Geste retiré",
+      "linkCopied": "Lien de partage copié",
+      "linkRegenerated": "Lien de partage actualisé",
+      "loading": "Chargement des listes...",
+      "manyGestures": "gestes",
+      "moveDown": "Déplacer vers le bas",
+      "moveUp": "Déplacer vers le haut",
+      "newListPlaceholder": "Nom de la nouvelle liste",
+      "noAddableGestures": "Rien à ajouter",
+      "noAddableGesturesDescription": "Tous les gestes correspondants sont déjà dans cette liste.",
+      "noGesturesDescription": "Parcourez les gestes et utilisez le bouton de liste pour les enregistrer.",
+      "noGesturesTitle": "Aucun geste dans cette liste",
+      "noLists": "Créez une liste pour commencer.",
+      "oneGesture": "geste",
+      "private": "Privée",
+      "refreshShareLink": "Actualiser le lien de partage",
+      "regenerateFailed": "Impossible d'actualiser le lien",
+      "removeFailed": "Impossible de retirer le geste",
+      "removeFromSelected": "Retirer de la sélection",
+      "removeGesture": "Retirer le geste",
+      "renameFailed": "Impossible de renommer la liste",
+      "renamed": "Liste renommée",
+      "renameList": "Renommer la liste",
+      "reorderFailed": "Impossible de réordonner la liste",
+      "saveDialogDescription": "Choisissez une liste pour \"{{name}}\".",
+      "saveDialogDescriptionFallback": "Choisissez où enregistrer ce geste.",
+      "saveDialogTitle": "Ajouter à une liste",
+      "saveListName": "Enregistrer le nom de la liste",
+      "searchToAdd": "Rechercher des gestes à ajouter",
+      "selected": "Sélectionnée",
+      "selectList": "Sélectionner une liste",
+      "gestureAlreadyInSelected": "Ce geste est déjà dans cette liste.",
+      "gestureNotInSelected": "Ce geste n'est pas encore dans cette liste.",
+      "shareList": "Partager la liste",
+      "shared": "Partagée",
+      "sharedEditable": "Partagée, modifiable",
+      "sharedEmptyDescription": "Le propriétaire n'a pas encore ajouté de gestes à cette liste.",
+      "sharedList": "Liste partagée",
+      "sharedNotFoundDescription": "Cette liste est privée, supprimée ou le lien a été remplacé.",
+      "sharedNotFoundTitle": "Liste indisponible",
+      "sharingFailed": "Impossible de mettre à jour le partage",
+      "sharingUpdated": "Partage mis à jour",
+      "signInDescription": "Créez, réordonnez et partagez des listes de gestes sur tous vos appareils.",
+      "signInRequired": "Connectez-vous pour enregistrer des gestes",
+      "signInTitle": "Connectez-vous pour gérer les listes",
+      "signInToEdit": "Connectez-vous pour ajouter ou retirer des gestes de cette liste partagée.",
+      "title": "Listes",
+      "viewGesture": "Voir le geste",
+      "viewOnly": "Lecture seule",
+      "yourLists": "Vos listes"
     },
-    "terms": {
-      "title": "Conditions de service",
-      "lastUpdated": "Dernière mise à jour : {{date}}",
-      "acceptance": {
-        "title": "1. Acceptation des conditions",
-        "body": "En accédant et en utilisant SMOG&Co (\"le Service\"), exploité par SMOG&Co ASBL (Belgique), vous acceptez et convenez d'être lié par les termes et conditions du présent accord. Si vous n'acceptez pas ces Conditions de service, veuillez ne pas utiliser le Service."
-      },
-      "description": {
-        "title": "2. Description du service",
-        "intro": "SMOG&Co est une application d'apprentissage des gestes en langue des signes qui fournit :",
-        "items": {
-          "library": "Accès à une bibliothèque de vidéos de gestes en langue des signes",
-          "search": "Recherche et catégorisation des gestes",
-          "favorites": "Possibilité d'enregistrer des gestes favoris",
-          "sync": "Synchronisation entre appareils pour les utilisateurs enregistrés",
-          "guest": "Mode invité pour un accès temporaire sans inscription"
-        }
-      },
-      "accounts": {
-        "title": "3. Comptes utilisateurs",
-        "create": {
-          "title": "3.1 Création de compte",
-          "body": "Vous pouvez créer un compte via l'authentification WorkOS. Vous êtes responsable de la confidentialité de vos identifiants et de toutes les activités effectuées sous votre compte."
-        },
-        "guest": {
-          "title": "3.2 Mode invité",
-          "body": "Vous pouvez utiliser le Service en tant qu'invité sans créer de compte. Les données invitées sont stockées localement sur votre appareil et seront automatiquement supprimées après 12 mois d'inactivité."
-        },
-        "termination": {
-          "title": "3.3 Résiliation du compte",
-          "body": "Vous pouvez supprimer votre compte à tout moment via la page des paramètres. Après suppression, toutes vos données personnelles seront définitivement supprimées dans un délai de 30 jours."
-        }
-      },
-      "conduct": {
-        "title": "4. Conduite de l'utilisateur",
-        "intro": "Vous acceptez de NE PAS :",
-        "items": {
-          "unlawful": "Utiliser le Service à des fins illégales",
-          "access": "Tenter d'obtenir un accès non autorisé à toute partie du Service",
-          "disrupt": "Interférer avec ou perturber le Service ou les serveurs/réseaux connectés au Service",
-          "automated": "Utiliser un système automatisé pour accéder au Service sans notre autorisation écrite préalable",
-          "resell": "Reproduire, dupliquer, copier ou revendre toute partie du Service",
-          "notices": "Supprimer ou modifier toute mention de droit d'auteur, de marque ou de propriété"
-        }
-      },
-      "intellectual": {
-        "title": "5. Propriété intellectuelle",
-        "ours": {
-          "title": "5.1 Notre contenu",
-          "body": "Tout contenu fourni via le Service, y compris les vidéos de gestes, textes, graphiques, logos et logiciels, est la propriété de SMOG&Co ou de ses concédants et est protégé par le droit d'auteur et d'autres lois sur la propriété intellectuelle."
-        },
-        "license": {
-          "title": "5.2 Licence",
-          "intro": "Nous vous accordons une licence limitée, non exclusive et non transférable pour accéder et utiliser le Service à des fins personnelles et non commerciales. Cette licence ne comprend aucun droit de :",
-          "items": {
-            "download": "Télécharger ou copier des vidéos de gestes (sauf via la mise en cache normale)",
-            "modify": "Modifier ou créer des œuvres dérivées",
-            "display": "Afficher ou exécuter publiquement le contenu",
-            "commercial": "Utiliser le contenu à des fins commerciales"
-          }
-        },
-        "education": {
-          "title": "5.3 Usage éducatif",
-          "body": "Le Service est destiné à des fins éducatives pour aider les utilisateurs à apprendre la langue des signes. Les utilisateurs sont encouragés à utiliser les connaissances acquises pour communiquer et enseigner aux autres."
-        }
-      },
-      "privacy": {
-        "title": "6. Confidentialité",
-        "body": "Votre utilisation du Service est également régie par notre Politique de confidentialité. En utilisant le Service, vous consentez à la collecte et à l'utilisation de vos informations telles que décrites dans la Politique de confidentialité."
-      },
-      "disclaimers": {
-        "title": "7. Avis de non-responsabilité",
-        "availability": {
-          "title": "7.1 Disponibilité du service",
-          "body": "Le Service est fourni \"tel quel\" et \"tel que disponible\" sans garantie d'aucune sorte. Nous ne garantissons pas que le Service sera ininterrompu, ponctuel, sécurisé ou exempt d'erreurs."
-        },
-        "educational": {
-          "title": "7.2 Contenu éducatif",
-          "body": "Bien que nous nous efforcions de fournir des démonstrations de gestes précises, nous ne garantissons pas l'exactitude, l'exhaustivité ou l'utilité du contenu. La langue des signes peut varier selon la région et le contexte."
-        },
-        "noAdvice": {
-          "title": "7.3 Pas de conseil professionnel",
-          "body": "Le Service est uniquement à des fins éducatives et ne constitue pas un enseignement professionnel de la langue des signes ni une certification."
-        }
-      },
-      "liability": {
-        "title": "8. Limitation de responsabilité",
-        "intro": "Dans la mesure maximale permise par la loi, SMOG&Co ne sera pas responsable des dommages indirects, accessoires, spéciaux, consécutifs ou punitifs, ni de toute perte de profits, de revenus, de données, d'utilisation, de goodwill ou d'autres pertes immatérielles résultant de :",
-        "items": {
-          "access": "Votre accès ou utilisation du Service, ou votre incapacité à y accéder ou à l'utiliser",
-          "content": "Tout comportement ou contenu de tiers sur le Service",
-          "materials": "Tout contenu obtenu via le Service",
-          "security": "Tout accès non autorisé, utilisation ou modification de vos transmissions ou contenus"
-        }
-      },
-      "indemnification": {
-        "title": "9. Indemnisation",
-        "body": "Vous acceptez d'indemniser et de dégager de toute responsabilité SMOG&Co, ses dirigeants, administrateurs, employés et agents pour toute réclamation, dommage, obligation, perte, responsabilité, coût ou dépense découlant de : (i) votre utilisation du Service ; (ii) votre violation de ces Conditions ; ou (iii) votre violation des droits de tiers."
-      },
-      "modifications": {
-        "title": "10. Modifications du service",
-        "body": "Nous nous réservons le droit de modifier ou d'interrompre, temporairement ou définitivement, le Service (ou toute partie de celui-ci) avec ou sans préavis. Nous ne serons pas responsables envers vous ou tout tiers pour toute modification, suspension ou interruption du Service."
-      },
-      "changes": {
-        "title": "11. Modifications des conditions",
-        "intro": "Nous nous réservons le droit de mettre à jour ou de modifier ces Conditions à tout moment. Nous vous informerons des changements importants en :",
-        "items": {
-          "updated": "Mettant à jour la date \"Dernière mise à jour\" ci-dessus",
-          "notification": "Affichant une notification dans l'application",
-          "acceptance": "Exigeant l'acceptation des nouvelles conditions lors de la prochaine connexion"
-        },
-        "closing": "Votre utilisation continue du Service après de tels changements constitue votre acceptation des nouvelles Conditions."
-      },
-      "governing": {
-        "title": "12. Droit applicable",
-        "body": "Les présentes conditions sont régies et interprétées conformément au droit belge, sans tenir compte des règles de conflit de lois. Vous acceptez la compétence exclusive des tribunaux situés en Belgique pour résoudre tout litige."
-      },
-      "severability": {
-        "title": "13. Divisibilité",
-        "body": "Si une disposition de ces Conditions est jugée inapplicable ou invalide, cette disposition sera limitée ou supprimée dans la mesure minimale nécessaire afin que les présentes Conditions restent pleinement en vigueur."
-      },
-      "entire": {
-        "title": "14. Intégralité de l'accord",
-        "body": "Ces Conditions, ainsi que la Politique de confidentialité, constituent l'accord intégral entre vous et SMOG&Co concernant l'utilisation du Service et remplacent tous les accords et ententes antérieurs."
-      },
-      "contact": {
-        "title": "15. Informations de contact",
-        "intro": "Si vous avez des questions concernant ces Conditions, veuillez nous contacter à :",
-        "emailLabel": "E-mail",
-        "emailValue": "[Your Contact Email]",
-        "addressLabel": "Adresse",
-        "addressValue": "[SMOG&Co VZW Registered Address, Belgium]"
-      },
-      "footer": "En utilisant SMOG&Co, vous reconnaissez avoir lu, compris et accepté d'être lié par ces Conditions de service."
+    "auth": {
+      "authenticationWait": "Veuillez patienter pendant que nous terminons votre authentification.",
+      "signingIn": "Connexion en cours..."
+    },
+    "errors": {
+      "retry": "Réessayer"
+    },
+    "gestures": {
+      "searchPlaceholder": "Rechercher des gestes par nom, concept ou description...",
+      "errorLoading": "Impossible de charger les gestes. Vérifiez votre connexion et réessayez.",
+      "noResultsWithFilters": "Aucun geste ne correspond à votre recherche",
+      "noResults": "Aucun geste disponible",
+      "selectGesture": "Sélectionnez un geste pour afficher les détails"
+    },
+    "language": {
+      "toggle": "Changer de langue"
+    },
+    "signIn": {
+      "button": "Se connecter",
+      "link": "Se connecter",
+      "switchToSignUp": "Besoin d'un compte ? S'inscrire",
+      "title": "Bon retour"
+    },
+    "signUp": {
+      "button": "S'inscrire",
+      "switchToSignIn": "Vous avez déjà un compte ? Se connecter",
+      "title": "Créer un compte"
+    },
+    "theme": {
+      "dark": "Sombre",
+      "light": "Clair",
+      "system": "Système",
+      "toggle": "Changer de thème"
+    },
+    "userMenu": {
+      "accountSettings": "Paramètres du compte",
+      "signOut": "Se déconnecter"
     }
   },
   "ui": {
@@ -886,12 +824,18 @@
       "errorTryAgain": "Veuillez réessayer plus tard.",
       "noGestures": "Aucun geste trouvé.",
       "addToFavorites": "Ajouter aux favoris",
-      "removeFromFavorites": "Retirer des favoris"
+      "removeFromFavorites": "Retirer des favoris",
+      "addToAnotherList": "Ajouter à une autre liste",
+      "addToList": "Ajouter à une liste",
+      "removeFromList": "Retirer de la liste"
     },
     "gestureDetail": {
       "backToGestures": "Retour aux Gestes",
       "addToFavorites": "Ajouter aux Favoris",
       "removeFromFavorites": "Retirer des Favoris",
+      "addToAnotherList": "Ajouter à une autre liste",
+      "addToList": "Ajouter à une liste",
+      "removeFromList": "Retirer de la liste",
       "description": "Description",
       "relatedConcepts": "Concepts Liés",
       "noVideo": "Aucune vidéo disponible",
@@ -908,6 +852,8 @@
     },
     "gestureFilters": {
       "searchPlaceholder": "Rechercher des gestes...",
+      "searchLabel": "Rechercher des gestes",
+      "clearSearch": "Effacer la recherche",
       "filters": "Filtres",
       "results": "{{count}} résultat",
       "results_other": "{{count}} résultats",
@@ -928,24 +874,6 @@
     }
   },
   "gdpr": {
-    "consent": {
-      "title": "Confidentialité et utilisation des données",
-      "description": "Nous respectons votre vie privée et nous nous engageons à protéger vos données personnelles.",
-      "analyticsTitle": "Analyse d'utilisation",
-      "analyticsDescription": "Aidez-nous à améliorer l'application en partageant des données d'utilisation anonymes",
-      "requiredTitle": "Requis",
-      "requiredDescription": "Gestion de compte et fonctionnalités essentielles de l'application",
-      "acceptAll": "Tout accepter",
-      "acceptRequired": "Accepter uniquement les requis",
-      "customize": "Personnaliser",
-      "learnMore": "En savoir plus dans notre",
-      "privacyPolicy": "Politique de confidentialité",
-      "and": "et",
-      "termsOfService": "Conditions de service",
-      "consentRequired": "Vous devez accepter notre Politique de confidentialité et nos Conditions de service pour continuer",
-      "updated": "Préférences mises à jour",
-      "failed": "Échec de la mise à jour des préférences"
-    },
     "account": {
       "manageData": "Gérer vos données",
       "exportData": "Télécharger mes données",
@@ -962,11 +890,7 @@
       "deleteConfirmButton": "Oui, supprimer mon compte",
       "deleting": "Suppression en cours...",
       "deleteSuccess": "Compte supprimé avec succès",
-      "deleteFailed": "Échec de la suppression du compte",
-      "analytics": "Analyse",
-      "analyticsDescription": "Partagez des données d'utilisation pour nous aider à améliorer l'application",
-      "analyticsEnabled": "Activé",
-      "analyticsDisabled": "Désactivé"
+      "deleteFailed": "Échec de la suppression du compte"
     }
   },
   "admin": {

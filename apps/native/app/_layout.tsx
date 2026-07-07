@@ -1,41 +1,86 @@
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
 import * as NavigationBar from "expo-navigation-bar";
-import { SplashScreen, Stack, useRouter } from "expo-router";
+import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
-import {
-  AppState,
-  type AppStateStatus,
-  Image,
-  Platform,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import RiveSplashScreen from "@/components/RiveSplashScreen";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Image, Platform, StyleSheet, Text, View } from "react-native";
+import { AnalyticsConsentPrompt } from "@/components/AnalyticsConsentPrompt";
+import { ListPickerBottomSheet } from "@/components/lists/ListPickerBottomSheet";
 import AppProviders from "@/context/AppProviders";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/context/ThemeContext";
+import { useTranslation } from "@/context/TranslationContext";
+import {
+  clearAnalyticsIdentity,
+  getAnalyticsConsent,
+  identifyAnalyticsGuest,
+  identifyAnalyticsUser,
+  initializeOpenPanel,
+  subscribeAnalyticsConsent,
+  trackScreenView,
+} from "@/lib/openpanel";
 // Initialize i18n configuration
 import "@/utils/i18n";
 
-// PostHog
-import { PostHogProvider, PostHogSurveyProvider } from "posthog-react-native";
-import {
-  autocaptureConfig,
-  initializeAnalytics,
-  posthog,
-  trackAppBackgrounded,
-  trackAppOpened,
-} from "@/services/analytics";
 import logger from "@/utils/logger";
 
-// Regex patterns for app state detection
-const INACTIVE_OR_BACKGROUND_REGEX = /inactive|background/;
+function NativeAnalytics({
+  showConsentPrompt,
+}: {
+  showConsentPrompt: boolean;
+}) {
+  const pathname = usePathname();
+  const { guestId, isGuest, isLoading, user } = useAuth();
+  const [isInitialized, setIsInitialized] = useState(false);
+  const identifiedProfileId = useRef<string | null>(null);
+  const analyticsConsent = useSyncExternalStore(
+    subscribeAnalyticsConsent,
+    getAnalyticsConsent,
+    getAnalyticsConsent
+  );
 
-// Keep the default splash visible while we load resources
-SplashScreen.preventAutoHideAsync();
+  useEffect(() => {
+    initializeOpenPanel().finally(() => setIsInitialized(true));
+  }, []);
+
+  useEffect(() => {
+    if (!(isInitialized && analyticsConsent === true)) {
+      identifiedProfileId.current = null;
+      return;
+    }
+    if (isLoading) {
+      return;
+    }
+
+    const nextProfileId = user?.id ?? (isGuest && guestId ? guestId : null);
+    if (identifiedProfileId.current === nextProfileId) {
+      return;
+    }
+    if (identifiedProfileId.current) {
+      clearAnalyticsIdentity();
+    }
+
+    if (user) {
+      identifyAnalyticsUser(user);
+    } else if (isGuest && guestId) {
+      identifyAnalyticsGuest(guestId);
+    }
+    identifiedProfileId.current = nextProfileId;
+  }, [analyticsConsent, guestId, isGuest, isInitialized, isLoading, user]);
+
+  useEffect(() => {
+    if (isInitialized && analyticsConsent === true && !isLoading) {
+      trackScreenView(pathname);
+    }
+  }, [analyticsConsent, isInitialized, isLoading, pathname]);
+
+  return (
+    <AnalyticsConsentPrompt
+      visible={showConsentPrompt && isInitialized && analyticsConsent === null}
+    />
+  );
+}
 
 // Shared header configuration per platform
 function useHeaderOptions() {
@@ -91,6 +136,7 @@ function AuthenticatedLayout() {
     <>
       <Stack initialRouteName="(tabs)">
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="auth-callback" options={{ headerShown: false }} />
         <Stack.Screen
           name="gestures/[id]"
           options={{
@@ -137,7 +183,14 @@ function AuthenticatedLayout() {
 }
 
 function RootLayoutNav() {
-  const { isLoading, isAuthenticated, isGuest, authMode } = useAuth();
+  const {
+    isLoading,
+    isHandlingOAuthCallback,
+    isAuthenticated,
+    isGuest,
+    authMode,
+  } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [hasNavigated, setHasNavigated] = useState(false);
   const prevAuthMode = useRef(authMode);
@@ -155,7 +208,7 @@ function RootLayoutNav() {
 
   // Force navigation when auth state changes - but only for initial load
   useEffect(() => {
-    if (!(isLoading || hasNavigated)) {
+    if (!(isLoading || isHandlingOAuthCallback || hasNavigated)) {
       if (isAuthenticated || isGuest) {
         logger.log("User is authenticated/guest - initial navigation to tabs");
         router.replace("/(tabs)");
@@ -166,7 +219,14 @@ function RootLayoutNav() {
         setHasNavigated(true);
       }
     }
-  }, [isLoading, isAuthenticated, isGuest, router, hasNavigated]);
+  }, [
+    isLoading,
+    isHandlingOAuthCallback,
+    isAuthenticated,
+    isGuest,
+    router,
+    hasNavigated,
+  ]);
 
   // Reset navigation flag when auth mode actually changes (not immediately)
   useEffect(() => {
@@ -178,13 +238,13 @@ function RootLayoutNav() {
   // Show loading while determining auth state
   if (isLoading) {
     return (
-      <View style={styles.splashContainer}>
+      <View style={styles.loadingContainer}>
         <Image
           resizeMode="contain"
           source={require("@/assets/images/adaptive-icon.png")}
           style={styles.logo}
         />
-        <Text style={styles.loading}>Initializing...</Text>
+        <Text style={styles.loading}>{t("common.initializing")}</Text>
       </View>
     );
   }
@@ -208,101 +268,23 @@ export default function RootLayout() {
     "SpaceMono-Regular": require("@/assets/fonts/SpaceMono-Regular.ttf"),
   });
 
-  const [showSplash, setShowSplash] = useState(true);
-
-  // App lifecycle tracking
-  const appStateRef = useRef(AppState.currentState);
-  const sessionStartTimeRef = useRef<number | null>(null);
-  const lastActiveTimeRef = useRef<number>(Date.now());
-  const isFirstLaunchRef = useRef(true);
-
-  useEffect(() => {
-    if (fontsLoaded) {
-      // Don't automatically hide splash after timeout anymore
-      // Let the Rive animation control when to hide
-      SplashScreen.hideAsync();
-
-      // Initialize analytics based on user consent
-      initializeAnalytics();
-
-      // Track app opened on first load
-      if (isFirstLaunchRef.current) {
-        trackAppOpened(true);
-        sessionStartTimeRef.current = Date.now();
-        isFirstLaunchRef.current = false;
-      }
-    }
-  }, [fontsLoaded]);
-
-  // App state change tracking
-  useEffect(() => {
-    const handleAppToForeground = (currentTime: number) => {
-      if (!isFirstLaunchRef.current) {
-        const timeSinceLastActive = currentTime - lastActiveTimeRef.current;
-        trackAppOpened(false, Math.round(timeSinceLastActive / 1000 / 60));
-      }
-      sessionStartTimeRef.current = currentTime;
-    };
-
-    const handleAppToBackground = (currentTime: number) => {
-      if (sessionStartTimeRef.current) {
-        const sessionDuration = Math.round(
-          (currentTime - sessionStartTimeRef.current) / 1000
-        );
-        trackAppBackgrounded(sessionDuration);
-      }
-      lastActiveTimeRef.current = currentTime;
-    };
-
-    const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      const currentTime = Date.now();
-      const isComingToForeground =
-        appStateRef.current.match(INACTIVE_OR_BACKGROUND_REGEX) &&
-        nextAppState === "active";
-      const isGoingToBackground =
-        appStateRef.current === "active" &&
-        nextAppState.match(INACTIVE_OR_BACKGROUND_REGEX);
-
-      if (isComingToForeground) {
-        handleAppToForeground(currentTime);
-      } else if (isGoingToBackground) {
-        handleAppToBackground(currentTime);
-      }
-
-      appStateRef.current = nextAppState;
-    };
-
-    const subscription = AppState.addEventListener(
-      "change",
-      handleAppStateChange
-    );
-
-    return () => subscription?.remove();
-  }, []);
-
   if (!fontsLoaded) {
     return null;
   }
 
   return (
-    <PostHogProvider autocapture={autocaptureConfig} client={posthog}>
-      <AppProviders>
-        {showSplash ? (
-          <RiveSplashScreen onAnimationComplete={() => setShowSplash(false)} />
-        ) : (
-          <PostHogSurveyProvider>
-            <BottomSheetModalProvider>
-              <RootLayoutNav />
-            </BottomSheetModalProvider>
-          </PostHogSurveyProvider>
-        )}
-      </AppProviders>
-    </PostHogProvider>
+    <AppProviders>
+      <BottomSheetModalProvider>
+        <NativeAnalytics showConsentPrompt />
+        <RootLayoutNav />
+        <ListPickerBottomSheet />
+      </BottomSheetModalProvider>
+    </AppProviders>
   );
 }
 
 const styles = StyleSheet.create({
-  splashContainer: {
+  loadingContainer: {
     flex: 1,
     backgroundColor: "#22805F",
     justifyContent: "center",

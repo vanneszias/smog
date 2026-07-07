@@ -1,3 +1,4 @@
+import { withServiceAuth } from "@smog/api/lib/convex";
 import { mollieClient } from "@smog/auth/server";
 import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
@@ -15,14 +16,12 @@ const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 export async function handleMollieWebhook(c: Context) {
   try {
     console.log("[Mollie Webhook] Received webhook");
-    console.log("[Mollie Webhook] Content-Type:", c.req.header("content-type"));
 
     // Try to parse body - Mollie sends JSON
     let body: { id?: string } = {};
 
     try {
       const rawBody = await c.req.text();
-      console.log("[Mollie Webhook] Raw body:", rawBody);
 
       // Try parsing as JSON first
       try {
@@ -49,8 +48,6 @@ export async function handleMollieWebhook(c: Context) {
       return c.json({ error: "Payment ID required" }, 400);
     }
 
-    console.log("[Mollie Webhook] Payment ID:", paymentId);
-
     // Get payment details from Mollie
     const payment = await mollieClient.payments.get(paymentId);
     console.log("[Mollie Webhook] Payment status:", payment.status);
@@ -72,7 +69,45 @@ export async function handleMollieWebhook(c: Context) {
     if (isBulkPayment && sponsorshipIdsJson) {
       // Handle bulk payment
       console.log("[Mollie Webhook] Processing bulk payment");
-      const sponsorshipIds = JSON.parse(sponsorshipIdsJson) as string[];
+      const parsedSponsorshipIds: unknown = JSON.parse(sponsorshipIdsJson);
+      if (
+        !Array.isArray(parsedSponsorshipIds) ||
+        parsedSponsorshipIds.length === 0 ||
+        parsedSponsorshipIds.length > 20 ||
+        parsedSponsorshipIds.some(
+          (id) => typeof id !== "string" || id.length === 0
+        )
+      ) {
+        return c.json({ error: "Invalid sponsorship metadata" }, 400);
+      }
+      const sponsorshipIds = parsedSponsorshipIds as string[];
+      if (new Set(sponsorshipIds).size !== sponsorshipIds.length) {
+        return c.json({ error: "Duplicate sponsorship metadata" }, 400);
+      }
+
+      const sponsorships = await Promise.all(
+        sponsorshipIds.map((id) =>
+          convex.query(
+            api.sponsorships.getById,
+            withServiceAuth({ id: id as Id<"sponsorships"> })
+          )
+        )
+      );
+      if (sponsorships.some((sponsorship) => !sponsorship)) {
+        return c.json({ error: "Sponsorship not found" }, 400);
+      }
+      const expectedAmount = sponsorships.reduce(
+        (total, sponsorship) => total + (sponsorship?.paymentAmount ?? 0),
+        0
+      );
+      const paidAmount = Math.round(Number(payment.amount.value) * 100);
+      if (
+        payment.amount.currency !== "EUR" ||
+        !Number.isFinite(paidAmount) ||
+        paidAmount !== expectedAmount
+      ) {
+        return c.json({ error: "Payment amount mismatch" }, 400);
+      }
       console.log(
         `[Mollie Webhook] Processing ${sponsorshipIds.length} sponsorships`
       );
@@ -116,9 +151,7 @@ export async function handleMollieWebhook(c: Context) {
     return c.json({ status: "success" }, 200);
   } catch (error) {
     console.error("[Mollie Webhook] Error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    return c.json({ error: errorMessage }, 500);
+    return c.json({ error: "Unable to process payment webhook" }, 500);
   }
 }
 
@@ -128,9 +161,12 @@ export async function handleMollieWebhook(c: Context) {
  * - payment_confirmed: receipt / payment acknowledgement
  */
 async function enqueuePaymentEmails(sponsorshipId: string): Promise<void> {
-  const sponsorship = await convex.query(api.sponsorships.getById, {
-    id: sponsorshipId as Id<"sponsorships">,
-  });
+  const sponsorship = await convex.query(
+    api.sponsorships.getById,
+    withServiceAuth({
+      id: sponsorshipId as Id<"sponsorships">,
+    })
+  );
 
   if (!sponsorship) {
     console.warn(

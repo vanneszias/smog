@@ -1,76 +1,68 @@
 # SMOG
 
-Sign language learning platform with mobile, web, and server components.
+Sign-language learning platform with native, web, API, video composition,
+payments, and administration.
 
-## Tech Stack
+## Stack
 
-- **Native**: React Native + Expo
-- **Web**: React + Vite + TanStack Router
-- **Server**: Hono + ORPC + Bun
-- **Backend**: Convex (database & functions)
-- **Video**: Mux (hosting)
-- **Build**: Turborepo + Bun
-- **Linting**: Biome
+- **Native:** React Native 0.83 + Expo 55 + Expo Router
+- **Web:** React 19 + Vite + TanStack Router/Query
+- **API:** Hono + oRPC on Bun
+- **Data:** Convex real-time database and functions
+- **Authentication:** WorkOS
+- **Video:** Mux streaming + Remotion composition
+- **Payments:** Mollie
+- **Analytics:** consent-gated, self-hosted OpenPanel
+- **Monorepo:** Turborepo + Bun
 
 ## Quick Start
 
 ```bash
-# Install dependencies
+cp .env.example .env
 bun install
-
-# Start all dev servers
 bun dev
 ```
 
+Web runs on `http://localhost:3001`, the API on
+`http://localhost:3000`, and Remotion on `http://localhost:3002`.
+
 ## Commands
 
-### Root
 ```bash
-bun check          # Lint and format
-bun build          # Build all
-bun check-types    # Typecheck all
-bun dev            # Start all dev servers
+bun check
+bun check-types
+bun run build
+
+bun -F web test
+bun -F native test
+bun -F @smog/convex test
+bun -F @smog/hooks test
+bun -F @smog/shared test
 ```
 
-### Individual Apps
-```bash
-# Native (React Native)
-bun -F native dev
-bun -F native ios
-bun -F native android
+## Layout
 
-# Web
-bun -F web dev
-
-# Server
-bun -F server dev
-
-# Remotion (Video Composition)
-bun -F remotion dev
-
-# Convex
-bun -F @smog/convex dev
-bun -F @smog/convex codegen
-```
-
-## Project Structure
-
-```
+```text
 apps/
-├── native/          # React Native mobile app
-├── web/             # React web app
-├── server/          # Hono API server
-└── remotion/        # Remotion video composition
-
+  native/       Expo mobile app
+  web/          Vite web app and admin/sponsor portal
+  server/       Hono API, auth callbacks, webhooks, email jobs
+  remotion/     Sponsorship video renderer
 packages/
-├── api/             # API layer
-├── auth/            # Authentication
-├── convex/          # Convex schema & types
-├── ui/              # Shared UI components
-├── styles/          # Shared styles
-└── types/           # Shared types
+  api/          oRPC routers
+  auth/         WorkOS utilities and Mollie client
+  convex/       Schema, queries, mutations, and cron jobs
+  config/       Shared constants
+  hooks/        Shared React hooks
+  i18n/         Locale resources
+  shared/       Analytics taxonomy, logging, and utilities
+  styles/       Design tokens
+  types/        Domain types
+  ui/           Shared web UI
+docs/           Architecture and operating documentation
 ```
 
-## Development
-
-See [AGENTS.md](./AGENTS.md) for detailed development guidelines.
+Start with [Getting Started](./docs/GETTING_STARTED.md), then read
+[Architecture](./docs/ARCHITECTURE.md),
+[Privacy and Analytics](./docs/PRIVACY_AND_ANALYTICS.md), and the
+[Release Guide](./docs/RELEASE.md).

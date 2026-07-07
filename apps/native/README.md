@@ -1,63 +1,51 @@
-# SMOG Native App
+# SMOG Native
 
-Sign language learning mobile app built with React Native and Expo.
+Expo 55 / React Native app for browsing, searching, saving, and sharing
+SMOG gestures.
 
-## Features
+## Architecture
 
-- Smart search with autocomplete
-- Video library of gestures
-- Favorites system
-- Offline support
-- Multilingual (EN, FR, NL)
-- Learning analytics
+- Expo Router navigation
+- WorkOS OAuth with PKCE
+- Convex real-time queries and mutations
+- SecureStore for refresh tokens
+- AsyncStorage for guest identity, UI preferences, recent searches, and
+  analytics consent
+- Mux playback through `expo-video`
+- Consent-gated OpenPanel analytics
 
-## Tech Stack
-
-- **Framework**: React Native + Expo
-- **Navigation**: Expo Router
-- **State**: React Context
-- **Backend**: Convex (real-time)
-- **Local**: SQLite (offline)
-- **Analytics**: PostHog
+The app does not use the retired SQLite gesture or favorites sync layer.
+Network access is currently required for server-backed gesture, favorite, and
+list data.
 
 ## Commands
 
-```bash
-bun dev            # Start Expo dev server
-bun ios            # Run iOS simulator
-bun android        # Run Android emulator
-bun test           # Run tests
-bun check-types    # Typecheck
-```
-
-## Setup
+From the repository root:
 
 ```bash
-# Install dependencies
-bun install
-
-# Start dev server
-bun dev
-
-# Scan QR code with Expo Go
+bun -F native dev
+bun -F native ios
+bun -F native android
+bun -F native test
+bun -F native check-types
 ```
 
-## Structure
-
-```
-app/                # Expo Router screens
-components/         # Reusable components
-context/            # React Context
-services/           # Business logic
-hooks/              # Custom hooks
-types/              # TypeScript types
-```
+Use a development build rather than Expo Go because the app includes native
+modules.
 
 ## Environment
 
-Required in `.env`:
-```
-EXPO_PUBLIC_CONVEX_URL=your_convex_url
+Configure the root `.env`:
+
+```env
+EXPO_PUBLIC_CONVEX_URL=
+EXPO_PUBLIC_SERVER_URL=
+EXPO_PUBLIC_WORKOS_CLIENT_ID=
+
+EXPO_PUBLIC_OPENPANEL_API_URL=https://analytics.zias.be/api
+EXPO_PUBLIC_OPENPANEL_CLIENT_ID=
+EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET=
 ```
 
-See [AGENTS.md](./AGENTS.md) for development guidelines.
+OpenPanel credentials may be omitted locally. Tracking is disabled by default
+and remains off until the user grants consent.

@@ -37,7 +37,7 @@ interface RecentSearchesProviderProps {
  * Provides global recent search state and handlers.
  * Stores recent searches in AsyncStorage for persistence.
  */
-export const RecentSearchesProvider: React.FC<RecentSearchesProviderProps> = ({
+const RecentSearchesProvider: React.FC<RecentSearchesProviderProps> = ({
   children,
   maxSearches = 10,
 }) => {

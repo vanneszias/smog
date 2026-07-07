@@ -38,6 +38,8 @@ export function GestureFilters({
       <div className="mb-3 flex items-center gap-2">
         <SearchBar
           className="flex-1"
+          clearLabel={t("ui.gestureFilters.clearSearch")}
+          inputLabel={t("ui.gestureFilters.searchLabel")}
           onChange={onSearchChange}
           placeholder={
             searchPlaceholder || t("ui.gestureFilters.searchPlaceholder")

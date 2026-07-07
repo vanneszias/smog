@@ -85,6 +85,9 @@ const BaseButton: React.FC<BaseButtonProps> = ({
 
   return (
     <TouchableOpacity
+      accessibilityLabel={title}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       activeOpacity={0.8}
       disabled={disabled || loading}
       onPress={handlePress}

@@ -28,12 +28,14 @@ import {
   useState,
 } from "react";
 import { setORPCAccessTokenProvider } from "../utils/orpc";
+import { clearAnalyticsIdentity } from "./openpanel";
 
 const logger = createLogger("auth");
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const clientId = import.meta.env.VITE_WORKOS_CLIENT_ID;
 const redirectUri = import.meta.env.VITE_WORKOS_REDIRECT_URI;
+const OAUTH_STATE_KEY = "smog_oauth_state";
 
 // In-memory token storage (never persisted)
 let accessToken: string | null = null;
@@ -43,13 +45,72 @@ type WebAuthContextType = Omit<AuthContextType, "continueAsGuest">;
 
 const AuthContext = createContext<WebAuthContextType | null>(null);
 
+interface SessionResult {
+  accessToken: string;
+  user: WorkOSUser;
+}
+
+interface OAuthCallbackParams {
+  code: string;
+  returnedState: string | null;
+}
+
+function storeSession(session: SessionResult): WorkOSUser {
+  accessToken = session.accessToken;
+  tokenExpiry = getTokenExpiry(session.accessToken);
+  return session.user;
+}
+
+function clearSession(): void {
+  accessToken = null;
+  tokenExpiry = null;
+}
+
+function readOAuthCallbackParams(): OAuthCallbackParams | null {
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get("code");
+  if (!code) {
+    return null;
+  }
+
+  window.history.replaceState({}, "", url.pathname);
+  return { code, returnedState: url.searchParams.get("state") };
+}
+
+function validateOAuthState(returnedState: string | null): void {
+  const expectedState = sessionStorage.getItem(OAUTH_STATE_KEY);
+  sessionStorage.removeItem(OAUTH_STATE_KEY);
+  if (!(expectedState && returnedState === expectedState)) {
+    throw new Error("OAuth state validation failed");
+  }
+}
+
+async function exchangeOAuthCode(code: string): Promise<SessionResult | null> {
+  const response = await fetch(`${serverUrl}/auth/workos/callback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ code }),
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const result = (await response.json()) as {
+    accessToken?: string;
+    user?: WorkOSUser;
+  };
+
+  return result.accessToken && result.user
+    ? { accessToken: result.accessToken, user: result.user }
+    : await refreshSession();
+}
+
 /**
  * Refresh session from server using httpOnly cookie
  */
-async function refreshSession(): Promise<{
-  accessToken: string;
-  user: WorkOSUser;
-} | null> {
+async function refreshSession(): Promise<SessionResult | null> {
   try {
     const response = await fetch(`${serverUrl}/auth/token/refresh`, {
       method: "POST",
@@ -72,6 +133,9 @@ async function refreshSession(): Promise<{
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<WorkOSUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHandlingCallback, setIsHandlingCallback] = useState(() =>
+    new URL(window.location.href).searchParams.has("code")
+  );
   const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
 
   // Restore session on mount
@@ -79,9 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const restoreSession = async () => {
       const result = await refreshSession();
       if (result) {
-        accessToken = result.accessToken;
-        tokenExpiry = getTokenExpiry(result.accessToken);
-        setUser(result.user);
+        setUser(storeSession(result));
       }
       setIsLoading(false);
     };
@@ -92,35 +154,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Handle OAuth callback from URL
   useEffect(() => {
     const handleCallback = async () => {
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get("code");
+      const callbackParams = readOAuthCallbackParams();
 
-      if (!code) {
+      if (!callbackParams) {
+        setIsHandlingCallback(false);
         return;
       }
 
-      // Clear URL params
-      window.history.replaceState({}, "", url.pathname);
-
       try {
-        const response = await fetch(`${serverUrl}/auth/workos/callback`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ code }),
-        });
-
-        if (response.ok) {
-          // Refresh session to get user data
-          const result = await refreshSession();
-          if (result) {
-            accessToken = result.accessToken;
-            tokenExpiry = getTokenExpiry(result.accessToken);
-            setUser(result.user);
-          }
+        validateOAuthState(callbackParams.returnedState);
+        const session = await exchangeOAuthCode(callbackParams.code);
+        if (session) {
+          setUser(storeSession(session));
         }
       } catch (error) {
         logger.error("[Auth] OAuth callback failed:", error);
+      } finally {
+        setIsHandlingCallback(false);
       }
     };
 
@@ -142,11 +192,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const result = await refreshSession();
         if (result) {
-          accessToken = result.accessToken;
-          tokenExpiry = getTokenExpiry(result.accessToken);
-          setUser(result.user);
+          setUser(storeSession(result));
           return accessToken;
         }
+        clearSession();
+        setUser(null);
         return null;
       } finally {
         refreshPromiseRef.current = null;
@@ -157,7 +207,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(() => {
-    const authUrl = buildAuthorizationUrl({ clientId, redirectUri });
+    const state = crypto.randomUUID();
+    sessionStorage.setItem(OAUTH_STATE_KEY, state);
+    const authUrl = buildAuthorizationUrl({ clientId, redirectUri, state });
     window.location.assign(authUrl);
   }, []);
 
@@ -170,17 +222,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       logger.error("[Auth] Sign out failed:", error);
     }
-    accessToken = null;
-    tokenExpiry = null;
+    clearAnalyticsIdentity();
+    clearSession();
     setUser(null);
   }, []);
 
-  const value = useMemo(
-    (): WebAuthContextType => ({
+  const value = useMemo((): WebAuthContextType => {
+    const authIsLoading = isLoading || isHandlingCallback;
+    return {
       user,
-      isLoading,
+      isLoading: authIsLoading,
+      isHandlingOAuthCallback: isHandlingCallback,
       isAuthenticated: !!user,
-      authMode: isLoading
+      authMode: authIsLoading
         ? "loading"
         : user
           ? "authenticated"
@@ -190,9 +244,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signOut,
       getAccessToken,
-    }),
-    [user, isLoading, signIn, signOut, getAccessToken]
-  );
+    };
+  }, [user, isLoading, isHandlingCallback, signIn, signOut, getAccessToken]);
 
   // Register access token provider for ORPC client
   useEffect(() => {

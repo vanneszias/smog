@@ -3,10 +3,35 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { calculateSimplifiedPrice, formatPrice } from "../lib/pricing";
 import {
   createProgressTicker,
   readFileAsBase64,
 } from "../routes/sponsors/utils/-sponsorshipHelpers";
+
+const normalizeCurrencySpacing = (value: string): string =>
+  value.replace(/\s/gu, " ");
+
+describe("sponsorship pricing", () => {
+  it("calculates logo pricing per selected gesture", () => {
+    expect(calculateSimplifiedPrice(3, true)).toMatchObject({
+      gestureCount: 3,
+      logoAddonCents: 3000,
+      subtotalCents: 15_000,
+      totalCents: 18_000,
+    });
+  });
+
+  it.each([
+    ["nl", "€ 50,00"],
+    ["fr", "50,00 €"],
+    ["en", "€50.00"],
+  ])("formats EUR prices for %s", (language, expected) => {
+    expect(normalizeCurrencySpacing(formatPrice(5000, language))).toBe(
+      expected
+    );
+  });
+});
 
 describe("createProgressTicker", () => {
   it("advances progress toward maxProgress", () => {

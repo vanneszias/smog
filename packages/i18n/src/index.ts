@@ -35,6 +35,10 @@ export interface TranslationKeys {
     undo: string;
     error: string;
   };
+  lists: {
+    emptyTitle: string;
+    emptyMessage: string;
+  };
   common: {
     back: string;
     cancel: string;
@@ -45,6 +49,7 @@ export interface TranslationKeys {
     home: string;
     search: string;
     favorites: string;
+    lists: string;
   };
   settings: {
     title: string;

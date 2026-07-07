@@ -51,5 +51,3 @@ export const typography = StyleSheet.create({
     marginTop: SPACING.xl,
   },
 });
-
-export default typography;

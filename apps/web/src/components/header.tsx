@@ -13,7 +13,7 @@ export default function Header() {
   // Close sidebar on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === t("accessibility.keys.escape", "Escape")) {
+      if (e.key === "Escape") {
         setSidebarOpen(false);
       }
     };
@@ -28,20 +28,20 @@ export default function Header() {
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "";
     };
-  }, [sidebarOpen, t]);
+  }, [sidebarOpen]);
 
   // Top header navigation - only key actions
   const headerLinks = [
-    { to: "/favorites", label: t("web.header.favorites", "Favorieten") },
-    { to: "/sponsors", label: t("web.header.sponsor", "Sponsor") },
+    { to: "/lists", label: t("web.home.header.lists", "Lijsten") },
+    { to: "/sponsors", label: t("web.home.header.sponsor", "Sponsor") },
   ];
 
   // Sidebar navigation - all pages
   const sidebarLinks = [
-    { to: "/gestures", label: t("web.header.search", "Zoek") },
-    { to: "/favorites", label: t("web.header.favorites", "Favorieten") },
-    { to: "/account", label: t("web.header.account", "Account") },
-    { to: "/sponsors", label: t("web.header.sponsor", "Sponsor") },
+    { to: "/gestures", label: t("web.home.header.search", "Zoeken") },
+    { to: "/lists", label: t("web.home.header.lists", "Lijsten") },
+    { to: "/account", label: t("web.home.header.account", "Account") },
+    { to: "/sponsors", label: t("web.home.header.sponsor", "Sponsor") },
   ];
 
   return (
@@ -77,7 +77,7 @@ export default function Header() {
               className="hidden items-center rounded-full bg-primary px-6 py-3 text-sm text-white uppercase transition-all hover:bg-primary/90 xl:inline-flex"
               to="/gestures"
             >
-              {t("web.header.discoverGestures", "Ontdek de SMOG-gebaren")}
+              {t("web.home.header.discoverGestures", "Ontdek de SMOG-gebaren")}
             </Link>
 
             {/* Menu Toggle Button - Always visible */}
@@ -147,10 +147,12 @@ export default function Header() {
 
       {/* Full Screen Sidebar - Slides from top on mobile, right on desktop */}
       <aside
-        className={`fixed inset-0 z-50 flex flex-col bg-sidebar transition-transform duration-500 ease-out md:left-auto md:w-[500px] ${
+        aria-hidden={!sidebarOpen}
+        aria-label={t("accessibility.menu.navigation", "Main navigation")}
+        className={`fixed inset-0 z-50 flex flex-col bg-sidebar transition-[transform,visibility] duration-500 ease-out md:left-auto md:w-[500px] ${
           sidebarOpen
-            ? "translate-x-0 translate-y-0"
-            : "-translate-y-full md:translate-x-full md:translate-y-0"
+            ? "visible translate-x-0 translate-y-0"
+            : "invisible -translate-y-full md:translate-x-full md:translate-y-0"
         }`}
       >
         {/* Sidebar Navigation */}
@@ -181,7 +183,7 @@ export default function Header() {
               }}
               to="/gestures"
             >
-              {t("web.header.discoverGestures", "Ontdek de SMOG-gebaren")}
+              {t("web.home.header.discoverGestures", "Ontdek de SMOG-gebaren")}
             </Link>
           </nav>
         </div>
@@ -206,7 +208,7 @@ export default function Header() {
               onClick={() => setSidebarOpen(false)}
               to="/terms"
             >
-              {t("web.footer.terms", "Voorwaarden")}
+              {t("web.home.footer.terms", "Voorwaarden")}
             </Link>
             <span>•</span>
             <Link
@@ -214,7 +216,7 @@ export default function Header() {
               onClick={() => setSidebarOpen(false)}
               to="/privacy"
             >
-              {t("web.footer.privacy", "Privacy")}
+              {t("web.home.footer.privacy", "Privacy")}
             </Link>
           </div>
 

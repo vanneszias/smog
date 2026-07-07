@@ -42,7 +42,7 @@ export function StepDetails({
   selectedGestures,
   onGeneratePreview,
 }: StepDetailsProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
 
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -73,7 +73,9 @@ export function StepDetails({
           type="button"
         >
           <ArrowRight className="h-4 w-4 rotate-180" />
-          <span className="font-medium text-sm">Terug naar selectie</span>
+          <span className="font-medium text-sm">
+            {t("web.sponsors.wizard.backToSelection")}
+          </span>
         </button>
 
         {/* Progress indicator */}
@@ -89,11 +91,13 @@ export function StepDetails({
           </div>
         </div>
 
-        <h1 className="font-bold text-2xl">Configureer je sponsoring</h1>
+        <h1 className="font-bold text-2xl">
+          {t("web.sponsors.wizard.configureTitle")}
+        </h1>
         <p className="mt-2 text-muted-foreground">
-          {form.selectedGestureIds.length}{" "}
-          {form.selectedGestureIds.length === 1 ? "gebaar" : "gebaren"}{" "}
-          geselecteerd
+          {t("web.sponsors.wizard.gesturesSelected", {
+            count: form.selectedGestureIds.length,
+          })}
         </p>
       </header>
 
@@ -113,6 +117,9 @@ export function StepDetails({
                 >
                   {gesture.name}
                   <button
+                    aria-label={t("web.sponsors.wizard.removeGestureLabel", {
+                      name: gesture.name,
+                    })}
                     className="rounded-full p-0.5 transition-colors hover:bg-primary/20"
                     onClick={() => form.handleToggleSelection(gesture._id)}
                     type="button"
@@ -151,7 +158,9 @@ export function StepDetails({
               )}
             </div>
             <p className="rounded-xl bg-secondary/20 p-3 text-sm">
-              <span className="text-muted-foreground">Voorbeeld: </span>
+              <span className="text-muted-foreground">
+                {t("web.sponsors.wizard.example")}:{" "}
+              </span>
               <span className="font-medium">
                 "Met de warme steun van: {form.sponsorName || "..."}"
               </span>
@@ -170,7 +179,10 @@ export function StepDetails({
               <div className="flex-1">
                 <span className="font-semibold">
                   {t("web.sponsors.wizard.includeLogo", {
-                    price: formatPrice(LOGO_ADDON_CENTS),
+                    price: formatPrice(
+                      LOGO_ADDON_CENTS,
+                      i18n.resolvedLanguage ?? i18n.language
+                    ),
                   })}
                 </span>
                 <p className="mt-1 text-muted-foreground text-sm">
@@ -184,13 +196,14 @@ export function StepDetails({
                 {form.logoPreview ? (
                   <div className="relative inline-block">
                     <img
-                      alt="Logo preview"
+                      alt={t("web.sponsors.wizard.logoPreviewAlt")}
                       className="h-24 w-24 rounded-xl border object-cover"
                       height={96}
                       src={form.logoPreview}
                       width={96}
                     />
                     <button
+                      aria-label={t("web.sponsors.wizard.removeLogo")}
                       className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-white shadow-lg"
                       onClick={() => {
                         form.setLogoFile(null);
@@ -213,7 +226,7 @@ export function StepDetails({
                       {t("web.sponsors.new.uploadLogo")}
                     </span>
                     <input
-                      accept="image/png,image/jpeg,image/svg+xml"
+                      accept="image/png,image/jpeg,image/webp"
                       className="hidden"
                       id="logo-upload"
                       onChange={handleLogoUpload}
@@ -311,7 +324,7 @@ export function StepDetails({
             <label className="font-semibold text-sm" htmlFor="contact-company">
               {t("web.sponsors.wizard.companyLabel")}{" "}
               <span className="font-normal text-muted-foreground">
-                (optioneel)
+                ({t("web.sponsors.wizard.optional")})
               </span>
             </label>
             <Input
@@ -455,7 +468,8 @@ export function StepDetails({
                 </span>
                 <span>
                   {formatPrice(
-                    form.selectedGestureIds.length * PRICE_PER_YEAR_CENTS
+                    form.selectedGestureIds.length * PRICE_PER_YEAR_CENTS,
+                    i18n.resolvedLanguage ?? i18n.language
                   )}
                 </span>
               </div>
@@ -464,7 +478,12 @@ export function StepDetails({
                   <span className="text-muted-foreground">
                     {t("web.sponsors.wizard.logoAddon")}
                   </span>
-                  <span>{formatPrice(LOGO_ADDON_CENTS)}</span>
+                  <span>
+                    {formatPrice(
+                      LOGO_ADDON_CENTS * form.selectedGestureIds.length,
+                      i18n.resolvedLanguage ?? i18n.language
+                    )}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between border-primary/20 border-t pt-2 font-bold text-lg">
@@ -474,7 +493,8 @@ export function StepDetails({
                     form.selectedGestureIds.length * PRICE_PER_YEAR_CENTS +
                       (form.includeLogo
                         ? LOGO_ADDON_CENTS * form.selectedGestureIds.length
-                        : 0)
+                        : 0),
+                    i18n.resolvedLanguage ?? i18n.language
                   )}
                 </span>
               </div>

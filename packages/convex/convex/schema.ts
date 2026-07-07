@@ -5,7 +5,9 @@ export default defineSchema({
   categories: defineTable({
     name: v.string(),
     isActive: v.boolean(),
-  }).index("by_name", ["name"]),
+  })
+    .index("by_name", ["name"])
+    .index("by_active", ["isActive"]),
 
   gestures: defineTable({
     name: v.string(),
@@ -45,6 +47,36 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_gesture", ["gestureId"])
     .index("by_user_gesture", ["userId", "gestureId"]),
+
+  gesture_lists: defineTable({
+    ownerId: v.id("users"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    visibility: v.union(v.literal("private"), v.literal("shared")),
+    viewShareToken: v.optional(v.string()),
+    editShareToken: v.optional(v.string()),
+    allowSharedEditing: v.boolean(),
+    isDefaultFavorites: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_owner_created_at", ["ownerId", "createdAt"])
+    .index("by_owner_default", ["ownerId", "isDefaultFavorites"])
+    .index("by_view_share_token", ["viewShareToken"])
+    .index("by_edit_share_token", ["editShareToken"]),
+
+  gesture_list_items: defineTable({
+    listId: v.id("gesture_lists"),
+    gestureId: v.id("gestures"),
+    addedBy: v.optional(v.id("users")),
+    position: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_list", ["listId"])
+    .index("by_gesture", ["gestureId"])
+    .index("by_list_gesture", ["listId", "gestureId"])
+    .index("by_list_position", ["listId", "position"]),
 
   sponsorships: defineTable({
     gestureId: v.id("gestures"),

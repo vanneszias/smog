@@ -8,7 +8,7 @@ import logger from "@/utils/logger";
 
 // Define available languages
 export type Language = "en" | "fr" | "nl";
-export const DEFAULT_LANGUAGE: Language = "en";
+const DEFAULT_LANGUAGE: Language = "en";
 export const AVAILABLE_LANGUAGES = {
   en: "English",
   fr: "Français",
@@ -96,5 +96,3 @@ i18n
     keySeparator: ".",
     nsSeparator: false,
   });
-
-export default i18n;

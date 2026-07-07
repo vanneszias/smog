@@ -1,194 +1,101 @@
 # Troubleshooting
 
-> Common issues and how to fix them.  
-> Last updated: March 18, 2026
+> Last updated: June 10, 2026
 
----
+## Native
 
-## Native App
+### No gestures or search results
 
-### App shows no gestures (blank screen)
+1. Confirm `EXPO_PUBLIC_CONVEX_URL` is present in the root `.env`.
+2. Confirm the device can reach the Convex deployment.
+3. Check the Expo console for a Convex query or authentication error.
+4. Restart the development build after changing build-time environment values.
 
-**Cause:** Database not populated or sync failed.
+The app no longer has a local SQLite database or force-sync/reset workflow.
 
-**Fix:**
-1. Check your network connection
-2. Open Developer Tools (Settings → Developer) and tap "Force Sync"
-3. If still blank, tap "Reset Database" → this drops SQLite and triggers a full re-sync
+### WorkOS sign-in fails
 
-**Debug:**
-```bash
-# Check SQLite via Expo Go / Development build console
-# Look for: [convexSyncService] Sync completed successfully
+Check `EXPO_PUBLIC_WORKOS_CLIENT_ID`, `EXPO_PUBLIC_SERVER_URL`, the registered
+`smog://auth-callback` redirect, and server `WORKOS_CLIENT_ID` /
+`WORKOS_CLIENT_SECRET`. Use a development build rather than Expo Go.
+
+### Video does not play
+
+Verify the Mux playback ID and network access. Simulator media behavior can
+differ from physical devices, so reproduce on a device before changing player
+code.
+
+## Web and API
+
+### Admin page is empty or unauthorized
+
+Sign in at `/login`, then confirm the Convex user has `role: "admin"`. A valid
+WorkOS account alone does not grant admin access.
+
+### oRPC returns 401
+
+Check the browser refresh-token cookie, `VITE_SERVER_URL`, server
+`WORKOS_CLIENT_ID` / `WORKOS_CLIENT_SECRET`, and CORS credentials. Log out and
+back in after changing auth configuration.
+
+### Sponsor preview fails
+
+Run `bun -F remotion dev`, verify `REMOTION_URL` and `REMOTION_API_KEY`, then
+check Mux credentials. The API polls the Remotion job for up to two minutes.
+
+### Mollie webhook is not received locally
+
+Mollie cannot call `localhost`. Expose port 3000 with a tunnel and configure the
+payment webhook as:
+
+```text
+https://<public-host>/webhooks/mollie
 ```
 
----
+The router omits a webhook URL for local `CORS_ORIGIN`, so use a public origin
+when testing the full callback.
 
-### "Database not initialized" error
+### Transactional email is not sent
 
-**Cause:** `databaseService.initialize()` hasn't completed yet.
+Check `REDIS_URL`, SMTP settings, and the server log for the BullMQ worker.
+IMAP affects sent-mail archiving, not delivery.
 
-**Fix:** The app uses `useDbReady()` hook to gate navigation. If you're seeing this in a screen, make sure the screen waits for `isDbReady` before accessing the database.
+## Analytics
 
----
+### No events
 
-### Video not playing in simulator
+Confirm the user granted consent. For web, check the server has
+`OPENPANEL_CLIENT_ID`, `OPENPANEL_CLIENT_SECRET`, and
+`OPENPANEL_API_URL=https://analytics.zias.be/api`. For native, check the
+`EXPO_PUBLIC_OPENPANEL_*` values. Tracking intentionally does nothing before
+consent.
 
-**Cause:** HLS streams sometimes don't work in the iOS Simulator.
+### Native SDK initialization warning
 
-**Fix:** Test video playback on a physical device or use Expo Go on a real phone.
+Expo 55 can trigger the generic `@openpanel/sdk` fallback. Events should still
+arrive. Check the subsequent log for a fallback failure before treating the
+warning as fatal.
 
----
+### Consent test
 
-### Expo build fails with "Module not found"
+1. Clear site/app storage.
+2. Confirm no OpenPanel requests before a choice.
+3. Grant consent and navigate. Web should call `/analytics/track`; native should
+   call OpenPanel directly.
+4. Withdraw consent from privacy/settings.
+5. Confirm navigation no longer produces events.
 
-**Cause:** Missing workspace dependency or stale bun.lock.
+## Convex and Builds
 
-**Fix:**
+For schema errors, run `bun -F @smog/convex dev` and inspect the deployment
+output. Convex schema changes may require an explicit migration before making a
+field required.
+
+For repository verification:
+
 ```bash
-bun install --frozen-lockfile
-# If still failing:
-rm -rf node_modules bun.lock
-bun install
+bun check
+bun check-types
+bun run build
+knip --no-progress --no-config-hints
 ```
-
----
-
-### Type errors after pulling main
-
-**Cause:** New types added to `@smog/types` or `@smog/shared` that your code doesn't use yet, or a breaking change in a package API.
-
-**Fix:**
-```bash
-bun check-types 2>&1 | head -30  # See specific errors
-bun install                        # Install any new packages
-```
-
----
-
-## Web App
-
-### Blank admin panel
-
-**Cause:** Not logged in as admin, or WorkOS session expired.
-
-**Fix:**
-1. Visit `/auth/login` and log in
-2. Check that your user has `role: "admin"` in the Convex `users` table
-
----
-
-### oRPC call fails with 401
-
-**Cause:** Session cookie expired or missing.
-
-**Fix:**
-1. Log out and log back in
-2. Check `WORKOS_API_KEY` and `WORKOS_CLIENT_ID` in `apps/server/.env`
-
----
-
-### Sponsors wizard preview generation fails
-
-**Cause:** Remotion server not running, or Convex not accessible.
-
-**Fix:**
-```bash
-# Start all required services
-bun dev
-
-# Check Remotion server specifically
-bun -F remotion dev
-```
-
----
-
-### "Failed to create sponsorships" on payment step
-
-**Cause:** Gesture already has an active or pending sponsorship.
-
-**Fix:** Check in the admin panel whether the selected gesture already has a sponsorship. If so, it must expire before a new one can be created.
-
----
-
-### Mollie webhook not received locally
-
-**Cause:** Mollie can't reach `localhost`.
-
-**Fix:** Use [ngrok](https://ngrok.com/) to expose your local server:
-```bash
-ngrok http 3000
-# Then set MOLLIE_WEBHOOK_URL=https://xxx.ngrok.app/api/webhooks/mollie
-# in your Mollie test dashboard
-```
-
----
-
-## Convex
-
-### "Convex not initialized" error
-
-**Cause:** `CONVEX_URL` env var is missing or incorrect.
-
-**Fix:**
-1. Check `apps/server/.env` has `CONVEX_URL=https://your-project.convex.cloud`
-2. Check `apps/web/.env` has `VITE_CONVEX_URL=https://your-project.convex.cloud`
-3. Run `bun -F @smog/convex dev` and confirm connection
-
----
-
-### Schema migration fails
-
-**Cause:** Breaking change to the Convex schema without a data migration.
-
-**Fix:**
-1. Run `bun -F @smog/convex dev` and check the Convex dashboard for errors
-2. If data migration is needed, write a migration function in `convex/migrations.ts`
-3. For the local SQLite cache, increment `DATABASE_TARGET_VERSION` in `@smog/config`
-
----
-
-## Build
-
-### `bun build` fails with type errors
-
-**Fix:**
-```bash
-bun check-types         # See all type errors first
-bun check               # Fix auto-fixable lint errors
-bun build               # Retry
-```
-
-### Turborepo cache stale
-
-**Fix:**
-```bash
-bun run build -- --force  # Force rebuild ignoring cache
-```
-
----
-
-## Performance
-
-### Native app slow to load gestures
-
-**Cause:** SQLite query without an index, or too many gestures in memory.
-
-**Fix:**
-1. Check that `DATABASE_TARGET_VERSION` was incremented and indexes were created
-2. Use `gestureService.searchGestures()` (which queries SQLite with indexes) instead of loading all then filtering in JS
-
-### Web admin table slow
-
-**Cause:** Rendering 500+ gestures in the DOM.
-
-**Fix:** The `AdminTable` uses `limit: 500` on the query. For larger datasets, add pagination by lowering the limit and implementing a cursor.
-
----
-
-## Getting More Help
-
-1. Check the relevant doc in `docs/` for your area
-2. Check the commit history: `git log --oneline --all` often reveals context
-3. Use `bun check-types` — TypeScript errors usually point directly to the problem
-4. Add temporary logging: `createLogger("debug").debug("value:", value)`

@@ -9,6 +9,7 @@ import { config } from "dotenv";
 // Load env vars from root .env (shared across all apps)
 config({ path: resolve(import.meta.dirname, "../../../../.env") });
 
+import type { Context, Next } from "hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -16,6 +17,19 @@ import { processComposition } from "./compose";
 import { createJob, getJob, getQueueStats } from "./jobs";
 
 const app = new Hono();
+const remotionApiKey = process.env.REMOTION_API_KEY;
+
+if (!remotionApiKey) {
+  throw new Error("REMOTION_API_KEY must be set");
+}
+
+async function requireApiKey(c: Context, next: Next) {
+  const authHeader = c.req.header("Authorization");
+  if (authHeader !== `Bearer ${remotionApiKey}`) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  await next();
+}
 
 // Middleware
 app.use(logger());
@@ -25,9 +39,13 @@ app.use(
   cors({
     origin: process.env.CORS_ORIGIN || "*",
     allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type"],
+    allowHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+app.use("/api/compose", requireApiKey);
+app.use("/api/compose/status/*", requireApiKey);
+app.use("/api/queue/status", requireApiKey);
 
 // Health check endpoints
 app.get("/", (c) => c.text("Remotion Video Composer - Ready"));

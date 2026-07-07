@@ -2,11 +2,12 @@
 # Web application (Vite/React → Caddy static file server)
 
 # ── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM oven/bun:1-alpine AS deps
+FROM --platform=$BUILDPLATFORM oven/bun:1.3.14-alpine AS deps
 WORKDIR /app
 
 COPY package.json bun.lock bunfig.toml ./
 COPY turbo.json ./
+COPY patches ./patches
 COPY packages/api/package.json     ./packages/api/
 COPY packages/auth/package.json    ./packages/auth/
 COPY packages/config/package.json  ./packages/config/
@@ -17,19 +18,21 @@ COPY packages/shared/package.json    ./packages/shared/
 COPY packages/styles/package.json  ./packages/styles/
 COPY packages/types/package.json   ./packages/types/
 COPY packages/ui/package.json      ./packages/ui/
+COPY apps/native/package.json      ./apps/native/
+COPY apps/remotion/package.json    ./apps/remotion/
+COPY apps/server/package.json      ./apps/server/
 COPY apps/web/package.json         ./apps/web/
+COPY upload/package.json           ./upload/
 
-# canvas is an optional native dep of fabric/jest — it will fail to build on
-# Alpine without extra tooling, which is fine: the browser uses its own Canvas
-# API. --frozen-lockfile ensures reproducible installs.
+# Install workspace dependencies with a cached Bun package store.
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install \
+    bun install --frozen-lockfile \
     && test -d node_modules \
     && test -d apps/web/node_modules \
     || (echo "ERROR: required node_modules directories are missing" && exit 1)
 
 # ── Stage 2: builder ─────────────────────────────────────────────────────────
-FROM --platform=$BUILDPLATFORM oven/bun:1-alpine AS builder
+FROM --platform=$BUILDPLATFORM oven/bun:1.3.14-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app ./
@@ -40,15 +43,21 @@ ARG VITE_SERVER_URL
 ARG VITE_WORKOS_CLIENT_ID
 ARG VITE_WORKOS_REDIRECT_URI
 ARG VITE_CONVEX_URL
-ARG VITE_PUBLIC_POSTHOG_API_KEY
-ARG VITE_PUBLIC_POSTHOG_HOST
+ARG VITE_OPENPANEL_API_URL
+ARG VITE_OPENPANEL_CLIENT_ID
 
 ENV VITE_SERVER_URL=$VITE_SERVER_URL \
     VITE_WORKOS_CLIENT_ID=$VITE_WORKOS_CLIENT_ID \
     VITE_WORKOS_REDIRECT_URI=$VITE_WORKOS_REDIRECT_URI \
     VITE_CONVEX_URL=$VITE_CONVEX_URL \
-    VITE_PUBLIC_POSTHOG_API_KEY=$VITE_PUBLIC_POSTHOG_API_KEY \
-    VITE_PUBLIC_POSTHOG_HOST=$VITE_PUBLIC_POSTHOG_HOST
+    VITE_OPENPANEL_API_URL=$VITE_OPENPANEL_API_URL \
+    VITE_OPENPANEL_CLIENT_ID=$VITE_OPENPANEL_CLIENT_ID
+
+RUN test -n "$VITE_SERVER_URL" \
+    && test -n "$VITE_WORKOS_CLIENT_ID" \
+    && test -n "$VITE_WORKOS_REDIRECT_URI" \
+    && test -n "$VITE_CONVEX_URL" \
+    || (echo "ERROR: VITE_SERVER_URL, VITE_WORKOS_CLIENT_ID, VITE_WORKOS_REDIRECT_URI, and VITE_CONVEX_URL are required" && exit 1)
 
 RUN cd apps/web && bun run build
 
@@ -62,15 +71,24 @@ COPY apps/web/Caddyfile /etc/caddy/Caddyfile
 
 EXPOSE 80 443
 
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD wget -q --spider http://localhost/health || exit 1
+
 CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
 
 # ── Stage 4: development ──────────────────────────────────────────────────────
 # Used by docker-compose for local dev with hot-reload via volume mounts.
-FROM oven/bun:1-alpine AS development
+FROM oven/bun:1.3.14-alpine AS development
 WORKDIR /app
 
 COPY --from=deps /app ./
 # Source is bind-mounted at runtime; no COPY . . needed here.
+
+ARG VITE_OPENPANEL_API_URL
+ARG VITE_OPENPANEL_CLIENT_ID
+
+ENV VITE_OPENPANEL_API_URL=$VITE_OPENPANEL_API_URL \
+    VITE_OPENPANEL_CLIENT_ID=$VITE_OPENPANEL_CLIENT_ID
 
 EXPOSE 5173
 

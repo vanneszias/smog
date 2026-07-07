@@ -1,4 +1,4 @@
-import MuxPlayer from "@mux/mux-player-react";
+import MuxPlayer from "@mux/mux-player-react/lazy";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -20,8 +20,10 @@ export function MuxVideoPicker({
 
   const { data, isLoading } = useQuery(
     orpc.admin.mux.listAssets.queryOptions({
-      limit,
-      page,
+      input: {
+        limit,
+        page,
+      },
     })
   );
 

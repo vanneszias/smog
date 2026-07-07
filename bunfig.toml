@@ -1,5 +1,5 @@
 [install]
-# Use hardlink linker for better performance in Docker/CI environments
-# This creates hard links instead of isolated copies, significantly faster
-# Falls back to 'isolated' if hard links aren't supported
-linker = "isolated"
+# Expo native builds require a single installation of every native module.
+# A hoisted workspace layout prevents Bun from creating peer-specific copies
+# that Expo Doctor (and occasionally native autolinking) treats as duplicates.
+linker = "hoisted"

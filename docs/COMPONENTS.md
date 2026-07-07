@@ -1,6 +1,6 @@
 # Component Documentation
 
-> Last updated: March 18, 2026  
+> Last updated: June 10, 2026
 > See also: [HOOKS.md](./HOOKS.md), [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ## Overview
@@ -34,7 +34,7 @@ The following shadcn/ui components are re-exported from `@smog/ui`:
 
 ### `VideoPlayer`
 **File:** `VideoPlayer.tsx` (120 lines)  
-**Purpose:** MUX HLS gesture video player with analytics and Liquid Glass UI.
+**Purpose:** MUX HLS gesture video player with Liquid Glass UI.
 
 ```typescript
 interface VideoPlayerProps {
@@ -42,18 +42,14 @@ interface VideoPlayerProps {
   autoPlay?: boolean;        // Default: true
   onComplete?: () => void;   // Called 5s before video end
   onPlayToEnd?: () => void;  // Called when video reaches end
-  gestureId?: string;        // For analytics
-  gestureName?: string;      // For analytics
 }
 ```
 
 **Architecture:**
 - `video/useVideoPlayerState` — expo-video player instance, event subscriptions
-- `video/useVideoAnalytics` — PostHog event tracking
 
 **Key behaviours:**
 - Pauses automatically when screen loses focus (navigation away)
-- Tracks `Video Player Opened`, `Video Playback Started/Paused/Completed/Almost Completed`
 - Shows `ActivityIndicator` while loading
 - Play/pause button uses Liquid Glass effect on supported devices
 
@@ -69,7 +65,6 @@ interface GestureCardProps {
   onPress: (gesture: Gesture) => void;
   isFavorite?: boolean;
   onToggleFavorite?: (gestureId: string) => void;
-  source?: "search_results" | "favorites_screen" | "related_gestures";
 }
 ```
 
@@ -79,28 +74,6 @@ interface GestureCardProps {
 - Long press: opens options bottom sheet
 - Haptic feedback on favourite toggle
 - Animated scale + heart overlay on like action
-
----
-
-### `GDPRConsentModal`
-**File:** `GDPRConsentModal.tsx` (200 lines)  
-**Purpose:** GDPR consent modal shown on first app launch.
-
-```typescript
-interface GDPRConsentModalProps {
-  visible: boolean;
-  onAcceptAll: (analyticsConsent: boolean) => Promise<void>;
-  onAcceptRequired: () => Promise<void>;
-}
-```
-
-**Architecture:**
-- `gdpr/useGDPRConsent` — state, loading flag, error handling for all three action paths
-
-**Consent paths:**
-1. "Accept all" → calls `onAcceptAll(true)`
-2. "Customise + save" → calls `onAcceptAll(analyticsConsent)` (toggle value)
-3. "Accept required only" → calls `onAcceptRequired()`
 
 ---
 
@@ -120,6 +93,14 @@ interface DisclaimerBannerProps {
 - Randomly selects one of 7 course-promotion messages
 - "Klik hier"/"klik dan hier" phrases are rendered as tappable links to `COURSE_URL`
 - Uses `VIDEO_COMPLETE_COUNT` and `COURSE_URL` from `@smog/config`
+
+---
+
+### `AnalyticsConsentPrompt`
+**Purpose:** First-choice prompt for optional native analytics.
+
+It links to the public privacy policy and offers equally visible allow and
+required-only actions. It is shown while consent is unknown.
 
 ---
 
@@ -145,9 +126,9 @@ interface DisclaimerBannerProps {
 ---
 
 ### `SponsorshipsManagement`
-**File:** `SponsorshipsManagement.tsx` (1099 lines)  
-**Status:** Partially refactored — type issues fixed, imports restored. Full refactor with `DataTable` deferred.  
-**Purpose:** Admin view for managing sponsorship lifecycle (approve, reject, expire, re-edit).
+**File:** `SponsorshipsManagement.tsx`
+**Purpose:** Admin view for managing sponsorship lifecycle (approve, reject,
+expire, cancel, and re-edit).
 
 ---
 
@@ -166,13 +147,14 @@ interface DisclaimerBannerProps {
 
 | Component | File | Responsibility |
 |-----------|------|---------------|
-| `StepSelect` | `StepSelect.tsx` (~230 lines) | Step 1: Browse + select gestures |
-| `StepDetails` | `StepDetails.tsx` (~280 lines) | Step 2: Sponsor info, contact, invoice |
-| `StepPreview` | `StepPreview.tsx` (~180 lines) | Step 3: Preview videos + payment CTA |
-| `SponsorGestureCard` | `SponsorGestureCard.tsx` | Gesture card for selection grid |
-| `SelectionBar` | `SelectionBar.tsx` | Floating selection summary bar |
+| `StepSelect` | `-StepSelect.tsx` | Step 1: Browse + select gestures |
+| `StepDetails` | `-StepDetails.tsx` | Step 2: Sponsor info, contact, invoice |
+| `StepPreview` | `-StepPreview.tsx` | Step 3: Preview videos + payment CTA |
+| `SponsorGestureCard` | `-SponsorGestureCard.tsx` | Gesture card for selection grid |
+| `SelectionBar` | `-SelectionBar.tsx` | Floating selection summary bar |
 
-All state is managed in `index.tsx` and passed as props.
+Form state lives in `hooks/-useSponsorshipForm.ts`; network actions live in
+`hooks/-useSponsorshipMutation.ts`.
 
 ---
 

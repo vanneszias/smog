@@ -1,0 +1,53 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreFiles": [
+    ".agents/**",
+    "packages/api/src/lib/categoriesCache.ts",
+    "packages/api/src/lib/csv.ts",
+    "packages/api/src/lib/emailTrigger.ts",
+    "packages/api/src/lib/mux.ts",
+    "packages/auth/src/lib/payments.ts"
+  ],
+  "ignoreDependencies": ["expo-doctor"],
+  "ignoreIssues": {
+    "apps/native/context/ListsContext.tsx": ["types"],
+    "apps/remotion/src/server/jobs.ts": ["types"],
+    "apps/remotion/src/utils/get-media-metadata.ts": ["types"],
+    "apps/server/src/services/email.ts": ["types"],
+    "apps/server/src/services/emailQueue.ts": ["types"],
+    "apps/server/src/services/mux.ts": ["types"],
+    "apps/server/src/services/sponsorship.ts": ["types"],
+    "apps/web/src/components/admin/AdminDashboard.tsx": ["types"],
+    "apps/web/src/components/admin/hooks/useAdminFilters.ts": ["types"],
+    "apps/web/src/routes/__root.tsx": ["types"],
+    "packages/api/src/context.ts": ["exports"],
+    "packages/api/src/lib/emailTrigger.ts": ["types"],
+    "packages/api/src/lib/mux.ts": ["types"]
+  },
+  "workspaces": {
+    "apps/native": {
+      "entry": ["app/**/*.{ts,tsx}", "metro.config.js", "plugins/*.js"],
+      "ignoreDependencies": ["@babel/core"]
+    },
+    "apps/remotion": {
+      "entry": ["remotion.config.ts", "src/index.ts"],
+      "ignoreDependencies": ["remotion"]
+    },
+    "packages/api": {
+      "entry": ["src/context.ts", "src/index.ts", "src/routers/index.ts"],
+      "ignoreDependencies": ["@mux/mux-node", "@smog/config", "zod"]
+    },
+    "packages/auth": {
+      "entry": ["src/index.ts", "src/server.ts"],
+      "ignoreDependencies": ["@mollie/api-client", "@smog/config"]
+    },
+    "packages/shared": {
+      "entry": ["src/index.ts", "src/otel.ts"],
+      "ignoreDependencies": [
+        "@opentelemetry/exporter-logs-otlp-http",
+        "@opentelemetry/resources",
+        "@opentelemetry/sdk-logs"
+      ]
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "@smog/hooks",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -13,22 +13,13 @@
     "test:watch": "vitest"
   },
   "peerDependencies": {
-    "react": "^19.0.0",
-    "@tanstack/react-query": "^5.85.5"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    }
+    "react": "^19.0.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
-    "vitest": "^2.1.9",
+    "vitest": "^4.1.9",
     "@smog/config": "workspace:*",
-    "@smog/types": "workspace:*",
-    "@smog/ui": "workspace:*",
-    "@types/react": "~19.1.17",
-    "@tanstack/react-query": "^5.100.5"
+    "@types/react": "~19.1.17"
   },
   "dependencies": {
     "fuse.js": "^7.3.0"

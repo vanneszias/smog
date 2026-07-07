@@ -8,6 +8,10 @@
     "offlineMode": "Je bent offline. Sommige functies kunnen beperkt zijn.",
     "backOnline": "Je bent terug online!",
     "recentSearches": "Recente zoekopdrachten",
+    "button": "Zoeken",
+    "filterButton": "Filteren op categorie",
+    "removeCategory": "Filter {{category}} verwijderen",
+    "inputLabel": "Zoek naar een gebaar",
     "clear": "Wissen",
     "clearAll": "Alles wissen",
     "foundResults": "{{count}} resultaten gevonden in {{time}}ms",
@@ -26,6 +30,55 @@
     "removed": "Verwijderd uit favorieten",
     "undo": "Ongedaan maken",
     "error": "Favoriet bijwerken mislukt"
+  },
+  "lists": {
+    "addToList": "Toevoegen aan lijst",
+    "addedToList": "Toegevoegd aan {{name}}",
+    "chooseList": "Kies een lijst voor dit gebaar.",
+    "chooseListFor": "Kies een lijst voor ‘{{name}}’.",
+    "createAndAdd": "Lijst maken en gebaar toevoegen",
+    "createNew": "Een nieuwe lijst maken",
+    "createdAndAdded": "{{name}} gemaakt en gebaar toegevoegd",
+    "deleteFailed": "Lijst verwijderen mislukt",
+    "deleteMessage": "Dit verwijdert de lijst en alle opgeslagen gebaren erin.",
+    "deleteTitle": "Lijst verwijderen",
+    "dragToReorder": "Sleep om te herschikken",
+    "emptyTitle": "Deze lijst is klaar voor het eerste gebaar",
+    "emptyMessage": "Voeg gebaren toe die je opnieuw wilt bekijken, oefenen of delen.",
+    "exploreGestures": "Gebaren verkennen",
+    "favorites": "Favorieten",
+    "favoritesCannotRename": "Favorieten kan niet worden hernoemd.",
+    "gestureRemoved": "Gebaar uit lijst verwijderd",
+    "inThisList": "In deze lijst",
+    "listCreated": "{{name}} gemaakt",
+    "listDeleted": "Lijst verwijderd",
+    "listIsPrivate": "Lijst is nu privé",
+    "listIsShared": "Lijst is nu gedeeld",
+    "listRenamed": "Lijst hernoemd",
+    "listSettings": "Lijstinstellingen",
+    "manageGestureLists": "Gebarenlijsten beheren",
+    "moveDown": "Omlaag verplaatsen",
+    "moveUp": "Omhoog verplaatsen",
+    "newList": "Nieuwe lijst",
+    "newListPlaceholder": "Nieuwe lijstnaam",
+    "overviewDescription": "Open een lijst om gebaren te bekijken, te ordenen of te verwijderen.",
+    "private": "Privé",
+    "addFailed": "Gebaar toevoegen mislukt",
+    "removeFailed": "Gebaar verwijderen mislukt",
+    "removeGesture": "Gebaar verwijderen",
+    "removedFromList": "Verwijderd uit {{name}}",
+    "rename": "Lijst hernoemen",
+    "reorderFailed": "Lijstvolgorde bijwerken mislukt",
+    "saveFailed": "Lijst opslaan mislukt",
+    "share": "Lijst delen",
+    "shareFailed": "Lijst delen mislukt",
+    "shared": "Gedeeld",
+    "sharingDescription": "Iedereen met de link kan deze lijst bekijken.",
+    "sharingFailed": "Delen bijwerken mislukt",
+    "tapToAddToList": "Voegt het gebaar aan deze lijst toe",
+    "tapToRemoveFromList": "Verwijdert het gebaar uit deze lijst",
+    "uncategorized": "Zonder categorie",
+    "yourLists": "Jouw lijsten"
   },
   "auth": {
     "welcome": {
@@ -86,14 +139,21 @@
   "common": {
     "back": "Terug",
     "cancel": "Annuleren",
+    "save": "Opslaan",
     "error": "Fout",
     "success": "Succes",
     "comingSoon": "Binnenkort beschikbaar",
     "edit": "Bewerken",
+    "delete": "Verwijderen",
     "continue": "Doorgaan",
+    "initializing": "SMOG starten...",
+    "pause": "Video pauzeren",
+    "play": "Video afspelen",
     "total": "Totaal",
     "week": "week",
     "weeks": "weken",
+    "year": "{{count}} jaar",
+    "years": "{{count}} jaar",
     "gesture": "gebaar",
     "gestures": "gebaren",
     "errors": {
@@ -126,7 +186,8 @@
   "tabs": {
     "home": "Home",
     "search": "Zoeken",
-    "favorites": "Favorieten"
+    "favorites": "Favorieten",
+    "lists": "Lijsten"
   },
   "gesture": {
     "loadFailed": "Het laden van dit gebaar is mislukt",
@@ -177,10 +238,16 @@
     "realData": "Echte gegevens",
     "production": "Productie",
     "mock": "Testgegevens",
-    "realDataw": "Echte Data",
     "auth": "Authenticatie",
     "manageAccount": "Account beheren",
-    "openDeveloperTools": "Ontwikkelaarstools openen"
+    "openDeveloperTools": "Ontwikkelaarstools openen",
+    "analyticsTitle": "Gebruiksanalytics",
+    "analyticsDescription": "Deel beperkte gebruiksgegevens om SMOG te verbeteren. Zoektermen en sessie-opnames worden nooit verzameld.",
+    "analyticsPromptTitle": "Help SMOG verbeteren",
+    "analyticsPromptDescription": "Met uw toestemming verzamelen we beperkte gebruiksgegevens via onze zelfgehoste analyticsdienst. Tracking blijft uit tot u kiest.",
+    "analyticsAllow": "Analytics toestaan",
+    "analyticsRequiredOnly": "Alleen noodzakelijk",
+    "privacyPolicy": "Lees het privacybeleid"
   },
   "about": {
     "title": "Over ons",
@@ -256,11 +323,21 @@
       "closeButton": "TERMINAL_SLUITEN"
     }
   },
+  "appStore": {
+    "new": "Nieuw",
+    "headline": "SMOG is nu beschikbaar op je telefoon!",
+    "subheadline": "Download de app en leer gebaren waar je ook bent",
+    "downloadOn": "Download in de",
+    "getItOn": "Beschikbaar op",
+    "close": "Sluit de app-downloadbanner"
+  },
   "web": {
     "home": {
       "title": "Leer SMOG",
+      "heroTitle": "Mensen ondersteunen hun spraak van nature met gebaren",
       "header": {
         "search": "Zoeken",
+        "lists": "Lijsten",
         "favorites": "Favorieten",
         "account": "Account",
         "sponsor": "Sponsor",
@@ -284,14 +361,100 @@
         "description": "Filter gebaren op onderwerp en categorie om je te concentreren op wat je wilt leren.",
         "action": "Begin met leren"
       },
-      "footer": "© 2026 SMOG&Co. Alle rechten voorbehouden."
+      "footer": {
+        "terms": "Voorwaarden",
+        "privacy": "Privacy"
+      },
+      "copyright": "© 2026 SMOG&Co. Alle rechten voorbehouden."
     },
     "gestures": {
       "searchPlaceholder": "Zoek gebaren op naam, concept of beschrijving...",
+      "errorLoading": "We konden de gebaren niet laden. Controleer je verbinding en probeer opnieuw.",
       "noResultsWithFilters": "Geen gebaren gevonden die aan je zoekopdracht voldoen",
       "noResults": "Geen gebaren beschikbaar",
       "loading": "Gebaren laden...",
       "selectGesture": "Selecteer een gebaar om details te bekijken"
+    },
+    "lists": {
+      "add": "Toevoegen",
+      "addFailed": "Kon gebaar niet toevoegen",
+      "addGestures": "Gebaren toevoegen",
+      "addedToList": "\"{{name}}\" toegevoegd aan lijst",
+      "addedToListShort": "Toegevoegd aan lijst",
+      "adding": "Toevoegen...",
+      "addToSelected": "Toevoegen aan selectie",
+      "alreadyInList": "Staat al in lijst",
+      "allowEditing": "Bewerken toestaan",
+      "browseGestures": "Gebaren bekijken",
+      "cancelRename": "Naam wijzigen annuleren",
+      "copyFailed": "Kon link niet kopiëren",
+      "copyLink": "Kopiëren",
+      "create": "Maken",
+      "createAndAdd": "Maken en toevoegen",
+      "createDialogDescription": "Geef de collectie die je wilt maken een naam.",
+      "createDialogTitle": "Nieuwe lijst",
+      "createFailed": "Kon lijst niet maken",
+      "created": "Lijst gemaakt",
+      "defaultList": "Standaardlijst",
+      "delete": "Lijst verwijderen",
+      "deleteConfirm": "Deze lijst verwijderen?",
+      "deleteFailed": "Kon lijst niet verwijderen",
+      "deleted": "Lijst verwijderd",
+      "doneAdding": "Klaar met toevoegen",
+      "editable": "Bewerkbaar",
+      "failedToLoad": "Kon lijsten niet laden",
+      "failedToLoadGestures": "Kon lijst niet laden",
+      "gestureAdded": "Gebaar toegevoegd",
+      "gestureRemoved": "Gebaar verwijderd",
+      "linkCopied": "Deellink gekopieerd",
+      "linkRegenerated": "Deellink vernieuwd",
+      "loading": "Lijsten laden...",
+      "manyGestures": "gebaren",
+      "moveDown": "Omlaag verplaatsen",
+      "moveUp": "Omhoog verplaatsen",
+      "newListPlaceholder": "Nieuwe lijstnaam",
+      "noAddableGestures": "Niets om toe te voegen",
+      "noAddableGesturesDescription": "Alle overeenkomende gebaren staan al in deze lijst.",
+      "noGesturesDescription": "Bekijk gebaren en gebruik de lijstknop om ze op te slaan.",
+      "noGesturesTitle": "Nog geen gebaren in deze lijst",
+      "noLists": "Maak een lijst om te beginnen.",
+      "oneGesture": "gebaar",
+      "private": "Privé",
+      "refreshShareLink": "Deellink vernieuwen",
+      "regenerateFailed": "Kon link niet vernieuwen",
+      "removeFailed": "Kon gebaar niet verwijderen",
+      "removeFromSelected": "Verwijderen uit selectie",
+      "removeGesture": "Gebaar verwijderen",
+      "renameFailed": "Kon lijst niet hernoemen",
+      "renamed": "Lijst hernoemd",
+      "renameList": "Lijst hernoemen",
+      "reorderFailed": "Kon lijst niet herschikken",
+      "saveDialogDescription": "Kies een lijst voor \"{{name}}\".",
+      "saveDialogDescriptionFallback": "Kies waar dit gebaar opgeslagen moet worden.",
+      "saveDialogTitle": "Toevoegen aan lijst",
+      "saveListName": "Lijstnaam opslaan",
+      "searchToAdd": "Zoek gebaren om toe te voegen",
+      "selected": "Geselecteerd",
+      "selectList": "Selecteer een lijst",
+      "gestureAlreadyInSelected": "Dit gebaar staat al in deze lijst.",
+      "gestureNotInSelected": "Dit gebaar staat nog niet in deze lijst.",
+      "shareList": "Lijst delen",
+      "shared": "Gedeeld",
+      "sharedEditable": "Gedeeld, bewerkbaar",
+      "sharedEmptyDescription": "De eigenaar heeft nog geen gebaren aan deze lijst toegevoegd.",
+      "sharedList": "Gedeelde lijst",
+      "sharedNotFoundDescription": "Deze lijst is privé, verwijderd of de link is vervangen.",
+      "sharedNotFoundTitle": "Lijst niet beschikbaar",
+      "sharingFailed": "Kon delen niet bijwerken",
+      "sharingUpdated": "Delen bijgewerkt",
+      "signInDescription": "Maak, herschik en deel gebarenlijsten op al je apparaten.",
+      "signInRequired": "Meld je aan om gebaren op te slaan",
+      "signInTitle": "Meld je aan om lijsten te beheren",
+      "signInToEdit": "Meld je aan om gebaren uit deze gedeelde lijst toe te voegen of te verwijderen.",
+      "title": "Lijsten",
+      "viewGesture": "Gebaar bekijken",
+      "viewOnly": "Alleen bekijken",
+      "yourLists": "Je lijsten"
     },
     "favorites": {
       "signInTitle": "Inloggen om favorieten te bekijken",
@@ -369,13 +532,9 @@
       },
       "privacy": {
         "title": "Privacy & Gegevens",
-        "analytics": {
-          "title": "Gebruiksanalyse",
-          "description": "Help ons SMOG te verbeteren door anonieme gebruiksgegevens te delen. Dit bevat geen persoonlijke informatie."
-        },
         "export": {
           "title": "Uw gegevens downloaden",
-          "description": "Exporteer al uw accountgegevens inclusief favorieten, voorkeuren en toestemmingsgeschiedenis in JSON-formaat.",
+          "description": "Exporteer al uw accountgegevens, inclusief favorieten en voorkeuren, in JSON-formaat.",
           "button": "Gegevens downloaden",
           "exporting": "Exporteren..."
         },
@@ -396,8 +555,7 @@
         "description": "Deze actie kan niet ongedaan worden gemaakt. Dit zal uw account permanent verwijderen en alle gegevens van onze servers verwijderen, inclusief:",
         "listItems": {
           "accountInfo": "Uw accountinformatie",
-          "favorites": "Alle opgeslagen favorieten",
-          "consentHistory": "Uw toestemmingsgeschiedenis",
+          "favorites": "Alle opgeslagen gebarenlijsten",
           "adminLogs": "Eventuele beheeractiviteitenlogboeken"
         },
         "cancel": "Annuleren",
@@ -405,9 +563,6 @@
         "deleting": "Verwijderen..."
       },
       "toast": {
-        "analyticsEnabled": "Analyse ingeschakeld. Bedankt voor uw hulp bij het verbeteren!",
-        "analyticsDisabled": "Analyse uitgeschakeld. Uw gegevens worden niet meer verzameld.",
-        "analyticsUpdateFailed": "Analysevoorkeuren bijwerken mislukt. Probeer het opnieuw.",
         "exportUnavailable": "Kan gegevens niet exporteren. Probeer het opnieuw.",
         "exportSuccess": "Uw gegevens zijn succesvol gedownload",
         "exportFailed": "Exporteren van gegevens mislukt. Probeer het opnieuw.",
@@ -418,6 +573,8 @@
     "sponsors": {
       "wizard": {
         "back": "Terug",
+        "backToSelection": "Terug naar selectie",
+        "backToDetails": "Terug naar details",
         "step": "Stap {{current}} van {{total}}",
         "selectedGestures": "Geselecteerde gebaren",
         "gesturesSelected": "{{count}} gebaar geselecteerd",
@@ -425,7 +582,32 @@
         "gesture": "gebaar",
         "gestures": "gebaren",
         "remove": "Verwijderen",
+        "removeGestureLabel": "{{name}} verwijderen",
         "continue": "Doorgaan",
+        "sponsored": "Gesponsord",
+        "inReview": "In behandeling",
+        "example": "Voorbeeld",
+        "logoPreviewAlt": "Voorbeeld van het logo",
+        "removeLogo": "Logo verwijderen",
+        "optional": "optioneel",
+        "previewFinalDescription": "De laatste stap voor de veilige betaling",
+        "videoName": "Naam in video",
+        "contact": "Contact",
+        "selection": {
+          "title": "Steun een gebaar",
+          "description": "Steun een gebaar voor één jaar. Jouw naam verschijnt in de video en helpt het SMOG-project.",
+          "perGesture": "Per gebaar, per jaar",
+          "nameInVideo": "Jouw naam in elke video",
+          "optionalLogo": "Voeg je logo toe (optioneel)",
+          "searchPlaceholder": "Zoek op naam, begrip of categorie...",
+          "categories": "Categorieën",
+          "showLess": "Minder tonen",
+          "showMore": "+{{count}} meer",
+          "available": "{{count}} beschikbaar gebaar",
+          "available_other": "{{count}} beschikbare gebaren",
+          "selected": "{{count}} geselecteerd",
+          "selected_other": "{{count}} geselecteerd"
+        },
         "configureTitle": "Configureer je sponsoring",
         "configureSubtitle": "Alle {{count}} geselecteerde gebaren tonen:\n\"{{message}}\"",
         "sponsorNameLabel": "Sponsor naam *",
@@ -490,6 +672,56 @@
         "invoiceEmailLabel": "E-mailadres voor factuur",
         "invoiceEmailPlaceholder": "factuur@voorbeeld.be"
       },
+      "reEdit": {
+        "invalidTitle": "Ongeldige link",
+        "invalidBody": "Bij deze link ontbreekt een vereiste code. Gebruik de link die je van de beheerder hebt ontvangen.",
+        "loading": "Je link controleren…",
+        "notFoundTitle": "Link niet gevonden",
+        "notFoundBody": "Deze link is ongeldig of al gebruikt. Neem contact op met de beheerder als je denkt dat dit niet klopt.",
+        "expiredTitle": "Link verlopen",
+        "expiredBody": "Deze link is verlopen. Vraag de beheerder om een nieuwe link.",
+        "submittedTitle": "Video verzonden!",
+        "submittedBody": "Je nieuwe video staat klaar voor controle. Je hoeft niet opnieuw te betalen; we nemen snel contact met je op.",
+        "backToSite": "Terug naar de website",
+        "eyebrow": "Sponsoring aanpassen",
+        "title": "Werk je video bij",
+        "gesture": "Gebaar",
+        "expires": "Link verloopt over {{count}} dag",
+        "expires_other": "Link verloopt over {{count}} dagen",
+        "originalVideo": "Oorspronkelijke gebarenvideo",
+        "editDetails": "Pas je gegevens aan",
+        "brandName": "Merknaam",
+        "brandPlaceholder": "Naam van je merk of bedrijf",
+        "brandHelp": "Deze naam verschijnt in de video.",
+        "overlayText": "Tekst in de video",
+        "overlayPlaceholder": "Tekst die bovenop de gebarenvideo verschijnt",
+        "maxCharacters": "Maximaal 100 tekens.",
+        "updateLogo": "Logo bijwerken",
+        "logoAlt": "Voorbeeld van het logo",
+        "removeLogo": "Logo verwijderen",
+        "uploadLogo": "Kies een nieuw logo",
+        "formats": "PNG, JPEG of WebP · Max. 2 MB",
+        "preview": "Voorbeeld",
+        "generating": "Genereren…",
+        "regenerate": "Opnieuw genereren",
+        "generatePreview": "Voorbeeld genereren",
+        "compositing": "Je video wordt samengesteld… Dit duurt ongeveer één minuut.",
+        "previewReady": "Tevreden? Verstuur de video hieronder wanneer je klaar bent.",
+        "previewEmpty": "Kies ‘Voorbeeld genereren’ om je bijgewerkte video te bekijken.",
+        "submitting": "Verzenden…",
+        "submitReview": "Ter controle verzenden",
+        "noPayment": "Je hoeft niet opnieuw te betalen. We controleren de aanpassing voordat ze online gaat.",
+        "errors": {
+          "logoTooLarge": "Het logo moet kleiner zijn dan 2 MB.",
+          "logoInvalidFormat": "Gebruik een PNG-, JPEG- of WebP-afbeelding.",
+          "brandRequired": "De merknaam is verplicht.",
+          "overlayRequired": "De tekst in de video is verplicht.",
+          "previewFailed": "We konden het voorbeeld niet genereren. Probeer het opnieuw.",
+          "generateFirst": "Genereer eerst een voorbeeld.",
+          "fillRequired": "Vul alle verplichte velden in.",
+          "submitFailed": "We konden je aanpassing niet verzenden. Probeer het opnieuw."
+        }
+      },
       "new": {
         "title": "Sponsor een gebaar!",
         "subtitle": "Word peter of meter van een gebaar",
@@ -517,11 +749,11 @@
           "sponsorNameTooLong": "Sponsor naam mag maximaal 40 tekens bevatten",
           "logoRequired": "Upload een logo of vink de optie uit",
           "logoTooLarge": "Afbeelding moet kleiner zijn dan 2MB",
-          "logoInvalidFormat": "Ongeldig afbeeldingsformaat. Gebruik PNG, JPG of SVG"
+          "logoInvalidFormat": "Ongeldig afbeeldingsformaat. Gebruik PNG, JPEG of WebP"
         },
         "logoGuidelines": {
           "title": "Logo richtlijnen",
-          "format": "Formaat: PNG met transparante achtergrond (aanbevolen) of SVG",
+          "format": "Formaat: PNG met transparante achtergrond (aanbevolen), JPEG of WebP",
           "dimensions": "Afmetingen: Minimaal 800x800px voor beste kwaliteit",
           "aspectRatio": "Bestandsverhouding: Vierkant (1:1) aanbevolen",
           "fileSize": "Bestandsgrootte: Maximaal 2MB",
@@ -620,7 +852,7 @@
           "queued": "Wachten op een beschikbare worker om uw video te verwerken...",
           "downloading": "Worker downloadt de originele video van Mux...",
           "processingImage": "Worker verwerkt en verkleint uw overlay afbeelding...",
-          "composing": "FFmpeg stelt de video samen met uw overlay...",
+          "composing": "De videodienst stelt uw video samen met de overlay...",
           "uploadingResult": "De definitieve samengestelde video wordt terug geüpload naar Mux...",
           "completed": "Uw video is klaar!",
           "failed": "Er is iets misgegaan. Probeer het opnieuw.",
@@ -651,8 +883,10 @@
         "loading": "Sponsoring details laden...",
         "error": {
           "title": "Laden van sponsoring details mislukt",
+          "description": "We kunnen de details nog niet laden. Dit heeft geen invloed op uw betaling.",
           "tryAgain": "Opnieuw proberen"
         },
+        "reviewDescription": "Een beheerder beoordeelt uw sponsoring binnen vijf werkdagen. U ontvangt een e-mail zodra deze online staat.",
         "processing": {
           "title": "Uw betaling wordt verwerkt...",
           "description": "Betaling ontvangen! De details van uw sponsoring verschijnen hier binnenkort. Deze pagina wordt automatisch bijgewerkt.",
@@ -682,355 +916,6 @@
     "metadata": {
       "title": "smog-sponsors",
       "description": "smog-sponsors is een webapplicatie"
-    },
-    "privacy": {
-      "title": "Privacybeleid",
-      "lastUpdated": "Laatst bijgewerkt: {{date}}",
-      "introduction": {
-        "title": "1. Inleiding",
-        "body": "Welkom bij SMOG&Co (\"we\", \"ons\" of \"onze\"). We zetten ons in voor de bescherming van uw persoonsgegevens en respecteren uw privacy. Dit Privacybeleid legt uit hoe we uw informatie verzamelen, gebruiken en beschermen wanneer u onze applicatie voor het leren van gebarentaal gebruikt."
-      },
-      "controller": {
-        "title": "2. Informatie over de verwerkingsverantwoordelijke",
-        "body": "De verwerkingsverantwoordelijke voor uw persoonsgegevens is SMOG&Co VZW (België). Voor privacyvragen kunt u contact opnemen via: [Your Privacy Contact Email]"
-      },
-      "dataCollect": {
-        "title": "3. Gegevens die wij verzamelen",
-        "account": {
-          "title": "3.1 Accountgegevens",
-          "items": {
-            "email": "E-mailadres (via WorkOS-authenticatie)",
-            "name": "Voor- en achternaam (via WorkOS-authenticatie)",
-            "userId": "Gebruikers-ID (unieke identificator)",
-            "timestamps": "Tijdstippen van accountaanmaak en laatste activiteit"
-          }
-        },
-        "usage": {
-          "title": "3.2 Gebruiksgegevens (als u toestemming geeft voor analyse)",
-          "items": {
-            "gestures": "Gebaren die u bekijkt en favoriet maakt",
-            "searches": "Zoekopdrachten die u uitvoert",
-            "navigation": "Navigatiepatronen in de app",
-            "device": "Apparaatinformatie (type, OS-versie)",
-            "session": "Sessieduur en -frequentie",
-            "video": "Interacties met videoweergave"
-          }
-        },
-        "preferences": {
-          "title": "3.3 Gebruikersvoorkeuren",
-          "items": {
-            "favorites": "Favoriete gebaren",
-            "searchHistory": "Zoekgeschiedenis (lokaal opgeslagen op uw apparaat)",
-            "settings": "Taal- en themavoorkeuren"
-          }
-        },
-        "guest": {
-          "title": "3.4 Gastmodusgegevens",
-          "items": {
-            "identifier": "Anonieme gast-id (bij gebruik van gastmodus)",
-            "retention": "Gastgegevens worden na 12 maanden inactiviteit verwijderd als onderdeel van ons bewaarbeleid"
-          }
-        }
-      },
-      "legalBasis": {
-        "title": "4. Rechtsgrond voor verwerking (GDPR)",
-        "items": {
-          "contract": {
-            "label": "Uitvoering van de overeenkomst",
-            "text": "Het verwerken van uw accountinformatie is noodzakelijk om onze diensten te leveren"
-          },
-          "consent": {
-            "label": "Toestemming",
-            "text": "Analyse en marketingcommunicatie (u kunt uw toestemming op elk moment intrekken in de instellingen)"
-          },
-          "legitimate": {
-            "label": "Gerechtvaardigd belang",
-            "text": "Beveiliging, fraudepreventie en verbetering van de dienst"
-          },
-          "legal": {
-            "label": "Wettelijke verplichting",
-            "text": "Naleving van toepasselijke wet- en regelgeving"
-          }
-        }
-      },
-      "useData": {
-        "title": "5. Hoe wij uw gegevens gebruiken",
-        "items": {
-          "provide": "Om onze dienst te leveren en te onderhouden",
-          "authenticate": "Om uw account te authenticeren (via WorkOS)",
-          "sync": "Om uw favorieten tussen apparaten te synchroniseren",
-          "analytics": "Om onze app te verbeteren via gebruiksanalyse (alleen indien u toestemt)",
-          "personalize": "Om uw leerervaring te personaliseren",
-          "support": "Om klantenondersteuning te bieden",
-          "legal": "Om aan wettelijke verplichtingen te voldoen"
-        }
-      },
-      "thirdParty": {
-        "title": "6. Diensten van derden",
-        "workos": {
-          "title": "6.1 Authenticatie - WorkOS",
-          "body": "We gebruiken WorkOS voor veilige authenticatie. WorkOS verwerkt uw e-mailadres en naam om uw account aan te maken en te beheren. Zie het privacybeleid van WorkOS op: <link>https://workos.com/privacy</link>"
-        },
-        "posthog": {
-          "title": "6.2 Analyse - PostHog (optioneel)",
-          "body": "Als u toestemt, gebruiken we PostHog (gehost in de EU) voor gebruiksanalyse op zowel onze web- als native toepassingen. PostHog helpt ons te begrijpen hoe gebruikers onze app gebruiken. U kunt op elk moment afmelden in de instellingen. Zie het privacybeleid van PostHog op: <link>https://posthog.com/privacy</link>"
-        },
-        "mux": {
-          "title": "6.3 Videohosting - Mux",
-          "body": "We gebruiken Mux voor het hosten en streamen van demonstratievideo's. Mux kan technische gegevens verzamelen die nodig zijn voor videolevering. Zie het privacybeleid van Mux op: <link>https://mux.com/privacy</link>"
-        },
-        "convex": {
-          "title": "6.4 Database - Convex",
-          "body": "We gebruiken Convex om uw accountgegevens, favorieten en gebruikersvoorkeuren op te slaan. Convex is onze backend-databaseprovider."
-        }
-      },
-      "storage": {
-        "title": "7. Gegevensopslag en beveiliging",
-        "items": {
-          "encryption": "Uw gegevens worden veilig opgeslagen met industriestandaard-encryptie",
-          "analytics": "Analysegegevens worden opgeslagen op PostHog-servers in de Europese Unie",
-          "measures": "Wij nemen passende technische en organisatorische maatregelen om uw gegevens te beschermen",
-          "access": "Toegang tot uw persoonsgegevens is beperkt tot geautoriseerd personeel"
-        }
-      },
-      "retention": {
-        "title": "8. Bewaartermijnen",
-        "items": {
-          "active": {
-            "label": "Actieve accounts",
-            "text": "Gegevens worden bewaard zolang uw account actief is"
-          },
-          "guest": {
-            "label": "Gastaccounts",
-            "text": "Automatisch verwijderd na 12 maanden inactiviteit"
-          },
-          "logs": {
-            "label": "Beheerlogs",
-            "text": "3 jaar bewaard voor auditdoeleinden"
-          },
-          "deleted": {
-            "label": "Verwijderde accounts",
-            "text": "Alle persoonsgegevens worden binnen 30 dagen na verwijderingsverzoek verwijderd"
-          }
-        }
-      },
-      "rights": {
-        "title": "9. Uw rechten (GDPR)",
-        "intro": "U hebt de volgende rechten:",
-        "items": {
-          "access": {
-            "label": "Recht op inzage",
-            "text": "Vraag een kopie van uw persoonsgegevens op (beschikbaar in Instellingen → Mijn gegevens downloaden)"
-          },
-          "rectification": {
-            "label": "Recht op rectificatie",
-            "text": "Corrigeer onjuiste gegevens via uw accountinstellingen"
-          },
-          "erasure": {
-            "label": "Recht op wissing",
-            "text": "Verwijder uw account en alle bijbehorende gegevens (Instellingen → Mijn account verwijderen)"
-          },
-          "restrict": {
-            "label": "Recht op beperking van verwerking",
-            "text": "Beperk hoe wij uw gegevens verwerken"
-          },
-          "portability": {
-            "label": "Recht op gegevensoverdraagbaarheid",
-            "text": "Ontvang uw gegevens in een machineleesbaar formaat"
-          },
-          "object": {
-            "label": "Recht van bezwaar",
-            "text": "Maak bezwaar tegen verwerking op basis van gerechtvaardigd belang"
-          },
-          "withdraw": {
-            "label": "Recht om toestemming in te trekken",
-            "text": "Schakel analyse op elk moment uit"
-          }
-        },
-        "closing": "Om deze rechten uit te oefenen, gebruikt u de opties in uw accountinstellingen of neemt u rechtstreeks contact met ons op."
-      },
-      "children": {
-        "title": "10. Privacy van kinderen",
-        "body": "Onze dienst is bedoeld voor gebruikers van 13 jaar en ouder (of de leeftijd van digitale toestemming in uw land). We verzamelen niet bewust gegevens van kinderen onder deze leeftijd. Als u denkt dat we gegevens van een kind hebben verzameld, neem dan onmiddellijk contact met ons op."
-      },
-      "transfers": {
-        "title": "11. Internationale gegevensoverdrachten",
-        "intro": "Uw gegevens kunnen worden overgedragen naar en verwerkt in landen buiten de EER/VK. We zorgen voor passende waarborgen, waaronder:",
-        "items": {
-          "euHosting": "Analyse gehost in de EU (PostHog)",
-          "scc": "Standaard contractuele clausules met externe verwerkers waar van toepassing",
-          "adequacy": "Toereikendheidsbesluiten van de Europese Commissie waar van toepassing"
-        }
-      },
-      "cookies": {
-        "title": "12. Cookies en lokale opslag",
-        "intro": "We gebruiken cookies en lokale opslag om het volgende op te slaan:",
-        "items": {
-          "auth": "Strikt noodzakelijke cookies voor authenticatiesessies",
-          "consent": "Toestemmingskeuzes voor analyse- en marketingvoorkeuren",
-          "preferences": "Gebruikersvoorkeuren (taal, thema)",
-          "search": "Recente zoekopdrachten (lokaal, niet naar servers verzonden)",
-          "cache": "Gecachte gebaren voor offline toegang"
-        },
-        "closing": "U kunt deze gegevens op elk moment wissen via uw apparaat-/browserinstellingen. U kunt uw toestemmingsvoorkeuren ook aanpassen in de accountinstellingen."
-      },
-      "changes": {
-        "title": "13. Wijzigingen in dit beleid",
-        "intro": "We kunnen dit Privacybeleid van tijd tot tijd bijwerken. We informeren u over belangrijke wijzigingen door:",
-        "items": {
-          "updated": "De datum \"Laatst bijgewerkt\" te actualiseren",
-          "notification": "Een in-app melding weer te geven",
-          "renewal": "Waar wettelijk vereist opnieuw toestemming te vragen"
-        }
-      },
-      "contact": {
-        "title": "14. Contact",
-        "intro": "Voor privacyvragen, het uitoefenen van uw rechten of zorgen over gegevensbescherming kunt u contact opnemen via:",
-        "emailLabel": "E-mail",
-        "emailValue": "[Your Privacy Contact Email]",
-        "addressLabel": "Adres",
-        "addressValue": "[SMOG&Co VZW Registered Address, Belgium]"
-      },
-      "authority": {
-        "title": "15. Toezichthoudende autoriteit",
-        "body": "Als u zich in België bevindt, hebt u het recht om een klacht in te dienen bij de Belgische Gegevensbeschermingsautoriteit (GBA/APD). Als u zich elders in de EER of het VK bevindt, kunt u contact opnemen met uw lokale gegevensbeschermingsautoriteit."
-      },
-      "footer": "Dit privacybeleid is opgesteld om te voldoen aan de GDPR en de Belgische gegevensbeschermingswetgeving. Door onze dienst te gebruiken, bevestigt u dat u dit beleid hebt gelezen en begrepen."
-    },
-    "terms": {
-      "title": "Servicevoorwaarden",
-      "lastUpdated": "Laatst bijgewerkt: {{date}}",
-      "acceptance": {
-        "title": "1. Acceptatie van voorwaarden",
-        "body": "Door toegang te krijgen tot en gebruik te maken van SMOG&Co (\"de Dienst\"), beheerd door SMOG&Co VZW (België), aanvaardt u de voorwaarden van deze overeenkomst en gaat u ermee akkoord. Als u niet akkoord gaat met deze Servicevoorwaarden, gebruik de Dienst dan niet."
-      },
-      "description": {
-        "title": "2. Beschrijving van de dienst",
-        "intro": "SMOG&Co is een applicatie voor het leren van gebarentaal die het volgende biedt:",
-        "items": {
-          "library": "Toegang tot een bibliotheek met gebarentaalvideo's",
-          "search": "Zoeken en categoriseren van gebaren",
-          "favorites": "Mogelijkheid om favoriete gebaren op te slaan",
-          "sync": "Synchronisatie tussen apparaten voor geregistreerde gebruikers",
-          "guest": "Gastmodus voor tijdelijke toegang zonder registratie"
-        }
-      },
-      "accounts": {
-        "title": "3. Gebruikersaccounts",
-        "create": {
-          "title": "3.1 Account aanmaken",
-          "body": "U kunt een account aanmaken via WorkOS-authenticatie. U bent verantwoordelijk voor het vertrouwelijk houden van uw accountgegevens en voor alle activiteiten onder uw account."
-        },
-        "guest": {
-          "title": "3.2 Gastmodus",
-          "body": "U kunt de Dienst als gast gebruiken zonder een account aan te maken. Gastgegevens worden lokaal op uw apparaat opgeslagen en na 12 maanden inactiviteit automatisch verwijderd."
-        },
-        "termination": {
-          "title": "3.3 Account beëindiging",
-          "body": "U kunt uw account op elk moment verwijderen via de instellingenpagina. Na verwijdering worden al uw persoonsgegevens binnen 30 dagen definitief verwijderd."
-        }
-      },
-      "conduct": {
-        "title": "4. Gebruikersgedrag",
-        "intro": "U stemt ermee in NIET:",
-        "items": {
-          "unlawful": "De Dienst te gebruiken voor illegale doeleinden",
-          "access": "Te proberen ongeautoriseerde toegang te verkrijgen tot enig deel van de Dienst",
-          "disrupt": "De Dienst of servers/netwerken die ermee verbonden zijn te verstoren",
-          "automated": "Geautomatiseerde systemen te gebruiken om toegang te krijgen tot de Dienst zonder onze voorafgaande schriftelijke toestemming",
-          "resell": "Een deel van de Dienst te reproduceren, dupliceren, kopiëren of door te verkopen",
-          "notices": "Auteursrecht-, merk- of eigendomsvermeldingen te verwijderen of te wijzigen"
-        }
-      },
-      "intellectual": {
-        "title": "5. Intellectuele eigendom",
-        "ours": {
-          "title": "5.1 Onze inhoud",
-          "body": "Alle inhoud die via de Dienst wordt aangeboden, waaronder gebarenvideo's, tekst, grafieken, logo's en software, is eigendom van SMOG&Co of haar licentiegevers en wordt beschermd door auteursrecht en andere wetten inzake intellectuele eigendom."
-        },
-        "license": {
-          "title": "5.2 Licentie",
-          "intro": "Wij verlenen u een beperkte, niet-exclusieve, niet-overdraagbare licentie om de Dienst te gebruiken voor persoonlijk, niet-commercieel gebruik. Deze licentie omvat geen rechten om:",
-          "items": {
-            "download": "Gebarenvideo's te downloaden of te kopiëren (behalve via normale caching)",
-            "modify": "Wijzigingen aan te brengen of afgeleide werken te maken",
-            "display": "De inhoud openbaar te tonen of uit te voeren",
-            "commercial": "De inhoud voor commerciële doeleinden te gebruiken"
-          }
-        },
-        "education": {
-          "title": "5.3 Educatief gebruik",
-          "body": "De Dienst is bedoeld voor educatieve doeleinden om gebruikers gebarentaal te leren. Gebruikers worden aangemoedigd de opgedane kennis te gebruiken om te communiceren en anderen te onderwijzen."
-        }
-      },
-      "privacy": {
-        "title": "6. Privacy",
-        "body": "Uw gebruik van de Dienst wordt ook beheerst door ons Privacybeleid. Door de Dienst te gebruiken, stemt u in met het verzamelen en gebruiken van uw informatie zoals beschreven in het Privacybeleid."
-      },
-      "disclaimers": {
-        "title": "7. Disclaimers",
-        "availability": {
-          "title": "7.1 Beschikbaarheid van de dienst",
-          "body": "De Dienst wordt geleverd \"zoals deze is\" en \"zoals beschikbaar\" zonder enige garanties. We garanderen niet dat de Dienst ononderbroken, tijdig, veilig of foutloos zal zijn."
-        },
-        "educational": {
-          "title": "7.2 Educatieve inhoud",
-          "body": "Hoewel we streven naar correcte gebarendemonstraties, garanderen we niet de nauwkeurigheid, volledigheid of bruikbaarheid van de inhoud. Gebarentaal kan per regio en context verschillen."
-        },
-        "noAdvice": {
-          "title": "7.3 Geen professioneel advies",
-          "body": "De Dienst is uitsluitend bedoeld voor educatieve doeleinden en vormt geen professioneel gebarentaalonderwijs of certificering."
-        }
-      },
-      "liability": {
-        "title": "8. Beperking van aansprakelijkheid",
-        "intro": "Voor zover wettelijk toegestaan is SMOG&Co niet aansprakelijk voor indirecte, incidentele, bijzondere, gevolg- of punitieve schade, of verlies van winst, inkomsten, gegevens, gebruik, goodwill of andere immateriële verliezen die voortvloeien uit:",
-        "items": {
-          "access": "Uw toegang tot of gebruik van, of het onvermogen om toegang te krijgen tot of gebruik te maken van de Dienst",
-          "content": "Het gedrag of de inhoud van derden op de Dienst",
-          "materials": "Inhoud verkregen via de Dienst",
-          "security": "Ongeautoriseerde toegang, gebruik of wijziging van uw transmissies of inhoud"
-        }
-      },
-      "indemnification": {
-        "title": "9. Vrijwaring",
-        "body": "U stemt ermee in SMOG&Co, haar bestuurders, werknemers en agenten te vrijwaren voor claims, schade, verplichtingen, verliezen, aansprakelijkheden, kosten of uitgaven die voortvloeien uit: (i) uw gebruik van de Dienst; (ii) uw schending van deze voorwaarden; of (iii) uw schending van rechten van derden."
-      },
-      "modifications": {
-        "title": "10. Wijzigingen aan de dienst",
-        "body": "Wij behouden ons het recht voor om de Dienst (of een deel daarvan) tijdelijk of permanent te wijzigen of stop te zetten, met of zonder voorafgaande kennisgeving. Wij zijn niet aansprakelijk voor enige wijziging, opschorting of stopzetting van de Dienst."
-      },
-      "changes": {
-        "title": "11. Wijzigingen van voorwaarden",
-        "intro": "Wij behouden ons het recht voor om deze voorwaarden op elk moment bij te werken of te wijzigen. We zullen u op de hoogte stellen van belangrijke wijzigingen door:",
-        "items": {
-          "updated": "De datum \"Laatst bijgewerkt\" hierboven bij te werken",
-          "notification": "Een in-app melding weer te geven",
-          "acceptance": "Acceptatie van nieuwe voorwaarden te vereisen bij de volgende aanmelding"
-        },
-        "closing": "Als u de Dienst blijft gebruiken na dergelijke wijzigingen, betekent dit dat u de nieuwe voorwaarden accepteert."
-      },
-      "governing": {
-        "title": "12. Toepasselijk recht",
-        "body": "Deze voorwaarden worden beheerst door het Belgisch recht, zonder rekening te houden met conflicterende rechtsregels. U stemt ermee in dat de rechtbanken in België exclusief bevoegd zijn voor het oplossen van geschillen."
-      },
-      "severability": {
-        "title": "13. Scheidbaarheid",
-        "body": "Als een bepaling van deze voorwaarden niet afdwingbaar of ongeldig wordt bevonden, wordt die bepaling beperkt of verwijderd tot het minimum dat nodig is zodat deze voorwaarden verder volledig van kracht blijven."
-      },
-      "entire": {
-        "title": "14. Volledige overeenkomst",
-        "body": "Deze voorwaarden vormen samen met het Privacybeleid de volledige overeenkomst tussen u en SMOG&Co met betrekking tot het gebruik van de Dienst en vervangen alle eerdere overeenkomsten en afspraken."
-      },
-      "contact": {
-        "title": "15. Contactgegevens",
-        "intro": "Als u vragen heeft over deze voorwaarden, neem dan contact met ons op via:",
-        "emailLabel": "E-mail",
-        "emailValue": "[Your Contact Email]",
-        "addressLabel": "Adres",
-        "addressValue": "[SMOG&Co VZW Registered Address, Belgium]"
-      },
-      "footer": "Door SMOG&Co te gebruiken, bevestigt u dat u deze Servicevoorwaarden hebt gelezen, begrepen en ermee akkoord gaat."
     }
   },
   "ui": {
@@ -1043,12 +928,18 @@
       "errorTryAgain": "Probeer het later opnieuw.",
       "noGestures": "Geen gebaren gevonden.",
       "addToFavorites": "Toevoegen aan favorieten",
-      "removeFromFavorites": "Verwijderen uit favorieten"
+      "removeFromFavorites": "Verwijderen uit favorieten",
+      "addToAnotherList": "Toevoegen aan een andere lijst",
+      "addToList": "Toevoegen aan lijst",
+      "removeFromList": "Verwijderen uit lijst"
     },
     "gestureDetail": {
       "backToGestures": "Terug naar Gebaren",
       "addToFavorites": "Toevoegen aan Favorieten",
       "removeFromFavorites": "Verwijderen uit Favorieten",
+      "addToAnotherList": "Toevoegen aan een andere lijst",
+      "addToList": "Toevoegen aan lijst",
+      "removeFromList": "Verwijderen uit lijst",
       "description": "Beschrijving",
       "relatedConcepts": "Gerelateerde Concepten",
       "noVideo": "Geen video beschikbaar",
@@ -1065,6 +956,8 @@
     },
     "gestureFilters": {
       "searchPlaceholder": "Zoek gebaren...",
+      "searchLabel": "Gebaren zoeken",
+      "clearSearch": "Zoekopdracht wissen",
       "filters": "Filters",
       "results": "{{count}} resultaat",
       "results_other": "{{count}} resultaten",
@@ -1085,24 +978,6 @@
     }
   },
   "gdpr": {
-    "consent": {
-      "title": "Privacy & gegevensgebruik",
-      "description": "We respecteren uw privacy en zijn toegewijd aan het beschermen van uw persoonlijke gegevens.",
-      "analyticsTitle": "Gebruiksanalyse",
-      "analyticsDescription": "Help ons de app te verbeteren door anonieme gebruiksgegevens te delen",
-      "requiredTitle": "Vereist",
-      "requiredDescription": "Accountbeheer en kernfunctionaliteit van de app",
-      "acceptAll": "Alles accepteren",
-      "acceptRequired": "Alleen vereiste accepteren",
-      "customize": "Aanpassen",
-      "learnMore": "Meer informatie in ons",
-      "privacyPolicy": "Privacybeleid",
-      "and": "en",
-      "termsOfService": "Servicevoorwaarden",
-      "consentRequired": "U moet ons Privacybeleid en onze Servicevoorwaarden accepteren om door te gaan",
-      "updated": "Voorkeuren bijgewerkt",
-      "failed": "Voorkeuren bijwerken mislukt"
-    },
     "account": {
       "manageData": "Beheer uw gegevens",
       "exportData": "Mijn gegevens downloaden",
@@ -1119,11 +994,7 @@
       "deleteConfirmButton": "Ja, verwijder mijn account",
       "deleting": "Verwijderen...",
       "deleteSuccess": "Account succesvol verwijderd",
-      "deleteFailed": "Account verwijderen mislukt",
-      "analytics": "Analyse",
-      "analyticsDescription": "Deel gebruiksgegevens om ons te helpen de app te verbeteren",
-      "analyticsEnabled": "Ingeschakeld",
-      "analyticsDisabled": "Uitgeschakeld"
+      "deleteFailed": "Account verwijderen mislukt"
     }
   },
   "accessibility": {
@@ -1131,7 +1002,8 @@
     "skipToNav": "Spring naar navigatie",
     "menu": {
       "open": "Menu openen",
-      "close": "Menu sluiten"
+      "close": "Menu sluiten",
+      "navigation": "Hoofdnavigatie"
     },
     "logo": {
       "alt": "SMOG Logo"

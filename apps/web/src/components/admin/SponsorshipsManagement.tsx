@@ -70,8 +70,10 @@ export function SponsorshipsManagement() {
 
   const { data: sponsorships, isLoading } = useQuery({
     ...orpc.admin.sponsorships.listAll.queryOptions({
-      status: statusFilter === "all" ? undefined : statusFilter,
-      limit: 100,
+      input: {
+        status: statusFilter === "all" ? undefined : statusFilter,
+        limit: 100,
+      },
     }),
     refetchOnMount: true,
   });

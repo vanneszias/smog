@@ -9,12 +9,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGestures } from "@/hooks/useGestures";
-import {
-  trackFavoriteAdded,
-  trackFavoriteRemoved,
-  trackGestureViewed,
-} from "@/lib/analytics";
-import { useFavorites } from "@/lib/favorites-context";
+import { useLists } from "@/lib/lists-context";
+import { trackAnalyticsEvent } from "@/lib/openpanel";
 import { isMobileDevice, openInApp } from "@/utils/deviceDetection";
 
 export const Route = createFileRoute("/gestures_/$id")({
@@ -25,7 +21,7 @@ function GesturesComponent() {
   const { t } = useTranslation();
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const { isFavorite, toggleFavorite, favoriteIds } = useFavorites();
+  const { isGestureSaved, openSaveGestureDialog, savedGestureIds } = useLists();
 
   // Detect mobile immediately (not in useEffect) to avoid hydration issues
   const [showOpenInApp, setShowOpenInApp] = useState(() => {
@@ -66,21 +62,17 @@ function GesturesComponent() {
     return allGestures.find((g) => g._id === id);
   }, [id, allGestures]);
 
-  useEffect(() => {
-    if (selectedGesture) {
-      const categories: string[] = (selectedGesture.categories || [])
-        .filter((c): c is Exclude<typeof c, null | undefined> => Boolean(c))
-        .map((c) => (typeof c === "string" ? c : c.name));
-      trackGestureViewed(
-        selectedGesture._id,
-        selectedGesture.name,
-        categories,
-        "search_results"
-      );
-    }
-  }, [selectedGesture]);
-
   const showSkeleton = isLoading && !!id;
+  const selectedGestureId = selectedGesture?._id;
+
+  useEffect(() => {
+    if (selectedGestureId) {
+      trackAnalyticsEvent("gesture_viewed", {
+        gesture_id: selectedGestureId,
+        source: "direct",
+      });
+    }
+  }, [selectedGestureId]);
 
   const handleSelectGesture = (gestureId: string) => {
     navigate({ to: "/gestures/$id", params: { id: gestureId } });
@@ -90,18 +82,17 @@ function GesturesComponent() {
     navigate({ to: "/gestures" });
   };
 
-  const handleToggleFavorite = (gestureId: string) => {
+  const handleToggleSaved = (gestureId: string) => {
     const gesture = allGestures.find((g) => g._id === gestureId);
-    const isFav = isFavorite(gestureId);
     const categories: string[] = (gesture?.categories || [])
       .filter((c): c is Exclude<typeof c, null | undefined> => Boolean(c))
       .map((c) => (typeof c === "string" ? c : c.name));
-    if (isFav) {
-      trackFavoriteRemoved(gestureId, gesture?.name || "", categories);
-    } else {
-      trackFavoriteAdded(gestureId, gesture?.name || "", categories);
-    }
-    toggleFavorite(gestureId, gesture?.name);
+    openSaveGestureDialog({
+      categories,
+      gestureId,
+      gestureName: gesture?.name,
+      source: "gesture_list",
+    });
   };
 
   const handleOpenInApp = useCallback(() => {
@@ -133,12 +124,12 @@ function GesturesComponent() {
           <div className="min-h-0 flex-1 overflow-hidden">
             <GestureList
               error={error}
-              favoriteGestureIds={favoriteIds}
               gestures={filteredGestures}
               isLoading={isLoading}
               onSelectGesture={handleSelectGesture}
               onSort={handleSort}
-              onToggleFavorite={handleToggleFavorite}
+              onToggleSaved={handleToggleSaved}
+              savedGestureIds={savedGestureIds}
               selectedGestureId={id}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
@@ -155,11 +146,25 @@ function GesturesComponent() {
           ) : selectedGesture ? (
             <GestureDetail
               gesture={selectedGesture}
-              isFavorite={isFavorite(selectedGesture._id)}
+              isSaved={isGestureSaved(selectedGesture._id)}
               onBack={handleDeselectGesture}
               onOpenInApp={handleOpenInApp}
-              onToggleFavorite={() =>
-                toggleFavorite(selectedGesture._id, selectedGesture.name)
+              onToggleSaved={() =>
+                openSaveGestureDialog({
+                  categories: selectedGesture.categories
+                    .filter(
+                      (
+                        category
+                      ): category is Exclude<
+                        typeof category,
+                        null | undefined
+                      > => Boolean(category)
+                    )
+                    .map((category) => category.name),
+                  gestureId: selectedGesture._id,
+                  gestureName: selectedGesture.name,
+                  source: "gesture_detail",
+                })
               }
               showOpenInApp={showOpenInApp}
             />

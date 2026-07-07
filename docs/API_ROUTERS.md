@@ -1,275 +1,91 @@
 # API Routers
 
-> Last updated: March 18, 2026  
-> See also: [ARCHITECTURE.md](./ARCHITECTURE.md), [PAYMENT_FLOW.md](./PAYMENT_FLOW.md)
+> Last updated: June 10, 2026
 
-## Overview
+The Hono server mounts the oRPC handler at `/rpc` and the OpenAPI reference
+handler at `/api-reference`. Router definitions live in
+`packages/api/src/routers/`.
 
-The API layer uses **oRPC** (type-safe RPC over HTTP) with **Zod** input/output schemas. All routers are defined in `packages/api/src/routers/` and mounted on the Hono server in `apps/server/src/index.ts`.
+## Routers
 
-The web app imports the client from `@/utils/orpc` and calls procedures directly — no code generation required.
+| Router | Main procedures |
+|---|---|
+| `gestures` | `list`, `getById`, `search` |
+| `categories` | `list`, `getByIds` |
+| `favorites` | get IDs/gestures, toggle, check |
+| `lists` | initialize, CRUD, sharing, list items, reordering |
+| `users` | get/create current user, WorkOS lookup |
+| `sponsorships` | list availability, preview, create, pay, success lookup, re-edit |
+| `admin` | users, gestures, categories, sponsorships, Mux, audit logs |
+
+## Example
 
 ```typescript
-// Web app usage
+import { useQuery } from "@tanstack/react-query";
 import { client, orpc } from "@/utils/orpc";
 
-// Query (TanStack Query)
-const { data } = useQuery(orpc.sponsorships.listGesturesWithSponsorship.queryOptions());
+const gestures = useQuery(
+  orpc.sponsorships.listGesturesWithSponsorship.queryOptions()
+);
 
-// Mutation
-const result = await client.sponsorships.generatePreview({ gestureId, sponsorName });
+const preview = await client.sponsorships.generatePreview({
+  gestureId,
+  sponsorName,
+  overlayText,
+  logoImage,
+});
 ```
 
----
+## Gesture Inputs
 
-## Router Structure
+- `gestures.list`: `{ cursor?: string; numItems?: number }`
+- `gestures.getById`: `{ id: string }`
+- `gestures.search`: `{ searchText: string; limit?: number }`
 
-```
-packages/api/src/routers/
-├── admin/
-│   ├── gestures.ts      — Gesture CRUD for admin panel
-│   └── sponsorships.ts  — Sponsorship management for admin panel
-├── categories.ts         — Category listing
-├── gestures.ts           — Public gesture queries
-├── sponsorships.ts       — Sponsor purchase flow (public)
-└── users.ts              — User profile
-```
+## Sponsorship Flow
 
----
+- `listGesturesWithSponsorship`
+- `generatePreview`
+- `createBulkSponsorshipsSimplified`
+- `createBulkPayment`
+- `getSponsorshipsByPaymentId`
+- `getByReEditToken`
+- `reSubmitSponsorship`
 
-## `categories` Router
+The server recalculates pricing in Convex. Public re-edit procedures authenticate
+with a random, expiring token rather than a user session.
 
-### `categories.list`
-List all active categories.
+## Admin Structure
 
-```typescript
-// Input: none
-// Output: Category[]
-const categories = await client.categories.list();
-```
+`admin.verifyAdmin` checks access. Nested groups expose:
 
----
+- `admin.users`
+- `admin.gestures`
+- `admin.categories`
+- `admin.sponsorships`
+- `admin.logs`
 
-## `gestures` Router
-
-### `gestures.list`
-List all active gestures (paginated).
-
-```typescript
-// Input: { limit?: number; cursor?: string }
-// Output: { gestures: Gesture[]; nextCursor?: string }
-```
-
-### `gestures.get`
-Get a single gesture by ID.
-
-```typescript
-// Input: { gestureId: string }
-// Output: Gesture
-```
-
----
-
-## `sponsorships` Router
-
-### `sponsorships.listGesturesWithSponsorship`
-List all gestures with their current sponsorship status. Used by the sponsor selection page.
-
-```typescript
-// Input: none
-// Output: GestureWithSponsorshipData[]
-// (includes gesture fields + sponsorship field if any)
-```
-
-### `sponsorships.generatePreview`
-Generate a pre-composed preview video for one gesture + overlay combination.  
-Triggers a Remotion render and uploads to MUX.
-
-```typescript
-// Input:
-{
-  gestureId: string;
-  sponsorName: string;
-  logoImage?: string;   // Base64 data URL (optional)
-  overlayText: string;
-}
-// Output: { playbackId: string }
-```
-
-### `sponsorships.createBulkSponsorshipsSimplified`
-Create Convex sponsorship records after preview generation (before payment).
-
-```typescript
-// Input:
-{
-  gestureIds: string[];
-  sponsorName: string;
-  sponsorEmail: string;
-  contactFullName: string;
-  contactCompany?: string;
-  overlayText: string;
-  logoImage?: string;
-  includeLogo: boolean;
-  durationYears: number;            // Always 1
-  previewVideoPlaybackIds: string[]; // One per gesture, same order as gestureIds
-  invoiceRequested?: boolean;
-  invoiceName?: string;
-  invoiceVatNumber?: string;
-  invoiceEmail?: string;
-}
-// Output: { sponsorshipIds: string[] }
-```
-
-### `sponsorships.createBulkPayment`
-Create a Mollie payment for multiple sponsorships and return the checkout URL.
-
-```typescript
-// Input: { sponsorshipIds: string[]; amount: number }
-// Output: { checkoutUrl: string; paymentId: string }
-```
-
-### `sponsorships.getSponsorshipsByPaymentId`
-Look up sponsorships by Mollie payment ID. Used by the success page.
-
-```typescript
-// Input: { paymentId: string }
-// Output: SponsorshipWithGesture[]
-```
-
----
-
-## `admin/gestures` Router
-
-Requires admin authentication.
-
-### `admin.gestures.listAll`
-List all gestures including inactive ones.
-
-```typescript
-// Input: { includeInactive?: boolean; limit?: number }
-// Output: AdminGesture[]
-```
-
-### `admin.gestures.update`
-Update one or more fields of a gesture.
-
-```typescript
-// Input: { gestureId: string; name?: string; info?: string; playbackId?: string;
-//           concept?: string[]; categoryIds?: string[]; isActive?: boolean }
-// Output: { success: boolean }
-```
-
-### `admin.gestures.create`
-Create a new gesture.
-
-```typescript
-// Input: { name: string; playbackId: string; info?: string;
-//           concept?: string[]; categoryIds?: string[] }
-// Output: { gestureId: string }
-```
-
----
-
-## `admin/sponsorships` Router
-
-Requires admin authentication.
-
-### `admin.sponsorships.listAll`
-List all sponsorships with optional status filter.
-
-```typescript
-// Input: { status?: string; limit?: number }
-// Output: SponsorshipWithGesture[]
-```
-
-### `admin.sponsorships.approve`
-Approve a pending sponsorship. Triggers Remotion render + email.
-
-```typescript
-// Input: { sponsorshipId: string }
-// Output: { success: boolean }
-```
-
-### `admin.sponsorships.reject`
-Reject a pending sponsorship with a reason. Sends rejection email.
-
-```typescript
-// Input: { sponsorshipId: string; reason: string }
-// Output: { success: boolean }
-```
-
-### `admin.sponsorships.forceExpire`
-Force-expire an active sponsorship.
-
-```typescript
-// Input: { sponsorshipId: string }
-// Output: { success: boolean }
-```
-
-### `admin.sponsorships.generateReEditLink`
-Generate a signed re-edit token link (valid 7 days) for the sponsor to resubmit.
-
-```typescript
-// Input: { sponsorshipId: string }
-// Output: { url: string }
-```
-
-### `admin.sponsorships.markPaidManually`
-Manually mark a sponsorship as paid (for offline payments).
-
-```typescript
-// Input: { sponsorshipId: string }
-// Output: { success: boolean }
-```
-
----
-
-## Error Handling
-
-All procedures throw structured errors that oRPC serialises as HTTP error responses:
-
-```typescript
-// Structured error thrown in router
-throw new ConvexError("Gesture not found");
-
-// Client receives:
-// { code: "CONVEX_ERROR", message: "Gesture not found", recoverable: true }
-```
-
-Error codes are defined in `packages/types/src/api.ts` as `ApiErrorCode`.
-
----
+Admin sponsorship actions include listing, approval, rejection, expiry,
+restoration, re-edit links, pending-payment cancellation, manual payment
+marking, and CSV export.
 
 ## Authentication
 
-Protected routes use the `authMiddleware` from `@smog/auth`:
+`publicProcedure`, `protectedProcedure`, and `adminProcedure` are defined in the
+API package. Protected requests pass a WorkOS bearer token through the request
+context; admin procedures additionally verify the Convex user role.
 
-```typescript
-// Public procedure
-export const listGestures = publicProcedure.query(async () => { ... });
-
-// Authenticated procedure  
-export const createGesture = authProcedure.mutation(async ({ ctx }) => {
-  const { userId } = ctx.auth;
-  ...
-});
-
-// Admin-only procedure
-export const approveSponsorship = adminProcedure.mutation(async ({ ctx }) => {
-  // ctx.auth.role === "admin" is guaranteed
-  ...
-});
-```
-
----
-
-## Webhook Endpoints
-
-These are plain Hono routes (not oRPC) mounted in `apps/server/src/index.ts`:
+## Plain Hono Routes
 
 | Method | Path | Purpose |
-|--------|------|---------|
-| `POST` | `/api/webhooks/mollie` | Mollie payment status updates |
-| `POST` | `/api/webhooks/mux` | MUX upload completion events |
+|---|---|---|
+| `POST` | `/auth/workos/callback` | Exchange WorkOS code |
+| `POST` | `/auth/token/refresh` | Refresh access token |
+| `POST` | `/auth/token/clear` | Clear web session cookie |
+| `POST` | `/webhooks/mollie` | Verify payment update |
+| `POST` | `/api/video/master-access` | Temporary Mux source URL |
+| `POST` | `/api/email/trigger` | Authenticated internal email job |
+| `GET` | `/api/email/preview/:template` | Render an admin-only sample email |
 
-See [PAYMENT_FLOW.md](./PAYMENT_FLOW.md) for the full Mollie webhook flow.
+See [Payment Flow](./PAYMENT_FLOW.md) and
+[Privacy and Analytics](./PRIVACY_AND_ANALYTICS.md).

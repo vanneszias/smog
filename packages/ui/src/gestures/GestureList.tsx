@@ -1,12 +1,7 @@
-import { Heart } from "lucide-react";
+import { Check, Plus } from "lucide-react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { GestureCardData } from "./GestureCard";
-
-export interface GestureListData {
-  gestures: GestureCardData[];
-  isDone?: boolean;
-  continueCursor?: string;
-}
+import type { GestureCardData } from "./types";
 
 interface GestureListProps {
   gestures: GestureCardData[];
@@ -17,29 +12,29 @@ interface GestureListProps {
   sortColumn?: "name" | "category";
   sortDirection?: "asc" | "desc";
   onSort?: (column: "name" | "category") => void;
-  favoriteGestureIds?: string[];
-  onToggleFavorite?: (gestureId: string) => void;
+  savedGestureIds?: string[];
+  onToggleSaved?: (gestureId: string) => void;
 }
 
 function GestureRow({
   gesture,
+  isSaved,
   isSelected,
   onClick,
-  isFavorite,
-  onToggleFavorite,
+  onToggleSaved,
 }: {
   gesture: GestureCardData;
   isSelected: boolean;
   onClick: () => void;
-  isFavorite?: boolean;
-  onToggleFavorite?: (gestureId: string) => void;
+  isSaved?: boolean;
+  onToggleSaved?: (gestureId: string) => void;
 }) {
   const { t } = useTranslation();
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  const handleSaveClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onToggleFavorite) {
-      onToggleFavorite(gesture._id);
+    if (onToggleSaved) {
+      onToggleSaved(gesture._id);
     }
   };
 
@@ -106,25 +101,27 @@ function GestureRow({
         )}
       </div>
 
-      {/* Favorite button */}
-      {onToggleFavorite && (
+      {/* Save-to-list button */}
+      {onToggleSaved && (
         <button
           aria-label={
-            isFavorite
-              ? t("ui.gestureList.removeFromFavorites")
-              : t("ui.gestureList.addToFavorites")
+            isSaved
+              ? t("ui.gestureList.addToAnotherList", "Add to another list")
+              : t("ui.gestureList.addToList", "Add to list")
           }
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all hover:scale-110 hover:bg-muted"
-          onClick={handleFavoriteClick}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all hover:scale-110 ${
+            isSaved
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : "text-primary hover:bg-muted"
+          }`}
+          onClick={handleSaveClick}
           type="button"
         >
-          <Heart
-            className={`h-6 w-6 transition-all ${
-              isFavorite
-                ? "fill-[#FF3B7D] stroke-[#FF3B7D]"
-                : "fill-none stroke-primary hover:fill-primary/20"
-            }`}
-          />
+          {isSaved ? (
+            <Check className="h-6 w-6" />
+          ) : (
+            <Plus className="h-6 w-6" />
+          )}
         </button>
       )}
     </div>
@@ -140,10 +137,14 @@ export function GestureList({
   sortColumn: _sortColumn = "name",
   sortDirection: _sortDirection = "asc",
   onSort: _onSort,
-  favoriteGestureIds = [],
-  onToggleFavorite,
+  savedGestureIds = [],
+  onToggleSaved,
 }: GestureListProps) {
   const { t } = useTranslation();
+  const savedGestureIdSet = useMemo(
+    () => new Set(savedGestureIds),
+    [savedGestureIds]
+  );
 
   if (isLoading) {
     return (
@@ -185,13 +186,13 @@ export function GestureList({
         {gestures.map((gesture) => (
           <GestureRow
             gesture={gesture}
-            isFavorite={favoriteGestureIds.includes(gesture._id)}
+            isSaved={savedGestureIdSet.has(gesture._id)}
             isSelected={selectedGestureId === gesture._id}
             key={gesture._id}
             onClick={() => {
               onSelectGesture(gesture._id);
             }}
-            onToggleFavorite={onToggleFavorite}
+            onToggleSaved={onToggleSaved}
           />
         ))}
       </div>

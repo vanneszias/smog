@@ -1,55 +1,36 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Text, View } from "react-native";
 import { useAuth } from "@/context/AuthProvider";
 import logger from "@/utils/logger";
 
 export default function AuthCallback() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
-  const [isProcessing, setIsProcessing] = useState(true);
+  const { authMode, isHandlingOAuthCallback, isLoading } = useAuth();
 
   useEffect(() => {
-    // Wait for WorkOS to finish loading
-    if (isLoading) {
+    if (isLoading || isHandlingOAuthCallback) {
       return;
     }
 
-    const handleAuthCallback = async () => {
-      try {
-        logger.log("[AuthCallback] Starting auth callback process");
-        logger.log("[AuthCallback] Current user:", !!user);
-
-        // Clear any existing guest mode since user just authenticated
-        if (user) {
-          logger.log("[AuthCallback] Clearing guest mode");
-          await AsyncStorage.removeItem("@smog_guest_mode");
-          await AsyncStorage.removeItem("@smog_guest_id");
-        }
-
-        // Wait a bit for auth state to stabilize
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        if (user) {
-          logger.log("[AuthCallback] User is signed in, navigating to tabs");
-          router.replace("/(tabs)");
-        } else {
-          logger.log("[AuthCallback] User not signed in, returning to welcome");
-          router.replace("/welcome");
-        }
-      } catch (error) {
-        logger.error("[AuthCallback] Error handling auth callback:", error);
-        router.replace("/welcome");
-      } finally {
-        setIsProcessing(false);
+    try {
+      if (authMode === "authenticated" || authMode === "guest") {
+        logger.log("[AuthCallback] Auth settled, navigating to tabs");
+        router.replace("/(tabs)");
+        return;
       }
-    };
 
-    if (isProcessing) {
-      handleAuthCallback();
+      if (authMode === "unauthenticated") {
+        logger.log(
+          "[AuthCallback] Auth failed or cancelled, returning to welcome"
+        );
+        router.replace("/welcome");
+      }
+    } catch (error) {
+      logger.error("[AuthCallback] Error handling auth callback:", error);
+      router.replace("/welcome");
     }
-  }, [router, isLoading, user, isProcessing]);
+  }, [authMode, isHandlingOAuthCallback, isLoading, router]);
 
   return (
     <View

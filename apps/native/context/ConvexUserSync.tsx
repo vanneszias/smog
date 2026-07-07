@@ -8,7 +8,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import {
   createContext,
   type ReactNode,
@@ -39,6 +39,7 @@ const ConvexUserContext = createContext<ConvexUserContextType>({
  */
 export function ConvexUserSync({ children }: { children: ReactNode }) {
   const { authMode, user, guestId, isLoading: isAuthLoading } = useAuth();
+  const convexAuth = useConvexAuth();
   const [userId, setUserId] = useState<Id<"users"> | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
 
@@ -48,9 +49,14 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
 
   // Convex queries
   const workosId = user?.id;
+  const isConvexAuthReady =
+    authMode !== "authenticated" || convexAuth.isAuthenticated;
+  const shouldQueryWorkOSUser = Boolean(
+    workosId && authMode === "authenticated" && convexAuth.isAuthenticated
+  );
   const existingUserByWorkOS = useQuery(
     api.users.getUserByWorkOSId,
-    workosId ? { workosId } : "skip"
+    shouldQueryWorkOSUser && workosId ? { workosId } : "skip"
   );
   const existingUserByGuest = useQuery(
     api.users.getUserByGuestId,
@@ -59,7 +65,7 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
 
   // Sync authenticated user
   const syncAuthenticatedUser = useCallback(async () => {
-    if (!workosId) {
+    if (!(workosId && convexAuth.isAuthenticated)) {
       return;
     }
 
@@ -84,7 +90,13 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
         setIsInitializing(false);
       }
     }
-  }, [workosId, existingUserByWorkOS, createUser, migrateGuestToUser]);
+  }, [
+    workosId,
+    convexAuth.isAuthenticated,
+    existingUserByWorkOS,
+    createUser,
+    migrateGuestToUser,
+  ]);
 
   // Sync guest user
   const syncGuestUser = useCallback(async () => {
@@ -114,7 +126,7 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
 
   // Handle auth state changes
   useEffect(() => {
-    if (isAuthLoading || isInitializing) {
+    if (isAuthLoading || isInitializing || !isConvexAuthReady) {
       return;
     }
 
@@ -129,6 +141,7 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
     authMode,
     isAuthLoading,
     isInitializing,
+    isConvexAuthReady,
     syncAuthenticatedUser,
     syncGuestUser,
   ]);
@@ -136,9 +149,9 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       userId,
-      isLoading: isAuthLoading || isInitializing,
+      isLoading: isAuthLoading || isInitializing || !isConvexAuthReady,
     }),
-    [userId, isAuthLoading, isInitializing]
+    [userId, isAuthLoading, isInitializing, isConvexAuthReady]
   );
 
   return (
@@ -146,13 +159,6 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
       {children}
     </ConvexUserContext.Provider>
   );
-}
-
-/**
- * Hook to get the current Convex user context
- */
-export function useConvexUser() {
-  return useContext(ConvexUserContext);
 }
 
 /**

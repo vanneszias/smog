@@ -1,4 +1,4 @@
-import MuxPlayer from "@mux/mux-player-react";
+import MuxPlayer from "@mux/mux-player-react/lazy";
 import { createLogger } from "@smog/shared";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,7 @@ export const Route = createFileRoute("/sponsors/re-edit")({
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Multi-step wizard requires complex state management
 function ReEditComponent() {
+  const { t } = useTranslation();
   const { token } = Route.useSearch();
 
   const {
@@ -108,7 +110,11 @@ function ReEditComponent() {
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      setLogoError("Logo must be smaller than 2 MB");
+      setLogoError(t("web.sponsors.reEdit.errors.logoTooLarge"));
+      return;
+    }
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setLogoError(t("web.sponsors.reEdit.errors.logoInvalidFormat"));
       return;
     }
     setLogoFile(file);
@@ -130,11 +136,11 @@ function ReEditComponent() {
       return;
     }
     if (!sponsorName.trim()) {
-      toast.error("Brand name is required.");
+      toast.error(t("web.sponsors.reEdit.errors.brandRequired"));
       return;
     }
     if (!overlayText.trim()) {
-      toast.error("Overlay text is required.");
+      toast.error(t("web.sponsors.reEdit.errors.overlayRequired"));
       return;
     }
     setIsGeneratingPreview(true);
@@ -150,7 +156,7 @@ function ReEditComponent() {
       setPreviewPlaybackId(result.playbackId);
     } catch (err) {
       logger.error("[ReEdit] Failed to generate preview:", err);
-      toast.error("Failed to generate preview. Please try again.");
+      toast.error(t("web.sponsors.reEdit.errors.previewFailed"));
     } finally {
       setIsGeneratingPreview(false);
     }
@@ -161,11 +167,11 @@ function ReEditComponent() {
       return;
     }
     if (!previewPlaybackId) {
-      toast.error("Generate a preview first.");
+      toast.error(t("web.sponsors.reEdit.errors.generateFirst"));
       return;
     }
     if (!(sponsorName.trim() && overlayText.trim())) {
-      toast.error("Please fill in all required fields.");
+      toast.error(t("web.sponsors.reEdit.errors.fillRequired"));
       return;
     }
     setIsSubmitting(true);
@@ -181,9 +187,7 @@ function ReEditComponent() {
       setSubmitted(true);
     } catch (err) {
       logger.error("[ReEdit] Failed to submit:", err);
-      toast.error(
-        `Failed to submit: ${err instanceof Error ? err.message : "Unknown error"}`
-      );
+      toast.error(t("web.sponsors.reEdit.errors.submitFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -194,10 +198,10 @@ function ReEditComponent() {
   if (!token) {
     return (
       <GuardScreen
-        body="This link is missing a required token. Please use the link provided by the admin."
+        body={t("web.sponsors.reEdit.invalidBody")}
         color="red"
         icon={<AlertTriangle className="h-8 w-8" />}
-        title="Invalid Link"
+        title={t("web.sponsors.reEdit.invalidTitle")}
       />
     );
   }
@@ -206,7 +210,7 @@ function ReEditComponent() {
     return (
       <div className="flex min-h-64 items-center justify-center gap-3 text-muted-foreground">
         <RefreshCw className="h-5 w-5 animate-spin" />
-        Validating your link…
+        {t("web.sponsors.reEdit.loading")}
       </div>
     );
   }
@@ -214,10 +218,10 @@ function ReEditComponent() {
   if (error || !tokenResult) {
     return (
       <GuardScreen
-        body="This re-edit link is invalid or has already been used. Contact the admin if you think this is a mistake."
+        body={t("web.sponsors.reEdit.notFoundBody")}
         color="red"
         icon={<AlertTriangle className="h-8 w-8" />}
-        title="Link Not Found"
+        title={t("web.sponsors.reEdit.notFoundTitle")}
       />
     );
   }
@@ -225,10 +229,10 @@ function ReEditComponent() {
   if (tokenResult.expired) {
     return (
       <GuardScreen
-        body="This re-edit link has expired. Ask the admin to generate a new one."
+        body={t("web.sponsors.reEdit.expiredBody")}
         color="amber"
         icon={<Clock className="h-8 w-8" />}
-        title="Link Expired"
+        title={t("web.sponsors.reEdit.expiredTitle")}
       />
     );
   }
@@ -239,16 +243,17 @@ function ReEditComponent() {
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
           <CheckCircle className="h-10 w-10 text-primary" />
         </div>
-        <h2 className="font-bold text-2xl">Video Submitted!</h2>
+        <h2 className="font-bold text-2xl">
+          {t("web.sponsors.reEdit.submittedTitle")}
+        </h2>
         <p className="max-w-sm text-muted-foreground">
-          Your new video is in the admin's review queue. No payment needed —
-          you'll hear back soon.
+          {t("web.sponsors.reEdit.submittedBody")}
         </p>
         <a
           className="mt-2 font-semibold text-primary text-sm hover:underline"
           href="/"
         >
-          ← Back to site
+          ← {t("web.sponsors.reEdit.backToSite")}
         </a>
       </div>
     );
@@ -271,14 +276,14 @@ function ReEditComponent() {
       <header className="border-border border-b bg-gradient-to-b from-background to-muted/20 px-4 pt-safe-top">
         <div className="mx-auto max-w-2xl py-8">
           <p className="mb-1 text-muted-foreground text-sm">
-            Re-edit sponsorship
+            {t("web.sponsors.reEdit.eyebrow")}
           </p>
           <h1 className="font-bold text-3xl tracking-tight">
-            Update your video
+            {t("web.sponsors.reEdit.title")}
           </h1>
           {sponsorship.gestureName && (
             <p className="mt-1 text-muted-foreground">
-              Gesture:{" "}
+              {t("web.sponsors.reEdit.gesture")}:{" "}
               <span className="font-medium text-foreground">
                 {sponsorship.gestureName}
               </span>
@@ -287,7 +292,7 @@ function ReEditComponent() {
           {daysLeft !== null && (
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-amber-600 text-sm dark:text-amber-400">
               <Clock className="h-3.5 w-3.5" />
-              Link expires in {daysLeft} day{daysLeft !== 1 ? "s" : ""}
+              {t("web.sponsors.reEdit.expires", { count: daysLeft })}
             </div>
           )}
         </div>
@@ -299,7 +304,7 @@ function ReEditComponent() {
         <div className="overflow-hidden rounded-2xl border-2 border-border shadow-sm">
           <div className="border-border border-b bg-card px-4 py-2.5">
             <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-              Original gesture video
+              {t("web.sponsors.reEdit.originalVideo")}
             </p>
           </div>
           <MuxPlayer
@@ -317,7 +322,7 @@ function ReEditComponent() {
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 font-semibold text-primary text-sm">
               {stepNum(1)}
             </span>
-            Edit your details
+            {t("web.sponsors.reEdit.editDetails")}
           </h2>
 
           <div className="space-y-5">
@@ -325,7 +330,7 @@ function ReEditComponent() {
             <div className="space-y-1.5">
               <p className="flex items-center gap-1.5 font-semibold text-sm">
                 <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                Gesture
+                {t("web.sponsors.reEdit.gesture")}
               </p>
               <div className="flex h-11 items-center rounded-xl border border-border bg-muted/40 px-3.5 text-muted-foreground text-sm italic">
                 {sponsorship.gestureName}
@@ -338,7 +343,8 @@ function ReEditComponent() {
                 className="font-semibold text-sm"
                 htmlFor="field-sponsor-name"
               >
-                Brand Name <span className="font-normal text-primary">*</span>
+                {t("web.sponsors.reEdit.brandName")}{" "}
+                <span className="font-normal text-primary">*</span>
               </label>
               <Input
                 className="h-11 rounded-xl"
@@ -348,11 +354,11 @@ function ReEditComponent() {
                   setSponsorName(e.target.value);
                   resetPreview();
                 }}
-                placeholder="Your brand or company name"
+                placeholder={t("web.sponsors.reEdit.brandPlaceholder")}
                 value={sponsorName}
               />
               <p className="text-muted-foreground text-xs">
-                Shown in the overlay on the video.
+                {t("web.sponsors.reEdit.brandHelp")}
               </p>
             </div>
 
@@ -362,7 +368,8 @@ function ReEditComponent() {
                 className="font-semibold text-sm"
                 htmlFor="field-overlay-text"
               >
-                Overlay Text <span className="font-normal text-primary">*</span>
+                {t("web.sponsors.reEdit.overlayText")}{" "}
+                <span className="font-normal text-primary">*</span>
               </label>
               <Input
                 className="h-11 rounded-xl"
@@ -372,11 +379,11 @@ function ReEditComponent() {
                   setOverlayText(e.target.value);
                   resetPreview();
                 }}
-                placeholder="Text composited on top of the gesture video"
+                placeholder={t("web.sponsors.reEdit.overlayPlaceholder")}
                 value={overlayText}
               />
               <p className="text-muted-foreground text-xs">
-                Max 100 characters.
+                {t("web.sponsors.reEdit.maxCharacters")}
               </p>
             </div>
           </div>
@@ -389,13 +396,13 @@ function ReEditComponent() {
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 font-semibold text-primary text-sm">
                 2
               </span>
-              Update logo
+              {t("web.sponsors.reEdit.updateLogo")}
             </h2>
 
             {logoPreview ? (
               <div className="flex items-center gap-4 rounded-xl border border-border bg-background p-4">
                 <img
-                  alt="Logo"
+                  alt={t("web.sponsors.reEdit.logoAlt")}
                   className="h-16 w-16 rounded-lg border border-border bg-card object-contain"
                   height={64}
                   src={logoPreview}
@@ -410,6 +417,7 @@ function ReEditComponent() {
                   </p>
                 </div>
                 <button
+                  aria-label={t("web.sponsors.reEdit.removeLogo")}
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
                   onClick={handleRemoveLogo}
                   type="button"
@@ -426,13 +434,15 @@ function ReEditComponent() {
                   <ImagePlus className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">Drop a new logo here</p>
+                  <p className="font-semibold text-sm">
+                    {t("web.sponsors.reEdit.uploadLogo")}
+                  </p>
                   <p className="mt-0.5 text-muted-foreground text-xs">
-                    PNG, SVG or WebP · Max 2 MB
+                    {t("web.sponsors.reEdit.formats")}
                   </p>
                 </div>
                 <input
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/webp"
                   className="hidden"
                   id="logo-upload"
                   onChange={handleLogoUpload}
@@ -453,7 +463,7 @@ function ReEditComponent() {
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 font-semibold text-primary text-sm">
                 {stepNum(hasLogo ? 3 : 2)}
               </span>
-              Preview
+              {t("web.sponsors.reEdit.preview")}
             </h2>
             <Button
               disabled={isGeneratingPreview}
@@ -464,12 +474,14 @@ function ReEditComponent() {
               {isGeneratingPreview ? (
                 <>
                   <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  Generating…
+                  {t("web.sponsors.reEdit.generating")}
                 </>
               ) : (
                 <>
                   <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                  {previewPlaybackId ? "Regenerate" : "Generate Preview"}
+                  {previewPlaybackId
+                    ? t("web.sponsors.reEdit.regenerate")
+                    : t("web.sponsors.reEdit.generatePreview")}
                 </>
               )}
             </Button>
@@ -478,7 +490,7 @@ function ReEditComponent() {
           {isGeneratingPreview && (
             <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-xl border border-primary/20 bg-primary/5 text-muted-foreground text-sm">
               <RefreshCw className="h-7 w-7 animate-spin text-primary" />
-              Compositing your video… about a minute.
+              {t("web.sponsors.reEdit.compositing")}
             </div>
           )}
 
@@ -495,7 +507,7 @@ function ReEditComponent() {
               </div>
               <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-primary text-sm">
                 <CheckCircle className="h-4 w-4 shrink-0" />
-                Looks good? Submit below when you're ready.
+                {t("web.sponsors.reEdit.previewReady")}
               </div>
             </div>
           )}
@@ -503,7 +515,7 @@ function ReEditComponent() {
           {!(previewPlaybackId || isGeneratingPreview) && (
             <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-xl border border-border border-dashed text-muted-foreground text-sm">
               <RefreshCw className="h-8 w-8 opacity-20" />
-              Click "Generate Preview" to see your video with the new overlay.
+              {t("web.sponsors.reEdit.previewEmpty")}
             </div>
           )}
         </section>
@@ -519,17 +531,17 @@ function ReEditComponent() {
             {isSubmitting ? (
               <>
                 <RefreshCw className="h-5 w-5 animate-spin" />
-                Submitting…
+                {t("web.sponsors.reEdit.submitting")}
               </>
             ) : (
               <>
                 <Send className="h-5 w-5" />
-                Submit for Review
+                {t("web.sponsors.reEdit.submitReview")}
               </>
             )}
           </Button>
           <p className="text-center text-muted-foreground text-sm">
-            No payment required. The admin reviews before it goes live.
+            {t("web.sponsors.reEdit.noPayment")}
           </p>
         </div>
       </div>
@@ -550,6 +562,7 @@ function GuardScreen({
   body: string;
   color: "red" | "amber";
 }) {
+  const { t } = useTranslation();
   const iconBg =
     color === "red"
       ? "bg-destructive/10 text-destructive"
@@ -568,7 +581,7 @@ function GuardScreen({
         className="mt-2 font-semibold text-primary text-sm hover:underline"
         href="/"
       >
-        ← Back to site
+        ← {t("web.sponsors.reEdit.backToSite")}
       </a>
     </div>
   );

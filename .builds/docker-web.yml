@@ -34,6 +34,10 @@ tasks:
       : "${REGISTRY_HOST:=docker.io}"
       : "${REGISTRY_USERNAME:?REGISTRY_USERNAME is required}"
       : "${REGISTRY_PASSWORD:?REGISTRY_PASSWORD is required}"
+      : "${VITE_SERVER_URL:?VITE_SERVER_URL is required}"
+      : "${VITE_WORKOS_CLIENT_ID:?VITE_WORKOS_CLIENT_ID is required}"
+      : "${VITE_WORKOS_REDIRECT_URI:?VITE_WORKOS_REDIRECT_URI is required}"
+      : "${VITE_CONVEX_URL:?VITE_CONVEX_URL is required}"
       set -x
 
       short_sha="$(git rev-parse --short=12 HEAD)"
@@ -61,8 +65,8 @@ tasks:
         --build-arg "VITE_WORKOS_CLIENT_ID=${VITE_WORKOS_CLIENT_ID:-}" \
         --build-arg "VITE_WORKOS_REDIRECT_URI=${VITE_WORKOS_REDIRECT_URI:-}" \
         --build-arg "VITE_CONVEX_URL=${VITE_CONVEX_URL:-}" \
-        --build-arg "VITE_PUBLIC_POSTHOG_API_KEY=${VITE_PUBLIC_POSTHOG_API_KEY:-}" \
-        --build-arg "VITE_PUBLIC_POSTHOG_HOST=${VITE_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}" \
+        --build-arg "VITE_OPENPANEL_API_URL=${VITE_OPENPANEL_API_URL:-https://analytics.zias.be/api}" \
+        --build-arg "VITE_OPENPANEL_CLIENT_ID=${VITE_OPENPANEL_CLIENT_ID:-}" \
         -f apps/web/Dockerfile \
         -t "$image:$image_tag" \
         .

@@ -1,1 +1,54 @@
-upload/
+# Dependencies
+**/node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+**/dist
+**/build
+**/*.tsbuildinfo
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Tooling and editor state
+.git
+.turbo
+.cache
+.expo
+.expo-shared
+.vscode
+.idea
+.opencode
+.agents
+.DS_Store
+coverage
+.nyc_output
+
+# Docker and local artifacts
+docker-compose.override.yml
+*.log
+*.tgz
+tmp
+upload/videos
+
+# Native build artifacts and credentials
+apps/native/ios
+apps/native/android
+**/ios/Pods
+**/ios/build
+**/android/app/build
+**/android/build
+**/DerivedData
+**/xcuserdata
+*.apk
+*.aab
+*.ipa
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+local.properties

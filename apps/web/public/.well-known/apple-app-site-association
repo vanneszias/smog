@@ -3,10 +3,12 @@
     "apps": [],
     "details": [
       {
-        "appID": "TEAM_ID.com.vanneszias.smog",
-        "paths": [
-          "/gestures/*",
-          "/"
+        "appID": "96XKP6MU2A.be.zias.smog",
+        "components": [
+          {
+            "/": "/gestures/*",
+            "comment": "Open gesture detail links in the native app"
+          }
         ]
       }
     ]

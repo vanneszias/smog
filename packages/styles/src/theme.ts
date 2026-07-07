@@ -47,5 +47,3 @@ export const themes = {
     statusBar: "light" as const,
   },
 } as const;
-
-export default themes;

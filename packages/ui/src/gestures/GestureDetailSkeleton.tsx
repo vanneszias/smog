@@ -1,10 +1,10 @@
-import { ArrowLeft, Heart } from "lucide-react";
+import { ArrowLeft, ListPlus } from "lucide-react";
 import { ShimmerSkeleton, Skeleton } from "../common/Skeleton";
 
 export function GestureDetailSkeleton() {
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
-      {/* Header with Back Button and Favorite */}
+      {/* Header with back button and list action */}
       <div className="mb-6 flex items-center justify-between">
         {/* Back Button Skeleton */}
         <div className="inline-flex items-center gap-2 opacity-30">
@@ -12,9 +12,9 @@ export function GestureDetailSkeleton() {
           <Skeleton className="h-5 w-32" />
         </div>
 
-        {/* Favorite Button Skeleton */}
+        {/* List action skeleton */}
         <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 opacity-50">
-          <Heart className="h-5 w-5" />
+          <ListPlus className="h-5 w-5" />
           <Skeleton className="h-5 w-36" />
         </div>
       </div>

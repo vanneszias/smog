@@ -30,6 +30,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { clearAnalyticsIdentity } from "@/lib/openpanel";
 import { generateGuestId } from "@/services/userService";
 import logger from "@/utils/logger";
 
@@ -136,6 +137,7 @@ async function isNetworkAvailable(): Promise<boolean> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<WorkOSUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHandlingOAuthCallback, setIsHandlingOAuthCallback] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("loading");
   const [guestId, setGuestId] = useState<string | null>(null);
   const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
@@ -159,13 +161,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Handle OAuth callback
   useEffect(() => {
-    if (response?.type !== "success") {
+    if (!response) {
+      return;
+    }
+
+    if (response.type !== "success") {
+      setIsHandlingOAuthCallback(false);
       return;
     }
 
     const { code } = response.params;
+    if (!code) {
+      logger.error("[Auth] OAuth callback missing authorization code");
+      setIsHandlingOAuthCallback(false);
+      return;
+    }
 
     const exchangeCode = async () => {
+      setIsHandlingOAuthCallback(true);
       try {
         // Get code_verifier from the auth request for PKCE flow
         const codeVerifier = request?.codeVerifier;
@@ -208,6 +221,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthMode("authenticated");
       } catch (error) {
         logger.error("[Auth] OAuth callback error:", error);
+      } finally {
+        setIsHandlingOAuthCallback(false);
       }
     };
 
@@ -321,13 +336,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(() => {
     if (request) {
-      promptAsync();
+      setIsHandlingOAuthCallback(true);
+      promptAsync()
+        .then((result) => {
+          if (result.type !== "success") {
+            setIsHandlingOAuthCallback(false);
+          }
+        })
+        .catch((error) => {
+          setIsHandlingOAuthCallback(false);
+          logger.error("[Auth] Failed to start OAuth flow:", error);
+        });
     } else {
       logger.error("[Auth] OAuth request not ready");
     }
   }, [request, promptAsync]);
 
   const signOut = useCallback(async () => {
+    clearAnalyticsIdentity();
     accessToken = null;
     await clearRefreshToken();
     await Promise.all(
@@ -355,6 +381,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (): AuthContextType => ({
       user,
       isLoading,
+      isHandlingOAuthCallback,
       isAuthenticated: authMode === "authenticated",
       authMode,
       isGuest: authMode === "guest",
@@ -367,6 +394,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [
       user,
       isLoading,
+      isHandlingOAuthCallback,
       authMode,
       guestId,
       signIn,
@@ -395,7 +423,8 @@ export function useAuth() {
  * Use this with ConvexProviderWithAuth
  */
 export function useAuthForConvex() {
-  const { isLoading, user, getAccessToken } = useAuth();
+  const { isLoading, isHandlingOAuthCallback, user, getAccessToken } =
+    useAuth();
 
   const fetchAccessToken = useCallback(async () => {
     try {
@@ -407,13 +436,12 @@ export function useAuthForConvex() {
 
   return useMemo(
     () => ({
-      isLoading,
+      isLoading: isLoading || isHandlingOAuthCallback,
       isAuthenticated: !!user,
       fetchAccessToken,
     }),
-    [isLoading, user, fetchAccessToken]
+    [isLoading, isHandlingOAuthCallback, user, fetchAccessToken]
   );
 }
 
 // Re-export for backwards compatibility
-export { useAuth as useSecureAuth };

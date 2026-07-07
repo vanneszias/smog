@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   BORDER_RADIUS,
   FONT_SIZE,
@@ -37,6 +37,8 @@ const CategoryFilters: React.FC<CategoryFiltersProps> = ({
     >
       {selectedCategories.map((category) => (
         <TouchableOpacity
+          accessibilityLabel={t("search.removeCategory", { category })}
+          accessibilityRole="button"
           activeOpacity={0.8}
           key={category}
           onPress={() => onRemoveCategory(category)}
@@ -60,6 +62,7 @@ const CategoryFilters: React.FC<CategoryFiltersProps> = ({
 
       {selectedCategories.length > 1 && (
         <TouchableOpacity
+          accessibilityRole="button"
           activeOpacity={0.7}
           onPress={onClearCategories}
           style={[styles.clearChip, { borderColor: theme.border }]}

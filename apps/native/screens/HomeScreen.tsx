@@ -1,7 +1,7 @@
 import { SPACING } from "@smog/styles";
 import { useRouter } from "expo-router";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Keyboard,
   Linking,
@@ -16,22 +16,17 @@ import Logo from "@/components/Logo";
 import RecentSearches from "@/components/search/RecentSearches";
 import SearchBar from "@/components/search/SearchBar";
 import SearchResults from "@/components/search/SearchResults";
-import { useFavorites } from "@/context/FavoritesContext";
+import { useLists } from "@/context/ListsContext";
 import { useRecentSearches } from "@/context/RecentSearchesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { useOptimizedSearch } from "@/hooks/useOptimizedSearch";
-import {
-  trackRecentSearchSelected,
-  trackSearchCleared,
-  trackSearchPerformed,
-} from "@/services/analytics";
 import type { Gesture } from "@/types";
 
 const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { theme } = useTheme();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isGestureSaved, openListPicker } = useLists();
   const { t } = useTranslation();
 
   // Search state
@@ -46,7 +41,7 @@ const HomeScreen: React.FC = () => {
     enableCache: true,
   });
 
-  const { addRecentSearch, recentSearches } = useRecentSearches();
+  const { addRecentSearch } = useRecentSearches();
 
   // Navigation handlers
   const navigateToSettings = useCallback(() => {
@@ -60,18 +55,16 @@ const HomeScreen: React.FC = () => {
     [router]
   );
 
-  // Track search results when they change
-  useEffect(() => {
-    if (searchTerm && searchHook.results.length >= 0) {
-      const searchDuration = searchHook.searchStats.searchTime;
-      trackSearchPerformed(
-        searchTerm,
-        [],
-        searchHook.results.length,
-        searchDuration
-      );
-    }
-  }, [searchHook.results, searchHook.searchStats.searchTime, searchTerm]);
+  const handleOpenListPicker = useCallback(
+    (gesture: Gesture) => {
+      openListPicker({
+        gestureId: gesture.id,
+        gestureName: gesture.name,
+        source: "search_results",
+      });
+    },
+    [openListPicker]
+  );
 
   // Search handlers
   const handleSearch = useCallback(
@@ -102,21 +95,16 @@ const HomeScreen: React.FC = () => {
       setSearchTerm(query);
       searchHook.search(query);
       addRecentSearch(query);
-
-      const position = recentSearches.indexOf(query);
-      trackRecentSearchSelected(query, position >= 0 ? position : 0);
     },
-    [searchHook, addRecentSearch, recentSearches]
+    [searchHook, addRecentSearch]
   );
 
   const recentSearchesVisible = searchTerm.length === 0;
 
   const handleClearSearch = useCallback(() => {
-    const previousQuery = searchTerm;
     setSearchTerm("");
     searchHook.clearSearch();
-    trackSearchCleared(previousQuery);
-  }, [searchHook.clearSearch, searchTerm]);
+  }, [searchHook.clearSearch]);
 
   const handleSearchFocus = useCallback(() => {
     setIsSearchFocused(true);
@@ -143,13 +131,13 @@ const HomeScreen: React.FC = () => {
     <SearchResults
       hasMore={searchHook.hasMore}
       initialQuery={searchTerm}
-      isFavorite={isFavorite}
       isLoading={searchHook.isLoading}
       isRefreshing={searchHook.isSearching}
+      isSaved={isGestureSaved}
       onGesturePress={handleGesturePress}
       onLoadMore={searchHook.loadMore}
+      onOpenListPicker={handleOpenListPicker}
       onRefresh={searchHook.refresh}
-      onToggleFavorite={toggleFavorite}
       results={searchHook.results}
       style={styles.searchResults}
     />

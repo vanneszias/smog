@@ -14,7 +14,7 @@ import { useCallback, useState } from "react";
 import type { SponsorDetailsErrors } from "../utils/-validation";
 import { validateDetails } from "../utils/-validation";
 
-export type WizardStep = "select" | "details" | "preview";
+type WizardStep = "select" | "details" | "preview";
 
 export interface SponsorshipFormState {
   // Wizard navigation

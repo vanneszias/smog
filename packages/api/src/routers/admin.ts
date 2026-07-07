@@ -3,7 +3,7 @@ import type { Id } from "@smog/convex/dataModel";
 import { z } from "zod";
 import { adminProcedure } from "../index";
 import { categoriesCache, logCacheOperation } from "../lib/categoriesCache";
-import { convexClient } from "../lib/convex";
+import { convexClient, withServiceAuth } from "../lib/convex";
 import { buildCsvString } from "../lib/csv";
 import { triggerEmail } from "../lib/emailTrigger";
 import {
@@ -12,6 +12,18 @@ import {
   getMuxUploadStatus,
   listMuxAssets,
 } from "../lib/mux";
+
+interface AdminLogInput extends Record<string, unknown> {
+  userId: Id<"users">;
+  action: string;
+  targetId: string;
+  targetType: string;
+  metadata?: unknown;
+}
+
+function logAdminAction(input: AdminLogInput) {
+  return convexClient.mutation(api.adminLogs.logAction, withServiceAuth(input));
+}
 
 export const adminRouter = {
   // Mux video management
@@ -57,9 +69,10 @@ export const adminRouter = {
 
   // Verify user is admin
   verifyAdmin: adminProcedure.handler(async ({ context }) => {
-    const user = await convexClient.query(api.users.getUserByWorkOSId, {
-      workosId: context.workosId,
-    });
+    const user = await convexClient.query(
+      api.users.getUserByWorkOSId,
+      withServiceAuth({ workosId: context.workosId })
+    );
     return user;
   }),
 
@@ -73,12 +86,18 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input }) => {
-        const result = await convexClient.query(api.users.listAllUsers, input);
+        const result = await convexClient.query(
+          api.users.listAllUsers,
+          withServiceAuth(input)
+        );
         return result;
       }),
 
     listAdmins: adminProcedure.handler(async () => {
-      const admins = await convexClient.query(api.users.listAdmins);
+      const admins = await convexClient.query(
+        api.users.listAdmins,
+        withServiceAuth({})
+      );
       return admins;
     }),
 
@@ -90,10 +109,13 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input }) => {
-        await convexClient.mutation(api.users.updateUserRole, {
-          userId: input.userId as Id<"users">,
-          role: input.role,
-        });
+        await convexClient.mutation(
+          api.users.updateUserRole,
+          withServiceAuth({
+            userId: input.userId as Id<"users">,
+            role: input.role,
+          })
+        );
         return { success: true };
       }),
   },
@@ -114,9 +136,9 @@ export const adminRouter = {
         // Always use listAllForAdmin which returns ALL gestures (including hidden)
         const gestures = await convexClient.query(
           api.gestures.listAllForAdmin,
-          {
+          withServiceAuth({
             limit: input.limit,
-          }
+          })
         );
         return gestures;
       }),
@@ -134,18 +156,21 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        await convexClient.mutation(api.gestures.updateGesture, {
-          gestureId: input.gestureId as Id<"gestures">,
-          name: input.name,
-          categoryIds: input.categoryIds as Id<"categories">[] | undefined,
-          playbackId: input.playbackId,
-          concept: input.concept,
-          info: input.info,
-          isActive: input.isActive,
-        });
+        await convexClient.mutation(
+          api.gestures.updateGesture,
+          withServiceAuth({
+            gestureId: input.gestureId as Id<"gestures">,
+            name: input.name,
+            categoryIds: input.categoryIds as Id<"categories">[] | undefined,
+            playbackId: input.playbackId,
+            concept: input.concept,
+            info: input.info,
+            isActive: input.isActive,
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "update_gesture",
           targetId: input.gestureId,
@@ -167,18 +192,21 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        const result = await convexClient.mutation(api.gestures.bulkUpdate, {
-          gestureIds: input.gestureIds as Id<"gestures">[],
-          updates: {
-            isActive: input.updates.isActive,
-            categoryIds: input.updates.categoryIds as
-              | Id<"categories">[]
-              | undefined,
-          },
-        });
+        const result = await convexClient.mutation(
+          api.gestures.bulkUpdate,
+          withServiceAuth({
+            gestureIds: input.gestureIds as Id<"gestures">[],
+            updates: {
+              isActive: input.updates.isActive,
+              categoryIds: input.updates.categoryIds as
+                | Id<"categories">[]
+                | undefined,
+            },
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "bulk_update_gestures",
           targetId: input.gestureIds.join(","),
@@ -198,13 +226,13 @@ export const adminRouter = {
       .handler(async ({ input, context }) => {
         const newStatus = await convexClient.mutation(
           api.gestures.toggleActive,
-          {
+          withServiceAuth({
             gestureId: input.gestureId as Id<"gestures">,
-          }
+          })
         );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "toggle_gesture_active",
           targetId: input.gestureId,
@@ -227,17 +255,20 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        const gestureId = await convexClient.mutation(api.gestures.create, {
-          name: input.name,
-          categoryIds: input.categoryIds as Id<"categories">[],
-          playbackId: input.playbackId,
-          concept: input.concept,
-          info: input.info,
-          isActive: input.isActive,
-        });
+        const gestureId = await convexClient.mutation(
+          api.gestures.create,
+          withServiceAuth({
+            name: input.name,
+            categoryIds: input.categoryIds as Id<"categories">[],
+            playbackId: input.playbackId,
+            concept: input.concept,
+            info: input.info,
+            isActive: input.isActive,
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "create_gesture",
           targetId: gestureId,
@@ -253,7 +284,8 @@ export const adminRouter = {
   categories: {
     listAll: adminProcedure.handler(async () => {
       const categories = await convexClient.query(
-        api.categories.listAllForAdmin
+        api.categories.listAllForAdmin,
+        withServiceAuth({})
       );
       return categories;
     }),
@@ -266,13 +298,16 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        const categoryId = await convexClient.mutation(api.categories.create, {
-          name: input.name,
-          isActive: input.isActive,
-        });
+        const categoryId = await convexClient.mutation(
+          api.categories.create,
+          withServiceAuth({
+            name: input.name,
+            isActive: input.isActive,
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "create_category",
           targetId: categoryId,
@@ -299,14 +334,17 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        await convexClient.mutation(api.categories.update, {
-          categoryId: input.categoryId as Id<"categories">,
-          name: input.name,
-          isActive: input.isActive,
-        });
+        await convexClient.mutation(
+          api.categories.update,
+          withServiceAuth({
+            categoryId: input.categoryId as Id<"categories">,
+            name: input.name,
+            isActive: input.isActive,
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "update_category",
           targetId: input.categoryId,
@@ -331,12 +369,15 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        await convexClient.mutation(api.categories.deleteCategory, {
-          categoryId: input.categoryId as Id<"categories">,
-        });
+        await convexClient.mutation(
+          api.categories.deleteCategory,
+          withServiceAuth({
+            categoryId: input.categoryId as Id<"categories">,
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "delete_category",
           targetId: input.categoryId,
@@ -369,14 +410,15 @@ export const adminRouter = {
       .handler(async ({ input }) => {
         const sponsorships = await convexClient.query(
           api.sponsorships.listAll,
-          input
+          withServiceAuth(input)
         );
         return sponsorships;
       }),
 
     listPendingApproval: adminProcedure.handler(async () => {
       const sponsorships = await convexClient.query(
-        api.sponsorships.listPendingApproval
+        api.sponsorships.listPendingApproval,
+        withServiceAuth({})
       );
       return sponsorships;
     }),
@@ -389,17 +431,23 @@ export const adminRouter = {
       )
       .handler(async ({ input, context }) => {
         // Fetch sponsorship before approval to get email + gesture info for the notification
-        const sponsorship = await convexClient.query(api.sponsorships.getById, {
-          id: input.sponsorshipId as Id<"sponsorships">,
-        });
+        const sponsorship = await convexClient.query(
+          api.sponsorships.getById,
+          withServiceAuth({
+            id: input.sponsorshipId as Id<"sponsorships">,
+          })
+        );
 
-        await convexClient.mutation(api.sponsorships.approve, {
-          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-          adminUserId: context.userId,
-        });
+        await convexClient.mutation(
+          api.sponsorships.approve,
+          withServiceAuth({
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+            adminUserId: context.userId,
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "approve_sponsorship",
           targetId: input.sponsorshipId,
@@ -439,14 +487,17 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        await convexClient.mutation(api.sponsorships.reject, {
-          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-          adminUserId: context.userId,
-          reason: input.reason,
-        });
+        await convexClient.mutation(
+          api.sponsorships.reject,
+          withServiceAuth({
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+            adminUserId: context.userId,
+            reason: input.reason,
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "reject_sponsorship",
           targetId: input.sponsorshipId,
@@ -464,13 +515,16 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        await convexClient.mutation(api.sponsorships.forceExpire, {
-          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-          adminUserId: context.userId,
-        });
+        await convexClient.mutation(
+          api.sponsorships.forceExpire,
+          withServiceAuth({
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+            adminUserId: context.userId,
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "force_expire_sponsorship",
           targetId: input.sponsorshipId,
@@ -487,9 +541,10 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input }) => {
-        const sponsorship = await convexClient.query(api.sponsorships.getById, {
-          id: input.id as Id<"sponsorships">,
-        });
+        const sponsorship = await convexClient.query(
+          api.sponsorships.getById,
+          withServiceAuth({ id: input.id as Id<"sponsorships"> })
+        );
         return sponsorship;
       }),
 
@@ -501,10 +556,10 @@ export const adminRouter = {
       )
       .handler(async ({ input }) => {
         const sponsorship = await convexClient.query(
-          api.sponsorships.getActiveByGesture,
-          {
+          api.sponsorships.getActiveByGestureForService,
+          withServiceAuth({
             gestureId: input.gestureId as Id<"gestures">,
-          }
+          })
         );
         return sponsorship;
       }),
@@ -518,10 +573,10 @@ export const adminRouter = {
       .handler(async ({ input, context }) => {
         // Get active sponsorship for this gesture
         const sponsorship = await convexClient.query(
-          api.sponsorships.getActiveByGesture,
-          {
+          api.sponsorships.getActiveByGestureForService,
+          withServiceAuth({
             gestureId: input.gestureId as Id<"gestures">,
-          }
+          })
         );
 
         if (!sponsorship) {
@@ -529,13 +584,16 @@ export const adminRouter = {
         }
 
         // Restore original video by expiring the sponsorship
-        await convexClient.mutation(api.sponsorships.forceExpire, {
-          sponsorshipId: sponsorship._id,
-          adminUserId: context.userId,
-        });
+        await convexClient.mutation(
+          api.sponsorships.forceExpire,
+          withServiceAuth({
+            sponsorshipId: sponsorship._id,
+            adminUserId: context.userId,
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "restore_original_video",
           targetId: input.gestureId,
@@ -556,14 +614,17 @@ export const adminRouter = {
         const token = crypto.randomUUID();
         const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
 
-        await convexClient.mutation(api.sponsorships.setReEditToken, {
-          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-          token,
-          expiresAt,
-        });
+        await convexClient.mutation(
+          api.sponsorships.setReEditToken,
+          withServiceAuth({
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+            token,
+            expiresAt,
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "generate_re_edit_link",
           targetId: input.sponsorshipId,
@@ -585,11 +646,14 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        await convexClient.mutation(api.sponsorships.cancelPendingPayment, {
-          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-        });
+        await convexClient.mutation(
+          api.sponsorships.cancelPendingPayment,
+          withServiceAuth({
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+          })
+        );
 
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "cancel_pending_payment",
           targetId: input.sponsorshipId,
@@ -606,12 +670,15 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input, context }) => {
-        await convexClient.mutation(api.sponsorships.markAsAwaitingApproval, {
-          sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-        });
+        await convexClient.mutation(
+          api.sponsorships.markAsAwaitingApproval,
+          withServiceAuth({
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+          })
+        );
 
         // Log action
-        await convexClient.mutation(api.adminLogs.logAction, {
+        await logAdminAction({
           userId: context.userId,
           action: "mark_paid_manually",
           targetId: input.sponsorshipId,
@@ -626,7 +693,9 @@ export const adminRouter = {
       .handler(async ({ input }) => {
         const result = await convexClient.query(
           api.sponsorships.getReEditLinkForAdmin,
-          { sponsorshipId: input.sponsorshipId as Id<"sponsorships"> }
+          withServiceAuth({
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+          })
         );
         if (!result) {
           return null;
@@ -662,10 +731,10 @@ export const adminRouter = {
       .handler(async ({ input }) => {
         const sponsorships = await convexClient.query(
           api.sponsorships.listAll,
-          {
+          withServiceAuth({
             status: input.status === "all" ? undefined : input.status,
             limit: 10_000,
-          }
+          })
         );
 
         // Apply date filters if provided
@@ -714,7 +783,10 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input }) => {
-        const logs = await convexClient.query(api.adminLogs.getRecent, input);
+        const logs = await convexClient.query(
+          api.adminLogs.getRecent,
+          withServiceAuth(input)
+        );
         return logs;
       }),
 
@@ -726,7 +798,10 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input }) => {
-        const logs = await convexClient.query(api.adminLogs.getByAction, input);
+        const logs = await convexClient.query(
+          api.adminLogs.getByAction,
+          withServiceAuth(input)
+        );
         return logs;
       }),
 
@@ -738,7 +813,10 @@ export const adminRouter = {
         })
       )
       .handler(async ({ input }) => {
-        const logs = await convexClient.query(api.adminLogs.getByTarget, input);
+        const logs = await convexClient.query(
+          api.adminLogs.getByTarget,
+          withServiceAuth(input)
+        );
         return logs;
       }),
   },

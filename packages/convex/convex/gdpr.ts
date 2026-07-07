@@ -3,12 +3,13 @@ import { mutation, query } from "./_generated/server";
 
 /**
  * GDPR Compliance Functions
- * Implements user rights: access, deletion, consent management
+ * Implements user rights: access and deletion
  *
  * Security Notes:
  * - All data export and deletion functions require authentication
  * - Authentication is validated via JWT tokens from WorkOS
- * - Guest users cannot export or delete data (their data is auto-removed after 12 months)
+ * - Guest users cannot use the authenticated export/delete endpoints
+ * - Inactive guest data is automatically removed after 12 months
  * - The client must use <Authenticated> wrappers to ensure proper auth state
  */
 
@@ -50,11 +51,48 @@ export const exportUserData = query({
       })
     );
 
-    // Get consent history
     const consents = await ctx.db
       .query("user_consents")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
+
+    const lists = await ctx.db
+      .query("gesture_lists")
+      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
+      .collect();
+
+    const listsWithDetails = await Promise.all(
+      lists.map(async (list) => {
+        const items = await ctx.db
+          .query("gesture_list_items")
+          .withIndex("by_list_position", (q) => q.eq("listId", list._id))
+          .collect();
+
+        const gestures = await Promise.all(
+          items.map(async (item) => {
+            const gesture = await ctx.db.get(item.gestureId);
+            return {
+              gestureId: item.gestureId,
+              gestureName: gesture?.name ?? "Unknown",
+              position: item.position,
+              addedAt: new Date(item.createdAt).toISOString(),
+            };
+          })
+        );
+
+        return {
+          listId: list._id,
+          name: list.name,
+          description: list.description ?? null,
+          visibility: list.visibility,
+          allowSharedEditing: list.allowSharedEditing,
+          isDefaultFavorites: list.isDefaultFavorites,
+          createdAt: new Date(list.createdAt).toISOString(),
+          updatedAt: new Date(list.updatedAt).toISOString(),
+          gestures,
+        };
+      })
+    );
 
     // Get admin logs related to user (where they are the target)
     const adminLogs = await ctx.db
@@ -85,12 +123,13 @@ export const exportUserData = query({
         lastActive: new Date(user.lastActiveAt).toISOString(),
       },
       favorites: favoritesWithDetails,
-      consents: consents.map((c) => ({
-        analyticsConsent: c.analyticsConsent,
-        marketingConsent: c.marketingConsent ?? false,
-        consentVersion: c.consentVersion,
-        consentDate: new Date(c.consentDate).toISOString(),
+      consents: consents.map((consent) => ({
+        analyticsConsent: consent.analyticsConsent,
+        marketingConsent: consent.marketingConsent ?? false,
+        consentVersion: consent.consentVersion,
+        consentDate: new Date(consent.consentDate).toISOString(),
       })),
+      lists: listsWithDetails,
       adminActivity: {
         logsCount: adminLogs.length,
         sponsorshipsReviewed: sponsorshipsReviewed.length,
@@ -98,11 +137,17 @@ export const exportUserData = query({
       dataProcessing: {
         purposes: [
           "Account management",
-          "Favorites synchronization",
-          "Usage analytics (if consented)",
+          "Gesture list and favorites synchronization",
+          "Security and service operation",
         ],
-        thirdParties: ["WorkOS (Authentication)", "PostHog (Analytics)"],
-        dataRetention: "Account data retained until deletion request",
+        thirdParties: [
+          "WorkOS (authentication)",
+          "Convex (database and application functions)",
+          "Mux (video delivery)",
+          "OpenPanel (optional analytics after consent)",
+        ],
+        dataRetention:
+          "Account, favorites, and lists are retained until account deletion; legally required transaction records follow separate retention rules.",
       },
     };
   },
@@ -147,7 +192,6 @@ export const deleteUserAccount = mutation({
       await ctx.db.delete(fav._id);
     }
 
-    // Delete consent records
     const consents = await ctx.db
       .query("user_consents")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
@@ -155,6 +199,25 @@ export const deleteUserAccount = mutation({
 
     for (const consent of consents) {
       await ctx.db.delete(consent._id);
+    }
+
+    // Delete owned lists and their items
+    const lists = await ctx.db
+      .query("gesture_lists")
+      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
+      .collect();
+
+    for (const list of lists) {
+      const items = await ctx.db
+        .query("gesture_list_items")
+        .withIndex("by_list", (q) => q.eq("listId", list._id))
+        .collect();
+
+      for (const item of items) {
+        await ctx.db.delete(item._id);
+      }
+
+      await ctx.db.delete(list._id);
     }
 
     // Anonymize admin logs (preserve audit trail but remove PII)
@@ -195,12 +258,13 @@ export const deleteUserAccount = mutation({
     return {
       success: true,
       deletedAt: new Date().toISOString(),
-      message: "Account and all associated data deleted successfully",
+      message:
+        "Account, favorites, and owned lists deleted. Legally required transaction records may be retained separately.",
     };
   },
 });
 
-// Record user consent (for authenticated users)
+// Compatibility API for app versions deployed before privacy consent moved local.
 export const recordConsent = mutation({
   args: {
     analyticsConsent: v.boolean(),
@@ -216,7 +280,6 @@ export const recordConsent = mutation({
       );
     }
 
-    // Find user by workosId
     const user = await ctx.db
       .query("users")
       .withIndex("by_workos_id", (q) => q.eq("workosId", identity.subject))
@@ -226,7 +289,6 @@ export const recordConsent = mutation({
       throw new Error("User not found");
     }
 
-    // Create consent record
     await ctx.db.insert("user_consents", {
       userId: user._id,
       analyticsConsent: args.analyticsConsent,
@@ -241,7 +303,6 @@ export const recordConsent = mutation({
   },
 });
 
-// Record guest user consent (before account creation)
 export const recordGuestConsent = mutation({
   args: {
     guestId: v.string(),
@@ -249,14 +310,12 @@ export const recordGuestConsent = mutation({
     marketingConsent: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    // Find or create guest user
     let user = await ctx.db
       .query("users")
       .withIndex("by_guest_id", (q) => q.eq("guestId", args.guestId))
       .unique();
 
     if (!user) {
-      // Create guest user if doesn't exist
       const userId = await ctx.db.insert("users", {
         guestId: args.guestId,
         createdAt: Date.now(),
@@ -268,7 +327,6 @@ export const recordGuestConsent = mutation({
       }
     }
 
-    // Create consent record
     await ctx.db.insert("user_consents", {
       userId: user._id,
       analyticsConsent: args.analyticsConsent,
@@ -281,7 +339,6 @@ export const recordGuestConsent = mutation({
   },
 });
 
-// Update consent preferences (for authenticated users)
 export const updateConsent = mutation({
   args: {
     analyticsConsent: v.boolean(),
@@ -304,7 +361,6 @@ export const updateConsent = mutation({
       throw new Error("User not found");
     }
 
-    // Create new consent record (keep history)
     await ctx.db.insert("user_consents", {
       userId: user._id,
       analyticsConsent: args.analyticsConsent,
@@ -317,14 +373,11 @@ export const updateConsent = mutation({
   },
 });
 
-// Get current consent status (for authenticated users)
-// Returns null if not authenticated (graceful handling for UI)
 export const getConsentStatus = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      // Return null instead of throwing - allows UI to handle gracefully
       return null;
     }
 
@@ -337,7 +390,6 @@ export const getConsentStatus = query({
       return null;
     }
 
-    // Get latest consent
     const consents = await ctx.db
       .query("user_consents")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
@@ -363,7 +415,6 @@ export const getConsentStatus = query({
   },
 });
 
-// Get guest consent status
 export const getGuestConsentStatus = query({
   args: {
     guestId: v.string(),
@@ -382,7 +433,6 @@ export const getGuestConsentStatus = query({
       };
     }
 
-    // Get latest consent
     const consents = await ctx.db
       .query("user_consents")
       .withIndex("by_user", (q) => q.eq("userId", user._id))

@@ -20,7 +20,7 @@ tasks:
       sudo chmod 600 /swapfile
       sudo mkswap /swapfile
       sudo swapon /swapfile
-      curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.11"
+      curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.14"
       {
         echo 'export BUN_INSTALL="$HOME/.bun"'
         echo 'export PATH="$BUN_INSTALL/bin:$PATH"'
@@ -29,13 +29,19 @@ tasks:
       bun install --frozen-lockfile --linker hoisted --network-concurrency 8 --concurrent-scripts 1 --no-progress
   - lint: |
       cd smog
-      ./node_modules/.bin/biome check apps packages package.json turbo.json biome.json
+      bun run check:ci
   - check-types: |
       cd smog
       bun run check-types
+  - test: |
+      cd smog
+      bun run test
   - build: |
       cd smog
       bun run build
+  - release-check: |
+      cd smog
+      bun run release:check
 submitter:
   git.sr.ht:
     enabled: true

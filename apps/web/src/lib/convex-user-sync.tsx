@@ -5,10 +5,8 @@
  * This ensures every authenticated user has a corresponding Convex user record.
  */
 
-import { api } from "@smog/convex";
 import type { Id } from "@smog/convex/dataModel";
 import { createLogger } from "@smog/shared";
-import { useMutation, useQuery } from "convex/react";
 import {
   createContext,
   type ReactNode,
@@ -17,6 +15,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { client } from "../utils/orpc";
 import { useAuth } from "./auth";
 
 const logger = createLogger("convexUserSync");
@@ -37,17 +36,11 @@ const ConvexUserContext = createContext<ConvexUserContextType>({
  */
 export function ConvexUserSync({ children }: { children: ReactNode }) {
   const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const workosId = user?.id ?? null;
   const [userId, setUserId] = useState<Id<"users"> | null>(null);
+  const [syncedWorkosId, setSyncedWorkosId] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
-
-  // Convex mutations
-  const createUser = useMutation(api.users.createUser);
-
-  // Query for existing user by WorkOS ID
-  const existingUser = useQuery(
-    api.users.getUserByWorkOSId,
-    user?.id ? { workosId: user.id } : "skip"
-  );
+  const [syncFailedFor, setSyncFailedFor] = useState<string | null>(null);
 
   // Handle user creation when auth state changes
   useEffect(() => {
@@ -57,48 +50,67 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
 
     const syncUser = async () => {
       // Not authenticated - clear user
-      if (!(isAuthenticated && user?.id)) {
+      if (!(isAuthenticated && workosId)) {
         setUserId(null);
+        setSyncedWorkosId(null);
+        setSyncFailedFor(null);
         return;
       }
 
-      // User already exists in Convex
-      if (existingUser) {
-        setUserId(existingUser._id);
+      if (userId && syncedWorkosId === workosId) {
         return;
       }
 
-      // User doesn't exist yet - create them
-      if (existingUser === null) {
-        setIsInitializing(true);
-        try {
-          const newUserId = await createUser({ workosId: user.id });
-          setUserId(newUserId);
-        } catch (error) {
-          logger.error("[ConvexUserSync] Failed to create user:", error);
-        } finally {
-          setIsInitializing(false);
+      if (syncFailedFor === workosId) {
+        return;
+      }
+
+      setIsInitializing(true);
+      try {
+        const syncedUser = await client.users.getOrCreateUser();
+        if (syncedUser) {
+          setUserId(syncedUser._id);
+          setSyncedWorkosId(workosId);
+          setSyncFailedFor(null);
         }
+      } catch (error) {
+        logger.error("[ConvexUserSync] Failed to sync user:", error);
+        setSyncFailedFor(workosId);
+      } finally {
+        setIsInitializing(false);
       }
     };
 
     syncUser();
   }, [
-    user,
+    workosId,
+    userId,
+    syncedWorkosId,
+    syncFailedFor,
     isAuthenticated,
-    existingUser,
     isAuthLoading,
     isInitializing,
-    createUser,
   ]);
 
   const value = useMemo(
     () => ({
       userId,
       isLoading:
-        isAuthLoading || isInitializing || (isAuthenticated && !userId),
+        isAuthLoading ||
+        isInitializing ||
+        (isAuthenticated &&
+          !(userId && syncedWorkosId === workosId) &&
+          syncFailedFor !== workosId),
     }),
-    [userId, isAuthLoading, isInitializing, isAuthenticated]
+    [
+      userId,
+      syncedWorkosId,
+      isAuthLoading,
+      isInitializing,
+      isAuthenticated,
+      syncFailedFor,
+      workosId,
+    ]
   );
 
   return (
@@ -106,13 +118,6 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
       {children}
     </ConvexUserContext.Provider>
   );
-}
-
-/**
- * Hook to get the current Convex user ID
- */
-export function useConvexUser() {
-  return useContext(ConvexUserContext);
 }
 
 /**

@@ -6,7 +6,10 @@
  */
 
 import { v } from "convex/values";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
+import { isValidServiceToken, requireServiceAuth } from "./lib/serviceAuth";
+import { ensureDefaultFavoritesList } from "./lists";
 
 // =============================================================================
 // User Type (for return values)
@@ -23,6 +26,29 @@ const userReturnType = v.object({
   lastActiveAt: v.number(),
 });
 
+const guestUserReturnType = v.object({
+  _id: v.id("users"),
+  guestId: v.optional(v.string()),
+});
+
+async function requireMatchingIdentity(
+  ctx: MutationCtx | QueryCtx,
+  workosId: string
+): Promise<void> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity || identity.subject !== workosId) {
+    throw new Error("Unauthorized");
+  }
+}
+
+async function hasMatchingIdentity(
+  ctx: MutationCtx | QueryCtx,
+  workosId: string
+): Promise<boolean> {
+  const identity = await ctx.auth.getUserIdentity();
+  return identity?.subject === workosId;
+}
+
 // =============================================================================
 // User Queries
 // =============================================================================
@@ -31,22 +57,37 @@ const userReturnType = v.object({
  * Get user by their Convex ID
  */
 export const getUserById = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.id("users"), serviceToken: v.string() },
   returns: v.union(userReturnType, v.null()),
-  handler: async (ctx, args) => await ctx.db.get(args.userId),
+  handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "getUserById");
+    return await ctx.db.get(args.userId);
+  },
 });
 
 /**
  * Get user by their WorkOS ID
  */
 export const getUserByWorkOSId = query({
-  args: { workosId: v.string() },
+  args: {
+    workosId: v.string(),
+    serviceToken: v.optional(v.string()),
+  },
   returns: v.union(userReturnType, v.null()),
-  handler: async (ctx, args) =>
-    await ctx.db
+  handler: async (ctx, args) => {
+    if (
+      !(
+        isValidServiceToken(args.serviceToken) ||
+        (await hasMatchingIdentity(ctx, args.workosId))
+      )
+    ) {
+      return null;
+    }
+    return await ctx.db
       .query("users")
       .withIndex("by_workos_id", (q) => q.eq("workosId", args.workosId))
-      .unique(),
+      .unique();
+  },
 });
 
 /**
@@ -54,12 +95,14 @@ export const getUserByWorkOSId = query({
  */
 export const getUserByGuestId = query({
   args: { guestId: v.string() },
-  returns: v.union(userReturnType, v.null()),
-  handler: async (ctx, args) =>
-    await ctx.db
+  returns: v.union(guestUserReturnType, v.null()),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
       .query("users")
       .withIndex("by_guest_id", (q) => q.eq("guestId", args.guestId))
-      .unique(),
+      .unique();
+    return user ? { _id: user._id, guestId: user.guestId } : null;
+  },
 });
 
 // =============================================================================
@@ -74,17 +117,44 @@ export const createUser = mutation({
     workosId: v.optional(v.string()),
     guestId: v.optional(v.string()),
     email: v.optional(v.string()),
+    serviceToken: v.optional(v.string()),
   },
   returns: v.id("users"),
   handler: async (ctx, args) => {
+    if (Boolean(args.workosId) === Boolean(args.guestId)) {
+      throw new Error("Provide exactly one user identity");
+    }
+    if (args.workosId) {
+      if (!isValidServiceToken(args.serviceToken)) {
+        await requireMatchingIdentity(ctx, args.workosId);
+      }
+    } else if (!args.guestId || args.guestId.length < 32) {
+      throw new Error("Invalid guest identity");
+    }
+
+    const existing = args.workosId
+      ? await ctx.db
+          .query("users")
+          .withIndex("by_workos_id", (q) => q.eq("workosId", args.workosId))
+          .unique()
+      : await ctx.db
+          .query("users")
+          .withIndex("by_guest_id", (q) => q.eq("guestId", args.guestId))
+          .unique();
+    if (existing) {
+      return existing._id;
+    }
+
     const now = Date.now();
-    return await ctx.db.insert("users", {
+    const userId = await ctx.db.insert("users", {
       workosId: args.workosId,
       guestId: args.guestId,
       email: args.email,
       createdAt: now,
       lastActiveAt: now,
     });
+    await ensureDefaultFavoritesList(ctx, userId);
+    return userId;
   },
 });
 
@@ -100,6 +170,8 @@ export const migrateGuestToUser = mutation({
   },
   returns: v.id("users"),
   handler: async (ctx, args) => {
+    await requireMatchingIdentity(ctx, args.workosId);
+
     const now = Date.now();
 
     // Find existing guest user
@@ -115,17 +187,20 @@ export const migrateGuestToUser = mutation({
         ...(args.email !== undefined && { email: args.email }),
         lastActiveAt: now,
       });
+      await ensureDefaultFavoritesList(ctx, guestUser._id);
       return guestUser._id;
     }
 
     // No guest found - create new user with both IDs
-    return await ctx.db.insert("users", {
+    const userId = await ctx.db.insert("users", {
       workosId: args.workosId,
       guestId: args.guestId,
       email: args.email,
       createdAt: now,
       lastActiveAt: now,
     });
+    await ensureDefaultFavoritesList(ctx, userId);
+    return userId;
   },
 });
 
@@ -133,9 +208,10 @@ export const migrateGuestToUser = mutation({
  * Update user's last active timestamp
  */
 export const updateLastActive = mutation({
-  args: { userId: v.id("users") },
+  args: { userId: v.id("users"), serviceToken: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "updateLastActive");
     await ctx.db.patch(args.userId, { lastActiveAt: Date.now() });
     return null;
   },
@@ -148,9 +224,11 @@ export const updateUserRole = mutation({
   args: {
     userId: v.id("users"),
     role: v.union(v.literal("user"), v.literal("admin")),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "updateUserRole");
     await ctx.db.patch(args.userId, { role: args.role });
     return null;
   },
@@ -167,6 +245,7 @@ export const listAllUsers = query({
   args: {
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
+    serviceToken: v.string(),
   },
   returns: v.object({
     users: v.array(userReturnType),
@@ -174,7 +253,8 @@ export const listAllUsers = query({
     nextCursor: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    const limit = args.limit || 50;
+    requireServiceAuth(args.serviceToken, "listAllUsers");
+    const limit = Math.min(Math.max(args.limit || 50, 1), 500);
     const users = await ctx.db
       .query("users")
       .order("desc")
@@ -195,11 +275,13 @@ export const listAllUsers = query({
  * List all admin users
  */
 export const listAdmins = query({
-  args: {},
+  args: { serviceToken: v.string() },
   returns: v.array(userReturnType),
-  handler: async (ctx) =>
-    await ctx.db
+  handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "listAdmins");
+    return await ctx.db
       .query("users")
       .withIndex("by_role", (q) => q.eq("role", "admin"))
-      .collect(),
+      .collect();
+  },
 });

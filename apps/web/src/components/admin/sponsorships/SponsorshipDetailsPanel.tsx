@@ -5,7 +5,7 @@
  * Displayed in the right column of the master-detail layout.
  */
 
-import MuxPlayer from "@mux/mux-player-react";
+import MuxPlayer from "@mux/mux-player-react/lazy";
 import {
   AlertCircle,
   Banknote,

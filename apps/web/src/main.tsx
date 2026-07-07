@@ -3,11 +3,10 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 import ReactDOM from "react-dom/client";
 import Loader from "./components/loader";
-import { initializeAnalytics } from "./lib/analytics";
 import { AuthProvider, useAuthForConvex } from "./lib/auth";
 import { ConvexUserSync } from "./lib/convex-user-sync";
-import { FavoritesProvider } from "./lib/favorites-context";
 import i18n from "./lib/i18n";
+import { ListsProvider } from "./lib/lists-context";
 import { routeTree } from "./routeTree.gen";
 import { orpc, queryClient } from "./utils/orpc";
 import { persistOptions } from "./utils/queryPersister";
@@ -59,14 +58,14 @@ const router = createRouter({
       <AuthProvider>
         <ConvexProviderWithAuth client={convex} useAuth={useAuthForConvex}>
           <ConvexUserSync>
-            <FavoritesProvider>
+            <ListsProvider>
               <PersistQueryClientProvider
                 client={queryClient}
                 persistOptions={persistOptions}
               >
                 {children}
               </PersistQueryClientProvider>
-            </FavoritesProvider>
+            </ListsProvider>
           </ConvexUserSync>
         </ConvexProviderWithAuth>
       </AuthProvider>
@@ -81,9 +80,6 @@ if (!rootElement) {
     i18n.t("common.errors.rootElementNotFound", "Root element not found")
   );
 }
-
-// Initialize analytics
-initializeAnalytics();
 
 // Update HTML lang attribute based on stored language
 const storedLanguage = localStorage.getItem("smog_language");

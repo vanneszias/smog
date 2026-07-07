@@ -13,6 +13,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SuccessRouteImport } from './routes/success'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ListsRouteImport } from './routes/lists'
 import { Route as GesturesRouteImport } from './routes/gestures'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as CallbackRouteImport } from './routes/callback'
@@ -23,6 +24,7 @@ import { Route as SponsorsIndexRouteImport } from './routes/sponsors/index'
 import { Route as SponsorIndexRouteImport } from './routes/sponsor/index'
 import { Route as SponsorsSuccessRouteImport } from './routes/sponsors/success'
 import { Route as SponsorsReEditRouteImport } from './routes/sponsors/re-edit'
+import { Route as ListsShareTokenRouteImport } from './routes/lists_.$shareToken'
 import { Route as GesturesIdRouteImport } from './routes/gestures_.$id'
 
 const TermsRoute = TermsRouteImport.update({
@@ -43,6 +45,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListsRoute = ListsRouteImport.update({
+  id: '/lists',
+  path: '/lists',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GesturesRoute = GesturesRouteImport.update({
@@ -95,6 +102,11 @@ const SponsorsReEditRoute = SponsorsReEditRouteImport.update({
   path: '/sponsors/re-edit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ListsShareTokenRoute = ListsShareTokenRouteImport.update({
+  id: '/lists_/$shareToken',
+  path: '/lists/$shareToken',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GesturesIdRoute = GesturesIdRouteImport.update({
   id: '/gestures_/$id',
   path: '/gestures/$id',
@@ -108,11 +120,13 @@ export interface FileRoutesByFullPath {
   '/callback': typeof CallbackRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
+  '/lists': typeof ListsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
   '/gestures/$id': typeof GesturesIdRoute
+  '/lists/$shareToken': typeof ListsShareTokenRoute
   '/sponsors/re-edit': typeof SponsorsReEditRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsor/': typeof SponsorIndexRoute
@@ -125,11 +139,13 @@ export interface FileRoutesByTo {
   '/callback': typeof CallbackRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
+  '/lists': typeof ListsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
   '/gestures/$id': typeof GesturesIdRoute
+  '/lists/$shareToken': typeof ListsShareTokenRoute
   '/sponsors/re-edit': typeof SponsorsReEditRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsor': typeof SponsorIndexRoute
@@ -143,11 +159,13 @@ export interface FileRoutesById {
   '/callback': typeof CallbackRoute
   '/favorites': typeof FavoritesRoute
   '/gestures': typeof GesturesRoute
+  '/lists': typeof ListsRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/success': typeof SuccessRoute
   '/terms': typeof TermsRoute
   '/gestures_/$id': typeof GesturesIdRoute
+  '/lists_/$shareToken': typeof ListsShareTokenRoute
   '/sponsors/re-edit': typeof SponsorsReEditRoute
   '/sponsors/success': typeof SponsorsSuccessRoute
   '/sponsor/': typeof SponsorIndexRoute
@@ -162,11 +180,13 @@ export interface FileRouteTypes {
     | '/callback'
     | '/favorites'
     | '/gestures'
+    | '/lists'
     | '/login'
     | '/privacy'
     | '/success'
     | '/terms'
     | '/gestures/$id'
+    | '/lists/$shareToken'
     | '/sponsors/re-edit'
     | '/sponsors/success'
     | '/sponsor/'
@@ -179,11 +199,13 @@ export interface FileRouteTypes {
     | '/callback'
     | '/favorites'
     | '/gestures'
+    | '/lists'
     | '/login'
     | '/privacy'
     | '/success'
     | '/terms'
     | '/gestures/$id'
+    | '/lists/$shareToken'
     | '/sponsors/re-edit'
     | '/sponsors/success'
     | '/sponsor'
@@ -196,11 +218,13 @@ export interface FileRouteTypes {
     | '/callback'
     | '/favorites'
     | '/gestures'
+    | '/lists'
     | '/login'
     | '/privacy'
     | '/success'
     | '/terms'
     | '/gestures_/$id'
+    | '/lists_/$shareToken'
     | '/sponsors/re-edit'
     | '/sponsors/success'
     | '/sponsor/'
@@ -214,11 +238,13 @@ export interface RootRouteChildren {
   CallbackRoute: typeof CallbackRoute
   FavoritesRoute: typeof FavoritesRoute
   GesturesRoute: typeof GesturesRoute
+  ListsRoute: typeof ListsRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   SuccessRoute: typeof SuccessRoute
   TermsRoute: typeof TermsRoute
   GesturesIdRoute: typeof GesturesIdRoute
+  ListsShareTokenRoute: typeof ListsShareTokenRoute
   SponsorsReEditRoute: typeof SponsorsReEditRoute
   SponsorsSuccessRoute: typeof SponsorsSuccessRoute
   SponsorIndexRoute: typeof SponsorIndexRoute
@@ -253,6 +279,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lists': {
+      id: '/lists'
+      path: '/lists'
+      fullPath: '/lists'
+      preLoaderRoute: typeof ListsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gestures': {
@@ -325,6 +358,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SponsorsReEditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lists_/$shareToken': {
+      id: '/lists_/$shareToken'
+      path: '/lists/$shareToken'
+      fullPath: '/lists/$shareToken'
+      preLoaderRoute: typeof ListsShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gestures_/$id': {
       id: '/gestures_/$id'
       path: '/gestures/$id'
@@ -342,11 +382,13 @@ const rootRouteChildren: RootRouteChildren = {
   CallbackRoute: CallbackRoute,
   FavoritesRoute: FavoritesRoute,
   GesturesRoute: GesturesRoute,
+  ListsRoute: ListsRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   SuccessRoute: SuccessRoute,
   TermsRoute: TermsRoute,
   GesturesIdRoute: GesturesIdRoute,
+  ListsShareTokenRoute: ListsShareTokenRoute,
   SponsorsReEditRoute: SponsorsReEditRoute,
   SponsorsSuccessRoute: SponsorsSuccessRoute,
   SponsorIndexRoute: SponsorIndexRoute,

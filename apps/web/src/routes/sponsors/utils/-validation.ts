@@ -64,7 +64,7 @@ export type SponsorDetailsErrors = Partial<
  * @param t - i18n translate function.
  * @param errors - Mutable error map to populate.
  */
-export function validateInvoiceFields(
+function validateInvoiceFields(
   data: Pick<
     SponsorDetailsFormData,
     "invoiceName" | "invoiceVatNumber" | "invoiceEmail"

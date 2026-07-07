@@ -1,185 +1,112 @@
-# Getting Started with SMOG
+# Getting Started
 
-> This guide gets a new developer productive in under 2 hours.  
-> Last updated: March 18, 2026
+> Last updated: June 10, 2026
 
 ## Prerequisites
 
-| Tool | Version | Install |
-|------|---------|---------|
-| [Bun](https://bun.sh) | ≥ 1.1 | `curl -fsSL https://bun.sh/install \| bash` |
-| [Node.js](https://nodejs.org) | ≥ 20 (for some tools) | via [nvm](https://github.com/nvm-sh/nvm) |
-| [Xcode](https://developer.apple.com/xcode/) | ≥ 15 | Mac App Store (iOS dev only) |
-| [Android Studio](https://developer.android.com/studio) | Latest | android.com (Android dev only) |
-| [Git](https://git-scm.com) | ≥ 2.40 | Homebrew: `brew install git` |
+- Bun 1.1 or newer
+- Node.js 20 or newer for tools that require Node
+- Xcode for iOS development
+- Android Studio for Android development
+- A Convex deployment and credentials for WorkOS, Mux, Mollie, and Remotion
+- Redis when testing queued email locally
 
-## 1. Clone & Install
+## Install
 
 ```bash
-git clone <repo-url> swift-forest
-cd swift-forest
+git clone <repo-url> smog
+cd smog
+cp .env.example .env
 bun install
 ```
 
-## 2. Environment Variables
+The repository uses one root `.env`. All supported variables and comments live
+in [`.env.example`](../.env.example).
 
-Copy the example env files and fill in the values:
+## Minimum Local Configuration
 
-```bash
-cp apps/web/.env.example apps/web/.env
-cp apps/server/.env.example apps/server/.env
-cp apps/native/.env.example apps/native/.env
-```
-
-### Required variables
-
-**`apps/web/.env`**
-```env
-VITE_CONVEX_URL=https://your-project.convex.cloud
-VITE_POSTHOG_API_KEY=phc_xxx
-```
-
-**`apps/server/.env`**
 ```env
 CONVEX_URL=https://your-project.convex.cloud
-MOLLIE_API_KEY=test_xxx
-WORKOS_API_KEY=sk_xxx
-WORKOS_CLIENT_ID=client_xxx
-```
-
-**`apps/native/.env`**
-```env
+VITE_CONVEX_URL=https://your-project.convex.cloud
 EXPO_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
-EXPO_PUBLIC_POSTHOG_API_KEY=phc_xxx
+
+WORKOS_CLIENT_ID=client_xxx
+WORKOS_CLIENT_SECRET=sk_xxx
+VITE_WORKOS_CLIENT_ID=client_xxx
+VITE_WORKOS_REDIRECT_URI=http://localhost:3001/callback
+
+VITE_SERVER_URL=http://localhost:3000
+EXPO_PUBLIC_SERVER_URL=http://localhost:3000
+CORS_ORIGIN=http://localhost:3001
 ```
 
-## 3. Start Development Servers
+For sponsorship development, also configure Mux, Mollie, Remotion, SMTP, and
+Redis values from `.env.example`.
 
-You can start all servers at once or individually:
+OpenPanel is optional in development. Web analytics is relayed through the
+server so the client secret is never exposed to the browser. Analytics remains
+disabled when client credentials are absent:
+
+```env
+OPENPANEL_API_URL=https://analytics.zias.be/api
+OPENPANEL_CLIENT_ID=
+OPENPANEL_CLIENT_SECRET=
+
+EXPO_PUBLIC_OPENPANEL_API_URL=https://analytics.zias.be/api
+EXPO_PUBLIC_OPENPANEL_CLIENT_ID=
+EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET=
+```
+
+Never expose a client secret through a `VITE_*` variable. The native SDK still
+requires a native client secret in the compiled app; use a separate,
+least-privileged OpenPanel client for native.
+
+## Start Services
 
 ```bash
-# All servers in parallel (recommended for full-stack work)
 bun dev
-
-# Individual servers
-bun -F native dev          # Expo dev server (mobile)
-bun -F web dev             # Vite dev server → http://localhost:3001
-bun -F server dev          # Hono API server → http://localhost:3000
-bun -F remotion dev        # Remotion preview → http://localhost:3002
-bun -F @smog/convex dev    # Convex backend
 ```
 
-## 4. Run the Native App
+Or run them separately:
 
 ```bash
-# iOS (requires Xcode + iOS Simulator)
-bun -F native ios
+bun -F @smog/convex dev
+bun -F server dev
+bun -F web dev
+bun -F remotion dev
+bun -F native dev
+```
 
-# Android (requires Android Studio + emulator)
+The native app uses development builds because it includes native modules:
+
+```bash
+bun -F native ios
 bun -F native android
 ```
 
-## 5. Project Structure Quick Reference
+## Architecture Notes
 
-```
-swift-forest/
-├── apps/
-│   ├── native/          # Expo/React Native mobile app
-│   │   ├── app/         # Expo Router screens
-│   │   ├── components/  # UI components
-│   │   ├── context/     # React contexts
-│   │   ├── hooks/       # Custom hooks
-│   │   └── services/    # Business logic
-│   │       ├── database/      # SQLite layer
-│   │       └── analytics/     # PostHog tracking
-│   ├── web/             # Vite/React web app
-│   │   └── src/
-│   │       ├── components/admin/  # Admin dashboard
-│   │       └── routes/sponsors/  # Sponsor purchase wizard
-│   ├── server/          # Hono/Bun API server
-│   └── remotion/        # Video composition
-├── packages/
-│   ├── @smog/api        # oRPC routers
-│   ├── @smog/auth       # Authentication
-│   ├── @smog/config     # Constants + URLs
-│   ├── @smog/convex     # Convex schema + functions
-│   ├── @smog/hooks      # Shared React hooks
-│   ├── @smog/shared     # Logger + error handling
-│   ├── @smog/styles     # Design tokens
-│   ├── @smog/types      # TypeScript types
-│   └── @smog/ui         # Shared web components
-└── docs/                # This documentation
-```
+- Native and web read gesture, favorite, and list data directly from Convex.
+- WorkOS provides OAuth identity; the API handles token exchange and refresh.
+- Sponsor previews and final videos are composed by Remotion and stored in Mux.
+- Mollie hosts payment entry; SMOG does not receive full card or bank details.
+- OpenPanel starts only after explicit analytics consent.
 
-## 6. Key Commands
+## Verification
+
+Run the same checks used before release:
 
 ```bash
-# Linting + formatting (auto-fix)
 bun check
-
-# Type checking (all packages)
 bun check-types
-
-# Build all packages
-bun build
-
-# Run tests
-bun -F @smog/shared test
-bun -F @smog/convex test
 bun -F web test
+bun -F @smog/convex test
 bun -F @smog/hooks test
-bun -F native test        # Jest (React Native)
+bun -F @smog/shared test
+bun run build
+knip --no-progress --no-config-hints
 ```
 
-## 7. Development Workflow
-
-### Adding a new gesture
-
-1. Go to the admin panel at `http://localhost:3001/admin`
-2. Click "New Gesture" in the Gestures tab
-3. Fill in name, categories, concepts, and MUX playback ID
-4. Save → gesture appears in the native app after next sync
-
-### Adding a new API endpoint
-
-1. Define input/output schemas in `packages/api/src/routers/[router].ts`
-2. Implement the handler (use `publicProcedure` or `authProcedure`)
-3. The web client picks it up automatically via oRPC
-
-### Adding a new screen (native)
-
-1. Create `apps/native/app/[screen-name].tsx` (Expo Router file-based routing)
-2. Export a default React component
-3. Navigate with `router.push("/screen-name")`
-
-### Making a Convex schema change
-
-1. Edit `packages/convex/convex/schema.ts`
-2. Run `bun -F @smog/convex dev` (Convex auto-deploys in dev mode)
-3. Update `DATABASE_TARGET_VERSION` in `@smog/config/constants` if SQLite schema changes too
-4. Add a migration in `packages/convex/convex/schema.ts` if needed
-
-## 8. Architecture Overview
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full system diagram.
-
-**Key concepts:**
-- **Offline-first** — native app reads from SQLite, syncs from Convex in background
-- **oRPC** — type-safe HTTP API between web → server (no code generation)
-- **Convex** — real-time cloud database + serverless functions
-
-## 9. Useful Resources
-
-| Document | When to read |
-|----------|-------------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Understanding the system |
-| [DATA_FLOW.md](./DATA_FLOW.md) | How data moves through the system |
-| [SYNC_STRATEGY.md](./SYNC_STRATEGY.md) | Offline sync details |
-| [PAYMENT_FLOW.md](./PAYMENT_FLOW.md) | Mollie integration |
-| [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) | Convex + SQLite schemas |
-| [COMPONENTS.md](./COMPONENTS.md) | Component reference |
-| [HOOKS.md](./HOOKS.md) | Hook reference |
-| [API_ROUTERS.md](./API_ROUTERS.md) | API endpoint reference |
-| [COMMON_TASKS.md](./COMMON_TASKS.md) | Step-by-step how-tos |
-| [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Fix common issues |
-| [CODE_STYLE.md](./CODE_STYLE.md) | Coding standards |
+See [Architecture](./ARCHITECTURE.md), [Data Flow](./DATA_FLOW.md),
+[Payment Flow](./PAYMENT_FLOW.md), and
+[Privacy and Analytics](./PRIVACY_AND_ANALYTICS.md).

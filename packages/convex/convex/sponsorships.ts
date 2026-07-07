@@ -20,6 +20,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import { requireServiceAuth } from "./lib/serviceAuth";
 import {
   calculateEndDateFromWeeks,
   weeksToYears,
@@ -40,9 +41,11 @@ export const create = mutation({
     sponsoredVideoPlaybackId: v.string(), // Mux playback ID
     durationWeeks: v.number(),
     paymentAmount: v.number(),
+    serviceToken: v.string(),
   },
   returns: v.id("sponsorships"),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.create");
     // Get gesture to backup original playbackId
     const gesture = await ctx.db.get(args.gestureId);
     if (!gesture) {
@@ -93,9 +96,11 @@ export const createBulk = mutation({
     sponsoredVideoPlaybackIds: v.array(v.string()), // Mux playback IDs, one per gesture
     durationWeeks: v.number(),
     paymentAmountPerGesture: v.number(),
+    serviceToken: v.string(),
   },
   returns: v.array(v.id("sponsorships")),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.createBulk");
     if (args.gestureIds.length !== args.sponsoredVideoPlaybackIds.length) {
       throw new Error(
         "Number of gesture IDs must match number of sponsored video playback IDs"
@@ -197,9 +202,21 @@ export const createBulkSimplified = mutation({
     invoiceName: v.optional(v.string()),
     invoiceVatNumber: v.optional(v.string()),
     invoiceEmail: v.optional(v.string()),
+    serviceToken: v.string(),
   },
   returns: v.array(v.id("sponsorships")),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.createBulkSimplified");
+    if (
+      args.gestureIds.length === 0 ||
+      args.gestureIds.length > 20 ||
+      args.gestureIds.length !== args.previewVideoPlaybackIds.length ||
+      new Set(args.gestureIds).size !== args.gestureIds.length ||
+      args.previewVideoPlaybackIds.some((id) => id.trim().length === 0) ||
+      args.durationYears !== 1
+    ) {
+      throw new Error("Invalid sponsorship selection");
+    }
     const sponsorshipIds: Id<"sponsorships">[] = [];
     const errors: string[] = [];
 
@@ -286,9 +303,11 @@ export const updateAfterPayment = mutation({
     sponsorshipId: v.id("sponsorships"),
     molliePaymentId: v.string(),
     sponsoredVideoPlaybackId: v.string(),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.updateAfterPayment");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
     if (!sponsorship) {
       throw new Error("Sponsorship not found");
@@ -317,14 +336,16 @@ export const updateAfterPayment = mutation({
 
 // Get sponsorship by payment ID (for webhook)
 export const getByPaymentId = query({
-  args: { molliePaymentId: v.string() },
-  handler: async (ctx, args) =>
-    await ctx.db
+  args: { molliePaymentId: v.string(), serviceToken: v.string() },
+  handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.getByPaymentId");
+    return await ctx.db
       .query("sponsorships")
       .withIndex("by_payment_id", (q) =>
         q.eq("molliePaymentId", args.molliePaymentId)
       )
-      .first(),
+      .first();
+  },
 });
 
 // Get all sponsorships by payment ID (for simplified flow with multiple gestures)
@@ -339,17 +360,18 @@ export const getAllByPaymentId = query({
       .collect();
 
     // Enrich with gesture names
-    const enriched = await Promise.all(
+    return await Promise.all(
       sponsorships.map(async (s) => {
         const gesture = await ctx.db.get(s.gestureId);
         return {
-          ...s,
           gestureName: gesture?.name,
+          sponsorName: s.sponsorName,
+          durationYears: s.durationYears,
+          paymentAmount: s.paymentAmount,
+          status: s.status,
         };
       })
     );
-
-    return enriched;
   },
 });
 
@@ -360,9 +382,11 @@ export const updateContactInfo = mutation({
     fullName: v.string(),
     email: v.string(),
     company: v.optional(v.string()),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.updateContactInfo");
     const sponsorships = await ctx.db
       .query("sponsorships")
       .withIndex("by_payment_id", (q) =>
@@ -390,41 +414,77 @@ export const updateContactInfo = mutation({
 
 // Get sponsorship by ID
 export const getById = query({
-  args: { id: v.id("sponsorships") },
-  handler: async (ctx, args) => await ctx.db.get(args.id),
+  args: { id: v.id("sponsorships"), serviceToken: v.string() },
+  handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.getById");
+    return await ctx.db.get(args.id);
+  },
 });
 
 // Get active sponsorship for a gesture
 export const getActiveByGesture = query({
   args: { gestureId: v.id("gestures") },
-  handler: async (ctx, args) =>
-    await ctx.db
+  handler: async (ctx, args) => {
+    const sponsorship = await ctx.db
       .query("sponsorships")
       .withIndex("by_gesture_and_status", (q) =>
         q.eq("gestureId", args.gestureId).eq("status", "active")
       )
-      .first(),
+      .first();
+    return sponsorship
+      ? {
+          status: sponsorship.status,
+          sponsorName: sponsorship.sponsorName,
+          endDate: sponsorship.endDate,
+        }
+      : null;
+  },
+});
+
+export const getActiveByGestureForService = query({
+  args: {
+    gestureId: v.id("gestures"),
+    serviceToken: v.string(),
+  },
+  handler: async (ctx, args) => {
+    requireServiceAuth(
+      args.serviceToken,
+      "sponsorships.getActiveByGestureForService"
+    );
+    return await ctx.db
+      .query("sponsorships")
+      .withIndex("by_gesture_and_status", (q) =>
+        q.eq("gestureId", args.gestureId).eq("status", "active")
+      )
+      .first();
+  },
 });
 
 // Get active sponsorships for multiple gestures (batch query)
 export const getActiveByGestures = query({
   args: { gestureIds: v.array(v.id("gestures")) },
   handler: async (ctx, args) => {
-    // Get all active sponsorships
-    const activeSponserships = await ctx.db
-      .query("sponsorships")
-      .withIndex("by_status", (q) => q.eq("status", "active"))
-      .collect();
+    if (args.gestureIds.length > 200) {
+      throw new Error("Too many gesture IDs");
+    }
+    const activeSponsorships = await Promise.all(
+      args.gestureIds.map((gestureId) =>
+        ctx.db
+          .query("sponsorships")
+          .withIndex("by_gesture_and_status", (q) =>
+            q.eq("gestureId", gestureId).eq("status", "active")
+          )
+          .first()
+      )
+    );
 
-    // Create a map of gestureId -> sponsorship for the requested gestures
-    const gestureIdSet = new Set(args.gestureIds);
     const sponsorshipMap: Record<
       string,
       { status: string; sponsorName?: string; endDate: number }
     > = {};
 
-    for (const sponsorship of activeSponserships) {
-      if (gestureIdSet.has(sponsorship.gestureId)) {
+    for (const sponsorship of activeSponsorships) {
+      if (sponsorship) {
         sponsorshipMap[sponsorship.gestureId] = {
           status: sponsorship.status,
           sponsorName: sponsorship.sponsorName,
@@ -446,24 +506,43 @@ export const listGesturesWithSponsorship = query({
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .collect();
 
-    // Fetch all sponsorships (active and pending states)
-    const allSponserships = await ctx.db.query("sponsorships").collect();
-
-    // Filter for active or pending sponsorships
-    const relevantSponserships = allSponserships.filter(
-      (s) =>
-        s.status === "active" ||
-        s.status === "pending" ||
-        s.status === "pending_payment" ||
-        s.status === "pending_approval"
+    const statuses = [
+      "pending",
+      "pending_payment",
+      "pending_approval",
+      "active",
+    ] as const;
+    const relevantSponsorships = (
+      await Promise.all(
+        statuses.map((status) =>
+          ctx.db
+            .query("sponsorships")
+            .withIndex("by_status", (q) => q.eq("status", status))
+            .collect()
+        )
+      )
+    ).flat();
+    const sponsorshipByGesture = new Map(
+      relevantSponsorships.map((sponsorship) => [
+        sponsorship.gestureId,
+        sponsorship,
+      ])
     );
 
     return gestures.map((gesture) => {
-      const sponsorship =
-        relevantSponserships.find((s) => s.gestureId === gesture._id) || null;
+      const sponsorship = sponsorshipByGesture.get(gesture._id) ?? null;
       return {
         ...gesture,
-        sponsorship,
+        sponsorship: sponsorship
+          ? {
+              status: sponsorship.status,
+              sponsorName:
+                sponsorship.status === "active"
+                  ? sponsorship.sponsorName
+                  : undefined,
+              endDate: sponsorship.endDate,
+            }
+          : null,
       };
     });
   },
@@ -471,8 +550,9 @@ export const listGesturesWithSponsorship = query({
 
 // Get expired sponsorships (for scheduled job)
 export const getExpired = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { serviceToken: v.string() },
+  handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.getExpired");
     const now = Date.now();
     const activeSponsors = await ctx.db
       .query("sponsorships")
@@ -485,9 +565,13 @@ export const getExpired = query({
 
 // Expire a sponsorship (restore original video)
 export const expire = mutation({
-  args: { sponsorshipId: v.id("sponsorships") },
+  args: {
+    sponsorshipId: v.id("sponsorships"),
+    serviceToken: v.string(),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.expire");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
     if (!sponsorship) {
       throw new Error("Sponsorship not found");
@@ -512,9 +596,11 @@ export const updatePaymentId = mutation({
   args: {
     sponsorshipId: v.id("sponsorships"),
     molliePaymentId: v.string(),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.updatePaymentId");
     await ctx.db.patch(args.sponsorshipId, {
       molliePaymentId: args.molliePaymentId,
       status: "pending_payment", // Waiting for payment confirmation
@@ -529,9 +615,11 @@ export const updateVideoPlaybackId = mutation({
   args: {
     sponsorshipId: v.id("sponsorships"),
     sponsoredVideoPlaybackId: v.string(),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.updateVideoPlaybackId");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
     if (!sponsorship) {
       throw new Error("Sponsorship not found");
@@ -549,9 +637,14 @@ export const updateVideoPlaybackId = mutation({
 export const markAsAwaitingApproval = mutation({
   args: {
     sponsorshipId: v.id("sponsorships"),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(
+      args.serviceToken,
+      "sponsorships.markAsAwaitingApproval"
+    );
     const sponsorship = await ctx.db.get(args.sponsorshipId);
     if (!sponsorship) {
       throw new Error("Sponsorship not found");
@@ -578,9 +671,11 @@ export const listAll = query({
   args: {
     status: v.optional(v.string()),
     limit: v.optional(v.number()),
+    serviceToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const limit = args.limit || 100;
+    requireServiceAuth(args.serviceToken, "sponsorships.listAll");
+    const limit = Math.min(Math.max(args.limit || 100, 1), 1000);
 
     const sponsorships = args.status
       ? await ctx.db
@@ -607,8 +702,9 @@ export const listAll = query({
 
 // Admin: List pending payment sponsorships (paid but not approved yet)
 export const listPendingApproval = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { serviceToken: v.string() },
+  handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.listPendingApproval");
     const sponsorships = await ctx.db
       .query("sponsorships")
       .withIndex("by_status", (q) => q.eq("status", "pending_approval"))
@@ -635,9 +731,11 @@ export const approve = mutation({
   args: {
     sponsorshipId: v.id("sponsorships"),
     adminUserId: v.id("users"),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.approve");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
     if (!sponsorship) {
       throw new Error("Sponsorship not found");
@@ -683,9 +781,11 @@ export const reject = mutation({
     sponsorshipId: v.id("sponsorships"),
     adminUserId: v.id("users"),
     reason: v.string(),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.reject");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
     if (!sponsorship) {
       throw new Error("Sponsorship not found");
@@ -710,9 +810,11 @@ export const setReEditToken = mutation({
     sponsorshipId: v.id("sponsorships"),
     token: v.string(),
     expiresAt: v.number(),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.setReEditToken");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
     if (!sponsorship) {
       throw new Error("Sponsorship not found");
@@ -794,9 +896,14 @@ export const reSubmitSponsorshipVideo = mutation({
     // Optional editable fields the sponsor may have changed
     overlayText: v.optional(v.string()),
     sponsorName: v.optional(v.string()),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(
+      args.serviceToken,
+      "sponsorships.reSubmitSponsorshipVideo"
+    );
     const sponsorship = await ctx.db
       .query("sponsorships")
       .withIndex("by_re_edit_token", (q) => q.eq("reEditToken", args.token))
@@ -837,8 +944,12 @@ export const reSubmitSponsorshipVideo = mutation({
 
 // Admin: Retrieve the current re-edit link token for a sponsorship (to copy it again)
 export const getReEditLinkForAdmin = query({
-  args: { sponsorshipId: v.id("sponsorships") },
+  args: {
+    sponsorshipId: v.id("sponsorships"),
+    serviceToken: v.string(),
+  },
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.getReEditLinkForAdmin");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
     if (!(sponsorship?.reEditToken && sponsorship.reEditTokenExpiresAt)) {
       return null;
@@ -856,8 +967,10 @@ export const getReEditLinkForAdmin = query({
 export const getExpiringSoon = query({
   args: {
     daysUntilExpiry: v.number(),
+    serviceToken: v.string(),
   },
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.getExpiringSoon");
     const now = Date.now();
     const cutoff = now + args.daysUntilExpiry * 24 * 60 * 60 * 1000;
 
@@ -879,9 +992,14 @@ export const getExpiringSoon = query({
 export const markRenewalReminderSent = mutation({
   args: {
     sponsorshipId: v.id("sponsorships"),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(
+      args.serviceToken,
+      "sponsorships.markRenewalReminderSent"
+    );
     await ctx.db.patch(args.sponsorshipId, {
       renewalReminderSentAt: Date.now(),
       updatedAt: Date.now(),
@@ -893,8 +1011,12 @@ export const markRenewalReminderSent = mutation({
 // Get stale pending_payment sponsorships (for scheduled cleanup job)
 // A sponsorship is considered stale if it has been in pending_payment for more than 24 hours
 export const getStalePendingPayments = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { serviceToken: v.string() },
+  handler: async (ctx, args) => {
+    requireServiceAuth(
+      args.serviceToken,
+      "sponsorships.getStalePendingPayments"
+    );
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     const pending = await ctx.db
       .query("sponsorships")
@@ -908,9 +1030,11 @@ export const getStalePendingPayments = query({
 export const cancelPendingPayment = mutation({
   args: {
     sponsorshipId: v.id("sponsorships"),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.cancelPendingPayment");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
     if (!sponsorship) {
       throw new Error("Sponsorship not found");
@@ -936,9 +1060,11 @@ export const forceExpire = mutation({
   args: {
     sponsorshipId: v.id("sponsorships"),
     adminUserId: v.id("users"),
+    serviceToken: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireServiceAuth(args.serviceToken, "sponsorships.forceExpire");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
     if (!sponsorship) {
       throw new Error("Sponsorship not found");

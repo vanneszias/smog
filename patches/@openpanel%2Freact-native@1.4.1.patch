@@ -1,0 +1,15 @@
+diff --git a/package.json b/package.json
+index 914039506640e97812888d8d0489795818f81e90..677ec7a115987797e1245cdfd913bb42442e5d97 100644
+--- a/package.json
++++ b/package.json
+@@ -20,8 +20,8 @@
+     "typescript": "catalog:"
+   },
+   "peerDependencies": {
+-    "expo-application": "5 - 7",
+-    "expo-constants": "14 - 18",
++    "expo-application": ">=5",
++    "expo-constants": ">=14",
+     "react-native": "*"
+   },
+   "private": false,

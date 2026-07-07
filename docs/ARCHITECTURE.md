@@ -1,155 +1,95 @@
-# SMOG Architecture
+# Architecture
 
-> Last updated: March 18, 2026
+> Last updated: June 10, 2026
 
-## Overview
+## System
 
-SMOG is a sign-language learning platform consisting of:
-
-- **Native app** — Expo/React Native offline-first mobile app
-- **Web app** — Vite/React sponsor purchase and admin portal
-- **Server** — Hono/Bun API server (oRPC, email, webhooks)
-- **Convex** — Real-time cloud database and serverless functions
-- **Remotion** — Server-side video composition for sponsorship overlays
-
-All apps live in a **Turborepo monorepo** managed with **Bun**.
-
----
-
-## System Diagram
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        SMOG Monorepo                            │
-│                                                                 │
-│  apps/native ──────────────────────────────────────────────┐   │
-│  (Expo/React Native)                                        │   │
-│  ├─ Offline-first SQLite (databaseService)                  │   │
-│  ├─ PostHog analytics (analyticsService)                    │   │
-│  ├─ Convex real-time sync (convexSyncService)               │   │
-│  └─ Gesture video playback (VideoPlayer → expo-video)       │   │
-│                                              │ Convex SDK   │   │
-│  apps/web ─────────────────────────────────┐│              │   │
-│  (Vite + React + TanStack Router/Query)     ││              │   │
-│  ├─ Sponsor purchase wizard (3-step)        ││              ▼   │
-│  ├─ Admin dashboard                         ││    ┌──────────┐  │
-│  └─ oRPC client → apps/server               ││    │  Convex  │  │
-│                              │ HTTP/oRPC    ││    │  Cloud   │  │
-│  apps/server ────────────────┘              ││    │(database │  │
-│  (Hono + Bun)                               ││    │+ cron)   │  │
-│  ├─ oRPC API routers (packages/api)         ││    └──────────┘  │
-│  ├─ Mollie payment webhooks                 ││         ▲        │
-│  ├─ Email queue (BullMQ + Redis)            ││         │        │
-│  └─ Remotion render jobs                    ││    Convex SDK    │
-│                    │ HTTP API                ││         │        │
-│  apps/remotion ────┘                        ││         │        │
-│  (Remotion v4)                              ││    packages/convex│
-│  ├─ Sponsorship video composition           ││    (@smog/convex) │
-│  └─ MUX upload                             ─┘│         │        │
-│                                              │    mutations/     │
-│  packages/                                   │    queries/       │
-│  ├─ @smog/api       — oRPC routers           │    schema         │
-│  ├─ @smog/auth      — Better Auth + Mollie   │                   │
-│  ├─ @smog/config    — constants + URLs       │                   │
-│  ├─ @smog/convex    — generated Convex API   │                   │
-│  ├─ @smog/hooks     — shared React hooks     │                   │
-│  ├─ @smog/i18n      — locale JSON files      │                   │
-│  ├─ @smog/shared    — logger + error handler │                   │
-│  ├─ @smog/styles    — design tokens          │                   │
-│  ├─ @smog/types     — domain types           │                   │
-│  └─ @smog/ui        — shared web components  │                   │
-└─────────────────────────────────────────────────────────────────┘
+```text
+Native (Expo 55) ───────────────┐
+  WorkOS OAuth                  │ Convex SDK
+  Convex queries/mutations      ├──────────────► Convex
+  Mux playback                  │                 data + functions + cron
+  OpenPanel after consent       │
+                                │
+Web (Vite + React) ─────────────┤
+  public learning UI            │
+  accounts and lists            │
+  sponsor wizard + admin        │
+  OpenPanel after consent       │
+             │ oRPC             │
+             ▼                  │
+Server (Hono + Bun) ────────────┘
+  WorkOS token exchange
+  Mollie webhook
+  email queue + scheduled jobs
+  Remotion orchestration
+             │
+             ▼
+Remotion service ──► Mux
+  preview/final sponsor video composition
 ```
 
----
+## Applications
 
-## Package Dependency Graph
+### Native
 
-```
-@smog/config  (no deps)
-    ↑
-@smog/types   (no runtime deps)
-@smog/styles  (no runtime deps)
-@smog/i18n    (no runtime deps)
-    ↑
-@smog/shared  (@smog/config)
-@smog/convex  (convex)
-    ↑
-@smog/auth    (@smog/convex, zod)
-    ↑
-@smog/api     (@smog/auth, @smog/convex, zod, orpc)
-    ↑
-@smog/hooks   (@smog/types, react, fuse.js)
-@smog/ui      (@smog/types, @smog/hooks, react, mux-player)
-    ↑
-apps/native   (all @smog/* packages)
-apps/web      (all @smog/* packages)
-apps/server   (@smog/api, @smog/auth, @smog/convex)
-apps/remotion (@smog/types)
-```
+`apps/native` uses Expo Router, WorkOS OAuth with PKCE, Convex real-time
+queries/mutations, and Mux playback. SecureStore holds refresh tokens;
+AsyncStorage holds non-secret preferences, guest identity, recent searches, and
+analytics consent.
 
----
+The previous SQLite gesture cache and offline favorites queue are no longer
+present. Server-backed content currently needs network access.
 
-## Key Architectural Decisions
+### Web
 
-### 1. Offline-First Native App
+`apps/web` is a Vite SPA with TanStack Router and TanStack Query. It provides
+the public gesture library, lists, account tools, sponsor purchase flow, and
+admin dashboard. It calls Convex directly for real-time data and the Hono/oRPC
+server for workflows that require secrets or external services.
 
-The native app stores all gesture and category data locally in SQLite (`gestures.db`). The `convexSyncService` syncs data in the background every 2 hours. This means:
+### Server
 
-- Gestures are available immediately without network
-- Users can browse and favourite gestures offline
-- Sync failures are graceful (retried with exponential backoff)
+`apps/server` owns server-only credentials and:
 
-See [SYNC_STRATEGY.md](./SYNC_STRATEGY.md) for details.
+- exchanges and refreshes WorkOS tokens;
+- exposes oRPC and OpenAPI handlers;
+- creates and verifies Mollie payments;
+- handles Mollie webhooks;
+- queues transactional email through BullMQ/Redis;
+- runs sponsorship expiration, renewal, and stale-payment jobs;
+- grants authenticated Remotion access to Mux source videos.
 
-### 2. Convex as the Source of Truth
+### Remotion
 
-Convex is the authoritative backend database. The native SQLite and web TanStack Query caches are derived views. Convex provides:
+`apps/remotion` composes sponsor overlays. The API submits jobs and polls for
+completion; Remotion obtains a temporary source URL from the server and uploads
+the result to Mux.
 
-- Real-time subscriptions (gestures, categories)
-- Server-side mutations with validation
-- Scheduled cron jobs (sponsorship expiry)
-- GDPR data deletion
+## Packages
 
-### 3. oRPC for Type-Safe HTTP API
+| Package | Responsibility |
+|---|---|
+| `@smog/api` | oRPC routers and request context |
+| `@smog/auth` | WorkOS types/config/token helpers and Mollie client |
+| `@smog/config` | Shared constants and URLs |
+| `@smog/convex` | Schema, generated bindings, functions, and cron jobs |
+| `@smog/hooks` | Shared React behavior |
+| `@smog/i18n` | Locale resources |
+| `@smog/shared` | Analytics event types, logging, errors, OpenTelemetry |
+| `@smog/styles` | Design tokens |
+| `@smog/types` | Domain types |
+| `@smog/ui` | Shared web components |
 
-The `apps/server` Hono server exposes an oRPC API consumed by `apps/web`. All routes are defined in `packages/api/src/routers/` with Zod input/output schemas. The oRPC client in `apps/web` provides end-to-end type safety without code generation.
+## Security Boundaries
 
-### 4. Remotion for Video Composition
+- WorkOS and Mollie secrets exist only on the server.
+- The web sends analytics through the server relay and never receives an
+  OpenPanel client secret.
+- Native OpenPanel uses a separate least-privileged client credential.
+- Internal email and Remotion routes require service bearer tokens.
+- Convex validates WorkOS JWTs for authenticated functions.
+- Optional analytics is disabled until explicit consent.
 
-When a sponsor purchases a sponsorship, `apps/server` enqueues a Remotion render job. The Remotion server composes the sponsor overlay (name + optional logo) onto the gesture video and uploads the result to MUX. The MUX playback ID is then stored in Convex.
-
-### 5. Mollie for Payments
-
-The sponsorship purchase flow uses Mollie as the payment provider:
-
-1. Sponsor selects gestures and fills in details
-2. Web app calls `POST /api/sponsorships/create-bulk-payment`
-3. Server creates a Mollie payment and returns a checkout URL
-4. Sponsor completes payment on Mollie's hosted checkout page
-5. Mollie sends a webhook to `POST /api/webhooks/mollie`
-6. Server updates sponsorship status to `pending_approval`
-7. Admin reviews and approves/rejects
-
-See [PAYMENT_FLOW.md](./PAYMENT_FLOW.md) for the full flow.
-
----
-
-## Tech Stack
-
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| Mobile | React Native + Expo | SDK 54 |
-| Web | Vite + React | React 19 |
-| Routing (web) | TanStack Router | v1 |
-| Data fetching | TanStack Query + oRPC | v5 |
-| Backend | Hono + Bun | latest |
-| Database | Convex + SQLite | latest |
-| Auth | Better Auth | latest |
-| Payments | Mollie | v3 |
-| Video | MUX + expo-video | latest |
-| Composition | Remotion | v4 |
-| Analytics | PostHog | latest |
-| Monorepo | Turborepo + Bun | latest |
-| Types | TypeScript | 5.8+ |
-| Linting | Biome | latest |
+See [Data Flow](./DATA_FLOW.md), [Payment Flow](./PAYMENT_FLOW.md), and
+[Privacy and Analytics](./PRIVACY_AND_ANALYTICS.md).

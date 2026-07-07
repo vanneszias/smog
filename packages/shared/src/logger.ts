@@ -78,8 +78,8 @@ export interface Logger {
  * @returns A scoped `Logger` instance.
  *
  * @example
- * const logger = createLogger("analyticsService");
- * logger.info("PostHog initialised");
+ * const logger = createLogger("syncService");
+ * logger.info("Synchronization started");
  */
 export function createLogger(
   module: string,

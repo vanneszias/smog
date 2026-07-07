@@ -4,6 +4,7 @@ import type { Id } from "@smog/convex/dataModel";
 import { ConvexHttpClient } from "convex/browser";
 import { z } from "zod";
 import { publicProcedure } from "../index";
+import { withServiceAuth } from "../lib/convex";
 import { triggerEmail } from "../lib/emailTrigger";
 
 // Fixed sponsor overlay configuration
@@ -31,6 +32,28 @@ const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
 
 // Get Remotion service URL from environment
 const REMOTION_URL = process.env.REMOTION_URL || "http://localhost:3002";
+const MAX_SPONSORSHIPS_PER_PAYMENT = 20;
+const MAX_LOGO_DATA_URL_LENGTH = 3_000_000;
+
+const logoDataUrlSchema = z
+  .string()
+  .max(MAX_LOGO_DATA_URL_LENGTH)
+  .refine(
+    (value) =>
+      /^data:image\/(?:png|jpeg|jpg|webp);base64,[a-zA-Z0-9+/=]+$/.test(value),
+    "Logo must be a PNG, JPEG, or WebP image"
+  );
+
+function getRemotionHeaders() {
+  const apiKey = process.env.REMOTION_API_KEY;
+  if (!apiKey) {
+    throw new Error("REMOTION_API_KEY must be set");
+  }
+  return {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+}
 
 // Poll Remotion until a composition job completes (max 2 minutes)
 async function pollCompositionJob(jobId: string): Promise<string> {
@@ -38,7 +61,8 @@ async function pollCompositionJob(jobId: string): Promise<string> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const statusResponse = await fetch(
-      `${REMOTION_URL}/api/compose/status/${jobId}`
+      `${REMOTION_URL}/api/compose/status/${jobId}`,
+      { headers: getRemotionHeaders() }
     );
     if (!statusResponse.ok) {
       continue;
@@ -81,7 +105,7 @@ async function composeVideo({
 }): Promise<string> {
   const response = await fetch(`${REMOTION_URL}/api/compose`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getRemotionHeaders(),
     body: JSON.stringify({
       playbackId,
       overlayImageUrl: logoImage || "",
@@ -132,10 +156,10 @@ export const sponsorshipsRouter = {
   generatePreview: publicProcedure
     .input(
       z.object({
-        gestureId: z.string(),
-        sponsorName: z.string().max(40),
-        logoImage: z.string().optional(), // base64 data URL
-        overlayText: z.string().max(100),
+        gestureId: z.string().min(1),
+        sponsorName: z.string().trim().min(1).max(40),
+        logoImage: logoDataUrlSchema.optional(),
+        overlayText: z.string().trim().min(1).max(100),
       })
     )
     .handler(async ({ input }) => {
@@ -160,7 +184,7 @@ export const sponsorshipsRouter = {
         // Call Remotion service to compose video
         const response = await fetch(`${REMOTION_URL}/api/compose`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getRemotionHeaders(),
           body: JSON.stringify({
             playbackId: gesture.playbackId,
             overlayImageUrl: input.logoImage || "",
@@ -211,24 +235,39 @@ export const sponsorshipsRouter = {
    */
   createBulkSponsorshipsSimplified: publicProcedure
     .input(
-      z.object({
-        gestureIds: z.array(z.string()),
-        sponsorName: z.string().max(40),
-        sponsorEmail: z.string().email(),
-        contactFullName: z.string(),
-        contactCompany: z.string().optional(),
-        overlayText: z.string(),
-        logoImage: z.string().optional(), // base64
-        includeLogo: z.boolean(),
-        durationYears: z.literal(1),
-        // One pre-composed preview playback ID per gesture, parallel to gestureIds.
-        previewVideoPlaybackIds: z.array(z.string()),
-        // Invoice fields
-        invoiceRequested: z.boolean().optional(),
-        invoiceName: z.string().optional(),
-        invoiceVatNumber: z.string().optional(),
-        invoiceEmail: z.string().email().optional(),
-      })
+      z
+        .object({
+          gestureIds: z
+            .array(z.string().min(1))
+            .min(1)
+            .max(MAX_SPONSORSHIPS_PER_PAYMENT),
+          sponsorName: z.string().trim().min(1).max(40),
+          sponsorEmail: z.string().trim().email().max(254),
+          contactFullName: z.string().trim().min(1).max(120),
+          contactCompany: z.string().trim().max(120).optional(),
+          overlayText: z.string().trim().min(1).max(100),
+          logoImage: logoDataUrlSchema.optional(),
+          includeLogo: z.boolean(),
+          durationYears: z.literal(1),
+          // One pre-composed preview playback ID per gesture, parallel to gestureIds.
+          previewVideoPlaybackIds: z
+            .array(z.string().min(1))
+            .max(MAX_SPONSORSHIPS_PER_PAYMENT),
+          // Invoice fields
+          invoiceRequested: z.boolean().optional(),
+          invoiceName: z.string().trim().max(160).optional(),
+          invoiceVatNumber: z.string().trim().max(32).optional(),
+          invoiceEmail: z.string().trim().email().max(254).optional(),
+        })
+        .refine(
+          (value) => new Set(value.gestureIds).size === value.gestureIds.length,
+          "Each gesture can only be sponsored once per payment"
+        )
+        .refine(
+          (value) =>
+            value.gestureIds.length === value.previewVideoPlaybackIds.length,
+          "Each gesture requires exactly one preview video"
+        )
     )
     .handler(async ({ input }) => {
       try {
@@ -240,7 +279,7 @@ export const sponsorshipsRouter = {
         // into the preview videos and storing large base64 data would exceed limits
         const sponsorshipIds = await convex.mutation(
           api.sponsorships.createBulkSimplified,
-          {
+          withServiceAuth({
             gestureIds: input.gestureIds as Id<"gestures">[],
             sponsorName: input.sponsorName,
             sponsorEmail: input.sponsorEmail,
@@ -254,7 +293,7 @@ export const sponsorshipsRouter = {
             invoiceName: input.invoiceName,
             invoiceVatNumber: input.invoiceVatNumber,
             invoiceEmail: input.invoiceEmail,
-          }
+          })
         );
 
         console.log(
@@ -271,7 +310,7 @@ export const sponsorshipsRouter = {
                 .catch(() => id)
             )
           ),
-          convex.query(api.users.listAdmins),
+          convex.query(api.users.listAdmins, withServiceAuth({})),
         ])
           .then(([gestureNames, admins]) => {
             const adminEmails = admins
@@ -324,10 +363,19 @@ export const sponsorshipsRouter = {
    */
   createBulkPayment: publicProcedure
     .input(
-      z.object({
-        sponsorshipIds: z.array(z.string()),
-        amount: z.number(),
-      })
+      z
+        .object({
+          sponsorshipIds: z
+            .array(z.string().min(1))
+            .min(1)
+            .max(MAX_SPONSORSHIPS_PER_PAYMENT),
+          amount: z.number().int().positive(),
+        })
+        .refine(
+          (value) =>
+            new Set(value.sponsorshipIds).size === value.sponsorshipIds.length,
+          "Duplicate sponsorships are not allowed"
+        )
     )
     .handler(async ({ input }) => {
       console.log(
@@ -337,19 +385,30 @@ export const sponsorshipsRouter = {
       // Verify all sponsorships exist and are in pending_payment state
       const sponsorships = await Promise.all(
         input.sponsorshipIds.map((id) =>
-          convex.query(api.sponsorships.getById, {
-            id: id as Id<"sponsorships">,
-          })
+          convex.query(
+            api.sponsorships.getById,
+            withServiceAuth({
+              id: id as Id<"sponsorships">,
+            })
+          )
         )
       );
 
       const invalidSponsorships = sponsorships.filter(
-        (s) => !s || s.status !== "pending_payment"
+        (s) =>
+          !s || s.status !== "pending_payment" || Boolean(s.molliePaymentId)
       );
       if (invalidSponsorships.length > 0) {
         throw new Error(
-          "Some sponsorships are not found or not in pending_payment state"
+          "Some sponsorships are unavailable or already have a payment"
         );
+      }
+      const expectedAmount = sponsorships.reduce(
+        (total, sponsorship) => total + (sponsorship?.paymentAmount ?? 0),
+        0
+      );
+      if (input.amount !== expectedAmount) {
+        throw new Error("Payment amount does not match sponsorship pricing");
       }
 
       const baseUrl = process.env.CORS_ORIGIN || "http://localhost:3001";
@@ -359,7 +418,7 @@ export const sponsorshipsRouter = {
       const payment = await mollieClient.payments.create({
         amount: {
           currency: "EUR",
-          value: (input.amount / 100).toFixed(2),
+          value: (expectedAmount / 100).toFixed(2),
         },
         description: `Sponsorship for ${input.sponsorshipIds.length} gesture(s)`,
         redirectUrl: `${baseUrl}/sponsors/success?paymentId={id}`,
@@ -369,14 +428,21 @@ export const sponsorshipsRouter = {
           isBulkPayment: "true",
         },
       });
+      const checkoutUrl = payment._links.checkout?.href;
+      if (!checkoutUrl) {
+        throw new Error("Payment provider did not return a checkout URL");
+      }
 
       // Update all sponsorships with the payment ID
       await Promise.all(
         input.sponsorshipIds.map((id) =>
-          convex.mutation(api.sponsorships.updatePaymentId, {
-            sponsorshipId: id as Id<"sponsorships">,
-            molliePaymentId: payment.id,
-          })
+          convex.mutation(
+            api.sponsorships.updatePaymentId,
+            withServiceAuth({
+              sponsorshipId: id as Id<"sponsorships">,
+              molliePaymentId: payment.id,
+            })
+          )
         )
       );
 
@@ -386,7 +452,7 @@ export const sponsorshipsRouter = {
 
       return {
         paymentId: payment.id,
-        checkoutUrl: payment._links.checkout?.href || "",
+        checkoutUrl,
       };
     }),
 
@@ -450,11 +516,11 @@ export const sponsorshipsRouter = {
   reSubmitSponsorship: publicProcedure
     .input(
       z.object({
-        token: z.string(),
-        gestureId: z.string(),
-        logoImage: z.string().optional(), // base64 data URL
-        overlayText: z.string().max(100),
-        sponsorName: z.string().max(40).optional(),
+        token: z.string().uuid(),
+        gestureId: z.string().min(1),
+        logoImage: logoDataUrlSchema.optional(),
+        overlayText: z.string().trim().min(1).max(100),
+        sponsorName: z.string().trim().min(1).max(40).optional(),
       })
     )
     .handler(async ({ input }) => {
@@ -489,13 +555,16 @@ export const sponsorshipsRouter = {
         );
 
         // Save to Convex — clears token and transitions status → pending_approval
-        await convex.mutation(api.sponsorships.reSubmitSponsorshipVideo, {
-          token: input.token,
-          previewVideoPlaybackId: composedPlaybackId,
-          sponsoredVideoPlaybackId: composedPlaybackId,
-          overlayText: input.overlayText,
-          sponsorName: input.sponsorName,
-        });
+        await convex.mutation(
+          api.sponsorships.reSubmitSponsorshipVideo,
+          withServiceAuth({
+            token: input.token,
+            previewVideoPlaybackId: composedPlaybackId,
+            sponsoredVideoPlaybackId: composedPlaybackId,
+            overlayText: input.overlayText,
+            sponsorName: input.sponsorName,
+          })
+        );
 
         return { success: true, playbackId: composedPlaybackId };
       } catch (error) {

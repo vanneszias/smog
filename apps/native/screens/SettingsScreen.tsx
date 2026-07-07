@@ -1,20 +1,32 @@
 import { useActionSheet } from "@expo/react-native-action-sheet";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ThemeMode } from "@smog/styles";
 import { FONT_SIZE, ICON_SIZE, SPACING } from "@smog/styles";
 import { Stack, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   Linking,
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { type Language, useTranslation } from "@/context/TranslationContext";
+import {
+  getAnalyticsConsent,
+  setAnalyticsConsent,
+  subscribeAnalyticsConsent,
+} from "@/lib/openpanel";
 
 type RNGlobal = typeof globalThis & {
   Alert?: {
@@ -27,6 +39,11 @@ const SettingsScreen = () => {
   const { language, setLanguage, availableLanguages, t } = useTranslation();
   const router = useRouter();
   const { showActionSheetWithOptions } = useActionSheet();
+  const analyticsConsent = useSyncExternalStore(
+    subscribeAnalyticsConsent,
+    getAnalyticsConsent,
+    getAnalyticsConsent
+  );
 
   const [selectedLanguage, setSelectedLanguage] = useState(language);
 
@@ -237,69 +254,113 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Developer Tools button at bottom, requires 5 taps */}
-        <View style={styles.devToolsContainer}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => {
-              const now = Date.now();
-
-              const showDevToolsAlert = () => {
-                if (typeof window !== "undefined") {
-                  window.alert("Tap 5 times to open Developer Tools");
-                } else {
-                  const globalAlert = (globalThis as RNGlobal).Alert;
-                  const hasAlert =
-                    !!globalAlert?.alert &&
-                    typeof globalAlert.alert === "function";
-                  if (hasAlert) {
-                    globalAlert?.alert?.("Tap 5 times to open Developer Tools");
-                  }
-                }
-              };
-
-              if (
-                devTapCount === 0 ||
-                !lastDevTap ||
-                now - lastDevTap >= 2000
-              ) {
-                setDevTapCount(1);
-                setLastDevTap(now);
-                showDevToolsAlert();
-                return;
-              }
-
-              if (devTapCount + 1 >= 5) {
-                setDevTapCount(0);
-                setLastDevTap(null);
-                router.push("/settings/developer-tools");
-                return;
-              }
-
-              setDevTapCount(devTapCount + 1);
-              setLastDevTap(now);
-            }}
+        <View style={styles.settingContainer}>
+          <Text style={[styles.settingLabel, { color: theme.text }]}>
+            {t("settings.analyticsTitle")}
+          </Text>
+          <View
             style={[
               styles.settingRow,
-              styles.devToolsButton,
               { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
-            <Text
-              style={[
-                styles.settingValue,
-                { color: theme.text, textAlign: "center" },
-              ]}
-            >
-              {t("settings.openDeveloperTools")}
-            </Text>
-            <Ionicons
-              color={theme.textLight}
-              name="chevron-forward"
-              size={ICON_SIZE.sm}
+            <View style={styles.analyticsCopy}>
+              <Text style={[styles.settingValue, { color: theme.text }]}>
+                {t("settings.analyticsTitle")}
+              </Text>
+              <Text
+                style={[styles.settingDescription, { color: theme.textLight }]}
+              >
+                {t("settings.analyticsDescription")}
+              </Text>
+            </View>
+            <Switch
+              accessibilityLabel={t("settings.analyticsTitle")}
+              onValueChange={async (enabled) => {
+                await setAnalyticsConsent(enabled);
+              }}
+              trackColor={{ true: theme.primary }}
+              value={analyticsConsent === true}
             />
+          </View>
+          <TouchableOpacity
+            onPress={() =>
+              Linking.openURL("https://app.smog.vlaanderen/privacy")
+            }
+          >
+            <Text style={[styles.privacyLink, { color: theme.primary }]}>
+              {t("settings.privacyPolicy")}
+            </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Developer tooling is never exposed in store builds. */}
+        {__DEV__ ? (
+          <View style={styles.devToolsContainer}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                const now = Date.now();
+
+                const showDevToolsAlert = () => {
+                  if (typeof window !== "undefined") {
+                    window.alert("Tap 5 times to open Developer Tools");
+                  } else {
+                    const globalAlert = (globalThis as RNGlobal).Alert;
+                    const hasAlert =
+                      !!globalAlert?.alert &&
+                      typeof globalAlert.alert === "function";
+                    if (hasAlert) {
+                      globalAlert?.alert?.(
+                        "Tap 5 times to open Developer Tools"
+                      );
+                    }
+                  }
+                };
+
+                if (
+                  devTapCount === 0 ||
+                  !lastDevTap ||
+                  now - lastDevTap >= 2000
+                ) {
+                  setDevTapCount(1);
+                  setLastDevTap(now);
+                  showDevToolsAlert();
+                  return;
+                }
+
+                if (devTapCount + 1 >= 5) {
+                  setDevTapCount(0);
+                  setLastDevTap(null);
+                  router.push("/settings/developer-tools");
+                  return;
+                }
+
+                setDevTapCount(devTapCount + 1);
+                setLastDevTap(now);
+              }}
+              style={[
+                styles.settingRow,
+                styles.devToolsButton,
+                { backgroundColor: theme.card, borderColor: theme.border },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.settingValue,
+                  { color: theme.text, textAlign: "center" },
+                ]}
+              >
+                {t("settings.openDeveloperTools")}
+              </Text>
+              <Ionicons
+                color={theme.textLight}
+                name="chevron-forward"
+                size={ICON_SIZE.sm}
+              />
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* Attribution */}
         <View style={styles.attributionContainer}>
@@ -347,6 +408,21 @@ const styles = StyleSheet.create({
   settingValue: {
     fontSize: FONT_SIZE.md,
     flex: 1,
+  },
+  settingDescription: {
+    fontSize: FONT_SIZE.sm,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  analyticsCopy: {
+    flex: 1,
+    paddingRight: SPACING.md,
+  },
+  privacyLink: {
+    fontSize: FONT_SIZE.sm,
+    marginTop: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    textDecorationLine: "underline",
   },
   devToolsContainer: {
     marginTop: SPACING.xxl,

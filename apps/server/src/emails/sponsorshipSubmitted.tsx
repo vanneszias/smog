@@ -66,5 +66,3 @@ export function SponsorshipSubmittedEmail({
     </EmailLayout>
   );
 }
-
-export default SponsorshipSubmittedEmail;

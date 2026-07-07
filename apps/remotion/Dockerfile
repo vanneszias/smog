@@ -2,12 +2,16 @@
 # Remotion Video Composition Service
 
 # ── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM oven/bun:1-alpine AS deps
+FROM oven/bun:1.3.14-alpine AS deps
 WORKDIR /app
 
 COPY package.json bun.lock bunfig.toml ./
 COPY turbo.json ./
+COPY patches ./patches
+COPY apps/native/package.json      ./apps/native/
 COPY apps/remotion/package.json    ./apps/remotion/
+COPY apps/server/package.json      ./apps/server/
+COPY apps/web/package.json         ./apps/web/
 COPY packages/types/package.json   ./packages/types/
 COPY packages/config/package.json  ./packages/config/
 COPY packages/api/package.json     ./packages/api/
@@ -15,14 +19,16 @@ COPY packages/auth/package.json    ./packages/auth/
 COPY packages/convex/package.json  ./packages/convex/
 COPY packages/hooks/package.json   ./packages/hooks/
 COPY packages/i18n/package.json    ./packages/i18n/
+COPY packages/shared/package.json  ./packages/shared/
 COPY packages/styles/package.json  ./packages/styles/
 COPY packages/ui/package.json      ./packages/ui/
+COPY upload/package.json           ./upload/
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install
+    bun install --frozen-lockfile
 
 # ── Stage 2: builder ─────────────────────────────────────────────────────────
-FROM oven/bun:1-alpine AS builder
+FROM oven/bun:1.3.14-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app ./
@@ -69,8 +75,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
     && rm -rf /var/lib/apt/lists/*
 
 # Install bun into the node image so we can run the app
-COPY --from=oven/bun:1 /usr/local/bin/bun /usr/local/bin/bun
-COPY --from=oven/bun:1 /usr/local/bin/bunx /usr/local/bin/bunx
+COPY --from=oven/bun:1.3.14 /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=oven/bun:1.3.14 /usr/local/bin/bunx /usr/local/bin/bunx
 
 ENV NODE_ENV=production
 
