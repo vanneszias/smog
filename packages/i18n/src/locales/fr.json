@@ -148,9 +148,9 @@
     "analyticsTitle": "Analyse d'utilisation",
     "analyticsDescription": "Partagez des données d'utilisation limitées pour améliorer SMOG. Les termes de recherche et les enregistrements de session ne sont jamais collectés.",
     "analyticsPromptTitle": "Aidez-nous à améliorer SMOG",
-    "analyticsPromptDescription": "Avec votre autorisation, nous collectons des données d'utilisation limitées via notre service d'analyse auto-hébergé. Le suivi reste désactivé jusqu'à votre choix.",
+    "analyticsPromptDescription": "Avec votre autorisation, nous collectons des données d'analyse limitées pour comprendre comment SMOG & Co est utilisé et améliorer l'application. Nous n'utilisons pas ces données à des fins publicitaires et ne vous suivons pas dans d'autres applications ou sur d'autres sites web.",
     "analyticsAllow": "Autoriser l'analyse",
-    "analyticsRequiredOnly": "Nécessaire uniquement",
+    "analyticsRequiredOnly": "Utiliser sans analyse",
     "privacyPolicy": "Lire la politique de confidentialité"
   },
   "about": {

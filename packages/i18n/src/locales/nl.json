@@ -244,9 +244,9 @@
     "analyticsTitle": "Gebruiksanalytics",
     "analyticsDescription": "Deel beperkte gebruiksgegevens om SMOG te verbeteren. Zoektermen en sessie-opnames worden nooit verzameld.",
     "analyticsPromptTitle": "Help SMOG verbeteren",
-    "analyticsPromptDescription": "Met uw toestemming verzamelen we beperkte gebruiksgegevens via onze zelfgehoste analyticsdienst. Tracking blijft uit tot u kiest.",
+    "analyticsPromptDescription": "Met uw toestemming verzamelen we beperkte gebruiksanalytics om te begrijpen hoe SMOG & Co wordt gebruikt en de app te verbeteren. We gebruiken deze gegevens niet voor advertenties en volgen u niet in andere apps of op andere websites.",
     "analyticsAllow": "Analytics toestaan",
-    "analyticsRequiredOnly": "Alleen noodzakelijk",
+    "analyticsRequiredOnly": "Gebruiken zonder analytics",
     "privacyPolicy": "Lees het privacybeleid"
   },
   "about": {

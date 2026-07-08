@@ -9,7 +9,7 @@ function PrivacyPolicyPage() {
   return (
     <div className="container overflow-y-auto px-12 py-8">
       <h1 className="mb-6 font-bold text-4xl">Privacybeleid</h1>
-      <p className="mb-4 text-sm">Laatst bijgewerkt: 10 juni 2026</p>
+      <p className="mb-4 text-sm">Laatst bijgewerkt: 8 juli 2026</p>
 
       <div className="space-y-6">
         <section>
@@ -216,7 +216,19 @@ function PrivacyPolicyPage() {
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            7. Cookies en lokale opslag
+            7. Geen tracking of advertenties
+          </h2>
+          <p>
+            SMOG & Co volgt gebruikers niet over apps of websites van andere
+            bedrijven heen. We gebruiken analyticsgegevens niet voor gerichte
+            advertenties of advertentiemeting en delen analyticsgegevens niet met
+            data brokers.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 font-semibold text-2xl">
+            8. Cookies en lokale opslag
           </h2>
           <ul className="ml-6 list-disc space-y-2">
             <li>
@@ -239,7 +251,7 @@ function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">8. Bewaartermijnen</h2>
+          <h2 className="mb-3 font-semibold text-2xl">9. Bewaartermijnen</h2>
           <ul className="ml-6 list-disc space-y-2">
             <li>
               Accountgegevens, favorieten en lijsten blijven bewaard zolang uw
@@ -270,7 +282,7 @@ function PrivacyPolicyPage() {
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            9. Accountverwijdering
+            10. Accountverwijdering
           </h2>
           <p>
             De verwijderfunctie verwijdert het account, favorieten en eigen
@@ -284,7 +296,7 @@ function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">10. Uw rechten</h2>
+          <h2 className="mb-3 font-semibold text-2xl">11. Uw rechten</h2>
           <p>
             Onder de GDPR kunt u, afhankelijk van de omstandigheden, inzage,
             rectificatie, wissing, beperking, overdraagbaarheid of bezwaar
@@ -303,7 +315,7 @@ function PrivacyPolicyPage() {
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            11. Internationale doorgiften
+            12. Internationale doorgiften
           </h2>
           <p>
             Sommige dienstverleners kunnen persoonsgegevens buiten de Europese
@@ -316,7 +328,7 @@ function PrivacyPolicyPage() {
 
         <section>
           <h2 className="mb-3 font-semibold text-2xl">
-            12. Beveiliging en incidenten
+            13. Beveiliging en incidenten
           </h2>
           <p>
             We gebruiken passende technische en organisatorische maatregelen,
@@ -328,7 +340,7 @@ function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">13. Kinderen</h2>
+          <h2 className="mb-3 font-semibold text-2xl">14. Kinderen</h2>
           <p>
             In België kan een kind vanaf 13 jaar zelf toestemming geven voor een
             rechtstreeks aangeboden online dienst. Is volgens het toepasselijke
@@ -339,7 +351,7 @@ function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">14. Wijzigingen</h2>
+          <h2 className="mb-3 font-semibold text-2xl">15. Wijzigingen</h2>
           <p>
             We kunnen dit beleid bijwerken wanneer de Dienst, leveranciers of
             wetgeving wijzigen. De datum bovenaan wordt aangepast en bij
@@ -349,7 +361,7 @@ function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 font-semibold text-2xl">15. Contact en klacht</h2>
+          <h2 className="mb-3 font-semibold text-2xl">16. Contact en klacht</h2>
           <p>
             SMOG & CO vzw
             <br />

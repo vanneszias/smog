@@ -271,9 +271,9 @@
     "analyticsTitle": "Usage analytics",
     "analyticsDescription": "Share limited usage data to help us improve SMOG. Search terms and session recordings are never collected.",
     "analyticsPromptTitle": "Help improve SMOG",
-    "analyticsPromptDescription": "With your permission, we collect limited usage data through our self-hosted analytics service. Tracking is off until you choose.",
+    "analyticsPromptDescription": "With your permission, we collect limited usage analytics to understand how SMOG & Co is used and improve the app. We do not use this data for advertising or track you across other apps or websites.",
     "analyticsAllow": "Allow analytics",
-    "analyticsRequiredOnly": "Required only",
+    "analyticsRequiredOnly": "Use without analytics",
     "privacyPolicy": "Read the privacy policy"
   },
   "about": {
