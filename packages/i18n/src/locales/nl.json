@@ -242,7 +242,7 @@
     "manageAccount": "Account beheren",
     "openDeveloperTools": "Ontwikkelaarstools openen",
     "analyticsTitle": "Gebruiksanalytics",
-    "analyticsDescription": "Deel beperkte gebruiksgegevens om SMOG te verbeteren. Zoektermen en sessie-opnames worden nooit verzameld.",
+    "analyticsDescription": "Gebruiksanalytics zijn optioneel. Als u ze toestaat, verzamelen we beperkte gebruiksanalytics om te begrijpen hoe SMOG & Co wordt gebruikt en de app te verbeteren. We gebruiken deze gegevens niet voor advertenties, volgen u niet in andere apps of op andere websites, verzamelen geen zoektermen en maken geen sessie-opnames.",
     "analyticsPromptTitle": "Help SMOG verbeteren",
     "analyticsPromptDescription": "Met uw toestemming verzamelen we beperkte gebruiksanalytics om te begrijpen hoe SMOG & Co wordt gebruikt en de app te verbeteren. We gebruiken deze gegevens niet voor advertenties en volgen u niet in andere apps of op andere websites.",
     "analyticsAllow": "Analytics toestaan",

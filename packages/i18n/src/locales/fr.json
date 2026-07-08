@@ -146,7 +146,7 @@
     "manageAccount": "Gérer le compte",
     "openDeveloperTools": "Ouvrir les outils développeur",
     "analyticsTitle": "Analyse d'utilisation",
-    "analyticsDescription": "Partagez des données d'utilisation limitées pour améliorer SMOG. Les termes de recherche et les enregistrements de session ne sont jamais collectés.",
+    "analyticsDescription": "Les données d'analyse d'utilisation sont facultatives. Si vous les autorisez, nous collectons des données d'analyse limitées pour comprendre comment SMOG & Co est utilisé et améliorer l'application. Nous n'utilisons pas ces données à des fins publicitaires, ne vous suivons pas dans d'autres applications ou sur d'autres sites web, ne collectons pas les termes de recherche et n'enregistrons pas les sessions.",
     "analyticsPromptTitle": "Aidez-nous à améliorer SMOG",
     "analyticsPromptDescription": "Avec votre autorisation, nous collectons des données d'analyse limitées pour comprendre comment SMOG & Co est utilisé et améliorer l'application. Nous n'utilisons pas ces données à des fins publicitaires et ne vous suivons pas dans d'autres applications ou sur d'autres sites web.",
     "analyticsAllow": "Autoriser l'analyse",
