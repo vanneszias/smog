@@ -2,7 +2,7 @@
   "expo": {
     "name": "SMOG & Co",
     "slug": "smog",
-    "version": "2.0.0",
+    "version": "2.0.2",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
