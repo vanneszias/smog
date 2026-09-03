@@ -91,3 +91,6 @@ local.properties
 
 # opencode
 .opencode
+
+# also ignore /upload so we dont upload any confidential videos
+/upload
