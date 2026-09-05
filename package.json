@@ -6,8 +6,7 @@
   "workspaces": {
     "packages": [
       "apps/*",
-      "packages/*",
-      "upload"
+      "packages/*"
     ],
     "catalog": {
       "hono": "^4.12.27",
@@ -41,7 +40,7 @@
   },
   "scripts": {
     "check": "biome check --write .",
-    "check:ci": "biome check apps packages scripts upload package.json turbo.json biome.json knip.json",
+    "check:ci": "biome check apps packages scripts package.json turbo.json biome.json knip.json",
     "dev": "docker run -d --name smog-redis -p 6379:6379 --rm redis:7-alpine 2>/dev/null; turbo dev",
     "build": "turbo build",
     "check-types": "turbo check-types",
@@ -59,9 +58,7 @@
     "native:android:release": "turbo -F native android -- --variant release",
     "convex:codegen": "turbo -F @smog/convex codegen",
     "convex:dev": "turbo -F @smog/convex dev",
-    "convex:deploy": "turbo -F @smog/convex deploy",
-    "upload": "bun --cwd upload run upload",
-    "delete-mux": "bun --cwd upload run delete-mux"
+    "convex:deploy": "turbo -F @smog/convex deploy"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.13",

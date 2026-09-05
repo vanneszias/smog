@@ -44,6 +44,38 @@ const webManifest = await readJson<WebManifest>(
 );
 const packageJson = await readJson<{ packageManager: string }>("package.json");
 
+const workflowPath = ".github/workflows/ci.yml";
+const workflowContents = await Bun.file(workflowPath).text();
+assert(Bun.YAML.parse(workflowContents), `${workflowPath} is invalid`);
+for (const required of [
+  "pull_request:",
+  "branches: [master]",
+  'tags: ["**"]',
+  "permissions:\n  contents: read",
+  "bun-version-file: package.json",
+  "bun install --frozen-lockfile",
+  "bun run release:check",
+  "needs: release-check",
+  "if: github.event_name == 'push'",
+  "fail-fast: false",
+  "target: production",
+  "type=sha,format=short,prefix=",
+  "type=ref,event=tag",
+  "flavor: latest=false",
+  "DOCKER_METADATA_SHORT_SHA_LENGTH: 12",
+]) {
+  assert(
+    workflowContents.includes(required),
+    `${workflowPath} must contain ${required}`
+  );
+}
+for (const app of ["server", "web", "remotion"]) {
+  assert(
+    workflowContents.includes(`- app: ${app}`),
+    `${workflowPath} must publish smog-${app}`
+  );
+}
+
 const expectedAppleAppId = `${appConfig.expo.ios.appleTeamId}.${appConfig.expo.ios.bundleIdentifier}`;
 assert(
   appleAssociation.applinks.details.some(
@@ -119,5 +151,5 @@ for (const dockerfile of [
 }
 
 console.log(
-  "[releaseConfig] Compose, native identifiers, app links, manifests, icons, and runtime pins are valid"
+  "[releaseConfig] CI, Compose, native identifiers, app links, manifests, icons, and runtime pins are valid"
 );

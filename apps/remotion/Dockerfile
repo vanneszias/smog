@@ -22,7 +22,6 @@ COPY packages/i18n/package.json    ./packages/i18n/
 COPY packages/shared/package.json  ./packages/shared/
 COPY packages/styles/package.json  ./packages/styles/
 COPY packages/ui/package.json      ./packages/ui/
-COPY upload/package.json           ./upload/
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile

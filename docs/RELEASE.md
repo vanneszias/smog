@@ -100,6 +100,19 @@ bun run release:check
 
 `release:check` runs Biome, TypeScript, all configured tests, a production dependency audit, Expo Doctor, production exports for iOS/Android/web, every workspace build, and `knip`.
 
+GitHub Actions runs the same check for every pull request and for pushes to `master` or any tag. Configure these repository settings before publishing images:
+
+- Secret `DOCKERHUB_USERNAME`: Docker Hub username with access to the three repositories.
+- Secret `DOCKERHUB_TOKEN`: Docker Hub access token with read/write permission.
+- Variable `VITE_SERVER_URL`: required public production server URL.
+- Variable `VITE_WORKOS_CLIENT_ID`: required public WorkOS client ID.
+- Variable `VITE_WORKOS_REDIRECT_URI`: required public production callback URL.
+- Variable `VITE_CONVEX_URL`: required public production Convex URL.
+- Variable `VITE_OPENPANEL_API_URL`: optional public analytics API URL; defaults to `https://analytics.zias.be/api`.
+- Variable `VITE_OPENPANEL_CLIENT_ID`: optional public web analytics client ID.
+
+The Docker Hub credentials are only provided to the publish job, which runs after the exact commit passes `release:check` and never runs for pull requests.
+
 ## Convex
 
 Deploy Convex before application images so new clients and server code can call the latest functions:
@@ -112,13 +125,15 @@ After deploy, confirm the production deployment URL matches `CONVEX_URL`, `VITE_
 
 ## Docker Images
 
-The `.builds/docker-*.yml` recipes publish these images:
+The GitHub Actions publish matrix builds the `production` target and publishes these Docker Hub images:
 
 ```text
 $REGISTRY_IMAGE_PREFIX/smog-server:$IMAGE_TAG
 $REGISTRY_IMAGE_PREFIX/smog-web:$IMAGE_TAG
 $REGISTRY_IMAGE_PREFIX/smog-remotion:$IMAGE_TAG
 ```
+
+Every image receives the first 12 characters of the commit SHA. A push to `master` also receives `latest`; a tag push also receives the sanitized Git tag and never receives `latest`.
 
 For a manual image release, run equivalent builds from the repo root:
 

@@ -22,7 +22,6 @@ COPY apps/native/package.json      ./apps/native/
 COPY apps/remotion/package.json    ./apps/remotion/
 COPY apps/server/package.json      ./apps/server/
 COPY apps/web/package.json         ./apps/web/
-COPY upload/package.json           ./upload/
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile

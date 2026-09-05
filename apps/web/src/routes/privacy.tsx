@@ -221,8 +221,8 @@ function PrivacyPolicyPage() {
           <p>
             SMOG & Co volgt gebruikers niet over apps of websites van andere
             bedrijven heen. We gebruiken analyticsgegevens niet voor gerichte
-            advertenties of advertentiemeting en delen analyticsgegevens niet met
-            data brokers.
+            advertenties of advertentiemeting en delen analyticsgegevens niet
+            met data brokers.
           </p>
         </section>
 
