@@ -32,6 +32,7 @@ docker-compose.override.yml
 *.log
 *.tgz
 tmp
+/upload
 
 # Native build artifacts and credentials
 apps/native/ios

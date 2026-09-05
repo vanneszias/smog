@@ -18,6 +18,9 @@ out
 apps/native/**
 !apps/native/package.json
 
+# ── Confidential local media ─────────────────────────────────────────────────
+/upload
+
 # ── Development tooling ───────────────────────────────────────────────────────
 .vscode
 .idea
