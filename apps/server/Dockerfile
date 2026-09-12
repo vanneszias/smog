@@ -37,8 +37,8 @@ RUN cd apps/server && bun run build
 
 # ── Stage 3: production ───────────────────────────────────────────────────────
 # The bun build bundles all @smog/* workspace packages and most npm deps into a
-# single ESM file. Only `nodemailer` is kept external (see build.ts), so we
-# install just that package instead of copying the full monorepo node_modules.
+# single ESM file. Only `nodemailer` and React are kept external (see build.ts),
+# so we copy just those packages instead of the full monorepo node_modules.
 FROM oven/bun:1.3.14-alpine AS production
 WORKDIR /app
 
@@ -47,6 +47,11 @@ RUN apk add --no-cache curl
 # Copy the bundled output
 COPY --from=builder /app/apps/server/dist ./dist
 COPY --from=deps /app/node_modules/nodemailer ./node_modules/nodemailer
+# React stays external so @react-email/render can dynamically import
+# react-dom/server at runtime; scheduler is react-dom's own dependency.
+COPY --from=deps /app/node_modules/react ./node_modules/react
+COPY --from=deps /app/node_modules/react-dom ./node_modules/react-dom
+COPY --from=deps /app/node_modules/scheduler ./node_modules/scheduler
 
 RUN addgroup -g 1001 -S nodejs \
     && adduser -S nodejs -u 1001 \
