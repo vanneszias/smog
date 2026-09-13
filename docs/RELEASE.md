@@ -18,7 +18,7 @@ Keep production values in the deployment host `.env` and in the CI/build system 
 Docker deployment values:
 
 ```env
-REGISTRY_IMAGE_PREFIX=vanneszias
+REGISTRY_IMAGE_PREFIX=ghcr.io/vanneszias
 IMAGE_TAG=<git-sha-or-release-tag>
 ```
 
@@ -102,8 +102,6 @@ bun run release:check
 
 GitHub Actions runs the same check for every pull request and for pushes to `master` or any tag. Configure these repository settings before publishing images:
 
-- Secret `DOCKERHUB_USERNAME`: Docker Hub username with access to the three repositories.
-- Secret `DOCKERHUB_TOKEN`: Docker Hub access token with read/write permission.
 - Variable `VITE_SERVER_URL`: required public production server URL.
 - Variable `VITE_WORKOS_CLIENT_ID`: required public WorkOS client ID.
 - Variable `VITE_WORKOS_REDIRECT_URI`: required public production callback URL.
@@ -111,7 +109,7 @@ GitHub Actions runs the same check for every pull request and for pushes to `mas
 - Variable `VITE_OPENPANEL_API_URL`: optional public analytics API URL; defaults to `https://analytics.zias.be/api`.
 - Variable `VITE_OPENPANEL_CLIENT_ID`: optional public web analytics client ID.
 
-The Docker Hub credentials are only provided to the publish job, which runs after the exact commit passes `release:check` and never runs for pull requests.
+Images are published to the GitHub Container Registry under `ghcr.io/vanneszias`, so no registry secret is needed: the publish job requests `packages: write` and logs in with the automatic `GITHUB_TOKEN`. That job runs only after the exact commit passes `release:check`, and never for pull requests.
 
 ## Convex
 
@@ -125,7 +123,7 @@ After deploy, confirm the production deployment URL matches `CONVEX_URL`, `VITE_
 
 ## Docker Images
 
-The GitHub Actions publish matrix builds the `production` target and publishes these Docker Hub images:
+The GitHub Actions publish matrix builds the `production` target and publishes these GitHub Container Registry images:
 
 ```text
 $REGISTRY_IMAGE_PREFIX/smog-server:$IMAGE_TAG
@@ -135,7 +133,13 @@ $REGISTRY_IMAGE_PREFIX/smog-remotion:$IMAGE_TAG
 
 Every image receives the first 12 characters of the commit SHA. A push to `master` also receives `latest`; a tag push also receives the sanitized Git tag and never receives `latest`.
 
-For a manual image release, run equivalent builds from the repo root:
+A package published with `GITHUB_TOKEN` inherits the visibility of this repository, so the images are public and the production host pulls them without logging in. If the repository ever becomes private, or a package visibility is changed by hand, log in once on the host with a personal access token that has `read:packages`:
+
+```bash
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username vanneszias --password-stdin
+```
+
+For a manual image release, log in with a token that has `write:packages` and run equivalent builds from the repo root:
 
 ```bash
 docker build --target production -f apps/server/Dockerfile -t "$REGISTRY_IMAGE_PREFIX/smog-server:$IMAGE_TAG" .

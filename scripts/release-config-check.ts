@@ -58,6 +58,9 @@ for (const required of [
   "needs: release-check",
   "if: github.event_name == 'push'",
   "fail-fast: false",
+  "packages: write",
+  "registry: ghcr.io",
+  "images: ghcr.io/",
   "target: production",
   "type=sha,format=short,prefix=",
   "type=ref,event=tag",
@@ -135,6 +138,10 @@ for (const service of ["redis-session", "remotion", "server", "web"]) {
 assert(
   (compose.match(/IMAGE_TAG:\?Set IMAGE_TAG/gu)?.length ?? 0) === 3,
   "All application images must require an immutable IMAGE_TAG"
+);
+assert(
+  (compose.match(/REGISTRY_IMAGE_PREFIX:-ghcr\.io\//gu)?.length ?? 0) === 3,
+  "All application images must default to the GitHub Container Registry"
 );
 
 const bunVersion = packageJson.packageManager.replace(/^bun@/u, "");

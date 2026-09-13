@@ -12,7 +12,7 @@ services:
       retries: 3
 
   remotion:
-    image: ${REGISTRY_IMAGE_PREFIX:-vanneszias}/smog-remotion:${IMAGE_TAG:?Set IMAGE_TAG to an immutable release tag}
+    image: ${REGISTRY_IMAGE_PREFIX:-ghcr.io/vanneszias}/smog-remotion:${IMAGE_TAG:?Set IMAGE_TAG to an immutable release tag}
     environment:
       NODE_ENV: production
       PORT: 3002
@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
 
   server:
-    image: ${REGISTRY_IMAGE_PREFIX:-vanneszias}/smog-server:${IMAGE_TAG:?Set IMAGE_TAG to an immutable release tag}
+    image: ${REGISTRY_IMAGE_PREFIX:-ghcr.io/vanneszias}/smog-server:${IMAGE_TAG:?Set IMAGE_TAG to an immutable release tag}
     env_file: .env
     environment:
       NODE_ENV: production
@@ -47,7 +47,7 @@ services:
     restart: unless-stopped
 
   web:
-    image: ${REGISTRY_IMAGE_PREFIX:-vanneszias}/smog-web:${IMAGE_TAG:?Set IMAGE_TAG to an immutable release tag}
+    image: ${REGISTRY_IMAGE_PREFIX:-ghcr.io/vanneszias}/smog-web:${IMAGE_TAG:?Set IMAGE_TAG to an immutable release tag}
     ports:
       - "80:80"
       - "443:443"
