@@ -38,7 +38,9 @@ Five failure modes this stage's tasks must pin down, each assigned to the task t
 **Files:**
 - Create: `apps/site/` (from template)
 - Modify: `.gitignore`
-- Modify: `package.json` (root, workspace scripts)
+
+The root `package.json` needs no edit: `workspaces.packages` is already
+`["apps/*", "packages/*"]`, so `apps/site` is picked up automatically.
 
 **Interfaces:**
 - Consumes: nothing.

@@ -205,7 +205,7 @@ mutations enforced is now structural.
 Guest identity (`guestId`) does not survive. Payload auth has no anonymous user
 concept worth emulating; the mobile app keeps guest state locally and prompts
 for an account when the user wants it synced. This is a deliberate product
-simplification, not an oversight.
+simplification, confirmed by the product owner on 2026-09-19, not an oversight.
 
 ### `lists`
 
