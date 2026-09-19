@@ -179,6 +179,79 @@ Three ways forward, in order of preference:
 
 ---
 
+## Staging is deployed and proven end to end
+
+`https://smog-site-staging.vanneszias.workers.dev` — version
+`c5f8c614-38e9-4e92-9ff5-84c8804b0bd2`.
+
+| Check | Result |
+|---|---|
+| `/` | 200 |
+| `/admin` | 200, renders the "Create first user" flow |
+| `/api/users` anonymous | 403 with Payload's own error |
+| `/api/access` | returns real per-collection access data |
+| First-user registration | 200, user id 1 created in remote D1 |
+| Media upload | 201, `filesize: 70`, `width: 1`, `height: 1` |
+| Object present in R2 | retrieved from `smog-staging-media`, valid PNG |
+| Served back through the Worker | 200, `image/png`, 70 bytes |
+
+The `/admin` result is the meaningful one: rendering "Create first user" means
+Payload queried the `users` table in **remote** D1 and found it empty. The 403
+means access control ran. Together they prove Worker → Payload → D1 → access
+control, not just a booting Worker.
+
+### R2 was genuinely broken, and is now genuinely fixed
+
+The upload round-trip matters more than it looks. The vendored template put
+`r2Storage` under a `storage:` key that `payload@3.82.1`'s `Config` type does
+not have, so the adapter was being **silently dropped** — uploads could never
+have reached a bucket. Stage 0 Task 2 moved it to `plugins:` to satisfy the
+compiler, and the reviewer flagged that this probably *restored* a broken
+feature rather than merely fixing types. Confirmed: the object is in the
+bucket and serves back byte-correct.
+
+A first attempt with a deliberately malformed PNG returned
+`There was a problem while uploading the file` (400). That was the invalid
+image, not R2 — Payload reads image dimensions on upload. Worth knowing, since
+that error message does not distinguish the two causes.
+
+### Remote migration: applied, by a documented detour
+
+`bun run deploy:database` still fails in this environment —
+`payload migrate` reaches remote D1 through Miniflare's remote-bindings proxy
+at `smog-site-staging.vanneszias.workers.dev`, and **workerd does not honour
+`HTTPS_PROXY`**, so it is blocked at workerd's own network layer even though
+`curl` to that exact host succeeds and the agent proxy logs no rejection for
+it. This is a sandbox artifact; a normal CI runner or developer machine has no
+such restriction.
+
+Rather than hand-write schema SQL against a database that will be the baseline
+for seven more collections, the migration was applied like this:
+
+1. `payload migrate` against **local** D1 — succeeded, 8 tables, batch 1.
+2. `wrangler d1 export --local` — 32 schema statements and exactly one
+   `INSERT`, Payload's own `payload_migrations` row.
+3. `wrangler d1 execute --remote --file` — goes through `api.cloudflare.com`,
+   which is not blocked. 8 tables, 45 rows written.
+
+Remote state verified afterwards: all 8 tables present, and `payload_migrations`
+holding `20250929_111647` at batch 1 — byte-equivalent to what `payload migrate`
+produces, bookkeeping included. Stage 1's migrations can build on it normally.
+
+**Note for the next session:** prefer the real `bun run deploy:database` once
+workerd egress is unrestricted. The detour above is correct but is not the
+documented path, and should not become habit.
+
+### Staging admin account
+
+A first user exists: `admin@smog.test`. Its password was generated randomly and
+is not recorded here. Create your own admin through `/admin` and delete this
+one before staging holds anything worth protecting.
+
+`PAYLOAD_SECRET` for the staging Worker was generated randomly and uploaded via
+`wrangler secret put`. It exists only in Cloudflare — not in the repo, not in
+any file, and not in this document.
+
 ## Environment constraints discovered
 
 Recorded because they shaped what was possible, and will shape the next
