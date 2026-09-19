@@ -47,6 +47,31 @@ bun -F site check-bundle-size # measure the Worker against its budget
 `src/payload-types.ts` is **committed**. Regenerate it whenever you change a
 collection — CI fails on drift.
 
+### If the test suite suddenly fails on a branch you just pulled
+
+```bash
+rm -rf apps/site/.wrangler/state/vitest
+```
+
+The suite runs against a **persisted** local D1 directory that is never cleared
+between runs. Two consequences, both of which have already cost someone an
+afternoon:
+
+- **Adding a collection invalidates the existing directory.** Payload's
+  `pushDevSchema` rebuilds `payload_locked_documents_rels` and trips over
+  `index payload_locked_documents_rels_order_idx already exists`. This is a
+  local-push-only problem — the committed migrations use `ALTER TABLE ... ADD`,
+  so deployed environments are unaffected — but it makes a perfectly good
+  branch look broken on first run.
+- **Any fixture value on a `unique` column must be unique per run**, or a later
+  run collides with an earlier run's leftover row. This fails in `beforeAll`,
+  which means Vitest reports the file's tests as *skipped* rather than failed —
+  a green-looking run that tested nothing. Use `crypto.randomUUID()`;
+  `Date.now()` is not enough, since two files can start in the same
+  millisecond.
+
+Never run two suites or builds concurrently against this directory.
+
 ## Deploying
 
 Always schema first, then code:
