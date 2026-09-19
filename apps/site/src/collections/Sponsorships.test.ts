@@ -102,6 +102,31 @@ describe("Sponsorships collection", () => {
     }
   });
 
+  it("makes the token and payment-id columns unique, not merely indexed", () => {
+    // An index makes a duplicate fast to find; only `unique` makes it
+    // impossible. `reEditToken` is a bearer credential and
+    // `molliePaymentId` is what the webhook resolves a payment through —
+    // a collision in either is a correctness bug, not a performance one.
+    // `Sponsorships.int.test.ts` proves the constraint reaches the
+    // database, and that NULLs still do not collide.
+    expect(field("reEditToken")).toHaveProperty("unique", true);
+    expect(field("molliePaymentId")).toHaveProperty("unique", true);
+  });
+
+  it("leaves the remaining text columns non-unique", () => {
+    // Guards the opposite mistake: `unique` on a field sponsors genuinely
+    // share — two campaigns from one sponsor, or the same overlay text —
+    // would reject legitimate rows.
+    for (const name of [
+      "sponsorName",
+      "sponsorEmail",
+      "overlayText",
+      "originalVideoPlaybackId",
+    ]) {
+      expect(field(name)).not.toHaveProperty("unique", true);
+    }
+  });
+
   it("relates a sponsorship to one gesture", () => {
     expect(field("gesture")).toMatchObject({
       type: "relationship",

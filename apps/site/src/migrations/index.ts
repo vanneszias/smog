@@ -7,6 +7,7 @@ import * as migration_20260919_193653_revert_3_90_columns from "./20260919_19365
 import * as migration_20260919_194626_add_user_favorites from "./20260919_194626_add_user_favorites";
 import * as migration_20260919_200842_add_lists from "./20260919_200842_add_lists";
 import * as migration_20260919_212934_add_sponsorships_and_audit from "./20260919_212934_add_sponsorships_and_audit";
+import * as migration_20260919_214755_add_sponsorship_token_unique_indexes from "./20260919_214755_add_sponsorship_token_unique_indexes";
 
 export const migrations = [
   {
@@ -53,5 +54,10 @@ export const migrations = [
     up: migration_20260919_212934_add_sponsorships_and_audit.up,
     down: migration_20260919_212934_add_sponsorships_and_audit.down,
     name: "20260919_212934_add_sponsorships_and_audit",
+  },
+  {
+    up: migration_20260919_214755_add_sponsorship_token_unique_indexes.up,
+    down: migration_20260919_214755_add_sponsorship_token_unique_indexes.down,
+    name: "20260919_214755_add_sponsorship_token_unique_indexes",
   },
 ];

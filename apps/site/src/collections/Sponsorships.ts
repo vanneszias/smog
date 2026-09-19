@@ -71,12 +71,20 @@ export const Sponsorships: CollectionConfig = {
     { name: "startDate", type: "date", required: true },
     { name: "endDate", type: "date", required: true, index: true },
     { name: "durationYears", type: "number", required: true, defaultValue: 1 },
-    { name: "molliePaymentId", type: "text", index: true },
+    // Unique, not merely indexed: the Mollie webhook resolves a payment to
+    // a sponsorship through this column, so two rows sharing one id means
+    // the webhook marks the wrong sponsorship paid. Nullable — and SQLite
+    // allows any number of NULLs under a unique index — so the rows that
+    // have no payment yet are unaffected.
+    { name: "molliePaymentId", type: "text", index: true, unique: true },
     { name: "paymentAmount", type: "number", required: true },
     { name: "rejectionReason", type: "textarea" },
     { name: "reviewedBy", type: "relationship", relationTo: "users" },
     { name: "reviewedAt", type: "date" },
-    { name: "reEditToken", type: "text", index: true },
+    // Unique for the same reason, with the stakes reversed: this is a
+    // bearer credential, so a collision hands one sponsor's token holder
+    // access to another sponsor's record. Also nullable.
+    { name: "reEditToken", type: "text", index: true, unique: true },
     { name: "reEditTokenExpiresAt", type: "date" },
     { name: "invoiceRequested", type: "checkbox", defaultValue: false },
     { name: "invoiceName", type: "text" },

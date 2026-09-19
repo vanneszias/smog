@@ -152,6 +152,137 @@ describe("Sponsorships access against a real database", () => {
     expect(survivor.id).toBe(sponsorshipId);
   });
 
+  it("denies a signed-in non-admin updating a sponsorship, leaving the row untouched", async () => {
+    // The most dangerous operation on the collection that carries money:
+    // `status`, `paymentAmount` and the playback IDs all live behind this
+    // one access rule. The config-shape test in `Sponsorships.test.ts` pins
+    // the reference; this pins what a real request gets, and — the part a
+    // thrown-error assertion alone would miss — that nothing was written on
+    // the way to being refused.
+    await expect(
+      payload.update({
+        collection: "sponsorships",
+        id: sponsorshipId,
+        overrideAccess: false,
+        user: regularUser as never,
+        data: {
+          status: "active",
+          paymentAmount: 1,
+          sponsoredVideoPlaybackId: `pb-hijacked-${runId}`,
+        },
+      })
+    ).rejects.toBeInstanceOf(Forbidden);
+
+    const after = await payload.findByID({
+      collection: "sponsorships",
+      id: sponsorshipId,
+      overrideAccess: true,
+    });
+
+    expect(after.status).toBe("active");
+    expect(after.paymentAmount).toBe(500);
+    expect(after.sponsoredVideoPlaybackId).toBeFalsy();
+  });
+
+  it("denies an anonymous update too", async () => {
+    await expect(
+      payload.update({
+        collection: "sponsorships",
+        id: sponsorshipId,
+        overrideAccess: false,
+        user: undefined,
+        data: { status: "cancelled" },
+      })
+    ).rejects.toBeInstanceOf(Forbidden);
+
+    const after = await payload.findByID({
+      collection: "sponsorships",
+      id: sponsorshipId,
+      overrideAccess: true,
+    });
+    expect(after.status).toBe("active");
+  });
+
+  it("refuses a second sponsorship carrying the same reEditToken", async () => {
+    // `reEditToken` is a bearer credential: whoever holds it edits the
+    // sponsorship it names. If two rows could share one, the holder reaches
+    // someone else's record. An index makes a collision fast to find; only
+    // `unique` makes it impossible.
+    const reEditToken = `re-edit-${runId}`;
+
+    await payload.create({
+      collection: "sponsorships",
+      data: sponsorshipData({ status: "active", reEditToken }),
+    });
+
+    await expect(
+      payload.create({
+        collection: "sponsorships",
+        data: sponsorshipData({
+          status: "active",
+          reEditToken,
+          sponsorName: "Token-botsing BV",
+        }),
+      })
+    ).rejects.toThrow();
+
+    const rows = await payload.find({
+      collection: "sponsorships",
+      overrideAccess: true,
+      where: { reEditToken: { equals: reEditToken } },
+    });
+    expect(rows.docs).toHaveLength(1);
+  });
+
+  it("refuses a second sponsorship carrying the same molliePaymentId", async () => {
+    // The Mollie webhook looks a sponsorship up by this id. A duplicate
+    // means the webhook marks the wrong row paid — money applied to
+    // someone else's sponsorship.
+    const molliePaymentId = `tr_${runId.replaceAll("-", "")}`;
+
+    await payload.create({
+      collection: "sponsorships",
+      data: sponsorshipData({ status: "active", molliePaymentId }),
+    });
+
+    await expect(
+      payload.create({
+        collection: "sponsorships",
+        data: sponsorshipData({
+          status: "active",
+          molliePaymentId,
+          sponsorName: "Betaling-botsing BV",
+        }),
+      })
+    ).rejects.toThrow();
+
+    const rows = await payload.find({
+      collection: "sponsorships",
+      overrideAccess: true,
+      where: { molliePaymentId: { equals: molliePaymentId } },
+    });
+    expect(rows.docs).toHaveLength(1);
+  });
+
+  it("still allows many sponsorships with no token and no payment id, since NULLs do not collide", async () => {
+    // Both columns stay nullable. SQLite permits any number of NULLs under
+    // a unique index, so making them unique must not force a value onto the
+    // rows that legitimately have neither — which is every sponsorship
+    // before the Mollie flow runs.
+    const first = await payload.create({
+      collection: "sponsorships",
+      data: sponsorshipData({ status: "active", sponsorName: "Leeg een" }),
+    });
+    const second = await payload.create({
+      collection: "sponsorships",
+      data: sponsorshipData({ status: "active", sponsorName: "Leeg twee" }),
+    });
+
+    expect(first.reEditToken).toBeFalsy();
+    expect(second.molliePaymentId).toBeFalsy();
+    expect(second.id).not.toBe(first.id);
+  });
+
   it("starts a sponsorship at pending_payment when no status is sent", async () => {
     // `status` is both `required` and defaulted. If the default were ever
     // dropped, this create would fail validation rather than quietly
