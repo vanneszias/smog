@@ -1,21 +1,12 @@
 import type { CollectionConfig, TextFieldSingleValidation } from "payload";
+import { defaultLocaleRequired } from "@/fields/defaultLocaleRequired";
 
 /**
  * The Dutch (`nl`) value is the source of truth; translations are optional.
- * A field-level `required: true` would validate per-locale and block saving
- * a document at all in `en`/`fr` until it has its own translation — which
- * would make the admin panel unusable in two of three locales, since the
- * migration plan starts `en` and `fr` empty. So `required` is enforced only
- * for the default locale, via this validator, instead of at the field level.
+ * See `defaultLocaleRequired` for why this isn't a field-level `required: true`.
  */
-export const validateName: TextFieldSingleValidation = (value, { req }) => {
-  if (req.locale && req.locale !== "nl") {
-    return true;
-  }
-  return typeof value === "string" && value.trim() !== ""
-    ? true
-    : "A Dutch name is required.";
-};
+export const validateName: TextFieldSingleValidation =
+  defaultLocaleRequired<string>("A Dutch name is required.");
 
 export const Categories: CollectionConfig = {
   slug: "categories",

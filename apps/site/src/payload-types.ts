@@ -70,6 +70,7 @@ export interface Config {
     users: User;
     media: Media;
     categories: Category;
+    gestures: Gesture;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -80,6 +81,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    gestures: GesturesSelect<false> | GesturesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -174,6 +176,27 @@ export interface Category {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "gestures".
+ */
+export interface Gesture {
+  id: number;
+  name?: string | null;
+  categories: (number | Category)[];
+  /**
+   * Mux playback ID for the gesture video.
+   */
+  playbackId: string;
+  /**
+   * Alternative words and synonyms used for search.
+   */
+  concepts?: string[] | null;
+  info?: string | null;
+  isActive?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -207,6 +230,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'categories';
         value: number | Category;
+      } | null)
+    | ({
+        relationTo: 'gestures';
+        value: number | Gesture;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -294,6 +321,20 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface CategoriesSelect<T extends boolean = true> {
   name?: T;
+  isActive?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "gestures_select".
+ */
+export interface GesturesSelect<T extends boolean = true> {
+  name?: T;
+  categories?: T;
+  playbackId?: T;
+  concepts?: T;
+  info?: T;
   isActive?: T;
   updatedAt?: T;
   createdAt?: T;

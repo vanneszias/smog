@@ -1,5 +1,6 @@
 import * as migration_20250929_111647 from "./20250929_111647";
 import * as migration_20260919_174541_add_categories from "./20260919_174541_add_categories";
+import * as migration_20260919_180415_add_gestures from "./20260919_180415_add_gestures";
 
 export const migrations = [
   {
@@ -11,5 +12,10 @@ export const migrations = [
     up: migration_20260919_174541_add_categories.up,
     down: migration_20260919_174541_add_categories.down,
     name: "20260919_174541_add_categories",
+  },
+  {
+    up: migration_20260919_180415_add_gestures.up,
+    down: migration_20260919_180415_add_gestures.down,
+    name: "20260919_180415_add_gestures",
   },
 ];
