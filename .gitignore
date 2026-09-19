@@ -94,3 +94,9 @@ local.properties
 
 # also ignore /upload so we dont upload any confidential videos
 /upload
+
+# Payload / OpenNext / Cloudflare
+.open-next/
+.wrangler/
+apps/site/cloudflare-env.d.ts
+apps/site/src/payload-types.ts
