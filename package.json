@@ -52,6 +52,7 @@
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
+    "dev:site": "turbo -F site dev",
     "native:ios": "turbo -F native ios --",
     "native:ios:release": "turbo -F native ios -- --configuration Release --device",
     "native:ios:debug": "turbo -F native ios -- --configuration Debug",

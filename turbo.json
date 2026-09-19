@@ -11,11 +11,19 @@
       "dependsOn": ["^lint"]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^check-types", "generate:types"]
     },
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "generate:types": {
+      "cache": false,
+      "outputs": ["cloudflare-env.d.ts", "src/payload-types.ts"]
+    },
+    "generate:importmap": {
+      "cache": false,
+      "outputs": ["src/app/(payload)/admin/importMap.js"]
     },
     "ios": {
       "cache": false,
