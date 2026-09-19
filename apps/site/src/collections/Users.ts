@@ -60,6 +60,15 @@ export const Users: CollectionConfig = {
       },
       index: true,
     },
+    {
+      name: "favorites",
+      type: "relationship",
+      relationTo: "gestures",
+      hasMany: true,
+      admin: {
+        description: "Gestures this user has favorited.",
+      },
+    },
   ],
   versions: false,
 };
