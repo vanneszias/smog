@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isAdmin, publicReadActive } from "@/access";
+import { blockDeleteWhenSponsored } from "@/hooks/blockDeleteWhenSponsored";
 import { Gestures } from "./Gestures";
 
 const field = (name: string) =>
@@ -29,6 +30,16 @@ describe("Gestures collection", () => {
       type: "text",
       required: true,
     });
+  });
+
+  it("guards deletes against existing sponsorships", () => {
+    // The behaviour lives in `Gestures.delete.int.test.ts`, which deletes a
+    // real sponsored gesture. This only pins that the hook is still wired
+    // up, which is the one way the behaviour disappears silently.
+    // `toContain` against a possibly-undefined value silently passes in
+    // Vitest 5 — verified by deleting the hooks block and watching this test
+    // stay green — so this asserts the array itself.
+    expect(Gestures.hooks?.beforeDelete).toEqual([blockDeleteWhenSponsored]);
   });
 
   it("indexes isActive, because every public query filters on it", () => {

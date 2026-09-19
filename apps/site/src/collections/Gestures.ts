@@ -1,6 +1,7 @@
 import type { CollectionConfig } from "payload";
 import { isAdmin, publicReadActive } from "@/access";
 import { defaultLocaleRequired } from "@/fields/defaultLocaleRequired";
+import { blockDeleteWhenSponsored } from "@/hooks/blockDeleteWhenSponsored";
 
 export const Gestures: CollectionConfig = {
   slug: "gestures",
@@ -13,6 +14,12 @@ export const Gestures: CollectionConfig = {
     create: isAdmin,
     update: isAdmin,
     delete: isAdmin,
+  },
+  // A gesture someone paid to sponsor cannot be deleted out from under the
+  // sponsorship. See `hooks/blockDeleteWhenSponsored` for why this is a hook
+  // rather than a database-level rule.
+  hooks: {
+    beforeDelete: [blockDeleteWhenSponsored],
   },
   fields: [
     {

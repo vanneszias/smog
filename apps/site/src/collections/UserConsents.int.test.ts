@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { Forbidden, getPayload } from "payload";
+import { Forbidden, getPayload, NotFound } from "payload";
 import { beforeAll, describe, expect, it } from "vitest";
 import config from "../payload.config";
 
@@ -173,5 +173,88 @@ describe("user-consents append-only behaviour against a real database", () => {
         where: { id: { equals: id } },
       })
     ).rejects.toBeInstanceOf(Forbidden);
+  });
+});
+
+/**
+ * The half of the referential-integrity ruling that belongs to
+ * `user_consents`: the record must survive the account it describes.
+ *
+ * This is deliberately a *behavioural* test against a real database rather
+ * than an assertion about the field config or the emitted DDL. Payload writes
+ * `ON DELETE set null` for every relationship regardless of nullability, so
+ * a schema-shaped assertion cannot tell a rule SQLite will honour from one it
+ * rejects at runtime — which is exactly how this defect survived being
+ * written four times in this project. Only deleting the parent proves it.
+ */
+describe("a consent record outlives the user it describes", () => {
+  let payload: Awaited<ReturnType<typeof getPayload>>;
+  const runId = crypto.randomUUID();
+
+  beforeAll(async () => {
+    payload = await getPayload({ config });
+  });
+
+  it("deletes the user and leaves the consent behind, anonymised", async () => {
+    const user = await payload.create({
+      collection: "users",
+      data: {
+        email: `erasure-${runId}@example.com`,
+        password: "test-password-123",
+        role: "user",
+      },
+    });
+
+    const consent = await payload.create({
+      collection: "user-consents",
+      data: {
+        user: user.id,
+        analyticsConsent: true,
+        marketingConsent: true,
+        consentVersion: `retained-${runId}`,
+        ipAddress: "198.51.100.4",
+        userAgent: "Mozilla/5.0 (retention test)",
+      },
+    });
+
+    // The whole point. With `user` required this throws
+    // `Failed query: delete from "users" where ...`, because SQLite cannot
+    // set a NOT NULL column to null.
+    await payload.delete({ collection: "users", id: user.id });
+
+    await expect(
+      payload.findByID({
+        collection: "users",
+        id: user.id,
+        overrideAccess: true,
+      })
+    ).rejects.toBeInstanceOf(NotFound);
+
+    const retained = await payload.findByID({
+      collection: "user-consents",
+      id: consent.id,
+      depth: 0,
+      overrideAccess: true,
+    });
+
+    expect(retained.user).toBeNull();
+    // Anonymised, not gutted: the evidence is what the record is for.
+    expect(retained.analyticsConsent).toBe(true);
+    expect(retained.marketingConsent).toBe(true);
+    expect(retained.consentVersion).toBe(`retained-${runId}`);
+    expect(retained.ipAddress).toBe("198.51.100.4");
+    expect(retained.createdAt).toBe(consent.createdAt);
+  });
+
+  it("records a consent with no user at all, which is what the null case becomes", async () => {
+    const orphan = await payload.create({
+      collection: "user-consents",
+      data: {
+        analyticsConsent: false,
+        consentVersion: `orphan-${runId}`,
+      },
+    });
+
+    expect(orphan.user ?? null).toBeNull();
   });
 });

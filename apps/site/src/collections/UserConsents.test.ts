@@ -26,21 +26,33 @@ describe("UserConsents collection", () => {
     expect(UserConsents.access?.delete).toBe(denyAll);
   });
 
-  it("requires the user, the decision and the version it was given against", () => {
+  it("requires the decision and the version it was given against", () => {
     const required = UserConsents.fields
       .filter((f) => (f as { required?: boolean }).required === true)
       .map((f) => ("name" in f ? f.name : undefined));
 
-    expect(required).toEqual(["user", "analyticsConsent", "consentVersion"]);
+    // `user` is deliberately absent — see the next test.
+    expect(required).toEqual(["analyticsConsent", "consentVersion"]);
   });
 
   it("indexes the user, because consents are looked up per person", () => {
     expect(field("user")).toMatchObject({
       type: "relationship",
       relationTo: "users",
-      required: true,
       index: true,
     });
+  });
+
+  it("leaves the user optional, so the record outlives the account", () => {
+    // `required` would emit `user_id integer NOT NULL` alongside the
+    // `ON DELETE set null` Payload always writes for a relationship — a pair
+    // SQLite cannot satisfy, so deleting a user who ever consented would die
+    // with a raw `Failed query: delete from "users" ...`. Nullable is also
+    // what the retention rule wants: the consent is evidence that must
+    // survive the account it describes, anonymised rather than destroyed.
+    // `UserConsents.int.test.ts` proves the delete actually succeeds and
+    // leaves the row behind; this pins the config that makes it possible.
+    expect(field("user")).not.toHaveProperty("required", true);
   });
 
   it("keeps analyticsConsent a checkbox, so a refusal is recordable", () => {

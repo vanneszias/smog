@@ -29,13 +29,14 @@ export const UserConsents: CollectionConfig = {
     delete: denyAll,
   },
   fields: [
-    {
-      name: "user",
-      type: "relationship",
-      relationTo: "users",
-      required: true,
-      index: true,
-    },
+    // Deliberately NOT required, which is what makes the column nullable and
+    // the `ON DELETE set null` Payload emits actually executable. A consent
+    // record is legal evidence with its own retention period: it has to
+    // outlive the account it describes, anonymised rather than destroyed,
+    // and deleting the user is often precisely the event it must survive.
+    // Required here would instead make the FK unsatisfiable, so deleting a
+    // user who ever consented would fail with a raw SQL error.
+    { name: "user", type: "relationship", relationTo: "users", index: true },
     { name: "analyticsConsent", type: "checkbox", required: true },
     { name: "marketingConsent", type: "checkbox" },
     // Which version of the policy text the user was shown. Without it, the

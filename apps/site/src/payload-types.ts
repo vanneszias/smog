@@ -297,7 +297,7 @@ export interface AdminLog {
  */
 export interface UserConsent {
   id: number;
-  user: number | User;
+  user?: (number | null) | User;
   analyticsConsent: boolean;
   marketingConsent?: boolean | null;
   consentVersion: string;

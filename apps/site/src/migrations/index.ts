@@ -8,6 +8,7 @@ import * as migration_20260919_194626_add_user_favorites from "./20260919_194626
 import * as migration_20260919_200842_add_lists from "./20260919_200842_add_lists";
 import * as migration_20260919_212934_add_sponsorships_and_audit from "./20260919_212934_add_sponsorships_and_audit";
 import * as migration_20260919_214755_add_sponsorship_token_unique_indexes from "./20260919_214755_add_sponsorship_token_unique_indexes";
+import * as migration_20260919_222612_nullable_consent_user from "./20260919_222612_nullable_consent_user";
 
 export const migrations = [
   {
@@ -59,5 +60,10 @@ export const migrations = [
     up: migration_20260919_214755_add_sponsorship_token_unique_indexes.up,
     down: migration_20260919_214755_add_sponsorship_token_unique_indexes.down,
     name: "20260919_214755_add_sponsorship_token_unique_indexes",
+  },
+  {
+    up: migration_20260919_222612_nullable_consent_user.up,
+    down: migration_20260919_222612_nullable_consent_user.down,
+    name: "20260919_222612_nullable_consent_user",
   },
 ];

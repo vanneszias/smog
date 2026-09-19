@@ -158,6 +158,67 @@ describe("migration chain", () => {
     expect(byName.get("sponsorships_re_edit_token_idx")).toBe(1);
   });
 
+  it("carries every existing user_consents row through the table rebuild", async () => {
+    // Making `user_consents.user_id` nullable forces SQLite's twelve-step
+    // rebuild: new table, `INSERT ... SELECT`, drop, rename. The failure mode
+    // that matters is a rebuild that recreates the table *empty*, which no
+    // structural assertion notices — the schema is right and the evidence is
+    // gone. So this replays a chain with a row already present.
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys = ON;");
+    const runner = migrationRunner(database);
+
+    for (const migration of migrations) {
+      await migration.up(runner.args);
+
+      if (migration.name === "20260919_212934_add_sponsorships_and_audit") {
+        database.exec(
+          `INSERT INTO users (id, email) VALUES (7100, 'pre-existing@example.test');`
+        );
+        database.exec(
+          `INSERT INTO user_consents (id, user_id, analytics_consent, consent_version)
+           VALUES (7101, 7100, 1, 'v1-before-the-rebuild');`
+        );
+      }
+    }
+
+    const rows = database
+      .prepare(
+        "SELECT user_id, consent_version FROM user_consents WHERE id = 7101"
+      )
+      .all() as { user_id: number | null; consent_version: string }[];
+
+    expect(rows).toEqual([
+      { user_id: 7100, consent_version: "v1-before-the-rebuild" },
+    ]);
+  });
+
+  it("lets a user be deleted and leaves the consent row behind with a null user", async () => {
+    const { database } = await chain();
+    // The payoff for the referential-integrity ruling, asserted against the
+    // *migrated* schema rather than the one `pushDevSchema` derives from the
+    // collection configs. Payload writes `ON DELETE set null` for every
+    // relationship whether or not the column can hold NULL, so only an actual
+    // delete distinguishes a rule SQLite honours from one it rejects.
+    database.exec(
+      `INSERT INTO users (id, email) VALUES (7200, 'consenting@example.test');`
+    );
+    database.exec(
+      `INSERT INTO user_consents (id, user_id, analytics_consent, consent_version)
+       VALUES (7201, 7200, 1, 'v1');`
+    );
+
+    database.exec("DELETE FROM users WHERE id = 7200;");
+
+    const rows = database
+      .prepare(
+        "SELECT user_id, consent_version FROM user_consents WHERE id = 7201"
+      )
+      .all() as { user_id: number | null; consent_version: string }[];
+
+    expect(rows).toEqual([{ user_id: null, consent_version: "v1" }]);
+  });
+
   it("actually rejects a duplicate token at the database level", async () => {
     const { database } = await chain();
     // Belt and braces on the above: `pragma_index_list` reporting `unique: 1`
