@@ -11,4 +11,5 @@
  */
 
 export * from "./constants";
+export * from "./sponsorships";
 export * from "./urls";

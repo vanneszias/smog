@@ -64,3 +64,19 @@ export const isAdminField: FieldAccess = ({ req: { user } }) =>
  * worth making legible.
  */
 export const publicRead: Access = () => true;
+
+/**
+ * Denies every request, signed in or not, admin or not.
+ *
+ * The counterpart to `publicRead`: collections never carry an inline
+ * `() => false` either, and "nothing reachable over the API may write this"
+ * is a decision worth naming. Used for `create`, `update` and `delete` on
+ * the audit collections (`admin-logs`, `user-consents`), whose only writer
+ * is a server-side hook going through the local API — where `overrideAccess`
+ * defaults to `true` and so bypasses this entirely
+ * (`payload/dist/collections/operations/local/create.js`, 3.89.0).
+ *
+ * Denying admins too is the point, not an oversight: a log an admin can POST
+ * to records whatever that admin wants it to record.
+ */
+export const denyAll: Access = () => false;

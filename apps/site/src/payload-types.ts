@@ -72,6 +72,9 @@ export interface Config {
     categories: Category;
     gestures: Gesture;
     lists: List;
+    sponsorships: Sponsorship;
+    'admin-logs': AdminLog;
+    'user-consents': UserConsent;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -84,6 +87,9 @@ export interface Config {
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     gestures: GesturesSelect<false> | GesturesSelect<true>;
     lists: ListsSelect<false> | ListsSelect<true>;
+    sponsorships: SponsorshipsSelect<false> | SponsorshipsSelect<true>;
+    'admin-logs': AdminLogsSelect<false> | AdminLogsSelect<true>;
+    'user-consents': UserConsentsSelect<false> | UserConsentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -228,6 +234,80 @@ export interface List {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sponsorships".
+ */
+export interface Sponsorship {
+  id: number;
+  gesture: number | Gesture;
+  sponsorName: string;
+  sponsorEmail: string;
+  contactFullName: string;
+  contactCompany?: string | null;
+  overlayText: string;
+  overlayImage?: (number | null) | Media;
+  hasLogo?: boolean | null;
+  originalVideoPlaybackId: string;
+  previewVideoPlaybackId?: string | null;
+  sponsoredVideoPlaybackId?: string | null;
+  status:
+    'pending_payment' | 'pending_approval' | 'pending_resubmission' | 'active' | 'expired' | 'rejected' | 'cancelled';
+  startDate: string;
+  endDate: string;
+  durationYears: number;
+  molliePaymentId?: string | null;
+  paymentAmount: number;
+  rejectionReason?: string | null;
+  reviewedBy?: (number | null) | User;
+  reviewedAt?: string | null;
+  reEditToken?: string | null;
+  reEditTokenExpiresAt?: string | null;
+  invoiceRequested?: boolean | null;
+  invoiceName?: string | null;
+  invoiceVatNumber?: string | null;
+  invoiceEmail?: string | null;
+  renewalReminderSentAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "admin-logs".
+ */
+export interface AdminLog {
+  id: number;
+  user?: (number | null) | User;
+  action: string;
+  targetType: string;
+  targetId: string;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "user-consents".
+ */
+export interface UserConsent {
+  id: number;
+  user: number | User;
+  analyticsConsent: boolean;
+  marketingConsent?: boolean | null;
+  consentVersion: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -269,6 +349,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'lists';
         value: number | List;
+      } | null)
+    | ({
+        relationTo: 'sponsorships';
+        value: number | Sponsorship;
+      } | null)
+    | ({
+        relationTo: 'admin-logs';
+        value: number | AdminLog;
+      } | null)
+    | ({
+        relationTo: 'user-consents';
+        value: number | UserConsent;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -396,6 +488,68 @@ export interface ListsSelect<T extends boolean = true> {
         addedBy?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sponsorships_select".
+ */
+export interface SponsorshipsSelect<T extends boolean = true> {
+  gesture?: T;
+  sponsorName?: T;
+  sponsorEmail?: T;
+  contactFullName?: T;
+  contactCompany?: T;
+  overlayText?: T;
+  overlayImage?: T;
+  hasLogo?: T;
+  originalVideoPlaybackId?: T;
+  previewVideoPlaybackId?: T;
+  sponsoredVideoPlaybackId?: T;
+  status?: T;
+  startDate?: T;
+  endDate?: T;
+  durationYears?: T;
+  molliePaymentId?: T;
+  paymentAmount?: T;
+  rejectionReason?: T;
+  reviewedBy?: T;
+  reviewedAt?: T;
+  reEditToken?: T;
+  reEditTokenExpiresAt?: T;
+  invoiceRequested?: T;
+  invoiceName?: T;
+  invoiceVatNumber?: T;
+  invoiceEmail?: T;
+  renewalReminderSentAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "admin-logs_select".
+ */
+export interface AdminLogsSelect<T extends boolean = true> {
+  user?: T;
+  action?: T;
+  targetType?: T;
+  targetId?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "user-consents_select".
+ */
+export interface UserConsentsSelect<T extends boolean = true> {
+  user?: T;
+  analyticsConsent?: T;
+  marketingConsent?: T;
+  consentVersion?: T;
+  ipAddress?: T;
+  userAgent?: T;
   updatedAt?: T;
   createdAt?: T;
 }
