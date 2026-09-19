@@ -75,34 +75,25 @@ jobs:
 
   site-payload-types-drift:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Check for required secrets
-        id: secrets-check
-        run: |
-          if [ -n "${SITE_PAYLOAD_SECRET}" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::Skipping the apps/site Payload types drift guard: PAYLOAD_SECRET is not configured as a repository secret."
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          SITE_PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
       - uses: actions/checkout@v5
-        if: steps.secrets-check.outputs.present == 'true'
       - uses: oven-sh/setup-bun@v2
-        if: steps.secrets-check.outputs.present == 'true'
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
-        if: steps.secrets-check.outputs.present == 'true'
       # Regenerates apps/site/src/payload-types.ts from the live collection
       # config and fails if that changes anything: a non-empty diff means a
       # collection was edited without regenerating the committed types.
+      #
+      # Needs no repository secrets. Type generation signs nothing and issues
+      # no query, so any non-empty PAYLOAD_SECRET satisfies the runtime check —
+      # the same reason deploy:database passes PAYLOAD_SECRET=ignore. Bindings
+      # resolve locally because NODE_ENV is not production here.
       - name: Guard committed Payload types against drift
-        if: steps.secrets-check.outputs.present == 'true'
         env:
           CLOUDFLARE_ENV: staging
-          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          PAYLOAD_SECRET: ignore
         run: |
           bun -F site generate:types:payload
           git diff --exit-code apps/site/src/payload-types.ts

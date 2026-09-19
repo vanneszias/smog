@@ -686,7 +686,9 @@ bucket, the adapter is still not wired — report it rather than working around 
 
 - [ ] **Step 10: Wire the checks into CI**
 
-Add a step to the existing GitHub Actions workflow that builds `apps/site`, gzips `.open-next/worker.js`, and calls `checkBundleSize` with the 10 MiB limit, failing the job when `ok` is false.
+Add a step to the existing GitHub Actions workflow that builds `apps/site`, runs `wrangler deploy --dry-run`, parses the gzip figure from its `Total Upload` line, and calls `checkBundleSize` with the 10 MiB limit and an 8 MiB warning threshold, failing the job when `ok` is false. Print the message even when passing, so the trend is visible in the log.
+
+Use the same measurement as Step 2 — **never** gzip `.open-next/worker.js`, for the reason Step 2 gives.
 
 Add a second CI step guarding the committed Payload types against drift, in a job that
 has `PAYLOAD_SECRET` available:
@@ -847,7 +849,7 @@ for the measurements behind each.
 - [x] Gate 3 (bun) recorded: PASS on bun 1.3.11.
 - [x] Gate 2 (bundle) recorded: 6.45 MiB gzipped of 10 MiB — **64.5% consumed,
       35.5% headroom, below the 40% flag threshold.**
-- [ ] CI fails the build when the gzipped Worker exceeds budget.
+- [x] CI fails the build when the gzipped Worker exceeds budget (`site-bundle-size` job).
 - [ ] Gate 1 (Remotion in a Cloudflare Container) — **NOT RUN.** No Docker daemon.
       Stage 6 cannot be planned until this is answered.
 
