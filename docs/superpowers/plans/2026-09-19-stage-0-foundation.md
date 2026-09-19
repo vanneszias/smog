@@ -6,7 +6,7 @@
 
 **Architecture:** Scaffold from Payload's official `with-cloudflare-d1` template rather than assembling the pieces by hand, adapt it to this monorepo's bun/Turborepo/Biome conventions, provision D1 and R2, and deploy to a staging Worker. Three gates run as their own tasks and each produces a written finding.
 
-**Tech Stack:** Next.js 16.3.3, Payload 3.90.1, `@payloadcms/db-d1-sqlite`, `@payloadcms/storage-r2`, `@opennextjs/cloudflare` ^1.11.0, wrangler ~4.116.0, bun 1.3.14, Turborepo 2.11.
+**Tech Stack:** Next.js 16.3.3, Payload 3.89.0, `@payloadcms/db-d1-sqlite`, `@payloadcms/storage-r2`, `@opennextjs/cloudflare` ^1.11.0, wrangler ~4.116.0, bun 1.3.14, Turborepo 2.11.
 
 **Spec:** [`../specs/2026-09-19-payload-migration-design.md`](../specs/2026-09-19-payload-migration-design.md)
 
@@ -14,7 +14,7 @@
 
 - Cloudflare Workers **Paid** plan is required; the template cannot deploy on Free due to size limits.
 - Package manager is **bun 1.3.14**. Do not introduce pnpm, npm or yarn lockfiles unless Task 5 concludes bun is unworkable.
-- All Payload packages sit on exactly **3.90.1**. Never upgrade one alone.
+- All Payload packages sit on exactly **3.89.0**. Never upgrade one alone.
 - Biome 2.3.13 extending `ultracite/core` and `ultracite/react`. `bun check` must pass before every commit.
 - Every new package registers `build`, `check-types` and `test` in `turbo.json`.
 - TypeScript strict mode, including `strictNullChecks`. `packages/config/tsconfig.base.json`
@@ -67,7 +67,7 @@ git sparse-checkout set templates/with-cloudflare-d1
 grep '"payload"' /tmp/payload-src/templates/with-cloudflare-d1/package.json
 ```
 
-Expected: `"payload": "3.90.1"`. If it reports a different version, stop and report it — the spec's pinned versions were read from this file and a drift means the plan needs updating, not overriding.
+Expected: `"payload": "3.89.0"`. If it reports a different version, stop and report it — the spec's pinned versions were read from this file and a drift means the plan needs updating, not overriding.
 
 - [ ] **Step 3: Copy the template into the monorepo**
 
@@ -670,7 +670,7 @@ Expected: PASS, 4 tests.
 - [ ] **Step 9: Smoke-test an R2 media upload**
 
 Stage 0 Task 2 moved `r2Storage` from the template's `storage:` key into `plugins:`,
-because `payload@3.90.1`'s `Config` has no `storage` field. That means the template was
+because `payload@3.89.0`'s `Config` has no `storage` field. That means the template was
 silently dropping the R2 adapter entirely, and this is the first deploy where uploads
 could ever have worked. Do not assume the fix works because it compiles.
 

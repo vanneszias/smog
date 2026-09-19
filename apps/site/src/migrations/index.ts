@@ -3,6 +3,7 @@ import * as migration_20260919_174541_add_categories from "./20260919_174541_add
 import * as migration_20260919_180415_add_gestures from "./20260919_180415_add_gestures";
 import * as migration_20260919_183041_payload_3_90_upgrade from "./20260919_183041_payload_3_90_upgrade";
 import * as migration_20260919_190548_add_user_roles from "./20260919_190548_add_user_roles";
+import * as migration_20260919_193653_revert_3_90_columns from "./20260919_193653_revert_3_90_columns";
 
 export const migrations = [
   {
@@ -29,5 +30,10 @@ export const migrations = [
     up: migration_20260919_190548_add_user_roles.up,
     down: migration_20260919_190548_add_user_roles.down,
     name: "20260919_190548_add_user_roles",
+  },
+  {
+    up: migration_20260919_193653_revert_3_90_columns.up,
+    down: migration_20260919_193653_revert_3_90_columns.down,
+    name: "20260919_193653_revert_3_90_columns",
   },
 ];

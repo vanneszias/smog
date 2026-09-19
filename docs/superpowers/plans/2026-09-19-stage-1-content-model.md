@@ -6,7 +6,7 @@
 
 **Architecture:** Collections are defined one per file under `apps/site/src/collections/`. Access control lives in pure, separately tested functions under `apps/site/src/access/` rather than inline in collection configs, because inline predicates are the single hardest thing to review in a Payload codebase. Two Convex tables disappear into field types.
 
-**Tech Stack:** Payload 3.90.1, `@payloadcms/db-d1-sqlite`, `@payloadcms/plugin-search`, `@payloadcms/richtext-lexical`, Vitest.
+**Tech Stack:** Payload 3.89.0, `@payloadcms/db-d1-sqlite`, `@payloadcms/plugin-search`, `@payloadcms/richtext-lexical`, Vitest.
 
 **Spec:** [`../specs/2026-09-19-payload-migration-design.md`](../specs/2026-09-19-payload-migration-design.md)
 
@@ -1345,7 +1345,7 @@ git commit -m "feat(site): add sponsorships, admin logs and user consents collec
 - [ ] **Step 1: Install the plugin**
 
 ```bash
-bun add -F site @payloadcms/plugin-search@3.90.1
+bun add -F site @payloadcms/plugin-search@3.89.0
 ```
 
 - [ ] **Step 2: Write the failing test for the sync transform**

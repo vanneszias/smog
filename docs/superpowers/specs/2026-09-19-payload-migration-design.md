@@ -87,12 +87,12 @@ Taken from the official `templates/with-cloudflare-d1` template.
 ```
 next                          16.3.3
 react / react-dom             19.2.6
-payload                       3.90.1
-@payloadcms/next              3.90.1
-@payloadcms/db-d1-sqlite      3.90.1
-@payloadcms/storage-r2        3.90.1
-@payloadcms/richtext-lexical  3.90.1
-@payloadcms/plugin-search     3.90.1
+payload                       3.89.0
+@payloadcms/next              3.89.0
+@payloadcms/db-d1-sqlite      3.89.0
+@payloadcms/storage-r2        3.89.0
+@payloadcms/richtext-lexical  3.89.0
+@payloadcms/plugin-search     3.89.0
 @opennextjs/cloudflare        ^1.11.0
 wrangler                      ~4.116.0
 ```
@@ -100,19 +100,39 @@ wrangler                      ~4.116.0
 Payload packages must all sit on the same patch version. Upgrading one means
 upgrading all of them together.
 
-**Why 3.90.1 and not the template's 3.82.1.** Every version up to and including
+**Why exactly 3.89.0 — it is the only version that works.** There is a
+one-release window, and both walls are hard:
+
+| Version | PBKDF2 iterations | Clears GHSA-jg8r-5jh2-v2xj | Runs on workerd |
+|---|---:|---|---|
+| ≤ 3.88.0 | 25,000 | no | yes |
+| **3.89.0** | **25,000** | **yes** | **yes** |
+| 3.90.0, 3.90.1 | 600,000 | yes | **no** |
+
+Payload 3.90.x switched password hashing to a `pbkdf2-sha256-v1` scheme at
+600,000 iterations. **workerd caps PBKDF2 at 100,000**, so on 3.90.x no password
+can be hashed at all: every registration and password change fails with
+`Pbkdf2 failed: iteration counts above 100000 are not supported`. The count is a
+hardcoded module constant in `generatePasswordSaltHash.js`, not configurable.
+
+This was found the hard way — upgraded to 3.90.1 for the advisory, deployed, and
+registration broke on staging. Pin 3.89.0 and do not upgrade Payload past it
+without first checking `currentPasswordHashIterations` against workerd's ceiling.
+
+**Why not the template's 3.82.1.** Every version up to and including
 3.88.0 carries GHSA-jg8r-5jh2-v2xj — Payload's default account-unlock access lets
 an authenticated user reset another account's lockout. `bun audit --production`
 is part of `release:check`, so the pinned version failed CI outright. Upgrading
 was also the cheapest it will ever be: two collections in, rather than at Stage 5
-with the sponsor flow built on top. The bump added two optional columns
-(`users.resetPasswordRequestedAt`, `media._objectKey`) and needed one migration;
-nothing else broke.
+with the sponsor flow built on top. The 3.90.1 detour added two optional columns
+(`users.resetPasswordRequestedAt`, `media._objectKey`); dropping back to 3.89.0
+removes them again, so the migration chain carries an add-then-drop pair rather
+than rewriting migrations already applied to staging.
 
 The template's own source has drifted from the versions it pins. **Four**
 confirmed instances, all fixed during Stage 0:
 
-| Template says | Reality in 3.90.1 |
+| Template says | Reality in 3.89.0 |
 |---|---|
 | `storage: [r2Storage(...)]` | no such `Config` key — belongs in `plugins` |
 | `generatePayloadViewport` | does not exist in `@payloadcms/next` |
@@ -202,7 +222,7 @@ export default buildConfig({
 ```
 
 Note `plugins`, not `storage`. The published `with-cloudflare-d1` template writes
-`storage: [r2Storage(...)]`, but `payload@3.90.1`'s `Config` type has no top-level
+`storage: [r2Storage(...)]`, but `payload@3.89.0`'s `Config` type has no top-level
 `storage` key and `r2Storage` returns a `Plugin`. The template as shipped does not
 type-check against the version it pins; this was found and corrected in Stage 0
 Task 2. Expect the same class of skew elsewhere in the template.

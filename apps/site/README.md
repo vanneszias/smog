@@ -14,12 +14,12 @@ While the migration runs, the existing stack (`apps/web`, `apps/native`,
 
 | Layer | |
 |---|---|
-| App | Next.js 16.3.3, React 19.2, Payload 3.90.1 |
+| App | Next.js 16.3.3, React 19.2, Payload 3.89.0 |
 | Worker | `@opennextjs/cloudflare`, `wrangler` |
 | Database | Cloudflare D1 via `@payloadcms/db-d1-sqlite` |
 | Files | Cloudflare R2 via `@payloadcms/storage-r2` |
 
-All Payload packages sit on exactly `3.90.1`. Upgrade them together or not at all.
+All Payload packages sit on exactly `3.89.0`. Upgrade them together or not at all.
 
 ## Local development
 
@@ -88,7 +88,7 @@ This app was scaffolded from Payload's official `with-cloudflare-d1` template,
 which does **not** type-check or build against the versions it pins. Four
 confirmed defects, all fixed here:
 
-| Template said | Reality in 3.90.1 |
+| Template said | Reality in 3.89.0 |
 |---|---|
 | `storage: [r2Storage(...)]` | no such `Config` key — belongs in `plugins` |
 | `generatePayloadViewport` | does not exist in `@payloadcms/next` |
