@@ -859,9 +859,11 @@ Three things came out of this stage that later stages must carry.
 
 **Bundle size is a standing constraint, not a checkbox.** At 64.5% consumed with
 two collections and no public site, every later stage needs to re-measure and
-justify its delta. Investigate excluding `drizzle-kit/api` (~7 MiB raw, migration
-*generation* tooling that runs at deploy time, not runtime) before Stage 3, while
-there is still room to be wrong about it.
+justify its delta. Measured breakdown: `worker.js` is 5,930 KiB gzipped (57.9% of budget) and the
+`ImageResponse` assets are 602 KiB (5.9%). `drizzle-kit` was tested and is **not**
+uploaded despite sitting in OpenNext's staging directory — stubbing it changed the
+total by zero bytes. The only identified lever is dropping `ImageResponse` if the
+design needs no dynamic OG images.
 
 **The vendored template is not known-good.** Four confirmed skews against the
 versions it pins: `storage:` should be `plugins:`; `generatePayloadViewport` does

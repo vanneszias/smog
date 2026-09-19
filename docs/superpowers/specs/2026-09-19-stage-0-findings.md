@@ -112,23 +112,44 @@ site (Stage 3), auth with social providers (Stage 4), the sponsorship wizard
 and Mollie integration (Stage 5), and the jobs queue (Stage 7). Those must all
 fit in the remaining 3.55 MiB gzipped.
 
-### Where the weight is, and what can be recovered
+### Where the weight is — measured, not guessed
 
-Identified during measurement, not yet acted on:
+Each uploaded artefact, gzipped:
 
-- **`drizzle-kit/api` is bundled into the Worker** — roughly 7 MiB raw. This is
-  Payload's *migration generation* tooling. Migrations are generated at
-  development time and applied by `deploy:database` before the Worker is
-  deployed, so the runtime should not need it. If it can be externalized or
-  tree-shaken, it is the single largest recoverable win.
-- **OG-image assets, ~1.5 MiB raw**: `resvg.wasm` (1,346 KiB),
-  `Geist-Regular.ttf.bin` (123 KiB), `yoga.wasm` (70 KiB). These come from
-  Next's `ImageResponse` / `next/og`. Nothing in the current app generates OG
-  images. If the design does not need dynamic OG images, this is free to
-  remove; if it does, the cost is now known rather than discovered later.
+| Artefact | gzip | Share of the 10 MiB budget |
+|---|---:|---:|
+| `worker.js` — Payload + Next runtime | 5,930 KiB | 57.9% |
+| `resvg.wasm` — Next `ImageResponse` | 516 KiB | 5.0% |
+| `Geist-Regular.ttf.bin` — `ImageResponse` | 58 KiB | 0.6% |
+| `yoga.wasm` — `ImageResponse` | 28 KiB | 0.3% |
+| **Total** | **6,601 KiB** | **64.5%** |
 
-`worker.js.map` is 39 MiB but is **not** counted toward the upload — the
-reported total is `worker.js` (29,084 KiB) plus the three binary assets.
+**Correction: `drizzle-kit` is not in the uploaded bundle.** An earlier version of
+this document called it "roughly 7 MiB raw" and "the single largest recoverable
+win". That was wrong, and it was wrong in the direction that would have wasted
+Stage 3's time.
+
+What is true: a 6.9 MiB `drizzle-kit/api.js` exists under
+`.open-next/server-functions/default/node_modules/`. What does not follow is that
+wrangler uploads it. It was tested directly — the file was replaced in place with
+a 299-byte throwing stub and `wrangler deploy --dry-run` re-run. The result was
+byte-identical: `30624.36 KiB / gzip: 6601.40 KiB`. OpenNext stages the package
+on disk; nothing reachable from `worker.js` imports it, so it never ships.
+
+Marking it in `serverExternalPackages` was also tried and changed the total by
+0.28 KiB, i.e. nothing. That change was reverted rather than left in place as a
+no-op with a confident comment attached.
+
+**The one real lever is the `ImageResponse` assets: 602 KiB gzipped, 5.9% of the
+budget.** They ship because `next/og` is part of the Next runtime OpenNext
+includes, not because anything in this app generates OG images. Removing them
+would lift headroom from 35.5% to roughly 41%. Worth doing if the design confirms
+it needs no dynamic OG images — but it is a single-digit improvement, not a
+rescue.
+
+**Everything else is Payload and Next themselves**, at 57.9% of the budget before
+a line of product code. There is no large easy win here. The budget has to be
+managed stage by stage.
 
 ### Consequence
 
@@ -140,8 +161,8 @@ checkbox. Three things follow:
    before the wall.
 2. Re-measure at the end of every stage, and record the delta. A stage that
    adds 1 MiB gzipped needs to justify it.
-3. Investigate the `drizzle-kit` exclusion **before Stage 3**, while there is
-   still room to be wrong about it.
+3. Decide early whether the app needs dynamic OG images. If not, dropping the
+   `ImageResponse` assets recovers 602 KiB gzipped — the only identified lever.
 
 ### Plan defect this exposed
 
@@ -298,6 +319,7 @@ Remaining:
    upload, wire both CI checks. The bundle measurement is already done.
 3. Task 6 — the Remotion container spike (Gate 1), once there is a Docker
    daemon.
-4. Investigate excluding `drizzle-kit` from the Worker bundle, before Stage 3.
+4. Decide whether dynamic OG images are needed; if not, drop the
+   `ImageResponse` assets for 602 KiB gzipped.
 
 Schema before code, always: `deploy:database` then `deploy:app`.

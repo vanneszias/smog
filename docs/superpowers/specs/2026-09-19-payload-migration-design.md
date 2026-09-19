@@ -46,7 +46,7 @@ carries a cost, the cost is stated.
 | Storage | Cloudflare R2 | — |
 | Scope | Full migration, native included | An app-store release is in the critical path |
 | Auth | Payload built-in + social providers | WorkOS password hashes cannot move; users re-authenticate |
-| Video composition | Remotion in a Cloudflare Container | Least proven option; spiked in Stage 0 |
+| Video composition | Remotion Lambda | An AWS account and per-render cost |
 | Layout | One Next.js app, `apps/site` | Admin-panel faults and public-site faults share a blast radius |
 | Components | Separate web and native libraries, shared philosophy | Two implementations of every primitive |
 | Data | Full scripted migration of all nine tables | A real migration stage with dry runs |
@@ -62,8 +62,10 @@ These apply to every stage. Exact values; do not substitute.
 - **Cloudflare Workers Paid plan is required.** The official Payload Cloudflare
   template states it "can only be deployed on Paid Workers right now due to
   size limits." Sending email to arbitrary recipients also requires it.
-- Package manager is **bun 1.3.14**, matching the existing monorepo. Payload
-  documents pnpm/npm/yarn; bun compatibility is a Stage 0 verification gate.
+- Package manager is **bun**, matching the existing monorepo, whose root
+  `package.json` declares `bun@1.3.14`. Payload documents pnpm/npm/yarn; bun
+  compatibility was verified in Stage 0 and passes. Note the verification ran on
+  bun 1.3.11, which is what the build container ships.
 - Linting and formatting is **Biome 2.3.13** extending `ultracite/core` and
   `ultracite/react`. `bun check` must pass before any commit.
 - Builds are orchestrated by **Turborepo 2.11**. Every new package registers
@@ -91,11 +93,19 @@ wrangler                      ~4.116.0
 Payload packages must all sit on the same patch version. Upgrading one means
 upgrading all of them together.
 
-The template's own source has drifted from the versions it pins. Two confirmed
-instances, both fixed in Stage 0 Task 2: `storage:` should be `plugins:` (above),
-and the admin layout imports `generatePayloadViewport` from `@payloadcms/next`,
-which does not exist in 3.82.1. Treat vendored template code as needing
-verification against the installed types, not as known-good.
+The template's own source has drifted from the versions it pins. **Four**
+confirmed instances, all fixed during Stage 0:
+
+| Template says | Reality in 3.82.1 |
+|---|---|
+| `storage: [r2Storage(...)]` | no such `Config` key — belongs in `plugins` |
+| `generatePayloadViewport` | does not exist in `@payloadcms/next` |
+| import map → `@payloadcms/ui/rsc` | the generator emits `@payloadcms/next/rsc` |
+| `"build": "payload build"` | no such command — it is `next build` |
+
+The first silently dropped R2 storage, so uploads could never have worked. The
+last would have failed every deploy at its first step. Treat vendored template
+code as needing verification against the installed packages, not as known-good.
 
 ## Architecture
 
@@ -117,15 +127,16 @@ verification against the installed types, not as known-good.
                      └───┬─────────────┬───────────────┬───┘
                          │             │               │
                     ┌────▼────┐   ┌────▼─────┐   ┌─────▼──────┐
-                    │  Mollie │   │   Mux    │   │ Container: │
-                    │  (HTTP) │   │  (HTTP)  │   │ smog-render│
-                    └─────────┘   └──────────┘   │  Remotion  │
+                    │  Mollie │   │   Mux    │   │  Remotion  │
+                    │  (HTTP) │   │  (HTTP)  │   │   Lambda   │
+                    └─────────┘   └──────────┘   │   (AWS)    │
                                                  └────────────┘
       Expo app ──────► /api/*  (REST, Payload auth cookies/JWT)
 ```
 
-One Worker. One deploy. The container is a separate Cloudflare resource the
-Worker calls over its binding.
+One Worker. One deploy. Remotion runs on AWS Lambda, which the Worker submits
+renders to over HTTP and polls for completion — the same asynchronous shape the
+current Remotion service already uses.
 
 ### Repository layout
 
@@ -133,7 +144,7 @@ Worker calls over its binding.
 apps/
   site/          NEW   Next 16 + Payload. Admin, API, public web.
   mobile/        NEW   Expo, Payload REST, own component library.
-  render/        NEW   Remotion in a Cloudflare Container.
+  render/        NEW   Remotion Lambda deployment config and compositions.
   web/                 deleted in Stage 10
   native/              deleted in Stage 10
   server/              deleted in Stage 10
@@ -353,33 +364,36 @@ and each gets its own plan document under `docs/superpowers/plans/`.
 | 3 | Public web | Redesigned gestures, search, detail, lists, favorites |
 | 4 | Auth | Payload auth with social login; account pages |
 | 5 | Sponsorships | Collection, sponsor wizard, Mollie endpoints |
-| 6 | Video pipeline | Remotion container, Mux integration, preview and final renders |
+| 6 | Video pipeline | Remotion Lambda, Mux integration, preview and final renders |
 | 7 | Email and jobs | Email adapter, templates, three scheduled tasks |
 | 8 | Native | Expo app on Payload REST with its own component library |
 | 9 | Data migration | Scripted Convex → D1 migration, verified by dry run |
 | 10 | Cutover | DNS switch; old apps and packages deleted |
 
-Stages 0–5 are strictly ordered. Stage 6 depends on the Stage 0 container
-spike. Stage 8 depends on Stage 4. Stages 9 and 10 depend on everything.
+Stages 0–5 are strictly ordered. Stage 8 depends on Stage 4. Stages 9 and 10
+depend on everything.
 
 ## Stage 0 gates
 
-Three things are unverified, and a plan written around an unverified assumption
-is fiction. Stage 0 resolves them before later stages are planned in detail.
+Three things were unverified when this spec was written. All three are now
+resolved; measurements are in
+[`2026-09-19-stage-0-findings.md`](./2026-09-19-stage-0-findings.md).
 
-1. **Remotion in a Cloudflare Container.** Headless Chromium in Containers is
-   the least proven part of this design. Gate: a container renders one
-   composition end to end. Fallback: Remotion Lambda.
-2. **Worker bundle size.** Payload plus Next 16 through OpenNext, against the
-   Paid-plan Worker size limit, with room left for five more stages of code.
-   Gate: a deployed Worker with the full content model, measured, with headroom
-   recorded.
-3. **Bun compatibility.** Payload documents pnpm, npm and yarn. This monorepo
-   is bun. Gate: `payload migrate`, `payload generate:types` and
-   `payload generate:importmap` all run under bun. Fallback: pnpm scoped to
-   `apps/site` only.
+1. **Remotion in a Cloudflare Container** — **abandoned by decision, 2026-09-19.**
+   The spike never ran: the available environment had no Docker daemon, and the
+   container was always the least proven part of this design. Rather than hold
+   Stage 6 hostage to an environment change, video composition moves to
+   **Remotion Lambda**, the mature documented serverless path. The decision
+   table above is updated accordingly. Stage 6 is now plannable.
+2. **Worker bundle size** — **measured: 6.45 MiB gzipped of 10 MiB, 64.5%
+   consumed.** Below the 40% headroom threshold this spec set, so it is flagged.
+   Bundle size is now a standing constraint on every later stage rather than a
+   Stage 0 checkbox. See the findings document for what is recoverable.
+3. **Bun compatibility** — **PASS.** All Payload CLI commands run under bun with
+   no workarounds. The pnpm fallback is unused.
 
-A failed gate changes the design. It does not get worked around quietly.
+A failed gate changes the design. Gate 1 did exactly that, and the change is
+recorded above rather than worked around.
 
 ## Testing
 
@@ -399,8 +413,8 @@ A failed gate changes the design. It does not get worked around quietly.
 | Risk | Mitigation |
 |---|---|
 | D1 adapter immaturity | Schema avoids D1-specific features; Postgres via Hyperdrive stays a config-level escape hatch |
-| Worker size limit reached mid-migration | Measured in Stage 0 with headroom recorded; re-measured at every stage |
-| Container cold starts on first render | Renders are already asynchronous with polling; sponsor UX unchanged |
+| **Worker size limit reached mid-migration** | **Live risk.** 64.5% consumed at Stage 0. CI enforces a budget; re-measure every stage and justify each delta. Measured: the Payload + Next runtime alone is 57.9% of budget before any product code. `drizzle-kit` was tested and is not uploaded. The only identified lever is 602 KiB of unused `ImageResponse` assets — there is no large easy win. |
+| Lambda cold starts on first render | Renders are already asynchronous with polling; sponsor UX unchanged |
 | Users lost at the auth cutover | Migration creates accounts and sends a set-password mail; favorites and lists survive keyed by email |
 | Mollie webhook replay during cutover | Endpoint is idempotent; old and new stacks both reconcile against Mollie as the source of truth |
 | Translation backlog | `en` and `fr` fall back to `nl`; no empty pages ship |
