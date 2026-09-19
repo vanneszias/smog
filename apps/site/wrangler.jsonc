@@ -1,7 +1,15 @@
-// NOTE: the two `database_id` values below are placeholders
-// (PLACEHOLDER_STAGING_DATABASE_ID / PLACEHOLDER_PRODUCTION_DATABASE_ID).
-// They must be replaced with the real output of `wrangler d1 create` before
-// any deploy — a deploy against a placeholder id will fail.
+// D1 and R2 bindings live only inside the named `staging` and `production`
+// environments below, never at the top level, so neither can be reached by
+// accident: a deploy with no --env resolves this bindingless top level and
+// fails rather than silently touching the wrong database.
+//
+// Because of that, `wrangler types` emits D1 and R2 as optional on the base
+// CloudflareEnv, which is why payload.config.ts asserts them via
+// requireBinding() instead of a non-null assertion.
+//
+// Deploy order is always schema then code: `deploy:database`, then
+// `deploy:app`. Both refuse to run unless CLOUDFLARE_ENV is exactly
+// "staging" or "production".
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
@@ -19,7 +27,7 @@
         {
           "binding": "D1",
           "database_name": "smog-staging",
-          "database_id": "PLACEHOLDER_STAGING_DATABASE_ID",
+          "database_id": "de652ee5-3851-4b02-85fb-f4eb8bddfe29",
           "remote": true,
         },
       ],
@@ -31,7 +39,7 @@
         {
           "binding": "D1",
           "database_name": "smog-production",
-          "database_id": "PLACEHOLDER_PRODUCTION_DATABASE_ID",
+          "database_id": "6f48c5c2-43f3-44a9-a083-46d18bf44831",
           "remote": true,
         },
       ],

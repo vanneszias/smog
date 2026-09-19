@@ -149,7 +149,7 @@ Set `"name": "site"` in `apps/site/package.json`, remove the `cross-env` depende
   "type": "module",
   "scripts": {
     "dev": "NODE_OPTIONS=--no-deprecation next dev --port 3003",
-    "build": "NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" payload build",
+    "build": "NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "generate:types": "bun run generate:types:cloudflare && bun run generate:types:payload",
@@ -564,12 +564,20 @@ bun run deploy:app
 
 - [ ] **Step 2: Record the measurement**
 
-Wrangler prints `Total Upload: X KiB / gzip: Y KiB` on deploy. The Workers Paid limit is **10 MiB gzipped**. Record the gzip figure — that is the number that matters.
+The Workers Paid limit is **10 MiB gzipped**. Get the number from wrangler, which
+performs the real bundle:
 
 ```bash
-ls -la .open-next/worker.js
-gzip -c .open-next/worker.js | wc -c
+bunx wrangler deploy --dry-run --env=staging --outdir=/tmp/dryrun
 ```
+
+Read the `Total Upload: X KiB / gzip: Y KiB` line. The gzip figure is the one
+that matters, and `--dry-run` produces it without deploying.
+
+**Do not measure `.open-next/worker.js` directly.** It is a ~2 KB entry stub
+that imports the real module graph; `gzip`-ing it reports under a kilobyte and
+100% headroom, which is wrong by three orders of magnitude. This plan said to do
+exactly that until the first real measurement caught it.
 
 - [ ] **Step 3: Assert the build left the working tree clean**
 

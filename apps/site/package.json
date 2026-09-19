@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_OPTIONS=--no-deprecation next dev --port 3003",
-    "build": "NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" payload build",
+    "build": "NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "generate:types": "bun run generate:types:cloudflare && bun run generate:types:payload",

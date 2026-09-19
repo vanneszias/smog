@@ -11,7 +11,7 @@ stages could be planned in detail. This records what each one actually returned.
 | Gate | Subject | Status |
 |---|---|---|
 | 1 | Remotion in a Cloudflare Container | **NOT RUN** — no Docker daemon |
-| 2 | Worker bundle size | **NOT RUN** — see below |
+| 2 | Worker bundle size | **PASS, WITH A WARNING** — 64.5% of budget already used |
 | 3 | bun compatibility with Payload's CLI | **PASS** |
 
 ---
@@ -68,29 +68,88 @@ regenerated map is now committed.
 
 This is the third confirmed skew between the `with-cloudflare-d1` template's
 source and the versions it pins, after `storage:` vs `plugins:` and the dead
-`generatePayloadViewport` import. The spec's standing warning holds: treat
-vendored template code as needing verification against installed types.
+`generatePayloadViewport` import.
+
+A **fourth** turned up during the Gate 2 build, and this one is fatal rather
+than cosmetic: the template's build script is `payload build`, but
+`payload@3.82.1` has **no `build` command** — its own CLI usage list confirms
+it. Every deploy would have failed at the first step. Corrected to `next build`,
+which is the actual build command for a Payload 3 Next.js app. The Stage 0 plan
+had copied the template's version verbatim, so the plan carried the same defect.
+
+The spec's standing warning holds, and has now earned itself four times over:
+treat vendored template code as needing verification against installed
+packages, not as known-good.
 
 ---
 
-## Gate 2 — Worker bundle size: NOT RUN
+## Gate 2 — Worker bundle size: PASS, with a warning
 
 **Question:** does Payload plus Next 16 through OpenNext fit the Workers Paid
 10 MiB gzipped limit, with room for five more stages of code?
 
-**Not answered.** `opennextjs-cloudflare build` was expected to run locally
-without credentials, which would have produced a real measurement without
-deploying. It was not reached in this session.
+**It fits. The headroom is the problem.**
 
-The `checkBundleSize` function and its CI wiring (Task 4 Steps 5–8, 10) are
-pure and remain runnable with no network. The measurement itself needs the
-build to complete.
+Measured with `wrangler deploy --dry-run --env=staging`, which performs the
+real bundle and reports exactly what an upload would send:
 
-**Consequence:** the spec's headroom question is open. Stages 3 through 8 are
-being planned without knowing how much of the Worker budget Stage 0 already
-consumes. This is a real risk to carry forward, not a formality.
+| Metric | Value |
+|---|---:|
+| Total upload, raw | 30,623.75 KiB (29.9 MiB) |
+| **Total upload, gzipped** | **6,601.12 KiB (6.45 MiB)** |
+| Workers Paid limit | 10 MiB gzipped |
+| **Budget consumed** | **64.5%** |
+| **Headroom remaining** | **35.5%** |
 
----
+The plan says to flag anything under 40% headroom as "a design-level problem
+for Stages 3 through 8, not a note." This is 35.5%, so it is flagged.
+
+**What makes it serious is what is *not* in that number yet.** The measured
+build contains two collections (`Users`, `Media`), no public site, no component
+library, no sponsor flow, no jobs. Still to come: seven collections and the
+search plugin (Stage 1), a full web component library (Stage 2), the public
+site (Stage 3), auth with social providers (Stage 4), the sponsorship wizard
+and Mollie integration (Stage 5), and the jobs queue (Stage 7). Those must all
+fit in the remaining 3.55 MiB gzipped.
+
+### Where the weight is, and what can be recovered
+
+Identified during measurement, not yet acted on:
+
+- **`drizzle-kit/api` is bundled into the Worker** — roughly 7 MiB raw. This is
+  Payload's *migration generation* tooling. Migrations are generated at
+  development time and applied by `deploy:database` before the Worker is
+  deployed, so the runtime should not need it. If it can be externalized or
+  tree-shaken, it is the single largest recoverable win.
+- **OG-image assets, ~1.5 MiB raw**: `resvg.wasm` (1,346 KiB),
+  `Geist-Regular.ttf.bin` (123 KiB), `yoga.wasm` (70 KiB). These come from
+  Next's `ImageResponse` / `next/og`. Nothing in the current app generates OG
+  images. If the design does not need dynamic OG images, this is free to
+  remove; if it does, the cost is now known rather than discovered later.
+
+`worker.js.map` is 39 MiB but is **not** counted toward the upload — the
+reported total is `worker.js` (29,084 KiB) plus the three binary assets.
+
+### Consequence
+
+Bundle size is now a standing constraint on every later stage, not a Stage 0
+checkbox. Three things follow:
+
+1. The CI budget check (Task 4) is no longer a formality. It should fail the
+   build well before 10 MiB — a threshold around 8 MiB gzipped gives warning
+   before the wall.
+2. Re-measure at the end of every stage, and record the delta. A stage that
+   adds 1 MiB gzipped needs to justify it.
+3. Investigate the `drizzle-kit` exclusion **before Stage 3**, while there is
+   still room to be wrong about it.
+
+### Plan defect this exposed
+
+Task 4 Step 2 told the executor to measure `.open-next/worker.js` with `ls` and
+`gzip`. That file is a **2,278-byte entry stub** that imports the real module
+graph; measuring it reports 745 bytes gzipped and 100% headroom. The plan has
+been corrected to use `wrangler deploy --dry-run`, whose `Total Upload` line is
+the only number that reflects what is actually sent.
 
 ## Gate 1 — Remotion in a Cloudflare Container: NOT RUN
 
@@ -132,6 +191,15 @@ session too.
   provisioning, deploy, or remote migration can run. This also blocked reading
   `payloadcms.com` and `blog.cloudflare.com` during research; Payload's docs
   were read through Context7 instead.
+- **`*.workers.dev` must also be allowlisted.** Allowing `api.cloudflare.com`
+  is not sufficient for remote D1. Miniflare proxies remote bindings through the
+  Worker's own subdomain, so `payload migrate` against remote D1 fails with
+  `Host not in allowlist: smog-site-staging.vanneszias.workers.dev`. Both hosts
+  are needed.
+- **The build needs `CLOUDFLARE_API_TOKEN`**, contrary to the plan's assumption
+  that only deploys do. `payload.config.ts` opens a remote proxy session during
+  `next build`, so a credential-free build is not possible with the current
+  config.
 - **No Docker daemon**, as above.
 - **bun 1.3.11**, against a declared 1.3.14.
 
@@ -139,12 +207,24 @@ session too.
 
 In order, with the plan steps that cover each:
 
-1. Task 3 Steps 1, 5, 6 — create `smog-staging` and `smog-production` D1
-   databases and R2 buckets, replace both `PLACEHOLDER_*_DATABASE_ID` values in
-   `wrangler.jsonc`, run the baseline migration, verify the remote tables exist.
-2. Task 4 — deploy to staging, measure the bundle (Gate 2), confirm the admin
-   panel loads, smoke-test an R2 upload, wire both CI checks.
-3. Task 6 — the Remotion container spike (Gate 1), if the environment has
-   Docker.
+Resources now exist and `wrangler.jsonc` carries their real IDs:
+
+| Resource | Name | ID |
+|---|---|---|
+| D1 | `smog-staging` | `de652ee5-3851-4b02-85fb-f4eb8bddfe29` |
+| D1 | `smog-production` | `6f48c5c2-43f3-44a9-a083-46d18bf44831` |
+| R2 | `smog-staging-media` | — |
+| R2 | `smog-production-media` | — |
+
+Remaining:
+
+1. Task 3 Steps 5, 6 — run the baseline migration against remote staging D1 and
+   verify the tables exist. **Blocked on `*.workers.dev` egress**, not on
+   credentials.
+2. Task 4 — deploy to staging, confirm the admin panel loads, smoke-test an R2
+   upload, wire both CI checks. The bundle measurement is already done.
+3. Task 6 — the Remotion container spike (Gate 1), once there is a Docker
+   daemon.
+4. Investigate excluding `drizzle-kit` from the Worker bundle, before Stage 3.
 
 Schema before code, always: `deploy:database` then `deploy:app`.
