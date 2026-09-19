@@ -24,6 +24,6 @@
   "devDependencies": {
     "typescript": "^5.9.3",
     "@smog/config": "workspace:*",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.11"
   }
 }
