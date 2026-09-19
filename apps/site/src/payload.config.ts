@@ -25,6 +25,25 @@ const isCLI = process.argv.some((value) =>
 );
 const isProduction = process.env.NODE_ENV === "production";
 
+/**
+ * True while `next build` is collecting route configuration.
+ *
+ * PAYLOAD_SECRET and the D1/R2 bindings are *runtime* inputs: the secret comes
+ * from Cloudflare's secret store and the bindings from the Worker environment,
+ * neither of which exists during a build. Demanding them here broke the root
+ * `bun run build` and `release:check` for the whole monorepo, and it would
+ * break any real CI build too — the earlier build only passed because a
+ * throwaway secret happened to be exported by hand.
+ *
+ * Nothing security-relevant happens during a build: no session is signed, no
+ * query is issued. The strict checks still run in the Worker, where a missing
+ * secret or binding is a genuine fault and fails loudly on the first request.
+ */
+const isNextBuild = process.env.NEXT_PHASE === "phase-production-build";
+
+/** Placeholder used only while collecting route config; never reaches a request. */
+const BUILD_PHASE_SECRET = "build-phase-placeholder-not-used-at-runtime";
+
 const createLog =
   (level: string, fn: typeof console.log) =>
   (objOrMsg: object | string, msg?: string) => {
@@ -68,17 +87,23 @@ export default buildConfig({
   },
   collections: [Users, Media],
   editor: lexicalEditor(),
-  secret: requireEnv("PAYLOAD_SECRET"),
+  secret: isNextBuild
+    ? (process.env.PAYLOAD_SECRET ?? BUILD_PHASE_SECRET)
+    : requireEnv("PAYLOAD_SECRET"),
   typescript: {
     outputFile: path.resolve(dirname, "payload-types.ts"),
   },
   db: sqliteD1Adapter({
-    binding: requireBinding(cloudflare.env.D1, "D1"),
+    binding: isNextBuild
+      ? (cloudflare.env.D1 as D1Database)
+      : requireBinding(cloudflare.env.D1, "D1"),
   }),
   logger: isProduction ? cloudflareLogger : undefined,
   plugins: [
     r2Storage({
-      bucket: requireBinding(cloudflare.env.R2, "R2"),
+      bucket: isNextBuild
+        ? (cloudflare.env.R2 as R2Bucket)
+        : requireBinding(cloudflare.env.R2, "R2"),
       collections: { media: true },
     }),
   ],
