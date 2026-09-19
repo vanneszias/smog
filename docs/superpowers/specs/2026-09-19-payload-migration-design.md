@@ -91,6 +91,12 @@ wrangler                      ~4.116.0
 Payload packages must all sit on the same patch version. Upgrading one means
 upgrading all of them together.
 
+The template's own source has drifted from the versions it pins. Two confirmed
+instances, both fixed in Stage 0 Task 2: `storage:` should be `plugins:` (above),
+and the admin layout imports `generatePayloadViewport` from `@payloadcms/next`,
+which does not exist in 3.82.1. Treat vendored template code as needing
+verification against the installed types, not as known-good.
+
 ## Architecture
 
 ### Deployment topology
@@ -163,10 +169,16 @@ const cloudflare =
 
 export default buildConfig({
   db: sqliteD1Adapter({ binding: cloudflare.env.D1 }),
-  storage: [r2Storage({ bucket: cloudflare.env.R2, collections: { media: true } })],
+  plugins: [r2Storage({ bucket: cloudflare.env.R2, collections: { media: true } })],
   // ...
 })
 ```
+
+Note `plugins`, not `storage`. The published `with-cloudflare-d1` template writes
+`storage: [r2Storage(...)]`, but `payload@3.82.1`'s `Config` type has no top-level
+`storage` key and `r2Storage` returns a `Plugin`. The template as shipped does not
+type-check against the version it pins; this was found and corrected in Stage 0
+Task 2. Expect the same class of skew elsewhere in the template.
 
 `wrangler.jsonc` uses `main: ".open-next/worker.js"`, compatibility date
 `2025-08-15`, and the compatibility flags `nodejs_compat` and
