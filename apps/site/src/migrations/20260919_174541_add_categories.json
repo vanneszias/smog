@@ -336,7 +336,7 @@
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "id": {
@@ -819,6 +819,6 @@
   "internal": {
     "indexes": {}
   },
-  "id": "90ea224f-fd77-4163-807b-4fa2cee61d33",
+  "id": "b8f2208e-8cd0-4e73-9250-361520d4b42d",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

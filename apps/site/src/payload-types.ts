@@ -167,7 +167,7 @@ export interface Media {
  */
 export interface Category {
   id: number;
-  name: string;
+  name?: string | null;
   isActive?: boolean | null;
   updatedAt: string;
   createdAt: string;

@@ -26,7 +26,7 @@ export async function up({
     sql`CREATE INDEX \`categories_created_at_idx\` ON \`categories\` (\`created_at\`);`
   );
   await db.run(sql`CREATE TABLE \`categories_locales\` (
-  	\`name\` text NOT NULL,
+  	\`name\` text,
   	\`id\` integer PRIMARY KEY NOT NULL,
   	\`_locale\` text NOT NULL,
   	\`_parent_id\` integer NOT NULL,
@@ -60,7 +60,6 @@ export async function down({
 }: MigrateDownArgs): Promise<void> {
   await db.run(sql`DROP TABLE \`categories\`;`);
   await db.run(sql`DROP TABLE \`categories_locales\`;`);
-  await db.run(sql`DROP TABLE \`payload_kv\`;`);
   await db.run(sql`PRAGMA foreign_keys=OFF;`);
   await db.run(sql`CREATE TABLE \`__new_payload_locked_documents_rels\` (
   	\`id\` integer PRIMARY KEY NOT NULL,
