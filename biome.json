@@ -18,6 +18,7 @@
       "!**/.alchemy",
       "!**/.svelte-kit",
       "!**/wrangler.jsonc",
+      "!**/payload-types.ts",
       "!**/.source",
       "!**/_generated",
       "!**/.agents"

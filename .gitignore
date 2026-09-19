@@ -99,4 +99,3 @@ local.properties
 .open-next/
 .wrangler/
 apps/site/cloudflare-env.d.ts
-apps/site/src/payload-types.ts

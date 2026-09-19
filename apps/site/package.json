@@ -11,7 +11,8 @@
     "generate:types": "bun run generate:types:cloudflare && bun run generate:types:payload",
     "generate:types:cloudflare": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "generate:types:payload": "NODE_OPTIONS=--no-deprecation payload generate:types",
-    "generate:importmap": "NODE_OPTIONS=--no-deprecation payload generate:importmap"
+    "generate:importmap": "NODE_OPTIONS=--no-deprecation payload generate:importmap",
+    "test:e2e": "NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.11.0",

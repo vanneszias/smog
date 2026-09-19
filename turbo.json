@@ -11,11 +11,15 @@
       "dependsOn": ["^lint"]
     },
     "check-types": {
-      "dependsOn": ["^check-types", "generate:types"]
+      "dependsOn": ["^check-types", "generate:types:cloudflare"]
     },
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "generate:types:cloudflare": {
+      "cache": false,
+      "outputs": ["cloudflare-env.d.ts"]
     },
     "generate:types": {
       "cache": false,
