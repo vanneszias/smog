@@ -5,6 +5,7 @@ import * as migration_20260919_183041_payload_3_90_upgrade from "./20260919_1830
 import * as migration_20260919_190548_add_user_roles from "./20260919_190548_add_user_roles";
 import * as migration_20260919_193653_revert_3_90_columns from "./20260919_193653_revert_3_90_columns";
 import * as migration_20260919_194626_add_user_favorites from "./20260919_194626_add_user_favorites";
+import * as migration_20260919_200842_add_lists from "./20260919_200842_add_lists";
 
 export const migrations = [
   {
@@ -41,5 +42,10 @@ export const migrations = [
     up: migration_20260919_194626_add_user_favorites.up,
     down: migration_20260919_194626_add_user_favorites.down,
     name: "20260919_194626_add_user_favorites",
+  },
+  {
+    up: migration_20260919_200842_add_lists.up,
+    down: migration_20260919_200842_add_lists.down,
+    name: "20260919_200842_add_lists",
   },
 ];

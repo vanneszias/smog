@@ -71,6 +71,7 @@ export interface Config {
     media: Media;
     categories: Category;
     gestures: Gesture;
+    lists: List;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -82,6 +83,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     gestures: GesturesSelect<false> | GesturesSelect<true>;
+    lists: ListsSelect<false> | ListsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -202,6 +204,30 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lists".
+ */
+export interface List {
+  id: number;
+  name: string;
+  description?: string | null;
+  owner: number | User;
+  visibility: 'private' | 'shared';
+  viewShareToken?: string | null;
+  editShareToken?: string | null;
+  allowSharedEditing?: boolean | null;
+  isDefaultFavorites?: boolean | null;
+  items?:
+    | {
+        gesture: number | Gesture;
+        addedBy?: (number | null) | User;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -239,6 +265,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'gestures';
         value: number | Gesture;
+      } | null)
+    | ({
+        relationTo: 'lists';
+        value: number | List;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -343,6 +373,29 @@ export interface GesturesSelect<T extends boolean = true> {
   concepts?: T;
   info?: T;
   isActive?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lists_select".
+ */
+export interface ListsSelect<T extends boolean = true> {
+  name?: T;
+  description?: T;
+  owner?: T;
+  visibility?: T;
+  viewShareToken?: T;
+  editShareToken?: T;
+  allowSharedEditing?: T;
+  isDefaultFavorites?: T;
+  items?:
+    | T
+    | {
+        gesture?: T;
+        addedBy?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

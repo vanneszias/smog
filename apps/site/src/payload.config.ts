@@ -13,6 +13,7 @@ import { buildConfig } from "payload";
 import type { GetPlatformProxyOptions } from "wrangler";
 import { Categories } from "./collections/Categories";
 import { Gestures } from "./collections/Gestures";
+import { Lists } from "./collections/Lists";
 import { Media } from "./collections/Media";
 import { Users } from "./collections/Users";
 import { requireBinding, requireEnv } from "./lib/env";
@@ -135,7 +136,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Categories, Gestures],
+  collections: [Users, Media, Categories, Gestures, Lists],
   editor: lexicalEditor(),
   localization: {
     locales: [
