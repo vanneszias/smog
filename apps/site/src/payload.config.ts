@@ -11,6 +11,7 @@ import { r2Storage } from "@payloadcms/storage-r2";
 import type { PayloadLogger } from "payload";
 import { buildConfig } from "payload";
 import type { GetPlatformProxyOptions } from "wrangler";
+import { Categories } from "./collections/Categories";
 import { Media } from "./collections/Media";
 import { Users } from "./collections/Users";
 import { requireBinding, requireEnv } from "./lib/env";
@@ -85,8 +86,17 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media],
+  collections: [Users, Media, Categories],
   editor: lexicalEditor(),
+  localization: {
+    locales: [
+      { label: "Nederlands", code: "nl" },
+      { label: "English", code: "en" },
+      { label: "Français", code: "fr" },
+    ],
+    defaultLocale: "nl",
+    fallback: true,
+  },
   secret: isNextBuild
     ? (process.env.PAYLOAD_SECRET ?? BUILD_PHASE_SECRET)
     : requireEnv("PAYLOAD_SECRET"),
