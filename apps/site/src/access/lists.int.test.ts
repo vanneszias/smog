@@ -23,8 +23,18 @@ describe("share-token field protection against a real database", () => {
   let gestureId: number;
   let listId: number;
 
-  const originalViewToken = "view-original";
-  const editToken = "edit-original";
+  // Suffixed with Date.now(), like every other fixture value in this test
+  // suite, because viewShareToken/editShareToken are `unique: true`.
+  // R3 finding: a run against a local D1 persistence directory left over
+  // from an earlier invocation (apps/site/.wrangler/state/vitest/worker-N,
+  // not cleared between separate `bun run test` calls — the same reuse
+  // documented in the Task 5 report) hit a real
+  // `UNIQUE constraint failed: lists.view_share_token` in this file's own
+  // `beforeAll`, which skipped all 4 of its tests without any one of them
+  // failing individually — this file colliding with its own prior run's
+  // data, not a cross-file cascade.
+  const originalViewToken = `view-original-${Date.now()}`;
+  const editToken = `edit-original-${Date.now()}`;
 
   beforeAll(async () => {
     payload = await getPayload({ config });
@@ -134,14 +144,20 @@ describe("share-token field protection against a real database", () => {
   });
 
   it("does let the list's owner rotate editShareToken", async () => {
+    // This one actually gets persisted (unlike the hijack attempts above,
+    // which the field guard rejects before they ever reach storage), so it
+    // needs the same per-run uniqueness as the fixture tokens above —
+    // this is the second, independent instance of the R3 unique-token
+    // collision this file had.
+    const rotatedToken = `edit-rotated-by-owner-${Date.now()}`;
     const updated = await payload.update({
       collection: "lists",
       id: listId,
       overrideAccess: false,
       user: { id: ownerId, role: "user", collection: "users" },
-      data: { editShareToken: "edit-rotated-by-owner" },
+      data: { editShareToken: rotatedToken },
     });
 
-    expect(updated.editShareToken).toBe("edit-rotated-by-owner");
+    expect(updated.editShareToken).toBe(rotatedToken);
   });
 });
