@@ -21,6 +21,15 @@ describe("Categories collection", () => {
     expect(name).not.toHaveProperty("required", true);
   });
 
+  it("wires the Dutch-required policy onto the name field via validate", () => {
+    const name = Categories.fields.find(
+      (field) => "name" in field && field.name === "name"
+    );
+    expect((name as { validate?: unknown } | undefined)?.validate).toBe(
+      validateName
+    );
+  });
+
   it("defaults isActive to true so new categories are visible", () => {
     const isActive = Categories.fields.find(
       (field) => "name" in field && field.name === "isActive"

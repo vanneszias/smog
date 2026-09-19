@@ -14,6 +14,9 @@ const DEFAULT_LOCALE = "nl";
  * and `hasMany` fields (value is an array), since Payload calls `validate`
  * with whatever shape that field produces.
  */
+const isBlank = (entry: unknown): boolean =>
+  typeof entry !== "string" || entry.trim() === "";
+
 export function defaultLocaleRequired<TValue = unknown>(
   message: string
 ): Validate<TValue> {
@@ -22,9 +25,13 @@ export function defaultLocaleRequired<TValue = unknown>(
       return true;
     }
 
+    // A `hasMany` field is empty unless at least one entry is a non-blank
+    // string — an array of only `""`/`"   "` must fail the same way a bare
+    // `""` would for a single-value field. Both paths share `isBlank` so
+    // they can't drift apart the way two ad hoc checks could.
     const isEmpty = Array.isArray(value)
-      ? value.length === 0
-      : typeof value !== "string" || value.trim() === "";
+      ? value.every(isBlank)
+      : isBlank(value);
 
     return isEmpty ? message : true;
   };

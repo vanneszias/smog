@@ -37,4 +37,12 @@ describe("Gestures collection", () => {
   it("does not require the name field at the field level, since that would validate per-locale", () => {
     expect(field("name")).not.toHaveProperty("required", true);
   });
+
+  it("enforces the Dutch-required policy on name through a validate function", () => {
+    const name = field("name");
+    expect(name).toHaveProperty("validate");
+    expect(typeof (name as { validate?: unknown } | undefined)?.validate).toBe(
+      "function"
+    );
+  });
 });

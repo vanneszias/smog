@@ -14,11 +14,11 @@ export default defineConfig({
     ],
     exclude: ["**/node_modules/**", "tests/e2e/**"],
     // Integration tests boot a real Payload instance against a local D1
-    // (miniflare) emulator persisted to `.wrangler/`. Running two such files
-    // concurrently races two emulator instances against the same on-disk
-    // state and fails with spurious D1 errors. Serializing test *files*
-    // (tests within a file still run as usual) avoids that; there are few
-    // enough integration tests that this costs no meaningful time.
-    fileParallelism: false,
+    // (miniflare) emulator. Rather than serializing test files to avoid two
+    // emulator instances racing the same on-disk state, payload.config.ts
+    // gives each Vitest worker its own persistence directory (keyed by
+    // `VITEST_WORKER_ID`), so files can run in parallel safely — including
+    // across `--shard`ed processes, which file-level serialization alone
+    // would not have covered.
   },
 });

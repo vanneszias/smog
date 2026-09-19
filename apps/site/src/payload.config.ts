@@ -28,6 +28,33 @@ const isCLI = process.argv.some((value) =>
 const isProduction = process.env.NODE_ENV === "production";
 
 /**
+ * Vitest sets `VITEST_WORKER_ID` uniquely per worker process. Without this,
+ * every integration test that boots a real Payload instance shares the same
+ * on-disk local D1 (miniflare) state at `.wrangler/state/v3` — fine for one
+ * test file at a time, but a second worker process touching it concurrently
+ * (two integration test files, `--shard`, or plain Vitest parallelism)
+ * corrupts it with spurious "index already exists" / "internal error" D1
+ * errors. Giving each worker its own persistence directory removes that
+ * race instead of only serializing access to a shared one.
+ *
+ * Outside Vitest, `VITEST_WORKER_ID` is unset and `persist` is `undefined`,
+ * so `getPlatformProxy` falls back to its normal shared default location —
+ * this only changes behavior under the test runner.
+ */
+const vitestPersist = process.env.VITEST_WORKER_ID
+  ? {
+      path: path.resolve(
+        dirname,
+        "..",
+        ".wrangler",
+        "state",
+        "vitest",
+        `worker-${process.env.VITEST_WORKER_ID}`
+      ),
+    }
+  : undefined;
+
+/**
  * True while `next build` is collecting route configuration.
  *
  * PAYLOAD_SECRET and the D1/R2 bindings are *runtime* inputs: the secret comes
@@ -128,6 +155,7 @@ function getCloudflareContextFromWrangler(): Promise<CloudflareContext> {
     getPlatformProxy({
       environment: process.env.CLOUDFLARE_ENV,
       remoteBindings: isProduction,
+      persist: vitestPersist,
     } satisfies GetPlatformProxyOptions)
   );
 }
