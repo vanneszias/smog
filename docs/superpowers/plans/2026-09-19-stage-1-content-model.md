@@ -546,6 +546,19 @@ export const isAdminOrSelf: Access = ({ req: { user } }) => {
 
 Returning a `Where` object rather than `true` is the whole point. Payload merges it into the query, so an inactive gesture is not merely hidden from the UI — it is absent from the result set of the REST API, GraphQL and the local API alike.
 
+**`is_active` is nullable in the generated schema, so `equals: true` and
+`not_equals: false` are not the same filter.** They differ for NULL rows, and Stage 9
+imports Convex data that can produce them. Choose deliberately:
+
+- `equals: true` — NULL rows are **hidden** from the public. Safe default: content is
+  invisible until something explicitly marks it active.
+- `not_equals: false` — NULL rows are **published**. An import that forgets the column
+  silently exposes everything.
+
+This plan uses `equals: true` for exactly that reason. Add a test asserting a row with
+a NULL `isActive` is not returned to an anonymous caller, so the choice is pinned rather
+than implied.
+
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `bun -F site test access`
