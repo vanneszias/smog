@@ -13,7 +13,7 @@ import { buildConfig } from "payload";
 import type { GetPlatformProxyOptions } from "wrangler";
 import { Media } from "./collections/Media";
 import { Users } from "./collections/Users";
-import { requireEnv } from "./lib/env";
+import { requireBinding, requireEnv } from "./lib/env";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -72,11 +72,13 @@ export default buildConfig({
   typescript: {
     outputFile: path.resolve(dirname, "payload-types.ts"),
   },
-  db: sqliteD1Adapter({ binding: cloudflare.env.D1 }),
+  db: sqliteD1Adapter({
+    binding: requireBinding(cloudflare.env.D1, "D1"),
+  }),
   logger: isProduction ? cloudflareLogger : undefined,
   plugins: [
     r2Storage({
-      bucket: cloudflare.env.R2,
+      bucket: requireBinding(cloudflare.env.R2, "R2"),
       collections: { media: true },
     }),
   ],

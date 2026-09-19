@@ -12,7 +12,10 @@
     "generate:types:cloudflare": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "generate:types:payload": "NODE_OPTIONS=--no-deprecation payload generate:types",
     "generate:importmap": "NODE_OPTIONS=--no-deprecation payload generate:importmap",
-    "test:e2e": "NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts"
+    "test:e2e": "NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts",
+    "deploy:database": "test -n \"$CLOUDFLARE_ENV\" || (echo 'CLOUDFLARE_ENV must be set to staging or production' && exit 1) && NODE_ENV=production PAYLOAD_SECRET=ignore payload migrate",
+    "deploy:app": "test -n \"$CLOUDFLARE_ENV\" || (echo 'CLOUDFLARE_ENV must be set to staging or production' && exit 1) && opennextjs-cloudflare build --env=$CLOUDFLARE_ENV && opennextjs-cloudflare deploy --env=$CLOUDFLARE_ENV",
+    "deploy": "bun run deploy:database && bun run deploy:app"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.11.0",
