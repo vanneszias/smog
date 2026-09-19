@@ -65,6 +65,28 @@ export const Users: CollectionConfig = {
       type: "relationship",
       relationTo: "gestures",
       hasMany: true,
+      hooks: {
+        // Payload's hasMany relationship stores whatever array it is given,
+        // duplicates included — verified against a real database, where
+        // [id, id] round-tripped as [3, 3]. The spec originally claimed
+        // dropping the join table made one-favorite-per-pair structural; it
+        // did not, so it is enforced here.
+        beforeChange: [
+          ({ value }) => {
+            if (!Array.isArray(value)) {
+              return value;
+            }
+
+            const ids = value.map((entry) =>
+              typeof entry === "object" && entry !== null && "id" in entry
+                ? (entry as { id: number | string }).id
+                : entry
+            );
+
+            return [...new Set(ids)];
+          },
+        ],
+      },
       admin: {
         description: "Gestures this user has favorited.",
       },

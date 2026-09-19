@@ -267,8 +267,22 @@ Payload auth collection. Email/password plus social providers. Fields: `role`
 (`user` | `admin`), and `favorites` as a `hasMany` relationship to `gestures`.
 
 **`user_favorites` is deleted.** A join table maintained by hand-written
-mutations becomes one relationship field. The one-favorite-per-pair rule that
-mutations enforced is now structural.
+mutations becomes one relationship field.
+
+An earlier draft of this spec claimed the one-favorite-per-pair rule thereby
+became *structural*. It does not. Payload's `hasMany` relationship stores
+whatever array it is given, duplicates included — verified against a real
+database in Stage 1 Task 4, where `favorites: [id, id]` round-tripped as
+`[3, 3]`. The rule is enforced by a `beforeChange` hook on the field instead.
+Less elegant than the claim, and true.
+
+A related consequence worth knowing before Stage 3: a favorite pointing at an
+inactive gesture is not removed from the array and not nulled. `publicReadActive`
+prevents population, so the entry stays as a bare numeric id sitting beside
+populated objects. The generated type is `(number | Gesture)[]`, so TypeScript
+forces consumers to narrow before reading a field — no read-side hook is needed,
+and adding one would be fragile, since at `depth: 0` every entry is legitimately
+a number.
 
 Guest identity (`guestId`) does not survive. Payload auth has no anonymous user
 concept worth emulating; the mobile app keeps guest state locally and prompts

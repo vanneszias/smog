@@ -49,17 +49,13 @@ describe("User favorites", () => {
   });
 
   /**
-   * The brief's premise is that a `hasMany` relationship is structurally
-   * incapable of storing the same related document twice, so no join-table
-   * mutation is needed to enforce one-favorite-per-pair. That premise does
-   * not hold: Payload's relationship field stores whatever array it is
-   * given, duplicates included — confirmed here against the real D1-backed
-   * local API, not inferred. `it.fails` keeps this documented and the suite
-   * green without a hook papering over it (see the task report for the
-   * write-up); if a future Payload version starts deduping, this test flips
-   * to an unexpected pass and fails loudly, which is the point.
+   * Payload's hasMany relationship does NOT dedupe on its own — verified
+   * against a real database, where `[id, id]` round-tripped as `[3, 3]`. The
+   * spec originally claimed dropping the join table made this structural; it
+   * did not, so a `beforeChange` hook on the field enforces it. This test
+   * pins the hook: remove it and the assertion fails.
    */
-  it.fails("does not structurally prevent the same gesture twice (documented Payload gap)", async () => {
+  it("stores the same gesture only once", async () => {
     const updated = await payload.update({
       collection: "users",
       id: userId,
