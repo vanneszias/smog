@@ -151,6 +151,21 @@ rescue.
 a line of product code. There is no large easy win here. The budget has to be
 managed stage by stage.
 
+### Measured deltas per stage
+
+The point of the Stage 0 measurement was to track movement, not to record one
+number. Each stage appends its own.
+
+| Point | gzip | % of 10 MiB | Delta |
+|---|---:|---:|---:|
+| Stage 0 baseline — 2 template collections | 6,601 KiB | 64.5% | — |
+| Stage 1 in progress — +`categories`, +`gestures`, Payload 3.82.1 → 3.90.1 | 6,838 KiB | 66.8% | +237 KiB |
+
+Two collections and a minor Payload upgrade cost 237 KiB gzipped. Five more
+collections, the search plugin, a component library and the public site still
+have to fit in the remaining 3.3 MiB. Re-measure at the end of every stage with
+`bun -F site check-bundle-size` and append a row here.
+
 ### Consequence
 
 Bundle size is now a standing constraint on every later stage, not a Stage 0
