@@ -72,6 +72,13 @@ These apply to every stage. Exact values; do not substitute.
   its `build`, `check-types` and `test` tasks in `turbo.json`.
 - TypeScript strict mode. Type-only imports use the `type` keyword.
 - Workspace imports use `@smog/<package>`; app-local imports use `@/`.
+- **Security advisories in transitive dependencies are pinned through root
+  `overrides`**, the pattern this repo already used before the migration.
+  `bun audit --production` runs inside `release:check` and must exit clean.
+  `apps/site` introduced advisories in `esbuild`, `image-size`, `sharp`, `undici`,
+  `dompurify` and `drizzle-orm` — the last a high-severity SQL-injection issue in
+  the very ORM Payload uses for every D1 query — all now pinned to patched
+  versions.
 
 ### Pinned versions
 
@@ -80,12 +87,12 @@ Taken from the official `templates/with-cloudflare-d1` template.
 ```
 next                          16.3.3
 react / react-dom             19.2.6
-payload                       3.82.1
-@payloadcms/next              3.82.1
-@payloadcms/db-d1-sqlite      3.82.1
-@payloadcms/storage-r2        3.82.1
-@payloadcms/richtext-lexical  3.82.1
-@payloadcms/plugin-search     3.82.1
+payload                       3.90.1
+@payloadcms/next              3.90.1
+@payloadcms/db-d1-sqlite      3.90.1
+@payloadcms/storage-r2        3.90.1
+@payloadcms/richtext-lexical  3.90.1
+@payloadcms/plugin-search     3.90.1
 @opennextjs/cloudflare        ^1.11.0
 wrangler                      ~4.116.0
 ```
@@ -93,10 +100,19 @@ wrangler                      ~4.116.0
 Payload packages must all sit on the same patch version. Upgrading one means
 upgrading all of them together.
 
+**Why 3.90.1 and not the template's 3.82.1.** Every version up to and including
+3.88.0 carries GHSA-jg8r-5jh2-v2xj — Payload's default account-unlock access lets
+an authenticated user reset another account's lockout. `bun audit --production`
+is part of `release:check`, so the pinned version failed CI outright. Upgrading
+was also the cheapest it will ever be: two collections in, rather than at Stage 5
+with the sponsor flow built on top. The bump added two optional columns
+(`users.resetPasswordRequestedAt`, `media._objectKey`) and needed one migration;
+nothing else broke.
+
 The template's own source has drifted from the versions it pins. **Four**
 confirmed instances, all fixed during Stage 0:
 
-| Template says | Reality in 3.82.1 |
+| Template says | Reality in 3.90.1 |
 |---|---|
 | `storage: [r2Storage(...)]` | no such `Config` key — belongs in `plugins` |
 | `generatePayloadViewport` | does not exist in `@payloadcms/next` |
@@ -186,7 +202,7 @@ export default buildConfig({
 ```
 
 Note `plugins`, not `storage`. The published `with-cloudflare-d1` template writes
-`storage: [r2Storage(...)]`, but `payload@3.82.1`'s `Config` type has no top-level
+`storage: [r2Storage(...)]`, but `payload@3.90.1`'s `Config` type has no top-level
 `storage` key and `r2Storage` returns a `Plugin`. The template as shipped does not
 type-check against the version it pins; this was found and corrected in Stage 0
 Task 2. Expect the same class of skew elsewhere in the template.

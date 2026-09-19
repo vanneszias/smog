@@ -61,7 +61,7 @@ Regenerating the import map changed it semantically, not just cosmetically:
 ```
 
 Both packages export the symbol, so the vendored version was not broken at
-runtime — but it is **stale relative to what Payload 3.82.1's own generator
+runtime — but it is **stale relative to what Payload 3.90.1's own generator
 emits**. With the types-drift guard planned for Task 4, generated output must
 match the generator or CI fails forever on a diff nobody introduced. The
 regenerated map is now committed.
@@ -72,7 +72,7 @@ source and the versions it pins, after `storage:` vs `plugins:` and the dead
 
 A **fourth** turned up during the Gate 2 build, and this one is fatal rather
 than cosmetic: the template's build script is `payload build`, but
-`payload@3.82.1` has **no `build` command** — its own CLI usage list confirms
+`payload@3.90.1` has **no `build` command** — its own CLI usage list confirms
 it. Every deploy would have failed at the first step. Corrected to `next build`,
 which is the actual build command for a Payload 3 Next.js app. The Stage 0 plan
 had copied the template's version verbatim, so the plan carried the same defect.
@@ -224,7 +224,7 @@ control, not just a booting Worker.
 ### R2 was genuinely broken, and is now genuinely fixed
 
 The upload round-trip matters more than it looks. The vendored template put
-`r2Storage` under a `storage:` key that `payload@3.82.1`'s `Config` type does
+`r2Storage` under a `storage:` key that `payload@3.90.1`'s `Config` type does
 not have, so the adapter was being **silently dropped** — uploads could never
 have reached a bucket. Stage 0 Task 2 moved it to `plugins:` to satisfy the
 compiler, and the reviewer flagged that this probably *restored* a broken
