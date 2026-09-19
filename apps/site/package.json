@@ -15,8 +15,10 @@
     "test:e2e": "NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts",
     "deploy:guard": "case \"$CLOUDFLARE_ENV\" in staging|production) ;; *) echo \"CLOUDFLARE_ENV must be exactly 'staging' or 'production' (got: '$CLOUDFLARE_ENV')\" >&2; exit 1 ;; esac",
     "deploy:database": "bun run deploy:guard && NODE_ENV=production PAYLOAD_SECRET=ignore payload migrate",
-    "deploy:app": "bun run deploy:guard && opennextjs-cloudflare build --env=\"$CLOUDFLARE_ENV\" && opennextjs-cloudflare deploy --env=\"$CLOUDFLARE_ENV\"",
-    "deploy": "bun run deploy:database && bun run deploy:app"
+    "build:app": "bun run deploy:guard && opennextjs-cloudflare build --env=\"$CLOUDFLARE_ENV\"",
+    "deploy:app": "bun run build:app && opennextjs-cloudflare deploy --env=\"$CLOUDFLARE_ENV\"",
+    "deploy": "bun run deploy:database && bun run deploy:app",
+    "check-bundle-size": "bun run scripts/check-bundle-size-ci.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.11.0",
