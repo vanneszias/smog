@@ -1,4 +1,4 @@
-import type { Access, AccessResult } from "payload";
+import type { Access, AccessResult, FieldAccess } from "payload";
 
 /**
  * Extracts the `shareToken` query parameter, treating an absent or
@@ -70,4 +70,64 @@ export const listUpdateAccess: Access = ({ req }): AccessResult => {
       { allowSharedEditing: { equals: true } },
     ],
   };
+};
+
+/**
+ * Admins can delete every list. A signed-in non-admin may delete only lists
+ * they own, via a `Where` filter — this is `isAdminOrSelf`'s shape, but
+ * keyed on the document's `owner` field rather than the requesting user's
+ * own `id`, since `lists` isn't the `users` collection.
+ *
+ * Deliberately narrower than `listUpdateAccess`: deleting a list is a
+ * strictly bigger, non-undoable authority than editing its items, so unlike
+ * update there is no share-token path here at all. An anonymous request —
+ * edit link or not — is denied outright, regardless of what token it
+ * presents.
+ */
+export const listDeleteAccess: Access = ({ req }): AccessResult => {
+  if (req.user?.role === "admin") {
+    return true;
+  }
+
+  if (req.user) {
+    return { owner: { equals: req.user.id } };
+  }
+
+  return false;
+};
+
+/**
+ * Field-level guard for `viewShareToken`, `editShareToken` and
+ * `allowSharedEditing`: only the list's owner or an admin may change them,
+ * even though `listUpdateAccess` already lets an anonymous edit-link holder
+ * update the document as a whole (to add/reorder items). Without this, that
+ * same anonymous editor could PATCH new values onto the very fields that
+ * grant edit access — rotating both tokens and locking the owner out of
+ * their own list.
+ *
+ * `FieldAccess` is boolean-only (see `isAdminField` above), and Payload
+ * 3.89.0 calls it with `{ id, blockData, data, doc, req, siblingData }`
+ * (`apps/site/node_modules/payload/dist/fields/hooks/beforeValidate/promise.js`).
+ * `doc` is the document's state *before* this update is applied — verified
+ * against a real database in `lists.int.test.ts` — with `owner` still a raw
+ * ID rather than a populated user, since Payload only resolves
+ * relationships to full documents in `afterRead` hooks, not here. `doc` is
+ * `undefined` during `create`, but this guard is only registered on
+ * `access.update`, so that case never reaches it.
+ */
+export const isListOwnerField: FieldAccess = ({ req, doc }) => {
+  if (req.user?.role === "admin") {
+    return true;
+  }
+
+  if (!(req.user && doc)) {
+    return false;
+  }
+
+  const ownerId =
+    typeof doc.owner === "object" && doc.owner !== null
+      ? (doc.owner as { id: unknown }).id
+      : doc.owner;
+
+  return ownerId === req.user.id;
 };

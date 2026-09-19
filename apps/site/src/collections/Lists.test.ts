@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { isAuthenticated } from "@/access";
-import { listReadAccess, listUpdateAccess } from "@/access/lists";
+import {
+  isListOwnerField,
+  listDeleteAccess,
+  listReadAccess,
+  listUpdateAccess,
+} from "@/access/lists";
 import { Lists } from "./Lists";
 
 const field = (name: string) =>
@@ -23,9 +28,13 @@ describe("Lists collection", () => {
     expect(Lists.access?.create).toBe(isAuthenticated);
   });
 
-  it("wires update and delete through listUpdateAccess, requiring owner or a valid edit token", () => {
+  it("wires update through listUpdateAccess, requiring owner or a valid edit token", () => {
     expect(Lists.access?.update).toBe(listUpdateAccess);
-    expect(Lists.access?.delete).toBe(listUpdateAccess);
+  });
+
+  it("wires delete through listDeleteAccess, not listUpdateAccess, since deleting is a bigger authority than editing items", () => {
+    expect(Lists.access?.delete).toBe(listDeleteAccess);
+    expect(Lists.access?.delete).not.toBe(listUpdateAccess);
   });
 
   it("uses name as the admin title", () => {
@@ -51,6 +60,17 @@ describe("Lists collection", () => {
   it("defaults allowSharedEditing and isDefaultFavorites to false", () => {
     expect(field("allowSharedEditing")).toHaveProperty("defaultValue", false);
     expect(field("isDefaultFavorites")).toHaveProperty("defaultValue", false);
+  });
+
+  it("guards the share-token and sharing fields with a field-level owner check, since document-level listUpdateAccess alone would let an anonymous edit-link holder rotate them", () => {
+    for (const name of [
+      "viewShareToken",
+      "editShareToken",
+      "allowSharedEditing",
+    ]) {
+      const config = field(name) as { access?: { update?: unknown } };
+      expect(config.access?.update).toBe(isListOwnerField);
+    }
   });
 
   it("has no position field, since array order is the order", () => {
