@@ -89,6 +89,13 @@ describe("Categories collection", () => {
     expect(name).toHaveProperty("localized", true);
   });
 
+  it("does not mark the localized name required", () => {
+    const name = Categories.fields.find(
+      (field) => "name" in field && field.name === "name"
+    );
+    expect(name).not.toHaveProperty("required", true);
+  });
+
   it("defaults isActive to true so new categories are visible", () => {
     const isActive = Categories.fields.find(
       (field) => "name" in field && field.name === "isActive"
@@ -112,7 +119,15 @@ Expected: FAIL — `Failed to resolve import "./Categories"`.
 Create `apps/site/src/collections/Categories.ts`:
 
 ```ts
-import type { CollectionConfig } from "payload";
+import type { CollectionConfig, TextFieldSingleValidation } from "payload";
+import { defaultLocaleRequired } from "@/fields/defaultLocaleRequired";
+
+/**
+ * The Dutch (`nl`) value is the source of truth; translations are optional.
+ * See `defaultLocaleRequired` for why this isn't a field-level `required: true`.
+ */
+export const validateName: TextFieldSingleValidation =
+  defaultLocaleRequired<string>("A Dutch name is required.");
 
 export const Categories: CollectionConfig = {
   slug: "categories",
@@ -124,8 +139,8 @@ export const Categories: CollectionConfig = {
     {
       name: "name",
       type: "text",
-      required: true,
       localized: true,
+      validate: validateName,
     },
     {
       name: "isActive",
@@ -136,6 +151,12 @@ export const Categories: CollectionConfig = {
   ],
 };
 ```
+
+`name` is deliberately **not** `required`. See the global constraint on localized
+fields: a field-level `required` on a localized field locks editors out of every
+non-default locale. `defaultLocaleRequired` lives in
+`apps/site/src/fields/defaultLocaleRequired.ts` and is shared by every localized
+field in this stage — Task 2 extracts it there when `gestures` needs it too.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
