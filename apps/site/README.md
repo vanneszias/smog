@@ -47,6 +47,14 @@ bun -F site check-bundle-size # measure the Worker against its budget
 `src/payload-types.ts` is **committed**. Regenerate it whenever you change a
 collection — CI fails on drift.
 
+`src/app/(payload)/admin/importMap.js` is **committed** too, and needs
+regenerating whenever you add or remove a plugin that ships client
+components. A stale one is invisible to typecheck, the test suite and a
+full build — it only breaks the admin panel at runtime — so CI guards it
+the same way. Run `bun -F site generate:importmap && bun check`; the
+generator's raw output is reformatted by Biome, and the pair round-trips
+byte-identically.
+
 Be aware that **running the test suite rewrites that file**. Outside
 production, `getPayload` regenerates the types from whatever the config
 currently says, so a suite run is enough to overwrite a committed change — and

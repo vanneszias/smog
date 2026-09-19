@@ -98,6 +98,27 @@ jobs:
           bun -F site generate:types:payload
           git diff --exit-code apps/site/src/payload-types.ts
 
+      # The admin import map is a committed *data* file listing every client
+      # component a plugin contributes. A stale one does not fail typecheck,
+      # the test suite, or even a forced uncached build -- all three were
+      # verified green against a deliberately stale map -- it fails at runtime
+      # in the admin panel, which nothing in CI exercises. Adding the search
+      # plugin without regenerating it would have shipped broken admin search
+      # views past a fully green pipeline.
+      #
+      # Biome reformats what Payload emits (quotes, semicolons, import
+      # grouping), so the generator's raw output never matches the committed
+      # file. Formatting after regenerating is exactly what a developer's
+      # `bun check` does, and the pair round-trips byte-identically.
+      - name: Guard the committed admin import map against drift
+        env:
+          CLOUDFLARE_ENV: staging
+          PAYLOAD_SECRET: ignore
+        run: |
+          bun -F site generate:importmap
+          bunx biome check --write "apps/site/src/app/(payload)/admin/importMap.js"
+          git diff --exit-code "apps/site/src/app/(payload)/admin/importMap.js"
+
   publish:
     needs: release-check
     if: github.event_name == 'push'
