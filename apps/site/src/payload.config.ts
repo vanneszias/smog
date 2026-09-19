@@ -6,11 +6,13 @@ import {
   getCloudflareContext,
 } from "@opennextjs/cloudflare";
 import { sqliteD1Adapter } from "@payloadcms/db-d1-sqlite";
+import { searchPlugin } from "@payloadcms/plugin-search";
 import { lexicalEditor } from "@payloadcms/richtext-lexical";
 import { r2Storage } from "@payloadcms/storage-r2";
 import type { PayloadLogger } from "payload";
 import { buildConfig } from "payload";
 import type { GetPlatformProxyOptions } from "wrangler";
+import { isAdmin, publicReadActive } from "./access";
 import { AdminLogs } from "./collections/AdminLogs";
 import { Categories } from "./collections/Categories";
 import { Gestures } from "./collections/Gestures";
@@ -20,6 +22,7 @@ import { Sponsorships } from "./collections/Sponsorships";
 import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
 import { requireBinding, requireEnv } from "./lib/env";
+import { beforeSyncGesture } from "./search/beforeSync";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -177,6 +180,61 @@ export default buildConfig({
         ? (cloudflare.env.R2 as R2Bucket)
         : requireBinding(cloudflare.env.R2, "R2"),
       collections: { media: true },
+    }),
+    /**
+     * Maintains a `search` collection synced from `gestures`, replacing the
+     * Convex `search_content` index.
+     *
+     * Access is spelled out rather than left to the plugin, whose defaults are
+     * `create: () => false`, `read: () => true` and — for `update`/`delete`,
+     * which it does not set — Payload's `defaultAccess`, i.e. any signed-in
+     * user. Two problems with that here. A public `read` leaks exactly what
+     * `publicReadActive` hides: the index entry of an inactive gesture, which
+     * would make search a way to enumerate gestures the API refuses to serve.
+     * And a signed-in non-admin could rewrite index entries.
+     *
+     * `publicReadActive` works unchanged because `isActive` is mirrored onto
+     * the search document by `beforeSyncGesture`. The plugin's own writes are
+     * unaffected: they go through the local API, where `overrideAccess`
+     * defaults to `true`.
+     *
+     * `create`, `update` and `delete` are `isAdmin` rather than `denyAll`
+     * because the admin panel's Reindex button checks exactly those three
+     * permissions before running (`generateReindexHandler`, 3.89.0) — and
+     * checks `create` and `read` only when they are overridden here, which
+     * they are. `denyAll` would make reindexing impossible for everybody.
+     */
+    searchPlugin({
+      collections: ["gestures"],
+      defaultPriorities: { gestures: 10 },
+      beforeSync: beforeSyncGesture,
+      searchOverrides: {
+        access: {
+          read: publicReadActive,
+          create: isAdmin,
+          update: isAdmin,
+          delete: isAdmin,
+        },
+        fields: ({ defaultFields }) => [
+          ...defaultFields,
+          {
+            name: "concepts",
+            type: "text",
+            index: true,
+            // `gestures.concepts` is localized, and the plugin syncs one
+            // locale per save. A non-localized column here would mean a save
+            // in `fr` overwriting the Dutch synonyms for every reader.
+            localized: true,
+            admin: { readOnly: true },
+          },
+          {
+            name: "isActive",
+            type: "checkbox",
+            index: true,
+            admin: { readOnly: true },
+          },
+        ],
+      },
     }),
   ],
 });

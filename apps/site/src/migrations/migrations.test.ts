@@ -219,6 +219,29 @@ describe("migration chain", () => {
     expect(rows).toEqual([{ user_id: null, consent_version: "v1" }]);
   });
 
+  it("puts the search index's localized columns on search_locales, not search", async () => {
+    const { database } = await chain();
+    // The search plugin's `title` and `concepts` are localized, so they live
+    // in `search_locales` keyed by `_locale`. If a migration ever flattens
+    // them onto `search`, a save in one locale silently overwrites every
+    // other locale's index entry — the exact failure `search.int.test.ts`
+    // covers at the API level, asserted here against the migrated schema.
+    const columns = (table: string) =>
+      (
+        database
+          .prepare("SELECT name FROM pragma_table_info(?)")
+          .all(table) as { name: string }[]
+      ).map((row) => row.name);
+
+    expect(columns("search_locales")).toEqual(
+      expect.arrayContaining(["title", "concepts", "_locale", "_parent_id"])
+    );
+    expect(columns("search")).toEqual(
+      expect.arrayContaining(["id", "priority", "is_active"])
+    );
+    expect(columns("search")).not.toContain("title");
+  });
+
   it("actually rejects a duplicate token at the database level", async () => {
     const { database } = await chain();
     // Belt and braces on the above: `pragma_index_list` reporting `unique: 1`
