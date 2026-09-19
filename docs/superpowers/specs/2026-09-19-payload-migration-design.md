@@ -300,6 +300,34 @@ field** of gesture relationships.
 integer and all the reindexing logic around it, and the admin panel gets
 drag-to-reorder for free.
 
+#### Sharing is inert until Stage 3
+
+Stage 1 builds the storage and the access rules for share links, but **not the
+feature**. Four gaps are deliberate, recorded here so Stage 3 closes them
+rather than rediscovering them:
+
+1. **Nothing generates the tokens.** `viewShareToken` and `editShareToken` are
+   never written, so both columns are always NULL and every share link is
+   inert. This is why the tokenless guard in `listReadAccess` /
+   `listUpdateAccess` — `if (!token) return false;` — is load-bearing: without
+   it a request carrying no token would build `{ equals: undefined }` and match
+   every private list in the table. Stage 3 must add token minting (a
+   `beforeChange` hook, or an endpoint the owner calls) *and* keep that guard.
+2. **A signed-in user cannot follow a share link.** Both access functions
+   short-circuit on `if (req.user)` and return `{ owner: { equals: ... } }`, so
+   an authenticated recipient of a share link sees nothing. Anonymous-only
+   sharing is not the product intent; Stage 3 has to let a signed-in
+   non-owner's token widen their filter rather than be ignored.
+3. **`visibility` is never consulted.** Setting a list back to `private` does
+   not revoke access — only clearing the token does. Stage 3 must either fold
+   `visibility` into the access filters or make un-sharing rotate the tokens.
+   Two mechanisms that can disagree is the worse option; prefer rotation.
+4. **`gesture_id` and `owner_id` are `NOT NULL` with `ON DELETE set null`.**
+   The FK action and the column constraint contradict each other, so deleting
+   a gesture or a user that a list references fails at the database layer
+   instead of cleaning up. Stage 3 must pick one: cascade the delete, or make
+   the column nullable and teach the read paths to skip orphans.
+
 ### `sponsorships`
 
 Carried over close to its current shape, because the payment flow depends on it:
