@@ -832,13 +832,40 @@ git commit -m "spike: evaluate Remotion in a Cloudflare Container"
 
 ## Stage 0 exit criteria
 
-Stage 0 is done when all of these hold:
+Status as of 2026-09-19. See
+[`../specs/2026-09-19-stage-0-findings.md`](../specs/2026-09-19-stage-0-findings.md)
+for the measurements behind each.
 
-- [ ] `https://smog-site-staging.*.workers.dev/admin` loads and an admin user can sign in.
-- [ ] `bunx wrangler d1 execute smog-staging --remote` lists the Payload tables.
-- [ ] `bun check`, `bun -F site check-types` and `bun -F site test` all pass.
-- [ ] CI fails the build when the gzipped Worker exceeds 10 MiB.
-- [ ] `docs/superpowers/specs/2026-09-19-stage-0-findings.md` records all three gates with measurements.
-- [ ] Any gate that failed has produced an edit to the spec, not a workaround.
+- [x] `https://smog-site-staging.vanneszias.workers.dev/admin` loads and renders the
+      first-user flow, proving a read against remote D1.
+- [x] `wrangler d1 execute smog-staging --remote` lists all 8 Payload tables, and
+      `payload_migrations` records `20250929_111647` at batch 1.
+- [x] An R2 upload round-trips: stored in `smog-staging-media`, served back through
+      the Worker at 200 with the correct type and size.
+- [x] `bun check`, `env -u PAYLOAD_SECRET bun run check-types` and `bun -F site test`
+      all pass.
+- [x] Gate 3 (bun) recorded: PASS on bun 1.3.11.
+- [x] Gate 2 (bundle) recorded: 6.45 MiB gzipped of 10 MiB — **64.5% consumed,
+      35.5% headroom, below the 40% flag threshold.**
+- [ ] CI fails the build when the gzipped Worker exceeds budget.
+- [ ] Gate 1 (Remotion in a Cloudflare Container) — **NOT RUN.** No Docker daemon.
+      Stage 6 cannot be planned until this is answered.
 
-Stage 1 planning starts from the findings document, not from this plan.
+## What Stage 0 changed about the rest of the plan
+
+Three things came out of this stage that later stages must carry.
+
+**Bundle size is a standing constraint, not a checkbox.** At 64.5% consumed with
+two collections and no public site, every later stage needs to re-measure and
+justify its delta. Investigate excluding `drizzle-kit/api` (~7 MiB raw, migration
+*generation* tooling that runs at deploy time, not runtime) before Stage 3, while
+there is still room to be wrong about it.
+
+**The vendored template is not known-good.** Four confirmed skews against the
+versions it pins: `storage:` should be `plugins:`; `generatePayloadViewport` does
+not exist; the import map was stale; and `payload build` is not a command, which
+would have failed every deploy. Verify template code against installed packages.
+
+**Stage 1 starts from a working baseline.** Remote staging D1 holds the template's
+8-table schema with correct migration bookkeeping, so Stage 1's seven collections
+land as ordinary additive migrations.
