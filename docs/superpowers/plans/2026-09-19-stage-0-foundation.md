@@ -358,7 +358,9 @@ Expected: Biome clean, types clean, and the suite green.
 Two things to expect here rather than be surprised by:
 
 - Biome will report violations in the vendored template files. Fix them; `ultracite` is strict and the template was not written against it. Do not add per-file ignores to make them go away.
-- `tests/int/api.int.spec.ts` boots a real Payload instance through `getPlatformProxy` against the template's placeholder `database_id: "DATABASE_ID"` and will error until Task 3 provisions a real database. If it does, leave the test in place and skip it with `describe.skip` plus a comment naming Task 3 as the unskip point. Do not delete it and do not weaken it.
+- `tests/int/api.int.spec.ts` will error under Vitest's default jsdom environment: jsdom's TextEncoder realm invariant breaks wrangler's bundled esbuild during Payload's boot. Add `// @vitest-environment node` at the top of the file, which fixes that crash outright. This is **not** a D1 problem — `getCloudflareContextFromWrangler()` emulates D1 locally outside production and ignores the placeholder `database_id`, so Task 3 has nothing to do with it.
+
+  The remaining blocker is `PAYLOAD_SECRET`. Gate the suite on it with `describe.skipIf(!process.env.PAYLOAD_SECRET)` rather than a bare `describe.skip`: `vitest.setup.ts` loads `dotenv/config`, so the suite lights up by itself wherever the secret exists, with no manual unskip and no owner to remember one. A conditional skip also needs no `biome-ignore`. Do not delete the test and do not weaken its assertions.
 
 - [ ] **Step 13: Commit**
 
