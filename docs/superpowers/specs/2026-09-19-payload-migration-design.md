@@ -323,10 +323,9 @@ rather than rediscovering them:
    `visibility` into the access filters or make un-sharing rotate the tokens.
    Two mechanisms that can disagree is the worse option; prefer rotation.
 4. **`gesture_id` and `owner_id` are `NOT NULL` with `ON DELETE set null`.**
-   The FK action and the column constraint contradict each other, so deleting
-   a gesture or a user that a list references fails at the database layer
-   instead of cleaning up. Stage 3 must pick one: cascade the delete, or make
-   the column nullable and teach the read paths to skip orphans.
+   Not a `lists` quirk — the same contradiction appears in `sponsorships` and
+   `user_consents`. See "Referential integrity" below, which rules on all of
+   them at once.
 
 ### `sponsorships`
 
@@ -339,6 +338,38 @@ re-edit token and expiry, invoice fields, and the renewal reminder timestamp.
 Status transitions and their side effects move from oRPC mutations into
 collection hooks.
 
+#### Deferred from Stage 1
+
+Stage 1 defines the shape only. Four things are knowingly absent:
+
+- **No public read path for overlay data (Stage 2/3).** `read: isAdmin` is
+  correct for the row — it carries contact details, a VAT number and an email
+  — but the public gesture page needs `overlayText`, `sponsoredVideoPlaybackId`,
+  `hasLogo` and `overlayImage` for whichever sponsorship is active and in term.
+  That needs a narrow access filter or a server-side projection; widening
+  `read` is not an option.
+- **No status-transition enforcement (Stage 5).** Every status is currently
+  reachable from every other. The seven-value tuple is pinned by test, but
+  nothing stops `active` → `pending_payment`.
+- **Nothing writes `admin-logs` or `user-consents` yet (Stage 5 / the consent
+  stage).** Both are append-only to everyone including admins, so the only way
+  in is a hook running with `overrideAccess`. The integration tests pin the
+  exact write path those hooks have to use.
+- **Payload's generated create types mark `status` and `durationYears` as
+  required despite both having defaults (Stage 5).** The very call the default
+  exists to serve does not typecheck. Stage 1 carries one narrow documented
+  cast in a fixture; Stage 5's callers will hit the same wall and should fix it
+  once, centrally, rather than casting at each call site.
+
+#### A Stage 9 import hazard
+
+`analytics_consent` is emitted as `integer DEFAULT false NOT NULL`. A raw-SQL
+import that simply omits the column therefore records an explicit *refusal* of
+analytics consent rather than an absent answer — silently, for every row. The
+Convex migration in Stage 9 must set this column explicitly for every row it
+writes, and its dry run must assert the resulting distribution against the
+source data rather than trusting the insert.
+
 ### `media`
 
 R2-backed uploads collection. Replaces Convex file storage for sponsor logos.
@@ -348,6 +379,36 @@ R2-backed uploads collection. Replaces Convex file storage for sponsor logos.
 Kept as collections. Both are audit trails with legal retention requirements —
 admin logs for three years, consents for GDPR evidence — so they stay
 append-only records rather than becoming document versions.
+
+### Referential integrity
+
+Payload emits every `relationship` column as `NOT NULL` (when `required`) with
+`ON DELETE set null`. Those two contradict each other: SQLite cannot null a
+`NOT NULL` column, so deleting a referenced row fails with a raw
+`Failed query: delete from "gestures" where ...` rather than either cleaning up
+or refusing politely. Confirmed against a real database in Stage 1 for
+`lists.owner`, `lists.items.gesture`, `sponsorships.gesture` and
+`user_consents.user`.
+
+This is one defect with four instances, so it gets one decision rather than
+four local ones. The right behaviour is not uniform, though — it follows from
+what each row *is*:
+
+| Reference | On delete of the target | Why |
+|---|---|---|
+| `user_consents.user` | Nullable, set null | A consent record is legal evidence with its own retention period. It must outlive the account it describes, anonymised rather than destroyed — deleting the user is often precisely the event the record has to survive. |
+| `sponsorships.gesture` | Refuse, with a real message | Someone paid for this. A sponsorship pointing at nothing is meaningless, and silently discarding it is worse than blocking the delete. The admin gets told which sponsorships block the gesture. |
+| `lists.owner` | Cascade | A private list has no meaning without its owner, and leaving ownerless rows behind would strand them where no access filter can ever reach them. |
+| `lists.items.gesture` | Drop the array row | The list survives; it just loses an entry. This is the only case where partial cleanup is the obviously correct answer. |
+
+The `user_consents` and `sponsorships` rows exist from Stage 1, so their
+behaviour is Stage 1's to fix. The two `lists` cases are Stage 3, alongside the
+sharing work above.
+
+Whatever the mechanism, it must be tested by actually deleting the target
+against a real database. A schema-level assertion cannot tell a working
+`ON DELETE` from one SQLite will reject at runtime — that is exactly how this
+defect survived being written four times.
 
 ### Localization
 
