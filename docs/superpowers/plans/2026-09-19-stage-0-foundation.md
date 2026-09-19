@@ -446,17 +446,56 @@ Create the production resources now too, with the same two commands and `-produc
 Add to `apps/site/package.json` scripts. The guard is the point: with no default, a bare `deploy` fails instead of guessing.
 
 ```json
-"deploy:database": "test -n \"$CLOUDFLARE_ENV\" || (echo 'CLOUDFLARE_ENV must be set to staging or production' && exit 1) && NODE_ENV=production PAYLOAD_SECRET=ignore payload migrate",
-"deploy:app": "test -n \"$CLOUDFLARE_ENV\" || (echo 'CLOUDFLARE_ENV must be set to staging or production' && exit 1) && opennextjs-cloudflare build --env=$CLOUDFLARE_ENV && opennextjs-cloudflare deploy --env=$CLOUDFLARE_ENV",
+"deploy:guard": "case \"$CLOUDFLARE_ENV\" in staging|production) ;; *) echo \"CLOUDFLARE_ENV must be exactly 'staging' or 'production' (got: '$CLOUDFLARE_ENV')\" >&2; exit 1 ;; esac",
+"deploy:database": "bun run deploy:guard && NODE_ENV=production PAYLOAD_SECRET=ignore payload migrate",
+"deploy:app": "bun run deploy:guard && opennextjs-cloudflare build --env=\"$CLOUDFLARE_ENV\" && opennextjs-cloudflare deploy --env=\"$CLOUDFLARE_ENV\"",
 "deploy": "bun run deploy:database && bun run deploy:app"
 ```
 
+Three things about this guard are deliberate, and a `test -n` one-liner gets all
+three wrong:
+
+- **It validates the value, not just presence.** `test -n` accepts `prod`, `typo`
+  and `Staging`, none of which match an `env.*` block. The message would then be
+  lying about what it enforces.
+- **It rejects whitespace.** `test -n " "` is *true*, so a single space passes a
+  presence check. Combined with an unquoted `--env=$CLOUDFLARE_ENV`, which
+  collapses to a bare `--env=`, that resolves the bindingless top-level config —
+  exactly the failure named environments exist to prevent.
+- **`--env` is quoted.** See above.
+
+Extracting the guard into its own script also avoids the fragility of
+`test -n "$X" || (echo … && exit 1) && cmd`, where the `exit 1` runs in a
+subshell and only works because its status short-circuits the `&&`. Appending
+anything after that chain silently defeats it.
+
 `PAYLOAD_SECRET=ignore` matches the template: migrations do not sign tokens, and requiring the real secret in a schema-only step spreads it to more CI contexts than necessary.
 
-- [ ] **Step 4: Verify the guard fails loudly**
+- [ ] **Step 4: Verify the guard fails loudly, across the whole input family**
 
-Run: `cd apps/site && unset CLOUDFLARE_ENV && bun run deploy:database`
-Expected: exits non-zero with `CLOUDFLARE_ENV must be set to staging or production`. No migration runs.
+One unset-variable check is not enough — the interesting failures are the values
+that *look* set.
+
+```bash
+cd apps/site
+for v in UNSET "" " " prod typo Staging staging production; do
+  if [ "$v" = UNSET ]; then env -u CLOUDFLARE_ENV bun run deploy:guard >/dev/null 2>&1
+  else CLOUDFLARE_ENV="$v" bun run deploy:guard >/dev/null 2>&1; fi
+  echo "[$v] exit=$?"
+done
+```
+
+Expected: exit 1 for `UNSET`, `""`, `" "`, `prod`, `typo` and `Staging`; exit 0 for
+`staging` and `production` only.
+
+Do not grep the command's output to decide pass/fail — `bun run` echoes the script
+text, which contains the guard's own message, so a naive grep reports a match on
+the success path too. Judge on the exit code.
+
+Then confirm the real scripts fail closed and produce no side effects:
+
+Run: `env -u CLOUDFLARE_ENV bun run deploy:database` and `... deploy:app`
+Expected: both exit non-zero; no migration runs and no `.open-next` is produced.
 
 - [ ] **Step 5: Run the template's baseline migration**
 
