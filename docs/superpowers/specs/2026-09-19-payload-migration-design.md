@@ -184,6 +184,15 @@ Task 2. Expect the same class of skew elsewhere in the template.
 `2025-08-15`, and the compatibility flags `nodejs_compat` and
 `global_fetch_strictly_public`.
 
+Bindings live **only** inside named `env.staging` and `env.production` blocks,
+never at the top level, so neither environment can be reached by accident and a
+deploy with no `CLOUDFLARE_ENV` refuses rather than guessing. That choice has a
+typing consequence worth knowing before it surprises someone: `wrangler types`
+then emits `D1` and `R2` as *optional* on the base `CloudflareEnv`, so
+`cloudflare.env.D1` is `D1Database | undefined`. Assert bindings at runtime
+through `requireBinding()` rather than silencing the type with a non-null
+assertion — the same fail-loudly posture `requireEnv()` takes for secrets.
+
 Deployment is two steps in order: `payload migrate` against the remote D1
 database, then `opennextjs-cloudflare build && opennextjs-cloudflare deploy`.
 Schema first, code second — the reverse leaves a deployed Worker querying
