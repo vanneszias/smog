@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isAdmin, publicReadActive } from "@/access";
 import { Gestures } from "./Gestures";
 
 const field = (name: string) =>
@@ -44,5 +45,20 @@ describe("Gestures collection", () => {
     expect(typeof (name as { validate?: unknown } | undefined)?.validate).toBe(
       "function"
     );
+  });
+
+  it("wires public reads through publicReadActive, not a raw boolean", () => {
+    // Reference equality, not just "is a function": swapping this for
+    // isAdmin, isAuthenticated, or an inline `() => true` would still pass
+    // a type check but would leak inactive gestures (or lock reads to
+    // admins). The behavior itself is covered end-to-end in
+    // access/publicReadActive.int.test.ts.
+    expect(Gestures.access?.read).toBe(publicReadActive);
+  });
+
+  it("wires create, update and delete to isAdmin", () => {
+    expect(Gestures.access?.create).toBe(isAdmin);
+    expect(Gestures.access?.update).toBe(isAdmin);
+    expect(Gestures.access?.delete).toBe(isAdmin);
   });
 });

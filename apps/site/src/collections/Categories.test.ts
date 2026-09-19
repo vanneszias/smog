@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isAdmin, publicReadActive } from "@/access";
 import { Categories, validateName } from "./Categories";
 
 describe("Categories collection", () => {
@@ -39,6 +40,16 @@ describe("Categories collection", () => {
 
   it("uses name as the admin title", () => {
     expect(Categories.admin?.useAsTitle).toBe("name");
+  });
+
+  it("wires public reads through publicReadActive, not a raw boolean", () => {
+    expect(Categories.access?.read).toBe(publicReadActive);
+  });
+
+  it("wires create, update and delete to isAdmin", () => {
+    expect(Categories.access?.create).toBe(isAdmin);
+    expect(Categories.access?.update).toBe(isAdmin);
+    expect(Categories.access?.delete).toBe(isAdmin);
   });
 });
 

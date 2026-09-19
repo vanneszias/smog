@@ -1,4 +1,5 @@
 import type { CollectionConfig, TextFieldSingleValidation } from "payload";
+import { isAdmin, publicReadActive } from "@/access";
 import { defaultLocaleRequired } from "@/fields/defaultLocaleRequired";
 
 /**
@@ -13,6 +14,12 @@ export const Categories: CollectionConfig = {
   admin: {
     useAsTitle: "name",
     defaultColumns: ["name", "isActive", "updatedAt"],
+  },
+  access: {
+    read: publicReadActive,
+    create: isAdmin,
+    update: isAdmin,
+    delete: isAdmin,
   },
   fields: [
     {

@@ -1,4 +1,5 @@
 import type { CollectionConfig } from "payload";
+import { isAdmin, publicReadActive } from "@/access";
 import { defaultLocaleRequired } from "@/fields/defaultLocaleRequired";
 
 export const Gestures: CollectionConfig = {
@@ -6,6 +7,12 @@ export const Gestures: CollectionConfig = {
   admin: {
     useAsTitle: "name",
     defaultColumns: ["name", "categories", "isActive", "updatedAt"],
+  },
+  access: {
+    read: publicReadActive,
+    create: isAdmin,
+    update: isAdmin,
+    delete: isAdmin,
   },
   fields: [
     {
