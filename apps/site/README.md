@@ -63,6 +63,11 @@ afternoon:
   local-push-only problem — the committed migrations use `ALTER TABLE ... ADD`,
   so deployed environments are unaffected — but it makes a perfectly good
   branch look broken on first run.
+- **Adding a `unique` constraint fails over rows that already violate it.**
+  Same cause, different symptom: `CREATE UNIQUE INDEX ... UNIQUE constraint
+  failed` during setup, because earlier runs left duplicate values behind from
+  back when the column was merely indexed. Clearing the directory is again the
+  whole fix.
 - **Any fixture value on a `unique` column must be unique per run**, or a later
   run collides with an earlier run's leftover row. This fails in `beforeAll`,
   which means Vitest reports the file's tests as *skipped* rather than failed —
