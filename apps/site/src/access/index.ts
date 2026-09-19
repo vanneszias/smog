@@ -1,4 +1,4 @@
-import type { Access } from "payload";
+import type { Access, FieldAccess } from "payload";
 
 /**
  * Restricts an operation to signed-in admins. Used for document- and
@@ -45,3 +45,22 @@ export const isAdminOrSelf: Access = ({ req: { user } }) => {
 
   return { id: { equals: user.id } };
 };
+
+/**
+ * Field-level equivalent of `isAdmin`.
+ *
+ * `FieldAccess` returns a plain boolean — it has no `Where` form — so this
+ * cannot reuse `isAdmin`, whose `Access` signature may also return a filter.
+ * Kept here rather than inline in a collection so every privileged field
+ * enforces the same rule.
+ */
+export const isAdminField: FieldAccess = ({ req: { user } }) =>
+  user?.role === "admin";
+
+/**
+ * Unconditionally public read. Exists so collections never carry an inline
+ * `() => true`: the plan requires every access rule to be a named, tested
+ * function, and "this one is deliberately public" is exactly the decision
+ * worth making legible.
+ */
+export const publicRead: Access = () => true;

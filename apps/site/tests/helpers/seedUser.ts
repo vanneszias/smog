@@ -4,7 +4,12 @@ import config from "../../src/payload.config.js";
 export const testUser = {
   email: "dev@payloadcms.com",
   password: "test",
-  role: "user" as const,
+  // The e2e specs drive /admin, which is gated on `role: "admin"`, so this
+  // fixture has to be a real admin. Seeding it is legitimate: `payload.create`
+  // below runs through the local API with the default `overrideAccess: true`,
+  // which is the privileged path. The public REST route cannot set `role` —
+  // see Users.escalation.int.test.ts.
+  role: "admin" as const,
 };
 
 /**
