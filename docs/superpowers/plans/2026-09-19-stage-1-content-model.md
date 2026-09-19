@@ -18,6 +18,28 @@ Inherits all Stage 0 global constraints. Additionally:
 
 - Locales are exactly `en`, `nl`, `fr`, with **`nl` as default** and fallback enabled. Existing content is Dutch.
 - Localized fields are exactly: `gestures.name`, `gestures.info`, `gestures.concepts`, `categories.name`. Nothing else. Adding localization to a field later is a migration; adding it speculatively is admin-panel clutter and a translation debt.
+- **Never combine `required: true` with `localized: true`.** Payload validates required
+  localized fields per-locale, so an editor working in `fr` cannot save the document at all —
+  not even to toggle an unrelated non-localized field — until they type a French value. With
+  `en` and `fr` starting empty, that makes the admin unusable in two of three locales.
+
+  The policy is: **the default locale is the source of truth; translations are optional.**
+  Enforce it with a validator that only demands a value when `req.locale` is the default,
+  instead of dropping the requirement entirely:
+
+  ```ts
+  validate: (value: unknown, { req }: { req: { locale?: string } }) => {
+    if (req.locale && req.locale !== "nl") {
+      return true;
+    }
+    return typeof value === "string" && value.trim() !== ""
+      ? true
+      : "A Dutch value is required.";
+  },
+  ```
+
+  Check the real `validate` signature against the installed Payload rather than copying this
+  sketch verbatim. Test both branches: empty in `nl` fails, empty in `fr` passes.
 - Collection slugs are kebab-case and plural: `gestures`, `categories`, `users`, `lists`, `sponsorships`, `media`, `admin-logs`, `user-consents`.
 - Every schema change is followed by `bunx payload migrate:create <name>` and the migration is committed with the code that needs it.
 - Access control functions never appear inline in a collection config. They are imported from `apps/site/src/access/`.
@@ -205,10 +227,17 @@ describe("Gestures collection", () => {
   });
 
   it("requires a Mux playback id", () => {
+    // playbackId is NOT localized, so plain `required` is safe here.
     expect(field("playbackId")).toMatchObject({
       type: "text",
       required: true,
     });
+  });
+
+  it("does not mark any localized field required", () => {
+    for (const name of ["name", "info", "concepts"]) {
+      expect(field(name)).not.toHaveProperty("required", true);
+    }
   });
 
   it("indexes isActive, because every public query filters on it", () => {
@@ -223,6 +252,11 @@ Run: `bun -F site test Gestures`
 Expected: FAIL — `Failed to resolve import "./Gestures"`.
 
 - [ ] **Step 3: Implement the collection**
+
+Task 1 introduced the default-locale validator for `categories.name`. Extract it into
+`apps/site/src/fields/defaultLocaleRequired.ts` as a shared helper before using it here —
+three more localized fields are about to need it, and a copied validator is a policy that
+drifts.
 
 Create `apps/site/src/collections/Gestures.ts`:
 
@@ -239,9 +273,11 @@ export const Gestures: CollectionConfig = {
     {
       name: "name",
       type: "text",
-      required: true,
       localized: true,
       index: true,
+      // Not `required` — see the global constraint on localized fields. Use the
+      // default-locale validator so a French editor can still save the document.
+      validate: defaultLocaleRequired("A Dutch name is required."),
     },
     {
       name: "categories",
