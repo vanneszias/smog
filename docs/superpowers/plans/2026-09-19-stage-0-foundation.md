@@ -28,7 +28,7 @@ Five failure modes this stage's tasks must pin down, each assigned to the task t
 1. **`PAYLOAD_SECRET` absent or rotated** invalidates every session and silently breaks admin login. Task 2 asserts the app refuses to boot without it rather than starting with an empty secret.
 2. **`payload migrate` targeting the wrong Cloudflare environment** writes staging schema into production. Task 3 makes the environment explicit in every migration script and asserts the wrong-environment case fails loudly.
 3. **D1 unreachable from the CLI context** makes `getPlatformProxy` fall back to a local SQLite file, so migrations appear to succeed while the remote database is untouched. Task 3 asserts the remote row exists after a remote migration.
-4. **Build artifacts committed to git.** `.open-next/`, `.wrangler/` and `cloudflare-env.d.ts` are large and machine-specific. Task 1 adds ignore entries and asserts a clean `git status` after a build.
+4. **Build artifacts committed to git.** `.open-next/`, `.wrangler/` and `cloudflare-env.d.ts` are large and machine-specific. Task 1 adds the ignore entries; Task 4 owns the assertion, since it runs the first build and Task 1 cannot.
 5. **Bundle size regressing after Stage 0 passes.** A one-time measurement is worthless by Stage 8. Task 4 records headroom and adds a CI check that fails when the gzipped Worker exceeds a recorded threshold.
 
 ---
@@ -113,14 +113,17 @@ git commit -m "feat(site): scaffold Payload app from with-cloudflare-d1 template
 
 **Files:**
 - Modify: `apps/site/package.json`
+- Modify: `apps/site/vitest.config.mts`
 - Modify: `apps/site/src/payload.config.ts`
 - Modify: `turbo.json`
+- Modify: root `package.json`
 - Create: `apps/site/src/lib/env.ts`
 - Test: `apps/site/src/lib/env.test.ts`
+- Delete: `apps/site/src/app/my-route/route.ts`, `apps/site/test.env`, `apps/site/eslint.config.mjs`, `apps/site/.prettierrc.json`, `apps/site/.npmrc`, `apps/site/.yarnrc`, `apps/site/.vscode/`
 
 **Interfaces:**
 - Consumes: `apps/site` from Task 1.
-- Produces: `requireEnv(name: string): string` from `apps/site/src/lib/env.ts`, used by `payload.config.ts` to read `PAYLOAD_SECRET`.
+- Produces: `requireEnv(name: string, source?: Record<string, string | undefined>): string` from `apps/site/src/lib/env.ts`, used by `payload.config.ts` to read `PAYLOAD_SECRET`.
 
 - [ ] **Step 1: Rename the package and drop cross-env**
 
@@ -149,7 +152,62 @@ Set `"name": "site"` in `apps/site/package.json`, remove the `cross-env` depende
 
 Port 3003 avoids the existing web (3001), server (3000) and Remotion (3002) dev servers, which keep running during the parallel-run period.
 
-- [ ] **Step 2: Write the failing test for required-environment handling**
+- [ ] **Step 2: Strip the template's toolchain baggage**
+
+The template ships its own linter, formatter, editor config and package-manager pins. This monorepo has all of those already, and a second opinion in a subdirectory is how a repo ends up formatted two ways.
+
+```bash
+cd apps/site
+git rm -r --cached .vscode 2>/dev/null || true
+rm -rf .vscode
+git rm -f eslint.config.mjs .prettierrc.json .npmrc .yarnrc test.env src/app/my-route/route.ts
+rmdir src/app/my-route
+```
+
+Each removal, and why:
+
+- `eslint.config.mjs`, `.prettierrc.json` — Biome with `ultracite` is the monorepo's linter and formatter. Two formatters fight.
+- `.npmrc`, `.yarnrc`, and the `engines.pnpm` and `pnpm` blocks in `package.json` — this repo is bun. Delete the two files and both JSON blocks. Keep `engines.node`.
+- `test.env` — contains only `NODE_OPTIONS`, no secrets today. It goes because nothing reads it (`vitest.setup.ts` loads `.env` through dotenv) and, critically, its name matches no ignore rule: `.env`, `.env*` and `.env*.local` all match on a basename *prefix*, so `test.env` is tracked. A real secret pasted into it later commits silently.
+- `src/app/my-route/route.ts` — a template demo that pays a full Payload init to return a constant string. It also has an unused `request` parameter and an unused `payload` binding, which `bun check` rejects under ultracite.
+
+- [ ] **Step 3: Fix the Vitest include glob before writing any test**
+
+`apps/site/vitest.config.mts` ships with:
+
+```ts
+include: ['tests/int/**/*.int.spec.ts'],
+```
+
+That **replaces** Vitest's default glob rather than adding to it, so no test anywhere under `src/` is ever collected. Every later step in this task — and every unit test in Stages 1 and 2 — depends on fixing it first.
+
+Change the `test` block to:
+
+```ts
+test: {
+  environment: 'jsdom',
+  setupFiles: ['./vitest.setup.ts'],
+  include: ['src/**/*.test.{ts,tsx}', 'tests/int/**/*.int.spec.ts'],
+  exclude: ['**/node_modules/**', 'tests/e2e/**'],
+},
+```
+
+The e2e exclusion is explicit: those are Playwright specs and Vitest must not try to collect them.
+
+- [ ] **Step 4: Verify the glob fix with a throwaway probe**
+
+Do not take the config change on faith — the whole point of Step 3 is that a wrong glob fails *silently* by finding nothing.
+
+```bash
+cd apps/site
+printf 'import { expect, it } from "vitest";\nit("probe", () => expect(1).toBe(1));\n' > src/probe.test.ts
+bun run test src/probe.test.ts
+rm src/probe.test.ts
+```
+
+Expected: 1 test collected and passing. If it reports "No test files found", the glob is still wrong — fix it before continuing.
+
+- [ ] **Step 5: Write the failing test for required-environment handling**
 
 Review Focus item 1. An empty `PAYLOAD_SECRET` must not boot — the template's `process.env.PAYLOAD_SECRET || ''` silently accepts one, which produces a running app whose sessions are all forgeable.
 
@@ -184,12 +242,14 @@ describe("requireEnv", () => {
 });
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [ ] **Step 6: Run the test to verify it fails**
 
-Run: `bun -F site test`
+Run: `bun -F site test src/lib/env.test.ts`
 Expected: FAIL — `Failed to resolve import "./env"`.
 
-- [ ] **Step 4: Implement `requireEnv`**
+If instead it reports "No test files found", Step 3 did not take. Go back.
+
+- [ ] **Step 7: Implement `requireEnv`**
 
 Create `apps/site/src/lib/env.ts`:
 
@@ -208,12 +268,12 @@ export function requireEnv(
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [ ] **Step 8: Run the test to verify it passes**
 
-Run: `bun -F site test`
+Run: `bun -F site test src/lib/env.test.ts`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 6: Use it in the Payload config**
+- [ ] **Step 9: Use it in the Payload config**
 
 In `apps/site/src/payload.config.ts`, replace:
 
@@ -233,9 +293,9 @@ and add the import alongside the existing ones:
 import { requireEnv } from "./lib/env";
 ```
 
-- [ ] **Step 7: Register the app with Turborepo**
+- [ ] **Step 10: Register the app with Turborepo**
 
-`turbo.json` already declares `build`, `check-types`, `test` and `dev`. Add the two generation tasks so they cache and order correctly:
+`turbo.json` already declares `build`, `check-types`, `test` and `dev`. Add the two generation tasks:
 
 ```json
 "generate:types": {
@@ -248,15 +308,39 @@ import { requireEnv } from "./lib/env";
 }
 ```
 
-- [ ] **Step 8: Verify lint and types**
+Then add the dependency edge that keeps CI honest:
 
-Run: `bun check && bun -F site check-types`
-Expected: both clean. Fix anything Biome reports; `ultracite` is strict and the template was not written against it.
+```json
+"check-types": {
+  "dependsOn": ["^check-types", "generate:types"]
+}
+```
 
-- [ ] **Step 9: Commit**
+`cloudflare-env.d.ts` and `src/payload-types.ts` are gitignored, so they are absent on a fresh clone. Without this edge, `check-types` passes on a developer machine that happens to have them and fails in CI, which is the worst possible place to learn it.
+
+- [ ] **Step 11: Add a root dev script**
+
+Match the existing `dev:web` / `dev:server` / `dev:native` pattern in the root `package.json`:
+
+```json
+"dev:site": "turbo -F site dev"
+```
+
+- [ ] **Step 12: Verify lint, types and the full suite**
+
+Run: `bun check && bun -F site check-types && bun -F site test`
+
+Expected: Biome clean, types clean, and the suite green.
+
+Two things to expect here rather than be surprised by:
+
+- Biome will report violations in the vendored template files. Fix them; `ultracite` is strict and the template was not written against it. Do not add per-file ignores to make them go away.
+- `tests/int/api.int.spec.ts` boots a real Payload instance through `getPlatformProxy` against the template's placeholder `database_id: "DATABASE_ID"` and will error until Task 3 provisions a real database. If it does, leave the test in place and skip it with `describe.skip` plus a comment naming Task 3 as the unskip point. Do not delete it and do not weaken it.
+
+- [ ] **Step 13: Commit**
 
 ```bash
-git add apps/site turbo.json
+git add apps/site turbo.json package.json
 git commit -m "feat(site): adapt template to bun, Turborepo and Biome conventions"
 ```
 
@@ -349,14 +433,17 @@ Add to `apps/site/package.json` scripts. The guard is the point: with no default
 Run: `cd apps/site && unset CLOUDFLARE_ENV && bun run deploy:database`
 Expected: exits non-zero with `CLOUDFLARE_ENV must be set to staging or production`. No migration runs.
 
-- [ ] **Step 5: Generate and run the first migration**
+- [ ] **Step 5: Run the template's baseline migration**
+
+The template already ships a baseline migration (`src/migrations/20250929_111647.{ts,json}`) describing exactly the `users`, `users_sessions` and `media` tables plus Payload's five internal tables. Do **not** run `migrate:create initial` — against a non-empty migrations directory it produces an empty no-op migration and leaves you thinking you created something.
 
 ```bash
 cd apps/site
 export CLOUDFLARE_ENV=staging
-bunx payload migrate:create initial
 bun run deploy:database
 ```
+
+Stage 1's seven collections then land as clean additive migrations on top of this baseline.
 
 - [ ] **Step 6: Prove the migration reached the remote database**
 
@@ -420,7 +507,14 @@ ls -la .open-next/worker.js
 gzip -c .open-next/worker.js | wc -c
 ```
 
-- [ ] **Step 3: Verify the admin panel actually loads**
+- [ ] **Step 3: Assert the build left the working tree clean**
+
+Review Focus item 4. This is the first task that can actually run a build, so it is the first that can check this.
+
+Run: `git status --short`
+Expected: empty. If `.open-next/`, `.wrangler/`, `cloudflare-env.d.ts` or `src/payload-types.ts` appear, the ignore entries from Task 1 are wrong — fix them before continuing rather than committing a build artifact.
+
+- [ ] **Step 4: Verify the admin panel actually loads**
 
 Open `https://smog-site-staging.<your-subdomain>.workers.dev/admin` and create the first admin user.
 
@@ -428,7 +522,7 @@ A successful deploy is not a working app: OpenNext can bundle a Worker that boot
 
 Expected: the user is created, the dashboard lists Users and Media.
 
-- [ ] **Step 4: Write the failing test for the budget check**
+- [ ] **Step 5: Write the failing test for the budget check**
 
 Review Focus item 5.
 
@@ -461,12 +555,12 @@ describe("checkBundleSize", () => {
 });
 ```
 
-- [ ] **Step 5: Run the test to verify it fails**
+- [ ] **Step 6: Run the test to verify it fails**
 
 Run: `bun -F site test check-bundle-size`
 Expected: FAIL — `Failed to resolve import "./check-bundle-size"`.
 
-- [ ] **Step 6: Implement the check**
+- [ ] **Step 7: Implement the check**
 
 Create `apps/site/scripts/check-bundle-size.ts`:
 
@@ -496,20 +590,20 @@ export function checkBundleSize(
 }
 ```
 
-- [ ] **Step 7: Run the test to verify it passes**
+- [ ] **Step 8: Run the test to verify it passes**
 
 Run: `bun -F site test check-bundle-size`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 8: Wire the check into CI**
+- [ ] **Step 9: Wire the check into CI**
 
 Add a step to the existing GitHub Actions workflow that builds `apps/site`, gzips `.open-next/worker.js`, and calls `checkBundleSize` with the 10 MiB limit, failing the job when `ok` is false.
 
-- [ ] **Step 9: Write the findings document**
+- [ ] **Step 10: Write the findings document**
 
 Create `docs/superpowers/specs/2026-09-19-stage-0-findings.md` with a **Gate 2** section recording: the raw and gzipped worker size, the percentage headroom, the deployed staging URL, and one sentence on whether five more stages of code plausibly fit. If headroom is under 40%, say so plainly — that is a design-level problem for Stages 3 through 8, not a note.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
 git add apps/site/scripts docs/superpowers/specs .github
