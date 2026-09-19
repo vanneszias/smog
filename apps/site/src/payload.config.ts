@@ -102,8 +102,29 @@ const cloudflareLogger = {
   },
 } as unknown as PayloadLogger;
 
-const cloudflare =
-  isCLI || !isProduction
+/**
+ * Bindings during `next build`.
+ *
+ * Booting a Workers runtime here is not just unnecessary, it is actively
+ * harmful: Next collects page data for several routes in parallel, each
+ * evaluating this module, each starting its own miniflare against the *same*
+ * local D1 directory. They then fight over the SQLite lock and the build dies
+ * with `SQLITE_BUSY`. The per-worker `persist` path above only covers Vitest,
+ * which sets `VITEST_WORKER_ID`; Next's build workers do not.
+ *
+ * Nothing legitimate queries the database while collecting page data, so the
+ * adapters get inert placeholders. If some future code *does* try to query at
+ * build time it will fail loudly on a missing method — which is the right
+ * outcome, because a build that reads the production database is a bug.
+ */
+const BUILD_PHASE_BINDINGS = {
+  D1: undefined as unknown as D1Database,
+  R2: undefined as unknown as R2Bucket,
+};
+
+const cloudflare = isNextBuild
+  ? { env: BUILD_PHASE_BINDINGS }
+  : isCLI || !isProduction
     ? await getCloudflareContextFromWrangler()
     : await getCloudflareContext({ async: true });
 
