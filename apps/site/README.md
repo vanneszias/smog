@@ -47,6 +47,13 @@ bun -F site check-bundle-size # measure the Worker against its budget
 `src/payload-types.ts` is **committed**. Regenerate it whenever you change a
 collection — CI fails on drift.
 
+Be aware that **running the test suite rewrites that file**. Outside
+production, `getPayload` regenerates the types from whatever the config
+currently says, so a suite run is enough to overwrite a committed change — and
+if you were mid-experiment with a collection, it silently writes the
+experiment's shape to disk. Check `git status` after a run that touched a
+collection, before concluding the types are what you committed.
+
 ### If the test suite suddenly fails on a branch you just pulled
 
 ```bash

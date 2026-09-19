@@ -36,9 +36,13 @@ describe("Gestures collection", () => {
     // The behaviour lives in `Gestures.delete.int.test.ts`, which deletes a
     // real sponsored gesture. This only pins that the hook is still wired
     // up, which is the one way the behaviour disappears silently.
-    // `toContain` against a possibly-undefined value silently passes in
-    // Vitest 5 — verified by deleting the hooks block and watching this test
-    // stay green — so this asserts the array itself.
+    // Asserts the whole array rather than membership, so that appending a
+    // second hook is also a deliberate change rather than something that
+    // slips in unnoticed. (An earlier comment here claimed `toContain`
+    // against an undefined value silently passes in Vitest 5. It does not —
+    // it raises "the given combination of arguments (undefined and ...) is
+    // invalid for this assertion". `toEqual` is still the stronger check,
+    // but not for that reason.)
     expect(Gestures.hooks?.beforeDelete).toEqual([blockDeleteWhenSponsored]);
   });
 
