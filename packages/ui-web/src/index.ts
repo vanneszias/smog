@@ -5,4 +5,5 @@
  * module that is not re-exported from this file is internal to the package.
  */
 
+export * from "./components/Button";
 export * from "./lib/cn";
