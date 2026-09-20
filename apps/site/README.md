@@ -212,15 +212,26 @@ So: run `bun -F site generate:types` (or `generate:types:cloudflare`) with no
 build present. `rm -rf apps/site/.open-next` first, or regenerate before you
 build.
 
-**Correction, measured in Stage 3 Task 9:** regenerating without a build does
-*not* remove the `mainModule` line. On wrangler ~4.116 it is emitted either
-way — regenerating with `.open-next` deleted produced a byte-identical file —
-so the committed `cloudflare-env.d.ts` carries it permanently and the only
-thing that decides whether `check-types` passes is whether a build is sitting
-on disk. **Delete `.open-next` before typechecking**, which is also what
-leaves the tree in the state the next session wants. CI never sees this:
-`release:check` runs `next build`, which writes `.next` and not `.open-next`,
-and it runs after the typecheck anyway.
+A Stage 3 Task 9 note claimed the line is emitted either way and cannot be
+removed. That is wrong; both directions were re-tested afterwards on wrangler
+4.116, and the results are worth keeping because the claim is easy to arrive
+at from a half-finished state:
+
+- **No build present, line absent → stays absent.** Regenerating produces a
+  file byte-identical to the committed one, with zero `.open-next`
+  references, and `check-types` exits 0.
+- **No build present, line injected → removed.** Regenerating drops it,
+  1 reference to 0.
+
+So the rule stands: **regenerate with no build present.** `rm -rf
+apps/site/.open-next` first, or regenerate before you build. If a committed
+`cloudflare-env.d.ts` already carries the line, regenerating without a build
+is also how you get rid of it.
+
+Deleting `.open-next` before typechecking works too, and is a good habit for
+leaving the tree in the state the next session wants — but it treats the
+symptom. CI never sees any of this: `release:check` runs `next build`, which
+writes `.next` and not `.open-next`, and the typecheck runs before it anyway.
 
 
 The Worker has a **10 MiB gzipped** limit on the Workers Paid plan, and Stage 0
