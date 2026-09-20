@@ -2,6 +2,16 @@ import { withPayload } from "@payloadcms/next/withPayload";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Next 16 writes an AGENTS.md and a CLAUDE.md into this directory on boot.
+  // Neither is wanted here: the repository's instructions live in the root
+  // AGENTS.md, and a generated file in `apps/site/` would be a
+  // directory-scoped override that silently outranks it for everything in
+  // this app — instructions nobody wrote, aimed at the agents working on the
+  // codebase. They are untracked rather than gitignored, so the realistic
+  // outcome is someone eventually commits them by accident. Opting out at the
+  // source beats ignoring the symptom.
+  agentRules: false,
+
   images: {
     localPatterns: [
       {
