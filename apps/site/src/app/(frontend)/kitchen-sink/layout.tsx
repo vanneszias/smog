@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import "./kitchen-sink.css";
+import { SiteDocument } from "@/components/SiteDocument";
 
 /**
  * `noindex` as well as the production guard in `page.tsx`.
@@ -17,12 +17,22 @@ export const metadata: Metadata = {
   title: "Kitchen sink — SMOG design system",
 };
 
+/**
+ * `lang="en"` because this page is written in English and is for whoever is
+ * reviewing the component library, not for a reader of the site. It renders
+ * its own document because the `(frontend)` root layout is a pass-through —
+ * see `SiteDocument` for why.
+ */
 export default function KitchenSinkLayout({
   children,
 }: {
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background text-foreground">{children}</div>
+    <SiteDocument lang="en">
+      <div className="min-h-screen bg-background text-foreground">
+        {children}
+      </div>
+    </SiteDocument>
   );
 }

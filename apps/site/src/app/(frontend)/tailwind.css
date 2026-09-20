@@ -1,11 +1,14 @@
 /*
- * Tailwind for the kitchen sink, and for nothing else yet.
+ * Tailwind and the design-system tokens for every public page.
  *
- * Imported by this route's own layout rather than by `(frontend)/layout.tsx`,
- * so Tailwind's preflight and the token variables load on `/kitchen-sink` and
- * leave the template home page — and the Payload admin, which has its own
- * stylesheet — exactly as they were. Stage 3 replaces that home page and can
- * move this import up a level then.
+ * Imported by `SiteDocument`, which is the one component that renders
+ * `<html>`, so every route that paints a document gets it and nothing else
+ * does. The Payload admin lives in another route group with its own
+ * stylesheet and never sees this file.
+ *
+ * It started life under `kitchen-sink/` when that route was the only thing in
+ * `apps/` using the library. Stage 3 added the public pages, so it moved up a
+ * level exactly as that file said it would.
  *
  * `source(none)` turns off automatic content detection and the two `@source`
  * lines say precisely what to scan: this app's own sources and the component
@@ -15,8 +18,8 @@
 @import "tailwindcss" source(none);
 @import "@smog/ui-web/styles/theme.css";
 
-@source "../../..";
-@source "../../../../../../packages/ui-web/src";
+@source "../..";
+@source "../../../../../packages/ui-web/src";
 
 /*
  * Test files are sources to Tailwind and nothing else. Left in, the `cn()`
@@ -29,10 +32,10 @@
  * files, so naming a class in prose anywhere under a `@source` root is enough
  * to emit it. That is why none of the classes involved is spelled out here.
  */
-@source not "../../../**/*.test.ts";
-@source not "../../../**/*.test.tsx";
-@source not "../../../../../../packages/ui-web/src/**/*.test.ts";
-@source not "../../../../../../packages/ui-web/src/**/*.test.tsx";
+@source not "../../**/*.test.ts";
+@source not "../../**/*.test.tsx";
+@source not "../../../../../packages/ui-web/src/**/*.test.ts";
+@source not "../../../../../packages/ui-web/src/**/*.test.tsx";
 
 /*
  * Tailwind's preflight leaves `<html>` transparent, so the page background
