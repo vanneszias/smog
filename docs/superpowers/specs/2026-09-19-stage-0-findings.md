@@ -244,6 +244,47 @@ Options, in the order they should be considered:
 Raising the warn threshold is not on the list. It is the only thing standing
 between this and a 10 MiB wall that fails the deploy rather than the build.
 
+| Stage 3 Task 6 — guest favorites (client island, no new route entry) | 7,415.88 KiB | 72.4% | +9.51 KiB |
+
+### A *route handler* that imports Payload costs ~519 KiB. A *page* does not.
+
+Task 6 measured this properly by building it three ways:
+
+| build | gzipped | delta |
+|---|---:|---:|
+| baseline | 7,406.37 KiB | — |
+| + a Payload-free stub `route.ts` | 7,446.27 KiB | +39.90 |
+| + the same route calling Payload | 7,964.99 KiB | **+558.62** |
+| + no route at all (shipped) | 7,415.88 KiB | +9.51 |
+
+One `import` in a route handler cost **519 KiB gzipped**.
+
+**The distinction matters and the obvious generalisation is wrong.** Both
+`/[locale]/gestures` and `/[locale]/gestures/[id]` import Payload through
+`payloadClient.ts`, and neither cost anything like that — Task 5's whole +437
+was the Mux duplication, verified separately. Pages share the SSR server
+bundle; a `route.ts` gets its own entry and re-bundles the Payload/D1/drizzle
+graph into it.
+
+So the rule for the rest of this migration is:
+
+- **A `page.tsx` that reads Payload is free.** Keep server work in pages.
+- **Every `route.ts`, `sitemap.ts`, `opengraph-image.tsx` or other special
+  file that reaches Payload costs roughly half a megabyte.** With ~776 KiB of
+  headroom before CI's 8 MiB warning, the budget affords *one*.
+
+Concretely: Task 7's share page is a page, so it is free. **Task 9's
+`sitemap.ts` is the one at risk** — it needs Payload to list gestures, and it
+would consume most of the remaining headroom on its own. Options there are to
+generate the sitemap from a page-rendered route, to build it at deploy time as
+a static file, or to spend the Mux-sharing / OG-image levers first.
+
+Task 6 shipped the favorites list as a client island calling Payload's
+already-bundled `/api/gestures` rather than a dedicated endpoint, which is why
+it cost 9.51 KiB instead of 558. The trade is recorded at the top of
+`favoritesQuery.ts`: the id filtering, dedupe, cap and re-sort now bind that
+caller rather than an endpoint.
+
 ### Consequence
 
 Bundle size is now a standing constraint on every later stage, not a Stage 0
