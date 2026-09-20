@@ -129,6 +129,60 @@ test.describe("Gestures list", () => {
     );
   });
 
+  test("narrows the list to what was typed in the search box", async ({
+    page,
+  }) => {
+    await page.goto(`${SITE}/nl/gestures`);
+
+    await page
+      .getByRole("searchbox", { name: "Zoek een gebaar" })
+      .fill(`${fixtures.run} gebaar 00`);
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByTestId("gesture-count")).toHaveText("1 gebaren");
+    await expect(cards(page)).toHaveCount(1);
+    await expect(cards(page).first()).toContainText("gebaar 00");
+  });
+
+  test("finds a Dutch-only gesture when searching in French", async ({
+    page,
+  }) => {
+    // Review Focus item 1, through the whole stack. The fixtures are indexed
+    // in `nl` only, so a French search that queried `fr` alone would show a
+    // French visitor an empty site and no error.
+    const query = new URLSearchParams({ q: `${fixtures.run} gebaar 0` });
+
+    await page.goto(`${SITE}/nl/gestures?${query}`);
+    await expect(page.getByTestId("gesture-count")).toHaveText("10 gebaren");
+
+    await page.goto(`${SITE}/fr/gestures?${query}`);
+    await expect(page.getByTestId("gesture-count")).toHaveText("10 gebaren");
+    await expect(cards(page)).toHaveCount(10);
+  });
+
+  test("shows an empty state, not the whole list, when nothing matches", async ({
+    page,
+  }) => {
+    // The other half of the seam: an id list that came back empty must reach
+    // the query as `id: { in: [] }` and empty the page, where *no* search at
+    // all leaves it unconstrained. Getting those two the wrong way round is
+    // how a search box that matches nothing shows everything.
+    const query = new URLSearchParams({ q: `zzzzzzz${fixtures.run}` });
+
+    await page.goto(`${SITE}/nl/gestures?${query}`);
+
+    await expect(page.getByTestId("gesture-count")).toHaveText("0 gebaren");
+    await expect(page.getByText("Geen gebaren gevonden")).toBeVisible();
+  });
+
+  test("treats a cleared search box as no filter rather than no results", async ({
+    page,
+  }) => {
+    await page.goto(`${SITE}/nl/gestures?q=`);
+
+    await expect(cards(page)).toHaveCount(PER_PAGE);
+  });
+
   test("links each card at the detail route", async ({ page }) => {
     await page.goto(`${SITE}/nl/gestures?category=${fixtures.smallCategoryId}`);
 

@@ -15,6 +15,7 @@ import {
   toGestureSummary,
 } from "@/lib/gestureQuery";
 import { isLocale } from "@/lib/locale";
+import { searchGestureIds } from "@/lib/search";
 
 export const metadata: Metadata = {
   description: "Blader door alle gebaren, gefilterd op categorie.",
@@ -73,22 +74,28 @@ export default async function GesturesPage({
   const pathname = `/${locale}/gestures`;
   const query = parseGestureListParams(toSearchParams(await searchParams));
 
-  const [result, categories] = await Promise.all([
-    /*
-     * `q` is passed through but resolves to no clause yet: search needs the
-     * cross-locale fallback that Task 4 builds, and a half-built search that
-     * silently returns nothing to a French visitor is worse than a search box
-     * that does not filter yet. `GestureListParams.searchIds` is the seam it
-     * plugs into.
-     */
-    fetchGestures({
-      categories: query.categories,
-      locale,
-      page: query.page,
-      q: query.q,
-    }),
+  /*
+   * `undefined` and `[]` mean different things to `fetchGestures`: the first
+   * constrains nothing, the second is a search that matched nothing and must
+   * show an empty page. So the blank case is decided here, and
+   * `searchGestureIds` is not called at all for it — a cleared search box
+   * leaves `?q=` in the URL, and that must mean "everything".
+   *
+   * The two searches run alongside the category options rather than after
+   * them, because only `fetchGestures` depends on the ids.
+   */
+  const [searchIds, categories] = await Promise.all([
+    query.q.trim() === "" ? undefined : searchGestureIds(query.q, locale),
     fetchCategoryOptions(locale),
   ]);
+
+  const result = await fetchGestures({
+    categories: query.categories,
+    locale,
+    page: query.page,
+    q: query.q,
+    searchIds,
+  });
 
   return (
     <div className="flex flex-col gap-6">

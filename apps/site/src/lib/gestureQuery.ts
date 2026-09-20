@@ -1,7 +1,8 @@
 import type { GestureSummary } from "@smog/ui-web";
-import type { Payload, Where } from "payload";
+import type { Where } from "payload";
 import type { Category, Gesture } from "@/payload-types";
 import type { Locale } from "./locale";
+import { getPayloadClient } from "./payloadClient";
 
 /**
  * Rows per page.
@@ -17,8 +18,9 @@ export const GESTURES_PER_PAGE = 12;
  * symbol nothing imports, and nothing outside this module names either type
  * today — callers pass object literals and read the result's fields. They
  * are still the module's contract; they are just spelled out in the function
- * signatures instead of re-exported. Task 4 exports `GestureListParams` at
- * the moment `search.ts` first imports it.
+ * signatures instead of re-exported. Task 4 kept it that way: `search.ts`
+ * produces the ids and the page passes them as a literal, so nothing outside
+ * this file ever names the type.
  */
 interface GestureListParams {
   q?: string;
@@ -132,21 +134,6 @@ function normalizePage(page: number | undefined): number {
   }
 
   return Math.max(1, Math.floor(page));
-}
-
-async function getPayloadClient(): Promise<Payload> {
-  /*
-   * Both imports are dynamic so this module can be imported by a jsdom unit
-   * test without booting Payload: `payload.config.ts` resolves Cloudflare
-   * bindings at module scope, and a static import is hoisted above
-   * everything that might have avoided it.
-   */
-  const [{ getPayload }, { default: config }] = await Promise.all([
-    import("payload"),
-    import("@/payload.config"),
-  ]);
-
-  return await getPayload({ config });
 }
 
 /**
