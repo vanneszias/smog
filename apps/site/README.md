@@ -151,6 +151,17 @@ collection tolerates its absence while the runtime path does not.
 
 ## Bundle budget
 
+`check-bundle-size` measures an **existing** build; it does not produce one.
+Run `bun -F site build:app` first (plain `build` is `next build` and stops
+short of the Worker), or wrangler fails with "The entry-point file at
+`.open-next/worker.js` was not found."
+
+You no longer need to delete `.open-next` afterwards. It used to poison the
+next `check-types` because `**/*.ts` swept in generated code; the tsconfig now
+excludes it, so leaving it in place is fine and saves the next person a
+rebuild.
+
+
 The Worker has a **10 MiB gzipped** limit on the Workers Paid plan, and Stage 0
 already uses **6.45 MiB of it** with two collections and no public site.
 
