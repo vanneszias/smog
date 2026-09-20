@@ -419,6 +419,42 @@ Neither fix is small, which is why this is recorded rather than rushed:
 
 Social login is Task 3, so that is where this belongs.
 
+**Closed in Stage 4 Task 3, and both of them, not one.** Recorded here rather
+than deleted, because the reasoning above is the reasoning that produced the
+fix and the next person meeting a mounted REST API should read it:
+
+- `users.access.create` is now `isAdminOrSelfRegistration` — admins, plus the
+  site's own `/auth/sign-up`, which identifies itself with
+  `req.context[SELF_REGISTRATION]`. That is sound because
+  `createPayloadRequest` sets `context: {}` **unconditionally** for every REST
+  and GraphQL request (a literal, verified at the call site), so only the
+  Local API can populate it. `POST /api/users` now answers 403 for a
+  registered address and a free one alike, byte for byte.
+- `POST /api/users/login` is shadowed by a collection endpoint on `users`,
+  using exactly the `sanitize.js` / `handleEndpoints` ordering described
+  above. It flattens every credential failure into a real
+  `AuthenticationError` — so `routeError` emits the *same bytes* as the
+  unknown-address case rather than a hand-matched copy — and applies the same
+  500 ms floor as `/auth/sign-in`.
+
+The trade the note above anticipated was made deliberately: **the admin panel
+no longer tells an admin that their account is locked.** It says "the email or
+password provided is incorrect", like every other refusal. A message only a
+registered address can provoke is a registered-address oracle whoever reads
+it, and the public sign-in page already makes the same trade.
+
+One thing the note did not anticipate, found by driving `/admin/login` in a
+browser: **Payload's admin panel posts `multipart/form-data` with the body in
+a `_payload` field**, not JSON. `wrapInternalEndpoints` is what gives
+Payload's own endpoints `req.data`, and it does not wrap a collection's. A
+shadowing endpoint that reads only JSON passes every test and every `curl`
+and locks the admin panel out.
+
+**Stage 4 exit criterion 5 is now met for the site as deployed.** Verified
+with real requests against a running dev server before and after; the
+transcripts are in
+`.superpowers/sdd/2026-09-20-stage-4-auth/task-3-report.md`.
+
 ### A three-character password can still be set through password reset
 
 Found in Stage 4 Task 1 and verified in `node_modules`. This is live, and the
