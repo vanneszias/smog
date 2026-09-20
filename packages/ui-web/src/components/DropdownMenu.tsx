@@ -25,9 +25,12 @@ export const DropdownMenuGroup = DropdownMenuPrimitiveGroup;
 /**
  * Sized from Radix's own Popper variables rather than a guess: the available
  * height is whatever the viewport leaves, and the menu is at least as wide as
- * the control that opened it. Inventing `max-h-64` here would emit
- * `calc(var(--spacing) * 64)`, and `--spacing` is not a token this design
- * system declares.
+ * the control that opened it. Inventing a numeric max-height step here would
+ * emit `calc(var(--spacing) * n)` against Tailwind's own 0.25rem multiplier
+ * rather than against one of our `--spacing-*` tokens — a size this design
+ * system never chose, silently in the right ballpark. The step is not spelled
+ * out in this sentence on purpose: Tailwind's scanner reads comments, so
+ * naming a class in prose is enough to emit it.
  *
  * Border role: `border-subtle`. A popup's own edge is decoration.
  */

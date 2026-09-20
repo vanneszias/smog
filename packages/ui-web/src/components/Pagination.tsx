@@ -1,3 +1,8 @@
+"use client";
+
+/* A client component: its two buttons take an `onClick` closing over `onPageChange`, and an event handler cannot cross the server/client boundary.
+ * Why this is per file and not on the barrel: see `src/index.ts`. */
+
 import { cva } from "class-variance-authority";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { forwardRef, type HTMLAttributes } from "react";

@@ -14,13 +14,37 @@ import type { ThemeName, Tokens } from "./tokens";
 export function toCssVariables(tokens: Tokens, theme: ThemeName): string {
   return [
     ...scale("color", tokens.semantic[theme], identity),
-    ...scale("spacing", tokens.spacing, px),
+    ...scale("spacing", numericStepsOnly(tokens.spacing), px),
     ...scale("radius", tokens.radius, px),
     ...scale("font-size", tokens.fontSize, px),
     ...scale("line-height", tokens.lineHeight, px),
     ...scale("duration", tokens.duration, ms),
     ...scale("shadow", tokens.shadow, identity),
   ].join("\n");
+}
+
+/**
+ * Drops the `xs`/`sm`/`md`/`lg`/`xl`/`xxl` aliases before anything reaches CSS.
+ *
+ * They exist in the token object for the native app, which still writes
+ * `SPACING.md`, and they must stay there until Stage 8. They must **not**
+ * become `--spacing-*` custom properties, because Tailwind v4 resolves a
+ * t-shirt-named width or height from the spacing namespace **before** the
+ * container namespace. With `--spacing-lg` declared, `max-w-lg` compiles to
+ * `max-width: var(--spacing-lg)` — 24px, not 32rem — and `max-w-sm` to 8px.
+ *
+ * That is not a theory. Before this filter existed, the kitchen-sink route
+ * rendered `DialogContent` (`max-w-lg`) 50 pixels wide and `SheetContent`
+ * (`max-w-sm`) 49, and every unit test passed, because the class name is
+ * spelled correctly and jsdom computes no layout. `css.test.ts` pins the
+ * absence of these names for exactly that reason.
+ */
+function numericStepsOnly<Value>(
+  spacing: Readonly<Record<string, Value>>
+): Readonly<Record<string, Value>> {
+  return Object.fromEntries(
+    Object.entries(spacing).filter(([key]) => /^\d+(\.\d+)?$/.test(key))
+  );
 }
 
 function scale<Value extends string | number>(

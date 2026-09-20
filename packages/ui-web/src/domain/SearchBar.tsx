@@ -1,3 +1,8 @@
+"use client";
+
+/* A client component: `useState`, `useRef` and `useEffect`, none of which exists in React's server build.
+ * Why this is per file and not on the barrel: see `src/index.ts`. */
+
 import { Search, X } from "lucide-react";
 import {
   type ComponentPropsWithoutRef,

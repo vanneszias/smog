@@ -1,3 +1,8 @@
+"use client";
+
+/* A client component: every category button takes an `onClick` closing over `onChange`.
+ * Why this is per file and not on the barrel: see `src/index.ts`. */
+
 import { forwardRef, type HTMLAttributes } from "react";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";

@@ -1,3 +1,8 @@
+"use client";
+
+/* A client component: the favourite control takes an `onClick` closing over `onFavorite`, and `renderLink` is a function prop.
+ * Why this is per file and not on the barrel: see `src/index.ts`. */
+
 import { Heart } from "lucide-react";
 import { forwardRef, type HTMLAttributes, type ReactNode } from "react";
 import { Badge } from "../components/Badge";

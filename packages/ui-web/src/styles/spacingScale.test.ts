@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { spacingStepsIn } from "./spacingScale";
 
 /*
  * Why this file exists.
@@ -9,13 +10,20 @@ import { describe, expect, it } from "vitest";
  * `--spacing` base, because the scale is a fixed list of steps rather than a
  * multiplier. Tailwind v4 builds `p-4` from `--spacing-4`, but for a step it
  * has no variable for it still emits the utility — as
- * `calc(var(--spacing) * 1.5)`. `--spacing` is undefined, so the declaration
- * is invalid and the padding silently disappears.
+ * `calc(var(--spacing) * 1.5)`.
  *
- * Nothing catches that: the class is spelled correctly, `cn()` keeps it, every
- * component test passes, and the only symptom is a control that is the wrong
- * size on a page nobody has opened yet. `py-1.5`, `size-3.5`, `w-9` and `p-7`
- * are all this bug.
+ * What that resolves to was measured for the first time in Stage 2 Task 8,
+ * against the real stylesheet the kitchen-sink route compiles. Declaring
+ * `--spacing-*` steps does **not** displace Tailwind's own default, so the
+ * emitted CSS still carries `--spacing: .25rem` on `:root` and an off-scale
+ * step silently resolves to 4px × n. This guard's original note said the
+ * declaration would be invalid and the padding would disappear; it does not.
+ * The bug is quieter than that, and therefore worse: the control is simply a
+ * size this design system never chose, plausible enough that nobody looks.
+ *
+ * Nothing else catches it: the class is spelled correctly, `cn()` keeps it,
+ * every component test passes. `py-1.5`, `size-3.5`, `w-9` and `p-7` are all
+ * this bug.
  *
  * The allowed steps are read out of the generated `theme.css` rather than
  * listed here, so this guard cannot drift from the tokens: add a step in
@@ -35,121 +43,6 @@ const declaredSpacingSteps = (): Set<string> => {
   return new Set(
     [...css.matchAll(/--spacing-([\w.]+)\s*:/g)].map((match) => match[1] ?? "")
   );
-};
-
-/**
- * The utility prefixes whose **numeric** value is a step on the spacing scale.
- *
- * Deliberately not every such utility in Tailwind — only the ones this package
- * uses, plus their immediate neighbours. A guard that fires on something
- * legitimate gets deleted, and a deleted guard catches nothing, so this errs
- * towards missing a case rather than inventing one. Longest first, because the
- * alternation is matched in order and `min-w` must beat `w`... which it does
- * anyway here, since the prefix is anchored to the start of the class.
- */
-const SPACING_PREFIXES = [
-  "p",
-  "px",
-  "py",
-  "pt",
-  "pr",
-  "pb",
-  "pl",
-  "ps",
-  "pe",
-  "m",
-  "mx",
-  "my",
-  "mt",
-  "mr",
-  "mb",
-  "ml",
-  "ms",
-  "me",
-  "gap",
-  "gap-x",
-  "gap-y",
-  "space-x",
-  "space-y",
-  "w",
-  "h",
-  "size",
-  "min-w",
-  "min-h",
-  "max-w",
-  "max-h",
-  "inset",
-  "inset-x",
-  "inset-y",
-  "top",
-  "right",
-  "bottom",
-  "left",
-  "start",
-  "end",
-  "translate-x",
-  "translate-y",
-  "basis",
-  "indent",
-  "scroll-m",
-  "scroll-mt",
-  "scroll-mb",
-  "scroll-ml",
-  "scroll-mr",
-  "scroll-p",
-  "scroll-pt",
-  "scroll-pb",
-  "scroll-pl",
-  "scroll-pr",
-];
-
-const SPACING_UTILITY = new RegExp(
-  `^(?:${[...SPACING_PREFIXES]
-    .sort((a, b) => b.length - a.length)
-    .join("|")})-(\\d+(?:\\.\\d+)?)$`
-);
-
-/** Block and line comments, so prose about a class is not read as a class. */
-const withoutComments = (source: string): string =>
-  source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
-
-/** Only what is inside a string literal can reach an element's class list. */
-const stringLiterals = (source: string): string[] =>
-  [...source.matchAll(/"([^"\n]*)"|`([^`]*)`|'([^'\n]*)'/g)].map(
-    (match) => match[1] ?? match[2] ?? match[3] ?? ""
-  );
-
-/**
- * Every numeric spacing step a source file asks for.
- *
- * Skips anything that is not a plain number: `w-full`, `max-w-sm` (the
- * container scale), `top-1/2` (a fraction) and `p-[10px]` (an arbitrary value)
- * do not go through `--spacing-*` at all. Variant prefixes are stripped, so
- * `sm:gap-4` and `hover:px-3` are checked like the bare class, and a leading
- * `-` for a negative margin is stripped too.
- */
-const spacingStepsIn = (source: string): string[] => {
-  const steps: string[] = [];
-  for (const literal of stringLiterals(withoutComments(source))) {
-    for (const rawToken of literal.split(/\s+/)) {
-      const token = rawToken.split(":").at(-1) ?? "";
-      /*
-       * The numeric-only value pattern is what keeps `w-[3px]`, `top-1/2` and
-       * `max-w-sm` out: none of them is `prefix-<number>`. An explicit skip
-       * for brackets and slashes used to sit here and a mutation showed it
-       * never fired, so it is gone rather than left as a line no test can
-       * pin. `SP5` — loosening the pattern to `[\w.]+` — is the mutation that
-       * expresses this intent, and it fails `ignores fractions and keywords`.
-       */
-      const match = SPACING_UTILITY.exec(
-        token.startsWith("-") ? token.slice(1) : token
-      );
-      if (match?.[1] !== undefined) {
-        steps.push(match[1]);
-      }
-    }
-  }
-  return steps;
 };
 
 const sourceFiles = (): string[] => {
@@ -245,6 +138,15 @@ describe("spacingStepsIn", () => {
     ).toEqual([]);
   });
 
+  /*
+   * `max-w-sm` is ignored here because it is not `prefix-<number>`. It is not
+   * harmless, though: while `@smog/styles` emitted its `sm`/`md`/`lg` spacing
+   * aliases as CSS variables, Tailwind resolved `max-w-sm` from the spacing
+   * namespace rather than `--container-*` and a `Dialog` rendered 50 pixels
+   * wide. That hazard is now impossible at the source and pinned by
+   * `packages/styles/src/css.test.ts`, which is the right place for it: a
+   * class-name scanner cannot tell which namespace a name resolves from.
+   */
   it("ignores fractions and keywords, which are their own scales", () => {
     expect(
       spacingStepsIn(

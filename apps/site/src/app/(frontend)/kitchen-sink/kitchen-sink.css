@@ -1,0 +1,48 @@
+/*
+ * Tailwind for the kitchen sink, and for nothing else yet.
+ *
+ * Imported by this route's own layout rather than by `(frontend)/layout.tsx`,
+ * so Tailwind's preflight and the token variables load on `/kitchen-sink` and
+ * leave the template home page — and the Payload admin, which has its own
+ * stylesheet — exactly as they were. Stage 3 replaces that home page and can
+ * move this import up a level then.
+ *
+ * `source(none)` turns off automatic content detection and the two `@source`
+ * lines say precisely what to scan: this app's own sources and the component
+ * library's. Automatic detection would work today and would quietly stop
+ * finding the library the first time someone moved this file.
+ */
+@import "tailwindcss" source(none);
+@import "@smog/ui-web/styles/theme.css";
+
+@source "../../..";
+@source "../../../../../../packages/ui-web/src";
+
+/*
+ * Test files are sources to Tailwind and nothing else. Left in, the `cn()`
+ * override tests' deliberate off-palette colour and the spacing guard's own
+ * off-scale fixtures become real rules in the shipped stylesheet — classes no
+ * page uses, generated only because a test mentions them. Excluding them cut
+ * this route's CSS by 3 KiB.
+ *
+ * The scanner is a plain text scanner: it reads comments and it reads `.css`
+ * files, so naming a class in prose anywhere under a `@source` root is enough
+ * to emit it. That is why none of the classes involved is spelled out here.
+ */
+@source not "../../../**/*.test.ts";
+@source not "../../../**/*.test.tsx";
+@source not "../../../../../../packages/ui-web/src/**/*.test.ts";
+@source not "../../../../../../packages/ui-web/src/**/*.test.tsx";
+
+/*
+ * Tailwind's preflight leaves `<html>` transparent, so the page background
+ * has to be named somewhere. On the element rather than on `<body>` because
+ * this is also what an overscroll bounce paints, and a white flash under a
+ * dark page is the one thing a scroll should never show.
+ *
+ * `var(--color-background)` and not a literal: `<html>` is also where the
+ * `.dark` class lands, so this one declaration follows the theme.
+ */
+html {
+  background: var(--color-background);
+}

@@ -1,3 +1,8 @@
+"use client";
+
+/* A client component: the dismiss button takes `onDismiss` as an `onClick`, and `toast` is sonner's imperative queue.
+ * Why this is per file and not on the barrel: see `src/index.ts`. */
+
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import {

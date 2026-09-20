@@ -1,3 +1,8 @@
+"use client";
+
+/* A client component: it hands `onFavorite` and a `renderLink` closure to `GestureCard`, and functions do not serialize across a client boundary.
+ * Why this is per file and not on the barrel: see `src/index.ts`. */
+
 import { SearchX } from "lucide-react";
 import { forwardRef, type HTMLAttributes, type ReactNode } from "react";
 import { EmptyState } from "../components/EmptyState";

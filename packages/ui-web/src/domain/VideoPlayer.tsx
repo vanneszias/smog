@@ -1,3 +1,8 @@
+"use client";
+
+/* A client component: `useState`, and `<mux-player>` is a custom element that only upgrades in a browser.
+ * Why this is per file and not on the barrel: see `src/index.ts`. */
+
 import type { MuxPlayerProps } from "@mux/mux-player-react";
 import MuxPlayer from "@mux/mux-player-react";
 import { VideoOff } from "lucide-react";
