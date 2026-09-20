@@ -23,6 +23,7 @@ import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
 import { authEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
+import { favoritesEndpoints } from "./endpoints/favorites";
 import { oauthEndpoints } from "./endpoints/oauth";
 import { requireBinding, requireEnv } from "./lib/env";
 import { beforeSyncGesture } from "./search/beforeSync";
@@ -175,8 +176,20 @@ export default buildConfig({
    * `?error=oauth-unavailable`, which keeps the route table the same shape
    * everywhere and keeps the handlers reachable from a test that supplies
    * its own provider.
+   *
+   * `favoritesEndpoints` adds `/api/account/favorites`, reached at
+   * `/account/favorites`. It is the signed-in half of the favourite control
+   * on the detail page and the favorites list, and it is here rather than in
+   * `app/` for the same half-megabyte reason as everything above — Stage 3
+   * Task 6 measured that exact route and recorded the number in
+   * `lib/favoritesQuery.ts`.
    */
-  endpoints: [...crawlerEndpoints, ...authEndpoints, ...oauthEndpoints],
+  endpoints: [
+    ...crawlerEndpoints,
+    ...authEndpoints,
+    ...oauthEndpoints,
+    ...favoritesEndpoints,
+  ],
   localization: {
     locales: [
       { label: "Nederlands", code: "nl" },

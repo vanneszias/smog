@@ -110,14 +110,36 @@ and **not reproducible on demand**:
 
 It has never been seen in CI across 30+ runs. The likely cause is the same D1
 contention documented above — vitest runs many workers against one persisted
-directory, and the seed test writes more than most — but nobody has captured
-the error text, because the first two sightings filtered output to summary
-lines and lost it.
+directory, and the seed test writes more than most.
 
-**If you hit it, capture the failure before re-running.** `bun run test 2>&1 |
-tee /tmp/run.log` and keep the log. A named error is worth more than another
-green run, and "it passed the second time" is how this has stayed unexplained
-through three encounters.
+**Fourth sighting, Stage 4 Task 4.** Twice in 31 consecutive whole-suite runs
+of a mutation sweep, against a persistence directory that had grown past D1's
+parameter cap (the capture above came out of the same sweep). The error text
+is still not captured, but the *shape* now is, from the JSON reporter:
+
+```
+833 executed, 1 failed, 14 pending
+FILE ERRORED with no failed assertion: src/seed/seed.int.test.ts
+```
+
+Fourteen tests reported **pending**, the file marked failed, and **no failed
+assertion** — which is the signature of a throw in `beforeAll`, exactly the
+"reported as skipped rather than failed" hazard listed above. That narrows it
+a long way: the hook is the only suspect, it takes ~27s of its own 180s
+budget, and it runs ~200 writes against a directory that by then held 140
+categories.
+
+**If you hit it, capture the failure before re-running.** A summary line will
+not do it, because the interesting text is the *file's* `message` and not an
+assertion's. Run the suite through the JSON reporter and print that field:
+
+```bash
+cd apps/site && bunx vitest run --reporter=json --outputFile=/tmp/run.json
+python3 -c "import json;[print(f['name'],f.get('message')) for f in json.load(open('/tmp/run.json'))['testResults'] if f['status']=='failed']"
+```
+
+"It passed the second time" is how this stayed unexplained through three
+encounters.
 
 ### If the test suite suddenly fails on a branch you just pulled
 
@@ -146,16 +168,41 @@ afternoon:
   a green-looking run that tested nothing. Use `crypto.randomUUID()`;
   `Date.now()` is not enough, since two files can start in the same
   millisecond.
-- **An unbounded read eventually dies of "too many SQL variables."** A
+- **An unbounded read eventually dies on D1's bound-parameter cap.** A
   `payload.find` with `limit: 0` on a *localized* collection issues a second
   query that binds one parameter per row to fetch the translations, and D1
   caps how many a statement may bind. `fetchCategoryOptions` reads every
   category that way, so after enough runs have piled categories into this
-  directory the gestures list page's own query starts failing with
-  `D1_ERROR: too many SQL variables`. Found during Stage 3 Task 6 at roughly
-  180 rows. Clearing the directory fixes the local symptom; the underlying
-  limit is real and is why anything that turns a caller-supplied list into an
-  `IN (...)` — `fetchGesturesByIds`, for one — caps its input.
+  directory the gestures list page's own query starts failing. Clearing the
+  directory fixes the local symptom; the underlying limit is real and is why
+  anything that turns a caller-supplied list into an `IN (...)` —
+  `fetchGesturesByIds`, for one — caps its input.
+
+  **Two details here were wrong until Stage 4 Task 4 captured the error.** A
+  31-mutation sweep grew the directory past the cap and the failure was
+  caught in full:
+
+  ```
+  FILE: src/lib/gestureQuery.int.test.ts
+  TEST: fetchCategoryOptions offers an active category as a filter
+  Error: Failed query: select "id", "is_active", … (select coalesce(
+    json_group_array(json_array("name", "_locale")), json_array()) as "data"
+    from "categories_locales" … ) as "_locales" from "categories"
+    where "categories"."id" in (?, ?, … )
+  params: 1,2,3,4,5,7,…,140
+      at find (@payloadcms/drizzle/dist/find/findMany.js:137:21)
+      at fetchCategoryOptions (apps/site/src/lib/gestureQuery.ts:220:18)
+  ```
+
+  - the message is **not** `D1_ERROR: too many SQL variables`. It is
+    drizzle's `Failed query:` with the whole statement and its parameter
+    list, which is why grepping for the old string finds nothing.
+  - it broke at **132 bound parameters**, not "roughly 180 rows". D1
+    documents a maximum of 100 per statement, so the earlier figure was a
+    recollection rather than a measurement. Treat 100 as the ceiling.
+
+  It surfaces in `gestureQuery.int.test.ts`, which is not the file that put
+  the rows there — a heavy sweep of any other file is enough.
 
 Never run two suites or builds concurrently against this directory.
 

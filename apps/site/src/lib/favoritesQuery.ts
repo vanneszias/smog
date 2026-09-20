@@ -73,13 +73,24 @@ export const MAX_FAVORITE_IDS = 200;
 const ID_PATTERN = /^[1-9][0-9]{0,15}$/;
 
 /**
+ * Whether a string looks like a gesture's primary key.
+ *
+ * Exported because the same question is asked in three places now, and the
+ * reasoning above is the reason for all three: the browser filters
+ * `localStorage` before building a query, `lib/accountFavorites.ts` filters
+ * the ids it reads off a `User` document, and `endpoints/favorites.ts`
+ * screens the id a POST body carries before it reaches a `findByID`. A
+ * second copy of the pattern is a second thing to forget to keep in step.
+ */
+export function isGestureId(value: string): boolean {
+  return ID_PATTERN.test(value);
+}
+
+/**
  * The ids worth asking about: real-looking, each once, at most `MAX`.
  */
 export function usableFavoriteIds(ids: readonly string[]): string[] {
-  return [...new Set(ids.filter((id) => ID_PATTERN.test(id)))].slice(
-    0,
-    MAX_FAVORITE_IDS
-  );
+  return [...new Set(ids.filter(isGestureId))].slice(0, MAX_FAVORITE_IDS);
 }
 
 /**

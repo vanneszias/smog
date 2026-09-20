@@ -61,6 +61,19 @@ const nextConfig: NextConfig = {
         destination: "/api/auth/google/callback",
         source: "/auth/google/callback",
       },
+      /*
+       * The signed-in favourite write. Locale-free like the auth three, and
+       * for a stronger reason: this one is called by `fetch` from a client
+       * component rather than by a form, so the path is a constant in
+       * `lib/accountFavorites.ts` and there is nothing locale-shaped about
+       * it. `tests/e2e/account-favorites.spec.ts` fetches it directly, which
+       * is the only place a deleted rewrite shows up as anything but a
+       * silently unsaved heart.
+       */
+      {
+        destination: "/api/account/favorites",
+        source: "/account/favorites",
+      },
     ];
   },
 

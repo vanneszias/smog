@@ -85,7 +85,9 @@ describe("FavoritesList", () => {
     //
     // Rendered with `react-dom/server`, which runs no effects, so this is
     // exactly the first paint and not an approximation of it.
-    const markup = renderToStaticMarkup(<FavoritesList locale="nl" />);
+    const markup = renderToStaticMarkup(
+      <FavoritesList accountFavoriteIds={null} locale="nl" />
+    );
 
     expect(markup).toContain('aria-busy="true"');
     expect(markup).toContain("Favorieten laden");
@@ -102,7 +104,7 @@ describe("FavoritesList", () => {
     );
 
     act(() => {
-      root.render(<FavoritesList locale="nl" />);
+      root.render(<FavoritesList accountFavoriteIds={null} locale="nl" />);
     });
 
     expect(isLoading()).toBe(true);
@@ -110,7 +112,7 @@ describe("FavoritesList", () => {
   });
 
   it("shows the empty state once the store turns out to be empty", async () => {
-    await mount(<FavoritesList locale="nl" />);
+    await mount(<FavoritesList accountFavoriteIds={null} locale="nl" />);
 
     expect(isLoading()).toBe(false);
     expect(heading()).toBe("Nog geen favorieten");
@@ -120,7 +122,7 @@ describe("FavoritesList", () => {
     const fetchMock = respondWith({ docs: [] });
     vi.stubGlobal("fetch", fetchMock);
 
-    await mount(<FavoritesList locale="nl" />);
+    await mount(<FavoritesList accountFavoriteIds={null} locale="nl" />);
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -134,7 +136,7 @@ describe("FavoritesList", () => {
       throw new DOMException("denied", "SecurityError");
     });
 
-    await mount(<FavoritesList locale="nl" />);
+    await mount(<FavoritesList accountFavoriteIds={null} locale="nl" />);
 
     expect(heading()).toBe("Nog geen favorieten");
     expect(fetchMock).not.toHaveBeenCalled();
@@ -149,7 +151,7 @@ describe("FavoritesList", () => {
       })
     );
 
-    await mount(<FavoritesList locale="nl" />);
+    await mount(<FavoritesList accountFavoriteIds={null} locale="nl" />);
 
     expect(cardNames()).toEqual(["Negen", "Vier"]);
   });
@@ -159,7 +161,7 @@ describe("FavoritesList", () => {
     const fetchMock = respondWith({ docs: [] });
     vi.stubGlobal("fetch", fetchMock);
 
-    await mount(<FavoritesList locale="fr" />);
+    await mount(<FavoritesList accountFavoriteIds={null} locale="fr" />);
 
     const url = new URL(
       String(fetchMock.mock.calls[0]?.[0]),
@@ -178,7 +180,7 @@ describe("FavoritesList", () => {
     const fetchMock = respondWith({ docs: [] });
     vi.stubGlobal("fetch", fetchMock);
 
-    await mount(<FavoritesList locale="nl" />);
+    await mount(<FavoritesList accountFavoriteIds={null} locale="nl" />);
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(heading()).toBe("Nog geen favorieten");
@@ -193,7 +195,7 @@ describe("FavoritesList", () => {
     vi.stubGlobal("fetch", respondWith({ docs: [] }, 500));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    await mount(<FavoritesList locale="nl" />);
+    await mount(<FavoritesList accountFavoriteIds={null} locale="nl" />);
 
     expect(heading()).toBe("Favorieten konden niet geladen worden");
   });
@@ -207,7 +209,7 @@ describe("FavoritesList", () => {
     vi.stubGlobal("fetch", respondWith({ docs: "nope" }));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    await mount(<FavoritesList locale="nl" />);
+    await mount(<FavoritesList accountFavoriteIds={null} locale="nl" />);
 
     expect(heading()).toBe("Favorieten konden niet geladen worden");
   });
@@ -216,7 +218,7 @@ describe("FavoritesList", () => {
     localStorage.setItem(GUEST_FAVORITES_KEY, '["9","4"]');
     vi.stubGlobal("fetch", respondWith({ docs: [gesture(9, "Negen"), null] }));
 
-    await mount(<FavoritesList locale="nl" />);
+    await mount(<FavoritesList accountFavoriteIds={null} locale="nl" />);
 
     expect(cardNames()).toEqual(["Negen"]);
   });
@@ -230,7 +232,7 @@ describe("FavoritesList", () => {
       })
     );
 
-    await mount(<FavoritesList locale="nl" />);
+    await mount(<FavoritesList accountFavoriteIds={null} locale="nl" />);
 
     const first = container.querySelector<HTMLButtonElement>(
       'button[aria-label="Favoriet"]'
@@ -248,7 +250,7 @@ describe("FavoritesList", () => {
     localStorage.setItem(GUEST_FAVORITES_KEY, '["9"]');
     vi.stubGlobal("fetch", respondWith({ docs: [gesture(9, "Negen")] }));
 
-    await mount(<FavoritesList locale="nl" />);
+    await mount(<FavoritesList accountFavoriteIds={null} locale="nl" />);
 
     await act(async () => {
       container
@@ -257,5 +259,140 @@ describe("FavoritesList", () => {
     });
 
     expect(heading()).toBe("Nog geen favorieten");
+  });
+});
+
+/*
+ * The signed-in half. The ids arrive as a prop from the server instead of
+ * out of `localStorage`, and removing one is a request rather than a local
+ * edit — which is why un-favouriting is the one behaviour that genuinely
+ * differs between the two modes rather than merely being sourced differently.
+ */
+describe("FavoritesList on an account", () => {
+  /**
+   * One `fetch` stub for both calls this component makes: the anonymous
+   * gestures lookup and the authenticated favourite write. Routing on the
+   * path rather than on call order, because the order is the component's
+   * business and a positional stub would pin it by accident.
+   */
+  const routedFetch = (write: { body?: unknown; status?: number }) =>
+    vi.fn().mockImplementation((url: string) => {
+      if (String(url).startsWith("/account/favorites")) {
+        const status = write.status ?? 200;
+
+        return Promise.resolve({
+          json: () => Promise.resolve(write.body ?? { favorite: false }),
+          ok: status >= 200 && status < 300,
+          status,
+        });
+      }
+
+      return Promise.resolve({
+        json: () =>
+          Promise.resolve({
+            docs: [gesture(9, "Negen"), gesture(4, "Vier")],
+          }),
+        ok: true,
+        status: 200,
+      });
+    });
+
+  const pressFirstHeart = async () => {
+    await act(async () => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Favoriet"]')
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+  };
+
+  const listError = (): null | string =>
+    container.querySelector('[data-testid="favorites-error"]')?.textContent ??
+    null;
+
+  it("asks about the account's ids and ignores this browser's", async () => {
+    // The mode switch, from the reading side. A signed-in reader on a shared
+    // machine must not be shown somebody else's guest favorites.
+    localStorage.setItem(GUEST_FAVORITES_KEY, '["4"]');
+    const fetchMock = routedFetch({});
+    vi.stubGlobal("fetch", fetchMock);
+
+    await mount(<FavoritesList accountFavoriteIds={["9"]} locale="nl" />);
+
+    const url = new URL(
+      String(fetchMock.mock.calls[0]?.[0]),
+      "https://example.invalid"
+    );
+
+    expect(url.searchParams.get("where[id][in]")).toBe("9");
+  });
+
+  it("does not read the guest store at all", async () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+    vi.stubGlobal("fetch", routedFetch({}));
+
+    await mount(<FavoritesList accountFavoriteIds={["9"]} locale="nl" />);
+
+    expect(getItem).not.toHaveBeenCalled();
+  });
+
+  it("shows the empty state for an account with no favorites", async () => {
+    // And without asking the server anything, the same as the guest path.
+    localStorage.setItem(GUEST_FAVORITES_KEY, '["9"]');
+    const fetchMock = routedFetch({});
+    vi.stubGlobal("fetch", fetchMock);
+
+    await mount(<FavoritesList accountFavoriteIds={[]} locale="nl" />);
+
+    expect(heading()).toBe("Nog geen favorieten");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("removes a favourite from the account, not from this browser", async () => {
+    localStorage.setItem(GUEST_FAVORITES_KEY, '["9","4"]');
+    const fetchMock = routedFetch({ body: { favorite: false } });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await mount(<FavoritesList accountFavoriteIds={["9", "4"]} locale="nl" />);
+    await pressFirstHeart();
+
+    const write = (fetchMock.mock.calls as [string, RequestInit][]).find(
+      ([url]) => url.startsWith("/account/favorites")
+    );
+
+    expect(write).toBeDefined();
+    expect(JSON.parse(String(write?.[1].body))).toEqual({
+      favorite: false,
+      gestureId: "9",
+    });
+    expect(cardNames()).toEqual(["Vier"]);
+    // The guest store is untouched: this reader's favorites do not live there.
+    expect(localStorage.getItem(GUEST_FAVORITES_KEY)).toBe('["9","4"]');
+  });
+
+  it("keeps the card when the account write fails", async () => {
+    // A card that vanishes on a write that failed is a lie the reader only
+    // discovers on their next visit.
+    vi.stubGlobal("fetch", routedFetch({ status: 500 }));
+
+    await mount(<FavoritesList accountFavoriteIds={["9", "4"]} locale="nl" />);
+    await pressFirstHeart();
+
+    expect(cardNames()).toEqual(["Negen", "Vier"]);
+    expect(listError()).toContain("Aanpassen is niet gelukt");
+  });
+
+  it("says the session ended when the removal comes back unauthenticated", async () => {
+    vi.stubGlobal("fetch", routedFetch({ status: 401 }));
+
+    await mount(<FavoritesList accountFavoriteIds={["9", "4"]} locale="nl" />);
+    await pressFirstHeart();
+
+    expect(cardNames()).toEqual(["Negen", "Vier"]);
+    expect(listError()).toContain("Je sessie is verlopen");
+    expect(
+      container
+        .querySelector('[data-testid="favorites-error"] a')
+        ?.getAttribute("href")
+    ).toBe("/nl/sign-in");
   });
 });

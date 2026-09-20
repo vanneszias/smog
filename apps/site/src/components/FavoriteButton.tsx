@@ -3,91 +3,223 @@
 import { Button, cn } from "@smog/ui-web";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
+import { writeAccountFavorite } from "@/lib/accountFavorites";
 import { readGuestFavorites, toggleGuestFavorite } from "@/lib/guestStore";
+import type { Locale } from "@/lib/locale";
 
 /**
- * Favourite a gesture, as a guest.
+ * Favourite a gesture — on the account when there is one, in this browser
+ * when there is not.
  *
- * `"use client"` because the answer lives in `localStorage`, which the server
- * cannot see, and because the control has an `onClick`. It is the smallest
- * thing on the detail page that needs the directive — the page around it
- * stays a Server Component.
+ * ## One control, two backends
  *
- * **The state is read in an effect and not during the first render**, and
- * that is a correctness requirement rather than a preference. The server
- * renders this button with no knowledge of what the guest favourited, so a
- * first client render that consulted `localStorage` would produce different
- * markup than the server sent and React would discard the tree. The heart
- * therefore fills a tick after hydration; the alternative is a hydration
- * mismatch on every favourited gesture.
+ * `signedIn` is the mode switch and it is a **server-rendered** prop, not
+ * something this component works out for itself. That matters for more than
+ * tidiness: the detail page is already `force-dynamic` and already resolves
+ * the viewer for its access check, so the answer is free there, and a heart
+ * that knew who you were only after a round trip would start every page
+ * visit by lying about your favorites. See the Task 4 report for the
+ * route-by-route version of that argument.
  *
- * Which is why there are **three** states and not two. Until the effect has
- * run, "not favourited" is a claim this component cannot back up, and the
- * server-rendered button is not wired to anything yet — a press before
- * hydration does nothing at all, silently. `data-ready` marks the moment the
- * control starts meaning what it says. It is what the e2e suite waits for,
- * and it was added because without it that suite pressed a dead button and
- * failed intermittently depending on how fast the page compiled.
+ * The two paths are deliberately asymmetric, because their failure modes
+ * are:
  *
- * Nothing here identifies the guest. There is no id, no anonymous account and
- * no request to the server — Stage 4 adds the sync path, and until then the
- * page below the button says so.
+ * - **Signed out** is exactly what Stage 3 shipped, down to the three-state
+ *   dance below. `localStorage` is not readable during the server render, so
+ *   "not favourited" is a claim this component cannot back up until its
+ *   effect has run — and a first client render that consulted the store
+ *   would produce different markup than the server sent and React would
+ *   throw the tree away.
+ * - **Signed in** starts from the account, which the server *did* know, so
+ *   the heart is already right in the server's markup and there is no
+ *   unknown state at all.
+ *
+ * ## `data-ready` means hydrated, and it took a regression to keep it that way
+ *
+ * The attribute exists because a server-rendered button is not wired to
+ * anything: React has not hydrated, a press does nothing, and it does so
+ * silently. Stage 3 added it after the e2e suite pressed a dead button and
+ * failed depending on how fast the route compiled.
+ *
+ * The first version of this task derived it from `state !== "unknown"`,
+ * which for a signed-in reader is true *in the server's markup* — so the
+ * attribute appeared before hydration, `expect(heart).toHaveAttribute(
+ * "data-ready", "true")` returned instantly, and six new specs pressed a
+ * dead button. Exactly the failure the attribute was invented to stop,
+ * reintroduced by making the state it was derived from arrive earlier.
+ *
+ * So it is now its own flag, set by the mount effect on **both** paths:
+ * "the answer is known" and "this control is alive" are different claims,
+ * and only the second one is what a test should wait for.
+ *
+ * ## The heart never leads the write
+ *
+ * There is no optimistic update on the signed-in path. The state moves only
+ * when the endpoint has said what it stored — `writeAccountFavorite` sends
+ * the state it wants rather than a toggle, so the answer is authoritative
+ * and a retry is harmless. A filled heart over a failed write is worse than
+ * a slow one: the reader closes the tab believing it was saved, and nothing
+ * ever tells them otherwise.
+ *
+ * While a write is in flight the control is disabled, which is what keeps a
+ * double press from sending a second, opposite request behind the first.
  */
 export function FavoriteButton({
   className,
   gestureId,
+  initialFavorite = false,
+  locale,
+  signedIn,
 }: {
   className?: string;
   gestureId: string;
+  /** Whether the account already holds this gesture. Ignored for a guest. */
+  initialFavorite?: boolean;
+  locale: Locale;
+  signedIn: boolean;
 }) {
-  const [state, setState] = useState<"unknown" | "on" | "off">("unknown");
+  const [state, setState] = useState<"off" | "on" | "unknown">(() => {
+    if (!signedIn) {
+      return "unknown";
+    }
+
+    return initialFavorite ? "on" : "off";
+  });
+  const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<"failed" | "signed-out" | null>(null);
   const isFavorite = state === "on";
 
   useEffect(() => {
     /*
+     * The store is read on the guest path only. A signed-in reader's answer
+     * came from the server with the page, and reading `localStorage` here
+     * would overwrite it with whatever this browser happened to have
+     * favourited before they signed in — which is Task 6's merge, not this
+     * component's business.
+     *
      * `readGuestFavorites` never throws — see `guestStore.ts`. That matters
      * more here than anywhere else: an effect that throws during mount is an
      * unhandled error in the client tree, and React unmounts everything up
      * to the nearest error boundary. In private browsing that would blank
      * the detail page rather than merely losing the heart.
-     *
-     * A denied store therefore resolves to `"off"` rather than staying
-     * `"unknown"`: the control works for the rest of the visit, it just
-     * cannot remember anything after it.
      */
-    setState(readGuestFavorites().includes(gestureId) ? "on" : "off");
-  }, [gestureId]);
+    if (!signedIn) {
+      setState(readGuestFavorites().includes(gestureId) ? "on" : "off");
+    }
+
+    // Unconditional, and that is the point: this says "hydrated", not "the
+    // answer is known". See the note above.
+    setReady(true);
+  }, [gestureId, signedIn]);
+
+  const pressGuest = () => {
+    setState(toggleGuestFavorite(gestureId).includes(gestureId) ? "on" : "off");
+  };
+
+  const pressAccount = async () => {
+    /*
+     * The second lock. `disabled={busy}` below is the first, and it is the
+     * one a mutation sweep proved bites — removing *this* guard alone failed
+     * nothing, because a disabled button does not deliver a click. It stays
+     * because `disabled` is a rendering concern that a restyle can drop, and
+     * because a caller that is not a click — a keyboard shortcut, a future
+     * "favourite all" — would not be stopped by it. Transcripts M8, M8b and
+     * M8c in the Task 4 report.
+     */
+    if (busy) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    const result = await writeAccountFavorite({
+      favorite: !isFavorite,
+      gestureId,
+    });
+
+    setBusy(false);
+
+    if (result.status === "ok") {
+      setState(result.favorite ? "on" : "off");
+      return;
+    }
+
+    /*
+     * The state is left exactly where it was. `signed-out` is the session
+     * expiring while the page sat open: the header still shows the account
+     * it was rendered with, so without this message the press would look
+     * like it worked and the favourite would be nowhere.
+     */
+    setError(result.status);
+  };
 
   return (
-    <Button
-      aria-label="Favoriet"
-      /*
-       * One accessible name in both states, with the state on
-       * `aria-pressed`. Swapping the label between "add" and "remove"
-       * announces a different control each time it is pressed. Same rule as
-       * `GestureCard`'s control, deliberately.
-       */
-      aria-pressed={isFavorite}
-      className={className}
-      /*
-       * Absent rather than `"false"` until the effect has run: a test that
-       * waits for `[data-ready]` should not match a button that is still
-       * inert, and an attribute whose value has to be read to know that is
-       * one more thing to get wrong.
-       */
-      data-ready={state === "unknown" ? undefined : "true"}
-      onClick={() =>
-        setState(
-          toggleGuestFavorite(gestureId).includes(gestureId) ? "on" : "off"
-        )
-      }
-      size="icon"
-      variant="ghost"
-    >
-      <Heart
-        aria-hidden="true"
-        className={cn("size-5", isFavorite && "fill-current")}
-      />
-    </Button>
+    <div className={cn("flex flex-col items-end gap-2", className)}>
+      <Button
+        aria-busy={busy}
+        aria-label="Favoriet"
+        /*
+         * One accessible name in both states, with the state on
+         * `aria-pressed`. Swapping the label between "add" and "remove"
+         * announces a different control each time it is pressed. Same rule as
+         * `GestureCard`'s control, deliberately.
+         */
+        aria-pressed={isFavorite}
+        /*
+         * Absent rather than `"false"` until the control is wired up: a test
+         * that waits for `[data-ready]` should not match a button that is
+         * still inert, and an attribute whose value has to be read to know
+         * that is one more thing to get wrong.
+         */
+        data-ready={ready ? "true" : undefined}
+        disabled={busy}
+        onClick={() => {
+          if (signedIn) {
+            pressAccount();
+            return;
+          }
+
+          pressGuest();
+        }}
+        size="icon"
+        variant="ghost"
+      >
+        <Heart
+          aria-hidden="true"
+          className={cn("size-5", isFavorite && "fill-current")}
+        />
+      </Button>
+
+      {error === null ? null : (
+        /*
+         * `<output>` rather than a `<p role="alert">`. Its implicit role is
+         * `status`, which is the polite live region this wants: the press
+         * failed, nothing is lost and nothing is urgent, where an `alert`
+         * interrupts whatever a screen reader is saying. It is also the
+         * element the linter insists on for that role, and it is right to.
+         */
+        <output
+          className="block max-w-xs text-right font-medium text-danger text-sm"
+          data-testid="favorite-error"
+        >
+          {error === "signed-out" ? (
+            <>
+              Je sessie is verlopen.{" "}
+              <a
+                className="underline underline-offset-2"
+                href={`/${locale}/sign-in`}
+              >
+                Meld je opnieuw aan
+              </a>{" "}
+              om dit gebaar te bewaren.
+            </>
+          ) : (
+            "Bewaren is niet gelukt. Probeer het opnieuw."
+          )}
+        </output>
+      )}
+    </div>
   );
 }

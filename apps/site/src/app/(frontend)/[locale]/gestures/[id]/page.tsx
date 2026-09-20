@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { isAccountFavorite } from "@/lib/accountFavorites";
 import { fetchGesture, fetchViewer } from "@/lib/gestureDetail";
 import { isLocale, type Locale, localeAlternates } from "@/lib/locale";
 import { fetchGestureOverlay, sponsorLogo } from "@/lib/sponsorOverlay";
@@ -127,6 +128,18 @@ export default async function GestureDetailPage({
   }
 
   /*
+   * The same `payload.auth` the access check above already paid for —
+   * `loadViewer` is `cache`d, so asking again inside one request is free.
+   * This is the whole of Task 4's cost on this route: the page was already
+   * `force-dynamic` and already resolving the viewer, so the signed-in
+   * favourite path costs it no prerendering and no extra query. The routes
+   * where that was *not* true are the ones whose account state is resolved
+   * in the browser instead; the reasoning is in the Task 4 report.
+   */
+  const viewer = await loadViewer();
+  const gestureId = String(gesture.id);
+
+  /*
    * Keyed on the document's own id rather than on the URL segment: the
    * segment is unvalidated input, and `/nl/gestures/7abc` must not be able to
    * address a different row here than it did above.
@@ -169,13 +182,21 @@ export default async function GestureDetailPage({
         <div className="flex items-start justify-between gap-4">
           <h1 className="font-bold text-foreground text-xxl">{name}</h1>
           {/*
-           * A client island, and the only one on this page. It reads the
-           * guest's `localStorage` after hydration, so the heart fills a tick
-           * late rather than being server-rendered wrong — see
-           * `FavoriteButton`. Keyed on the document's id for the same reason
-           * the overlay is: the URL segment is unvalidated input.
+           * A client island, and the only one on this page. For a guest it
+           * reads `localStorage` after hydration, so the heart fills a tick
+           * late rather than being server-rendered wrong; for a signed-in
+           * reader the server already knows and it is correct on the first
+           * paint — see `FavoriteButton`. Keyed on the document's id for the
+           * same reason the overlay is: the URL segment is unvalidated
+           * input.
            */}
-          <FavoriteButton className="shrink-0" gestureId={String(gesture.id)} />
+          <FavoriteButton
+            className="shrink-0"
+            gestureId={gestureId}
+            initialFavorite={isAccountFavorite(viewer, gestureId)}
+            locale={locale}
+            signedIn={viewer !== null}
+          />
         </div>
 
         {categories.length > 0 ? (

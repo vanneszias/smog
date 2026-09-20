@@ -17,10 +17,15 @@ import type { User } from "@/payload-types";
  * is not sent on a cross-site POST, so the session cookie the endpoint needs
  * simply is not there for an attacker's form.
  *
- * Stage 4 Task 4 owns this component's fuller version — an account menu, the
- * signed-in favorites path. It exists already because Review Focus item 1 is
- * Task 2's to prove: "a session established under /nl is honoured under /en"
- * needs something on the page that changes when the session is lost.
+ * **Task 4 kept it a nav and not a menu, on purpose.** The plan's Step 1 asks
+ * for an account menu, and a menu needs somewhere to go: the account page is
+ * Task 5's, and a disclosure widget wrapping one address and one button is
+ * two keyboard interactions and an `aria-expanded` bought for nothing. What
+ * Task 4 did add is the signed-in favorites path — which turned out to live
+ * entirely in `FavoriteButton`, `FavoritesList` and `endpoints/favorites.ts`,
+ * because the header's only input is still who you are. When Task 5 lands
+ * `/{locale}/account`, this is where its link goes, and that is the point at
+ * which a menu starts paying for itself.
  */
 export function AccountNav({
   locale,
@@ -59,7 +64,35 @@ export function AccountNav({
   return (
     <nav aria-label="Account" data-testid="account-nav">
       <div className="flex items-center gap-3">
-        <span className="text-foreground text-sm" data-testid="account-email">
+        {/*
+         * Truncated, with the whole address on `title`. Addresses run to
+         * sixty characters and this sits in a `flex-wrap` header beside the
+         * locale switcher; an untruncated one pushes the switcher onto a
+         * second row. `max-w-*` plus `truncate` rather than a substring, so
+         * the DOM still carries the real value — `tests/e2e/auth.spec.ts`
+         * asserts on it, and a server-side ellipsis would mean asserting on
+         * the ellipsis.
+         *
+         * `xs` is a *container*-scale name, not a spacing step, and that is
+         * deliberate: a numeric max-width step the theme does not declare
+         * compiles to `calc(var(--spacing) * n)` against Tailwind's own
+         * multiplier rather than against a token this design system chose.
+         * The first draft of this line used one, and the only thing that
+         * caught it was `kitchen-sink.e2e.spec.ts`'s check of the compiled
+         * stylesheet — the class-name guard beside it scans the kitchen-sink
+         * route and nothing else.
+         *
+         * Note that naming the offending class in this comment is enough to
+         * bring it back: Tailwind v4 scans source files as **text** and does
+         * not skip comments, so a class written in prose is a class in the
+         * stylesheet. That is how this comment failed the very test it is
+         * describing.
+         */}
+        <span
+          className="max-w-xs truncate text-foreground text-sm"
+          data-testid="account-email"
+          title={user.email}
+        >
           {user.email}
         </span>
         {/*

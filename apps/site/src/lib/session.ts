@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { User } from "@/payload-types";
 import { getPayloadClient } from "./payloadClient";
 
@@ -105,10 +106,22 @@ export async function resolveSession(
  *
  * **Calling this opts the route out of static rendering.** Reading request
  * headers is what makes a page dynamic; the cost is measured and recorded in
- * the Stage 4 Task 2 report rather than left as a surprise.
+ * the Stage 4 Task 2 report rather than left as a surprise. Task 4 revisited
+ * which routes should pay it and left the answer unchanged; its report has
+ * the route table and the argument.
+ *
+ * **Wrapped in React's `cache`, so a layout and the page inside it share one
+ * `payload.auth` per request.** Before Task 4 there was exactly one caller —
+ * the locale layout — and memoising it would have been decoration. There are
+ * two now: `/{locale}/favorites` needs the account's favorite ids in the same
+ * render the header needs the account's address. Without this that page would
+ * verify the JWT and re-read the user twice per request, which is the kind of
+ * cost that arrives one caller at a time and is never attributed to anything.
+ * `cache` is a no-op outside a request scope, so this changes nothing for a
+ * test or a script that calls it directly.
  */
-export async function readSession(): Promise<null | User> {
+export const readSession = cache(async (): Promise<null | User> => {
   const { headers } = await import("next/headers");
 
   return await resolveSession(await headers());
-}
+});
