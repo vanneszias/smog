@@ -601,6 +601,24 @@ Worse, `bun -F site test:e2e` is broken independently of this work: its
 the package script at all. Stage 3 should fix the script first, then decide
 whether CI runs it — a guard nobody executes is documentation.
 
+**Resolved in Stage 3, 2026-09-20. CI runs it.** Task 1 fixed the script; Task 9
+took the decision with measurements rather than a preference, because the cost
+of getting it wrong is a browser job that is red one run in five, ignored within
+a week and then disabled.
+
+- **Flakiness: 6 runs, 69 specs, 0 failures, 0 retries.** Five consecutive runs
+  at the CI configuration (`--workers=1`, retries disabled locally so a flake
+  could not be papered over), plus a sixth against a deleted
+  `.wrangler/state/v3` — the state a fresh checkout starts in.
+- **Runtime: 96-101 s wall per run**, dev-server boot included. It is therefore
+  a separate parallel `site-e2e` job rather than another step in
+  `release-check`, which is ~5 minutes on its own.
+- The suite is still flaky at two or more workers, and that is understood
+  rather than tolerated: a spec helper's Payload instance and the dev server
+  both write `.wrangler/state/v3`, and SQLite answers the second writer with
+  `SQLITE_BUSY`. `playwright.config.ts` pins one worker on CI, which is why the
+  measurement was taken there.
+
 ## Stage 0 gates
 
 Three things were unverified when this spec was written. All three are now

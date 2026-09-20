@@ -73,6 +73,63 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: bun run check-bundle-size
 
+  # Measured before it was added, because a browser job that is red one run in
+  # five gets ignored within a week and then disabled — which is worse than not
+  # having one. Stage 3 Task 9 ran the suite five times at this exact
+  # configuration (`--workers=1`, retries disabled) plus once more against a
+  # deleted local D1 directory, which is the state a fresh checkout starts in:
+  # six runs, 69 specs, 0 failures, 96-101 s wall each. The timings and the
+  # reasoning are in `.superpowers/sdd/2026-09-20-stage-3-public-web/
+  # task-9-report.md`.
+  #
+  # It is its own job rather than another step in `release-check` because it is
+  # about as long as that job is, and the two have no reason to be serial.
+  #
+  # What it guards that nothing else does: the compiled-stylesheet assertions in
+  # `kitchen-sink.e2e.spec.ts` read the *resolved* CSS in a real browser, which
+  # is the only layer that would have caught `max-w-lg` collapsing to 24px. Every
+  # other spacing guard reads source. A guard nobody executes is documentation.
+  site-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      # `playwright.config.ts` pins `channel: "chromium"`, so this is the one
+      # browser the suite needs. `--with-deps` installs the shared libraries
+      # the runner image does not carry.
+      - name: Install Playwright's chromium
+        working-directory: apps/site
+        run: bunx playwright install --with-deps chromium
+      # PAYLOAD_SECRET is not a secret here and deliberately not read from one:
+      # the suite runs against an ephemeral local D1 (miniflare) that this job
+      # creates and throws away, and the only thing the value does is sign the
+      # admin spec's own session cookie. Taking it from repository secrets would
+      # make the job silently skip on a fork. CLOUDFLARE_ENV selects which
+      # wrangler environment's bindings to emulate locally; nothing remote is
+      # reached.
+      #
+      # `CI` is set by Actions, which is what makes `playwright.config.ts` use
+      # one worker: the suite is flaky at two, because a spec helper's Payload
+      # instance and the dev server both write `.wrangler/state/v3` and SQLite
+      # answers the second writer with SQLITE_BUSY rather than queuing.
+      - name: Run the site e2e suite
+        working-directory: apps/site
+        env:
+          CLOUDFLARE_ENV: staging
+          PAYLOAD_SECRET: ci-e2e-local-database-only
+        run: bun run test:e2e
+      - name: Upload the Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/site/playwright-report
+          retention-days: 7
+
   site-payload-types-drift:
     runs-on: ubuntu-latest
     timeout-minutes: 15
