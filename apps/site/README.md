@@ -62,6 +62,43 @@ if you were mid-experiment with a collection, it silently writes the
 experiment's shape to disk. Check `git status` after a run that touched a
 collection, before concluding the types are what you committed.
 
+## Seeding a local database
+
+```bash
+CLOUDFLARE_ENV=staging PAYLOAD_SECRET=<anything> bun -F site seed
+```
+
+Fills the local emulated D1 with the fixtures in `src/seed/fixtures.ts`: five
+categories, 33 gestures across them (one deactivated, one filed under two
+categories, one with a deliberately long name), English and French
+translations on some but deliberately not all of them, plus an admin and a
+regular user. Enough to exercise pagination, locale fallback and
+`publicReadActive` without hand-typing anything into the admin panel.
+
+**It refuses to run anywhere but locally.** `src/seed/guard.ts` demands
+`CLOUDFLARE_ENV=staging` exactly — no trimming, no case folding — and refuses
+any `NODE_ENV` other than unset, `development` or `test`, because
+`NODE_ENV=production` is what makes `payload.config.ts` resolve *remote*
+Cloudflare bindings. The check runs before `payload.config` is imported, which
+is why that import is dynamic: a static one is hoisted and would resolve the
+bindings first. There is no flag to override it.
+
+**It is idempotent**, keyed on the Dutch name of a category or gesture and on
+a user's email: re-running updates in place rather than duplicating, and
+content you created by hand is left alone. It never deletes anything — a
+"wipe first" seed would fail halfway on any gesture a sponsorship points at
+(`blockDeleteWhenSponsored`) and leave the database worse than it found it.
+
+Sign-in credentials are printed at the end and can be overridden with
+`SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_USER_EMAIL` and
+`SEED_USER_PASSWORD`.
+
+If the first run dies on `index payload_locked_documents_rels_order_idx
+already exists`, the local D1 predates a collection that has since been added:
+`rm -rf apps/site/.wrangler/state/v3` and run it again. This is the same
+staleness described below for the test state, in the directory `bun -F site
+dev` uses.
+
 ### If the test suite suddenly fails on a branch you just pulled
 
 ```bash

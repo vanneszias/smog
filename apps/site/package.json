@@ -12,6 +12,7 @@
     "generate:types:cloudflare": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "generate:types:payload": "NODE_OPTIONS=--no-deprecation payload generate:types",
     "generate:importmap": "NODE_OPTIONS=--no-deprecation payload generate:importmap",
+    "seed": "NODE_OPTIONS=--no-deprecation bun run src/seed/index.ts",
     "test:e2e": "NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts",
     "deploy:guard": "case \"$CLOUDFLARE_ENV\" in staging|production) ;; *) echo \"CLOUDFLARE_ENV must be exactly 'staging' or 'production' (got: '$CLOUDFLARE_ENV')\" >&2; exit 1 ;; esac",
     "deploy:database": "bun run deploy:guard && NODE_ENV=production PAYLOAD_SECRET=ignore payload migrate",
