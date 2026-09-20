@@ -156,10 +156,25 @@ Run `bun -F site build:app` first (plain `build` is `next build` and stops
 short of the Worker), or wrangler fails with "The entry-point file at
 `.open-next/worker.js` was not found."
 
-You no longer need to delete `.open-next` afterwards. It used to poison the
-next `check-types` because `**/*.ts` swept in generated code; the tsconfig now
-excludes it, so leaving it in place is fine and saves the next person a
-rebuild.
+Leaving `.open-next` in place afterwards is normally fine — the tsconfig
+excludes it, and `check-types` is clean with a build present. **One sequence
+breaks that**, and it is worth knowing because the error points at generated
+code rather than at what you did:
+
+```
+.open-next/server-functions/.../handler.mjs: error TS1111: Private field '#d' …
+```
+
+`wrangler types` writes `mainModule: typeof import("./.open-next/worker")`
+into `cloudflare-env.d.ts` **when a build happens to exist at that moment**.
+`cloudflare-env.d.ts` is committed and is not excluded, and a tsconfig
+`exclude` does not stop a file being pulled into the program by an import from
+an included file — so the generated handler gets typechecked and fails.
+
+So: run `bun -F site generate:types` (or `generate:types:cloudflare`) with no
+build present. `rm -rf apps/site/.open-next` first, or regenerate before you
+build. If you have already committed a `cloudflare-env.d.ts` containing that
+`mainModule` line, regenerate it without a build and commit that instead.
 
 
 The Worker has a **10 MiB gzipped** limit on the Workers Paid plan, and Stage 0
