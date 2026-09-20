@@ -3,6 +3,7 @@ import {
   DEFAULT_LOCALE,
   isLocale,
   LOCALES,
+  localeAlternates,
   localeHref,
   resolveLocale,
 } from "./locale";
@@ -100,6 +101,32 @@ describe("localeHref", () => {
     // `href`, and a same-origin path is the only safe thing to emit.
     expect(localeHref("https://elsewhere.example/en/gestures", "fr")).toBe(
       "/fr/gestures"
+    );
+  });
+});
+
+describe("localeAlternates", () => {
+  it("names the same page in every locale", () => {
+    expect(localeAlternates("/gestures/7")).toEqual({
+      en: "/en/gestures/7",
+      fr: "/fr/gestures/7",
+      nl: "/nl/gestures/7",
+    });
+  });
+
+  it("handles the locale root without a trailing slash", () => {
+    // `/nl/` is a different URL to `/nl` for a crawler, and an hreflang that
+    // names a URL the site redirects away from is an hreflang it ignores.
+    expect(localeAlternates("")).toEqual({
+      en: "/en",
+      fr: "/fr",
+      nl: "/nl",
+    });
+  });
+
+  it("covers exactly the declared locales", () => {
+    expect(Object.keys(localeAlternates("")).sort()).toEqual(
+      [...LOCALES].sort()
     );
   });
 });

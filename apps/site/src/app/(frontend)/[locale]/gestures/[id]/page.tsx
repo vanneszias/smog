@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { fetchGesture, fetchViewer } from "@/lib/gestureDetail";
-import { isLocale, LOCALES, type Locale } from "@/lib/locale";
+import { isLocale, type Locale, localeAlternates } from "@/lib/locale";
 import { fetchGestureOverlay, sponsorLogo } from "@/lib/sponsorOverlay";
 import type { Category } from "@/payload-types";
 
@@ -51,19 +51,6 @@ const loadGesture = cache(
     await fetchGesture({ id, locale, user: await loadViewer() })
 );
 
-/**
- * The same document in the other two locales.
- *
- * Every locale is path-prefixed, including the default, so each entry is a
- * real URL rather than a bare-root special case. The gesture's own id is used
- * rather than the raw segment, so `/nl/gestures/007` does not advertise
- * `/fr/gestures/007` as an alternate of `/fr/gestures/7`.
- */
-const languageAlternates = (id: number | string) =>
-  Object.fromEntries(
-    LOCALES.map((locale) => [locale, `/${locale}/gestures/${id}`])
-  );
-
 export async function generateMetadata({
   params,
 }: {
@@ -87,7 +74,12 @@ export async function generateMetadata({
   return {
     alternates: {
       canonical: `/${locale}/gestures/${gesture.id}`,
-      languages: languageAlternates(gesture.id),
+      /*
+       * The gesture's own id rather than the raw segment, so
+       * `/nl/gestures/007` does not advertise `/fr/gestures/007` as an
+       * alternate of `/fr/gestures/7`.
+       */
+      languages: localeAlternates(`/gestures/${gesture.id}`),
     },
     /*
      * `info` is localized and optional, so this is frequently absent — and an

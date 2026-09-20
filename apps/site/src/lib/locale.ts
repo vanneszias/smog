@@ -70,3 +70,27 @@ export function localeHref(pathname: string, next: Locale): string {
 
   return `/${segments.join("/")}${url.search}${url.hash}`;
 }
+
+/**
+ * One page's URL in every locale, keyed by locale, for
+ * `alternates.languages`.
+ *
+ * Takes the path *after* the locale segment (`""` for a locale root), so
+ * callers cannot accidentally build `/nl/nl/gestures`. Every locale is
+ * path-prefixed, including the default, so there is no bare-root special
+ * case.
+ *
+ * The values are relative. Next resolves them against `metadataBase` when one
+ * is set and emits them unchanged when it is not — verified in
+ * `next/dist/lib/metadata/resolvers/resolve-url.js` (16.3.3), whose
+ * `resolveAbsoluteUrlWithPathname` returns the string untouched without a
+ * base. This app sets no `metadataBase`, because the only honest value is the
+ * host the request arrived on and reading that in `generateMetadata` would
+ * opt every prerendered page out of static rendering. The sitemap, which must
+ * carry absolute URLs, builds its own from the request origin instead.
+ */
+export function localeAlternates(path: string): Record<Locale, string> {
+  return Object.fromEntries(
+    LOCALES.map((locale) => [locale, `/${locale}${path}`])
+  ) as Record<Locale, string>;
+}

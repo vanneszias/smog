@@ -5,11 +5,81 @@ import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { SiteDocument } from "@/components/SiteDocument";
 import { isLocale, LOCALES, type Locale } from "@/lib/locale";
 
-export const metadata: Metadata = {
-  description:
-    "Gebaren opzoeken, bekijken en bewaren — de openbare SMOG-website.",
-  title: { default: "SMOG", template: "%s — SMOG" },
+const SITE_NAME = "SMOG";
+
+/**
+ * The site's own description, per locale.
+ *
+ * The *content* falls back to Dutch in an untranslated locale — Payload's
+ * `fallback: true` — but the chrome does not have to. A French visitor who
+ * finds the site in a search result reads this line before anything else,
+ * and a Dutch one there tells them the site is not for them.
+ */
+const DESCRIPTIONS: Record<Locale, string> = {
+  en: "Look up, watch and save SMOG gestures.",
+  fr: "Rechercher, regarder et enregistrer les gestes SMOG.",
+  nl: "Gebaren opzoeken, bekijken en bewaren — de openbare SMOG-website.",
 };
+
+/**
+ * Open Graph speaks Facebook's `language_TERRITORY`, not a bare ISO code.
+ *
+ * Belgian territories for Dutch and French, because that is who this is for;
+ * `en_GB` for English, since the alternative would be claiming a US audience
+ * for a Flemish sign system.
+ */
+const OG_LOCALES: Record<Locale, string> = {
+  en: "en_GB",
+  fr: "fr_BE",
+  nl: "nl_BE",
+};
+
+/**
+ * The metadata every public page inherits.
+ *
+ * Two omissions are deliberate, and both would be bugs if they were here.
+ *
+ * **No `alternates`.** `mergeMetadata` in
+ * `next/dist/lib/metadata/resolve-metadata.js` (16.3.3) clones the parent's
+ * resolved metadata and overwrites only the keys the child *defines*, so an
+ * `alternates.canonical` set here would be inherited verbatim by every page
+ * that does not set its own — `/nl/gestures` would declare `/nl` as its
+ * canonical URL and ask Google to drop it from the index. Each page that
+ * wants alternates therefore declares its own.
+ *
+ * **No `openGraph.title` or `openGraph.description`.** `postProcessMetadata`
+ * (same file) fills both from the *page's* resolved title and description
+ * when Open Graph leaves them unset, so omitting them gives every page an
+ * accurate `og:title` — where setting them here would stamp "SMOG" on all of
+ * them.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const title = { default: SITE_NAME, template: `%s — ${SITE_NAME}` };
+
+  if (!isLocale(locale)) {
+    // The layout 404s below; this only has to avoid indexing a wrong locale
+    // into the title of the not-found page.
+    return { title };
+  }
+
+  return {
+    description: DESCRIPTIONS[locale],
+    openGraph: {
+      alternateLocale: LOCALES.filter((other) => other !== locale).map(
+        (other) => OG_LOCALES[other]
+      ),
+      locale: OG_LOCALES[locale],
+      siteName: SITE_NAME,
+      type: "website",
+    },
+    title,
+  };
+}
 
 /**
  * The three locales, so all of them prerender.

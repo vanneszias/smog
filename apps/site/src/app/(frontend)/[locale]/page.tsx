@@ -1,5 +1,32 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isLocale } from "@/lib/locale";
+import { isLocale, localeAlternates } from "@/lib/locale";
+
+/**
+ * Its own `alternates`, rather than the layout's.
+ *
+ * Alternates are inherited by every child segment that does not declare them
+ * (see the layout), so they belong on the page whose path they describe and
+ * nowhere above it.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+
+  if (!isLocale(locale)) {
+    return {};
+  }
+
+  return {
+    alternates: {
+      canonical: `/${locale}`,
+      languages: localeAlternates(""),
+    },
+  };
+}
 
 /**
  * The locale root, so `/` has somewhere to redirect to.

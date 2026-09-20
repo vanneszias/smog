@@ -14,13 +14,47 @@ import {
   fetchGestures,
   toGestureSummary,
 } from "@/lib/gestureQuery";
-import { isLocale } from "@/lib/locale";
+import { isLocale, localeAlternates } from "@/lib/locale";
 import { searchGestureIds } from "@/lib/search";
 
-export const metadata: Metadata = {
-  description: "Blader door alle gebaren, gefilterd op categorie.",
-  title: "Gebaren",
-};
+/**
+ * A `generateMetadata` rather than a static `metadata`, because the
+ * `alternates` have to name this path in each locale and a static export
+ * cannot see the locale.
+ *
+ * The alternates live here rather than in the layout for the reason the
+ * layout gives: Next inherits them into every child that does not declare its
+ * own, so one set in the layout would make this page claim `/nl` as its
+ * canonical URL.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const base = {
+    description: "Blader door alle gebaren, gefilterd op categorie.",
+    title: "Gebaren",
+  };
+
+  if (!isLocale(locale)) {
+    return base;
+  }
+
+  return {
+    ...base,
+    alternates: {
+      /*
+       * The bare path, with no query. `?page=3&category=7` is a view of this
+       * list rather than a page of its own, and a canonical URL that carried
+       * the query would ask a crawler to index every filter combination.
+       */
+      canonical: `/${locale}/gestures`,
+      languages: localeAlternates("/gestures"),
+    },
+  };
+}
 
 /**
  * Rendered per request, never prerendered.
