@@ -62,6 +62,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       asChild = false,
       loading = false,
       disabled,
+      type,
       children,
       ...props
     },
@@ -75,6 +76,22 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size }), className)}
         disabled={disabled || loading}
         ref={ref}
+        /*
+         * `type="button"` by default, and an explicit `type` still wins.
+         *
+         * HTML defaults a button inside a form to `submit`, which makes the
+         * failure silent and destructive: pressing Enter in a field submits
+         * the form through the first submit-shaped control it finds, which is
+         * how a "clear" button ends up erasing what was just typed. The
+         * opposite mistake — a real submit button that does nothing until
+         * someone writes `type="submit"` — is visible the first time it is
+         * pressed and breaks nothing.
+         *
+         * Only when this renders a real <button>. With `asChild` the element
+         * is the caller's — usually an <a> — and `type` is not a valid
+         * attribute there, so the default is not forced onto it.
+         */
+        type={asChild ? type : (type ?? "button")}
         {...props}
       >
         {loading ? (

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Button } from "./Button";
@@ -81,6 +82,87 @@ describe("Button", () => {
     const classes = classesOf(screen.getByRole("button"));
     expect(classes).toContain("border-border-strong");
     expect(classes).not.toContain("border-border-subtle");
+  });
+
+  /*
+   * The type defaults, and the behaviour is what these test — not the
+   * attribute. HTML makes a button inside a form a submit button unless it
+   * says otherwise, and that default is silent: nothing about
+   * `<Button onClick={clear}>` hints that pressing Enter anywhere in the form
+   * will press it. So `Button` defaults to `type="button"` and a caller who
+   * wants a submit button asks for one.
+   */
+  it("does not submit the form it is inside", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit();
+        }}
+      >
+        <Button>Wissen</Button>
+      </form>
+    );
+    await user.click(screen.getByRole("button", { name: "Wissen" }));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("submits the form it is inside when it is asked to", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit();
+        }}
+      >
+        <Button type="submit">Opslaan</Button>
+      </form>
+    );
+    await user.click(screen.getByRole("button", { name: "Opslaan" }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("defaults its type to button", () => {
+    render(<Button>Opslaan</Button>);
+    expect(screen.getByRole("button").getAttribute("type")).toBe("button");
+  });
+
+  it("lets a caller ask for another type instead of the default", () => {
+    render(<Button type="reset">Herstellen</Button>);
+    expect(screen.getByRole("button").getAttribute("type")).toBe("reset");
+  });
+
+  /*
+   * With `asChild` the element belongs to the caller and is usually an <a>,
+   * where `type` means something else entirely and is invalid as written.
+   * The default must not be forced onto it.
+   */
+  it("puts no type on a child element that is not a button", () => {
+    render(
+      <Button asChild>
+        <a href="/gebaren">Gebaren</a>
+      </Button>
+    );
+    expect(screen.getByRole("link").getAttribute("type")).toBeNull();
+  });
+
+  it("still passes a type a caller sets on a slotted element", () => {
+    render(
+      <Button asChild type="submit">
+        {/*
+         * biome-ignore lint/a11y/useButtonType: the missing type is the point.
+         * Radix's Slot merges `{...slotProps, ...childProps}`, so a `type` on
+         * this child would win over the one on `Button` and the assertion
+         * below would prove nothing about what `Button` passes down.
+         */}
+        <button>Opslaan</button>
+      </Button>
+    );
+    expect(screen.getByRole("button").getAttribute("type")).toBe("submit");
   });
 
   it("forwards a ref to the button element", () => {
