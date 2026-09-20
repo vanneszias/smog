@@ -28,6 +28,26 @@ describe("listReadAccess", () => {
     });
   });
 
+  it("widens a signed-in reader's filter with a share token instead of ignoring it", () => {
+    // Gap 2 of the spec's "Sharing is inert until Stage 3". The signed-in
+    // branch used to *replace* the filter, so an authenticated recipient of
+    // a share link saw nothing.
+    //
+    // Exact shape, not `toMatchObject`, and deliberately so: dropping the
+    // `or` (back to owner-only), swapping `viewShareToken` for
+    // `editShareToken`, or losing the owner clause (a token costing its
+    // holder access to their own lists) each fail this one assertion.
+    expect(listReadAccess(req({ id: 5, role: "user" }, "abc123"))).toEqual({
+      or: [{ owner: { equals: 5 } }, { viewShareToken: { equals: "abc123" } }],
+    });
+  });
+
+  it("keeps a signed-in reader to their own lists when the token is blank", () => {
+    expect(listReadAccess(req({ id: 5, role: "user" }, "   "))).toEqual({
+      owner: { equals: 5 },
+    });
+  });
+
   it("matches a supplied share token", () => {
     expect(listReadAccess(req(null, "abc123"))).toEqual({
       viewShareToken: { equals: "abc123" },
@@ -50,6 +70,32 @@ describe("listUpdateAccess", () => {
 
   it("gives an owner their own lists", () => {
     expect(listUpdateAccess(req({ id: 5, role: "user" }))).toEqual({
+      owner: { equals: 5 },
+    });
+  });
+
+  it("widens a signed-in editor's filter with an edit token, still requiring allowSharedEditing", () => {
+    // The update half of gap 2. The widened clause is the whole anonymous
+    // rule as one branch of the `or`, not a bare token match: an edit link
+    // that stopped honouring `allowSharedEditing` the moment its holder
+    // signed in would be a way around the owner's revocation switch.
+    expect(
+      listUpdateAccess(req({ id: 5, role: "user" }, "edit-token-123"))
+    ).toEqual({
+      or: [
+        { owner: { equals: 5 } },
+        {
+          and: [
+            { editShareToken: { equals: "edit-token-123" } },
+            { allowSharedEditing: { equals: true } },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("keeps a signed-in editor to their own lists when the token is blank", () => {
+    expect(listUpdateAccess(req({ id: 5, role: "user" }, "  "))).toEqual({
       owner: { equals: 5 },
     });
   });
@@ -97,6 +143,16 @@ describe("listDeleteAccess", () => {
     // Deletion has no share-token path at all: holding an edit link lets you
     // change a list's items, not destroy the list itself.
     expect(listDeleteAccess(req(null, "edit-token-123"))).toBe(false);
+  });
+
+  it("does not widen a signed-in non-owner's filter with a token, unlike read and update", () => {
+    // Task 7 widened the signed-in branch of the other two access functions
+    // so a token adds to what its holder can reach. This one must not follow
+    // suit, and the likeliest way for it to is somebody copying the widened
+    // branch across all three. Exact shape, so an added `or` fails here.
+    expect(
+      listDeleteAccess(req({ id: 5, role: "user" }, "edit-token-123"))
+    ).toEqual({ owner: { equals: 5 } });
   });
 });
 

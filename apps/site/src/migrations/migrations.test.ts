@@ -219,6 +219,66 @@ describe("migration chain", () => {
     expect(rows).toEqual([{ user_id: null, consent_version: "v1" }]);
   });
 
+  it("gives every pre-existing list its own pair of share tokens", async () => {
+    // Task 7 mints tokens in a `beforeChange` hook, which fixes every future
+    // list and no existing one. The backfill is what reaches the rows Stage 1
+    // and Stage 2 created, and the failure that matters is not "no token" —
+    // it is *one* token shared by every legacy list, which is what a single
+    // `UPDATE ... SET x = <one value>` would produce and which no structural
+    // assertion would notice. So this replays a chain with two tokenless
+    // lists already in it and compares them to each other.
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys = ON;");
+    const runner = migrationRunner(database);
+
+    for (const migration of migrations) {
+      if (migration.name === "20260920_103500_share_token_defaults") {
+        database.exec(
+          `INSERT INTO users (id, email) VALUES (7300, 'list-owner@example.test');`
+        );
+        database.exec(
+          `INSERT INTO lists (id, name, owner_id, visibility)
+           VALUES (7301, 'Oude lijst', 7300, 'shared'),
+                  (7302, 'Nog een oude lijst', 7300, 'shared');`
+        );
+        // A row that already has a token, to prove the backfill leaves it be
+        // rather than rotating live links on deploy.
+        database.exec(
+          `INSERT INTO lists (id, name, owner_id, visibility, view_share_token)
+           VALUES (7303, 'Al gedeeld', 7300, 'shared', 'already-minted-token');`
+        );
+      }
+
+      await migration.up(runner.args);
+    }
+
+    const rows = database
+      .prepare(
+        "SELECT id, view_share_token, edit_share_token FROM lists ORDER BY id"
+      )
+      .all() as {
+      id: number;
+      view_share_token: string | null;
+      edit_share_token: string | null;
+    }[];
+
+    const byId = new Map(rows.map((row) => [row.id, row]));
+
+    for (const id of [7301, 7302]) {
+      expect(byId.get(id)?.view_share_token).toMatch(/^[0-9a-f]{32}$/);
+      expect(byId.get(id)?.edit_share_token).toMatch(/^[0-9a-f]{32}$/);
+    }
+
+    // Distinct per row, and a view token is never also an edit token.
+    const tokens = [7301, 7302].flatMap((id) => [
+      byId.get(id)?.view_share_token,
+      byId.get(id)?.edit_share_token,
+    ]);
+    expect(new Set(tokens).size).toBe(4);
+
+    expect(byId.get(7303)?.view_share_token).toBe("already-minted-token");
+  });
+
   it("puts the search index's localized columns on search_locales, not search", async () => {
     const { database } = await chain();
     // The search plugin's `title` and `concepts` are localized, so they live

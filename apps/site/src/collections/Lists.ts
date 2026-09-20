@@ -1,4 +1,4 @@
-import type { CollectionConfig } from "payload";
+import type { CollectionBeforeChangeHook, CollectionConfig } from "payload";
 import { isAuthenticated } from "@/access";
 import {
   isListOwnerField,
@@ -20,8 +20,82 @@ function resolveGestureId(gesture: unknown): number | string | undefined {
     : (gesture as number | string | undefined);
 }
 
+/**
+ * Mints the share tokens on create, and rotates them when a list is
+ * un-shared.
+ *
+ * **Minting** closes gap 1 of the spec's "Sharing is inert until Stage 3":
+ * nothing wrote `viewShareToken` or `editShareToken`, so both columns were
+ * always NULL and every share link was inert. A value supplied by the caller
+ * wins — `??`, not `||`, and not an unconditional assignment — because the
+ * integration fixtures create lists with known tokens and read by them, and
+ * because an owner rotating a token by hand is a legitimate write.
+ *
+ * Both tokens are minted even for a list created `private`. `visibility` is
+ * not consulted by the access filters at all (see below), so what a private
+ * list's token buys is a link the owner can turn on later without a second
+ * write path; nobody but the owner has ever seen it.
+ *
+ * **Rotation** closes gap 3. `visibility` being ignored meant setting a list
+ * back to `private` revoked nothing — only clearing the token did. The spec
+ * rules on rotation over folding `visibility` into the access filters, on the
+ * grounds that two mechanisms which can disagree is the worse option, and
+ * that ruling is what this implements: the capability *is* the token, and
+ * un-sharing destroys the outstanding one.
+ *
+ * Three details, each of which is a decision rather than an accident:
+ *
+ * - **`beforeChange`, not the `afterChange` the plan sketched.** An
+ *   `afterChange` hook cannot change the document it is told about; it would
+ *   have to issue a second `payload.update` with `overrideAccess: true`, need
+ *   a `context` flag to stop that update re-entering this hook, and return
+ *   the *old* tokens to the caller who just un-shared — so the owner's own
+ *   response would carry a link that no longer works. Doing it here is one
+ *   write, atomic with the change that triggers it, and self-consistent.
+ * - **It runs after field-level access has already been applied.** Payload
+ *   3.89.0 enforces `field.access[operation]` in the `beforeValidate` *field*
+ *   pass (`payload/dist/fields/hooks/beforeValidate/promise.js`, line 217),
+ *   and `collections/operations/utilities/update.js` orders that strictly
+ *   before the collection `beforeChange` hooks. So `isListOwnerField` has
+ *   already stripped any token an anonymous edit-link holder tried to set by
+ *   the time this runs, and the value this writes is not subject to it —
+ *   which is what lets an *anonymous* editor's `visibility: "private"` still
+ *   rotate.
+ * - **Only on the transition.** Rotation is revocation, so it fires when a
+ *   list *becomes* private and not on every save that mentions the field.
+ *   Rotating unconditionally would invalidate a live share link whenever the
+ *   owner renamed a list they had already made private.
+ */
+const mintAndRotateShareTokens: CollectionBeforeChangeHook = ({
+  data,
+  operation,
+  originalDoc,
+}) => {
+  if (operation === "create") {
+    return {
+      ...data,
+      editShareToken: data.editShareToken ?? crypto.randomUUID(),
+      viewShareToken: data.viewShareToken ?? crypto.randomUUID(),
+    };
+  }
+
+  const becomingPrivate =
+    data.visibility === "private" && originalDoc?.visibility !== "private";
+
+  if (!becomingPrivate) {
+    return data;
+  }
+
+  return {
+    ...data,
+    editShareToken: crypto.randomUUID(),
+    viewShareToken: crypto.randomUUID(),
+  };
+};
+
 export const Lists: CollectionConfig = {
   slug: "lists",
+  hooks: { beforeChange: [mintAndRotateShareTokens] },
   admin: {
     useAsTitle: "name",
     defaultColumns: ["name", "owner", "visibility", "updatedAt"],

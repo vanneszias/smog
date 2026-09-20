@@ -1,4 +1,4 @@
-import type { Access, AccessResult, FieldAccess } from "payload";
+import type { Access, AccessResult, FieldAccess, Where } from "payload";
 
 /**
  * Extracts the `shareToken` query parameter, treating an absent or
@@ -18,23 +18,39 @@ function shareToken(req: { searchParams?: URLSearchParams }): string | null {
 }
 
 /**
- * Admins see every list. A signed-in non-admin is restricted to lists they
- * own via a `Where` filter. An anonymous request is restricted to the list
- * matching its `shareToken` query parameter, if any — and denied outright
- * when no usable token is supplied, rather than being handed
- * `{ viewShareToken: { equals: undefined } }`, which would match every
- * private list whose `viewShareToken` column is NULL.
+ * Admins see every list. Everyone else sees the lists they own, plus the one
+ * their `shareToken` query parameter names — and an anonymous request with no
+ * usable token is denied outright rather than being handed
+ * `{ viewShareToken: { equals: undefined } }`, which would match every list
+ * whose `viewShareToken` column is NULL.
+ *
+ * **Why the signed-in branch widens rather than replaces.** It used to return
+ * `{ owner: { equals: req.user.id } }` unconditionally, which meant an
+ * authenticated recipient of a share link saw nothing — anonymous-only
+ * sharing, which is not the product intent (spec, "Sharing is inert until
+ * Stage 3", gap 2). A token now *adds* to what its holder can reach, in both
+ * directions: they keep their own lists, and they gain the shared one.
+ *
+ * **Why the tokenless guard survives Task 7.** Minting means most rows now
+ * carry a token, so the reasoning "the columns are no longer NULL, the guard
+ * is dead code" is available and is wrong twice over. Rows created before
+ * minting still hold NULL, and `viewShareToken` has no `required: true` to
+ * stop a future write clearing one. `shareTokens.int.test.ts` keeps exactly
+ * such a row on hand so the guard is provably load-bearing rather than
+ * merely defensible.
  */
 export const listReadAccess: Access = ({ req }): AccessResult => {
   if (req.user?.role === "admin") {
     return true;
   }
 
-  if (req.user) {
-    return { owner: { equals: req.user.id } };
-  }
-
   const token = shareToken(req);
+
+  if (req.user) {
+    const own = { owner: { equals: req.user.id } };
+
+    return token ? { or: [own, { viewShareToken: { equals: token } }] } : own;
+  }
 
   if (!token) {
     return false;
@@ -44,32 +60,49 @@ export const listReadAccess: Access = ({ req }): AccessResult => {
 };
 
 /**
- * Same shape as `listReadAccess`, but an anonymous editor must present the
- * edit token, not the view token, and `allowSharedEditing` must be on —
- * otherwise a list owner who shared a read-only view link would
- * unknowingly be granting write access with it.
+ * Same shape as `listReadAccess`, but an editor must present the edit token,
+ * not the view token, and `allowSharedEditing` must be on — otherwise a list
+ * owner who shared a read-only view link would unknowingly be granting write
+ * access with it.
+ *
+ * The signed-in branch widens for the same reason read's does, and the clause
+ * it widens with is the *whole* anonymous rule rather than a bare token
+ * match. An edit link that stopped honouring `allowSharedEditing` the moment
+ * its holder signed in would be a way around the owner's revocation switch,
+ * and "signed in" is not a property the owner granted anything to.
  */
 export const listUpdateAccess: Access = ({ req }): AccessResult => {
   if (req.user?.role === "admin") {
     return true;
   }
 
-  if (req.user) {
-    return { owner: { equals: req.user.id } };
-  }
-
   const token = shareToken(req);
+
+  /*
+   * A function of a *non-null* token rather than a value computed up front.
+   * Building it eagerly would put `{ editShareToken: { equals: null } }` on
+   * the stack for every tokenless request, one careless reorder away from
+   * being returned — and that filter matches every list whose edit token is
+   * NULL, which is the identical trap `shareToken()` exists to close.
+   */
+  const byEditToken = (value: string): Where => ({
+    and: [
+      { editShareToken: { equals: value } },
+      { allowSharedEditing: { equals: true } },
+    ],
+  });
+
+  if (req.user) {
+    const own = { owner: { equals: req.user.id } };
+
+    return token ? { or: [own, byEditToken(token)] } : own;
+  }
 
   if (!token) {
     return false;
   }
 
-  return {
-    and: [
-      { editShareToken: { equals: token } },
-      { allowSharedEditing: { equals: true } },
-    ],
-  };
+  return byEditToken(token);
 };
 
 /**
@@ -83,6 +116,11 @@ export const listUpdateAccess: Access = ({ req }): AccessResult => {
  * update there is no share-token path here at all. An anonymous request —
  * edit link or not — is denied outright, regardless of what token it
  * presents.
+ *
+ * Task 7 widened the signed-in branch of read and update so a token adds to
+ * what its holder can reach. This one deliberately did **not** follow, and
+ * the likeliest way for it to start is somebody applying the same edit to all
+ * three. `lists.test.ts` asserts the exact shape here for that reason.
  */
 export const listDeleteAccess: Access = ({ req }): AccessResult => {
   if (req.user?.role === "admin") {

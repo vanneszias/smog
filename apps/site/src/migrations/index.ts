@@ -10,6 +10,7 @@ import * as migration_20260919_212934_add_sponsorships_and_audit from "./2026091
 import * as migration_20260919_214755_add_sponsorship_token_unique_indexes from "./20260919_214755_add_sponsorship_token_unique_indexes";
 import * as migration_20260919_222612_nullable_consent_user from "./20260919_222612_nullable_consent_user";
 import * as migration_20260919_230345_add_search from "./20260919_230345_add_search";
+import * as migration_20260920_103500_share_token_defaults from "./20260920_103500_share_token_defaults";
 
 export const migrations = [
   {
@@ -71,5 +72,10 @@ export const migrations = [
     up: migration_20260919_230345_add_search.up,
     down: migration_20260919_230345_add_search.down,
     name: "20260919_230345_add_search",
+  },
+  {
+    up: migration_20260920_103500_share_token_defaults.up,
+    down: migration_20260920_103500_share_token_defaults.down,
+    name: "20260920_103500_share_token_defaults",
   },
 ];
