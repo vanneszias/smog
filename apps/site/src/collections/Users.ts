@@ -67,6 +67,30 @@ export const Users: CollectionConfig = {
     // (`payload/dist/auth/strategies/local/incrementLoginAttempts.js`), and
     // `payload/dist/auth/types.d.ts:210` documents the unit.
     lockTime: TEN_MINUTES_MS,
+    cookies: {
+      /*
+       * Payload's default is `secure: false`, not merely unset —
+       * `addDefaultsToAuthConfig` writes `{ sameSite: 'Lax', secure: false }`
+       * over whatever is missing (`collections/config/defaults.js:132`), and
+       * `generatePayloadCookie` passes it straight through
+       * (`auth/cookies.js`). So the session cookie ships without the `Secure`
+       * attribute unless it is asked for here, and a browser will then send
+       * it over plain HTTP to this host — the one request an attacker on the
+       * network gets to read.
+       *
+       * Setting it does not break local work: `http://localhost` is a
+       * trustworthy origin, and Chromium has accepted `Secure` cookies from
+       * it since Chrome 89. `tests/e2e/auth.spec.ts` and the admin specs both
+       * sign in over `http://localhost:3003`, so that claim is tested rather
+       * than asserted.
+       *
+       * `sameSite` is left to the default `Lax`, which is what keeps the
+       * cookie off a cross-site POST — half of why `/auth/sign-out` is safe.
+       * The other half, and the login-CSRF case `Lax` does not cover, is the
+       * `Origin` check in `endpoints/auth.ts`.
+       */
+      secure: true,
+    },
   },
   // A list without an owner has no meaning and no access filter can reach
   // it, so the spec's referential-integrity table rules cascade. See

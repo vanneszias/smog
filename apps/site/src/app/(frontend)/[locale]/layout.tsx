@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { type ReactNode, Suspense } from "react";
+import { AccountNav } from "@/components/AccountNav";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { SiteDocument } from "@/components/SiteDocument";
 import { isLocale, LOCALES, type Locale } from "@/lib/locale";
+import { readSession } from "@/lib/session";
 
 const SITE_NAME = "SMOG";
 
@@ -109,6 +111,16 @@ export function generateStaticParams(): { locale: Locale }[] {
  * worse than an error for a reader and worse than an error for a crawler.
  * `resolveLocale` still falls back to the default, because that is what every
  * helper downstream wants; the 404 is the route's job.
+ *
+ * **Reading the session here is what makes every page under it dynamic.**
+ * `readSession` reads request headers, and a route that reads request headers
+ * cannot be prerendered — so `/{locale}` and `/{locale}/favorites`, the two
+ * pages in this group that were still static, are not any more. That is a
+ * real cost and it is measured in the Stage 4 Task 2 report rather than
+ * discovered later. It is paid here, in the layout, because the account nav
+ * belongs in the header of every page and a per-page session read would be
+ * the same cost with three places to forget it. `hasSessionCookie` keeps the
+ * common case — a signed-out visitor — from booting Payload at all.
  */
 export default async function LocaleLayout({
   children,
@@ -122,6 +134,8 @@ export default async function LocaleLayout({
   if (!isLocale(locale)) {
     notFound();
   }
+
+  const user = await readSession();
 
   return (
     <SiteDocument lang={locale}>
@@ -154,15 +168,18 @@ export default async function LocaleLayout({
                 </li>
               </ul>
             </nav>
-            {/*
-             * `LocaleSwitcher` reads `useSearchParams`, which opts its route
-             * out of static rendering unless it sits inside a Suspense
-             * boundary. Without this wrapper every prerendered page in the
-             * group fails the build, not only the ones with a query string.
-             */}
-            <Suspense fallback={null}>
-              <LocaleSwitcher current={locale} />
-            </Suspense>
+            <div className="flex items-center gap-4">
+              <AccountNav locale={locale} user={user} />
+              {/*
+               * `LocaleSwitcher` reads `useSearchParams`, which opts its route
+               * out of static rendering unless it sits inside a Suspense
+               * boundary. Without this wrapper every prerendered page in the
+               * group fails the build, not only the ones with a query string.
+               */}
+              <Suspense fallback={null}>
+                <LocaleSwitcher current={locale} />
+              </Suspense>
+            </div>
           </div>
         </header>
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">

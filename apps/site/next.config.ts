@@ -29,6 +29,27 @@ const nextConfig: NextConfig = {
     return [
       { destination: "/api/robots.txt", source: "/robots.txt" },
       { destination: "/api/sitemap.xml", source: "/sitemap.xml" },
+      /*
+       * The auth endpoints, for the same bundle reason and by the same
+       * mechanism. `src/endpoints/auth.ts` hangs three handlers off Payload's
+       * existing REST entry, which reaches them at `/api/auth/*`; these three
+       * lines are what let a `<form action="/auth/sign-in">` find them.
+       *
+       * Locale-free on purpose. The forms carry the locale in their body, so
+       * there is one path per action rather than one per action per locale,
+       * and the endpoint clamps whatever arrives to a known locale before it
+       * builds a `Location`. Six more rewrites would be six more ways for the
+       * set to drift when a fourth locale is added.
+       *
+       * Returning an array puts these in Next's `afterFiles` phase: checked
+       * after real files and pages, before dynamic routes. Nothing in `app/`
+       * claims `/auth/*`, so they match — and if something ever does, the
+       * file wins and `tests/e2e/auth.spec.ts` fails rather than the sign-in
+       * form quietly posting to a page.
+       */
+      { destination: "/api/auth/sign-in", source: "/auth/sign-in" },
+      { destination: "/api/auth/sign-out", source: "/auth/sign-out" },
+      { destination: "/api/auth/sign-up", source: "/auth/sign-up" },
     ];
   },
 

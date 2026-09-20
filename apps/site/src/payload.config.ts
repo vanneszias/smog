@@ -21,6 +21,7 @@ import { Media } from "./collections/Media";
 import { Sponsorships } from "./collections/Sponsorships";
 import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
+import { authEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
 import { requireBinding, requireEnv } from "./lib/env";
 import { beforeSyncGesture } from "./search/beforeSync";
@@ -160,8 +161,13 @@ export default buildConfig({
    * because a Next metadata route that imports Payload is its own bundle
    * entry and costs half a megabyte gzipped; see `endpoints/crawler.ts` for
    * the four measurements.
+   *
+   * `/api/auth/*` — sign-in, sign-up and sign-out — are here for exactly the
+   * same reason and reached the same way, through rewrites at `/auth/*`. A
+   * `route.ts` would be a second copy of the Payload/D1/drizzle graph; these
+   * ride on `app/(payload)/api/[...slug]/route.ts`, which already carries it.
    */
-  endpoints: crawlerEndpoints,
+  endpoints: [...crawlerEndpoints, ...authEndpoints],
   localization: {
     locales: [
       { label: "Nederlands", code: "nl" },
