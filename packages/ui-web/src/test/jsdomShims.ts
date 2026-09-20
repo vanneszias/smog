@@ -85,7 +85,14 @@ Element.prototype.releasePointerCapture ??= () => {
   // jsdom has no pointer capture
 };
 
-if (!("matchMedia" in globalThis)) {
+/*
+ * `matchMedia` is the one shim that cannot use an `in` check: jsdom declares
+ * the property on the window and leaves it `undefined`, so `"matchMedia" in
+ * globalThis` is already true and the guard would skip the shim while every
+ * caller still reads `undefined` and throws. Typeof is the honest test, and it
+ * still steps aside for a jsdom release that grows a real implementation.
+ */
+if (typeof (globalThis as { matchMedia?: unknown }).matchMedia !== "function") {
   Object.assign(globalThis, {
     matchMedia: (query: string): MediaQueryList =>
       ({
