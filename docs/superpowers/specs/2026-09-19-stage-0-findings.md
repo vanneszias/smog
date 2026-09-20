@@ -285,6 +285,61 @@ it cost 9.51 KiB instead of 558. The trade is recorded at the top of
 `favoritesQuery.ts`: the id filtering, dedupe, cap and re-sort now bind that
 caller rather than an endpoint.
 
+| Stage 3 Task 7 — list sharing, one page route | 7,422.26 KiB | 72.5% | +6.38 KiB |
+| Stage 3 Task 8 — referential integrity, two hooks | 7,423.13 KiB | 72.5% | +0.87 KiB |
+| **Stage 3 Task 9 — sitemap, robots, per-page metadata** | **7,428.58 KiB** | **72.5%** | **+5.45 KiB** |
+
+### The sitemap cost 5 KiB instead of 524, and the difference is where it lives
+
+Task 6 predicted this one: *"Task 9's `sitemap.ts` is the one at risk."* It was.
+Four builds against the same commit, each measured with
+`wrangler deploy --dry-run`:
+
+| build | gzipped | delta |
+|---|---:|---:|
+| baseline (Task 8) | 7,423.13 KiB | — |
+| + `app/robots.ts`, no Payload import | 7,459.26 KiB | +36.13 |
+| + `app/(frontend)/sitemap.ts` calling Payload | 7,982.91 KiB | **+523.65** |
+| both as Payload endpoints behind rewrites | 7,428.19 KiB | **+5.06** |
+
+The naive pair *fits* — 7,982.91 KiB is 209 KiB under CI's 8 MiB warning — and
+that is exactly why it had to be decided with the number in front of us rather
+than by whether the build went red. It would have spent 560 KiB of the 769 KiB
+of headroom on two text files, and the next route that renders the Mux player
+costs 437 KiB on its own (Stage 5's sponsor preview is that route).
+
+The shipped total is 7,428.58 KiB; the extra 0.39 KiB over that fourth row is
+the locale-aware metadata added in the same task.
+
+**What was shipped:** `/api/sitemap.xml` and `/api/robots.txt` as root-level
+Payload endpoints (`src/endpoints/crawler.ts`), reached at the conventional
+`/sitemap.xml` and `/robots.txt` through two rewrites in `next.config.ts`.
+`app/(payload)/api/[...slug]/route.ts` already exists and already imports the
+whole Payload graph, so a handler added to it adds only the handler; rewrites
+are routes-manifest entries and add no code at all.
+
+**A trap inside the trap.** The first endpoint version measured **+27.92 KiB**,
+not +5.06. The cause was a cycle: the endpoint is registered in
+`payload.config.ts`, and its module imported `payloadClient.ts`, which
+dynamically imports `@/payload.config` — so the config's graph re-entered
+itself and the bundler duplicated part of it. Passing `req.payload` into the
+query instead of reaching for a fresh client removed 22.86 KiB. The rule for
+anything called from `payload.config.ts`: take the instance as an argument.
+
+### Next 16 ignores a `robots.ts` inside a route group, silently
+
+`app/(frontend)/robots.ts` produces **no route at all** — no warning, no entry
+in the build's route table, and a 404 at runtime. The robots matcher in
+`next/dist/lib/metadata/is-metadata-route.js` (16.3.3) is anchored:
+``^[\\/]robots\.(…)$``, so only `app/robots.ts` matches. The sitemap matcher
+is *not* anchored, so `app/(frontend)/sitemap.ts` does work — the two files do
+not behave the same way, which is how the first measurement in the table above
+came back as "+0.01 KiB, robots is free" when nothing had been built.
+
+If a future task moves either file back into `app/`, put `robots.ts` at the app
+root and verify against the build's route table rather than the file's
+existence.
+
 ### Consequence
 
 Bundle size is now a standing constraint on every later stage, not a Stage 0
