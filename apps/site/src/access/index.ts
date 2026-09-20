@@ -47,6 +47,54 @@ export const isAdminOrSelf: Access = ({ req: { user } }) => {
 };
 
 /**
+ * The `req.context` key `endpoints/auth.ts` sets when it is the one creating
+ * a user.
+ *
+ * A string rather than a symbol because `RequestContext` is serialisable and
+ * Payload copies it through `createLocalReq`.
+ */
+export const SELF_REGISTRATION = "smog:selfRegistration";
+
+/**
+ * Admins, plus the site's own sign-up endpoint. Nothing else may create a
+ * user.
+ *
+ * ## Why `create` is no longer `() => true`
+ *
+ * It was, deliberately, so that people could register — and `Users.ts` said
+ * in as many words that Stage 4 would revisit it "when social login lands".
+ * This is that revisit, and what forces it is not tidiness: a public
+ * `create` makes `POST /api/users` the most direct email-enumeration oracle
+ * on the site. One unauthenticated request separates a registered address
+ * (400, "A user with the given email is already registered") from a free one
+ * (201). Reproduced against a running dev server; the transcript is in the
+ * Task 3 report. No amount of care in `/auth/sign-up` closes that while
+ * Payload's REST API is mounted and its `create` is public.
+ *
+ * ## Why `req.context` is a real guard and not a password in a cookie
+ *
+ * `createPayloadRequest` sets `context: {}` **unconditionally** for every
+ * REST and GraphQL request (`payload/dist/utilities/createPayloadRequest.js`,
+ * verified at the call site — it is a literal, not a default that a body
+ * could override). The only way a request carries context is
+ * `createLocalReq`, which is the Local API, which is server-side code. So
+ * this is "the call came from inside this application", which is exactly
+ * what it needs to express.
+ *
+ * ## Why not simply create with `overrideAccess: true`
+ *
+ * Because that would throw away the *field*-level guard at the same time.
+ * `role` carries `create: isAdminField`, and `overrideAccess: true` skips
+ * field access entirely — so the sign-up endpoint would be relying on its
+ * literal `role: "user"` alone. Task 2's mutation sweep (S1–S3) showed that
+ * each of those two guards alone is invisible and only the pair is provable;
+ * this keeps both, by letting the endpoint through `access.create` rather
+ * than around it.
+ */
+export const isAdminOrSelfRegistration: Access = ({ req }) =>
+  req.user?.role === "admin" || req.context?.[SELF_REGISTRATION] === true;
+
+/**
  * Field-level equivalent of `isAdmin`.
  *
  * `FieldAccess` returns a plain boolean — it has no `Where` form — so this

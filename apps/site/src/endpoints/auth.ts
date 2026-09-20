@@ -1,9 +1,13 @@
 import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
 import {
+  AuthenticationError,
   generateExpiredPayloadCookie,
   generatePayloadCookie,
+  headersWithCors,
+  loginOperation,
   logoutOperation,
 } from "payload";
+import { SELF_REGISTRATION } from "@/access";
 import {
   homePath,
   isCredentialFailure,
@@ -249,6 +253,14 @@ const signUp: PayloadHandler = async (req) => {
      */
     await req.payload.create({
       collection: USERS,
+      /*
+       * The third guard, and the one that closed the REST oracle:
+       * `users.access.create` is no longer `() => true`, so this is the only
+       * anonymous path that may create a user. `createPayloadRequest` sets
+       * `context: {}` for every REST and GraphQL request, so nothing
+       * arriving over the network can forge this — see `access/index.ts`.
+       */
+      context: { [SELF_REGISTRATION]: true },
       data: { email, password: field(form, "password"), role: "user" },
       overrideAccess: false,
     });
@@ -343,6 +355,183 @@ const signOut: PayloadHandler = async (req) => {
 
   return seeOther(homePath(locale), expired);
 };
+
+/**
+ * The body of a POST, as a plain object, in every shape Payload accepts.
+ *
+ * ## Why this function exists at all
+ *
+ * Custom endpoints do not get `req.data`. `wrapInternalEndpoints`
+ * (`payload/dist/utilities/wrapInternalEndpoints.js`) is what calls
+ * `addDataAndFileToRequest`, and it wraps only Payload's *own* endpoints —
+ * so a collection endpoint that shadows one of them has to read its own
+ * body. Verified at the call site; the first version of this handler
+ * silently saw `undefined` for every field.
+ *
+ * ## `multipart/form-data` with a `_payload` field is not an edge case
+ *
+ * **It is how the admin panel logs in.** Payload's own `Form` submits
+ * `multipart/form-data` carrying the JSON body in a single `_payload` field,
+ * which `addDataAndFileToRequest` unpacks
+ * (`fields?._payload && typeof fields._payload === 'string'`). An earlier
+ * version of this handler read `application/json` and
+ * `application/x-www-form-urlencoded` only — every integration test passed,
+ * `curl` with `-H 'Content-Type: application/json'` passed, and **the admin
+ * panel could not sign in**, because it posted a shape nothing here read and
+ * got "the email or password provided is incorrect" for correct credentials.
+ * Found by a browser, not by a test; `signs in a request shaped the way the
+ * admin panel posts it` is the test that would have found it.
+ *
+ * Files are deliberately not handled: this parses bodies for the login
+ * endpoint, and a login carries no upload.
+ */
+async function readBody(req: PayloadRequest): Promise<Record<string, unknown>> {
+  const [type] = (req.headers.get("content-type") ?? "").split(";", 1);
+
+  try {
+    if (type === "application/json") {
+      return (await req.json?.()) as Record<string, unknown>;
+    }
+
+    if (type === "application/x-www-form-urlencoded") {
+      return Object.fromEntries(await readForm(req));
+    }
+
+    if (type?.startsWith("multipart/")) {
+      const form = await readForm(req);
+      const embedded = form.get("_payload");
+
+      return typeof embedded === "string"
+        ? (JSON.parse(embedded) as Record<string, unknown>)
+        : Object.fromEntries(form);
+    }
+  } catch {
+    return {};
+  }
+
+  return {};
+}
+
+/**
+ * `POST /api/users/login`, shadowing Payload's own.
+ *
+ * ## Why this exists
+ *
+ * Task 2 closed email enumeration on `/auth/sign-in` and reported that the
+ * site as deployed still leaked, because `app/(payload)/api/[...slug]/route.ts`
+ * mounts Payload's REST API and its `loginHandler` answers a locked account
+ * with "This user is locked due to having too many failed login attempts."
+ * An address that was never registered can never lock, so that sentence is a
+ * one-request proof that an account exists — the exact leak `/auth/sign-in`
+ * was changed to close, still wide open one path over. Reproduced against a
+ * running dev server before this was written; the transcript is in the Task 3
+ * report.
+ *
+ * ## Why shadowing works
+ *
+ * `collections/config/sanitize.js` pushes `authCollectionEndpoints` onto
+ * whatever the collection already declares, and `handleEndpoints` takes the
+ * **first** match — so a `post /login` declared on `Users` wins over
+ * Payload's. Task 2 verified the mechanism; this is the use of it.
+ *
+ * ## What it costs, stated plainly
+ *
+ * **The admin panel no longer tells an admin their account is locked.** They
+ * see "The email or password provided is incorrect." and are left to work
+ * out that waiting ten minutes fixes it. That is a real regression in
+ * operator experience, and it is the price of the property: a message only a
+ * registered address can provoke is a registered-address oracle whoever is
+ * reading it. The public sign-in page states the lockout rule to everybody
+ * for this reason; `/admin` is Payload's own screen and cannot.
+ *
+ * ## What is reimplemented, and what is not
+ *
+ * The success path mirrors `payload/dist/auth/endpoints/login.js` because
+ * that file cannot be imported — `payload`'s `exports` map publishes only
+ * `.`, `./internal`, `./node`, `./shared`, `./i18n/*` and `./migrations`, so
+ * a deep import into `dist` does not resolve. Everything it needs —
+ * `loginOperation`, `generatePayloadCookie`, `headersWithCors` — is exported
+ * from the package root, so nothing here reaches past a public API.
+ *
+ * The failure path is *not* reimplemented: it throws a real
+ * `AuthenticationError` and lets `handleEndpoints`' own `routeError` format
+ * it. That is what makes the locked answer byte-identical to the
+ * unknown-address answer rather than merely similar — the same code produces
+ * both.
+ */
+const usersLogin: PayloadHandler = async (req) => {
+  const started = Date.now();
+  const collection = req.payload.collections[USERS];
+  const body = await readBody(req);
+  const depth = Number(req.searchParams.get("depth"));
+
+  try {
+    const result = await loginOperation({
+      collection,
+      data: {
+        email: typeof body.email === "string" ? body.email : "",
+        password: typeof body.password === "string" ? body.password : "",
+      },
+      depth: Number.isFinite(depth) ? depth : undefined,
+      req,
+    });
+
+    if (result.token === undefined) {
+      // Same guard as `signIn` above: a 200 with no cookie signs nobody in
+      // while looking exactly like success.
+      throw new Error("login succeeded without issuing a token");
+    }
+
+    const cookie = generatePayloadCookie({
+      collectionAuthConfig: collection.config.auth,
+      cookiePrefix: req.payload.config.cookiePrefix,
+      token: result.token,
+    });
+
+    const { token: _token, ...withoutToken } = result;
+    const payloadBody = collection.config.auth.removeTokenFromResponses
+      ? withoutToken
+      : result;
+
+    return Response.json(
+      { message: req.t("authentication:passed"), ...payloadBody },
+      {
+        headers: headersWithCors({
+          headers: new Headers({ "Set-Cookie": cookie }),
+          req,
+        }),
+        status: 200,
+      }
+    );
+  } catch (error) {
+    if (!isCredentialFailure(error)) {
+      throw error;
+    }
+
+    /*
+     * The same floor as `/auth/sign-in`, and for the same measured reason:
+     * `checkLoginPermission` runs before `authenticateLocalStrategy`, so an
+     * unknown address and a locked account answer without touching PBKDF2
+     * while a wrong password pays 25,000 iterations. Flattening the message
+     * without flattening the timing would leave the oracle intact and only
+     * make it slightly less obvious.
+     */
+    await pad(started);
+
+    throw new AuthenticationError(req.t);
+  }
+};
+
+/**
+ * Endpoints declared on the `users` collection itself.
+ *
+ * One entry, and it deliberately shadows a built-in. Kept here rather than
+ * inline in `collections/Users.ts` so the reasoning sits next to the sign-in
+ * endpoint it has to stay identical to.
+ */
+export const usersCollectionEndpoints: Endpoint[] = [
+  { handler: usersLogin, method: "post", path: "/login" },
+];
 
 export const authEndpoints: Endpoint[] = [
   { handler: signIn, method: "post", path: "/auth/sign-in" },

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { isAdmin, isAdminOrSelf } from "@/access";
+import {
+  isAdmin,
+  isAdminOrSelf,
+  isAdminOrSelfRegistration,
+  SELF_REGISTRATION,
+} from "@/access";
 import { googleStrategy } from "@/auth/googleStrategy";
+import { usersCollectionEndpoints } from "@/endpoints/auth";
 import { cascadeListsOnUserDelete } from "@/hooks/cascadeListsOnUserDelete";
 import { enforcePasswordPolicy } from "@/hooks/enforcePasswordPolicy";
 import { Users } from "./Users";
@@ -61,8 +67,29 @@ describe("Users collection", () => {
     expect(Users.hooks?.beforeValidate).toEqual([enforcePasswordPolicy]);
   });
 
-  it("allows public registration", () => {
-    expect(Users.access?.create?.({} as never)).toBe(true);
+  /**
+   * Public REST registration was closed in Stage 4 Task 3. The behavioural
+   * half is in `Users.rest.int.test.ts`, which drives the mounted REST API;
+   * this pins the wiring, because a `create` that quietly went back to
+   * `() => true` would fail nothing else in this file.
+   */
+  it("no longer lets anybody create a user over the public API", () => {
+    expect(Users.access?.create).toBe(isAdminOrSelfRegistration);
+    expect(Users.access?.create?.({ req: {} } as never)).toBe(false);
+    expect(
+      Users.access?.create?.({ req: { user: { role: "user" } } } as never)
+    ).toBe(false);
+  });
+
+  it("still lets an admin and the site's own sign-up create one", () => {
+    expect(
+      Users.access?.create?.({ req: { user: { role: "admin" } } } as never)
+    ).toBe(true);
+    expect(
+      Users.access?.create?.({
+        req: { context: { [SELF_REGISTRATION]: true } },
+      } as never)
+    ).toBe(true);
   });
 
   /**
@@ -74,6 +101,21 @@ describe("Users collection", () => {
   it("registers the Google auth strategy, and only that one", () => {
     expect(Users.auth).toMatchObject({ strategies: [googleStrategy] });
     expect(googleStrategy.name).toBe("google");
+  });
+
+  /**
+   * Shadowing Payload's built-in `POST /api/users/login` is what closes the
+   * `LockedAuth` leak on the mounted REST API. `sanitize.js` appends the
+   * built-ins *after* whatever the collection declares and `handleEndpoints`
+   * takes the first match, so the path and method have to be exactly these.
+   */
+  it("shadows the built-in login endpoint", () => {
+    expect(Users.endpoints).toBe(usersCollectionEndpoints);
+    expect(usersCollectionEndpoints).toHaveLength(1);
+    expect(usersCollectionEndpoints[0]).toMatchObject({
+      method: "post",
+      path: "/login",
+    });
   });
 
   /**

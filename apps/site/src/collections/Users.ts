@@ -1,6 +1,12 @@
 import type { CollectionConfig } from "payload";
-import { isAdmin, isAdminField, isAdminOrSelf } from "@/access";
+import {
+  isAdmin,
+  isAdminField,
+  isAdminOrSelf,
+  isAdminOrSelfRegistration,
+} from "@/access";
 import { googleStrategy } from "@/auth/googleStrategy";
+import { usersCollectionEndpoints } from "@/endpoints/auth";
 import { cascadeListsOnUserDelete } from "@/hooks/cascadeListsOnUserDelete";
 import { enforcePasswordPolicy } from "@/hooks/enforcePasswordPolicy";
 
@@ -110,6 +116,12 @@ export const Users: CollectionConfig = {
       secure: true,
     },
   },
+  /*
+   * One entry, and it shadows Payload's own `POST /api/users/login`. See
+   * `endpoints/auth.ts` for why that is possible, why it is necessary and
+   * what the admin panel loses by it.
+   */
+  endpoints: usersCollectionEndpoints,
   // A list without an owner has no meaning and no access filter can reach
   // it, so the spec's referential-integrity table rules cascade. See
   // `hooks/cascadeListsOnUserDelete`.
@@ -124,10 +136,16 @@ export const Users: CollectionConfig = {
   },
   access: {
     read: isAdminOrSelf,
-    // Public registration is intentional; Stage 4 revisits it when social
-    // login lands. The `role` field below is what keeps that from being an
-    // admin signup form.
-    create: () => true,
+    /*
+     * **Public registration is no longer open over REST**, which is the
+     * revisit the previous comment here promised "when social login lands".
+     * People still register — through `/auth/sign-up`, which is the only
+     * anonymous caller `isAdminOrSelfRegistration` lets through — but
+     * `POST /api/users` now answers 403 whether or not the address exists,
+     * which closes the site's most direct enumeration oracle. The reasoning,
+     * the mechanism and what it cost are in `access/index.ts`.
+     */
+    create: isAdminOrSelfRegistration,
     update: isAdminOrSelf,
     delete: isAdmin,
     // Payload's defaultUnlockAccess is any authenticated user of the admin
