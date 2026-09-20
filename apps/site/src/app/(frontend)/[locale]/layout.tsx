@@ -74,6 +74,14 @@ export default async function LocaleLayout({
                     Gebaren
                   </a>
                 </li>
+                <li>
+                  <a
+                    className="text-foreground-muted text-sm hover:text-foreground"
+                    href={`/${locale}/favorites`}
+                  >
+                    Favorieten
+                  </a>
+                </li>
               </ul>
             </nav>
             {/*

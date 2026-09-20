@@ -17,3 +17,14 @@ import "dotenv/config";
  */
 process.env.PAYLOAD_SECRET ||= "test-only-secret-not-used-for-signing";
 process.env.CLOUDFLARE_ENV ||= "staging";
+
+/**
+ * React 19 requires this flag before `act` will run, and warns loudly without
+ * it. It lives here rather than in each test file because it is a property of
+ * the runner, not of any one component — and because a file that forgot it
+ * would still typecheck, since one file's `declare global` covers the whole
+ * program.
+ */
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;

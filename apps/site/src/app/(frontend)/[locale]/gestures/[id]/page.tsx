@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import { fetchGesture, fetchViewer } from "@/lib/gestureDetail";
 import { isLocale, LOCALES, type Locale } from "@/lib/locale";
 import { fetchGestureOverlay, sponsorLogo } from "@/lib/sponsorOverlay";
@@ -173,7 +174,17 @@ export default async function GestureDetailPage({
       </nav>
 
       <header className="flex flex-col gap-3">
-        <h1 className="font-bold text-foreground text-xxl">{name}</h1>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="font-bold text-foreground text-xxl">{name}</h1>
+          {/*
+           * A client island, and the only one on this page. It reads the
+           * guest's `localStorage` after hydration, so the heart fills a tick
+           * late rather than being server-rendered wrong — see
+           * `FavoriteButton`. Keyed on the document's id for the same reason
+           * the overlay is: the URL segment is unvalidated input.
+           */}
+          <FavoriteButton className="shrink-0" gestureId={String(gesture.id)} />
+        </div>
 
         {categories.length > 0 ? (
           <ul aria-label="Categorieën" className="flex flex-wrap gap-2">
