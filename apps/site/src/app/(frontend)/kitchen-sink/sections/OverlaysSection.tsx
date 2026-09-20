@@ -171,6 +171,50 @@ export function OverlaysSection() {
           </Tooltip>
         </TooltipProvider>
       </Specimen>
+
+      {/*
+       * The layer probe: a tooltip and a dialog next to each other, with
+       * stable test ids, so `overlay-layers.spec.ts` can hold one open while
+       * opening the other. Two installed copies of
+       * `@radix-ui/react-dismissable-layer` keep independent layer stacks, and
+       * the only observable symptom is Escape reaching the wrong one. This
+       * pair exists to keep that observable rather than to demonstrate a
+       * component.
+       */}
+      <Specimen label="Layer probe — a tooltip and a dialog in contact">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button data-testid="layer-probe-tooltip-trigger" variant="ghost">
+                Laag-probe tooltip
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Laag-probe</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button data-testid="layer-probe-dialog-trigger" variant="outline">
+              Laag-probe dialoog
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Laag-probe</DialogTitle>
+              <DialogDescription>
+                Escape moet deze sluiten, ook terwijl de tooltip ernaast open
+                staat.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="ghost">Sluiten</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </Specimen>
     </Section>
   );
 }
