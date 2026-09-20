@@ -5,16 +5,16 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./colors": "./src/colors.ts",
-    "./constants": "./src/constants.ts",
-    "./theme": "./src/theme.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
-    "check-types": "tsc -b"
+    "check-types": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
-    "@smog/config": "workspace:*"
+    "@smog/config": "workspace:*",
+    "vitest": "^4.1.11"
   }
 }
