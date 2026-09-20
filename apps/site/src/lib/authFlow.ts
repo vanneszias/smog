@@ -171,7 +171,21 @@ export function homePath(locale: Locale): string {
  * A `?error=` carrying free text is a phishing surface even when React
  * escapes it.
  */
-type SignInError = "invalid";
+type SignInError =
+  | "invalid"
+  /** The OAuth flow was refused. One code for every reason it can be. */
+  | "oauth"
+  /** No client credentials are configured for that provider. */
+  | "oauth-unavailable"
+  /**
+   * The provider would not assert that the address is verified.
+   *
+   * Separate from `oauth` because it is the one OAuth refusal the visitor
+   * can act on, and because it says nothing about this site: it is a fact
+   * about their account at the provider, returned identically whether or
+   * not an account exists here.
+   */
+  | "oauth-unverified";
 type SignUpError = "email" | "password";
 type SignInNotice = "registered";
 
@@ -215,14 +229,27 @@ function withQuery(
  * These responses carry `Set-Cookie`, and a shared cache that stored one
  * would hand somebody else's session to the next visitor.
  */
-export function seeOther(location: string, setCookie?: string): Response {
+export function seeOther(
+  location: string,
+  setCookie?: string | string[]
+): Response {
   const headers = new Headers({
     "Cache-Control": "no-store",
     Location: location,
   });
 
-  if (setCookie !== undefined) {
-    headers.set("Set-Cookie", setCookie);
+  /*
+   * `append`, not `set`, and an array rather than a joined string: the OAuth
+   * callback has to clear its `state` cookie *and* set a session cookie on
+   * the same response. `Set-Cookie` is the one header a comma cannot join —
+   * a cookie value may contain one — so two cookies are two header lines,
+   * which is what `Headers.append` emits and what `getSetCookie()` reads
+   * back.
+   */
+  for (const cookie of typeof setCookie === "string"
+    ? [setCookie]
+    : (setCookie ?? [])) {
+    headers.append("Set-Cookie", cookie);
   }
 
   return new Response(null, { headers, status: 303 });

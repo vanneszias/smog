@@ -12,6 +12,7 @@ import * as migration_20260919_222612_nullable_consent_user from "./20260919_222
 import * as migration_20260919_230345_add_search from "./20260919_230345_add_search";
 import * as migration_20260920_103500_share_token_defaults from "./20260920_103500_share_token_defaults";
 import * as migration_20260920_114500_list_fk_behaviour from "./20260920_114500_list_fk_behaviour";
+import * as migration_20260920_160000_add_user_oauth_accounts from "./20260920_160000_add_user_oauth_accounts";
 
 export const migrations = [
   {
@@ -83,5 +84,10 @@ export const migrations = [
     up: migration_20260920_114500_list_fk_behaviour.up,
     down: migration_20260920_114500_list_fk_behaviour.down,
     name: "20260920_114500_list_fk_behaviour",
+  },
+  {
+    up: migration_20260920_160000_add_user_oauth_accounts.up,
+    down: migration_20260920_160000_add_user_oauth_accounts.down,
+    name: "20260920_160000_add_user_oauth_accounts",
   },
 ];

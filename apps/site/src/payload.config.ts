@@ -23,6 +23,7 @@ import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
 import { authEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
+import { oauthEndpoints } from "./endpoints/oauth";
 import { requireBinding, requireEnv } from "./lib/env";
 import { beforeSyncGesture } from "./search/beforeSync";
 
@@ -166,8 +167,16 @@ export default buildConfig({
    * same reason and reached the same way, through rewrites at `/auth/*`. A
    * `route.ts` would be a second copy of the Payload/D1/drizzle graph; these
    * ride on `app/(payload)/api/[...slug]/route.ts`, which already carries it.
+   *
+   * `oauthEndpoints` adds `/api/auth/google` and `/api/auth/google/callback`
+   * to the same set. They are registered unconditionally, even though no
+   * Google credentials exist in development or in CI: `resolveProvider`
+   * answers `null` when they are absent and the endpoint redirects with
+   * `?error=oauth-unavailable`, which keeps the route table the same shape
+   * everywhere and keeps the handlers reachable from a test that supplies
+   * its own provider.
    */
-  endpoints: [...crawlerEndpoints, ...authEndpoints],
+  endpoints: [...crawlerEndpoints, ...authEndpoints, ...oauthEndpoints],
   localization: {
     locales: [
       { label: "Nederlands", code: "nl" },

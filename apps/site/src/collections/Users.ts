@@ -1,5 +1,6 @@
 import type { CollectionConfig } from "payload";
 import { isAdmin, isAdminField, isAdminOrSelf } from "@/access";
+import { googleStrategy } from "@/auth/googleStrategy";
 import { cascadeListsOnUserDelete } from "@/hooks/cascadeListsOnUserDelete";
 import { enforcePasswordPolicy } from "@/hooks/enforcePasswordPolicy";
 
@@ -59,6 +60,23 @@ export const Users: CollectionConfig = {
     hidden: ({ user }) => user?.role !== "admin",
   },
   auth: {
+    /*
+     * Google sign-in, as a first-class strategy rather than as something
+     * bolted onto the login endpoint.
+     *
+     * Two things about the list are worth knowing before touching it.
+     * **Custom strategies run before Payload's own** — `payload.init` builds
+     * `authStrategies` from the collections first and appends `local-jwt`
+     * last (`payload/dist/index.js`) — so everything here is on the path of
+     * every authenticated request, including the admin panel's. And
+     * `executeAuthStrategies` **stops at the first strategy that returns a
+     * user**, so one that answers when it should not shadows password
+     * sessions entirely. `auth/googleStrategy.ts` therefore answers only for
+     * tokens carrying its own provider claim and returns `{ user: null }`
+     * for everything else; `Users.oauth.int.test.ts` pins that an ordinary
+     * password session is unaffected by its presence.
+     */
+    strategies: [googleStrategy],
     // Read `MAX_LOGIN_ATTEMPTS` above before changing either of these: they
     // are the brute-force control, because the password hash is not one.
     maxLoginAttempts: MAX_LOGIN_ATTEMPTS,
@@ -152,6 +170,46 @@ export const Users: CollectionConfig = {
         update: isAdminField,
       },
       index: true,
+    },
+    {
+      /*
+       * The identities at external providers that may sign in to this
+       * account.
+       *
+       * **Stored rather than matching on email alone**, because the email on
+       * a Google account can change and `sub` cannot: Google documents it as
+       * stable for the life of the account and never reused. Matching only
+       * on email would mean somebody who changes their Google address to one
+       * we already know gets handed that account.
+       *
+       * **An array, and `provider` is stored beside `subject`**, because the
+       * plan requires Apple to slot in later. A subject is only unique
+       * within its provider.
+       */
+      name: "oauthAccounts",
+      type: "array",
+      access: {
+        /*
+         * Exactly the guard on `role` above, and for a sharper reason.
+         * `isAdminOrSelf` gives a signed-in visitor document-level update on
+         * their own record, so without a field guard they could write
+         * *somebody else's* Google subject onto their own account — and the
+         * next time that person signed in with Google, they would land in
+         * the attacker's account with the attacker reading everything they
+         * did there. `endpoints/oauth.ts` writes this field with
+         * `overrideAccess: true`, which is the only path that may.
+         */
+        create: isAdminField,
+        update: isAdminField,
+      },
+      admin: {
+        description:
+          "Linked social sign-ins. Written by the OAuth callback; not editable here.",
+      },
+      fields: [
+        { name: "provider", type: "text", required: true, index: true },
+        { name: "subject", type: "text", required: true, index: true },
+      ],
     },
     {
       name: "favorites",

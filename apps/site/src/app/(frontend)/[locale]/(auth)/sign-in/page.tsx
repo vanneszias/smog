@@ -1,6 +1,7 @@
 import { Button, Field, Input } from "@smog/ui-web";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { resolveProvider } from "@/auth/oauthProvider";
 import { isLocale, resolveLocale } from "@/lib/locale";
 
 export const metadata: Metadata = {
@@ -35,6 +36,30 @@ const SIGN_IN_ERROR =
   "E-mailadres of wachtwoord klopt niet. Na vijf mislukte pogingen wordt aanmelden voor dit account tien minuten geblokkeerd — probeer het dan later opnieuw.";
 
 /**
+ * What each OAuth refusal is allowed to say.
+ *
+ * `oauth` is one sentence for every way the flow can fail — a forged,
+ * missing or replayed `state`, a provider error, an unverifiable ID token, a
+ * mismatched nonce — for the same reason the password error is one sentence:
+ * none of those distinctions helps the visitor and some of them help a
+ * prober.
+ *
+ * `oauth-unverified` is the exception, and it is safe to be specific about
+ * because it is a fact about the visitor's **Google** account, not about this
+ * site. `endpoints/oauth.ts` returns it identically whether or not an account
+ * exists here — there is no database query on that path at all — so it
+ * cannot be used to ask whether an address is registered.
+ */
+const OAUTH_ERRORS: Record<string, string> = {
+  oauth:
+    "Aanmelden met Google is niet gelukt. Probeer het opnieuw of meld je aan met een wachtwoord.",
+  "oauth-unavailable":
+    "Aanmelden met Google is op dit moment niet beschikbaar. Meld je aan met een wachtwoord.",
+  "oauth-unverified":
+    "Google heeft dit e-mailadres niet bevestigd. Bevestig het bij Google en probeer het opnieuw, of meld je aan met een wachtwoord.",
+};
+
+/**
  * What sign-up redirects to, worded so it says nothing about the address.
  *
  * "If that address was still free" is not coyness; it is the requirement.
@@ -60,6 +85,17 @@ export default async function SignInPage({
 
   const { error, notice } = await searchParams;
   const current = resolveLocale(locale);
+  const message =
+    error === undefined ? null : (OAUTH_ERRORS[error] ?? SIGN_IN_ERROR);
+
+  /*
+   * The button is shown only when the provider is actually configured.
+   * `resolveProvider` reads the environment and nothing else — no Payload,
+   * no database — so asking here costs a property lookup, and it means a
+   * deployment without Google credentials does not offer a button that can
+   * only answer `?error=oauth-unavailable`.
+   */
+  const googleConfigured = resolveProvider("google") !== null;
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
@@ -74,7 +110,7 @@ export default async function SignInPage({
         </p>
       ) : null}
 
-      {error === undefined ? null : (
+      {message === null ? null : (
         /*
          * `role="alert"` so the message is announced when the visitor is
          * bounced back here, and not only seen. This page is a fresh
@@ -86,9 +122,27 @@ export default async function SignInPage({
           data-testid="sign-in-error"
           role="alert"
         >
-          {SIGN_IN_ERROR}
+          {message}
         </p>
       )}
+
+      {googleConfigured ? (
+        /*
+         * A link, not a form. The start endpoint is a `GET` because it has
+         * no side effect the visitor can be tricked into: it mints a fresh
+         * `state`, writes it to the visitor's own cookie and redirects. The
+         * worst a third party can do by pointing a browser at it is discard
+         * a flow that visitor had not started.
+         */
+        <a
+          className="flex items-center justify-center rounded-md border border-border bg-surface px-4 py-2 font-medium text-foreground text-sm hover:bg-surface-hover"
+          data-testid="sign-in-google"
+          href={`/auth/google?locale=${current}`}
+          rel="nofollow"
+        >
+          Aanmelden met Google
+        </a>
+      ) : null}
 
       {/*
        * A plain form post to a Payload endpoint. No `"use client"`, no

@@ -50,6 +50,17 @@ const nextConfig: NextConfig = {
       { destination: "/api/auth/sign-in", source: "/auth/sign-in" },
       { destination: "/api/auth/sign-out", source: "/auth/sign-out" },
       { destination: "/api/auth/sign-up", source: "/auth/sign-up" },
+      /*
+       * Google sign-in. The callback path is the one registered with the
+       * provider as a redirect URI, so it is a URL a third party depends on
+       * — `endpoints/oauth.ts` derives it from `req.origin` and these two
+       * lines are what make that derivation land on the handler.
+       */
+      { destination: "/api/auth/google", source: "/auth/google" },
+      {
+        destination: "/api/auth/google/callback",
+        source: "/auth/google/callback",
+      },
     ];
   },
 

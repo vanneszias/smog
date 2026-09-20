@@ -248,6 +248,28 @@ describe("seeOther", () => {
     expect(seeOther("/nl").headers.get("Set-Cookie")).toBeNull();
   });
 
+  /**
+   * The OAuth callback has to clear its `state` cookie and set a session
+   * cookie on the same response. `Set-Cookie` is the one header a comma
+   * cannot join — a cookie value may contain one — so these have to be two
+   * header lines, which is what `getSetCookie()` reads back.
+   */
+  it("attaches every cookie it is given as its own header line", () => {
+    const response = seeOther("/nl", [
+      "payload-oauth-state=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+      "payload-token=abc; Path=/",
+    ]);
+
+    expect(response.headers.getSetCookie()).toEqual([
+      "payload-oauth-state=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+      "payload-token=abc; Path=/",
+    ]);
+  });
+
+  it("attaches nothing when given an empty list", () => {
+    expect(seeOther("/nl", []).headers.getSetCookie()).toEqual([]);
+  });
+
   it("has no body, so two redirects differ only in their headers", () => {
     expect(seeOther("/nl").body).toBeNull();
   });

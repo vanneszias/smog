@@ -139,6 +139,16 @@ export interface User {
   id: number;
   role: 'user' | 'admin';
   /**
+   * Linked social sign-ins. Written by the OAuth callback; not editable here.
+   */
+  oauthAccounts?:
+    | {
+        provider: string;
+        subject: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
    * Gestures this user has favorited.
    */
   favorites?: (number | Gesture)[] | null;
@@ -435,6 +445,13 @@ export interface PayloadMigration {
  */
 export interface UsersSelect<T extends boolean = true> {
   role?: T;
+  oauthAccounts?:
+    | T
+    | {
+        provider?: T;
+        subject?: T;
+        id?: T;
+      };
   favorites?: T;
   updatedAt?: T;
   createdAt?: T;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isAdmin, isAdminOrSelf } from "@/access";
+import { googleStrategy } from "@/auth/googleStrategy";
 import { cascadeListsOnUserDelete } from "@/hooks/cascadeListsOnUserDelete";
 import { enforcePasswordPolicy } from "@/hooks/enforcePasswordPolicy";
 import { Users } from "./Users";
@@ -62,6 +63,36 @@ describe("Users collection", () => {
 
   it("allows public registration", () => {
     expect(Users.access?.create?.({} as never)).toBe(true);
+  });
+
+  /**
+   * The custom strategy is on the path of every authenticated request,
+   * including the admin panel's, because `payload.init` puts a collection's
+   * own strategies *before* `local-jwt`. The whole array, so a second
+   * strategy is a deliberate change rather than something that appears.
+   */
+  it("registers the Google auth strategy, and only that one", () => {
+    expect(Users.auth).toMatchObject({ strategies: [googleStrategy] });
+    expect(googleStrategy.name).toBe("google");
+  });
+
+  /**
+   * Without these, `isAdminOrSelf` lets a signed-in visitor write somebody
+   * else's provider subject onto their own account — and the next time that
+   * person signs in with Google they land in the attacker's account.
+   */
+  it("lets only an admin write a linked social identity", () => {
+    const accounts = field("oauthAccounts") as {
+      access?: {
+        create?: (args: never) => boolean;
+        update?: (args: never) => boolean;
+      };
+    };
+
+    for (const guard of [accounts.access?.create, accounts.access?.update]) {
+      expect(guard?.({ req: { user: { role: "user" } } } as never)).toBe(false);
+      expect(guard?.({ req: { user: { role: "admin" } } } as never)).toBe(true);
+    }
   });
 
   it("adds a role field defaulting to user", () => {

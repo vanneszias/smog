@@ -158,6 +158,7 @@
         "@smog/ui-web": "workspace:*",
         "dotenv": "16.4.7",
         "graphql": "^16.8.1",
+        "jose": "^6.2.3",
         "lucide-react": "^0.473.0",
         "next": "16.3.3",
         "payload": "3.89.0",

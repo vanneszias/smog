@@ -200,6 +200,43 @@ test.describe("Email and password auth", () => {
     expect(response.headers().location).toBe("/nl/sign-in?error=invalid");
   });
 
+  /**
+   * The two OAuth rewrites, checked the same way and for the same reason:
+   * `next.config.ts` is not typechecked against `src/endpoints/oauth.ts`, and
+   * the integration tests address those endpoints at `/api/auth/google`,
+   * which exists whether or not the public path does. The callback path in
+   * particular is a URL registered with Google as a redirect URI — if the
+   * rewrite is gone, every real sign-in lands on a 404 and nothing else in
+   * the suite notices.
+   *
+   * No Google credentials exist in CI, so `resolveProvider` answers `null`
+   * and both paths redirect with `?error=oauth-unavailable`. That is the
+   * assertion: reached and answered, not 404. The flow itself is proven
+   * against a provider the integration test controls.
+   */
+  test("serves the Google endpoints at the rewritten paths", async ({
+    request,
+  }) => {
+    for (const path of ["/auth/google", "/auth/google/callback"]) {
+      const response = await request.get(`${SITE}${path}`, {
+        maxRedirects: 0,
+      });
+
+      expect(response.status(), path).toBe(303);
+      expect(response.headers().location, path).toBe(
+        "/nl/sign-in?error=oauth-unavailable"
+      );
+    }
+  });
+
+  test("does not offer Google sign-in when it is not configured", async ({
+    page,
+  }) => {
+    await page.goto(`${SITE}/nl/sign-in`);
+
+    await expect(page.getByTestId("sign-in-google")).toHaveCount(0);
+  });
+
   test("refuses a sign-in posted from another site", async ({ request }) => {
     const response = await request.post(`${SITE}/auth/sign-in`, {
       form: { email: member, locale: "nl", password: AUTH_PASSWORD },
