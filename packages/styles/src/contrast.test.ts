@@ -101,7 +101,22 @@ describe("surface hierarchy", () => {
   // for meaningful boundaries and is too strong for a fill, so this asserts
   // a modest but real step. Measured in a browser during Stage 2: light
   // `background` and `surfaceRaised` were literally the same #ffffff.
-  const MIN_SURFACE_STEP = 1.12;
+  /**
+   * The floor is deliberately below both themes' actual values rather than
+   * just under them. This guard exists to catch the regression Stage 2 shipped
+   * — light `background` and `surfaceRaised` were both `#ffffff` (1.00) and
+   * `surface` was 1.06 — not to pin an exact aesthetic.
+   *
+   * At 1.12 the dark theme cleared by 0.007 (1.127), which is 0.6% of
+   * headroom: any future nudge to `neutral[900]` or `[950]` would fail a test
+   * whose message points at a number rather than at the cause. A guard that
+   * fires on legitimate work gets deleted, and then the real regression has
+   * nothing standing in its way.
+   *
+   * 1.10 still fails hard on both original values while leaving room to move
+   * the greys. Actuals when this was written: light 1.153, dark 1.127.
+   */
+  const MIN_SURFACE_STEP = 1.1;
 
   for (const theme of ["light", "dark"] as const) {
     it(`separates surface from background in the ${theme} theme`, () => {
@@ -111,6 +126,9 @@ describe("surface hierarchy", () => {
           tokens.semantic[theme].background
         )
       ).toBeGreaterThanOrEqual(MIN_SURFACE_STEP);
+      // If this failed: a card is no longer distinguishable from the page
+      // behind it without its border. Move the theme's `background` further
+      // from its surfaces; do not lower the floor.
     });
 
     it(`separates surfaceRaised from background in the ${theme} theme`, () => {
@@ -120,6 +138,9 @@ describe("surface hierarchy", () => {
           tokens.semantic[theme].background
         )
       ).toBeGreaterThanOrEqual(MIN_SURFACE_STEP);
+      // If this failed: a card is no longer distinguishable from the page
+      // behind it without its border. Move the theme's `background` further
+      // from its surfaces; do not lower the floor.
     });
   }
 });
