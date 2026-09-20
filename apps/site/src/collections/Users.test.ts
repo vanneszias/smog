@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isAdmin, isAdminOrSelf } from "@/access";
+import { cascadeListsOnUserDelete } from "@/hooks/cascadeListsOnUserDelete";
 import { Users } from "./Users";
 
 const field = (name: string) =>
@@ -21,6 +22,15 @@ describe("Users collection", () => {
 
   it("wires delete through isAdmin", () => {
     expect(Users.access?.delete).toBe(isAdmin);
+  });
+
+  it("cascades the owner's lists on delete", () => {
+    // The behaviour lives in `Lists.delete.int.test.ts`, which deletes a real
+    // user who owns real lists. This pins that the hook is still wired up —
+    // unwiring it does not fail any config-shaped assertion, it just returns
+    // the raw `Failed query: delete from "users" ...` to whoever next deletes
+    // an account. The whole array, so a second hook is a deliberate change.
+    expect(Users.hooks?.beforeDelete).toEqual([cascadeListsOnUserDelete]);
   });
 
   it("allows public registration", () => {

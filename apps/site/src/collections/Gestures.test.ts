@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isAdmin, publicReadActive } from "@/access";
 import { blockDeleteWhenSponsored } from "@/hooks/blockDeleteWhenSponsored";
+import { dropDeletedGestureFromLists } from "@/hooks/dropDeletedGestureFromLists";
 import { Gestures } from "./Gestures";
 
 const field = (name: string) =>
@@ -32,18 +33,28 @@ describe("Gestures collection", () => {
     });
   });
 
-  it("guards deletes against existing sponsorships", () => {
-    // The behaviour lives in `Gestures.delete.int.test.ts`, which deletes a
-    // real sponsored gesture. This only pins that the hook is still wired
-    // up, which is the one way the behaviour disappears silently.
+  it("guards deletes against existing sponsorships, then strips the gesture from lists", () => {
+    // The behaviours live in `Gestures.delete.int.test.ts` and
+    // `Lists.delete.int.test.ts`, which delete real gestures against a real
+    // database. This only pins that both hooks are still wired up, which is
+    // the one way either behaviour disappears silently.
+    //
     // Asserts the whole array rather than membership, so that appending a
-    // second hook is also a deliberate change rather than something that
+    // third hook is also a deliberate change rather than something that
     // slips in unnoticed. (An earlier comment here claimed `toContain`
     // against an undefined value silently passes in Vitest 5. It does not —
     // it raises "the given combination of arguments (undefined and ...) is
     // invalid for this assertion". `toEqual` is still the stronger check,
     // but not for that reason.)
-    expect(Gestures.hooks?.beforeDelete).toEqual([blockDeleteWhenSponsored]);
+    //
+    // The order is part of the assertion, not incidental to it: the
+    // sponsorship guard refuses the delete, the list hook rewrites rows, and
+    // running them the other way round would have a refused delete depend on
+    // the transaction rolling back work it should never have started.
+    expect(Gestures.hooks?.beforeDelete).toEqual([
+      blockDeleteWhenSponsored,
+      dropDeletedGestureFromLists,
+    ]);
   });
 
   it("indexes isActive, because every public query filters on it", () => {

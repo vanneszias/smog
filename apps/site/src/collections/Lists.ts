@@ -8,16 +8,25 @@ import {
 } from "@/access/lists";
 
 /**
- * A `gesture` relationship value as sent to (or stored on) an `items` row:
- * either a raw id, or — for `previousValue` rows in particular, and
- * defensively for incoming ones too — an already-populated document.
+ * A relationship value as sent to (or stored on) an `items` row — `gesture`
+ * or `addedBy` — reduced to its id: either a raw id already, or, for
+ * `previousValue` rows in particular and defensively for incoming ones too,
+ * an already-populated document.
+ *
  * Shared by both halves of the `items` `beforeChange` hook below so the two
- * concerns (carry-forward, dedupe) agree on what "the same gesture" means.
+ * concerns (carry-forward, dedupe) agree on what "the same gesture" means,
+ * and exported for `hooks/dropDeletedGestureFromLists`, which is the third
+ * place that has to answer that question — "is this row the gesture being
+ * deleted?" — and has to answer it identically, or a row the dedupe pass
+ * treats as a duplicate of the doomed gesture survives the delete and takes
+ * the raw foreign-key error with it.
  */
-function resolveGestureId(gesture: unknown): number | string | undefined {
-  return typeof gesture === "object" && gesture !== null && "id" in gesture
-    ? (gesture as { id: number | string }).id
-    : (gesture as number | string | undefined);
+export function resolveRelationshipId(
+  value: unknown
+): number | string | undefined {
+  return typeof value === "object" && value !== null && "id" in value
+    ? (value as { id: number | string }).id
+    : (value as number | string | undefined);
 }
 
 /**
@@ -230,7 +239,7 @@ export const Lists: CollectionConfig = {
             >();
             if (Array.isArray(previousValue)) {
               for (const previousItem of previousValue) {
-                const previousGestureId = resolveGestureId(
+                const previousGestureId = resolveRelationshipId(
                   (previousItem as { gesture?: unknown } | undefined)?.gesture
                 );
                 if (
@@ -246,7 +255,7 @@ export const Lists: CollectionConfig = {
             }
 
             const withAddedByCarriedForward = value.map((item) => {
-              const gestureId = resolveGestureId(
+              const gestureId = resolveRelationshipId(
                 (item as { gesture?: unknown } | undefined)?.gesture
               );
               const addedByIsAbsent =
@@ -296,7 +305,7 @@ export const Lists: CollectionConfig = {
             const deduped: typeof withAddedByCarriedForward = [];
 
             for (const item of withAddedByCarriedForward) {
-              const gestureId = resolveGestureId(
+              const gestureId = resolveRelationshipId(
                 (item as { gesture?: unknown } | undefined)?.gesture
               );
 

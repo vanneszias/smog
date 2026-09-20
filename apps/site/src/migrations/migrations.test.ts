@@ -279,6 +279,136 @@ describe("migration chain", () => {
     expect(byId.get(7303)?.view_share_token).toBe("already-minted-token");
   });
 
+  it("carries every existing list and list item through the foreign-key rebuild", async () => {
+    // `20260920_114500_list_fk_behaviour` rebuilds both `lists` and
+    // `lists_items` to change two foreign keys, which SQLite cannot do in
+    // place. The failure that matters is not a wrong constraint — it is a
+    // rebuild that recreates either table empty, which every structural
+    // assertion in this file would still pass while every list in the
+    // database quietly disappeared. So this replays the chain with rows
+    // already present, exactly as the `user_consents` rebuild above does.
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys = ON;");
+    const runner = migrationRunner(database);
+
+    for (const migration of migrations) {
+      if (migration.name === "20260920_114500_list_fk_behaviour") {
+        database.exec(
+          `INSERT INTO users (id, email) VALUES (7400, 'pre-rebuild@example.test');`
+        );
+        database.exec(
+          `INSERT INTO gestures (id, playback_id) VALUES (7410, 'pb-a'), (7411, 'pb-b');`
+        );
+        database.exec(
+          `INSERT INTO lists (id, name, owner_id, visibility)
+           VALUES (7401, 'Lijst van voor de herbouw', 7400, 'shared');`
+        );
+        database.exec(
+          `INSERT INTO lists_items (_order, _parent_id, id, gesture_id, added_by_id)
+           VALUES (1, 7401, 'row-a', 7410, 7400),
+                  (2, 7401, 'row-b', 7411, NULL);`
+        );
+      }
+
+      await migration.up(runner.args);
+    }
+
+    expect(
+      database.prepare("SELECT id, name, owner_id FROM lists").all()
+    ).toEqual([
+      { id: 7401, name: "Lijst van voor de herbouw", owner_id: 7400 },
+    ]);
+    expect(
+      database
+        .prepare(
+          "SELECT id, gesture_id, added_by_id FROM lists_items ORDER BY _order"
+        )
+        .all()
+    ).toEqual([
+      { added_by_id: 7400, gesture_id: 7410, id: "row-a" },
+      { added_by_id: null, gesture_id: 7411, id: "row-b" },
+    ]);
+  });
+
+  it("deletes a user's lists with the user, against the migrated schema", async () => {
+    const { database } = await chain();
+    // The payoff for `lists.owner`. `cascadeListsOnUserDelete` is what runs
+    // on every delete through the Local API and is what
+    // `Lists.delete.int.test.ts` exercises, but that suite builds its schema
+    // with `pushDevSchema` from the collection configs — which still say
+    // `ON DELETE set null` on a `NOT NULL` column, because Payload has no
+    // way to express anything else. So the *migrated* schema, the one
+    // production actually runs, is only ever proven here, and only by
+    // deleting.
+    database.exec(
+      `INSERT INTO users (id, email) VALUES (7500, 'owner@example.test');`
+    );
+    database.exec(
+      `INSERT INTO gestures (id, playback_id) VALUES (7510, 'pb-cascade');`
+    );
+    database.exec(
+      `INSERT INTO lists (id, name, owner_id, visibility)
+       VALUES (7501, 'Wordt meegenomen', 7500, 'private');`
+    );
+    database.exec(
+      `INSERT INTO lists_items (_order, _parent_id, id, gesture_id)
+       VALUES (1, 7501, 'cascade-row', 7510);`
+    );
+
+    database.exec("DELETE FROM users WHERE id = 7500;");
+
+    expect(
+      database.prepare("SELECT id FROM lists WHERE id = 7501").all()
+    ).toEqual([]);
+    // And the array rows go with the list, via the `_parent_id` cascade that
+    // has been there since `add_lists`. A list row deleted without its items
+    // would leave orphans no query reaches.
+    expect(
+      database
+        .prepare("SELECT id FROM lists_items WHERE _parent_id = 7501")
+        .all()
+    ).toEqual([]);
+  });
+
+  it("drops a deleted gesture's list rows and leaves the rest of the list", async () => {
+    const { database } = await chain();
+    // The payoff for `lists.items.gesture`, and the behaviour that is
+    // deliberately *not* the same as `sponsorships.gesture` next door: a
+    // sponsorship refuses the delete, a list membership evaporates and the
+    // list survives. Before this migration the same statement failed with
+    // `NOT NULL constraint failed: lists_items.gesture_id`.
+    database.exec(
+      `INSERT INTO users (id, email) VALUES (7600, 'holder@example.test');`
+    );
+    database.exec(
+      `INSERT INTO gestures (id, playback_id)
+       VALUES (7610, 'pb-keep'), (7611, 'pb-drop'), (7612, 'pb-keep-2');`
+    );
+    database.exec(
+      `INSERT INTO lists (id, name, owner_id, visibility)
+       VALUES (7601, 'Blijft bestaan', 7600, 'private');`
+    );
+    database.exec(
+      `INSERT INTO lists_items (_order, _parent_id, id, gesture_id)
+       VALUES (1, 7601, 'keep-1', 7610),
+              (2, 7601, 'drop-me', 7611),
+              (3, 7601, 'keep-2', 7612);`
+    );
+
+    database.exec("DELETE FROM gestures WHERE id = 7611;");
+
+    expect(
+      database.prepare("SELECT id FROM lists WHERE id = 7601").all()
+    ).toEqual([{ id: 7601 }]);
+    expect(
+      database
+        .prepare(
+          "SELECT id FROM lists_items WHERE _parent_id = 7601 ORDER BY _order"
+        )
+        .all()
+    ).toEqual([{ id: "keep-1" }, { id: "keep-2" }]);
+  });
+
   it("puts the search index's localized columns on search_locales, not search", async () => {
     const { database } = await chain();
     // The search plugin's `title` and `concepts` are localized, so they live

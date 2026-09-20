@@ -59,8 +59,18 @@ export const blockDeleteWhenSponsored: CollectionBeforeDeleteHook = async ({
     limit: MAX_NAMED,
     depth: 0,
     overrideAccess: true,
-    // Shares the caller's transaction. Without it the lookup runs outside
-    // the delete's transaction and can miss rows written in the same request.
+    // The caller's `req`, so the lookup carries the same session as the
+    // delete that triggered it.
+    //
+    // Correcting the reason this line used to give (Stage 3 Task 8): it
+    // claimed the lookup would otherwise run outside the delete's
+    // transaction. There is no transaction. `sqliteD1Adapter` is
+    // constructed without `transactionOptions` (`payload.config.ts`), so the
+    // adapter takes Payload's `defaultBeginTransaction()`, which resolves to
+    // `null` and makes `initTransaction` a no-op. Passing `req` is still
+    // correct — it is what would enlist this read if that ever changed — but
+    // nothing on this collection's delete path is atomic, which is why the
+    // hook order in `Gestures.ts` is load-bearing rather than defensive.
     req,
   });
 

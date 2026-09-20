@@ -2,6 +2,7 @@ import type { CollectionConfig } from "payload";
 import { isAdmin, publicReadActive } from "@/access";
 import { defaultLocaleRequired } from "@/fields/defaultLocaleRequired";
 import { blockDeleteWhenSponsored } from "@/hooks/blockDeleteWhenSponsored";
+import { dropDeletedGestureFromLists } from "@/hooks/dropDeletedGestureFromLists";
 
 export const Gestures: CollectionConfig = {
   slug: "gestures",
@@ -15,11 +16,14 @@ export const Gestures: CollectionConfig = {
     update: isAdmin,
     delete: isAdmin,
   },
-  // A gesture someone paid to sponsor cannot be deleted out from under the
-  // sponsorship. See `hooks/blockDeleteWhenSponsored` for why this is a hook
-  // rather than a database-level rule.
+  // Two different answers to "something points at this gesture", and the
+  // order is load-bearing. A gesture someone paid to sponsor cannot be
+  // deleted out from under the sponsorship, so that guard refuses first;
+  // only then is the gesture stripped from the lists that merely hold it,
+  // which the spec's referential-integrity table rules should survive the
+  // delete rather than block it. See each hook's doc comment.
   hooks: {
-    beforeDelete: [blockDeleteWhenSponsored],
+    beforeDelete: [blockDeleteWhenSponsored, dropDeletedGestureFromLists],
   },
   fields: [
     {

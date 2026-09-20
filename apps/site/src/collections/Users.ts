@@ -1,5 +1,6 @@
 import type { CollectionConfig } from "payload";
 import { isAdmin, isAdminField, isAdminOrSelf } from "@/access";
+import { cascadeListsOnUserDelete } from "@/hooks/cascadeListsOnUserDelete";
 
 export const Users: CollectionConfig = {
   slug: "users",
@@ -11,6 +12,12 @@ export const Users: CollectionConfig = {
     hidden: ({ user }) => user?.role !== "admin",
   },
   auth: true,
+  // A list without an owner has no meaning and no access filter can reach
+  // it, so the spec's referential-integrity table rules cascade. See
+  // `hooks/cascadeListsOnUserDelete`.
+  hooks: {
+    beforeDelete: [cascadeListsOnUserDelete],
+  },
   access: {
     read: isAdminOrSelf,
     // Public registration is intentional; Stage 4 revisits it when social
