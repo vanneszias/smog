@@ -380,6 +380,48 @@ Kept as collections. Both are audit trails with legal retention requirements —
 admin logs for three years, consents for GDPR evidence — so they stay
 append-only records rather than becoming document versions.
 
+### There are no transactions on any write path
+
+Found in Stage 3 Task 8 by a mutation that should not have been able to fail,
+and verified at the call site rather than inferred:
+
+- `payload.config.ts` builds `sqliteD1Adapter({ binding })` with no
+  `transactionOptions`.
+- `@payloadcms/db-d1-sqlite/dist/index.js:83` therefore sets
+  `beginTransaction: defaultBeginTransaction()`.
+- `payload/dist/database/defaultBeginTransaction.js` returns
+  `() => Promise.resolve(null)`.
+
+A null transaction id makes `initTransaction` return false, so nothing is ever
+begun and `killTransaction` rolls nothing back. **Every multi-step write in
+this project is partially committed on failure.**
+
+This is a property of the adapter configuration, not of any one hook, and it
+changes how the rest of the migration must be written:
+
+- **Hook order is load-bearing, not defensive.** On `gestures.beforeDelete`,
+  `blockDeleteWhenSponsored` must run before `dropDeletedGestureFromLists`:
+  reversed, a refused delete still strips the gesture from every list first,
+  and nothing puts it back. Proven by mutation against a real database —
+  `refuses a sponsored gesture without stripping it from any list` fails.
+- **A cascade is not atomic.** `cascadeListsOnUserDelete` runs in
+  `beforeDelete` rather than `afterDelete` for this reason: the alternative
+  failure mode is orphan lists with a dangling `owner_id` that no access
+  filter can reach.
+- **Stages 5 and 9 need to plan for it.** Sponsorship status transitions with
+  side effects, the Mollie webhook, and the Convex import are all multi-step
+  writes. Each needs to be either idempotent or ordered so that the
+  irreversible step is last.
+
+Enabling `transactionOptions` would fix all of this, and is deliberately *not*
+done here: it is an adapter-wide change touching every write path, and it
+needs measuring against a real Worker rather than miniflare. Recorded as a
+decision to revisit, not an oversight.
+
+A Stage 1 comment in `hooks/blockDeleteWhenSponsored.ts` claimed its lookup
+ran "inside the delete's transaction". That was wrong and has been corrected
+in place.
+
 ### Referential integrity
 
 Payload emits every `relationship` column as `NOT NULL` (when `required`) with
