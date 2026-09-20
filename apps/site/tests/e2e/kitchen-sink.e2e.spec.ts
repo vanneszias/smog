@@ -1,4 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { abortMux, stallMux } from "../helpers/mux";
 
 /**
  * The three things Stage 2 deliberately did not fake under jsdom.
@@ -12,30 +13,6 @@ import { expect, type Page, test } from "@playwright/test";
 const KITCHEN_SINK = "http://localhost:3003/kitchen-sink";
 
 const LONG_NAME = "Aangenaam kennis met je te maken";
-
-/** Mux's hosts, which a sandboxed or offline machine cannot reach. */
-const MUX_HOSTS = [
-  "https://stream.mux.com/**",
-  "https://image.mux.com/**",
-  "https://inferred.litix.io/**",
-];
-
-/**
- * Holds every Mux request open for ever.
- *
- * Without this the outcome of the player tests depends on whether the machine
- * running them can reach Mux: online it plays, offline it errors into the
- * wrapper's empty state and the element is gone before an assertion can see
- * it. Stalling makes "the element mounted and upgraded" the only thing under
- * test, identically on both kinds of machine.
- */
-async function stallMux(page: Page): Promise<void> {
-  for (const host of MUX_HOSTS) {
-    await page.route(host, () => {
-      /* never settled on purpose */
-    });
-  }
-}
 
 test.describe("kitchen sink", () => {
   test("renders every section", async ({ page }) => {
@@ -182,9 +159,7 @@ test.describe("kitchen sink", () => {
   test("falls back to the error state when the stream cannot be fetched", async ({
     page,
   }) => {
-    for (const host of MUX_HOSTS) {
-      await page.route(host, (route) => route.abort());
-    }
+    await abortMux(page);
 
     await page.goto(KITCHEN_SINK);
 
