@@ -21,6 +21,7 @@ import { Media } from "./collections/Media";
 import { Sponsorships } from "./collections/Sponsorships";
 import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
+import { crawlerEndpoints } from "./endpoints/crawler";
 import { requireBinding, requireEnv } from "./lib/env";
 import { beforeSyncGesture } from "./search/beforeSync";
 
@@ -153,6 +154,14 @@ export default buildConfig({
     UserConsents,
   ],
   editor: lexicalEditor(),
+  /*
+   * `/api/sitemap.xml` and `/api/robots.txt`, rewritten to `/sitemap.xml` and
+   * `/robots.txt` in `next.config.ts`. They live here rather than in `app/`
+   * because a Next metadata route that imports Payload is its own bundle
+   * entry and costs half a megabyte gzipped; see `endpoints/crawler.ts` for
+   * the four measurements.
+   */
+  endpoints: crawlerEndpoints,
   localization: {
     locales: [
       { label: "Nederlands", code: "nl" },

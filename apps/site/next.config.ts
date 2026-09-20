@@ -12,6 +12,26 @@ const nextConfig: NextConfig = {
   // source beats ignoring the symptom.
   agentRules: false,
 
+  /**
+   * The two crawler files live on Payload's REST entry, not in `app/`.
+   *
+   * A `sitemap.ts` that imports Payload is its own bundle entry and measured
+   * +523.65 KiB gzipped against this commit; the same generator as a Payload
+   * endpoint measured +5.06 KiB, because `app/(payload)/api/[...slug]/route.ts`
+   * already carries that graph. See `src/endpoints/crawler.ts`.
+   *
+   * A rewrite, unlike a redirect, keeps the conventional URL: a crawler that
+   * probes `/robots.txt` gets the file at `/robots.txt`, with no hop and no
+   * `/api/` path in anyone's index. Rewrites are entries in the routes
+   * manifest, so this costs no bundled code at all.
+   */
+  async rewrites() {
+    return [
+      { destination: "/api/robots.txt", source: "/robots.txt" },
+      { destination: "/api/sitemap.xml", source: "/sitemap.xml" },
+    ];
+  },
+
   images: {
     localPatterns: [
       {
