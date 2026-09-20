@@ -380,6 +380,45 @@ Kept as collections. Both are audit trails with legal retention requirements —
 admin logs for three years, consents for GDPR evidence — so they stay
 append-only records rather than becoming document versions.
 
+### The mounted REST API leaks account existence
+
+Stage 4 Task 2 closed email enumeration on the site's own sign-in and sign-up
+endpoints — identical bytes for unknown, wrong-password and locked, plus a
+500 ms floor because the timing ranges were disjoint enough to classify in one
+request. **That is not the whole attack surface**, and the task said so rather
+than claiming the criterion met.
+
+`app/(payload)/api/[...slug]/route.ts` mounts Payload's REST API. Reproduced
+against a running dev server:
+
+```
+POST /api/users  {fresh address}     -> 201
+POST /api/users  {existing address}  -> 400
+   "A user with the given email is already registered."
+POST /api/users/login  {locked}      -> 401
+   "This user is locked due to having too many failed login attempts."
+```
+
+`POST /api/users` is public because `users.access.create` is `() => true` —
+deliberate, so people can register. It is also a more direct oracle than
+anything the sign-in flow exposed.
+
+**So Stage 4 exit criterion 5 is met for the site's own endpoints and not for
+the site as deployed.** Do not let it close on the strength of the sign-in
+tests.
+
+Neither fix is small, which is why this is recorded rather than rushed:
+
+- **Shadowing `/api/users/login`** is mechanically possible — `sanitize.js`
+  appends Payload's built-ins *after* a collection's own endpoints and
+  `handleEndpoints` takes the first match — but it means reimplementing
+  `loginHandler` for the admin panel, which would lose its lockout message.
+- **Closing REST registration** changes semantics that
+  `Users.escalation.int.test.ts` pins, and `Users.ts` already records that
+  public registration is revisited "when social login lands".
+
+Social login is Task 3, so that is where this belongs.
+
 ### A three-character password can still be set through password reset
 
 Found in Stage 4 Task 1 and verified in `node_modules`. This is live, and the
