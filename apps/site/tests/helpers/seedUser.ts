@@ -1,5 +1,6 @@
 import { getPayload } from "payload";
 import config from "../../src/payload.config.js";
+import { withBusyRetry } from "./d1Retry";
 
 export const testUser = {
   email: "dev@payloadcms.com",
@@ -19,20 +20,24 @@ export async function seedTestUser(): Promise<void> {
   const payload = await getPayload({ config });
 
   // Delete existing test user if any
-  await payload.delete({
-    collection: "users",
-    where: {
-      email: {
-        equals: testUser.email,
+  await withBusyRetry("remove a leftover test user", () =>
+    payload.delete({
+      collection: "users",
+      where: {
+        email: {
+          equals: testUser.email,
+        },
       },
-    },
-  });
+    })
+  );
 
   // Create fresh test user
-  await payload.create({
-    collection: "users",
-    data: testUser,
-  });
+  await withBusyRetry("create the test user", () =>
+    payload.create({
+      collection: "users",
+      data: testUser,
+    })
+  );
 }
 
 /**
@@ -41,12 +46,14 @@ export async function seedTestUser(): Promise<void> {
 export async function cleanupTestUser(): Promise<void> {
   const payload = await getPayload({ config });
 
-  await payload.delete({
-    collection: "users",
-    where: {
-      email: {
-        equals: testUser.email,
+  await withBusyRetry("delete the test user", () =>
+    payload.delete({
+      collection: "users",
+      where: {
+        email: {
+          equals: testUser.email,
+        },
       },
-    },
-  });
+    })
+  );
 }

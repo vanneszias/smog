@@ -11,6 +11,11 @@ export default defineConfig({
       "src/**/*.test.{ts,tsx}",
       "scripts/**/*.test.ts",
       "tests/int/**/*.int.spec.ts",
+      // The e2e helpers are not e2e specs: `seedUser.ts` carries the retry
+      // that decides whether the admin suite is reproducible, and that logic
+      // is testable without a browser. `exclude` below still keeps the specs
+      // themselves out of Vitest.
+      "tests/helpers/**/*.test.ts",
     ],
     exclude: ["**/node_modules/**", "tests/e2e/**"],
     // Vitest's 10s default is tuned for unit tests. Every `*.int.test.ts`
