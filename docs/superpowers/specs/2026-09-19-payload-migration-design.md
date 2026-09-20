@@ -380,6 +380,34 @@ Kept as collections. Both are audit trails with legal retention requirements —
 admin logs for three years, consents for GDPR evidence — so they stay
 append-only records rather than becoming document versions.
 
+### A three-character password can still be set through password reset
+
+Found in Stage 4 Task 1 and verified in `node_modules`. This is live, and the
+only thing making it unreachable is a gap that **Stage 7 closes**, so it is
+recorded here rather than in a task report.
+
+`auth/operations/resetPassword.js` hashes the new password **first** and calls
+`beforeValidate` afterwards, with the *user document* as `data`. By the time
+any collection hook runs, `data.password` is undefined — so the password
+policy added in Stage 4 Task 1 cannot see the plaintext and cannot reject it.
+Payload's own floor at that entry point is a hard-coded 3 characters.
+
+`app/(payload)/api/[...slug]/route.ts` mounts the REST API, and
+`auth/endpoints/index.js` registers `/forgot-password` and `/reset-password`
+for every auth collection. The endpoints exist and respond today. **The only
+reason nobody can walk through them is that no email adapter is configured**,
+so the reset token is written to the console instead of being delivered.
+
+**Stage 7 configures the email adapter.** Doing that without also applying the
+password policy at the reset entry point re-opens a three-character password
+floor on a production site — silently, because every existing test still
+passes. Closing it means overriding the reset endpoint, which carries its own
+bundle cost under the route-handler rule above.
+
+No characterization test was added asserting the current behaviour. A green
+test whose assertion is "this weakness still exists" reads as approval of it
+to the next person who greps for the endpoint.
+
 ### There are no transactions on any write path
 
 Found in Stage 3 Task 8 by a mutation that should not have been able to fail,
