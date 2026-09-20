@@ -19,6 +19,7 @@
       "!**/.svelte-kit",
       "!**/wrangler.jsonc",
       "!**/payload-types.ts",
+      "!packages/ui-web/src/styles/theme.css",
       "!**/.source",
       "!**/_generated",
       "!**/.agents"

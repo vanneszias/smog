@@ -1,0 +1,121 @@
+/*
+ * GENERATED FILE — do not edit.
+ *
+ * Produced by `bun -F @smog/ui-web generate:theme` from @smog/styles.
+ * Change a value in packages/styles/src/tokens.ts and regenerate; theme.test.ts
+ * fails while this file and the tokens disagree.
+ */
+
+/*
+ * Light values. Tailwind v4 emits these onto `:root` and builds the matching
+ * utilities, so `bg-primary`, `text-foreground` and `rounded-md` resolve to
+ * tokens instead of Tailwind's own palette and scales.
+ */
+
+@theme {
+  --color-background: #FFFFFF;
+  --color-surface: #F7F8F9;
+  --color-surface-raised: #FFFFFF;
+  --color-border-subtle: #DDE1E4;
+  --color-border: #6E757C;
+  --color-border-strong: #565C63;
+  --color-foreground: #1A1D21;
+  --color-foreground-muted: #565C63;
+  --color-primary: #00805F;
+  --color-primary-foreground: #FFFFFF;
+  --color-accent: #EE971C;
+  --color-accent-foreground: #0E1013;
+  --color-success: #97C699;
+  --color-success-foreground: #0E1013;
+  --color-warning: #F0C814;
+  --color-warning-foreground: #0E1013;
+  --color-danger: #D63228;
+  --color-danger-foreground: #FFFFFF;
+  --color-ring: #00805F;
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-20: 80px;
+  --spacing-24: 96px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 48px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-xxl: 32px;
+  --line-height-xs: 16px;
+  --line-height-sm: 20px;
+  --line-height-md: 24px;
+  --line-height-lg: 28px;
+  --line-height-xl: 32px;
+  --line-height-xxl: 40px;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 128, 95, 0.08);
+  --shadow-md: 0 2px 4px 0 rgba(0, 128, 95, 0.12);
+  --shadow-lg: 0 4px 8px 0 rgba(0, 128, 95, 0.2);
+}
+
+/*
+ * Dark values: the same custom properties, re-declared. Every utility reads
+ * its variable at use time, so re-theming the subtree under `.dark` takes no
+ * `dark:` classes at all.
+ */
+
+.dark {
+  --color-background: #0E1013;
+  --color-surface: #1A1D21;
+  --color-surface-raised: #2B2F34;
+  --color-border-subtle: #40454B;
+  --color-border-strong: #9BA2AA;
+  --color-foreground: #F7F8F9;
+  --color-foreground-muted: #9BA2AA;
+  --color-primary: #51A892;
+  --color-primary-foreground: #0E1013;
+  --color-accent: #F1AB47;
+  --color-danger: #FF6057;
+  --color-danger-foreground: #0E1013;
+  --color-ring: #51A892;
+}
+
+/*
+ * Tailwind keeps its type scale in the `--text-*` namespace; ours is
+ * `--font-size-*` / `--line-height-*`, because "font size" is what native
+ * calls it too. Aliased here rather than renamed, so one name serves both
+ * platforms.
+ */
+
+@theme inline {
+  --text-xs: var(--font-size-xs);
+  --text-xs--line-height: var(--line-height-xs);
+  --text-sm: var(--font-size-sm);
+  --text-sm--line-height: var(--line-height-sm);
+  --text-md: var(--font-size-md);
+  --text-md--line-height: var(--line-height-md);
+  --text-lg: var(--font-size-lg);
+  --text-lg--line-height: var(--line-height-lg);
+  --text-xl: var(--font-size-xl);
+  --text-xl--line-height: var(--line-height-xl);
+  --text-xxl: var(--font-size-xxl);
+  --text-xxl--line-height: var(--line-height-xxl);
+}
