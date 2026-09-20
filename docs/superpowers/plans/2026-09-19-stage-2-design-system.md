@@ -320,7 +320,8 @@ describe("cn", () => {
   it("lets a caller className override a variant class", () => {
     const variant = "px-4 py-2 bg-primary text-primary-foreground";
     expect(cn(variant, "bg-red-500")).toContain("bg-red-500");
-    expect(cn(variant, "bg-red-500")).not.toContain("bg-primary");
+    // Split, don't substring: `hover:bg-primary/90` contains "bg-primary".
+    expect(cn(variant, "bg-red-500").split(/\s+/)).not.toContain("bg-primary");
   });
 
   it("keeps non-conflicting utilities from both sides", () => {
@@ -398,16 +399,25 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "Opslaan" })).toBeDefined();
   });
 
+  // Assert against the CLASS LIST, never a substring of `className`.
+  // `expect(className).not.toContain("bg-primary")` cannot pass: the primary
+  // variant also carries `hover:bg-primary/90`, and that string contains
+  // "bg-primary". Worse, the substring form is exactly the assertion that
+  // still passes when the merge is broken and both classes are emitted — it
+  // is the bug it is supposed to catch, wearing the shape of a test.
+  // Tasks 5 through 7 copy this helper, not the substring form.
+  const classesOf = (el: Element) => el.className.split(/\s+/).filter(Boolean);
+
   it("defaults to the primary variant", () => {
     render(<Button>Opslaan</Button>);
-    expect(screen.getByRole("button").className).toContain("bg-primary");
+    expect(classesOf(screen.getByRole("button"))).toContain("bg-primary");
   });
 
   it("lets className override a variant class", () => {
     render(<Button className="bg-red-500">Opslaan</Button>);
-    const className = screen.getByRole("button").className;
-    expect(className).toContain("bg-red-500");
-    expect(className).not.toContain("bg-primary");
+    const classes = classesOf(screen.getByRole("button"));
+    expect(classes).toContain("bg-red-500");
+    expect(classes).not.toContain("bg-primary");
   });
 
   it("forwards a ref to the button element", () => {
@@ -460,7 +470,7 @@ Expected: FAIL — `Failed to resolve import "./Button"`.
 Create `packages/ui-web/src/components/Button.tsx`:
 
 ```tsx
-import { Slot } from "@radix-ui/react-slot";
+import { Slot, Slottable } from "@radix-ui/react-slot";
 import { type VariantProps, cva } from "class-variance-authority";
 import { Loader2 } from "lucide-react";
 import { type ButtonHTMLAttributes, forwardRef } from "react";
@@ -510,7 +520,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading ? <Loader2 aria-hidden className="size-4 animate-spin" /> : null}
-        {children}
+        {/*
+          `Slottable` is load-bearing, not decoration. With `asChild`,
+          `Component` is Radix's `Slot`, which calls `React.Children.only`.
+          A bare `{children}` alongside the spinner expression hands it two
+          children — `null` counts — so EVERY `asChild` use throws, not only
+          the loading one. `Slottable` marks which child the slot replaces.
+        */}
+        <Slottable>{children}</Slottable>
       </Component>
     );
   }
