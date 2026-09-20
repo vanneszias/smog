@@ -483,6 +483,40 @@ No characterization test was added asserting the current behaviour. A green
 test whose assertion is "this weakness still exists" reads as approval of it
 to the next person who greps for the endpoint.
 
+### A relationship field accepts an id for a row that does not exist
+
+Found in Stage 4 Task 4 and verified at the call site. This is not specific to
+favorites; it applies to **every** relationship field in the project.
+
+`payload/dist/utilities/isValidID.js` is the whole of Payload's relationship
+validation, and for a numeric key it is:
+
+```js
+if (type === 'number' && typeof value === 'number' && !Number.isNaN(value)) {
+    return true;
+}
+```
+
+A `typeof` test. No query, no existence check. So `favorites: [999000001]`
+writes a dangling reference, and the same is true of any `relationship` or
+`hasMany` field written through the Local or REST API.
+
+Two consequences worth carrying:
+
+- **A caller that accepts ids from a request must resolve them itself**, with
+  `overrideAccess: false`, before writing. Task 4's favorites endpoint does
+  this, which also stops a non-admin favouriting an *inactive* gesture — the
+  access check comes for free with the lookup and would not have happened
+  otherwise.
+- **The same function rejects string ids on a numeric key.** Every other layer
+  in this app carries ids as strings, so anything writing a relationship has to
+  convert, and a silent no-op is the failure if it does not. Assert the stored
+  type rather than trusting the round trip.
+
+Stages 5 and 9 both write relationships from external input — the sponsorship
+flow from a form, the Convex import from a file — and neither gets existence
+checking from the framework.
+
 ### There are no transactions on any write path
 
 Found in Stage 3 Task 8 by a mutation that should not have been able to fail,
