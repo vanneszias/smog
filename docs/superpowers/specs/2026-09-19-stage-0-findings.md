@@ -159,11 +159,24 @@ number. Each stage appends its own.
 | Point | gzip | % of 10 MiB | Delta |
 |---|---:|---:|---:|
 | Stage 0 baseline — 2 template collections | 6,601 KiB | 64.5% | — |
-| Stage 1 in progress — +`categories`, +`gestures`, Payload 3.82.1 → 3.89.0 | 6,838 KiB | 66.8% | +237 KiB |
+| Stage 1 in progress — +`categories`, +`gestures`, on Payload **3.90.1** | 6,838 KiB | 66.8% | +237 KiB |
+| **Stage 1 complete** — +`users` roles, `lists`, `sponsorships`, `admin-logs`, `user-consents`, search plugin, seed; pinned back to Payload **3.89.0** | 6,656.73 KiB | 65.0% | **−181 KiB** |
 
-Two collections and a minor Payload upgrade cost 237 KiB gzipped. Five more
-collections, the search plugin, a component library and the public site still
-have to fit in the remaining 3.3 MiB. Re-measure at the end of every stage with
+**Stage 1 cost +56 KiB gzipped in total**, which is far less than the mid-stage
+row suggests. That row reads as a regression the stage then undid, and it is
+worth being precise about why, because the naive reading is wrong: it was
+measured while the app was briefly on Payload 3.90.1. Pinning back to 3.89.0 —
+forced by workerd's 100,000-iteration PBKDF2 cap, not by bundle size — returned
+roughly 180 KiB, which then absorbed five collections and the search plugin.
+
+Measured deltas within the stage: the search plugin cost **+8.62 KiB** (measured
+both sides of its own commit rather than against a stale figure), and the seed
+script cost nothing measurable, being a CLI entry point rather than worker code.
+
+So the honest summary is that five collections and a search plugin are cheap;
+the Payload minor version is not. Version choice dominates content-model growth
+at this scale, which is worth remembering before the next upgrade is treated as
+routine. Re-measure at the end of every stage with
 `bun -F site check-bundle-size` and append a row here.
 
 ### Consequence
