@@ -1,6 +1,53 @@
 import type { CollectionConfig } from "payload";
 import { isAdmin, isAdminField, isAdminOrSelf } from "@/access";
 import { cascadeListsOnUserDelete } from "@/hooks/cascadeListsOnUserDelete";
+import { enforcePasswordPolicy } from "@/hooks/enforcePasswordPolicy";
+
+/** `lockTime` is milliseconds — see the note on `auth` below. */
+const TEN_MINUTES_MS = 10 * 60 * 1000;
+
+/**
+ * How many failed sign-ins lock the account.
+ *
+ * ## Why this is the brute-force control, and the hash is not
+ *
+ * Payload 3.89.0 hashes passwords with **PBKDF2-HMAC-SHA256 at 25,000
+ * iterations** — the literal `25000` in `pbkdf2Promisified`
+ * (`payload/dist/auth/strategies/local/generatePasswordSaltHash.js`). OWASP's
+ * current guidance for that algorithm is **600,000**, so every password this
+ * app stores is protected by roughly 1/24th of the work factor it should be.
+ *
+ * Payload 3.90.x raises the constant to exactly 600,000, and **that is the
+ * release this project cannot run**: workerd caps PBKDF2 at 100,000
+ * iterations, so the fixed version cannot hash a password on Cloudflare at
+ * all. The iteration count is not exposed as configuration — it is a literal
+ * in the dependency — so there is no third option. This is why `payload` and
+ * every `@payloadcms/*` package are pinned to `3.89.0`, and it is a
+ * deliberate, recorded trade, not an oversight. Do not "fix" it by
+ * upgrading, and do not replace it with a bespoke KDF; either is worse than
+ * the problem. Revisit only when Payload makes iterations configurable or
+ * workerd raises its cap.
+ *
+ * What follows from that: **resistance to online guessing has to come from
+ * lockout rather than from the cost of a single guess.** Hence the two
+ * settings below, the password floor in `hooks/enforcePasswordPolicy`, and
+ * the stage's preference for Google sign-in, which gives us no password to
+ * hash in the first place. Full write-up in
+ * `docs/superpowers/specs/2026-09-19-stage-0-findings.md`.
+ *
+ * ## Why these are written out when 3.89.0 already defaults to them
+ *
+ * `addDefaultsToAuthConfig` (`payload/dist/collections/config/defaults.js`)
+ * applies `maxLoginAttempts: 5` and `lockTime: 600000` even to a bare
+ * `auth: true`, so setting them changes no behaviour today — verified
+ * against a real database. They are spelled out anyway because the whole
+ * brute-force story rests on them: an upstream default is something a
+ * dependency bump can move silently, and a future edit that turns `auth`
+ * into an object of its own is one forgotten key away from
+ * `maxLoginAttempts: 0`. `Users.test.ts` pins both values and
+ * `Users.lockout.int.test.ts` pins the behaviour.
+ */
+const MAX_LOGIN_ATTEMPTS = 5;
 
 export const Users: CollectionConfig = {
   slug: "users",
@@ -11,12 +58,27 @@ export const Users: CollectionConfig = {
     // admin panel.
     hidden: ({ user }) => user?.role !== "admin",
   },
-  auth: true,
+  auth: {
+    // Read `MAX_LOGIN_ATTEMPTS` above before changing either of these: they
+    // are the brute-force control, because the password hash is not one.
+    maxLoginAttempts: MAX_LOGIN_ATTEMPTS,
+    // Milliseconds. Confirmed at the call site rather than assumed:
+    // `incrementLoginAttempts` computes `new Date(Date.now() + lockTime)`
+    // (`payload/dist/auth/strategies/local/incrementLoginAttempts.js`), and
+    // `payload/dist/auth/types.d.ts:210` documents the unit.
+    lockTime: TEN_MINUTES_MS,
+  },
   // A list without an owner has no meaning and no access filter can reach
   // it, so the spec's referential-integrity table rules cascade. See
   // `hooks/cascadeListsOnUserDelete`.
   hooks: {
     beforeDelete: [cascadeListsOnUserDelete],
+    // Payload checks that a password is *present*, not that it is any good:
+    // its only length rule is a hard-coded `minLength = 3`. This is the
+    // floor. See `hooks/enforcePasswordPolicy` for why it is a collection
+    // hook rather than a field `validate`, and for the one path it cannot
+    // reach.
+    beforeValidate: [enforcePasswordPolicy],
   },
   access: {
     read: isAdminOrSelf,

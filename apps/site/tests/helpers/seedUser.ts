@@ -4,7 +4,11 @@ import { withBusyRetry } from "./d1Retry";
 
 export const testUser = {
   email: "dev@payloadcms.com",
-  password: "test",
+  // Twelve characters or more: `hooks/enforcePasswordPolicy` is a real
+  // collection hook and applies to fixtures too. The previous value here
+  // was `"test"`, which the policy now refuses, so seeding would have
+  // failed before a single admin spec ran.
+  password: "e2e-admin-password",
   // The e2e specs drive /admin, which is gated on `role: "admin"`, so this
   // fixture has to be a real admin. Seeding it is legitimate: `payload.create`
   // below runs through the local API with the default `overrideAccess: true`,

@@ -512,3 +512,130 @@ Remaining:
    `ImageResponse` assets for 602 KiB gzipped.
 
 Schema before code, always: `deploy:database` then `deploy:app`.
+
+## Password hashing is 24× weaker than guidance, and cannot be fixed here
+
+Recorded during Stage 4 Task 1. This is the reason the `users` collection is
+shaped the way it is, and it is not a bug anyone should try to close.
+
+### The measurement
+
+`payload/dist/auth/strategies/local/generatePasswordSaltHash.js` hashes with
+**PBKDF2-HMAC-SHA256 at 25,000 iterations**, 512-byte output, per-user 32-byte
+random salt:
+
+```js
+crypto.pbkdf2(password, salt, 25000, 512, 'sha256', …)
+```
+
+The `25000` is a literal in the dependency. Payload exposes no configuration
+for it — there is no `auth.hashing`, no cost-factor option, nothing in
+`SanitizedCollectionConfig['auth']` that reaches it. The only lever upstream
+offers is the version number.
+
+OWASP's current recommendation for PBKDF2-HMAC-SHA256 is **600,000**
+iterations, so every stored password here carries roughly **1/24th** of the
+work factor it should.
+
+### Why the fixed version is unavailable
+
+Payload **3.90.x raises the constant to exactly 600,000**, and that is
+precisely the release this project cannot run: **workerd caps PBKDF2 at
+100,000 iterations** (established in Stage 1, and the original reason for the
+pin). On 3.90.x the Worker cannot hash a password at all — it is not slow, it
+throws.
+
+So the situation is a closed triangle:
+
+| Option | Outcome |
+|---|---|
+| Stay on 3.89.0 | 25,000 iterations — weak, but it runs |
+| Upgrade to 3.90.x | 600,000 iterations — correct, but workerd refuses |
+| Configure the count | Not possible; it is a literal |
+| Hash it ourselves | A bespoke KDF is how you get something *worse* |
+
+The pin on `payload` and every `@payloadcms/*` package at `3.89.0` is
+therefore an auth-path constraint, not just a compatibility one. **Do not
+upgrade Payload to "fix" this.** Revisit only when Payload makes the iteration
+count configurable, or workerd raises its cap — either one alone resolves it.
+
+### Mitigations actually in place
+
+Since the cost of a single guess cannot be raised, the number of guesses is
+capped instead:
+
+- **Lockout: `maxLoginAttempts: 5`, `lockTime: 600000` (ten minutes)** on
+  `users.auth`. Verified at the call site rather than assumed —
+  `incrementLoginAttempts` computes `new Date(Date.now() + lockTime)`, so the
+  unit is **milliseconds**, and `resetLoginAttempts` zeroes both
+  `loginAttempts` and `lockUntil` on a **successful** sign-in, so the counter
+  does not accumulate across a legitimate user's typos.
+- **`access.unlock: isAdmin`** (Stage 1). Payload's `defaultUnlockAccess` is
+  any authenticated user of the admin collection, which with public
+  registration would make the lockout decorative.
+- **A password floor of 12 characters plus a small deny-list**, in
+  `apps/site/src/hooks/enforcePasswordPolicy.ts`. Payload's own floor is a
+  hard-coded three; `payload.create` accepted `"abc"` before this existed.
+- **No upper bound on password length.** A cap is a denial-of-service control
+  for an expensive KDF, and ours is cheap; capping would only break password
+  managers. A 200-character password is pinned as accepted.
+- **Google sign-in is the preferred path** (Stage 4 Task 3), because a Google
+  account gives us no password to hash.
+
+### Three things Task 1 found that the plan did not predict
+
+1. **Lockout was already on.** The plan states that `maxLoginAttempts` and
+   `lockTime` "both default to off". In 3.89.0 they do not:
+   `addDefaultsToAuthConfig` (`payload/dist/collections/config/defaults.js`)
+   applies `maxLoginAttempts: 5` and `lockTime: 600000` to a bare
+   `auth: true`, and the sanitized config confirms it at runtime. The
+   behavioural lockout tests therefore passed before anything was configured.
+   Writing the values out explicitly is still worth doing — an upstream
+   default is something a dependency bump moves silently, and any future edit
+   that turns `auth` into an object of its own is one forgotten key away from
+   `maxLoginAttempts: 0` — but it changed no behaviour on the day.
+
+2. **A locked account is distinguishable from a wrong password, and that is
+   an enumeration signal.** Measured against a real database:
+
+   | Case | Error | HTTP | Message |
+   |---|---|---|---|
+   | Unknown address | `AuthenticationError` | 401 | `The email or password provided is incorrect.` |
+   | Known address, wrong password | `AuthenticationError` | 401 | `The email or password provided is incorrect.` |
+   | Locked account, wrong password | `LockedAuth` | 401 | `This user is locked due to having too many failed login attempts.` |
+   | Locked account, **correct** password | `LockedAuth` | 401 | `This user is locked due to having too many failed login attempts.` |
+
+   The first two are identical, which is the good half. The `LockedAuth`
+   response is not: an attacker who sends six wrong passwords and reads
+   "this user is locked" has learned the address is registered, because an
+   unregistered one never locks — `checkLoginPermission` throws
+   `AuthenticationError` for a missing user before any lock is considered
+   (`payload/dist/auth/operations/login.js`). **Review Focus item 5 requires
+   these to be indistinguishable**, so the sign-in endpoint Stage 4 Task 2
+   builds must flatten `LockedAuth` into the same body as
+   `AuthenticationError` rather than passing Payload's error through. Note
+   that flattening the *body* does not flatten the *timing*. `login.js` runs
+   `checkLoginPermission` **before** `authenticateLocalStrategy`, so both an
+   unknown address and a locked account answer without ever calling PBKDF2,
+   while a wrong password on a live, unlocked account pays the full 25,000
+   iterations first. The bodies match; the response times do not, in both
+   directions. Closing that needs a deliberate equalising delay, which is
+   Task 2's call to make — recorded here so it is a decision rather than an
+   omission.
+
+3. **`resetPassword` bypasses collection hooks for the password.** It hashes
+   first and calls `beforeValidate` afterwards, passing the *user document*
+   rather than the submitted body
+   (`payload/dist/auth/operations/resetPassword.js`), so `data.password` is
+   undefined inside the hook and the policy cannot see it. A reset can still
+   set a three-character password.
+
+   This is live rather than hypothetical: `app/(payload)/api/[...slug]/route.ts`
+   mounts Payload's REST API, and `payload/dist/auth/endpoints/index.js`
+   registers `/forgot-password` and `/reset-password` on every auth
+   collection. The only thing making it unreachable today is that no email
+   adapter is configured, so the reset token goes to the console instead of
+   to a mailbox — it becomes reachable the moment one is. A collection hook
+   cannot close this; whichever task builds the reset flow must apply the
+   policy at that entry point, and configuring email without doing so
+   re-opens the three-character floor.

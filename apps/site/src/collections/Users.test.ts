@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isAdmin, isAdminOrSelf } from "@/access";
 import { cascadeListsOnUserDelete } from "@/hooks/cascadeListsOnUserDelete";
+import { enforcePasswordPolicy } from "@/hooks/enforcePasswordPolicy";
 import { Users } from "./Users";
 
 const field = (name: string) =>
@@ -31,6 +32,32 @@ describe("Users collection", () => {
     // the raw `Failed query: delete from "users" ...` to whoever next deletes
     // an account. The whole array, so a second hook is a deliberate change.
     expect(Users.hooks?.beforeDelete).toEqual([cascadeListsOnUserDelete]);
+  });
+
+  it("locks an account after five failed sign-ins, for ten minutes", () => {
+    // These two are the brute-force control, and they are the control
+    // because the KDF is not: 25,000 PBKDF2 iterations against OWASP's
+    // 600,000, on a Payload version pinned by workerd's own cap. The
+    // reasoning is in the header of `Users.ts`.
+    //
+    // They are pinned here even though 3.89.0's `addDefaultsToAuthConfig`
+    // already supplies exactly these values for a bare `auth: true`. That
+    // is the reason to pin them, not a reason to skip it: an upstream
+    // default can move under a dependency bump without anything in this
+    // repository changing, and nothing else in the suite would notice.
+    // `lockTime` is milliseconds.
+    expect(Users.auth).toMatchObject({
+      maxLoginAttempts: 5,
+      lockTime: 600_000,
+    });
+  });
+
+  it("enforces a password policy on write", () => {
+    // Payload's own floor is a hard-coded three characters, so without this
+    // hook `abc` is a valid password. The whole array, so adding a second
+    // beforeValidate hook is a deliberate change. Behaviour is covered in
+    // `Users.password.int.test.ts`.
+    expect(Users.hooks?.beforeValidate).toEqual([enforcePasswordPolicy]);
   });
 
   it("allows public registration", () => {
