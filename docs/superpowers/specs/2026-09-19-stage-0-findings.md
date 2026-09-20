@@ -204,6 +204,46 @@ check and saves no bytes at all.
 The 602 KiB `ImageResponse`/OG-image lever identified in Stage 0 is still
 unspent and is still the largest single recoverable win.
 
+| Stage 3 Task 3 — locale routing, gestures list (blank template removed) | 6,968.82 KiB | 68.1% | −210 KiB |
+| **Stage 3 Task 5** — gesture detail page, no new dependency | 7,406.37 KiB | 72.3% | **+437 KiB** |
+
+### The Mux player is bundled once per route that renders it
+
+The Task 5 row is the important one, because it adds **no dependency** and still
+costs 437 KiB gzipped for a single page. Investigated rather than assumed:
+
+```
+$ grep -rl "mux-player" .open-next/server-functions
+  handler.mjs                              23M
+  .next/server/chunks/ssr/_0cpe-yd._.js   1.3M
+  .next/server/chunks/ssr/_183qisd._.js   1.3M
+```
+
+Two 1.3 MB SSR chunks, each containing the player, referenced by different
+page manifests — the kitchen sink and the new detail page. The uncompressed
+upload grew by 1,994 KiB, which is consistent. Turbopack emits a **per-route**
+SSR chunk, so a heavy client component used by N routes is bundled N times.
+
+**Why this matters more than the number itself.** At 7,406 KiB there is roughly
+**786 KiB before CI's 8 MiB warning**. One more route rendering `VideoPlayer`
+crosses it. Stage 5's sponsor wizard has a preview step, which is exactly that
+route — so the budget question arrives *before* anyone is thinking about bytes.
+
+Options, in the order they should be considered:
+
+1. **Share the chunk.** One `next/dynamic` boundary that every route imports,
+   rather than each route importing `VideoPlayer` directly. This is the real
+   fix and it gets cheaper the earlier it is done.
+2. **Drop the kitchen sink from the production build.** Stage 2 ruled to ship
+   it because Stage 4 would need the player anyway. That reasoning has now
+   expired: the detail page carries the player, so the kitchen sink's marginal
+   cost is a whole duplicate chunk rather than nothing. Worth revisiting, and
+   it is a build-time exclusion, not a runtime 404.
+3. **Spend the OG-image lever** (602 KiB, still unspent).
+
+Raising the warn threshold is not on the list. It is the only thing standing
+between this and a 10 MiB wall that fails the deploy rather than the build.
+
 ### Consequence
 
 Bundle size is now a standing constraint on every later stage, not a Stage 0
