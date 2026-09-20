@@ -77,4 +77,20 @@ describe.each(["light", "dark"] as const)("%s theme contrast", (theme) => {
   it.each(uiPairs)("%s meets AA for UI boundaries", (_label, fg, bg) => {
     expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(AA_LARGE);
   });
+
+  /*
+   * `borderSubtle` is deliberately exempt from 3:1 — WCAG 1.4.11 covers UI
+   * components and meaningful graphics, not decoration. What must hold is that
+   * the three border roles stay in strength order, so `borderSubtle` cannot be
+   * quietly dropped in where `border` belongs without this failing.
+   */
+  it("keeps the three border roles in strength order", () => {
+    const subtle = contrastRatio(s.borderSubtle, s.background);
+    const functional = contrastRatio(s.border, s.background);
+    const strong = contrastRatio(s.borderStrong, s.background);
+
+    expect(subtle).toBeLessThan(functional);
+    expect(functional).toBeLessThan(strong);
+    expect(functional).toBeGreaterThanOrEqual(AA_LARGE);
+  });
 });

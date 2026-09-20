@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { contrastRatio } from "./contrast";
 import { tokens } from "./tokens";
 
 describe("tokens", () => {
@@ -66,6 +67,30 @@ describe("tokens", () => {
       }
     }
     expect(Object.keys(tokens.color.neutral)).toEqual(steps);
+  });
+
+  it("darkens monotonically across every ramp", () => {
+    const ramps = { neutral: tokens.color.neutral, ...tokens.color.brandScale };
+
+    for (const [name, ramp] of Object.entries(ramps)) {
+      const onWhite = Object.values(ramp).map((hex) =>
+        contrastRatio(hex, "#FFFFFF")
+      );
+
+      for (let index = 1; index < onWhite.length; index++) {
+        expect(onWhite[index], `${name} step ${index}`).toBeGreaterThan(
+          onWhite[index - 1] as number
+        );
+      }
+    }
+  });
+
+  it("separates the decorative border from the functional one", () => {
+    for (const [name, theme] of Object.entries(tokens.semantic)) {
+      expect(theme.borderSubtle, name).toBeDefined();
+      expect(theme.borderSubtle, name).not.toBe(theme.border);
+      expect(theme.border, name).not.toBe(theme.borderStrong);
+    }
   });
 
   it("draws every semantic value from the palette rather than a loose hex", () => {

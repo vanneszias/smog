@@ -60,15 +60,17 @@ function createRamp(base: string, anchor: RampStep): ColorRamp {
 }
 
 /**
- * Grey ramp. The 400 and 500 steps are tuned so a border drawn with them clears
- * 3:1 against the light and dark backgrounds respectively — see `contrast.ts`.
+ * Grey ramp, on the conventional shape: small lightness steps at the light end,
+ * the widest jumps across 300–500, then an even march to black. No step is
+ * tuned for a particular consumer — the semantic roles below pick the step that
+ * does the job, rather than the ramp bending to make one step do two.
  */
 const neutral = {
   50: "#F7F8F9",
   100: "#EDEFF1",
   200: "#DDE1E4",
   300: "#C3C8CD",
-  400: "#888F96",
+  400: "#9BA2AA",
   500: "#6E757C",
   600: "#565C63",
   700: "#40454B",
@@ -99,14 +101,29 @@ const brandScale = {
  * an action. Status surfaces (`accent`, `warning`, `success`) keep the brand
  * hue and carry near-black text, because a badge is read as a label.
  * Every pair here is asserted against WCAG AA in `contrast.test.ts`.
+ *
+ * Three border roles, and choosing between them is not a matter of taste:
+ *
+ * - `borderSubtle` is decoration. A rule between list rows, a card edge whose
+ *   absence loses no information. WCAG 1.4.11 does not cover decoration, so
+ *   this one is deliberately below 3:1 and must stay visually quiet.
+ * - `border` is functional: the edge of an input, anything delimiting an
+ *   interactive control, anything carrying state. It meets 3:1 against both
+ *   `background` and `surface`, and `contrast.test.ts` holds it there.
+ * - `borderStrong` is emphasis on top of that — a selected or focused edge.
+ *
+ * If a boundary would change what a user understands were it removed, it is a
+ * `border`, not a `borderSubtle`. The strength order between the three is also
+ * asserted, so the decorative one cannot quietly take the functional one's job.
  */
 const semantic = {
   light: {
     background: WHITE,
     surface: neutral[50],
     surfaceRaised: WHITE,
-    border: neutral[400],
-    borderStrong: neutral[500],
+    borderSubtle: neutral[200],
+    border: neutral[500],
+    borderStrong: neutral[600],
     foreground: neutral[900],
     foregroundMuted: neutral[600],
     primary: brandScale.primary[600],
@@ -125,6 +142,7 @@ const semantic = {
     background: neutral[950],
     surface: neutral[900],
     surfaceRaised: neutral[800],
+    borderSubtle: neutral[700],
     border: neutral[500],
     borderStrong: neutral[400],
     foreground: neutral[50],
