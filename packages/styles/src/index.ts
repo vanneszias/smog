@@ -23,7 +23,15 @@ export const colors = {
   secondary: tokens.color.brand.secondary,
   accent: tokens.color.brand.accent,
   warning: tokens.color.brand.warning,
-  background: tokens.semantic.light.background,
+  /*
+   * Deliberately `white`, not `tokens.semantic.light.background`, which moved
+   * to `neutral[100]` in Stage 3 so a white card reads against the page. That
+   * is a decision about the *web* surfaces; this object is what `apps/native`
+   * still paints its screens with, and `themes.light.background` below has
+   * always been `white` outright. Following the semantic token here would
+   * repaint a shipping app as a side effect of a web token change.
+   */
+  background: tokens.color.white,
   text: tokens.color.neutral[800],
   textLight: tokens.color.neutral[600],
   border: tokens.color.neutral[200],

@@ -94,3 +94,32 @@ describe.each(["light", "dark"] as const)("%s theme contrast", (theme) => {
     expect(functional).toBeGreaterThanOrEqual(AA_LARGE);
   });
 });
+
+describe("surface hierarchy", () => {
+  // A card must be distinguishable from the page behind it without relying
+  // on its border. 1.06:1 is not a boundary anyone can see; WCAG's 3:1 is
+  // for meaningful boundaries and is too strong for a fill, so this asserts
+  // a modest but real step. Measured in a browser during Stage 2: light
+  // `background` and `surfaceRaised` were literally the same #ffffff.
+  const MIN_SURFACE_STEP = 1.12;
+
+  for (const theme of ["light", "dark"] as const) {
+    it(`separates surface from background in the ${theme} theme`, () => {
+      expect(
+        contrastRatio(
+          tokens.semantic[theme].surface,
+          tokens.semantic[theme].background
+        )
+      ).toBeGreaterThanOrEqual(MIN_SURFACE_STEP);
+    });
+
+    it(`separates surfaceRaised from background in the ${theme} theme`, () => {
+      expect(
+        contrastRatio(
+          tokens.semantic[theme].surfaceRaised,
+          tokens.semantic[theme].background
+        )
+      ).toBeGreaterThanOrEqual(MIN_SURFACE_STEP);
+    });
+  }
+});

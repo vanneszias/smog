@@ -115,11 +115,25 @@ const brandScale = {
  * If a boundary would change what a user understands were it removed, it is a
  * `border`, not a `borderSubtle`. The strength order between the three is also
  * asserted, so the decorative one cannot quietly take the functional one's job.
+ *
+ * The light theme tints the *page* rather than greying the *cards*. Stage 2
+ * measured light `background` and `surfaceRaised` at the same `#ffffff`, with
+ * a 1.32:1 border the only thing telling a card from the page behind it — so
+ * a card with no border had no edge at all. Two directions fix that; this one
+ * puts `background` a step down the neutral ramp and leaves both surfaces
+ * white, because a white card on a faintly tinted page is the conventional
+ * reading of depth and keeps the highest-contrast surface under the text.
+ *
+ * `surface` and `surfaceRaised` are deliberately equal in light mode. The step
+ * that carries meaning is card-versus-page; elevation between two stacked
+ * surfaces is carried by `shadow`, not by a third fill nobody can name.
+ * `contrast.test.ts` holds both surfaces at least 1.12:1 from `background` in
+ * either theme.
  */
 const semantic = {
   light: {
-    background: WHITE,
-    surface: neutral[50],
+    background: neutral[100],
+    surface: WHITE,
     surfaceRaised: WHITE,
     borderSubtle: neutral[200],
     border: neutral[500],

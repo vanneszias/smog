@@ -213,12 +213,14 @@ test.describe("kitchen sink", () => {
   });
 
   /*
-   * Deferred question 3: light-theme surface hierarchy.
+   * Light-theme surface hierarchy, as the browser resolves it.
    *
-   * `background` and `surface` are 1.06:1 apart by design and no contrast
-   * test covers them, because they are not a text pairing. This records what
-   * the browser actually resolves them to, in both themes, so the numbers in
-   * the report are measured rather than recomputed from the tokens.
+   * Stage 2 measured light `background` and `surface` 1.06:1 apart and
+   * `surfaceRaised` identical to `background`, with nothing but a 1.32:1
+   * border separating a card from the page. Stage 3 Task 1 moved `background`
+   * to `neutral[100]` and both surfaces to white. `contrast.test.ts` holds the
+   * ratio; this reads the compiled custom properties, so a theme regenerated
+   * from stale tokens cannot pass it.
    */
   test("resolves distinct surface, border and foreground tokens in both themes", async ({
     page,
@@ -243,7 +245,15 @@ test.describe("kitchen sink", () => {
 
     expect(light.background).not.toBe("");
     expect(light.background).not.toBe(light.surface);
-    expect(light.surface).not.toBe(light.surfaceRaised);
+    /*
+     * `surface` and `surfaceRaised` are the same white in light mode on
+     * purpose, since Stage 3 moved `background` down the neutral ramp instead
+     * of pushing the surfaces grey. The step that has to exist is
+     * card-versus-page, asserted on the line above and held at 1.12:1 by
+     * `contrast.test.ts`; elevation between two stacked surfaces is carried by
+     * shadow. Dark mode still uses three distinct fills, checked below.
+     */
+    expect(light.surfaceRaised).toBe(light.surface);
 
     await page.getByRole("button", { name: /thema/i }).click();
     await expect(page.locator("html")).toHaveClass(/dark/);
@@ -253,6 +263,7 @@ test.describe("kitchen sink", () => {
     expect(dark.background).not.toBe(light.background);
     expect(dark.foreground).not.toBe(light.foreground);
     expect(dark.background).not.toBe(dark.surface);
+    expect(dark.surface).not.toBe(dark.surfaceRaised);
   });
 
   /*
