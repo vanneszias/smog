@@ -36,6 +36,7 @@ export function SiteDocument({
      * element's own attributes only, not for the tree beneath it.
      */
     <html lang={lang} suppressHydrationWarning>
+      {/* biome-ignore lint/style/noHeadElement: the rule wants `next/head`, which is Pages Router only. In the App Router the component that renders `<html>` renders `<head>` too, and there is no other way to place the pre-hydration theme script. */}
       <head>
         {/*
          * The theme class has to be on `<html>` before the first paint, and
