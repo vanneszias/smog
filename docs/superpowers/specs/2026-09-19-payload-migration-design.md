@@ -512,6 +512,53 @@ and each gets its own plan document under `docs/superpowers/plans/`.
 Stages 0–5 are strictly ordered. Stage 8 depends on Stage 4. Stages 9 and 10
 depend on everything.
 
+## Carried out of Stage 2
+
+Stage 2 met all nine of its exit criteria. Three things survived it anyway and
+belong to Stage 3, recorded here because none of them fails a test today.
+
+### The light theme has no visible surface hierarchy
+
+Measured in a real browser, not inferred: light `background` and
+`surface-raised` are **the same colour** (`#ffffff`, ratio 1.00), `background`
+to `surface` is 1.06, and the only thing separating a raised component from the
+page is a `borderSubtle` edge at **1.32:1**. Dark mode is fine (1.13 / 1.26 /
+1.41, edge 1.97).
+
+Every existing test passes, and would keep passing if the hierarchy were
+invisible, because contrast tests assert text legibility rather than whether a
+card can be told apart from the page behind it. Three token options are written
+up in the Task 8 report; this is a design decision for Stage 3, not something to
+paper over by adding borders to individual components as they are built.
+
+### Two copies of `@radix-ui/react-dismissable-layer`
+
+Tooltip pins 1.1.11, Dialog pins 1.1.19, so they maintain independent layer
+stacks: an open tooltip `preventDefault()`s Escape and the dialog then declines
+to close. Diagnosed with an instrumented listener trace and confirmed at the
+call site.
+
+**Not fixed.** A root `overrides` entry did not dedupe under bun — the nested
+exact pins survived — and forcing it needs a clean reinstall plus revalidation
+of all four apps, which is not a thing to do at the end of a stage. Escape works
+on the kitchen-sink route today only because the page no longer pins a tooltip
+open; the cause is still installed. Stage 3 should fix it properly before
+building overlay-heavy pages on top of it.
+
+### The strongest style guard does not run in CI
+
+Three layers now guard the spacing scale: the named-alias hazard at the token
+source (`css.test.ts`, in CI), numeric off-scale classes in both packages
+(in CI), and the *compiled stylesheet in a real browser* — which is the only one
+that would have caught `max-w-lg` collapsing to 24px, and it runs only under
+`test:e2e`, which CI does not run.
+
+Worse, `bun -F site test:e2e` is broken independently of this work: its
+`--import=tsx/esm` fights Playwright's own loader on Node 22
+(`ERR_INVALID_RETURN_PROPERTY_VALUE`), so nobody can run the e2e suite through
+the package script at all. Stage 3 should fix the script first, then decide
+whether CI runs it — a guard nobody executes is documentation.
+
 ## Stage 0 gates
 
 Three things were unverified when this spec was written. All three are now

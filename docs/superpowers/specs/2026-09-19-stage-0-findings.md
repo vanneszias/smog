@@ -179,6 +179,31 @@ at this scale, which is worth remembering before the next upgrade is treated as
 routine. Re-measure at the end of every stage with
 `bun -F site check-bundle-size` and append a row here.
 
+| **Stage 2 complete** — token package + 30-component web library, kitchen-sink route | 7,178.17 KiB | 70.1% | **+521 KiB** |
+
+### The trajectory now matters more than any single row
+
+Stage 2 cost +521 KiB, and **364.9 KiB of it is the Mux player plus hls.js** — 72%
+of the stage's growth is one dependency. The rest of the component library, all
+thirty components of it, is comparatively cheap.
+
+The numbers that should govern Stage 3 planning are the thresholds, not the
+delta. `check-bundle-size-ci.ts` **warns at 8 MiB** and fails at 10. We are at
+7.01 MiB, so roughly **1 MiB of headroom before CI starts warning** and 2.8 MiB
+before it breaks the build. Stages 3 through 8 still have to fit the public
+site, auth, the sponsorship wizard, email templates and the job runners into
+that.
+
+**Decision on the kitchen-sink route: ship it.** Excluding it would defer about
+0.36 MiB by exactly one stage, because Stage 4 needs the Mux player anyway, and
+save roughly 0.14 MiB permanently. That is not worth a build-time exclusion
+today. If the budget does tighten, the lever is a build-time exclusion of the
+route — *not* a stronger runtime guard, since the production 404 is a runtime
+check and saves no bytes at all.
+
+The 602 KiB `ImageResponse`/OG-image lever identified in Stage 0 is still
+unspent and is still the largest single recoverable win.
+
 ### Consequence
 
 Bundle size is now a standing constraint on every later stage, not a Stage 0
