@@ -126,6 +126,16 @@ afternoon:
   a green-looking run that tested nothing. Use `crypto.randomUUID()`;
   `Date.now()` is not enough, since two files can start in the same
   millisecond.
+- **An unbounded read eventually dies of "too many SQL variables."** A
+  `payload.find` with `limit: 0` on a *localized* collection issues a second
+  query that binds one parameter per row to fetch the translations, and D1
+  caps how many a statement may bind. `fetchCategoryOptions` reads every
+  category that way, so after enough runs have piled categories into this
+  directory the gestures list page's own query starts failing with
+  `D1_ERROR: too many SQL variables`. Found during Stage 3 Task 6 at roughly
+  180 rows. Clearing the directory fixes the local symptom; the underlying
+  limit is real and is why anything that turns a caller-supplied list into an
+  `IN (...)` — `fetchGesturesByIds`, for one — caps its input.
 
 Never run two suites or builds concurrently against this directory.
 
