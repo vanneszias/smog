@@ -96,3 +96,21 @@ try {
 - Biome handles linting and formatting
 - Extends `ultracite` presets
 - Run `bun check` before committing to auto-fix issues
+
+## Before pushing
+`bun build` and `bun check-types` are not the gate CI applies. CI runs
+`bun release:check`, which additionally runs the test suites, `bun audit
+--production`, `expo-doctor`, and **knip**. Knip is the one that catches
+people out: an exported symbol nothing imports fails the build, so a helper
+type exported "for later" turns the pipeline red on a commit that otherwise
+passes every local check.
+
+Run `bun release:check` before pushing. If the whole thing is too slow, at
+minimum run `bunx knip --no-progress --no-config-hints` — that is the exact
+invocation CI uses, and it is fast.
+
+Note that `expo-doctor` needs network access to the React Native Directory
+and a deduplicated `node_modules`, so it can fail locally in a sandbox while
+passing in CI's clean install. A local `expo-doctor` failure about duplicate
+copies of `react` or an "unexpected server response" is usually the
+environment, not the change — confirm against CI rather than chasing it.

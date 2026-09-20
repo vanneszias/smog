@@ -50,13 +50,13 @@ export interface SeedSummary {
   gestureIds: Record<string, number>;
 }
 
-export interface SeedUser {
+interface SeedUser {
   email: string;
   password: string;
   role: "admin" | "user";
 }
 
-export interface SeedOptions {
+interface SeedOptions {
   payload: Payload;
   env?: Record<string, string | undefined>;
   log?: (message: string) => void;
