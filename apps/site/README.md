@@ -99,6 +99,26 @@ already exists`, the local D1 predates a collection that has since been added:
 staleness described below for the test state, in the directory `bun -F site
 dev` uses.
 
+### An intermittent `seed.int.test.ts` failure under the full suite
+
+Seen three times by three different people, roughly one run in four or five,
+and **not reproducible on demand**:
+
+- `bun run test` reports `7 successful, 8 total` with `FAIL src/seed/seed.int.test.ts`.
+- `bun -F site test seed.int` in isolation passes all 14.
+- Three consecutive full runs afterwards were green.
+
+It has never been seen in CI across 30+ runs. The likely cause is the same D1
+contention documented above — vitest runs many workers against one persisted
+directory, and the seed test writes more than most — but nobody has captured
+the error text, because the first two sightings filtered output to summary
+lines and lost it.
+
+**If you hit it, capture the failure before re-running.** `bun run test 2>&1 |
+tee /tmp/run.log` and keep the log. A named error is worth more than another
+green run, and "it passed the second time" is how this has stayed unexplained
+through three encounters.
+
 ### If the test suite suddenly fails on a branch you just pulled
 
 ```bash
