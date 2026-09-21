@@ -270,6 +270,30 @@ type AccountListsNotice =
 /** The link a confirmation mail carries can only fail one way, publicly. */
 type ConfirmEmailError = "link";
 
+/**
+ * The codes the sponsor wizard's steps may be sent back with.
+ *
+ * Codes rather than messages for the same reason as every set above, and one
+ * flat union rather than one per step because the steps redirect to each
+ * other: a stale selection posted at step 3 has to be reported on step 1,
+ * where the sponsor can fix it.
+ *
+ * The four selection codes are `lib/sponsorSelection.ts`'s `SelectionRefusal`
+ * and are deliberately spelled out again rather than imported: this module is
+ * unit-tested under jsdom and stays free of anything that reaches the
+ * database, and the two are pinned together by `sponsorships.int.test.ts`,
+ * which drives every one of them through a real request.
+ */
+type SponsorError =
+  /** Nothing was selected. */
+  | "empty"
+  /** Something in the selection is not a gesture anyone may sponsor. */
+  | "gesture"
+  /** One of the selected gestures is already sponsored. */
+  | "sold"
+  /** More gestures than one sponsorship may cover. */
+  | "too-many";
+
 export function signInPath(
   locale: Locale,
   query?: { error?: SignInError; notice?: SignInNotice }
@@ -316,6 +340,41 @@ export function accountListPath(
   query?: { error?: AccountListsError; notice?: AccountListsNotice }
 ): string {
   return withQuery(`/${locale}/account/lists/${id}`, query);
+}
+
+/**
+ * Step 1 of the sponsor wizard: choose the gestures.
+ *
+ * Every sponsor path here is locale-prefixed because they are *pages*; the
+ * form targets they post to are not, for the reason `next.config.ts` gives —
+ * the locale rides in the body so there is one rewrite per action rather than
+ * one per action per locale.
+ */
+export function sponsorPath(
+  locale: Locale,
+  query?: { error?: SponsorError }
+): string {
+  return withQuery(`/${locale}/sponsor`, query);
+}
+
+/**
+ * Step 2: the sponsor's details.
+ *
+ * **The selection rides in the URL, and nothing else does.** Gesture ids are
+ * public — they are in every card's link on `/gestures` — so a shareable step
+ * 2 costs nothing and buys a wizard that survives a reload, a back button and
+ * a bookmark with no client JavaScript and no server-side draft to expire.
+ * The sponsor's own details are the opposite and never appear here.
+ */
+export function sponsorDetailsPath(
+  locale: Locale,
+  gestures: readonly (number | string)[],
+  query?: { error?: SponsorError }
+): string {
+  return withQuery(`/${locale}/sponsor/details`, {
+    ...query,
+    gestures: gestures.length === 0 ? undefined : gestures.join(","),
+  });
 }
 
 export function confirmEmailPath(

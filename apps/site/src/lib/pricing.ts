@@ -12,6 +12,9 @@ import {
   PRICE_PER_YEAR_CENTS,
 } from "@smog/config/constants";
 
+/** Mollie and `Intl` both speak euro; the database speaks cents. */
+const CENTS_PER_EURO = 100;
+
 /**
  * What a sponsorship order costs, in euro cents.
  *
@@ -70,4 +73,21 @@ export function sponsorshipAmountCents(
   const logoCents = includeLogo ? LOGO_ADDON_CENTS * gestureCount : 0;
 
   return subtotalCents + logoCents;
+}
+
+/**
+ * An amount of euro cents, as a page prints it.
+ *
+ * Belgian Dutch: a comma for the decimal separator and a non-breaking space
+ * after the sign, which is what `Intl` produces for `nl-BE` and what nobody
+ * gets right by hand. It lives beside the arithmetic so that the number a
+ * sponsor reads on the selection screen, on the review screen and on Mollie's
+ * page is formatted once — three `toFixed(2)` calls is three chances to show
+ * a price that is not the one being charged.
+ */
+export function formatEuro(cents: number): string {
+  return new Intl.NumberFormat("nl-BE", {
+    currency: "EUR",
+    style: "currency",
+  }).format(cents / CENTS_PER_EURO);
 }

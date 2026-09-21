@@ -29,6 +29,7 @@ import { favoritesEndpoints } from "./endpoints/favorites";
 import { listsEndpoints } from "./endpoints/lists";
 import { mollieEndpoints } from "./endpoints/mollie";
 import { oauthEndpoints } from "./endpoints/oauth";
+import { sponsorshipEndpoints } from "./endpoints/sponsorships";
 import { requireBinding, requireEnv } from "./lib/env";
 import { beforeSyncGesture } from "./search/beforeSync";
 
@@ -200,6 +201,12 @@ export default buildConfig({
    * patterns leave Payload's endpoint matcher to choose, and the wrong
    * choice here would answer "saved" without saving.
    *
+   * `sponsorshipEndpoints` adds the sponsor wizard's writes, under
+   * `/sponsor/*`. They are the only endpoints here with no session check at
+   * all: sponsoring is a public purchase flow in the shipped product, so what
+   * stands in for authentication is that nothing the form says is believed —
+   * see `endpoints/sponsorships.ts`.
+   *
    * `mollieEndpoints` adds `POST /api/webhooks/mollie`, reached at
    * `/webhooks/mollie`. It is the only endpoint here that a third party calls,
    * and the only one with no origin check — Mollie posts from its own servers
@@ -213,6 +220,7 @@ export default buildConfig({
     ...favoritesEndpoints,
     ...accountEndpoints,
     ...listsEndpoints,
+    ...sponsorshipEndpoints,
     ...mollieEndpoints,
   ],
   localization: {

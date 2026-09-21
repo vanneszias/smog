@@ -1,4 +1,32 @@
+import type { Where } from "payload";
 import { getPayloadClient } from "./payloadClient";
+
+/**
+ * "This sponsorship is the one running right now."
+ *
+ * Exported because two surfaces need exactly this rule and a second copy
+ * would drift: the gesture page asks it to decide whether to draw an
+ * overlay, and the sponsor wizard asks it to decide whether a gesture is
+ * still for sale. Selling a window that is already sold is the failure that
+ * costs money to unwind, so the two must agree by construction rather than
+ * by review.
+ *
+ * Returned as the conjuncts rather than as one `Where`, so a caller can
+ * spread them into its own `and` alongside whatever it is asking about —
+ * one gesture here, a list of them in `lib/sponsorSelection.ts`.
+ *
+ * `now` is a parameter rather than read inside, because both callers compare
+ * two bounds against it and a function that read the clock twice could
+ * straddle a tick. The dates are ISO-8601 strings, which is what the D1
+ * adapter stores and what sorts identically lexically and chronologically.
+ */
+export function activeAndInTerm(now: string): Where[] {
+  return [
+    { status: { equals: "active" } },
+    { startDate: { less_than_equal: now } },
+    { endDate: { greater_than_equal: now } },
+  ];
+}
 
 /*
  * Not exported, for the reason spelled out in `gestureQuery.ts`: knip fails
@@ -79,12 +107,7 @@ export async function fetchGestureOverlay(
     },
     sort: "-startDate",
     where: {
-      and: [
-        { gesture: { equals: gestureId } },
-        { status: { equals: "active" } },
-        { startDate: { less_than_equal: now } },
-        { endDate: { greater_than_equal: now } },
-      ],
+      and: [{ gesture: { equals: gestureId } }, ...activeAndInTerm(now)],
     },
   });
 
