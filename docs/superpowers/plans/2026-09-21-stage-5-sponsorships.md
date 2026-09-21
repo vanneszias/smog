@@ -807,7 +807,7 @@ git commit -m "feat(site): accept Mollie's webhook, idempotently and in bulk"
 - Create: `apps/site/src/hooks/logSponsorshipTransitions.ts` + `.int.test.ts`
 - Modify: `apps/site/src/collections/Sponsorships.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("writes a log row when the status changes");
@@ -826,11 +826,11 @@ it("does not fail the transition when the log write fails", async () => {
 });
 ```
 
-- [ ] **Step 2: Implement as `afterChange`**
+- [x] **Step 2: Implement as `afterChange`**
 
 Run `cd /home/user/smog/apps/site && bunx vitest run src/hooks/logSponsorshipTransitions.int.test.ts` before and after. The hook calls `req.payload.create({ collection: "admin-logs", data: {...}, overrideAccess: true })` inside a `try`/`catch` that logs and swallows — see Step 1's resilience test for why it must not rethrow.
 
-- [ ] **Step 3: Mutation-prove**
+- [x] **Step 3: Mutation-prove**
 
 | mutation | must fail |
 |---|---|
@@ -839,7 +839,7 @@ Run `cd /home/user/smog/apps/site && bunx vitest run src/hooks/logSponsorshipTra
 | let a log failure throw | the resilience test |
 | record only the new status | the both-statuses test |
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd /home/user/smog && bun check && bun -F site check-types

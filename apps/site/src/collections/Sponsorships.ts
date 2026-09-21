@@ -11,6 +11,7 @@ import { SPONSORSHIP_STATUSES } from "@smog/config/sponsorships";
 import type { CollectionConfig } from "payload";
 import { isAdmin } from "@/access";
 import { enforceStatusTransitions } from "@/hooks/enforceStatusTransitions";
+import { logSponsorshipTransitions } from "@/hooks/logSponsorshipTransitions";
 
 /**
  * The two defaults Payload's generated create types refuse to honour.
@@ -57,6 +58,7 @@ export const Sponsorships: CollectionConfig = {
   },
   hooks: {
     beforeChange: [enforceStatusTransitions],
+    afterChange: [logSponsorshipTransitions],
   },
   fields: [
     {
