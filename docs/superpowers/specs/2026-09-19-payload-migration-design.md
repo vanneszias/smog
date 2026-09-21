@@ -1112,6 +1112,53 @@ Three things follow for the rest of this migration:
   that still need moving — but naming it a guard is how the next person
   stops looking. The webhook says so at the line.
 
+## A helper named for a loop that it does not contain
+
+Stage 5 Tasks 6-7. The tenth entry on the list of tests that pass while the
+thing they guard is unproven — and the first one where the test was *right*
+and its helper was lying.
+
+`tests/e2e/overlay-layers.spec.ts` had:
+
+```ts
+async function hoverUntilTooltipOpens(page, trigger) {
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.hover();               // once
+  ...
+}
+```
+
+It hovers exactly once. A server-rendered trigger is inert until React
+hydrates it, so a hover that lands early wires nothing up — and because the
+pointer is then already inside the element, **no further pointer-enter is
+coming**. The caller's `toBeVisible` spends its entire timeout waiting for a
+tooltip that was never going to appear.
+
+The same hazard `FavoriteButton` grew its `data-ready` attribute for, and it
+does not announce itself: it passes on an idle machine and fails on a busy
+one. It surfaced only when Stage 5's sponsor spec was added ahead of this
+file and made the dev server slower to serve the route.
+
+Measured rather than guessed, which is what separated cause from coincidence:
+
+| run | result |
+|---|---|
+| full suite, with the sponsor spec | flaky, 2 of 2 |
+| this spec alone | clean, 3 of 3 |
+| full suite, sponsor spec excluded | clean |
+| full suite, after the fix | clean, 2 of 2 |
+
+The fix is for the helper to do what its name says: hover, wait briefly,
+move the pointer away, hover again, up to five times. **It weakens nothing.**
+The caller still asserts the tooltip is visible and every later assertion is
+untouched; a mutation that removes the tooltip content entirely still fails
+the test. What it stops is the test depending on hydration having finished
+before the first hover.
+
+The general shape is worth keeping: **a helper whose name promises a loop
+should contain one**, and a name that describes a retry is the easiest place
+in a suite for a missing retry to hide.
+
 ## Risks
 
 | Risk | Mitigation |

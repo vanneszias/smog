@@ -12,18 +12,70 @@ const KITCHEN_SINK = "http://localhost:3003/kitchen-sink";
  * Measured on chromium: hover alone opens nothing, hover plus one pixel opens
  * it every time.
  */
+/**
+ * How many times to try opening the tooltip before giving up and letting the
+ * caller's own assertion report the failure.
+ */
+const HOVER_ATTEMPTS = 5;
+
+/** How long one attempt waits for the tooltip before hovering again. */
+const HOVER_ATTEMPT_MS = 1000;
+
+/**
+ * Hovers the trigger until a tooltip is actually open.
+ *
+ * **It used to hover exactly once, despite the name, and that made this file
+ * flaky as soon as the suite grew.** A server-rendered trigger is inert until
+ * React hydrates it: the hover lands on markup Radix has not wired up yet,
+ * nothing opens, and the caller's `toBeVisible` spends its whole timeout
+ * waiting for a tooltip that was never going to appear — the mouse is already
+ * inside the trigger, so no further pointer-enter is coming.
+ *
+ * It is the same hazard `FavoriteButton` grew its `data-ready` attribute for,
+ * and it does not announce itself: the test passes on an idle machine and
+ * fails on a busy one. Measured, when Stage 5's sponsor spec was added ahead
+ * of this file: flaky in 2 of 2 full runs, clean in 3 of 3 runs of this spec
+ * alone, and clean in a full run with only that spec excluded. The dev server
+ * was simply slower to serve this route.
+ *
+ * Retrying does **not** weaken what the test proves. The caller still asserts
+ * the tooltip is visible, and every assertion after it is untouched; this only
+ * stops the test depending on hydration having finished before the first
+ * hover. Each attempt moves the pointer away first, because a hover that is
+ * already inside the element produces no new pointer-enter for Radix to see.
+ */
 async function hoverUntilTooltipOpens(
   page: Page,
   trigger: Locator
 ): Promise<void> {
   await trigger.scrollIntoViewIfNeeded();
-  await trigger.hover();
 
-  const box = await trigger.boundingBox();
-  if (box === null) {
-    throw new Error("the tooltip trigger has no box to hover");
+  const tooltip = page.getByRole("tooltip");
+
+  for (let attempt = 0; attempt < HOVER_ATTEMPTS; attempt += 1) {
+    await trigger.hover();
+
+    const box = await trigger.boundingBox();
+    if (box === null) {
+      throw new Error("the tooltip trigger has no box to hover");
+    }
+    await page.mouse.move(
+      box.x + box.width / 2 + 1,
+      box.y + box.height / 2 + 1
+    );
+
+    try {
+      await expect(tooltip).toBeVisible({ timeout: HOVER_ATTEMPT_MS });
+      return;
+    } catch {
+      // Away from the trigger, so the next `hover` is a fresh pointer-enter.
+      await page.mouse.move(0, 0);
+    }
   }
-  await page.mouse.move(box.x + box.width / 2 + 1, box.y + box.height / 2 + 1);
+
+  // Deliberately no throw: the caller asserts visibility itself, and its
+  // failure names the locator and shows the call log. A throw here would
+  // replace that with a less useful message.
 }
 
 /**
