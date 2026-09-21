@@ -1335,6 +1335,66 @@ system being replaced can describe its data model rather than the
 behaviour.** Stage 9's import has the same exposure, since it reads the old
 model directly.
 
+## An omitted access rule is not a closed door — it is "any signed-in user"
+
+Stage 7 Task 2, found by strengthening a test that had been passing
+vacuously, and it had been true of two shipped collections since Stage 5.
+
+`collections/Claims.ts` (and `WebhookDeliveries` and `RenderCompletions`
+before it) writes an `access` block naming `create`, `update` and `delete`.
+Deleting those three does **not** leave the collection closed. Payload falls
+back to `defaultAccess`, which is exactly:
+
+```js
+export const defaultAccess = ({ req: { user } }) => Boolean(user)
+```
+
+**Any signed-in account.** For a claims table that is not a tidiness question: a
+claim row is a *receipt* saying "this render has already been uploaded", and
+the render callback honours it by doing nothing. So any account that could
+sign up could have forged one and made a real render silently disappear.
+
+The mutation survived at first because the test only posted **anonymously**,
+which `defaultAccess` refuses anyway — so the guard looked proven while
+testing nothing beyond Payload's own default. It bites once the test tries
+three callers: anonymous, a signed-in non-admin, and an admin.
+
+Two things follow.
+
+**An access test needs a signed-in non-admin.** Anonymous-only is the shape
+that passes against a collection with no rules at all. The same applies to
+`read`: neither replaced collection ever tested its own `read: isAdmin`, so
+that rule had never been proven either.
+
+**This is the "assert presence, not absence" rule wearing different
+clothes.** Asserting that the wrong caller is refused proves nothing unless
+some caller is admitted, and unless the refused caller is one the *fallback*
+would have admitted.
+
+## A lease and a receipt cannot share an expiry policy
+
+Same task, and the most dangerous line in a table that now serves four
+consumers.
+
+`claims` holds two kinds of row that look identical:
+
+- a **lease** — "this job runner is working" — which **must lapse**, or one
+  crashed worker ends all scheduled work for ever;
+- a **receipt** — "this Mollie payment / this render job has been handled" —
+  which must **never** lapse, because AWS Lambda and Mollie both deliver at
+  least once, and an expired receipt lets a retried callback create a second
+  Mux asset. That is a bill every month, for ever, which is why
+  `RenderCompletions` was built in the first place.
+
+So `expiresAt` is nullable and the choice belongs to the consumer, not the
+table. Both mistakes are silent and they fail in opposite directions: a
+receipt given a TTL duplicates paid work, a lease given none stops the
+scheduler after a single crash.
+
+The sweep that clears lapsed leases is written so neither can be caught by
+accident — the `expiresAt` comparison lives in the delete's own query, and
+no comparison against NULL is ever true.
+
 ## Risks
 
 | Risk | Mitigation |
