@@ -1515,6 +1515,39 @@ query on the indexed column.
 **"Filter in memory after a bounded read" is a starvation bug wearing the
 clothes of a pagination detail.**
 
+### A distinctness assertion cannot detect a missing member
+
+Stage 8 Task 3's guard on the cross-platform prop vocabulary asserted that
+each of the five `Button` variant names renders a *distinct* class string.
+The mandated mutation — delete `ghost` from the native `buttonVariants` — was
+supposed to fail it. All twenty-two tests passed with a variant missing.
+
+`class-variance-authority` 0.7.1 resolves `variants[variant][variantKey]`,
+and for a name it does not recognise that is `undefined`, which `cx()`
+silently drops. The dimension's classes vanish and the base classes remain —
+so an unimplemented variant renders **one string, the same string whichever
+name produced it**. Five names therefore still yield five distinct outputs
+when one of them is not implemented: four real ones plus the fallback. The
+set-size check can never see the gap.
+
+The plan's own self-check missed it for the same reason: it appended **one**
+unknown name and required a collision, and one fallback value collides with
+nothing. Two unknown names would have collided with each other and exposed
+it.
+
+The fix is to compare every variant against an explicit *unimplemented*
+control render, so "fell through to the fallback" is distinguishable from
+"has its own classes". Its known limit: a variant whose own classes are
+legitimately the empty string would equal the control and slip through. None
+exists in either library today.
+
+**Distinctness over a set is not coverage of the set.** Where "every member
+is implemented" is the property, assert against a known-absent member, not
+against the other members. The same shape recurs wherever a lookup has a
+silent fallback — a translation table returning the key, a router returning
+a catch-all, a colour map returning a default.
+
+
 ## Risks
 
 | Risk | Mitigation |
