@@ -376,7 +376,7 @@ The spec names this precisely: "Payload's generated create types mark `status` a
 **Interfaces:**
 - Produces: `createSponsorship(payload: Payload, data: NewSponsorship): Promise<Sponsorship>` where `NewSponsorship` is the generated create type with `status` and `durationYears` made optional.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // The point is a *type* claim, so it is asserted by compiling, and by one
@@ -400,7 +400,7 @@ it("creates a sponsorship without naming status or durationYears", async () => {
 });
 ```
 
-- [ ] **Step 2: Run, implement, run**
+- [x] **Step 2: Run, implement, run**
 
 ```ts
 // apps/site/src/lib/sponsorshipCreate.ts
@@ -435,21 +435,21 @@ export type NewSponsorship = Omit<
 > which is the named export Payload provides for exactly this. Use whichever
 > compiles; do not fall back to `as never`.
 
-- [ ] **Step 3: Replace Stage 1's fixture cast and prove it is gone**
+- [x] **Step 3: Replace Stage 1's fixture cast and prove it is gone**
 
 ```bash
 grep -rn "as unknown as\|@ts-expect-error" apps/site/src/seed/ | grep -i sponsor
 ```
 Expected after this task: no matches.
 
-- [ ] **Step 4: Mutation-prove**
+- [x] **Step 4: Mutation-prove**
 
 | mutation | must fail |
 |---|---|
 | `createSponsorship` passes `status: "active"` explicitly | the default test |
 | `NewSponsorship` becomes `any` | typecheck must still pass, so **add** a `@ts-expect-error` test asserting a missing `sponsorName` is rejected — otherwise this mutation is invisible |
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -m "refactor(site): fix Payload's sponsorship create types in one place"

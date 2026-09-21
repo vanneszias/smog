@@ -13,6 +13,21 @@ import { isAdmin } from "@/access";
 import { enforceStatusTransitions } from "@/hooks/enforceStatusTransitions";
 
 /**
+ * The two defaults Payload's generated create types refuse to honour.
+ *
+ * `status` and `durationYears` are `required: true` with a `defaultValue`,
+ * and `RequiredDataFromCollectionSlug<"sponsorships">` marks both required
+ * on create regardless — so the very call the default exists to serve does
+ * not typecheck. `lib/sponsorshipCreate.ts` is the one place that fixes
+ * that, and it fills these values rather than restating them, so the two
+ * cannot drift into disagreeing about what a new sponsorship starts as.
+ */
+export const SPONSORSHIP_DEFAULTS = {
+  durationYears: 1,
+  status: "pending_payment",
+} as const;
+
+/**
  * A sponsored gesture: a company pays for its name and logo to be overlaid
  * on one gesture's video for a fixed term.
  *
@@ -65,7 +80,7 @@ export const Sponsorships: CollectionConfig = {
       name: "status",
       type: "select",
       required: true,
-      defaultValue: "pending_payment",
+      defaultValue: SPONSORSHIP_DEFAULTS.status,
       index: true,
       // Built from the `@smog/config` tuple rather than restated here, so
       // the admin panel's options and the values Stage 2's StatusBadge and
@@ -74,7 +89,12 @@ export const Sponsorships: CollectionConfig = {
     },
     { name: "startDate", type: "date", required: true },
     { name: "endDate", type: "date", required: true, index: true },
-    { name: "durationYears", type: "number", required: true, defaultValue: 1 },
+    {
+      name: "durationYears",
+      type: "number",
+      required: true,
+      defaultValue: SPONSORSHIP_DEFAULTS.durationYears,
+    },
     // Unique, not merely indexed: the Mollie webhook resolves a payment to
     // a sponsorship through this column, so two rows sharing one id means
     // the webhook marks the wrong sponsorship paid. Nullable — and SQLite
