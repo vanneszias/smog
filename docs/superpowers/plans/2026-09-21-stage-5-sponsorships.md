@@ -1226,7 +1226,7 @@ resubmission.
 **Files:**
 - Modify: `apps/site/src/collections/Sponsorships.ts` — admin-only field access on `rejectionReason`, `reviewedBy`, `reviewedAt`; a `beforeChange` that stamps the reviewer.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```ts
 it("stamps reviewedBy and reviewedAt when an admin approves");
@@ -1240,7 +1240,7 @@ it("refuses a non-admin setting reviewedBy");
 it("refuses a re-edit token holder approving their own sponsorship");
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 ```bash
 cd /home/user/smog/apps/site && bunx vitest run src/collections/Sponsorships.review.int.test.ts
@@ -1248,7 +1248,7 @@ cd /home/user/smog/apps/site && bunx vitest run src/collections/Sponsorships.rev
 Expected: FAIL on the missing import, not on an assertion. A test that fails
 on an assertion before the code exists is testing something else.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Follow the house pattern in `apps/site/src/endpoints/account.ts` and
 `apps/site/src/endpoints/lists.ts`: `guardOrigin(req)` first, then
@@ -1258,13 +1258,13 @@ carry no client JavaScript. Resolve every id from the form with
 `overrideAccess: false`. Add the rewrite to `apps/site/next.config.ts` and
 register the endpoint array in `apps/site/src/payload.config.ts`.
 
-- [ ] **Step 4: Run until green**
+- [x] **Step 4: Run until green**
 
 ```bash
 cd /home/user/smog/apps/site && bunx vitest run src/collections/Sponsorships.review.int.test.ts
 ```
 
-- [ ] **Step 5: Mutation-prove every guard**
+- [x] **Step 5: Mutation-prove every guard**
 
 One mutation per guard named in Step 1. For each: apply it, `grep` to
 confirm it landed, run the **whole** file (never `-t`), record CAUGHT or
@@ -1272,7 +1272,7 @@ SURVIVED from the runner's own `Tests` line, restore, and byte-compare
 against the backup. A SURVIVED mutation means the test is decorative — fix
 the test, or delete the guard and say why. Do not adjust the record.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /home/user/smog && bun check && bun -F site check-types && bunx knip --no-progress --no-config-hints

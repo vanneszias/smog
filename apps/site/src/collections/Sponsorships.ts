@@ -14,6 +14,7 @@ import { sponsorshipReEditAccess } from "@/access/sponsorships";
 import { enforceStatusTransitions } from "@/hooks/enforceStatusTransitions";
 import { logSponsorshipTransitions } from "@/hooks/logSponsorshipTransitions";
 import { manageReEditToken } from "@/hooks/manageReEditToken";
+import { stampReviewDecision } from "@/hooks/stampReviewDecision";
 
 /**
  * Field-level `read` for everything a re-edit token holder has no business
@@ -93,11 +94,17 @@ export const Sponsorships: CollectionConfig = {
     /*
      * Order is the policy, not an accident. `enforceStatusTransitions`
      * refuses an illegal move first, so nothing downstream mints a credential
-     * for a transition that is about to be rejected; `manageReEditToken` then
-     * acts on the move that survived. Each returns the data the next one
-     * sees — `collections/operations/utilities/update.js` chains them.
+     * or stamps a reviewer for a transition that is about to be rejected;
+     * `manageReEditToken` and `stampReviewDecision` then act on the move that
+     * survived. Each returns the data the next one sees —
+     * `collections/operations/utilities/update.js` chains them — and the two
+     * downstream hooks touch disjoint columns, so neither can undo the other.
      */
-    beforeChange: [enforceStatusTransitions, manageReEditToken],
+    beforeChange: [
+      enforceStatusTransitions,
+      manageReEditToken,
+      stampReviewDecision,
+    ],
     afterChange: [logSponsorshipTransitions],
   },
   fields: [

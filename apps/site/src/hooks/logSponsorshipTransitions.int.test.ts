@@ -212,7 +212,10 @@ describe("logSponsorshipTransitions", () => {
 
     await payload.update({
       collection: "sponsorships",
-      data: { status: "rejected" },
+      // The reason is not decoration here: `hooks/stampReviewDecision.ts`
+      // refuses a rejection without one, whoever is making it, so a fixture
+      // that omitted it would fail before this hook ever ran.
+      data: { rejectionReason: "Onleesbaar logo.", status: "rejected" },
       id,
       overrideAccess: true,
     });
@@ -239,7 +242,10 @@ describe("logSponsorshipTransitions", () => {
     ] as const) {
       await payload.update({
         collection: "sponsorships",
-        data: { status },
+        data:
+          status === "rejected"
+            ? { rejectionReason: "Onleesbaar logo.", status }
+            : { status },
         id,
         overrideAccess: true,
       });
