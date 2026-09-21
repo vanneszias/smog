@@ -4,8 +4,16 @@
  * @vitest-environment node
  */
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { signedMuxSourceUrl } from "@/lib/mux";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { deleteMuxAsset, readMuxAsset, signedMuxSourceUrl } from "@/lib/mux";
 
 /** Two hours, the window `lib/mux.ts` mints. Pinned here as a literal. */
 const TTL_SECONDS = 2 * 60 * 60;
@@ -334,5 +342,270 @@ describe("the Mux source URL", () => {
     expect(String(outcome)).toContain("must both be set");
     expect(String(outcome)).not.toContain(key);
     expect(String(outcome)).not.toContain(atob(key).slice(0, 40));
+  });
+});
+
+/*
+ * ---------------------------------------------------------------------------
+ * The back half of an asset's life
+ * ---------------------------------------------------------------------------
+ */
+
+const STUB_TOKEN_ID = "mux-token-id-for-tests-only";
+const STUB_TOKEN_SECRET = "mux-token-secret-for-tests-only";
+const ORIGINAL_TOKEN_ID = process.env.MUX_TOKEN_ID;
+const ORIGINAL_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET;
+
+const ASSET_ID = "assetForTestsOnly001";
+
+/**
+ * Reading an asset and deleting one, against a fake that answers the shape of
+ * Mux's protocol and nothing else.
+ *
+ * **Nothing here is evidence about Mux.** There are no Mux credentials in this
+ * project (see the plan's "BLOCKED ON CREDENTIALS"), so what these prove is
+ * that this application asks the right question and reads the answer the way
+ * it says it does. Whether `DELETE /video/v1/assets/:id` really answers `204`,
+ * and whether a missing asset really answers `404`, is Task 6's first contact.
+ * Stage 4's Google strategy is the precedent and the warning.
+ */
+describe("Mux's back half", () => {
+  /** Every request this file's code made, in order. */
+  let calls: { method: string; url: string; authorization: string }[] = [];
+  /** What the fake answers next. Set per test. */
+  let answer: () => Response = () => new Response(null, { status: 204 });
+
+  const realFetch = globalThis.fetch;
+
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      headers: { "content-type": "application/json" },
+      status,
+    });
+
+  beforeAll(() => {
+    process.env.MUX_TOKEN_ID = STUB_TOKEN_ID;
+    process.env.MUX_TOKEN_SECRET = STUB_TOKEN_SECRET;
+
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+
+      if (!url.startsWith("https://api.mux.com/")) {
+        return realFetch(input as RequestInfo, init);
+      }
+
+      const headers = new Headers(init?.headers);
+
+      calls.push({
+        authorization: headers.get("authorization") ?? "",
+        method: init?.method ?? "GET",
+        url,
+      });
+
+      return Promise.resolve(answer());
+    });
+  });
+
+  beforeEach(() => {
+    calls = [];
+    answer = () => new Response(null, { status: 204 });
+  });
+
+  afterAll(() => {
+    vi.unstubAllGlobals();
+    restoreEnv("MUX_TOKEN_ID", ORIGINAL_TOKEN_ID);
+    restoreEnv("MUX_TOKEN_SECRET", ORIGINAL_TOKEN_SECRET);
+  });
+
+  it("boots with the credentials this file assumes", () => {
+    // `beforeAll` throwing is reported as *skipped* rather than failed, so a
+    // run that stubbed nothing would look green having proven nothing.
+    expect(process.env.MUX_TOKEN_ID).toBe(STUB_TOKEN_ID);
+    expect(process.env.MUX_TOKEN_SECRET).toBe(STUB_TOKEN_SECRET);
+  });
+
+  it("asks Mux to delete the asset it was given", async () => {
+    await deleteMuxAsset(ASSET_ID);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.method).toBe("DELETE");
+    expect(calls[0]?.url).toBe(
+      `https://api.mux.com/video/v1/assets/${ASSET_ID}`
+    );
+    // The credentials travel in the header and nowhere else — not in the URL,
+    // which is logged by every proxy between here and Mux.
+    expect(calls[0]?.authorization).toBe(
+      `Basic ${btoa(`${STUB_TOKEN_ID}:${STUB_TOKEN_SECRET}`)}`
+    );
+    expect(calls[0]?.url).not.toContain(STUB_TOKEN_SECRET);
+  });
+
+  it("does not read the body of a successful delete", async () => {
+    // Mux answers `204 No Content`. Reading it as JSON would turn a completed
+    // deletion into a throw, and the caller would leave the asset recorded and
+    // ask again tomorrow, for ever.
+    answer = () => new Response(null, { status: 204 });
+
+    await expect(deleteMuxAsset(ASSET_ID)).resolves.toBeUndefined();
+  });
+
+  it("treats an asset Mux no longer has as deleted", async () => {
+    /*
+     * The whole of the job's resumability. An asset can be gone because an
+     * operator removed it by hand, or because a previous run deleted it and
+     * died before recording that it had. A 404 that read as a failure would
+     * pin that sponsorship for ever.
+     */
+    answer = () =>
+      json(
+        { error: { messages: ["Asset not found"], type: "not_found" } },
+        404
+      );
+
+    await expect(deleteMuxAsset(ASSET_ID)).resolves.toBeUndefined();
+  });
+
+  it("refuses to call a rejected delete a deletion", async () => {
+    /*
+     * The other half of the 404 rule, and the one that makes it safe. A 401 or
+     * a 503 says nothing about whether the asset is there; swallowing it the
+     * way a 404 is swallowed would clear the only record of an asset that is
+     * still on Mux and still billed for.
+     *
+     * The rejection is captured with `.then(ok, err)` rather than caught
+     * around an `expect.unreachable()`: that spelling puts the "should have
+     * thrown" failure into the test's own `catch`, where the assertions pass
+     * against it and a version that resolved would be reported green.
+     */
+    answer = () =>
+      json({ error: { messages: ["Unauthorized"], type: "auth" } }, 401);
+
+    const outcome = await deleteMuxAsset(ASSET_ID).then(
+      () => new Error("resolved instead of refusing"),
+      (thrown: unknown) => thrown
+    );
+
+    expect(String(outcome)).toContain("HTTP 401");
+    expect(String(outcome)).toContain("Unauthorized");
+    expect(String(outcome)).not.toContain(STUB_TOKEN_SECRET);
+  });
+
+  it("refuses to delete anything without credentials", async () => {
+    restoreEnv("MUX_TOKEN_SECRET", undefined);
+
+    const outcome = await deleteMuxAsset(ASSET_ID).then(
+      () => new Error("resolved instead of refusing"),
+      (thrown: unknown) => thrown
+    );
+
+    process.env.MUX_TOKEN_SECRET = STUB_TOKEN_SECRET;
+
+    expect(String(outcome)).toContain("credentials are missing");
+    // And nothing was asked of Mux at all, rather than asked without a header.
+    expect(calls).toHaveLength(0);
+    // The positive beside it: with the pair back, the same call goes through.
+    await expect(deleteMuxAsset(ASSET_ID)).resolves.toBeUndefined();
+    expect(calls).toHaveLength(1);
+  });
+
+  it("reports what Mux says about an asset", async () => {
+    answer = () =>
+      json({
+        data: {
+          id: ASSET_ID,
+          playback_ids: [{ id: "pbReadForTestsOnly", policy: "public" }],
+          status: "ready",
+        },
+      });
+
+    await expect(readMuxAsset(ASSET_ID)).resolves.toEqual({
+      playbackId: "pbReadForTestsOnly",
+      status: "ready",
+    });
+    expect(calls[0]?.method).toBe("GET");
+    expect(calls[0]?.url).toBe(
+      `https://api.mux.com/video/v1/assets/${ASSET_ID}`
+    );
+  });
+
+  it("reports an errored asset as errored rather than throwing", async () => {
+    // Review Focus 4. `errored` is Mux's answer, not a failure to answer, and
+    // the caller acts on it — a throw here would be indistinguishable from an
+    // outage, which the caller must not act on.
+    // With its playback id intact, which is what Mux really answers: the ids
+    // are minted when the asset is created, long before ingest can fail. An
+    // errored asset is therefore one that has an id and plays nothing, and a
+    // caller that only looked for a missing id would call it healthy.
+    answer = () =>
+      json({
+        data: {
+          id: ASSET_ID,
+          playback_ids: [{ id: "pbErroredForTestsOnly", policy: "public" }],
+          status: "errored",
+        },
+      });
+
+    await expect(readMuxAsset(ASSET_ID)).resolves.toEqual({
+      playbackId: "pbErroredForTestsOnly",
+      status: "errored",
+    });
+  });
+
+  it("reports an asset Mux does not have as absent", async () => {
+    answer = () =>
+      json(
+        { error: { messages: ["Asset not found"], type: "not_found" } },
+        404
+      );
+
+    await expect(readMuxAsset(ASSET_ID)).resolves.toBeNull();
+  });
+
+  it("refuses to call an outage an absent asset", async () => {
+    answer = () => json({ error: { messages: ["Service unavailable"] } }, 503);
+
+    const outcome = await readMuxAsset(ASSET_ID).then(
+      (state) => new Error(`answered ${JSON.stringify(state)}`),
+      (thrown: unknown) => thrown
+    );
+
+    expect(String(outcome)).toContain("HTTP 503");
+    expect(String(outcome)).toContain("Service unavailable");
+  });
+
+  it("does not take a signed playback id for a public one", async () => {
+    // A `signed` id is not one an unauthenticated page can play, so an asset
+    // carrying only signed ids has nothing this product can put on a page.
+    answer = () =>
+      json({
+        data: {
+          id: ASSET_ID,
+          playback_ids: [{ id: "pbSignedForTestsOnly", policy: "signed" }],
+          status: "ready",
+        },
+      });
+
+    await expect(readMuxAsset(ASSET_ID)).resolves.toEqual({
+      playbackId: null,
+      status: "ready",
+    });
+  });
+
+  it("refuses an answer that is not JSON at all", async () => {
+    // A Cloudflare or Mux error page is HTML, sometimes with a 200 as a cached
+    // edge response. Reading `{}` out of that is how a caller concludes an
+    // asset has no playback id and throws away a composite that is alive.
+    answer = () =>
+      new Response("<html>502 Bad Gateway</html>", {
+        headers: { "content-type": "text/html" },
+        status: 200,
+      });
+
+    const outcome = await readMuxAsset(ASSET_ID).then(
+      (state) => new Error(`answered ${JSON.stringify(state)}`),
+      (thrown: unknown) => thrown
+    );
+
+    expect(String(outcome)).toContain("non-JSON body");
   });
 });

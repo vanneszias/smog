@@ -560,7 +560,7 @@ test, which is what makes the remaining pair load-bearing rather than assumed.
 
 This is the job the spec schedules daily. Stage 7 owns the scheduler; **this task owns the operation**, so that Stage 7 wires up something already proven.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("moves an in-term sponsorship to expired once its end date passes");
@@ -584,11 +584,157 @@ it("marks a render failed when Mux reports the asset errored");
 it("does not point a sponsorship at an asset that never became ready");
 ```
 
-- [ ] **Step 2-4:** run, implement, run.
+- [x] **Step 2-4:** run, implement, run.
 
-- [ ] **Step 5: Mutation-prove** — especially the ordering: swapping the delete and the restore must fail a test, and so must treating a Mux 404 as a failure.
+**An eighth thing wrong with this plan, and it is the sentence Review Focus 5
+is built on.** "Expiry restores the gesture's original video *and* deletes the
+sponsored Mux asset" describes the **shipped Convex product's data model, not
+this one**, and following it literally here would have been the bug rather than
+the fix.
 
-- [ ] **Step 6: Commit.**
+`packages/convex/convex/sponsorships.ts` overwrites `gesture.playbackId` with
+the sponsored id on approval and writes `originalVideoPlaybackId` back over it
+in `expire` — there, the gesture row *is* the pointer, so restoring it is a
+write. **`apps/site` never touches `gestures.playbackId` at all.**
+`hooks/publishComposedVideo.ts` writes the composite to
+`sponsorships.sponsoredVideoPlaybackId`, and the page composes the two at read
+time — `overlay?.sponsoredVideoPlaybackId ?? gesture.playbackId`, where
+`overlay` is `fetchGestureOverlay`. The gesture's own video is never displaced,
+so there is nothing on the gesture to put back. Writing
+`originalVideoPlaybackId` onto `gestures.playbackId` would be a no-op wherever
+the two agree, and everywhere they do not — an administrator replaced the
+gesture's video during the term — it would silently revert that
+administrator's newer video to a snapshot taken at checkout.
+
+**The restore is the status move to `expired`**, and a ninth correction follows
+from it. `fetchGestureOverlay` bounds the *term* as well as the status
+(`activeAndInTerm` is `status = active AND startDate <= now AND endDate >=
+now`), so a sponsorship this job selects — whose `endDate` has by definition
+passed — **has already stopped being drawn before the job runs**. The harm
+Review Focus 5 describes therefore cannot arrive through the due path at all.
+It arrives if the guard is ever wrong about *which* sponsorships have left the
+page: the outstanding-deletion sweep also reaches `cancelled` rows, whose term
+may still be running, and an asset deleted out from under an `active` in-term
+sponsorship is a dead player on a live page with no way back. That is what
+`it("does not delete the asset of a sponsorship that is still on the page")`
+asserts, through `fetchGestureOverlay` rather than through a column, and M12 is
+the mutation that fails it.
+
+**The ordering is a guard, not a sequence.** There are no transactions, so
+`releaseAsset` reads the sponsorship back out of the database and refuses to
+call Mux unless it says the sponsorship has left the page — which is stronger
+than trusting the update that made the move, because an update that changed
+nothing still answers with a document. Both entry points share the one guard,
+so swapping the restore and the delete does not merely reorder them, it makes
+the guard refuse and the **happy path** fails (M15). `it("does not take the
+update's word for it that the restore landed")` is the distinguishing test:
+the sponsorship write is swallowed — it resolves, the row does not change — and
+the asset survives anyway.
+
+**A tenth: `it("marks a render failed when Mux reports the asset errored")` is
+unimplementable as written.** `POST /api/render/callback` marks a render
+`ready` the moment Mux accepts the asset, and `lib/renderState.ts` gives
+`ready` no outgoing edge — Task 1 mutation-proved that, because re-opening a
+finished render would let a second callback overwrite its Mux ids. So a render
+whose asset dies afterwards is already terminal and `canAdvance("ready",
+"failed")` is `false`. `settleComposedVideos` advances the state where the
+table allows it (a render still `uploading`, which is what a crash between the
+Mux create and the render update leaves) and records the reason on the row
+where it does not. Widening the table would undo a shipped decision.
+
+**An eleventh, and the one a hand-written list would have got wrong.**
+`rejected` is *not* a status nothing comes back from — `rejected ->
+pending_resubmission` is legal — so a rejected sponsorship's composite can
+still reach a page by way of a resubmission somebody approves. The set of
+statuses whose asset may be deleted is therefore **derived** from
+`ALLOWED_TRANSITIONS` (no outgoing edges) rather than restated, and M11 shows
+the hand-written list failing.
+
+**No claim, and the reason is worth recording** because Stage 5 and Task 3 both
+needed one. The irreversible step in the callback is `POST /assets`, where a
+second one is a second asset and a bill for ever; the irreversible step here is
+`DELETE /assets/:id`, and Mux answers a second one `404`, which `lib/mux.ts`
+treats as success. The restore is `active -> expired` and a second one is
+`expired -> expired`, which `enforceStatusTransitions` allows and
+`logSponsorshipTransitions` does not log twice. So this job wants at-least-once
+with an idempotent effect, which it has, rather than exactly-once, which would
+cost a table. **It is not one of the four consumers Stage 7's generic `claims`
+collection is for.**
+
+**Two things this task needed that the File Structure did not give it.**
+`lib/mux.ts` gains `readMuxAsset` and `deleteMuxAsset` (Task 3 left that half
+here), and the readiness sweep is a second export of
+`jobs/expireSponsorships.ts` rather than a third file, because Stage 7
+schedules both and they share the guard and the ledger.
+
+**The ledger, stated once because everything resumable here depends on it.**
+`renders.muxAssetId` means "an asset this application believes is alive and has
+not deleted". `POST /api/render/callback` writes it; a completed deletion and a
+Mux verdict of dead are the only things that clear it. Nothing records "I did
+this" anywhere else, so a half-run is finished by the next run reading state
+rather than a cursor.
+
+- [x] **Step 5: Mutation-prove** — especially the ordering: swapping the delete and the restore must fail a test, and so must treating a Mux 404 as a failure.
+
+**34 mutations, 32 CAUGHT on the first pass and two SURVIVED.** Both survivors
+were real, and both were the test's fault rather than the guard's.
+
+| # | mutation | must fail | |
+|---|---|---|---|
+| M1 | `deleteMuxAsset` treats a 404 as a failure | "treats an asset Mux no longer has as deleted" | CAUGHT |
+| M2 | every refusal is treated as already gone | "refuses to call a rejected delete a deletion" | CAUGHT |
+| M3 | the body is read before the status | "does not read the body of a successful delete" | CAUGHT |
+| M4 | the delete is issued as a `GET` | "asks Mux to delete the asset it was given" | CAUGHT |
+| M5 | the delete needs no credentials | "refuses to delete anything without credentials" | CAUGHT |
+| M6 | `readMuxAsset` throws on a 404 | "reports an asset Mux does not have as absent" | CAUGHT |
+| M7 | every refusal reads as an absent asset | "refuses to call an outage an absent asset" | CAUGHT |
+| M8 | a signed playback id counts as public | "does not take a signed playback id for a public one" | CAUGHT |
+| M9 | the due query drops the end-date bound | "leaves an in-term one alone" | CAUGHT |
+| M10 | the due bound is `less_than_equal` | "leaves one alone at the exact instant its term ends" | CAUGHT |
+| M11 | the terminal set is hand-written, with `rejected` in it | "does not delete a rejected sponsorship's asset" | CAUGHT |
+| M12 | the terminal set also holds `active` | "does not delete the asset of a sponsorship that is still on the page" | CAUGHT |
+| M13 | the guard allows everything | "does not take the update's word for it" | CAUGHT |
+| M14 | the due loop trusts its own restore and skips the guard | "does not take the update's word for it" | CAUGHT |
+| M15 | the delete and the restore are swapped | the happy path, and five more | CAUGHT |
+| M16 | the ledger is cleared before Mux is asked | "keeps the asset recorded when Mux refuses the delete" | CAUGHT |
+| M17 | a refused delete still clears the ledger | the same | CAUGHT |
+| M18 | the outstanding-deletion sweep is removed | "finishes a half-run" | CAUGHT |
+| M19 | the orphan pass is removed | "deletes the asset of a render whose sponsorship was deleted" | CAUGHT |
+| M20 | the sweep does not skip what the due loop handled | "keeps the asset recorded when Mux refuses the delete" | CAUGHT |
+| M21 | a failed restore takes the run down | "leaves the asset alone when the restore fails" | CAUGHT |
+| M22 | a failed delete takes the run down | "carries on after one sponsorship's asset cannot be deleted" | CAUGHT |
+| M23 | an empty asset id counts as an asset | "never asks Mux about a render that holds no asset" | CAUGHT |
+| M24 | the restore writes `cancelled` | "moves an in-term sponsorship to expired", and six more | CAUGHT |
+| M25 | the restore also clears the published composite | "deletes the sponsored Mux asset after the restore succeeds" | CAUGHT |
+| M26 | an errored asset is treated as playable | "marks a render failed when Mux reports the asset errored" | **SURVIVED** |
+| M27 | anything but `ready` is treated as dead | "leaves a composite that is still preparing exactly where it is" | CAUGHT |
+| M28 | an asset Mux does not have is treated as fine | "treats an asset Mux no longer has as one that will never play" | CAUGHT |
+| M29 | the render is recorded before the sponsorship is cleared | "clears the sponsorship before it records the render" | CAUGHT |
+| M30 | the composite is cleared whichever render died | "leaves the composite of a different render alone" | CAUGHT |
+| M31 | the state table is not consulted before writing `failed` | "records the reason on a render the state table will not let it fail" | CAUGHT |
+| M32 | a dead asset stays on the ledger | "marks a render failed when Mux reports the asset errored" | CAUGHT |
+| M33 | the readiness sweep also asks about finished sponsorships | "does not ask Mux about an asset that is about to be deleted anyway" | CAUGHT |
+| M34 | an outage takes the readiness sweep down | "leaves everything exactly as it was when Mux cannot be asked" | CAUGHT |
+
+**M26 survived, and it was the fixture that was wrong — Task 4's M9 arrived at
+from the other direction.** `unplayableReason` refuses an asset that is
+`errored` *or* has no public playback id, and every errored fixture in the file
+answered `playback_ids: []`. So the missing-id check stood in for the `errored`
+check and deleting the latter changed nothing. That fixture was also wrong
+about Mux: playback ids are minted when the asset is created, long before
+ingest can fail, so a real errored asset carries an id that plays nothing. With
+the fixture corrected the two conditions are covered separately — M26 by the
+errored tests and M8 by "treats an asset with no public playback id as one that
+will never play" — and M26 is CAUGHT.
+
+**M15 survived its first spelling, and that was the mutation's fault.** The
+first patch *added* a deletion pass before the restore instead of moving the
+existing one, so the happy path still deleted after the restore and all 30
+tests passed. A mutation that lands in the file is not necessarily the mutation
+that was meant; the harness checks the bytes changed, not that they changed
+into the thing described. Re-run as a true swap, it fails six tests.
+
+- [x] **Step 6: Commit.**
 
 ---
 

@@ -415,3 +415,129 @@ export async function signedMuxSourceUrl(
     url: `${MUX_STREAM_ORIGIN}/${playbackId}/high.mp4?token=${token}`,
   };
 }
+
+/*
+ * ---------------------------------------------------------------------------
+ * The back half of an asset's life: is it playable, and is it gone
+ * ---------------------------------------------------------------------------
+ */
+
+/** Mux's answer when it has never heard of the asset, or no longer has it. */
+const NOT_FOUND = 404;
+
+/**
+ * What Mux currently says about an asset this application created.
+ *
+ * Not exported, for the reason the types above give: knip fails
+ * `bun release:check` on an exported symbol nothing imports, and the caller
+ * reads the two fields off the result.
+ */
+interface MuxAssetState {
+  playbackId: null | string;
+  /** Mux's own word — `preparing`, `ready` or `errored`. */
+  status: string;
+}
+
+/**
+ * What Mux says about an asset now, or `null` if Mux does not have it.
+ *
+ * **This is a sweep, not a poll, and the difference is the whole design.**
+ * `asset.ready` is asynchronous: `createMuxAssetFromUrl` returns while the
+ * asset is still `preparing`, and minutes later it is either playable or
+ * `errored`. A Worker request cannot wait for that — it has nowhere to wait,
+ * because the callback has to answer Lambda — so nothing in this application
+ * ever loops on this function. `jobs/expireSponsorships.ts` asks once, from a
+ * scheduled job, about assets it already knows the id of.
+ *
+ * **A 404 is an answer, not a failure**, and it is the one case that has to be
+ * distinguished from every other refusal. An asset Mux does not have is an
+ * asset that will never play and that nobody is being billed for; a 401, a 429
+ * or a 503 says nothing at all about the asset and must not be read as "it is
+ * gone", because acting on that would throw away a composite that is alive.
+ * So `null` means *Mux answered, and it does not have this asset*, and
+ * everything else that is not a success throws.
+ *
+ * @throws If the credentials are unset, or Mux refuses with anything but a
+ *   404, or answers with a non-JSON body.
+ */
+export async function readMuxAsset(
+  assetId: string
+): Promise<null | MuxAssetState> {
+  const authorization = authorizationOrThrow();
+
+  const response = await fetch(
+    `${MUX_API_BASE}/assets/${encodeURIComponent(assetId)}`,
+    { headers: { Authorization: authorization }, method: "GET" }
+  );
+
+  if (response.status === NOT_FOUND) {
+    return null;
+  }
+
+  const body = await parseMuxJson(response, "Reading an asset");
+
+  if (!response.ok) {
+    throw new Error(
+      `[mux] Reading an asset was refused (HTTP ${response.status}): ${refusalMessage(body)}`
+    );
+  }
+
+  const data = body.data;
+
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("[mux] Mux answered without an asset.");
+  }
+
+  const asset = data as Record<string, unknown>;
+
+  return {
+    playbackId: publicPlaybackId(asset),
+    status: typeof asset.status === "string" ? asset.status : "unknown",
+  };
+}
+
+/**
+ * Deletes an asset, and treats one that is already gone as deleted.
+ *
+ * **The irreversible step of the expiry, and the reason the job is ordered the
+ * way it is.** A deleted Mux asset cannot be restored — the composite would
+ * have to be rendered again, which costs Lambda time and a sponsor's overlay
+ * that may no longer exist — so `jobs/expireSponsorships.ts` reads the
+ * sponsorship back out of the database and refuses to call this until it says
+ * the sponsorship has left the public page.
+ *
+ * **A 404 is success.** The operation asked for is "this asset is not on
+ * Mux's books any more", and an asset Mux has never heard of satisfies it.
+ * That is not a nicety: the asset may be gone because an operator deleted it
+ * by hand, or because a previous run of the job deleted it and died before
+ * recording that it had. Treating that as a failure would mean the job could
+ * never finish for that sponsorship and would ask Mux to delete it again every
+ * day, for ever. The job is resumable precisely because this call is.
+ *
+ * Every other refusal throws, and the caller leaves the asset id recorded so
+ * the next run tries again. A 401 is not a missing asset.
+ *
+ * @throws If the credentials are unset, or Mux refuses with anything but a
+ *   404, or answers a refusal with a non-JSON body.
+ */
+export async function deleteMuxAsset(assetId: string): Promise<void> {
+  const authorization = authorizationOrThrow();
+
+  const response = await fetch(
+    `${MUX_API_BASE}/assets/${encodeURIComponent(assetId)}`,
+    { headers: { Authorization: authorization }, method: "DELETE" }
+  );
+
+  // Mux answers a successful delete `204 No Content`, so the body is not read
+  // on the way out: `parseMuxJson` would turn an empty body into a throw and
+  // report a completed deletion as a failure.
+  if (response.ok || response.status === NOT_FOUND) {
+    return;
+  }
+
+  const body = await parseMuxJson(response, "Deleting an asset");
+
+  throw new Error(
+    `[mux] Deleting an asset was refused (HTTP ${response.status}): ${refusalMessage(body)}`
+  );
+}
