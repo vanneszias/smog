@@ -372,6 +372,30 @@ Stage 1 defines the shape only. Four things are knowingly absent:
   cast in a fixture; Stage 5's callers will hit the same wall and should fix it
   once, centrally, rather than casting at each call site.
 
+#### Correction: `molliePaymentId` must not be unique
+
+Stage 1 declared `molliePaymentId` as `index: true, unique: true`, with
+the rationale that "the Mollie webhook resolves a payment to a
+sponsorship through this column, so two rows sharing one id means the
+webhook marks the wrong sponsorship paid".
+
+That rationale describes a one-to-one relationship the product does not
+have. `packages/convex/convex/schema.ts` declares
+`.index("by_payment_id", ["molliePaymentId"])` — a **plain index** — and
+`apps/server/src/webhooks/mollie.ts` writes `molliePaymentId: paymentId`
+to *every* sponsorship named by a bulk payment. One payment covering many
+sponsorships is the shipped behaviour, and `apps/site` makes it the norm
+rather than the exception by writing one row per selected gesture.
+
+So the constraint is wrong, and it fails closed: the second row a bulk
+checkout writes is refused by the index. Stage 5 Task 7 drops it and
+keeps the plain index.
+
+**Uniqueness does not leave the design, it moves to where it works.**
+`webhook-deliveries.paymentId` is one row per Mollie payment and is the
+claim that makes the webhook exactly-once — see "A `where` on an update
+is a SELECT" below for why that is the only atomic primitive available.
+
 #### A Stage 9 import hazard
 
 `analytics_consent` is emitted as `integer DEFAULT false NOT NULL`. A raw-SQL
