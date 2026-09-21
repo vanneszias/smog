@@ -1,35 +1,38 @@
 /**
- * **The Stage 6 seam.**
+ * **The Stage 6 seam, opened.**
  *
  * Which video the review step plays, given the sponsorship in front of it.
  *
- * ## What this returns today, and why it is not the final answer
+ * ## What this returns, and what changed
  *
- * The shipped product's step 3 reviews a *pre-composed* preview: the
- * sponsor's logo and text already burned into the frame by Remotion and
- * served from Mux. Composition is Stage 6, and the spec orders the stages
- * strictly — so Stage 5 cannot show a composited preview without reaching
- * into the next one.
+ * The composed preview when there is one, and the gesture's own video until
+ * there is. Stage 5 built this function to return the original *always*, and
+ * said so as a test rather than as a comment: `renderPreview.test.ts` asserted
+ * that a subject carrying a composed preview still played the original, with
+ * the note that the test was supposed to fail in Stage 6. Task 4 is that
+ * failure, and the body is all that changed — **the signature did not**, so
+ * the two callers (`sponsor/preview/page.tsx` and `sponsor/re-edit/page.tsx`)
+ * are untouched by this commit and keep calling it exactly as before.
  *
- * Rather than resequence, this stage plays the gesture's **original** video
- * and draws the overlay as HTML on top of it. The sponsor sees the video they
- * are sponsoring and the words that will appear on it; they do not see the
- * final composite until Stage 6. The product owner confirmed that ordering on
- * 2026-09-21.
+ * That is what the seam bought. Without it, Stage 6 could have written
+ * `previewVideoPlaybackId` from the render callback, never preferred it here,
+ * and no test in the repository would have noticed that the sponsor was still
+ * approving a video with no logo on it.
  *
- * ## What Stage 6 changes, and what it must not
+ * ## Why the fallback stays, and is not a transitional leftover
  *
- * **Stage 6 replaces the body. It does not change the signature.** When a
- * composed preview exists it is `previewVideoPlaybackId`, which is already a
- * column on `sponsorships` and is already a parameter here — Stage 6's change
- * is to prefer it, and everything that calls this keeps calling it the same
- * way.
+ * A render takes minutes and this page is reachable the whole time. A sponsor
+ * who reloads mid-render must see the video they are sponsoring with the
+ * overlay drawn in HTML on top — which is exactly what Stage 5 shipped — and
+ * not an error or an empty player. The fallback is also what covers a render
+ * that failed outright: `endpoints/render.ts` records the failure and attaches
+ * nothing, so the column stays NULL and this keeps answering.
  *
- * `renderPreview.test.ts` asserts the Stage 5 contract explicitly: a subject
- * that *has* a composed preview still plays the original. That test is
- * supposed to fail in Stage 6, which is the point — it makes the seam
- * something a future task has to open on purpose rather than something it
- * discovers it has already walked through.
+ * The empty string is treated as absent along with `null`. A `??` alone would
+ * hand the player `""`, which is a broken video rather than the original one,
+ * and nothing in this database stops a text column holding `""` — see
+ * `endpoints/sponsorships.ts`, which maps its own optional fields to `null` by
+ * hand for the same reason.
  */
 
 /**
@@ -50,14 +53,19 @@ interface PreviewSubject {
   /**
    * The composed preview's playback id, when one exists.
    *
-   * Nothing writes it in Stage 5 — `POST /api/render/callback` is Stage 6 —
-   * so it is always absent here today. It is in the signature now precisely
-   * so that Stage 6 does not have to change one.
+   * Written by `POST /api/render/callback` when Remotion Lambda's composite
+   * reaches Mux, and only onto a sponsorship still waiting for one — a
+   * cancelled, rejected or re-editing sponsorship is left alone, so what this
+   * property holds is always a composite of the overlay currently on the row.
    */
   previewVideoPlaybackId?: null | string;
 }
 
 /** The playback id the review step should play. */
 export function previewPlaybackId(subject: PreviewSubject): string {
-  return subject.originalVideoPlaybackId;
+  const composed = subject.previewVideoPlaybackId;
+
+  return typeof composed === "string" && composed !== ""
+    ? composed
+    : subject.originalVideoPlaybackId;
 }

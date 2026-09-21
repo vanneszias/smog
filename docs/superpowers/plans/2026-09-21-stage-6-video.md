@@ -367,7 +367,7 @@ than discovering it.
 
 The spec: "issues a short-lived Mux source URL to the render container, behind a service token."
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("issues a source URL for a gesture's playback id");
@@ -387,7 +387,7 @@ it("falls back to the original while the render is still running", () => {
 });
 ```
 
-- [ ] **Step 2-4:** run, implement, run. Compare the service token with `lib/constantTime.ts` (Task 2 extracted it from `endpoints/oauth.ts`, where a third copy was otherwise coming) — a `===` here leaks it exactly as it would there.
+- [x] **Step 2-4:** run, implement, run. Compare the service token with `lib/constantTime.ts` (Task 2 extracted it from `endpoints/oauth.ts`, where a third copy was otherwise coming) — a `===` here leaks it exactly as it would there.
 
 **Two decisions this task must take, both under uncertainty that cannot be
 resolved in this environment. Neither may be guessed silently.**
@@ -421,9 +421,135 @@ a function name and region are required — then submission is stubbed behind
 the same seam as `renderPreview`, the stub is tested, and Task 6 fills it.
 Say so plainly rather than half-building it.
 
-- [ ] **Step 5: Mutation-prove** each guard, including that the expiry is real (a URL minted with no expiry must fail a test).
+---
 
-- [ ] **Step 6: Commit.**
+**Decision 1, taken: neither scheme is chosen, and both are proven.**
+`lib/renderSignature.ts` now exports `RENDER_SIGNATURE_SCHEME`, one constant
+carrying the algorithm, the header name and the value prefix; `sign` and
+`verify` take it as a defaulted argument, and `endpoints/render.ts` reads the
+header name from it rather than restating the string. Both candidate schemes are
+pinned by **published known-answer vectors, confirmed against OpenSSL rather
+than against this module** — HMAC-SHA-256 and HMAC-SHA-512 of "The quick brown
+fox jumps over the lazy dog" under the key "key". Adopting Remotion's scheme, if
+Task 6 finds that is what arrives, is an edit to three fields.
+
+The evidence for *not* guessing is in the mutation table: M1 and M2 change the
+scheme and the callback's own integration suite stays green, because signing and
+verifying move together — exactly the trap Task 2 recorded. Only the
+known-answer vectors and the literal pin catch it. A verifier chosen by
+guesswork would therefore have passed this entire repository and 401ed every
+real callback.
+
+Nothing here confirms which scheme Remotion Lambda sends. `remotion.dev` is
+blocked by this environment's egress proxy and no installed package mentions the
+header. It stays open for Task 6.
+
+**Decision 2, taken and measured: no SDK, and submission is stubbed.**
+Measured on this task's parent commit with `renderMediaOnLambda` imported from
+`@remotion/lambda/client` into an endpoint so it could not be tree-shaken:
+
+| build | `Total Upload` gzipped | headroom |
+|---|---|---|
+| without it | 7514.73 KiB | 27% |
+| with it | 8268.12 KiB | 19% |
+
+**+753.39 KiB gzipped** — four and a half times the +165.71 KiB Stage 5 refused
+to spend on the Mollie SDK, out of a budget Stage 7 has not drawn on yet. The
+dependency is not added, and the measurement is recorded in `lib/renderJob.ts`.
+
+**One line of this plan's reasoning was wrong.** `@remotion/lambda/client` does
+*not* pull in the AWS SDK: it re-exports `@remotion/lambda-client`, whose
+`dependencies` are empty — Remotion carries its own request signing. The cost is
+the rest of the client surface, and it is larger than the SDK argument
+suggested, not smaller.
+
+And the `fetch` + SigV4 alternative was **not** built, because it cannot be
+verified here and building it would be the exact failure this stage is trying to
+avoid. Three things are missing: a deployed function (name and region), a serve
+URL, and the *invoke payload's own shape* — a private, version-checked protocol
+between `@remotion/lambda-client` and the function it deployed. Writing that
+request from memory and testing it against a fake of my own making would prove
+only that the two agree with each other.
+
+So `lib/renderJob.ts` builds and fully tests everything that **is** knowable —
+the composition id, the `SponsoredVideoSchema` input props, the signed source
+URL and the callback address — and `submitRenderJob` is an empty transport that
+records what it did not send. `endpoints/sponsorships.ts` calls it once per
+sponsorship after the payment, inside a `catch` that cannot fail a paid
+checkout (M29). Task 6 replaces one function body.
+
+**A third thing this task needed that the plan did not name.** The copy from
+`previewVideoPlaybackId` to `sponsoredVideoPlaybackId` is Task 4's, and a second
+hook had to go beside it. `rejected -> pending_resubmission` is legal, so a
+sponsorship can carry a composite made *before* a rejection and come back
+through the queue with different text — and copying blindly on approval puts the
+rejected submission's video live the moment the re-edit is approved.
+`hooks/publishComposedVideo.ts` therefore also throws a composite away whenever
+the overlay text or logo changes, before the copy runs in the same save (M21,
+M23). It is a hook rather than a line in the re-edit endpoint because it is a
+fact about the content: the admin panel and Stage 9's import go through it too.
+
+- [x] **Step 5: Mutation-prove** each guard, including that the expiry is real (a URL minted with no expiry must fail a test).
+
+**30 mutations, 28 CAUGHT on the first pass and two SURVIVED.** Both survivors
+were real and neither was adjusted away.
+
+| # | mutation | must fail | |
+|---|---|---|---|
+| M1 | `RENDER_SIGNATURE_SCHEME.algorithm` becomes SHA-512 | the scheme pin, both known-answer vectors | CAUGHT |
+| M2 | the scheme gains a `sha512=` prefix | the scheme pin, the round trips | CAUGHT |
+| M3 | the scheme's header becomes `x-remotion-signature` | the scheme pin | CAUGHT |
+| M4 | the signer ignores the scheme's algorithm | the SHA-512 vector | CAUGHT |
+| M5 | the source token is minted with no `exp` | "issues a URL that expires" | CAUGHT |
+| M6 | the expiry is a hundred years out | "issues a URL that expires" | CAUGHT |
+| M7 | the token is not bound to the playback id | "binds the token" | CAUGHT |
+| M8 | the token is not signed | "signs the token" | CAUGHT |
+| M9 | a missing signing key is not refused | "refuses to mint" | **SURVIVED** |
+| M9b | the guard accepts an unnamed key id | "refuses to mint" | CAUGHT |
+| M10 | `kid` is dropped from the JWT header | "names the signing key" | CAUGHT |
+| M11 | the service token is not checked at all | six source-endpoint tests | CAUGHT |
+| M12 | the token is compared with `===` | "compares in constant time" | CAUGHT |
+| M13 | an unknown playback id answers 404 | the oracle test | CAUGHT |
+| M14 | an inactive gesture is served | "does not issue one for an inactive gesture" | CAUGHT |
+| M15 | an unset service token means no check | — | **SURVIVED** |
+| M16 | the seam is closed again | "returns the composed video" | CAUGHT |
+| M17 | an empty composed id is preferred | "falls back for an empty id" | CAUGHT |
+| M18 | checkout never asks for a render | "asks for a render of every gesture" | CAUGHT |
+| M19 | approval is not required to publish | "copies nothing on any other move" | CAUGHT |
+| M20 | an already live video is overwritten | "does not overwrite" | CAUGHT |
+| M21 | a changed overlay keeps its composite | four, including the re-edit scenario | CAUGHT |
+| M22 | every update throws the composite away | "keeps the composite when neither changed" | CAUGHT |
+| M23 | the two hooks run in the other order | "does not publish a composite the same write invalidated" | CAUGHT |
+| M24 | a changed logo does not invalidate | "throws it away when the logo changes" | CAUGHT |
+| M25 | the submission carries the callback secret | "never puts the secret in the submission" | CAUGHT |
+| M26 | the logo is passed as `null` rather than omitted | "includes the logo only when there is one" | CAUGHT |
+| M27 | the unconfigured seam says nothing | "submits nothing, and says so" | CAUGHT |
+| M28 | an empty bearer token is not refused | "refuses every caller when unconfigured" | CAUGHT |
+| M29 | a failed submission fails the checkout | "completes the checkout even when it throws" | CAUGHT |
+
+**M9 survived, and it was the test that was wrong — two of them.** The guard
+that refuses to mint without a signing key was asserted with
+`rejects.toThrow(/MUX_SIGNING_KEY/)`, and with the guard deleted an empty key
+falls through to the PEM parser, *whose own error names the same variable*. One
+regex, two different refusals, and a test that could not tell them apart. The
+neighbouring test was worse: it wrapped `expect.unreachable()` in its own
+`try/catch`, so the "this should have thrown" failure landed in the catch and
+the assertions passed against it. Both are fixed — the message is matched
+precisely, and the rejection is captured with `.then(ok, err)` rather than
+caught — and M9 and M9b are CAUGHT.
+
+**M15 survived because the guard was unreachable, so the guard is gone.** The
+source endpoint refused outright when `MUX_SOURCE_SERVICE_TOKEN` was unset, on
+top of refusing an empty presented token and comparing in constant time.
+`equalConstantTime` checks lengths first, so an unset variable can only match a
+presented token that is itself empty — which the line above already refuses.
+Nothing could reach it. `hooks/stampReviewDecision.ts` made the same call about
+three field rules the plan asked for: a guard nothing can reach is not a weaker
+guard, it is a comment. The fail-closed property it existed for is unchanged and
+still named by a test, and M28 — deleting the empty-token check — fails that
+test, which is what makes the remaining pair load-bearing rather than assumed.
+
+- [x] **Step 6: Commit.**
 
 ---
 
@@ -471,7 +597,10 @@ it("does not point a sponsorship at an asset that never became ready");
 **Do not start this task without the product owner's explicit go-ahead.** It deploys a Remotion Lambda (billable AWS resources) and creates real Mux assets.
 
 - [ ] Deploy the Remotion Lambda function to the named account and region; record the function name, the bucket, and the deploy command in `apps/site/README.md`.
-- [ ] Set `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `REMOTION_FUNCTION_NAME`, `REMOTION_REGION`, `RENDER_CALLBACK_SECRET` and `MUX_SOURCE_SERVICE_TOKEN` as Worker secrets — **as environment variables, never pasted into a transcript**.
+- [ ] Set `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `REMOTION_FUNCTION_NAME`, `REMOTION_REGION`, `RENDER_CALLBACK_SECRET` and `MUX_SOURCE_SERVICE_TOKEN` as Worker secrets — **as environment variables, never pasted into a transcript**. Task 4 added three more that this list did not have: `REMOTION_SERVE_URL` (the deployed bundle, which comes out of the same deploy as the function), and `MUX_SIGNING_KEY_ID` / `MUX_SIGNING_KEY_PRIVATE`, which are what `GET /api/mux/source/:id` mints an expiring URL with. Without the pair that endpoint throws on every request.
+- [ ] **Decide the source assets' playback policy, which decides whether the source URL's expiry means anything.** `lib/mux.ts` mints a real, signed, verifiable expiry, and Mux serves a `public` playback id to anyone who asks regardless — and every asset in this product is public, including the ones `createMuxAssetFromUrl` creates. So on today's data the endpoint protects the *enumeration* of which gestures exist and nothing else; the gesture page already streams the same video to anonymous visitors. Making the expiry bite is a `playback_policy` decision on the asset, not a change to the endpoint.
+- [ ] Confirm which signature scheme Remotion Lambda actually sends, and set `RENDER_SIGNATURE_SCHEME` accordingly. Both candidates are already proven by known-answer vector; this is a three-field edit, not a rewrite.
+- [ ] Check that the composition id and input props still match `apps/remotion`. `lib/renderJob.ts` hard-codes `SponsoredVideo` and the three props `SponsoredVideoSchema` declares, and **nothing enforces the agreement** — the two apps share no code, so a rename there is a runtime failure here.
 - [ ] Render one real composition end to end on staging and record what differed from the fake. **Expect something to differ**; the fake proves the shape of the protocol, never the provider's behaviour.
 - [ ] Re-measure the bundle and record the delta.
 

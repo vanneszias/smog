@@ -1,6 +1,10 @@
 import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
-import { createMuxAssetFromUrl } from "@/lib/mux";
-import { verifyRenderCallback } from "@/lib/renderSignature";
+import { equalConstantTime } from "@/lib/constantTime";
+import { createMuxAssetFromUrl, signedMuxSourceUrl } from "@/lib/mux";
+import {
+  RENDER_SIGNATURE_SCHEME,
+  verifyRenderCallback,
+} from "@/lib/renderSignature";
 import type { Render } from "@/payload-types";
 
 /**
@@ -99,8 +103,21 @@ import type { Render } from "@/payload-types";
  *   swallowing it would throw away a composite that cost real money to make.
  */
 
-/** The header Remotion Lambda is configured to sign the body into. */
-const SIGNATURE_HEADER = "x-render-signature";
+/**
+ * The header Remotion Lambda is configured to sign the body into.
+ *
+ * Read from `lib/renderSignature.ts` rather than restated, because the header
+ * name, the HMAC and the value's prefix are one decision and Task 4 could not
+ * settle it: Remotion Lambda's own webhook is reported to send
+ * `X-Remotion-Signature: sha512=<hex>`, and nothing in this environment could
+ * confirm that. Both schemes are pinned by known-answer vectors there, and
+ * adopting the other one is an edit to that constant — which moves this
+ * handler with it instead of leaving a second copy behind.
+ */
+const SIGNATURE_HEADER = RENDER_SIGNATURE_SCHEME.header;
+
+/** How a service token is presented, and the only spelling accepted. */
+const BEARER = "Bearer ";
 
 /**
  * The sponsorship statuses a freshly composed video may be attached to.
@@ -252,6 +269,30 @@ function parseReport(raw: string): null | RenderReport {
       : failureReason(payload),
     succeeded: false,
   };
+}
+
+/**
+ * The gesture whose video Mux plays under `playbackId`, or `null`.
+ *
+ * `overrideAccess: true` and an explicit `isActive` test at the call site,
+ * rather than `overrideAccess: false` leaning on `publicReadActive`. The two
+ * would agree today, and the explicit one is the guard that can be *seen* —
+ * and, more to the point, the one a mutation sweep can delete and watch a test
+ * fail. A guard expressed as the absence of a flag is a guard nobody reviews.
+ */
+async function findGestureByPlaybackId(
+  req: PayloadRequest,
+  playbackId: string
+): Promise<null | { isActive?: boolean | null }> {
+  const { docs } = await req.payload.find({
+    collection: "gestures",
+    depth: 0,
+    limit: 1,
+    overrideAccess: true,
+    where: { playbackId: { equals: playbackId } },
+  });
+
+  return docs[0] ?? null;
 }
 
 /** The render this job belongs to, or `null` if this app never submitted it. */
@@ -426,6 +467,94 @@ async function attachToSponsorship(
   });
 }
 
+/**
+ * `GET /api/mux/source/:id` — the source video a render container renders from.
+ *
+ * ## What the service token is, and what it is not
+ *
+ * A single shared bearer token in `MUX_SOURCE_SERVICE_TOKEN`, compared with
+ * `lib/constantTime.ts` for the reason that module documents at length: a
+ * byte-by-byte `===` on a value an attacker can present repeatedly turns
+ * guessing it into a per-character search. It is the third caller of that
+ * helper, and the copy of the comparison that did not get written.
+ *
+ * It fails closed. An unset variable refuses every caller rather than waving
+ * them through, because the alternative is a deployment where an empty
+ * `Authorization` header is a valid credential.
+ *
+ * ## Why an unknown playback id is answered exactly like a wrong token
+ *
+ * A different answer here makes this endpoint an oracle for which gestures
+ * exist: anybody guessing playback ids could sort them into "real" and "not"
+ * without ever holding the token. The same applies to a gesture that has been
+ * deactivated, which the public API refuses to serve at all
+ * (`publicReadActive`) — so it is refused here too, and refused in a way
+ * that is indistinguishable from it.
+ *
+ * That is cheap to hold because there is nothing useful to say: a caller
+ * without the token has no business knowing, and a caller with it is asking
+ * about a gesture this application is not going to render.
+ *
+ * ## What this actually protects, stated honestly
+ *
+ * Not the video. Every playback id in this product has a `public` policy, and
+ * Mux serves a public id to anyone who asks, token or no token — the gesture
+ * page streams exactly this video to anonymous visitors. What the endpoint
+ * protects is the enumeration above, and it is the seam that becomes
+ * load-bearing the moment a source asset moves to a `signed` policy. The
+ * expiry it mints is real, signed and verifiable; Mux is simply not the thing
+ * enforcing it today. See `lib/mux.ts`, and Task 6.
+ */
+const muxSource: PayloadHandler = async (
+  req: PayloadRequest
+): Promise<Response> => {
+  const serviceToken = process.env.MUX_SOURCE_SERVICE_TOKEN ?? "";
+  const authorization = req.headers.get("authorization") ?? "";
+  const presented = authorization.startsWith(BEARER)
+    ? authorization.slice(BEARER.length)
+    : "";
+
+  /*
+   * Two conditions, not three. An earlier draft also refused outright when
+   * `serviceToken === ""`, and the mutation that deletes that disjunct
+   * **survived the whole suite** — correctly, because it cannot be reached:
+   * `equalConstantTime` compares lengths first, so an unset variable can only
+   * match a presented token that is itself empty, and the line above has
+   * already refused that one. A guard nothing can reach is not a weaker guard,
+   * it is a comment — `hooks/stampReviewDecision.ts` says the same about three
+   * field rules it declined to write — so it is a comment.
+   *
+   * The property it was there for still holds and is still tested by name:
+   * with no token configured every caller is refused, including one presenting
+   * an empty bearer token. See "refuses every caller when no service token is
+   * configured", and the mutation that deletes `presented === ""` fails it.
+   */
+  if (presented === "" || !equalConstantTime(presented, serviceToken)) {
+    return problem(UNAUTHORIZED, "This request is not allowed.");
+  }
+
+  const requested = req.routeParams?.id;
+  const playbackId = typeof requested === "string" ? requested : "";
+  const gesture =
+    playbackId === "" ? null : await findGestureByPlaybackId(req, playbackId);
+
+  if (gesture === null || gesture.isActive !== true) {
+    req.payload.logger.warn(
+      "[render] A source URL was asked for a playback id that names no active gesture"
+    );
+
+    // Byte for byte the refusal above. See the doc block.
+    return problem(UNAUTHORIZED, "This request is not allowed.");
+  }
+
+  const source = await signedMuxSourceUrl(playbackId, Date.now());
+
+  return Response.json(
+    { expiresAt: new Date(source.expiresAt).toISOString(), url: source.url },
+    { headers: NO_STORE, status: OK }
+  );
+};
+
 const renderCallback: PayloadHandler = async (
   req: PayloadRequest
 ): Promise<Response> => {
@@ -543,4 +672,12 @@ const renderCallback: PayloadHandler = async (
 
 export const renderEndpoints: Endpoint[] = [
   { handler: renderCallback, method: "post", path: "/render/callback" },
+  /*
+   * No rewrite in `next.config.ts` for this one, unlike the callback's. The
+   * caller is this application's own render submission, which builds the URL
+   * from `req.origin` and can say `/api/...` as easily as anything else — so
+   * there is no third party holding a published address, and no reason to
+   * spend a second public URL on it.
+   */
+  { handler: muxSource, method: "get", path: "/mux/source/:id" },
 ];

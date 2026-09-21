@@ -19,6 +19,7 @@ import { field, guardOrigin, readForm } from "@/lib/formPost";
 import { createMolliePayment } from "@/lib/mollie";
 import { sponsorshipAmountCents } from "@/lib/pricing";
 import { findSponsorshipByReEditToken } from "@/lib/reEdit";
+import { submitRenderJob } from "@/lib/renderJob";
 import {
   encodeSponsorDraft,
   LOGO_TYPES,
@@ -356,6 +357,90 @@ function createSponsorships(
 }
 
 /**
+ * The sponsor's logo as an absolute URL, or `null`.
+ *
+ * Absolute because the consumer is a Remotion composition running in AWS,
+ * which has no origin of its own to resolve `/api/media/file/...` against.
+ * `disableErrors` rather than a try/catch: the id came from `resolveLogo`,
+ * which already resolved it against a real row, so a miss here means the row
+ * went away between two reads and is worth a `null` rather than a 500 on a
+ * checkout somebody is paying for.
+ */
+async function logoUrlFor(
+  req: PayloadRequest,
+  mediaId: null | number
+): Promise<null | string> {
+  if (mediaId === null) {
+    return null;
+  }
+
+  const media = await req.payload.findByID({
+    collection: "media",
+    depth: 0,
+    disableErrors: true,
+    id: mediaId,
+    overrideAccess: true,
+  });
+  const url = media?.url;
+
+  if (typeof url !== "string" || url === "") {
+    return null;
+  }
+
+  return url.startsWith("/") ? `${req.origin ?? ""}${url}` : url;
+}
+
+/**
+ * Asks for a composited video of every gesture this checkout just sold.
+ *
+ * ## Why a failure here cannot fail the checkout
+ *
+ * The sponsor has an open Mollie payment by the time this runs. A video
+ * pipeline that is unconfigured, unreachable or simply not built yet must not
+ * be able to turn that into an error page: the purchase is complete, the rows
+ * exist, and a missing composite is something an operator can chase from the
+ * log line below. So every refusal is caught and named, and the redirect
+ * happens either way.
+ *
+ * ## What it does today, stated plainly
+ *
+ * Nothing is submitted. `lib/renderJob.ts` is a seam with an empty transport —
+ * there is no deployed Remotion Lambda, and the plan's "BLOCKED ON
+ * CREDENTIALS" forbids this task from creating one — so each call records that
+ * no render was submitted and for which sponsorship. Task 6 fills the seam and
+ * this loop does not change.
+ *
+ * Sequentially rather than `Promise.all`, for the reason `createSponsorships`
+ * gives about D1: concurrency here buys milliseconds and costs a known order
+ * if something dies half way.
+ */
+async function submitRenders(
+  req: PayloadRequest,
+  created: readonly Sponsorship[],
+  logoUrl: null | string
+): Promise<void> {
+  const now = Date.now();
+
+  for (const sponsorship of created) {
+    try {
+      await submitRenderJob(req.payload, {
+        logoUrl,
+        now,
+        origin: req.origin ?? "",
+        overlayText: sponsorship.overlayText,
+        playbackId: sponsorship.originalVideoPlaybackId,
+        sponsorshipId: sponsorship.id,
+      });
+    } catch (error) {
+      req.payload.logger.error(
+        { err: error },
+        `[sponsorships] No render could be submitted for sponsorship ${sponsorship.id}; it is paid for and has no composited video`
+      );
+    }
+  }
+}
+
+/**
  * `POST /api/sponsor/start` — step 1's only write, which writes nothing.
  *
  * It resolves the selection and hands it to step 2 in the URL. The check has
@@ -542,6 +627,10 @@ const checkout: PayloadHandler = async (req) => {
     overlayImage: logo.overlayImage,
   });
 
+  // Resolved once for the whole order: one checkout carries one logo, and the
+  // renders below all draw it.
+  const logoUrl = await logoUrlFor(req, logo.overlayImage);
+
   const ids = created.map((sponsorship) => String(sponsorship.id));
 
   let payment: Awaited<ReturnType<typeof createMolliePayment>>;
@@ -586,6 +675,15 @@ const checkout: PayloadHandler = async (req) => {
       `[sponsorships] Payment ${payment.id} could not be written onto ${errors.map((e) => e.id).join(", ")}`
     );
   }
+
+  /*
+   * After the payment, and deliberately not before it. A render costs Lambda
+   * time and Mux storage, and a checkout that never reaches Mollie is a
+   * sponsor who changed their mind at the till — so the order is the same one
+   * the whole file uses: the irreversible, billable step last, and only once
+   * everything that could refuse the sale has.
+   */
+  await submitRenders(req, created, logoUrl);
 
   return seeOther(payment.checkoutUrl);
 };

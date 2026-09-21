@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { readFile } from "node:fs/promises";
 import { getPayload, handleEndpoints } from "payload";
 import {
   afterAll,
@@ -9,7 +10,10 @@ import {
   it,
   vi,
 } from "vitest";
-import { signRenderCallback } from "@/lib/renderSignature";
+import {
+  RENDER_SIGNATURE_SCHEME,
+  signRenderCallback,
+} from "@/lib/renderSignature";
 import { canAdvance, claimRenderJob } from "@/lib/renderState";
 import nextConfig from "../../next.config";
 import config from "../payload.config";
@@ -324,6 +328,10 @@ describe("the render callback", () => {
     expect(gestureId).toBeGreaterThan(0);
     expect(process.env.RENDER_CALLBACK_SECRET).toBe(STUB_SECRET);
     expect(process.env.MUX_TOKEN_ID).toBe(STUB_MUX_ID);
+    // The header every delivery below puts the signature in is the one the
+    // handler reads, and it reads it from the scheme constant rather than from
+    // a string of its own — so changing the scheme moves both together.
+    expect(RENDER_SIGNATURE_SCHEME.header).toBe(SIGNATURE_HEADER);
   });
 
   it("is reachable at the path next.config.ts rewrites /render/callback to", async () => {
@@ -954,5 +962,308 @@ describe("the render callback", () => {
     }
 
     expect(muxUploads).toEqual([]);
+  });
+});
+
+/**
+ * `GET /api/mux/source/:id` — the short-lived source URL a render container
+ * fetches the gesture's video from, behind a service token.
+ *
+ * Driven through `handleEndpoints` for the reason the callback's own suite
+ * gives: half of what can go wrong is routing, and a handler called directly
+ * passes whatever path it is mounted at. The signing key is generated in this
+ * process and thrown away — there is no Mux signing key in this project, and
+ * one committed to a repository would be a finding rather than a fixture.
+ *
+ * **None of this is evidence about Mux.** It proves that this application
+ * refuses the right callers and mints a real signed token for the right ones.
+ * Whether Mux honours the token is Task 6's first contact, and `lib/mux.ts`
+ * records the one thing already known to differ: a `public` playback policy —
+ * which is what every asset in this product has — is served by Mux to anyone
+ * who asks, token or not.
+ */
+describe("the Mux source endpoint", () => {
+  let payload: Awaited<ReturnType<typeof getPayload>>;
+  let activePlaybackId: string;
+  let inactivePlaybackId: string;
+
+  const SOURCE_PATH = "/api/mux/source";
+  const STUB_SERVICE_TOKEN = "stub-mux-source-service-token-for-tests-only";
+  const STUB_SIGNING_KEY_ID = "signing-key-for-tests-only";
+
+  const ORIGINAL_SERVICE_TOKEN = process.env.MUX_SOURCE_SERVICE_TOKEN;
+  const ORIGINAL_SIGNING_ID = process.env.MUX_SIGNING_KEY_ID;
+  const ORIGINAL_SIGNING_KEY = process.env.MUX_SIGNING_KEY_PRIVATE;
+
+  const HOURS_2 = 2 * 60 * 60 * 1000;
+
+  /** One request, with whatever `Authorization` the caller wants — or none. */
+  const ask = (playbackId: string, authorization?: null | string) =>
+    handleEndpoints({
+      config,
+      request: new Request(
+        `${SITE}${SOURCE_PATH}/${encodeURIComponent(playbackId)}`,
+        {
+          headers:
+            authorization === undefined
+              ? { Authorization: `Bearer ${STUB_SERVICE_TOKEN}` }
+              : authorization === null
+                ? {}
+                : { Authorization: authorization },
+          method: "GET",
+        }
+      ),
+    });
+
+  /** Everything about a response a caller can see. */
+  const snapshot = async (response: Response) => ({
+    body: await response.text(),
+    headers: [...response.headers.entries()].sort(),
+    status: response.status,
+  });
+
+  const seedGesture = async (label: string, isActive: boolean) => {
+    const category = await payload.create({
+      collection: "categories",
+      data: { isActive: true, name: `Bron ${label} ${RUN}` },
+      locale: "nl",
+    });
+    const playbackId = `pb-source-${label}-${RUN}`;
+
+    await payload.create({
+      collection: "gestures",
+      data: {
+        categories: [category.id],
+        isActive,
+        name: `Bron ${label} ${RUN}`,
+        playbackId,
+      },
+      locale: "nl",
+    });
+
+    return playbackId;
+  };
+
+  beforeAll(async () => {
+    payload = await getPayload({ config });
+
+    const pair = await crypto.subtle.generateKey(
+      {
+        hash: "SHA-256",
+        modulusLength: 2048,
+        name: "RSASSA-PKCS1-v1_5",
+        publicExponent: new Uint8Array([1, 0, 1]),
+      },
+      true,
+      ["sign", "verify"]
+    );
+    const pkcs8 = new Uint8Array(
+      await crypto.subtle.exportKey("pkcs8", pair.privateKey)
+    );
+    const body = btoa(
+      Array.from(pkcs8, (byte) => String.fromCharCode(byte)).join("")
+    ).replace(/(.{64})/g, "$1\n");
+
+    process.env.MUX_SIGNING_KEY_PRIVATE = btoa(
+      `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`
+    );
+    process.env.MUX_SIGNING_KEY_ID = STUB_SIGNING_KEY_ID;
+    process.env.MUX_SOURCE_SERVICE_TOKEN = STUB_SERVICE_TOKEN;
+
+    activePlaybackId = await seedGesture("actief", true);
+    inactivePlaybackId = await seedGesture("inactief", false);
+  });
+
+  afterAll(() => {
+    restoreEnv("MUX_SOURCE_SERVICE_TOKEN", ORIGINAL_SERVICE_TOKEN);
+    restoreEnv("MUX_SIGNING_KEY_ID", ORIGINAL_SIGNING_ID);
+    restoreEnv("MUX_SIGNING_KEY_PRIVATE", ORIGINAL_SIGNING_KEY);
+  });
+
+  it("boots with the fixtures this file assumes", () => {
+    // `beforeAll` throwing is reported as *skipped* rather than failed, so a
+    // run that seeded nothing would look green having asserted nothing.
+    expect(activePlaybackId).toContain(RUN);
+    expect(inactivePlaybackId).toContain(RUN);
+    expect(process.env.MUX_SOURCE_SERVICE_TOKEN).toBe(STUB_SERVICE_TOKEN);
+  });
+
+  it("issues a source URL for a gesture's playback id", async () => {
+    const response = await ask(activePlaybackId);
+
+    expect(response.status).toBe(200);
+
+    const issued = (await response.json()) as {
+      expiresAt: string;
+      url: string;
+    };
+
+    expect(issued.url).toContain(
+      `https://stream.mux.com/${activePlaybackId}/high.mp4?token=`
+    );
+    // A real JWT, not a URL with a word in it: three base64url segments.
+    expect(new URL(issued.url).searchParams.get("token")).toMatch(
+      /^[\w-]+\.[\w-]+\.[\w-]+$/
+    );
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("issues a URL that expires", async () => {
+    /*
+     * The arithmetic proof is in `mux.test.ts`, which reads `exp` out of the
+     * signed claims — a URL minted with no expiry at all fails there, and so
+     * does one with a hundred-year window. What this asserts is the half only
+     * the endpoint can get wrong: that the expiry it *reports* is the real
+     * one, and that it is hours rather than years away.
+     */
+    const before = Date.now();
+    const issued = (await (await ask(activePlaybackId)).json()) as {
+      expiresAt: string;
+    };
+    const expiresAt = Date.parse(issued.expiresAt);
+
+    expect(Number.isNaN(expiresAt)).toBe(false);
+    expect(expiresAt).toBeGreaterThanOrEqual(before + HOURS_2 - 1000);
+    expect(expiresAt).toBeLessThanOrEqual(Date.now() + HOURS_2);
+  });
+
+  it("refuses a request with no service token", async () => {
+    const response = await ask(activePlaybackId, null);
+
+    expect(response.status).toBe(401);
+    expect(await response.text()).not.toContain("stream.mux.com");
+
+    // The positive beside the negative: the same request, with the token, is
+    // answered — so this refusal is the missing header and nothing else.
+    expect((await ask(activePlaybackId)).status).toBe(200);
+  });
+
+  it("refuses a wrong service token", async () => {
+    // Priced so that only the token can refuse it: the same header shape, the
+    // same length, one character different.
+    const wrong = `${STUB_SERVICE_TOKEN.slice(0, -1)}X`;
+
+    expect(wrong).toHaveLength(STUB_SERVICE_TOKEN.length);
+    expect((await ask(activePlaybackId, `Bearer ${wrong}`)).status).toBe(401);
+    // And a correct token presented without the scheme is still not a token.
+    expect((await ask(activePlaybackId, STUB_SERVICE_TOKEN)).status).toBe(401);
+  });
+
+  it("answers a missing playback id the same way as a wrong token", async () => {
+    /*
+     * Otherwise this endpoint enumerates which gestures exist, to anybody
+     * guessing playback ids — and a playback id is not a secret: the public
+     * gesture page renders one in its player.
+     *
+     * The fixture is priced so the comparison means something. The unknown-id
+     * request carries the **correct** service token, so it reaches the lookup
+     * and is refused by the guard under test; if both answers came from the
+     * same early return for the same reason, the assertion below would be
+     * satisfied by an endpoint that refused everything. The 200 underneath is
+     * what rules that out.
+     */
+    const unknown = await snapshot(await ask(`pb-never-issued-${RUN}`));
+    const wrongToken = await snapshot(
+      await ask(activePlaybackId, "Bearer not-the-service-token-at-all")
+    );
+
+    expect(unknown).toEqual(wrongToken);
+    expect(unknown.status).toBe(401);
+    expect((await ask(activePlaybackId)).status).toBe(200);
+  });
+
+  it("does not issue one for an inactive gesture", async () => {
+    /*
+     * A deactivated gesture is one the public API refuses to serve at all
+     * (`access/index.ts`'s `publicReadActive`), and a render of it would put a
+     * sponsor's logo on a video nobody can reach. The fixture differs from the
+     * one above in exactly one column, so `isActive` is the only thing that
+     * can be refusing it.
+     */
+    const refused = await snapshot(await ask(inactivePlaybackId));
+    const wrongToken = await snapshot(
+      await ask(activePlaybackId, "Bearer not-the-service-token-at-all")
+    );
+
+    expect(refused.status).toBe(401);
+    // And indistinguishable from a wrong token, so it does not leak that the
+    // gesture exists either.
+    expect(refused).toEqual(wrongToken);
+
+    // The positive: activating that very gesture makes the same request work.
+    const { docs } = await payload.find({
+      collection: "gestures",
+      depth: 0,
+      limit: 1,
+      overrideAccess: true,
+      where: { playbackId: { equals: inactivePlaybackId } },
+    });
+
+    await payload.update({
+      collection: "gestures",
+      data: { isActive: true },
+      id: docs[0]?.id ?? 0,
+      overrideAccess: true,
+    });
+
+    try {
+      expect((await ask(inactivePlaybackId)).status).toBe(200);
+    } finally {
+      await payload.update({
+        collection: "gestures",
+        data: { isActive: false },
+        id: docs[0]?.id ?? 0,
+        overrideAccess: true,
+      });
+    }
+  });
+
+  it("refuses every caller when no service token is configured", async () => {
+    // Fails closed. An unset secret must not mean "no check": the alternative
+    // is a staging deploy that hands the source of every gesture to anybody who
+    // sends an empty `Authorization` header.
+    const configured = process.env.MUX_SOURCE_SERVICE_TOKEN;
+    restoreEnv("MUX_SOURCE_SERVICE_TOKEN", undefined);
+
+    try {
+      expect((await ask(activePlaybackId)).status).toBe(401);
+      expect((await ask(activePlaybackId, "Bearer ")).status).toBe(401);
+      expect((await ask(activePlaybackId, "Bearer undefined")).status).toBe(
+        401
+      );
+    } finally {
+      process.env.MUX_SOURCE_SERVICE_TOKEN = configured ?? "";
+    }
+
+    expect((await ask(activePlaybackId)).status).toBe(200);
+  });
+
+  it("compares the service token in constant time", async () => {
+    /*
+     * The same assertion `renderSignature.test.ts` makes about the callback's
+     * HMAC, and for the same reason: a byte-by-byte `===` on a bearer token an
+     * attacker can present repeatedly turns guessing it into a per-character
+     * search. It is an assertion about the implementation rather than a timing
+     * measurement, because a timing measurement in CI fails on a busy machine
+     * instead of on a regression.
+     *
+     * `lib/constantTime.ts` is the third caller this helper now has — Task 2
+     * extracted it from `endpoints/oauth.ts` when a second copy appeared, and
+     * this is the copy that did not get written.
+     */
+    const source = await readFile(
+      new URL("./render.ts", import.meta.url),
+      "utf8"
+    );
+
+    // The positive: the presented token and the configured one meet in the
+    // shared helper, and nowhere else.
+    expect(source).toMatch(/equalConstantTime\(presented, serviceToken\)/);
+    // The negatives, named precisely rather than broadly: the emptiness checks
+    // above the comparison are `=== ""` and leak nothing, so a regex that
+    // banned every `===` in this file would fail on those and teach the next
+    // person to weaken it.
+    expect(source).not.toMatch(/presented\s*===\s*serviceToken/);
+    expect(source).not.toMatch(/serviceToken\s*===\s*presented/);
   });
 });

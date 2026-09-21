@@ -8,6 +8,7 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import {
+  RENDER_SIGNATURE_SCHEME,
   signRenderCallback,
   verifyRenderCallback,
 } from "@/lib/renderSignature";
@@ -15,6 +16,32 @@ import {
 /** Stand-ins, never real credentials, and not shaped like any provider's key. */
 const SECRET = "render-callback-secret-for-tests-only";
 const OTHER_SECRET = "a-different-secret-for-tests-only";
+
+/**
+ * The scheme Remotion Lambda's own webhook is *reported* to sign with, spelled
+ * out here so that both candidates are proven before either is chosen.
+ *
+ * Task 4 could not confirm the report in this environment: `@remotion/lambda`
+ * is not a dependency of this app (Task 4 measured it at **+753.39 KiB
+ * gzipped** and rejected it), no installed Remotion package mentions the
+ * header, and `remotion.dev` is blocked by this environment's egress proxy.
+ * What is *not* acceptable is picking one and hoping: a verifier that passes
+ * every test in this repository and answers 401 to every real callback is the
+ * failure this file exists to prevent, and it would surface at the worst
+ * possible moment — Task 6, against a deployed Lambda, with a render already
+ * paid for.
+ *
+ * So the algorithm, the header name and the value prefix live in one exported
+ * constant, `RENDER_SIGNATURE_SCHEME`, and both candidate schemes are pinned
+ * below by published known-answer vectors. Whichever Remotion turns out to
+ * send, adopting it is an edit to those three fields and is already proven
+ * here — rather than a rewrite of a verifier under time pressure.
+ */
+const REMOTION_LAMBDA_SCHEME = {
+  algorithm: "SHA-512",
+  header: "x-remotion-signature",
+  prefix: "sha512=",
+} as const;
 
 const BODY = JSON.stringify({
   jobId: "render-1234",
@@ -168,7 +195,9 @@ describe("the render callback signature", () => {
 
     // Verification compares through the shared helper, and never with `===`
     // on the two signature strings.
-    expect(signature).toMatch(/return equalConstantTime\(header, /);
+    // The line is wrapped by Biome now that the scheme is a third argument,
+    // so the assertion spans the wrap rather than assuming one line.
+    expect(signature).toMatch(/return equalConstantTime\(\s*header,/);
     expect(signature).not.toMatch(/===\s*expected/);
     expect(signature).not.toMatch(/header\s*===\s*expected/);
     expect(signature).not.toMatch(/===\s*await signRenderCallback/);
@@ -190,6 +219,114 @@ describe("the render callback signature", () => {
     expect(loop).toContain("charCodeAt");
     expect(loop).not.toMatch(/\bbreak\b/);
     expect(loop).not.toMatch(/\breturn\b/);
+  });
+
+  it("keeps the whole scheme in one constant, so being wrong is a one-line change", async () => {
+    /*
+     * The three fields together *are* the wire format, and they are pinned as
+     * literals rather than compared against themselves: a test that asserted
+     * `scheme.header === scheme.header` would pass under every mutation, and a
+     * test that built the expected signature from the same constant the
+     * implementation reads would pass under a changed algorithm too — which is
+     * exactly the trap Task 2 recorded, where signing and verifying change
+     * together and nothing notices.
+     *
+     * `endpoints/render.ts` reads the header name from here rather than
+     * repeating it, so changing this constant moves the endpoint with it.
+     */
+    expect(RENDER_SIGNATURE_SCHEME).toEqual({
+      algorithm: "SHA-256",
+      header: "x-render-signature",
+      prefix: "",
+    });
+
+    // And the active scheme really is the one the default argument uses: the
+    // same call spelled out explicitly produces the identical signature.
+    expect(await signRenderCallback(BODY, SECRET)).toBe(
+      await signRenderCallback(BODY, SECRET, RENDER_SIGNATURE_SCHEME)
+    );
+  });
+
+  it("signs and verifies the other scheme Remotion Lambda may be sending", async () => {
+    /*
+     * The second known-answer vector, and the whole point of the exercise:
+     * HMAC-SHA-512 of the same published message under the same published key,
+     * confirmed against OpenSSL rather than against this module. If Task 6
+     * finds that Remotion sends `X-Remotion-Signature: sha512=<hex>`, the
+     * three fields above change and this test is what says the verifier
+     * already handles it.
+     */
+    expect(
+      await signRenderCallback(
+        "The quick brown fox jumps over the lazy dog",
+        "key",
+        REMOTION_LAMBDA_SCHEME
+      )
+    ).toBe(
+      "sha512=b42af09057bac1e2d41708e48a902e09b5ff7f12ab428a4fe86653c73dd248fb82f948a549f7b791a5b41915ee4d1ec3935357e4e2317250d0372afa2ebeeb3a"
+    );
+
+    // Round trip under that scheme, so the verifier is exercised and not only
+    // the signer.
+    const signed = await signRenderCallback(
+      BODY,
+      SECRET,
+      REMOTION_LAMBDA_SCHEME
+    );
+
+    expect(
+      await verifyRenderCallback(BODY, signed, SECRET, REMOTION_LAMBDA_SCHEME)
+    ).toBe(true);
+    expect(
+      await verifyRenderCallback(
+        TAMPERED,
+        signed,
+        SECRET,
+        REMOTION_LAMBDA_SCHEME
+      )
+    ).toBe(false);
+  });
+
+  it("does not accept one scheme's signature under the other", async () => {
+    /*
+     * The failure mode this whole arrangement exists for, made visible: a
+     * verifier configured for the wrong scheme refuses every genuine callback.
+     * Better to see it here, in three assertions, than in Task 6 against a
+     * deployed Lambda.
+     *
+     * All three parts of a scheme are load-bearing, so all three are
+     * exercised: the hash (a SHA-256 hex is not a SHA-512 one), the prefix (the
+     * right digest with the prefix stripped is still refused), and — by the
+     * endpoint reading `scheme.header` — where the value is looked for.
+     */
+    const sha256 = await signRenderCallback(BODY, SECRET);
+    const prefixed = await signRenderCallback(
+      BODY,
+      SECRET,
+      REMOTION_LAMBDA_SCHEME
+    );
+
+    expect(
+      await verifyRenderCallback(BODY, sha256, SECRET, REMOTION_LAMBDA_SCHEME)
+    ).toBe(false);
+    expect(await verifyRenderCallback(BODY, prefixed, SECRET)).toBe(false);
+
+    // The prefix on its own, with the digest right: still refused, because the
+    // header value is compared whole.
+    expect(
+      await verifyRenderCallback(
+        BODY,
+        prefixed.slice(REMOTION_LAMBDA_SCHEME.prefix.length),
+        SECRET,
+        REMOTION_LAMBDA_SCHEME
+      )
+    ).toBe(false);
+
+    // The positive beside the three negatives: each scheme accepts its own.
+    expect(await verifyRenderCallback(BODY, sha256, SECRET)).toBe(true);
+    expect(
+      await verifyRenderCallback(BODY, prefixed, SECRET, REMOTION_LAMBDA_SCHEME)
+    ).toBe(true);
   });
 
   it("is a SHA-256 HMAC, so a length-extension does not forge one", async () => {

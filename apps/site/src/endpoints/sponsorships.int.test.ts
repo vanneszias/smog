@@ -35,6 +35,25 @@ const CHECKOUT_PATH = "/api/sponsor/checkout";
 const DAY = 24 * 60 * 60 * 1000;
 
 /**
+ * Puts a variable back the way it was, including back to *absent*.
+ *
+ * `process.env.X = undefined` does not unset X — Node coerces the value and
+ * leaves the string `"undefined"` behind — and `vitest.config.mts` sets
+ * `isolate: false`, so every file this worker runs afterwards shares this
+ * process. A leftover `REMOTION_FUNCTION_NAME="undefined"` would put a later
+ * file's checkout down the configured branch of a seam that cannot submit.
+ */
+function restoreEnv(name: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name];
+
+    return;
+  }
+
+  process.env[name] = value;
+}
+
+/**
  * The sponsor wizard's endpoints, driven through `handleEndpoints` against a
  * real database.
  *
@@ -1225,6 +1244,114 @@ describe("the sponsor wizard, steps 2 and 3", () => {
       `https://www.mollie.com/checkout/${paymentId}`
     );
     expect(mollieCalls[0]?.body.redirectUrl).toBe(`${SITE}/nl/sponsor/success`);
+  });
+
+  it("asks for a render of every gesture it just sold", async () => {
+    /*
+     * **The Stage 6 seam at the other end.** `lib/renderJob.ts` cannot submit
+     * anything — there is no deployed Remotion Lambda, and the plan forbids
+     * this task from creating one — so what checkout can be held to today is
+     * that it *asks*, once per sponsorship it created, and that the gap is
+     * recorded rather than silent. A checkout that quietly submitted nothing
+     * would leave a sponsor waiting for a composite nobody ever requested,
+     * with nothing in any log to find.
+     *
+     * The log line is the only observable the empty seam has, which is the
+     * point: when Task 6 fills it, this assertion is what has to change, the
+     * same way `renderPreview.test.ts` had to change here.
+     */
+    const gestures = await newGestures(2, "render-ask");
+    const ids = gestures.map((gesture) => gesture.id);
+    const info = vi.spyOn(payload.logger, "info");
+
+    let response: Response;
+    let logged: string[] = [];
+
+    try {
+      response = await formPost(CHECKOUT_PATH, goodDetails(), ids);
+    } finally {
+      // Read before restoring: `mockRestore` clears the recorded calls as well
+      // as putting the original method back, so a `finally` that restored first
+      // would leave every assertion below comparing empty lists.
+      logged = info.mock.calls.map((call) => String(call[0]));
+      info.mockRestore();
+    }
+
+    // The sale completed: the ask is after the payment, and cannot break it.
+    expect(response.status).toBe(303);
+    expect(destination(response)).toContain("https://www.mollie.com/checkout/");
+
+    const rows = await rowsFor(ids);
+    const asked = logged.filter((line) => line.includes("[renderJob]"));
+
+    expect(rows).toHaveLength(2);
+    // One per sponsorship, naming it, so an operator can tell which of a
+    // three-gesture order has no video coming.
+    expect(asked).toHaveLength(2);
+
+    for (const row of rows) {
+      expect(asked.some((line) => line.includes(`sponsorship ${row.id}`))).toBe(
+        true
+      );
+    }
+
+    // And no render row was claimed, because no render was submitted. A
+    // `queued` row for a job nobody sent is a lie the callback would later
+    // have to answer to.
+    const { totalDocs } = await payload.find({
+      collection: "renders",
+      depth: 0,
+      limit: 1,
+      overrideAccess: true,
+      where: { sponsorship: { in: rows.map((row) => row.id) } },
+    });
+
+    expect(totalDocs).toBe(0);
+  });
+
+  it("completes the checkout even when the render submission throws", async () => {
+    /*
+     * The sponsor has an open Mollie payment by the time a render is asked
+     * for. A video pipeline that is misconfigured — here: a Lambda named but
+     * no Mux signing key, which is exactly the half-finished state Task 6 will
+     * pass through — must not be able to turn a completed purchase into an
+     * error page.
+     *
+     * The failure is priced so only the `catch` can absorb it: the three
+     * `REMOTION_*` variables are set, so the seam gets past its "not
+     * configured" branch and into building the submission, where the missing
+     * signing key throws.
+     */
+    process.env.REMOTION_FUNCTION_NAME = "remotion-render-for-tests-only";
+    process.env.REMOTION_REGION = "eu-central-1";
+    process.env.REMOTION_SERVE_URL = "https://example.invalid/sites/smog";
+
+    const gestures = await newGestures(1, "render-throws");
+    const ids = gestures.map((gesture) => gesture.id);
+    const errors = vi.spyOn(payload.logger, "error");
+
+    let response: Response;
+    let logged: string[] = [];
+
+    try {
+      response = await formPost(CHECKOUT_PATH, goodDetails(), ids);
+    } finally {
+      logged = errors.mock.calls.map((call) => JSON.stringify(call));
+      errors.mockRestore();
+      restoreEnv("REMOTION_FUNCTION_NAME", undefined);
+      restoreEnv("REMOTION_REGION", undefined);
+      restoreEnv("REMOTION_SERVE_URL", undefined);
+    }
+
+    expect(response.status).toBe(303);
+    expect(destination(response)).toContain("https://www.mollie.com/checkout/");
+    expect(await rowsFor(ids)).toHaveLength(1);
+
+    // And it is recorded rather than swallowed: a sponsorship that is paid for
+    // and has no video coming is something an operator has to be able to find.
+    expect(
+      logged.filter((line) => line.includes("No render could be submitted"))
+    ).toHaveLength(1);
   });
 
   it("does not create rows when Mollie refuses the payment — it leaves them for cleanup-stale-payments", async () => {

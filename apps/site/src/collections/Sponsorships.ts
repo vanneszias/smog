@@ -14,6 +14,10 @@ import { sponsorshipReEditAccess } from "@/access/sponsorships";
 import { enforceStatusTransitions } from "@/hooks/enforceStatusTransitions";
 import { logSponsorshipTransitions } from "@/hooks/logSponsorshipTransitions";
 import { manageReEditToken } from "@/hooks/manageReEditToken";
+import {
+  invalidateComposedVideo,
+  publishComposedVideo,
+} from "@/hooks/publishComposedVideo";
 import { stampReviewDecision } from "@/hooks/stampReviewDecision";
 
 /**
@@ -93,15 +97,24 @@ export const Sponsorships: CollectionConfig = {
   hooks: {
     /*
      * Order is the policy, not an accident. `enforceStatusTransitions`
-     * refuses an illegal move first, so nothing downstream mints a credential
-     * or stamps a reviewer for a transition that is about to be rejected;
-     * `manageReEditToken` and `stampReviewDecision` then act on the move that
-     * survived. Each returns the data the next one sees —
-     * `collections/operations/utilities/update.js` chains them — and the two
-     * downstream hooks touch disjoint columns, so neither can undo the other.
+     * refuses an illegal move first, so nothing downstream mints a credential,
+     * stamps a reviewer or publishes a video for a transition that is about to
+     * be rejected; the rest then act on the move that survived. Each returns
+     * the data the next one sees —
+     * `collections/operations/utilities/update.js` chains them.
+     *
+     * **The one pair whose order is load-bearing rather than tidy** is
+     * `invalidateComposedVideo` before `publishComposedVideo`. A single save
+     * that both corrects the overlay text and approves the sponsorship must
+     * not publish the composite of the text it just replaced, and swapping
+     * these two lines is exactly that bug —
+     * `hooks/publishComposedVideo.int.test.ts` fails on it by name. Everything
+     * else here touches disjoint columns, so nothing can undo anything.
      */
     beforeChange: [
       enforceStatusTransitions,
+      invalidateComposedVideo,
+      publishComposedVideo,
       manageReEditToken,
       stampReviewDecision,
     ],
