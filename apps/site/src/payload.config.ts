@@ -24,6 +24,7 @@ import { Sponsorships } from "./collections/Sponsorships";
 import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
 import { WebhookDeliveries } from "./collections/WebhookDeliveries";
+import { cloudflareEmailAdapter } from "./email/adapter";
 import { accountEndpoints } from "./endpoints/account";
 import { authEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
@@ -138,6 +139,7 @@ const cloudflareLogger = {
  */
 const BUILD_PHASE_BINDINGS = {
   D1: undefined as unknown as D1Database,
+  EMAIL: undefined as unknown as SendEmail,
   R2: undefined as unknown as R2Bucket,
 };
 
@@ -250,6 +252,29 @@ export default buildConfig({
   typescript: {
     outputFile: path.resolve(dirname, "payload-types.ts"),
   },
+  /**
+   * Mail, through Cloudflare's `send_email` binding.
+   *
+   * The binding is passed as a **thunk**, deliberately. `cloudflare.env` is
+   * resolved at module scope because the D1 adapter needs it there, but
+   * `EMAIL` is absent during `next build` (see `BUILD_PHASE_BINDINGS`) and in
+   * any environment that has not been given one — so reaching for it here
+   * would be `createMollieClient({ apiKey: "" })` again, a module that cannot
+   * be imported rather than a request that cannot send. `src/email/adapter.ts`
+   * calls the thunk inside `sendEmail` and fails there.
+   *
+   * The sender is the shipped product's, transcribed from
+   * `apps/server/src/services/email.ts` (`SMTP_FROM`, defaulting to
+   * `Smog <no-reply@smog.app>`) rather than chosen here, and overridable for
+   * whichever domain Task 7 onboards to Email Service. Until that domain is
+   * verified every send answers `E_SENDER_NOT_VERIFIED`, which is the whole
+   * of what Stage 7 is blocked on.
+   */
+  email: cloudflareEmailAdapter({
+    binding: () => cloudflare.env.EMAIL,
+    defaultFromAddress: process.env.EMAIL_FROM_ADDRESS ?? "no-reply@smog.app",
+    defaultFromName: process.env.EMAIL_FROM_NAME ?? "Smog",
+  }),
   db: sqliteD1Adapter({
     binding: isNextBuild
       ? (cloudflare.env.D1 as D1Database)

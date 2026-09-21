@@ -104,7 +104,7 @@ of a protocol and never the provider's behaviour.
 
 **Files:** create `src/email/adapter.ts` + `.test.ts`; modify `wrangler.jsonc`, `payload.config.ts`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("sends a message through the binding");
@@ -129,18 +129,18 @@ it("answers a quota refusal differently from a bad address", () => {
 });
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 ```bash
 cd /home/user/smog/apps/site && bunx vitest run src/email/adapter.test.ts
 ```
 Expected: FAIL on the missing import, not on an assertion.
 
-- [ ] **Step 3: Implement.** Payload's `EmailAdapter` shape is `{ name, defaultFromAddress, defaultFromName, sendEmail }`. The binding takes a MIME message; build it rather than reaching for a dependency — **measure anything you are tempted to add.**
+- [x] **Step 3: Implement.** Payload's `EmailAdapter` shape is `{ name, defaultFromAddress, defaultFromName, sendEmail }`. The binding takes a MIME message; build it rather than reaching for a dependency — **measure anything you are tempted to add.**
 
-- [ ] **Step 4: Run until green.**
+- [x] **Step 4: Run until green.**
 
-- [ ] **Step 5: Mutation-prove**
+- [x] **Step 5: Mutation-prove**
 
 | mutation | must fail |
 |---|---|
@@ -150,12 +150,37 @@ Expected: FAIL on the missing import, not on an assertion.
 | a quota refusal reported as a permanent failure | the quota test |
 | the subject or recipient dropped from the MIME message | the passthrough test |
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ```bash
 cd /home/user/smog && bun check && bun -F site check-types && bunx knip --no-progress --no-config-hints
 git add -A && git commit -m "feat(site): send mail through the Cloudflare binding"
 ```
+
+**Three corrections, made while implementing.**
+
+1. **"The binding takes a MIME message" is wrong.** Two Cloudflare products
+   share the name `send_email`. Email *Routing*'s binding takes an
+   `EmailMessage` built from raw MIME via the workerd-only `cloudflare:email`
+   module. Email *Service* — the product whose error table this entire stage
+   is written against — additionally accepts a structured
+   `EmailMessageBuilder`, `{ to, from, subject, text, html }`, and composes
+   the MIME itself. The installed workerd types declare both overloads, so
+   this is checked rather than recalled. The builder is taken: importing
+   `cloudflare:email` would break `next build` and every test in this suite,
+   which is the very trap Step 5's third mutation is about.
+2. **The allowlist is not the only restriction, and `destination_address` is
+   worse.** Cloudflare's "Configure send bindings" page lists
+   `destination_address` (a *single* permitted recipient, which additionally
+   *redirects* a message whose `to` is null or undefined) and
+   `allowed_sender_addresses` beside `allowed_destination_addresses`. The test
+   asserts the binding carries `name` and nothing else.
+3. **`send_email` is not inherited from the top level.** wrangler's own config
+   schema says it "must be specified in every named environment", so the test
+   in the plan — which reads a top-level `send_email` — would have passed
+   against two deployed Workers that could not send at all. The binding is
+   declared in `env.staging` and `env.production`, and the test walks every
+   environment.
 
 ---
 

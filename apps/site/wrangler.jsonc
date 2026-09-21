@@ -32,6 +32,23 @@
         },
       ],
       "r2_buckets": [{ "binding": "R2", "bucket_name": "smog-staging-media" }],
+      // Cloudflare Email Service. It carries `name` and nothing else, on
+      // purpose: `destination_address`, `allowed_destination_addresses` and
+      // `allowed_sender_addresses` each narrow what this binding may do, and
+      // `E_RECIPIENT_NOT_ALLOWED` fires only when one of the destination
+      // restrictions exists. For transactional mail the addresses are every
+      // sponsor and every user, so an allowlist would silently drop nearly
+      // all of it — and `destination_address` would additionally redirect a
+      // message whose `to` went missing. Unrestricted, the binding may send
+      // to any verified destination address today and to any recipient once
+      // the sending domain is onboarded (Task 7, blocked on that DNS work).
+      //
+      // Repeated per environment rather than declared at the top level:
+      // wrangler's own config schema says `send_email` "is not automatically
+      // inherited from the top level environment, and so must be specified in
+      // every named environment", so a single top-level entry would leave
+      // both deployed Workers unable to send at all.
+      "send_email": [{ "name": "EMAIL" }],
     },
     "production": {
       "name": "smog-site-production",
@@ -46,6 +63,8 @@
       "r2_buckets": [
         { "binding": "R2", "bucket_name": "smog-production-media" },
       ],
+      // See the note in `staging` above: `name` only, and once per environment.
+      "send_email": [{ "name": "EMAIL" }],
     },
   },
 }
