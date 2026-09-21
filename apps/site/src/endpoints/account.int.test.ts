@@ -17,6 +17,10 @@ import config from "../payload.config";
 describe("the account endpoints", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
 
+  /** Every message the queue handed to the adapter, in order. */
+  const outbox: { subject: string; text: string; to: string }[] = [];
+  let realSendEmail: typeof payload.sendEmail;
+
   const SITE = "http://localhost:3003";
   const PASSWORD = "account-int-password";
   const run = crypto.randomUUID().slice(0, 8);
@@ -176,35 +180,54 @@ describe("the account endpoints", () => {
   };
 
   /**
-   * Runs `write` and returns the confirmation URL it logged, if any.
+   * Runs the queue once, exactly as `GET /api/jobs/run` does.
    *
-   * No email adapter is configured (Stage 0), so the endpoint logs the link
-   * rather than sending it — and this is the only way a test can hold the
-   * token the endpoint actually minted. When Stage 7 wires an adapter, this
-   * helper is what points at the line that has to change.
+   * `overrideAccess: true` because `jobs.access.run` is `denyAll`: the Local
+   * API is the only door into the queue, which is the property
+   * `src/jobs/index.ts` exists to create.
    */
-  const capturedConfirmLink = async (write: () => Promise<unknown>) => {
-    const logger = payload.logger as unknown as {
-      info: (obj: unknown, msg?: string) => void;
-    };
-    const original = logger.info;
-    let link: string | undefined;
+  const drain = () =>
+    payload.jobs.run({
+      limit: 25,
+      overrideAccess: true,
+      queue: "default",
+      sequential: true,
+    });
 
-    logger.info = (obj: unknown, msg?: string) => {
-      if (typeof obj === "object" && obj !== null && "confirmUrl" in obj) {
-        link = String((obj as { confirmUrl: unknown }).confirmUrl);
-      }
+  /**
+   * Runs `write`, drains the queue, and returns the confirmation URL the
+   * account holder was actually sent.
+   *
+   * **This helper is the Stage 4 deferral closing.** It used to read the link
+   * out of a log line, because there was no adapter and the endpoint wrote the
+   * URL to the console — and it carried a note saying it was what would have
+   * to change when Stage 7 wired one up. This is that change: nothing is
+   * logged any more, the link comes out of the outbox, and
+   * `sends the email-change confirmation instead of logging it` asserts both
+   * halves of that sentence.
+   */
+  const capturedConfirmLink = async (
+    write: () => Promise<unknown>,
+    recipient: string
+  ) => {
+    await write();
+    await drain();
 
-      return original.call(logger, obj, msg);
-    };
+    /*
+     * Keyed on the recipient, not on "the most recent message". Every other
+     * test in this file that starts an address change leaves its job in the
+     * queue, and one drain runs all of them — so the outbox after a drain
+     * holds several confirmation links and the first one is somebody else's.
+     * Asserting a link that belongs to another account is how this test would
+     * pass while proving nothing, and it is exactly how it failed first.
+     */
+    const message = outbox.filter((sent) => sent.to === recipient).at(-1);
 
-    try {
-      await write();
-    } finally {
-      logger.info = original;
-    }
-
-    return link;
+    return message?.text
+      .split("\n")
+      .find(
+        (line) => line.startsWith("http://") || line.startsWith("https://")
+      );
   };
 
   const sessionResolves = async (cookie: string) => {
@@ -217,9 +240,31 @@ describe("the account endpoints", () => {
 
   beforeAll(async () => {
     payload = await getPayload({ config });
+
+    /*
+     * The outbox. Replaced rather than spied, because `vi.restoreAllMocks()`
+     * in a neighbouring file's `afterEach` would otherwise put the real
+     * binding back under this one — `isolate: false` shares the instance.
+     */
+    realSendEmail = payload.sendEmail;
+    payload.sendEmail = (async (message: {
+      subject?: string;
+      text?: unknown;
+      to?: unknown;
+    }) => {
+      outbox.push({
+        subject: message.subject ?? "",
+        text: String(message.text ?? ""),
+        to: String(message.to ?? ""),
+      });
+
+      return { accepted: true };
+    }) as typeof payload.sendEmail;
   });
 
   afterAll(async () => {
+    payload.sendEmail = realSendEmail;
+
     await payload.delete({
       collection: "lists",
       where: { name: { like: `Account int ${run}` } },
@@ -475,6 +520,15 @@ describe("the account endpoints", () => {
         { current: PASSWORD, email: target(), locale: "nl" },
         { cookie: member.cookie }
       );
+      /*
+       * The digest is written by the send and not by the request. Stage 7
+       * moved the minting into `jobs/sendEmail.ts`, because a job's input is
+       * logged in full by Payload whenever a task throws and a deferred send
+       * is an ordinary event — `lib/emailChange.ts` says so at length. Until
+       * the queue runs there is a pending address and no credential, which is
+       * a pending change nobody can confirm rather than one anybody can.
+       */
+      await drain();
 
       const stored = await reload(member.id);
 
@@ -482,6 +536,134 @@ describe("the account endpoints", () => {
       // length alone proves nothing — the confirmation test below is what
       // proves the stored value is a *digest* of the token and not the token.
       expect(stored.pendingEmailToken).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("sends the email-change confirmation instead of logging it", async () => {
+      /*
+       * Stage 4 Task 5's deferral, closed. The endpoint wrote the confirmation
+       * link to the console because no adapter existed; **deleting that log
+       * without sending anything is the failure this test exists to prevent**,
+       * so it asserts both halves — a message went out carrying the link, and
+       * nothing anywhere wrote the token to a log.
+       */
+      const member = await createMember("email-sent");
+      const wanted = target();
+
+      const logger = payload.logger as unknown as Record<
+        string,
+        (...args: unknown[]) => unknown
+      >;
+      const levels = ["debug", "error", "info", "warn"];
+      const originals = levels.map((level) => logger[level]);
+      const lines: string[] = [];
+
+      for (const [index, level] of levels.entries()) {
+        logger[level] = (...args: unknown[]) => {
+          lines.push(args.map((arg) => JSON.stringify(arg) ?? "").join(" "));
+
+          return originals[index]?.apply(logger, args);
+        };
+      }
+
+      let link: string | undefined;
+
+      try {
+        link = await capturedConfirmLink(
+          () =>
+            post(
+              "/account/email",
+              { current: PASSWORD, email: wanted, locale: "nl" },
+              { cookie: member.cookie }
+            ),
+          wanted
+        );
+      } finally {
+        for (const [index, level] of levels.entries()) {
+          logger[level] = originals[index] as (...args: unknown[]) => unknown;
+        }
+      }
+
+      expect(link).toBeDefined();
+
+      const token = new URL(link ?? "").searchParams.get("token") ?? "";
+
+      expect(token).not.toBe("");
+      // It went to the address being claimed, not to the one on the account:
+      // the whole point is proving somebody reads the *new* mailbox. Exactly
+      // one message, so a second attempt would show up here rather than being
+      // hidden behind `find`.
+      const sent = outbox.filter((message) => message.to === wanted);
+
+      expect(sent).toHaveLength(1);
+      expect(sent[0]?.subject).toBe("Bevestig je nieuwe e-mailadres");
+      expect(sent[0]?.to).not.toBe(member.email);
+      expect(lines.length).toBeGreaterThan(0);
+      expect(lines.filter((line) => line.includes(token))).toEqual([]);
+    });
+
+    it("ends an earlier change's link when a new one is started", async () => {
+      /*
+       * One pending change, one live link. The token is minted by the send
+       * now, so the request that *starts* a change has to clear the previous
+       * one explicitly — and if it did not, the link already sitting in the
+       * first address's mailbox would confirm the second address, which is a
+       * mailbox the account holder may no longer control.
+       */
+      const member = await createMember("email-relink");
+      const first = target();
+      const second = target();
+
+      const firstLink = await capturedConfirmLink(
+        () =>
+          post(
+            "/account/email",
+            { current: PASSWORD, email: first, locale: "nl" },
+            { cookie: member.cookie }
+          ),
+        first
+      );
+      const firstToken =
+        new URL(firstLink ?? "").searchParams.get("token") ?? "";
+
+      expect(firstToken).not.toBe("");
+
+      await post(
+        "/account/email",
+        { current: PASSWORD, email: second, locale: "nl" },
+        { cookie: member.cookie }
+      );
+
+      const spent = await post("/account/confirm-email", {
+        locale: "nl",
+        token: firstToken,
+      });
+
+      expect(spent.headers.get("Location")).toBe(
+        "/nl/account/confirm-email?error=link"
+      );
+      expect((await reload(member.id)).email).toBe(member.email);
+
+      // The positive beside the negative: the *new* change still works, so
+      // this is one link being ended rather than the flow being broken.
+      await drain();
+
+      const secondLink = outbox
+        .filter((message) => message.to === second)
+        .at(-1)
+        ?.text.split("\n")
+        .find((line) => line.startsWith("http"));
+      const secondToken =
+        new URL(secondLink ?? "").searchParams.get("token") ?? "";
+
+      const confirmed = await post("/account/confirm-email", {
+        locale: "nl",
+        token: secondToken,
+      });
+
+      expect(confirmed.headers.get("Location")).toBe(
+        "/nl/sign-in?notice=email-changed"
+      );
+      expect((await reload(member.id)).email).toBe(second);
     });
 
     it("refuses without the current password", async () => {
@@ -680,12 +862,14 @@ describe("the account endpoints", () => {
       const member = await createMember("email-roundtrip");
       const wanted = unique("email-roundtrip-new");
 
-      const link = await capturedConfirmLink(() =>
-        post(
-          "/account/email",
-          { current: PASSWORD, email: wanted, locale: "nl" },
-          { cookie: member.cookie }
-        )
+      const link = await capturedConfirmLink(
+        () =>
+          post(
+            "/account/email",
+            { current: PASSWORD, email: wanted, locale: "nl" },
+            { cookie: member.cookie }
+          ),
+        wanted
       );
 
       expect(link).toBeDefined();

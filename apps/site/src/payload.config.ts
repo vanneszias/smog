@@ -34,6 +34,7 @@ import { mollieEndpoints } from "./endpoints/mollie";
 import { oauthEndpoints } from "./endpoints/oauth";
 import { renderEndpoints } from "./endpoints/render";
 import { sponsorshipEndpoints } from "./endpoints/sponsorships";
+import { jobsConfig } from "./jobs";
 import { requireBinding, requireEnv } from "./lib/env";
 import { beforeSyncGesture } from "./search/beforeSync";
 
@@ -282,6 +283,16 @@ export default buildConfig({
     defaultFromAddress: process.env.EMAIL_FROM_ADDRESS ?? "no-reply@smog.app",
     defaultFromName: process.env.EMAIL_FROM_NAME ?? "Smog",
   }),
+  /**
+   * The queue, and the four scheduled jobs it will drive.
+   *
+   * Two things follow from this key existing at all, and both are written up
+   * in `src/jobs/index.ts`: Payload adds a `payload-jobs` collection (a
+   * schema change, migrated in `20260921_200000_add_payload_jobs`), and it
+   * registers `GET /api/payload-jobs/run`, which without
+   * `jobs.access.run` would run the whole queue for any signed-in account.
+   */
+  jobs: jobsConfig,
   db: sqliteD1Adapter({
     binding: isNextBuild
       ? (cloudflare.env.D1 as D1Database)

@@ -256,6 +256,68 @@ describe("migration chain", () => {
     ]);
   });
 
+  it("gives the queue a job table and a log that dies with its job", async () => {
+    /*
+     * The one migration in this chain that no collection file describes.
+     * `payload-jobs` exists because `src/jobs/index.ts` registers a task —
+     * `config.jobs.enabled` is false until one does — so the only statement
+     * of what a deployed database needs is the migration itself, and this is
+     * the only thing that reads it.
+     *
+     * The log's cascade is the half worth asserting as behaviour: an attempt
+     * record whose job has been deleted is a row nothing can reach, and
+     * `deleteJobOnComplete` means jobs are deleted routinely.
+     */
+    const { database } = await chain();
+
+    database.exec(
+      `INSERT INTO payload_jobs (id, queue, task_slug) VALUES (7400, 'default', 'send-email');`
+    );
+    database.exec(
+      `INSERT INTO payload_jobs_log (_order, _parent_id, id, executed_at, completed_at, task_slug, task_i_d, state) VALUES (1, 7400, 'log-7400', '2026-09-21T00:00:00.000Z', '2026-09-21T00:00:01.000Z', 'send-email', '1', 'failed');`
+    );
+
+    // A log row for a job that does not exist is refused, so the chain really
+    // did emit the foreign key and not just a column named after one.
+    expect(() =>
+      database.exec(
+        `INSERT INTO payload_jobs_log (_order, _parent_id, id, executed_at, completed_at, task_slug, task_i_d, state) VALUES (1, 9999, 'log-orphan', '2026-09-21T00:00:00.000Z', '2026-09-21T00:00:01.000Z', 'send-email', '1', 'failed');`
+      )
+    ).toThrow(/FOREIGN KEY/i);
+
+    database.exec("DELETE FROM payload_jobs WHERE id = 7400;");
+
+    expect(
+      database
+        .prepare(
+          "SELECT COUNT(*) AS n FROM payload_jobs_log WHERE _parent_id = 7400"
+        )
+        .get()
+    ).toEqual({ n: 0 });
+  });
+
+  it("adds no locked-document column for the queue", async () => {
+    /*
+     * Every other collection this migration chain adds costs a twelve-step
+     * rebuild of `payload_locked_documents_rels`, because Payload adds one
+     * relationship column per collection. The jobs collection sets
+     * `lockDocuments: false`, so it does not — and a migration that rebuilt
+     * that table anyway would be a rebuild the pushed schema disagrees with,
+     * which is exactly the drift `pushDevSchema` cannot catch.
+     */
+    const { database } = await chain();
+    const columns = (
+      database
+        .prepare(
+          "SELECT name FROM pragma_table_info('payload_locked_documents_rels')"
+        )
+        .all() as { name: string }[]
+    ).map((column) => column.name);
+
+    expect(columns).toContain("claims_id");
+    expect(columns).not.toContain("payload_jobs_id");
+  });
+
   it("gives renders a UNIQUE index on the job id", async () => {
     // The same claim mechanism as `claims` above, for the same reason and with
     // the same failure mode, on a different table. `endpoints/render.ts` takes

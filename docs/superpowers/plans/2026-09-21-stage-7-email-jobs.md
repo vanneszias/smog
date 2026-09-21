@@ -275,7 +275,7 @@ it("keeps two consumers with the same key from colliding", () => {
 
 **Files:** create `src/email/render.ts` (+ test), `src/jobs/index.ts` (the `send-email` task); modify `account.ts` and `sponsorships.ts` to queue instead of log.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("sends the email-change confirmation instead of logging it", () => {
@@ -296,7 +296,58 @@ it("does not put the re-edit token in a log line");
 it("renders every message in the recipient's locale");
 ```
 
-- [ ] **Step 2-4:** run, implement, run, mutation-prove each guard, commit.
+- [x] **Step 2-4:** run, implement, run, mutation-prove each guard, commit.
+
+**Seven corrections, made while implementing.**
+
+1. **`endpoints/sponsorships.ts` does not log a re-edit link, and never did.**
+   The plan lists it beside `account.ts` as a place that logs instead of
+   sending; `account.ts` does, and this one has no such line anywhere. Nothing
+   in this application has ever produced a re-edit link for anybody — Stage 5
+   deliberately dropped the shipped product's "generate link" button, because
+   `hooks/manageReEditToken.ts` makes *moving the status to
+   `pending_resubmission` in the admin panel* the action that mints the token.
+   So the queue point is a collection `afterChange` hook,
+   `hooks/queueReEditEmail.ts`, and no endpoint is involved at either end.
+2. **Registering the first task opens a second, unauthenticated-by-default
+   door into the queue.** `config.jobs.enabled` flips, and Payload mounts
+   `GET /api/payload-jobs/run` on the jobs collection gated on
+   `jobs.access.run ?? defaultAccess` — where `defaultAccess` is
+   `Boolean(user)`. Task 2 put a shared secret, a constant-time comparison and
+   a lease in front of `GET /api/jobs/run`; task registration would have handed
+   **every signed-in account** a URL that runs the same queue with none of
+   them. `jobs.access.run` is `() => false`, and the test asserts anonymous, a
+   signed-in non-admin and an admin.
+3. **A credential cannot travel in a job's input.** Payload logs the *whole
+   job*, `input` included, every time a task throws
+   (`queues/errors/handleTaskError.js`), and this task's retry policy makes a
+   throw an ordinary event. So the plan's "queue instead of log" cannot mean
+   "queue the link": the confirmation token is now minted by the send
+   (`lib/emailChange.ts`), the re-edit token is read back at send time with
+   `showHiddenFields: true`, and the queue carries identifiers only. The
+   request that starts an address change therefore also has to clear the
+   previous token, or a link already sitting in the old address's mailbox
+   would confirm the new one.
+4. **Payload runs a tick's jobs through `Promise.all`.** With no transactions
+   that is two writers on one row: two `send-email` jobs for one account died
+   on `Failed query: insert into "users_sessions" …` the first time this
+   file's tests ran, because updating a document rewrites its array tables.
+   `endpoints/jobs.ts` now passes `sequential: true`, which is the property
+   the run lease already gives *between* ticks, applied inside one.
+5. **`payload-jobs` needs no `payload_locked_documents_rels` rebuild**, unlike
+   every other collection added since Stage 1: the jobs collection sets
+   `lockDocuments: false`, so Payload adds no relationship column. The
+   migration is two `CREATE TABLE`s, and `migrations.test.ts` asserts the
+   absence as well as the presence.
+6. **"Renders every message in the recipient's locale" is only half
+   answerable.** The address change carries the locale of the form the account
+   holder submitted. A `sponsorships` row records no language at all, so the
+   re-edit invitation renders in the site default — `req.locale` is available
+   and deliberately unused, because on an admin write that is the
+   administrator's editing locale, not the sponsor's.
+7. **`retries.attempts: 3` permits four executions, not three.** Payload gives
+   up when the task's own `totalTried` has *reached* `attempts`
+   (`handleTaskError`), so the bound the test asserts is a literal 4.
 
 ---
 

@@ -18,6 +18,7 @@ import {
   invalidateComposedVideo,
   publishComposedVideo,
 } from "@/hooks/publishComposedVideo";
+import { queueReEditEmail } from "@/hooks/queueReEditEmail";
 import { stampReviewDecision } from "@/hooks/stampReviewDecision";
 
 /**
@@ -118,7 +119,15 @@ export const Sponsorships: CollectionConfig = {
       manageReEditToken,
       stampReviewDecision,
     ],
-    afterChange: [logSponsorshipTransitions],
+    /*
+     * Both of these follow the write rather than preceding it, and neither
+     * may throw: the status has already moved by the time they run, so a
+     * throw would report a failure for a change that happened — and on the
+     * webhook path would turn one delivered payment into an endless
+     * redelivery. `queueReEditEmail` is second because the log is the record
+     * of what happened and the invitation is a consequence of it.
+     */
+    afterChange: [logSponsorshipTransitions, queueReEditEmail],
   },
   fields: [
     {

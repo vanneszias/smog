@@ -110,17 +110,23 @@ const PERMANENT_REFUSALS = new Set([
  * "sending failed" is what produces either a reminder nobody was ever asked
  * for or a queue that never drains.
  *
- * Deliberately not exported. Nothing outside this module names the type until
- * Task 3's retry policy does, and knip fails the build on an exported symbol
- * nothing imports — the same ruling `lib/mollie.ts` records for
- * `CreateMolliePaymentInput`. The two fields are readable from the instance
- * either way, which is how `adapter.test.ts` asserts on them.
+ * Deliberately not exported, even now that Task 3's retry policy exists.
+ * `isRetryableSendFailure` below is what that policy asks, and it answers for
+ * a raw refusal as readily as for one of these — so the queue never has to
+ * know which shape it caught, and knip has nothing exported that nothing
+ * imports. The two fields are readable from the instance either way, which is
+ * how `adapter.test.ts` asserts on them.
+ *
+ * `retryable` is computed rather than passed in. It was a constructor
+ * argument until the policy needed the same question answered somewhere else;
+ * one function answering it for both is what stops a wrapped failure and a
+ * raw one being classified by two lists that can disagree.
  */
 class EmailSendFailure extends Error {
   readonly code: string;
   readonly retryable: boolean;
 
-  constructor(code: string, retryable: boolean, cause: unknown) {
+  constructor(code: string, cause: unknown) {
     super(
       code === ""
         ? "The email binding refused the message."
@@ -129,8 +135,30 @@ class EmailSendFailure extends Error {
     );
     this.name = "EmailSendFailure";
     this.code = code;
-    this.retryable = retryable;
+    this.retryable = isRetryableSendFailure(this);
   }
+}
+
+/**
+ * Whether trying this send again could produce a different answer.
+ *
+ * Exported because the classification and the *policy built on it* belong in
+ * different places: this module knows what Cloudflare's codes mean, and
+ * `jobs/index.ts` knows what to do about it — defer, or stop and record why.
+ * Duplicating the set there would be two lists to keep in step, and the one
+ * that fell behind would be the one that decides whether mail is dropped.
+ *
+ * It takes `unknown` and reads the code off whatever it is given, which makes
+ * it true of both shapes the same refusal wears: the raw error the binding
+ * throws, and the {@link EmailSendFailure} this module wraps it in. A caller
+ * cannot get the wrong answer by asking about the wrong one.
+ *
+ * Anything unrecognised — including an error with no code at all, which is
+ * what a network fault looks like — is retryable. See {@link
+ * PERMANENT_REFUSALS} for why that direction and not the other.
+ */
+export function isRetryableSendFailure(error: unknown): boolean {
+  return !PERMANENT_REFUSALS.has(codeOf(error));
 }
 
 /** Cloudflare puts its error table's code on the thrown error's `code`. */
@@ -227,9 +255,7 @@ export function cloudflareEmailAdapter({
       try {
         return await send.send(builder);
       } catch (error) {
-        const code = codeOf(error);
-
-        throw new EmailSendFailure(code, !PERMANENT_REFUSALS.has(code), error);
+        throw new EmailSendFailure(codeOf(error), error);
       }
     },
   });

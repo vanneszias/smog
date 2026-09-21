@@ -60,11 +60,12 @@ function setToken(value: string | undefined): void {
  * handler called with a hand-built `req` passes whatever path it is mounted
  * at.
  *
- * **There is no job queue yet.** `jobs.enabled` is false until a task is
- * registered (Tasks 3 and 5). Measured rather than assumed: the real
- * `payload.jobs.run` does not throw in that state, it answers
- * `noJobsRemaining` — so the endpoint logs "Ran 0 jobs" and returns. That is
- * left alone rather than worked around, because an endpoint that answers
+ * **The queue exists and is empty here.** It did not exist at all when this
+ * file was written — `jobs.enabled` is false until a task is registered, and
+ * Task 3 registered the first one — but nothing changed for these tests: an
+ * empty queue answers `noJobsRemaining`, so the endpoint logs "Ran 0 jobs"
+ * and returns, exactly as it did when there was no queue to ask. That is left
+ * alone rather than worked around, because an endpoint that answers
  * differently when the queue is empty is an endpoint that tells an
  * unauthenticated caller whether their token was right, and one of the tests
  * below is exactly that comparison. Everywhere the *run* is the subject
@@ -152,6 +153,75 @@ describe("the job run endpoint", () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
+  it("refuses the queue's own endpoint to every signed-in account", async () => {
+    /*
+     * **Registering a task opens a second door into the queue**, and it is not
+     * this file's endpoint. Payload mounts `GET /api/payload-jobs/run` on the
+     * jobs collection the moment `jobs.enabled` flips
+     * (`queues/endpoints/run.js`), and gates it on
+     * `jobs.access.run ?? defaultAccess` — where `defaultAccess` is
+     * `Boolean(user)`. Left at the default, every signed-in account could run
+     * every scheduled job on demand: a way to force mail, and a way to run the
+     * queue *beside* the lease above rather than behind it, which is Review
+     * Focus 1 and 2 undone by a config key nobody wrote.
+     *
+     * So all three callers are asserted — anonymous, a signed-in non-admin and
+     * an admin — because a rule that only refuses anonymous callers is
+     * indistinguishable from no rule at all against an anonymous request.
+     */
+    const stamp = crypto.randomUUID().slice(0, 8);
+    const password = "jobs-endpoint-password";
+    const accounts = await Promise.all(
+      (["user", "admin"] as const).map(async (role) => {
+        const email = `jobs-${role}-${stamp}@example.test`;
+
+        await payload.create({
+          collection: "users",
+          data: { email, password, role },
+        });
+        const { token } = await payload.login({
+          collection: "users",
+          data: { email, password },
+        });
+
+        return `payload-token=${token}`;
+      })
+    );
+
+    const payloadRun = (cookie?: string) =>
+      handleEndpoints({
+        config,
+        request: new Request(`${SITE}/api/payload-jobs/run`, {
+          headers: cookie === undefined ? {} : { Cookie: cookie },
+          method: "GET",
+        }),
+      });
+
+    const spy = spyOnRun();
+
+    for (const cookie of [undefined, ...accounts]) {
+      expect((await payloadRun(cookie)).status).toBe(401);
+    }
+
+    expect(spy).not.toHaveBeenCalled();
+
+    // The positive beside the negative: the sessions really are sessions, so
+    // the 401s above are the access rule refusing and not three anonymous
+    // requests wearing cookies Payload ignored.
+    for (const cookie of accounts) {
+      const { user } = await payload.auth({
+        headers: new Headers({ Cookie: cookie }),
+      });
+
+      expect(user).not.toBeNull();
+    }
+
+    await payload.delete({
+      collection: "users",
+      where: { email: { like: `jobs-%-${stamp}@example.test` } },
+    });
+  });
+
   it("refuses a wrong token", async () => {
     const spy = spyOnRun();
 
@@ -222,10 +292,9 @@ describe("the job run endpoint", () => {
 
   it("answers a wrong token exactly as it answers a missing job queue", async () => {
     // No spy here, so the second call reaches the real `payload.jobs.run`,
-    // which finds no queue at all — no task is registered until Task 3. A
-    // caller must not be able to tell that apart from being refused, or the
-    // endpoint is an oracle for its own secret: one request per guess, and
-    // the answer says whether the guess was right.
+    // which finds nothing to run. A caller must not be able to tell that apart
+    // from being refused, or the endpoint is an oracle for its own secret: one
+    // request per guess, and the answer says whether the guess was right.
     const refused = await snapshot(await run("Bearer not-the-token-at-all"));
     const accepted = await snapshot(await run(`Bearer ${STUB_TOKEN}`));
 

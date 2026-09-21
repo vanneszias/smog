@@ -141,19 +141,34 @@ const runJobs: PayloadHandler = async (
       limit: JOBS_PER_RUN,
       overrideAccess: true,
       queue: QUEUE,
+      /*
+       * **One job at a time.** Payload runs a tick's jobs through
+       * `Promise.all` unless told otherwise
+       * (`queues/operations/runJobs/index.js`), and this database has no
+       * transactions — which is the premise every guard in this application
+       * rests on. Two jobs writing the same document in one tick therefore
+       * race, and it is not theoretical: the first run of Task 3's tests, with
+       * two `send-email` jobs in one tick, died on `Failed query: insert into
+       * "users_sessions" …` from inside `Promise.all`, because updating a
+       * document rewrites its array tables and two rewrites overlapped.
+       *
+       * Serialising them costs a tick that takes as long as its jobs added up,
+       * against a queue measured in a handful of messages. It buys the same
+       * property the lease above buys between ticks, inside one: exactly one
+       * writer at a time.
+       */
+      sequential: true,
     });
 
     req.payload.logger.info(
       `[jobs] Ran ${Object.keys(result.jobStatus ?? {}).length} jobs from the ${QUEUE} queue`
     );
   } catch (error) {
-    // A job that throws must not take the lease down with it. Note that "no
-    // queue at all" is *not* this branch: `jobs.enabled` is false until a task
-    // is registered (Tasks 3 and 5), and measured here, `payload.jobs.run`
-    // then answers `noJobsRemaining` rather than throwing — so until those
-    // tasks land this endpoint is a scheduler with nothing to schedule, and
-    // says so at info level. Either way the caller gets the same bytes; see
-    // the note above about why.
+    // A job that throws must not take the lease down with it. Note that an
+    // empty queue is *not* this branch: `payload.jobs.run` answers
+    // `noJobsRemaining` rather than throwing, which is also what it did before
+    // Task 3 registered the first task and there was no queue at all. Either
+    // way the caller gets the same bytes; see the note above about why.
     req.payload.logger.error(
       { err: error },
       "[jobs] The run failed; the lease is released so the next tick retries"

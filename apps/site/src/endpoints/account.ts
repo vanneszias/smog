@@ -1,5 +1,6 @@
 import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
 import { generateExpiredPayloadCookie, logoutOperation } from "payload";
+import { SEND_EMAIL } from "@/jobs";
 import {
   accountPath,
   confirmEmailPath,
@@ -10,6 +11,7 @@ import {
   seeOther,
   signInPath,
 } from "@/lib/authFlow";
+import { sha256Hex } from "@/lib/emailChange";
 import { field, guardOrigin, pad, readForm } from "@/lib/formPost";
 import type { Locale } from "@/lib/locale";
 import type { User } from "@/payload-types";
@@ -62,12 +64,6 @@ const USERS = "users";
  */
 const CONFIRM_TTL_MS = 60 * 60 * 1000;
 
-/** Bytes of entropy in a confirmation token. */
-const TOKEN_BYTES = 32;
-
-const HEX = 16;
-const BYTE_HEX_WIDTH = 2;
-
 /** The paths a `ValidationError` complained about, or `null` if it is not one. */
 function validationPaths(error: unknown): null | string[] {
   if (!(error instanceof Error) || error.name !== "ValidationError") {
@@ -83,32 +79,6 @@ function validationPaths(error: unknown): null | string[] {
   return data.errors.map((entry) =>
     typeof entry?.path === "string" ? entry.path : ""
   );
-}
-
-function toHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (byte) =>
-    byte.toString(HEX).padStart(BYTE_HEX_WIDTH, "0")
-  ).join("");
-}
-
-/**
- * What is stored for a confirmation token: its SHA-256, never the token.
- *
- * Payload keeps `resetPasswordToken` in the clear, so a database dump is a
- * set of usable reset links. There is no reason to repeat that here: the
- * lookup is an equality on a value the holder of the link can recompute, and
- * nobody else can invert.
- *
- * `crypto.subtle` rather than `node:crypto` because this runs in workerd,
- * where the Web Crypto API is the one that exists.
- */
-async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value)
-  );
-
-  return toHex(new Uint8Array(digest));
 }
 
 /** The signed-in account, or `null`. */
@@ -341,8 +311,6 @@ const requestEmailChange: PayloadHandler = async (req) => {
    * settled at confirmation time, in front of somebody who has already
    * proved they read the mail there.
    */
-  const token = toHex(crypto.getRandomValues(new Uint8Array(TOKEN_BYTES)));
-
   await req.payload.update({
     collection: USERS,
     data: {
@@ -350,7 +318,16 @@ const requestEmailChange: PayloadHandler = async (req) => {
       pendingEmailExpiresAt: new Date(
         Date.now() + CONFIRM_TTL_MS
       ).toISOString(),
-      pendingEmailToken: await sha256Hex(token),
+      /*
+       * **Cleared, not left alone.** The token is minted by the job that
+       * sends it (`lib/emailChange.ts` says why at length), so this write no
+       * longer replaces it — and a token left over from an address change
+       * started ten minutes ago would otherwise still match this row, which
+       * means the link sent to *that* address would confirm *this* one. One
+       * pending change, one live link, and starting a new change ends the
+       * old one.
+       */
+      pendingEmailToken: null,
     },
     depth: 0,
     id: user.id,
@@ -365,26 +342,46 @@ const requestEmailChange: PayloadHandler = async (req) => {
   });
 
   /*
-   * **There is nowhere to send this yet.** No email adapter is configured
-   * (Stage 0; Payload says so on every boot), so Payload's own
-   * `forgotPassword` already writes its reset link to the console and this
-   * does the same rather than inventing a second, quieter convention. Stage
-   * 7 configures an adapter, and this line is the one that becomes a send.
+   * **Queued, not sent here, and not logged any more.** Stage 4 wrote the
+   * confirmation link to the console because there was no adapter; Stage 7
+   * has one, and this is the line that became a send.
    *
-   * It is logged as a link and not as a bare token so whoever wires the
-   * adapter sends the right URL, and at `info` because a log nobody reads at
-   * `debug` is the same as no log. The exposure is bounded and is the same
-   * one Payload's reset flow already has in this deployment: the token
-   * completes a change *the account owner just authenticated for*, to an
-   * address the owner chose, and it is useless without that request.
+   * It goes through the queue rather than straight to the binding for two
+   * reasons. A send inside this handler would hold the account page open for
+   * as long as Cloudflare takes to answer, on a path that is already held to
+   * a 500 ms timing floor — and a refusal would be lost, where a queued
+   * message is retried and, if it is refused for good, recorded with the
+   * reason (`jobs/index.ts`).
+   *
+   * **The job carries the account id and not the link.** The token does not
+   * exist yet: `jobs/sendEmail.ts` mints it at the moment of sending,
+   * because a job's input is logged in full by Payload's own error handler
+   * whenever a task throws, and a deferred send is an ordinary event.
+   *
+   * `req.origin` is captured here because the job cannot: a Local API
+   * request's origin is `http://localhost`.
+   *
+   * A queue failure does not fail the request. The change is recorded and
+   * the account page already says an address is pending; answering with an
+   * error would tell the visitor their change did not happen when it did.
    */
-  req.payload.logger.info(
-    {
-      confirmUrl: `${req.origin ?? ""}${confirmEmailPath(locale, { token })}`,
-      userId: user.id,
-    },
-    "[account] No email adapter: confirmation link for an address change not delivered"
-  );
+  try {
+    await req.payload.jobs.queue({
+      input: {
+        kind: "email-change",
+        locale,
+        origin: req.origin ?? "",
+        userId: user.id,
+      },
+      req,
+      task: SEND_EMAIL,
+    });
+  } catch (error) {
+    req.payload.logger.error(
+      { err: error },
+      `[account] Could not queue the confirmation for the address change on account ${user.id}; it will not be sent`
+    );
+  }
 
   await pad(started);
 
