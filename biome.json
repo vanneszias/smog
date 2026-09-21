@@ -29,7 +29,7 @@
   },
   "extends": ["ultracite/core", "ultracite/react"],
   "javascript": {
-    "globals": ["__DEV__", "Bun"]
+    "globals": ["__DEV__", "Bun", "jest"]
   },
   "linter": {
     "rules": {

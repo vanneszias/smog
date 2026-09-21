@@ -18,6 +18,7 @@
   "dependencies": {
     "@smog/config": "workspace:*",
     "@smog/styles": "workspace:*",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "tailwind-merge": "^3.5.0"
   },
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
+    "@smog/ui-web": "workspace:*",
     "@testing-library/react-native": "^13.2.0",
     "@types/jest": "29.5.14",
     "@types/react": "19.2.14",

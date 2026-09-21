@@ -71,14 +71,7 @@
         "babel.config.js",
         "scripts/*.ts"
       ],
-      "ignoreDependencies": [
-        "@babel/core",
-        "@smog/config",
-        "@smog/styles",
-        "clsx",
-        "tailwind-merge",
-        "tailwindcss"
-      ]
+      "ignoreDependencies": ["@babel/core", "@smog/config", "tailwindcss"]
     }
   }
 }
