@@ -224,6 +224,23 @@ function readMerged(body: unknown): null | string[] {
  * is idempotent.
  */
 export async function syncGuestFavorites(): Promise<GuestMerge> {
+  /*
+   * **Two components call this, and it deliberately does not de-duplicate
+   * them.** The layout's `GuestFavoritesSync` runs on every signed-in page
+   * and `FavoriteButton` runs on gesture pages, so on a gesture page both
+   * mount in the same tick, both read the same non-empty array before either
+   * has cleared it, and both post it.
+   *
+   * An in-flight guard collapsing them into one request was written, proved
+   * to work, and then **reverted**: handing both callers the same promise
+   * fixes the handler order, so the abandoned caller's `.then` always
+   * settles before the live one's. That made `FavoriteButton`'s `live`
+   * cleanup flag unprovable — the mutation that deletes it stopped failing
+   * anything, because the live answer now always landed last and overwrote
+   * the stale one. A saved request is not worth an unguarded stale write;
+   * a duplicate POST of the same ids is exactly the case the server half's
+   * idempotency exists for, and that idempotency is itself mutation-proven.
+   */
   const ids = readGuestFavorites();
 
   if (ids.length === 0) {

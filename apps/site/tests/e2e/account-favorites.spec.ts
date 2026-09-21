@@ -218,15 +218,32 @@ test.describe("Account favorites", () => {
     ).toBeVisible();
   });
 
-  test("does not show a guest's favorites to a signed-in reader", async ({
+  test("carries a guest's favorites into the account it signs in to", async ({
     page,
   }) => {
     /*
-     * A shared machine. Whatever the last visitor favourited is still in
-     * this browser's `localStorage`; it is not this account's, and Task 6 —
-     * not a silent read of the wrong store — is what will merge it.
+     * **Stage 4 exit criterion 6, end to end.** This replaces a test that
+     * asserted the opposite — that a guest's local favorites stay invisible
+     * to a signed-in reader — which was correct until Task 6 and whose own
+     * comment named Task 6 as the thing that would change it.
+     *
+     * It is deliberately asserted on `/nl`, the page sign-in redirects to
+     * (`endpoints/auth.ts` answers with `seeOther(homePath(locale))`), and
+     * **not** on a gesture page. That is the whole point: `FavoriteButton`
+     * is the only other component that merges and it renders on gesture
+     * pages alone, so a merge that needed one would not be a merge "on
+     * sign-in" — a reader who signs in and never opens a gesture would keep
+     * their guest list forever. `GuestFavoritesSync` in the locale layout is
+     * what makes this pass; remove it from the layout and this test is the
+     * one that says so.
+     *
+     * `evaluate` rather than `addInitScript`, because an init script re-runs
+     * on every navigation and would put the guest ids back after the merge
+     * had cleared them — which would make the localStorage assertion below
+     * unfalsifiable.
      */
-    await page.addInitScript(
+    await page.goto(`${SITE}/nl`);
+    await page.evaluate(
       ([key, id]) => {
         window.localStorage.setItem(key, JSON.stringify([id]));
       },
@@ -234,14 +251,40 @@ test.describe("Account favorites", () => {
     );
 
     await signInAs(page, await freshAccount());
-    await page.goto(`${SITE}/nl/favorites`);
 
-    await expect(
-      page.getByRole("heading", { name: "Nog geen favorieten" })
-    ).toBeVisible();
+    /*
+     * The merge is a fetch fired from a mount effect, so the account's list
+     * is what settles rather than the URL — polled through the favorites
+     * page rather than guessed at with a timeout.
+     *
+     * Asserted on the **card being there**, not on the empty-state heading
+     * being absent. The first draft did the latter and was vacuous:
+     * `FavoritesList` opens in a `loading` state that renders neither, so
+     * `toBeHidden()` on the heading passed instantly on the loading frame,
+     * and removing `GuestFavoritesSync` from the layout — the very thing
+     * this test exists to catch — still passed. A positive assertion cannot
+     * be satisfied by a page that has not finished rendering.
+     */
+    await expect(async () => {
+      await page.goto(`${SITE}/nl/favorites`);
+      await expect(cards(page)).toHaveCount(1);
+      await expect(cards(page).first()).toContainText(fixtures.firstName);
+    }).toPass();
 
+    // On the account, not merely on the page: a reload reads the row.
     await openDetail(page, fixtures.firstId);
-    await expect(heart(page)).toHaveAttribute("aria-pressed", "false");
+    await expect(heart(page)).toHaveAttribute("aria-pressed", "true");
+
+    // And the local copy is gone, so a later sign-out does not leave the
+    // same ids sitting in the browser to be merged into the next account.
+    await expect(async () => {
+      expect(
+        await page.evaluate(
+          (key) => window.localStorage.getItem(key),
+          GUEST_KEY
+        )
+      ).toBeNull();
+    }).toPass();
   });
 
   test("tells a reader whose session ended, and does not fill the heart", async ({

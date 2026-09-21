@@ -864,6 +864,64 @@ first for free. And a lockout is a state that silences every other signal
 the account can give, so a fixture that locks an account must unlock it
 before asking it anything else.
 
+## A Playwright absence assertion passes on a page that has not rendered yet
+
+Stage 4 Task 6. The same lesson as the locked-account section above, in a
+different runner, and this one was caught by a mutation rather than by
+reading.
+
+The merge that carries a guest's favorites into their new account has to run
+on the page **sign-in lands on** — `endpoints/auth.ts` answers a successful
+sign-in with `seeOther(homePath(locale))`, and `FavoriteButton`, the only
+component that merged, renders on gesture pages alone. So as first built,
+Stage 4 exit criterion 6 was really "merges on the first gesture page after
+sign-in", which for a reader who never opens one is never. The fix is
+`components/GuestFavoritesSync.tsx` in the locale layout.
+
+The e2e test written to prove it did not:
+
+```ts
+await expect(async () => {
+  await page.goto(`${SITE}/nl/favorites`);
+  await expect(
+    page.getByRole("heading", { name: "Nog geen favorieten" })
+  ).toBeHidden();
+}).toPass();
+```
+
+`FavoritesList` opens in a `loading` state that renders neither the cards nor
+the empty state, and **Playwright's `toBeHidden()` is satisfied by an element
+that does not exist**. So the assertion passed on the loading frame, and
+deleting `GuestFavoritesSync` from the layout — the one thing the test exists
+to catch — still passed. Asserting the card is *present* fixed it; the
+mutation then failed as it should.
+
+The rule: **assert presence, not absence**, whenever the absence is also what
+an unfinished render looks like. An absence assertion is only meaningful
+once something else proves the page has settled.
+
+## A saved request is not worth an unprovable guard
+
+Also Stage 4 Task 6, and recorded because the reasoning generalises past it.
+
+Two components now trigger the guest merge — the layout's sync on every
+signed-in page, and `FavoriteButton` on a gesture page — so on a gesture page
+both fire and the same ids are posted twice. An in-flight guard in
+`syncGuestFavorites` collapsing concurrent callers onto one promise was
+written and worked.
+
+It was reverted. Handing both callers the *same* promise fixes the order in
+which their `.then` handlers run: the abandoned caller's always settles
+before the live one's, so the live answer always lands last. That made
+`FavoriteButton`'s `live` cleanup flag unprovable — the mutation deleting it
+stopped failing anything, because the stale write could no longer win. The
+guard still mattered; nothing could show that it did.
+
+The duplicate POST is precisely the case the server half's idempotency was
+built for, and that idempotency *is* mutation-proven. Trading a proven guard
+for an unproven optimisation is the wrong direction, so the optimisation
+went.
+
 ## Risks
 
 | Risk | Mitigation |

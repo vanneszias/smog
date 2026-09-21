@@ -165,6 +165,64 @@ describe("syncGuestFavorites", () => {
     });
   });
 
+  it("lets two components merge the same ids without disagreeing", async () => {
+    /*
+     * The layout's `GuestFavoritesSync` and `FavoriteButton` both mount in
+     * the same tick on a gesture page, so this genuinely happens. They are
+     * deliberately *not* de-duplicated — see the note in
+     * `syncGuestFavorites` — so what has to hold is that two overlapping
+     * merges of the same ids both report the account's list rather than one
+     * of them reporting "nothing to merge" and repainting an empty heart.
+     *
+     * This is the client-side face of the server half's idempotency, which
+     * is what makes the duplicate safe.
+     */
+    localStorage.setItem(GUEST_FAVORITES_KEY, '["7"]');
+
+    const fetchMock = ok(["7"]);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const [first, second] = await Promise.all([
+      syncGuestFavorites(),
+      syncGuestFavorites(),
+    ]);
+
+    expect(first).toEqual({ favorites: ["7"], status: "merged" });
+    expect(second).toEqual(first);
+    expect(localStorage.getItem(GUEST_FAVORITES_KEY)).toBeNull();
+  });
+
+  it("retries after a failure rather than latching", async () => {
+    /*
+     * The whole recovery story is that the next signed-in page tries again,
+     * which is safe because the server half is idempotent. A merge that
+     * failed once must therefore not mark itself done.
+     */
+    localStorage.setItem(GUEST_FAVORITES_KEY, '["7"]');
+    vi.spyOn(console, "error").mockImplementation(() => {
+      // Logged by the failure path; silenced, not asserted.
+    });
+
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ favorites: ["7"] }), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        })
+      );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(syncGuestFavorites()).resolves.toEqual({ status: "failed" });
+    await expect(syncGuestFavorites()).resolves.toEqual({
+      favorites: ["7"],
+      status: "merged",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("does nothing at all when the store is denied", async () => {
     // Private browsing. `readGuestFavorites` answers `[]` rather than
     // throwing, so this is indistinguishable from having no favorites — and

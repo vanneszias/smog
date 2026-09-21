@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { type ReactNode, Suspense } from "react";
 import { AccountNav } from "@/components/AccountNav";
+import { GuestFavoritesSync } from "@/components/GuestFavoritesSync";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { SiteDocument } from "@/components/SiteDocument";
 import { isLocale, LOCALES, type Locale } from "@/lib/locale";
@@ -182,6 +183,14 @@ export default async function LocaleLayout({
             </div>
           </div>
         </header>
+        {/*
+         * Renders nothing. It carries a guest's favorites into the account on
+         * the first signed-in page — which has to be here, in the layout,
+         * because sign-in redirects to the home page and the only other
+         * component that merges renders on gesture pages. See
+         * `components/GuestFavoritesSync.tsx`.
+         */}
+        {user === null ? null : <GuestFavoritesSync />}
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
           {children}
         </main>
