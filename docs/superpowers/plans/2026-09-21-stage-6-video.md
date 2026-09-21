@@ -387,7 +387,39 @@ it("falls back to the original while the render is still running", () => {
 });
 ```
 
-- [ ] **Step 2-4:** run, implement, run. Compare the service token with the same constant-time helper from Task 2 — a `===` here leaks it exactly as it would there.
+- [ ] **Step 2-4:** run, implement, run. Compare the service token with `lib/constantTime.ts` (Task 2 extracted it from `endpoints/oauth.ts`, where a third copy was otherwise coming) — a `===` here leaks it exactly as it would there.
+
+**Two decisions this task must take, both under uncertainty that cannot be
+resolved in this environment. Neither may be guessed silently.**
+
+**1. The callback signature scheme is unverifiable here, so make it cheap to
+be wrong.** Task 2 signs HMAC-SHA-256 as `X-Render-Signature: <hex>`.
+Remotion Lambda's own webhook is reported to sign HMAC-**SHA-512** as
+`X-Remotion-Signature: sha512=<hex>`. That report could not be confirmed:
+`@remotion/lambda` is not installed, no installed Remotion package mentions
+the header, and `remotion.dev` is blocked by this environment's egress
+proxy. **Do not pick one and hope.** Put the algorithm, the header name and
+the value prefix in one exported constant, and write the verifier so both
+schemes are covered by tests — a known-answer vector for each. Whichever
+Remotion actually sends, the change is then one line and is already proven,
+instead of every real callback 401ing from a verifier that passes every test
+in this repo.
+
+**2. How the Worker submits a render — measure before choosing.** The
+obvious route is `@remotion/lambda`, which pulls the AWS SDK into a Worker
+with **27% headroom that Stage 7 also has to fit in**. Stage 5 rejected the
+Mollie SDK at +165.71 KiB for two REST calls; this is the same trade with a
+bigger dependency. Measure the gzipped delta the same way
+(`CLOUDFLARE_ENV=staging bun run build:app && bun run check-bundle-size`) and
+put the number in the report. The `fetch`-shaped alternative is an AWS SigV4
+request signed with `crypto.subtle`, which is about a hundred lines and no
+dependency. **Default to `fetch` unless the measurement says the SDK is
+under 100 KiB gzipped and the report says what it buys.**
+
+If the render cannot be submitted at all without credentials — likely, since
+a function name and region are required — then submission is stubbed behind
+the same seam as `renderPreview`, the stub is tested, and Task 6 fills it.
+Say so plainly rather than half-building it.
 
 - [ ] **Step 5: Mutation-prove** each guard, including that the expiry is real (a URL minted with no expiry must fail a test).
 
