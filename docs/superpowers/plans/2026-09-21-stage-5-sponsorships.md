@@ -484,7 +484,8 @@ git commit -m "refactor(site): fix Payload's sponsorship create types in one pla
 - Create: `apps/site/src/lib/mollie.ts` + `.test.ts`
 
 **Interfaces:**
-- Produces: `sponsorshipAmountCents(durationYears: number, gestureCount: number): number`; `createMolliePayment(input: CreatePaymentInput): Promise<{ checkoutUrl: string; id: string }>`; `readMolliePayment(id: string): Promise<{ amountCents: number; metadata: Record<string, string>; status: string }>`.
+- Consumes: `PRICE_PER_YEAR_CENTS`, `LOGO_ADDON_CENTS`, `FIXED_DURATION_YEARS`, `MAX_GESTURES_PER_SPONSORSHIP` from `@smog/config/constants`.
+- Produces: `sponsorshipAmountCents(gestureCount: number, includeLogo: boolean): number`; `createMolliePayment(input: CreatePaymentInput): Promise<{ checkoutUrl: string; id: string }>`; `readMolliePayment(id: string): Promise<{ amountCents: number; metadata: Record<string, string>; status: string }>`.
 
 - [ ] **Step 1: Measure before choosing — this step produces a number, not an opinion**
 
@@ -512,10 +513,47 @@ this — `apps/server/src/services/sponsorship.ts` and
 **pricing does not change in this migration**, so these numbers are
 transcribed, not chosen.
 
+**CORRECTED against the shipped product before Task 3 started.** This plan
+originally took `(durationYears, gestureCount)` and asked for a "multi-year
+rate". There is no such thing: `packages/config/src/constants.ts` declares
+`FIXED_DURATION_YEARS = 1` with the comment "All sponsorships are currently
+for exactly 1 year", and the real variable is the **logo add-on**. The
+shipped calculation is `apps/web/src/lib/pricing.ts`:
+
 ```ts
-it("charges the current price for one gesture for one year");
-it("multiplies by the number of gestures");
-it("applies the current multi-year rate");
+PRICE_PER_YEAR_CENTS = 5000   // EUR 50.00 per gesture per year
+LOGO_ADDON_CENTS     = 1000   // EUR 10.00 per gesture, when a logo is included
+total = PRICE_PER_YEAR_CENTS * n + (includeLogo ? LOGO_ADDON_CENTS * n : 0)
+```
+
+Import those constants from `@smog/config/constants` — do **not** restate the
+numbers in `apps/site`. `packages/config` survives until Stage 10 and is the
+shared source; a second copy is a second thing to forget when pricing
+changes.
+
+```ts
+it("charges EUR 50.00 for one gesture for one year", () => {
+  expect(sponsorshipAmountCents(1, false)).toBe(5000);
+});
+it("adds EUR 10.00 per gesture when a logo is included", () => {
+  expect(sponsorshipAmountCents(1, true)).toBe(6000);
+});
+it("multiplies both parts by the number of gestures", () => {
+  expect(sponsorshipAmountCents(3, false)).toBe(15_000);
+  expect(sponsorshipAmountCents(3, true)).toBe(18_000);
+});
+it("agrees with the shipped calculation across the whole legal range", () => {
+  // Transcription is the risk here, not arithmetic. This pins every input
+  // the wizard can produce against the numbers the current product charges,
+  // so a typo in one constant cannot pass as a pricing decision.
+  for (let n = 1; n <= MAX_GESTURES_PER_SPONSORSHIP; n += 1) {
+    for (const logo of [false, true]) {
+      expect(sponsorshipAmountCents(n, logo)).toBe(
+        5000 * n + (logo ? 1000 * n : 0)
+      );
+    }
+  }
+});
 it("returns whole cents, never a fraction", () => {
   // Mollie takes a decimal string with exactly two places. A float cent
   // count becomes "49.000000000000004" and the API rejects the payment —
@@ -773,7 +811,14 @@ Stage 3's and are mutation-proven. **Do not rewrite them.**
 ```ts
 it("lists only active gestures as sponsorable");
 it("refuses a selection naming a gesture that does not exist");
-it("refuses a selection of more than twenty gestures");
+it("refuses a selection of more than MAX_GESTURES_PER_SPONSORSHIP gestures", () => {
+  // **Ten, not twenty.** `packages/config/src/constants.ts` sets
+  // `MAX_GESTURES_PER_SPONSORSHIP = 10`. This plan said twenty in an earlier
+  // draft by confusing it with the webhook's bulk-payment cap, which is a
+  // genuinely different number for a genuinely different reason: how many
+  // sponsorship rows one Mollie payment may name. Import the constant; do
+  // not write either number as a literal.
+});
 it("refuses an empty selection");
 it("keeps the selection across the step boundary");
 it("refuses a gesture that already has an active sponsorship in term", async () => {
@@ -1070,7 +1115,7 @@ git add -A && git commit -m "feat(site): stamp and justify an admin's review dec
 
 ## Stage 5 exit criteria
 
-1. A sponsor can select up to twenty active gestures, enter their details, upload a logo, and reach Mollie's checkout.
+1. A sponsor can select up to `MAX_GESTURES_PER_SPONSORSHIP` (10) active gestures, enter their details, upload a logo, and reach Mollie's checkout.
 2. A paid payment moves every sponsorship in it to `pending_approval`, exactly once, under retries and concurrent deliveries.
 3. A failed, expired or cancelled payment resolves the sponsorship rather than leaving it pending forever.
 4. No status transition outside the table is reachable, including through `overrideAccess`.
