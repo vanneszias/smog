@@ -1,4 +1,5 @@
 import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
+import { CLAIM_KINDS, releaseClaim, takeClaim } from "@/lib/claims";
 import { MollieRefusedError, readMolliePayment } from "@/lib/mollie";
 import type { Sponsorship } from "@/payload-types";
 
@@ -61,11 +62,23 @@ import type { Sponsorship } from "@/payload-types";
  * report exactly one changed document; five concurrent updates had all five
  * report one.
  *
- * So the guard is `webhook-deliveries`: a row whose `paymentId` carries a
- * unique index, inserted before any sponsorship is touched. SQLite evaluates
- * a unique index inside the INSERT, which makes it the one atomic operation
- * available, and of two concurrent deliveries exactly one gets the row. See
- * `collections/WebhookDeliveries.ts`.
+ * So the guard is a `claims` row: a key carrying a unique index, inserted
+ * before any sponsorship is touched. SQLite evaluates a unique index inside
+ * the INSERT, which makes it the one atomic operation available, and of two
+ * concurrent deliveries exactly one gets the row. See `lib/claims.ts`.
+ *
+ * That was `webhook-deliveries`, a table of its own, until Stage 7 folded it
+ * and `render-completions` into one generic table with four consumers — the
+ * refactor `collections/RenderCompletions.ts` deferred until they were all
+ * visible. **Nothing about this handler's behaviour changed**, and the way
+ * that is known is that Stage 5's concurrency mutation still fails Stage 5's
+ * test through the new table: drop `unique` from `claims.key` and `survives
+ * two concurrent deliveries of the same payment` fails, alone.
+ *
+ * The claim is a **receipt**, not a lease: it carries no expiry and is kept
+ * for ever, because a payment that has been advanced has been advanced. The
+ * expiry that `endpoints/jobs.ts` sets on its own claim would, here, mean a
+ * redelivery weeks later advancing the same payment a second time.
  *
  * The `status` clause on the update below is therefore **not** the concurrency
  * guard, and is not written as one. It is how the handler picks the rows that
@@ -234,51 +247,16 @@ function parseSponsorshipIds(raw: string | undefined): null | string[] {
 }
 
 /**
- * Takes the delivery lock, answering `false` if another delivery already has
- * it.
+ * The claim one delivery is taken with.
  *
- * The `catch` cannot simply assume a duplicate: a create can also fail because
- * the database is unreachable, and treating that as "somebody else handled it"
- * would silently drop the payment. So a failure is confirmed by reading the
- * row back — if it is there, the insert lost a race it was meant to lose; if
- * it is not, something else is wrong and the error is rethrown for the handler
- * to answer 502 with.
- *
- * The lost race arrives as a raw `Failed query: insert into
- * "webhook_deliveries" ...` rather than Payload's `ValidationError`, measured
- * against a real D1: Payload's own uniqueness pre-check does not fire for this
- * field, which is the whole reason this works at all — a pre-check would be a
- * read followed by a write, and there is no transaction to make that pair
- * atomic.
+ * `lib/claims.ts` holds the mechanism and the reasoning — the unique index as
+ * the only atomic primitive, and the read-back that keeps a database outage
+ * from masquerading as a replay. This is only the name the delivery goes under,
+ * and it is namespaced by kind so that a Mollie payment id and a Remotion job
+ * id that happened to be the same string could never shadow each other.
  */
-async function claimDelivery(
-  req: PayloadRequest,
-  paymentId: string
-): Promise<boolean> {
-  try {
-    await req.payload.create({
-      collection: "webhook-deliveries",
-      data: { paymentId },
-      overrideAccess: true,
-    });
-
-    return true;
-  } catch (error) {
-    const { totalDocs } = await req.payload.find({
-      collection: "webhook-deliveries",
-      depth: 0,
-      limit: 1,
-      overrideAccess: true,
-      where: { paymentId: { equals: paymentId } },
-    });
-
-    if (totalDocs === 0) {
-      throw error;
-    }
-
-    return false;
-  }
-}
+const deliveryClaim = (paymentId: string) =>
+  ({ key: paymentId, kind: CLAIM_KINDS.mollieDelivery }) as const;
 
 /**
  * Gives the lock back, so a delivery that only half applied can be replayed.
@@ -289,22 +267,14 @@ async function claimDelivery(
  * those into no-ops — the lock would say the payment was handled when some of
  * its sponsorships never were.
  */
-async function releaseDelivery(
+function releaseDelivery(
   req: PayloadRequest,
   paymentId: string
 ): Promise<void> {
-  try {
-    await req.payload.delete({
-      collection: "webhook-deliveries",
-      overrideAccess: true,
-      where: { paymentId: { equals: paymentId } },
-    });
-  } catch (error) {
-    req.payload.logger.error(
-      { err: error },
-      `[mollie] Could not release the delivery claim for ${paymentId}; a replay of this payment will be refused`
-    );
-  }
+  return releaseClaim(req.payload, {
+    ...deliveryClaim(paymentId),
+    consequence: `[mollie] Could not release the delivery claim for ${paymentId}; a replay of this payment will be refused`,
+  });
 }
 
 /**
@@ -421,7 +391,7 @@ const mollieWebhook: PayloadHandler = async (
     }
   }
 
-  if (!(await claimDelivery(req, paymentId))) {
+  if (!(await takeClaim(req.payload, deliveryClaim(paymentId)))) {
     req.payload.logger.info(
       `[mollie] Payment ${paymentId} is already being handled; this delivery is a replay`
     );

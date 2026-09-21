@@ -18,6 +18,7 @@ import * as migration_20260921_090000_add_webhook_deliveries from "./20260921_09
 import * as migration_20260921_120000_sponsorship_payment_id_not_unique from "./20260921_120000_sponsorship_payment_id_not_unique";
 import * as migration_20260921_140000_add_renders from "./20260921_140000_add_renders";
 import * as migration_20260921_160000_add_render_completions from "./20260921_160000_add_render_completions";
+import * as migration_20260921_180000_add_claims from "./20260921_180000_add_claims";
 
 export const migrations = [
   {
@@ -119,5 +120,10 @@ export const migrations = [
     up: migration_20260921_160000_add_render_completions.up,
     down: migration_20260921_160000_add_render_completions.down,
     name: "20260921_160000_add_render_completions",
+  },
+  {
+    up: migration_20260921_180000_add_claims.up,
+    down: migration_20260921_180000_add_claims.down,
+    name: "20260921_180000_add_claims",
   },
 ];

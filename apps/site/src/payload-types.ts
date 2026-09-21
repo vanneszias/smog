@@ -75,9 +75,8 @@ export interface Config {
     sponsorships: Sponsorship;
     'admin-logs': AdminLog;
     'user-consents': UserConsent;
-    'webhook-deliveries': WebhookDelivery;
     renders: Render;
-    'render-completions': RenderCompletion;
+    claims: Claim;
     search: Search;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -94,9 +93,8 @@ export interface Config {
     sponsorships: SponsorshipsSelect<false> | SponsorshipsSelect<true>;
     'admin-logs': AdminLogsSelect<false> | AdminLogsSelect<true>;
     'user-consents': UserConsentsSelect<false> | UserConsentsSelect<true>;
-    'webhook-deliveries': WebhookDeliveriesSelect<false> | WebhookDeliveriesSelect<true>;
     renders: RendersSelect<false> | RendersSelect<true>;
-    'render-completions': RenderCompletionsSelect<false> | RenderCompletionsSelect<true>;
+    claims: ClaimsSelect<false> | ClaimsSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -335,16 +333,6 @@ export interface UserConsent {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "webhook-deliveries".
- */
-export interface WebhookDelivery {
-  id: number;
-  paymentId: string;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "renders".
  */
 export interface Render {
@@ -361,11 +349,13 @@ export interface Render {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "render-completions".
+ * via the `definition` "claims".
  */
-export interface RenderCompletion {
+export interface Claim {
   id: number;
-  jobId: string;
+  key: string;
+  kind: 'job-run' | 'mollie-delivery' | 'render-completion';
+  expiresAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -445,16 +435,12 @@ export interface PayloadLockedDocument {
         value: number | UserConsent;
       } | null)
     | ({
-        relationTo: 'webhook-deliveries';
-        value: number | WebhookDelivery;
-      } | null)
-    | ({
         relationTo: 'renders';
         value: number | Render;
       } | null)
     | ({
-        relationTo: 'render-completions';
-        value: number | RenderCompletion;
+        relationTo: 'claims';
+        value: number | Claim;
       } | null)
     | ({
         relationTo: 'search';
@@ -663,15 +649,6 @@ export interface UserConsentsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "webhook-deliveries_select".
- */
-export interface WebhookDeliveriesSelect<T extends boolean = true> {
-  paymentId?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "renders_select".
  */
 export interface RendersSelect<T extends boolean = true> {
@@ -687,10 +664,12 @@ export interface RendersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "render-completions_select".
+ * via the `definition` "claims_select".
  */
-export interface RenderCompletionsSelect<T extends boolean = true> {
-  jobId?: T;
+export interface ClaimsSelect<T extends boolean = true> {
+  key?: T;
+  kind?: T;
+  expiresAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

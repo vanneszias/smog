@@ -1,4 +1,5 @@
 import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
+import { CLAIM_KINDS, releaseClaim, takeClaim } from "@/lib/claims";
 import { equalConstantTime } from "@/lib/constantTime";
 import { createMuxAssetFromUrl, signedMuxSourceUrl } from "@/lib/mux";
 import {
@@ -48,15 +49,31 @@ import type { Render } from "@/payload-types";
  * is a SELECT**, measured on this adapter, with two concurrent conditional
  * updates both reporting a changed row.
  *
- * So the claim is its own insert against its own unique index:
- * `collections/RenderCompletions.ts`, one row per job id, taken **before any
- * Mux call**. First callback inserts and proceeds; a replay's insert fails and
- * is answered 200 having done nothing; a failure that is *not* a duplicate is
- * confirmed by reading the row back, so a database outage cannot masquerade as
- * a replay and silently drop a render somebody paid for.
+ * So the claim is its own insert against its own unique index: one `claims`
+ * row per job id, taken **before any Mux call**. First callback inserts and
+ * proceeds; a replay's insert fails and is answered 200 having done nothing; a
+ * failure that is *not* a duplicate is confirmed by reading the row back, so a
+ * database outage cannot masquerade as a replay and silently drop a render
+ * somebody paid for.
  *
  * The claim is handed back whenever the work did not complete, which is what
  * keeps that safe — see `releaseCompletion`.
+ *
+ * That was `render-completions`, a table of its own, until Stage 7 folded it
+ * and `webhook-deliveries` into one generic `claims` table — the refactor
+ * `collections/RenderCompletions.ts` deferred until all four consumers were
+ * visible. **Nothing about this handler's behaviour changed**, and the way
+ * that is known is that Stage 6's concurrency mutation still fails Stage 6's
+ * tests through the new table: drop `unique` from `claims.key` and `survives
+ * two concurrent callbacks for one job` fails.
+ *
+ * The claim carries **no expiry**, and that is load-bearing rather than a
+ * default. `endpoints/jobs.ts` leases its claim, because a runner that dies
+ * must not stop the queue for ever. A completion claim that expired would let
+ * a Lambda retry — AWS's delivery contract is at-least-once — upload the same
+ * render again once the lease lapsed, which is the second Mux asset and the
+ * monthly bill this whole mechanism exists to prevent. A render job id is used
+ * once, so nothing legitimate ever needs the row back.
  *
  * ## The world moves while a render runs
  *
@@ -312,49 +329,17 @@ async function findRender(
 }
 
 /**
- * Takes the completion lock, answering `false` if another callback has it.
+ * The claim one callback is taken with.
  *
- * The `catch` cannot simply assume a duplicate: a create can also fail because
- * the database is unreachable, and treating that as "somebody else handled it"
- * would answer 200 to a render nothing was done about — Lambda stops retrying,
- * and a composite that cost real money is silently dropped. So a failure is
- * confirmed by reading the row back; if it is not there, something else is
- * wrong and the error is rethrown for the handler to fail loudly with.
- *
- * The lost race arrives as a raw `Failed query: insert into
- * "render_completions" ...` rather than Payload's `ValidationError`, which is
- * not an accident: Payload's own `unique` pre-check is a read followed by a
- * write, so it does not fire under concurrency — and if it did, it would be
- * exactly the read-then-write pair this mechanism exists to avoid.
+ * `lib/claims.ts` holds the mechanism and the reasoning — the unique index as
+ * the only atomic primitive, and the read-back that keeps a database outage
+ * from masquerading as a replay and silently dropping a render somebody paid
+ * for. This is only the name the callback goes under, namespaced by kind so
+ * that a Remotion job id and a Mollie payment id that happened to be the same
+ * string could never shadow each other.
  */
-async function claimCompletion(
-  req: PayloadRequest,
-  jobId: string
-): Promise<boolean> {
-  try {
-    await req.payload.create({
-      collection: "render-completions",
-      data: { jobId },
-      overrideAccess: true,
-    });
-
-    return true;
-  } catch (error) {
-    const { totalDocs } = await req.payload.find({
-      collection: "render-completions",
-      depth: 0,
-      limit: 1,
-      overrideAccess: true,
-      where: { jobId: { equals: jobId } },
-    });
-
-    if (totalDocs === 0) {
-      throw error;
-    }
-
-    return false;
-  }
-}
+const completionClaim = (jobId: string) =>
+  ({ key: jobId, kind: CLAIM_KINDS.renderCompletion }) as const;
 
 /**
  * Gives the lock back, so the retry Lambda is about to make can finish the job.
@@ -368,22 +353,11 @@ async function claimCompletion(
  * a failure path by the time it gets here, and replacing whatever went wrong
  * with "could not delete a row" would lose the original fault.
  */
-async function releaseCompletion(
-  req: PayloadRequest,
-  jobId: string
-): Promise<void> {
-  try {
-    await req.payload.delete({
-      collection: "render-completions",
-      overrideAccess: true,
-      where: { jobId: { equals: jobId } },
-    });
-  } catch (error) {
-    req.payload.logger.error(
-      { err: error },
-      `[render] Could not release the completion claim on render job ${jobId}; a retry of this render will be turned away as a replay`
-    );
-  }
+function releaseCompletion(req: PayloadRequest, jobId: string): Promise<void> {
+  return releaseClaim(req.payload, {
+    ...completionClaim(jobId),
+    consequence: `[render] Could not release the completion claim on render job ${jobId}; a retry of this render will be turned away as a replay`,
+  });
 }
 
 /** Records a render that will never produce a playable asset. */
@@ -590,7 +564,7 @@ const renderCallback: PayloadHandler = async (
     return acknowledged();
   }
 
-  if (!(await claimCompletion(req, report.jobId))) {
+  if (!(await takeClaim(req.payload, completionClaim(report.jobId)))) {
     req.payload.logger.info(
       `[render] Render job ${report.jobId} has already been completed; this callback is a replay`
     );

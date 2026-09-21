@@ -190,7 +190,7 @@ git add -A && git commit -m "feat(site): send mail through the Cloudflare bindin
 
 This is the refactor Stage 6 deliberately deferred until there were four consumers. There are: the Mollie webhook, the render callback, and two of the jobs below.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // Review Focus 2 — the endpoint executes work.
@@ -219,9 +219,9 @@ it("keeps two consumers with the same key from colliding", () => {
 });
 ```
 
-- [ ] **Step 2: Run, implement, run.** `Claims` is `{ key: unique, kind, claimedAt, expiresAt }`; the key is namespaced by `kind` so two consumers cannot collide. **Re-run Stage 5's and Stage 6's concurrency mutations afterwards** — dropping `unique` must still fail their tests through the new table.
+- [x] **Step 2: Run, implement, run.** `Claims` is `{ key: unique, kind, claimedAt, expiresAt }`; the key is namespaced by `kind` so two consumers cannot collide. **Re-run Stage 5's and Stage 6's concurrency mutations afterwards** — dropping `unique` must still fail their tests through the new table.
 
-- [ ] **Step 3: Mutation-prove**
+- [x] **Step 3: Mutation-prove**
 
 | mutation | must fail |
 |---|---|
@@ -232,7 +232,42 @@ it("keeps two consumers with the same key from colliding", () => {
 | the claim never released | "the next tick runs" |
 | the claim given no expiry | the dead-worker test |
 
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
+
+**Five corrections, made while implementing.**
+
+1. **`expiresAt` cannot be mandatory, and the plan's flat `{ key, kind,
+   claimedAt, expiresAt }` hides the most dangerous decision in the table.**
+   A `job-run` claim is a **lease** — it must lapse, or one crashed runner
+   ends scheduled work for ever. A `mollie-delivery` or `render-completion`
+   claim is a **receipt** — it must never lapse, because a render job id's
+   claim expiring lets a retried Lambda callback (at-least-once delivery)
+   create a second Mux asset, which is a bill every month for a video nothing
+   points at. So `expiresAt` is nullable and the choice is per consumer, and
+   both mistakes are silent. `lib/claims.ts` says so at length.
+2. **`claimedAt` is `createdAt`.** Payload gives every collection one, the two
+   tables this replaces relied on it for their `defaultColumns`, and nothing
+   re-claims a row in place — so a second column would only be a second
+   spelling of the same fact. Omitted.
+3. **`GET /api/payload-jobs/run` is Payload's own endpoint and does not
+   exist.** `config.jobs.enabled` is false until a task is registered, so
+   Payload registers no jobs endpoint and no `payload-jobs` collection — and
+   an endpoint Payload owns is not one this application can put a token in
+   front of. The endpoint is **`GET /api/jobs/run`**, ours, in
+   `src/endpoints/jobs.ts`. Measured while writing the tests:
+   `payload.jobs.run()` in that state answers `noJobsRemaining` rather than
+   throwing.
+4. **The migration has to carry the existing rows across.** Creating an empty
+   `claims` table and dropping the two old ones passes every schema assertion
+   and makes every completed render replayable. Each old row is copied under
+   its namespaced key with `expires_at` NULL, and `migrations.test.ts` proves
+   it by replaying the chain to the migration before the merge, inserting a
+   row in each old table, and running the merge.
+5. **A Cloudflare Cron Trigger does not call a URL.** It invokes the Worker's
+   `scheduled()` handler; nothing in `wrangler.jsonc` can point a cron at a
+   path. Task 5 will need worker-level wiring (an OpenNext `scheduled` export
+   that fetches this endpoint) rather than a `"crons"` entry alone. Flagged
+   here rather than solved, because Task 5 owns it.
 
 ---
 

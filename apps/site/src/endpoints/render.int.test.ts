@@ -257,13 +257,21 @@ describe("the render callback", () => {
     return docs[0];
   };
 
+  /**
+   * The completion claim, looked up by the key `lib/claims.ts` actually stores.
+   *
+   * Namespaced by kind, and spelled out here rather than imported: the whole
+   * point of the namespace is that a Remotion job id and a Mollie payment id
+   * cannot shadow each other, and a helper shared with the code under test
+   * would agree with whatever that code did.
+   */
   const completionsFor = async (id: string) => {
     const { totalDocs } = await payload.find({
-      collection: "render-completions",
+      collection: "claims",
       depth: 0,
       limit: 1,
       overrideAccess: true,
-      where: { jobId: { equals: id } },
+      where: { key: { equals: `render-completion:${id}` } },
     });
 
     return totalDocs;
@@ -544,9 +552,9 @@ describe("the render callback", () => {
     expect(muxUploads).toHaveLength(1);
 
     await payload.delete({
-      collection: "render-completions",
+      collection: "claims",
       overrideAccess: true,
-      where: { jobId: { equals: id } },
+      where: { key: { equals: `render-completion:${id}` } },
     });
 
     expect((await deliver(successReport(id))).status).toBe(200);
@@ -568,7 +576,7 @@ describe("the render callback", () => {
     const spy = vi
       .spyOn(payload, "create")
       .mockImplementation((args: Parameters<typeof create>[0]) =>
-        args.collection === "render-completions"
+        args.collection === "claims"
           ? Promise.reject(new Error("D1_ERROR: network is unreachable"))
           : create(args)
       );

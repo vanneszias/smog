@@ -15,20 +15,20 @@ import type { GetPlatformProxyOptions } from "wrangler";
 import { isAdmin, publicReadActive } from "./access";
 import { AdminLogs } from "./collections/AdminLogs";
 import { Categories } from "./collections/Categories";
+import { Claims } from "./collections/Claims";
 import { Gestures } from "./collections/Gestures";
 import { Lists } from "./collections/Lists";
 import { Media } from "./collections/Media";
-import { RenderCompletions } from "./collections/RenderCompletions";
 import { Renders } from "./collections/Renders";
 import { Sponsorships } from "./collections/Sponsorships";
 import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
-import { WebhookDeliveries } from "./collections/WebhookDeliveries";
 import { cloudflareEmailAdapter } from "./email/adapter";
 import { accountEndpoints } from "./endpoints/account";
 import { authEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
+import { jobsEndpoints } from "./endpoints/jobs";
 import { listsEndpoints } from "./endpoints/lists";
 import { mollieEndpoints } from "./endpoints/mollie";
 import { oauthEndpoints } from "./endpoints/oauth";
@@ -165,9 +165,8 @@ export default buildConfig({
     Sponsorships,
     AdminLogs,
     UserConsents,
-    WebhookDeliveries,
     Renders,
-    RenderCompletions,
+    Claims,
   ],
   editor: lexicalEditor(),
   /*
@@ -225,6 +224,13 @@ export default buildConfig({
    * opposite arrangement from Mollie's: there is nobody to ask back about a
    * render, so the body *is* the evidence and an HMAC over it is the whole of
    * the authentication. See `endpoints/render.ts`.
+   *
+   * `jobsEndpoints` adds `GET /api/jobs/run`, the only thing that runs
+   * Payload's queue on Workers — `autoRun` needs a long-lived process and
+   * there is not one. It is the third endpoint something outside a browser
+   * calls, it carries a shared secret in `Authorization`, and it answers every
+   * caller the same bytes so that a right token cannot be told from a wrong
+   * one. See `endpoints/jobs.ts`.
    */
   endpoints: [
     ...crawlerEndpoints,
@@ -232,6 +238,7 @@ export default buildConfig({
     ...oauthEndpoints,
     ...favoritesEndpoints,
     ...accountEndpoints,
+    ...jobsEndpoints,
     ...listsEndpoints,
     ...sponsorshipEndpoints,
     ...mollieEndpoints,

@@ -36,6 +36,9 @@ import { migrations } from "./index";
 
 const dialect = new SQLiteSyncDialect();
 
+/** The migration that folded `webhook_deliveries` and `render_completions` into one table. */
+const MERGE_MIGRATION = "20260921_180000_add_claims";
+
 /**
  * The migrations call `db.run(sql`...`)`, where `sql` is Drizzle's template
  * tag and the argument is a query object, not a string. Rendering it through
@@ -164,46 +167,99 @@ describe("migration chain", () => {
     expect(byName.get("sponsorships_mollie_payment_id_idx")).toBe(0);
   });
 
-  it("gives webhook-deliveries a UNIQUE index on the payment id", async () => {
-    // Not a data-quality nicety. `endpoints/mollie.ts` claims a Mollie
-    // delivery by inserting this row, and the unique index is the only
-    // atomic operation this database offers — there are no transactions, and
-    // an `update` with a `where` was measured resolving its filter with a
-    // separate SELECT, so two concurrent deliveries both "won" it. Downgrade
-    // this index to an ordinary one and the webhook silently goes back to
-    // read-then-write: one payment, two transitions, two log rows, two
-    // emails. `pushDevSchema` derives the local schema from the collection
-    // config and never opens a migration file, so only this asserts that a
-    // *deployed* database gets the constraint.
+  it("gives claims a UNIQUE index on the key", async () => {
+    // Not a data-quality nicety, and the one assertion in this file that three
+    // separate consumers rest on. `endpoints/mollie.ts`, `endpoints/render.ts`
+    // and `endpoints/jobs.ts` all claim work by inserting a row here, and the
+    // unique index is the only atomic operation this database offers — there
+    // are no transactions, and an `update` with a `where` was measured
+    // resolving its filter with a separate SELECT, so two concurrent writers
+    // both "won" it. Downgrade this index to an ordinary one and every one of
+    // them silently goes back to read-then-write: one payment advanced twice,
+    // two Mux assets for one render, and two job runs at once.
+    //
+    // `pushDevSchema` derives the local schema from the collection config and
+    // never opens a migration file, so only this asserts that a *deployed*
+    // database gets the constraint.
     const { database } = await chain();
     const byName = new Map(
-      indexesOn(database, "webhook_deliveries").map((i) => [i.name, i.unique])
+      indexesOn(database, "claims").map((i) => [i.name, i.unique])
     );
 
-    expect(byName.get("webhook_deliveries_payment_id_idx")).toBe(1);
+    expect(byName.get("claims_key_idx")).toBe(1);
+    // And the two columns a sweep filters on are indexed but emphatically not
+    // unique: many claims share a kind, and many share an expiry.
+    expect(byName.get("claims_kind_idx")).toBe(0);
+    expect(byName.get("claims_expires_at_idx")).toBe(0);
   });
 
-  it("refuses a second webhook-deliveries row for one payment", async () => {
+  it("refuses a second claims row for one key", async () => {
     // The index asserted as behaviour rather than as metadata: a unique
     // index that SQLite reports but does not apply would satisfy the
     // assertion above, and the whole guard rests on this INSERT failing.
     const { database } = await chain();
 
     database.exec(
-      `INSERT INTO webhook_deliveries (id, payment_id) VALUES (7300, 'tr_migration_probe');`
+      `INSERT INTO claims (id, key, kind) VALUES (7300, 'mollie-delivery:tr_migration_probe', 'mollie-delivery');`
     );
 
     expect(() =>
       database.exec(
-        `INSERT INTO webhook_deliveries (id, payment_id) VALUES (7301, 'tr_migration_probe');`
+        `INSERT INTO claims (id, key, kind) VALUES (7301, 'mollie-delivery:tr_migration_probe', 'mollie-delivery');`
       )
     ).toThrow(/UNIQUE/i);
   });
 
+  it("lets two kinds hold the same underlying identifier", async () => {
+    // The reason the stored key is `${kind}:${key}` and not the caller's
+    // string. A Mollie payment id and a Remotion job id are both opaque
+    // strings chosen elsewhere; if they collided in this table one consumer
+    // would find the other's claim taken and skip work only it could do.
+    const { database } = await chain();
+
+    expect(() => {
+      database.exec(
+        `INSERT INTO claims (id, key, kind) VALUES (7310, 'mollie-delivery:same-string', 'mollie-delivery');`
+      );
+      database.exec(
+        `INSERT INTO claims (id, key, kind) VALUES (7311, 'render-completion:same-string', 'render-completion');`
+      );
+      database.exec(
+        `INSERT INTO claims (id, key, kind) VALUES (7312, 'job-run:same-string', 'job-run');`
+      );
+    }).not.toThrow();
+  });
+
+  it("lets a claim be kept for ever or expire", async () => {
+    // One table holds a receipt (`expires_at` NULL, kept for ever, which is
+    // what stops a replayed Lambda callback making a second Mux asset) and a
+    // lease (`expires_at` set, so a job runner that dies does not stop the
+    // queue for good). A NOT NULL column here would make the first impossible.
+    const { database } = await chain();
+
+    database.exec(
+      `INSERT INTO claims (id, key, kind) VALUES (7320, 'render-completion:receipt', 'render-completion');`
+    );
+    database.exec(
+      `INSERT INTO claims (id, key, kind, expires_at) VALUES (7321, 'job-run:lease', 'job-run', '2026-01-01T00:00:00.000Z');`
+    );
+
+    expect(
+      database
+        .prepare(
+          "SELECT key, expires_at FROM claims WHERE id IN (7320, 7321) ORDER BY id"
+        )
+        .all()
+    ).toEqual([
+      { key: "render-completion:receipt", expires_at: null },
+      { key: "job-run:lease", expires_at: "2026-01-01T00:00:00.000Z" },
+    ]);
+  });
+
   it("gives renders a UNIQUE index on the job id", async () => {
-    // The same claim mechanism as `webhook-deliveries`, for the same reason
-    // and with the same failure mode. `endpoints/render.ts` takes a render
-    // job by inserting this row, and a unique index is the only atomic
+    // The same claim mechanism as `claims` above, for the same reason and with
+    // the same failure mode, on a different table. `endpoints/render.ts` takes
+    // a render job by inserting this row, and a unique index is the only atomic
     // operation this database offers: there are no transactions, and an
     // `update` with a `where` was measured resolving its filter with a
     // separate SELECT, so two concurrent writers both "won" it. Downgrade
@@ -227,9 +283,9 @@ describe("migration chain", () => {
 
   it("refuses a second renders row for one job id", async () => {
     // The index asserted as behaviour rather than as metadata, exactly as for
-    // `webhook_deliveries` above: a unique index SQLite reports but does not
-    // apply would satisfy the assertion above, and the whole guard rests on
-    // this INSERT failing.
+    // `claims` above: a unique index SQLite reports but does not apply would
+    // satisfy the assertion above, and the whole guard rests on this INSERT
+    // failing.
     const { database } = await chain();
 
     database.exec(
@@ -243,79 +299,73 @@ describe("migration chain", () => {
     ).toThrow(/UNIQUE/i);
   });
 
-  it("gives render-completions a UNIQUE index on the job id", async () => {
-    // The *second* claim this stage needs, and a different one from
-    // `renders.jobId` next door. That row is inserted by the submitter at
-    // checkout, so it already exists when Remotion Lambda calls back and two
-    // concurrent callbacks would both lose an insert against it. This table is
-    // what serialises the callbacks themselves — see
-    // `collections/RenderCompletions.ts`. Downgrade this index to an ordinary
-    // one and two callbacks for one render both upload: two Mux assets, one
-    // referenced, and a bill every month for the other. `pushDevSchema`
-    // derives the local schema from the collection config and never opens a
-    // migration file, so only this asserts that a *deployed* database gets it.
-    const { database } = await chain();
-    const byName = new Map(
-      indexesOn(database, "render_completions").map((i) => [i.name, i.unique])
-    );
+  it("carries the two old claim tables' rows into claims", async () => {
+    /*
+     * The half of this migration that is not schema, and the half that can
+     * lose money.
+     *
+     * A `webhook_deliveries` or `render_completions` row is a *receipt* — it
+     * says the work was done. Creating an empty `claims` table and dropping
+     * the two old ones would pass every assertion above and make every
+     * completed render replayable the moment AWS retried a callback: at-least-
+     * once delivery, a second Mux asset, a bill every month for a video
+     * nobody can name.
+     *
+     * So this replays the chain up to the migration *before* the merge, puts a
+     * row in each old table, and then runs the merge — which is the only way
+     * to observe a data migration at all, since `chain()` above starts from an
+     * empty database.
+     */
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys = ON;");
+    const runner = migrationRunner(database);
+    const merge = migrations.findIndex((m) => m.name === MERGE_MIGRATION);
 
-    expect(byName.get("render_completions_job_id_idx")).toBe(1);
-  });
+    expect(merge).toBeGreaterThan(0);
 
-  it("refuses a second render-completions row for one job id", async () => {
-    // The index asserted as behaviour rather than as metadata, exactly as for
-    // `webhook_deliveries` and `renders` above: a unique index SQLite reports
-    // but does not apply would satisfy the assertion above, and the whole
-    // guard rests on this INSERT failing.
-    const { database } = await chain();
-
-    database.exec(
-      `INSERT INTO render_completions (id, job_id) VALUES (7700, 'completion-migration-probe');`
-    );
-
-    expect(() =>
-      database.exec(
-        `INSERT INTO render_completions (id, job_id) VALUES (7701, 'completion-migration-probe');`
-      )
-    ).toThrow(/UNIQUE/i);
-  });
-
-  it("keeps the two render claims independent of each other", async () => {
-    // A completion claim is per callback and a render claim is per job, and
-    // they happen to be keyed on the same string. Nothing joins them, and the
-    // failure this pins is a future "tidy-up" that makes one a foreign key on
-    // the other: a completion row would then be impossible to insert before
-    // the render row exists, or impossible to delete when the callback hands
-    // the claim back after a Mux outage — which is the one thing that lets a
-    // retry finish the job.
-    const { database } = await chain();
+    for (const migration of migrations.slice(0, merge)) {
+      await migration.up(runner.args);
+    }
 
     database.exec(
-      `INSERT INTO render_completions (id, job_id) VALUES (7702, 'completion-with-no-render');`
+      `INSERT INTO webhook_deliveries (id, payment_id, created_at, updated_at) VALUES (1, 'tr_already_handled', '2026-09-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z');`
     );
+    database.exec(
+      `INSERT INTO render_completions (id, job_id, created_at, updated_at) VALUES (1, 'render-already-uploaded', '2026-09-02T00:00:00.000Z', '2026-09-02T00:00:00.000Z');`
+    );
+
+    await migrations[merge]?.up(runner.args);
+
     expect(
       database
-        .prepare("SELECT job_id FROM render_completions WHERE id = 7702")
+        .prepare(
+          "SELECT key, kind, expires_at, created_at FROM claims ORDER BY key"
+        )
         .all()
-    ).toEqual([{ job_id: "completion-with-no-render" }]);
+    ).toEqual([
+      {
+        key: "mollie-delivery:tr_already_handled",
+        kind: "mollie-delivery",
+        expires_at: null,
+        created_at: "2026-09-01T00:00:00.000Z",
+      },
+      {
+        key: "render-completion:render-already-uploaded",
+        kind: "render-completion",
+        expires_at: null,
+        created_at: "2026-09-02T00:00:00.000Z",
+      },
+    ]);
 
-    database.exec("DELETE FROM render_completions WHERE id = 7702;");
+    // And back again, so a rollback does not lose them either.
+    await migrations[merge]?.down(runner.args);
+
     expect(
-      database
-        .prepare("SELECT id FROM render_completions WHERE id = 7702")
-        .all()
-    ).toEqual([]);
-
-    // And the same string may sit in both tables at once, which is the
-    // ordinary case: one job, one submission, one callback.
-    database.exec(
-      `INSERT INTO renders (id, job_id, state) VALUES (7703, 'both-claims', 'queued');`
-    );
-    expect(() =>
-      database.exec(
-        `INSERT INTO render_completions (id, job_id) VALUES (7704, 'both-claims');`
-      )
-    ).not.toThrow();
+      database.prepare("SELECT payment_id FROM webhook_deliveries").all()
+    ).toEqual([{ payment_id: "tr_already_handled" }]);
+    expect(
+      database.prepare("SELECT job_id FROM render_completions").all()
+    ).toEqual([{ job_id: "render-already-uploaded" }]);
   });
 
   it("lets a sponsorship be deleted and leaves its render behind", async () => {

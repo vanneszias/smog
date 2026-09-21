@@ -88,8 +88,10 @@ export function canAdvance(from: RenderState, to: RenderState): boolean {
  *
  * A unique index is the one atomic primitive left, because SQLite evaluates it
  * inside the INSERT. That is what `renders.jobId` is for, and the whole of why
- * `collections/Renders.ts` exists. See its doc block, and
- * `collections/WebhookDeliveries.ts`, which established the pattern in Stage 5.
+ * `collections/Renders.ts` exists. See its doc block, and `lib/claims.ts`,
+ * which now holds the pattern `collections/WebhookDeliveries.ts` established
+ * in Stage 5 — that collection and `render-completions` were folded into one
+ * `claims` table in Stage 7 once there were four consumers.
  *
  * ## Why the failure is confirmed by reading the row back
  *

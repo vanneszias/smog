@@ -190,13 +190,21 @@ describe("the Mollie webhook", () => {
     return docs;
   };
 
+  /**
+   * The delivery claim, looked up by the key `lib/claims.ts` actually stores.
+   *
+   * Namespaced by kind, and spelled out here rather than imported: the whole
+   * point of the namespace is that a Mollie payment id and a Remotion job id
+   * cannot shadow each other, and a helper shared with the code under test
+   * would agree with whatever that code did.
+   */
   const claimsFor = async (paymentId: string) => {
     const { totalDocs } = await payload.find({
-      collection: "webhook-deliveries",
+      collection: "claims",
       depth: 0,
       limit: 1,
       overrideAccess: true,
-      where: { paymentId: { equals: paymentId } },
+      where: { key: { equals: `mollie-delivery:${paymentId}` } },
     });
 
     return totalDocs;
@@ -708,7 +716,7 @@ describe("the Mollie webhook", () => {
     const spy = vi
       .spyOn(payload, "create")
       .mockImplementation((args: Parameters<typeof create>[0]) =>
-        args.collection === "webhook-deliveries"
+        args.collection === "claims"
           ? Promise.reject(new Error("D1_ERROR: network is unreachable"))
           : create(args)
       );
