@@ -476,8 +476,12 @@ describe("tailwind.config.js", () => {
     );
   });
 
-  it("does not silently agree when a role is missing", () => {
-    expect(renderTailwindConfig()).not.toContain('"surface": undefined');
+  it("emits every semantic role", () => {
+    const config = renderTailwindConfig();
+
+    for (const role of Object.keys(tokens.semantic.light)) {
+      expect(config).toContain(`"${kebabRole(role)}":`);
+    }
   });
 
   it("renders every spacing step", () => {
@@ -491,9 +495,22 @@ describe("tailwind.config.js", () => {
 ```
 
 The first test is the drift guard: it fails the moment somebody edits
-`tokens.ts` without running the generator, which is the whole point. The
-fourth exists because `${undefined}` stringifies happily and a missing
-semantic role would otherwise pass every `toContain` around it.
+`tokens.ts` without running the generator, which is the whole point.
+
+The fourth exists because the first three name **two** roles between them, and
+a generator that dropped the other seventeen would satisfy all of them. It
+derives its expectations from `tokens.semantic.light` rather than listing roles
+by hand — a hand-written list is the same vacuousness one level up.
+
+**An earlier draft of this plan asserted
+`not.toContain('"surface": undefined')` here, and that assertion cannot fail.**
+`JSON.stringify` drops keys whose value is `undefined` rather than emitting the
+literal, and `colors()` assigns a key only when `Object.entries` yields the
+role — so a dropped role produces an *absent key*, never that substring. The
+draft had reasoned about `${undefined}` interpolating into a template literal,
+which is not how the generator emits colours. Task 2's reviewer caught it.
+Recorded here rather than quietly corrected, because a test that cannot fail
+reads like coverage, which is what makes it worse than no test at all.
 
 - [ ] **Step 2: Run it and watch it fail**
 
