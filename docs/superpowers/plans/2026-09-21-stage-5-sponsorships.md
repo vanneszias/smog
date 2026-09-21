@@ -1284,12 +1284,12 @@ git add -A && git commit -m "feat(site): stamp and justify an admin's review dec
 
 ### Task 10: Stage exit
 
-- [ ] Re-measure the bundle: `CLOUDFLARE_ENV=staging bun run build:app && bun run check-bundle-size`. **Record the number and the delta from 7.31 MiB**, and state whether Stages 6 and 7 still fit in what is left. If this stage spent more than about 0.7 MiB, say so as a finding rather than as a footnote.
-- [ ] Confirm no `app/**/route.ts` imports Payload: `find apps/site/src/app -name 'route.ts'` must return only the three under `(payload)/`.
-- [ ] Confirm nothing under `apps/site` imports `@smog/auth` or WorkOS — `src/authBoundary.test.ts` already enforces this and must still pass.
-- [ ] `bun release:check` green; `site-e2e` green.
-- [ ] Re-run the Stage 1 referential-integrity mutations for `sponsorships.gesture` — the spec's ruling is "refuse, with a real message", and this stage adds the first non-admin writer of that relationship.
-- [ ] State explicitly whether each exit criterion below is met.
+- [x] Re-measure the bundle: `CLOUDFLARE_ENV=staging bun run build:app && bun run check-bundle-size`. **Record the number and the delta from 7.31 MiB**, and state whether Stages 6 and 7 still fit in what is left. If this stage spent more than about 0.7 MiB, say so as a finding rather than as a footnote.
+- [x] Confirm no `app/**/route.ts` imports Payload: `find apps/site/src/app -name 'route.ts'` must return only the three under `(payload)/`.
+- [x] Confirm nothing under `apps/site` imports `@smog/auth` or WorkOS — `src/authBoundary.test.ts` already enforces this and must still pass.
+- [x] `bun release:check` green; `site-e2e` green.
+- [x] Re-run the Stage 1 referential-integrity mutations for `sponsorships.gesture` — the spec's ruling is "refuse, with a real message", and this stage adds the first non-admin writer of that relationship.
+- [x] State explicitly whether each exit criterion below is met.
 
 ## Stage 5 exit criteria
 
@@ -1302,3 +1302,82 @@ git add -A && git commit -m "feat(site): stamp and justify an admin's review dec
 7. An admin can approve or reject from the Payload panel; rejecting requires a reason.
 8. A gesture with an active in-term sponsorship cannot be sold the same window twice.
 9. The bundle is measured and recorded, and no `app/**/route.ts` imports Payload.
+
+## Stage 5 exit: measured
+
+**Bundle: 7.33 MiB gzipped of 10.00 MiB — 27% headroom.** Measured with
+`CLOUDFLARE_ENV=staging bun run build:app && bun run check-bundle-size`
+(`wrangler deploy --dry-run` over the real `.open-next/worker.js`, not an
+estimate). Stage 4 closed at 7,483.37 KiB; this is 7,510.12 KiB, so **the
+whole stage cost +26.75 KiB** — a payment flow, a webhook, a four-page wizard
+and two collections, for the price of a rounding error. That is what choosing
+`fetch` over a 2.1 MB SDK and endpoints over route handlers buys. Stages 6 and
+7 still have ~2.67 MiB between them.
+
+**No `app/**/route.ts` imports Payload.** The only route handlers in the tree
+remain the three Payload generates into `app/(payload)/`. Every write this
+stage added is a Payload endpoint behind a `next.config.ts` rewrite.
+
+**Referential integrity re-checked with Stage 5's writers in place.** The spec
+rules that `sponsorships.gesture` must "refuse, with a real message". Removing
+the throw from `hooks/blockDeleteWhenSponsored.ts` fails 3 tests in
+`Gestures.delete.int.test.ts`, including the bulk-delete path the admin list
+view uses. Still load-bearing.
+
+**Suites:** 1206 unit tests in 91 files, run three times from a cleared
+`.wrangler/state` — `EXIT=0` and 1206 passed each time. 117 e2e, no flaky.
+`check-types`, `bun check` and `knip` clean.
+
+**`bun release:check`:** everything green except `expo-doctor`, which fails on
+two network checks — "Host not in..." reaching the Expo config schema endpoint
+and "Directory check failed with unexpected server response" for the React
+Native Directory. `AGENTS.md` documents this as a sandbox-environment failure
+to confirm against CI rather than chase; it runs against `apps/native`, which
+this stage never touched, and CI has been green on every push.
+
+### Each criterion, stated
+
+| # | criterion | met | evidence |
+|---|---|---|---|
+| 1 | select up to 10 gestures, enter details, upload a logo, reach Mollie | **yes** | `endpoints/sponsorships.int.test.ts`; `tests/e2e/sponsor.spec.ts` |
+| 2 | a paid payment advances every sponsorship exactly once, under retries and concurrency | **yes** | `collections/WebhookDeliveries.ts` claim; the concurrent-delivery test |
+| 3 | failed/expired/cancelled resolves rather than hanging | **yes** | `endpoints/mollie.int.test.ts` — a deliberate divergence from the shipped handler, which leaves them pending for ever |
+| 4 | no transition outside the table, including through `overrideAccess` | **yes** | `hooks/enforceStatusTransitions.ts` |
+| 5 | one `admin-logs` row per change, via `overrideAccess`, a failed log never fails the transition | **yes** | `hooks/logSponsorshipTransitions.int.test.ts` |
+| 6 | a re-edit token reads one sponsorship, expires, cannot approve or reprice | **yes** | `access/sponsorships.int.test.ts` — the tokenless guard is provable only because of a second fixture; see below |
+| 7 | an admin approves or rejects; rejecting requires a reason | **yes** | `hooks/stampReviewDecision.ts` |
+| 8 | a gesture cannot be sold the same window twice | **yes, and wider than written** | `lib/sponsorSelection.ts` blocks `pending_payment` and `pending_approval` too, matching the shipped `checkExistingSponsorship` |
+| 9 | bundle measured; no route handler imports Payload | **yes** | above |
+
+All nine are met.
+
+### Carried out of Stage 5
+
+None of these fails a test today, which is why they are written down.
+
+- **The preview is not composited.** Decided with the product owner:
+  `lib/renderPreview.ts` returns the original playback id and Stage 6 replaces
+  the body, not the signature. A sponsor pays without seeing the finished
+  overlay until then.
+- **Approval does not copy the video onto the gesture.** The shipped `approve`
+  writes `sponsoredVideoPlaybackId` through and rewrites the dates. There is no
+  composited video to copy until Stage 6, and the dates are already written at
+  creation. Stage 6 owns the first half; the second is deliberate and recorded
+  in Task 7.
+- **An abandoned `pending_payment` row blocks its gesture.** The price of
+  matching the shipped availability rule, and the lesser of the two bugs — the
+  alternative sells one gesture twice. It ends when Stage 7 ships
+  `cleanup-stale-payments`. **This is a live gap between now and then.**
+- **Nothing sweeps an orphaned `media` upload.** A logo stored just before a
+  failed write survives. Ordered so the leftover is always a file and never a
+  sponsorship pointing at nothing. Stage 7.
+- **The admin cannot deliver a re-edit link yet.** The token is minted, stored
+  and `hidden: true`; the mail that would carry it is Stage 7. The clear-text
+  decision still holds — a server-side read with `showHiddenFields: true` is
+  how an admin component would rebuild the URL — but nothing reads it today.
+- **An administrator can extend a live token by editing
+  `reEditTokenExpiresAt`** in the panel without being able to see the token.
+- **One unexplained `EXIT=1`.** A single Vitest run during Task 8 exited 1
+  while its own summary said `1206 passed`. Three subsequent runs from a
+  cleared state were `EXIT=0`. Not reproduced, not explained, and recorded
+  rather than dismissed.
