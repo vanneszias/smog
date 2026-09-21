@@ -10,27 +10,32 @@ its own plan document, per `superpowers:writing-plans`.
 | 0 | Foundation and spikes | [`2026-09-19-stage-0-foundation.md`](./2026-09-19-stage-0-foundation.md) | — |
 | 1 | Content model | [`2026-09-19-stage-1-content-model.md`](./2026-09-19-stage-1-content-model.md) | 0 |
 | 2 | Design system | [`2026-09-19-stage-2-design-system.md`](./2026-09-19-stage-2-design-system.md) | 0 |
-| 3 | Public web | written when Stage 2 lands | 1, 2 |
-| 4 | Auth | written when Stage 3 lands | 1, 2 |
-| 5 | Sponsorships | written when Stage 4 lands | 1, 4 |
-| 6 | Video pipeline | written when Stage 0 gate 1 resolves | 0 gate 1, 5 |
-| 7 | Email and jobs | written when Stage 5 lands | 5 |
-| 8 | Native | written when Stage 4 lands | 4 |
-| 9 | Data migration | written when Stages 1, 4, 5 land | 1, 4, 5 |
+| 3 | Public web | [`2026-09-20-stage-3-public-web.md`](./2026-09-20-stage-3-public-web.md) | 1, 2 |
+| 4 | Auth | [`2026-09-20-stage-4-auth.md`](./2026-09-20-stage-4-auth.md) | 1, 2 |
+| 5 | Sponsorships | [`2026-09-21-stage-5-sponsorships.md`](./2026-09-21-stage-5-sponsorships.md) | 1, 4 |
+| 6 | Video pipeline | [`2026-09-21-stage-6-video.md`](./2026-09-21-stage-6-video.md) | 0 gate 1, 5 |
+| 7 | Email and jobs | [`2026-09-21-stage-7-email-jobs.md`](./2026-09-21-stage-7-email-jobs.md) | 5 |
+| 8 | Native | [`2026-09-21-stage-8-native.md`](./2026-09-21-stage-8-native.md) | 4 |
+| 8.5 | Consent | written when Stage 8 lands | 1, 4 |
+| 9 | Data migration | written when Stages 1, 4, 5 land | 1, 4, 5, 8.5 |
 | 10 | Cutover | written when Stage 9 lands | all |
 
-## Why later plans are not written yet
+## Why a plan is written when its predecessor lands
 
-The spec names three unresolved gates in Stage 0: Remotion in a Cloudflare
-Container, Worker bundle size, and bun compatibility with Payload's CLI. A
-detailed plan written around an unverified assumption is fiction, and Stage 6
-in particular changes shape entirely if the container gate fails and rendering
-falls back to Remotion Lambda.
+A detailed plan written around an unverified assumption is fiction. Stage 6
+changed shape entirely when Stage 0's container gate failed and rendering
+moved to Remotion Lambda; every plan since has been written from the
+interfaces that actually shipped rather than the ones the spec imagined.
 
-Stages 3 through 5 also consume interfaces that Stages 1 and 2 define. Writing
-their step-level code now would mean inventing component and collection
-signatures that the earlier stages have not yet settled, which is exactly the
-type-drift failure the writing-plans self-review exists to catch.
+That is not a formality. Stage 5's implementers found eight errors in their
+plan by reading shipped source, Stage 6's found eight, and Stage 7's found
+around twenty-eight — every one of them a signature or a behaviour the plan
+had reasoned about instead of read. **When the plan and the code disagree,
+the code is right**, and the task report is how the next plan gets less
+wrong.
 
-Each plan is written as its predecessor lands, from the interfaces that
-actually shipped.
+Stages 8.5, 9 and 10 remain unwritten for the same reason. Stage 8.5 must
+land before Stage 9: `user-consents.analytics_consent` is
+`NOT NULL DEFAULT false`, so an import into a table with no defined write
+path cannot tell "no answer" from "declined" and would silently record a
+refusal for every existing user.
