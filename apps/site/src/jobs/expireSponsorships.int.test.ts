@@ -739,6 +739,54 @@ describe("expiring a sponsorship whose term has ended", () => {
     expect((await renderRow(render)).muxAssetId ?? null).toBeNull();
   });
 
+  it("reaches an orphaned render the readiness sweep has already settled", async () => {
+    /*
+     * **The orphan sweep is keyed off the indexed `sponsorship` column now,
+     * not filtered out of a page of every render holding an asset.** Stage 6
+     * recorded the starvation that filter caused: with more live assets than
+     * fit in one page, an orphan behind them was never in the page to be kept
+     * — and an orphan is the one row nobody will ever notice, because it is a
+     * bill every month for a video nothing points at.
+     *
+     * A page of two hundred healthy renders is not a fixture; this asserts the
+     * same defect from the other side. The render below is stamped `settledAt`
+     * exactly as a healthy live asset is, which takes it out of the readiness
+     * sweep's set — so if the orphan sweep still read that same set, this
+     * asset would never be deleted. It is a different query, and the row is
+     * reached by being an orphan rather than by being recent.
+     */
+    const gesture = await seedGesture("settled-orphan");
+    const assetId = `asset-settled-orphan-${RUN}`;
+    const sponsorshipId = await seedSponsorship("settled-orphan", {
+      endsInDays: 30,
+      gesture,
+      sponsored: `pb-settled-orphan-${RUN}`,
+      status: "active",
+    });
+    const render = await seedRender("settled-orphan", sponsorshipId, {
+      assetId,
+      playbackId: `pb-settled-orphan-${RUN}`,
+      state: "ready",
+    });
+
+    await payload.update({
+      collection: "renders",
+      data: { settledAt: new Date().toISOString() },
+      id: render,
+      overrideAccess: true,
+    });
+    await payload.delete({
+      collection: "sponsorships",
+      id: sponsorshipId,
+      overrideAccess: true,
+    });
+
+    await expireSponsorships(payload, NOW);
+
+    expect(deletesOf(assetId)).toHaveLength(1);
+    expect((await renderRow(render)).muxAssetId ?? null).toBeNull();
+  });
+
   it("expires a sponsorship whose Mux asset is already gone", async () => {
     /*
      * A manual deletion, or a previous half-run that deleted the asset and
@@ -1337,6 +1385,134 @@ describe("a composed video Mux never made ready", () => {
       (await sponsorshipRow(sponsorshipId)).previewVideoPlaybackId ?? null
     ).toBeNull();
     expect((await renderRow(render)).muxAssetId ?? null).toBeNull();
+  });
+
+  it("reads the readiness sweep off an index, not a scan", async () => {
+    /*
+     * **Stage 6 handed this to Stage 7 by name**: the sweep could starve. It
+     * read every render still holding a `muxAssetId`, newest first, capped at
+     * one page — so the set it read was the product's whole history of healthy
+     * live assets, and once that passed a page an older render sat behind
+     * every newer one and was never asked about again.
+     *
+     * The fix is a column the sweep writes, so the set drains. The assertion
+     * is in two parts because the two halves fail differently:
+     *
+     * - **structural**: the candidate query filters on `settledAt`. A sweep
+     *   that stamped the column and then ignored it would pass every
+     *   behavioural assertion in this file and starve exactly as before, and
+     *   two hundred renders is not a fixture.
+     * - **behavioural**: a render Mux has called `ready` is never asked about
+     *   again. That is what makes the set finite — and it is asserted through
+     *   `muxCalls`, so it is about a request that is not made rather than
+     *   about a column that is set.
+     */
+    const gesture = await seedGesture("settled");
+    const assetId = `asset-settle-settled-${RUN}`;
+    const playbackId = `pb-settle-settled-${RUN}`;
+    const sponsorshipId = await seedSponsorship("settled", {
+      gesture,
+      preview: playbackId,
+      status: "pending_approval",
+    });
+    const render = await seedRender("settled", sponsorshipId, {
+      assetId,
+      playbackId,
+      state: "ready",
+    });
+
+    const realFind = payload.find.bind(payload);
+    const renderQueries: unknown[] = [];
+
+    payload.find = (async (args: Parameters<typeof payload.find>[0]) => {
+      if (args.collection === "renders") {
+        renderQueries.push({ sort: args.sort, where: args.where });
+      }
+
+      return await realFind(args);
+    }) as typeof payload.find;
+
+    let first: Awaited<ReturnType<typeof settleComposedVideos>>;
+
+    try {
+      first = await settleComposedVideos(payload);
+    } finally {
+      payload.find = realFind;
+    }
+
+    // The candidate query, not one of the per-render reads: it is the one that
+    // names `muxAssetId`, and it must also name `settledAt`.
+    const candidate = renderQueries.find((query) =>
+      JSON.stringify(query).includes("muxAssetId")
+    );
+
+    expect(JSON.stringify(candidate)).toContain("settledAt");
+    expect((candidate as { sort?: string } | undefined)?.sort).toBe(
+      "createdAt"
+    );
+
+    expect(first.settled).toBeGreaterThanOrEqual(1);
+    expect((await renderRow(render)).settledAt).toBeTruthy();
+    expect(muxCalls.filter((call) => call.assetId === assetId)).toHaveLength(1);
+
+    // And the second sweep does not ask again. This is the whole of "cannot
+    // starve": the set the sweep reads is the work outstanding rather than
+    // everything that has ever happened.
+    muxCalls = [];
+    await settleComposedVideos(payload);
+
+    expect(muxCalls.filter((call) => call.assetId === assetId)).toEqual([]);
+  });
+
+  it("does not settle an asset that is only preparing", async () => {
+    /*
+     * The guard inside the fix, and the one that would undo the sweep if it
+     * were wrong. `preparing` is not a verdict — it is the ordinary answer
+     * minutes after a callback, and the asset may still go `errored`. Settling
+     * it would take it out of the candidate set on the strength of an answer
+     * that has not been given, and the composite that then died would sit in
+     * `previewVideoPlaybackId` waiting for an administrator to publish a video
+     * that does not exist. That is the failure this entire sweep exists to
+     * prevent.
+     */
+    const gesture = await seedGesture("unsettled");
+    const assetId = `asset-settle-unsettled-${RUN}`;
+    const playbackId = `pb-settle-unsettled-${RUN}`;
+    const sponsorshipId = await seedSponsorship("unsettled", {
+      gesture,
+      preview: playbackId,
+      status: "pending_approval",
+    });
+    const render = await seedRender("unsettled", sponsorshipId, {
+      assetId,
+      playbackId,
+      state: "ready",
+    });
+
+    muxAnswers.set(`GET ${assetId}`, () =>
+      Promise.resolve(
+        jsonResponse({
+          data: {
+            id: assetId,
+            playback_ids: [{ id: playbackId, policy: "public" }],
+            status: "preparing",
+          },
+        })
+      )
+    );
+
+    await settleComposedVideos(payload);
+
+    expect((await renderRow(render)).settledAt ?? null).toBeNull();
+
+    // And the next sweep does ask again, which is the point of not settling
+    // it: the answer that matters has not been given yet.
+    muxCalls = [];
+    muxAnswers = new Map();
+    await settleComposedVideos(payload);
+
+    expect(muxCalls.filter((call) => call.assetId === assetId)).toHaveLength(1);
+    expect((await renderRow(render)).settledAt).toBeTruthy();
   });
 
   it("leaves a composite that is still preparing exactly where it is", async () => {

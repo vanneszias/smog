@@ -107,8 +107,12 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('nl' | 'en' | 'fr') | ('nl' | 'en' | 'fr')[];
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    'payload-jobs-stats': PayloadJobsStat;
+  };
+  globalsSelect: {
+    'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
+  };
   locale: 'nl' | 'en' | 'fr';
   widgets: {
     collections: CollectionsWidget;
@@ -117,6 +121,9 @@ export interface Config {
   jobs: {
     tasks: {
       'send-email': TaskSendEmail;
+      'expire-sponsorships': TaskExpireSponsorships;
+      'send-renewal-reminders': TaskSendRenewalReminders;
+      'cleanup-stale-payments': TaskCleanupStalePayments;
       inline: {
         input: unknown;
         output: unknown;
@@ -351,6 +358,7 @@ export interface Render {
   muxAssetId?: string | null;
   muxPlaybackId?: string | null;
   failureReason?: string | null;
+  settledAt?: string | null;
   attempts?: number | null;
   updatedAt: string;
   createdAt: string;
@@ -455,7 +463,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'send-email';
+        taskSlug: 'inline' | 'send-email' | 'expire-sponsorships' | 'send-renewal-reminders' | 'cleanup-stale-payments';
         taskID: string;
         input?:
           | {
@@ -488,10 +496,20 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'send-email') | null;
+  taskSlug?:
+    ('inline' | 'send-email' | 'expire-sponsorships' | 'send-renewal-reminders' | 'cleanup-stale-payments') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
+  meta?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -758,6 +776,7 @@ export interface RendersSelect<T extends boolean = true> {
   muxAssetId?: T;
   muxPlaybackId?: T;
   failureReason?: T;
+  settledAt?: T;
   attempts?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -822,6 +841,7 @@ export interface PayloadJobsSelect<T extends boolean = true> {
   queue?: T;
   waitUntil?: T;
   processing?: T;
+  meta?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -859,6 +879,34 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats".
+ */
+export interface PayloadJobsStat {
+  id: number;
+  stats?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats_select".
+ */
+export interface PayloadJobsStatsSelect<T extends boolean = true> {
+  stats?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "collections_widget".
  */
 export interface CollectionsWidget {
@@ -873,12 +921,36 @@ export interface CollectionsWidget {
  */
 export interface TaskSendEmail {
   input: {
-    kind: 'email-change' | 're-edit';
+    kind: 'email-change' | 're-edit' | 'renewal-reminder';
     locale: 'nl' | 'en' | 'fr';
     origin: string;
     userId?: number | null;
     sponsorshipId?: number | null;
   };
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskExpire-sponsorships".
+ */
+export interface TaskExpireSponsorships {
+  input?: unknown;
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskSend-renewal-reminders".
+ */
+export interface TaskSendRenewalReminders {
+  input?: unknown;
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskCleanup-stale-payments".
+ */
+export interface TaskCleanupStalePayments {
+  input?: unknown;
   output?: unknown;
 }
 /**

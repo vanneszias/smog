@@ -440,7 +440,7 @@ it("does not cancel a row the webhook advanced mid-sweep");
   `GET /api/jobs/run` with its token. Whatever wiring calls the cron must go
   through that path.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("sends one reminder about thirty days before expiry");
@@ -462,7 +462,86 @@ it("reads the readiness sweep off an index, not a scan", () => {
 it("registers all four tasks with the schedules the spec names");
 ```
 
-- [ ] **Step 2-4:** run, implement, run, mutation-prove, commit.
+- [x] **Step 2-4:** run, implement, run, mutation-prove, commit.
+
+**Eight corrections, made while implementing.**
+
+1. **Adding a `schedule` is a schema change, and the plan says nothing about
+   one.** Three things arrive with the first `schedule` property, none of them
+   declared by any collection file, and all three are silent when missing.
+   `sanitize.js` pushes a **`payload-jobs-stats` global** — a table —
+   because `handleSchedules` keeps each task's `lastScheduledRun` in it and
+   computes the next occurrence *from* that value; without it every tick throws
+   on `findGlobal`, **after** the run lease has been taken, which would make
+   the first missing table the last time the queue ever ran. It also adds
+   **`payload_jobs.meta`**, where `handleSchedules` writes
+   `{ scheduled: true }` and which `defaultBeforeSchedule` counts on to decide
+   whether a schedule is already covered — without the column an hourly cron
+   queues a daily job twenty-four times a day. The third is
+   `renders.settled_at`, below. `20260921_220000_add_job_schedules` is the
+   migration; `payload_locked_documents_rels` is untouched, because a global is
+   locked through `payload_locked_documents.global_slug` rather than through a
+   relationship column, and `migrations.test.ts` asserts the absence.
+2. **The Cron Trigger is not reachable from this codebase, and `wrangler.jsonc`
+   carries no `"crons"` entry.** Task 2 flagged that a Cron Trigger invokes the
+   Worker's `scheduled()` handler rather than calling a URL; what Task 5 found
+   is that this application cannot export one. The entry module is
+   `.open-next/worker.js`, which `@opennextjs/cloudflare` copies verbatim from
+   its own template on every build and which exports `fetch` and three Durable
+   Objects and nothing else, with no configuration hook to add to it. Reaching
+   `scheduled()` means pointing `main` at a wrapper of ours — a build-entry
+   change whose only proof is a deployed Worker and which cannot be typechecked
+   in a tree where `.open-next` has not been built. **A `"crons"` entry without
+   it would be worse than none**: every firing errors while the dashboard shows
+   a configured cron. So the entry is a comment saying exactly what Task 7 must
+   add, and the half that can be proven without a deploy is `src/jobs/cron.ts`,
+   unit-tested — the request the handler makes, dispatched into the Worker's own
+   `fetch` rather than out over the network, because
+   `global_fetch_strictly_public` would send a self-fetch through the edge.
+3. **The spec names four tasks and five operations.** `settleComposedVideos`
+   has no task of its own: it runs inside `expire-sponsorships`, after the
+   expiry, because it deliberately skips a render whose sponsorship is terminal
+   on the grounds that its asset is about to be deleted — which is only true if
+   the expiry has already run in the same job. Two tasks with two cron
+   expressions would make that guarantee a coincidence.
+4. **"Key it off an index" cannot be done with an index.** Indexing the
+   readiness sweep's existing candidate column changes nothing about
+   starvation: the set is still every healthy live asset the product has ever
+   made, so one page of it is still the same page for ever. What ends the
+   starvation is a column the sweep *writes* — `renders.settledAt`, stamped
+   when Mux calls an asset `ready`, which is terminal — so the set becomes the
+   work outstanding and drains. Only `ready` settles; `preparing` is not a
+   verdict, and settling it would take an asset out of the set on the strength
+   of an answer that has not been given.
+5. **The orphan sweep was starving too, and that is the half with money
+   attached.** `expireSponsorships` read one page of every render holding an
+   asset and then kept the ones whose `sponsorship` was null — so with more
+   live assets than fit in a page, an orphan behind them was never in the page
+   to be kept. An orphan is the one row nobody ever notices: a Mux bill every
+   month for a video nothing points at. It is now its own query on the indexed
+   `sponsorship` column, and the test asserts it through a render the readiness
+   sweep has already settled, which the old code could not have reached.
+6. **`renewalReminderSentAt` is written by the send, not by the sweep** — the
+   one place this port departs from `startRenewalReminderCronJob`, which marks
+   it immediately after its enqueue. Stamping at queue time makes the plan's own
+   "defer, not drop" impossible: the deferral the reminder is supposed to
+   survive would already have been recorded as a reminder that was sent. The
+   cost is the ordinary at-least-once cost, and it is the right way round — a
+   sponsor reminded twice has been mildly annoyed, a sponsorship that lapsed
+   because the reminder was filed as sent is revenue nobody can get back.
+7. **The shipped reminder contradicts itself and the contradiction was not
+   transcribed.** `RenewalReminderEmail`'s footer says the sponsorship ends "over
+   ongeveer 7 dagen" while the query that selects its recipients is
+   `daysUntilExpiry: 30`. The copy here says thirty, because that is the number
+   the job applies.
+8. **A test-method finding, and the third of this shape in this stage.** An
+   assertion about "the queue" or "the sweep's count" in a database that is
+   never cleared is an assertion about how many times the suite has been run.
+   A mutation run turned up `expected [ …(12) ] to have a length of 1` in a
+   test that had passed four times, from fixtures earlier runs left behind —
+   the mutation was innocent and the test was wrong. Every count here is now
+   scoped to the row under test, and both new files delete their own leftovers
+   before they seed.
 
 ---
 

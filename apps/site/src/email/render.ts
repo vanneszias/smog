@@ -72,6 +72,18 @@ type EmailMessage =
       sponsorName: string;
       /** The capability URL, already carrying its token. */
       url: string;
+    }
+  | {
+      /** The day the sponsorship stops being drawn on the gesture page. */
+      endDate: string;
+      /** The gesture being sponsored, in the locale the message is written in. */
+      gestureName: string;
+      kind: "renewal-reminder";
+      locale: Locale;
+      /** Whoever the sponsorship names as its contact. */
+      sponsorName: string;
+      /** Where a renewal starts. Not a credential — see the note above. */
+      url: string;
     };
 
 /** What the adapter is handed: nodemailer's shape, minus the recipient. */
@@ -166,6 +178,71 @@ const RE_EDIT: Record<Locale, (name: string, url: string) => RenderedEmail> = {
 };
 
 /**
+ * The renewal reminder, one month before the sponsorship's term ends.
+ *
+ * Transcribed from the shipped `RenewalReminderEmail`
+ * (`apps/server/src/emails/renewalReminder.tsx`) rather than written here: the
+ * subject is its subject, and the three things it says are the three things it
+ * said — the term ends on this date, the gesture goes back to its own video
+ * afterwards, and renewing keeps it. Two differences, both deliberate.
+ *
+ * The shipped footer says "over ongeveer 7 dagen", which contradicts the same
+ * file's own thirty-day query and is a copy bug rather than a rule; this says
+ * the number the job actually applies. And this is text rather than a React
+ * Email layout with a button, for the reason at the top of this module.
+ */
+const RENEWAL_REMINDER: Record<
+  Locale,
+  (name: string, gesture: string, endDate: string, url: string) => RenderedEmail
+> = {
+  nl: (name, gesture, endDate, url) => ({
+    subject: "Je SMOG-sponsoring verloopt binnenkort",
+    text: [
+      `Beste ${name},`,
+      "",
+      `Je sponsoring van het gebaar "${gesture}" loopt af op ${endDate}.`,
+      "",
+      "Daarna toont het gebaar opnieuw de originele video en wordt jouw uitstraling niet langer aan bezoekers getoond.",
+      "",
+      "Verlengen kan via deze link:",
+      url,
+      "",
+      "Heb je al verlengd? Dan mag je deze e-mail negeren.",
+    ].join("\n"),
+  }),
+  en: (name, gesture, endDate, url) => ({
+    subject: "Your SMOG sponsorship ends soon",
+    text: [
+      `Dear ${name},`,
+      "",
+      `Your sponsorship of the gesture "${gesture}" ends on ${endDate}.`,
+      "",
+      "After that the gesture shows its original video again and your branding is no longer shown to visitors.",
+      "",
+      "You can renew with this link:",
+      url,
+      "",
+      "If you have already renewed, you can ignore this message.",
+    ].join("\n"),
+  }),
+  fr: (name, gesture, endDate, url) => ({
+    subject: "Votre parrainage SMOG se termine bientôt",
+    text: [
+      `Bonjour ${name},`,
+      "",
+      `Votre parrainage du geste « ${gesture} » se termine le ${endDate}.`,
+      "",
+      "Ensuite, le geste affichera de nouveau sa vidéo d'origine et votre image ne sera plus montrée aux visiteurs.",
+      "",
+      "Vous pouvez le renouveler avec ce lien :",
+      url,
+      "",
+      "Si vous avez déjà renouvelé, vous pouvez ignorer ce message.",
+    ].join("\n"),
+  }),
+};
+
+/**
  * One message, in the locale it is addressed to.
  *
  * The locale is a parameter and not a lookup, because the two callers know it
@@ -180,8 +257,51 @@ export function renderEmail(message: EmailMessage): RenderedEmail {
     return EMAIL_CHANGE[message.locale](oneLine(message.url));
   }
 
-  return RE_EDIT[message.locale](
+  if (message.kind === "re-edit") {
+    return RE_EDIT[message.locale](
+      oneLine(message.sponsorName),
+      oneLine(message.url)
+    );
+  }
+
+  return RENEWAL_REMINDER[message.locale](
     oneLine(message.sponsorName),
+    oneLine(message.gestureName),
+    oneLine(message.endDate),
     oneLine(message.url)
   );
 }
+
+/**
+ * A date as the recipient's locale writes it.
+ *
+ * Here rather than in the job for the reason the rest of this module is here:
+ * what a sponsor reads is copy, and "31 oktober 2027" against "October 31,
+ * 2027" is copy. The region is pinned per language — Belgian Dutch and Belgian
+ * French, British English — because the product is Flemish and `en-US` would
+ * put the month first for a reader in Belgium.
+ *
+ * An unparseable value answers with itself rather than "Invalid Date": a
+ * sponsorship with a broken `endDate` is a message worth sending with an ugly
+ * date in it, not one worth failing four times over.
+ */
+export function formatEmailDate(value: string, locale: Locale): string {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(DATE_LOCALES[locale], {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(parsed);
+}
+
+const DATE_LOCALES: Record<Locale, string> = {
+  nl: "nl-BE",
+  en: "en-GB",
+  fr: "fr-BE",
+};

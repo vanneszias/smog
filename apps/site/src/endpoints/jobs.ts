@@ -137,10 +137,59 @@ const runJobs: PayloadHandler = async (
   }
 
   try {
+    /*
+     * **The schedules, before the queue — and this call is the whole of
+     * whether they exist.**
+     *
+     * A task's `schedule` is acted on by `handleSchedules` and by nothing
+     * else. Payload's own `GET /api/payload-jobs/run` calls it
+     * (`queues/endpoints/run.js`); the Local API's `run` does not
+     * (`queues/localAPI.js`). This endpoint uses the Local API because
+     * `jobs.access.run` is `denyAll` and Payload's endpoint is therefore
+     * closed to everybody — so without this line the four `schedule`
+     * properties in `jobs/index.ts` would be decoration, the queue would
+     * never be filled, and a cron calling this URL every hour would answer
+     * `200 {"status":"ok"}` for ever while nothing ran.
+     *
+     * It is inside the lease, with the run, on purpose. `defaultBeforeSchedule`
+     * decides whether to queue by counting the runnable scheduled jobs for the
+     * task — a read and then a write, which is the shape this whole
+     * application has established does not serialise. Two ticks overlapping
+     * outside the lease would both count zero and both queue.
+     *
+     * It is before the run so that a schedule which has just come due is
+     * drained by the same tick rather than waiting for the next one, which is
+     * the ordering Payload's own endpoint uses and the reason its comment
+     * gives for combining the two.
+     *
+     * A failure to schedule does not stop the queue draining. The jobs already
+     * in it are work somebody is waiting for, and the next tick re-evaluates
+     * every schedule from `lastScheduledRun` anyway — nothing is lost by this
+     * one failing, and quite a lot is lost by a queue that stops.
+     */
+    try {
+      await req.payload.jobs.handleSchedules({ queue: QUEUE, req });
+    } catch (error) {
+      req.payload.logger.error(
+        { err: error },
+        "[jobs] Could not evaluate the schedules; the queue is still drained and the next tick tries again"
+      );
+    }
+
     const result = await req.payload.jobs.run({
       limit: JOBS_PER_RUN,
       overrideAccess: true,
       queue: QUEUE,
+      /*
+       * This request, rather than the local one Payload would synthesise.
+       * `createLocalReq` gives a job an origin of `http://localhost` (3.89.0),
+       * and `send-renewal-reminders` builds the link in every message it
+       * queues out of `req.origin` — so a job run under a synthesised request
+       * would send working links to a host nobody can reach. The cron calls
+       * this endpoint at the site's own public URL, which is exactly the value
+       * those links need.
+       */
+      req,
       /*
        * **One job at a time.** Payload runs a tick's jobs through
        * `Promise.all` unless told otherwise

@@ -318,6 +318,81 @@ describe("migration chain", () => {
     expect(columns).not.toContain("payload_jobs_id");
   });
 
+  it("gives the schedules the bookkeeping they cannot run without", async () => {
+    /*
+     * Three columns' worth of consequence from adding a `schedule` to a task,
+     * none of which any collection file declares.
+     *
+     * `payload_jobs_stats` holds each task's `lastScheduledRun`, and
+     * `handleSchedules` computes the next occurrence *from* it — so without
+     * the table every tick of `GET /api/jobs/run` throws on `findGlobal`,
+     * after the run lease has been taken.
+     *
+     * `payload_jobs.meta` is the quiet one. `handleSchedules` writes
+     * `{ scheduled: true }` there, and `defaultBeforeSchedule` decides whether
+     * a schedule is already covered by counting jobs where `meta.scheduled` is
+     * true. Without the column that count is asked of a column that is not
+     * there, and an hourly cron queues a daily job twenty-four times a day.
+     */
+    const { database } = await chain();
+
+    database.exec(
+      `INSERT INTO payload_jobs_stats (id, stats) VALUES (1, '{"scheduledRuns":{"queues":{"default":{}}}}');`
+    );
+
+    expect(
+      database.prepare("SELECT COUNT(*) AS n FROM payload_jobs_stats").get()
+    ).toEqual({ n: 1 });
+
+    const jobColumns = (
+      database
+        .prepare("SELECT name FROM pragma_table_info('payload_jobs')")
+        .all() as { name: string }[]
+    ).map((column) => column.name);
+
+    expect(jobColumns).toContain("meta");
+
+    // And still no relationship column for the stats global: a global is
+    // locked through `payload_locked_documents.global_slug`, which has existed
+    // since Stage 1, rather than through a column of its own. A migration that
+    // rebuilt that table anyway would disagree with the pushed schema.
+    const lockColumns = (
+      database
+        .prepare(
+          "SELECT name FROM pragma_table_info('payload_locked_documents_rels')"
+        )
+        .all() as { name: string }[]
+    ).map((column) => column.name);
+
+    expect(lockColumns).not.toContain("payload_jobs_stats_id");
+  });
+
+  it("indexes the column that stops the readiness sweep starving", async () => {
+    /*
+     * `renders.settled_at` is what turns the readiness sweep's candidate set
+     * from the product's whole history into the work outstanding: a render Mux
+     * has called `ready` is stamped and never read again. The sweep filters on
+     * it every hour for ever, so it is indexed — and *not* uniquely, because
+     * every render settled in the same millisecond shares a value.
+     */
+    const { database } = await chain();
+    const byName = new Map(
+      indexesOn(database, "renders").map((index) => [index.name, index.unique])
+    );
+
+    expect(byName.get("renders_settled_at_idx")).toBe(0);
+
+    // Nullable with no default, so every row that existed before the migration
+    // is born unsettled and the first sweep checks the whole backlog once.
+    database.exec(
+      `INSERT INTO renders (id, job_id, state) VALUES (7510, 'settle-migration-probe', 'ready');`
+    );
+
+    expect(
+      database.prepare("SELECT settled_at FROM renders WHERE id = 7510").get()
+    ).toEqual({ settled_at: null });
+  });
+
   it("gives renders a UNIQUE index on the job id", async () => {
     // The same claim mechanism as `claims` above, for the same reason and with
     // the same failure mode, on a different table. `endpoints/render.ts` takes

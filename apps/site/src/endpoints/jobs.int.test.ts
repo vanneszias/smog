@@ -111,6 +111,24 @@ describe("the job run endpoint", () => {
       where: { key: { equals: LEASE_KEY } },
     });
 
+  /**
+   * Empties the queue.
+   *
+   * Every run below now evaluates the schedules before it runs anything —
+   * Task 5's `handleSchedules` call, without which the four `schedule`
+   * properties in `jobs/index.ts` would be decoration — so a tick here leaves
+   * one pending row per scheduled task behind. They are not this file's
+   * subject, and `.wrangler/state/vitest` is persisted: a row left here is a
+   * scheduled job that runs against another file's fixtures the next time
+   * anything drains the queue.
+   */
+  const emptyQueue = () =>
+    payload.delete({
+      collection: "payload-jobs",
+      overrideAccess: true,
+      where: { id: { exists: true } },
+    });
+
   /** Replaces the queue with a counter, so "did it run" is observable. */
   const spyOnRun = (behaviour?: () => Promise<unknown>) =>
     vi
@@ -130,6 +148,7 @@ describe("the job run endpoint", () => {
   beforeEach(async () => {
     setToken(STUB_TOKEN);
     await clearLease();
+    await emptyQueue();
   });
 
   afterEach(() => {
@@ -138,6 +157,7 @@ describe("the job run endpoint", () => {
 
   afterAll(async () => {
     await clearLease();
+    await emptyQueue();
     setToken(ORIGINAL_TOKEN);
   });
 

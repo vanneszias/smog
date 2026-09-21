@@ -1,6 +1,6 @@
 import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
 import { generateExpiredPayloadCookie, logoutOperation } from "payload";
-import { SEND_EMAIL } from "@/jobs";
+import { SEND_EMAIL } from "@/jobs/sendEmail";
 import {
   accountPath,
   confirmEmailPath,

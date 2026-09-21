@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderEmail } from "@/email/render";
+import { formatEmailDate, renderEmail } from "@/email/render";
 import { LOCALES } from "@/lib/locale";
 
 const URL_FOR = "https://smog.example.test/nl/account/confirm-email?token=abc";
@@ -28,8 +28,16 @@ describe("the message bodies", () => {
         sponsorName: "Acme",
         url: URL_FOR,
       });
+      const reminder = renderEmail({
+        endDate: "31 oktober 2027",
+        gestureName: "Dank u",
+        kind: "renewal-reminder",
+        locale,
+        sponsorName: "Acme",
+        url: URL_FOR,
+      });
 
-      for (const message of [change, reEdit]) {
+      for (const message of [change, reEdit, reminder]) {
         expect(message.subject).not.toBe("");
         expect(message.text).toContain(URL_FOR);
         subjects.add(message.subject);
@@ -37,10 +45,73 @@ describe("the message bodies", () => {
       }
     }
 
-    // Three locales times two messages, all different. A dictionary that
+    // Three locales times three messages, all different. A dictionary that
     // answered one locale's copy for another collapses this count.
-    expect(subjects.size).toBe(LOCALES.length * 2);
-    expect(bodies.size).toBe(LOCALES.length * 2);
+    expect(subjects.size).toBe(LOCALES.length * 3);
+    expect(bodies.size).toBe(LOCALES.length * 3);
+  });
+
+  it("tells the sponsor which gesture and which date the reminder is about", () => {
+    /*
+     * The three facts the shipped `RenewalReminderEmail` carries, which are
+     * the three a sponsor needs to decide: who it is addressed to, what is
+     * ending, and when. A reminder that said only "your sponsorship ends soon"
+     * is unanswerable by a company sponsoring more than one gesture.
+     */
+    const message = renderEmail({
+      endDate: "31 oktober 2027",
+      gestureName: "Dank u wel",
+      kind: "renewal-reminder",
+      locale: "nl",
+      sponsorName: "Jan Janssens",
+      url: URL_FOR,
+    });
+
+    expect(message.subject).toBe("Je SMOG-sponsoring verloopt binnenkort");
+    expect(message.text).toContain("Jan Janssens");
+    expect(message.text).toContain("Dank u wel");
+    expect(message.text).toContain("31 oktober 2027");
+    expect(message.text).toContain(URL_FOR);
+  });
+
+  it("flattens a gesture name that carries newlines", () => {
+    /*
+     * The same rule as the sponsor name beside it, applied to the value that
+     * was added later — which is exactly the case the note in `render.ts`
+     * predicts: the next interpolated value is added by somebody who has not
+     * read it.
+     */
+    const message = renderEmail({
+      endDate: "31 oktober 2027",
+      gestureName: "Dank\r\nBcc: iemand@elders.test",
+      kind: "renewal-reminder",
+      locale: "nl",
+      sponsorName: "Acme",
+      url: URL_FOR,
+    });
+
+    expect(message.text).not.toContain("\r");
+    expect(message.text).toContain("Dank Bcc: iemand@elders.test");
+  });
+
+  it("writes the end date the way the recipient's locale writes it", () => {
+    /*
+     * `2027-10-31` is a date an American reads as one thing and a Belgian as
+     * another, and the sponsor reading this is Belgian. Asserted per locale
+     * rather than through `Intl` a second time, which would only assert that
+     * the same call returns the same answer.
+     */
+    const iso = "2027-10-31T23:00:00.000Z";
+
+    expect(formatEmailDate(iso, "nl")).toBe("31 oktober 2027");
+    expect(formatEmailDate(iso, "en")).toBe("31 October 2027");
+    expect(formatEmailDate(iso, "fr")).toBe("31 octobre 2027");
+  });
+
+  it("answers an unparseable date with itself rather than Invalid Date", () => {
+    // A sponsorship with a broken `endDate` is a message worth sending with an
+    // ugly date in it, not one worth failing four times over and filing.
+    expect(formatEmailDate("not a date", "nl")).toBe("not a date");
   });
 
   it("names the sponsor in the invitation it addresses to them", () => {

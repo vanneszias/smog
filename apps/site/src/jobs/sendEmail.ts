@@ -1,9 +1,13 @@
 import type { Payload } from "payload";
-import { renderEmail } from "@/email/render";
-import { confirmEmailPath, sponsorReEditPath } from "@/lib/authFlow";
+import { formatEmailDate, renderEmail } from "@/email/render";
+import {
+  confirmEmailPath,
+  sponsorPath,
+  sponsorReEditPath,
+} from "@/lib/authFlow";
 import { issueEmailChangeToken } from "@/lib/emailChange";
 import type { Locale } from "@/lib/locale";
-import type { Sponsorship, User } from "@/payload-types";
+import type { Gesture, Sponsorship, User } from "@/payload-types";
 
 /**
  * The two messages this application sends, and the one rule they share.
@@ -67,9 +71,20 @@ import type { Sponsorship, User } from "@/payload-types";
  * button, not of the sponsor reading the mail.
  */
 
+/**
+ * The task slug every queue point names.
+ *
+ * Here rather than in `jobs/index.ts`, where it used to live, because
+ * `jobs/sendRenewalReminders.ts` is both a registered task *and* a queue point
+ * for this one — so importing the slug from the module that registers every
+ * task would be a cycle. The slug belongs to the operation either way: this
+ * module is what a `send-email` job runs.
+ */
+export const SEND_EMAIL = "send-email";
+
 /** What a queued message names. Identifiers and a locale; never a token. */
 export interface SendEmailInput {
-  kind: "email-change" | "re-edit";
+  kind: "email-change" | "re-edit" | "renewal-reminder";
   locale: Locale;
   /**
    * The scheme and host the link is built on, captured from the request that
@@ -96,7 +111,7 @@ const NOTHING_SENT: SendReport = { recipient: null };
 /** One row by id, or `null` — `findByID` throws for a row somebody deleted. */
 async function findOne<T>(
   payload: Payload,
-  collection: "sponsorships" | "users",
+  collection: "gestures" | "sponsorships" | "users",
   id: number,
   showHiddenFields: boolean
 ): Promise<null | T> {
@@ -247,11 +262,182 @@ async function sendReEditInvitation(
   return { recipient };
 }
 
+/**
+ * The gesture this sponsorship is for, named in the reader's language.
+ *
+ * `locale` on the read rather than the default, because `gestures.name` is a
+ * localized field and the whole of this message is written in one language —
+ * a Dutch sentence naming the English gesture would read as a bug to the one
+ * person it is addressed to.
+ *
+ * A gesture that is no longer there does not stop the message. The reminder's
+ * subject is the term ending, not the gesture, and a sponsor whose gesture an
+ * administrator deleted still has a sponsorship that is about to run out.
+ */
+async function gestureName(
+  payload: Payload,
+  sponsorship: Sponsorship,
+  locale: Locale
+): Promise<null | string> {
+  const id =
+    typeof sponsorship.gesture === "object" && sponsorship.gesture !== null
+      ? sponsorship.gesture.id
+      : sponsorship.gesture;
+
+  if (typeof id !== "number") {
+    return null;
+  }
+
+  const { docs } = await payload.find({
+    collection: "gestures",
+    depth: 0,
+    limit: 1,
+    locale,
+    overrideAccess: true,
+    where: { id: { equals: id } },
+  });
+
+  const name = (docs[0] as Gesture | undefined)?.name;
+
+  return typeof name === "string" && name !== "" ? name : null;
+}
+
+/**
+ * The renewal reminder, about thirty days before the term ends.
+ *
+ * ## Review Focus 3: never twice, and never dropped
+ *
+ * `renewalReminderSentAt` has existed since Stage 1 and nothing has ever
+ * written it. **This is the write, and it happens here rather than in the
+ * sweep that queued the message** — which is the one place this port departs
+ * from the shipped `startRenewalReminderCronJob`, where the mark is made
+ * immediately after the enqueue (`apps/server/src/cron.ts`).
+ *
+ * The reason is the other half of Review Focus 3. A quota refusal must defer
+ * rather than drop: `E_DAILY_LIMIT_EXCEEDED` says nothing about this
+ * sponsorship, and `jobs/index.ts` defers the job so it is tried again with a
+ * backoff. Stamping at queue time would mean the deferral it is *supposed* to
+ * survive had already been recorded as a reminder that was sent, and the
+ * sponsor would be asked to renew by nobody. Stamping here means the column
+ * records what it says it records: a message that went out.
+ *
+ * The cost of that direction is the ordinary at-least-once cost — a worker
+ * that died between `payload.sendEmail` resolving and the stamp landing would
+ * let the next sweep ask again — and it is the right way round. A sponsor
+ * reminded twice has been mildly annoyed; a sponsorship that lapsed because
+ * the reminder was filed as sent and never went is revenue nobody can get
+ * back, and it is silent.
+ *
+ * ## Two mechanisms stop a second reminder, and they are not the same one
+ *
+ * `jobs/sendRenewalReminders.ts` does not offer a stamped sponsorship as a
+ * candidate. That is an optimisation. **The guard is here**, because the sweep
+ * runs daily and a job deferred by a quota refusal is still in the queue when
+ * the next sweep runs — so two jobs for one sponsorship is the ordinary case,
+ * not the exceptional one. Whichever sends first stamps, and the other reads
+ * the stamp and sends nothing.
+ */
+async function sendRenewalReminder(
+  payload: Payload,
+  input: SendEmailInput
+): Promise<SendReport> {
+  const sponsorshipId = input.sponsorshipId ?? null;
+
+  if (sponsorshipId === null) {
+    payload.logger.error(
+      "[sendEmail] A renewal reminder named no sponsorship; nothing was sent"
+    );
+
+    return NOTHING_SENT;
+  }
+
+  const sponsorship = await findOne<Sponsorship>(
+    payload,
+    "sponsorships",
+    sponsorshipId,
+    false
+  );
+
+  if (sponsorship === null) {
+    payload.logger.warn(
+      `[sendEmail] Sponsorship ${sponsorshipId} no longer exists; no renewal reminder was sent`
+    );
+
+    return NOTHING_SENT;
+  }
+
+  if (sponsorship.renewalReminderSentAt) {
+    payload.logger.info(
+      `[sendEmail] Sponsorship ${sponsorshipId} has already been reminded; no second reminder was sent`
+    );
+
+    return NOTHING_SENT;
+  }
+
+  /*
+   * A sponsorship that has been cancelled, or whose term has already run out
+   * while this message sat in the queue, is not one anybody should be asked to
+   * renew. The two conditions are both here and neither implies the other: a
+   * cancelled sponsorship can still be inside its term, and a sponsorship
+   * whose term ended is only `expired` once `expire-sponsorships` has run.
+   */
+  if (
+    sponsorship.status !== "active" ||
+    Date.parse(sponsorship.endDate) <= Date.now()
+  ) {
+    payload.logger.info(
+      `[sendEmail] Sponsorship ${sponsorshipId} is ${sponsorship.status} and ends ${sponsorship.endDate}; no renewal reminder was sent`
+    );
+
+    return NOTHING_SENT;
+  }
+
+  const recipient = sponsorship.sponsorEmail;
+  const { subject, text } = renderEmail({
+    endDate: formatEmailDate(sponsorship.endDate, input.locale),
+    gestureName:
+      (await gestureName(payload, sponsorship, input.locale)) ??
+      sponsorship.overlayText,
+    kind: "renewal-reminder",
+    locale: input.locale,
+    sponsorName: sponsorship.contactFullName || sponsorship.sponsorName,
+    url: `${input.origin}${sponsorPath(input.locale)}`,
+  });
+
+  await payload.sendEmail({ subject, text, to: recipient });
+
+  /*
+   * After the send, and only after it. The column is the record that a sponsor
+   * was asked, so writing it before would make a refusal indistinguishable
+   * from a delivery — and this task's whole retry policy is built on refusals
+   * being ordinary.
+   */
+  await payload.update({
+    collection: "sponsorships",
+    data: { renewalReminderSentAt: new Date().toISOString() },
+    id: sponsorshipId,
+    overrideAccess: true,
+  });
+
+  // The sponsorship, never the address.
+  payload.logger.info(
+    `[sendEmail] Sent the renewal reminder for sponsorship ${sponsorshipId}`
+  );
+
+  return { recipient };
+}
+
 export function sendQueuedEmail(
   payload: Payload,
   input: SendEmailInput
 ): Promise<SendReport> {
-  return input.kind === "email-change"
-    ? sendEmailChange(payload, input)
-    : sendReEditInvitation(payload, input);
+  if (input.kind === "email-change") {
+    return sendEmailChange(payload, input);
+  }
+
+  if (input.kind === "re-edit") {
+    return sendReEditInvitation(payload, input);
+  }
+
+  return sendRenewalReminder(payload, input);
 }

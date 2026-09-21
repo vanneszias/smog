@@ -173,6 +173,30 @@ export const Renders: CollectionConfig = {
     /** Whatever Lambda or Mux said went wrong, kept verbatim for an operator. */
     { name: "failureReason", type: "textarea" },
     /**
+     * When Mux last confirmed this render's asset is playable.
+     *
+     * **This column exists so the readiness sweep cannot starve**, which Stage
+     * 6 recorded as carried work and Stage 7 Task 5 closes. That sweep reads
+     * every render still holding a `muxAssetId`, and until now the set it read
+     * was every healthy live asset the product has ever made, newest first and
+     * capped at one page — so once the backlog passed that page, an older
+     * render sat behind every newer one and was never asked about again.
+     *
+     * A column the sweep *writes* is what turns that set from a history into a
+     * work queue: a render Mux has called `ready` can never become anything
+     * else, so once it is stamped it leaves the candidate set for good and the
+     * set drains monotonically. Indexed, because the candidate query filters
+     * on it every hour for ever.
+     *
+     * **Only `ready` is settled.** `preparing` is not a verdict — it is the
+     * ordinary answer minutes after a callback, and an asset in it may still
+     * go `errored` — so a preparing asset is deliberately left unstamped and
+     * asked about again. `errored`, an asset Mux no longer has, and one with
+     * no public playback id all leave the set the other way, by having their
+     * `muxAssetId` cleared.
+     */
+    { name: "settledAt", type: "date", index: true },
+    /**
      * How many times this job has been submitted to Lambda.
      *
      * `defaultValue` without `required`, deliberately. Payload's

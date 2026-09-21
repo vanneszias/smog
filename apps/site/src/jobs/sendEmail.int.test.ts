@@ -134,7 +134,15 @@ describe("the send-email task", () => {
       showHiddenFields: true,
     }) as Promise<Sponsorship>;
 
-  /** Every job still in the queue, newest first. */
+  /**
+   * Every `send-email` job still in the queue, newest first.
+   *
+   * Filtered by task since Task 5 put the other three on a clock: the tick
+   * driven through `GET /api/jobs/run` below now evaluates the schedules
+   * first, so `payload-jobs` also holds one pending row per scheduled task,
+   * waiting for its own next occurrence. Those are not this file's subject,
+   * and `emptyQueue` still takes everything.
+   */
   const queued = async () => {
     const { docs } = await payload.find({
       collection: "payload-jobs",
@@ -142,6 +150,7 @@ describe("the send-email task", () => {
       limit: 50,
       overrideAccess: true,
       sort: "-createdAt",
+      where: { taskSlug: { equals: "send-email" } },
     });
 
     return docs;

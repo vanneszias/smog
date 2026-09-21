@@ -159,22 +159,20 @@ const TERMINAL_STATUSES: ReadonlySet<string> = new Set(
  * that reads a table whose size grows with the product's whole history is a
  * job that gets slower for ever.
  *
- * **A bound means an order, and the two queries below are ordered
- * differently on purpose.** Neither can express what it actually wants in
- * SQL, because what it wants spans two tables and this adapter has no join, so
- * each is sorted by the axis along which the thing it is looking for is
- * recent:
+ * **A bound means an order, and a bound with the wrong candidate set means
+ * starvation.** Neither query below can express what it actually wants in
+ * SQL, because what it wants spans two tables and this adapter has no join.
  *
  * - the outstanding-deletion sweep reads *sponsorships*, most recently changed
  *   first, because the row it is looking for is one this job itself expired
  *   moments before it died.
- * - the readiness sweep reads *renders*, newest first, because the asset whose
- *   fate is in doubt is the one Mux accepted minutes ago. An asset that has
- *   played for a year does not turn.
- *
- * Sorting both by the same axis is what would starve one of them: a render
- * from a year ago whose sponsorship expired today sits behind every healthy
- * live asset under `-createdAt`, and would never be deleted.
+ * - the render sweeps read *renders*, oldest first, over sets that a
+ *   successful sweep removes rows from: `settledAt` for the readiness sweep
+ *   and a null `sponsorship` for the orphan sweep. Stage 6 recorded the
+ *   starvation those two filters close, and Stage 7 Task 5 closed it — before
+ *   them, one page of `-createdAt` over *every* render holding an asset meant
+ *   a render from a year ago sat behind every healthy live asset and was never
+ *   reached at all.
  */
 const PAGE = 200;
 
@@ -366,21 +364,82 @@ async function sponsorshipsPastTheEnd(
 }
 
 /**
- * Every render row that still claims to hold an asset on Mux, newest first.
+ * Render rows holding an asset that Mux has never confirmed is playable,
+ * oldest first.
  *
  * `muxAssetId` is this application's whole record of what it is being billed
  * for: `POST /api/render/callback` writes it when Mux accepts an asset, and
  * the only things that clear it are a completed deletion and an asset Mux says
  * is dead.
+ *
+ * **`settledAt` is what stops this sweep starving**, which is the one piece of
+ * carried work Stage 6 handed to Stage 7 by name. This query used to be every
+ * render holding an asset, `-createdAt`, capped at one page — so the moment
+ * the product had more than `PAGE` healthy live assets, the sweep read the
+ * same newest page every hour for ever and an older render was never asked
+ * about again. The filter, not the ordering, is the fix: a render Mux has
+ * called `ready` is stamped and leaves this set permanently, so the set is the
+ * work outstanding rather than the whole history, and it drains.
+ *
+ * The ordering is then oldest-first rather than newest-first, which is the
+ * opposite of what this query used to do and is deliberate. The old order was
+ * argued from "the asset whose fate is in doubt is the one Mux accepted
+ * minutes ago", and that is still true — but it is an argument for checking
+ * the newest *soon*, not for checking them *instead*. With a set that drains,
+ * a new render is settled on the next tick either way, and oldest-first is the
+ * order in which nothing can be left behind: the one render that has waited
+ * longest is always in the page.
  */
-async function rendersHoldingAssets(payload: Payload): Promise<Render[]> {
+async function unsettledRendersHoldingAssets(
+  payload: Payload
+): Promise<Render[]> {
   const { docs } = await payload.find({
     collection: "renders",
     depth: 0,
     limit: PAGE,
     overrideAccess: true,
-    sort: "-createdAt",
-    where: { muxAssetId: { exists: true } },
+    sort: "createdAt",
+    where: {
+      and: [{ muxAssetId: { exists: true } }, { settledAt: { exists: false } }],
+    },
+  });
+
+  return docs;
+}
+
+/**
+ * Render rows holding an asset that no sponsorship leads to any more, oldest
+ * first.
+ *
+ * A sponsorship deleted from the admin panel takes its own row and leaves its
+ * renders behind holding the one thing Mux bills for — `ON DELETE set null`,
+ * which `collections/Renders.ts` records as deliberate — and no query keyed on
+ * a sponsorship reaches them.
+ *
+ * **Asked of the database rather than filtered in memory**, and that is the
+ * second half of the same starvation. This used to read one page of every
+ * render holding an asset and then keep the ones whose `sponsorship` was null:
+ * with more than `PAGE` live assets, an orphan behind them was never in the
+ * page to be filtered, and an orphan is exactly the row nobody will ever
+ * notice — a bill every month for a video nothing points at. `sponsorship` is
+ * indexed (`collections/Renders.ts`), so the filter costs nothing and the page
+ * is a page of orphans rather than a page of everything.
+ */
+async function orphanedRendersHoldingAssets(
+  payload: Payload
+): Promise<Render[]> {
+  const { docs } = await payload.find({
+    collection: "renders",
+    depth: 0,
+    limit: PAGE,
+    overrideAccess: true,
+    sort: "createdAt",
+    where: {
+      and: [
+        { muxAssetId: { exists: true } },
+        { sponsorship: { exists: false } },
+      ],
+    },
   });
 
   return docs;
@@ -467,14 +526,10 @@ export async function expireSponsorships(
     }
   }
 
-  // And the rows no sponsorship leads to any more. A sponsorship deleted from
-  // the admin panel takes its own row and leaves its renders behind holding
-  // the one thing Mux bills for, and no query above reaches them: the due
-  // query and the sweep both start from a sponsorship.
-  for (const render of await rendersHoldingAssets(payload)) {
-    if (relationId(render.sponsorship) === null) {
-      await releaseAsset(payload, render, report);
-    }
+  // And the rows no sponsorship leads to any more. The due query and the sweep
+  // above both start from a sponsorship, so neither can reach one.
+  for (const render of await orphanedRendersHoldingAssets(payload)) {
+    await releaseAsset(payload, render, report);
   }
 
   payload.logger.info(
@@ -493,6 +548,8 @@ export async function expireSponsorships(
 /** What one readiness sweep found. Not exported; see `ExpiryReport`. */
 interface SettlementReport {
   checked: number;
+  /** Assets Mux called `ready`, which will never be asked about again. */
+  settled: number;
   unreadable: number;
   unplayable: number;
 }
@@ -626,6 +683,44 @@ async function recordUnplayable(
   );
 }
 
+/**
+ * Records that Mux has confirmed this asset is playable, so no later sweep
+ * asks about it again.
+ *
+ * **Only `ready` settles, and the distinction is the whole of the guard.**
+ * `unplayableReason` answers `null` for two different states — `ready`, which
+ * is final, and `preparing`, which is the ordinary answer minutes after a
+ * callback and may still turn into `errored`. Stamping a preparing asset would
+ * take it out of the candidate set on the strength of an answer that has not
+ * been given yet, and the composite that then died would sit in
+ * `previewVideoPlaybackId` waiting for an administrator to publish a video
+ * that does not exist. That is the failure this whole sweep exists to prevent,
+ * reintroduced by the fix for a different one.
+ *
+ * A stamped render is never read again: the candidate query filters on this
+ * column, which is what makes the sweep's cost proportional to new work rather
+ * than to the product's whole history — and what makes it impossible for an
+ * older render to wait behind a page of healthy ones for ever.
+ */
+async function settle(
+  payload: Payload,
+  render: Render,
+  asset: Awaited<ReturnType<typeof readMuxAsset>>,
+  report: SettlementReport
+): Promise<void> {
+  if (asset?.status !== "ready") {
+    return;
+  }
+
+  await payload.update({
+    collection: "renders",
+    data: { settledAt: new Date().toISOString() },
+    id: render.id,
+    overrideAccess: true,
+  });
+  report.settled += 1;
+}
+
 /** The sponsorship a render was made for, or `null` if there is not one. */
 async function sponsorshipOf(
   payload: Payload,
@@ -643,11 +738,12 @@ export async function settleComposedVideos(
 ): Promise<SettlementReport> {
   const report: SettlementReport = {
     checked: 0,
+    settled: 0,
     unplayable: 0,
     unreadable: 0,
   };
 
-  for (const render of await rendersHoldingAssets(payload)) {
+  for (const render of await unsettledRendersHoldingAssets(payload)) {
     const id = assetId(render);
     const sponsorship = await sponsorshipOf(payload, render);
 
@@ -663,10 +759,10 @@ export async function settleComposedVideos(
 
     report.checked += 1;
 
-    let reason: null | string;
+    let asset: Awaited<ReturnType<typeof readMuxAsset>>;
 
     try {
-      reason = unplayableReason(id, await readMuxAsset(id));
+      asset = await readMuxAsset(id);
     } catch (error) {
       report.unreadable += 1;
       payload.logger.error(
@@ -677,7 +773,11 @@ export async function settleComposedVideos(
       continue;
     }
 
+    const reason = unplayableReason(id, asset);
+
     if (reason === null) {
+      await settle(payload, render, asset, report);
+
       continue;
     }
 
@@ -686,7 +786,7 @@ export async function settleComposedVideos(
   }
 
   payload.logger.info(
-    `[expireSponsorships] Checked ${report.checked} Mux asset(s); ${report.unplayable} unplayable, ${report.unreadable} could not be read`
+    `[expireSponsorships] Checked ${report.checked} Mux asset(s); ${report.settled} settled, ${report.unplayable} unplayable, ${report.unreadable} could not be read`
   );
 
   return report;

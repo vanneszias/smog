@@ -1,5 +1,5 @@
 import type { CollectionAfterChangeHook } from "payload";
-import { SEND_EMAIL } from "@/jobs";
+import { SEND_EMAIL } from "@/jobs/sendEmail";
 import { DEFAULT_LOCALE } from "@/lib/locale";
 import type { Sponsorship } from "@/payload-types";
 
