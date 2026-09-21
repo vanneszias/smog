@@ -1212,6 +1212,48 @@ suspicion as a reproducible one**: this one had been visible for two stages
 as "SQLITE_BUSY noise" and a single unexplained exit code before it finally
 failed a build.
 
+## A collection `beforeChange` hook sees the whole document, so "no change" reads as an allowed change
+
+Stage 6 Task 3, and it invalidates a security assumption written into that
+stage's plan.
+
+`hooks/enforceStatusTransitions.ts` refuses any move the table forbids, and
+is deliberately subject to `overrideAccess` so that every writer is held to
+it. The Stage 6 plan leaned on that: a render finishing after its
+sponsorship was cancelled would, it said, be refused by the hook, so the
+callback merely had to handle its own refusal gracefully.
+
+**It is not refused.** By the time a collection `beforeChange` runs, `data`
+is the *whole merged document* — Payload 3.89.0 fills absent fields from
+`originalDoc` in `fields/hooks/beforeValidate/promise.js`. So an update that
+writes only a playback id arrives carrying the status the row already had,
+`from === to`, and `canTransition` allows it by design (it must: every
+ordinary edit re-submits the status).
+
+Measured rather than argued — a cancelled sponsorship, updated with nothing
+but a playback id:
+
+```
+### outcome: ACCEPTED — the hook did not refuse
+```
+
+**What follows is general.** The transition table protects *transitions*. It
+does not protect a row from being written to while it sits in a state where
+writing is wrong. Any guard of the form "this must not happen to a cancelled
+/ rejected / expired row" has to be written where the write is made, and is
+the only thing standing there.
+
+`rejected` is the sharpest case, and shows why "which statuses are dead" is
+not safe to reason about casually: `lib/sponsorshipStatus.ts` allows
+`rejected -> pending_resubmission`, so a composed video attached to a
+rejected sponsorship goes live the moment the sponsor's re-edit is approved.
+
+`endpoints/render.ts` therefore carries `STATUSES_AWAITING_A_COMPOSITION`
+and pins it two ways: a test that performs the write the handler declines to
+make and watches Payload accept it, and a mutation that disables the guard
+and shows the refusal tests failing *while the "answers 200" test still
+passes* — which is only possible because no hook raised anything.
+
 ## Risks
 
 | Risk | Mitigation |
