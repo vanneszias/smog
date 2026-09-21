@@ -20,6 +20,7 @@
       "!**/wrangler.jsonc",
       "!**/payload-types.ts",
       "!packages/ui-web/src/styles/theme.css",
+      "!packages/ui-native/global.css",
       "!**/.source",
       "!**/_generated",
       "!**/.agents"

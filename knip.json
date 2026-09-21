@@ -63,6 +63,22 @@
         "@opentelemetry/resources",
         "@opentelemetry/sdk-logs"
       ]
+    },
+    "packages/ui-native": {
+      "entry": [
+        "src/index.ts",
+        "tailwind.config.js",
+        "babel.config.js",
+        "scripts/*.ts"
+      ],
+      "ignoreDependencies": [
+        "@babel/core",
+        "@smog/config",
+        "@smog/styles",
+        "clsx",
+        "tailwind-merge",
+        "tailwindcss"
+      ]
     }
   }
 }
