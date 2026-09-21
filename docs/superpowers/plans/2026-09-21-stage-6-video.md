@@ -754,11 +754,11 @@ into the thing described. Re-run as a true swap, it fails six tests.
 
 ### Task 7: Stage exit
 
-- [ ] Re-measure the bundle against 7.33 MiB and state whether Stage 7 still fits.
-- [ ] Confirm no `app/**/route.ts` imports Payload.
-- [ ] `bun release:check` green; `site-e2e` green.
-- [ ] Re-run Stage 5's webhook concurrency mutations — this stage adds a second claim-based endpoint and they must still bite.
-- [ ] State explicitly whether each exit criterion is met, and **name every one that is met only against a fake.**
+- [x] Re-measure the bundle against 7.33 MiB and state whether Stage 7 still fits.
+- [x] Confirm no `app/**/route.ts` imports Payload.
+- [x] `bun release:check` green; `site-e2e` green.
+- [x] Re-run Stage 5's webhook concurrency mutations — this stage adds a second claim-based endpoint and they must still bite.
+- [x] State explicitly whether each exit criterion is met, and **name every one that is met only against a fake.**
 
 ## Stage 6 exit criteria
 
@@ -771,3 +771,76 @@ into the thing described. Re-run as a true swap, it fails six tests.
 7. A sponsorship never points at a Mux asset that is not ready.
 8. The bundle is measured and recorded, and no `app/**/route.ts` imports Payload.
 9. **Every criterion above is marked as verified against real services or against a fake.** Stage 4's Google criterion is the precedent for why this one exists.
+
+## Stage 6 exit: measured
+
+**Bundle: 7.34 MiB gzipped of 10.00 MiB — 27% headroom.** Stage 5 closed at
+7,510.12 KiB; this is 7,518.69, so **the whole stage cost +8.57 KiB**. A
+render state machine, an HMAC-verified callback, two claim collections, a
+signed source endpoint, an approval hook and an expiry job, for the price of
+nothing — because the measurement in Task 4 refused `@remotion/lambda` at
+**+753.39 KiB**, 4.5x what Stage 5 refused for Mollie. Stage 7 still has
+~2.66 MiB.
+
+**No `app/**/route.ts` imports Payload.** The only three remain the ones
+Payload generates into `app/(payload)/`.
+
+**Stage 5's claim still bites with a second claim-based endpoint in the
+tree.** Setting `webhook-deliveries.paymentId` to `unique: false` fails
+`survives two concurrent deliveries of the same payment`, and nothing else.
+
+**Suites:** 1349 unit tests in 99 files; 117 e2e, no flaky. `check-types`,
+`bun check`, `knip` clean. `bun release:check` passes everything except
+`expo-doctor`, which fails two **network** checks — the Expo config schema
+endpoint and the React Native Directory — against `apps/native`, which this
+stage never touched. `AGENTS.md` documents that as a sandbox failure to
+confirm against CI, and CI has been green on every push.
+
+### Each criterion, and what it was verified against
+
+**Read the right-hand column before the middle one.** Everything in this
+stage that touches Remotion or Mux is verified against a local fake. A fake
+proves the shape of a protocol and never the provider's behaviour — Stage 4's
+Google strategy is the standing precedent, still unproven against real
+Google.
+
+| # | criterion | met | verified against |
+|---|---|---|---|
+| 1 | logo and text composited, result uploaded to Mux | **no — submission is stubbed** | n/a; Task 4 measured that the invoke payload is a private protocol it could not write from memory |
+| 2 | the callback refuses an unsigned or altered body | **yes** | real HMAC, **and both candidate schemes** pinned by OpenSSL-checked vectors |
+| 3 | two callbacks produce one Mux asset | **yes** | real D1 unique index; **fake Mux** |
+| 4 | a render finishing after cancel/reject does not resurrect it, and is still recorded | **yes** | real D1 and real hooks |
+| 5 | the source URL is expiring, token-gated, and reveals nothing | **half** | token and enumeration: real. **Expiry restricts nothing** — Mux enforces playback tokens only on `signed` assets and every asset here is `public`. An asset-policy decision, not a code change. |
+| 6 | expiry restores before deleting, and completes if the asset is gone | **yes** | real D1; **fake Mux**. Note the "restore" is the status move — see below. |
+| 7 | a sponsorship never points at an asset that is not ready | **yes, with one residual** | fake Mux. A composite already published and then dying is logged, not swapped — Task 4's deliberate limit about not pulling a paying sponsor's video from a background write. |
+| 8 | bundle measured; no route handler imports Payload | **yes** | above |
+| 9 | every criterion marked real or fake | **yes** | this table |
+
+**Seven of nine met, one half met, one not met.** Criterion 1 is the stage's
+actual deliverable and it is stubbed; that is what Task 6 is for and why it
+is blocked rather than optimistic.
+
+### Carried out of Stage 6
+
+- **Task 6 is blocked** on Mux credentials, a decision about which AWS
+  account, and — added by Task 4 — `REMOTION_SERVE_URL`,
+  `MUX_SIGNING_KEY_ID`, `MUX_SIGNING_KEY_PRIVATE`. Without the last two the
+  source endpoint throws on every request.
+- **The signature scheme is unresolved.** SHA-256 vs Remotion's reported
+  SHA-512 could not be settled here: `@remotion/lambda` is not installed, no
+  installed package names the header, and `remotion.dev` is blocked by the
+  egress proxy. Both are tested; adopting the other is a three-field edit.
+- **Nothing enforces the agreement with `apps/remotion`.** `lib/renderJob.ts`
+  hard-codes the composition id and three prop names; a rename there is a
+  runtime failure here that only Task 6 can discover. `MAX_SPONSOR_NAME` and
+  the Remotion schema's cap agree at 35 **by coincidence, not construction**.
+- **The readiness sweep can starve** on a backlog larger than one page.
+  Stage 7 should key it off an index when it schedules it.
+- **A dead asset is un-ledgered, not deleted** — deletion lives in exactly
+  one place with one guard. If Mux bills for `errored` assets, those leak
+  until an operator acts on the recorded id.
+- **Stage 7 owns the generic `claims` collection.** Two exist now
+  (`webhook-deliveries`, `render-completions`) and Stage 7's jobs make four
+  consumers. The expiry job deliberately needs none: its irreversible step is
+  a `DELETE` Mux answers 404 on repeat, so at-least-once with an idempotent
+  effect is enough.
