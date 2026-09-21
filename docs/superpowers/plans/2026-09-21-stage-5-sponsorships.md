@@ -487,7 +487,7 @@ git commit -m "refactor(site): fix Payload's sponsorship create types in one pla
 - Consumes: `PRICE_PER_YEAR_CENTS`, `LOGO_ADDON_CENTS`, `FIXED_DURATION_YEARS`, `MAX_GESTURES_PER_SPONSORSHIP` from `@smog/config/constants`.
 - Produces: `sponsorshipAmountCents(gestureCount: number, includeLogo: boolean): number`; `createMolliePayment(input: CreatePaymentInput): Promise<{ checkoutUrl: string; id: string }>`; `readMolliePayment(id: string): Promise<{ amountCents: number; metadata: Record<string, string>; status: string }>`.
 
-- [ ] **Step 1: Measure before choosing — this step produces a number, not an opinion**
+- [x] **Step 1: Measure before choosing — this step produces a number, not an opinion**
 
 `@mollie/api-client` is 2.1 MB unpacked and is used for exactly two calls:
 `payments.create` and `payments.get`. The Worker has **27% headroom** and
@@ -505,7 +505,31 @@ CLOUDFLARE_ENV=staging bun run build:app && CLOUDFLARE_ENV=staging bun run check
 100 KiB gzipped *and* the report says why the SDK earns it. Two REST calls
 do not normally justify a dependency in a Worker this close to its ceiling.
 
-- [ ] **Step 2: Write the failing pricing test**
+**MEASURED.** Both builds, same commit, `CLOUDFLARE_ENV=staging`, from
+wrangler's own `Total Upload` line:
+
+| build | gzipped | delta |
+|---|---:|---:|
+| baseline (end of Task 2) | 7,483.37 KiB | — |
+| + `@mollie/api-client` reachable from an endpoint | 7,649.08 KiB | **+165.71** |
+| shipped (`fetch`, end of Task 3) | 7,483.37 KiB | **0.00** |
+
+**+165.71 KiB is over the 100 KiB bar, so: `fetch`.** The SDK buys two URL
+templates and a response type, and costs 6% of the headroom Stages 6 and 7
+still have to share. Task 3's own delta is 0.00 KiB because neither new
+module is reachable from the Worker graph until Task 4's webhook and Task 7's
+checkout import them; the `fetch` client is a few KiB of source and shows up
+then.
+
+A second finding from the probe build, worth more than the number:
+`createMollieClient({ apiKey: "" })` **throws at module evaluation**, and the
+shipped `packages/auth/src/lib/payments.ts` constructs the client at module
+scope from `process.env.MOLLIE_API_KEY || ""`. The first probe build failed
+during `next build`'s page-data collection for exactly that reason — a Worker
+built that way is dead on import wherever the variable is unset, not merely
+on the request that needed it. Whatever Stage 5 ships reads the key per call.
+
+- [x] **Step 2: Write the failing pricing test**
 
 Read the current prices out of the existing implementation before writing
 this — `apps/server/src/services/sponsorship.ts` and
@@ -571,7 +595,36 @@ it("refuses a zero or negative gesture count", () => {
 });
 ```
 
-- [ ] **Step 3: Write the failing Mollie client tests, against a stubbed `fetch`**
+**CORRECTED AGAIN DURING TASK 3 — the last two snippets above still carry the
+old `(durationYears, gestureCount)` signature.** They were missed when the
+signature was corrected to `(gestureCount, includeLogo)` just above:
+
+- `sponsorshipAmountCents(years, count)` passes a *number* where
+  `includeLogo: boolean` is expected, which does not typecheck, and loops
+  over a duration that is no longer an input.
+- `sponsorshipAmountCents(1, 0)` is meant to be the zero-gesture case but
+  reads as **one gesture, no logo** — the valid call. It does not throw, so a
+  test asserting it throws would fail against a correct implementation. The
+  shipped test is `sponsorshipAmountCents(0, false)`.
+
+**And "returns whole cents, never a fraction" is vacuous as written.**
+Integer constants times an integer count are always integers, so no mutation
+of the arithmetic can make that loop fail. What can produce a fraction is a
+*non-integer count* reaching the multiplication, so the guard is
+`Number.isInteger(gestureCount)` and what proves it is the positive case:
+`sponsorshipAmountCents(2.5, false)` must throw. The whole-range loop stays
+beside it as the transcription check it really is.
+
+**`FIXED_DURATION_YEARS` is not consumed by `lib/pricing.ts`.** The
+interfaces list names it, but the shipped calculation in
+`apps/web/src/lib/pricing.ts` does not multiply by it — `subtotal =
+PRICE_PER_YEAR_CENTS * gestureCount`, with `durationYears` reported alongside
+the total as a separate field of the breakdown. The two agree today only
+because the constant is 1; multiplying would silently double every price the
+day somebody set it to 2 while `apps/web` kept charging the old amount.
+Transcription wins.
+
+- [x] **Step 3: Write the failing Mollie client tests, against a stubbed `fetch`**
 
 ```ts
 it("sends the amount as a two-decimal string in the currency Mollie wants");
@@ -586,14 +639,14 @@ it("treats a non-JSON body as a failure rather than as a paid payment", () => {
 });
 ```
 
-- [ ] **Step 4: Implement both, run, and confirm the key never appears in a log**
+- [x] **Step 4: Implement both, run, and confirm the key never appears in a log**
 
 ```bash
 grep -rn "MOLLIE_API_KEY" apps/site/src | grep -v "process.env.MOLLIE_API_KEY"
 ```
 Expected: no matches. The key is read once and passed as a header.
 
-- [ ] **Step 5: Mutation-prove**
+- [x] **Step 5: Mutation-prove**
 
 | mutation | must fail |
 |---|---|
@@ -604,7 +657,7 @@ Expected: no matches. The key is read once and passed as a header.
 | `response.json()` wrapped in a `try` returning `{}` | the non-JSON test |
 | the integer guard removed from pricing | the whole-cents test |
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git commit -m "feat(site): price a sponsorship, and talk to Mollie without the SDK"
