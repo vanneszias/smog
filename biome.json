@@ -21,6 +21,7 @@
       "!**/payload-types.ts",
       "!packages/ui-web/src/styles/theme.css",
       "!packages/ui-native/global.css",
+      "!packages/ui-native/tailwind.config.js",
       "!**/.source",
       "!**/_generated",
       "!**/.agents"
