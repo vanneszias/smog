@@ -1147,11 +1147,28 @@ records why: a database dump is otherwise a set of usable links. The
 re-edit token today is stored in the clear, like Payload's own
 `resetPasswordToken`.
 
-Hash it, matching `endpoints/account.ts`, unless the admin panel's
-`ReEditLinkBox` needs to redisplay the link after the fact — in which case
-say so in the report and keep it clear-text with `hidden: true`, since a
-hash cannot be un-hashed to show an admin the URL. **Make the call, write
-down which and why; do not leave both.**
+**RESOLVED — clear-text with `hidden: true`.** The plan named the deciding
+condition, and the answer is yes. `getReEditLinkForAdmin` in
+`packages/convex/convex/sponsorships.ts` returns `token:
+sponsorship.reEditToken` — the raw value — so `ReEditLinkBox` can rebuild the
+URL behind a copy button. A SHA-256 cannot be un-hashed, so hashing would
+delete a shipped feature, which this migration's non-goals forbid.
+
+This deliberately differs from `endpoints/account.ts`, which *does* hash its
+email-confirmation token. The difference is that nothing ever redisplays that
+one.
+
+State the cost rather than burying it: **a database dump contains usable
+re-edit links.** Three things bound it. The token expires — and
+`reEditTokenExpiresAt` is a column nothing enforces until this task. It is
+`hidden: true`, so it never leaves through an API response. And it grants
+exactly one thing, re-editing one sponsorship: it cannot approve that
+sponsorship, cannot change its amount, and cannot reach another row. That is
+the position Payload itself takes with `resetPasswordToken`.
+
+If the product owner would rather have the hash than the copy button, that is
+a product decision and a small change: hash the column, and have the admin
+panel mint a fresh token instead of redisplaying the old one.
 
 - [ ] **Step 2: Run them and watch them fail**
 
