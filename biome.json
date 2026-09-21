@@ -29,8 +29,16 @@
   },
   "extends": ["ultracite/core", "ultracite/react"],
   "javascript": {
-    "globals": ["__DEV__", "Bun", "jest"]
+    "globals": ["__DEV__", "Bun"]
   },
+  "overrides": [
+    {
+      "includes": ["**/*.test.ts", "**/*.test.tsx"],
+      "javascript": {
+        "globals": ["jest"]
+      }
+    }
+  ],
   "linter": {
     "rules": {
       "performance": {
