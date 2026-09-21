@@ -198,4 +198,93 @@ test.describe("Sponsor wizard", () => {
       "Sponsor een gebaar"
     );
   });
+
+  /**
+   * The re-edit link, which is the one page on this wizard nobody arrives at
+   * by walking the steps: it is a capability URL out of a mail, weeks later,
+   * with no cookie and no session behind it.
+   */
+  test("lets a token holder resubmit, and kills the link behind them", async ({
+    page,
+  }) => {
+    const payload = await getPayload({ config });
+    const token = crypto.randomUUID();
+
+    const gesture = await withBusyRetry("create the re-edit gesture", () =>
+      payload.create({
+        collection: "gestures",
+        data: {
+          // `Number`, not the id as it arrives: `isValidID` requires
+          // `typeof value === "number"` for a numeric key.
+          categories: [Number(categoryId)],
+          isActive: true,
+          name: `E2E herwerken ${run}`,
+          playbackId: `pb-e2e-re-edit-${run}`,
+        },
+        locale: "nl",
+      })
+    );
+
+    const sponsorship = await withBusyRetry("create the re-edit row", () =>
+      payload.create({
+        collection: "sponsorships",
+        data: {
+          contactFullName: "Jan Janssens",
+          durationYears: 1,
+          endDate: new Date(Date.now() + 300 * DAY).toISOString(),
+          gesture: gesture.id,
+          originalVideoPlaybackId: `pb-e2e-re-edit-${run}`,
+          overlayText: "Acme NV",
+          paymentAmount: 5000,
+          reEditToken: token,
+          reEditTokenExpiresAt: new Date(Date.now() + 7 * DAY).toISOString(),
+          sponsorEmail: `re-edit-${run}@example.test`,
+          sponsorName: "Acme NV",
+          startDate: new Date().toISOString(),
+          status: "pending_resubmission",
+        },
+      })
+    );
+
+    await page.context().clearCookies();
+    await page.goto(`${SITE}/nl/sponsor/re-edit?token=${token}`);
+
+    await expect(page.getByTestId("re-edit-for")).toHaveText(
+      `E2E herwerken ${run}`
+    );
+    await page.getByTestId("re-edit-name").fill("Acme herwerkt");
+    await page.getByTestId("re-edit-submit").click();
+
+    await expect(page).toHaveURL(`${SITE}/nl/sponsor/re-edit?notice=sent`);
+    await expect(page.getByTestId("re-edit-sent")).toBeVisible();
+
+    const row = await withBusyRetry("read the resubmitted row", () =>
+      payload.findByID({
+        collection: "sponsorships",
+        id: sponsorship.id,
+        overrideAccess: true,
+      })
+    );
+
+    expect(row.status).toBe("pending_approval");
+    expect(row.sponsorName).toBe("Acme herwerkt");
+
+    // And the link is spent. Not `toBeHidden()` on the form — that would pass
+    // on a page that rendered nothing at all — but the sentence the page
+    // shows instead.
+    await page.goto(`${SITE}/nl/sponsor/re-edit?token=${token}`);
+    await expect(page.getByTestId("re-edit-invalid")).toBeVisible();
+  });
+
+  test("tells a stranger with no token the same thing as a spent one", async ({
+    page,
+  }) => {
+    await page.context().clearCookies();
+    await page.goto(`${SITE}/nl/sponsor/re-edit`);
+
+    await expect(page.getByTestId("re-edit-invalid")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Deze link werkt niet meer"
+    );
+  });
 });

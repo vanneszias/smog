@@ -45,12 +45,14 @@ interface GestureOverlay {
 /**
  * The four display fields a sponsored gesture page needs, and nothing else.
  *
- * **This is a narrow read path, not a widened one.** `sponsorships.read` is
- * `isAdmin` and stays that way: a row carries the sponsor's email, contact
- * name, VAT number, invoice details and re-edit token, and every one of
- * those is personal data that has no business leaving the server. So the
- * privileged query runs here, with `overrideAccess: true`, and only the
- * projection below crosses into the render.
+ * **This is a narrow read path, not a widened one.** `sponsorships.read` has
+ * never been public and is not now: Stage 5 widened it only as far as
+ * `access/sponsorships.ts`, which resolves one unexpired re-edit token to one
+ * row and denies everything else. A row carries the sponsor's email, contact
+ * name, VAT number, invoice details and re-edit token, and every one of those
+ * is personal data that has no business leaving the server. So the privileged
+ * query runs here, with `overrideAccess: true`, and only the projection below
+ * crosses into the render.
  *
  * Two defences, because they fail differently:
  *

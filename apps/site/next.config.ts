@@ -154,6 +154,15 @@ const nextConfig: NextConfig = {
       { destination: "/api/sponsor/details", source: "/sponsor/details" },
       { destination: "/api/sponsor/checkout", source: "/sponsor/checkout" },
       /*
+       * The sponsor's one write after paying. Locale-free like its three
+       * siblings, and the token rides in the body rather than the path: the
+       * page it posts from carries the token in *its* query string because a
+       * capability URL has nowhere else to put it, but a form post does, and
+       * a `Location` this endpoint builds should not have to echo a
+       * credential it is about to destroy.
+       */
+      { destination: "/api/sponsor/re-edit", source: "/sponsor/re-edit" },
+      /*
        * Mollie's payment webhook. The only rewrite here whose source URL a
        * third party holds: `lib/mollie.ts` sends it to Mollie as
        * `webhookUrl` when a payment is created, and Mollie posts back to

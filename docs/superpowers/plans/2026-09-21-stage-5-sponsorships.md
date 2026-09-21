@@ -1119,7 +1119,7 @@ git add -A && git commit -m "feat(site): take a sponsor's details and send them 
 
 The spec's access rule: "sponsor reads own by token; admin has full access."
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```ts
 it("lets the token holder read their own sponsorship");
@@ -1140,7 +1140,7 @@ it("moves pending_resubmission back to pending_approval on submit");
 it("does not expose the sponsor's contact details to a view-token holder");
 ```
 
-- [ ] **Step 2: Decide and record how the token is stored**
+- [x] **Step 2: Decide and record how the token is stored**
 
 Stage 4 stores the email-change confirmation token as its **SHA-256** and
 records why: a database dump is otherwise a set of usable links. The
@@ -1170,7 +1170,7 @@ If the product owner would rather have the hash than the copy button, that is
 a product decision and a small change: hash the column, and have the admin
 panel mint a fresh token instead of redisplaying the old one.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 ```bash
 cd /home/user/smog/apps/site && bunx vitest run src/access/sponsorships.int.test.ts src/endpoints/sponsorships.int.test.ts
@@ -1178,7 +1178,7 @@ cd /home/user/smog/apps/site && bunx vitest run src/access/sponsorships.int.test
 Expected: FAIL on the missing import, not on an assertion. A test that fails
 on an assertion before the code exists is testing something else.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Follow the house pattern in `apps/site/src/endpoints/account.ts` and
 `apps/site/src/endpoints/lists.ts`: `guardOrigin(req)` first, then
@@ -1188,13 +1188,13 @@ carry no client JavaScript. Resolve every id from the form with
 `overrideAccess: false`. Add the rewrite to `apps/site/next.config.ts` and
 register the endpoint array in `apps/site/src/payload.config.ts`.
 
-- [ ] **Step 4: Run until green**
+- [x] **Step 4: Run until green**
 
 ```bash
 cd /home/user/smog/apps/site && bunx vitest run src/access/sponsorships.int.test.ts src/endpoints/sponsorships.int.test.ts
 ```
 
-- [ ] **Step 5: Mutation-prove every guard**
+- [x] **Step 5: Mutation-prove every guard**
 
 One mutation per guard named in Step 1. For each: apply it, `grep` to
 confirm it landed, run the **whole** file (never `-t`), record CAUGHT or
@@ -1202,7 +1202,7 @@ SURVIVED from the runner's own `Tests` line, restore, and byte-compare
 against the backup. A SURVIVED mutation means the test is decorative — fix
 the test, or delete the guard and say why. Do not adjust the record.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /home/user/smog && bun check && bun -F site check-types && bunx knip --no-progress --no-config-hints

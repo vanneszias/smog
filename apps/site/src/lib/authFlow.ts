@@ -312,6 +312,17 @@ type SponsorError =
   /** The VAT number is not a Belgian ondernemingsnummer. */
   | "vat";
 
+/**
+ * The one thing the re-edit page has to say that is not a refusal.
+ *
+ * It is a notice rather than a page of its own because the token is gone by
+ * the time it is shown: the sponsor is redirected back to this address
+ * without a token, which would otherwise render "this link is no longer
+ * valid" — true, and exactly the wrong sentence for somebody who has just
+ * used it correctly.
+ */
+type SponsorNotice = "sent";
+
 export function signInPath(
   locale: Locale,
   query?: { error?: SignInError; notice?: SignInNotice }
@@ -414,6 +425,29 @@ export function sponsorPreviewPath(
  */
 export function sponsorSuccessPath(locale: Locale): string {
   return `/${locale}/sponsor/success`;
+}
+
+/**
+ * The re-edit page, which is a capability URL and not a step of the wizard.
+ *
+ * **The token is in the query string because that is what a capability URL
+ * is**, and because this address is one the sponsor receives in a mail and
+ * clicks weeks later — there is no cookie, no session and no earlier step to
+ * carry it. The cost is the one every such link pays: it lands in browser
+ * history and in the `Referer` of anything the page loads. It is bounded by
+ * the token expiring, by it being destroyed the moment it is used, and by
+ * what it reaches — one row, read-only, with the contact and invoice fields
+ * stripped by `collections/Sponsorships.ts`.
+ *
+ * The token is echoed back on a refusal so the sponsor can fix their entry
+ * and post again; omitting it is how the endpoint says "this link is spent",
+ * and the page renders that on its own rather than through an error code.
+ */
+export function sponsorReEditPath(
+  locale: Locale,
+  query?: { error?: SponsorError; notice?: SponsorNotice; token?: string }
+): string {
+  return withQuery(`/${locale}/sponsor/re-edit`, query);
 }
 
 export function confirmEmailPath(

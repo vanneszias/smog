@@ -12,15 +12,18 @@ import {
   sponsorDetailsPath,
   sponsorPath,
   sponsorPreviewPath,
+  sponsorReEditPath,
   sponsorSuccessPath,
 } from "@/lib/authFlow";
 import { field, guardOrigin, readForm } from "@/lib/formPost";
 import { createMolliePayment } from "@/lib/mollie";
 import { sponsorshipAmountCents } from "@/lib/pricing";
+import { findSponsorshipByReEditToken } from "@/lib/reEdit";
 import {
   encodeSponsorDraft,
   LOGO_TYPES,
   MAX_LOGO_BYTES,
+  MAX_SPONSOR_NAME,
   readSponsorDetails,
   SPONSOR_DRAFT_COOKIE,
   SPONSOR_DRAFT_TTL_SECONDS,
@@ -180,6 +183,34 @@ function webhookUrlFor(origin: string): string | undefined {
  * name is a client-supplied R2 key, and two sponsors uploading `logo.png`
  * should not be one sponsor overwriting the other.
  */
+async function storeLogo(
+  req: PayloadRequest,
+  file: File,
+  sponsorName: string
+): Promise<{ error: LogoRefusal } | { mediaId: string }> {
+  if (!(LOGO_TYPES as readonly string[]).includes(file.type)) {
+    return { error: "logo-type" };
+  }
+
+  if (file.size > MAX_LOGO_BYTES) {
+    return { error: "logo-size" };
+  }
+
+  const media = await req.payload.create({
+    collection: "media",
+    data: { alt: `Logo van ${sponsorName}` },
+    file: {
+      data: Buffer.from(await file.arrayBuffer()),
+      mimetype: file.type,
+      name: `sponsor-logo-${crypto.randomUUID()}.${EXTENSIONS[file.type] ?? "bin"}`,
+      size: file.size,
+    },
+    overrideAccess: true,
+  });
+
+  return { mediaId: String(media.id) };
+}
+
 async function uploadLogo(
   req: PayloadRequest,
   form: FormData,
@@ -198,27 +229,7 @@ async function uploadLogo(
     return { error: "logo" };
   }
 
-  if (!(LOGO_TYPES as readonly string[]).includes(file.type)) {
-    return { error: "logo-type" };
-  }
-
-  if (file.size > MAX_LOGO_BYTES) {
-    return { error: "logo-size" };
-  }
-
-  const media = await req.payload.create({
-    collection: "media",
-    data: { alt: `Logo van ${details.sponsorName}` },
-    file: {
-      data: Buffer.from(await file.arrayBuffer()),
-      mimetype: file.type,
-      name: `sponsor-logo-${crypto.randomUUID()}.${EXTENSIONS[file.type] ?? "bin"}`,
-      size: file.size,
-    },
-    overrideAccess: true,
-  });
-
-  return { mediaId: String(media.id) };
+  return await storeLogo(req, file, details.sponsorName);
 }
 
 /**
@@ -579,8 +590,140 @@ const checkout: PayloadHandler = async (req) => {
   return seeOther(payment.checkoutUrl);
 };
 
+/**
+ * `POST /api/sponsor/re-edit` — the sponsor's one write after paying.
+ *
+ * An administrator who wants a change moves the sponsorship to
+ * `pending_resubmission`, which mints a token
+ * (`hooks/manageReEditToken.ts`); the sponsor follows the link, edits the
+ * overlay text and the logo, and posts here, which puts the row back in the
+ * approval queue and destroys the token.
+ *
+ * ## The token is the whole of the authorisation, and it is checked by a read
+ *
+ * `findSponsorshipByReEditToken` runs with `overrideAccess: false`, so
+ * `access/sponsorships.ts` decides — which is what enforces the expiry, and
+ * the reason `reEditTokenExpiresAt` stopped being a column nobody reads. It
+ * is also why nothing below re-derives "is this token still good": there is
+ * one rule and one place it lives.
+ *
+ * The write that follows runs with `overrideAccess: true`, which is
+ * deliberate and is the narrower of the two available designs.
+ * `sponsorships.update` is `isAdmin`, so the alternative would be widening it
+ * to the token holder and then fencing off, field by field, the twenty-odd
+ * columns they must not touch — `paymentAmount`, `gesture`, `status`,
+ * `reviewedBy`, the dates — where one missing guard is a sponsor editing
+ * their own price. Here the set of fields a sponsor can change is the literal
+ * below, and `status` moves exactly one step, which
+ * `hooks/enforceStatusTransitions.ts` checks again underneath.
+ *
+ * ## Order, with no transactions to lean on
+ *
+ * The logo is stored first and the sponsorship updated second, so a failure
+ * between them leaves an unreferenced `media` row rather than a sponsorship
+ * pointing at an upload that does not exist. That is the same direction
+ * `checkout` orders its two writes in, for the same reason, and the leftover
+ * is what Stage 7's cleanup collects.
+ */
+const reEdit: PayloadHandler = async (req) => {
+  const crossSiteResponse = guardOrigin(req);
+
+  if (crossSiteResponse) {
+    return crossSiteResponse;
+  }
+
+  const form = await readForm(req);
+  const locale = localeFromForm(form.get("locale"));
+  const token = field(form, "token").trim();
+  const sponsorship = await findSponsorshipByReEditToken(req.payload, token);
+
+  /*
+   * No token in the redirect, and no error code either. A token that no
+   * longer resolves is spent, expired or invented, and the page says so on
+   * its own when it is asked to render without one — so "this link is no
+   * longer valid" is written once, on the page, rather than twice.
+   */
+  if (sponsorship === null) {
+    return seeOther(sponsorReEditPath(locale));
+  }
+
+  /*
+   * Transcribed from `reSubmitSponsorshipVideo` in
+   * `packages/convex/convex/sponsorships.ts`, which refuses the same way.
+   * `manageReEditToken` clears the token whenever a sponsorship leaves
+   * `pending_resubmission`, so a live token on any other status is a row that
+   * was *created* holding one — a fixture, an admin, or Stage 9's import —
+   * rather than one the flow produced. Without this, such a token would move
+   * a rejected sponsorship into the approval queue without anybody asking
+   * for a resubmission.
+   */
+  if (sponsorship.status !== "pending_resubmission") {
+    return seeOther(sponsorReEditPath(locale));
+  }
+
+  const sponsorName = field(form, "sponsorName").trim();
+
+  if (sponsorName === "" || sponsorName.length > MAX_SPONSOR_NAME) {
+    return seeOther(sponsorReEditPath(locale, { error: "name", token }));
+  }
+
+  const file = form.get("logo");
+
+  /*
+   * A replacement logo, and only for a sponsorship that paid for one.
+   * `hasLogo` records whether the option was *bought* —
+   * `packages/convex/convex/schema.ts` says so in as many words and
+   * `lib/sponsorOverlay.ts` gates the public overlay on exactly that pair —
+   * so a file posted against a sponsorship without it is dropped rather than
+   * stored, which is the same rule `uploadLogo` applies at step 2 to a file
+   * posted alongside an unticked box. An empty part is what a browser sends
+   * for a file input nobody touched, and here it means "keep the logo I
+   * already have" rather than the refusal it means at step 2.
+   */
+  let overlayImage: number | undefined;
+
+  if (sponsorship.hasLogo === true && file instanceof File && file.size > 0) {
+    const stored = await storeLogo(req, file, sponsorName);
+
+    if ("error" in stored) {
+      return seeOther(
+        sponsorReEditPath(locale, { error: stored.error, token })
+      );
+    }
+
+    overlayImage = Number(stored.mediaId);
+  }
+
+  await req.payload.update({
+    collection: "sponsorships",
+    data: {
+      ...(overlayImage === undefined ? {} : { overlayImage }),
+      /*
+       * One input, two columns, exactly as step 2 writes them: the shipped
+       * wizard collects `sponsorName` once and sends
+       * `overlayText: form.sponsorName`. A second input here would be a
+       * field the product does not have.
+       */
+      overlayText: sponsorName,
+      sponsorName,
+      /*
+       * Back to the queue. `manageReEditToken` clears the token and its
+       * expiry on the way out, which is what makes the link one-shot, and
+       * `logSponsorshipTransitions` files the move in `admin-logs`.
+       */
+      status: "pending_approval",
+    },
+    id: sponsorship.id,
+    overrideAccess: true,
+    req,
+  });
+
+  return seeOther(sponsorReEditPath(locale, { notice: "sent" }));
+};
+
 export const sponsorshipEndpoints: Endpoint[] = [
   { handler: startSponsorship, method: "post", path: "/sponsor/start" },
   { handler: submitDetails, method: "post", path: "/sponsor/details" },
   { handler: checkout, method: "post", path: "/sponsor/checkout" },
+  { handler: reEdit, method: "post", path: "/sponsor/re-edit" },
 ];

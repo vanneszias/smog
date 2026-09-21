@@ -2,6 +2,7 @@ import { SPONSORSHIP_STATUSES } from "@smog/config";
 import { SPONSORSHIP_STATUSES as SPONSORSHIP_STATUSES_SUBPATH } from "@smog/config/sponsorships";
 import { describe, expect, it } from "vitest";
 import { isAdmin } from "@/access";
+import { sponsorshipReEditAccess } from "@/access/sponsorships";
 import { Sponsorships } from "./Sponsorships";
 
 const field = (name: string) =>
@@ -49,14 +50,24 @@ describe("Sponsorships collection", () => {
     expect(Sponsorships.slug).toBe("sponsorships");
   });
 
-  it("wires every operation through isAdmin, not a raw boolean", () => {
+  it("wires every write through isAdmin, not a raw boolean", () => {
     // Reference equality: a sponsorship row carries a sponsor's contact
     // details, invoice name and VAT number, so a stray `() => true` here is
     // a personal-data leak, not just an over-permissive read.
-    expect(Sponsorships.access?.read).toBe(isAdmin);
     expect(Sponsorships.access?.create).toBe(isAdmin);
     expect(Sponsorships.access?.update).toBe(isAdmin);
     expect(Sponsorships.access?.delete).toBe(isAdmin);
+  });
+
+  it("opens read to the re-edit token, and to nothing else", () => {
+    // The one operation Stage 5 widened, and the assertion is still
+    // reference equality rather than a shape: `sponsorshipReEditAccess`
+    // denies a request that presents no token, and an inline rule written to
+    // look like it would be one `!` away from handing over every row whose
+    // token is NULL. `access/sponsorships.int.test.ts` proves the behaviour;
+    // this proves the wiring, which a mutation to either alone would
+    // otherwise slip past.
+    expect(Sponsorships.access?.read).toBe(sponsorshipReEditAccess);
   });
 
   it("localizes nothing, so no required field becomes unsaveable in en or fr", () => {

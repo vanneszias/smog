@@ -24,8 +24,15 @@
  * therefore the sponsor name's 35, not the API's more generous 100.
  */
 
-/** The sponsor name, which is also the overlay text. 35 is the shipped cap. */
-const MAX_SPONSOR_NAME = 35;
+/**
+ * The sponsor name, which is also the overlay text. 35 is the shipped cap.
+ *
+ * Exported because the re-edit form in `endpoints/sponsorships.ts` collects
+ * this one field on its own, without the contact and invoice half
+ * `readSponsorDetails` requires, and the two bounds must be the same number:
+ * a name the wizard accepted must not be one the re-edit refuses.
+ */
+export const MAX_SPONSOR_NAME = 35;
 const MAX_CONTACT_NAME = 120;
 const MAX_COMPANY = 120;
 const MAX_EMAIL = 254;

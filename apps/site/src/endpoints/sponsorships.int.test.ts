@@ -1479,3 +1479,448 @@ describe("the sponsor wizard, steps 2 and 3", () => {
     return await formPost(CHECKOUT_PATH, fields, gestureIds);
   };
 });
+
+/**
+ * `POST /api/sponsor/re-edit` — the sponsor's one write after paying.
+ *
+ * Driven through `handleEndpoints` rather than by calling the handler, for
+ * the reason the two describes above give: half of what can go wrong is
+ * routing, and a handler called with a hand-built `req` passes whatever path
+ * it is mounted at. The token is the only authorisation on this surface, so
+ * every refusal below is asserted twice — the answer the sponsor gets, and
+ * the row not having moved.
+ */
+describe("the sponsor wizard, the re-edit link", () => {
+  const RUN_RE_EDIT = crypto.randomUUID();
+  const RE_EDIT_PATH = "/api/sponsor/re-edit";
+  const YEAR = 365 * DAY;
+
+  /** A one-by-one transparent GIF, small enough to post in a test. */
+  const PIXEL_RE_EDIT = Buffer.from(
+    "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+    "base64"
+  );
+
+  let payload: Awaited<ReturnType<typeof getPayload>>;
+  let gestureId: number;
+
+  const sponsorship = async (overrides: Record<string, unknown> = {}) =>
+    await payload.create({
+      collection: "sponsorships",
+      data: {
+        contactFullName: `Jan Janssens ${RUN_RE_EDIT}`,
+        durationYears: 1,
+        endDate: new Date(Date.now() + YEAR).toISOString(),
+        gesture: gestureId,
+        originalVideoPlaybackId: `pb-re-edit-${RUN_RE_EDIT}`,
+        overlayText: `Met dank aan Acme ${RUN_RE_EDIT}`,
+        paymentAmount: 5000,
+        sponsorEmail: `re-edit-${crypto.randomUUID()}@example.com`,
+        sponsorName: `Acme ${RUN_RE_EDIT}`,
+        startDate: new Date().toISOString(),
+        status: "pending_resubmission",
+        ...overrides,
+      },
+      overrideAccess: true,
+    });
+
+  /** A sponsorship waiting to be re-edited, and the link that reaches it. */
+  const awaitingReEdit = async (overrides: Record<string, unknown> = {}) => {
+    const token = crypto.randomUUID();
+    const row = await sponsorship({
+      reEditToken: token,
+      reEditTokenExpiresAt: new Date(Date.now() + 7 * DAY).toISOString(),
+      ...overrides,
+    });
+
+    return { id: row.id, token };
+  };
+
+  /** The raw row, hidden columns and all, as only server-side code reads it. */
+  const raw = async (id: number) =>
+    await payload.findByID({
+      collection: "sponsorships",
+      depth: 0,
+      id,
+      overrideAccess: true,
+      showHiddenFields: true,
+    });
+
+  /** The re-edit form, as the page renders it: multipart, because of the logo. */
+  const submit = (
+    fields: Record<string, string>,
+    init: { logo?: File; origin?: null | string } = {}
+  ) => {
+    const body = new FormData();
+
+    for (const [name, value] of Object.entries(fields)) {
+      body.append(name, value);
+    }
+
+    if (init.logo !== undefined) {
+      body.append("logo", init.logo);
+    }
+
+    const headers = new Headers();
+
+    if (init.origin !== null) {
+      headers.set("Origin", init.origin ?? SITE);
+    }
+
+    return handleEndpoints({
+      config,
+      request: new Request(`${SITE}${RE_EDIT_PATH}`, {
+        body,
+        headers,
+        method: "POST",
+      }),
+    });
+  };
+
+  const landing = (response: Response) => response.headers.get("Location");
+
+  beforeAll(async () => {
+    payload = await getPayload({ config });
+
+    const category = await payload.create({
+      collection: "categories",
+      data: { isActive: true, name: `Herwerken ${RUN_RE_EDIT}` },
+      locale: "nl",
+    });
+
+    const gesture = await payload.create({
+      collection: "gestures",
+      data: {
+        categories: [category.id],
+        isActive: true,
+        name: `Herwerken ${RUN_RE_EDIT}`,
+        playbackId: `pb-re-edit-${RUN_RE_EDIT}`,
+      },
+      locale: "nl",
+    });
+    gestureId = gesture.id;
+  });
+
+  it("boots with the fixtures this file assumes", async () => {
+    // `beforeAll` throwing is reported as *skipped*, not failed, so a run
+    // that seeded nothing would look green.
+    const { id, token } = await awaitingReEdit();
+    const row = await raw(id);
+
+    expect(row.status).toBe("pending_resubmission");
+    expect(row.reEditToken).toBe(token);
+  });
+
+  it("moves pending_resubmission back to pending_approval on submit", async () => {
+    const { id, token } = await awaitingReEdit();
+
+    const response = await submit({
+      locale: "nl",
+      // Short on purpose: the cap is 35 characters, and a name built out of
+      // this file's run id would be refused for a reason this test is not
+      // about.
+      sponsorName: "Acme herwerkt",
+      token,
+    });
+
+    expect(response.status).toBe(303);
+    expect(landing(response)).toBe("/nl/sponsor/re-edit?notice=sent");
+
+    const row = await raw(id);
+
+    expect(row.status).toBe("pending_approval");
+    expect(row.sponsorName).toBe("Acme herwerkt");
+    // One input, two columns, exactly as step 2 writes them.
+    expect(row.overlayText).toBe("Acme herwerkt");
+  });
+
+  it("destroys the token it was used with", async () => {
+    const { id, token } = await awaitingReEdit();
+
+    await submit({ locale: "nl", sponsorName: "Acme", token });
+
+    const row = await raw(id);
+
+    expect(row.reEditToken).toBeNull();
+    expect(row.reEditTokenExpiresAt).toBeNull();
+  });
+
+  it("refuses a token that has already been used, and changes nothing", async () => {
+    const { id, token } = await awaitingReEdit();
+
+    await submit({ locale: "nl", sponsorName: "Eerste", token });
+
+    const response = await submit({
+      locale: "nl",
+      sponsorName: "Tweede",
+      token,
+    });
+
+    expect(landing(response)).toBe("/nl/sponsor/re-edit");
+    expect((await raw(id)).sponsorName).toBe("Eerste");
+  });
+
+  it("refuses an expired token, and accepted the same one before it expired", async () => {
+    const { id, token } = await awaitingReEdit();
+
+    // The positive case first, on the same token and the same row, so the
+    // refusal below cannot be a token that never matched anything.
+    const accepted = await submit({
+      locale: "nl",
+      sponsorName: "Op tijd",
+      token,
+    });
+
+    expect(landing(accepted)).toBe("/nl/sponsor/re-edit?notice=sent");
+
+    // Put the row back where it was, with the same token, expired.
+    await payload.update({
+      collection: "sponsorships",
+      data: { status: "pending_resubmission" },
+      id,
+      overrideAccess: true,
+    });
+    await payload.update({
+      collection: "sponsorships",
+      data: {
+        reEditToken: token,
+        reEditTokenExpiresAt: new Date(Date.now() - DAY).toISOString(),
+      },
+      id,
+      overrideAccess: true,
+    });
+
+    const refused = await submit({
+      locale: "nl",
+      sponsorName: "Te laat",
+      token,
+    });
+
+    expect(landing(refused)).toBe("/nl/sponsor/re-edit");
+    expect((await raw(id)).sponsorName).toBe("Op tijd");
+  });
+
+  it("refuses a token on a sponsorship that is not awaiting a resubmission", async () => {
+    // A live token on another status is a row that was *created* holding one
+    // — an admin, or Stage 9's import — rather than one this flow produced.
+    // Without the status check it would push a rejected sponsorship into the
+    // approval queue without anybody asking for a resubmission.
+    const { id, token } = await awaitingReEdit({ status: "rejected" });
+
+    const response = await submit({
+      locale: "nl",
+      sponsorName: "Toch maar",
+      token,
+    });
+
+    expect(landing(response)).toBe("/nl/sponsor/re-edit");
+    expect((await raw(id)).status).toBe("rejected");
+  });
+
+  it("refuses a token nobody minted", async () => {
+    const response = await submit({
+      locale: "nl",
+      sponsorName: "Acme",
+      token: crypto.randomUUID(),
+    });
+
+    expect(landing(response)).toBe("/nl/sponsor/re-edit");
+  });
+
+  it("refuses a post with no token at all without touching a tokenless row", async () => {
+    // The tokenless guard, reached through the endpoint rather than through
+    // the access rule directly: `{ equals: undefined }` would match every
+    // row whose token is NULL, and this one is such a row.
+    const row = await sponsorship({ status: "pending_approval" });
+
+    const response = await submit({ locale: "nl", sponsorName: "Acme" });
+
+    expect(landing(response)).toBe("/nl/sponsor/re-edit");
+    expect((await raw(row.id)).sponsorName).toBe(`Acme ${RUN_RE_EDIT}`);
+  });
+
+  it("refuses a blank sponsor name and keeps the link alive", async () => {
+    const { id, token } = await awaitingReEdit();
+
+    const response = await submit({ locale: "nl", sponsorName: "   ", token });
+
+    expect(landing(response)).toBe(
+      `/nl/sponsor/re-edit?error=name&token=${token}`
+    );
+
+    const row = await raw(id);
+
+    expect(row.status).toBe("pending_resubmission");
+    expect(row.reEditToken).toBe(token);
+  });
+
+  it("refuses a sponsor name longer than the wizard's own cap", async () => {
+    const { id, token } = await awaitingReEdit();
+
+    const response = await submit({
+      locale: "nl",
+      sponsorName: "x".repeat(36),
+      token,
+    });
+
+    expect(landing(response)).toBe(
+      `/nl/sponsor/re-edit?error=name&token=${token}`
+    );
+    expect((await raw(id)).status).toBe("pending_resubmission");
+  });
+
+  it("refuses a cross-site post outright", async () => {
+    const { id, token } = await awaitingReEdit();
+
+    const response = await submit(
+      { locale: "nl", sponsorName: "Gekaapt", token },
+      { origin: "https://evil.example" }
+    );
+
+    expect(response.status).toBe(403);
+    expect((await raw(id)).status).toBe("pending_resubmission");
+  });
+
+  it("does not let the form choose the status", async () => {
+    // The endpoint writes a closed set of fields, so a posted `status` is
+    // not a field at all — it is an unknown form key.
+    const { id, token } = await awaitingReEdit();
+
+    await submit({
+      locale: "nl",
+      sponsorName: "Acme",
+      status: "active",
+      token,
+    });
+
+    expect((await raw(id)).status).toBe("pending_approval");
+  });
+
+  it("does not let the form choose the payment amount", async () => {
+    const { id, token } = await awaitingReEdit();
+
+    await submit({
+      locale: "nl",
+      paymentAmount: "1",
+      sponsorName: "Acme",
+      token,
+    });
+
+    expect((await raw(id)).paymentAmount).toBe(5000);
+  });
+
+  it("replaces the logo of a sponsorship that paid for one", async () => {
+    const { id, token } = await awaitingReEdit({ hasLogo: true });
+
+    await submit(
+      { locale: "nl", sponsorName: "Acme", token },
+      { logo: new File([PIXEL_RE_EDIT], "nieuw.png", { type: "image/png" }) }
+    );
+
+    const row = await raw(id);
+
+    expect(row.status).toBe("pending_approval");
+    expect(row.overlayImage).not.toBeNull();
+  });
+
+  it("ignores a logo posted for a sponsorship that did not pay for one", async () => {
+    // `hasLogo` records what was *bought*, and `lib/sponsorOverlay.ts` gates
+    // the public overlay on exactly that pair — so storing the file would buy
+    // an unauthenticated upload and show nothing.
+    const { id, token } = await awaitingReEdit({ hasLogo: false });
+
+    const response = await submit(
+      { locale: "nl", sponsorName: "Acme", token },
+      { logo: new File([PIXEL_RE_EDIT], "gratis.png", { type: "image/png" }) }
+    );
+
+    const row = await raw(id);
+
+    // The submission still went through — this is a dropped file, not a
+    // refused request.
+    expect(landing(response)).toBe("/nl/sponsor/re-edit?notice=sent");
+    expect(row.status).toBe("pending_approval");
+    expect(row.overlayImage ?? null).toBeNull();
+  });
+
+  it("refuses a replacement logo that is not an image type", async () => {
+    const { id, token } = await awaitingReEdit({ hasLogo: true });
+
+    const response = await submit(
+      { locale: "nl", sponsorName: "Acme", token },
+      { logo: new File(["<script>"], "acme.html", { type: "text/html" }) }
+    );
+
+    expect(landing(response)).toBe(
+      `/nl/sponsor/re-edit?error=logo-type&token=${token}`
+    );
+    expect((await raw(id)).status).toBe("pending_resubmission");
+  });
+
+  it("refuses a replacement logo bigger than a logo may be", async () => {
+    const { id, token } = await awaitingReEdit({ hasLogo: true });
+
+    const response = await submit(
+      { locale: "nl", sponsorName: "Acme", token },
+      {
+        logo: new File([new Uint8Array(MAX_LOGO_BYTES + 1)], "huge.png", {
+          type: "image/png",
+        }),
+      }
+    );
+
+    expect(landing(response)).toBe(
+      `/nl/sponsor/re-edit?error=logo-size&token=${token}`
+    );
+    expect((await raw(id)).status).toBe("pending_resubmission");
+  });
+
+  it("keeps the logo a sponsor did not replace", async () => {
+    const { id, token } = await awaitingReEdit({ hasLogo: true });
+
+    const media = await payload.create({
+      collection: "media",
+      data: { alt: `Logo ${RUN_RE_EDIT}` },
+      file: {
+        data: PIXEL_RE_EDIT,
+        mimetype: "image/png",
+        name: `re-edit-bestaand-${crypto.randomUUID()}.png`,
+        size: PIXEL_RE_EDIT.byteLength,
+      },
+      overrideAccess: true,
+    });
+
+    await payload.update({
+      collection: "sponsorships",
+      data: { overlayImage: media.id },
+      id,
+      overrideAccess: true,
+    });
+
+    await submit({ locale: "nl", sponsorName: "Acme", token });
+
+    expect((await raw(id)).overlayImage).toBe(media.id);
+  });
+
+  it("files the transition in admin-logs like every other one", async () => {
+    const { id, token } = await awaitingReEdit();
+
+    await submit({ locale: "nl", sponsorName: "Acme", token });
+
+    const { docs } = await payload.find({
+      collection: "admin-logs",
+      overrideAccess: true,
+      where: {
+        and: [
+          { targetId: { equals: String(id) } },
+          { action: { equals: "sponsorship.status_changed" } },
+        ],
+      },
+    });
+
+    expect(docs.map((doc) => doc.metadata)).toContainEqual({
+      from: "pending_resubmission",
+      to: "pending_approval",
+    });
+  });
+});
