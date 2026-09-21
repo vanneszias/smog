@@ -76,6 +76,7 @@ export interface Config {
     'admin-logs': AdminLog;
     'user-consents': UserConsent;
     'webhook-deliveries': WebhookDelivery;
+    renders: Render;
     search: Search;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -93,6 +94,7 @@ export interface Config {
     'admin-logs': AdminLogsSelect<false> | AdminLogsSelect<true>;
     'user-consents': UserConsentsSelect<false> | UserConsentsSelect<true>;
     'webhook-deliveries': WebhookDeliveriesSelect<false> | WebhookDeliveriesSelect<true>;
+    renders: RendersSelect<false> | RendersSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -340,6 +342,22 @@ export interface WebhookDelivery {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "renders".
+ */
+export interface Render {
+  id: number;
+  jobId: string;
+  sponsorship?: (number | null) | Sponsorship;
+  state: 'queued' | 'rendering' | 'uploading' | 'ready' | 'failed';
+  muxAssetId?: string | null;
+  muxPlaybackId?: string | null;
+  failureReason?: string | null;
+  attempts?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This is a collection of automatically created search results. These results are used by the global site search and will be updated automatically as documents in the CMS are created or updated.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -417,6 +435,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'webhook-deliveries';
         value: number | WebhookDelivery;
+      } | null)
+    | ({
+        relationTo: 'renders';
+        value: number | Render;
       } | null)
     | ({
         relationTo: 'search';
@@ -629,6 +651,21 @@ export interface UserConsentsSelect<T extends boolean = true> {
  */
 export interface WebhookDeliveriesSelect<T extends boolean = true> {
   paymentId?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "renders_select".
+ */
+export interface RendersSelect<T extends boolean = true> {
+  jobId?: T;
+  sponsorship?: T;
+  state?: T;
+  muxAssetId?: T;
+  muxPlaybackId?: T;
+  failureReason?: T;
+  attempts?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -18,6 +18,7 @@ import { Categories } from "./collections/Categories";
 import { Gestures } from "./collections/Gestures";
 import { Lists } from "./collections/Lists";
 import { Media } from "./collections/Media";
+import { Renders } from "./collections/Renders";
 import { Sponsorships } from "./collections/Sponsorships";
 import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
@@ -161,6 +162,7 @@ export default buildConfig({
     AdminLogs,
     UserConsents,
     WebhookDeliveries,
+    Renders,
   ],
   editor: lexicalEditor(),
   /*

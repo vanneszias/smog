@@ -200,6 +200,90 @@ describe("migration chain", () => {
     ).toThrow(/UNIQUE/i);
   });
 
+  it("gives renders a UNIQUE index on the job id", async () => {
+    // The same claim mechanism as `webhook-deliveries`, for the same reason
+    // and with the same failure mode. `endpoints/render.ts` takes a render
+    // job by inserting this row, and a unique index is the only atomic
+    // operation this database offers: there are no transactions, and an
+    // `update` with a `where` was measured resolving its filter with a
+    // separate SELECT, so two concurrent writers both "won" it. Downgrade
+    // this index to an ordinary one and the claim silently goes back to
+    // read-then-write — two Lambda callbacks for one job, two Mux assets, and
+    // a monthly bill for the one nothing points at. `pushDevSchema` derives
+    // the local schema from the collection config and never opens a migration
+    // file, so only this asserts that a *deployed* database gets it.
+    const { database } = await chain();
+    const byName = new Map(
+      indexesOn(database, "renders").map((i) => [i.name, i.unique])
+    );
+
+    expect(byName.get("renders_job_id_idx")).toBe(1);
+    // And the lookups the callback and the expiry job make are indexed but
+    // emphatically not unique: many renders share a state, and a sponsorship
+    // that is rendered twice has two rows.
+    expect(byName.get("renders_state_idx")).toBe(0);
+    expect(byName.get("renders_sponsorship_idx")).toBe(0);
+  });
+
+  it("refuses a second renders row for one job id", async () => {
+    // The index asserted as behaviour rather than as metadata, exactly as for
+    // `webhook_deliveries` above: a unique index SQLite reports but does not
+    // apply would satisfy the assertion above, and the whole guard rests on
+    // this INSERT failing.
+    const { database } = await chain();
+
+    database.exec(
+      `INSERT INTO renders (id, job_id, state) VALUES (7500, 'render-migration-probe', 'queued');`
+    );
+
+    expect(() =>
+      database.exec(
+        `INSERT INTO renders (id, job_id, state) VALUES (7501, 'render-migration-probe', 'queued');`
+      )
+    ).toThrow(/UNIQUE/i);
+  });
+
+  it("lets a sponsorship be deleted and leaves its render behind", async () => {
+    // Payload writes `ON DELETE set null` for every relationship whether or
+    // not the column can hold NULL, so a NOT NULL `sponsorship_id` would make
+    // this delete fail — probed against a real D1, where it surfaced as a raw
+    // `Failed query: delete from "sponsorships"`. Only an actual delete
+    // distinguishes a rule SQLite honours from one it rejects, which is the
+    // same ruling `user_consents` reached one collection earlier.
+    //
+    // Keeping the row is also the behaviour that matters: `mux_asset_id` is
+    // what Mux charges for every month, and a render deleted with its
+    // sponsorship is an asset nobody can name any more.
+    const { database } = await chain();
+
+    database.exec(
+      `INSERT INTO gestures (id, playback_id) VALUES (7600, 'pb-render-migration');`
+    );
+    database.exec(
+      `INSERT INTO sponsorships
+         (id, gesture_id, sponsor_name, sponsor_email, contact_full_name, overlay_text,
+          original_video_playback_id, status, start_date, end_date, duration_years, payment_amount)
+       VALUES (7601, 7600, 'Acme', 'acme@example.test', 'Jan Janssens', 'Met dank aan Acme',
+               'pb-render-migration', 'active', '2026-01-01T00:00:00.000Z', '2027-01-01T00:00:00.000Z', 1, 5000);`
+    );
+    database.exec(
+      `INSERT INTO renders (id, job_id, sponsorship_id, state, mux_asset_id)
+       VALUES (7602, 'render-orphan-probe', 7601, 'ready', 'asset-migration-probe');`
+    );
+
+    database.exec("DELETE FROM sponsorships WHERE id = 7601;");
+
+    expect(
+      database
+        .prepare(
+          "SELECT sponsorship_id, mux_asset_id FROM renders WHERE id = 7602"
+        )
+        .all()
+    ).toEqual([
+      { mux_asset_id: "asset-migration-probe", sponsorship_id: null },
+    ]);
+  });
+
   it("carries every existing user_consents row through the table rebuild", async () => {
     // Making `user_consents.user_id` nullable forces SQLite's twelve-step
     // rebuild: new table, `INSERT ... SELECT`, drop, rename. The failure mode

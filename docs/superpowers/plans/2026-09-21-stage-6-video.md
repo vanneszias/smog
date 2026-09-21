@@ -101,7 +101,7 @@ Five things the spec implies that no task's happy path exercises.
 **Interfaces:**
 - Produces: `RENDER_STATES` (`queued` | `rendering` | `uploading` | `ready` | `failed`); `canAdvance(from, to): boolean`; the `renders` collection with `jobId` **unique**, `sponsorship` (relationship), `state`, `muxAssetId`, `muxPlaybackId`, `failureReason`, `attempts`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("covers every state the collection can hold");
@@ -123,20 +123,20 @@ it("tells a duplicate claim from a database outage", async () => {
 });
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 ```bash
 cd /home/user/smog/apps/site && bunx vitest run src/lib/renderState.test.ts src/collections/Renders.int.test.ts
 ```
 Expected: FAIL on the missing import, not on an assertion.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Model `Renders.ts` on `collections/WebhookDeliveries.ts` — read its doc block first; it explains why a unique index is the only mechanism that works here. `renders.access` is admin-only for read and write: nothing public ever needs a render row, and the callback runs `overrideAccess: true`.
 
-- [ ] **Step 4: Run until green, then `rm -rf apps/site/.wrangler/state`** — this task changes the schema, and a stale directory makes a *different* set of files fail on every run.
+- [x] **Step 4: Run until green, then `rm -rf apps/site/.wrangler/state`** — this task changes the schema, and a stale directory makes a *different* set of files fail on every run.
 
-- [ ] **Step 5: Mutation-prove**
+- [x] **Step 5: Mutation-prove**
 
 | mutation | must fail |
 |---|---|
@@ -146,7 +146,7 @@ Model `Renders.ts` on `collections/WebhookDeliveries.ts` — read its doc block 
 | a terminal state gains an outgoing edge | "lets nothing out of ready or failed" |
 | the migration recreates the index as non-unique | `migrations.test.ts` |
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /home/user/smog && bun check && bun -F site check-types && bunx knip --no-progress --no-config-hints
