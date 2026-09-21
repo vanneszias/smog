@@ -551,7 +551,7 @@ it("registers all four tasks with the schedules the spec names");
 
 Stage 5 recorded it: a logo stored just before a failed write survives with nothing pointing at it, and Stage 6 added the same shape for a `media` row a re-edit abandoned.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("removes a media row nothing references");
@@ -564,7 +564,49 @@ it("keeps one a draft still in flight references", () => {
 it("deletes from R2 only after the row is gone, and survives a missing object");
 ```
 
-- [ ] **Step 2-4:** run, implement, run, mutation-prove, commit.
+- [x] **Step 2-4:** run, implement, run, mutation-prove, commit.
+
+**Five corrections, made while implementing.**
+
+1. **A sibling, and here is which.** `src/jobs/cleanupOrphanedMedia.ts`,
+   registered inside the existing hourly `cleanup-stale-payments` task. The
+   modules are split because they are two operations with nothing in common
+   but a cadence — different collections, and dangerous in different ways, one
+   cancelling a purchase and the other destroying a file. They share the
+   *task* because they share a clock, and because that is what keeps the
+   spec's four tasks four.
+2. **Reachability alone would delete an administrator's library, and the plan
+   does not mention it.** `media` is a general collection and `media.create`
+   is `isAdmin`, so an administrator may upload to it — and an image they have
+   uploaded but not yet used is *exactly* as unreferenced as an abandoned
+   logo. A sweep that removed every unreferenced row would delete it a day
+   later, silently and with no way back. The sweep is therefore narrowed to
+   the filenames this application writes: `endpoints/sponsorships.ts` names
+   every logo itself, because a client-supplied name is a client-supplied R2
+   key, and `SPONSOR_LOGO_PREFIX` now lives in `lib/sponsorDraft.ts` so the
+   name a logo is written under and the name a sweep looks for cannot drift.
+3. **"Nothing references it" has to mean any status, not any *live* status.**
+   A cancelled or expired sponsorship is still the record of what a sponsor
+   was sold and what an administrator approved, and the admin panel and
+   `lib/renderPreview.ts` both render its overlay. Narrowing the reachability
+   query to `active` deletes the evidence behind every finished sponsorship a
+   day after it ends, and no test about an active one would notice — so there
+   is a test about a cancelled one.
+4. **"Delete from R2 only after the row is gone" is already true, by
+   construction, and the useful version of the test is the other direction.**
+   The sweep never touches R2 at all: it deletes the `media` document, and
+   `@payloadcms/plugin-cloud-storage`'s `afterDelete` removes the object
+   afterwards and swallows its own failures. So the assertion that bites is
+   that a row whose deletion *fails* still has its file — the other order
+   leaves a `media` row pointing at nothing, which is a broken image on a
+   sponsor's page rather than a stray object in a bucket. The mutation that
+   catches it deletes the row through `payload.db.deleteOne`, bypassing the
+   hook, and the test notices the object surviving.
+5. **No schema change, checked rather than assumed.**
+   `sponsorships.overlay_image_id` is already indexed and so is
+   `media.created_at` — Payload indexes relationship and timestamp columns by
+   default — so both halves of the candidate query and the reachability lookup
+   are index reads, and this task adds no migration.
 
 ---
 
@@ -574,6 +616,17 @@ it("deletes from R2 only after the row is gone, and survives a missing object");
 
 - [ ] Verify the sender domain and onboard it to Cloudflare Email Service; record the steps in `apps/site/README.md`.
 - [ ] Set the run-endpoint token and any mail configuration as Worker secrets — **as environment variables, never pasted into a transcript.**
+- [ ] **Wire the Cron Trigger, which Task 5 could not.** A Cron Trigger invokes
+  the Worker's `scheduled()` handler, and OpenNext's generated
+  `.open-next/worker.js` exports only `fetch` and three Durable Objects — so
+  this means pointing `main` at a wrapper module that re-exports those and adds
+  `scheduled`, calling `runScheduledTick` (`src/jobs/cron.ts`, already
+  unit-tested) with the generated worker's own `fetch`. Then the `"crons"`
+  entry, `SITE_ORIGIN` as a var and `JOBS_RUN_TOKEN` as a secret, per
+  environment. `wrangler.jsonc` carries the whole list as a comment and
+  deliberately carries no `"crons"` key until then: a cron on a Worker with no
+  `scheduled` export errors on every firing while the dashboard shows it
+  configured.
 - [ ] Send one of each message on staging and record what differed from the fake. **Expect something to differ.**
 - [ ] Find and record the actual daily quota.
 - [ ] Confirm the Cron Trigger fires and the run endpoint refuses an unauthenticated call in production.

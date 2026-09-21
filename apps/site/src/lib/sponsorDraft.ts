@@ -57,6 +57,24 @@ export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
  */
 export const LOGO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
+/**
+ * What every logo this application stores is called.
+ *
+ * `endpoints/sponsorships.ts` names the file itself rather than taking the
+ * browser's name, because a client-supplied name is a client-supplied R2 key
+ * and two sponsors uploading `logo.png` should not be one sponsor overwriting
+ * the other. That makes the prefix an invariant of this application rather
+ * than a convention, and `jobs/cleanupOrphanedMedia.ts` leans on it: `media`
+ * is a general collection an administrator may also upload to, and a sweep
+ * that deleted every unreferenced row would delete their library.
+ *
+ * Here rather than in either of them, so the name a logo is written under and
+ * the name a sweep looks for cannot drift into disagreeing — which would be a
+ * sweep that silently stopped finding anything, or one that started deleting
+ * things it should not.
+ */
+export const SPONSOR_LOGO_PREFIX = "sponsor-logo-";
+
 /*
  * Neither this nor `SponsorDraft` below is exported, and `isVatNumber` is not
  * either: knip fails `bun release:check` on an exported symbol nothing

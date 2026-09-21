@@ -1,6 +1,7 @@
 import type { JobsConfig, RunJobAccess, TaskConfig } from "payload";
 import { JobCancelledError } from "payload";
 import { isRetryableSendFailure } from "@/email/adapter";
+import { cleanupOrphanedMedia } from "@/jobs/cleanupOrphanedMedia";
 import { cleanupStalePayments } from "@/jobs/cleanupStalePayments";
 import {
   expireSponsorships,
@@ -322,22 +323,40 @@ export const jobsConfig: JobsConfig = {
     },
     {
       /**
-       * Cancels a checkout nobody ever paid for, so the gesture it reserved
-       * can be sold again.
+       * The two things an abandoned checkout leaves behind: a
+       * `pending_payment` row holding a gesture nobody can buy, and a logo in
+       * R2 that nothing will ever point at.
        *
        * Hourly, from the spec, and the cadence is part of the design rather
-       * than a preference: the window is twenty-four hours, so an hourly
+       * than a preference: both windows are twenty-four hours, so an hourly
        * sweep means an abandoned checkout blocks its gesture for at most
-       * twenty-five, and the row-level lease
-       * (`jobs/cleanupStalePayments.ts`) is fifteen minutes — shorter than
-       * the interval, so one crashed sweep costs no ticks at all.
+       * twenty-five and a stray upload survives at most a day. The row-level
+       * lease in `jobs/cleanupStalePayments.ts` is fifteen minutes — shorter
+       * than the interval, so one crashed sweep costs no ticks at all.
+       *
+       * **Two operations in one task, and the split between them is the
+       * point.** `jobs/cleanupOrphanedMedia.ts` says why it is a sibling
+       * module rather than more of its neighbour: they read different
+       * collections and are dangerous in different ways, one cancelling a
+       * purchase and the other destroying a file. What they share is a clock,
+       * so what they share is a task — which is also what keeps the spec's
+       * four tasks four.
+       *
+       * The media sweep runs second, and not for a reason worth relying on:
+       * nothing it looks at is touched by the cancellation, because
+       * cancelling a sponsorship does not release its `overlayImage`. If that
+       * ever changes, this ordering stops being incidental and starts being a
+       * decision that has to be written down.
        */
       handler: async ({ req }) => {
-        await cleanupStalePayments(req.payload, new Date());
+        const now = new Date();
+
+        await cleanupStalePayments(req.payload, now);
+        await cleanupOrphanedMedia(req.payload, now);
 
         return { output: {} };
       },
-      label: "Cancel abandoned checkouts",
+      label: "Cancel abandoned checkouts and sweep unreferenced logos",
       retries: NO_RETRIES,
       schedule: scheduled(HOURLY),
       slug: "cleanup-stale-payments",

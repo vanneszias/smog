@@ -430,13 +430,14 @@ describe("the scheduled jobs", () => {
   it("runs every operation each scheduled task is named after", async () => {
     /*
      * A task's handler is wiring, and wiring is where an operation goes
-     * missing without anything failing. `expire-sponsorships` is **two**
-     * operations in one task — the expiry and the readiness sweep — and they
-     * are one task because the second deliberately skips a render whose
-     * sponsorship is terminal, on the grounds that the first is about to
-     * delete its asset. A handler that called only the first would leave the
-     * sweep Stage 6 built running nowhere at all, and every other test in this
-     * file would still pass.
+     * missing without anything failing. Two of the three are **two operations
+     * each**: `expire-sponsorships` is the expiry and the readiness sweep, one
+     * task because the second deliberately skips a render whose sponsorship is
+     * terminal on the grounds that the first is about to delete its asset; and
+     * `cleanup-stale-payments` is the abandoned checkout and the logo it left
+     * behind in R2, one task because they share a clock and nothing else. A
+     * handler that called only the first of either would leave a sweep running
+     * nowhere at all, and every other test in this file would still pass.
      *
      * The evidence is each operation's own closing log line, because a job run
      * from inside the queue has no return value anybody outside it can read.
@@ -453,6 +454,7 @@ describe("the scheduled jobs", () => {
     expect(said("[expireSponsorships] Checked")).not.toEqual([]);
     expect(said("[sendRenewalReminders] Queued")).not.toEqual([]);
     expect(said("[cleanupStalePayments] Cancelled")).not.toEqual([]);
+    expect(said("[cleanupOrphanedMedia] Deleted")).not.toEqual([]);
   });
 
   it("still drains the queue when the schedules cannot be evaluated", async () => {

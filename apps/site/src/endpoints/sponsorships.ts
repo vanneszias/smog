@@ -28,6 +28,7 @@ import {
   readSponsorDetails,
   SPONSOR_DRAFT_COOKIE,
   SPONSOR_DRAFT_TTL_SECONDS,
+  SPONSOR_LOGO_PREFIX,
   type SponsorDetails,
 } from "@/lib/sponsorDraft";
 import { resolveSponsorSelection } from "@/lib/sponsorSelection";
@@ -203,7 +204,7 @@ async function storeLogo(
     file: {
       data: Buffer.from(await file.arrayBuffer()),
       mimetype: file.type,
-      name: `sponsor-logo-${crypto.randomUUID()}.${EXTENSIONS[file.type] ?? "bin"}`,
+      name: `${SPONSOR_LOGO_PREFIX}${crypto.randomUUID()}.${EXTENSIONS[file.type] ?? "bin"}`,
       size: file.size,
     },
     overrideAccess: true,
