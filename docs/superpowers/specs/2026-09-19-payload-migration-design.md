@@ -981,6 +981,64 @@ built for, and that idempotency *is* mutation-proven. Trading a proven guard
 for an unproven optimisation is the wrong direction, so the optimisation
 went.
 
+## A client built at module scope from an unset variable is dead on import
+
+Stage 5 Task 3, found by a throwaway probe build rather than by reading.
+
+`@mollie/api-client` validates in its constructor: `createMollieClient({ apiKey: "" })`
+throws `Parameter "apiKey" is an empty string.` The shipped
+`packages/auth/src/lib/payments.ts` is
+
+```ts
+export const mollieClient = createMollieClient({
+  apiKey: process.env.MOLLIE_API_KEY || "",
+});
+```
+
+at **module scope**, so in any environment where `MOLLIE_API_KEY` is unset,
+*importing that module throws* — not the request that needed Mollie, the
+import. The probe build died in `next build`'s page-data collection for
+exactly this reason.
+
+The failure mode is what makes it worth recording: a secret read at module
+scope turns a missing-configuration problem into a build or boot failure in
+a file that may have nothing to do with payments, and the stack trace names
+the importer rather than the cause. Read at call time, the same missing
+variable is one endpoint answering 500 with a message that says which
+variable is missing.
+
+`apps/site/src/lib/mollie.ts` reads the key per call for this reason. **Stage
+7's email adapter has the same shape and the same temptation**, and Stage 10
+should not port `packages/auth/src/lib/payments.ts` as it stands.
+
+## Two more ways a test can prove nothing, both from Stage 5 Task 3
+
+The list this document keeps is now at eight. These two are cheap to repeat.
+
+**An assertion whose inputs cannot violate it.** The plan asked for
+`it("returns whole cents, never a fraction")`, looping integer counts through
+a function built from integer constants. Integers times integers are
+integers, so no mutation of the arithmetic could fail it. The function can
+only produce a fraction from a non-integer *count*, so the guard is
+`Number.isInteger(gestureCount)` and what proves it is the positive case —
+`sponsorshipAmountCents(2.5, false)` must throw.
+
+**An equivalent mutation, deleted rather than recorded.**
+`...(input.webhookUrl ? { webhookUrl: input.webhookUrl } : {})` and a plain
+`webhookUrl: input.webhookUrl` serialise to identical bytes, because
+`JSON.stringify` drops `undefined` values. No test can distinguish them. The
+conditional spread reads as a guard and is not one, so it went — the same
+ruling as the `isGestureId` screen in Stage 4 Task 7 and the empty-token
+early return in `confirmEmailChange`.
+
+A third from the same task is the more dangerous kind, because the guard was
+real and only *looked* redundant: a bare `typeof value !== "string"` check on
+Mollie's decimal amount survived its mutation because a downstream
+`Number.isFinite` caught the `undefined` case. Strengthening the test to list
+every way the field can be missing then failed against the implementation —
+`Number("")` is **0**, so a payment carrying `value: ""` was being read as
+`amountCents: 0`. A guard that appears masked may be masking a bug.
+
 ## Risks
 
 | Risk | Mitigation |
