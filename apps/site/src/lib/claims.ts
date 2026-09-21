@@ -76,6 +76,11 @@ import type { Payload } from "payload";
  * Adding a member is adding a consumer. Renaming one **orphans every existing
  * row of the old name**, which for `render-completion` means every completed
  * render becomes replayable — so a rename is a data migration, not an edit.
+ *
+ * Adding one is *not* a schema change, checked rather than assumed: the
+ * collection's `select` field is a plain `text` column in SQLite with no CHECK
+ * constraint (`20260921_180000_add_claims`), so the set is enforced by
+ * Payload's validation and by this type, and only `payload-types.ts` changes.
  */
 export const CLAIM_KINDS = {
   /** `endpoints/jobs.ts` — a lease on the scheduled-job runner. Expires. */
@@ -84,6 +89,21 @@ export const CLAIM_KINDS = {
   mollieDelivery: "mollie-delivery",
   /** `endpoints/render.ts` — one render callback. Kept for ever. */
   renderCompletion: "render-completion",
+  /**
+   * `jobs/cleanupStalePayments.ts` — a lease on sweeping one abandoned
+   * checkout. Expires, and is kept until it does.
+   *
+   * The odd one out, and worth saying why rather than leaving it to look like
+   * the others. It is a **lease**, because a sweeper that dies holding a
+   * receipt would strand that sponsorship in `pending_payment` for ever —
+   * which is the exact gap the job exists to close, recreated by its own
+   * lock. But unlike `job-run` it is *not* released when the work succeeds:
+   * a lapsed lease and a cancelled sponsorship are both "nothing left to do
+   * here", and keeping it is what makes the second run of a sweep
+   * distinguishable from the first at all. The job clears its own lapsed
+   * leases at the start of each run, because nothing else ever will.
+   */
+  stalePayment: "stale-payment",
 } as const;
 
 type ClaimKind = (typeof CLAIM_KINDS)[keyof typeof CLAIM_KINDS];

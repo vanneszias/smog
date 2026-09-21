@@ -357,7 +357,7 @@ it("renders every message in the recipient's locale");
 
 The spec: hourly, cancels `pending_payment` rows older than 24 hours. **This closes the gap where an abandoned checkout blocks its gesture** — recorded at Stage 5's exit as live until this exists.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("cancels a pending_payment sponsorship older than the window");
@@ -375,7 +375,47 @@ it("is idempotent, and the second run is stopped by the claim not the status");
 it("does not cancel a row the webhook advanced mid-sweep");
 ```
 
-- [ ] **Step 2-4:** run, implement, run, mutation-prove, commit.
+- [x] **Step 2-4:** run, implement, run, mutation-prove, commit.
+
+**Six corrections, made while implementing.**
+
+1. **A lease's clock is not the sweep's `now`, and conflating them unlocks
+   every live lease.** The sweep takes a `now` so a test can move the *window*
+   rather than backdate `createdAt`, which Payload owns. The first version
+   compared lease expiries against that same `now` — and a sweep asked to
+   treat everything older than "25 hours from now" as abandoned then deleted
+   every unexpired lease in the table, including one another sweeper was
+   holding. A lock that unlocks itself for whoever asks the biggest question
+   is not a lock. Lease expiry reads the real clock, as `takeClaim`'s own
+   `clearExpired` does; the window reads `now`. Caught by a failing test, and
+   the assertion that caught it is still there.
+2. **The re-read guard narrows the webhook race and does not close it.** What
+   closes it is `hooks/enforceStatusTransitions.ts` refusing
+   `pending_approval -> cancelled`, so a payment landing *after* the re-read
+   makes the write fail rather than succeed quietly. Both are needed: the
+   guard alone is a race, the transition table alone turns an ordinary event
+   into an error log.
+3. **The claim is not what makes the sweep idempotent — the status is.** A
+   cancelled row leaves the candidate query, and a second cancellation would
+   be a no-op `canTransition` permits anyway. The claim divides the work of
+   two *overlapping* sweeps at row granularity. The test says which mechanism
+   stopped which run, because a test that merely ran the job twice would not.
+4. **It is a lease that is kept when the sweep succeeds** — which is what
+   makes the plan's sentence true — and the job clears its own lapsed leases
+   at the start of every run, because nothing else ever would. A receipt would
+   mean a sweeper that died between claiming and cancelling left that
+   sponsorship claimed for ever and its gesture unsellable for ever: this
+   job's own lock recreating the gap the job exists to close.
+5. **The lease's expiry is provable only structurally.** The behaviour it
+   guards is a process dying mid-sweep, which a test inside that process
+   cannot stage — the ordinary failure path releases the claim itself, and is
+   tested. The mutation that turns the lease into a receipt is caught by
+   asserting the stored `expiresAt`, and that is recorded as a structural
+   assertion rather than dressed up as a behavioural one.
+6. **This task builds the operation, not the schedule.** `src/jobs/index.ts`
+   registers only `send-email`; `cleanupStalePayments` is called by nothing
+   yet, exactly as `expireSponsorships` has been since Stage 6. Task 5 owns
+   all four schedules.
 
 ---
 
@@ -384,6 +424,21 @@ it("does not cancel a row the webhook advanced mid-sweep");
 **Files:** create `src/jobs/sendRenewalReminders.ts` + `.int.test.ts`; extend `src/jobs/index.ts` with all four schedules; modify `wrangler.jsonc` with the Cron Trigger.
 
 `expireSponsorships` and `settleComposedVideos` are **already built and mutation-proven** (Stage 6 Task 5). Schedule them. Do not rewrite them.
+`cleanupStalePayments` is too, as of Task 4.
+
+**Two things Task 3 found that this task will trip over.**
+
+- **`payload.jobs.run` does not schedule anything.** A task's `schedule`
+  property is acted on by `payload.jobs.handleSchedules`, which Payload's own
+  `GET /api/payload-jobs/run` calls before running the queue
+  (`queues/endpoints/run.js`) and which the Local API's `run` does *not*
+  (`queues/localAPI.js`). `endpoints/jobs.ts` uses the Local API — it has to,
+  because Payload's endpoint is now closed to everybody — so a `schedule`
+  added to a task without also calling `handleSchedules` from that endpoint is
+  four jobs that are never queued and a cron that appears to work.
+- **`jobs.access.run` is `denyAll`**, so nothing reaches the queue except
+  `GET /api/jobs/run` with its token. Whatever wiring calls the cron must go
+  through that path.
 
 - [ ] **Step 1: Write the failing tests**
 

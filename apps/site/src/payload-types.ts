@@ -362,7 +362,7 @@ export interface Render {
 export interface Claim {
   id: number;
   key: string;
-  kind: 'job-run' | 'mollie-delivery' | 'render-completion';
+  kind: 'job-run' | 'mollie-delivery' | 'render-completion' | 'stale-payment';
   expiresAt?: string | null;
   updatedAt: string;
   createdAt: string;
