@@ -17,15 +17,15 @@ import type { User } from "@/payload-types";
  * is not sent on a cross-site POST, so the session cookie the endpoint needs
  * simply is not there for an attacker's form.
  *
- * **Task 4 kept it a nav and not a menu, on purpose.** The plan's Step 1 asks
- * for an account menu, and a menu needs somewhere to go: the account page is
- * Task 5's, and a disclosure widget wrapping one address and one button is
- * two keyboard interactions and an `aria-expanded` bought for nothing. What
- * Task 4 did add is the signed-in favorites path — which turned out to live
- * entirely in `FavoriteButton`, `FavoritesList` and `endpoints/favorites.ts`,
- * because the header's only input is still who you are. When Task 5 lands
- * `/{locale}/account`, this is where its link goes, and that is the point at
- * which a menu starts paying for itself.
+ * **Still a nav and not a menu, now that there is somewhere to go.** Task 4
+ * deferred the plan's "account menu" on the grounds that a disclosure widget
+ * wrapping one address and one button buys nothing, and said Task 5's
+ * `/{locale}/account` would be the point at which a menu starts paying for
+ * itself. It is not: the account page arrived, and the link to it is the
+ * address, so the header still holds exactly two tab stops. A menu would add
+ * an `aria-expanded`, an escape handler and a `"use client"` boundary to the
+ * layout of every page in order to hide one of them. Revisit when there are
+ * three or more destinations.
  */
 export function AccountNav({
   locale,
@@ -87,14 +87,24 @@ export function AccountNav({
          * not skip comments, so a class written in prose is a class in the
          * stylesheet. That is how this comment failed the very test it is
          * describing.
+         *
+         * The address *is* the link to the account page, rather than a
+         * separate "Account" item beside it — so the header gains a
+         * destination without gaining a tab stop.
+         *
+         * `inline-block` is load-bearing rather than decoration: `truncate`
+         * sets `overflow: hidden` and a `max-width`, neither of which an
+         * inline box obeys, so the same classes that truncated the old
+         * `<span>` would let an `<a>` run the header onto a second row.
          */}
-        <span
-          className="max-w-xs truncate text-foreground text-sm"
+        <a
+          className="inline-block max-w-xs truncate text-foreground text-sm underline hover:no-underline"
           data-testid="account-email"
+          href={`/${locale}/account`}
           title={user.email}
         >
           {user.email}
-        </span>
+        </a>
         {/*
          * The locale travels in the body rather than in the action URL so the
          * endpoint has one path, and so the value cannot be smuggled in by a

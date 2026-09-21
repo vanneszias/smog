@@ -74,6 +74,24 @@ const nextConfig: NextConfig = {
         destination: "/api/account/favorites",
         source: "/account/favorites",
       },
+      /*
+       * The account page's four writes. Locale-free like everything above —
+       * the forms carry the locale in their body — and rewrites rather than
+       * route handlers for the same bundle reason.
+       *
+       * `/account/confirm-email` is a sibling of `/account/email` rather
+       * than a child of it on purpose: Payload's endpoint matcher would have
+       * to decide between two overlapping patterns, and a nested path that
+       * resolved to the wrong handler would answer "your address has
+       * changed" without changing it.
+       */
+      { destination: "/api/account/password", source: "/account/password" },
+      { destination: "/api/account/email", source: "/account/email" },
+      {
+        destination: "/api/account/confirm-email",
+        source: "/account/confirm-email",
+      },
+      { destination: "/api/account/delete", source: "/account/delete" },
     ];
   },
 

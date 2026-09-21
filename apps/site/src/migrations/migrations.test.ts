@@ -219,6 +219,35 @@ describe("migration chain", () => {
     expect(rows).toEqual([{ user_id: null, consent_version: "v1" }]);
   });
 
+  it("gives users the pending-email columns the account page writes", async () => {
+    /*
+     * `pushDevSchema` derives the local schema from the collection configs
+     * and never opens a migration file, so every integration test in this app
+     * passes against columns no migration creates. The first place that
+     * shows up otherwise is `payload migrate` against a deployed D1 — and
+     * here it would show up as an address change that 500s for everybody.
+     */
+    const { database } = await chain();
+    const columns = (
+      database.prepare("SELECT name FROM pragma_table_info('users')").all() as {
+        name: string;
+      }[]
+    ).map((column) => column.name);
+
+    expect(columns).toEqual(
+      expect.arrayContaining([
+        "pending_email",
+        "pending_email_expires_at",
+        "pending_email_token",
+      ])
+    );
+
+    // Indexed because every confirmation is an equality lookup on it.
+    expect(indexesOn(database, "users").map((index) => index.name)).toContain(
+      "users_pending_email_token_idx"
+    );
+  });
+
   it("gives every pre-existing list its own pair of share tokens", async () => {
     // Task 7 mints tokens in a `beforeChange` hook, which fixes every future
     // list and no existing one. The backfill is what reaches the rows Stage 1

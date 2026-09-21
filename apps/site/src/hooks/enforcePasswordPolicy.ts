@@ -1,4 +1,7 @@
-import type { CollectionBeforeValidateHook } from "payload";
+import type {
+  CollectionBeforeOperationHook,
+  CollectionBeforeValidateHook,
+} from "payload";
 import { ValidationError } from "payload";
 
 /**
@@ -104,18 +107,9 @@ const rejectionReason = (password: string): null | string => {
  * first and calls `beforeValidate` afterwards, with the *user document* as
  * `data` rather than the submitted body
  * (`auth/operations/resetPassword.js`), so `data.password` is undefined
- * there and this hook cannot see it. A reset can therefore still set a
- * three-character password.
- *
- * That gap is not purely theoretical: `app/(payload)/api/[...slug]/route.ts`
- * mounts Payload's REST API, which registers `/forgot-password` and
- * `/reset-password` for every auth collection
- * (`payload/dist/auth/endpoints/index.js`). What makes it unreachable *today*
- * is only that no email adapter is configured, so the reset token is written
- * to the console rather than delivered. It becomes reachable the moment one
- * is. Whichever task builds the reset flow has to apply this policy at its
- * own entry point — a collection hook cannot. Recorded in
- * `docs/superpowers/specs/2026-09-19-stage-0-findings.md`.
+ * there and this hook cannot see it. {@link enforcePasswordPolicyOnReset}
+ * closes that path; it is a separate hook because it has to run at a
+ * different point in the same operation.
  */
 export const enforcePasswordPolicy: CollectionBeforeValidateHook = ({
   data,
@@ -130,6 +124,89 @@ export const enforcePasswordPolicy: CollectionBeforeValidateHook = ({
 
   if (reason === null) {
     return data;
+  }
+
+  throw new ValidationError({
+    collection: "users",
+    errors: [{ message: reason, path: "password" }],
+  });
+};
+
+/**
+ * The same floor, applied to `resetPassword`.
+ *
+ * ## The gap this closes
+ *
+ * `enforcePasswordPolicy` above cannot see a reset. `resetPasswordOperation`
+ * (`payload/dist/auth/operations/resetPassword.js`, 3.89.0) calls
+ * `generatePasswordSaltHash` **first** and only then runs the collection's
+ * `beforeValidate` hooks, passing the *user document* — the one carrying the
+ * freshly written `salt` and `hash` — as `data`. By the time a
+ * `beforeValidate` hook runs there is no plaintext left in `data` to inspect,
+ * so the floor that every other path enforces simply is not applied.
+ *
+ * What is applied instead is Payload's own: `generatePasswordSaltHash` runs
+ * `password()` from `fields/validations.js` with a synthesised field
+ * descriptor that passes no `minLength`, so the default parameter —
+ * `minLength = 3` — is the entire rule. **A reset could set a
+ * three-character password**, on an account whose twelve-character floor had
+ * been enforced at every other door.
+ *
+ * It is unreachable today only because no email adapter is configured, so
+ * `forgotPassword` writes the token to the console instead of delivering it.
+ * Stage 7 configures one. It is also the *only* way into a Google-created
+ * account that has never set a password — `endpoints/oauth.ts` gives those a
+ * random 288-bit value nobody knows — so the reset path is not a corner of
+ * this system, it is the main door for one class of account.
+ *
+ * ## Why a `beforeOperation` hook and not an endpoint override
+ *
+ * The obvious fix is to shadow `POST /api/users/reset-password` the way
+ * `endpoints/auth.ts` shadows `/login`, and that is what the stage plan
+ * costed. It is not necessary. `resetPasswordOperation` calls
+ * `buildBeforeOperation` as the first step inside its transaction —
+ * **before the token is looked up, and long before
+ * `generatePasswordSaltHash` is reached** — and that helper hands every
+ * `beforeOperation` hook the operation's own `args`, `data.password`
+ * included: the plaintext, exactly as submitted
+ * (`collections/operations/utilities/buildBeforeOperation.js`). Verified at
+ * the call site.
+ *
+ * A hook is strictly better than an endpoint override here: it covers the
+ * REST endpoint, the GraphQL mutation, the admin panel's reset screen and
+ * `payload.resetPassword` from server code, where an override covers one of
+ * the four and leaves the rest on Payload's three-character floor.
+ *
+ * **It must narrow on `operation`.** `beforeOperation` fires for every
+ * operation on this collection — `login`, `create`, `read`, all of them —
+ * and `args` has a different shape for each. `Users.password.int.test.ts`
+ * pins that an ordinary sign-in still works with this hook installed, which
+ * is the test a missing narrow fails.
+ */
+export const enforcePasswordPolicyOnReset: CollectionBeforeOperationHook = ({
+  args,
+  operation,
+}) => {
+  if (operation !== "resetPassword") {
+    return;
+  }
+
+  const password = (args as { data?: { password?: unknown } }).data?.password;
+
+  /*
+   * A non-string is left alone rather than rejected. `resetPasswordOperation`
+   * has its own answer for a missing password — `Missing required data.`,
+   * a 400 — and reporting it here as a weak password would be a worse
+   * message for the same request.
+   */
+  if (typeof password !== "string") {
+    return;
+  }
+
+  const reason = rejectionReason(password);
+
+  if (reason === null) {
+    return;
   }
 
   throw new ValidationError({

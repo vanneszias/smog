@@ -21,6 +21,7 @@ import { Media } from "./collections/Media";
 import { Sponsorships } from "./collections/Sponsorships";
 import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
+import { accountEndpoints } from "./endpoints/account";
 import { authEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
@@ -183,12 +184,17 @@ export default buildConfig({
    * `app/` for the same half-megabyte reason as everything above — Stage 3
    * Task 6 measured that exact route and recorded the number in
    * `lib/favoritesQuery.ts`.
+   *
+   * `accountEndpoints` adds the four writes the account page makes —
+   * `/account/password`, `/account/email`, `/account/confirm-email` and
+   * `/account/delete` — on the same terms.
    */
   endpoints: [
     ...crawlerEndpoints,
     ...authEndpoints,
     ...oauthEndpoints,
     ...favoritesEndpoints,
+    ...accountEndpoints,
   ],
   localization: {
     locales: [

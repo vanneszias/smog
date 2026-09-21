@@ -47,6 +47,28 @@ describe("AccountNav", () => {
     ).toBe("someone@example.test");
   });
 
+  it("links the signed-in address at the account page", () => {
+    // The header is the only route to `/{locale}/account` in the chrome; a
+    // link that lost its href would leave the page reachable only by typing
+    // the URL, and nothing else in the suite renders this header.
+    expect(
+      nav(signedIn).querySelector<HTMLAnchorElement>(
+        '[data-testid="account-email"]'
+      )?.href
+    ).toContain("/nl/account");
+  });
+
+  it("keeps the account link inside the locale it was rendered for", () => {
+    const host = render(
+      renderToStaticMarkup(<AccountNav locale="fr" user={signedIn} />)
+    );
+
+    expect(
+      host.querySelector<HTMLAnchorElement>('[data-testid="account-email"]')
+        ?.href
+    ).toContain("/fr/account");
+  });
+
   it("offers no way back in to somebody already signed in", () => {
     const host = nav(signedIn);
 

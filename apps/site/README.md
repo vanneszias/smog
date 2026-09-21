@@ -151,12 +151,23 @@ The suite runs against a **persisted** local D1 directory that is never cleared
 between runs. Two consequences, both of which have already cost someone an
 afternoon:
 
-- **Adding a collection invalidates the existing directory.** Payload's
-  `pushDevSchema` rebuilds `payload_locked_documents_rels` and trips over
+- **Any schema change invalidates the existing directory — a new *field* is
+  enough.** Payload's `pushDevSchema` rebuilds
+  `payload_locked_documents_rels` and trips over
   `index payload_locked_documents_rels_order_idx already exists`. This is a
   local-push-only problem — the committed migrations use `ALTER TABLE ... ADD`,
   so deployed environments are unaffected — but it makes a perfectly good
   branch look broken on first run.
+
+  Stage 4 Task 5 is the worked example, and it cost most of a session. It
+  added three `users` columns and one index. Against a directory left over
+  from before that change, the suite failed in a **different set of files on
+  every run** — including files the task never touched — and the failures
+  clustered on `users`, which made it look like tests were leaking login
+  lockouts into each other. They were not. `rm -rf .wrangler/state` and the
+  same commit ran 885/885 green four times over. If failures move between
+  runs and you have just changed the schema, clear the directory *before*
+  forming any other theory.
 - **Adding a `unique` constraint fails over rows that already violate it.**
   Same cause, different symptom: `CREATE UNIQUE INDEX ... UNIQUE constraint
   failed` during setup, because earlier runs left duplicate values behind from

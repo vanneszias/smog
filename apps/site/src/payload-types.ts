@@ -149,6 +149,15 @@ export interface User {
       }[]
     | null;
   /**
+   * An address change awaiting confirmation. Written by the account endpoints; not editable here.
+   */
+  pendingEmail?: string | null;
+  pendingEmailToken?: string | null;
+  /**
+   * When the pending address change stops being confirmable.
+   */
+  pendingEmailExpiresAt?: string | null;
+  /**
    * Gestures this user has favorited.
    */
   favorites?: (number | Gesture)[] | null;
@@ -452,6 +461,9 @@ export interface UsersSelect<T extends boolean = true> {
         subject?: T;
         id?: T;
       };
+  pendingEmail?: T;
+  pendingEmailToken?: T;
+  pendingEmailExpiresAt?: T;
   favorites?: T;
   updatedAt?: T;
   createdAt?: T;

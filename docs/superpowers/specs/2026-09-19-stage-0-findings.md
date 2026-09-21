@@ -623,7 +623,12 @@ capped instead:
    Task 2's call to make — recorded here so it is a decision rather than an
    omission.
 
-3. **`resetPassword` bypasses collection hooks for the password.** It hashes
+3. **`resetPassword` bypasses collection hooks for the password.**
+   **Closed in Stage 4 Task 5** by `enforcePasswordPolicyOnReset`, a
+   `beforeOperation` hook — `buildBeforeOperation` runs before the hashing
+   and hands the hook the submitted `data.password`, which `beforeValidate`
+   never sees. The rest of this entry describes the gap as it was found. It
+   hashes
    first and calls `beforeValidate` afterwards, passing the *user document*
    rather than the submitted body
    (`payload/dist/auth/operations/resetPassword.js`), so `data.password` is
@@ -635,7 +640,11 @@ capped instead:
    registers `/forgot-password` and `/reset-password` on every auth
    collection. The only thing making it unreachable today is that no email
    adapter is configured, so the reset token goes to the console instead of
-   to a mailbox — it becomes reachable the moment one is. A collection hook
-   cannot close this; whichever task builds the reset flow must apply the
-   policy at that entry point, and configuring email without doing so
-   re-opens the three-character floor.
+   to a mailbox — it becomes reachable the moment one is.
+
+   The original conclusion here — "a collection hook cannot close this" — was
+   **wrong**, and the correction is kept because it is the kind of mistake
+   that costs a task. A `beforeValidate` hook cannot; a `beforeOperation`
+   hook can, because `resetPasswordOperation` runs
+   `buildBeforeOperation` before it hashes and passes the operation's own
+   `args`. See `hooks/enforcePasswordPolicy.ts`.

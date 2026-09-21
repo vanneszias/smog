@@ -119,6 +119,148 @@ describe("Users password policy", () => {
     ).toMatch(/at least 12 characters/i);
   });
 
+  /**
+   * Starts a reset and returns the token, the way the (unconfigured) mailer
+   * would have carried it.
+   *
+   * `disableEmail` because there is no adapter; `forgotPasswordOperation`
+   * returns the token either way.
+   */
+  const resetTokenFor = async (email: string): Promise<string> =>
+    (await payload.forgotPassword({
+      collection: "users",
+      data: { email },
+      disableEmail: true,
+    })) as unknown as string;
+
+  describe("on the reset-password path", () => {
+    /*
+     * The gap `hooks/enforcePasswordPolicy` could not close and
+     * `enforcePasswordPolicyOnReset` does. `resetPasswordOperation` hashes
+     * before it runs `beforeValidate`, and hands that hook the user document
+     * rather than the submitted body — so `data.password` is undefined there
+     * and the twelve-character floor simply was not applied. What was applied
+     * is Payload's own default parameter, `minLength = 3`.
+     *
+     * Unreachable today only because no email adapter is configured. Stage 7
+     * configures one.
+     */
+    it("rejects a three-character password", async () => {
+      const user = await create("pw-reset-short", "reset-floor-password");
+      const token = await resetTokenFor(user.email);
+
+      expect(
+        await rejectionFrom(
+          payload.resetPassword({
+            collection: "users",
+            data: { password: "abc", token },
+            overrideAccess: true,
+          })
+        )
+      ).toMatch(/at least 12 characters/i);
+
+      // And the old one still works, so the reset did not half-happen.
+      const loggedIn = await payload.login({
+        collection: "users",
+        data: { email: user.email, password: "reset-floor-password" },
+      });
+
+      expect(loggedIn.user?.id).toBe(user.id);
+    });
+
+    it("rejects a common password that clears the length floor", async () => {
+      const user = await create("pw-reset-common", "reset-common-password");
+      const token = await resetTokenFor(user.email);
+
+      expect(
+        await rejectionFrom(
+          payload.resetPassword({
+            collection: "users",
+            data: { password: "password1234", token },
+            overrideAccess: true,
+          })
+        )
+      ).toMatch(/too common/i);
+    });
+
+    it("still lets a strong password through", async () => {
+      // The other half. A hook that rejected everything would pass both
+      // tests above and break password reset entirely — which, on a
+      // Google-created account, is the only door there is.
+      const user = await create("pw-reset-ok", "reset-original-password");
+      const token = await resetTokenFor(user.email);
+
+      await payload.resetPassword({
+        collection: "users",
+        data: { password: "reset-replacement-ok", token },
+        overrideAccess: true,
+      });
+
+      const loggedIn = await payload.login({
+        collection: "users",
+        data: { email: user.email, password: "reset-replacement-ok" },
+      });
+
+      expect(loggedIn.user?.id).toBe(user.id);
+    });
+
+    it("leaves every other operation on the collection alone", async () => {
+      /*
+       * `beforeOperation` fires for `login`, `create`, `read` and the rest,
+       * and `args` has a different shape for each. A hook that forgot to
+       * narrow on the operation would read `args.data.password` on a login —
+       * where it is the password being *checked*, not one being set.
+       *
+       * **The interesting case is a wrong password, not a right one**, and
+       * the first version of this test missed that. Every *correct* password
+       * is at least twelve characters by construction — the policy put it
+       * there — so an un-narrowed hook waves every successful sign-in
+       * through and this test stayed green. What it breaks is the failures:
+       * a short wrong guess leaves as a `ValidationError` about password
+       * length instead of an `AuthenticationError`, thrown before
+       * `loginOperation` has counted the attempt — which silently disables
+       * lockout, the one brute-force control this project has. The sweep
+       * caught the un-narrowed hook through an unrelated account-endpoint
+       * test; that is a finding, and this is the fix. Transcript M30 in the
+       * Task 5 report.
+       */
+      const user = await create("pw-reset-narrow", "narrow-enough-password");
+      const loggedIn = await payload.login({
+        collection: "users",
+        data: { email: user.email, password: "narrow-enough-password" },
+      });
+
+      expect(loggedIn.user?.id).toBe(user.id);
+
+      const refused = await payload
+        .login({
+          collection: "users",
+          data: { email: user.email, password: "short" },
+        })
+        .then(() => null)
+        .catch((error: Error) => error);
+
+      expect(refused?.name).toBe("AuthenticationError");
+
+      const { docs } = await payload.find({
+        collection: "users",
+        overrideAccess: true,
+        showHiddenFields: true,
+        where: { email: { equals: user.email } },
+      });
+
+      // The attempt was counted, which is what lockout is built on.
+      expect(docs[0]?.loginAttempts).toBe(1);
+
+      const read = await payload.findByID({
+        collection: "users",
+        id: user.id,
+      });
+
+      expect(read.id).toBe(user.id);
+    });
+  });
+
   it("leaves a write that carries no password alone", async () => {
     const user = await create("pw-untouched", "another-good-password");
 

@@ -60,15 +60,29 @@ const OAUTH_ERRORS: Record<string, string> = {
 };
 
 /**
- * What sign-up redirects to, worded so it says nothing about the address.
+ * The notices this page can be sent back with.
  *
- * "If that address was still free" is not coyness; it is the requirement.
- * `endpoints/auth.ts` answers a taken address and a fresh one with the same
- * bytes, and a page that said "your account has been created" would undo that
- * in the only place the visitor actually reads.
+ * Three of the four arrive from the account endpoints, which land here rather
+ * than on the account page because every one of them ends the session or
+ * changes the address it is held under — so the account page would have
+ * bounced the visitor straight here anyway, with the message lost on the way.
  */
-const REGISTERED_NOTICE =
-  "Als dat e-mailadres nog vrij was, staat je account klaar. Meld je hieronder aan.";
+const NOTICES: Record<string, string> = {
+  deleted:
+    "Je account en je lijsten zijn verwijderd. Bedankt voor het gebruiken van SMOG.",
+  "email-changed":
+    "Je e-mailadres is gewijzigd. Meld je hieronder aan met je nieuwe adres.",
+  "password-changed":
+    "Je wachtwoord is gewijzigd en je bent op al je apparaten afgemeld. Meld je hieronder opnieuw aan.",
+  /*
+   * "If that address was still free" is not coyness; it is the requirement.
+   * `endpoints/auth.ts` answers a taken address and a fresh one with the same
+   * bytes, and a page that said "your account has been created" would undo
+   * that in the only place the visitor actually reads.
+   */
+  registered:
+    "Als dat e-mailadres nog vrij was, staat je account klaar. Meld je hieronder aan.",
+};
 
 export default async function SignInPage({
   params,
@@ -87,6 +101,7 @@ export default async function SignInPage({
   const current = resolveLocale(locale);
   const message =
     error === undefined ? null : (OAUTH_ERRORS[error] ?? SIGN_IN_ERROR);
+  const noticeMessage = notice === undefined ? undefined : NOTICES[notice];
 
   /*
    * The button is shown only when the provider is actually configured.
@@ -101,14 +116,14 @@ export default async function SignInPage({
     <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
       <h1 className="font-bold text-foreground text-xxl">Aanmelden</h1>
 
-      {notice === "registered" ? (
+      {noticeMessage === undefined ? null : (
         <p
           className="rounded-md border border-border bg-surface px-4 py-3 text-foreground text-sm"
           data-testid="sign-in-notice"
         >
-          {REGISTERED_NOTICE}
+          {noticeMessage}
         </p>
-      ) : null}
+      )}
 
       {message === null ? null : (
         /*

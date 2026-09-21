@@ -12,14 +12,13 @@ import {
   homePath,
   isCredentialFailure,
   isEmailShaped,
-  isTrustedOrigin,
   localeFromForm,
   normaliseEmail,
-  remainingPad,
   seeOther,
   signInPath,
   signUpPath,
 } from "@/lib/authFlow";
+import { field, guardOrigin, pad, readForm } from "@/lib/formPost";
 
 /**
  * Sign-in, sign-up and sign-out, as Payload endpoints.
@@ -55,66 +54,6 @@ import {
 
 /** The only collection these endpoints will authenticate against. */
 const USERS = "users";
-
-/**
- * Reads the submitted form, tolerating a request that has none.
- *
- * `req.formData()` rejects on an empty or unparseable body, and a POST with
- * no body is something a probe does constantly. An empty `FormData` sends it
- * down the ordinary "those credentials are wrong" path instead of a 500.
- */
-async function readForm(req: PayloadRequest): Promise<FormData> {
-  /*
-   * `PayloadRequest` types `formData` as optional — it is the Fetch `Request`
-   * method, and Payload does not promise every host provides it — so the
-   * guard is a typecheck requirement as much as a runtime one.
-   */
-  if (typeof req.formData !== "function") {
-    return new FormData();
-  }
-
-  try {
-    return await req.formData();
-  } catch {
-    return new FormData();
-  }
-}
-
-function field(form: FormData, name: string): string {
-  const value = form.get(name);
-
-  return typeof value === "string" ? value : "";
-}
-
-/**
- * Holds the response until {@link AUTH_FLOOR_MS} has passed since `started`.
- *
- * See `lib/authFlow.ts` for the measurements that make this necessary: the
- * unpadded answers separate "registered" from "not registered" in a single
- * request.
- */
-function pad(started: number): Promise<void> {
-  const wait = remainingPad(Date.now() - started);
-
-  return new Promise((resolve) => setTimeout(resolve, wait));
-}
-
-/** 403 for a cross-site POST. Not a redirect: nothing here should be retried. */
-function crossSite(): Response {
-  return new Response("Cross-site request refused.", {
-    headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" },
-    status: 403,
-  });
-}
-
-function guardOrigin(req: PayloadRequest): null | Response {
-  const trusted = isTrustedOrigin({
-    origin: req.headers.get("origin"),
-    requestOrigin: req.origin ?? "",
-  });
-
-  return trusted ? null : crossSite();
-}
 
 /** The paths a `ValidationError` complained about, or `null` if it is not one. */
 function validationPaths(error: unknown): null | string[] {

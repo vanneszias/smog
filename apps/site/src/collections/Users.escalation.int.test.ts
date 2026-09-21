@@ -165,4 +165,91 @@ describe("Users privilege escalation", () => {
 
     expect(stored.role).toBe("admin");
   });
+
+  it("does not let a user plant their own email-change confirmation", async () => {
+    /*
+     * The email-change flow is only a verification if the two ends are
+     * different people's inboxes. `isAdminOrSelf` gives a signed-in visitor
+     * document-level update on their own record, so without a field guard a
+     * `PATCH /api/users/:id` carrying a `pendingEmail` and a
+     * `pendingEmailToken` of the visitor's own choosing would let them
+     * confirm their own change — moving the account to an address nobody
+     * proved they control, which is the takeover path
+     * `endpoints/account.ts` exists to close.
+     *
+     * `overrideAccess: false` with the user as themselves, because that is
+     * the request being simulated. The write is not refused, Payload strips
+     * the fields it will not let them write — so the assertion is on what
+     * landed, not on a throw.
+     */
+    const member = await payload.create({
+      collection: "users",
+      overrideAccess: true,
+      data: {
+        email: unique("planter"),
+        password: "pw-planter-12345",
+        role: "user",
+      },
+    });
+
+    await payload.update({
+      collection: "users",
+      id: member.id,
+      overrideAccess: false,
+      req: { user: { ...member, collection: "users" } } as never,
+      data: {
+        pendingEmail: unique("planted"),
+        pendingEmailExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+        pendingEmailToken: "a".repeat(64),
+      },
+    });
+
+    const stored = await payload.findByID({
+      collection: "users",
+      id: member.id,
+      overrideAccess: true,
+      showHiddenFields: true,
+    });
+
+    expect(stored.pendingEmail ?? null).toBeNull();
+    expect(stored.pendingEmailToken ?? null).toBeNull();
+    expect(stored.pendingEmailExpiresAt ?? null).toBeNull();
+  });
+
+  it("does not let a user read their own confirmation token back", async () => {
+    /*
+     * `hidden: true` keeps the digest out of every API response, including
+     * `/api/users/me`. It is a digest, so reading it buys an attacker
+     * nothing on its own — but the field exists to be compared against, and
+     * a value the caller can read is a value the caller can replay if the
+     * comparison is ever loosened.
+     */
+    const member = await payload.create({
+      collection: "users",
+      overrideAccess: true,
+      data: {
+        email: unique("reader"),
+        password: "pw-reader-12345",
+        role: "user",
+      },
+    });
+
+    await payload.update({
+      collection: "users",
+      id: member.id,
+      overrideAccess: true,
+      data: { pendingEmailToken: "b".repeat(64) },
+    });
+
+    const asThemselves = await payload.findByID({
+      collection: "users",
+      id: member.id,
+      overrideAccess: false,
+      req: { user: { ...member, collection: "users" } } as never,
+    });
+
+    expect(
+      (asThemselves as { pendingEmailToken?: unknown }).pendingEmailToken
+    ).toBeUndefined();
+  });
 });

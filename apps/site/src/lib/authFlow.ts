@@ -187,7 +187,46 @@ type SignInError =
    */
   | "oauth-unverified";
 type SignUpError = "email" | "password";
-type SignInNotice = "registered";
+type SignInNotice =
+  /** The account, and everything on it, is gone. */
+  | "deleted"
+  /** A pending address change was confirmed and is now the sign-in address. */
+  | "email-changed"
+  /** The password changed, and with it every session the account had. */
+  | "password-changed"
+  /** Sign-up answered. Worded so it says nothing about the address. */
+  | "registered";
+
+/**
+ * The codes the account page may be sent back with.
+ *
+ * `credentials` is deliberately one code for two outcomes — the current
+ * password was wrong, and the account is locked — for the same reason
+ * `SignInError.invalid` is one code for four. The account is already known
+ * to whoever is posting, so this is not an enumeration oracle; what it is is
+ * a password oracle against a *borrowed* session, and the pair of "one
+ * answer" and the 500 ms floor is what keeps a stolen cookie from being
+ * turned into the account's password at eighty milliseconds a guess.
+ */
+type AccountError =
+  /** The typed address did not match the account's. Deletion only. */
+  | "confirm"
+  /** The current password was refused, or the account is locked. */
+  | "credentials"
+  /** The account could not be deleted. */
+  | "delete"
+  /** The new address is not an address. */
+  | "email"
+  /** The new address is the one already on the account. */
+  | "email-unchanged"
+  /** The new password did not clear the policy. */
+  | "password";
+type AccountNotice =
+  /** The address change is parked, awaiting confirmation at the new address. */
+  "email-pending";
+
+/** The link a confirmation mail carries can only fail one way, publicly. */
+type ConfirmEmailError = "link";
 
 export function signInPath(
   locale: Locale,
@@ -198,6 +237,20 @@ export function signInPath(
 
 export function signUpPath(locale: Locale, query?: { error?: SignUpError }) {
   return withQuery(`/${locale}/sign-up`, query);
+}
+
+export function accountPath(
+  locale: Locale,
+  query?: { error?: AccountError; notice?: AccountNotice }
+): string {
+  return withQuery(`/${locale}/account`, query);
+}
+
+export function confirmEmailPath(
+  locale: Locale,
+  query?: { error?: ConfirmEmailError; token?: string }
+): string {
+  return withQuery(`/${locale}/account/confirm-email`, query);
 }
 
 function withQuery(

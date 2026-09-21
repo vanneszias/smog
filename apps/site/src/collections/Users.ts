@@ -8,7 +8,10 @@ import {
 import { googleStrategy } from "@/auth/googleStrategy";
 import { usersCollectionEndpoints } from "@/endpoints/auth";
 import { cascadeListsOnUserDelete } from "@/hooks/cascadeListsOnUserDelete";
-import { enforcePasswordPolicy } from "@/hooks/enforcePasswordPolicy";
+import {
+  enforcePasswordPolicy,
+  enforcePasswordPolicyOnReset,
+} from "@/hooks/enforcePasswordPolicy";
 
 /** `lockTime` is milliseconds — see the note on `auth` below. */
 const TEN_MINUTES_MS = 10 * 60 * 1000;
@@ -127,11 +130,15 @@ export const Users: CollectionConfig = {
   // `hooks/cascadeListsOnUserDelete`.
   hooks: {
     beforeDelete: [cascadeListsOnUserDelete],
+    // The same floor, on the one path `beforeValidate` cannot see:
+    // `resetPassword` hashes before it validates, so the plaintext is only
+    // reachable from `beforeOperation`. Read the hook before removing this —
+    // without it a password reset is held to Payload's three characters.
+    beforeOperation: [enforcePasswordPolicyOnReset],
     // Payload checks that a password is *present*, not that it is any good:
     // its only length rule is a hard-coded `minLength = 3`. This is the
     // floor. See `hooks/enforcePasswordPolicy` for why it is a collection
-    // hook rather than a field `validate`, and for the one path it cannot
-    // reach.
+    // hook rather than a field `validate`.
     beforeValidate: [enforcePasswordPolicy],
   },
   access: {
@@ -228,6 +235,75 @@ export const Users: CollectionConfig = {
         { name: "provider", type: "text", required: true, index: true },
         { name: "subject", type: "text", required: true, index: true },
       ],
+    },
+    /*
+     * An address change that has been asked for but not yet proved.
+     *
+     * **Why the address does not simply move.** Changing `email` on request
+     * is an account-takeover path with one extra step: somebody holding a
+     * borrowed session points the account at an address they control and
+     * then uses password reset to own it permanently. `endpoints/account.ts`
+     * therefore demands the current password *and* parks the new address
+     * here until whoever reads the mail at that address confirms it. Neither
+     * half is redundant: the password stops a borrowed session, and the
+     * confirmation stops a typo — or a deliberate hand-off — from moving the
+     * account to a mailbox its owner cannot read.
+     *
+     * **All three are admin-only at field level**, exactly like
+     * `oauthAccounts` above and for the same reason. `isAdminOrSelf` gives a
+     * signed-in visitor document-level update on their own record, so
+     * without these guards a `PATCH /api/users/:id` could write
+     * `pendingEmail` and a `pendingEmailToken` of the visitor's own choosing
+     * and then confirm it — the verification step, performed on both ends by
+     * the same person, which is no verification at all. The account
+     * endpoints write these with `overrideAccess: true`, which is the only
+     * path that may.
+     */
+    {
+      name: "pendingEmail",
+      type: "email",
+      access: {
+        create: isAdminField,
+        update: isAdminField,
+      },
+      admin: {
+        description:
+          "An address change awaiting confirmation. Written by the account endpoints; not editable here.",
+        readOnly: true,
+      },
+    },
+    {
+      name: "pendingEmailToken",
+      type: "text",
+      // The SHA-256 of the token, never the token. A database dump is then
+      // not a set of usable confirmation links — the same reason Payload
+      // hides `resetPasswordToken`, taken one step further, because Payload
+      // stores that one in the clear.
+      index: true,
+      /*
+       * `hidden` keeps it out of every API response and out of the admin
+       * panel, which is what `payload/dist/auth/baseFields` does for
+       * `resetPasswordToken`. It does **not** stop a `where` clause matching
+       * on it — hidden is an output rule — which is exactly what
+       * `endpoints/account.ts` needs.
+       */
+      hidden: true,
+      access: {
+        create: isAdminField,
+        update: isAdminField,
+      },
+    },
+    {
+      name: "pendingEmailExpiresAt",
+      type: "date",
+      access: {
+        create: isAdminField,
+        update: isAdminField,
+      },
+      admin: {
+        description: "When the pending address change stops being confirmable.",
+        readOnly: true,
+      },
     },
     {
       name: "favorites",

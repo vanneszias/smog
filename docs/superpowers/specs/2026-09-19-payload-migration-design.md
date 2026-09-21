@@ -455,11 +455,31 @@ with real requests against a running dev server before and after; the
 transcripts are in
 `.superpowers/sdd/2026-09-20-stage-4-auth/task-3-report.md`.
 
-### A three-character password can still be set through password reset
+### A three-character password could be set through password reset — closed in Stage 4 Task 5
 
-Found in Stage 4 Task 1 and verified in `node_modules`. This is live, and the
-only thing making it unreachable is a gap that **Stage 7 closes**, so it is
-recorded here rather than in a task report.
+**Status: closed.** `users.hooks.beforeOperation` now carries
+`enforcePasswordPolicyOnReset` (`apps/site/src/hooks/enforcePasswordPolicy.ts`),
+which applies the same twelve-character floor to `resetPassword`.
+`Users.password.int.test.ts` fails by name — `rejects a three-character
+password` and `rejects a common password that clears the length floor` — if
+the hook is removed, and `Users.test.ts` pins the wiring. **Stage 7 can
+configure the email adapter without re-opening this.** The rest of this
+section is the original finding, kept because the mechanism is worth knowing
+before anybody touches that hook.
+
+The fix is *not* the endpoint override this section originally costed. Read
+`enforcePasswordPolicyOnReset` before changing it: `resetPasswordOperation`
+calls `buildBeforeOperation` as the first step inside its transaction, before
+the token is looked up and long before `generatePasswordSaltHash`, and hands
+every `beforeOperation` hook the operation's own `args` — `data.password`
+included, as plaintext
+(`payload/dist/collections/operations/utilities/buildBeforeOperation.js`,
+verified at the call site). A hook therefore costs nothing in bundle terms and
+covers the REST endpoint, the GraphQL mutation, the admin panel's reset screen
+and `payload.resetPassword` from server code, where an endpoint override would
+have covered one of the four.
+
+Found in Stage 4 Task 1 and verified in `node_modules`.
 
 `auth/operations/resetPassword.js` hashes the new password **first** and calls
 `beforeValidate` afterwards, with the *user document* as `data`. By the time
@@ -473,15 +493,29 @@ for every auth collection. The endpoints exist and respond today. **The only
 reason nobody can walk through them is that no email adapter is configured**,
 so the reset token is written to the console instead of being delivered.
 
-**Stage 7 configures the email adapter.** Doing that without also applying the
-password policy at the reset entry point re-opens a three-character password
-floor on a production site — silently, because every existing test still
-passes. Closing it means overriding the reset endpoint, which carries its own
-bundle cost under the route-handler rule above.
+**Stage 7 configures the email adapter.** Before Stage 4 Task 5 that would
+have re-opened a three-character password floor on a production site —
+silently, because every existing test still passed. It no longer does; see the
+status note at the top of this section.
 
-No characterization test was added asserting the current behaviour. A green
-test whose assertion is "this weakness still exists" reads as approval of it
-to the next person who greps for the endpoint.
+**What Stage 7 still has to decide, because Task 5 deliberately did not.**
+Closing the floor is not the same as building the reset flow, and three
+things are still missing:
+
+- **Nothing rate-limits `/forgot-password`.** Payload's own endpoint will
+  happily mint and mail a token per request, and it answers a registered and
+  an unregistered address differently enough to be worth measuring against
+  Review Focus item 5 the way Task 2 measured sign-in.
+- **`resetPasswordToken` is stored in the clear**, unlike the address-change
+  token `endpoints/account.ts` added, which is stored as a SHA-256. That is
+  Payload's behaviour, not a choice this project made, and closing it means
+  shadowing the endpoint after all.
+- **A completed reset does not revoke other sessions**, where a password
+  change through `/account/password` does. The two ought to agree.
+
+No characterization test was added asserting the old behaviour. A green test
+whose assertion is "this weakness still exists" reads as approval of it to the
+next person who greps for the endpoint.
 
 ### A relationship field accepts an id for a row that does not exist
 
@@ -790,6 +824,45 @@ recorded above rather than worked around.
   approval flow, and public search and browse.
 - **Migration** — the Stage 9 script runs dry against a copy of production data
   and asserts row counts and referential integrity per table before any write.
+
+## A locked account answers "no" to every password, including the right one
+
+Found in Stage 4 Task 5, and it is the cleanest example yet of the pattern
+this document keeps recording: a test that passes while the thing it guards
+is broken.
+
+`endpoints/account.int.test.ts` checked that a refused password change had
+not changed the password, by trying to sign in with the new one and
+expecting failure:
+
+```ts
+await lockOut(member.email);
+// …the endpoint refuses, because the account is locked…
+expect(await canSignIn(member.email, NEXT)).toBe(false);
+```
+
+The account is locked at that point, and Payload raises `LockedAuth` from
+`authenticateLocalStrategy` **before it compares any hash**. So the call
+answers `false` for every password there is. The assertion could not fail.
+
+Measured, not argued: a probe locked an account, changed its password
+through `payload.update`, then signed in with the *correct new* password and
+still got `false`.
+
+Proved in both directions with the same mutation — `changePassword` writing
+the new password *before* honouring the credential refusal:
+
+| Assertion | Mutant |
+|---|---|
+| `canSignIn(email, NEXT) === false` alone | **survived** |
+| `unlock()`, then `NEXT === false` *and* `PASSWORD === true` | **caught** |
+
+Two lessons that generalise past this one test. A negative assertion needs a
+positive one beside it: "the new password does not work" is worth nothing
+without "the old one still does", because a broken account satisfies the
+first for free. And a lockout is a state that silences every other signal
+the account can give, so a fixture that locks an account must unlock it
+before asking it anything else.
 
 ## Risks
 

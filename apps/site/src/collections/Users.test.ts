@@ -8,7 +8,10 @@ import {
 import { googleStrategy } from "@/auth/googleStrategy";
 import { usersCollectionEndpoints } from "@/endpoints/auth";
 import { cascadeListsOnUserDelete } from "@/hooks/cascadeListsOnUserDelete";
-import { enforcePasswordPolicy } from "@/hooks/enforcePasswordPolicy";
+import {
+  enforcePasswordPolicy,
+  enforcePasswordPolicyOnReset,
+} from "@/hooks/enforcePasswordPolicy";
 import { Users } from "./Users";
 
 const field = (name: string) =>
@@ -135,6 +138,56 @@ describe("Users collection", () => {
       expect(guard?.({ req: { user: { role: "user" } } } as never)).toBe(false);
       expect(guard?.({ req: { user: { role: "admin" } } } as never)).toBe(true);
     }
+  });
+
+  /**
+   * The same guard as `oauthAccounts`, on the three fields that carry a
+   * pending address change. Without them a signed-in visitor can write their
+   * own `pendingEmailToken` over REST and then confirm their own change,
+   * which is a verification step performed by one person on both ends.
+   * Behaviour is in `Users.escalation.int.test.ts`.
+   */
+  it("lets only an admin write a pending address change", () => {
+    for (const name of [
+      "pendingEmail",
+      "pendingEmailToken",
+      "pendingEmailExpiresAt",
+    ]) {
+      const pending = field(name) as {
+        access?: {
+          create?: (args: never) => boolean;
+          update?: (args: never) => boolean;
+        };
+      };
+
+      for (const guard of [pending.access?.create, pending.access?.update]) {
+        expect(
+          guard?.({ req: { user: { role: "user" } } } as never),
+          name
+        ).toBe(false);
+        expect(
+          guard?.({ req: { user: { role: "admin" } } } as never),
+          name
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("keeps the confirmation token out of every API response", () => {
+    expect(field("pendingEmailToken")).toMatchObject({ hidden: true });
+  });
+
+  it("applies the password policy to a reset, where beforeValidate cannot", () => {
+    /*
+     * `resetPassword` hashes before it validates and hands `beforeValidate`
+     * the user document, so the floor has to be applied from
+     * `beforeOperation` instead. The whole array, so adding a second
+     * `beforeOperation` hook is a deliberate change. Behaviour is in
+     * `Users.password.int.test.ts`.
+     */
+    expect(Users.hooks?.beforeOperation).toEqual([
+      enforcePasswordPolicyOnReset,
+    ]);
   });
 
   it("adds a role field defaulting to user", () => {
