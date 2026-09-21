@@ -1449,6 +1449,72 @@ the **old** address's mailbox would confirm the **new** one.
 **A job's input is not private storage. Treat it as a log line that has not
 happened yet.**
 
+## A count asserted against a database nobody clears is a count of test runs
+
+Stage 7 Task 5, and the third finding in this project about the *method*
+rather than the code. The other two are above: "the mutation landed is not
+the mutation is the mutation", and a SURVIVED verdict deserving the same
+suspicion as a passing test.
+
+`.wrangler/state/vitest` is persisted and never cleared — a deliberate
+property, recorded in nine test files, that keeps the suite honest about
+non-empty databases. The consequence nobody had written down: **an assertion
+of the form "the queue has one row" is an assertion about how many times the
+suite has been run.**
+
+It surfaced during a mutation sweep as
+`expected [ …(12) ] to have a length of 1` — in a test that had passed four
+times. The mutation was innocent; the test was wrong, and had been wrong
+since it was written. Read the other way it is worse: such a test passes on
+a clean checkout, passes in CI, and starts failing on a developer's machine
+weeks later for reasons that have nothing to do with their change.
+
+**Scope every count to the row under test**, and have an integration file
+delete its own leftovers before seeding rather than trusting the state it
+inherits.
+
+## Turning a framework feature on can require schema nobody mentions
+
+Same task. Adding a `schedule` to a Payload task is one line, and it needs
+three pieces of storage that fail silently when missing:
+
+- **`payload-jobs-stats`**, a global. `handleSchedules` reads
+  `lastScheduledRun` from it via `db.findGlobal` — verified at the source —
+  and throws without it, **after** the run lease has been taken. The first
+  tick would be the last.
+- **`payload_jobs.meta`**, where `{ scheduled: true }` lives and which
+  Payload's own `defaultBeforeSchedule` counts on. Without it an hourly cron
+  queues a daily job twenty-four times a day.
+- The column the starvation fix writes (`renders.settledAt`).
+
+This is the same shape as the `defaultAccess` findings above and belongs
+beside them: **enabling a Payload feature can add an endpoint you did not
+write and require storage you were not told about.** After turning one on,
+enumerate what it added — routes, access rules and tables — and gate or
+migrate each.
+
+## An index cannot fix starvation; only a column the sweep writes can
+
+Stage 6 recorded that the readiness sweep could starve on a backlog larger
+than one page, and said to "key it off an index". That instruction was
+wrong, and Stage 7 had to find out why: indexing the existing candidate
+column changes nothing, because **the candidate set is still every healthy
+live asset ever made.** An index makes the scan faster, not smaller.
+
+What ends starvation is a column the sweep *writes* — `renders.settledAt`,
+stamped only when Mux reports `ready`, which is terminal. Settled rows leave
+the candidate set for ever.
+
+The same defect was found next door and it had money attached: the orphan
+sweep read one page of every render holding an asset and filtered for
+`sponsorship === null` **in memory**, so with more live assets than fit a
+page, an orphan behind them was never in the page at all. An orphaned Mux
+asset is a bill every month for a video nothing points at. It now has its own
+query on the indexed column.
+
+**"Filter in memory after a bounded read" is a starvation bug wearing the
+clothes of a pagination detail.**
+
 ## Risks
 
 | Risk | Mitigation |
