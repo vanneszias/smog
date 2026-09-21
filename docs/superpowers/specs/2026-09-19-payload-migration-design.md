@@ -1039,6 +1039,55 @@ every way the field can be missing then failed against the implementation —
 `Number("")` is **0**, so a payment carrying `value: ""` was being read as
 `amountCents: 0`. A guard that appears masked may be masking a bug.
 
+## A `where` on an update is a SELECT, so it cannot serialise anything
+
+Stage 5 Task 4, and the most consequential finding of the stage — because it
+is the mechanism the plan proposed for the one hazard "There are no
+transactions on any write path" creates.
+
+The idea was a **conditional update**: move a row with an `update` whose
+`where` names the status being moved *from*, and treat "zero rows changed"
+as "somebody else got there first". It reads like SQL's
+`UPDATE … WHERE status = 'pending_payment'`, which is atomic. It is not that.
+
+Measured against this project's own D1, twice, independently:
+
+```
+two concurrent conditional updates on one row  ->  both report docs.length === 1
+five concurrent conditional updates on one row ->  all five report docs.length === 1
+```
+
+The source says why. `payload/dist/collections/operations/update.js` resolves
+the `where` with a **separate `payload.db.find`** and then calls
+`updateDocument` per id; `@payloadcms/drizzle/dist/updateOne.js` does the same
+one layer down — `select id … limit 1`, then upsert. So the `where` is a
+SELECT that happens before the write, with nothing joining them. Every
+concurrent caller selects the same row and every one of them "succeeds".
+
+Related but weaker in the same way: **Payload's own `unique` pre-check is a
+read followed by a write**, so it does not stop two concurrent creates
+either.
+
+**What does work is a unique index, because SQLite evaluates it inside the
+INSERT.** `collections/WebhookDeliveries.ts` is one row per Mollie payment
+id, `unique: true`, claimed before any sponsorship is touched. Of two
+concurrent creates exactly one succeeds; of five, exactly one. The loser
+arrives as a raw `Failed query: insert into "webhook_deliveries" …` rather
+than a Payload `ValidationError` — precisely *because* the pre-check did not
+fire — so the claim confirms a failure by reading the row back, and a
+database outage cannot masquerade as a replay.
+
+Three things follow for the rest of this migration:
+
+- **Any "exactly once" requirement needs a unique index, not a `where`.**
+  Stage 7's jobs (`expire-sponsorships`, `cleanup-stale-payments`) and Stage
+  9's import all have this shape.
+- **A claim must be handed back when the work did not complete**, or a
+  half-applied delivery leaves a record saying it was handled.
+- **A `where` clause on an update is still useful** — it selects the rows
+  that still need moving — but naming it a guard is how the next person
+  stops looking. The webhook says so at the line.
+
 ## Risks
 
 | Risk | Mitigation |
