@@ -1395,6 +1395,60 @@ The sweep that clears lapsed leases is written so neither can be caught by
 accident — the `expiresAt` comparison lives in the delete's own query, and
 no comparison against NULL is ever true.
 
+## Payload's `defaultAccess` fallback produced two vulnerabilities in one stage
+
+Stage 7. The first was Task 2's: an omitted `create`/`update`/`delete` on a
+collection falls back to `Boolean(user)`. The second is the same mechanism a
+layer up, and it is worse, because **nothing in this repository asked for the
+door that opened.**
+
+Registering the first job task flips `config.jobs.enabled`, and Payload then
+mounts its own `GET /api/payload-jobs/run` on the jobs collection. Its gate,
+verified at the source (`payload/dist/queues/endpoints/run.js`):
+
+```js
+const accessFn = jobsConfig.access?.run ?? defaultAccess;
+```
+
+So **any signed-in account could run the whole queue** — sending mail,
+sweeping payments, expiring sponsorships — completely bypassing
+`endpoints/jobs.ts`, its secret, its constant-time comparison and its run
+lease. Those protect a *different* URL. The collection's own CRUD access is
+`() => false` for all four operations, which makes the endpoint easy to miss:
+the collection looks sealed.
+
+`jobs.access.run` is now `() => false`, tested against anonymous, a
+signed-in non-admin and an admin.
+
+**The general rule this stage earned twice: in Payload, a missing access rule
+is an open one, and enabling a feature can mount an endpoint you did not
+write.** After turning any Payload feature on, list what it added and gate
+each thing explicitly. "I did not create that route" is not a reason to
+believe it is closed.
+
+## A credential cannot travel in a job's input
+
+Same stage, and it changed what "queue it instead of logging it" could mean.
+
+Payload logs the **whole job row, `input` included**, when a task fails
+(`queues/errors/handleTaskError.js`), and a retry policy makes failure
+ordinary rather than exceptional. So queueing a message with the re-edit
+token or the email-change link in its payload would have written those
+capability URLs into the logs on the first transient refusal — replacing a
+deliberate, single, documented log line with an undeliberate recurring one.
+
+Both tokens are therefore resolved **at send time**: the confirmation token
+is minted by the send, and the re-edit token is read back out of the row with
+`showHiddenFields: true`.
+
+One consequence had to be chased down rather than assumed: because the
+confirmation token is now minted at send time, `POST /account/email` has to
+clear `pendingEmailToken` when a new change is started, or a link sitting in
+the **old** address's mailbox would confirm the **new** one.
+
+**A job's input is not private storage. Treat it as a log line that has not
+happened yet.**
+
 ## Risks
 
 | Risk | Mitigation |
