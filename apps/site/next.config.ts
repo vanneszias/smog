@@ -105,6 +105,40 @@ const nextConfig: NextConfig = {
         source: "/account/confirm-email",
       },
       { destination: "/api/account/delete", source: "/account/delete" },
+      /*
+       * The owner's six list writes. Locale-free like everything above — the
+       * forms carry the locale in their body — and flat siblings rather than
+       * nested paths, so Payload's endpoint matcher never has to choose
+       * between two patterns that both fit.
+       *
+       * Note that `/account/lists/*` here and the pages at
+       * `/{locale}/account/lists` are different URL spaces: these are the
+       * form targets and carry no locale prefix, so nothing in `app/` claims
+       * them. `tests/e2e/account-lists.spec.ts` drives the real forms, which
+       * is the only layer where a deleted line here shows up as anything but
+       * a button that silently does nothing.
+       */
+      {
+        destination: "/api/account/lists/create",
+        source: "/account/lists/create",
+      },
+      {
+        destination: "/api/account/lists/rename",
+        source: "/account/lists/rename",
+      },
+      {
+        destination: "/api/account/lists/delete",
+        source: "/account/lists/delete",
+      },
+      { destination: "/api/account/lists/add", source: "/account/lists/add" },
+      {
+        destination: "/api/account/lists/remove",
+        source: "/account/lists/remove",
+      },
+      {
+        destination: "/api/account/lists/share",
+        source: "/account/lists/share",
+      },
     ];
   },
 

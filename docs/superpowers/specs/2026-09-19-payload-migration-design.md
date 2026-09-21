@@ -551,6 +551,48 @@ Stages 5 and 9 both write relationships from external input — the sponsorship
 flow from a form, the Convex import from a file — and neither gets existence
 checking from the framework.
 
+**Correction, Stage 4 Task 7: the dangling row does not reach the database.**
+The `isValidID` reading above is right, and the conclusion drawn from it —
+"`favorites: [999000001]` writes a dangling reference" — is wrong. Measured
+against this project's own local D1 rather than inferred, on both of the
+tables in question:
+
+```
+dangling users.favorites  -> Failed query: insert into "users_rels" …
+  Caused by: D1_ERROR: FOREIGN KEY constraint failed: SQLITE_CONSTRAINT
+             (extended: SQLITE_CONSTRAINT_FOREIGNKEY)
+dangling lists.items.gesture -> Failed query: insert into "lists_items" …
+  Caused by: the same
+```
+
+Payload's validation lets the id through; the schema's foreign key stops it.
+That is the same `NOT NULL` + `ON DELETE set null` relationship column
+"Referential integrity" below rules on, seen from the insert side.
+
+**The advice does not change, but its reason does.** A caller that accepts
+ids from a request must still resolve them with `overrideAccess: false`, for
+two reasons neither of which is data integrity:
+
+- the unresolved id is an unhandled `DrizzleQueryError` — a 500 with a JSON
+  body in a browser window — where every other refusal on the same surface is
+  a sentence. The foreign key protects the row; it does nothing for the
+  person.
+- the lookup is where the *access* check happens, and no constraint in the
+  schema expresses "not a gesture an editor has deactivated". That half was
+  always the load-bearing one, and it is the half a mutation can prove:
+  flipping `overrideAccess` to `true` fails a test in both
+  `endpoints/favorites.int.test.ts` and `endpoints/lists.int.test.ts`,
+  while deleting the whole lookup fails on the constraint.
+
+A second, narrower correction from the same task. The screen that keeps a
+non-numeric id out of a query — `isGestureId` and friends — is about
+`parseFloat` inside `sanitizeQueryValue`, which is the path a **`where`
+clause** takes. A `findByID` on the primary key does not take it: measured,
+it answers `null` for `1abc`, `007` and `abc`, and resolves `1.0` to row 1,
+which `Number` reads identically. So a screen in front of a `findByID` is
+unprovable and was removed from `endpoints/lists.ts`; a screen in front of a
+`Number` that feeds a filter is not, and stays.
+
 ### There are no transactions on any write path
 
 Found in Stage 3 Task 8 by a mutation that should not have been able to fail,

@@ -126,6 +126,29 @@ export default async function AccountPage({
       )}
 
       <section className="flex flex-col gap-4">
+        <h2 className="font-semibold text-foreground text-lg">Mijn lijsten</h2>
+        <p className="text-foreground-muted text-sm">
+          Maak lijsten met gebaren, en deel ze met een link.
+        </p>
+        {/*
+         * A link from here rather than a second item in the header. Task 4
+         * deferred an account menu on the grounds that a disclosure widget
+         * wrapping one address and one button buys nothing, and said the
+         * point to revisit was three destinations; this is the second, and it
+         * belongs on the page the first one already is.
+         */}
+        <p>
+          <a
+            className="text-primary text-sm underline underline-offset-2"
+            data-testid="account-lists-link"
+            href={`/${current}/account/lists`}
+          >
+            Naar mijn lijsten
+          </a>
+        </p>
+      </section>
+
+      <section className="flex flex-col gap-4">
         <h2 className="font-semibold text-foreground text-lg">
           Wachtwoord wijzigen
         </h2>

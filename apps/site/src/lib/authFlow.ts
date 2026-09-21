@@ -225,6 +225,48 @@ type AccountNotice =
   /** The address change is parked, awaiting confirmation at the new address. */
   "email-pending";
 
+/**
+ * The codes the owner's list surface may be sent back with.
+ *
+ * `unknown` is deliberately one code for two outcomes — no list has that id,
+ * and the list with that id belongs to somebody else. `endpoints/lists.ts`
+ * resolves both with a single query whose `where` names the owner, so the
+ * two are not merely reported identically, they are *produced* identically;
+ * there is no branch between them for a message or a timing floor to give
+ * away. List ids are consecutive integers, so a code that told them apart
+ * would be an id-existence oracle for every list in the table.
+ */
+type AccountListsError =
+  /** The typed name did not match the list's. Deletion only. */
+  | "confirm"
+  /** The description is longer than a description may be. */
+  | "description"
+  /** The list already holds as many gestures as one list may. */
+  | "full"
+  /** No such gesture, or not one this visitor is allowed to see. */
+  | "gesture"
+  /** The name is blank, or longer than a name may be. */
+  | "name"
+  /** No list of yours has that id. */
+  | "unknown"
+  /** Not a visibility this app has. */
+  | "visibility";
+type AccountListsNotice =
+  /** A gesture was put on the list. */
+  | "added"
+  /** The list exists now. */
+  | "created"
+  /** The list is gone. */
+  | "deleted"
+  /** A gesture was taken off the list. */
+  | "removed"
+  /** The name or description changed. */
+  | "renamed"
+  /** The list has a live share link. */
+  | "shared"
+  /** The list is private again, and the old link is dead. */
+  | "unshared";
+
 /** The link a confirmation mail carries can only fail one way, publicly. */
 type ConfirmEmailError = "link";
 
@@ -244,6 +286,36 @@ export function accountPath(
   query?: { error?: AccountError; notice?: AccountNotice }
 ): string {
   return withQuery(`/${locale}/account`, query);
+}
+
+/** The owner's index of their own lists. */
+export function accountListsPath(
+  locale: Locale,
+  query?: { error?: AccountListsError; notice?: AccountListsNotice }
+): string {
+  return withQuery(`/${locale}/account/lists`, query);
+}
+
+/**
+ * One owned list, under `/account` rather than beside the public share page.
+ *
+ * Not a workaround for Next's router, though it is also that: two different
+ * slug names on one dynamic segment (`lists/[shareToken]` and `lists/[id]`)
+ * is a build-time throw in `shared/lib/router/utils/sorted-routes.js`. The
+ * reason it is the right place anyway is that the two surfaces answer to
+ * different access rules — `[shareToken]` is an unauthenticated capability
+ * URL, this is an owner read behind a session — and sibling paths under one
+ * segment invite one to be mistaken for the other.
+ *
+ * The id is stringified rather than typed as a string because Payload hands
+ * back a number for a D1 primary key and every caller here has one.
+ */
+export function accountListPath(
+  locale: Locale,
+  id: number | string,
+  query?: { error?: AccountListsError; notice?: AccountListsNotice }
+): string {
+  return withQuery(`/${locale}/account/lists/${id}`, query);
 }
 
 export function confirmEmailPath(

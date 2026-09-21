@@ -25,6 +25,7 @@ import { accountEndpoints } from "./endpoints/account";
 import { authEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
+import { listsEndpoints } from "./endpoints/lists";
 import { oauthEndpoints } from "./endpoints/oauth";
 import { requireBinding, requireEnv } from "./lib/env";
 import { beforeSyncGesture } from "./search/beforeSync";
@@ -188,6 +189,13 @@ export default buildConfig({
    * `accountEndpoints` adds the four writes the account page makes —
    * `/account/password`, `/account/email`, `/account/confirm-email` and
    * `/account/delete` — on the same terms.
+   *
+   * `listsEndpoints` adds the six writes the owner's list pages make, under
+   * `/account/lists/*`. Flat siblings rather than nested paths — `create`,
+   * `rename`, `delete`, `add`, `remove`, `share` — for the reason
+   * `next.config.ts` gives about `/account/confirm-email`: overlapping
+   * patterns leave Payload's endpoint matcher to choose, and the wrong
+   * choice here would answer "saved" without saving.
    */
   endpoints: [
     ...crawlerEndpoints,
@@ -195,6 +203,7 @@ export default buildConfig({
     ...oauthEndpoints,
     ...favoritesEndpoints,
     ...accountEndpoints,
+    ...listsEndpoints,
   ],
   localization: {
     locales: [
