@@ -243,6 +243,81 @@ describe("migration chain", () => {
     ).toThrow(/UNIQUE/i);
   });
 
+  it("gives render-completions a UNIQUE index on the job id", async () => {
+    // The *second* claim this stage needs, and a different one from
+    // `renders.jobId` next door. That row is inserted by the submitter at
+    // checkout, so it already exists when Remotion Lambda calls back and two
+    // concurrent callbacks would both lose an insert against it. This table is
+    // what serialises the callbacks themselves — see
+    // `collections/RenderCompletions.ts`. Downgrade this index to an ordinary
+    // one and two callbacks for one render both upload: two Mux assets, one
+    // referenced, and a bill every month for the other. `pushDevSchema`
+    // derives the local schema from the collection config and never opens a
+    // migration file, so only this asserts that a *deployed* database gets it.
+    const { database } = await chain();
+    const byName = new Map(
+      indexesOn(database, "render_completions").map((i) => [i.name, i.unique])
+    );
+
+    expect(byName.get("render_completions_job_id_idx")).toBe(1);
+  });
+
+  it("refuses a second render-completions row for one job id", async () => {
+    // The index asserted as behaviour rather than as metadata, exactly as for
+    // `webhook_deliveries` and `renders` above: a unique index SQLite reports
+    // but does not apply would satisfy the assertion above, and the whole
+    // guard rests on this INSERT failing.
+    const { database } = await chain();
+
+    database.exec(
+      `INSERT INTO render_completions (id, job_id) VALUES (7700, 'completion-migration-probe');`
+    );
+
+    expect(() =>
+      database.exec(
+        `INSERT INTO render_completions (id, job_id) VALUES (7701, 'completion-migration-probe');`
+      )
+    ).toThrow(/UNIQUE/i);
+  });
+
+  it("keeps the two render claims independent of each other", async () => {
+    // A completion claim is per callback and a render claim is per job, and
+    // they happen to be keyed on the same string. Nothing joins them, and the
+    // failure this pins is a future "tidy-up" that makes one a foreign key on
+    // the other: a completion row would then be impossible to insert before
+    // the render row exists, or impossible to delete when the callback hands
+    // the claim back after a Mux outage — which is the one thing that lets a
+    // retry finish the job.
+    const { database } = await chain();
+
+    database.exec(
+      `INSERT INTO render_completions (id, job_id) VALUES (7702, 'completion-with-no-render');`
+    );
+    expect(
+      database
+        .prepare("SELECT job_id FROM render_completions WHERE id = 7702")
+        .all()
+    ).toEqual([{ job_id: "completion-with-no-render" }]);
+
+    database.exec("DELETE FROM render_completions WHERE id = 7702;");
+    expect(
+      database
+        .prepare("SELECT id FROM render_completions WHERE id = 7702")
+        .all()
+    ).toEqual([]);
+
+    // And the same string may sit in both tables at once, which is the
+    // ordinary case: one job, one submission, one callback.
+    database.exec(
+      `INSERT INTO renders (id, job_id, state) VALUES (7703, 'both-claims', 'queued');`
+    );
+    expect(() =>
+      database.exec(
+        `INSERT INTO render_completions (id, job_id) VALUES (7704, 'both-claims');`
+      )
+    ).not.toThrow();
+  });
+
   it("lets a sponsorship be deleted and leaves its render behind", async () => {
     // Payload writes `ON DELETE set null` for every relationship whether or
     // not the column can hold NULL, so a NOT NULL `sponsorship_id` would make

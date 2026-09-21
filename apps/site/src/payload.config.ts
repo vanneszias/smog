@@ -18,6 +18,7 @@ import { Categories } from "./collections/Categories";
 import { Gestures } from "./collections/Gestures";
 import { Lists } from "./collections/Lists";
 import { Media } from "./collections/Media";
+import { RenderCompletions } from "./collections/RenderCompletions";
 import { Renders } from "./collections/Renders";
 import { Sponsorships } from "./collections/Sponsorships";
 import { UserConsents } from "./collections/UserConsents";
@@ -30,6 +31,7 @@ import { favoritesEndpoints } from "./endpoints/favorites";
 import { listsEndpoints } from "./endpoints/lists";
 import { mollieEndpoints } from "./endpoints/mollie";
 import { oauthEndpoints } from "./endpoints/oauth";
+import { renderEndpoints } from "./endpoints/render";
 import { sponsorshipEndpoints } from "./endpoints/sponsorships";
 import { requireBinding, requireEnv } from "./lib/env";
 import { beforeSyncGesture } from "./search/beforeSync";
@@ -163,6 +165,7 @@ export default buildConfig({
     UserConsents,
     WebhookDeliveries,
     Renders,
+    RenderCompletions,
   ],
   editor: lexicalEditor(),
   /*
@@ -214,6 +217,12 @@ export default buildConfig({
    * and the only one with no origin check — Mollie posts from its own servers
    * with no `Origin` header. Nothing in the request is trusted: the handler
    * keeps the payment id and asks Mollie what that payment is.
+   *
+   * `renderEndpoints` adds `POST /api/render/callback`, reached at
+   * `/render/callback`. It is the second endpoint a third party calls, and the
+   * opposite arrangement from Mollie's: there is nobody to ask back about a
+   * render, so the body *is* the evidence and an HMAC over it is the whole of
+   * the authentication. See `endpoints/render.ts`.
    */
   endpoints: [
     ...crawlerEndpoints,
@@ -224,6 +233,7 @@ export default buildConfig({
     ...listsEndpoints,
     ...sponsorshipEndpoints,
     ...mollieEndpoints,
+    ...renderEndpoints,
   ],
   localization: {
     locales: [

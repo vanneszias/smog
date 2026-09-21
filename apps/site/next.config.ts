@@ -177,6 +177,22 @@ const nextConfig: NextConfig = {
        * this entry exists and points at the handler's registered path.
        */
       { destination: "/api/webhooks/mollie", source: "/webhooks/mollie" },
+      /*
+       * Remotion Lambda's render callback. The second rewrite here whose
+       * source URL a third party holds, and it is held for longer than
+       * Mollie's: the URL is handed to AWS when a render is submitted and is
+       * posted back to minutes later, on retries, for jobs submitted before
+       * any deploy. Deleting this line turns every callback into a 404, which
+       * AWS retries and then gives up on — and a composed video nobody ever
+       * uploads is a sponsor who paid for a render that silently never
+       * arrives.
+       *
+       * Locale-free for the same reason as Mollie's, and the strongest of the
+       * set: the caller is a Lambda function that has never heard of this
+       * site's locales. `src/endpoints/render.int.test.ts` asserts that this
+       * entry exists and that its destination really resolves to the handler.
+       */
+      { destination: "/api/render/callback", source: "/render/callback" },
     ];
   },
 

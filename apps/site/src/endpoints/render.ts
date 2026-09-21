@@ -1,0 +1,546 @@
+import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
+import { createMuxAssetFromUrl } from "@/lib/mux";
+import { verifyRenderCallback } from "@/lib/renderSignature";
+import type { Render } from "@/payload-types";
+
+/**
+ * `POST /api/render/callback` — the only thing that turns a finished Remotion
+ * Lambda render into a Mux asset.
+ *
+ * ## The body is the evidence, so it has to be signed
+ *
+ * This is a public URL. It carries a playback id, and what this handler does
+ * with a playback id is put the video it names onto a gesture's page. Anyone
+ * who can post an accepted body can therefore put any video on any gesture.
+ *
+ * That is the opposite situation from `endpoints/mollie.ts`, and the two are
+ * worth comparing because they look alike. Mollie does not sign its webhooks,
+ * so that handler throws the body away except for an id and asks Mollie, over
+ * an authenticated connection, what the payment actually is — the body is a
+ * hint, never evidence. Here there is nobody to ask back: the result of a
+ * render is known only to the thing that produced it. So the body *is* the
+ * evidence, and `lib/renderSignature.ts` is what makes it admissible. There is
+ * no session, no `Origin` and no source address to lean on — AWS Lambda posts
+ * from wherever it likes — and the shared secret is the whole of the
+ * authentication.
+ *
+ * The signature is checked **first**, before the body is parsed, before the
+ * job is looked up and long before anything is written. Every refusal below it
+ * is a decision about work this application asked for; the signature is what
+ * decides whether it asked for it at all.
+ *
+ * ## Exactly one Mux asset per job
+ *
+ * AWS's delivery contract is at-least-once and Lambda retries any non-2xx, so
+ * two callbacks for one render are ordinary rather than exceptional. Two Mux
+ * assets are not: only one can ever be referenced, and the other is a bill
+ * that arrives every month, for ever, for a video nobody can name.
+ *
+ * **The plan said to reuse Task 1's claim on the `renders` row, and that
+ * cannot work.** That row is created by the submitter at checkout, so it
+ * already exists by the time Lambda calls back: two concurrent callbacks would
+ * both *lose* an insert against it and neither would upload. It cannot be an
+ * `update` with a `where` either, however phrased — **a `where` on an update
+ * is a SELECT**, measured on this adapter, with two concurrent conditional
+ * updates both reporting a changed row.
+ *
+ * So the claim is its own insert against its own unique index:
+ * `collections/RenderCompletions.ts`, one row per job id, taken **before any
+ * Mux call**. First callback inserts and proceeds; a replay's insert fails and
+ * is answered 200 having done nothing; a failure that is *not* a duplicate is
+ * confirmed by reading the row back, so a database outage cannot masquerade as
+ * a replay and silently drop a render somebody paid for.
+ *
+ * The claim is handed back whenever the work did not complete, which is what
+ * keeps that safe — see `releaseCompletion`.
+ *
+ * ## The world moves while a render runs
+ *
+ * Renders take minutes. In that window a sponsorship can be cancelled, or
+ * rejected, or sent back to the sponsor for a re-edit, and the composite this
+ * callback is holding is of content that is no longer what anyone agreed to.
+ * So the playback id is attached only to a sponsorship still in a status that
+ * is waiting for one — see `STATUSES_AWAITING_A_COMPOSITION`.
+ *
+ * **The plan expected `hooks/enforceStatusTransitions.ts` to refuse that, and
+ * it does not.** That hook compares `originalDoc.status` with `data.status`,
+ * and `data` is the whole merged document by the time a `beforeChange` runs —
+ * `fields/hooks/beforeValidate/promise.js` (3.89.0) fills every absent field
+ * from `originalDoc` — so an update that writes only a playback id arrives
+ * carrying the status it already had, `from === to`, and `canTransition`
+ * allows it. There is no transition to refuse, because this handler is not
+ * making one. The guard below is therefore not a second line of defence
+ * behind the hook; it is the only one, and deleting it puts the rejected
+ * submission's video on the page the moment the sponsor's re-edit is
+ * approved.
+ *
+ * The render row is advanced to `ready` **before** the sponsorship is
+ * considered, and regardless of what that consideration decides. The render
+ * really did finish, and losing that fact means a retry re-renders and pays
+ * for it a second time. It is the sponsorship that must not move, not the
+ * record of the work.
+ *
+ * ## What every answer says
+ *
+ * A settled decision answers `200 {"status":"ok"}`, byte for byte, whatever it
+ * decided — including for a job id this application has never heard of. A 404
+ * there would make this an oracle for which renders exist, and a non-2xx for a
+ * replay would have Lambda retrying a decision that will not change.
+ *
+ * There are exactly three exceptions:
+ *
+ * - **An unsigned, empty or wrong signature** answers 401. Nothing about the
+ *   request is believed, so there is nothing to be idempotent about.
+ * - **A body that is not a render report** answers 400. It is signed, so it
+ *   came from this application's own secret, and a retry of the same bytes
+ *   will be refused the same way.
+ * - **Mux could not be asked** answers 502, and hands the claim back. A
+ *   timeout, a 503 or a rate limit says nothing about the render, and
+ *   swallowing it would throw away a composite that cost real money to make.
+ */
+
+/** The header Remotion Lambda is configured to sign the body into. */
+const SIGNATURE_HEADER = "x-render-signature";
+
+/**
+ * The sponsorship statuses a freshly composed video may be attached to.
+ *
+ * A render is submitted at checkout, while the sponsorship is
+ * `pending_payment`, and the callback lands minutes later — by which time the
+ * Mollie webhook may have moved it to `pending_approval`. Those two are the
+ * whole of the legitimate window.
+ *
+ * Every other status is excluded for its own reason, and none of them is
+ * defensive:
+ *
+ * - `cancelled` and `expired` are terminal. Nothing will ever play this.
+ * - `rejected` looks terminal and is not: `lib/sponsorshipStatus.ts` allows
+ *   `rejected -> pending_resubmission`, because the shipped product re-opens a
+ *   rejected sponsorship. Attaching here means the *rejected* submission's
+ *   video goes live the moment the sponsor's re-edit is approved.
+ * - `pending_resubmission` is the same worry one step earlier: the sponsor is
+ *   changing the overlay right now, so this composite is of the old text or
+ *   the old logo.
+ * - `active` would overwrite a composite that is already on a public page with
+ *   one from a render nobody is waiting for.
+ */
+const STATUSES_AWAITING_A_COMPOSITION = new Set([
+  "pending_payment",
+  "pending_approval",
+]);
+
+const NO_STORE = { "Cache-Control": "no-store" };
+
+/** HTTP statuses, named so the handler reads as decisions rather than numbers. */
+const OK = 200;
+const BAD_REQUEST = 400;
+const UNAUTHORIZED = 401;
+const BAD_GATEWAY = 502;
+
+/**
+ * The one body every settled decision answers with.
+ *
+ * A fresh object each time: `Response.json` does not copy it, and a shared
+ * literal handed to two responses is a mutable object two callers hold.
+ */
+function acknowledged(): Response {
+  return Response.json({ status: "ok" }, { headers: NO_STORE, status: OK });
+}
+
+function problem(status: number, error: string): Response {
+  return Response.json({ error }, { headers: NO_STORE, status });
+}
+
+/** What Lambda said happened, reduced to the four things this handler acts on. */
+interface RenderReport {
+  jobId: string;
+  /** Where Lambda put the composed video. Empty when the render failed. */
+  outputUrl: string;
+  /** Whatever Lambda said went wrong, verbatim. Empty when it succeeded. */
+  reason: string;
+  succeeded: boolean;
+}
+
+/** The raw request body, or `""` if there is not one to be had. */
+async function readBody(req: PayloadRequest): Promise<string> {
+  try {
+    return typeof req.text === "function" ? await req.text() : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Whatever Lambda put in `errors`, joined, verbatim.
+ *
+ * Verbatim is the point: this is the only thing an operator will have to go on
+ * when a render fails, and a summarised or truncated version of it is a
+ * support ticket that cannot be answered. A report with no usable message
+ * still yields a sentence, because an empty `failureReason` reads as "nobody
+ * recorded why" rather than as "Lambda did not say".
+ */
+function failureReason(payload: Record<string, unknown>): string {
+  const errors = payload.errors;
+
+  if (Array.isArray(errors)) {
+    const messages = errors
+      .map((entry) =>
+        entry !== null && typeof entry === "object"
+          ? (entry as { message?: unknown }).message
+          : entry
+      )
+      .filter(
+        (message): message is string =>
+          typeof message === "string" && message !== ""
+      );
+
+    if (messages.length > 0) {
+      return messages.join("; ");
+    }
+  }
+
+  const type = typeof payload.type === "string" ? payload.type : "unknown";
+
+  return `Remotion Lambda reported "${type}" without an error message.`;
+}
+
+/**
+ * The render report out of a signed body, or `null` if it is not one.
+ *
+ * The shape is Remotion Lambda's own webhook payload — `type`, `renderId`,
+ * `outputUrl`, `errors` — rather than one invented here, so that Task 6's
+ * first contact with a real Lambda has one fewer thing to differ about.
+ *
+ * A `success` with no `outputUrl` is **not** a parse failure: Lambda said the
+ * render finished, which is a fact worth recording, and there is simply
+ * nothing to upload. It becomes a failed render with that as its reason,
+ * rather than a 400 that Lambda would retry for ever.
+ */
+function parseReport(raw: string): null | RenderReport {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return null;
+  }
+
+  const payload = parsed as Record<string, unknown>;
+  const jobId = payload.renderId;
+
+  if (typeof jobId !== "string" || jobId === "") {
+    return null;
+  }
+
+  const succeeded = payload.type === "success";
+  const outputUrl = payload.outputUrl;
+  const usableUrl = typeof outputUrl === "string" ? outputUrl : "";
+
+  if (succeeded && usableUrl !== "") {
+    return { jobId, outputUrl: usableUrl, reason: "", succeeded: true };
+  }
+
+  return {
+    jobId,
+    outputUrl: "",
+    reason: succeeded
+      ? "Remotion Lambda reported a success with no output URL."
+      : failureReason(payload),
+    succeeded: false,
+  };
+}
+
+/** The render this job belongs to, or `null` if this app never submitted it. */
+async function findRender(
+  req: PayloadRequest,
+  jobId: string
+): Promise<null | Render> {
+  const { docs } = await req.payload.find({
+    collection: "renders",
+    depth: 0,
+    limit: 1,
+    overrideAccess: true,
+    where: { jobId: { equals: jobId } },
+  });
+
+  return docs[0] ?? null;
+}
+
+/**
+ * Takes the completion lock, answering `false` if another callback has it.
+ *
+ * The `catch` cannot simply assume a duplicate: a create can also fail because
+ * the database is unreachable, and treating that as "somebody else handled it"
+ * would answer 200 to a render nothing was done about — Lambda stops retrying,
+ * and a composite that cost real money is silently dropped. So a failure is
+ * confirmed by reading the row back; if it is not there, something else is
+ * wrong and the error is rethrown for the handler to fail loudly with.
+ *
+ * The lost race arrives as a raw `Failed query: insert into
+ * "render_completions" ...` rather than Payload's `ValidationError`, which is
+ * not an accident: Payload's own `unique` pre-check is a read followed by a
+ * write, so it does not fire under concurrency — and if it did, it would be
+ * exactly the read-then-write pair this mechanism exists to avoid.
+ */
+async function claimCompletion(
+  req: PayloadRequest,
+  jobId: string
+): Promise<boolean> {
+  try {
+    await req.payload.create({
+      collection: "render-completions",
+      data: { jobId },
+      overrideAccess: true,
+    });
+
+    return true;
+  } catch (error) {
+    const { totalDocs } = await req.payload.find({
+      collection: "render-completions",
+      depth: 0,
+      limit: 1,
+      overrideAccess: true,
+      where: { jobId: { equals: jobId } },
+    });
+
+    if (totalDocs === 0) {
+      throw error;
+    }
+
+    return false;
+  }
+}
+
+/**
+ * Gives the lock back, so the retry Lambda is about to make can finish the job.
+ *
+ * A claim that outlives the work it covers is worse than no claim at all: the
+ * row says this callback was handled, so the retry that would have completed
+ * it is waved through as a replay and the render is lost. `endpoints/mollie.ts`
+ * releases its claim on exactly this reasoning.
+ *
+ * A failure to release is logged rather than thrown. The caller is already on
+ * a failure path by the time it gets here, and replacing whatever went wrong
+ * with "could not delete a row" would lose the original fault.
+ */
+async function releaseCompletion(
+  req: PayloadRequest,
+  jobId: string
+): Promise<void> {
+  try {
+    await req.payload.delete({
+      collection: "render-completions",
+      overrideAccess: true,
+      where: { jobId: { equals: jobId } },
+    });
+  } catch (error) {
+    req.payload.logger.error(
+      { err: error },
+      `[render] Could not release the completion claim on render job ${jobId}; a retry of this render will be turned away as a replay`
+    );
+  }
+}
+
+/** Records a render that will never produce a playable asset. */
+async function recordFailure(
+  req: PayloadRequest,
+  render: Render,
+  reason: string,
+  muxAssetId?: string
+): Promise<void> {
+  await req.payload.update({
+    collection: "renders",
+    data: {
+      failureReason: reason,
+      state: "failed",
+      ...(muxAssetId ? { muxAssetId } : {}),
+    },
+    id: render.id,
+    overrideAccess: true,
+  });
+}
+
+/**
+ * Puts the composed video on the sponsorship, if it is still the sponsorship
+ * the composite was made for.
+ *
+ * `previewVideoPlaybackId` and not `sponsoredVideoPlaybackId`, which is the
+ * column the public gesture page reads (`lib/sponsorOverlay.ts`). That copy is
+ * made when an administrator approves the sponsorship, which is the shipped
+ * product's own flow — `apps/server/src/services/sponsorship.ts` writes
+ * `sponsoredVideoPlaybackId: sponsorship.previewVideoPlaybackId` at exactly
+ * that moment and calls it the "simplified flow". Keeping the two columns
+ * distinct means no callback, however well signed, can reach a public page
+ * without a person in between.
+ *
+ * `overrideAccess: true` because `sponsorships.update` is `isAdmin` and this
+ * request has no user at all. It is the same arrangement every writer in this
+ * stage uses, and the reason the guards here are code rather than access
+ * rules: an access rule this handler bypasses is not a guard this handler is
+ * subject to.
+ */
+async function attachToSponsorship(
+  req: PayloadRequest,
+  render: Render,
+  playbackId: string
+): Promise<void> {
+  const relation = render.sponsorship;
+  const sponsorshipId =
+    typeof relation === "object" && relation !== null ? relation.id : relation;
+
+  if (sponsorshipId === null || sponsorshipId === undefined) {
+    // The sponsorship was deleted while the render ran. The render row is the
+    // only thing left that knows the Mux asset id, which is what a cleanup
+    // needs; see `collections/Renders.ts`.
+    req.payload.logger.warn(
+      `[render] Render job ${render.jobId} finished for a sponsorship that no longer exists`
+    );
+
+    return;
+  }
+
+  const sponsorship = await req.payload.findByID({
+    collection: "sponsorships",
+    depth: 0,
+    id: sponsorshipId,
+    overrideAccess: true,
+  });
+
+  if (!STATUSES_AWAITING_A_COMPOSITION.has(sponsorship.status)) {
+    req.payload.logger.warn(
+      `[render] Render job ${render.jobId} finished for a sponsorship that is now ${sponsorship.status}; the composed video is recorded but not attached`
+    );
+
+    return;
+  }
+
+  await req.payload.update({
+    collection: "sponsorships",
+    data: { previewVideoPlaybackId: playbackId },
+    id: sponsorshipId,
+    overrideAccess: true,
+  });
+}
+
+const renderCallback: PayloadHandler = async (
+  req: PayloadRequest
+): Promise<Response> => {
+  const raw = await readBody(req);
+
+  const signed = await verifyRenderCallback(
+    raw,
+    req.headers.get(SIGNATURE_HEADER),
+    process.env.RENDER_CALLBACK_SECRET ?? ""
+  );
+
+  if (!signed) {
+    req.payload.logger.warn(
+      "[render] A render callback arrived without an acceptable signature"
+    );
+
+    return problem(UNAUTHORIZED, "The callback signature is not acceptable.");
+  }
+
+  const report = parseReport(raw);
+
+  if (report === null) {
+    return problem(BAD_REQUEST, "The callback body is not a render report.");
+  }
+
+  const render = await findRender(req, report.jobId);
+
+  if (render === null) {
+    req.payload.logger.warn(
+      `[render] A callback named render job ${report.jobId}, which this application did not submit`
+    );
+
+    return acknowledged();
+  }
+
+  if (!(await claimCompletion(req, report.jobId))) {
+    req.payload.logger.info(
+      `[render] Render job ${report.jobId} has already been completed; this callback is a replay`
+    );
+
+    return acknowledged();
+  }
+
+  if (!report.succeeded) {
+    await recordFailure(req, render, report.reason);
+    req.payload.logger.error(
+      `[render] Render job ${report.jobId} failed: ${report.reason}`
+    );
+
+    return acknowledged();
+  }
+
+  // Everything that can refuse the work has now run. What follows is the one
+  // step nothing can undo, and it happens exactly once per job because of the
+  // claim above.
+  await req.payload.update({
+    collection: "renders",
+    data: { state: "uploading" },
+    id: render.id,
+    overrideAccess: true,
+  });
+
+  let asset: Awaited<ReturnType<typeof createMuxAssetFromUrl>>;
+
+  try {
+    asset = await createMuxAssetFromUrl(report.outputUrl);
+  } catch (error) {
+    req.payload.logger.error(
+      { err: error },
+      `[render] Mux would not take the output of render job ${report.jobId}; answering 502 so it is delivered again`
+    );
+    // No asset was created, so handing the claim back cannot orphan one — and
+    // without it the retry this 502 asks for would be turned away as a replay.
+    await releaseCompletion(req, report.jobId);
+
+    return problem(BAD_GATEWAY, "The composed video could not be uploaded.");
+  }
+
+  if (asset.playbackId === null || asset.status === "errored") {
+    // Mux took the asset and then could not prepare it, or prepared one with
+    // nothing to play it by. The asset exists and is billable, so the claim
+    // stays and the id is recorded — a retry would only make a second one.
+    // A sponsorship pointing at this would be a dead player on a public page.
+    await recordFailure(
+      req,
+      render,
+      `Mux accepted the asset and it is not playable (status ${asset.status}, ${asset.playbackId === null ? "no public playback id" : "playback id present"}).`,
+      asset.assetId
+    );
+    req.payload.logger.error(
+      `[render] Mux asset ${asset.assetId} for render job ${report.jobId} is not playable`
+    );
+
+    return acknowledged();
+  }
+
+  // Before the sponsorship is even looked at. The render finished, and that
+  // fact must survive whatever the sponsorship has become in the meantime —
+  // otherwise a retry re-renders and pays for it twice.
+  await req.payload.update({
+    collection: "renders",
+    data: {
+      muxAssetId: asset.assetId,
+      muxPlaybackId: asset.playbackId,
+      state: "ready",
+    },
+    id: render.id,
+    overrideAccess: true,
+  });
+
+  await attachToSponsorship(req, render, asset.playbackId);
+
+  return acknowledged();
+};
+
+export const renderEndpoints: Endpoint[] = [
+  { handler: renderCallback, method: "post", path: "/render/callback" },
+];

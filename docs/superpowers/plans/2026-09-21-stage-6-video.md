@@ -205,7 +205,7 @@ it("is a SHA-256 HMAC, so a length-extension does not forge one");
 - Create: `apps/site/src/endpoints/render.ts` + `.int.test.ts`
 - Modify: `apps/site/next.config.ts`, `src/payload.config.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("advances the render and stores the Mux ids");
@@ -239,7 +239,7 @@ it("answers 502 when Mux is unreachable, so the callback is retried");
 it("answers an unknown job id exactly as it answers a known one");
 ```
 
-- [ ] **Step 2-4:** run, implement, run.
+- [x] **Step 2-4:** run, implement, run.
 
 **CORRECTED after Task 1 — this plan said to reuse Task 1's claim, and that
 cannot work.** The `renders` row is created by the *submitter* (Task 4:
@@ -278,7 +278,7 @@ irreversible step — creating a Mux asset, which Mux bills for monthly —
 happens once and last, and so a crash between steps leaves a state a retry
 can finish.
 
-- [ ] **Step 5: Mutation-prove — 12 mutations**
+- [x] **Step 5: Mutation-prove — 12 mutations**
 
 | mutation | must fail |
 |---|---|
@@ -295,7 +295,66 @@ can finish.
 | the failure reason dropped | the reason test |
 | the render row not marked ready when the sponsorship has moved on | the "records ready anyway" test |
 
-- [ ] **Step 6: Commit.**
+All twelve **CAUGHT**, plus seven more for the guards this task added that the
+plan did not name: the `unique` dropped from `render-completions.jobId` (the
+concurrency test), the claim treating every failure as a duplicate (the
+claim-outage test), the claim not handed back after a Mux failure (the 502
+test), an unplayable Mux asset treated as ready and a non-public playback id
+accepted (Review Focus 4), a `success` with no output URL treated as a success,
+and the migration recreating the index as non-unique (`migrations.test.ts`).
+None survived.
+
+**Two mutations are caught by the concurrency test and deliberately *not* by
+`it("is idempotent: the same callback twice uploads to Mux once")`** — removing
+the claim, and dropping the `unique` index. Measured, not assumed: with either
+mutation applied the sequential replay still uploads once, because the render
+state table refuses `ready -> uploading`. That test is satisfied by two
+different mechanisms and cannot say which one acted, so it is not proof of the
+claim; `it("survives two concurrent callbacks")` and `it("is stopped by the
+completion claim and not by the render state table")` are, and the second puts
+the render row back to `queued` so the state table cannot be what refuses.
+
+**A sixth thing wrong with this plan, found while implementing Task 3.** Review
+Focus 1 says "`enforceStatusTransitions` will refuse the move — so the callback
+has to handle its own refusal rather than 500". **It will not refuse, and there
+is no move.** The callback writes a playback id onto the sponsorship; it does
+not change the status. `data` is the whole merged document by the time a
+collection `beforeChange` runs — `fields/hooks/beforeValidate/promise.js`
+(3.89.0) fills every absent field from `originalDoc` — so the update arrives
+carrying the status it already had, `from === to`, and `canTransition` allows
+it. A callback that leaned on the hook would therefore write the composed video
+straight onto a cancelled or rejected sponsorship and answer 200, with nothing
+refusing anything.
+
+So the guard is explicit in the handler (`STATUSES_AWAITING_A_COMPOSITION`) and
+it is the *only* one, not a second line of defence.
+`it("is refused by the callback's own guard, not by enforceStatusTransitions")`
+pins the finding by making the write the handler declines to make and watching
+Payload accept it, and mutation M6 confirms it from the other side: with the
+guard disabled the cancelled and rejected tests fail while
+`it("answers 200 to all of those")` still passes, which is only possible
+because the hook raised nothing.
+
+**Two things this task needed that the plan's File Structure did not give it.**
+`src/lib/mux.ts` is listed under Task 5's neighbourhood but the callback cannot
+upload without it, so its `createMuxAssetFromUrl` half lands here and the
+readiness/delete half is left to Task 5. And the callback writes
+`previewVideoPlaybackId`, not `sponsoredVideoPlaybackId`: the second is what
+`lib/sponsorOverlay.ts` puts on a public page, and the copy between them is the
+approval hook the plan gives to Task 4 — which is the shipped product's own
+"simplified flow" (`apps/server/src/services/sponsorship.ts`). No callback,
+however well signed, reaches a public page without a person in between.
+
+**A warning for Task 6, which is the first that can act on it.** Task 2's
+signature is HMAC-**SHA-256**, hex, in `X-Render-Signature`. Remotion Lambda's
+own webhook signs with HMAC-**SHA-512** and sends `X-Remotion-Signature:
+sha512=<hex>`. If Task 4 configures Remotion's built-in webhook rather than
+posting the callback itself, every real callback will be refused 401 by a
+verifier that every test in this repository passes. Nothing here can settle it
+without a deployed Lambda; it is recorded so that Task 6 looks for it rather
+than discovering it.
+
+- [x] **Step 6: Commit.**
 
 ---
 

@@ -77,6 +77,7 @@ export interface Config {
     'user-consents': UserConsent;
     'webhook-deliveries': WebhookDelivery;
     renders: Render;
+    'render-completions': RenderCompletion;
     search: Search;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -95,6 +96,7 @@ export interface Config {
     'user-consents': UserConsentsSelect<false> | UserConsentsSelect<true>;
     'webhook-deliveries': WebhookDeliveriesSelect<false> | WebhookDeliveriesSelect<true>;
     renders: RendersSelect<false> | RendersSelect<true>;
+    'render-completions': RenderCompletionsSelect<false> | RenderCompletionsSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -358,6 +360,16 @@ export interface Render {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "render-completions".
+ */
+export interface RenderCompletion {
+  id: number;
+  jobId: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This is a collection of automatically created search results. These results are used by the global site search and will be updated automatically as documents in the CMS are created or updated.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -439,6 +451,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'renders';
         value: number | Render;
+      } | null)
+    | ({
+        relationTo: 'render-completions';
+        value: number | RenderCompletion;
       } | null)
     | ({
         relationTo: 'search';
@@ -666,6 +682,15 @@ export interface RendersSelect<T extends boolean = true> {
   muxPlaybackId?: T;
   failureReason?: T;
   attempts?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "render-completions_select".
+ */
+export interface RenderCompletionsSelect<T extends boolean = true> {
+  jobId?: T;
   updatedAt?: T;
   createdAt?: T;
 }
