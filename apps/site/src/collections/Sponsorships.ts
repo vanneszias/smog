@@ -10,6 +10,7 @@
 import { SPONSORSHIP_STATUSES } from "@smog/config/sponsorships";
 import type { CollectionConfig } from "payload";
 import { isAdmin } from "@/access";
+import { enforceStatusTransitions } from "@/hooks/enforceStatusTransitions";
 
 /**
  * A sponsored gesture: a company pays for its name and logo to be overlaid
@@ -38,6 +39,9 @@ export const Sponsorships: CollectionConfig = {
     create: isAdmin,
     update: isAdmin,
     delete: isAdmin,
+  },
+  hooks: {
+    beforeChange: [enforceStatusTransitions],
   },
   fields: [
     {

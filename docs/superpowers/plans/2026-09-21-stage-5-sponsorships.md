@@ -137,7 +137,7 @@ Currently every status is reachable from every other; the spec calls this out as
 - Consumes: `SPONSORSHIP_STATUSES`, `SponsorshipStatus` from `@smog/config`.
 - Produces: `canTransition(from: SponsorshipStatus, to: SponsorshipStatus): boolean`; `ALLOWED_TRANSITIONS: Readonly<Record<SponsorshipStatus, readonly SponsorshipStatus[]>>`; `enforceStatusTransitions` as a `CollectionBeforeChangeHook`.
 
-- [ ] **Step 1: Write the failing table test**
+- [x] **Step 1: Write the failing table test**
 
 ```ts
 // apps/site/src/lib/sponsorshipStatus.test.ts
@@ -203,12 +203,12 @@ describe("the sponsorship status machine", () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cd apps/site && bunx vitest run src/lib/sponsorshipStatus.test.ts`
 Expected: FAIL — `Failed to resolve import "./sponsorshipStatus"`.
 
-- [ ] **Step 3: Write the table**
+- [x] **Step 3: Write the table**
 
 ```ts
 // apps/site/src/lib/sponsorshipStatus.ts
@@ -258,12 +258,12 @@ export function canTransition(
 }
 ```
 
-- [ ] **Step 4: Run it and watch it pass**
+- [x] **Step 4: Run it and watch it pass**
 
 Run: `cd apps/site && bunx vitest run src/lib/sponsorshipStatus.test.ts`
 Expected: PASS, 6 tests.
 
-- [ ] **Step 5: Write the failing hook test**
+- [x] **Step 5: Write the failing hook test**
 
 ```ts
 // apps/site/src/hooks/enforceStatusTransitions.int.test.ts — the shape
@@ -279,7 +279,7 @@ it("refuses the illegal move even with overrideAccess", async () => {
 it("names both statuses in the error, so an admin can see what it refused");
 ```
 
-- [ ] **Step 6: Run, implement the hook, run again**
+- [x] **Step 6: Run, implement the hook, run again**
 
 ```ts
 // apps/site/src/hooks/enforceStatusTransitions.ts
@@ -327,7 +327,7 @@ export const enforceStatusTransitions: CollectionBeforeChangeHook = ({
 };
 ```
 
-- [ ] **Step 7: Register it, and prove it is registered**
+- [x] **Step 7: Register it, and prove it is registered**
 
 Add to `apps/site/src/collections/Sponsorships.ts`:
 
@@ -340,7 +340,7 @@ Add to `apps/site/src/collections/Sponsorships.ts`:
 
 The int test above goes through `payload.update`, so it fails if the hook is not wired — a unit test of the hook alone would not.
 
-- [ ] **Step 8: Mutation-prove each guard**
+- [x] **Step 8: Mutation-prove each guard**
 
 For each, apply, `grep` to confirm it landed, run the **whole** test file, restore, byte-compare:
 
@@ -352,7 +352,7 @@ For each, apply, `grep` to confirm it landed, run the **whole** test file, resto
 | `pending_payment`'s list gains `"active"` | add a test asserting it is refused, then re-run |
 | a terminal gains an outgoing edge | "lets nothing out of a terminal status" |
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 cd /home/user/smog && bun check && bun -F site check-types && bunx knip --no-progress --no-config-hints
