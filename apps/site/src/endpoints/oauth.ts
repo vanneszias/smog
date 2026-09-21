@@ -10,6 +10,7 @@ import {
   resolveProvider,
 } from "@/auth/oauthProvider";
 import { homePath, seeOther, signInPath } from "@/lib/authFlow";
+import { equalConstantTime } from "@/lib/constantTime";
 import { type Locale, resolveLocale } from "@/lib/locale";
 import type { User } from "@/payload-types";
 
@@ -106,29 +107,6 @@ function randomToken(): string {
     .replaceAll("+", "-")
     .replaceAll("/", "_")
     .replaceAll("=", "");
-}
-
-/**
- * Compares two strings without leaking where they differ.
- *
- * `state` is a bearer value for the length of one redirect, so the usual
- * argument that a timing comparison is unexploitable over a network applies
- * — this is here because writing `===` in a security check invites the next
- * person to copy it somewhere it does matter, and the cost is one loop.
- */
-function equalConstantTime(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-
-  let difference = 0;
-
-  for (let index = 0; index < a.length; index += 1) {
-    // biome-ignore lint/suspicious/noBitwiseOperators: XOR-accumulate is what makes this comparison constant-time. Any formulation the rule would accept — `!==` with an early return, `+=` on a boolean — either short-circuits or branches, which is the property being avoided.
-    difference |= a.charCodeAt(index) ^ b.charCodeAt(index);
-  }
-
-  return difference === 0;
 }
 
 function readCookie(req: PayloadRequest, name: string): null | string {

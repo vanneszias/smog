@@ -165,7 +165,7 @@ Do this **before** the callback does anything, so there is never a commit where 
 **Interfaces:**
 - Produces: `signRenderCallback(body: string, secret: string): Promise<string>`; `verifyRenderCallback(body: string, header: null | string, secret: string): Promise<boolean>`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("accepts a body signed with the shared secret");
@@ -184,9 +184,9 @@ it("compares in constant time", () => {
 it("is a SHA-256 HMAC, so a length-extension does not forge one");
 ```
 
-- [ ] **Step 2-4:** run, implement with `crypto.subtle` (workerd has Web Crypto, not `node:crypto`), run again.
+- [x] **Step 2-4:** run, implement with `crypto.subtle` (workerd has Web Crypto, not `node:crypto`), run again.
 
-- [ ] **Step 5: Mutation-prove**
+- [x] **Step 5: Mutation-prove**
 
 | mutation | must fail |
 |---|---|
@@ -195,7 +195,7 @@ it("is a SHA-256 HMAC, so a length-extension does not forge one");
 | the secret is read from the body instead of the environment | the wrong-secret test |
 | an absent header is treated as valid | the absent-header test |
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ---
 
