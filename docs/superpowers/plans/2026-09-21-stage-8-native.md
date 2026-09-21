@@ -960,7 +960,7 @@ describe("Button", () => {
   it("reports busy while loading", () => {
     render(<Button loading>Press me</Button>);
 
-    expect(screen.getByRole("button")).toHaveAccessibilityState({ busy: true });
+    expect(screen.getByRole("button")).toBeBusy();
   });
 
   it("paints the primary variant with the primary token", () => {
@@ -1155,8 +1155,9 @@ export function Text({ className, ...props }: TextProps) {
 bun -F @smog/ui-native test
 ```
 
-Expected: PASS. If `toHaveAccessibilityState` is unrecognised, `jest.setup.ts`
-is not loading `@testing-library/react-native/extend-expect`.
+Expected: PASS. If `toBeBusy` is unrecognised, `jest.setup.ts` is not loading
+the matchers — Task 1 recorded how they register in 13.3.3, which is not via
+the `extend-expect` subpath an older version published.
 
 - [ ] **Step 12: Prove the vocabulary guard is load-bearing**
 
@@ -1304,7 +1305,7 @@ non-obvious ones, which are the reason this is a list and not one file:
 | `Input` | it has an accessible name from `label` **without** rendering a visible label, because `accessibilityLabel` is the only name a `TextInput` gets on iOS; and `invalid` sets `accessibilityState.invalid` rather than only a border colour |
 | `Card` | `interactive` changes the border role (`border-border` vs `border-border-subtle`), asserted as two different colours |
 | `Badge` | every `BADGE_VARIANTS` entry renders distinctly, imported from `@smog/ui-web/vocabulary` exactly as `Button`'s does |
-| `Switch` | pressing it calls `onValueChange` with the **negation** of `value`, and a disabled one does not call it at all |
+| `Switch` | pressing it calls `onValueChange` with the **negation** of `value`, and a disabled one does not call it at all; state is asserted with `toBeChecked()` / `not.toBeChecked()` |
 | `Skeleton` | it is hidden from assistive technology (`accessibilityElementsHidden`), because a loading placeholder announced as content is worse than silence |
 | `EmptyState` | the title is a heading to assistive technology (`accessibilityRole="header"`) |
 | `Avatar` | with no `uri` it renders initials derived from `name` — and "Ada Lovelace" gives "AL" while "Ada" gives "A", so a single-word name does not crash on `parts[1]` |
@@ -1652,9 +1653,7 @@ describe("GestureCard", () => {
       />
     );
 
-    expect(screen.getByLabelText("Favourite")).toHaveAccessibilityState({
-      selected: false,
-    });
+    expect(screen.getByLabelText("Favourite")).not.toBeSelected();
 
     rerender(
       <GestureCard
@@ -1665,9 +1664,7 @@ describe("GestureCard", () => {
       />
     );
 
-    expect(screen.getByLabelText("Favourite")).toHaveAccessibilityState({
-      selected: true,
-    });
+    expect(screen.getByLabelText("Favourite")).toBeSelected();
   });
 
   it("renders a gesture with no categories", () => {
@@ -1684,6 +1681,15 @@ reads as a different control each time it is pressed. Web reports the state
 through `aria-pressed`; React Native's equivalent is
 `accessibilityState.selected` on a `role="button"`, which is what iOS and
 Android actually announce.
+
+The matcher is `toBeSelected()`, not `toHaveAccessibilityState({ selected })`.
+**`toHaveAccessibilityState` does not exist** in the installed
+`@testing-library/react-native` (13.3.3) — checked against
+`node_modules/@testing-library/react-native/build/matchers/`, which ships
+`to-be-selected`, `to-be-busy`, `to-be-checked` and `to-be-disabled` and no
+state matcher at all. An earlier draft of this plan reached for the
+non-existent one in three places; Task 3 hit it first and swapped its own for
+`toBeBusy()`.
 
 The last test is the `GestureSummary` optional fields meaning what they say.
 A gesture with no categories is the ordinary case for a newly seeded row, and
