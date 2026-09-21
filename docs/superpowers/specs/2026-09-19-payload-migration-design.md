@@ -1159,6 +1159,59 @@ The general shape is worth keeping: **a helper whose name promises a loop
 should contain one**, and a name that describes a retry is the easiest place
 in a suite for a missing retry to hide.
 
+## The test suite was starting 152 miniflare instances and disposing none
+
+Found when `release-check` went red on a **documentation-only commit**, with
+eleven failures in `search/search.int.test.ts` that no local run reproduced.
+The error was not ours:
+
+```
+AssertionError: (message?.id === id)
+  at assert                miniflare/.../proxy/fetch-sync.ts:147
+  at ProxyStubHandler.#syncCall  miniflare/.../proxy/client.ts:674
+```
+
+That is miniflare's proxy delivering a response to the wrong request.
+
+**The cause.** `payload.config.ts` calls `getPlatformProxy()` at module
+scope. Vitest's default `isolate: true` gives every test *file* a fresh
+module registry, so every file evaluated that line again — while the
+underlying miniflare instances are OS-level resources in a reused worker
+process and nothing ever disposed them. Measured:
+
+| | `isolate: true` | `isolate: false` |
+|---|---:|---:|
+| miniflare instances started | **152** | **13** |
+| suite duration | 245.8s | **99.1s** |
+
+Thirteen is about one per worker. A hundred and fifty-two live instances
+sharing one sync-fetch proxy is what made an id collision possible — and it
+also explains the `SQLITE_BUSY` noise (many instances, one persist
+directory) and an unexplained `EXIT=1` that reported every test passing.
+
+**The fix that looked obvious does not work.** The upstream this was adapted
+from caches the context on `globalThis[Symbol.for("__cloudflare-context__")]`
+and our adaptation dropped that, so restoring it was the first idea. Probed
+before writing it: a value set on `globalThis` in one test file reads back
+`undefined` in the next, because Vitest's isolation replaces the global too.
+The cache would have been a no-op.
+
+**`isolate: false` works, and introduced one flake of its own.** Sharing one
+jsdom environment across a worker's files means `localStorage` survives from
+file to file, and `guestStore.test.ts`'s "returns an empty list when nothing
+is stored" started failing intermittently. That test had been passing
+because Vitest handed it a fresh environment, not because anything cleared
+the store — the same shape as every other entry on this list. A global
+`beforeEach` clear in `vitest.setup.ts` fixes it at the runner, where the
+property belongs; none of the eight files that touch `localStorage` seeds it
+in a `beforeAll`, so nothing is taken away.
+
+Four consecutive clean runs afterwards, at 1232 tests, and the suite is 2.5x
+faster. **An intermittent failure in an unrelated file is worth the same
+suspicion as a reproducible one**: this one had been visible for two stages
+as "SQLITE_BUSY noise" and a single unexplained exit code before it finally
+failed a build.
+
 ## Risks
 
 | Risk | Mitigation |

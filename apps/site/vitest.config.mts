@@ -69,6 +69,7 @@ export default defineConfig({
     // and leave the test comparing two identical refusals.
     hookTimeout: 60_000,
     testTimeout: 30_000,
+    isolate: false,
     // Integration tests boot a real Payload instance against a local D1
     // (miniflare) emulator. Rather than serializing test files to avoid two
     // emulator instances racing the same on-disk state, payload.config.ts
