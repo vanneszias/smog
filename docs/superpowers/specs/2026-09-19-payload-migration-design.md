@@ -351,8 +351,19 @@ Stage 1 defines the shape only. Four things are knowingly absent:
 - **No status-transition enforcement (Stage 5).** Every status is currently
   reachable from every other. The seven-value tuple is pinned by test, but
   nothing stops `active` → `pending_payment`.
-- **Nothing writes `admin-logs` or `user-consents` yet (Stage 5 / the consent
-  stage).** Both are append-only to everyone including admins, so the only way
+- **Nothing writes `admin-logs` or `user-consents` yet.** `admin-logs` gets
+  its writer in Stage 5 (sponsorship status transitions). `user-consents`
+  gets Stage 8.5 — decided 2026-09-21, after the Stage 5 plan's self-review
+  found that "the consent stage" named here did not exist in the stage
+  table and so belonged to nobody. The collection has shipped since Stage 1
+  with a GDPR retention rationale, a nullable `user` column so a record
+  outlives the account it describes, and not one row; Stage 4's test that
+  account deletion preserves consent records proves a property of an empty
+  table until then. Its writer is the cookie and analytics banner, which is
+  a public-site concern and not a sponsorship one. It must precede Stage 9
+  because of the `analytics_consent` hazard recorded below: an import into a
+  table nobody has defined a write path for cannot know whether a missing
+  value means "no answer" or "declined". Both are append-only to everyone including admins, so the only way
   in is a hook running with `overrideAccess`. The integration tests pin the
   exact write path those hooks have to use.
 - **Payload's generated create types mark `status` and `durationYears` as
@@ -761,11 +772,17 @@ and each gets its own plan document under `docs/superpowers/plans/`.
 | 6 | Video pipeline | Remotion Lambda, Mux integration, preview and final renders |
 | 7 | Email and jobs | Email adapter, templates, three scheduled tasks |
 | 8 | Native | Expo app on Payload REST with its own component library |
+| 8.5 | Consent | Cookie and analytics banner; the first writer `user-consents` has ever had |
 | 9 | Data migration | Scripted Convex → D1 migration, verified by dry run |
 | 10 | Cutover | DNS switch; old apps and packages deleted |
 
 Stages 0–5 are strictly ordered. Stage 8 depends on Stage 4. Stages 9 and 10
 depend on everything.
+
+**Stage 8.5 is numbered rather than inserted** so that the four plan documents
+and every cross-reference already written against stages 9 and 10 keep
+meaning what they say. It must land *before* Stage 9, which is the whole
+reason it exists as a stage rather than as a wish — see below.
 
 ## Carried out of Stage 2
 

@@ -12,7 +12,19 @@
 
 ---
 
-## Decision taken in this plan, flagged for review
+## Decisions, confirmed by the product owner 2026-09-21
+
+Both questions below were put to the product owner before Task 3 started.
+Both were answered; neither is an open question any more.
+
+1. **Ship the seam, keep the 5 → 6 order.** Confirmed. Task 7 renders the
+   original video behind `lib/renderPreview.ts` and Stage 6 replaces the
+   body, not the signature.
+2. **`user-consents` gets its own stage, before cutover.** Confirmed as
+   **Stage 8.5** in the spec's stage table. It is explicitly *not* folded
+   into Stage 5, so nothing in this plan carries it.
+
+## The seam, in detail
 
 **Stage 5 ships the wizard with an uncomposited preview, and defines the seam Stage 6 fills.**
 
@@ -37,14 +49,12 @@ account deletion *keeps* consent records, which currently proves a property
 of an empty table.
 
 It is not sponsorship work, so putting it here would be scope creep, and this
-plan does not. **Recommendation: it belongs with whatever ships the cookie
-and analytics banner on the public site, which is unbuilt.** Either add it to
-Stage 3's remit as carried-over work or give it a stage of its own before
-cutover; deciding at Stage 9 is too late, because the Convex import has to
-know whether it is importing into a live table or a dead one — and the spec
-already records that `analytics_consent` defaults to an explicit *refusal*,
-so an import that skips the column silently records that every existing user
-declined.
+plan does not. **Resolved: it is now Stage 8.5 in the spec's stage table**, a small stage of
+its own that ships the cookie and analytics banner together with the first
+write path `user-consents` has ever had. It must land before Stage 9,
+because the spec records that `analytics_consent` defaults to an explicit
+*refusal* — so an import that skips the column silently records that every
+existing user declined.
 
 **Already done, not re-planned here.** The spec lists "no public read path
 for overlay data" as deferred from Stage 1 to Stage 2/3. Stage 3 shipped it
@@ -175,7 +185,10 @@ describe("the sponsorship status machine", () => {
   });
 
   it("lets nothing out of a terminal status", () => {
-    for (const terminal of ["expired", "rejected", "cancelled"] as const) {
+    // `rejected` is deliberately absent — see the table above. It is
+    // re-openable for resubmission in the shipped product, and the edge is
+    // pinned by its own positive test rather than left implicit.
+    for (const terminal of ["expired", "cancelled"] as const) {
       const reachable = SPONSORSHIP_STATUSES.filter(
         (to) => to !== terminal && canTransition(terminal, to)
       );
@@ -245,7 +258,14 @@ export const ALLOWED_TRANSITIONS: Readonly<
   // Runs its term, or is pulled.
   active: ["expired", "cancelled"],
   expired: [],
-  rejected: [],
+  // CORRECTED DURING TASK 1, against the shipped product. This plan
+  // originally had `rejected: []`. `packages/convex/convex/sponsorships.ts`
+  // allows `generateReEditLink` for exactly
+  // `["pending_approval", "pending_resubmission", "rejected"]`, and the
+  // admin panel renders the button for a rejected sponsorship. The
+  // migration's non-goal is that sponsorship behaviour does not change, so
+  // the shipped allowlist wins over this plan's guess.
+  rejected: ["pending_resubmission"],
   cancelled: [],
 };
 
