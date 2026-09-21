@@ -144,18 +144,24 @@ describe("migration chain", () => {
     expect(migrations.map((m) => m.name).sort()).toEqual(files);
   });
 
-  it("ends with the sponsorship bearer-token columns uniquely indexed", async () => {
+  it("ends with the re-edit token uniquely indexed and the payment id not", async () => {
     const { database } = await chain();
-    // The payoff. `reEditToken` is a bearer credential and `molliePaymentId`
-    // is what the payment webhook looks up by, so a duplicate in either means
-    // one sponsor reaching another's record, or money applied to the wrong
-    // row. The collection config asserts the *intent*; this asserts that the
-    // migration chain actually produces it in the database.
+    // `reEditToken` is a bearer credential, so a duplicate means one sponsor
+    // reaching another's record — that index stays unique, and the collection
+    // config asserting the *intent* is not the same claim as the migration
+    // chain producing it.
+    //
+    // `molliePaymentId` is the opposite, and Stage 1 had it backwards. The
+    // webhook resolves a payment through `metadata.sponsorshipIds`, not
+    // through this column; one checkout covering three gestures writes three
+    // rows carrying one payment id, which a unique index refuses. Stage 5
+    // Task 7 drops it — see
+    // `20260921_120000_sponsorship_payment_id_not_unique`.
     const indexes = indexesOn(database, "sponsorships");
 
     const byName = new Map(indexes.map((i) => [i.name, i.unique]));
-    expect(byName.get("sponsorships_mollie_payment_id_idx")).toBe(1);
     expect(byName.get("sponsorships_re_edit_token_idx")).toBe(1);
+    expect(byName.get("sponsorships_mollie_payment_id_idx")).toBe(0);
   });
 
   it("gives webhook-deliveries a UNIQUE index on the payment id", async () => {
@@ -530,5 +536,48 @@ describe("migration chain", () => {
     // the Mollie flow runs would collide with the previous one.
     insert(9003, null);
     insert(9004, null);
+  });
+
+  it("lets one payment id sit on every sponsorship it paid for", async () => {
+    const { database } = await chain();
+    // The index asserted as behaviour rather than as metadata, in the
+    // direction that matters here: `pragma_index_list` reporting `unique: 0`
+    // and SQLite letting the second row in are different claims, and it is
+    // the second that makes a bulk checkout possible at all.
+    //
+    // This is the exact shape `endpoints/sponsorships.ts` writes — one row
+    // per selected gesture, all naming one Mollie payment — and the exact
+    // shape `apps/server/src/webhooks/mollie.ts` has always written.
+    database.exec(
+      `INSERT INTO gestures (id, playback_id)
+       VALUES (9100, 'pb-bulk-a'), (9101, 'pb-bulk-b'), (9102, 'pb-bulk-c');`
+    );
+
+    const insert = (id: number, gesture: number) =>
+      database.exec(
+        `INSERT INTO sponsorships (
+           id, gesture_id, sponsor_name, sponsor_email, contact_full_name,
+           overlay_text, original_video_playback_id, start_date, end_date,
+           payment_amount, mollie_payment_id
+         ) VALUES (
+           ${id}, ${gesture}, 'Sponsor', 'bulk@example.test', 'Contact',
+           'Overlay', 'pb-original', '2026-01-01', '2027-01-01',
+           5000, 'tr_one_payment_three_gestures'
+         );`
+      );
+
+    expect(() => {
+      insert(9110, 9100);
+      insert(9111, 9101);
+      insert(9112, 9102);
+    }).not.toThrow();
+
+    expect(
+      database
+        .prepare(
+          "SELECT count(*) as rows FROM sponsorships WHERE mollie_payment_id = 'tr_one_payment_three_gestures'"
+        )
+        .all()
+    ).toEqual([{ rows: 3 }]);
   });
 });

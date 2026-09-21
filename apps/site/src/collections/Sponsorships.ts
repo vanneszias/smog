@@ -97,12 +97,34 @@ export const Sponsorships: CollectionConfig = {
       required: true,
       defaultValue: SPONSORSHIP_DEFAULTS.durationYears,
     },
-    // Unique, not merely indexed: the Mollie webhook resolves a payment to
-    // a sponsorship through this column, so two rows sharing one id means
-    // the webhook marks the wrong sponsorship paid. Nullable — and SQLite
-    // allows any number of NULLs under a unique index — so the rows that
-    // have no payment yet are unaffected.
-    { name: "molliePaymentId", type: "text", index: true, unique: true },
+    /*
+     * Indexed, and deliberately **not** unique.
+     *
+     * Stage 1 made it unique, reasoning that "the Mollie webhook resolves a
+     * payment to a sponsorship through this column". It does not: the webhook
+     * resolves through `metadata.sponsorshipIds` (see `endpoints/mollie.ts`),
+     * and the column means "which payment paid for this", which is
+     * many-to-one by nature. One checkout covering three gestures writes three
+     * rows carrying one payment id, and under a unique index D1 refused the
+     * second — so the unique constraint made the shipped bulk purchase
+     * impossible rather than safer.
+     *
+     * Checked against the product rather than argued:
+     * `packages/convex/convex/schema.ts` declares `by_payment_id` as a plain
+     * index, and `apps/server/src/webhooks/mollie.ts` writes the same
+     * `molliePaymentId` to *every* sponsorship in a bulk payment.
+     *
+     * Uniqueness has not disappeared from the design; it moved to where it
+     * works. `webhook-deliveries.paymentId` is one row per payment and is the
+     * claim that makes the webhook exactly-once — see
+     * `collections/WebhookDeliveries.ts`.
+     *
+     * `20260921_120000_sponsorship_payment_id_not_unique` is the migration
+     * that drops it in a deployed database; `migrations.test.ts` asserts the
+     * chain really produces an ordinary index and that two rows may share a
+     * payment id.
+     */
+    { name: "molliePaymentId", type: "text", index: true },
     { name: "paymentAmount", type: "number", required: true },
     { name: "rejectionReason", type: "textarea" },
     { name: "reviewedBy", type: "relationship", relationTo: "users" },

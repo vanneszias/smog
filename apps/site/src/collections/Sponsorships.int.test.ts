@@ -234,41 +234,56 @@ describe("Sponsorships access against a real database", () => {
     expect(rows.docs).toHaveLength(1);
   });
 
-  it("refuses a second sponsorship carrying the same molliePaymentId", async () => {
-    // The Mollie webhook looks a sponsorship up by this id. A duplicate
-    // means the webhook marks the wrong row paid — money applied to
-    // someone else's sponsorship.
+  it("lets one Mollie payment sit on every sponsorship it paid for", async () => {
+    /*
+     * **The inverse of what Stage 1 asserted here, and the product decides
+     * it.** This test used to demand that a second row carrying the same
+     * `molliePaymentId` be refused, on the reasoning that "the Mollie webhook
+     * looks a sponsorship up by this id". It does not: `endpoints/mollie.ts`
+     * resolves through `metadata.sponsorshipIds`, and the column means "which
+     * payment paid for this", which is many-to-one.
+     *
+     * `apps/site`'s checkout writes one row per selected gesture, so a
+     * three-gesture order is three rows and one payment id — and under the
+     * unique index D1 refused the second, which made the shipped bulk
+     * purchase impossible. `apps/server/src/webhooks/mollie.ts` has always
+     * written the same id to every sponsorship in a bulk payment, and
+     * `packages/convex/convex/schema.ts` declares `by_payment_id` as a plain
+     * index. Stage 5 Task 7 drops the constraint; this is the behaviour that
+     * replaces it.
+     */
     const molliePaymentId = `tr_${runId.replaceAll("-", "")}`;
 
-    await payload.create({
+    const first = await payload.create({
       collection: "sponsorships",
-      data: sponsorshipData({ status: "active", molliePaymentId }),
+      data: sponsorshipData({ molliePaymentId, status: "active" }),
     });
 
-    await expect(
-      payload.create({
-        collection: "sponsorships",
-        data: sponsorshipData({
-          status: "active",
-          molliePaymentId,
-          sponsorName: "Betaling-botsing BV",
-        }),
-      })
-    ).rejects.toThrow();
+    const second = await payload.create({
+      collection: "sponsorships",
+      data: sponsorshipData({
+        molliePaymentId,
+        sponsorName: "Tweede gebaar, zelfde betaling",
+        status: "active",
+      }),
+    });
 
     const rows = await payload.find({
       collection: "sponsorships",
       overrideAccess: true,
       where: { molliePaymentId: { equals: molliePaymentId } },
     });
-    expect(rows.docs).toHaveLength(1);
+
+    expect(second.id).not.toBe(first.id);
+    expect(second.molliePaymentId).toBe(molliePaymentId);
+    expect(rows.docs).toHaveLength(2);
   });
 
   it("still allows many sponsorships with no token and no payment id, since NULLs do not collide", async () => {
-    // Both columns stay nullable. SQLite permits any number of NULLs under
-    // a unique index, so making them unique must not force a value onto the
-    // rows that legitimately have neither — which is every sponsorship
-    // before the Mollie flow runs.
+    // Both columns stay nullable. `reEditToken` is still unique and SQLite
+    // permits any number of NULLs under a unique index, so the constraint
+    // must not force a value onto the rows that legitimately have neither —
+    // which is every sponsorship before the Mollie flow runs.
     const first = await payload.create({
       collection: "sponsorships",
       data: sponsorshipData({ status: "active", sponsorName: "Leeg een" }),

@@ -140,17 +140,19 @@ const nextConfig: NextConfig = {
         source: "/account/lists/share",
       },
       /*
-       * The sponsor wizard's writes. Locale-free like everything above
+       * The sponsor wizard's three writes. Locale-free like everything above
        * — the forms carry the locale in their body — and flat siblings for
        * the reason `/account/confirm-email` gives: overlapping patterns leave
        * Payload's endpoint matcher to choose, and the wrong choice here would
        * answer "paid" without charging anybody.
        *
-       * Nothing in `app/` claims `/sponsor/start`: the wizard's *pages* are
-       * locale-prefixed
+       * Nothing in `app/` claims `/sponsor/start`, `/sponsor/details` or
+       * `/sponsor/checkout`: the wizard's *pages* are locale-prefixed
        * (`/{locale}/sponsor/...`), so the two URL spaces do not overlap.
        */
       { destination: "/api/sponsor/start", source: "/sponsor/start" },
+      { destination: "/api/sponsor/details", source: "/sponsor/details" },
+      { destination: "/api/sponsor/checkout", source: "/sponsor/checkout" },
       /*
        * Mollie's payment webhook. The only rewrite here whose source URL a
        * third party holds: `lib/mollie.ts` sends it to Mollie as

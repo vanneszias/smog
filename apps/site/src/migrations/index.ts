@@ -15,6 +15,7 @@ import * as migration_20260920_114500_list_fk_behaviour from "./20260920_114500_
 import * as migration_20260920_160000_add_user_oauth_accounts from "./20260920_160000_add_user_oauth_accounts";
 import * as migration_20260920_233000_add_user_pending_email from "./20260920_233000_add_user_pending_email";
 import * as migration_20260921_090000_add_webhook_deliveries from "./20260921_090000_add_webhook_deliveries";
+import * as migration_20260921_120000_sponsorship_payment_id_not_unique from "./20260921_120000_sponsorship_payment_id_not_unique";
 
 export const migrations = [
   {
@@ -101,5 +102,10 @@ export const migrations = [
     up: migration_20260921_090000_add_webhook_deliveries.up,
     down: migration_20260921_090000_add_webhook_deliveries.down,
     name: "20260921_090000_add_webhook_deliveries",
+  },
+  {
+    up: migration_20260921_120000_sponsorship_payment_id_not_unique.up,
+    down: migration_20260921_120000_sponsorship_payment_id_not_unique.down,
+    name: "20260921_120000_sponsorship_payment_id_not_unique",
   },
 ];

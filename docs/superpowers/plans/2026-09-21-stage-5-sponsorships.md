@@ -1046,7 +1046,7 @@ git add -A && git commit -m "feat(site): choose the gestures a sponsorship cover
 replaces the body and not the signature, and its test asserts the Stage 5
 contract explicitly so that Stage 6 has to change a test on purpose.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```ts
 it("refuses a sponsor email that is not an address");
@@ -1068,7 +1068,7 @@ it("does not create rows when Mollie refuses the payment", async () => {
 it("shows the original video in the preview step (Stage 5 contract)");
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 ```bash
 cd /home/user/smog/apps/site && bunx vitest run src/endpoints/sponsorships.int.test.ts src/lib/renderPreview.test.ts
@@ -1076,7 +1076,7 @@ cd /home/user/smog/apps/site && bunx vitest run src/endpoints/sponsorships.int.t
 Expected: FAIL on the missing import, not on an assertion. A test that fails
 on an assertion before the code exists is testing something else.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Follow the house pattern in `apps/site/src/endpoints/account.ts` and
 `apps/site/src/endpoints/lists.ts`: `guardOrigin(req)` first, then
@@ -1086,13 +1086,13 @@ carry no client JavaScript. Resolve every id from the form with
 `overrideAccess: false`. Add the rewrite to `apps/site/next.config.ts` and
 register the endpoint array in `apps/site/src/payload.config.ts`.
 
-- [ ] **Step 4: Run until green**
+- [x] **Step 4: Run until green**
 
 ```bash
 cd /home/user/smog/apps/site && bunx vitest run src/endpoints/sponsorships.int.test.ts src/lib/renderPreview.test.ts
 ```
 
-- [ ] **Step 5: Mutation-prove every guard**
+- [x] **Step 5: Mutation-prove every guard**
 
 One mutation per guard named in Step 1. For each: apply it, `grep` to
 confirm it landed, run the **whole** file (never `-t`), record CAUGHT or
@@ -1100,7 +1100,7 @@ SURVIVED from the runner's own `Tests` line, restore, and byte-compare
 against the backup. A SURVIVED mutation means the test is decorative — fix
 the test, or delete the guard and say why. Do not adjust the record.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /home/user/smog && bun check && bun -F site check-types && bunx knip --no-progress --no-config-hints

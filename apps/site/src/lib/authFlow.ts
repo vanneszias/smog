@@ -285,14 +285,32 @@ type ConfirmEmailError = "link";
  * which drives every one of them through a real request.
  */
 type SponsorError =
+  /** The contact's name or company is blank or too long. */
+  | "contact"
+  /** The sponsor's email address is not an address. */
+  | "email"
   /** Nothing was selected. */
   | "empty"
   /** Something in the selection is not a gesture anyone may sponsor. */
   | "gesture"
+  /** An invoice was asked for without the details an invoice needs. */
+  | "invoice"
+  /** The logo option was taken without a logo. */
+  | "logo"
+  /** The file is bigger than a logo may be. */
+  | "logo-size"
+  /** The file is not one of the image types a logo may be. */
+  | "logo-type"
+  /** The sponsor name — which is also the overlay text — is blank or too long. */
+  | "name"
+  /** Mollie would not open a checkout, so nothing has been charged. */
+  | "payment"
   /** One of the selected gestures is already sponsored. */
   | "sold"
   /** More gestures than one sponsorship may cover. */
-  | "too-many";
+  | "too-many"
+  /** The VAT number is not a Belgian ondernemingsnummer. */
+  | "vat";
 
 export function signInPath(
   locale: Locale,
@@ -375,6 +393,27 @@ export function sponsorDetailsPath(
     ...query,
     gestures: gestures.length === 0 ? undefined : gestures.join(","),
   });
+}
+
+/** Step 3: review the preview and pay. */
+export function sponsorPreviewPath(
+  locale: Locale,
+  query?: { error?: SponsorError }
+): string {
+  return withQuery(`/${locale}/sponsor/preview`, query);
+}
+
+/**
+ * Where Mollie returns the sponsor, whatever they decided there.
+ *
+ * No `?paymentId={id}` placeholder, which the shipped flow passes and Mollie
+ * substitutes. The shipped success page uses it to poll for the webhook
+ * landing; this one has no client JavaScript to poll with, so the id would be
+ * a payment identifier sitting in a browser history, a `Referer` header and a
+ * proxy log for nothing.
+ */
+export function sponsorSuccessPath(locale: Locale): string {
+  return `/${locale}/sponsor/success`;
 }
 
 export function confirmEmailPath(

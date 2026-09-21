@@ -1,12 +1,34 @@
-import type { Endpoint, PayloadHandler } from "payload";
+import { FIXED_DURATION_YEARS } from "@smog/config/constants";
 import {
+  type Endpoint,
+  generateCookie,
+  type PayloadHandler,
+  type PayloadRequest,
+} from "payload";
+import {
+  isEmailShaped,
   localeFromForm,
   seeOther,
   sponsorDetailsPath,
   sponsorPath,
+  sponsorPreviewPath,
+  sponsorSuccessPath,
 } from "@/lib/authFlow";
-import { guardOrigin, readForm } from "@/lib/formPost";
+import { field, guardOrigin, readForm } from "@/lib/formPost";
+import { createMolliePayment } from "@/lib/mollie";
+import { sponsorshipAmountCents } from "@/lib/pricing";
+import {
+  encodeSponsorDraft,
+  LOGO_TYPES,
+  MAX_LOGO_BYTES,
+  readSponsorDetails,
+  SPONSOR_DRAFT_COOKIE,
+  SPONSOR_DRAFT_TTL_SECONDS,
+  type SponsorDetails,
+} from "@/lib/sponsorDraft";
 import { resolveSponsorSelection } from "@/lib/sponsorSelection";
+import { createSponsorship } from "@/lib/sponsorshipCreate";
+import type { Gesture, Sponsorship } from "@/payload-types";
 
 /**
  * The sponsor wizard's writes.
@@ -42,6 +64,285 @@ import { resolveSponsorSelection } from "@/lib/sponsorSelection";
 
 /** The form field every selected gesture's checkbox shares. */
 const SPONSOR_SELECTION_FIELD = "gestureId";
+
+/** The rewrite source Mollie is handed, not the endpoint's own `/api/` path. */
+const MOLLIE_WEBHOOK_PATH = "/webhooks/mollie";
+
+/** Origins Mollie cannot reach, so it is never offered a webhook for them. */
+const LOCAL_HOSTS = new Set(["0.0.0.0", "127.0.0.1", "::1", "localhost"]);
+
+/** One day, for the term arithmetic the shipped mutation does. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** The shipped term: `Date.now() + durationYears * 365 * 24 * 60 * 60 * 1000`. */
+const DAYS_PER_YEAR = 365;
+
+/** Which extension a stored logo gets, by the type it was accepted as. */
+const EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+/** The three ways a logo can be refused. */
+type LogoRefusal = "logo" | "logo-size" | "logo-type";
+
+/**
+ * The selection a form carries.
+ *
+ * `getAll`, because a set of checkboxes with one name is how a form says "a
+ * list" — and `FormData.get` would silently take the first, turning a
+ * ten-gesture order into a one-gesture one at the till. A `File` entry cannot
+ * be a gesture id, so anything that is not a string is dropped here rather
+ * than stringified into `"[object File]"` and looked up.
+ */
+function selectedGestureIds(form: FormData): string[] {
+  return form
+    .getAll(SPONSOR_SELECTION_FIELD)
+    .filter((value): value is string => typeof value === "string");
+}
+
+/**
+ * The draft cookie, built the way `endpoints/oauth.ts` builds its `state`
+ * cookie: through Payload's own `generateCookie`, with `domain` and `secure`
+ * taken from the users collection's cookie config so this app has one answer
+ * to "what does a cookie from this site look like".
+ *
+ * `Lax` rather than `Strict`: the sponsor arrives at step 3 by a same-site
+ * redirect, which `Lax` covers, and `None` would ship a draft of somebody's
+ * contact details on any cross-site request at all.
+ */
+function draftCookie(req: PayloadRequest, value: string): string {
+  const cookies = req.payload.collections.users?.config.auth.cookies;
+
+  return generateCookie({
+    domain: cookies?.domain ?? undefined,
+    httpOnly: true,
+    maxAge: SPONSOR_DRAFT_TTL_SECONDS,
+    name: SPONSOR_DRAFT_COOKIE,
+    path: "/",
+    returnCookieAsObject: false,
+    sameSite: "Lax",
+    secure: cookies?.secure,
+    value,
+  }) as string;
+}
+
+/**
+ * Where Mollie should announce this payment's fate, or `undefined`.
+ *
+ * **Omitted for a local origin, and that is not a convenience.** Mollie
+ * refuses a `webhookUrl` it cannot reach, and it refuses the whole payment
+ * with it — so a developer running `bun -F site dev` would get no checkout at
+ * all rather than a checkout with no webhook. The shipped flow makes the same
+ * exception with `baseUrl.includes("localhost")`; this matches on the host
+ * rather than on a substring, so a real domain with "localhost" in its name
+ * still gets its webhook.
+ *
+ * The path is the rewrite source in `next.config.ts`, not the endpoint's own
+ * `/api/...` path: Mollie holds this URL for weeks and posts back to whatever
+ * it was given.
+ */
+function webhookUrlFor(origin: string): string | undefined {
+  let url: URL;
+
+  try {
+    url = new URL(origin);
+  } catch {
+    return undefined;
+  }
+
+  return LOCAL_HOSTS.has(url.hostname)
+    ? undefined
+    : `${url.origin}${MOLLIE_WEBHOOK_PATH}`;
+}
+
+/**
+ * The sponsor's logo in `media`, or the code that refuses the file.
+ *
+ * **Nothing is uploaded unless the logo was asked for.** `hasLogo` records
+ * whether the option was *paid* for — `packages/convex/convex/schema.ts` says
+ * so in as many words and `lib/sponsorOverlay.ts` gates the public overlay on
+ * exactly that pair — so a file posted alongside an unticked box is dropped,
+ * not stored.
+ *
+ * **`overrideAccess: true` on a write an anonymous visitor caused.**
+ * `media.create` is `isAdmin`, deliberately: Stage 3 closed a hole where one
+ * signup bought arbitrary R2 uploads. Sponsoring needs no account at all, so
+ * the access layer cannot be what authorises this — what stands in for it is
+ * the pair of checks above the create, which bound the file to 2 MB and to
+ * three image types *before* anything reaches R2. That leaves an
+ * unauthenticated upload surface, bounded at 2 MB a request; it is the same
+ * surface the shipped `generatePreview` procedure exposes, and Stage 7's
+ * cleanup is where an unreferenced upload should eventually be swept.
+ *
+ * The stored filename is this app's, not the browser's. A client-supplied
+ * name is a client-supplied R2 key, and two sponsors uploading `logo.png`
+ * should not be one sponsor overwriting the other.
+ */
+async function uploadLogo(
+  req: PayloadRequest,
+  form: FormData,
+  details: SponsorDetails
+): Promise<{ error: LogoRefusal } | { mediaId: null | string }> {
+  if (!details.wantsLogo) {
+    return { mediaId: null };
+  }
+
+  const file = form.get("logo");
+
+  // An empty part is what a browser sends for a file input nobody touched,
+  // so "no file" and "a zero-byte file" are the same mistake and get the same
+  // sentence.
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "logo" };
+  }
+
+  if (!(LOGO_TYPES as readonly string[]).includes(file.type)) {
+    return { error: "logo-type" };
+  }
+
+  if (file.size > MAX_LOGO_BYTES) {
+    return { error: "logo-size" };
+  }
+
+  const media = await req.payload.create({
+    collection: "media",
+    data: { alt: `Logo van ${details.sponsorName}` },
+    file: {
+      data: Buffer.from(await file.arrayBuffer()),
+      mimetype: file.type,
+      name: `sponsor-logo-${crypto.randomUUID()}.${EXTENSIONS[file.type] ?? "bin"}`,
+      size: file.size,
+    },
+    overrideAccess: true,
+  });
+
+  return { mediaId: String(media.id) };
+}
+
+/**
+ * The logo the preview step says was uploaded, resolved against `media`.
+ *
+ * The id arrives in a hidden field, so it is a number a stranger can type.
+ * `overlayImage` carries a real foreign key, which means an id for a row that
+ * does not exist is an unhandled `DrizzleQueryError` — a 500 with a JSON body
+ * in a browser window, on a page whose every other refusal is a sentence.
+ * Resolving it first is the difference, and it is the Global Constraint the
+ * spec states for every id that arrives in a request.
+ *
+ * It resolves to *any* media row, because `media.read` is public and always
+ * has been — the worst a forged id buys is a sponsorship whose overlay names
+ * an image already served to everybody, and an administrator approves every
+ * sponsorship before it goes live.
+ */
+async function resolveLogo(
+  req: PayloadRequest,
+  details: SponsorDetails,
+  mediaId: string
+): Promise<{ error: LogoRefusal } | { overlayImage: null | number }> {
+  if (!details.wantsLogo) {
+    return { overlayImage: null };
+  }
+
+  if (mediaId === "") {
+    return { error: "logo" };
+  }
+
+  const media = await req.payload.findByID({
+    collection: "media",
+    depth: 0,
+    disableErrors: true,
+    id: mediaId,
+    overrideAccess: false,
+  });
+
+  return media === null ? { error: "logo" } : { overlayImage: media.id };
+}
+
+/**
+ * One sponsorship row per selected gesture, all in `pending_payment`.
+ *
+ * ## Why one row per gesture, and what `paymentAmount` means
+ *
+ * Transcribed from `createBulkSimplified` in
+ * `packages/convex/convex/sponsorships.ts`: a sponsorship is a contract
+ * about exactly one gesture's video for a term, so three gestures is three
+ * rows and one payment, not one row naming three. `paymentAmount` is therefore the
+ * **per-gesture** amount and not the order total — which is exactly what
+ * `endpoints/mollie.ts` assumes when it sums it across a payment's
+ * sponsorships and compares the sum with what Mollie charged. Writing the
+ * total on each row would make a three-gesture order look like it cost three
+ * times what it did, and the webhook would refuse the payment the sponsor
+ * had already made.
+ *
+ * ## The two dates
+ *
+ * `startDate` is now and `endDate` is now plus the term, both written here.
+ * The shipped mutation writes `startDate: 0` and fills it in after payment;
+ * this column is `required` in Payload and — more to the point — nothing in
+ * this app ever sets it later, so a sentinel would make every sponsorship
+ * fail `lib/sponsorOverlay.ts`'s in-term test for ever. Now is honest: the
+ * term this sponsor is buying starts when they buy it.
+ *
+ * ## Sequentially, not `Promise.all`
+ *
+ * Ten rows against D1 through one HTTP-shaped binding. Concurrency here buys
+ * a few milliseconds and costs the one thing worth having if this dies
+ * half-way: a prefix of the order written, in a known order, rather than an
+ * arbitrary subset.
+ */
+function createSponsorships(
+  req: PayloadRequest,
+  gestures: readonly Gesture[],
+  order: { details: SponsorDetails; overlayImage: null | number }
+): Promise<Sponsorship[]> {
+  const startedAt = Date.now();
+  const startDate = new Date(startedAt).toISOString();
+  const endDate = new Date(
+    startedAt + FIXED_DURATION_YEARS * DAYS_PER_YEAR * DAY_MS
+  ).toISOString();
+  const { details } = order;
+  const perGestureCents = sponsorshipAmountCents(1, details.wantsLogo);
+
+  return gestures.reduce<Promise<Sponsorship[]>>(
+    (chain, gesture) =>
+      chain.then(async (rows) => [
+        ...rows,
+        await createSponsorship(req.payload, {
+          contactCompany:
+            details.contactCompany === "" ? null : details.contactCompany,
+          contactFullName: details.contactFullName,
+          durationYears: FIXED_DURATION_YEARS,
+          endDate,
+          gesture: gesture.id,
+          hasLogo: details.wantsLogo,
+          invoiceEmail:
+            details.invoiceEmail === "" ? null : details.invoiceEmail,
+          invoiceName: details.invoiceName === "" ? null : details.invoiceName,
+          invoiceRequested: details.invoiceRequested,
+          invoiceVatNumber:
+            details.invoiceVatNumber === "" ? null : details.invoiceVatNumber,
+          // The gesture's own video, kept so Stage 6 can put it back when the
+          // term ends and so the preview step has something to play.
+          originalVideoPlaybackId: gesture.playbackId,
+          overlayImage: order.overlayImage,
+          /*
+           * **The overlay text is the sponsor name**, because that is what
+           * the shipped wizard sends: one input, two columns. See
+           * `lib/sponsorDraft.ts` — there is no second field in the product
+           * and adding one here would be a change to it.
+           */
+          overlayText: details.sponsorName,
+          paymentAmount: perGestureCents,
+          sponsorEmail: details.sponsorEmail,
+          sponsorName: details.sponsorName,
+          startDate,
+        }),
+      ]),
+    Promise.resolve([])
+  );
+}
 
 /**
  * `POST /api/sponsor/start` — step 1's only write, which writes nothing.
@@ -89,6 +390,197 @@ const startSponsorship: PayloadHandler = async (req) => {
   );
 };
 
+/**
+ * `POST /api/sponsor/details` — step 2.
+ *
+ * It writes exactly one thing, and only when it has to: the logo, into
+ * `media`. The sponsorship rows are deliberately *not* created here. A
+ * sponsor who fills this form and closes the tab is the common case, and a
+ * row created at this step would sit in `pending_payment` blocking its
+ * gesture until Stage 7's `cleanup-stale-payments` exists to sweep it —
+ * which, today, is never.
+ *
+ * Everything else travels to step 3 in the draft cookie. See
+ * `lib/sponsorDraft.ts` for why it is a cookie and not the query string, and
+ * why it is not signed.
+ */
+const submitDetails: PayloadHandler = async (req) => {
+  const crossSiteResponse = guardOrigin(req);
+
+  if (crossSiteResponse) {
+    return crossSiteResponse;
+  }
+
+  const form = await readForm(req);
+  const locale = localeFromForm(form.get("locale"));
+  const selection = await resolveSponsorSelection(
+    req.payload,
+    selectedGestureIds(form)
+  );
+
+  /*
+   * A bad selection goes back to step 1, not to step 2: step 2 has nothing
+   * to show without gestures, and the thing the sponsor has to fix is on the
+   * page before this one.
+   */
+  if ("error" in selection) {
+    return seeOther(sponsorPath(locale, { error: selection.error }));
+  }
+
+  const gestureIds = selection.gestures.map((gesture) => String(gesture.id));
+  const details = readSponsorDetails(form, isEmailShaped);
+
+  if ("error" in details) {
+    return seeOther(
+      sponsorDetailsPath(locale, gestureIds, { error: details.error })
+    );
+  }
+
+  const logo = await uploadLogo(req, form, details);
+
+  if ("error" in logo) {
+    return seeOther(
+      sponsorDetailsPath(locale, gestureIds, { error: logo.error })
+    );
+  }
+
+  return seeOther(
+    sponsorPreviewPath(locale),
+    draftCookie(
+      req,
+      encodeSponsorDraft({ ...details, gestureIds, logoMediaId: logo.mediaId })
+    )
+  );
+};
+
+/**
+ * `POST /api/sponsor/checkout` — step 3, and the only handler here that costs
+ * anybody money.
+ *
+ * ## Nothing from step 2 is trusted, because nothing can be
+ *
+ * Every field arrives again as a hidden input and is validated again with the
+ * same functions step 2 used, the gestures are resolved again with
+ * `overrideAccess: false`, their availability is checked again, and the
+ * amount is computed from the resolved selection rather than read from the
+ * body. Not defence in depth: this endpoint is reachable directly, the draft
+ * cookie is not signed, and minutes can pass between step 2 and step 3 — in
+ * which somebody else can buy one of the gestures.
+ *
+ * ## The ordering, with no transactions to lean on
+ *
+ * The rows are written first and the payment second, because the payment's
+ * metadata has to name the rows — that is the only thing that lets the
+ * webhook work out what a payment paid for. So:
+ *
+ * 1. N sponsorship rows, in `pending_payment`, with no `molliePaymentId`.
+ * 2. One Mollie payment naming all N.
+ * 3. `molliePaymentId` written onto all N.
+ * 4. The sponsor is sent to Mollie.
+ *
+ * **If step 2 fails, the rows stay.** That is the correct outcome and not an
+ * oversight: deleting them would be a second multi-step write with no
+ * transaction behind it either, and a half-done delete leaves rows that
+ * are worse still than the ones it was cleaning up. What the rows are is exactly what
+ * Stage 7's `cleanup-stale-payments` collects — `pending_payment`, no payment
+ * id, older than its window — and `sponsorships.int.test.ts` asserts that
+ * shape by name rather than asserting "nothing happened".
+ *
+ * **If step 3 fails, the sponsor still goes to Mollie.** They have a payment
+ * open and must be able to pay it; the webhook resolves through
+ * `metadata.sponsorshipIds` and not through this column, so the payment still
+ * lands. The failure is logged, which is all an operator needs.
+ */
+const checkout: PayloadHandler = async (req) => {
+  const crossSiteResponse = guardOrigin(req);
+
+  if (crossSiteResponse) {
+    return crossSiteResponse;
+  }
+
+  const form = await readForm(req);
+  const locale = localeFromForm(form.get("locale"));
+  const selection = await resolveSponsorSelection(
+    req.payload,
+    selectedGestureIds(form)
+  );
+
+  if ("error" in selection) {
+    return seeOther(sponsorPath(locale, { error: selection.error }));
+  }
+
+  const gestureIds = selection.gestures.map((gesture) => String(gesture.id));
+  const details = readSponsorDetails(form, isEmailShaped);
+
+  if ("error" in details) {
+    return seeOther(
+      sponsorDetailsPath(locale, gestureIds, { error: details.error })
+    );
+  }
+
+  const logo = await resolveLogo(req, details, field(form, "logoMediaId"));
+
+  if ("error" in logo) {
+    return seeOther(
+      sponsorDetailsPath(locale, gestureIds, { error: logo.error })
+    );
+  }
+
+  const created = await createSponsorships(req, selection.gestures, {
+    details,
+    overlayImage: logo.overlayImage,
+  });
+
+  const ids = created.map((sponsorship) => String(sponsorship.id));
+
+  let payment: Awaited<ReturnType<typeof createMolliePayment>>;
+
+  try {
+    payment = await createMolliePayment({
+      /*
+       * The order total, from the same function that priced each row, so the
+       * webhook's `sum(paymentAmount) === payment.amount` comparison holds by
+       * construction rather than by agreement between two call sites.
+       */
+      amountCents: sponsorshipAmountCents(
+        selection.gestures.length,
+        details.wantsLogo
+      ),
+      description: `Sponsorship for ${ids.length} gesture(s)`,
+      redirectUrl: `${req.origin ?? ""}${sponsorSuccessPath(locale)}`,
+      sponsorshipIds: ids,
+      webhookUrl: webhookUrlFor(req.origin ?? ""),
+    });
+  } catch (error) {
+    req.payload.logger.error(
+      { err: error },
+      `[sponsorships] Mollie would not open a checkout for ${ids.join(", ")}; they stay in pending_payment with no payment id`
+    );
+
+    return seeOther(sponsorPreviewPath(locale, { error: "payment" }));
+  }
+
+  const { errors } = await req.payload.update({
+    collection: "sponsorships",
+    data: { molliePaymentId: payment.id },
+    overrideAccess: true,
+    where: { id: { in: ids } },
+  });
+
+  if (errors.length > 0) {
+    // Logged and not answered: the sponsor has a checkout open, and the
+    // webhook resolves through the payment's metadata rather than through
+    // this column, so the payment still lands on the right rows.
+    req.payload.logger.error(
+      `[sponsorships] Payment ${payment.id} could not be written onto ${errors.map((e) => e.id).join(", ")}`
+    );
+  }
+
+  return seeOther(payment.checkoutUrl);
+};
+
 export const sponsorshipEndpoints: Endpoint[] = [
   { handler: startSponsorship, method: "post", path: "/sponsor/start" },
+  { handler: submitDetails, method: "post", path: "/sponsor/details" },
+  { handler: checkout, method: "post", path: "/sponsor/checkout" },
 ];

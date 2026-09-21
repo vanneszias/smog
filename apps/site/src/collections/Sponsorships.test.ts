@@ -102,15 +102,24 @@ describe("Sponsorships collection", () => {
     }
   });
 
-  it("makes the token and payment-id columns unique, not merely indexed", () => {
+  it("makes the re-edit token unique, and the payment id only indexed", () => {
     // An index makes a duplicate fast to find; only `unique` makes it
-    // impossible. `reEditToken` is a bearer credential and
-    // `molliePaymentId` is what the webhook resolves a payment through —
-    // a collision in either is a correctness bug, not a performance one.
-    // `Sponsorships.int.test.ts` proves the constraint reaches the
-    // database, and that NULLs still do not collide.
+    // impossible. `reEditToken` is a bearer credential, so a collision hands
+    // one sponsor's token holder another sponsor's record — that one is a
+    // correctness bug and stays unique.
     expect(field("reEditToken")).toHaveProperty("unique", true);
-    expect(field("molliePaymentId")).toHaveProperty("unique", true);
+
+    /*
+     * `molliePaymentId` is the opposite, and Stage 1 had it backwards. The
+     * webhook resolves a payment through `metadata.sponsorshipIds`, not
+     * through this column; one checkout covering three gestures writes three
+     * rows carrying one payment id, which a unique index refuses — so the
+     * constraint made the shipped bulk purchase impossible rather than safer.
+     * `Sponsorships.int.test.ts` proves two rows may now share one id, and
+     * `migrations/migrations.test.ts` proves a *deployed* database gets an
+     * ordinary index.
+     */
+    expect(field("molliePaymentId")).not.toHaveProperty("unique", true);
   });
 
   it("leaves the remaining text columns non-unique", () => {
