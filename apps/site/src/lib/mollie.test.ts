@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createMolliePayment, readMolliePayment } from "./mollie";
+import {
+  createMolliePayment,
+  MollieRefusedError,
+  readMolliePayment,
+} from "./mollie";
 
 // A stand-in, never a real credential. Every test stubs `fetch`, so nothing
 // here ever reaches Mollie. It is deliberately not shaped like a Mollie key
@@ -355,6 +359,25 @@ describe("readMolliePayment", () => {
     await expect(readMolliePayment("tr_stub")).resolves.toMatchObject({
       status: "paid",
     });
+  });
+
+  it("carries Mollie's HTTP status on a refusal, so 'no such payment' is not 'Mollie is down'", async () => {
+    // `endpoints/mollie.ts` splits on exactly this number. A 404 is a definite
+    // answer about an id — answered 200, nothing to retry — and everything
+    // else says nothing about the payment and must be retried. Without the
+    // status the two are one "it threw", and whichever way that is resolved
+    // the webhook is wrong half the time: it either turns into a "does this
+    // payment exist" oracle or silently drops a real payment during an outage.
+    for (const status of [404, 429, 503] as const) {
+      stubFetch(jsonResponse({ detail: "nope", status }, status));
+
+      const error = await readMolliePayment("tr_stub").catch(
+        (thrown: unknown) => thrown
+      );
+
+      expect(error).toBeInstanceOf(MollieRefusedError);
+      expect((error as MollieRefusedError).status).toBe(status);
+    }
   });
 
   it("throws with Mollie's own detail when the payment cannot be read", async () => {

@@ -93,9 +93,11 @@ Copied verbatim from the spec and from what the previous four stages established
 Five things the spec implies, that no task's own happy path exercises, and that will bite a real person. Each one's test is assigned to the task that owns the code.
 
 1. **Mollie retries the webhook, and may deliver it twice concurrently.** Mollie retries on any non-2xx and on timeouts. With no transactions, two overlapping deliveries for one payment can both read `pending_payment` and both advance it. The sponsor is charged once and the log says twice. → Task 4.
-2. **A payment succeeds for a sponsorship whose gesture was deleted or deactivated meanwhile.** The wizard resolved the gesture minutes earlier. `blockDeleteWhenSponsored` protects *sponsored* gestures, but a `pending_payment` row is not yet sponsored. → Task 4 (the webhook's decision) and Task 6 (the selection screen refusing it up front).
+2. **A payment succeeds for a sponsorship whose gesture was deleted or deactivated meanwhile.** The wizard resolved the gesture minutes earlier. ~~`blockDeleteWhenSponsored` protects *sponsored* gestures, but a `pending_payment` row is not yet sponsored.~~ **Half of this was wrong, corrected in Task 4.** `blockDeleteWhenSponsored`'s lookup is `{ gesture: { equals: id } }` with no status filter, so it refuses the delete for a `pending_payment` row too — and the foreign key refuses it again underneath. Only *deactivation* is reachable, and the webhook advances anyway because the sponsor paid. → Task 4 (the webhook's decision) and Task 6 (the selection screen refusing it up front).
 3. **The webhook arrives for a payment Mollie says is `failed`, `expired` or `canceled`, not just `paid`.** The old handler skips anything not `paid` and returns 200 — so a failed payment leaves the row in `pending_payment` forever, and `cleanup-stale-payments` (Stage 7) does not exist yet. → Task 4.
 4. **A bulk payment partially applies.** The existing flow pays for up to 20 sponsorships in one Mollie payment. Without transactions, the third of five can fail and leave two advanced. → Task 4.
+
+   **Found in Task 4, and it is Task 7's problem: `sponsorships.molliePaymentId` is `unique: true`, which a bulk payment cannot satisfy.** Stage 1 made it unique with the rationale that "the Mollie webhook resolves a payment to a sponsorship through this column"; the webhook resolves through `metadata.sponsorshipIds` instead, and `apps/site` writes one sponsorship row per selected gesture, so a single payment covers up to ten rows that would all have to carry the same id. The migrated schema has the unique index (`20260919_214755`), and a probe confirmed D1 enforces it. The webhook therefore does **not** port the shipped handler's `sponsorship.molliePaymentId !== paymentId` cross-check — it cannot, because at most one row per payment can ever hold the value. **Task 7 must decide before it writes the column:** either drop the unique index, or store the payment id somewhere that admits a list.
 5. **The re-edit token is a capability URL that outlives its purpose.** It is stored in the clear, has an expiry column nothing enforces yet, and grants writes to a paid sponsorship. → Task 8.
 
 ---
@@ -115,6 +117,7 @@ Five things the spec implies, that no task's own happy path exercises, and that 
 | `apps/site/src/lib/renderPreview.ts` | The Stage 6 seam. Returns a playback id for the preview step. |
 | `apps/site/src/endpoints/sponsorships.ts` | Wizard writes: start, details, checkout, re-edit. |
 | `apps/site/src/endpoints/mollie.ts` | `POST /api/webhooks/mollie`. Idempotent. |
+| `apps/site/src/collections/WebhookDeliveries.ts` | The unique-index row the webhook claims a payment with. Added in Task 4 after the planned conditional update was measured and failed. |
 | `apps/site/src/app/(frontend)/[locale]/sponsor/page.tsx` | Step 1, select gestures. |
 | `apps/site/src/app/(frontend)/[locale]/sponsor/details/page.tsx` | Step 2, sponsor and invoice details, logo upload. |
 | `apps/site/src/app/(frontend)/[locale]/sponsor/preview/page.tsx` | Step 3, review and pay. |
@@ -671,13 +674,24 @@ Every one of the five Review Focus items except the last lands here.
 
 **Files:**
 - Create: `apps/site/src/endpoints/mollie.ts` + `.int.test.ts`
-- Modify: `apps/site/next.config.ts`, `apps/site/src/payload.config.ts`
+- Create: `apps/site/src/collections/WebhookDeliveries.ts` — **not in the
+  original plan.** Step 3's conditional update was measured and does not work
+  on this adapter; see that step for the evidence and what replaced it.
+- Create: `apps/site/src/migrations/20260921_090000_add_webhook_deliveries.ts`
+- Modify: `apps/site/next.config.ts`, `apps/site/src/payload.config.ts`,
+  `apps/site/src/lib/mollie.ts` (a refusal now carries Mollie's HTTP status),
+  `apps/site/src/migrations/index.ts`, `apps/site/src/migrations/migrations.test.ts`
 
 **Interfaces:**
-- Consumes: `readMolliePayment` (Task 3), `canTransition` (Task 1).
+- Consumes: `readMolliePayment` and `MollieRefusedError` (Task 3).
 - Produces: `mollieEndpoints: Endpoint[]` serving `POST /api/webhooks/mollie`.
 
-- [ ] **Step 1: Write the failing tests — all of them, before any handler**
+`canTransition` is **not** consumed. The handler does not decide whether a
+transition is legal — `enforceStatusTransitions` does, from `beforeChange`,
+for every writer including this one. A second copy of that decision in the
+endpoint would be a second place for the table to be disagreed with.
+
+- [x] **Step 1: Write the failing tests — all of them, before any handler**
 
 ```ts
 // The happy path, and then every way Mollie can make it go wrong.
@@ -733,67 +747,138 @@ it("answers an unknown payment id the same way it answers a known one", async ()
 it("refuses a payment whose amount does not match the sponsorship");
 ```
 
-- [ ] **Step 2: Run them all and watch them fail**
+- [x] **Step 2: Run them all and watch them fail**
 
 Run: `cd apps/site && bunx vitest run src/endpoints/mollie.int.test.ts`
 Expected: FAIL on the import.
 
-- [ ] **Step 3: Implement, with the concurrency guard as a conditional update**
+- [x] **Step 3: Implement — the conditional update was measured and does not work**
 
-There are no transactions, so the idempotency guard cannot be read-then-write.
-Use a **conditional update** — an `update` whose `where` includes the status
-being moved *from* — and treat "zero rows changed" as "somebody else already
-did it":
+The plan proposed a **conditional update** — an `update` whose `where` names
+the status being moved *from*, treating "zero rows changed" as "somebody else
+already did it" — and asked for it to be verified rather than assumed. It was,
+and it does not hold.
 
-```ts
-const { docs } = await req.payload.update({
-  collection: "sponsorships",
-  data: { status: "pending_approval" },
-  overrideAccess: true,
-  where: {
-    and: [
-      { id: { equals: sponsorship.id } },
-      // The guard. Two concurrent deliveries both reach this line; only one
-      // matches a row, because the first one's write has already moved the
-      // status. Reading the status first and then writing would let both
-      // through — there is no transaction to make that pair atomic.
-      { status: { equals: "pending_payment" } },
-    ],
-  },
-});
+`collections/operations/update.js` (3.89.0) resolves the `where` with a
+separate `payload.db.find` and then calls `updateDocument` per id it found;
+the adapter's own `updateOne` does the same thing one layer down
+(`@payloadcms/drizzle/dist/updateOne.js` runs `select id … limit 1` and then
+upserts). The filter is a SELECT, not a conditional UPDATE. Measured against a
+real D1 with a throwaway probe:
 
-const advanced = docs.length === 1;
-```
-
-Everything after that — the admin log, the email queue — runs only when
-`advanced` is true. **Verify with a test that `payload.update` with a `where`
-returns only the rows it actually changed on this adapter**; if it does not,
-the fallback is a dedicated `webhookDeliveries` row with a unique index on
-the payment id, and the unique-constraint violation is the guard. Do not
-proceed on the assumption.
-
-- [ ] **Step 4: Run every test; none may be skipped**
-
-- [ ] **Step 5: Mutation-prove — 14 mutations, all must be CAUGHT**
-
-| mutation | must fail |
+| probe | result |
 |---|---|
-| trust `body.id`'s status instead of asking Mollie | "reads the payment from Mollie" |
-| drop the `status` clause from the conditional `where` | the concurrency test |
-| replace the conditional update with read-then-write | the concurrency test |
-| treat every non-`paid` status as `open` | the failed/expired/canceled tests |
-| answer 4xx for a non-`paid` payment | "answers 200 to every one of those" |
-| answer 404 for an unknown payment | the oracle test |
-| drop the amount check | the amount test |
-| cap bulk at 100 instead of 20 | the bulk cap test |
-| accept bulk metadata that is not an array | the bulk shape test |
-| stop at the first failure in a bulk payment | "advances the rest" |
-| log before the update rather than after | the concurrency log-count test |
-| `overrideAccess: false` on the sponsorship update | the deactivated-gesture test |
-| swallow a `readMolliePayment` throw and answer 200 | add a test: a Mollie outage must not silently drop the payment |
-| remove the rewrite from `next.config.ts` | an e2e or a rewrite test |
+| `update` with a `where` returns only the rows it matched | true — 2 rows in, 1 matching, `docs` is that one |
+| a `where` matching nothing returns `docs: []`, `errors: []` | true |
+| **two concurrent conditional updates on one row** | **both reported `docs.length === 1`** |
+| **five concurrent conditional updates on one row** | **all five reported `docs.length === 1`** |
+| a bulk `update` whose hook refuses collects `errors` rather than throwing | true |
 
-- [ ] **Step 6: Commit**
+So the fallback the plan named is what shipped: **a dedicated row with a unique
+index on the payment id, where the unique-constraint violation is the guard**
+— `collections/WebhookDeliveries.ts`, one `paymentId` column with
+`unique: true`. SQLite evaluates a unique index inside the INSERT, which makes
+it the only atomic operation available here. Probed the same way: of two
+concurrent `payload.create` calls exactly one succeeds, and of five exactly
+one. The loser arrives as a raw `Failed query: insert into
+"webhook_deliveries" …` rather than Payload's `ValidationError` — Payload's own
+uniqueness pre-check does not fire for this field, which is the whole reason
+this works, since a pre-check is a read followed by a write and there is no
+transaction to join them.
+
+The claim is **per payment, not per sponsorship**, because a payment covers a
+whole order. The per-sponsorship writes that follow stay separately idempotent,
+and the endpoint **hands the claim back when it could not advance everything**,
+so a half-applied delivery leaves no record saying it was handled.
+
+The `status` clause on the update is still there, but it is **not** the
+concurrency guard and is not written as one: it is how the handler picks the
+rows that still need moving, so a delivery arriving after an admin has already
+approved a sponsorship leaves that row untouched instead of writing a status
+`enforceStatusTransitions` would refuse.
+
+Two further corrections to this task, found while implementing it:
+
+- **`lib/mollie.ts` now throws `MollieRefusedError`, carrying Mollie's HTTP
+  status.** Without it the oracle requirement ("an unknown payment id is
+  answered exactly like a known one") and the outage requirement ("a Mollie
+  outage must not silently drop the payment") are in direct contradiction:
+  both arrive as a thrown `Error`, and whichever way that is resolved the
+  handler is wrong half the time. A 404 is Mollie's definite answer about an
+  id and takes the ordinary 200; everything else is answered 502 so Mollie
+  redelivers.
+- **Every reachable decision answers `200 {"status":"ok"}`, byte for byte**,
+  and the detail goes to the logger. A body that varied with the outcome is
+  the same oracle a 404 would be. The only exceptions are a body with no
+  payment id (400) and Mollie being unreachable (502).
+
+- [x] **Step 4: Run every test; none may be skipped**
+
+28 tests in `endpoints/mollie.int.test.ts`, none skipped. Two of the plan's
+named tests changed, and both changes are findings rather than convenience:
+
+- `it("refuses and reports when the gesture row is gone entirely")` became
+  **`it("refuses the whole payment when a sponsorship it names no longer
+  exists")`**. The gesture row *cannot* be gone. Review Focus 2 says
+  "`blockDeleteWhenSponsored` protects *sponsored* gestures, but a
+  `pending_payment` row is not yet sponsored" — that is not what the hook
+  does. Its `where` is `{ gesture: { equals: id } }` with no status filter, so
+  it refuses the delete for a `pending_payment` row exactly as for an `active`
+  one, and Payload's `NOT NULL` + `ON DELETE set null` foreign key refuses it
+  again underneath. The test asserts the reachable version and pins the
+  unreachable one, so the claim is proved rather than asserted in prose.
+- `it("refuses a bulk metadata payload that is not an array of ids")` gained a
+  sibling, `it("refuses a payment that names the same sponsorship twice")`,
+  and the explicit duplicate screen the shipped handler carries is **absent**.
+  It is load-bearing in `apps/server`, which resolves each id with its own
+  `getById` and so double-counts the expected amount; here the resolve is one
+  query whose row count is compared with the id count, which refuses `[a, a]`
+  already. A second screen in front of it could not be made to fail by any
+  mutation — the same ruling as Stage 4's deleted `isGestureId` screen.
+
+- [x] **Step 5: Mutation-prove — 23 mutations, all CAUGHT**
+
+The plan's fourteen, plus nine the implementation warranted. Every row was run
+as the whole two files (`endpoints/mollie.int.test.ts` and
+`hooks/logSponsorshipTransitions.int.test.ts`), with the mutation confirmed
+present by `grep` before the run, the runner's own `Tests` line parsed rather
+than its exit code, and each file byte-compared against its backup afterwards.
+
+| mutation | outcome | failed |
+|---|---|---|
+| trust the body's implied status instead of asking Mollie | CAUGHT | "reads the payment from Mollie" (+4) |
+| drop the `status` clause from the `where` | CAUGHT | "does not touch a sponsorship that has already moved past pending_payment" |
+| replace the conditional update with read-then-write | **equivalent** | see below |
+| treat every non-`paid` status as `open` | CAUGHT | the failed/expired/canceled tests |
+| answer 4xx for a non-`paid` payment | CAUGHT | "answers 200 to every one of those" (+7) |
+| answer 404 for an unknown payment | CAUGHT | the oracle test |
+| drop the amount check | CAUGHT | the amount test |
+| cap bulk at 100 instead of 20 | CAUGHT | the bulk cap test |
+| accept bulk metadata that is not an array | CAUGHT | the bulk shape test |
+| stop at the first failure in a bulk payment | CAUGHT | "advances the rest" |
+| log before the write rather than after | CAUGHT | "writes nothing when the transition is refused" (+11) |
+| `overrideAccess: false` on the sponsorship update | CAUGHT | 18 tests |
+| swallow a `readMolliePayment` throw and answer 200 | CAUGHT | the outage test |
+| remove the rewrite from `next.config.ts` | CAUGHT | the rewrite test |
+| remove the `webhook-deliveries` claim entirely | CAUGHT | the concurrency test (+2) |
+| drop the currency check | CAUGHT | the non-euro test |
+| accept a payment naming more ids than there are rows | CAUGHT | the missing-sponsorship and duplicate tests |
+| never hand the claim back after a partial failure | CAUGHT | "lets a replay finish the job" |
+| treat every claim failure as a duplicate | CAUGHT | "answers a non-2xx when the claim cannot be taken" |
+| claim before validating the metadata and the amount | CAUGHT | the missing-sponsorship and amount tests |
+| accept only a JSON body, not Mollie's form encoding | CAUGHT | 24 tests |
+| proceed when the body carries no payment id | CAUGHT | the 400 test |
+| accept an empty string as a sponsorship id | CAUGHT | the bulk shape test |
+
+**The read-then-write mutant is equivalent, and is recorded rather than
+claimed.** Given the delivery claim, "re-select the pending rows and update
+each by id" and "`update` with a `where`" are the same program — the second is
+literally how Payload implements the first. It did fail one test, but only
+because that test's `payload.update` spy returns a shape the mutant reads
+differently, which is an artefact of the spy and not a behavioural difference.
+The `status` clause itself *is* proved, by the row that has already moved on.
+
+- [x] **Step 6: Commit**
 
 ```bash
 git commit -m "feat(site): accept Mollie's webhook, idempotently and in bulk"
@@ -830,14 +915,35 @@ it("does not fail the transition when the log write fails", async () => {
 
 Run `cd /home/user/smog/apps/site && bunx vitest run src/hooks/logSponsorshipTransitions.int.test.ts` before and after. The hook calls `req.payload.create({ collection: "admin-logs", data: {...}, overrideAccess: true })` inside a `try`/`catch` that logs and swallows — see Step 1's resilience test for why it must not rethrow.
 
-- [x] **Step 3: Mutation-prove**
+- [x] **Step 3: Mutation-prove — 7 mutations, all CAUGHT**
 
-| mutation | must fail |
-|---|---|
-| `overrideAccess: false` | the overrideAccess test |
-| log on every update, not only status changes | "writes nothing when..." |
-| let a log failure throw | the resilience test |
-| record only the new status | the both-statuses test |
+The plan's four, plus three the implementation warranted. Ten tests in the
+file, none skipped; each mutation run as the whole file, confirmed present by
+`grep` first, and the file byte-compared against its backup afterwards.
+
+| mutation | outcome | failed |
+|---|---|---|
+| `overrideAccess: false` | CAUGHT | the overrideAccess test (+4) |
+| log on every update, not only status changes | CAUGHT | "writes nothing when an update leaves the status alone" |
+| let a log failure throw | CAUGHT | the resilience test |
+| record only the new status | CAUGHT | the both-statuses test and the chain test |
+| drop the `operation` test, so a create is logged | CAUGHT | "writes nothing when a sponsorship is created" (+7) |
+| hard-code a null actor | CAUGHT | "records who made the change, and null for the webhook" |
+| register it on `beforeChange` instead | CAUGHT | "writes nothing when the transition is refused" (+11) |
+
+Three tests beyond the plan's list, each because a guard otherwise had no
+mutation of its own:
+
+- `it("writes nothing when a sponsorship is created")` — `previousDoc` is `{}`
+  and not `undefined` on a create, so without the `operation` test every new
+  row is born with an `undefined -> pending_payment` entry.
+- `it("records a chain of transitions in order, each naming where it came
+  from")` — one row cannot distinguish a `from` that tracks the document from
+  a constant. Three moves through three statuses can.
+- `it("writes nothing when the transition is refused")` — the log has to
+  describe what happened, not what was attempted. This is what the Task 4
+  mutation "log before the write rather than after" fails against, and it
+  belongs here because it is a property of the hook.
 
 - [x] **Step 4: Commit**
 

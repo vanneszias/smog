@@ -78,6 +78,32 @@ interface MolliePayment {
   status: string;
 }
 
+/**
+ * A refusal Mollie itself answered, carrying the HTTP status it answered with.
+ *
+ * The status is what lets a caller tell an *answer* from a *failure*. Mollie
+ * replies 404 to a payment id it does not recognise, and that is a definite
+ * statement about that id — there is nothing to retry. A 429, a 503 or a
+ * connection that never completed says nothing about the payment, and
+ * retrying is the only correct response. `endpoints/mollie.ts` splits exactly
+ * there: the first is answered 200, the second 502, and without the status
+ * the two collapse into "something went wrong" and Mollie either hammers a
+ * dead id forever or silently drops a real payment.
+ *
+ * The message is unchanged from the plain `Error` this replaces, so it stays
+ * the thing a log line prints, and a caller that only cares that it threw is
+ * unaffected.
+ */
+export class MollieRefusedError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "MollieRefusedError";
+    this.status = status;
+  }
+}
+
 function apiKeyOrThrow(): string {
   const apiKey = process.env.MOLLIE_API_KEY?.trim();
 
@@ -148,8 +174,9 @@ async function mollieRequest(
   const body = await parseMollieJson(response, what);
 
   if (!response.ok) {
-    throw new Error(
-      `[mollie] ${what} was refused (HTTP ${response.status}): ${refusalMessage(body)}`
+    throw new MollieRefusedError(
+      `[mollie] ${what} was refused (HTTP ${response.status}): ${refusalMessage(body)}`,
+      response.status
     );
   }
 

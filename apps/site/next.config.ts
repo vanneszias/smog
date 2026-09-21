@@ -139,6 +139,21 @@ const nextConfig: NextConfig = {
         destination: "/api/account/lists/share",
         source: "/account/lists/share",
       },
+      /*
+       * Mollie's payment webhook. The only rewrite here whose source URL a
+       * third party holds: `lib/mollie.ts` sends it to Mollie as
+       * `webhookUrl` when a payment is created, and Mollie posts back to
+       * whatever it was given — for weeks, on retries, for payments opened
+       * long before any deploy. So this line is not a convenience, it is a
+       * published address, and deleting it turns every retry into a 404 and
+       * every paid sponsorship into one stuck in `pending_payment`.
+       *
+       * Locale-free like everything above, and for the strongest reason of
+       * the set: the caller is a server in Amsterdam that has never heard of
+       * this site's locales. `src/endpoints/mollie.int.test.ts` asserts that
+       * this entry exists and points at the handler's registered path.
+       */
+      { destination: "/api/webhooks/mollie", source: "/webhooks/mollie" },
     ];
   },
 

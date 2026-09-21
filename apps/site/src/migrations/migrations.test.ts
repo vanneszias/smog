@@ -158,6 +158,42 @@ describe("migration chain", () => {
     expect(byName.get("sponsorships_re_edit_token_idx")).toBe(1);
   });
 
+  it("gives webhook-deliveries a UNIQUE index on the payment id", async () => {
+    // Not a data-quality nicety. `endpoints/mollie.ts` claims a Mollie
+    // delivery by inserting this row, and the unique index is the only
+    // atomic operation this database offers — there are no transactions, and
+    // an `update` with a `where` was measured resolving its filter with a
+    // separate SELECT, so two concurrent deliveries both "won" it. Downgrade
+    // this index to an ordinary one and the webhook silently goes back to
+    // read-then-write: one payment, two transitions, two log rows, two
+    // emails. `pushDevSchema` derives the local schema from the collection
+    // config and never opens a migration file, so only this asserts that a
+    // *deployed* database gets the constraint.
+    const { database } = await chain();
+    const byName = new Map(
+      indexesOn(database, "webhook_deliveries").map((i) => [i.name, i.unique])
+    );
+
+    expect(byName.get("webhook_deliveries_payment_id_idx")).toBe(1);
+  });
+
+  it("refuses a second webhook-deliveries row for one payment", async () => {
+    // The index asserted as behaviour rather than as metadata: a unique
+    // index that SQLite reports but does not apply would satisfy the
+    // assertion above, and the whole guard rests on this INSERT failing.
+    const { database } = await chain();
+
+    database.exec(
+      `INSERT INTO webhook_deliveries (id, payment_id) VALUES (7300, 'tr_migration_probe');`
+    );
+
+    expect(() =>
+      database.exec(
+        `INSERT INTO webhook_deliveries (id, payment_id) VALUES (7301, 'tr_migration_probe');`
+      )
+    ).toThrow(/UNIQUE/i);
+  });
+
   it("carries every existing user_consents row through the table rebuild", async () => {
     // Making `user_consents.user_id` nullable forces SQLite's twelve-step
     // rebuild: new table, `INSERT ... SELECT`, drop, rename. The failure mode

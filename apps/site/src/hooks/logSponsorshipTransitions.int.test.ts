@@ -174,6 +174,39 @@ describe("logSponsorshipTransitions", () => {
     expect(await logsFor(id)).toHaveLength(0);
   });
 
+  it("writes nothing when the transition is refused", async () => {
+    // The log has to describe what happened, not what was attempted.
+    // `enforceStatusTransitions` throws from `beforeChange`, so an
+    // `afterChange` hook never runs for a refused move — which is the whole
+    // reason this is an `afterChange` hook. Moved earlier, the audit trail
+    // fills up with transitions the database refused, and an admin reading it
+    // sees a sponsorship that went somewhere it never went.
+    const id = await seed("refused", "active");
+
+    await expect(
+      payload.update({
+        collection: "sponsorships",
+        data: { status: "pending_payment" },
+        id,
+        overrideAccess: true,
+      })
+    ).rejects.toThrow(/cannot go from active to pending_payment/);
+
+    expect(await logsFor(id)).toHaveLength(0);
+
+    // The positive beside the negative: a move this row *is* allowed does get
+    // logged, so the emptiness above is about the refusal and not about this
+    // fixture being unloggable.
+    await payload.update({
+      collection: "sponsorships",
+      data: { status: "expired" },
+      id,
+      overrideAccess: true,
+    });
+
+    expect(await logsFor(id)).toHaveLength(1);
+  });
+
   it("records both the old and the new status", async () => {
     const id = await seed("both-ends", "pending_approval");
 

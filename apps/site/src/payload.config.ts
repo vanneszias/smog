@@ -21,11 +21,13 @@ import { Media } from "./collections/Media";
 import { Sponsorships } from "./collections/Sponsorships";
 import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
+import { WebhookDeliveries } from "./collections/WebhookDeliveries";
 import { accountEndpoints } from "./endpoints/account";
 import { authEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
 import { listsEndpoints } from "./endpoints/lists";
+import { mollieEndpoints } from "./endpoints/mollie";
 import { oauthEndpoints } from "./endpoints/oauth";
 import { requireBinding, requireEnv } from "./lib/env";
 import { beforeSyncGesture } from "./search/beforeSync";
@@ -157,6 +159,7 @@ export default buildConfig({
     Sponsorships,
     AdminLogs,
     UserConsents,
+    WebhookDeliveries,
   ],
   editor: lexicalEditor(),
   /*
@@ -196,6 +199,12 @@ export default buildConfig({
    * `next.config.ts` gives about `/account/confirm-email`: overlapping
    * patterns leave Payload's endpoint matcher to choose, and the wrong
    * choice here would answer "saved" without saving.
+   *
+   * `mollieEndpoints` adds `POST /api/webhooks/mollie`, reached at
+   * `/webhooks/mollie`. It is the only endpoint here that a third party calls,
+   * and the only one with no origin check — Mollie posts from its own servers
+   * with no `Origin` header. Nothing in the request is trusted: the handler
+   * keeps the payment id and asks Mollie what that payment is.
    */
   endpoints: [
     ...crawlerEndpoints,
@@ -204,6 +213,7 @@ export default buildConfig({
     ...favoritesEndpoints,
     ...accountEndpoints,
     ...listsEndpoints,
+    ...mollieEndpoints,
   ],
   localization: {
     locales: [

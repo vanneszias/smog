@@ -75,6 +75,7 @@ export interface Config {
     sponsorships: Sponsorship;
     'admin-logs': AdminLog;
     'user-consents': UserConsent;
+    'webhook-deliveries': WebhookDelivery;
     search: Search;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -91,6 +92,7 @@ export interface Config {
     sponsorships: SponsorshipsSelect<false> | SponsorshipsSelect<true>;
     'admin-logs': AdminLogsSelect<false> | AdminLogsSelect<true>;
     'user-consents': UserConsentsSelect<false> | UserConsentsSelect<true>;
+    'webhook-deliveries': WebhookDeliveriesSelect<false> | WebhookDeliveriesSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -328,6 +330,16 @@ export interface UserConsent {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "webhook-deliveries".
+ */
+export interface WebhookDelivery {
+  id: number;
+  paymentId: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This is a collection of automatically created search results. These results are used by the global site search and will be updated automatically as documents in the CMS are created or updated.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -401,6 +413,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'user-consents';
         value: number | UserConsent;
+      } | null)
+    | ({
+        relationTo: 'webhook-deliveries';
+        value: number | WebhookDelivery;
       } | null)
     | ({
         relationTo: 'search';
@@ -604,6 +620,15 @@ export interface UserConsentsSelect<T extends boolean = true> {
   consentVersion?: T;
   ipAddress?: T;
   userAgent?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "webhook-deliveries_select".
+ */
+export interface WebhookDeliveriesSelect<T extends boolean = true> {
+  paymentId?: T;
   updatedAt?: T;
   createdAt?: T;
 }
