@@ -1282,6 +1282,59 @@ The general shape is one this document has recorded before in other clothes:
 **a control can be real, tested, and aimed at the wrong thing.** The test
 that the URL expires is honest; the belief it invites is not.
 
+## "The mutation landed" is not "the mutation is the mutation"
+
+Stage 6 Task 5, and it is a flaw in the mutation-testing discipline this
+whole project rests on rather than in any one test.
+
+The harness every task here uses does the right things: it diffs the file to
+confirm the edit applied, runs the whole file, parses the runner's own
+`Tests` line rather than an exit code, and byte-compares after restoring.
+All of that verifies that *something* changed. None of it verifies that what
+changed is what the mutation was supposed to be.
+
+The case: the mutation was "swap the restore and the delete", which is the
+ordering Review Focus 5 exists to protect. The first spelling *added* a
+deletion pass before the restore instead of moving the existing one — so the
+happy path still deleted after restoring, and all thirty tests passed. Read
+as written, that says the ordering is unguarded. Re-spelled as a true swap,
+it fails six tests including the happy path.
+
+**A SURVIVED verdict on a safety property is a claim about the tests, and it
+deserves the same suspicion as a passing test.** Before recording one, read
+the mutated code and ask whether it expresses the defect named — not whether
+the bytes differ. The failure mode is quiet: it reports a guard as missing
+when the guard is fine, which is the direction that wastes a day, and the
+opposite spelling would have reported a real gap as covered.
+
+## Restoring a video that was never moved
+
+Same task, and a bug the plan would have caused if followed literally.
+
+Stage 6's Review Focus 5 says expiry "restores the gesture's original video
+**and** deletes the sponsored asset". That is true of the shipped Convex
+product: `packages/convex/convex/sponsorships.ts` overwrites
+`gestures.playbackId` on approval and writes `originalVideoPlaybackId` back
+over it on expiry. There, the gesture row is the pointer.
+
+**`apps/site` never writes `gestures.playbackId` at all.** Verified: no
+writer exists, and the detail page composes at read time —
+`overlay?.sponsoredVideoPlaybackId ?? gesture.playbackId`. The composite
+lives on the sponsorship and is selected by `fetchGestureOverlay`'s
+active-and-in-term filter.
+
+So there is nothing to put back, and writing the checkout-time
+`originalVideoPlaybackId` onto the gesture would be a no-op wherever the two
+agree — and **wherever they do not, because an admin replaced the gesture's
+video during the term, it would silently revert that admin's newer video to
+a snapshot taken at checkout.** The restore is the status move to `expired`,
+and nothing else.
+
+The lesson generalises past this stage: **a requirement inherited from the
+system being replaced can describe its data model rather than the
+behaviour.** Stage 9's import has the same exposure, since it reads the old
+model directly.
+
 ## Risks
 
 | Risk | Mitigation |
