@@ -241,7 +241,42 @@ it("answers an unknown job id exactly as it answers a known one");
 
 - [ ] **Step 2-4:** run, implement, run.
 
-The claim from Task 1 goes **first**, before any Mux call. Order everything so the irreversible step — creating a Mux asset — happens once and last, and so a crash between steps leaves a state a retry can finish.
+**CORRECTED after Task 1 — this plan said to reuse Task 1's claim, and that
+cannot work.** The `renders` row is created by the *submitter* (Task 4:
+"checkout submits a render"), so by the time Lambda calls back the row
+already exists. Two concurrent callbacks would both *lose* an insert against
+it, and neither would upload. And it cannot be an `update` with a `where`,
+however it is phrased: **a `where` on an update is a SELECT** — measured,
+two concurrent conditional updates both report a changed row.
+
+**Serialising the callbacks needs its own insert against its own unique
+index.** Add a second collection — `RenderCompletions`, one row per `jobId`,
+`unique: true` — inserted by the *callback* before any Mux call. First
+callback inserts and proceeds; a replay's insert fails and is answered 200
+with nothing done; a failure that is not a duplicate is confirmed by reading
+the row back, so a database outage cannot masquerade as a replay. That is
+`collections/WebhookDeliveries.ts`'s shape exactly, and Task 1's own doc
+block already says so.
+
+**Why not move row creation into the callback and drop `queued`.** It was
+considered and rejected: the `queued` row is the only record that a render
+is outstanding, and without it a render whose callback never arrives is
+invisible — nothing could ever find it to retry. Keeping the submitter's
+record is worth a second table.
+
+**Why not generalise the two claim tables into one now.** There will be at
+least four consumers — this, the Mollie webhook, and Stage 7's
+`expire-sponsorships` and `cleanup-stale-payments`. A single `claims`
+collection keyed on an opaque string is the right abstraction *then*, when
+all four are visible and it can be done once. Doing it here means editing
+Stage 5's shipped and mutation-proven webhook mid-stage to serve an
+abstraction with two users. **Stage 7 owns that refactor**; this task adds
+the second table and says why.
+
+The claim goes **first**, before any Mux call. Order everything so the
+irreversible step — creating a Mux asset, which Mux bills for monthly —
+happens once and last, and so a crash between steps leaves a state a retry
+can finish.
 
 - [ ] **Step 5: Mutation-prove — 12 mutations**
 
