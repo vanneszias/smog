@@ -635,11 +635,11 @@ it("deletes from R2 only after the row is gone, and survives a missing object");
 
 ### Task 8: Stage exit
 
-- [ ] Re-measure the bundle against **7.34 MiB** and state whether Stages 8–10 fit.
-- [ ] Confirm no `app/**/route.ts` imports Payload.
-- [ ] **Re-run Stage 5's and Stage 6's concurrency mutations through the new `Claims` table** — both must still bite.
-- [ ] `bun release:check` green; `site-e2e` green.
-- [ ] State whether each exit criterion is met, and **name every one met only against a fake.**
+- [x] Re-measure the bundle against **7.34 MiB** and state whether Stages 8–10 fit.
+- [x] Confirm no `app/**/route.ts` imports Payload.
+- [x] **Re-run Stage 5's and Stage 6's concurrency mutations through the new `Claims` table** — both must still bite.
+- [x] `bun release:check` green; `site-e2e` green.
+- [x] State whether each exit criterion is met, and **name every one met only against a fake.**
 
 ## Stage 7 exit criteria
 
@@ -653,3 +653,73 @@ it("deletes from R2 only after the row is gone, and survives a missing object");
 8. `expire-sponsorships` and the readiness sweep run on schedule, and the sweep cannot starve.
 9. An orphaned media row is removed without touching one a sponsor is still using.
 10. The bundle is measured and recorded, and every criterion is marked real or fake.
+
+## Stage 7 exit: measured
+
+**Bundle: 7.36 MiB gzipped of 10.00 MiB — 26% headroom.** Stage 6 closed at
+7,518.69 KiB; this is 7,533.04, so **the stage cost +14.35 KiB**: an email
+adapter, six jobs, a claims table, a scheduler and two sweeps, for the price
+of nothing, because the `send_email` binding needs no dependency. Stages 8,
+8.5, 9 and 10 share ~2.64 MiB.
+
+**No `app/**/route.ts` imports Payload.** Still only the three Payload
+generates into `app/(payload)/`.
+
+**Both earlier stages' concurrency guarantees survive the merge into one
+`Claims` table.** Setting `unique: false` fails Stage 5's
+`survives two concurrent deliveries of the same payment` and **four** of
+Stage 6's render tests — the concurrent-callback test, the replay 200, the
+unknown-job oracle, and the one that proves the claim rather than the state
+table stops a replay. Stronger than either was before the merge.
+
+**Suites:** 1452 unit tests in 109 files, run twice from a cleared
+`.wrangler/state`; 117 e2e, no flaky. `check-types`, `bun check` and `knip`
+clean. `bun release:check` passes everything except `expo-doctor`'s two
+network checks against `apps/native`, which this stage never touched —
+`AGENTS.md` documents that as a sandbox failure to confirm against CI, and
+CI has been green on every push.
+
+### Each criterion, and what it was verified against
+
+Everything touching Cloudflare's mail is a **local fake**; miniflare writes
+the message to `.wrangler/tmp/email/` instead of delivering it. The standing
+precedent is Stage 4's Google strategy and Stage 6's whole render pipeline.
+
+| # | criterion | met | verified against |
+|---|---|---|---|
+| 1 | sends mail, and a failure reaches the caller | **yes** | **fake binding** |
+| 2 | the run endpoint refuses an unauthenticated call and cannot run twice concurrently | **yes** | real D1, real lease |
+| 3 | one `Claims` table serialises all consumers, earlier mutations still bite | **yes** | real D1 — see above |
+| 4 | the email-change confirmation and the re-edit link are sent, not logged | **yes** | real hooks and endpoints; **fake send** |
+| 5 | a queued email retries a transient refusal, stops on a permanent one, never logs a token | **yes** | real queue; **fake refusals** |
+| 6 | an abandoned `pending_payment` row is cancelled and its gesture becomes buyable again | **yes** | real D1, asserted through `lib/sponsorSelection.ts` |
+| 7 | one renewal reminder per sponsorship, recorded, never twice | **yes** | real D1 |
+| 8 | `expire-sponsorships` and the readiness sweep run on schedule, and the sweep cannot starve | **yes, in the queue** | a scheduled job proven to reach the queue and run; **the cron that would call it is not wired** |
+| 9 | an orphaned media row is removed without touching one in use | **yes** | real D1 and R2 emulation |
+| 10 | bundle measured; every criterion marked real or fake | **yes** | this table |
+
+**Nine of ten met; criterion 8 is met inside the application and not at the
+edge.** A schedule reaches the queue and runs — proved over three real ticks
+— but nothing fires the tick in production yet.
+
+### Carried out of Stage 7
+
+- **The Cron Trigger is not reachable from this codebase.** `.open-next/worker.js`
+  is copied verbatim from OpenNext's template on every build and exports only
+  `fetch` and three Durable Objects; there is no hook for `scheduled`.
+  `wrangler.jsonc` therefore carries **no `"crons"` key on purpose** — a cron
+  on a Worker with no `scheduled` export errors on every firing while the
+  dashboard shows it configured, which is worse than none. The seam is
+  `src/jobs/cron.ts`, unit-tested; Task 7 wires it.
+- **Task 7 is blocked** on a verified sender domain, `JOBS_RUN_TOKEN` (a new
+  secret, unset — so the endpoint currently refuses every call, deliberately),
+  and the cron wiring above.
+- **Schedules are UTC.** The shipped `apps/server/src/cron.ts` ran in
+  Europe/Brussels; croner takes the process timezone and a Worker's is UTC, so
+  `send-renewal-reminders` at `0 8 * * *` lands at 09:00 or 10:00 Brussels
+  depending on the season. Compensating in the cron string would be right for
+  half the year.
+- **The shipped renewal email contradicts itself** — its footer says the term
+  ends "over ongeveer 7 dagen" while the query selecting its recipients uses
+  thirty days. Not transcribed; the new copy says thirty.
+- **The daily mail quota's actual number is unknown.** Only Task 7 can find it.
