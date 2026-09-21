@@ -661,6 +661,8 @@ it without dragging React DOM into a React Native runtime.
 - Modify: `packages/ui-web/package.json` (add the `./vocabulary` export)
 - Create: `packages/ui-native/src/lib/cn.ts`
 - Create: `packages/ui-native/src/lib/cn.test.ts`
+- Create: `packages/ui-native/src/test/resolvedColor.ts`
+- Create: `packages/ui-native/src/components/Text.tsx` (the stub Task 4 replaces)
 - Create: `packages/ui-native/src/components/Button.tsx`
 - Create: `packages/ui-native/src/components/Button.test.tsx`
 - Modify: `packages/ui-native/src/index.ts`
@@ -671,6 +673,7 @@ it without dragging React DOM into a React Native runtime.
 - Produces:
   - `@smog/ui-web/vocabulary` → `BUTTON_VARIANTS: readonly ["primary","secondary","outline","ghost","danger"]`, `BUTTON_SIZES: readonly ["sm","md","lg","icon"]`, `BADGE_VARIANTS: readonly ["neutral","primary","success","warning","danger","outline"]`, `INPUT_SIZES: readonly ["sm","md","lg"]`.
   - `cn(...inputs: ClassValue[]): string`.
+  - `resolvedColor(hex: string): string` from `src/test/resolvedColor.ts` — **measured in Task 1, not guessed.** Tailwind v3 routes every colour utility through a `--tw-bg-opacity` custom property so opacity modifiers work, and NativeWind resolves that at runtime to an `rgba(r, g, b, a)` string; a hex literal is never what `toHaveStyle` receives. `resolvedColor("#00805F")` returns `"rgba(0, 128, 95, 1)"`. Every colour assertion in this package calls it on a value read from `tokens` — a hex literal in a test is a token that has escaped just as surely as one in a component.
   - `Button`, `ButtonProps`, `buttonVariants` from `@smog/ui-native`. `ButtonProps` is `PressableProps & VariantProps<typeof buttonVariants> & { children: ReactNode; loading?: boolean; className?: string }`.
 
 - [ ] **Step 1: Read the web library's actual variant names**
@@ -883,8 +886,10 @@ Expected: PASS, 4 tests.
 `packages/ui-native/src/components/Button.test.tsx`:
 
 ```tsx
+import { tokens } from "@smog/styles";
 import { BUTTON_SIZES, BUTTON_VARIANTS } from "@smog/ui-web/vocabulary";
 import { fireEvent, render, screen } from "@testing-library/react-native";
+import { resolvedColor } from "../test/resolvedColor";
 import { Button, buttonVariants } from "./Button";
 
 describe("Button", () => {
@@ -945,7 +950,7 @@ describe("Button", () => {
     render(<Button testID="subject">Press me</Button>);
 
     expect(screen.getByTestId("subject")).toHaveStyle({
-      backgroundColor: "#00805F",
+      backgroundColor: resolvedColor(tokens.semantic.light.primary),
     });
   });
 
@@ -957,7 +962,7 @@ describe("Button", () => {
     );
 
     expect(screen.getByTestId("subject")).not.toHaveStyle({
-      backgroundColor: "#00805F",
+      backgroundColor: resolvedColor(tokens.semantic.light.primary),
     });
   });
 
@@ -969,7 +974,7 @@ describe("Button", () => {
     );
 
     expect(screen.getByTestId("subject")).not.toHaveStyle({
-      backgroundColor: "#00805F",
+      backgroundColor: resolvedColor(tokens.semantic.light.primary),
     });
   });
 
@@ -1229,6 +1234,7 @@ import { Input } from "./Input";
 import { Skeleton } from "./Skeleton";
 import { Switch } from "./Switch";
 import { Text } from "./Text";
+import { resolvedColor } from "../test/resolvedColor";
 
 const CASES: [string, (props: { className?: string }) => ReactElement][] = [
   ["Text", (p) => <Text {...p}>text</Text>],
@@ -1251,14 +1257,16 @@ describe.each(CASES)("%s", (_name, Component) => {
 
     // Every component roots at `testID="root"`; see the package convention.
     expect(screen.getByTestId("root")).toHaveStyle({
-      backgroundColor: tokens.semantic.light.danger,
+      backgroundColor: resolvedColor(tokens.semantic.light.danger),
     });
   });
 });
 ```
 
-The expected colour is read from `tokens` rather than written as a hex,
-deliberately: `semantic.light.danger` is a computed ramp step
+The expected colour goes through `resolvedColor` (Task 3) because NativeWind
+serialises every colour as `rgba(...)`, never as the hex the theme declares —
+measured in Task 1. The colour itself is read from `tokens` rather than
+written as a literal, deliberately: `semantic.light.danger` is a computed ramp step
 (`brandScale.error[600]`, a mix of `#FF3B30` toward black), and a literal
 transcribed by hand into a test is a second declaration of a token. If this
 test ever fails after a token change, the generated theme was not
