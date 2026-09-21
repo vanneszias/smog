@@ -1254,6 +1254,34 @@ make and watches Payload accept it, and a mutation that disables the guard
 and shows the refusal tests failing *while the "answers 200" test still
 passes* — which is only possible because no hook raised anything.
 
+## A signed URL protects nothing when the asset is public
+
+Stage 6 Task 4. The spec asks for `GET /api/mux/source/:id` to issue "a
+short-lived Mux source URL to the render container, behind a service token",
+and Stage 6 made that exit criterion 5. The endpoint exists, the token is
+checked in constant time, the URL is signed and verifiably short-lived — and
+**Mux will serve the same video to anyone who asks without it.**
+
+Mux enforces a playback token only on an asset whose `playback_policy` is
+`signed`. Every asset in this product is `public`: the gesture pages stream
+them to anonymous visitors, and `lib/mux.ts:190` creates the composed ones
+`playback_policy: ["public"]` to match.
+
+So what the endpoint actually protects is **enumeration** — which playback
+ids exist, and which gesture each belongs to — not the video. That is worth
+having and the endpoint keeps it. But "short-lived" is a property of the URL
+and not of the access, and a reader who sees the expiry test pass will
+believe otherwise.
+
+**Whether to change it is an asset-policy decision, not a code change.**
+Moving to `signed` means every public gesture page has to mint a token per
+play, which is a different product. Recorded here so Stage 6's exit states
+criterion 5 as half met rather than met.
+
+The general shape is one this document has recorded before in other clothes:
+**a control can be real, tested, and aimed at the wrong thing.** The test
+that the URL expires is honest; the belief it invites is not.
+
 ## Risks
 
 | Risk | Mitigation |
