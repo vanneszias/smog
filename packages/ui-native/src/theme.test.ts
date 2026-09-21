@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tokens } from "@smog/styles";
-import { renderTailwindConfig } from "./theme";
+import { kebab, renderTailwindConfig } from "./theme";
 
 const CONFIG = join(__dirname, "..", "tailwind.config.js");
 
@@ -25,8 +25,12 @@ describe("tailwind.config.js", () => {
     );
   });
 
-  it("does not silently agree when a role is missing", () => {
-    expect(renderTailwindConfig()).not.toContain('"surface": undefined');
+  it("emits every semantic role", () => {
+    const config = renderTailwindConfig();
+
+    for (const role of Object.keys(tokens.semantic.light)) {
+      expect(config).toContain(`"${kebab(role)}":`);
+    }
   });
 
   it("renders every spacing step", () => {

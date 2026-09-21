@@ -15,7 +15,13 @@ import { tokens } from "@smog/styles";
  * than nesting a `dark` palette keeps `bg-surface-dark` spellable, which a
  * nested object does not.
  */
-function kebab(name: string): string {
+/**
+ * Exported so `theme.test.ts` can derive the expected key for a semantic
+ * role from `tokens.semantic.light` itself, rather than hand-listing role
+ * names — a hand-written list would be exactly as vacuous as the assertion
+ * it replaces.
+ */
+export function kebab(name: string): string {
   return name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 }
 
