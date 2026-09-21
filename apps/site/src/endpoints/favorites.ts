@@ -2,6 +2,7 @@ import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
 import { accountFavoriteIds } from "@/lib/accountFavorites";
 import { isTrustedOrigin } from "@/lib/authFlow";
 import { isGestureId } from "@/lib/favoritesQuery";
+import { mergeGuestFavorites } from "@/lib/mergeGuestState";
 import type { User } from "@/payload-types";
 
 /**
@@ -224,6 +225,102 @@ const setFavorite: PayloadHandler = async (req) => {
   );
 };
 
+/**
+ * The guest ids a merge request carries, or `null`.
+ *
+ * Deliberately *not* screened for id shape here: `mergeGuestFavorites`
+ * filters, deduplicates and caps the list itself, because it is the thing
+ * that builds the query and the screen has to sit next to the query it
+ * protects. All this asks is that the body is JSON and that `ids` is an
+ * array of strings, and it drops the rest of the array rather than the whole
+ * request — one corrupt entry in `localStorage` should not cost a reader the
+ * other twenty favorites.
+ */
+async function readMergeBody(req: PayloadRequest): Promise<null | string[]> {
+  const [type] = (req.headers.get("content-type") ?? "").split(";", 1);
+
+  if (type !== "application/json" || typeof req.json !== "function") {
+    return null;
+  }
+
+  let body: unknown;
+
+  try {
+    body = await req.json();
+  } catch (error) {
+    req.payload.logger.warn(
+      { err: error },
+      "[favorites] Failed to parse the merge request body"
+    );
+
+    return null;
+  }
+
+  if (typeof body !== "object" || body === null) {
+    return null;
+  }
+
+  const { ids } = body as { ids?: unknown };
+
+  if (!Array.isArray(ids)) {
+    return null;
+  }
+
+  return ids.filter((id): id is string => typeof id === "string");
+}
+
+/**
+ * The guest's list, merged into the signed-in account.
+ *
+ * Same door discipline as `setFavorite` above — `Origin` first, then the
+ * session, then the body — and for the same reasons. The answer carries the
+ * account's whole favorites list rather than just what changed, because the
+ * caller's job is to repaint a heart that the server rendered before the
+ * merge ran and "what you now hold" is the only answer that lets it.
+ */
+const mergeFavorites: PayloadHandler = async (req) => {
+  if (
+    !isTrustedOrigin({
+      origin: req.headers.get("origin"),
+      requestOrigin: req.origin ?? "",
+    })
+  ) {
+    return new Response("Cross-site request refused.", {
+      headers: { ...NO_STORE, "Content-Type": "text/plain" },
+      status: 403,
+    });
+  }
+
+  if (req.user?.collection !== USERS) {
+    return problem(401, "signed-out");
+  }
+
+  const user = req.user as User;
+  const ids = await readMergeBody(req);
+
+  if (ids === null) {
+    return problem(400, "invalid");
+  }
+
+  const result = await mergeGuestFavorites({ ids, payload: req.payload, user });
+
+  if (result === null) {
+    // The session resolved but the row is gone — an account deleted in
+    // another tab. Same answer as an expired cookie.
+    return problem(401, "signed-out");
+  }
+
+  return Response.json(
+    { added: result.added, favorites: result.favorites },
+    { headers: NO_STORE, status: 200 }
+  );
+};
+
 export const favoritesEndpoints: Endpoint[] = [
   { handler: setFavorite, method: "post", path: "/account/favorites" },
+  {
+    handler: mergeFavorites,
+    method: "post",
+    path: "/account/merge-favorites",
+  },
 ];

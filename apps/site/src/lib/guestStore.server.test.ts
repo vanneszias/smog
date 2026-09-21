@@ -1,6 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { readGuestFavorites, toggleGuestFavorite } from "./guestStore";
+import {
+  clearGuestFavorites,
+  readGuestFavorites,
+  toggleGuestFavorite,
+} from "./guestStore";
 
 /**
  * The same module, with no `window` at all.
@@ -32,6 +36,14 @@ describe("guest favorites on the server", () => {
     expect(toggleGuestFavorite("a")).toEqual(["a"]);
   });
 
+  it("swallows a clear there is nothing to clear", () => {
+    // `clearGuestFavorites` is only ever called from a mount effect, so it
+    // should never run here — but "should never" is not "cannot", and the
+    // whole contract of this module is that the worst outcome is nothing
+    // happening. Without the `window` guard this is a `ReferenceError`.
+    expect(() => clearGuestFavorites()).not.toThrow();
+  });
+
   it("says nothing about it", () => {
     /*
      * This is what the `typeof window` check buys, and it is the only thing
@@ -48,6 +60,7 @@ describe("guest favorites on the server", () => {
 
     readGuestFavorites();
     toggleGuestFavorite("a");
+    clearGuestFavorites();
 
     expect(warn).not.toHaveBeenCalled();
 

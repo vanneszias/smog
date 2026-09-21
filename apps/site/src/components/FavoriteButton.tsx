@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { writeAccountFavorite } from "@/lib/accountFavorites";
 import { readGuestFavorites, toggleGuestFavorite } from "@/lib/guestStore";
 import type { Locale } from "@/lib/locale";
+import { syncGuestFavorites } from "@/lib/mergeGuestState";
 
 /**
  * Favourite a gesture — on the account when there is one, in this browser
@@ -63,6 +64,28 @@ import type { Locale } from "@/lib/locale";
  *
  * While a write is in flight the control is disabled, which is what keeps a
  * double press from sending a second, opposite request behind the first.
+ *
+ * ## It is also where the guest list follows the reader in
+ *
+ * Signing in cannot merge the guest favorites by itself: they are in
+ * `localStorage`, which the sign-in endpoint cannot see and the server
+ * render cannot read. Something in the browser has to offer them, and this
+ * is the component that already knows both halves — that there is an account
+ * now, and that this browser has a list from before there was one.
+ *
+ * So the mount effect calls `syncGuestFavorites` on the account path. It
+ * costs nothing for the ordinary reader: with an empty guest list it makes
+ * no request at all. **This is the only reason the account path touches
+ * `localStorage`, and the list is input to a server write, never a source
+ * for the heart** — the state that comes back is the account's, after the
+ * merge.
+ *
+ * **It does mean the merge only runs on a page that renders this button.**
+ * A reader who signs in and goes straight to `/{locale}/favorites` keeps
+ * their guest list until they open a gesture. That is a real gap in the
+ * plan's design rather than an oversight here, and it is recorded in the
+ * Task 6 report; the fix is another caller of `syncGuestFavorites`, not a
+ * different shape for it.
  */
 export function FavoriteButton({
   className,
@@ -92,11 +115,10 @@ export function FavoriteButton({
 
   useEffect(() => {
     /*
-     * The store is read on the guest path only. A signed-in reader's answer
-     * came from the server with the page, and reading `localStorage` here
-     * would overwrite it with whatever this browser happened to have
-     * favourited before they signed in — which is Task 6's merge, not this
-     * component's business.
+     * The store is never read *for this control's state* on the account
+     * path. A signed-in reader's answer came from the server with the page,
+     * and taking it from `localStorage` instead would show a filled heart
+     * for a favourite the account does not have.
      *
      * `readGuestFavorites` never throws — see `guestStore.ts`. That matters
      * more here than anywhere else: an effect that throws during mount is an
@@ -106,11 +128,45 @@ export function FavoriteButton({
      */
     if (!signedIn) {
       setState(readGuestFavorites().includes(gestureId) ? "on" : "off");
+      setReady(true);
+      return;
     }
 
     // Unconditional, and that is the point: this says "hydrated", not "the
     // answer is known". See the note above.
     setReady(true);
+
+    /*
+     * The account path *does* read the store — once, and only to hand it to
+     * the server. This is the one place in the app that knows both that
+     * somebody is signed in and what this browser favourited before they
+     * were, so it is where the merge is triggered from; `syncGuestFavorites`
+     * makes no request at all when there is nothing to merge, which is every
+     * page for almost every reader.
+     *
+     * The state is then taken from the *server's* answer — the account's
+     * whole list after the merge — and never from the local array. That
+     * distinction is the whole design: the local ids are input to a write,
+     * not a second source of truth. It also repaints a heart the server
+     * rendered before the merge existed, which is the visible half of
+     * "guest state follows the account".
+     *
+     * `syncGuestFavorites` never throws and never reports a merge it did not
+     * get an answer for, so a failure here leaves both the heart and the
+     * local array exactly where they were — and the next signed-in page
+     * tries again, which is safe because the server half is idempotent.
+     */
+    let live = true;
+
+    syncGuestFavorites().then((merge) => {
+      if (live && merge.status === "merged") {
+        setState(merge.favorites.includes(gestureId) ? "on" : "off");
+      }
+    });
+
+    return () => {
+      live = false;
+    };
   }, [gestureId, signedIn]);
 
   const pressGuest = () => {

@@ -163,3 +163,37 @@ export function toggleGuestFavorite(id: string): string[] {
 
   return next;
 }
+
+/**
+ * Forgets the whole guest list, or gives up quietly.
+ *
+ * The one irreversible step in Task 6's sign-in merge, which is why it is a
+ * function of its own rather than `toggleGuestFavorite` in a loop: the merge
+ * has to be able to say "and only now" about exactly this, and a caller that
+ * cleared id by id would leave a half-cleared list behind on the write that
+ * failed. `mergeGuestState.ts` calls it after the account has acknowledged
+ * the write and never before — there are no transactions on any write path
+ * in this app, so clearing first and then failing loses the favorites with
+ * nothing left to retry from.
+ *
+ * `removeItem` rather than `setItem(…, "[]")`: an absent key and an empty
+ * array read the same through `readGuestFavorites`, and the absent one is
+ * the state a browser that never favourited anything is already in.
+ *
+ * Never throws, like everything else here. A denied store means the list was
+ * unreadable in the first place, so there was nothing to merge and nothing
+ * to clear.
+ */
+export function clearGuestFavorites(): void {
+  const store = openStore();
+
+  if (store === null) {
+    return;
+  }
+
+  try {
+    store.removeItem(GUEST_FAVORITES_KEY);
+  } catch (error) {
+    console.warn("[guestStore] Failed to clear favorites:", error);
+  }
+}

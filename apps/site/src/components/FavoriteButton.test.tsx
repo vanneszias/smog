@@ -219,10 +219,17 @@ describe("FavoriteButton on an account", () => {
      * favourited this gesture as a guest on some other machine must see the
      * account's answer — and one who favourited it in *this* browser before
      * signing in must not see a filled heart for a favourite the account
-     * does not have. Reconciling those two is Task 6's merge, not a silent
-     * read of the wrong store.
+     * does not have.
+     *
+     * Task 6 reconciles those two, and it reconciles them through the
+     * *server*: the merge below is refused, so the account still does not
+     * hold gesture 7 and the heart must say so. A component that had taken
+     * the easy route — reading `localStorage` on the account path — would
+     * fill the heart here and the reader would believe a favourite was
+     * saved that is not.
      */
     localStorage.setItem(GUEST_FAVORITES_KEY, '["7"]');
+    vi.stubGlobal("fetch", respondWith({}, 500));
 
     await mount(signedIn({ initialFavorite: false }));
 
@@ -444,11 +451,19 @@ describe("FavoriteButton on an account", () => {
     expect(button().getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("never reads the guest store on the account path", async () => {
+  it("never reads the guest store for its own state", async () => {
     /*
-     * The mode switch from the other side, and the assertion that catches a
-     * mutation forcing it to `localStorage`: the account path must not read
-     * the browser's list at all, not even to ignore it.
+     * **This test used to assert the guest store was not read at all**, and
+     * Task 6 is the reason it no longer can: the account path now reads it
+     * once, on mount, to hand it to the merge. The property that mattered is
+     * unchanged and is asserted more precisely here — the store is read
+     * exactly once, by the merge, and a press consults the account and
+     * nothing else.
+     *
+     * Weakening it to "reads it sometimes" would have thrown away the
+     * assertion that catches a mutation pointing the heart at
+     * `localStorage`, so the count is pinned and the sibling test above
+     * pins the state with a merge that fails.
      */
     const getItem = vi.spyOn(Storage.prototype, "getItem");
     vi.stubGlobal("fetch", respondWith({ favorite: true }));
@@ -456,6 +471,110 @@ describe("FavoriteButton on an account", () => {
     await mount(signedIn());
     await press();
 
-    expect(getItem).not.toHaveBeenCalled();
+    expect(getItem.mock.calls).toEqual([[GUEST_FAVORITES_KEY]]);
+  });
+
+  it("merges this browser's guest favorites into the account", async () => {
+    /*
+     * The visible half of "guest state follows the account". The button is
+     * the one place that knows both that there is an account and what this
+     * browser held before there was one, so it is where the merge is
+     * triggered — and the heart repaints from the account's list afterwards,
+     * because the server rendered it before the merge ran.
+     */
+    localStorage.setItem(GUEST_FAVORITES_KEY, '["7","9"]');
+
+    const fetchMock = respondWith({ added: ["7", "9"], favorites: ["7", "9"] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await mount(signedIn({ initialFavorite: false }));
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+
+    expect(url).toBe("/account/merge-favorites");
+    expect(JSON.parse(String(init.body))).toEqual({ ids: ["7", "9"] });
+    expect(button().getAttribute("aria-pressed")).toBe("true");
+    // Last, and only now. See `lib/mergeGuestState.ts`.
+    expect(localStorage.getItem(GUEST_FAVORITES_KEY)).toBeNull();
+  });
+
+  it("keeps the guest list when the merge is refused", async () => {
+    // No transactions, so the local array is the only retry there is. The
+    // next signed-in page tries again, which is safe because the server
+    // half is idempotent.
+    localStorage.setItem(GUEST_FAVORITES_KEY, '["7"]');
+    vi.stubGlobal("fetch", respondWith({}, 500));
+
+    await mount(signedIn({ initialFavorite: false }));
+
+    expect(localStorage.getItem(GUEST_FAVORITES_KEY)).toBe('["7"]');
+    expect(button().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("ignores a merge that finishes after the button has moved on", async () => {
+    /*
+     * The detail page keys this component on the document's id, but a
+     * re-render with a new `gestureId` re-runs the effect without
+     * remounting, and the first merge is still in flight — the local array
+     * is only cleared when it answers, so the second effect posts it again.
+     * Two answers then arrive for two different gestures, and the stale one
+     * arrives last.
+     *
+     * Without the cleanup flag the late answer wins: it computes
+     * `favorites.includes("7")` from its own closure and fills a heart that
+     * is now showing gesture 9. The effect's `live` flag is what makes the
+     * abandoned run silent, and this is the only way to see it.
+     */
+    localStorage.setItem(GUEST_FAVORITES_KEY, '["7"]');
+
+    const answer = (favorites: string[]) => ({
+      json: () => Promise.resolve({ favorites }),
+      ok: true,
+      status: 200,
+    });
+    const pending: ((value: unknown) => void)[] = [];
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            pending.push(resolve);
+          })
+      )
+    );
+
+    await mount(<FavoriteButton gestureId="7" locale="nl" signedIn={true} />);
+    await mount(<FavoriteButton gestureId="9" locale="nl" signedIn={true} />);
+
+    expect(pending).toHaveLength(2);
+
+    // The live run answers first: the account holds 7, and this button is
+    // now gesture 9.
+    await act(async () => {
+      pending[1]?.(answer(["7"]));
+    });
+
+    expect(button().getAttribute("aria-pressed")).toBe("false");
+
+    // The abandoned run answers late, with the same list, and must change
+    // nothing.
+    await act(async () => {
+      pending[0]?.(answer(["7"]));
+    });
+
+    expect(button().getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("asks nothing of the server when this browser has no guest list", async () => {
+    // Every signed-in page mounts this button. A reader who never
+    // favourited anything as a guest must not pay a request for the merge
+    // on every gesture they open.
+    const fetchMock = respondWith({ favorites: [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await mount(signedIn());
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

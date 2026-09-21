@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  clearGuestFavorites,
   GUEST_FAVORITES_KEY,
   readGuestFavorites,
   toggleGuestFavorite,
@@ -183,5 +184,41 @@ describe("guest favorites", () => {
 
     expect(GUEST_FAVORITES_KEY).toBe("smog.guest.favorites");
     expect(localStorage.getItem(GUEST_FAVORITES_KEY)).toBe('["a"]');
+  });
+
+  it("forgets the whole list when it is cleared", () => {
+    toggleGuestFavorite("a");
+    toggleGuestFavorite("b");
+
+    clearGuestFavorites();
+
+    expect(readGuestFavorites()).toEqual([]);
+    // The key is removed rather than set to "[]": an absent key is the state
+    // a browser that never favourited anything is already in.
+    expect(localStorage.getItem(GUEST_FAVORITES_KEY)).toBeNull();
+  });
+
+  it("leaves nothing else on the origin behind", () => {
+    // The clear is aimed at one key. A `localStorage.clear()` here would
+    // take the theme preference and anything else this origin holds with it.
+    localStorage.setItem("smog.theme", "dark");
+    toggleGuestFavorite("a");
+
+    clearGuestFavorites();
+
+    expect(localStorage.getItem("smog.theme")).toBe("dark");
+  });
+
+  it("gives up quietly when the store refuses to be cleared", () => {
+    // Same contract as every other function here: the worst outcome is that
+    // nothing happens. A throw would be an unhandled error inside the mount
+    // effect that calls this, which blanks the page below it.
+    toggleGuestFavorite("a");
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new DOMException("denied", "SecurityError");
+    });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    expect(() => clearGuestFavorites()).not.toThrow();
   });
 });

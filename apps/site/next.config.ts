@@ -75,6 +75,19 @@ const nextConfig: NextConfig = {
         source: "/account/favorites",
       },
       /*
+       * The guest-to-account favourites merge, posted once by
+       * `lib/mergeGuestState.ts` on the first signed-in page a browser with
+       * a leftover guest list opens. A sibling of `/account/favorites`
+       * rather than a child of it, for the reason the confirm-email rewrite
+       * below gives: two overlapping patterns leave Payload's endpoint
+       * matcher to pick, and the wrong pick here would answer "merged"
+       * without merging.
+       */
+      {
+        destination: "/api/account/merge-favorites",
+        source: "/account/merge-favorites",
+      },
+      /*
        * The account page's four writes. Locale-free like everything above —
        * the forms carry the locale in their body — and rewrites rather than
        * route handlers for the same bundle reason.
