@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   fireEvent,
   render,
@@ -9,6 +10,11 @@ import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import * as WebBrowser from "expo-web-browser";
 import { useColorScheme } from "nativewind";
+import {
+  ANALYTICS_CONSENT_KEY,
+  readConsent,
+  resetConsentForTests,
+} from "@/lib/consent";
 import { setLocale } from "@/lib/i18n";
 import { SessionProvider } from "@/lib/session";
 import SettingsScreen from "../../app/(tabs)/settings/index";
@@ -129,6 +135,47 @@ describe("the settings screen, signed in", () => {
     await waitFor(() => expect(SecureStore.deleteItemAsync).toHaveBeenCalled());
     await waitFor(() =>
       expect(router.replace).toHaveBeenCalledWith("/(auth)/sign-in")
+    );
+  });
+});
+
+describe("the analytics control", () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    resetConsentForTests();
+    setLocale("nl");
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+    global.fetch = jest.fn() as unknown as typeof fetch;
+  });
+
+  it("is off for someone who has not answered, and turning it on grants", async () => {
+    renderScreen();
+    const toggle = await screen.findByLabelText(/analytics/i);
+    expect(toggle.props.value).toBe(false);
+    fireEvent(toggle, "valueChange", true);
+    await waitFor(() => expect(readConsent()).toBe("granted"));
+  });
+
+  it("lets someone who allowed analytics withdraw — a refusal, not a blank", async () => {
+    await AsyncStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+    renderScreen();
+    const toggle = await screen.findByLabelText(/analytics/i);
+    await waitFor(() => expect(toggle.props.value).toBe(true));
+    fireEvent(toggle, "valueChange", false);
+    await waitFor(() => expect(readConsent()).toBe("denied"));
+  });
+
+  it("works without an account", async () => {
+    renderScreen(); // no token in SecureStore: signed out
+    expect(await screen.findByLabelText(/analytics/i)).toBeTruthy();
+  });
+
+  it("opens the privacy policy in the current locale", async () => {
+    setLocale("en");
+    renderScreen();
+    fireEvent.press(await screen.findByTestId("settings-privacy"));
+    expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(
+      expect.stringMatching(/\/en\/privacy$/)
     );
   });
 });

@@ -1,13 +1,15 @@
 import { availableLocales } from "@smog/i18n";
-import { Button, Card, Text } from "@smog/ui-native";
+import { Button, Card, Switch, Text } from "@smog/ui-native";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useColorScheme } from "nativewind";
 import { Pressable, View } from "react-native";
 import { API_BASE_URL } from "@/lib/api";
+import { setConsent, useConsent } from "@/lib/consent";
 import { t, useLocale } from "@/lib/i18n";
 import type { Locale } from "@/lib/locale";
 import { signOut, useSession } from "@/lib/session";
+import { privacyPolicyUrl } from "@/lib/site";
 
 /**
  * Every option this screen offers is one press, with nothing destructive on
@@ -89,6 +91,40 @@ function ThemeRow() {
   );
 }
 
+/**
+ * The only place, guest or signed in, to change an analytics decision once
+ * `ConsentBanner` has stopped asking: that banner renders nothing once
+ * `consent` is no longer `null`, so without a control here the first answer
+ * would otherwise be final (Stage 8.5 found the same gap on the web).
+ */
+function AnalyticsRow() {
+  const { consent } = useConsent();
+  const { locale } = useLocale();
+
+  return (
+    <Card className="gap-sm p-md">
+      <View className="flex-row items-center justify-between gap-md">
+        <View className="flex-1">
+          <Text variant="heading">{t("settings.analyticsTitle")}</Text>
+          <Text variant="muted">{t("settings.analyticsDescription")}</Text>
+        </View>
+        <Switch
+          label={t("settings.analyticsTitle")}
+          onValueChange={(next) => setConsent(next ? "granted" : "denied")}
+          value={consent === "granted"}
+        />
+      </View>
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => WebBrowser.openBrowserAsync(privacyPolicyUrl(locale))}
+        testID="settings-privacy"
+      >
+        <Text className="underline">{t("settings.privacyPolicy")}</Text>
+      </Pressable>
+    </Card>
+  );
+}
+
 export default function SettingsScreen() {
   const { user } = useSession();
   const { locale } = useLocale();
@@ -113,6 +149,7 @@ export default function SettingsScreen() {
 
       <LanguageRow />
       <ThemeRow />
+      <AnalyticsRow />
 
       {user === null ? null : (
         <Button
