@@ -19,6 +19,12 @@ import { readConsent, subscribeConsent, useConsent } from "@/lib/consent";
  * module scope from an unset variable is dead on import (spec, same-named
  * section); built lazily, a missing variable is a silent no-op instead.
  *
+ * **Once built, it is kept for the app's life.** A withdrawal calls
+ * `clear()` (the SDK's device and session ids go) and the gate above does
+ * the rest; a re-grant reuses the same client. Building a fresh one per
+ * grant would leak: the SDK's constructor registers an `AppState` listener
+ * it never removes (`@openpanel/react-native/dist/index.js`).
+ *
  * The credentials are `EXPO_PUBLIC_*`, so they ship inside the bundle and
  * are extractable from any installed copy. That is why they belong to a
  * separate least-privileged native OpenPanel client, never the web pair.
@@ -64,7 +70,6 @@ function getClient(): Client | null {
 subscribeConsent(() => {
   if (!granted() && client !== null) {
     client.clear();
-    client = null;
   }
 });
 

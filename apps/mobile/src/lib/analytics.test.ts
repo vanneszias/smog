@@ -191,6 +191,36 @@ describe("mobile analytics", () => {
     expect(mockClear).toHaveBeenCalled();
   });
 
+  it("reuses one client for the app's life across withdraw and re-grant", async () => {
+    // Each SDK construction registers an AppState listener it never
+    // removes, so a client per grant would leak one per consent flip.
+    await setConsent("granted");
+    analytics.trackEvent("video_playback_completed", { gesture_id: "1" });
+    await setConsent("denied");
+    analytics.trackEvent("video_playback_completed", { gesture_id: "2" });
+    await setConsent("granted");
+    analytics.trackEvent("video_playback_completed", { gesture_id: "3" });
+
+    expect(mockConstructed).toHaveBeenCalledTimes(1);
+    expect(mockClear).toHaveBeenCalledTimes(1);
+    expect(mockTrack.mock.calls.map(([, properties]) => properties)).toEqual([
+      { gesture_id: "1", platform: "native" },
+      { gesture_id: "3", platform: "native" },
+    ]);
+  });
+
+  it("keeps the SDK's own filter closed after a withdrawal", async () => {
+    await setConsent("granted");
+    analytics.trackEvent("video_playback_completed", { gesture_id: "1" });
+    const { filter } = mockConstructed.mock.calls[0][0] as {
+      filter: () => boolean;
+    };
+    expect(filter()).toBe(true);
+
+    await setConsent("denied");
+    expect(filter()).toBe(false);
+  });
+
   it("is a silent no-op when the credentials are not configured", async () => {
     // `= undefined` would not do: Node stringifies any assignment to
     // `process.env.*`, so the value would become the *string* "undefined"
