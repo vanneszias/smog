@@ -358,12 +358,18 @@ Stage 1 defines the shape only. Four things are knowingly absent:
   table and so belonged to nobody. The collection has shipped since Stage 1
   with a GDPR retention rationale, a nullable `user` column so a record
   outlives the account it describes, and not one row; Stage 4's test that
-  account deletion preserves consent records proves a property of an empty
-  table until then. Its writer is the cookie and analytics banner, which is
+  account deletion preserves consent records proves a property nothing in
+  the product could reach until then. Its writer is the cookie and analytics banner, which is
   a public-site concern and not a sponsorship one. It must precede Stage 9
   because of the `analytics_consent` hazard recorded below: an import into a
   table nobody has defined a write path for cannot know whether a missing
-  value means "no answer" or "declined". Both are append-only to everyone including admins, so the only way
+  value means "no answer" or "declined". **Correction, Stage 8.5:** an earlier
+  draft of this line said that test "proves a property of an empty table",
+  and that is wrong. `account.int.test.ts:1181-1203` creates a `user-consents`
+  fixture row, **reads it back** to confirm the fixture really set the user
+  before asserting anything, and only then deletes the account. The property
+  it proves is real and the test is sound; what was missing was a *production*
+  write path, not a row. Both are append-only to everyone including admins, so the only way
   in is a hook running with `overrideAccess`. The integration tests pin the
   exact write path those hooks have to use.
 - **Payload's generated create types mark `status` and `durationYears` as
@@ -404,6 +410,69 @@ analytics consent rather than an absent answer — silently, for every row. The
 Convex migration in Stage 9 must set this column explicitly for every row it
 writes, and its dry run must assert the resulting distribution against the
 source data rather than trusting the insert.
+
+#### Findings from Stage 8.5, so a later stage does not re-learn them
+
+- **Redis-backed anything cannot cross to the Worker, and the replacement is a
+  unique index.** The shipped limiter,
+  `apps/server/src/services/rateLimit.ts`, is a Hono middleware over a
+  module-level `ioredis` client using `INCR` — atomic in the store. `apps/site`
+  declares no Redis client, no Redis is reachable from a Cloudflare Worker in
+  this infrastructure, and `wrangler.jsonc`'s whole binding inventory is
+  `ASSETS`, `D1`, `R2` and `EMAIL`: no KV, no Durable Object, no Cloudflare
+  Rate Limiting binding, no Analytics Engine. The store therefore has to be the
+  application's own D1, and — as `lib/claims.ts` already established for the
+  Mollie webhook and the render callback — **a unique index is the one atomic
+  primitive this adapter has**, because SQLite evaluates it inside the INSERT.
+  `lib/rateLimit.ts` is `INSERT … ON CONFLICT(key) DO UPDATE SET count = count
+  + 1 RETURNING count` through `payload.db.drizzle`, one statement, below
+  Payload's API on purpose.
+- **The limiter's two candidate designs are not near neighbours, and the
+  measurement is why the gate existed.** At 20 parallel calls with a limit of
+  10: upsert-and-return allows **10**; count-then-insert (`payload.count` then
+  `payload.create`, using only shipped primitives) allows **20**; and
+  upsert-and-return with the unique index removed allows **0**, because SQLite
+  rejects an `ON CONFLICT` target matching no constraint and the fail-closed
+  path takes over. Count-then-insert is not an approximate limiter — at that
+  concurrency it is no limiter at all, while passing every sequential
+  functional test. Anyone tempted to simplify this should reproduce those three
+  numbers first.
+- **Fail-open does not transfer when the store becomes the app's own
+  database.** The Redis original swallows store failures because Redis is a
+  separate service. In a Worker whose limiter counts in the same D1 that serves
+  every page, there is no "limiter down, site up" to stay available for, and
+  failing open converts any provokable fault into an unlimited public write
+  endpoint. `lib/rateLimit.ts` refuses instead, and logs.
+- **knip does not report an entry file's own exports, which makes the same
+  construct fail in one workspace and pass in another.** `knip.json`'s
+  `workspaces` map covers eight workspaces; `packages/ui-web` is not one of
+  them, so knip falls back to its `package.json` `main`/`types`/`exports` — all
+  `./src/index.ts` — and treats everything that file exports as public API. An
+  export nothing imports therefore **fails CI in `apps/site/src/lib` and passes
+  in `packages/ui-web`'s `index.ts`**. That is correct behaviour for a library,
+  but it means moving a symbol between the two changes whether CI can see it,
+  and an unused component can sit in `ui-web` indefinitely. This is not Stage
+  8's `apps/mobile` defect, where an entry glob of `src/**/*.ts` swallowed
+  ordinary internal modules and hid genuinely dead code.
+- **A randomised test fixture is not an isolated one.** A helper in
+  `endpoints/analytics.int.test.ts` returned a random address out of 254 under
+  a doc comment promising "a fresh `cf-connecting-ip` per test, so no two tests
+  share a budget". An address *is* a budget in this limiter, so ten tests over
+  254 values is a birthday collision at a few percent per run — ten green CI
+  runs, then a red one. Stages 9 and 10 will write more tests against this same
+  limiter: allocate keys from a counter that throws when it runs out, and clear
+  the namespace in `beforeEach`, because unique keys hold only while every
+  future test remembers to ask for one, and a test that forgets falls into the
+  shared `"unknown"` bucket silently. Note also that `.wrangler/state/vitest`
+  is persisted, so a run that dies before its cleanup leaves spent rows for the
+  next run to inherit.
+- **Unbounded `payload.delete` still bites, in three places now.** D1 refuses
+  at 100 bound parameters and `payload.delete` emits one per *deleted document*
+  on the trailing `delete from "payload_preferences" where key in (…)`.
+  `jobs/cleanupOrphanedMedia.ts` documents it, `pruneRateLimits` was fixed for
+  it in Stage 8.5, and `endpoints/account.int.test.ts`'s `afterAll` still has
+  it — invisible in CI, which starts from an empty persistence directory, and
+  fatal locally once enough runs accumulate in `.wrangler/state/vitest`.
 
 ### `media`
 

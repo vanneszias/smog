@@ -16,8 +16,8 @@ its own plan document, per `superpowers:writing-plans`.
 | 6 | Video pipeline | [`2026-09-21-stage-6-video.md`](./2026-09-21-stage-6-video.md) | 0 gate 1, 5 | landed |
 | 7 | Email and jobs | [`2026-09-21-stage-7-email-jobs.md`](./2026-09-21-stage-7-email-jobs.md) | 5 | landed |
 | 8 | Native | [`2026-09-21-stage-8-native.md`](./2026-09-21-stage-8-native.md) | 4 | **landed** — nine of ten exit criteria; the tenth needs a device |
-| 8.5 | Consent | [`2026-09-22-stage-8-5-consent.md`](./2026-09-22-stage-8-5-consent.md) | 1, 4, 8 | plan written |
-| 9 | Data migration | written when Stages 1, 4, 5 land | 1, 4, 5, 8.5 | — |
+| 8.5 | Consent | [`2026-09-22-stage-8-5-consent.md`](./2026-09-22-stage-8-5-consent.md) | 1, 4, 8 | **landed** — all ten exit criteria met |
+| 9 | Data migration | **next** — write it now that 8.5 has landed | 1, 4, 5, 8.5 | — |
 | 10 | Cutover | written when Stage 9 lands | all | — |
 
 "Landed" means the plan's exit assessment is appended to it with the
@@ -38,8 +38,16 @@ had reasoned about instead of read. **When the plan and the code disagree,
 the code is right**, and the task report is how the next plan gets less
 wrong.
 
-Stages 8.5, 9 and 10 remain unwritten for the same reason. Stage 8.5 must
-land before Stage 9: `user-consents.analytics_consent` is
-`NOT NULL DEFAULT false`, so an import into a table with no defined write
-path cannot tell "no answer" from "declined" and would silently record a
-refusal for every existing user.
+Stages 9 and 10 remain unwritten for the same reason. Stage 8.5 had to land
+before Stage 9: `user-consents.analytics_consent` is `NOT NULL DEFAULT false`,
+so an import into a table with no defined write path cannot tell "no answer"
+from "declined" and would silently record a refusal for every existing user.
+
+**Stage 8.5 has now landed and that block is lifted.** `user-consents` has a
+production writer — the banner and the account control, through
+`POST /api/consent` — so the two states are distinguishable in this
+application for the first time. Stage 9 must still set `analytics_consent`
+explicitly for every row it writes and assert the resulting distribution
+against the source rather than trusting the insert; Stage 8.5's exit assessment
+carries the measurement showing what a write-only-on-true reconciler costs, and
+the three different consent storage keys the two old stacks and this one use.

@@ -1939,3 +1939,471 @@ git add docs apps packages
 git commit -m "docs: close Stage 8.5 with the measurements"
 git push -u origin claude/exciting-cerf-y8jun7
 ```
+
+---
+
+## Stage 8.5 exit criteria
+
+1. A visitor who never answers is never tracked.
+2. A refusal is a row.
+3. The banner does not trap focus.
+4. The relay refuses what the allowlist does not name, and refuses a cross-site post.
+5. The limiter holds, with the concurrency number recorded and the design named.
+6. No client secret is in the browser bundle.
+7. `bun release:check` passes.
+8. `bunx knip --no-progress --no-config-hints` is clean.
+9. The site bundle has not grown materially.
+10. `user-consents` has rows written by production code, not only by fixtures.
+
+## Stage 8.5 exit: measured
+
+Measured on `74a3d1d`, the branch head after Task 5's fix round 2 landed.
+
+### The headline: the limiter gate, and what it caught
+
+**20 parallel calls at a limit of 10:**
+
+| design | allowed of 20 |
+|---|---|
+| **(b) upsert-and-return, shipped** | **10** |
+| (a) count-then-insert, the plan's fallback | 20 |
+| (b) with the unique index removed | 0 |
+
+Design (a) is not an approximate limiter. At a limit of 10 it let **every one
+of the twenty through** — it is no limiter at all for exactly the traffic
+shape a limiter exists for. **Had the plan simply specified the simpler
+option, this stage would have shipped something shaped like a rate limiter
+that enforced nothing, with every functional test green**, because every
+functional test issues requests one at a time and (a) passes all of them. The
+gate — "measure both, then choose" — is the only reason the difference was
+ever seen.
+
+The third number is the mechanism, re-measured at this exit rather than
+quoted: with `unique: false` on `rate-limits.key`, `holds under concurrency`
+fails `expected +0 to be 10`. SQLite rejects an `ON CONFLICT` target matching
+no constraint, the statement throws, and the deliberately fail-closed path
+refuses everything. A lost index is loud in both directions.
+
+**Fail-open was deliberately reversed to fail-closed.** The Redis original
+(`apps/server/src/services/rateLimit.ts`) swallows store failures because
+Redis is a separate service. Here the store is the application's own D1:
+there is no state of the world where the site serves and D1 is unreachable,
+so "availability wins" buys nothing, while failing open would turn any
+provokable fault into an unlimited public write endpoint.
+
+### The whole-stage mutation
+
+`unique: false` on `rate-limits.key`, `.wrangler/state/vitest` cleared so the
+index was really gone, full `bun -F site test`:
+
+**13 tests fail across 2 files** (1,597 passed of 1,610):
+
+| file | failures | of |
+|---|---|---|
+| `src/lib/rateLimit.int.test.ts` | 4 | 6 — `allows up to the limit and refuses the next one`, `counts each client separately`, `counts each namespace separately`, `holds under concurrency` |
+| `src/endpoints/analytics.int.test.ts` | 9 | 11 — every test that expects the relay to answer anything other than 429 |
+
+The two survivors in each file are the ones that do not need the index: the
+prune tests (`drains a backlog larger than D1's bind-parameter cap`, `keeps
+the live window and takes the spent ones`), and the two relay tests whose
+expected answer is a refusal anyway (`refuses a cross-site post`, which
+`guardOrigin` answers before the limiter runs, and `does not let a
+client-supplied header buy a fresh budget`).
+
+Restored byte for byte: md5 `9a93f7a4f45037b8f6487adbe07e62a3` before and
+after, `git diff` empty, and the full suite back to **1,610 / 1,610 in 124
+files**.
+
+### Whether the CI split worked
+
+Task 1 stated a falsifiable prediction: if miniflare's sync-proxy desync
+(`assert (message?.id === id)`, `fetch-sync.ts:147`) recurs in a job running
+nothing but the site suite, contention with the rest of `release:check` was
+not the cause.
+
+`site-tests` has been dispatched **17 times** since the split first ran on
+`b32f64b`. Three were cancelled by `cancel-in-progress` before completing and
+assert nothing. Of the **14 that completed, 13 were green and one was red**:
+
+- **12 consecutive green** — runs 119, 121–125, 127–132 (`37594c6` through
+  `f50d736`).
+- **Run 133 on `17b3aba` failed**, and **it was not the desync.** One
+  assertion, `refuses nothing on the strength of a missing Origin`, `expected
+  429 to be 202`, with 1,609 of 1,610 passing. Cause found and fixed in
+  `74a3d1d`; see "A randomised fixture is not an isolated one" below.
+- **Run 134 on `74a3d1d` is green**, all five jobs.
+
+**So: 14 completed runs of the isolated job, zero recurrences of the desync.**
+That is what the record says, and it is not a verdict. The desync recurred at
+intervals of hours across the Stage 8 branch, and this branch's whole life is
+about nine hours. Fourteen runs is evidence, not proof; the `isolate`
+experiment stays on the shelf rather than being discarded.
+
+**Wall clock.** Before the split, `release-check` carried the site suite:
+**8m16s** on `1cd69bf`, 8m51s on `8370e74`, 8m50s on `38a186d`. After it,
+across the 12 completed post-split runs, `release-check` ranges 3m47s–6m05s
+(median ≈5m01s) and `site-tests` 2m44s–5m56s; both jobs start in the same
+second and run in parallel. On `74a3d1d` the pair is release-check 3m59s and
+site-tests 4m06s.
+
+**But the workflow's wall clock did not halve, and saying it did would be
+wrong.** `site-e2e` was 5m50s on `1cd69bf` and is 7m00s on `74a3d1d` — this
+stage added a consent-banner spec and consent seeding to four others — so the
+critical path moved from `release-check` (8m16s) to `site-e2e` (7m00s). The
+job that was the bottleneck roughly halved; the workflow got about a minute
+faster. Load reduction was the goal and wall clock was never it.
+
+### A randomised fixture is not an isolated one
+
+Run 133's failure is the most instructive thing this stage produced after the
+limiter gate, and the diagnosis that first looked right was wrong.
+
+The first hypothesis was that tests omitting `cf-connecting-ip` fall into
+`rateLimitKey`'s shared `"unknown"` bucket and spend one budget between them.
+They do not: every test in that file already passed an address. **The defect
+was one line up, in a helper whose doc comment promised precisely the property
+its code failed to deliver:**
+
+```ts
+/** A fresh `cf-connecting-ip` per test, so no two tests share a budget. */
+return `${block}.${Math.floor(Math.random() * IP_MAX) + 1}`;
+```
+
+An address *is* a budget. Ten tests drawn at random from 254 addresses is a
+birthday collision at a few percent per run, and two of those tests spend a
+120-request budget down to its last request on purpose. That is "green ten
+times, red on the eleventh" exactly.
+
+The fix is deliberately both halves: `freshClientIp()` allocates from a
+counter and **throws** if the block runs out rather than wrapping onto a spent
+address — a counter cannot collide — and a `beforeEach` clears the namespace,
+which is the half that survives the next person, because unique addresses hold
+only while every future test remembers to ask for one, and a test that forgets
+falls into the shared `"unknown"` bucket and silently reacquires the
+dependency. The clear also covers what addresses cannot: `.wrangler/state/vitest`
+is persisted, so a run that died before its cleanup leaves spent rows behind.
+
+**The order-independence demonstration is the strongest evidence in the
+stage.** The same mutation that failed six of eleven tests before the fix —
+every test pinned to one shared address — now passes **11/11**, so no test's
+result depends on the addresses being unique at all; the `beforeEach` carries
+the property rather than luck. Plus three shuffled orders
+(`--sequence.shuffle.tests`, seeds 11, 4242, 90210) at 11/11, with seed 11
+running the CI-failing test first and seed 90210 running it immediately after
+the budget-exhausting one.
+
+**And this is the third time in this stage a comment asserted a property its
+code did not hold.** Task 3's `[data-radix-portal]` query could not fail for
+two independent reasons while its comment said it detected "the one thing
+`Sheet` would have added". Task 6's pinning test's doc comment claimed the
+plausible refactor "fails that test by name"; it did not — the refactor passed
+all 100 component tests. Now this. **Every one was found by somebody trying to
+make the thing fail, and none by reading it.** That is the lesson Stages 9 and
+10 should carry, above any individual fix here: in this codebase a comment
+about a test's power is a claim of the same standing as a claim about a
+library, and it has the same track record.
+
+### Each criterion, and what it was verified against
+
+| # | criterion | met | measurement |
+|---|---|---|---|
+| 1 | a visitor who never answers is never tracked | **yes** | `src/lib/analytics.test.ts` 5/5. Gate mutated `readConsent() === "granted"` → `readConsent() !== "denied"` (the falsy-style check the module warns against): **`sends nothing for a visitor who has not answered yet` fails**, "expected fetch to not be called at all, but actually been called 1 times". 1 failed / 4 passed; restored, md5 `9b735971bc22dc9bdcb8f3e9d5b27c84`. |
+| 2 | a refusal is a row | **yes** | `src/endpoints/consent.int.test.ts` 8/8, driving the real `POST /api/consent` through `handleEndpoints` with the shipped config. Mutated the handler to write only when `analyticsConsent` is true — the exact reconciler defect the spec's Stage 9 hazard names: **2 fail**, `records a refusal as a row, not as an absence` (`expected +0 to be 1`) and `appends rather than amends when somebody changes their mind` (`expected 1 to be 2`). Restored, md5 `71d4d8cc9c39529f2e8a7b7daeeefc38`. |
+| 3 | the banner does not trap focus | **yes** | `packages/ui-web/src/components/Banner.test.tsx` 6/6, and **two** mutations each fail exactly one test: `createPortal(…, document.body)` fails `renders no scrim, and is not portaled out of the page`; focusing the first button on mount fails `does not take focus on mount, and does not trap it`. Restored, md5 `e0c61255175af9767bbed5a0083cdf0e`. |
+| 4 | the relay refuses what the allowlist does not name, and refuses a cross-site post | **yes** | `src/endpoints/analytics.int.test.ts` 11/11. Allowlist mutated away (`Object.hasOwn(TRACK_EVENTS, name)` dropped): **`refuses an event that is not in the allowlist` fails, alone**. `guardOrigin`'s early return disabled: **`refuses a cross-site post` fails, alone**. Restored, md5 `fe34e2112b59ca9c0349c6686d3316df`. |
+| 5 | the limiter holds, design named | **yes — design (b), upsert-and-return, exact** | `bun -F site test src/lib/rateLimit.int.test.ts -t "holds under concurrency"` → 1 passed, 5 skipped. 10 of 20 allowed at a limit of 10; table above. |
+| 6 | no client secret in the browser bundle | **yes** | `CLOUDFLARE_ENV=staging bun run build:app`, then greps over the built output: `OPENPANEL_CLIENT_SECRET` appears **4 times across 3 files under `.open-next/server-functions/`** and **0 times anywhere under `.open-next/assets/`**. Positive control, so the grep is known to reach the browser bundle: `smog.consent.analytics` **is** present in `.open-next/assets/_next/static/chunks/`. `.open-next/` deleted afterwards. |
+| 7 | `bun release:check` passes | **no on the first run, yes on the second — both reported** | See below. |
+| 8 | knip clean | **yes** | `bunx knip --no-progress --no-config-hints` → exit 0, no output, twice (9.2s). |
+| 9 | the bundle has not grown materially | **yes** | Base `38a186d` **7,564.66 KiB gzipped** (35,160.45 KiB raw) vs HEAD **7,574.53 KiB** (35,220.94 KiB raw): **+9.87 KiB gzipped**, 26% headroom against the 10.00 MiB budget. Built in a worktree with the same `node_modules` by hard link, as Stage 8's exit did. The base figure reproduces Stage 8's recorded 7,564.67 KiB to 0.01 KiB, which is the cross-check that the two builds are comparable. |
+| 10 | `user-consents` has rows written by production code | **yes** | At `38a186d` the only non-test references to the collection were its own config, the access note and generated types — **no writer existed**. Now: browser `postConsent` (`components/ConsentSync.tsx:163`) → `POST /api/consent` → `endpoints/consent.ts:125` → `recordConsent` → `payload.create({ collection: "user-consents" })`, exercised end to end over HTTP by all 8 tests in `consent.int.test.ts`. |
+
+### Criterion 7, honestly
+
+**The first `bun release:check` of this exit failed, and not on `expo-doctor`.**
+It failed in `site-tests` territory — the `analytics.int.test.ts` birthday
+collision above, which CI hit on run 133 for `17b3aba`. That failure is
+reported here rather than replaced by the later green run, because a stage
+that only prints its second attempt is doing the thing this ledger spent
+fifteen rulings refusing.
+
+The second run, on `74a3d1d` with the fix in, reaches `native:release-check`
+and stops there on `expo-doctor`'s **two documented sandbox failures**:
+
+```
+Running 19 checks on your project...
+Unexpected error while running 'Check Expo config (app.json/ app.config.js) schema' check:
+SyntaxError: Unexpected token 'H', "Host not i"... is not valid JSON
+17/19 checks passed. 2 checks failed.
+✖ Check Expo config (app.json/ app.config.js) schema
+✖ Validate packages against React Native Directory package metadata
+Directory check failed with unexpected server response
+```
+
+`expo-doctor apps/mobile`, run separately because the script throws before
+reaching it, fails the identical two and passes the identical seventeen.
+Confirmed against CI rather than chased: **run 134 on `74a3d1d` is a full
+success on all five jobs**, where a clean install and real network run both
+doctors.
+
+Everything before that point passes: `biome check:ci` over 884 files with no
+fixes, `release:config-check`, `check-types` **16 of 16**, `turbo test` **10
+of 10**, `bun audit --production` with no vulnerabilities. Because the script
+throws at `expo-doctor`, `build` and `knip` never execute inside it; both were
+run directly and both pass — `bun run build` 4 of 4, knip exit 0.
+
+**Suites: 2,595 tests.** `apps/site` 1,610 in 124 files (Stage 8 closed at
+1,523 in 113); `packages/ui-web` 481 in 33 (was 475 in 32); `apps/mobile` 174
+in 20; `packages/ui-native` 142 in 22; `packages/styles` 81 in 4; `packages/shared`
+34 in 2; `apps/web` 33 in 2; `packages/convex` 29 in 5; `packages/hooks` 9 in 1;
+`apps/native` 2 in 1.
+
+### One local-only trap, found by measuring
+
+Running the site suite repeatedly in one checkout eventually fails
+`src/endpoints/account.int.test.ts` — **not on an assertion**: 1,610 of 1,610
+tests pass and the *suite* fails in `afterAll` with
+
+```
+D1_ERROR: too many SQL variables at offset 821: SQLITE_ERROR
+  on: delete from "payload_preferences" where key in (?, ? …)
+```
+
+The teardown is `payload.delete({ collection: "users", where: { email: { like:
+"account-" } } })` — unbounded, and `.wrangler/state/vitest` is persisted, so
+the `account-*` users accumulate across every local run until the delete
+crosses D1's 100-bound-parameter cap. It is **exactly** the hazard Task 5's
+review found in `pruneRateLimits` (I1) and that `jobs/cleanupOrphanedMedia.ts`
+already documents, in a Stage 4 test teardown (`7de5b5a`) this stage never
+touched. CI never sees it, because every CI run starts from an empty
+persistence directory. Clearing `apps/site/.wrangler/state` clears it; every
+measurement above was taken from a cleared state. Recorded so the next person
+does not debug it, and because the same unbounded-delete shape is now known to
+exist in at least three places in this repo.
+
+### Two structural guarantees that no assertion pins
+
+Task 7's mutation exercise produced a finding better than its fix, and the
+exit must say it plainly rather than let the tests take credit:
+
+1. **`trackEvent`'s `void` return type is what makes a blocking dependency on
+   the beacon impossible.** Re-measured here: putting a literal `await` in
+   front of both `trackEvent` calls in `FavoriteButton.tsx` (and making the
+   handler `async`) leaves **35/35 green**, because `await` on `void` resolves
+   immediately whatever the network does. Only a *composite* mutation —
+   `trackEvent` returning `Promise<void>` **and** the `await` moved before
+   `setState` — reproduces the real bug shape.
+2. **`trackEvent`'s internal `.catch()` swallows rejections before any caller
+   can observe them.** Measured here: deleting the `.catch()` entirely leaves
+   `analytics.test.ts` at **5/5**, *including* `never throws when the relay
+   request fails` — because a rejected promise never throws synchronously, and
+   `.not.toThrow()` around a synchronous call cannot see it.
+
+**Neither property is pinned by any assertion in the repo, and no test asserts
+`trackEvent`'s return value or type at all.** A future change to
+`Promise<void>` would be silent. The two new FavoriteButton tests do cover the
+*behaviour*; they do not hold up the *mechanism*. That is written here so
+nobody reads the green suite as protection it is not.
+
+### What was deliberately NOT built, and why
+
+These are decisions with reasons, not gaps nobody noticed.
+
+- **The privacy policy ships Dutch-only while the banner is trilingual**
+  (Ruling 7). Verified at this exit: `ConsentBanner`'s `COPY` has `en`, `fr`
+  and `nl`; `[locale]/privacy/page.tsx` renders one Dutch body at all three
+  locales. A French reader pressing "Politique de confidentialité" lands on
+  Dutch text. Policy copy is a legal statement about what this organisation
+  does with data, and writing it in two more languages here would be
+  fabricating the most consequential text in the stage. Professional
+  translation and legal review are on the blocked list below.
+- **`gesture_collection_changed` with `collection: "list"` is unemitted**
+  (Ruling 13). The list add/remove flow is a `<form method="post">` at a
+  `next.config.ts` rewrite and that page's own doc comment states it ships no
+  client JavaScript by design. Wiring the event needs client JS on a page that
+  deliberately has none. **The server cannot emit it either, and that is not
+  convenience:** a server-side emit would violate Ruling 11, because the server
+  knows the account's recorded row while the device's `localStorage` is what
+  actually governs whether this browser is tracked — it would track a device
+  whose own answer was "denied". The gate being client-side is the design, so
+  an interaction with no client code has no gated way to report itself. List
+  add/remove is therefore invisible in analytics; do not read its absence as
+  zero usage.
+- **The `FavoritesList` emitter was removed, not relabelled** (Ruling 15,
+  superseding Ruling 14). `apps/web` does not track removing a favourite from
+  the favourites listing — `trackAnalyticsEvent` appears only in
+  `lists-context.tsx`'s picker-dialog flow, used from the browse grid and the
+  detail page, never in `routes/lists.tsx`. So `apps/site` was about to start
+  collecting an interaction neither stack has ever collected. Expanding what is
+  collected about people, quietly, inside the stage that exists to ask their
+  permission, is not a call to make on one's own authority.
+  `FavoritesList.tsx` is byte-for-byte its pre-Task-7 self (`git diff f50d736~1`
+  empty). Reversing this is one file and a test; it is offered to the user
+  below rather than decided for them.
+- **`video_playback_completed` has never had a web emitter.** Measured across
+  the whole repo: the only call site is `apps/native/screens/GestureScreen.tsx:70`.
+  Not a regression and not an omission of this stage — a video-completion
+  signal has only ever existed on the phone.
+- **The sponsorship funnel, auth and shared lists emit nothing**, on either
+  stack. `apps/site` has exactly four emitters —
+  `GestureViewTracker.tsx:28` (`gesture_viewed`), `FavoriteButton.tsx:189` and
+  `:223` (`gesture_collection_changed`), `GestureResults.tsx:66`
+  (`search_performed`) — mirroring `apps/web`'s five. Adding any other event is
+  new data collection and belongs to a stage where that is the subject.
+
+### The deferred minors, triaged
+
+Sixteen minors were deferred across Tasks 3–6. None blocks merge. They split
+three ways, and the middle group is the one worth acting on soon.
+
+**Fix before merge: none.** Every one of the sixteen is either a comment that
+is wrong about code that is right, or a shape question with no behavioural
+consequence. Nothing here can produce an incorrect result, lose a row, or let a
+request through that should be refused.
+
+**Should be fixed next time the file is opened (six, in five bullets),
+because each is a statement in the repo that is false and will mislead a
+reader:**
+
+- `RateLimits.ts` says the retention period is "measured in minutes". It is
+  not: `RETAIN_SECONDS` is 3600 and the sweep is hourly, so a row lives up to
+  about two hours. Verified at this exit. A retention claim in a comment about
+  personal data is the wrong thing to have wrong.
+- `jobs/index.ts:344` says the task list "keeps the spec's four tasks four".
+  There are **five** slugs in that file — `send-email`, `expire-sponsorships`,
+  `send-renewal-reminders`, `cleanup-stale-payments`, `prune-rate-limits`.
+  Verified at this exit.
+- Task 5's migration precedent is miscited: the real ones are `20260920_103500`
+  and `20260920_114500`, not `add_claims`.
+- `postConsent`'s comment describes return-value handling its caller does not
+  do, and another comment says "the test below" for a test in a different file.
+- The name `postConsent` denotes two different things — the browser function in
+  `ConsentSync.tsx` and the endpoint handler in `endpoints/consent.ts`.
+
+**Genuinely deferrable (nine):** `Banner` does not forward a ref while every
+other exported `packages/ui-web` component does (Task 3 — and the brief's
+Interfaces block specified the plain function, so it is the plan's shape, not a
+deviation; a library component breaking the package's declared shape is worth a
+decision, not a scramble); the `down` migration's locked-documents rebuild is
+hand-adapted and unexecuted by any test; a wrangler comment overclaims what a
+var separates; Task 5's report gave the wrong reason for there being no
+`cloudflare-env.d.ts` diff (the file is gitignored, not per-environment);
+`RECORD_COPY[*].heading` is written in three locales and never rendered (knip
+does not inspect object properties); `withdrewConsent` duplicates a query
+`newestConsentDecision` already owns; a rapid double-toggle can leave one
+redundant `user-consents` row (append-only is the design, so an extra row is
+noise, not corruption); the Banner `label` and the privacy body are the
+implementer's own words rather than pre-reviewed i18n strings (subsumed by the
+translation and legal review below); `.append` → `.appendChild` in a test, which
+is what the neighbouring tests already use.
+
+**One deserves its own line, because it is a test that cannot fail for the
+reason it claims:** Task 6's brief-mandated guard test asserts only that the
+owner has 0 rows and never that the stranger got 1, so it would also pass
+against a handler that refused everything. That is the eleventh
+could-not-fail-as-described assertion this project has caught, and the eighth
+originating in plan text — mine. It is not a live bug (the handler is correct,
+and other tests cover the write), but it is exactly the shape this stage has
+now been burned by three times.
+
+### Carried out of Stage 8.5
+
+**1. Stage 9 is unblocked, and here is what it must do.**
+`user-consents` now has a real writer, so "no row" and "a row saying no" are
+finally distinguishable in this application. The import must **set
+`analytics_consent` explicitly for every row it writes**, because the column is
+`integer DEFAULT false NOT NULL` and an import that omits it records an
+explicit refusal — silently, for everyone. And its dry run must **assert the
+resulting distribution against the source data rather than trusting the
+insert**. The mutation in criterion 2 above is the shape of the defect: a
+reconciler that writes only on `true` passes every "consent was recorded" test
+and loses every refusal.
+
+**2. The three stacks use three different consent stores, and Stage 9 must
+decide what, if anything, migrates.** It is not a key rename:
+
+| stack | key | storage | values |
+|---|---|---|---|
+| `apps/web` | `smog_analytics_consent` | `localStorage` | `"true"` / `"false"` |
+| `apps/native` | `@smog_analytics_consent` (`packages/config/src/constants.ts:96`) | `AsyncStorage` | `"true"` / `"false"` |
+| `apps/site` | `smog.consent.analytics` (`src/lib/consentStore.ts:39`) | `localStorage` | `"granted"` / `"denied"` |
+
+The value vocabulary differs too, and the site's store is **tri-state**: absent
+means undecided, which neither old store can express — `apps/web` reads a
+missing key and a `"false"` the same way. A migration that maps `"false"` →
+`"denied"` would convert "never asked" into a recorded refusal on every device
+that never answered, which is the browser-side twin of the `analytics_consent`
+import hazard. `apps/site` additionally keeps a second key,
+`smog.consent.synced`, which records *which account* the row was posted for.
+
+**3. `apps/mobile` has no analytics at all.** Confirmed by search: no
+dependency, no module, no prompt, no consent key — zero references in the whole
+workspace. That is deliberate (a tracker before a way to record a refusal is
+the mistake this stage exists to prevent) and it is a **real gap**, because the
+old native app has both. Whether the new app gets consent and tracking is
+Stage 10's decision, not an oversight.
+
+**4. The relay's honest limitation, restated (Ruling 2).** A guest's gate is
+client-side only, because a guest's consent lives locally and there is nothing
+to look up server-side for an anonymous visitor. The relay refuses a cross-site
+post, an event outside the allowlist, anything over the rate limit, and — when
+the request carries a session — an event whose account's newest row says
+`false`. A determined client can still send events it was not authorised to
+send. That is true of every browser-side analytics gate and is why the
+allowlist and the limiter exist; it is stated here rather than in a comment
+claiming a guarantee the code does not provide.
+
+**5. `packages/ui-web`'s knip asymmetry (Ruling 6).** `knip.json`'s `workspaces`
+map covers eight workspaces and `packages/ui-web` is not one of them, so knip
+falls back to `package.json`'s `main`/`types`/`exports` — all `./src/index.ts`
+— and **never reports an entry file's own exports**. For a library that is
+correct: an export with no in-repo importer is public API, not dead code. The
+asymmetry to know is that **the identical construct fails CI in `apps/site`'s
+`src/lib` and passes in `ui-web`'s `index.ts`**, which is why Task 2 needed
+Ruling 5 and Task 3 needed nothing, and why moving a symbol between the two
+changes whether CI can see it. This is **not** Stage 8's `apps/mobile` defect
+repeating, where the entry glob was `src/**/*.ts` and swallowed ordinary
+internal modules.
+
+**6. What this stage learned about its own evidence.** Eight defects traced to
+this plan's own text — an export that broke CI, a test assertion that could not
+fail, a `-t` filter matching no test (`-t "concurrent"` against a test named
+"holds under concurrency": reproduced at this exit as `1 skipped (1)` / `6
+skipped (6)`, **exit 0, having asserted nothing**), illustrative copy that did
+not match the i18n JSON, a gate quoting another stack's API, a script named two
+ways in one brief, a guard test that could pass against a handler refusing
+everything, and a fallback design that was no limiter. **Every one was found by
+an implementer or reviewer reading shipped code instead of the plan.** The rule
+holds: when the plan and the code disagree, the code is right.
+
+### Blocked on the user
+
+- **The Cloudflare API token still needs rotating.** Exposed in a session
+  transcript; carried unchanged from Stages 7 and 8. Every bundle measurement
+  above runs against it. **Blocks:** nothing in the code, everything in the
+  account's safety.
+- **OpenPanel client id and secret for the site.** `wrangler secret put
+  OPENPANEL_CLIENT_ID --env=staging` and the same for
+  `OPENPANEL_CLIENT_SECRET`, per environment; **never in the repo** — a `vars`
+  entry would undo the entire relay while looking like configuration. Until
+  both are set the relay accepts events and drops them with a logged warning,
+  which is the state every local checkout and CI is in. **Blocks:** any event
+  reaching OpenPanel at all. The banner, the row, the limiter and the allowlist
+  all work without them.
+- **A decision on `analytics.zias.be` and the new origin.** One correction to
+  how this was framed: the relay posts **server-to-server** from the Worker to
+  `${OPENPANEL_API_URL}/track`, so browser CORS never applies to it. What still
+  needs a decision is whether the self-hosted OpenPanel project at
+  `analytics.zias.be` issues a client id/secret for this new origin and accepts
+  its events, or whether the two sites share one project — which determines
+  whether the old and new stacks' data are comparable or separate.
+  **Blocks:** the meaning of the data, not its delivery.
+- **Professional translation and legal review of the privacy policy** (Ruling
+  7). **Blocks:** a non-Dutch visitor being able to read the policy they are
+  consenting against. The banner already links to it in all three locales.
+- **One offer, needing only a yes or no:** re-add the favourites-listing
+  emitter removed under Ruling 15. It would give a signal neither stack has
+  ever had — how often people remove a favourite from the favourites page —
+  at the cost of collecting one interaction more than before. One file, one
+  test. It was removed rather than shipped because starting new collection
+  inside the consent stage is the user's call, not the implementer's.
