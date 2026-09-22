@@ -29,6 +29,7 @@ describe("AccountConsentControl", () => {
     props: Parameters<typeof AccountConsentControl>[0] = {
       initialConsent: null,
       locale: "nl",
+      userId: 1,
     }
   ) => {
     await act(async () => {
@@ -51,7 +52,7 @@ describe("AccountConsentControl", () => {
     // `ConsentBanner`. The recorded-decision caption is unaffected: it is
     // server-known already, see the next tests.
     const html = renderToStaticMarkup(
-      <AccountConsentControl initialConsent={null} locale="nl" />
+      <AccountConsentControl initialConsent={null} locale="nl" userId={1} />
     );
     expect(html).not.toContain('role="switch"');
   });
@@ -108,12 +109,9 @@ describe("AccountConsentControl", () => {
   /*
    * Ruling 11 (per the coordinator's decision on this task): the server
    * never writes the browser's consent flag, so the switch's state must
-   * come from `localStorage` alone, never from the account's recorded row —
-   * even when the two disagree. This is the assertion that pins it: the row
-   * says `granted`, `localStorage` says `denied`, and the switch must still
-   * show `denied`. A future edit that folded `initialConsent` into the
-   * switch's initial `checked` value — even only as a fallback — makes this
-   * fail by name.
+   * come from `localStorage` alone, never from the account's recorded row.
+   * Two tests pin this, because a reviewer proved one alone does not: this
+   * one covers an *explicit* local decision that disagrees with the row.
    */
   it("the switch is unaffected by what the account's row says", async () => {
     window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "denied");
@@ -124,6 +122,39 @@ describe("AccountConsentControl", () => {
         recordedAt: "2026-01-05T00:00:00.000Z",
       },
       locale: "nl",
+      userId: 1,
+    });
+
+    expect(switchEl()?.getAttribute("aria-checked")).toBe("false");
+  });
+
+  /*
+   * The realistic violation: a fallback used only when this device has not
+   * decided (`initialConsent?.analyticsConsent ?? false`, or similar), which
+   * the test above cannot catch because it only ever sets an *explicit*
+   * local value. Confirmed to fail against exactly that mutation: with the
+   * effect changed to
+   *
+   *   const local = readConsent();
+   *   if (local === null) {
+   *     setChecked(initialConsent?.analyticsConsent === true);
+   *     return;
+   *   }
+   *   setChecked(local === "granted");
+   *
+   * this test fails (`aria-checked` becomes `"true"`), and it was restored
+   * byte for byte afterwards. See the Task 6 report for the transcript.
+   */
+  it("does not fall back to the account's row when this device has not decided", async () => {
+    // `beforeEach` already clears localStorage — no key at all, the
+    // undecided case, not an explicit "denied".
+    await mount({
+      initialConsent: {
+        analyticsConsent: true,
+        recordedAt: "2026-01-05T00:00:00.000Z",
+      },
+      locale: "nl",
+      userId: 1,
     });
 
     expect(switchEl()?.getAttribute("aria-checked")).toBe("false");
@@ -136,6 +167,7 @@ describe("AccountConsentControl", () => {
         recordedAt: "2026-01-05T00:00:00.000Z",
       },
       locale: "nl",
+      userId: 1,
     });
 
     const caption = container.querySelector(
@@ -152,6 +184,7 @@ describe("AccountConsentControl", () => {
         recordedAt: "2026-02-11T00:00:00.000Z",
       },
       locale: "en",
+      userId: 1,
     });
 
     const caption = container.querySelector(
@@ -162,7 +195,7 @@ describe("AccountConsentControl", () => {
   });
 
   it("renders the no-answer state when there is no recorded row, not a default that reads as a refusal", async () => {
-    await mount({ initialConsent: null, locale: "fr" });
+    await mount({ initialConsent: null, locale: "fr", userId: 1 });
 
     const caption = container.querySelector(
       '[data-testid="account-consent-record"]'
@@ -180,10 +213,29 @@ describe("AccountConsentControl", () => {
         root.unmount();
       });
       root = createRoot(container);
-      await mount({ initialConsent: null, locale });
+      await mount({ initialConsent: null, locale, userId: 1 });
       rendered.add(container.textContent ?? "");
     }
 
     expect(rendered.size).toBe(3);
+  });
+
+  it("posts with this account's own id when toggled", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(okResponse());
+
+    await mount({ initialConsent: null, locale: "nl", userId: 42 });
+    await act(async () => {
+      switchEl().click();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // The marker `postConsent` writes is keyed by the id passed in, not a
+    // hardcoded one — asserted indirectly here via the stored marker, since
+    // `ConsentSync.test.tsx` covers the marker's shape directly.
+    expect(window.localStorage.getItem("smog.consent.synced")).toBe(
+      JSON.stringify({ userId: "42", value: "granted" })
+    );
   });
 });

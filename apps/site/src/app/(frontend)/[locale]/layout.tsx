@@ -202,7 +202,7 @@ export default async function LocaleLayout({
              * `localStorage` until there is one. See
              * `components/ConsentSync.tsx`.
              */}
-            <ConsentSync />
+            <ConsentSync userId={user.id} />
           </>
         )}
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">

@@ -174,6 +174,7 @@ export default async function AccountPage({
         <AccountConsentControl
           initialConsent={initialConsent}
           locale={current}
+          userId={user.id}
         />
       </section>
 

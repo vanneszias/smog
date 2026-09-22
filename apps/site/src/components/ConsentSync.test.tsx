@@ -13,6 +13,8 @@ import { ConsentSync } from "./ConsentSync";
 let container: HTMLDivElement;
 let root: Root;
 
+const SYNCED_KEY = "smog.consent.synced";
+
 describe("ConsentSync", () => {
   beforeEach(() => {
     container = document.createElement("div");
@@ -30,9 +32,9 @@ describe("ConsentSync", () => {
     vi.restoreAllMocks();
   });
 
-  const mount = async () => {
+  const mount = async (userId: number | string = 1) => {
     await act(async () => {
-      root.render(<ConsentSync />);
+      root.render(<ConsentSync userId={userId} />);
     });
   };
 
@@ -48,7 +50,7 @@ describe("ConsentSync", () => {
   });
 
   it("adds nothing to the server-rendered markup either", () => {
-    expect(renderToStaticMarkup(<ConsentSync />)).toBe("");
+    expect(renderToStaticMarkup(<ConsentSync userId={1} />)).toBe("");
   });
 
   it("makes no request when the visitor has not decided yet", async () => {
@@ -87,6 +89,17 @@ describe("ConsentSync", () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       analyticsConsent: false,
     });
+  });
+
+  it("marks the sync with the account it was made for", async () => {
+    window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(okResponse());
+
+    await mount(7);
+
+    expect(window.localStorage.getItem(SYNCED_KEY)).toBe(
+      JSON.stringify({ userId: "7", value: "granted" })
+    );
   });
 
   /*
@@ -169,5 +182,68 @@ describe("ConsentSync", () => {
 
     await expect(mount()).resolves.toBeUndefined();
     expect(container.innerHTML).toBe("");
+  });
+
+  /*
+   * Ruling 12: the shared/library computer walkthrough. Account 1 granted
+   * and its marker is on record; account 2 signs in on the same browser.
+   * `localStorage` still says "granted" — that is account 1's answer, not
+   * account 2's — and the realistic bug is treating it as already
+   * reconciled (or worse, syncing it as if account 2 had said so). Neither
+   * may happen: the browser's decision must be cleared, and nothing posted,
+   * so the banner asks account 2 for themselves.
+   */
+  describe("when the marker names a different account", () => {
+    const markerFor = (userId: string, value: string) =>
+      window.localStorage.setItem(
+        SYNCED_KEY,
+        JSON.stringify({ userId, value })
+      );
+
+    it("clears the browser's decision instead of syncing it to the new account", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      markerFor("1", "granted");
+      const fetchMock = vi.spyOn(globalThis, "fetch");
+
+      await mount(2);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("leaves the banner's undecided state as the result", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      markerFor("1", "granted");
+
+      await mount(2);
+
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
+    });
+
+    it("does not fabricate a row for the new account from the old marker's value", async () => {
+      // The tempting-but-wrong fix, spelled out as a negative assertion:
+      // keying the marker by user id and falling through to "not yet
+      // synced" would make this mount POST `granted` under account 2 — a
+      // decision account 2 never made. This must not happen either.
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      markerFor("1", "granted");
+      const fetchMock = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(okResponse());
+
+      await mount(2);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("does the same for a refusal, not only for a grant", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "denied");
+      markerFor("1", "denied");
+      const fetchMock = vi.spyOn(globalThis, "fetch");
+
+      await mount(2);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
+    });
   });
 });

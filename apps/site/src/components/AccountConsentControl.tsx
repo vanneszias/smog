@@ -26,10 +26,15 @@ import type { Locale } from "@/lib/locale";
  * `lib/consentStore.ts` already enforces exactly that — nothing is written
  * until a real decision is made on this browser — and merging the account's
  * row into the switch would quietly undo it for every returning visitor.
- * `AccountConsentControl.test.tsx`'s "the switch is unaffected by what the
- * account's row says" pins this: it passes a row that disagrees with
- * `localStorage` and asserts the switch still shows the local value, so a
- * future edit that wires the row into `checked` fails that test by name.
+ * `AccountConsentControl.test.tsx` pins two shapes of that mistake, because
+ * one test proved not to be enough: "the switch is unaffected by what the
+ * account's row says" passes a row that disagrees with an *explicit* local
+ * decision and asserts the switch shows the local value — but a reviewer
+ * showed that test alone does not catch the more realistic edit, a fallback
+ * used only when `localStorage` is undecided (`initialConsent?.…  ?? …`).
+ * "the switch does not fall back to the account's row when this device has
+ * not decided" is the second test, and it is the one that actually fails if
+ * `initialConsent` is read into `checked` at all, in either branch.
  *
  * The corollary is that a device-scoped toggle alone is not honest about
  * what it covers, so the label below says "on this device" rather than
@@ -133,9 +138,11 @@ const RECORD_COPY: Record<
 export function AccountConsentControl({
   initialConsent,
   locale,
+  userId,
 }: {
   initialConsent: ConsentRecord | null;
   locale: Locale;
+  userId: number | string;
 }) {
   const [checked, setChecked] = useState<boolean | undefined>(undefined);
 
@@ -154,8 +161,11 @@ export function AccountConsentControl({
     writeConsent(next ? "granted" : "denied");
     // Not awaited: this is a mount-effect-shaped fire-and-forget, and
     // `postConsent` never throws. A failed POST leaves `ConsentSync`'s sync
-    // marker unset, so the next signed-in page load retries it.
-    postConsent(next);
+    // marker unset, so the next signed-in page load retries it. `userId` is
+    // this account's own id — the one the session already resolved this
+    // page to — so the marker `postConsent` writes matches the account this
+    // toggle actually wrote a row for.
+    postConsent(userId, next);
   };
 
   return (
