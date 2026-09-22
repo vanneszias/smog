@@ -1474,22 +1474,29 @@ bun -F @smog/ui-native test src/components/Sheet.test.tsx
 
 Expected: FAIL, then PASS.
 
-**Do not reach for `jest.mock("react-native-reanimated", () =>
-require("react-native-reanimated/mock"))`.** An earlier draft of this step
-did, and Task 4 tried it and proved it does not work in this dependency
-combination: reanimated's own `mock.js` still transitively requires the real
-`react-native-worklets`, which ships no mock of its own, so the render
-crashes identically. Task 4 dropped `animate-pulse` from `Skeleton` for
-exactly this reason, and recorded it in the component as a deliberate
-difference from web rather than a silent one.
+**The Reanimated mock is already in `jest.setup.ts`, and getting it there took
+two rounds — read this before you touch it.** Reanimated's own `mock.js`
+transitively requires `react-native-worklets`, so mocking reanimated alone
+still crashes the renderer. Both are needed, **worklets first**:
 
-**This is the measurement that should decide Step 2.** If Reanimated cannot
-be mocked, `@gorhom/bottom-sheet` — which renders through Reanimated — cannot
-be tested here at all without solving the worklets problem first, and the
-`Modal` option is not merely smaller but the only one whose behaviour this
-suite can assert. If you want the gesture-driven sheet anyway, the cost is
-making `react-native-worklets` testable, and that is a task of its own, not a
-step inside this one. Record which you chose and why.
+```ts
+jest.mock("react-native-worklets", () =>
+  require("react-native-worklets/lib/module/mock")
+);
+jest.mock("react-native-reanimated", () =>
+  require("react-native-reanimated/mock")
+);
+```
+
+Task 4 added exactly this. Confirm it is there rather than adding a second
+registration.
+
+That history matters for Step 2's decision. An intermediate report claimed
+`react-native-worklets` ships no mock and that therefore anything rendering
+through Reanimated could not be tested here — which would have made `Modal`
+the only option rather than a choice. **That claim was false**; the `find`
+that "proved" it had been run with `-maxdepth 1`. So Step 2 is a real
+measurement again: both options are testable, and the number decides.
 
 - [ ] **Step 4: Write the failing `Toast` tests**
 
