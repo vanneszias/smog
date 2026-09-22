@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { seedConsent } from "../helpers/seedConsent";
 import {
   cleanupGestureFixtures,
   type GestureFixtures,
@@ -75,6 +76,15 @@ test.describe("Gestures list", () => {
   });
 
   test("shows different gestures on page two", async ({ page }) => {
+    // Not what this test is about — see `seedConsent`'s own comment. The
+    // pagination sits at the foot of the list, and whether the undecided
+    // banner covers it depends on how tall the cards are when the click
+    // lands: before their images load the button sits clear of it, after
+    // they load it can sit underneath, where the banner takes the click.
+    // Playwright does not scroll an element that is already on screen, so
+    // the spacer below the page does not help here. Unseeded, this failed
+    // all three attempts on `2e94eda` after passing on `899a6f5`.
+    await seedConsent(page);
     await page.goto(`${SITE}/nl/gestures?category=${fixtures.bigCategoryId}`);
 
     const first = await cards(page).first().innerText();
