@@ -2096,8 +2096,16 @@ the non-site suites, `bun audit`, `bun run build` and knip green; Payload
 types, admin import map and `cloudflare-env.d.ts` regenerate with no diff.
 `expo-doctor` failed locally on its two network checks (the sandbox proxy
 answers Expo's hosts with "Host not in allowlist") — the environment, as
-AGENTS.md warns, and in `apps/native`, which this change does not touch. The
-bundle-size job needs Cloudflare credentials and is left to CI.
+AGENTS.md warns, and in `apps/native`, which this change does not touch.
+
+**The bundle-size job cannot vouch for this, so it was measured here.** In CI,
+`site-bundle-size` goes green in about four seconds, because the repository has
+no Cloudflare secrets and the job skips itself with a warning. Its green is not a
+build. The OpenNext build (`CLOUDFLARE_ENV=staging bun run build:app`, with a
+throwaway `PAYLOAD_SECRET`) succeeds on wrangler 4.136.3 in 35 s, and
+`check-bundle-size` reports **7.40 MiB gzipped of 10.00 MiB, 26% headroom**,
+the same as the last recorded 7,574.53 KiB. Until those secrets exist, every
+wrangler or dependency bump has to be measured by hand like this.
 
 **What would falsify this:** a recurrence of `message?.id === id` on a
 commit carrying wrangler ≥ 4.134.0. The fixed code no longer contains that
