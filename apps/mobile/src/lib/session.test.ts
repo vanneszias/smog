@@ -7,14 +7,16 @@ import {
   changePassword,
   deleteAccount,
   getToken,
-  getVerifiedToken,
+  getVerifiedSession,
   INSTALL_MARKER,
   refresh,
   requestEmailChange,
   SessionProvider,
+  setVerifiedSessionForTests,
   signIn,
   signOut,
   signUp,
+  storeToken,
   TOKEN_KEY,
   useSession,
 } from "./session";
@@ -261,19 +263,32 @@ describe("the reinstall case", () => {
 });
 
 /**
- * `getVerifiedToken` — added for `consentSync.ts`'s fix-round-1 fix
- * (finding 2): the token `resolveSessionUser` most recently read, whether
- * or not `/users/me` found a user with it. `resolveSessionUser` itself is
- * not exported, so these drive it the only way anything outside this file
- * can: through a mounted `SessionProvider`.
+ * `getVerifiedSession` — added for `consentSync.ts`'s fix-round-1 fix
+ * (finding 2) and corrected in fix round 2: the token/account pair
+ * `resolveSessionUser` most recently *confirmed*, which it may only set
+ * once `/users/me` has actually answered, for that exact token, naming a
+ * real user. `resolveSessionUser` itself is not exported, so these drive
+ * it the only way anything outside this file can: through a mounted
+ * `SessionProvider`.
+ *
+ * Fix round 2's own review is what named the version of this describe
+ * block below that no longer exists: it asserted `getVerifiedSession`'s
+ * predecessor recorded a token the instant it was read, before `/users/me`
+ * had answered — which was exactly the bug (a token could be "verified"
+ * for an account that had not, in fact, been confirmed yet). The tests
+ * below assert the opposite of that one, on purpose.
  */
-describe("getVerifiedToken", () => {
+describe("getVerifiedSession", () => {
   beforeEach(() => {
     jest.resetAllMocks();
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue("1");
+    // `verifiedSession` is module-level state that outlives any one test;
+    // reset it so an earlier test's confirmed pair can't make this one
+    // pass for the wrong reason.
+    setVerifiedSessionForTests(null);
   });
 
-  it("records the token /users/me was verified with", async () => {
+  it("records the token and the account /users/me confirmed together", async () => {
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("t");
     global.fetch = jest.fn(() =>
       json({ user: { email: "a@b.test", id: "1", role: "user" } })
@@ -284,10 +299,10 @@ describe("getVerifiedToken", () => {
     });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(getVerifiedToken()).toBe("t");
+    expect(getVerifiedSession()).toEqual({ token: "t", userId: "1" });
   });
 
-  it("still records the token when /users/me could not verify it", async () => {
+  it("records nothing when /users/me could not verify the token — never the token alone", async () => {
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("t");
     global.fetch = jest.fn(() =>
       Promise.reject(new TypeError("offline"))
@@ -298,15 +313,39 @@ describe("getVerifiedToken", () => {
     });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    // `resolveSessionUser` answered `null` (could not verify), but it did
-    // attempt this token — `consentSync.ts`'s reconciler needs to know
-    // *that*, not whether the attempt succeeded, to tell "unverified" apart
-    // from "the keychain has since moved on to a different token".
-    expect(getVerifiedToken()).toBe("t");
+    // The bug fix round 2 found: this used to record `t` here regardless,
+    // because it was written the instant the token was read rather than
+    // once a response had actually confirmed whose it was.
+    expect(getVerifiedSession()).toBeNull();
     expect(result.current.user).toBeNull();
   });
 
-  it("records no token when there is none to verify", async () => {
+  it("leaves an earlier confirmed pair untouched when a later resolve for the same token fails", async () => {
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("t");
+    global.fetch = jest.fn(() =>
+      json({ user: { email: "a@b.test", id: "1", role: "user" } })
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useSession(), {
+      wrapper: SessionProvider,
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(getVerifiedSession()).toEqual({ token: "t", userId: "1" });
+
+    // A later resolve for the very same token (not a switch) that happens
+    // to fail — offline for a moment — does not retract a confirmation
+    // that still holds; `session.ts`'s own comment on `verifiedSession`
+    // explains why leaving it is the safe default here, not clearing it.
+    const offlineFetch = jest.fn(() =>
+      Promise.reject(new TypeError("offline"))
+    ) as unknown as typeof fetch;
+    global.fetch = offlineFetch;
+    await storeToken("t");
+    await waitFor(() => expect(offlineFetch).toHaveBeenCalled());
+
+    expect(getVerifiedSession()).toEqual({ token: "t", userId: "1" });
+  });
+
+  it("clears the verified pair when there is no token left to confirm", async () => {
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
 
     const { result } = renderHook(() => useSession(), {
@@ -314,7 +353,7 @@ describe("getVerifiedToken", () => {
     });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(getVerifiedToken()).toBeNull();
+    expect(getVerifiedSession()).toBeNull();
   });
 });
 

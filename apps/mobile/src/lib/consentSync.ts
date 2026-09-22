@@ -8,7 +8,7 @@ import {
   readConsent,
   subscribeConsent,
 } from "@/lib/consent";
-import { getToken, getVerifiedToken, useSession } from "@/lib/session";
+import { getToken, getVerifiedSession, useSession } from "@/lib/session";
 
 /**
  * Writes a signed-in person's analytics decision to `POST /api/consent`, once
@@ -25,7 +25,7 @@ import { getToken, getVerifiedToken, useSession } from "@/lib/session";
  *   app returns to the foreground. A failed write leaves its marker
  *   `pending`, and the next pass sends it again.
  *
- * Two more things a fix-round review found, both about `useSession`'s
+ * Three more things two fix-round reviews found, all about `useSession`'s
  * asynchrony rather than `AsyncStorage`'s:
  *
  * - `user === null` does not mean "signed out". `resolveSessionUser`
@@ -34,13 +34,25 @@ import { getToken, getVerifiedToken, useSession } from "@/lib/session";
  *   429/5xx) — `pass` tells the two apart with `getToken()` before it will
  *   drop a decision.
  * - A pass carries the `userId` it was enqueued for, but the keychain can
- *   already hold a *different* account's token by the time it runs
- *   (`SessionProvider` does not re-verify the instant a token changes) —
- *   `pass` refuses to POST unless `getToken()` still matches
- *   `getVerifiedToken()`, so an outgoing account's decision is never sent
- *   under an incoming one's token. And `postConsent`'s request now carries
- *   a hand-rolled timeout, so a stalled one fails into the retry path
- *   instead of holding every later pass queued behind it forever.
+ *   already hold another account's token by the time it runs
+ *   (`SessionProvider` does not re-verify the instant a token changes).
+ *   `pass` refuses to POST unless `session.ts`'s `getVerifiedSession()`
+ *   names *both* the same token `getToken()` reads right now *and* the
+ *   same `userId` this pass carries — see that function's own comment for
+ *   why a token match alone (fix round 1's first attempt) was not enough:
+ *   `resolveSessionUser` used to record a token the instant it read it,
+ *   before `/users/me` had said whose it was, so a pass for the outgoing
+ *   account could still see the incoming account's token as "verified"
+ *   during the window before that account's own resolution landed.
+ * - Once a pass does decide to POST, it sends the exact token
+ *   `getVerifiedSession()` named — never `auth: true`'s own fresh keychain
+ *   read — so a keychain read between the check above and the request
+ *   itself can't smuggle in a different token than the one just verified.
+ *
+ * `postConsent`'s request also carries a hand-rolled timeout, so a stalled
+ * one fails into the retry path instead of holding every later pass queued
+ * behind it — including the one that would drop a marker on a real
+ * sign-out — forever.
  */
 export const CONSENT_SYNCED_KEY = "smog.consent.synced";
 
@@ -112,6 +124,7 @@ async function dropForeignDecision(): Promise<void> {
 
 async function postConsent(
   userId: string,
+  token: string,
   value: "granted" | "denied"
 ): Promise<void> {
   // Provisional first: if the app dies mid-request, the decision is already
@@ -134,10 +147,18 @@ async function postConsent(
   }, CONSENT_POST_TIMEOUT_MS);
 
   try {
+    // `auth: true` is deliberately not used here: that option has
+    // `payloadFetch` read the keychain itself, at whatever moment it gets
+    // around to it, which is exactly the fresh read `pass`'s caller just
+    // went to the trouble of avoiding. Sending `token` — the one `pass`
+    // already confirmed against `getVerifiedSession()` — keeps the check
+    // and the request using the same value throughout.
     await payloadFetch("/consent", {
-      auth: true,
       body: JSON.stringify({ analyticsConsent: value === "granted" }),
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `JWT ${token}`,
+        "Content-Type": "application/json",
+      },
       method: "POST",
       signal: controller.signal,
     });
@@ -184,19 +205,25 @@ async function pass(userId: string | null): Promise<void> {
     return;
   }
 
-  // The keychain may already hold a different token than the one `userId`
-  // was verified with: `SessionProvider` does not re-verify the instant a
-  // token changes (see `session.ts`'s `getVerifiedToken` comment), so a
-  // pass enqueued for the outgoing account can still run after the
-  // incoming account's token has already been written. POSTing with
-  // whatever token is in the keychain *now* would file this decision under
-  // whoever that token belongs to — refuse, and let the next pass, once
-  // the session has caught up, reconcile for real (fix round 1, finding 2).
-  if ((await getToken()) !== getVerifiedToken()) {
+  // A pass may only POST once *both* the account and the token it would
+  // send are the ones `/users/me` actually confirmed together — see
+  // `session.ts`'s `getVerifiedSession` comment for the window this
+  // closes, and why a token match alone (fix round 1's first attempt) was
+  // not enough. `userId` is checked here even though `marker.userId` was
+  // already checked above: the marker names whose *decision* this is, this
+  // checks whose *session* is live right now, and the two can disagree
+  // (fix round 1, finding 2's account-switch race) even when they happen
+  // to name the same value the marker does.
+  const verified = getVerifiedSession();
+  if (
+    verified === null ||
+    verified.userId !== userId ||
+    (await getToken()) !== verified.token
+  ) {
     return;
   }
 
-  await postConsent(userId, consent);
+  await postConsent(userId, verified.token, consent);
 }
 
 let queue: Promise<void> = Promise.resolve();

@@ -429,37 +429,57 @@ interface SessionContextValue {
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 /**
- * The token {@link resolveSessionUser} most recently read from the
- * keychain when it (attempted to) resolve `/users/me` — whether or not
- * that request found a user, and regardless of whether it even completed.
- *
- * `consentSync.ts`'s reconciler compares this against a fresh
- * {@link getToken} immediately before every `POST /api/consent`: this
- * provider does not flip `loading` back to `true` the instant a new token
- * is stored (`storeToken`'s `notifySessionChanged` starts a fresh
- * `resolveSessionUser` call, but the component tree keeps rendering
- * whoever `user` was before that call resolves), so a reconciliation pass
- * already queued for the outgoing account can still run after a different
- * account's token has already been written. Sending that pass's POST with
- * whatever token the keychain holds *right now* would attribute the
- * outgoing account's decision to whoever the new token belongs to — this
- * lets the reconciler tell "the token I was verified with" apart from
- * "the token that happens to be in the keychain this instant" and refuse
- * to POST when they differ.
+ * A token, paired with the account `GET /api/users/me` actually named for
+ * it — the one thing this file is willing to call "verified".
  */
-let verifiedToken: string | null = null;
-
-/** See {@link verifiedToken}. */
-export function getVerifiedToken(): string | null {
-  return verifiedToken;
+interface VerifiedSession {
+  token: string;
+  userId: string;
 }
 
 /**
- * Tests only: pretend the session was last verified against this token,
- * without driving a real `resolveSessionUser()` round trip to set it.
+ * The token/account pair {@link resolveSessionUser} most recently
+ * confirmed — set only once `/users/me` has answered, for this exact
+ * token, with a real user, never before that response and never on a
+ * failed or empty one. A fix-round-2 correction: an earlier version of
+ * this recorded the token the instant it was read, before `/users/me`
+ * even answered, which meant a POST could go out for a token nobody had
+ * actually confirmed belonged to anybody yet.
+ *
+ * `consentSync.ts`'s reconciler treats a pass as safe to POST only when
+ * {@link getToken} still agrees with `token` here *and* the pass's own
+ * `userId` agrees with `userId` here. Both have to hold, because this
+ * provider does not flip `loading` back to `true` the instant a new token
+ * is stored (`storeToken`'s `notifySessionChanged` starts a fresh
+ * `resolveSessionUser` call, but the component tree keeps rendering
+ * whoever `user` was before that call resolves): a reconciliation pass
+ * already queued for the outgoing account can still run while a
+ * different account's token is already in the keychain and that
+ * account's own `resolveSessionUser` call is still in flight — the exact
+ * window this pairing exists to close. Until that call actually confirms
+ * the new pair, this one still names the *previous* token and account, so
+ * a pass for the outgoing account is refused (token match, but this pair
+ * is stale the instant the keychain moves on) — never silently sent under
+ * whichever token now happens to be in the keychain.
+ *
+ * Cleared, not merely left stale, when the keychain has no token at all:
+ * there is nothing left it could still legitimately confirm.
  */
-export function setVerifiedTokenForTests(token: string | null): void {
-  verifiedToken = token;
+let verifiedSession: VerifiedSession | null = null;
+
+/** See {@link verifiedSession}. */
+export function getVerifiedSession(): VerifiedSession | null {
+  return verifiedSession;
+}
+
+/**
+ * Tests only: pretend the session was last confirmed as this pair, without
+ * driving a real `resolveSessionUser()` round trip to set it.
+ */
+export function setVerifiedSessionForTests(
+  session: VerifiedSession | null
+): void {
+  verifiedSession = session;
 }
 
 /**
@@ -472,13 +492,9 @@ export function setVerifiedTokenForTests(token: string | null): void {
 async function resolveSessionUser(): Promise<SessionUser | null> {
   const token = await getToken();
 
-  // Recorded before the request even starts, and whether or not it
-  // succeeds: a token this call attempted (and failed) to verify is still
-  // the token "this session" is currently associated with, for
-  // {@link getVerifiedToken}'s purposes — see that function's own comment.
-  verifiedToken = token;
-
   if (token === null) {
+    // Nothing left for `verifiedSession` to confirm; see its own comment.
+    verifiedSession = null;
     return null;
   }
 
@@ -487,6 +503,15 @@ async function resolveSessionUser(): Promise<SessionUser | null> {
       "/users/me",
       { auth: true }
     );
+
+    // The only assignment: a real response, for this exact token, naming
+    // a real account. A failed request (the `catch` below) or a `200`
+    // with no user leaves `verifiedSession` exactly as it was — see its
+    // own comment for why that is the safe default rather than clearing
+    // it, and why it is never set before this line.
+    if (result.user !== null) {
+      verifiedSession = { token, userId: result.user.id };
+    }
 
     return result.user;
   } catch {

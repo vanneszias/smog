@@ -16,7 +16,9 @@ import {
 import {
   INSTALL_MARKER,
   SessionProvider,
-  setVerifiedTokenForTests,
+  setVerifiedSessionForTests,
+  storeToken,
+  useSession,
 } from "./session";
 
 jest.mock("expo-secure-store");
@@ -57,14 +59,16 @@ beforeEach(async () => {
   resetConsentForTests();
   await loadConsent();
   (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("token");
-  // `pass`'s finding-2 fix (fix round 1) refuses to POST unless the
-  // keychain's current token matches the one the session was last verified
-  // with. None of these tests drive a real `resolveSessionUser()` round
-  // trip, so that "verified" state is set directly to the same "token"
-  // `SecureStore` answers with above — the precondition a real app would
-  // already be in by the time `useConsentSync` ever calls `reconcileConsent`
-  // for a signed-in user.
-  setVerifiedTokenForTests("token");
+  // `pass` refuses to POST unless the pass's own `userId` and the
+  // keychain's current token both agree with the account and token
+  // `/users/me` last confirmed *together* (`session.ts`'s
+  // `getVerifiedSession`). None of the tests below that call
+  // `reconcileConsent` directly drive a real `resolveSessionUser()` round
+  // trip, so that confirmed pairing is set directly, matching the
+  // `SecureStore` mock above and the "7" every such test uses — the
+  // precondition a real app would already be in by the time
+  // `useConsentSync` ever calls `reconcileConsent` for a signed-in user.
+  setVerifiedSessionForTests({ token: "token", userId: "7" });
   global.fetch = jest.fn(ok) as unknown as typeof fetch;
   jest.spyOn(console, "error").mockImplementation(() => undefined);
   jest.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -265,15 +269,38 @@ describe("reconcileConsent, an unverified session (Review Focus 3 and 5, fix rou
 });
 
 /**
- * Fix round 1, finding 2: a pass carries the `userId` it was enqueued for,
- * but by the time it actually runs the keychain can already hold another
- * account's token — `SessionProvider` does not re-verify the instant a
- * token changes. `pass` now refuses to POST unless the keychain's current
- * token still matches the one the session was verified with.
+ * Fix round 1, finding 2 (corrected in fix round 2): a pass carries the
+ * `userId` it was enqueued for, but by the time it actually runs the
+ * keychain can already hold another account's token — `SessionProvider`
+ * does not re-verify the instant a token changes. `pass` refuses to POST
+ * unless `session.ts`'s `getVerifiedSession()` names both the account this
+ * pass carries and the token currently in the keychain, and it sends
+ * exactly that verified token rather than letting `payloadFetch` re-read
+ * the keychain for its own.
+ *
+ * Fix round 2's own review is why there are two kinds of test here rather
+ * than one: the first two isolate each half of that comparison directly
+ * (an internal-consistency check, using `setVerifiedSessionForTests` to
+ * construct states that are simple to state precisely); the third
+ * reproduces the actual account-switch race end to end, through a real
+ * `SessionProvider`, without injecting any state production can't reach —
+ * fix round 1's own version of this describe block did exactly that
+ * (`setVerifiedTokenForTests("tA")` was never a value a real resolve could
+ * have produced at that point), which is why it passed without actually
+ * closing the race it was named for.
  */
-describe("reconcileConsent, a token the session has moved on from (Review Focus 5, fix round 1)", () => {
+describe("reconcileConsent, a token the session has moved on from (Review Focus 5, fix round 2)", () => {
+  it("sends the account's decision under the exact token the session was verified with", async () => {
+    await setConsent("granted");
+
+    await reconcileConsent("7");
+
+    const [[, init]] = consentPosts();
+    expect(new Headers(init.headers).get("Authorization")).toBe("JWT token");
+  });
+
   it("does not POST when the keychain now holds a different token than the one this session verified", async () => {
-    setVerifiedTokenForTests("tA");
+    setVerifiedSessionForTests({ token: "tA", userId: "7" });
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("tB");
     await AsyncStorage.setItem(
       CONSENT_SYNCED_KEY,
@@ -289,6 +316,133 @@ describe("reconcileConsent, a token the session has moved on from (Review Focus 
       userId: "7",
       value: "granted",
     });
+  });
+
+  it("does not POST when the verified session names a different account than this pass, even if the token still matches", async () => {
+    // The token hasn't changed, but the confirmed pairing names a
+    // different account than the one this pass carries — an internal
+    // inconsistency `pass` refuses to paper over by trusting the token
+    // match alone.
+    setVerifiedSessionForTests({ token: "token", userId: "7" });
+    await AsyncStorage.setItem(
+      CONSENT_SYNCED_KEY,
+      JSON.stringify({ pending: true, userId: "9", value: "granted" })
+    );
+    await setConsent("granted");
+
+    await reconcileConsent("9");
+
+    expect(consentPosts()).toHaveLength(0);
+    expect(await marker()).toEqual({
+      pending: true,
+      userId: "9",
+      value: "granted",
+    });
+  });
+
+  it("sends exactly the verified token, not a fresh keychain read, even if the keychain has since moved on again", async () => {
+    // Simulates the check/use gap directly: `pass`'s own gate check reads
+    // the keychain once (sees "tA", matching the verified pairing) — a
+    // second, later keychain read (what `payloadFetch`'s own `auth: true`
+    // would have done) would see "tC" instead. The POST must still carry
+    // "tA": the token `pass` already confirmed, not whatever the keychain
+    // says by the time the request itself goes out.
+    setVerifiedSessionForTests({ token: "tA", userId: "7" });
+    (SecureStore.getItemAsync as jest.Mock)
+      .mockResolvedValueOnce("tA")
+      .mockResolvedValue("tC");
+    await setConsent("granted");
+
+    await reconcileConsent("7");
+
+    const [[, init]] = consentPosts();
+    expect(new Headers(init.headers).get("Authorization")).toBe("JWT tA");
+  });
+
+  /**
+   * The actual race, reproduced through a real `SessionProvider`: account
+   * A is genuinely verified (a real `/users/me` answering A's id, against
+   * "tA"), then the keychain is handed B's token while B's own
+   * `/users/me` is still in flight. `getVerifiedSession()` still names A
+   * during that whole window — this is `session.ts`'s own fix-round-2
+   * correction at work, not anything this test sets up directly — so a
+   * pass enqueued for A while the tree still rendered A (exactly what
+   * `useConsentSync`'s own closure would have done) must not send A's
+   * decision under B's token. Once B's `/users/me` finally answers, the
+   * next pass (for B) finds A's marker foreign and drops it — never
+   * having POSTed it under anyone's token at all.
+   */
+  it("never sends an outgoing account's decision under an incoming account's token, across a real account switch", async () => {
+    const meAs = (id: string) =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ user: { email: `${id}@b.test`, id, role: "user" } }),
+          { headers: { "Content-Type": "application/json" }, status: 200 }
+        )
+      );
+
+    // A is genuinely verified against "tA".
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("tA");
+    global.fetch = jest.fn((url: string) =>
+      String(url).includes("/users/me") ? meAs("7") : ok()
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useSession(), {
+      wrapper: SessionProvider,
+    });
+    await waitFor(() => expect(result.current.user?.id).toBe("7"));
+
+    // A's decision, still pending from an earlier failed POST.
+    await setConsent("granted");
+    await AsyncStorage.setItem(
+      CONSENT_SYNCED_KEY,
+      JSON.stringify({ pending: true, userId: "7", value: "granted" })
+    );
+
+    // The keychain now holds B's token, and B's own resolve is started
+    // (via `storeToken`, exactly as a real sign-in would) but never
+    // answers here — the real window: `getVerifiedSession()` still names
+    // A, `getToken()` already names B.
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("tB");
+    let resolveUsersMeForB: (response: Response) => void = () => undefined;
+    global.fetch = jest.fn((url: string) => {
+      if (String(url).includes("/users/me")) {
+        return new Promise<Response>((resolve) => {
+          resolveUsersMeForB = resolve;
+        });
+      }
+      return ok();
+    }) as unknown as typeof fetch;
+    await storeToken("tB");
+
+    // A pass enqueued for A — standing in for what `useConsentSync`'s own
+    // closure, still holding A's id, would have queued during this
+    // window — must not POST.
+    await reconcileConsent("7");
+
+    expect(consentPosts()).toHaveLength(0);
+    expect(await marker()).toEqual({
+      pending: true,
+      userId: "7",
+      value: "granted",
+    });
+
+    // Now B's own resolution lands.
+    resolveUsersMeForB(
+      new Response(
+        JSON.stringify({ user: { email: "b@b.test", id: "8", role: "user" } }),
+        { headers: { "Content-Type": "application/json" }, status: 200 }
+      )
+    );
+    await waitFor(() => expect(result.current.user?.id).toBe("8"));
+
+    // A pass for B — standing in for the one `useConsentSync` runs once
+    // its own `userId` catches up — drops A's marker as foreign, having
+    // never sent a consent POST under B's token for A's decision.
+    await reconcileConsent("8");
+
+    expect(readConsent()).toBeNull();
+    expect(await marker()).toBeNull();
+    expect(consentPosts()).toHaveLength(0);
   });
 
   it("aborts a stalled consent POST after 15s, leaving it pending for the next pass to retry", async () => {
