@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { renderHook } from "@testing-library/react-native";
 import * as analytics from "./analytics";
 import { loadConsent, resetConsentForTests, setConsent } from "./consent";
 
@@ -7,18 +8,54 @@ const mockScreenView = jest.fn();
 const mockIdentify = jest.fn();
 const mockClear = jest.fn();
 const mockConstructed = jest.fn();
+/**
+ * What the real SDK would put on the wire. `@openpanel/react-native`'s
+ * `OpenPanel` remembers the last `screenView` path (`this.lastPath`) and
+ * attaches it as `__path` to every later `track` call
+ * (`node_modules/@openpanel/react-native/dist/index.js`), so a path sent
+ * once as a screen view rides along on every event after it. The mock
+ * reproduces exactly that, so a test can inspect the payloads an event
+ * would really carry rather than only the arguments this module passed.
+ */
+const mockWire = jest.fn();
 
 jest.mock("@openpanel/react-native", () => ({
   OpenPanel: jest.fn().mockImplementation((options: unknown) => {
     mockConstructed(options);
+    let lastPath = "";
     return {
       clear: mockClear,
       identify: mockIdentify,
-      screenView: mockScreenView,
-      track: mockTrack,
+      screenView: (path: string, properties?: Record<string, unknown>) => {
+        mockScreenView(path, properties);
+        lastPath = path;
+        mockWire("screen_view", { ...properties, __path: path });
+      },
+      track: (name: string, properties?: Record<string, unknown>) => {
+        mockTrack(name, properties);
+        mockWire(name, { ...properties, __path: lastPath });
+      },
     };
   }),
 }));
+
+/*
+ * expo-router, as a route in this app would see it: `useSegments()` gives
+ * the route's own file-system pattern, `usePathname()` the concrete URL
+ * with each dynamic segment filled in. Both are provided so a screen-view
+ * hook that reads the concrete pathname is caught sending it.
+ */
+let mockSegments: string[] = [];
+let mockPathname = "/";
+jest.mock("expo-router", () => ({
+  usePathname: () => mockPathname,
+  useSegments: () => mockSegments,
+}));
+
+const onRoute = (segments: string[], pathname: string): void => {
+  mockSegments = segments;
+  mockPathname = pathname;
+};
 
 const ENV = {
   EXPO_PUBLIC_OPENPANEL_API_URL: "https://analytics.example/api",
@@ -107,7 +144,8 @@ describe("mobile analytics", () => {
       result_count: 2,
       source: "submit",
     });
-    analytics.trackScreenView("/gestures/1");
+    onRoute(["gestures", "[id]"], "/gestures/1");
+    renderHook(() => analytics.useScreenViews());
 
     expect(mockIdentify).not.toHaveBeenCalled();
     expect(mockConstructed.mock.calls[0][0]).not.toHaveProperty("profileId");
@@ -147,9 +185,115 @@ describe("mobile analytics", () => {
 
   it("sends screen views through the SDK's own screenView", async () => {
     await setConsent("granted");
-    analytics.trackScreenView("/search");
+    onRoute(["(tabs)", "search"], "/search");
+    renderHook(() => analytics.useScreenViews());
     expect(mockScreenView).toHaveBeenCalledWith("/search", {
       platform: "native",
     });
+  });
+
+  it("sends no screen view before consent is granted", () => {
+    onRoute(["(tabs)", "search"], "/search");
+    renderHook(() => analytics.useScreenViews());
+    expect(mockScreenView).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Screen views carry route PATTERNS, never concrete paths (final-review
+ * Critical finding, 2026-09-22). A list is owned by one account and the
+ * lists tab is signed-in only, so `/lists/<id>` names an account as surely
+ * as a user id would — and the SDK then repeats that path as `__path` on
+ * every later event. Each dynamic segment is sent as its `[param]` name.
+ */
+describe("screen views name the route, not the thing on it", () => {
+  const DYNAMIC_ROUTES: {
+    id: string;
+    pathname: string;
+    pattern: string;
+    segments: string[];
+  }[] = [
+    {
+      id: "list-abc123",
+      pathname: "/lists/list-abc123",
+      pattern: "/lists/[id]",
+      segments: ["(tabs)", "lists", "[id]"],
+    },
+    {
+      id: "gesture-42",
+      pathname: "/gestures/gesture-42",
+      pattern: "/gestures/[id]",
+      segments: ["gestures", "[id]"],
+    },
+  ];
+
+  it.each(DYNAMIC_ROUTES)("sends $pathname as $pattern", async ({
+    pathname,
+    pattern,
+    segments,
+  }) => {
+    await setConsent("granted");
+    onRoute(segments, pathname);
+    renderHook(() => analytics.useScreenViews());
+    expect(mockScreenView).toHaveBeenCalledTimes(1);
+    expect(mockScreenView).toHaveBeenCalledWith(pattern, {
+      platform: "native",
+    });
+  });
+
+  it.each([
+    { pathname: "/", segments: ["(tabs)"] },
+    { pathname: "/search", segments: ["(tabs)", "search"] },
+    { pathname: "/lists", segments: ["(tabs)", "lists"] },
+    {
+      pathname: "/settings/account",
+      segments: ["(tabs)", "settings", "account"],
+    },
+    { pathname: "/sign-in", segments: ["(auth)", "sign-in"] },
+    { pathname: "/dev/kitchen-sink", segments: ["dev", "kitchen-sink"] },
+  ])("sends the static route $pathname unchanged", async ({
+    pathname,
+    segments,
+  }) => {
+    await setConsent("granted");
+    onRoute(segments, pathname);
+    renderHook(() => analytics.useScreenViews());
+    expect(mockScreenView).toHaveBeenCalledWith(pathname, {
+      platform: "native",
+    });
+  });
+
+  it("never puts a concrete dynamic id in any screen-view or event payload", async () => {
+    await setConsent("granted");
+    for (const { id, pathname, pattern, segments } of DYNAMIC_ROUTES) {
+      mockWire.mockClear();
+      onRoute(segments, pathname);
+      const { unmount } = renderHook(() => analytics.useScreenViews());
+      // The event list detail really sends after a screen view there: the
+      // SDK attaches the last screen-view path to it as `__path`.
+      analytics.trackEvent("gesture_collection_changed", {
+        action: "removed",
+        collection: "list",
+        gesture_id: "g-1",
+        source: "gesture_list",
+      });
+      analytics.trackEvent("search_performed", {
+        category_count: 0,
+        has_results: true,
+        query_length: 3,
+        result_count: 1,
+        source: "submit",
+      });
+      unmount();
+
+      expect(mockWire).toHaveBeenCalledTimes(3);
+      for (const [, properties] of mockWire.mock.calls) {
+        expect(properties.__path).toBe(pattern);
+        expect(JSON.stringify(properties)).not.toContain(id);
+      }
+      for (const [path] of mockScreenView.mock.calls) {
+        expect(path).not.toContain(id);
+      }
+    }
   });
 });

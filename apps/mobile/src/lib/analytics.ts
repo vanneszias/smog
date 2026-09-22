@@ -1,6 +1,8 @@
 import { OpenPanel } from "@openpanel/react-native";
 import type { AnalyticsEventMap, AnalyticsEventName } from "@smog/shared";
-import { readConsent, subscribeConsent } from "@/lib/consent";
+import { useSegments } from "expo-router";
+import { useEffect } from "react";
+import { readConsent, subscribeConsent, useConsent } from "@/lib/consent";
 
 /**
  * Analytics, direct from the device to OpenPanel — as `apps/native` did, and
@@ -77,12 +79,60 @@ export function trackEvent<E extends AnalyticsEventName>(
   }
 }
 
-export function trackScreenView(path: string): void {
+function trackScreenView(path: string): void {
   try {
     getClient()?.screenView(path, { platform: "native" });
   } catch (error) {
     console.error("[analytics] Failed to send screen view:", error);
   }
+}
+
+/**
+ * The route's file-system pattern — `/lists/[id]`, never `/lists/<an id>`.
+ *
+ * Built from expo-router's `useSegments()`, not `usePathname()`. Segments
+ * are route *names* (`routeInfo.js`'s `getRouteInfoFromState` splits each
+ * navigator's route name on `/`), so a dynamic segment is always its
+ * `[param]` name and a param's value can never appear in one; the concrete
+ * pathname is what expo-router builds *from* them by filling the params
+ * in. A pathname-side normaliser would need its own copy of the route
+ * table to know which segments are dynamic, and would silently leak the
+ * first new dynamic route nobody added to it.
+ *
+ * Group segments (`(tabs)`, `(auth)`) are dropped, exactly as expo-router
+ * drops them when it builds the pathname: a static route is therefore sent
+ * as the same string it always was (`/search`, `/settings/account`,
+ * `/sign-in`), and only dynamic ones change. `index` never reaches here —
+ * expo-router already pops a trailing `index` — so `(tabs)/index` is `/`.
+ * A catch-all (`[...rest]`) or `+not-found` stays as that literal name,
+ * which is equally free of whatever the URL held.
+ */
+function screenPattern(segments: readonly string[]): string {
+  const visible = segments.filter(
+    (segment) => !(segment.startsWith("(") && segment.endsWith(")"))
+  );
+  return `/${visible.join("/")}`;
+}
+
+/**
+ * One screen view per route pattern the person lands on, while consent is
+ * granted. Patterns, never concrete paths (Stage 8.6 final review,
+ * Critical): a list has one owner and the lists tab is signed-in only, so
+ * `/lists/<id>` identifies an account — and the SDK keeps the last
+ * screen-view path as `lastPath` and attaches it as `__path` to *every*
+ * later `track` (`@openpanel/react-native/dist/index.js`), so a concrete
+ * path would ride along on each event sent from that screen too. This hook
+ * is the only caller of `screenView`, which is the only thing that sets
+ * `lastPath`.
+ */
+export function useScreenViews(): void {
+  const pattern = screenPattern(useSegments());
+  const { consent } = useConsent();
+  useEffect(() => {
+    if (consent === "granted") {
+      trackScreenView(pattern);
+    }
+  }, [consent, pattern]);
 }
 
 /** Tests only. */

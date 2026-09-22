@@ -21,7 +21,6 @@ jest.mock("expo-router", () => ({
 jest.mock("expo-secure-store");
 jest.mock("@/lib/analytics", () => ({
   trackEvent: jest.fn(),
-  trackScreenView: jest.fn(),
 }));
 
 const json = (body: unknown, status = 200) =>

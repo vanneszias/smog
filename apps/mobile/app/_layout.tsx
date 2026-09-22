@@ -2,7 +2,7 @@ import "../global.css";
 
 import { ToastProvider } from "@smog/ui-native";
 import { getLocales } from "expo-localization";
-import { Stack, usePathname } from "expo-router";
+import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
 import {
@@ -15,8 +15,7 @@ import {
   ConsentBanner,
   useConsentBannerVisible,
 } from "@/components/ConsentBanner";
-import { trackScreenView } from "@/lib/analytics";
-import { useConsent } from "@/lib/consent";
+import { useScreenViews } from "@/lib/analytics";
 import { useConsentSync } from "@/lib/consentSync";
 import { setLocale } from "@/lib/i18n";
 import { resolveLocale } from "@/lib/locale";
@@ -65,13 +64,8 @@ function useInitialLocale(): void {
  */
 function Navigator() {
   useConsentSync();
-  const pathname = usePathname();
-  const { consent } = useConsent();
-  useEffect(() => {
-    if (consent === "granted") {
-      trackScreenView(pathname);
-    }
-  }, [consent, pathname]);
+  // Route patterns, never concrete paths — see the hook's own comment.
+  useScreenViews();
   const insets = useSafeAreaInsets();
   const bannerVisible = useConsentBannerVisible();
 

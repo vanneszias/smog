@@ -8,7 +8,6 @@ jest.mock("expo-router", () => ({
 
 jest.mock("@/lib/analytics", () => ({
   trackEvent: jest.fn(),
-  trackScreenView: jest.fn(),
 }));
 
 const PAGE = {
