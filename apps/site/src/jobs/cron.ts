@@ -65,13 +65,19 @@
 /**
  * What a `scheduled()` handler needs out of the Worker environment.
  *
- * Not exported: knip fails `bun release:check` on an exported symbol nothing
- * imports, and the only caller names the *function's* parameter rather than
- * this type — the ruling `lib/mollie.ts` records for `CreateMolliePaymentInput`
- * and `jobs/expireSponsorships.ts` for its two report types. It is still the
- * contract; it is stated in the signature instead.
+ * Exported for one reason only: `worker.ts` types its `env` as
+ * `CloudflareEnv & CronEnvironment`. `wrangler types` builds `CloudflareEnv`
+ * from `wrangler.jsonc`'s `vars` and bindings, so it never carries
+ * `JOBS_RUN_TOKEN` — a secret is deliberately absent from that file (Global
+ * Constraints) — and without this intersection `CloudflareEnv` alone shares
+ * no property name with this type, which TypeScript's weak-type check
+ * (`TS2559`) rejects outright rather than structurally allowing. This is the
+ * one case the `lib/mollie.ts` / `jobs/expireSponsorships.ts` ruling against
+ * exporting a parameter-shape type doesn't cover: those types have a caller
+ * in the same module tree that can just accept the function's inferred
+ * parameter; this one is intersected into a *different* type one file over.
  */
-interface CronEnvironment {
+export interface CronEnvironment {
   JOBS_RUN_TOKEN?: string;
   SITE_ORIGIN?: string;
 }
@@ -113,5 +119,45 @@ export async function runScheduledTick(
       headers: { authorization: `Bearer ${token}` },
       method: "GET",
     })
+  );
+}
+
+/**
+ * The Worker's `scheduled(controller, env, ctx)` handler, minus the two
+ * platform arguments this does not need.
+ *
+ * `ctx.waitUntil` is the reason this exists rather than the caller just
+ * awaiting `runScheduledTick` itself: a Cron Trigger invocation returns as
+ * soon as `scheduled()` returns, and anything still in flight past that point
+ * is cut off. Handing the promise to `waitUntil` keeps the tick — and the
+ * queue drain it triggers — alive after this function has returned.
+ *
+ * The response is inspected here, once, for the one thing `runScheduledTick`
+ * deliberately does not tell its caller: whether the run was answered at all.
+ * A non-2xx (the endpoint is otherwise silent about outcomes, per its own
+ * doc comment) is logged with its status so a failing tick is visible in the
+ * Worker log instead of looking identical to a healthy one forever.
+ *
+ * Both branches only log. A scheduled invocation has no caller to reject to,
+ * and Cloudflare docs are explicit that scheduled handlers should not throw:
+ * doing so from inside `waitUntil` would surface as an uncaught rejection
+ * with no one to catch it, not a retry.
+ */
+export function onScheduled(
+  environment: CronEnvironment,
+  context: { waitUntil(promise: Promise<unknown>): void },
+  dispatch: (request: Request) => Promise<Response>
+): void {
+  context.waitUntil(
+    runScheduledTick(environment, dispatch).then(
+      (response) => {
+        if (!response.ok) {
+          console.error(`[cron] Scheduled job run answered ${response.status}`);
+        }
+      },
+      (error: unknown) => {
+        console.error("[cron] Scheduled job run failed:", error);
+      }
+    )
   );
 }

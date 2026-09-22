@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { runScheduledTick } from "@/jobs/cron";
+import { describe, expect, it, vi } from "vitest";
+import { onScheduled, runScheduledTick } from "@/jobs/cron";
 
 /**
  * The tick a Cron Trigger's `scheduled()` handler makes.
@@ -102,5 +102,91 @@ describe("the scheduled tick", () => {
     await runScheduledTick(environment, dispatch);
 
     expect(called).toBe(true);
+  });
+});
+
+describe("onScheduled", () => {
+  const environment = {
+    JOBS_RUN_TOKEN: "cron-test-token",
+    SITE_ORIGIN: "https://smog.example",
+  };
+
+  const capture = () => {
+    const held: Promise<unknown>[] = [];
+    return {
+      held,
+      context: { waitUntil: (p: Promise<unknown>) => held.push(p) },
+    };
+  };
+
+  it("holds the run open with waitUntil and dispatches the authenticated tick", async () => {
+    const { held, context } = capture();
+    // Typed with its `Request` parameter (rather than the brief's `() => …`)
+    // so `dispatch.mock.calls[0]` is `[Request]` on its own: this workspace's
+    // global `Request` is workers-types', and casting a zero-arg mock's `[]`
+    // call tuple to `[Request]` is a `TS2352` "insufficient overlap" under
+    // `strict`, not a cast TypeScript allows here.
+    const dispatch = vi.fn((_request: Request) =>
+      Promise.resolve(Response.json({ status: "ok" }))
+    );
+
+    onScheduled(environment, context, dispatch);
+
+    expect(held).toHaveLength(1);
+    await held[0];
+    const [request] = dispatch.mock.calls[0];
+    expect(request.url).toBe("https://smog.example/api/jobs/run");
+    expect(request.headers.get("authorization")).toBe("Bearer cron-test-token");
+  });
+
+  it("logs a refused tick with its status instead of passing it off as a run (Review Focus 1)", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const { held, context } = capture();
+
+    onScheduled(environment, context, () =>
+      Promise.resolve(new Response(null, { status: 401 }))
+    );
+    await held[0];
+
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("401"));
+    error.mockRestore();
+  });
+
+  it("logs a missing variable and does not reject (Review Focus 2)", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const { held, context } = capture();
+    const dispatch = vi.fn();
+
+    onScheduled({ JOBS_RUN_TOKEN: "t" }, context, dispatch);
+
+    await expect(held[0]).resolves.toBeUndefined();
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith(
+      "[cron] Scheduled job run failed:",
+      expect.objectContaining({
+        message: expect.stringContaining("SITE_ORIGIN"),
+      })
+    );
+    error.mockRestore();
+  });
+
+  it("logs a dispatch that throws and does not reject", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const { held, context } = capture();
+
+    onScheduled(environment, context, () => Promise.reject(new Error("boom")));
+
+    await expect(held[0]).resolves.toBeUndefined();
+    expect(error).toHaveBeenCalledWith(
+      "[cron] Scheduled job run failed:",
+      expect.any(Error)
+    );
+    error.mockRestore();
   });
 });
