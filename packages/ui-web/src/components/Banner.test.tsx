@@ -55,12 +55,20 @@ describe("Banner", () => {
     expect(document.activeElement).not.toBe(inside);
   });
 
-  it("renders no scrim", () => {
+  it("renders no scrim, and is not portaled out of the page", () => {
     const { container } = render(<Banner label="Cookiemelding">Inhoud</Banner>);
 
-    // The one thing `Sheet` would have added. Asserted structurally rather
-    // than by class name so it survives a restyle.
-    expect(container.querySelectorAll("[data-radix-portal]")).toHaveLength(0);
+    /*
+     * Two observables, both of which a modal would change. `Sheet` mounts
+     * `<DialogOverlay />` unconditionally, which portals its content to
+     * `document.body` and sets `pointer-events: none` there; a `Banner` that
+     * grew either would stop being a notice and start being a wall.
+     *
+     * Asserted by containment rather than by a `data-*` attribute: no
+     * installed Radix version sets one, so an attribute query here would read
+     * zero whatever the component did.
+     */
+    expect(container.contains(screen.getByRole("region"))).toBe(true);
     expect(document.body.style.pointerEvents).toBe("");
   });
 
