@@ -245,11 +245,32 @@ describe("oauth endpoints", () => {
    * Everything about a response a client can see, for the comparisons where
    * "both failed" is not good enough. Same shape as `auth.int.test.ts`.
    */
+  /**
+   * A response reduced to what two refusals must have in common.
+   *
+   * `Expires` is normalised out, and only `Expires`. `clearedStateCookie`
+   * builds it from `Date.now() - 1000`, so two requests either side of a
+   * second boundary produce cookies that differ by one second — which turned
+   * this comparison red in CI on a run where nothing about the code had
+   * changed (`release-check`, head 4dd31db: `00:55:14` against `00:55:15`).
+   *
+   * Normalising loses nothing the test was asserting. The property here is
+   * that a registered address and a free one produce the *same* refusal; the
+   * expiry is a function of the wall clock, not of which branch ran. That the
+   * cookie really is cleared — an `Expires` in the past, not merely an empty
+   * value — is asserted separately by `isCleared`, which is where that
+   * belongs.
+   */
+  const EXPIRES = /Expires=[^;]+/;
+
   const snapshot = async (response: Response) => ({
     body: await response.text(),
-    headers: [...response.headers.entries()].sort(([a], [b]) =>
-      a.localeCompare(b)
-    ),
+    headers: [...response.headers.entries()]
+      .map(
+        ([name, value]) =>
+          [name, value.replace(EXPIRES, "Expires=<normalised>")] as const
+      )
+      .sort(([a], [b]) => a.localeCompare(b)),
     status: response.status,
   });
 
