@@ -25,12 +25,27 @@ const SITE = "http://localhost:3003";
 const PATH = "/api/analytics/track";
 const PASSWORD = "analytics-int-password";
 const HOUR = 60 * 60 * 1000;
+/** `WINDOW_SECONDS` in `endpoints/analytics.ts`, which is not exported. */
+const WINDOW_SECONDS = 60;
 /** Rows per cleanup delete, under D1's cap of 100 bind parameters. */
 const CLEANUP_BATCH = 50;
 /** The last usable host in TEST-NET-3; running out is a fault, not a wrap. */
 const IP_MAX = 254;
 
 let allocated = 0;
+
+/**
+ * The users this file creates, so it can take them away again.
+ *
+ * `afterAll` used to clear the rate-limit counters and nothing else, which
+ * left two accounts and four `user-consents` rows behind on every run — into
+ * `.wrangler/state/vitest`, which is persisted and never cleared. That is the
+ * wrong table to leak into twice over: `user-consents` denies `delete` to
+ * everyone through the API for good reasons, the rows are indistinguishable
+ * from real evidence to any later reader, and `favorites.int.test.ts` already
+ * records the house rule that a suite tidies up what it writes.
+ */
+const createdUserIds: number[] = [];
 
 /**
  * A `cf-connecting-ip` no other test in this file will be given.
@@ -145,6 +160,19 @@ describe("the analytics relay", () => {
    * a `-createdAt` sort over a tie would decide the test rather than the
    * handler.
    */
+  /** A fresh account, remembered so `afterAll` can delete it. */
+  const createUser = async (): Promise<{ email: string; id: number }> => {
+    const email = `analytics-${RUN}-${crypto.randomUUID()}@example.test`;
+    const user = await payload.create({
+      collection: "users",
+      data: { email, password: PASSWORD, role: "user" },
+    });
+
+    createdUserIds.push(Number(user.id));
+
+    return { email, id: Number(user.id) };
+  };
+
   const recordConsents = async (
     user: number,
     grants: boolean[]
@@ -204,6 +232,63 @@ describe("the analytics relay", () => {
     }
   };
 
+  /**
+   * Which fixed window the relay's limiter is counting into right now.
+   *
+   * `takeRateLimit` puts `windowStart` in the stored key, so a window that
+   * turns over mid-test hands the caller a brand-new counter — and a test
+   * that has just spent a budget of 120 then gets `202` where it asserted
+   * `429`. The two tests below run 1738 ms and 1582 ms against a 60-second
+   * window, so roughly three runs in a hundred straddled a boundary and
+   * failed on a property that was never in doubt. Same shape as the
+   * `freshClientIp` collision that produced CI run 133: a shared, moving
+   * piece of state that decides the assertion instead of the handler.
+   */
+  const relayWindow = () => Math.floor(Date.now() / 1000 / WINDOW_SECONDS);
+
+  /**
+   * Spends one fresh address's whole budget and answers what the request
+   * after it got — or `null` when the window moved while it ran, which makes
+   * the attempt meaningless rather than the property false.
+   *
+   * The statuses are returned rather than asserted here — a helper outside
+   * an `it()` must not hold the assertions, and the caller wants them all
+   * anyway: every request up to the limit has to be accepted, not merely the
+   * last one.
+   */
+  const spendBudget = async (
+    overflow: (ip: string) => Promise<Response>
+  ): Promise<null | { refused: Response; spent: number[] }> => {
+    const ip = freshClientIp();
+    const opened = relayWindow();
+    const spent: number[] = [];
+
+    for (let attempt = 0; attempt < ANALYTICS_LIMIT; attempt += 1) {
+      spent.push((await post(trackEvent(), { ip })).status);
+    }
+
+    const refused = await overflow(ip);
+
+    return relayWindow() === opened ? { refused, spent } : null;
+  };
+
+  /** {@link spendBudget}, retried with a new address if the window moved. */
+  const overflowResponse = async (
+    overflow: (ip: string) => Promise<Response>
+  ): Promise<{ refused: Response; spent: number[] }> => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const outcome = await spendBudget(overflow);
+
+      if (outcome !== null) {
+        return outcome;
+      }
+    }
+
+    throw new Error(
+      "the relay's 60-second window turned over on three consecutive attempts"
+    );
+  };
+
   beforeAll(async () => {
     payload = await getPayload({ config });
   });
@@ -222,7 +307,28 @@ describe("the analytics relay", () => {
     await clearCounters();
   });
 
-  afterAll(clearCounters);
+  /**
+   * Counters, then the consent rows, then the accounts they point at — in
+   * that order, so nothing is left as an orphan for the run after this one.
+   */
+  afterAll(async () => {
+    await clearCounters();
+
+    if (createdUserIds.length === 0) {
+      return;
+    }
+
+    await payload.delete({
+      collection: "user-consents",
+      overrideAccess: true,
+      where: { user: { in: createdUserIds } },
+    });
+    await payload.delete({
+      collection: "users",
+      overrideAccess: true,
+      where: { id: { in: createdUserIds } },
+    });
+  });
 
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -264,18 +370,17 @@ describe("the analytics relay", () => {
   });
 
   it("stops forwarding once the limit is spent", async () => {
-    // The limiter is keyed on the edge-supplied address, so the test drives it
-    // through the same header the Worker will see.
-    const ip = freshClientIp();
-    const send = () => post(trackEvent(), { ip });
+    // The limiter is keyed on the edge-supplied address, so the test drives
+    // it through the same header the Worker will see. See
+    // {@link overflowResponse} for why the budget is spent through a helper
+    // rather than inline.
+    const { refused, spent } = await overflowResponse((ip) =>
+      post(trackEvent(), { ip })
+    );
 
-    for (let attempt = 0; attempt < ANALYTICS_LIMIT; attempt += 1) {
-      expect((await send()).status).toBe(202);
-    }
-
-    const refusedResponse = await send();
-    expect(refusedResponse.status).toBe(429);
-    expect(refusedResponse.headers.get("Retry-After")).not.toBeNull();
+    expect(spent).toEqual(Array.from({ length: ANALYTICS_LIMIT }, () => 202));
+    expect(refused.status).toBe(429);
+    expect(refused.headers.get("Retry-After")).not.toBeNull();
   });
 
   it("does not let a client-supplied header buy a fresh budget", async () => {
@@ -285,15 +390,11 @@ describe("the analytics relay", () => {
      * Cloudflare, `cf-connecting-ip` is set by the edge and is the only one of
      * the four that is not.
      */
-    const ip = freshClientIp();
-    const send = (spoofed?: string) =>
-      post(trackEvent(), { forwardedFor: spoofed, ip });
+    const { refused } = await overflowResponse((ip) =>
+      post(trackEvent(), { forwardedFor: "10.0.0.1", ip })
+    );
 
-    for (let attempt = 0; attempt < ANALYTICS_LIMIT; attempt += 1) {
-      await send();
-    }
-
-    expect((await send("10.0.0.1")).status).toBe(429);
+    expect(refused.status).toBe(429);
   });
 
   it("forwards the credentials the browser never sees, and the visitor's address", async () => {
@@ -362,13 +463,9 @@ describe("the analytics relay", () => {
      * recorded second here, after a grant, so a handler reading the oldest row
      * would let this through.
      */
-    const email = `analytics-${RUN}-${crypto.randomUUID()}@example.test`;
-    const user = await payload.create({
-      collection: "users",
-      data: { email, password: PASSWORD, role: "user" },
-    });
+    const { email, id } = await createUser();
 
-    await recordConsents(Number(user.id), [true, false]);
+    await recordConsents(id, [true, false]);
 
     const { token } = await payload.login({
       collection: "users",
@@ -384,13 +481,9 @@ describe("the analytics relay", () => {
   });
 
   it("accepts a signed-in visitor whose record says yes", async () => {
-    const email = `analytics-${RUN}-${crypto.randomUUID()}@example.test`;
-    const user = await payload.create({
-      collection: "users",
-      data: { email, password: PASSWORD, role: "user" },
-    });
+    const { email, id } = await createUser();
 
-    await recordConsents(Number(user.id), [false, true]);
+    await recordConsents(id, [false, true]);
 
     const { token } = await payload.login({
       collection: "users",

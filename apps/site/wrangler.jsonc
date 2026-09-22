@@ -64,12 +64,19 @@
       "r2_buckets": [{ "binding": "R2", "bucket_name": "smog-staging-media" }],
       // OpenPanel, the analytics vendor `endpoints/analytics.ts` relays to.
       //
-      // The URL is a var because it is not a secret and because naming it here
-      // is what keeps a staging deploy out of production's project. The client
-      // id and secret are **secrets** and are never written in this file:
+      // The URL is a var because it is not a secret. It does **not** keep this
+      // environment's events out of the other one's project, which this
+      // comment used to claim: staging and production carry the identical
+      // URL, because there is one self-hosted OpenPanel behind both. What
+      // separates the two projects is the client id and secret, which are
+      // per-environment **secrets** and are never written in this file:
       //
       //   wrangler secret put OPENPANEL_CLIENT_ID --env=staging
       //   wrangler secret put OPENPANEL_CLIENT_SECRET --env=staging
+      //
+      // Naming the URL here at all, rather than leaning on `DEFAULT_API_URL`
+      // in `endpoints/analytics.ts`, is so that a deploy states where events
+      // go instead of inheriting it from a constant in the source.
       //
       // The secret is the entire reason the relay exists — a browser holding
       // it could write anything into this project's analytics — so a `vars`
@@ -112,12 +119,19 @@
       ],
       // OpenPanel, the analytics vendor `endpoints/analytics.ts` relays to.
       //
-      // The URL is a var because it is not a secret and because naming it here
-      // is what keeps a staging deploy out of production's project. The client
-      // id and secret are **secrets** and are never written in this file:
+      // The URL is a var because it is not a secret. It does **not** keep this
+      // environment's events out of the other one's project, which this
+      // comment used to claim: staging and production carry the identical
+      // URL, because there is one self-hosted OpenPanel behind both. What
+      // separates the two projects is the client id and secret, which are
+      // per-environment **secrets** and are never written in this file:
       //
       //   wrangler secret put OPENPANEL_CLIENT_ID --env=production
       //   wrangler secret put OPENPANEL_CLIENT_SECRET --env=production
+      //
+      // Naming the URL here at all, rather than leaning on `DEFAULT_API_URL`
+      // in `endpoints/analytics.ts`, is so that a deploy states where events
+      // go instead of inheriting it from a constant in the source.
       //
       // The secret is the entire reason the relay exists — a browser holding
       // it could write anything into this project's analytics — so a `vars`
