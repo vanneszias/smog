@@ -179,7 +179,9 @@ in Step 4 — not a third re-run.
 **Interfaces:**
 - Consumes: nothing.
 - Produces: a `site-tests` CI job name that Task 8's exit assessment reads; a
-  `release:check:no-site` script that `release-check` runs.
+  `release:check:ci` script that `release-check` runs. (The name is the one in
+  Step 2's code block; an earlier draft of this line said `release:check:no-site`,
+  which was never the literal anywhere.)
 
 - [ ] **Step 1: Read what exists before changing it**
 
