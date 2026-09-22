@@ -1769,3 +1769,58 @@ than assumed to have been tested here.
 | Users lost at the auth cutover | Migration creates accounts and sends a set-password mail; favorites and lists survive keyed by email |
 | Mollie webhook replay during cutover | Endpoint is idempotent; old and new stacks both reconcile against Mollie as the source of truth |
 | Translation backlog | `en` and `fr` fall back to `nl`; no empty pages ship |
+
+## Decisions taken 2026-09-22, after Stage 8.5 landed
+
+These were put to the user and answered; they govern the remaining stages.
+
+**Stage order changes.** Mobile consent and analytics move *before* Stage 9, as
+**Stage 8.6**. `apps/mobile` today has no analytics and no consent prompt at all,
+while `apps/native` — which Stage 10 deletes — has both. Cutting over without it
+would ship a native app that either collects nothing or, worse, gains collection
+later without a prompt. Numbered rather than inserted, for the same reason 8.5 was.
+
+**Stage 9 imports no consent at all.** Every user is re-asked on the new site.
+The old stacks store a boolean; the new one stores a tri-state where `null` means
+"never asked", and neither old store can express that. Mapping an old `false` to
+`denied` would record an explicit refusal for people who were never asked, in the
+one table that exists to be evidence and that nothing can delete. Importing only
+the `true` values was rejected too: a grant given under the old policy wording is
+not a grant under the new one.
+
+**Cutover is big-bang with a maintenance window.** Writes freeze, the migration
+runs once, verification runs, DNS switches. Chosen over dual-write because two
+writers need a conflict rule per collection and there are no transactions on the
+D1 side to lean on — and because a single source of truth at any instant is what
+makes the dry run a genuine rehearsal rather than an approximation.
+
+**Stage 9 waits for a real Convex export** rather than being built against the
+schema. `packages/convex/convex/schema.ts` is the authority on shape, but this
+project has repeatedly found the code and the schema disagreeing, and a migration
+is the worst place to discover it. The export will contain real user data: it is
+never printed, quoted, or logged — only aggregates (counts, distributions,
+null-rates, integrity checks) leave the sandbox.
+
+**Mobile analytics goes direct to OpenPanel from the device**, as `apps/native`
+does, rather than relaying through `apps/site`. Recorded with its consequence
+stated: anything `EXPO_PUBLIC_*` ships inside the bundle, so the native client
+secret is extractable from any installed copy of the app. The existing mitigation
+stands and must be kept — `.env.example` already provisions a *separate
+least-privileged* native client, distinct from the web pair, and the web stack
+continues to relay so its secret stays server-side.
+
+**The mobile consent prompt is non-blocking**, matching the web banner rather
+than `apps/native`'s full-screen modal. Same reasoning as Ruling 11's: a prompt
+standing between a person and the privacy policy it links to is the pattern
+regulators single out.
+
+**Credentials are not tracked per stage.** One consolidated deployment checklist,
+each entry naming the exact command that sets it and what breaks without it.
+
+**The privacy policy gets EN and FR drafts**, visibly marked unreviewed and
+pending legal sign-off, rather than staying Dutch-only while the banner is
+trilingual. Professional translation and legal review remain launch blockers on
+the checklist.
+
+**The favourites-listing analytics emitter stays out.** `apps/web` never tracked
+that interaction, so adding it would be new collection rather than a migration.
