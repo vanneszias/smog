@@ -62,6 +62,23 @@
         },
       ],
       "r2_buckets": [{ "binding": "R2", "bucket_name": "smog-staging-media" }],
+      // OpenPanel, the analytics vendor `endpoints/analytics.ts` relays to.
+      //
+      // The URL is a var because it is not a secret and because naming it here
+      // is what keeps a staging deploy out of production's project. The client
+      // id and secret are **secrets** and are never written in this file:
+      //
+      //   wrangler secret put OPENPANEL_CLIENT_ID --env=staging
+      //   wrangler secret put OPENPANEL_CLIENT_SECRET --env=staging
+      //
+      // The secret is the entire reason the relay exists — a browser holding
+      // it could write anything into this project's analytics — so a `vars`
+      // entry for it would undo the feature while looking like configuration.
+      // Until both are set the relay accepts events and drops them, which is
+      // the state every local checkout and CI is in.
+      "vars": {
+        "OPENPANEL_API_URL": "https://analytics.zias.be/api",
+      },
       // Cloudflare Email Service. It carries `name` and nothing else, on
       // purpose: `destination_address`, `allowed_destination_addresses` and
       // `allowed_sender_addresses` each narrow what this binding may do, and
@@ -93,6 +110,23 @@
       "r2_buckets": [
         { "binding": "R2", "bucket_name": "smog-production-media" },
       ],
+      // OpenPanel, the analytics vendor `endpoints/analytics.ts` relays to.
+      //
+      // The URL is a var because it is not a secret and because naming it here
+      // is what keeps a staging deploy out of production's project. The client
+      // id and secret are **secrets** and are never written in this file:
+      //
+      //   wrangler secret put OPENPANEL_CLIENT_ID --env=production
+      //   wrangler secret put OPENPANEL_CLIENT_SECRET --env=production
+      //
+      // The secret is the entire reason the relay exists — a browser holding
+      // it could write anything into this project's analytics — so a `vars`
+      // entry for it would undo the feature while looking like configuration.
+      // Until both are set the relay accepts events and drops them, which is
+      // the state every local checkout and CI is in.
+      "vars": {
+        "OPENPANEL_API_URL": "https://analytics.zias.be/api",
+      },
       // See the note in `staging` above: `name` only, and once per environment.
       "send_email": [{ "name": "EMAIL" }],
     },

@@ -21,6 +21,7 @@ import * as migration_20260921_160000_add_render_completions from "./20260921_16
 import * as migration_20260921_180000_add_claims from "./20260921_180000_add_claims";
 import * as migration_20260921_200000_add_payload_jobs from "./20260921_200000_add_payload_jobs";
 import * as migration_20260921_220000_add_job_schedules from "./20260921_220000_add_job_schedules";
+import * as migration_20260922_100000_add_rate_limits from "./20260922_100000_add_rate_limits";
 
 export const migrations = [
   {
@@ -137,5 +138,10 @@ export const migrations = [
     up: migration_20260921_220000_add_job_schedules.up,
     down: migration_20260921_220000_add_job_schedules.down,
     name: "20260921_220000_add_job_schedules",
+  },
+  {
+    up: migration_20260922_100000_add_rate_limits.up,
+    down: migration_20260922_100000_add_rate_limits.down,
+    name: "20260922_100000_add_rate_limits",
   },
 ];

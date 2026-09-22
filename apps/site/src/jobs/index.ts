@@ -14,6 +14,7 @@ import {
 } from "@/jobs/sendEmail";
 import { sendRenewalReminders } from "@/jobs/sendRenewalReminders";
 import { LOCALES } from "@/lib/locale";
+import { pruneRateLimits } from "@/lib/rateLimit";
 
 /**
  * Payload's queue, as this application configures it.
@@ -360,6 +361,38 @@ export const jobsConfig: JobsConfig = {
       retries: NO_RETRIES,
       schedule: scheduled(HOURLY),
       slug: "cleanup-stale-payments",
+    },
+    {
+      /**
+       * Takes the spent rate-limit counters out of the database.
+       *
+       * Its own task rather than another operation inside
+       * `cleanup-stale-payments`, although both run hourly, because what it
+       * sweeps is a different kind of thing: `rate_limits.key` is derived from
+       * a client address, so these rows are **personal data with a useful life
+       * of one window**, and the sweep is a retention rule rather than
+       * housekeeping. Folding it into a task named after abandoned checkouts
+       * would leave the one job in this file that exists for a legal reason
+       * invisible in the queue, in the logs and in this list.
+       *
+       * Hourly is the cadence the retention period is written against:
+       * `lib/rateLimit.ts` keeps a row for an hour, which is comfortably
+       * longer than any window this application uses — a sweep that reached a
+       * window that is still *live* would hand whoever was in it a fresh
+       * budget.
+       *
+       * A sweep, so `NO_RETRIES` for the reason above: the next tick re-derives
+       * what is left to delete and is a better retry than a replay.
+       */
+      handler: async ({ req }) => {
+        await pruneRateLimits(req.payload, new Date());
+
+        return { output: {} };
+      },
+      label: "Delete spent rate-limit counters",
+      retries: NO_RETRIES,
+      schedule: scheduled(HOURLY),
+      slug: "prune-rate-limits",
     },
   ],
 };

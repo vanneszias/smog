@@ -19,12 +19,14 @@ import { Claims } from "./collections/Claims";
 import { Gestures } from "./collections/Gestures";
 import { Lists } from "./collections/Lists";
 import { Media } from "./collections/Media";
+import { RateLimits } from "./collections/RateLimits";
 import { Renders } from "./collections/Renders";
 import { Sponsorships } from "./collections/Sponsorships";
 import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
 import { cloudflareEmailAdapter } from "./email/adapter";
 import { accountEndpoints, mobileAccountEndpoints } from "./endpoints/account";
+import { analyticsEndpoints } from "./endpoints/analytics";
 import { authEndpoints, mobileAuthEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
@@ -170,6 +172,7 @@ export default buildConfig({
     UserConsents,
     Renders,
     Claims,
+    RateLimits,
   ],
   editor: lexicalEditor(),
   /*
@@ -272,8 +275,20 @@ export default buildConfig({
    * `listsEndpoints`' own form handler through a `decide*` function rather
    * than reimplementing it: a 303 for the owner pages, a JSON body here, one
    * outcome computed once. See `endpoints/lists.ts`.
+   * `analyticsEndpoints` adds `POST /api/analytics/track`, the browser's only
+   * route to OpenPanel. It exists so the ingest secret stays on the server:
+   * a page holding it would be handing it to every visitor. It requires **no
+   * session** — a guest who granted consent is trackable, and their gate is
+   * the client-side consent store, because there is no row to look up for
+   * somebody with no account. What it refuses is a cross-site post, an event
+   * outside its allowlist, anything over a rate limit counted in D1
+   * (`lib/rateLimit.ts`, which replaces a Redis limiter that could not be
+   * ported), and a signed-in visitor whose latest `user-consents` row says
+   * no. See `endpoints/analytics.ts`, which is careful about which of those
+   * is a consent check and which is not.
    */
   endpoints: [
+    ...analyticsEndpoints,
     ...crawlerEndpoints,
     ...authEndpoints,
     ...mobileAuthEndpoints,

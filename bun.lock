@@ -193,6 +193,7 @@
         "@payloadcms/richtext-lexical": "3.89.0",
         "@payloadcms/storage-r2": "3.89.0",
         "@smog/config": "workspace:*",
+        "@smog/shared": "workspace:*",
         "@smog/ui-web": "workspace:*",
         "dotenv": "16.4.7",
         "graphql": "^16.8.1",

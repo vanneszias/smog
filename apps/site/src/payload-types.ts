@@ -77,6 +77,7 @@ export interface Config {
     'user-consents': UserConsent;
     renders: Render;
     claims: Claim;
+    'rate-limits': RateLimit;
     search: Search;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
@@ -96,6 +97,7 @@ export interface Config {
     'user-consents': UserConsentsSelect<false> | UserConsentsSelect<true>;
     renders: RendersSelect<false> | RendersSelect<true>;
     claims: ClaimsSelect<false> | ClaimsSelect<true>;
+    'rate-limits': RateLimitsSelect<false> | RateLimitsSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
@@ -124,6 +126,7 @@ export interface Config {
       'expire-sponsorships': TaskExpireSponsorships;
       'send-renewal-reminders': TaskSendRenewalReminders;
       'cleanup-stale-payments': TaskCleanupStalePayments;
+      'prune-rate-limits': TaskPruneRateLimits;
       inline: {
         input: unknown;
         output: unknown;
@@ -376,6 +379,18 @@ export interface Claim {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "rate-limits".
+ */
+export interface RateLimit {
+  id: number;
+  key: string;
+  count: number;
+  windowStart: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This is a collection of automatically created search results. These results are used by the global site search and will be updated automatically as documents in the CMS are created or updated.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -463,7 +478,13 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'send-email' | 'expire-sponsorships' | 'send-renewal-reminders' | 'cleanup-stale-payments';
+        taskSlug:
+          | 'inline'
+          | 'send-email'
+          | 'expire-sponsorships'
+          | 'send-renewal-reminders'
+          | 'cleanup-stale-payments'
+          | 'prune-rate-limits';
         taskID: string;
         input?:
           | {
@@ -497,7 +518,15 @@ export interface PayloadJob {
       }[]
     | null;
   taskSlug?:
-    ('inline' | 'send-email' | 'expire-sponsorships' | 'send-renewal-reminders' | 'cleanup-stale-payments') | null;
+    | (
+        | 'inline'
+        | 'send-email'
+        | 'expire-sponsorships'
+        | 'send-renewal-reminders'
+        | 'cleanup-stale-payments'
+        | 'prune-rate-limits'
+      )
+    | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -559,6 +588,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'claims';
         value: number | Claim;
+      } | null)
+    | ({
+        relationTo: 'rate-limits';
+        value: number | RateLimit;
       } | null)
     | ({
         relationTo: 'search';
@@ -794,6 +827,17 @@ export interface ClaimsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "rate-limits_select".
+ */
+export interface RateLimitsSelect<T extends boolean = true> {
+  key?: T;
+  count?: T;
+  windowStart?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "search_select".
  */
 export interface SearchSelect<T extends boolean = true> {
@@ -950,6 +994,14 @@ export interface TaskSendRenewalReminders {
  * via the `definition` "TaskCleanup-stale-payments".
  */
 export interface TaskCleanupStalePayments {
+  input?: unknown;
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskPrune-rate-limits".
+ */
+export interface TaskPruneRateLimits {
   input?: unknown;
   output?: unknown;
 }

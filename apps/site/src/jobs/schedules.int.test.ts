@@ -278,11 +278,13 @@ describe("the scheduled jobs", () => {
     expect([...byTask.keys()].sort()).toEqual([
       "cleanup-stale-payments",
       "expire-sponsorships",
+      "prune-rate-limits",
       "send-email",
       "send-renewal-reminders",
     ]);
 
     expect(byTask.get("cleanup-stale-payments")).toEqual(["default:0 * * * *"]);
+    expect(byTask.get("prune-rate-limits")).toEqual(["default:0 * * * *"]);
     expect(byTask.get("expire-sponsorships")).toEqual(["default:0 0 * * *"]);
     expect(byTask.get("send-renewal-reminders")).toEqual(["default:0 8 * * *"]);
 
@@ -311,7 +313,7 @@ describe("the scheduled jobs", () => {
     expect(await jobs()).toEqual([]);
 
     // Then the endpoint, which is the same run with `handleSchedules` in front
-    // of it. Three scheduled tasks, three rows, each waiting for its own next
+    // of it. Four scheduled tasks, four rows, each waiting for its own next
     // occurrence rather than running immediately.
     expect((await tick()).status).toBe(200);
 
@@ -321,6 +323,7 @@ describe("the scheduled jobs", () => {
     expect(slugs).toEqual([
       "cleanup-stale-payments",
       "expire-sponsorships",
+      "prune-rate-limits",
       "send-renewal-reminders",
     ]);
 
@@ -430,7 +433,7 @@ describe("the scheduled jobs", () => {
   it("runs every operation each scheduled task is named after", async () => {
     /*
      * A task's handler is wiring, and wiring is where an operation goes
-     * missing without anything failing. Two of the three are **two operations
+     * missing without anything failing. Two of the four are **two operations
      * each**: `expire-sponsorships` is the expiry and the readiness sweep, one
      * task because the second deliberately skips a render whose sponsorship is
      * terminal on the grounds that the first is about to delete its asset; and
@@ -455,6 +458,7 @@ describe("the scheduled jobs", () => {
     expect(said("[sendRenewalReminders] Queued")).not.toEqual([]);
     expect(said("[cleanupStalePayments] Cancelled")).not.toEqual([]);
     expect(said("[cleanupOrphanedMedia] Deleted")).not.toEqual([]);
+    expect(said("[pruneRateLimits] Deleted")).not.toEqual([]);
   });
 
   it("still drains the queue when the schedules cannot be evaluated", async () => {
