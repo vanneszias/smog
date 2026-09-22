@@ -165,6 +165,17 @@ describe("the analytics control", () => {
     await waitFor(() => expect(readConsent()).toBe("denied"));
   });
 
+  it("disables the switch until the stored answer has loaded", async () => {
+    await AsyncStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+    renderScreen();
+    const toggle = screen.getByLabelText(/analytics/i);
+    expect(toggle.props.disabled).toBe(true);
+    expect(toggle.props.value).toBe(false);
+
+    await waitFor(() => expect(toggle.props.disabled).toBe(false));
+    expect(toggle.props.value).toBe(true);
+  });
+
   it("works without an account", async () => {
     renderScreen(); // no token in SecureStore: signed out
     expect(await screen.findByLabelText(/analytics/i)).toBeTruthy();

@@ -98,7 +98,7 @@ function ThemeRow() {
  * would otherwise be final (Stage 8.5 found the same gap on the web).
  */
 function AnalyticsRow() {
-  const { consent } = useConsent();
+  const { consent, loaded } = useConsent();
   const { locale } = useLocale();
 
   return (
@@ -109,6 +109,7 @@ function AnalyticsRow() {
           <Text variant="muted">{t("settings.analyticsDescription")}</Text>
         </View>
         <Switch
+          disabled={!loaded}
           label={t("settings.analyticsTitle")}
           onValueChange={(next) => setConsent(next ? "granted" : "denied")}
           value={consent === "granted"}
