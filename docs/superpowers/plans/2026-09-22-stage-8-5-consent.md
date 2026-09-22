@@ -1315,7 +1315,7 @@ count = count + 1 RETURNING count` — which SQLite evaluates atomically, making
 count exact. It needs raw drizzle. **Verify `payload.db.drizzle` is actually reachable
 on this adapter before choosing it**, and verify the atomicity rather than assuming it:
 
-Run: `bun -F site test src/lib/rateLimit.int.test.ts -t "concurrent"` after writing the
+Run: `bun -F site test src/lib/rateLimit.int.test.ts -t "holds under concurrency"` after writing the
 concurrency test in Step 3, and drive 20 parallel calls at a limit of 10. Design (b)
 must yield exactly 10 allowed. Design (a) will yield more, and the test must then
 assert the bound it actually offers rather than a number it cannot honour.
