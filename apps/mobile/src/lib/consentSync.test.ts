@@ -541,6 +541,35 @@ describe("useConsentSync", () => {
     expect(await marker()).toEqual({ userId: "7", value: "granted" });
   });
 
+  it("logs a pass that fails, rather than leaving its rejection unhandled", async () => {
+    // The keychain starts failing once `/users/me` has answered, so the
+    // session resolves normally and the pass's own `getToken()` is what
+    // throws — the one read in `pass` nothing inside it catches.
+    let keychainBroken = false;
+    const keychainError = new Error("keychain unavailable");
+    (SecureStore.getItemAsync as jest.Mock).mockImplementation(() =>
+      keychainBroken ? Promise.reject(keychainError) : Promise.resolve("token")
+    );
+    global.fetch = jest.fn((url: string) => {
+      if (String(url).includes("/users/me")) {
+        keychainBroken = true;
+        return me("7");
+      }
+      return ok();
+    }) as unknown as typeof fetch;
+    await setConsent("granted");
+
+    renderHook(() => useConsentSync(), { wrapper: SessionProvider });
+
+    await waitFor(() =>
+      expect(console.error).toHaveBeenCalledWith(
+        "[consentSync] Failed to reconcile consent:",
+        keychainError
+      )
+    );
+    expect(consentPosts()).toHaveLength(0);
+  });
+
   it("retries a pending decision when the app returns to the foreground (Review Focus 5)", async () => {
     let consentAnswer: () => Promise<Response> = () => status(500);
     global.fetch = jest.fn((url: string) =>

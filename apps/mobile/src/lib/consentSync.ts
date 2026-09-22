@@ -259,8 +259,13 @@ export function useConsentSync(): void {
       return;
     }
 
+    // The chain in `reconcileConsent` swallows a failed pass for the
+    // *next* pass's sake, but the promise handed back here still rejects;
+    // left floating, that rejection would go unhandled and unlogged.
     const run = () => {
-      reconcileConsent(userId);
+      reconcileConsent(userId).catch((error: unknown) => {
+        console.error("[consentSync] Failed to reconcile consent:", error);
+      });
     };
 
     run();
