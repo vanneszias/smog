@@ -150,18 +150,31 @@ const CONSENT_PATH = "/api/consent";
  */
 const SYNCED_KEY = "smog.consent.synced";
 
-/** What the marker holds: a value, and the account it was recorded for. */
+/**
+ * What the marker holds: a value, the account it was recorded for, and
+ * whether the server has acknowledged it yet.
+ *
+ * `pending` is optional and its absence means *acknowledged*, which is not a
+ * default chosen for brevity: markers written before this field existed were
+ * only ever written after a 200, so a marker with no `pending` really is a
+ * confirmed one and every browser carrying an old marker reads correctly on
+ * the first load after this ships.
+ */
 interface SyncMarker {
+  pending?: boolean;
   userId: string;
   value: string;
 }
 
 function isSyncMarker(value: unknown): value is SyncMarker {
+  const pending = (value as { pending?: unknown } | null)?.pending;
+
   return (
     typeof value === "object" &&
     value !== null &&
     typeof (value as { userId?: unknown }).userId === "string" &&
-    typeof (value as { value?: unknown }).value === "string"
+    typeof (value as { value?: unknown }).value === "string" &&
+    (pending === undefined || typeof pending === "boolean")
   );
 }
 
@@ -198,43 +211,67 @@ function clearSyncMarker(): void {
  * Records which account this browser's decision has been posted for, and
  * says whether that actually stuck.
  *
- * ## What a lost marker really costs — the honest version
+ * ## What a marker-less decision really costs — the honest version
  *
  * This used to say that a lost marker "only risks one duplicate row on the
  * next page load, not a lost decision". Since Ruling 12 that is false, and it
- * was false in the direction that matters. `writeConsent` documents that
- * `setItem` throws `QuotaExceededError` in private browsing, so this write
- * can fail while `ANALYTICS_CONSENT_KEY` is already on disk from an earlier
- * page. The decision then sits in this browser with **nothing saying whose it
- * is**, the account-mismatch branch has no marker to compare and cannot fire,
- * and the next account to sign in falls straight through to
- * `postConsent(B, …)` — a row recorded for B out of A's decision, which
- * Ruling 12 names the worst of the three options it weighed.
+ * is false in the direction that matters: a decision sitting in this browser
+ * with **nothing saying whose it is** cannot be recognised by the
+ * account-mismatch branch or by the signed-out branch, so the next guest is
+ * tracked on it and the next account has a row written from it — the outcome
+ * Ruling 12 calls the worst of the three options it weighed.
  *
- * ## So the failure is detected rather than shrugged at
+ * ## The gap that actually bit, and what closes it
  *
- * The write is read back, which catches a store that throws *and* a store
- * that accepts the write and keeps nothing. When the marker is not durable
- * the caller drops the browser's decision: a decision this browser cannot
+ * An earlier version of this comment named *eviction* as the residual. That
+ * was true and it was not the reachable one. The marker used to be written
+ * only after a 200, so **every decision whose POST did not land** — offline,
+ * a 401 mid-session, and, since `endpoints/consent.ts` acquired a limiter, an
+ * ordinary 429 on this browser's first post for that account — was
+ * byte-identical to a guest's own answer. That is one refused request away,
+ * not a storage anomaly.
+ *
+ * So the marker is written **twice**: provisionally before the request, with
+ * `pending: true`, and again without it once the server has acknowledged. The
+ * provisional write is what keeps "account 1 decided this and we could not
+ * tell the server" distinguishable from "a guest decided this", which is the
+ * distinction both of the branches above are built on. It does not weaken
+ * `endpoints/consent.ts`'s delay-not-drop property: a pending marker is not a
+ * reconciled one, so the next pass posts again.
+ *
+ * ## When the marker itself will not stick
+ *
+ * Both writes are read back, which catches a store that throws *and* one that
+ * accepts the write and keeps nothing. When the marker is not durable the
+ * caller drops the browser's decision: a decision this browser cannot
  * attribute is one it must not keep, because keeping it is what hands it to
  * the next account. The cost is that the banner asks again — the safe failure
  * Ruling 12 already priced, and the same one a person gets for signing out.
- * The row that was just written is unaffected: the account's answer is on the
- * record, and only this browser's copy of it is dropped.
  *
- * **What this does not close, stated rather than implied.** A marker that was
- * written and is *later* evicted — storage cleared for one key, a browser
- * reclaiming space — leaves exactly the same decision-without-an-owner, and
- * it cannot be told apart from the first-ever sync, where a null marker
- * legitimately means "never posted". Nothing client-side can distinguish the
- * two, so that gap stays open and is not claimed shut here. Closing it needs
- * the server check this module's "chosen: a local marker" note declined: one
- * indexed read per signed-in page load, which buys the distinction the
- * browser cannot make.
+ * **What is left, stated rather than implied.** A marker that was written and
+ * is *later* evicted leaves the same decision-with-no-owner, and it cannot be
+ * told apart from the first-ever sync, where a null marker legitimately means
+ * "never posted". That is now the only route in, and nothing client-side can
+ * distinguish the two — closing it needs the server check this module's
+ * "chosen: a local marker" note declined, one indexed read per signed-in page
+ * load. Second: when the provisional write fails outright the decision is
+ * dropped even if the POST then also fails, so a browser with unusable
+ * storage and no connection loses the answer rather than misattributing it.
+ * That is the direction chosen, not an oversight.
  */
-function markSynced(userId: number | string, value: string): boolean {
+function markSynced(
+  userId: number | string,
+  value: string,
+  pending: boolean
+): boolean {
   try {
-    const marker: SyncMarker = { userId: String(userId), value };
+    /*
+     * A confirmed marker is written without the key at all, so it is byte
+     * for byte what every earlier version of this file wrote.
+     */
+    const marker: SyncMarker = pending
+      ? { pending: true, userId: String(userId), value }
+      : { userId: String(userId), value };
     const serialised = JSON.stringify(marker);
 
     window.localStorage.setItem(SYNCED_KEY, serialised);
@@ -263,6 +300,19 @@ async function postConsent(
   userId: number | string,
   analyticsConsent: boolean
 ): Promise<boolean> {
+  const value = analyticsConsent ? "granted" : "denied";
+
+  /*
+   * **Before the request, on purpose.** This is not the reconciled marker —
+   * it carries `pending: true` and no pass treats it as one — it is this
+   * browser saying *whose* decision it is holding, which it has to be able to
+   * say from the moment there is a decision and a session, not from the
+   * moment a request happens to succeed. See {@link markSynced}.
+   */
+  const attributable = markSynced(userId, value, true);
+
+  let acknowledged = false;
+
   try {
     const response = await fetch(CONSENT_PATH, {
       body: JSON.stringify({ analyticsConsent }),
@@ -271,21 +321,26 @@ async function postConsent(
       method: "POST",
     });
 
-    if (!response.ok) {
-      return false;
-    }
+    acknowledged = response.ok;
   } catch (error) {
     console.error("[ConsentSync] Failed to record consent:", error);
+  }
+
+  if (!attributable) {
+    // Nothing here can say whose this is, so this browser stops holding it.
+    clearConsent();
+
     return false;
   }
 
-  // Last, and only here. See "The ordering rule" above.
-  if (!markSynced(userId, analyticsConsent ? "granted" : "denied")) {
-    /*
-     * The decision is on the server and cannot be attributed here, so this
-     * browser stops holding it. See {@link markSynced} for why this is the
-     * lesser of the two wrongs available.
-     */
+  if (!acknowledged) {
+    // The marker stays pending, so the next pass posts again. This is the
+    // delay-not-drop property `endpoints/consent.ts`'s limit relies on.
+    return false;
+  }
+
+  // The irreversible step, last. See "The ordering rule" above.
+  if (!markSynced(userId, value, false)) {
     clearConsent();
 
     return false;
@@ -341,9 +396,12 @@ function reconcileConsent(userId: null | number | string): void {
     return;
   }
 
-  if (marker !== null && marker.value === consent) {
-    // Already told the server this, for this account, and re-running is the
-    // normal case: see "What already reconciled means here".
+  if (marker !== null && marker.value === consent && marker.pending !== true) {
+    // Already told the server this, for this account, *and the server said
+    // so* — re-running is the normal case: see "What already reconciled
+    // means here". A pending marker is deliberately not enough: it names the
+    // owner of a decision the server has not confirmed, and the retry is
+    // what keeps a refused write a delay rather than a loss.
     return;
   }
 
@@ -377,7 +435,14 @@ export function ConsentSync({ userId }: { userId: null | number | string }) {
 
     pass();
 
-    return subscribeConsent(pass);
+    /*
+     * This document's own writes only. Another tab that writes the store is
+     * running this same reconciler and is already posting; waking here would
+     * add a second row for one toggle, and a tab still rendered from before
+     * a sign-in would wake with `userId === null` and clear the answer that
+     * tab had just taken. `lib/consentStore.ts` carries the full argument.
+     */
+    return subscribeConsent(pass, { crossTab: false });
   }, [userId]);
 
   return null;

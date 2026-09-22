@@ -47,6 +47,24 @@ describe("ConsentSync", () => {
   const markerFor = (userId: string, value: string) =>
     window.localStorage.setItem(SYNCED_KEY, JSON.stringify({ userId, value }));
 
+  /**
+   * What another tab's write looks like from in here.
+   *
+   * `storage` fires in every document *except* the one that wrote, so a
+   * second tab is exactly a direct `localStorage` write that this document
+   * was not notified of, followed by this event. Using `writeConsent` here
+   * instead would call `notify()` in this document and simulate nothing.
+   */
+  const fromAnotherTab = async (consent: string) => {
+    window.localStorage.setItem(ANALYTICS_CONSENT_KEY, consent);
+
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: ANALYTICS_CONSENT_KEY })
+      );
+    });
+  };
+
   /** A second page load in the same browser: unmount, then mount again. */
   const reload = async (userId: null | number | string) => {
     await act(async () => {
@@ -398,6 +416,118 @@ describe("ConsentSync", () => {
 
       expect(fetchMock).not.toHaveBeenCalled();
       expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
+    });
+  });
+
+  /*
+   * **The blocker the first fix wave did not close.** The signed-out branch
+   * keys on the marker being present, and the marker was written only after
+   * a 200 — so "a decision made while signed in whose POST never landed" was
+   * byte-identical to "a guest's own decision". Both of this stage's named
+   * failure modes fall out of that: the next guest is tracked on it, and the
+   * next account has a row written from it. `POST /api/consent` acquired a
+   * rate limiter in the same wave, which put a fresh, ordinary route into it
+   * — a 429 on the first post for that account on that browser lands exactly
+   * here.
+   */
+  describe("when a signed-in decision never reached the server", () => {
+    const refuseThePost = () =>
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ error: "Too many requests" }), {
+          headers: { "Content-Type": "application/json" },
+          status: 429,
+        })
+      );
+
+    it("does not leave it behind for the next guest", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      const fetchMock = refuseThePost();
+
+      await mount(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // The visitor signs out. This was account 1's answer, not this
+      // browser's guest's, and the next person must be asked.
+      await reload(null);
+
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
+      expect(window.localStorage.getItem(SYNCED_KEY)).toBeNull();
+    });
+
+    it("is not recorded under the next account either", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      const fetchMock = refuseThePost();
+
+      await mount(1);
+      await reload(2);
+
+      // One attempt, for account 1. Nothing fabricated for account 2 — the
+      // outcome Ruling 12 calls the worst of the three it weighed.
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
+    });
+
+    /*
+     * The property a provisional marker is most likely to break, so it is
+     * pinned rather than assumed: the limiter delays a record, it does not
+     * drop one. A marker that suppressed the retry would turn every 429 into
+     * a silently unrecorded decision.
+     */
+    it("is still retried for the account that made it", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      const fetchMock = refuseThePost();
+
+      await mount(1);
+      fetchMock.mockResolvedValue(okResponse());
+      await reload(1);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(window.localStorage.getItem(SYNCED_KEY)).toBe(
+        JSON.stringify({ userId: "1", value: "granted" })
+      );
+    });
+  });
+
+  /*
+   * `subscribeConsent` fires on cross-tab `storage` events as well as on
+   * this document's own writes, which is right for a banner and wrong for a
+   * reconciler: the other tab has a reconciler of its own, already posting.
+   * Two tabs, one toggle, two permanent rows — the same "two writers, one
+   * toggle" argument that took the POST out of `AccountConsentControl`,
+   * surviving across documents.
+   */
+  describe("when another tab is the one that acts", () => {
+    it("does not post a decision the tab that made it is already posting", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "denied");
+      markerFor("1", "denied");
+      const fetchMock = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(okResponse());
+
+      await mount(1);
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      await fromAnotherTab("granted");
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("does not let a tab rendered before sign-in wipe what a signed-in tab just decided", async () => {
+      /*
+       * A page opened while signed out still has `userId === null` in its
+       * props for as long as it stays open. Woken by another tab's write it
+       * would find a marker, call it a decision with nobody to own it, and
+       * clear the answer the visitor had just given in the other tab.
+       */
+      await mount(null);
+
+      markerFor("1", "granted");
+      await fromAnotherTab("granted");
+
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBe(
+        "granted"
+      );
+      expect(window.localStorage.getItem(SYNCED_KEY)).not.toBeNull();
     });
   });
 

@@ -129,17 +129,35 @@ export function clearConsent(): void {
 }
 
 /**
- * Subscribe to changes, in this tab and in every other one.
+ * Subscribe to changes, in this tab and — unless asked otherwise — in every
+ * other one.
  *
  * The `storage` event fires in every tab EXCEPT the one that wrote, so both
  * halves are needed: `notify()` covers this tab, the listener covers the
  * others. A store with only the first keeps a second tab tracking after a
  * refusal, and no single-tab test would ever show it.
  *
+ * ## Why `crossTab: false` exists, and who wants it
+ *
+ * That argument is about *display*: a banner and a switch must both tell the
+ * truth in every open tab, so they take the default. It is the wrong rule for
+ * a subscriber that *acts* on the change. `components/ConsentSync.tsx` posts a
+ * row, and the tab that made the decision is already posting one — so a
+ * second tab woken by `storage` writes a duplicate into a table nothing can
+ * prune, and a tab rendered before sign-in wakes with a stale `userId` and
+ * clears the answer the other tab has just taken. Every document runs its own
+ * reconciler on mount, so nothing is missed by declining to act on somebody
+ * else's write; only the duplicate is.
+ *
  * Shaped for `useSyncExternalStore`: subscribe returns its own unsubscribe.
  */
-export function subscribeConsent(listener: () => void): () => void {
+export function subscribeConsent(
+  listener: () => void,
+  options: { crossTab?: boolean } = {}
+): () => void {
   listeners.add(listener);
+
+  const crossTab = options.crossTab !== false;
 
   const onStorage = (event: StorageEvent) => {
     if (event.key === ANALYTICS_CONSENT_KEY) {
@@ -147,14 +165,14 @@ export function subscribeConsent(listener: () => void): () => void {
     }
   };
 
-  if (typeof window !== "undefined") {
+  if (crossTab && typeof window !== "undefined") {
     window.addEventListener("storage", onStorage);
   }
 
   return () => {
     listeners.delete(listener);
 
-    if (typeof window !== "undefined") {
+    if (crossTab && typeof window !== "undefined") {
       window.removeEventListener("storage", onStorage);
     }
   };
