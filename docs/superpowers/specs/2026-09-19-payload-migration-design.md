@@ -1547,6 +1547,40 @@ against the other members. The same shape recurs wherever a lookup has a
 silent fallback — a translation table returning the key, a router returning
 a catch-all, a colour map returning a default.
 
+### A tie-breaker cannot be tested by fixtures that never tie
+
+`lib/gestureQuery.ts` sorts `["name", "id"]`, and its comment explains why:
+`name` is localized and optional, so in a locale nothing is translated into
+every row sorts equal, and an unstable order across two requests shows one
+gesture twice and another never. Stage 8 Task 10 was told to prove that by
+deleting `"id"` and watching the stability tests fail. **All 1488 site tests
+stayed green.**
+
+Three readings, each wrong until the last. The implementer concluded the
+adapter "self-heals" with a `-id` fallback, so `id` was decoration. The
+controller said removing `id` yields `["name", "-createdAt"]` — right about
+the result, wrong about the cause. The reviewer read
+`@payloadcms/drizzle`'s `buildOrderBy`: its gate checks whether the sort
+mentions **`createdAt`**, not `id`, so `-createdAt` is appended either way.
+Production orders by `name, id, createdAt DESC`; the mutation removes the
+only *unique* key and leaves `name, createdAt DESC`, and `createdAt` is not
+unique — two rows sharing a name and a creation millisecond tie, order
+undefined.
+
+Underneath all three: **every seeded gesture in both fixtures gets a unique
+zero-padded name.** No two rows ever share one. Ordering by `name` alone is
+already total, so the tie the sort exists to break never occurs and the
+mutation could not have been observed whatever the adapter did.
+
+The guard is real and the tests cannot see it. Fixing it means seeding rows
+that collide on `name` *and* on `createdAt` — the case the third key exists
+for. Until then the sort is protected by a comment, not by a test.
+
+**Where a guard exists for a collision, the fixture has to collide.** The
+same shape hides wherever test data is generated to be conveniently distinct:
+unique names defeat a sort tie-breaker, unique timestamps defeat an ordering
+fallback, unique ids defeat a dedupe.
+
 
 ## Risks
 
