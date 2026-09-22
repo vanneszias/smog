@@ -1928,14 +1928,19 @@ EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET=probe-secret-8f3a bunx expo export
   `smog_analytics_consent`): **present** — but not because anything reads
   or writes it. Traced with `python3` byte-offset inspection to
   `packages/config/src/constants.ts`'s `ANALYTICS_CONSENT_STORAGE_KEY`
-  constant, re-exported by `@smog/config`'s barrel (`export * from
-  "./constants"`) alongside unrelated constants (`SQLITE_DATABASE_NAME`,
-  `DATABASE_TARGET_VERSION`, …) that `packages/ui-native/src/domain/
-  StatusBadge.tsx` *does* import from that same barrel. Metro bundles a
-  required CommonJS/ESM module as a whole file — it does not tree-shake
-  individual unused named exports the way Rollup/webpack can — so the
-  entire `constants.ts` module, including this one string it never uses,
-  ships as inert data. `apps/mobile` has zero imports of
+  constant. `packages/config/src/index.ts`'s barrel re-exports it (`export
+  * from "./constants"`, alongside `./sponsorships` and `./urls`), and
+  `packages/ui-native/src/domain/StatusBadge.tsx` imports from that same
+  barrel — `SPONSORSHIP_STATUS_LABELS` and `type SponsorshipStatus`, both
+  actually defined in `packages/config/src/sponsorships.ts`, not
+  `constants.ts`. Nothing in the repo imports `constants.ts`'s
+  `SQLITE_DATABASE_NAME` or `DATABASE_TARGET_VERSION` either (grepped) —
+  they, and `ANALYTICS_CONSENT_STORAGE_KEY`, ship purely because importing
+  anything from the `@smog/config` barrel pulls in every module it
+  re-exports wholesale. Metro bundles a required CommonJS/ESM module as a
+  whole file — it does not tree-shake individual unused named exports the
+  way Rollup/webpack can — so `constants.ts` ships in full, including this
+  one string nothing ever reads. `apps/mobile` has zero imports of
   `ANALYTICS_CONSENT_STORAGE_KEY` (grepped) and `consent.ts` never reads or
   writes `AsyncStorage` under that key — confirmed both by source
   inspection and by `consent.test.ts`'s `"never reads the legacy apps/native
