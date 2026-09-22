@@ -5,20 +5,24 @@
 Eleven stages. Each produces working, testable software on its own and each has
 its own plan document, per `superpowers:writing-plans`.
 
-| # | Stage | Plan | Depends on |
-|---|---|---|---|
-| 0 | Foundation and spikes | [`2026-09-19-stage-0-foundation.md`](./2026-09-19-stage-0-foundation.md) | — |
-| 1 | Content model | [`2026-09-19-stage-1-content-model.md`](./2026-09-19-stage-1-content-model.md) | 0 |
-| 2 | Design system | [`2026-09-19-stage-2-design-system.md`](./2026-09-19-stage-2-design-system.md) | 0 |
-| 3 | Public web | [`2026-09-20-stage-3-public-web.md`](./2026-09-20-stage-3-public-web.md) | 1, 2 |
-| 4 | Auth | [`2026-09-20-stage-4-auth.md`](./2026-09-20-stage-4-auth.md) | 1, 2 |
-| 5 | Sponsorships | [`2026-09-21-stage-5-sponsorships.md`](./2026-09-21-stage-5-sponsorships.md) | 1, 4 |
-| 6 | Video pipeline | [`2026-09-21-stage-6-video.md`](./2026-09-21-stage-6-video.md) | 0 gate 1, 5 |
-| 7 | Email and jobs | [`2026-09-21-stage-7-email-jobs.md`](./2026-09-21-stage-7-email-jobs.md) | 5 |
-| 8 | Native | [`2026-09-21-stage-8-native.md`](./2026-09-21-stage-8-native.md) | 4 |
-| 8.5 | Consent | written when Stage 8 lands | 1, 4 |
-| 9 | Data migration | written when Stages 1, 4, 5 land | 1, 4, 5, 8.5 |
-| 10 | Cutover | written when Stage 9 lands | all |
+| # | Stage | Plan | Depends on | Status |
+|---|---|---|---|---|
+| 0 | Foundation and spikes | [`2026-09-19-stage-0-foundation.md`](./2026-09-19-stage-0-foundation.md) | — | landed |
+| 1 | Content model | [`2026-09-19-stage-1-content-model.md`](./2026-09-19-stage-1-content-model.md) | 0 | landed |
+| 2 | Design system | [`2026-09-19-stage-2-design-system.md`](./2026-09-19-stage-2-design-system.md) | 0 | landed |
+| 3 | Public web | [`2026-09-20-stage-3-public-web.md`](./2026-09-20-stage-3-public-web.md) | 1, 2 | landed |
+| 4 | Auth | [`2026-09-20-stage-4-auth.md`](./2026-09-20-stage-4-auth.md) | 1, 2 | landed |
+| 5 | Sponsorships | [`2026-09-21-stage-5-sponsorships.md`](./2026-09-21-stage-5-sponsorships.md) | 1, 4 | landed |
+| 6 | Video pipeline | [`2026-09-21-stage-6-video.md`](./2026-09-21-stage-6-video.md) | 0 gate 1, 5 | landed |
+| 7 | Email and jobs | [`2026-09-21-stage-7-email-jobs.md`](./2026-09-21-stage-7-email-jobs.md) | 5 | landed |
+| 8 | Native | [`2026-09-21-stage-8-native.md`](./2026-09-21-stage-8-native.md) | 4 | **landed** — nine of ten exit criteria; the tenth needs a device |
+| 8.5 | Consent | **next** — write it now that Stage 8 has landed | 1, 4 | — |
+| 9 | Data migration | written when Stages 1, 4, 5 land | 1, 4, 5, 8.5 | — |
+| 10 | Cutover | written when Stage 9 lands | all | — |
+
+"Landed" means the plan's exit assessment is appended to it with the
+measurements, not that every criterion was met — each plan's own exit section
+says which were not and why.
 
 ## Why a plan is written when its predecessor lands
 

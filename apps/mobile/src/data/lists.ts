@@ -49,7 +49,7 @@ interface RawGesture {
 }
 
 /** One gesture on a list, as `GET /api/lists/:id?depth=1` populates it. */
-export interface ListGesture {
+interface ListGesture {
   id: string;
   name: string;
   playbackId?: string | null;
@@ -67,15 +67,15 @@ export interface ListGesture {
  * itself rather than off the populated document, and is what a "remove"
  * control needs to act on a row it cannot otherwise describe.
  */
-export interface ListItem {
+interface ListItem {
   gesture: ListGesture | null;
   gestureId: string;
 }
 
-export type ListVisibility = "private" | "shared";
+type ListVisibility = "private" | "shared";
 
 /** One list, as the owner's index shows it — no items, just a count. */
-export interface ListSummary {
+interface ListSummary {
   description: string | null;
   id: string;
   itemCount: number;
@@ -84,7 +84,7 @@ export interface ListSummary {
 }
 
 /** One list with its gestures, as the detail screen shows it. */
-export interface ListDetail {
+interface ListDetail {
   description: string | null;
   id: string;
   items: ListItem[];

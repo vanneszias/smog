@@ -3596,3 +3596,410 @@ rest were reasoned from it. Stage 5 found eight plan errors, Stage 6 eight,
 Stage 7 around twenty-eight, every one of them found by an implementer
 reading the file rather than trusting the plan. Do that again, and report
 what you found — the report is how the next plan gets less wrong.
+
+---
+
+## Stage 8 exit: measured
+
+**`apps/site` worker: 7,564.67 KiB gzipped (7.39 MiB) of 10.00 MiB — 26%
+headroom.** Measured with `CLOUDFLARE_ENV=staging bun run build:app` then
+`wrangler deploy --dry-run`, the same way Stages 4, 6 and 7 measured it.
+
+Stage 7 closed at 7,533.04 KiB, which would make this stage +31.63 KiB — but
+that comparison crosses two build environments, so it was replaced by a real
+A/B: the stage's own base commit `c7767c6` was checked out into a worktree,
+given the *same* `node_modules` by hard link, and built with the same
+toolchain. It measures **7,528.04 KiB gzipped (34,991.41 KiB raw)** against
+HEAD's **7,564.67 KiB (35,159.77 KiB raw)**.
+
+**Stage 8 cost +36.63 KiB gzipped, and that is above the ~20 KiB line this
+plan drew**, so the plan's own instruction applies: find what pulled a module
+graph in. Nothing did.
+
+- `apps/site/package.json` is byte-identical to `c7767c6`.
+- `bun.lock`'s only change is the two workspaces this stage created, neither
+  of which `apps/site` depends on.
+- An import survey of all nine changed or added server files
+  (`endpoints/{account,auth,lists,mobile,mobileSession,oauth}.ts`,
+  `lib/{claims,formPost}.ts`, `payload.config.ts`) finds exactly two
+  third-party specifiers, `payload` and `jose` — and `jose` was already in
+  the graph at the base through `auth/googleStrategy.ts` and
+  `endpoints/oauth.ts`.
+
+The growth is 46,688 bytes of new first-party endpoint source, which lands as
+**+127,606 bytes inside `handler.mjs` alone** (24,711,875 vs 24,584,269) plus
+the Payload config chunk that carries the same endpoints a second time. The
+stage added eleven JSON handlers to a site that had none: sign-up, the mobile
+session exchange, two reads, six list writes and three account writes. That is
+what 36.63 KiB of first-party code looks like, and it is the price of the
+rule this stage worked under — the app does not re-derive a rule the web
+already owns.
+
+**No `app/**/route.ts` imports Payload.** Still only the three Payload
+generates into `app/(payload)/`. Every endpoint this stage added rides on
+`api/[...slug]`.
+
+**`apps/mobile` export: 17,371,136 bytes (16.57 MiB)** across both platforms —
+iOS 4,310,436 B and Android 4,408,040 B of Hermes bytecode, plus a 1,440,765 B
+web bundle and 12,072 B of compiled CSS. Task 7 recorded 16.25 MiB when the
+app was four screens and a kitchen sink; Tasks 8 to 12 added auth, browse,
+search, detail, favourites, lists, settings and the account screen for
+**+320 KiB**. Nothing enforces a budget against this number; printing it on
+every `release:check` is what makes a regression visible at all.
+
+**Suites:** `apps/site` 1,523 tests in 113 files; `packages/ui-web` 475 in 32;
+`apps/mobile` 174 in 20; `packages/ui-native` 142 in 22; plus `apps/native`,
+`apps/web` and four packages. `turbo test` is 10 tasks of 10; `turbo
+check-types` 16 of 16; `bun audit --production` finds no vulnerabilities;
+`bun run build` is 4 of 4; `bunx knip --no-progress --no-config-hints` exits 0
+with no output.
+
+**`bun release:check` stops at `expo-doctor`, on the two network checks
+`AGENTS.md` documents**, and it stops against `apps/native` — an app this
+stage never touched:
+
+```
+Running 19 checks on your project...
+Unexpected error while running 'Check Expo config (app.json/ app.config.js) schema' check:
+SyntaxError: Unexpected token 'H', "Host not i"... is not valid JSON
+17/19 checks passed. 2 checks failed.
+✖ Check Expo config (app.json/ app.config.js) schema
+✖ Validate packages against React Native Directory package metadata
+Directory check failed with unexpected server response
+```
+
+Both failures are the proxy answering where a server should: the schema check
+parsed an error page instead of JSON, and the Directory check got no usable
+response at all. `expo-doctor apps/mobile`, run separately because the script
+throws before reaching it, fails the identical two and passes the identical
+seventeen. Confirmed against CI rather than chased: **`release-check` is green
+on `8370e74`** (run 35697918423, first attempt), where a clean install and real
+network run both doctors.
+
+Because the script throws there, `bun run build` and `knip` never execute
+inside `release:check`. Both were run directly instead, and both pass.
+
+One local-only papercut found by measuring the bundle, recorded so the next
+person does not debug it: `bun -F site build:app` leaves `.open-next/` behind,
+and `site#check-types` then fails with four `TS1111` errors inside the
+generated `handler.mjs` although `apps/site/tsconfig.json` lists `.open-next`
+in `exclude` — `tsc --listFilesOnly` shows it reading `.open-next/cloudflare/*`
+regardless, so something reaches those files other than `include`. The exact
+mechanism was not chased. CI never hits it (nothing runs `build:app` before
+`check-types`); deleting `.open-next/` clears it.
+
+### The concurrency mutation, whole-branch
+
+Setting `unique: false` on `claims.key` and running the entire `apps/site`
+suite fails **16 tests across 6 files**, and the restore returns 1,523/1,523:
+
+| file | failures |
+|---|---|
+| `src/lib/claims.int.test.ts` | 6 |
+| `src/endpoints/render.int.test.ts` | 4 — Stage 6's concurrent callback, replay 200, unknown-job oracle, and "stopped by the claim not the state table" |
+| `src/endpoints/jobs.int.test.ts` | 2 — Stage 7's overlapping invocations and the lease that must lapse |
+| `src/endpoints/mobileSession.int.test.ts` | **2 — Stage 8's `survives two concurrent redemptions of one code` and `refuses the same code twice`** |
+| `src/endpoints/mollie.int.test.ts` | 1 — Stage 5's `survives two concurrent deliveries of the same payment` |
+| `src/jobs/cleanupStalePayments.int.test.ts` | 1 — Stage 7's idempotency, "stopped by the claim not the status" |
+
+**That is what this check exists to establish.** Task 9's single-use exchange
+code is not a parallel mechanism that happens to work; it is the same unique
+index every other consumer serialises on, and it fails with them. Stage 7's
+exit recorded five failures from this mutation. It is now sixteen, and one
+database row is still the only atomic primitive any of them has.
+
+`apps/site/src/collections/Claims.ts` restored byte for byte —
+`git diff` empty, md5 `e8791c52155e55ab29c976bf380468f2` before and after.
+
+### Each criterion, and what it was verified against
+
+| # | criterion | met | measurement |
+|---|---|---|---|
+| 1 | the app builds, both platforms, size recorded | **yes** | `bun -F mobile export` exit 0; iOS + Android + web bundles above |
+| 2 | `bun release:check` passes | **yes, with the documented `expo-doctor` exception** | everything up to and including `bun audit` passes here; `expo-doctor`'s two network checks fail for both Expo apps; `build` and `knip` run separately and pass; CI green on `8370e74` |
+| 3 | knip clean, Task 3's exemption gone | **yes, after a fix this task made** | see below |
+| 4 | nothing imports a package Stage 10 deletes | **yes** | `src/boundary.test.ts` 10/10, over 46 real files (16 under `app/`, 30 under `src/`) |
+| 5 | every `@smog/ui-native` component is rendered by a screen | **yes, with one honest qualifier** | see below |
+| 6 | the prop vocabulary is identical across platforms | **yes** | see below |
+| 7 | the generated native theme matches `tokens` | **yes** | `theme.test.ts` 5/5, including "byte-identical to what the generator produces"; `git diff c7767c6..HEAD -- packages/styles/src/tokens.ts` is empty, so there was no token change to re-run it after |
+| 8 | the site bundle has not grown materially | **yes, trigger tripped and cause found** | +36.63 KiB gzipped, above the ~20 KiB line; no new dependency, all first-party — above |
+| 9 | sign in, browse, search, favourite, sign out **on a real device** | **NO** | see below |
+| 10 | the Stage 4 auth assertions still pass unchanged | **yes** | `bun -F site test src/endpoints/auth.int.test.ts` 40/40; the file's only commit this stage is `d790f21`, +152/−1, and the one deleted line is `import { isCredentialFailure } from "@/lib/authFlow";`, replaced by a two-symbol import on line 13. Nothing was edited, only added. |
+
+**Criterion 9 is not met and cannot be met here.** There is no device, no
+simulator and no emulator in this environment. What is specifically
+unverified:
+
+- **`expo-secure-store` against a real keychain.** Review Focus item 2 lives
+  exactly here: the iOS keychain survives app deletion, so a reinstall
+  resumes a session — including one whose account is gone. Task 8 shipped the
+  mechanism (a keychain token with no `AsyncStorage` marker beside it is a
+  previous installation's, and is cleared), and every test of it runs against
+  a mock. The mock cannot show what the real keychain does across an uninstall.
+- **That the six `/api/mobile/lists/*` writes work on device.** Task 11's
+  whole reason for existing was that React Native's `fetch` is `whatwg-fetch`
+  and reads no `redirect` option, so the form endpoints' 303 was being
+  followed into a page the app has no session for. The JSON surface fixes
+  that by construction, and its tests pass — but the platform behaviour that
+  made the old shape fail is the same platform behaviour nothing here can run.
+- **That a `className` becomes a style in a running app.** Task 7 substituted
+  the strongest available proxy rather than claiming a screenshot: a real
+  `expo export`, and a direct read of the compiled CSS (11,854 bytes with
+  `#00805f` and `border-style:dashed` present; 6,781 bytes with both gone when
+  a content glob is removed). A reproduced failure beats an unfalsifiable
+  success, and it is still not a phone.
+- **Live Google sign-in**, which was already Stage 4's unmet criterion 2 and
+  now has a second client.
+
+### The knip fix this task made, and why criterion 3 needed one
+
+Criterion 3 was met on the letter before this task ran. Task 1 gave
+`packages/ui-native` six `ignoreDependencies`; `40e9ebe` dropped
+`@smog/styles`, `clsx` and `tailwind-merge`, and `589d5ee` dropped
+`@smog/config` when `StatusBadge`'s runtime edge onto `@smog/ui-web` was
+removed. What remains is `@babel/core` and `tailwindcss` — the same pair
+`apps/native` and `apps/mobile` both carry, because knip cannot read a babel
+or tailwind config's imports. That is the pre-existing React Native pattern,
+not a Stage 8 concession. No `ignoreIssues` entry was ever added; Ruling 2
+provisioned for one and it was never needed, for a reason worth keeping (below).
+
+**It was failed in spirit, in `apps/mobile`.** That workspace's `entry` glob
+was `["app/**/*.{ts,tsx}", "src/**/*.ts", …]`, added in `fc62c66`. knip does
+not report unused exports *from entry files*, so a glob over the whole of
+`src/` made knip structurally unable to report an unused export anywhere in
+that app. It had reported none since the app was created, and that was not
+evidence of anything.
+
+Narrowing the entry to `["app/**/*.{ts,tsx}", "metro.config.js",
+"tailwind.config.js"]` surfaced ten exported types nothing imports, and no
+unused files or values:
+
+```
+Unused exported types (10)
+UseFavoritesResult         interface  apps/mobile/src/data/favorites.ts:49:18
+UseFavoriteGesturesResult  interface  apps/mobile/src/data/favorites.ts:156:18
+GesturesPage               interface  apps/mobile/src/data/gestures.ts:30:18
+UseGesturesParams          interface  apps/mobile/src/data/gestures.ts:90:18
+ListGesture                interface  apps/mobile/src/data/lists.ts:52:18
+ListItem                   interface  apps/mobile/src/data/lists.ts:70:18
+ListVisibility             type       apps/mobile/src/data/lists.ts:75:13
+ListSummary                interface  apps/mobile/src/data/lists.ts:78:18
+ListDetail                 interface  apps/mobile/src/data/lists.ts:87:18
+PayloadFetchInit           type       apps/mobile/src/lib/api.ts:73:13
+```
+
+All ten are internal shapes — screens import the hooks, never the hooks'
+result types — so all ten lost their `export` keyword rather than gaining a
+named exemption. `bunx knip --no-progress --no-config-hints` now exits 0 with
+no output, `bun -F mobile check-types` is clean, and `bun -F mobile test` is
+174/174.
+
+This is precisely the failure `AGENTS.md` warns about ("an exported symbol
+nothing imports fails the build"), hidden by configuration rather than absent.
+A named exemption is reviewable; a workspace-wide entry glob is not.
+
+The mechanism was proven rather than assumed. Appending the same unused type
+to `packages/ui-native/src/index.ts` (an entry) and to `src/lib/cn.ts` (not an
+entry), then running knip, reports **one** of them:
+
+```
+Unused exported types (1)
+ProbeExportOffEntry  type  packages/ui-native/src/lib/cn.ts:17:13
+```
+
+Both files restored, `git diff` empty, knip back to exit 0. That is also why
+Ruling 2's anticipated `ignoreIssues` exemption was never needed: Tasks 3 to 6
+exported components nothing imported, but they exported them *from
+`src/index.ts`*, which is an entry, so knip was never going to say anything.
+The plan expected four red commits and got none, and the reason was this, not
+good luck.
+
+### Criterion 5, with the qualifier it needs
+
+knip proves every `@smog/ui-native` export is imported — that is what makes
+its silence meaningful now — and a grep of `apps/mobile/app/**` places each
+one in a route. But four of the nineteen exports are rendered **only** by
+`app/dev/kitchen-sink.tsx`: `Avatar`, `Skeleton`, `StatusBadge` and
+`useToast`. That route is a real Expo Router screen and it ships, so the
+criterion is met as written; it is not the same claim as "a user sees this
+component". `StatusBadge` in particular exists for the sponsor surface, which
+this stage put out of scope on purpose. Recorded so nobody reads knip's
+silence as product coverage.
+
+### Criterion 6, and a plan error
+
+The plan's File Structure lists `packages/ui-native/src/vocabulary.test.ts`
+and criterion 6 asks for "`vocabulary.test.ts` green in both packages". **That
+file does not exist and never did.** The native half of the guard lives in
+`src/components/Button.test.tsx` and `src/components/Badge.test.tsx`, which
+import `BUTTON_VARIANTS` / `BUTTON_SIZES` / `BADGE_VARIANTS` from
+`@smog/ui-web/vocabulary` directly. The guarantee is the one the criterion
+wanted; the filename in the plan was wrong.
+
+The cross-platform mutation from Task 3 Step 12, reproduced here: adding
+`"subtle"` to `BUTTON_VARIANTS` in `packages/ui-web/src/vocabulary.ts` fails
+**both** suites from one edit —
+
+```
+FAIL  src/vocabulary.test.ts > the shared vocabulary > has a distinct implementation for every button variant
+AssertionError: expected [ …(6) ] to not include 'inline-flex items-center justify-cent…'
+
+● Button › implements every variant in the shared vocabulary, distinctly
+  Expected value: not "flex-row items-center justify-center gap-sm rounded-md h-10 px-lg"
+```
+
+— and both pass again after the restore (native 11/11, web 4/4), with
+`git diff packages/ui-web/src/vocabulary.ts` empty and md5
+`1148c3189bc5525f96a8bc97b402404c` unchanged. One word in one file on the web
+side turns the native library red. That is the property, and it has now been
+seen to fail.
+
+### Carried out of Stage 8
+
+**1. CI instability is this branch's top standing risk, and it is three
+incidents, not two.** All three are on this branch, in one night, none a code
+defect:
+
+| commit | job | symptom |
+|---|---|---|
+| `9354283` | `site#test` | miniflare sync-proxy: `assert (message?.id === id)` at `plugins/core/proxy/fetch-sync.ts:147`, surfacing as 500s and null Locations across unrelated suites |
+| `293e5b2` | `mobile#test` | exit code 130 — SIGINT, a killed process, not a failed assertion |
+| `1bfb970` | `site#test` | the same sync-proxy assert, 10 files / 44 tests, every symptom downstream of a D1 query throwing (`expected 500 to be 303`, `expected null not to be null`, `the callback did not issue a session`) |
+
+The first two cleared on one re-run each. The third was never re-run — the
+next commit, `8370e74`, went green on its first attempt (run 35697918423),
+which is the same information at no cost.
+
+**The ledger's own rule was that a second incident ends the re-run era, and
+this is the third. The decision is: split `release-check`, or cap the site
+suite's concurrency — not a fourth re-run.** What the three have in common is
+load: one job now runs 1,523 site tests across 113 files against miniflare,
+plus 174 mobile and 142 ui-native Jest tests, and `apps/site/vitest.config.mts`
+sets `isolate: false`.
+
+A mechanism worth naming and **explicitly not proven**: `isolate: false`'s own
+comment justifies itself on *disk* safety — each Vitest worker gets its own D1
+persistence directory keyed by `VITEST_WORKER_ID`. Disk is not the channel
+that failed. Miniflare's sync proxy is per-process, and `isolate: false` puts
+several files' Payload instances and D1 stubs in one process at once, which is
+the shape a request/response id mismatch would take. The experiment is a run
+with `isolate: true` or `poolOptions.threads.singleThread`; its cost is
+wall-clock on a suite already at ~130 s locally and ~4 min in CI.
+
+**That experiment was deliberately not run here, and `vitest.config.mts` was
+deliberately not touched.** This failure has never occurred in this sandbox —
+two full suite runs during this task's mutation check were clean — so a local
+measurement of the mitigation would prove nothing about the thing it mitigates.
+Changing CI topology on an exit commit, on a hypothesis that cannot be measured
+where the change is being made, is the drive-by this stage has spent thirteen
+tasks refusing. It belongs to Stage 8.5's first task, with the frame above
+quoted so nobody re-derives it.
+
+**2. Live Google sign-in is still unverified, on both platforms.** Stage 4's
+criterion 2, unchanged, now with a second client: Task 9's native flow is
+proven end to end against the local fake OpenID provider only. No client id
+or secret exists in dev or CI. The failure modes a fake cannot show —
+discovery-document drift, `nonce` handling, consent-screen configuration, a
+`hd` claim — are the ones that appear on first contact.
+
+**3. No app-store release, and that is Stage 10's problem.** The spec's
+decision table puts an app-store release in the critical path for the full
+migration. This stage produces an app that *builds* — `expo export` for iOS,
+Android and web, `eas.json` present — and nothing more. Missing: signing
+credentials and provisioning, store listings and screenshots, privacy
+disclosures (which Stage 8.5's consent work feeds), and the review cycle
+itself, whose latency is a schedule risk nothing here can compress.
+
+**4. `apps/native` is still shipping.** Both apps exist until Stage 10 deletes
+the old one, and they are built to coexist: `be.zias.smog` / scheme `smog`
+against `be.zias.smog.next` / scheme `smogmobile`. The scheme split is not
+cosmetic — `apps/native` registers `smog://` with its own `/auth-callback`
+route for the WorkOS flow, so the illustrative `smog://auth-callback` in Task
+9's brief would have handed the OAuth callback to a live app on the same
+device. `src/boundary.test.ts` is what keeps the new app from acquiring
+anything Stage 10 has to migrate rather than delete.
+
+**5. Stage 8.5 is next and it gates Stage 9.** `user-consents.analytics_consent`
+is `NOT NULL DEFAULT false`, so importing into a table with no defined write
+path cannot tell "no answer" from "declined" and would record a refusal for
+every existing user. `apps/mobile` ships with no analytics at all for the same
+reason — adding a tracker before there is a way to record a refusal is the
+mistake that stage exists to prevent.
+
+**6. The `mobileLists` ownership soft spot.** `mobileLists.int.test.ts`
+re-proves "a stranger cannot act on this list" *directly* for rename only; the
+other five writes rely on the shared `decide*` / `ownedListById` path that the
+untouched `lists.int.test.ts` proves. That is reasonable while the code is
+genuinely shared — but if that extraction is ever unpicked, five JSON
+endpoints lose their ownership coverage silently and no test goes red.
+
+**7. The Stage 3 sort-fixture gap is still open.** `lib/gestureQuery.ts` sorts
+`["name", "id"]` to stop a paginated list showing one gesture twice, and every
+seeded gesture in both fixtures gets a unique zero-padded name, so the tie the
+tie-breaker exists to break never occurs. Task 10 deleted the `"id"` and all
+1,488 tests stayed green. Recorded in the spec; the fix is fixtures that
+collide on `name` *and* `createdAt`, and it belongs to whoever next owns
+`gestureQuery`.
+
+**8. Three things about `apps/mobile` and `packages/ui-native` that no test
+covers, each written into the file rather than left to be rediscovered:**
+
+- **NativeWind's animation pipeline.** `Skeleton`'s guard catches an author
+  deleting `animate-pulse`; `gate.test.tsx` catches the `className`→style
+  pipeline failing entirely via a static colour utility. The animation path is
+  separate code — the crash traces from Task 4's rounds 1–2 prove it — and is
+  unobservable under the worklets mock. Inherent to the environment.
+- **Android shadows are compiled by neither suite.** `nativewind`'s
+  `shadows.js` branches on `=== "android"` twice: `elevation-*` is registered
+  only there, and only there does `shadow-*` emit `-rn-elevation`.
+  `apps/mobile` pins `NATIVEWIND_OS="ios"` (needed for the `darkMode: "class"`
+  at-rule), and `packages/ui-native` leaves it unset and so compiles through
+  the *web* plugin — a third shape. Blast radius today is one class,
+  `shadow-lg` on `Toast`, which nothing asserts on. The fix when something
+  depends on it is to compile twice and assert per platform, not to flip the
+  value.
+- **`Sheet`'s "renders nothing while closed"** is satisfied by the RN
+  jest-preset's Modal mock (`if (props.visible === false) return null`), not
+  by `Sheet`'s own guard. The pair still works because the *open* case is
+  real, but a reader who believes the closed assertion is load-bearing may one
+  day delete the open one as redundant.
+- Smaller, same family: `@shopify/flash-list` 2.0.2's own shipped
+  `jestSetup.js` is broken (it imports a `RecyclerView` export the main entry
+  does not have); `expo-video`'s mock lives in its own file because
+  nativewind's babel helper cannot be reached from `jest.mock()`'s sandboxed
+  factory; and `SearchBar`'s focus-after-clear has no unit-level proof under
+  jest-expo.
+
+**9. A locale gap is pinned, not fixed.** Task 12's i18n key-parity check
+found 92 legacy keys missing from `fr`, 14 `en`-only wizard keys and 1 missing
+from `en`. It is recorded as an `it.failing` that genuinely throws today
+rather than deleted or quietly accepted, and it is Stage 10's.
+
+**10. What this stage learned about its own evidence, which bears on how much
+weight the thirteen task reports deserve.** Nine assertions in this stage
+could not have failed, **six of them written that way by the plan**; two were
+caught proactively by implementers running their own mutations, and the rest
+by review. One task report cited an md5 for a file it had never hashed — the
+outcome it claimed was real, but the artifact offered as proof was invented,
+which is worse than a wrong claim about a library because a hash exists
+precisely so nobody has to trust the claimant. Four separate times a component
+comment or a report asserted something about a library that reading the
+library contradicted. **A report's claim to have verified something is not
+itself verification**, and the only reason any of this surfaced is that every
+task carried a mutation with "restore byte for byte" attached.
+
+### Blocked, and on whom
+
+Unchanged from Stage 7 except where noted; all of it is on the user, none of
+it on the code:
+
+- **The Cloudflare API token is still not rotated.** It was exposed in a
+  session transcript. Everything above that measures a bundle runs against it.
+- **Mux credentials and an AWS account** — Stage 6's pipeline is proven
+  against emulation only.
+- **Google OAuth client id and secret** — carried item 2 above, now blocking
+  two clients.
+- **A verified sender domain**, `JOBS_RUN_TOKEN` (unset, so the jobs endpoint
+  refuses every call by design) and the **cron wiring** — Stage 7's Task 7,
+  still open. `.open-next/worker.js` exports no `scheduled` handler, so
+  `wrangler.jsonc` carries no `crons` key on purpose.

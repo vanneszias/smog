@@ -803,6 +803,12 @@ and each gets its own plan document under `docs/superpowers/plans/`.
 Stages 0–5 are strictly ordered. Stage 8 depends on Stage 4. Stages 9 and 10
 depend on everything.
 
+**Stages 0 through 8 have landed**, each with its exit assessment appended to
+its own plan under `docs/superpowers/plans/`. Stage 8 met nine of its ten exit
+criteria; the tenth is "works on a real device", which no environment this
+project has run in can satisfy — see that plan's exit section for exactly what
+is unverified. **Stage 8.5 is the next plan to write.**
+
 **Stage 8.5 is numbered rather than inserted** so that the four plan documents
 and every cross-reference already written against stages 9 and 10 keep
 meaning what they say. It must land *before* Stage 9, which is the whole
@@ -1580,6 +1586,108 @@ for. Until then the sort is protected by a comment, not by a test.
 same shape hides wherever test data is generated to be conveniently distinct:
 unique names defeat a sort tie-breaker, unique timestamps defeat an ordering
 fallback, unique ids defeat a dedupe.
+
+
+### An `entry` glob over a source tree turns knip off for that workspace
+
+`knip` does not report unused exports *from entry files* — an entry is a
+package's public surface, and flagging its exports would flag every library.
+That default is correct, and it is why `packages/ui-native` could ship
+`Button` through `src/index.ts` in Stage 8 Task 3 with nothing importing it
+and still keep CI green, though the plan had provisioned an `ignoreIssues`
+exemption for exactly that commit. The exemption was never needed and the
+reason was never noticed.
+
+The same mechanism was load-bearing in the other direction three tasks later.
+`apps/mobile` was created with `"entry": ["app/**/*.{ts,tsx}", "src/**/*.ts",
+…]`. Every file under `src/` was therefore an entry, so **knip was
+structurally unable to report an unused export anywhere in that app** and had
+reported none since the app existed. Narrowing the entry to the Expo Router
+route directory and the two config files surfaced ten exported types nothing
+imports, in four files, on the first run.
+
+This matters more than ten types. `AGENTS.md` names knip as the check that
+catches people out — "an exported symbol nothing imports fails the build, so a
+helper type exported 'for later' turns the pipeline red on a commit that
+otherwise passes every local check". A workspace whose entry glob covers its
+whole source tree has opted out of that, silently, while still appearing in
+the config as a configured workspace.
+
+**A tool's silence is only evidence if the tool could have spoken.** The
+reviewable form of "this export is deliberate" is a named `ignoreIssues`
+entry, which a reader can see and challenge. An entry glob is not that; it is
+an exemption with no name, no scope and no expiry, and it reads like
+configuration rather than like a decision.
+
+### A session token is a valid exchange code unless a claim says it is not
+
+Stage 8 Task 9 hands a native app a single-use code at a custom-scheme
+redirect and lets it trade the code for a session over HTTPS, because a
+session token in a `smog://` URL is readable from the browser history, the OS
+log and any app that claims the same scheme. The exchange endpoint therefore
+has to refuse *anything that is not that code* — and the thing most likely to
+be presented is a real session token, which is signed with the same secret by
+the same issuer.
+
+Nothing distinguishes them but an explicit `purpose` claim. The endpoint pins
+HS256, checks `purpose`, and burns the `jti` through the `Claims` unique index
+so a stolen code cannot be replayed.
+
+The sharper half is how nearly it went unproven. The test that was supposed to
+show a session token is not a valid exchange code was built on a token from
+`payload.login()` — and `getFieldsToSign` signs `{id, collection, email, sid?}`
+with **no `sub`**, so the fixture would have been refused whether the `purpose`
+check existed or not. It was found by running the mutation and watching the
+test stay green, then rebuilt on a real `createOAuthSession` token, with the
+password-login case kept and relabelled as explicitly *not* mutation-sensitive
+rather than left to read as coverage.
+
+**Two tokens that are refused for different reasons look identical from the
+test's side.** When a guard exists to tell two similar things apart, the
+fixture has to be the thing that would pass without it.
+
+### A style gate that only runs under the test runner proves only the test runner
+
+Stage 8 Task 1 was a gate: fifteen components were about to be written in
+NativeWind, and the stage was to change shape immediately if a `className`
+did not become a real style. The gate passed, and it proved less than it
+looked like it proved. `jest.setup.ts` compiles `global.css` with postcss and
+calls `setupAllComponents()` by hand, because `react-native-css-interop`
+short-circuits under `NODE_ENV=test` and Jest has no bundler. The path that
+produced the passing style was **not** the path a phone runs.
+
+The real proof came six tasks later and it is worth copying. There was no
+simulator, emulator or browser in the environment, and no screenshot was
+claimed. Instead: a real `expo export`, and a direct read of the CSS Metro
+compiled — 11,854 bytes containing `#00805f` and `border-style:dashed` under
+the three content globs, and 6,781 bytes with both gone when the third glob
+was removed. **A substitution that reproduces the failure beats an
+unfalsifiable claim of success**, and the reviewer re-ran both exports and
+matched them byte for byte.
+
+Generalised: when a test harness has to reconstruct by hand what a bundler
+does in production, the test proves the reconstruction. The question to ask of
+any such gate is which of its steps the shipped pipeline also performs, and
+the answer belongs next to the gate.
+
+### The keychain outlives the app, so a reinstall resumes a deleted session
+
+`expo-secure-store` writes to the iOS keychain, which survives deleting the
+app. A session token stored there is therefore still present on a fresh
+install — including one whose account has since been deleted, which answers
+401 for ever unless the app notices.
+
+Stage 8's fix is a marker in `AsyncStorage`, which does *not* survive: a
+keychain token with no marker beside it belongs to a previous installation and
+is cleared before it is used. The mechanism is cheap and the failure it
+prevents is not — a user whose only recovery is deleting an app they have
+already deleted.
+
+It is also, as of Stage 8, **unverified against a real keychain**: every test
+of it runs against a mock, and a mock cannot show what the keychain does
+across an uninstall. Stage 10 ships this app to a store; that is the first
+point at which the guarantee is testable, and it should be tested there rather
+than assumed to have been tested here.
 
 
 ## Risks

@@ -27,7 +27,7 @@ import { resolveLocale } from "@/lib/locale";
  */
 
 /** One page of `GET /api/mobile/gestures`. */
-export interface GesturesPage {
+interface GesturesPage {
   docs: GestureSummary[];
   page: number;
   totalDocs: number;
@@ -87,7 +87,7 @@ interface HookResult<T> {
   refetch: () => void;
 }
 
-export interface UseGesturesParams {
+interface UseGesturesParams {
   q?: string;
   category?: string | null;
   page?: number;

@@ -70,7 +70,7 @@ async function errorCodeFrom(response: Response): Promise<string> {
   }
 }
 
-export type PayloadFetchInit = RequestInit & {
+type PayloadFetchInit = RequestInit & {
   locale?: Locale;
   /** Attaches the session's `Authorization` header, when there is one. */
   auth?: boolean;

@@ -46,7 +46,7 @@ function currentLocale(): Locale {
   return resolveLocale(getLocales().map((locale) => locale.languageTag));
 }
 
-export interface UseFavoritesResult {
+interface UseFavoritesResult {
   /** The current favourite ids, guest or account, whichever applies. */
   ids: string[];
   /** Still resolving the initial list — the session, or the first read. */
@@ -153,7 +153,7 @@ export function useFavorites(): UseFavoritesResult {
  * — so a stale id simply falls out of the list rather than rendering a
  * blank row or, worse, the wrong gesture's name under the wrong id.
  */
-export interface UseFavoriteGesturesResult {
+interface UseFavoriteGesturesResult {
   data: GestureSummary[];
   error: ApiError | null;
   loading: boolean;
