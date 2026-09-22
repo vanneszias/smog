@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { GestureViewTracker } from "@/components/GestureViewTracker";
 import { isAccountFavorite } from "@/lib/accountFavorites";
 import { fetchGesture, fetchViewer } from "@/lib/gestureDetail";
 import { isLocale, type Locale, localeAlternates } from "@/lib/locale";
@@ -169,6 +170,8 @@ export default async function GestureDetailPage({
 
   return (
     <article className="flex flex-col gap-6">
+      <GestureViewTracker gestureId={gestureId} />
+
       <nav aria-label="Kruimelpad">
         <a
           className="text-primary text-sm underline underline-offset-2"

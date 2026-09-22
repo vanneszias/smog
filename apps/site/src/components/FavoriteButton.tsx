@@ -4,6 +4,7 @@ import { Button, cn } from "@smog/ui-web";
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { writeAccountFavorite } from "@/lib/accountFavorites";
+import { trackEvent } from "@/lib/analytics";
 import { readGuestFavorites, toggleGuestFavorite } from "@/lib/guestStore";
 import type { Locale } from "@/lib/locale";
 import { syncGuestFavorites } from "@/lib/mergeGuestState";
@@ -86,6 +87,19 @@ import { syncGuestFavorites } from "@/lib/mergeGuestState";
  * plan's design rather than an oversight here, and it is recorded in the
  * Task 6 report; the fix is another caller of `syncGuestFavorites`, not a
  * different shape for it.
+ *
+ * ## It reports what it did, not what it tried
+ *
+ * `gesture_collection_changed` fires once the outcome is known — after
+ * `toggleGuestFavorite` on the guest path, after the endpoint's `ok` on the
+ * account path — never before. A press that lands on `signed-out` or
+ * `failed` reports nothing, because nothing changed. `collection:
+ * "favorites"` and `source: "gesture_detail"` are this component's fixed
+ * values: this stack keeps favorites as its own collection rather than
+ * `apps/web`'s "a default list named Favorites", so unlike that stack's
+ * `lists-context.tsx` (always `collection: "list"`), this control's
+ * `collection` never varies. `trackEvent` itself is the consent gate; this
+ * component does not check `readConsent()` a second time.
  */
 export function FavoriteButton({
   className,
@@ -170,7 +184,14 @@ export function FavoriteButton({
   }, [gestureId, signedIn]);
 
   const pressGuest = () => {
-    setState(toggleGuestFavorite(gestureId).includes(gestureId) ? "on" : "off");
+    const nowFavorite = toggleGuestFavorite(gestureId).includes(gestureId);
+    setState(nowFavorite ? "on" : "off");
+    trackEvent("gesture_collection_changed", {
+      action: nowFavorite ? "added" : "removed",
+      collection: "favorites",
+      gesture_id: gestureId,
+      source: "gesture_detail",
+    });
   };
 
   const pressAccount = async () => {
@@ -199,6 +220,12 @@ export function FavoriteButton({
 
     if (result.status === "ok") {
       setState(result.favorite ? "on" : "off");
+      trackEvent("gesture_collection_changed", {
+        action: result.favorite ? "added" : "removed",
+        collection: "favorites",
+        gesture_id: gestureId,
+        source: "gesture_detail",
+      });
       return;
     }
 

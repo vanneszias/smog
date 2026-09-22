@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ANALYTICS_CONSENT_KEY } from "@/lib/consentStore";
 import { GUEST_FAVORITES_KEY } from "@/lib/guestStore";
 import { FavoriteButton } from "./FavoriteButton";
 
@@ -464,6 +465,12 @@ describe("FavoriteButton on an account", () => {
      * assertion that catches a mutation pointing the heart at
      * `localStorage`, so the count is pinned and the sibling test above
      * pins the state with a merge that fails.
+     *
+     * Task 7 adds a second, unrelated read: `trackEvent`'s consent gate,
+     * fired once the write resolves as `ok`. It is not a second read of
+     * *the guest store* — a different key, for a different reason — so it
+     * is pinned alongside the merge's read rather than making this
+     * assertion any looser.
      */
     const getItem = vi.spyOn(Storage.prototype, "getItem");
     vi.stubGlobal("fetch", respondWith({ favorite: true }));
@@ -471,7 +478,10 @@ describe("FavoriteButton on an account", () => {
     await mount(signedIn());
     await press();
 
-    expect(getItem.mock.calls).toEqual([[GUEST_FAVORITES_KEY]]);
+    expect(getItem.mock.calls).toEqual([
+      [GUEST_FAVORITES_KEY],
+      [ANALYTICS_CONSENT_KEY],
+    ]);
   });
 
   it("merges this browser's guest favorites into the account", async () => {
