@@ -22,6 +22,24 @@ import { jest } from "@jest/globals";
  * invoked, not when `nativewind`/`tailwindcss` are required — but it is set
  * here, at the top, so nothing later in this file could accidentally read
  * the compiled CSS before it does.
+ *
+ * **`"ios"` is a choice with a cost, and the cost is Android.**
+ * `nativewind/dist/tailwind/shadows.js` branches on
+ * `NATIVEWIND_OS === "android"` twice: it registers the `elevation-*`
+ * utilities only there, and only there does `shadow-*` also emit
+ * `-rn-elevation`. Pinned to `"ios"`, every test in this app compiles the
+ * iOS shadow output, so an assertion about Android elevation would pass
+ * while testing something the Android build never renders. Today the blast
+ * radius is one class — `shadow-lg` on `@smog/ui-native`'s `Toast` — and
+ * nothing asserts on it; `packages/ui-native` leaves `NATIVEWIND_OS` unset
+ * and so compiles that class through the *web* plugin, which is a third
+ * shape again. Neither suite sees what Android ships.
+ *
+ * The honest fix, when something does depend on elevation, is to compile
+ * the config twice and assert per platform, not to flip this value: `"ios"`
+ * is required here for the `darkMode: "class"` at-rule above, and
+ * `"android"` would keep that while changing which shadows are right. Until
+ * then this is a known, named divergence rather than an accident.
  */
 process.env.NATIVEWIND_OS ??= "ios";
 

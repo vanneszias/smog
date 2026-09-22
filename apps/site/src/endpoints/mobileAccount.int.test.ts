@@ -209,6 +209,72 @@ describe("the native app's account endpoints", () => {
         status: "invalid",
       });
     });
+
+    it("holds a refusal to the timing floor", async () => {
+      /*
+       * The same assertion `account.int.test.ts` makes about the form
+       * surface, repeated here rather than inherited, because what it
+       * protects is not the shared decision — it is this renderer's wiring
+       * to it. `started` is read in the handler, not in `decideChangePassword`,
+       * so a handler that measured after `readBody`, or skipped the shared
+       * function for a "quick" local check, would keep every functional
+       * assertion in this file green while separating "wrong password" from
+       * "locked" by the ~80 ms a PBKDF2 comparison costs. Slack below the
+       * 500 ms floor, the way the form suite does it: pinning the exact
+       * number fails on a slow machine instead of on a regression.
+       */
+      const member = await createMember("password-timing");
+      const started = Date.now();
+
+      await post(
+        "/mobile/account/password",
+        { current: "not-the-password", next: "a-fine-password-222333" },
+        { token: member.token }
+      );
+
+      expect(Date.now() - started).toBeGreaterThanOrEqual(450);
+    });
+
+    it("acts on the token's account, never on one the body names", async () => {
+      /*
+       * Neither JSON body carries a target account, so cross-account use is
+       * structurally impossible today — this is the assertion that keeps it
+       * that way. A future edit that resolved the account from, say, a body
+       * `email` field would turn a stranger's session into a password reset
+       * for anybody, and every other test in this file would still pass.
+       */
+      const owner = await createMember("password-owner");
+      const stranger = await createMember("password-stranger");
+
+      const response = await post(
+        "/mobile/account/password",
+        {
+          current: PASSWORD,
+          email: owner.email,
+          id: owner.id,
+          next: "a-fine-password-444555",
+          userId: owner.id,
+        },
+        { token: stranger.token }
+      );
+
+      expect(response.status).toBe(200);
+
+      // The owner's password is untouched; the caller's own changed.
+      await expect(
+        payload.login({
+          collection: "users",
+          data: { email: owner.email, password: PASSWORD },
+        })
+      ).resolves.toBeTruthy();
+
+      await expect(
+        payload.login({
+          collection: "users",
+          data: { email: stranger.email, password: "a-fine-password-444555" },
+        })
+      ).resolves.toBeTruthy();
+    });
   });
 
   describe("request email change", () => {
@@ -282,6 +348,58 @@ describe("the native app's account endpoints", () => {
         field: "email-unchanged",
         status: "invalid",
       });
+    });
+
+    it("holds a refusal to the timing floor", async () => {
+      /*
+       * See the same assertion under "change password" for why this is
+       * repeated per renderer rather than trusted to the shared decision.
+       */
+      const member = await createMember("email-timing");
+      const started = Date.now();
+
+      await post(
+        "/mobile/account/email",
+        { current: "not-the-password", email: `moved-${member.email}` },
+        { token: member.token }
+      );
+
+      expect(Date.now() - started).toBeGreaterThanOrEqual(450);
+    });
+
+    it("parks the address on the token's account, not on one the body names", async () => {
+      const owner = await createMember("email-owner");
+      const stranger = await createMember("email-stranger");
+      const wanted = `taken-${stranger.email}`;
+
+      const response = await post(
+        "/mobile/account/email",
+        {
+          current: PASSWORD,
+          email: wanted,
+          id: owner.id,
+          userId: owner.id,
+        },
+        { token: stranger.token }
+      );
+
+      expect(response.status).toBe(200);
+
+      const [reloadedOwner, reloadedStranger] = await Promise.all([
+        payload.findByID({
+          collection: "users",
+          id: owner.id,
+          overrideAccess: true,
+        }),
+        payload.findByID({
+          collection: "users",
+          id: stranger.id,
+          overrideAccess: true,
+        }),
+      ]);
+
+      expect(reloadedOwner.pendingEmail).toBeFalsy();
+      expect(reloadedStranger.pendingEmail).toBe(wanted.toLowerCase());
     });
   });
 
