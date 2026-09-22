@@ -56,6 +56,7 @@
     "check-types": "turbo check-types",
     "test": "turbo test",
     "release:check": "bun run check:ci && bun run release:config-check && bun run check-types && bun run test && bun audit --production && bun run native:release-check && bun run build && knip --no-progress --no-config-hints",
+    "release:check:ci": "bun run check:ci && bun run release:config-check && bun run check-types && turbo test --filter=!site && bun audit --production && bun run native:release-check && bun run build && knip --no-progress --no-config-hints",
     "release:config-check": "bun scripts/release-config-check.ts",
     "native:release-check": "bun scripts/native-release-check.ts",
     "dev:native": "turbo -F native dev",

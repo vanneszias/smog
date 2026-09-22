@@ -267,6 +267,16 @@ git add .github/workflows/ci.yml package.json docs/superpowers/plans/2026-09-22-
 git commit -m "ci: run the site suite in its own job, with a prediction attached"
 ```
 
+**The experiment a recurrence licenses:**
+
+If the desync recurs in `site-tests`, set `isolate: true` in
+`apps/site/vitest.config.mts` and measure the wall-clock cost of the site suite
+before and after. The hypothesis it tests: that config's own comment justifies
+`isolate: false` on *disk* safety — per-worker D1 persistence directories keyed by
+`VITEST_WORKER_ID` — and disk is not the channel that failed. Miniflare's sync proxy
+is per-process, and `isolate: false` puts several files' Payload instances and D1
+stubs in one process at once, which is the shape a request/response id mismatch takes.
+
 ---
 
 ## Task 2: The consent store

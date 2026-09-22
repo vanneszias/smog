@@ -22,7 +22,28 @@ jobs:
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
-      - run: bun run release:check
+      - run: bun run release:check:ci
+
+  # Split out of `release-check` on 2026-09-22, after three intermittent CI kills on
+  # the Stage 8 branch — two of them miniflare's sync-proxy desync
+  # (`assert (message?.id === id)`, fetch-sync.ts:147), which took down 10 files and
+  # 44 tests on `1bfb970` and then passed on the next commit untouched.
+  #
+  # The fault has never reproduced outside CI, so this is not a fix and is not
+  # claimed as one: it is the load reduction the Stage 8 exit assigned, and it is
+  # falsifiable. If the desync recurs HERE — in a job running nothing but the site
+  # suite — then contention with the other release:check tasks was not the cause,
+  # and the next step is vitest's `isolate` setting rather than another re-run.
+  site-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun -F site test
 
   site-bundle-size:
     runs-on: ubuntu-latest
