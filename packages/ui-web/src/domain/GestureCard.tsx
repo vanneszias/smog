@@ -21,17 +21,8 @@ import { cn } from "../lib/cn";
 export interface GestureSummary {
   id: string;
   name: string;
-  playbackId?: string | null;
-  /*
-   * Last on purpose: `packages/ui-native/src/domain/summary.test.ts` compares
-   * this type against its native redeclaration by slicing the source text up
-   * to the interface's first `}`, and this field's own inline object type
-   * closes with one before the interface does. Ordered any other way, that
-   * scan stops here and never reaches `playbackId` on either platform. See
-   * that test's own comment for why it stays this crude on purpose, and why
-   * a field reorder is the one difference it is built to tolerate.
-   */
   categories?: readonly { id: string; name: string }[];
+  playbackId?: string | null;
 }
 
 export type GestureCardProps = Omit<

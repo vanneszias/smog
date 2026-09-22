@@ -12,17 +12,12 @@ import { cn } from "../lib/cn";
  * `@mux/mux-player-react` and React DOM into a React Native bundle through
  * `GestureGrid.tsx`'s own web import chain. `summary.test.ts` compares the
  * two declarations as text so the two cannot drift silently.
- *
- * `categories` is last for the same reason it is last on web: the parity
- * test slices this interface's source up to its first `}`, and this field's
- * own inline object type closes with one before the interface does. See
- * that test's comment, and the matching note on the web declaration.
  */
 export interface GestureSummary {
   id: string;
   name: string;
-  playbackId?: string | null;
   categories?: readonly { id: string; name: string }[];
+  playbackId?: string | null;
 }
 
 export type GestureCardProps = Omit<ViewProps, "children"> & {
