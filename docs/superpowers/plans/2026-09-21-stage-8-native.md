@@ -1225,7 +1225,7 @@ exists on both; the inventory does not have to.
 - Consumes: `cn` and the generated theme classes.
 - Produces, all exported from `@smog/ui-native`:
   - `Text({ variant?: "body" | "muted" | "heading" | "title", size?: "xs" | "sm" | "md" | "lg" | "xl", className?, ...RNTextProps })`
-  - `Input({ size?: InputSize, invalid?: boolean, label: string, className?, ...TextInputProps })` — `label` is **required**; see below.
+  - `Input({ size?: InputSize, invalid?: boolean, label: string, errorMessage?: string, className?, ...TextInputProps })` — `label` is **required**; see below.
   - `Card({ interactive?: boolean, className?, children })`
   - `Badge({ variant?: BadgeVariant, size?: BadgeSize, className?, children })` + `badgeVariants`
   - `Switch({ value: boolean, onValueChange: (next: boolean) => void, label: string, disabled?: boolean })`
@@ -1302,7 +1302,7 @@ non-obvious ones, which are the reason this is a list and not one file:
 | component | the test that earns its keep |
 |---|---|
 | `Text` | a `variant="muted"` renders a different colour than `variant="body"` — the pair, not one assertion |
-| `Input` | it has an accessible name from `label` **without** rendering a visible label, because `accessibilityLabel` is the only name a `TextInput` gets on iOS; and `invalid` sets `accessibilityState.invalid` rather than only a border colour |
+| `Input` | it has an accessible name from `label` **without** rendering a visible label, because `accessibilityLabel` is the only name a `TextInput` gets on iOS; and `errorMessage` both renders visibly and becomes `accessibilityHint`, with the other direction asserted — neither present when it is absent |
 | `Card` | `interactive` changes the border role (`border-border` vs `border-border-subtle`), asserted as two different colours |
 | `Badge` | every `BADGE_VARIANTS` entry renders distinctly, imported from `@smog/ui-web/vocabulary` exactly as `Button`'s does |
 | `Switch` | pressing it calls `onValueChange` with the **negation** of `value`, and a disabled one does not call it at all; state is asserted with `toBeChecked()` / `not.toBeChecked()` |
@@ -1314,6 +1314,21 @@ non-obvious ones, which are the reason this is a list and not one file:
 with a placeholder and no label is the single most common accessibility
 failure in React Native apps, and making the prop optional is how every one
 of them happens. Required, with a test, it cannot.
+
+**An earlier draft of this plan had `invalid` set `accessibilityState.invalid`.
+That is inert.** Checked in `react-native@0.83.10` rather than assumed: iOS
+`RCTView.m` reads only `checked`, `expanded` and `busy` from
+`accessibilityState`; Android's `ReactAccessibilityDelegate.kt` defines only
+`disabled`, `selected` and `checked`; `ViewAccessibility.d.ts` types the whole
+union as `disabled | selected | checked | busy | expanded`; and no
+`aria-invalid` exists in the package at all. The draft's own test had to widen
+the type to compile — which was the platform saying the field does not exist —
+and it would have pinned a prop no screen reader ever reads.
+
+So `invalid` stays the **visual** state it always was, and the announcement
+rides on `errorMessage` → `accessibilityHint`, which both platforms do read.
+The two are deliberately uncoupled: a caller may want the red border before it
+has a message to show.
 
 - [ ] **Step 3: Run the tests and watch them fail**
 
@@ -1457,15 +1472,19 @@ deliberate: they assert the behaviour, not the library.
 bun -F @smog/ui-native test src/components/Sheet.test.tsx
 ```
 
-Expected: FAIL, then PASS. If you chose `@gorhom/bottom-sheet`, add its jest
-mock to `jest.setup.ts` — it renders through Reanimated, which does not run
-under the test renderer unmocked:
+Expected: FAIL, then PASS. The Reanimated mock this step used to add —
 
 ```ts
 jest.mock("react-native-reanimated", () =>
   require("react-native-reanimated/mock")
 );
 ```
+
+— **is already in `jest.setup.ts`.** Task 4 brought it forward: without it,
+`animate-pulse` on `Skeleton` crashed the renderer through uninitialised
+worklets, and the first instinct was to drop the animation from shipped code
+to suit the test runner. Adding the mock a task early kept the component
+honest. Confirm it is there rather than adding a second one.
 
 - [ ] **Step 4: Write the failing `Toast` tests**
 
