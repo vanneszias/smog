@@ -57,6 +57,22 @@ describe("the rate limiter, against a real database", () => {
     }
   });
 
+  /**
+   * One call against this run's own namespace.
+   *
+   * **No test here shares a budget with another, and that is checked rather
+   * than hoped for.** The stored key is `${namespace}:${key}:${windowStart}`,
+   * the namespace carries this run's uuid, and every test below builds its
+   * `key` from a fresh `crypto.randomUUID()` — so nothing another test, or
+   * another run, has spent can reach it.
+   *
+   * `endpoints/analytics.int.test.ts` had the same exposure through a
+   * different route and it was a real intermittent CI failure: it drew its
+   * client addresses randomly from 254 values, so two tests could collide, and
+   * one of the two spends its budget to the last request on purpose. A uuid is
+   * not that space. Confirmed by running this file with
+   * `--sequence.shuffle.tests` under two seeds, stable in both.
+   */
   const take = (key: string, limit = SERIAL_LIMIT) =>
     takeRateLimit({
       key,

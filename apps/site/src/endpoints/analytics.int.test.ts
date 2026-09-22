@@ -4,6 +4,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -23,12 +24,48 @@ const RUN = crypto.randomUUID().slice(0, 8);
 const SITE = "http://localhost:3003";
 const PATH = "/api/analytics/track";
 const PASSWORD = "analytics-int-password";
-const IP_MAX = 254;
 const HOUR = 60 * 60 * 1000;
+/** Rows per cleanup delete, under D1's cap of 100 bind parameters. */
+const CLEANUP_BATCH = 50;
+/** The last usable host in TEST-NET-3; running out is a fault, not a wrap. */
+const IP_MAX = 254;
 
-/** A fresh `cf-connecting-ip` per test, so no two tests share a budget. */
-function documentationIp(block: string): string {
-  return `${block}.${Math.floor(Math.random() * IP_MAX) + 1}`;
+let allocated = 0;
+
+/**
+ * A `cf-connecting-ip` no other test in this file will be given.
+ *
+ * **This used to be `Math.random()` over 254 addresses, and that was the
+ * defect.** `rateLimitKey` is `cf-connecting-ip` and nothing else — which is
+ * the right design and is not what changed — so an address is a budget, and
+ * two tests drawing the same number share one. Two of the tests below spend a
+ * budget of 120 deliberately, so a collision with either turns some *other*
+ * test's 202 into a 429. At ten tests over 254 values that is a few percent a
+ * run: it passed ten consecutive CI runs and failed the eleventh, on
+ * "refuses nothing on the strength of a missing Origin", with
+ * `expected 429 to be 202`.
+ *
+ * Reproduced deterministically by pinning this function to one address, which
+ * failed six of the eleven tests at once — the same assertion CI reported
+ * among them. A counter cannot collide, and exhausting the block throws rather
+ * than wrapping round to an address already spent.
+ *
+ * It is deliberately *not* the whole fix. `beforeEach` clears the namespace as
+ * well, so that a test which forgets to pass an address — and so lands in the
+ * shared `"unknown"` bucket — is still independent of everything that ran
+ * before it. Unique addresses make the intent legible; the clear is what makes
+ * the property hold whether or not the next person remembers.
+ */
+function freshClientIp(): string {
+  allocated += 1;
+
+  if (allocated > IP_MAX) {
+    throw new Error(
+      `This file has more tests than TEST-NET-3 has addresses (${IP_MAX}); allocate a second block rather than reusing one.`
+    );
+  }
+
+  return `203.0.113.${allocated}`;
 }
 
 /**
@@ -133,17 +170,59 @@ describe("the analytics relay", () => {
     type: "track",
   });
 
+  /**
+   * Every counter this file's namespace holds, gone.
+   *
+   * Batched, for the reason `lib/rateLimit.ts` records at length: a
+   * `payload.delete` with a `where` emits one bind parameter per deleted
+   * document into its trailing `payload_preferences` delete, and D1 refuses at
+   * 100. The rows this file writes are bounded by its own test count — but
+   * `.wrangler/state/vitest` is persisted and never cleared, so a run that
+   * died before its cleanup leaves its rows behind under a different window
+   * key, and enough interrupted runs would cross the cap in a `beforeEach`
+   * that is supposed to be the thing making the suite reliable.
+   */
+  const clearCounters = async (): Promise<void> => {
+    for (;;) {
+      const { docs } = await payload.find({
+        collection: "rate-limits",
+        depth: 0,
+        limit: CLEANUP_BATCH,
+        overrideAccess: true,
+        where: { key: { like: "analytics:" } },
+      });
+
+      if (docs.length === 0) {
+        return;
+      }
+
+      await payload.delete({
+        collection: "rate-limits",
+        overrideAccess: true,
+        where: { id: { in: docs.map((row) => row.id) } },
+      });
+    }
+  };
+
   beforeAll(async () => {
     payload = await getPayload({ config });
   });
 
-  afterAll(async () => {
-    await payload.delete({
-      collection: "rate-limits",
-      overrideAccess: true,
-      where: { key: { like: "analytics:" } },
-    });
+  /**
+   * **No test's result may depend on how many other tests ran first.**
+   *
+   * The relay's budget is per address per sixty-second window, and two tests
+   * below spend one to the last request on purpose. Without this, a test that
+   * shared an address with either — by a random collision, by forgetting to
+   * pass one and landing in `"unknown"`, or by a leftover row from a run that
+   * died — would read the *sum of what ran before it* instead of its own
+   * subject, and would do so intermittently. See {@link freshClientIp}.
+   */
+  beforeEach(async () => {
+    await clearCounters();
   });
+
+  afterAll(clearCounters);
 
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -151,7 +230,7 @@ describe("the analytics relay", () => {
 
   it("accepts an allowlisted event", async () => {
     const response = await post(trackEvent(), {
-      ip: documentationIp("203.0.113"),
+      ip: freshClientIp(),
     });
 
     expect(response.status).toBe(202);
@@ -160,7 +239,7 @@ describe("the analytics relay", () => {
   it("refuses an event that is not in the allowlist", async () => {
     const response = await post(
       { payload: { name: "password_entered", properties: {} }, type: "track" },
-      { ip: documentationIp("203.0.113") }
+      { ip: freshClientIp() }
     );
 
     expect(response.status).toBe(400);
@@ -169,7 +248,7 @@ describe("the analytics relay", () => {
   it("refuses a payload shape it does not forward", async () => {
     const response = await post(
       { payload: { name: "gesture_viewed" }, type: "alias" },
-      { ip: documentationIp("203.0.113") }
+      { ip: freshClientIp() }
     );
 
     expect(response.status).toBe(400);
@@ -177,7 +256,7 @@ describe("the analytics relay", () => {
 
   it("refuses a cross-site post", async () => {
     const response = await post(trackEvent(), {
-      ip: documentationIp("203.0.113"),
+      ip: freshClientIp(),
       origin: "https://evil.example",
     });
 
@@ -187,7 +266,7 @@ describe("the analytics relay", () => {
   it("stops forwarding once the limit is spent", async () => {
     // The limiter is keyed on the edge-supplied address, so the test drives it
     // through the same header the Worker will see.
-    const ip = documentationIp("203.0.113");
+    const ip = freshClientIp();
     const send = () => post(trackEvent(), { ip });
 
     for (let attempt = 0; attempt < ANALYTICS_LIMIT; attempt += 1) {
@@ -206,7 +285,7 @@ describe("the analytics relay", () => {
      * Cloudflare, `cf-connecting-ip` is set by the edge and is the only one of
      * the four that is not.
      */
-    const ip = documentationIp("198.51.100");
+    const ip = freshClientIp();
     const send = (spoofed?: string) =>
       post(trackEvent(), { forwardedFor: spoofed, ip });
 
@@ -222,7 +301,7 @@ describe("the analytics relay", () => {
      * The whole reason the relay exists, asserted rather than assumed. The
      * request is intercepted at `fetch`, so nothing leaves the test process.
      */
-    const ip = documentationIp("203.0.113");
+    const ip = freshClientIp();
     const before = {
       id: process.env.OPENPANEL_CLIENT_ID,
       secret: process.env.OPENPANEL_CLIENT_SECRET,
@@ -268,7 +347,7 @@ describe("the analytics relay", () => {
     vi.stubGlobal("fetch", sent);
 
     const response = await post(trackEvent(), {
-      ip: documentationIp("203.0.113"),
+      ip: freshClientIp(),
     });
 
     expect(response.status).toBe(202);
@@ -298,7 +377,7 @@ describe("the analytics relay", () => {
 
     const response = await post(trackEvent(), {
       cookie: `payload-token=${token}`,
-      ip: documentationIp("203.0.113"),
+      ip: freshClientIp(),
     });
 
     expect(response.status).toBe(403);
@@ -320,7 +399,7 @@ describe("the analytics relay", () => {
 
     const response = await post(trackEvent(), {
       cookie: `payload-token=${token}`,
-      ip: documentationIp("203.0.113"),
+      ip: freshClientIp(),
     });
 
     expect(response.status).toBe(202);
@@ -334,7 +413,7 @@ describe("the analytics relay", () => {
      * decision rather than an accident.
      */
     const response = await post(trackEvent(), {
-      ip: documentationIp("203.0.113"),
+      ip: freshClientIp(),
       origin: null,
     });
 
