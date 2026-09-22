@@ -137,17 +137,63 @@ relying on inference. Google sign-in on mobile needs nothing in the app: it
 goes through the site's `/auth/google?client=mobile` and returns via
 `smogmobile://auth-callback` (hard-coded; the `scheme` in `app.json`).
 
-### Mobile analytics (Stage 8.6 — pending)
+### Mobile analytics (Stage 8.6)
 
-`apps/mobile` reads no OpenPanel variable today. The only related entries are
-in the **root** `.env.example`, written for the legacy `apps/native`:
+`apps/mobile` sends analytics events straight from the device to OpenPanel
+(`src/lib/analytics.ts`), gated on the on-device consent decision — never
+through `apps/site`. It reads three variables, all `EXPO_PUBLIC_*`:
 
 - `EXPO_PUBLIC_OPENPANEL_API_URL`
 - `EXPO_PUBLIC_OPENPANEL_CLIENT_ID`
-- `EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET` — note: any `EXPO_PUBLIC_*` value is
-  shipped in the app bundle, so this "secret" is public by construction.
+- `EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET`
 
-Stage 8.6 will fill this section.
+Every `EXPO_PUBLIC_*` variable is inlined into the JS bundle at build time —
+Expo/Metro substitutes the literal `process.env.EXPO_PUBLIC_…` expression
+during bundling — so it ships inside the compiled app and is extractable
+from any installed copy. It is **public by construction**, not a secret in
+the normal sense, regardless of the name. This is exactly why these three
+values must be a **separate, least-privileged** OpenPanel client scoped to
+this native app, and must never be the web pair (`OPENPANEL_CLIENT_ID` /
+`OPENPANEL_CLIENT_SECRET`, set as Worker secrets in §6 above) — the web
+pair's blast radius (the whole `analytics.zias.be` project as seen from the
+Worker) is not something to also hand out in an APK/IPA.
+
+Set each with `eas env:create`, matching the form already used for
+`EXPO_PUBLIC_API_URL` above (run in `apps/mobile`):
+
+```bash
+eas env:create --environment production --name EXPO_PUBLIC_OPENPANEL_API_URL --value https://analytics.zias.be/api --visibility plaintext
+eas env:create --environment production --name EXPO_PUBLIC_OPENPANEL_CLIENT_ID --value <native-client-id> --visibility plaintext
+eas env:create --environment production --name EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET --value <native-client-secret> --visibility sensitive
+```
+
+`--visibility plaintext` for the URL and client id (there is nothing to hide
+about either — both are readable in the shipped bundle anyway).
+`--visibility sensitive` for the client secret only to keep it out of the EAS
+dashboard's plaintext listing and build logs; it does **not** make the value
+secret in the shipped app itself — see above. Repeat for `preview` if that
+profile should also report analytics (`eas.json`'s `preview` profile builds
+against `NODE_ENV=production`).
+
+**Without these set:** analytics is a silent no-op. `src/lib/analytics.ts`'s
+`getClient()` returns `null` whenever `EXPO_PUBLIC_OPENPANEL_CLIENT_ID` or
+`EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET` is unset, so `trackEvent`/
+`trackScreenView` do nothing and no OpenPanel client is ever constructed —
+no crash, no queued/dropped events, nothing in the OpenPanel dashboard. This
+is entirely independent of consent: the prompt (`ConsentBanner`), the
+Settings analytics switch, and the `smog.consent.analytics` /
+`smog.consent.synced` on-device state (and the signed-in `POST
+/api/consent` row it drives) all work exactly the same with or without these
+variables set — only the OpenPanel send is affected.
+
+**Local dev:** `apps/mobile` has no `.env.example` of its own; the three
+`EXPO_PUBLIC_OPENPANEL_*` names are already documented in the **root**
+`.env.example` (written for the legacy `apps/native`, reused here — the
+comment there calls out the native pair specifically, distinct from the web
+`OPENPANEL_CLIENT_*` pair above it). Copy the root `.env.example` values (or
+your own least-privileged native-client credentials) into `apps/mobile`'s
+local environment however Expo picks up `EXPO_PUBLIC_*` for that dev flow
+(e.g. a `.env` file read by `expo start`); nothing further to add per-app.
 
 ## First deploy, in order
 
