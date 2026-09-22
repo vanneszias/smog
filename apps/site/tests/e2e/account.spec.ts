@@ -5,6 +5,7 @@ import {
   seedAuthUser,
   uniqueAuthEmail,
 } from "../helpers/seedAuthUser";
+import { seedConsent } from "../helpers/seedConsent";
 
 const SITE = "http://localhost:3003";
 
@@ -154,6 +155,8 @@ test.describe("The account page", () => {
   }) => {
     const member = await freshMember("account-delete-wrong");
 
+    // Not what this test is about — see `seedConsent`'s own comment.
+    await seedConsent(page);
     await signInAs(page, member);
     await page.goto(`${SITE}/nl/account`);
     await page.getByTestId("delete-confirm").fill(`x${member}`);
@@ -164,6 +167,17 @@ test.describe("The account page", () => {
     await expect(page.getByTestId("account-email")).toContainText(member);
   });
 
+  /*
+   * Deliberately left seeding nothing — the one place in this suite that
+   * still drives `delete-account` with the consent banner up and undecided,
+   * on purpose. `ConsentBanner`'s reserved-space spacer is what this test
+   * proves: it presses a page-bottom control while the fixed banner is
+   * genuinely covering the foot of the viewport, with no seeded decision
+   * making the banner absent to dodge the question. If a future change
+   * regresses the spacer, this is the test that goes red — the other
+   * account/list/sponsor specs that now seed a decision would stay green
+   * and prove nothing about it.
+   */
   test("deletes the account when the address is typed", async ({ page }) => {
     const member = await freshMember("account-delete-ok");
 

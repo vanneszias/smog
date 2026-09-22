@@ -109,4 +109,72 @@ describe("ConsentBanner", () => {
     const link = container.querySelector("a");
     expect(link?.getAttribute("href")).toBe("/fr/privacy");
   });
+
+  /*
+   * Fix round 1: `site-e2e` caught the fixed-position banner intercepting
+   * clicks on real page-bottom controls (`account.spec.ts`,
+   * `account-lists.spec.ts`, `sponsor.spec.ts`) — a consent wall reintroduced
+   * at the layout level, which no unit test could have seen because none of
+   * them render a *second*, unrelated component below this one. What a unit
+   * test *can* pin is the two properties the fix depends on: the spacer
+   * tracks the banner's own measured height, and it disappears the moment
+   * there is nothing left to reserve space for.
+   *
+   * jsdom has no `ResizeObserver` (see the component's own comment on why it
+   * is guarded with `typeof ResizeObserver === "undefined"`), so this
+   * installs a fake that invokes its callback synchronously from `observe()`
+   * with a fixed height, standing in for the real browser reporting the
+   * banner's rendered box.
+   */
+  it("reserves exactly the banner's measured height, and only while it is showing", () => {
+    class FakeResizeObserver {
+      private readonly callback: ResizeObserverCallback;
+
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = callback;
+      }
+
+      observe() {
+        this.callback(
+          [{ contentRect: { height: 96 } } as ResizeObserverEntry],
+          this as unknown as ResizeObserver
+        );
+      }
+
+      unobserve() {
+        // The fake never needs to stop watching a specific element.
+      }
+
+      disconnect() {
+        // Nothing to release: this fake holds no real observation.
+      }
+    }
+
+    const original = (globalThis as { ResizeObserver?: unknown })
+      .ResizeObserver;
+    (globalThis as { ResizeObserver: unknown }).ResizeObserver =
+      FakeResizeObserver;
+
+    try {
+      mount();
+
+      const spacer = container.querySelector('[aria-hidden="true"]');
+      expect(spacer).not.toBeNull();
+      expect((spacer as HTMLElement).style.height).toBe("96px");
+
+      const accept = [...container.querySelectorAll("button")].find((button) =>
+        button.textContent?.includes("toestaan")
+      );
+
+      act(() => {
+        accept?.click();
+      });
+
+      // Answered: the banner and its spacer leave together. A visitor who
+      // has decided must not carry permanent dead space at the page's foot.
+      expect(container.querySelector('[aria-hidden="true"]')).toBeNull();
+    } finally {
+      (globalThis as { ResizeObserver?: unknown }).ResizeObserver = original;
+    }
+  });
 });

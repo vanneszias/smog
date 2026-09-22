@@ -192,10 +192,21 @@ export default async function LocaleLayout({
          * `components/GuestFavoritesSync.tsx`.
          */}
         {user === null ? null : <GuestFavoritesSync />}
-        <ConsentBanner locale={locale} />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
           {children}
         </main>
+        {/*
+         * Last in the flex column on purpose, not beside `GuestFavoritesSync`
+         * above. `ConsentBanner` renders its own reserved-space spacer
+         * alongside the fixed banner (see its own doc comment), and that
+         * spacer is a normal flow element: placed here, after `<main>`, it
+         * extends the document *past* whatever the page's own last control
+         * is, so a visitor can scroll clear of the banner to reach it. Placed
+         * before `<main>` instead, it would only push the real content down
+         * by the same amount and leave the page's true bottom exactly as
+         * covered as before — the bug this fix-round exists to close.
+         */}
+        <ConsentBanner locale={locale} />
       </div>
     </SiteDocument>
   );

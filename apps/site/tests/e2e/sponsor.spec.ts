@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { getPayload } from "payload";
 import config from "../../src/payload.config.js";
 import { withBusyRetry } from "../helpers/d1Retry";
+import { seedConsent } from "../helpers/seedConsent";
 
 const SITE = "http://localhost:3003";
 const DAY = 24 * 60 * 60 * 1000;
@@ -101,6 +102,8 @@ test.describe("Sponsor wizard", () => {
   const filtered = `${SITE}/nl/sponsor?category=`;
 
   test("walks a selection through to the review step", async ({ page }) => {
+    // Not what this test is about — see `seedConsent`'s own comment.
+    await seedConsent(page);
     await page.goto(`${filtered}${categoryId}`);
 
     const boxes = page.getByTestId("sponsor-gesture-checkbox");
@@ -207,6 +210,9 @@ test.describe("Sponsor wizard", () => {
   test("lets a token holder resubmit, and kills the link behind them", async ({
     page,
   }) => {
+    // Not what this test is about — see `seedConsent`'s own comment.
+    await seedConsent(page);
+
     const payload = await getPayload({ config });
     const token = crypto.randomUUID();
 

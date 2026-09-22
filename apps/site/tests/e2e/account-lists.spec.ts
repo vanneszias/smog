@@ -5,6 +5,7 @@ import {
   seedAuthUser,
   uniqueAuthEmail,
 } from "../helpers/seedAuthUser";
+import { seedConsent } from "../helpers/seedConsent";
 import {
   cleanupListGestureFixtures,
   type ListGestureFixtures,
@@ -240,6 +241,10 @@ test.describe("The owner's list pages", () => {
   }) => {
     const member = await freshMember("lists-delete");
 
+    // Not what this test is about — see `seedConsent`'s own comment.
+    // `account.spec.ts`'s "deletes the account when the address is typed"
+    // is the one place that still leaves this unseeded, on purpose.
+    await seedConsent(page);
     await signInAs(page, member);
     const name = await makeList(page, "weg");
 

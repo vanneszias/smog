@@ -2,7 +2,7 @@
 
 import { Banner, Button } from "@smog/ui-web";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type ConsentState,
   readConsent,
@@ -73,6 +73,32 @@ const COPY: Record<
 export function ConsentBanner({ locale }: { locale: Locale }) {
   /** `undefined` is "not read yet"; `null` is "read, and they have not answered". */
   const [state, setState] = useState<ConsentState | undefined>(undefined);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  /**
+   * Reserved page-bottom space, exactly the banner's own rendered height.
+   *
+   * `Banner` is `position: fixed`, which is what keeps a real modal scrim out
+   * of this component (see `Banner.tsx`'s own doc comment) but which also
+   * means it takes no space in the document flow — so with nothing else
+   * done, it sits on top of whatever the last thing on the page happens to
+   * be. On `/nl/account`, `/nl/account/lists/:id` and the sponsor wizard that
+   * "whatever" is a submit button, and Playwright's real click caught it
+   * first: `<section aria-label="Help SMOG verbeteren" …> intercepts pointer
+   * events`. A fixed element covering an interactive one is exactly the
+   * consent-wall failure `Banner`'s design doc rules out — it had just moved
+   * from "traps focus inside the notice" to "blocks a control the notice
+   * isn't even part of".
+   *
+   * Measured rather than guessed, because the banner's own height is not
+   * constant: it wraps to two rows under ~640px (`Banner.tsx`'s
+   * `sm:flex-row`), and three different browser widths in this app's own
+   * e2e suite would each need a different hardcoded number, with no signal
+   * when a future copy change makes today's guess wrong again.
+   * `ResizeObserver` is the one API that reports an element's *rendered*
+   * box without polling, so the spacer tracks the real element instead of a
+   * number one commit will eventually drift from.
+   */
+  const [reservedSpace, setReservedSpace] = useState(0);
 
   useEffect(() => {
     setState(readConsent());
@@ -82,6 +108,35 @@ export function ConsentBanner({ locale }: { locale: Locale }) {
     });
   }, []);
 
+  useEffect(() => {
+    if (state !== null) {
+      // Answered, or not yet read: either way there is nothing to reserve
+      // space for. This is also what keeps the reservation from outliving
+      // the banner — a visitor who has already decided gets zero dead space
+      // at the foot of every page, forever, not a leftover gap.
+      return;
+    }
+
+    const section = wrapperRef.current?.querySelector("section");
+
+    if (!section || typeof ResizeObserver === "undefined") {
+      // jsdom (this component's own unit tests) has no `ResizeObserver`.
+      // Skipping the reservation there is correct, not a gap: those tests
+      // assert copy, state transitions and clicks, none of which depend on
+      // pixel geometry, and a real browser is what Step 4(a) below is
+      // actually verified against.
+      return;
+    }
+
+    const observer = new ResizeObserver(([entry]) => {
+      setReservedSpace(entry.contentRect.height);
+    });
+
+    observer.observe(section);
+
+    return () => observer.disconnect();
+  }, [state]);
+
   if (state !== null) {
     return null;
   }
@@ -89,22 +144,40 @@ export function ConsentBanner({ locale }: { locale: Locale }) {
   const copy = COPY[locale];
 
   return (
-    <Banner label={copy.title}>
-      <div className="flex flex-col gap-1">
-        <p className="font-semibold text-foreground">{copy.title}</p>
-        <p className="text-foreground-muted text-sm">
-          {copy.description}{" "}
-          <Link className="underline" href={`/${locale}/privacy`}>
-            {copy.policy}
-          </Link>
-        </p>
+    <>
+      <div ref={wrapperRef}>
+        <Banner label={copy.title}>
+          <div className="flex flex-col gap-1">
+            <p className="font-semibold text-foreground">{copy.title}</p>
+            <p className="text-foreground-muted text-sm">
+              {copy.description}{" "}
+              <Link className="underline" href={`/${locale}/privacy`}>
+                {copy.policy}
+              </Link>
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+            <Button onClick={() => writeConsent("denied")} variant="secondary">
+              {copy.decline}
+            </Button>
+            <Button onClick={() => writeConsent("granted")}>
+              {copy.accept}
+            </Button>
+          </div>
+        </Banner>
       </div>
-      <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-        <Button onClick={() => writeConsent("denied")} variant="secondary">
-          {copy.decline}
-        </Button>
-        <Button onClick={() => writeConsent("granted")}>{copy.accept}</Button>
-      </div>
-    </Banner>
+      {/*
+       * The spacer, not the banner: `Banner`'s own root is `position:
+       * fixed`, so it takes no flow height regardless of where this
+       * component sits in the tree — nothing here would push page content
+       * if this div were absent. Rendered as a sibling rather than as
+       * padding on `<main>` because `ConsentBanner` is a client leaf and
+       * `[locale]/layout.tsx` is a Server Component with no state to hold
+       * this height in; a plain flow element after `<main>` in that layout
+       * (see Task 4's fix-round commit) achieves the same reserved space
+       * without inventing a channel to pass a number up to a server parent.
+       */}
+      <div aria-hidden="true" style={{ height: reservedSpace }} />
+    </>
   );
 }
