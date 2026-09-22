@@ -1,8 +1,13 @@
 // @vitest-environment node
 import type { PayloadRequest } from "payload";
 import { getPayload, handleEndpoints } from "payload";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { CONSENT_VERSION, recordConsent } from "@/endpoints/consent";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  CONSENT_LIMIT,
+  CONSENT_VERSION,
+  CONSENT_WINDOW_SECONDS,
+  recordConsent,
+} from "@/endpoints/consent";
 import config from "../payload.config";
 
 /**
@@ -82,8 +87,51 @@ describe("the consent endpoint", () => {
     });
   };
 
+  /**
+   * Which fixed window `takeRateLimit` is counting this endpoint's requests
+   * into right now.
+   */
+  const consentWindow = () =>
+    Math.floor(Date.now() / 1000 / CONSENT_WINDOW_SECONDS);
+
+  /**
+   * Every counter this endpoint's namespace holds, gone.
+   *
+   * `.wrangler/state/vitest` is persisted and never cleared, and the budget
+   * is keyed on the account id — which SQLite hands out again after the rows
+   * using it are deleted. So a previous run's counter for id 41 is a live
+   * counter for *this* run's id 41, and the test above would read the sum of
+   * two runs. Batched under D1's cap of 100 bind parameters, for the reason
+   * `lib/rateLimit.ts` records at length.
+   */
+  const clearConsentCounters = async (): Promise<void> => {
+    for (;;) {
+      const { docs } = await payload.find({
+        collection: "rate-limits",
+        depth: 0,
+        limit: 50,
+        overrideAccess: true,
+        where: { key: { like: "consent:" } },
+      });
+
+      if (docs.length === 0) {
+        return;
+      }
+
+      await payload.delete({
+        collection: "rate-limits",
+        overrideAccess: true,
+        where: { id: { in: docs.map((row) => row.id) } },
+      });
+    }
+  };
+
   beforeAll(async () => {
     payload = await getPayload({ config });
+  });
+
+  beforeEach(async () => {
+    await clearConsentCounters();
   });
 
   /**
@@ -95,6 +143,8 @@ describe("the consent endpoint", () => {
    * be told apart from a real one by a later reader.
    */
   afterAll(async () => {
+    await clearConsentCounters();
+
     if (memberIds.length > 0) {
       await payload.delete({
         collection: "user-consents",
@@ -194,8 +244,81 @@ describe("the consent endpoint", () => {
       overrideAccess: true,
       where: { user: { equals: owner.id } },
     });
+    const strangerRows = await payload.find({
+      collection: "user-consents",
+      overrideAccess: true,
+      where: { user: { equals: stranger.id } },
+    });
 
     expect(ownerRows.totalDocs).toBe(0);
+    /*
+     * **The half this test was missing.** "The owner got no row" is also
+     * true of a handler that refuses every request, writes nothing at all,
+     * or is not mounted — so on its own it pins nothing about *whose*
+     * account is used. The row has to exist, and it has to be the
+     * stranger's: that is what makes this a test of "the session decides"
+     * rather than a test of "something went wrong somewhere".
+     */
+    expect(strangerRows.totalDocs).toBe(1);
+  });
+
+  it("stops one account appending permanent rows without limit", async () => {
+    /*
+     * `user-consents` denies `delete` to everyone and the prune job does not
+     * touch it — by design, it is evidence. So an unlimited writer into it
+     * is a way for any registered account to append rows that nobody can
+     * ever remove.
+     *
+     * The budget is spent inside one fixed window, checked rather than
+     * assumed: `takeRateLimit`'s key carries `windowStart`, so a turnover
+     * between the first request and the last hands the caller a fresh
+     * counter and turns the final 429 into a 200. That is a false failure
+     * about the clock, not about the limiter, so an attempt that straddles
+     * is discarded and retried with a new account.
+     */
+    const spendBudget = async (): Promise<null | Response> => {
+      const member = await createMember("rate-limited");
+      const opened = consentWindow();
+
+      for (let spent = 0; spent < CONSENT_LIMIT; spent += 1) {
+        const allowed = await post(
+          "/consent",
+          { analyticsConsent: true },
+          { token: member.token }
+        );
+
+        expect(allowed.status).toBe(200);
+      }
+
+      const refusedResponse = await post(
+        "/consent",
+        { analyticsConsent: false },
+        { token: member.token }
+      );
+
+      return consentWindow() === opened
+        ? refusedResponse
+        : (null as null | Response);
+    };
+
+    let refusedResponse: null | Response = null;
+
+    for (
+      let attempt = 0;
+      attempt < 3 && refusedResponse === null;
+      attempt += 1
+    ) {
+      refusedResponse = await spendBudget();
+    }
+
+    if (refusedResponse === null) {
+      throw new Error(
+        "the limiter's window turned over on three consecutive attempts"
+      );
+    }
+
+    expect(refusedResponse.status).toBe(429);
+    expect(refusedResponse.headers.get("Retry-After")).not.toBeNull();
   });
 
   it("refuses a body whose analyticsConsent is not a boolean", async () => {

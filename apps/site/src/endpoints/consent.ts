@@ -1,6 +1,7 @@
 import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
 import { readBody } from "@/endpoints/auth";
 import { guardOrigin } from "@/lib/formPost";
+import { takeRateLimit } from "@/lib/rateLimit";
 import type { User } from "@/payload-types";
 
 /**
@@ -28,10 +29,63 @@ import type { User } from "@/payload-types";
  * defaults `overrideAccess` to `true` (which is why the existing
  * `UserConsents.int.test.ts` fixtures write with neither) — passing both here
  * says, at the call site, exactly what this call is doing.
+ *
+ * ## Why it is rate limited, into a table with no delete
+ *
+ * `user-consents` denies `delete` to everyone and no sweep touches it — that
+ * is the point of an evidence table, and it is also why an unlimited writer
+ * into it is worse here than on any other endpoint in this app. A refused
+ * analytics event is a dropped beacon; a flood of consent rows is permanent.
+ * Any account in good standing could append them, so a session is not on its
+ * own a limit.
+ *
+ * The limiter is `lib/rateLimit.ts`, the one Task 5 built, under its own
+ * namespace so that this endpoint and the relay cannot spend each other's
+ * budget — the property `takeRateLimit`'s `namespace` argument exists for.
  */
 
 /** The only collection this endpoint authenticates against. */
 const USERS = "users";
+
+/** Its own budget, never the relay's. See the module note. */
+const RATE_LIMIT_NAMESPACE = "consent";
+
+/**
+ * Ten decisions per account per half hour.
+ *
+ * Chosen from what the two writers can actually produce rather than from a
+ * round number. A visitor answers the banner once, and the switch on the
+ * privacy and account pages writes one row per flip; `ConsentSync` posts only
+ * when the browser's decision differs from what it last recorded for this
+ * account, so ordinary page loads add nothing at all. Ten answers inside
+ * thirty minutes is several times more than a person changing their mind, and
+ * it is the difference between an account appending 480 permanent rows a day
+ * at worst and appending as many as a script can send.
+ *
+ * **A refusal here delays a record, it does not drop one.** `postConsent`
+ * writes its sync marker only after a 200, so a decision the limiter turns
+ * away is still in the browser, still unmarked, and is retried on the next
+ * page load or the next time the store changes. That is what makes a limit
+ * this tight safe on the one endpoint whose whole job is not to lose an
+ * answer.
+ *
+ * The window is shorter than `lib/rateLimit.ts`'s `RETAIN_SECONDS` (an hour),
+ * which it has to be: the prune sweep must never reach a window that is still
+ * live, or the account inside it gets a fresh budget.
+ */
+export const CONSENT_LIMIT = 10;
+export const CONSENT_WINDOW_SECONDS = 30 * 60;
+
+/** 429, carrying the seconds until this account's window turns over. */
+function tooManyRequests(retryAfterSeconds: number): Response {
+  return Response.json(
+    { error: "Too many requests" },
+    {
+      headers: { ...NO_STORE, "Retry-After": String(retryAfterSeconds) },
+      status: 429,
+    }
+  );
+}
 
 /** Every answer here is this caller's own state, and never worth caching. */
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -144,6 +198,24 @@ const postConsent: PayloadHandler = async (req) => {
   }
 
   const user = req.user as User;
+
+  /*
+   * Keyed on the account, not on the address: the session is already
+   * resolved above and cannot be spoofed, where an address can be shared by
+   * a whole school. The budget belongs to whoever is appending the rows.
+   */
+  const verdict = await takeRateLimit({
+    key: String(user.id),
+    limit: CONSENT_LIMIT,
+    namespace: RATE_LIMIT_NAMESPACE,
+    payload: req.payload,
+    windowSeconds: CONSENT_WINDOW_SECONDS,
+  });
+
+  if (verdict.allowed === false) {
+    return tooManyRequests(verdict.retryAfterSeconds);
+  }
+
   const body = await readBody(req);
   const { analyticsConsent } = body as { analyticsConsent?: unknown };
 
