@@ -4,8 +4,17 @@ import { ToastProvider } from "@smog/ui-native";
 import { getLocales } from "expo-localization";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { View } from "react-native";
+import {
+  SafeAreaInsetsContext,
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { enableScreens } from "react-native-screens";
+import {
+  ConsentBanner,
+  useConsentBannerVisible,
+} from "@/components/ConsentBanner";
 import { setLocale } from "@/lib/i18n";
 import { resolveLocale } from "@/lib/locale";
 import { SessionProvider } from "@/lib/session";
@@ -44,6 +53,31 @@ function useInitialLocale(): void {
   }, []);
 }
 
+/**
+ * The navigator, plus the consent banner sitting below it in flow rather
+ * than over it. While the banner is visible it owns the bottom safe-area
+ * inset itself (see `Banner`'s own comment), so the navigator's subtree is
+ * told that inset is already spent — otherwise the tab bar pads itself a
+ * second time for a home indicator the banner is already sitting on.
+ */
+function Navigator() {
+  const insets = useSafeAreaInsets();
+  const bannerVisible = useConsentBannerVisible();
+
+  return (
+    <View className="flex-1">
+      <SafeAreaInsetsContext.Provider
+        value={bannerVisible ? { ...insets, bottom: 0 } : insets}
+      >
+        <View className="flex-1">
+          <Stack screenOptions={{ headerShown: false }} />
+        </View>
+      </SafeAreaInsetsContext.Provider>
+      <ConsentBanner />
+    </View>
+  );
+}
+
 export default function RootLayout() {
   useInitialLocale();
 
@@ -51,7 +85,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SessionProvider>
         <ToastProvider>
-          <Stack screenOptions={{ headerShown: false }} />
+          <Navigator />
         </ToastProvider>
       </SessionProvider>
     </SafeAreaProvider>
