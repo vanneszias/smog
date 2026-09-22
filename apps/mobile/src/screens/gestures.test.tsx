@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -53,7 +54,7 @@ describe("the gestures screen", () => {
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
   });
 
-  it("shows a loading state before the first response", () => {
+  it("shows a loading state before the first response", async () => {
     global.fetch = jest.fn(
       () => new Promise(() => undefined)
     ) as unknown as typeof fetch;
@@ -61,6 +62,15 @@ describe("the gestures screen", () => {
     renderScreen();
 
     expect(screen.getByLabelText(/gebaren laden/i)).toBeOnTheScreen();
+
+    // The gestures fetch above never resolves — that is the point of this
+    // test — but this screen also mounts `SessionProvider` and its own
+    // `useFavorites`, both of which resolve quickly against the mocked
+    // `SecureStore`. Flush that pending work under `act` here, rather than
+    // leaving it to update state during whatever test runs next.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
   });
 
   it("shows the gestures once they arrive", async () => {

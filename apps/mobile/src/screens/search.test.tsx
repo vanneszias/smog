@@ -120,16 +120,40 @@ describe("the search screen", () => {
     });
     expect(trackEvent).toHaveBeenCalledTimes(1);
 
-    // A bare re-render (no prop/state change) never re-runs the effect at
-    // all, so the real risk this guards against is settling the *same*
-    // query a second time — cleared, then retyped identically, which
-    // fetches again and hands back a brand-new `data` object for the same
-    // string.
+    // A bare re-render (no prop/state change) — this screen has no page
+    // control of its own, so a re-render is the testable stand-in for
+    // "checked again while still on the same settled query" — must not
+    // count as a second search.
     rerender(<SearchScreen />);
     await screen.findByText("Hallo");
 
     expect(trackEvent).toHaveBeenCalledTimes(1);
+  });
 
+  it("fires again when the same query is settled on a second time, after changing", async () => {
+    const twoResults = {
+      docs: [
+        { categories: [], id: "1", name: "Hallo", playbackId: "abc" },
+        { categories: [], id: "2", name: "Dag", playbackId: "def" },
+      ],
+      page: 1,
+      totalDocs: 2,
+      totalPages: 1,
+    };
+    global.fetch = jest.fn(() => json(twoResults)) as unknown as typeof fetch;
+
+    render(<SearchScreen />);
+    type("hal");
+    await screen.findByText("Hallo");
+
+    expect(trackEvent).toHaveBeenCalledTimes(1);
+
+    // Changing the query away — even clearing it — and then settling on
+    // the exact same string again is a new search, per `apps/native`
+    // (`SearchScreen.tsx` ~111-125), which fired on every submit. This is
+    // the scenario the dedup guard must not overcount into silence:
+    // clearing the query is what used to leave the "already reported"
+    // marker stuck on "hal" forever.
     fireEvent.changeText(screen.getByLabelText("Zoeken"), "");
     fireEvent(screen.getByLabelText("Zoeken"), "submitEditing");
     await screen.findByText(/typ om een gebaar te zoeken/i);
@@ -137,7 +161,14 @@ describe("the search screen", () => {
     type("hal");
     await screen.findByText("Hallo");
 
-    expect(trackEvent).toHaveBeenCalledTimes(1);
+    expect(trackEvent).toHaveBeenCalledWith("search_performed", {
+      category_count: 0,
+      has_results: true,
+      query_length: 3,
+      result_count: 2,
+      source: "submit",
+    });
+    expect(trackEvent).toHaveBeenCalledTimes(2);
   });
 
   it("reports a settled query with no results", async () => {

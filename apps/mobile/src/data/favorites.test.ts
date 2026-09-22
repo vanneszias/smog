@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { renderHook, waitFor } from "@testing-library/react-native";
+import { act, renderHook, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { MAX_GUEST_FAVORITES } from "@/lib/guest";
 import { SessionProvider } from "@/lib/session";
@@ -86,7 +86,9 @@ describe("useFavorites", () => {
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
-      await result.current.toggle("a");
+      await act(async () => {
+        await result.current.toggle("a");
+      });
 
       await waitFor(() => expect(result.current.ids).toEqual(["a"]));
       expect(global.fetch).not.toHaveBeenCalled();
@@ -135,7 +137,9 @@ describe("useFavorites", () => {
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
-      await result.current.toggle("7");
+      await act(async () => {
+        await result.current.toggle("7");
+      });
 
       await waitFor(() => expect(result.current.ids).toEqual(["7"]));
 

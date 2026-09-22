@@ -44,6 +44,12 @@ describe("the favorites screen", () => {
     expect(await screen.findByTestId("favorites-scope")).toHaveTextContent(
       /dit toestel/i
     );
+
+    // The scope text renders immediately and does not itself wait on
+    // `useFavorites`/`useFavoriteGestures`'s own async loads — let those
+    // settle under `act` here too (both resolve to an empty list), rather
+    // than leaving them to update state during whatever test runs next.
+    await screen.findByText(/nog geen favorieten/i);
   });
 
   it("shows an empty state before anything is favourited", async () => {

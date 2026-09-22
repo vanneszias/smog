@@ -43,10 +43,15 @@ describe("ConsentBanner", () => {
     expect(await screen.findByText("Analytics toestaan")).toBeTruthy();
   });
 
-  it("does not render at all before the stored answer has loaded (Review Focus 2)", () => {
+  it("does not render at all before the stored answer has loaded (Review Focus 2)", async () => {
     // Synchronously after mount, the store has not resolved yet.
     renderBanner();
     expect(screen.queryByText("Analytics toestaan")).toBeNull();
+
+    // Let the pending `loadConsent` read settle under `act` before this
+    // test ends — otherwise its resolution (and the `emit()` it drives)
+    // fires later, outside `act`, attributed to whatever test runs next.
+    await screen.findByText("Analytics toestaan");
   });
 
   it.each([

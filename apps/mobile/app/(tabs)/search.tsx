@@ -39,19 +39,29 @@ export default function SearchScreen() {
   });
 
   /**
-   * Once per settled query, when its first page of results arrives — never
-   * for a failed search, which leaves `data` unset. Keyed on the query
-   * string rather than `data`'s identity, so re-searching the same term a
-   * second time (its `data` is a fresh object even though the string is
-   * unchanged) does not report a second search.
+   * Once per *settlement* of a query, when its first page of results
+   * arrives — never for a failed search, which leaves `data` unset. A
+   * settlement is scoped to one value of `query`: dedup is keyed on
+   * `data`'s identity (via a per-query "have we already reported this
+   * one" flag), not on the query string alone, so a bare re-render or a
+   * later page for the same still-current query does not fire twice, but
+   * changing the query away and later settling on that exact same string
+   * again — apps/native fired on every submit
+   * (`apps/native/screens/SearchScreen.tsx` ~111-125) — counts as a new
+   * search and fires again. Whenever `query` itself changes, the tracked
+   * record is replaced with a fresh, unreported one for that string.
    */
-  const reported = useRef<string | null>(null);
+  const settlement = useRef<{ query: string; reported: boolean } | null>(null);
   useEffect(() => {
-    if (!enabled || loading || error || !data || reported.current === query) {
+    if (settlement.current?.query !== query) {
+      settlement.current = { query, reported: false };
+    }
+
+    if (!enabled || loading || error || !data || settlement.current.reported) {
       return;
     }
 
-    reported.current = query;
+    settlement.current.reported = true;
     trackEvent("search_performed", {
       category_count: 0,
       has_results: data.docs.length > 0,
