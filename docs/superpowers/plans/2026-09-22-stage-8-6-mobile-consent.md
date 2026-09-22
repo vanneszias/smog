@@ -1765,10 +1765,20 @@ Then export again **without** the two variables and confirm the probe strings ar
    as signed out"` / `"keeps a pending decision when the session could not
    be verified, and still retries it once verified again"`, which pin the
    ruling that only an absent token — not an unresolved one — means
-   sign-out).
+   sign-out). **Corrected by the final review:** that ruling's premise —
+   "a 401 clears the token, so real sign-outs still drop" — missed that
+   Payload answers an *expired* JWT with `200 { user: null }`; see "Final
+   whole-branch review" below and its pinning tests.
 4. **Account identity leaking into analytics.** Pinned by
    `apps/mobile/src/lib/analytics.test.ts`, `"never identifies anyone, and
-   names no account in any event (Review Focus 4)"`.
+   names no account in any event (Review Focus 4)"` — **as rewritten in the
+   final review**: the original asserted all four forbidden keys with one
+   `arrayContaining`, so it failed only if every one was present and a
+   single leaked `userId` passed. It now asserts each key separately over
+   every event type, the screen view, and the payloads the SDK would put on
+   the wire. The route-pattern tests (`describe("screen views name the
+   route, not the thing on it")`) pin the one real leak the final review
+   found.
 5. **The consent POST failing — offline, 429, 5xx.** Pinned by
    `apps/mobile/src/lib/consentSync.test.ts`, the `it.each([429, 500,
    503])("keeps a %s pending and retries on the next pass (Review Focus
@@ -1778,7 +1788,13 @@ Then export again **without** the two variables and confirm the probe strings ar
 
 ### Exit criteria, by verification
 
-1. **Non-blocking prompt, covers nothing.** `Banner` renders in layout flow
+1. **Non-blocking prompt, covers nothing.** *Met only after the final
+   review's fix:* the banner's two buttons sat side by side, and the Dutch
+   labels (≈470pt) overflowed the ≈342pt a 390pt phone leaves, pushing the
+   refusal partly off-screen. They are now stacked full width — pinned by
+   `ConsentBanner.test.tsx`, `"stacks its two answers vertically, each full
+   width"` (a layout assertion; the on-device rendering is still unchecked,
+   see below). `Banner` renders in layout flow
    below the navigator, not as a `Modal`/scrim — pinned by
    `packages/ui-native/src/components/Banner.test.tsx`, `"is not a modal:
    nothing in its tree is an RN Modal"`, and the `Navigator` in
@@ -1801,24 +1817,35 @@ Then export again **without** the two variables and confirm the probe strings ar
 4. **Signing out drops an account-attributed decision.** Pinned by Review
    Focus 3's tests above, including the pending-marker variant
    `"drops a pending decision on sign-out as well — the next person must not
-   inherit it"`.
+   inherit it"`. *Met only after the final review's fix* for the sign-out
+   nobody performs — an expired token: `session.test.ts`, `describe(
+   "resolveSessionUser, a token /users/me names nobody for")`, and
+   `consentSync.test.ts`, `"drops the decision and its marker when the
+   session has expired (final review)"`.
 5. **No event without `"granted"`; withdrawal stops sending immediately.**
    Pinned by `analytics.test.ts`, `"sends nothing, and builds no client,
    before anyone has answered"`, `"sends nothing after a refusal"`, and
    `"stops sending, and clears the client, the moment consent is
    withdrawn"`.
-6. **No account identity reaches OpenPanel.** Pinned by Review Focus 4's
-   test at the jest layer; confirmed independently at the bundle layer in
-   Step 2 below — no `.identify(` call site exists anywhere in the exported
-   JS.
+6. **No account identity reaches OpenPanel.** *Not met as first
+   recorded — met after the final review's fix.* Screen views sent concrete
+   paths (`/lists/<listId>`), and a list id maps one-to-one to an account;
+   the SDK then repeated that path as `__path` on every later event. Now
+   pinned by `analytics.test.ts`'s route-pattern tests (in particular
+   `"never puts a concrete dynamic id in any screen-view or event
+   payload"`) and the rewritten Review Focus 4 test at the jest layer; the
+   bundle-layer check in Step 2 below (no `.identify(` call site in the
+   exported JS) still holds, but by itself it could not have caught a path.
 7. **Exactly `apps/native`'s five events.** `gesture_viewed`,
    `video_playback_completed`, `search_performed`,
    `gesture_collection_changed` (×2 call sites: added in
    `app/gestures/[id].tsx`, removed in `app/(tabs)/lists/[id].tsx`), and
-   `screen_view` via `trackScreenView` in `app/_layout.tsx` — confirmed by
-   grepping every non-test `trackEvent(`/`trackScreenView(` call site in
-   `apps/mobile/app` and `apps/mobile/src`; no sixth event, no favourites
-   emitter.
+   `screen_view` via `useScreenViews` (`src/lib/analytics.ts`, mounted once
+   in `app/_layout.tsx`'s `Navigator`) — confirmed by grepping every
+   non-test `trackEvent(`/`screenView(` call site in `apps/mobile/app` and
+   `apps/mobile/src`; no sixth event, no favourites emitter. (The final
+   review found `search_performed` reported a refined query with the
+   *previous* query's counts; fixed and pinned — see below.)
 8. **Settings offers withdrawal and the policy link to guests and signed-in
    people alike.** Pinned by `apps/mobile/src/screens/settings.test.tsx`,
    `describe("the analytics control")`: `"is off for someone who has not
@@ -1898,7 +1925,8 @@ Every other step, run individually from the root/relevant package:
 failures seen were transient full-concurrency resource contention that did
 not reproduce when the same suite ran without competing against the other
 17 packages, and a stale pre-existing local build artifact unrelated to
-this stage's changes. No Stage 8.6 code defect was found.
+this stage's changes. No Stage 8.6 code defect was found *by the gate* —
+the final whole-branch review below found five that it could not.
 
 ### Step 2: credentials inline, SDK ships (export proofs)
 
@@ -1969,6 +1997,77 @@ EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET=probe-secret-8f3a bunx expo export
   form of the documented "silent no-op" than the source comment claims:
   build-time elimination, not just a runtime null return.
 
+### Final whole-branch review: found and fixed
+
+The whole-branch review over `899a6f5..fc0e4e8` returned one Critical and
+four Important findings. Criteria 1, 4 and 6, and Review Focus 4, depended
+on these fixes; the account above was written before them. Each fix was
+test-first (RED shown, then GREEN) and, for the first four, mutation-checked
+(reverting the fix fails the new test on its assertion).
+
+1. **Critical — an account-linkable id reached OpenPanel** (criterion 6).
+   `app/_layout.tsx` sent `usePathname()` as the screen view, so list
+   detail went out as `/lists/<listId>`, and
+   `@openpanel/react-native` keeps the last screen-view path as `lastPath`
+   and attaches it as `__path` to every later `track` — so
+   `gesture_collection_changed` from list detail carried it too. Screen
+   views are now built by `useScreenViews` in `src/lib/analytics.ts` from
+   expo-router's `useSegments()`: segments are route *names*, so a dynamic
+   segment is always its `[param]` name (`/lists/[id]`, `/gestures/[id]`)
+   and a param value cannot appear; group segments (`(tabs)`, `(auth)`) are
+   dropped exactly as expo-router drops them from the pathname, so every
+   static route is sent as the same string as before. `screenView` is the
+   only thing that sets the SDK's `lastPath`, and `useScreenViews` is its
+   only caller. Pinned by `analytics.test.ts`, `describe("screen views name
+   the route, not the thing on it")` (list and gesture detail as patterns,
+   six static routes unchanged, and `"never puts a concrete dynamic id in
+   any screen-view or event payload"`, against an SDK mock that reproduces
+   `lastPath`/`__path`). Commit `a86b5fd`.
+2. **Important — Review Focus 4's test could not fail for one leaked key.**
+   Rewritten as described under Review Focus 4 above. Commit `55e41ca`.
+3. **Important — an expired session kept the account's decision**
+   (criterion 4). Payload answers an invalid/expired JWT on `/users/me`
+   with `200 { user: null }` (`payload/dist/auth/operations/me.js`), the
+   default `tokenExpiration` is 7200s, and nothing refreshes. The dead
+   token stayed stored, and `consentSync`'s `pass(null)` read "token
+   present" as "could not verify" and kept the decision forever on a device
+   showing itself signed out. `resolveSessionUser` now treats a successful
+   answer with `user === null` as definitive: it clears the token through
+   `clearToken` (so listeners fire) and the verified pair, unless a newer
+   token was stored while that answer was in flight. Network failure, 429
+   and 5xx still keep the token as "could not verify". Pinned by
+   `session.test.ts`, `describe("resolveSessionUser, a token /users/me
+   names nobody for")`, and `consentSync.test.ts`, `"drops the decision
+   and its marker when the session has expired (final review)"`. Commit
+   `8633ebb`.
+4. **Important — every refined search was reported with the previous
+   query's counts** (criterion 7's `search_performed`). `useGestures` keeps
+   the old page, with `loading` false, for the render in which the query
+   changes, so the settlement fired at once on stale data and the real
+   results arrived already reported; a refined query that failed was still
+   counted. The settlement now remembers the page on hand when the query
+   changed and reports only a page that arrived after it. Pinned by
+   `src/screens/search.test.tsx`, `describe("a query refined into another
+   (final review, Important)")`. Commit `1d2f278`.
+5. **Important — the banner's buttons overflowed narrow screens**
+   (criterion 1). Stacked, full width. Pinned by `ConsentBanner.test.tsx`,
+   `"stacks its two answers vertically, each full width"`. Commit
+   `e777c9b`. **Not verified on a device** — no simulator in this
+   environment; the banner's height on small screens and a toast over the
+   banner are recorded for Stage 10's device pass.
+
+Folded in by the controller: one OpenPanel client for the app's life
+(withdrawal calls `clear()` and the gate holds; each construction
+registered an `AppState` listener the SDK never removes) — pinned by
+`analytics.test.ts`, `"reuses one client for the app's life across
+withdraw and re-grant"`, commit `ff46959`; and `useConsentSync`'s `run` now
+catches and logs a failed pass instead of dropping its promise — pinned by
+`consentSync.test.ts`, `"logs a pass that fails, rather than leaving its
+rejection unhandled"`, commit `cc632cc`.
+
+With these fixes all nine exit criteria are met, criterion 1's layout
+excepted from on-device confirmation.
+
 ### Carried out of Stage 8.6
 
 Not fixed here — for the final whole-branch review to triage (from the SDD
@@ -1989,8 +2088,8 @@ ledger, `progress.md`):
 - Task 4: a provisional-marker write failure skips the POST where the web
   still POSTs; no read-back of the marker (plan-mandated, undocumented
   difference from the web).
-- Task 4: `run` (inside `useConsentSync`) drops `reconcileConsent`'s
-  promise (a floating promise).
+- ~~Task 4: `run` (inside `useConsentSync`) drops `reconcileConsent`'s
+  promise (a floating promise).~~ Fixed in the final review (`cc632cc`).
 - Task 4: the "settles rather than looping" test has no subscriber
   attached, so it cannot actually detect a loop.
 - Task 4: listener removal on unmount is untested (the `AppState` spy
@@ -2014,6 +2113,9 @@ ledger, `progress.md`):
 - Task 5: the constructor's `catch` path is untested.
 - Task 6: the inline `onPlaybackEnd` arrow resubscribes the `playToEnd`
   listener every render (harmless churn).
-- Task 6: `search.tsx`'s comment says the dedup is keyed on data identity;
-  it is actually keyed on the query string plus a reported flag.
+- ~~Task 6: `search.tsx`'s comment says the dedup is keyed on data identity;
+  it is actually keyed on the query string plus a reported flag.~~
+  Rewritten in the final review (`1d2f278`) to describe the mechanism it
+  now has: a per-query record with a reported flag and the stale page it
+  ignores.
 - Task 7: `AnalyticsRow`'s `Switch` falls back to `testID="root"`.

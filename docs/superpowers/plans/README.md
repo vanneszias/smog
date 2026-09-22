@@ -17,7 +17,7 @@ its own plan document, per `superpowers:writing-plans`.
 | 7 | Email and jobs | [`2026-09-21-stage-7-email-jobs.md`](./2026-09-21-stage-7-email-jobs.md) | 5 | landed |
 | 8 | Native | [`2026-09-21-stage-8-native.md`](./2026-09-21-stage-8-native.md) | 4 | **landed** — nine of ten exit criteria; the tenth needs a device |
 | 8.5 | Consent | [`2026-09-22-stage-8-5-consent.md`](./2026-09-22-stage-8-5-consent.md) | 1, 4, 8 | **landed** — all ten exit criteria met |
-| 8.6 | Mobile consent and analytics | [`2026-09-22-stage-8-6-mobile-consent.md`](./2026-09-22-stage-8-6-mobile-consent.md) | 1, 4, 8, 8.5 | **landed** — all nine exit criteria met |
+| 8.6 | Mobile consent and analytics | [`2026-09-22-stage-8-6-mobile-consent.md`](./2026-09-22-stage-8-6-mobile-consent.md) | 1, 4, 8, 8.5 | **landed** — all nine exit criteria met after the final review's fixes (criteria 1, 4 and 6 were not, as first recorded); the banner layout still needs a device |
 | 9 | Data migration | **next** — write it now that 8.6 has landed | 1, 4, 5, 8.5 | — |
 | 10 | Cutover | written when Stage 9 lands | all | — |
 
