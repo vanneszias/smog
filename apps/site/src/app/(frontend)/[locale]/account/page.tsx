@@ -1,6 +1,7 @@
 import { Button, Field, Input } from "@smog/ui-web";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { AccountConsentControl } from "@/components/AccountConsentControl";
 import { isLocale, resolveLocale } from "@/lib/locale";
 import { readSession } from "@/lib/session";
 
@@ -146,6 +147,17 @@ export default async function AccountPage({
             Naar mijn lijsten
           </a>
         </p>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="font-semibold text-foreground text-lg">Privacy</h2>
+        {/*
+         * The control the privacy page (Task 4) already promises exists: a
+         * signed-in visitor can withdraw — or give — analytics consent here.
+         * `AccountConsentControl` is a client leaf; this page stays a Server
+         * Component around it, same shape as every other section here.
+         */}
+        <AccountConsentControl />
       </section>
 
       <section className="flex flex-col gap-4">

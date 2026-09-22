@@ -28,6 +28,7 @@ import { cloudflareEmailAdapter } from "./email/adapter";
 import { accountEndpoints, mobileAccountEndpoints } from "./endpoints/account";
 import { analyticsEndpoints } from "./endpoints/analytics";
 import { authEndpoints, mobileAuthEndpoints } from "./endpoints/auth";
+import { consentEndpoints } from "./endpoints/consent";
 import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
 import { jobsEndpoints } from "./endpoints/jobs";
@@ -297,6 +298,7 @@ export default buildConfig({
     ...mobileListsEndpoints,
     ...oauthEndpoints,
     ...favoritesEndpoints,
+    ...consentEndpoints,
     ...accountEndpoints,
     ...mobileAccountEndpoints,
     ...jobsEndpoints,

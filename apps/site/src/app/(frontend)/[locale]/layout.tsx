@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { type ReactNode, Suspense } from "react";
 import { AccountNav } from "@/components/AccountNav";
 import { ConsentBanner } from "@/components/ConsentBanner";
+import { ConsentSync } from "@/components/ConsentSync";
 import { GuestFavoritesSync } from "@/components/GuestFavoritesSync";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { SiteDocument } from "@/components/SiteDocument";
@@ -191,7 +192,19 @@ export default async function LocaleLayout({
          * component that merges renders on gesture pages. See
          * `components/GuestFavoritesSync.tsx`.
          */}
-        {user === null ? null : <GuestFavoritesSync />}
+        {user === null ? null : (
+          <>
+            <GuestFavoritesSync />
+            {/*
+             * Only when there is a session, for the same reason
+             * `GuestFavoritesSync` is: a guest has nothing to reconcile —
+             * their decision is not attached to an account yet, and stays in
+             * `localStorage` until there is one. See
+             * `components/ConsentSync.tsx`.
+             */}
+            <ConsentSync />
+          </>
+        )}
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
           {children}
         </main>
