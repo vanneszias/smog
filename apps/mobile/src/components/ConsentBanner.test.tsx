@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react-native";
 import * as WebBrowser from "expo-web-browser";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -85,5 +86,26 @@ describe("ConsentBanner", () => {
       expect.stringMatching(/\/fr\/privacy$/)
     );
     expect(readConsent()).toBeNull();
+  });
+
+  /**
+   * Stage 8.6 final review: side by side in a row, the Dutch labels
+   * ("Analytics toestaan" + "Gebruiken zonder analytics", ≈470pt) overflow
+   * the ≈342pt a 390pt phone leaves inside the banner's padding, pushing the
+   * refusal partly off-screen. Stacked, each full width, refusing is exactly
+   * as reachable as accepting at any label length.
+   */
+  it("stacks its two answers vertically, each full width", async () => {
+    renderBanner();
+    const allow = await screen.findByTestId("consent-allow");
+    const refuse = screen.getByTestId("consent-required-only");
+    const actions = screen.getByTestId("consent-actions");
+
+    expect(actions).toHaveStyle({ flexDirection: "column" });
+    expect(actions).not.toHaveStyle({ flexDirection: "row" });
+    expect(within(actions).getByTestId("consent-allow")).toBe(allow);
+    expect(within(actions).getByTestId("consent-required-only")).toBe(refuse);
+    expect(allow).toHaveStyle({ width: "100%" });
+    expect(refuse).toHaveStyle({ width: "100%" });
   });
 });

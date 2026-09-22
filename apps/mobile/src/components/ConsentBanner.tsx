@@ -38,11 +38,23 @@ export function ConsentBanner() {
       >
         <Text className="underline">{t("settings.privacyPolicy")}</Text>
       </Pressable>
-      <View className="flex-row gap-sm">
-        <Button onPress={() => setConsent("granted")} testID="consent-allow">
+      {/*
+       * Stacked, each full width — never side by side. In a row the Dutch
+       * labels need ≈470pt against the ≈342pt a 390pt phone leaves here,
+       * and the overflow pushed the refusal off-screen (Stage 8.6 final
+       * review). A column keeps refusing exactly as reachable as accepting
+       * whatever the locale's label lengths.
+       */}
+      <View className="flex-col gap-sm" testID="consent-actions">
+        <Button
+          className="w-full"
+          onPress={() => setConsent("granted")}
+          testID="consent-allow"
+        >
           {t("settings.analyticsAllow")}
         </Button>
         <Button
+          className="w-full"
           onPress={() => setConsent("denied")}
           testID="consent-required-only"
           variant="secondary"
