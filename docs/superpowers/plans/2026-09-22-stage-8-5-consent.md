@@ -89,11 +89,16 @@ shipped source in front of me. Each line names the task that owns its test.
    declined, and the next device they use has no record to read back. Task 6 owns
    this; its test signs in with a stored `false` and asserts a row exists with
    `analyticsConsent: false`.
-3. **The relay must refuse an event the browser was never authorised to send.** The
-   consent gate lives in the browser, which the user controls; a relay that trusts
-   its caller is not a gate at all. Task 5 owns this; its test posts an event with no
-   session and with a session whose consent row says `false`, and asserts both are
-   refused without reaching the vendor.
+3. **The relay must refuse what it is actually able to refuse, and must not pretend
+   to more.** A guest's consent lives in the browser, so for an anonymous visitor
+   there is nothing server-side to check — that is the cost of keeping guest consent
+   local, and it is stated rather than papered over. What the relay *can* refuse it
+   must: a cross-site post, an event the allowlist does not name, anything over the
+   rate limit, and — when the request carries a session — an event whose account's
+   most recent consent row says `false`. Task 5 owns this; its tests assert all four,
+   and assert that a refusal never reaches the vendor. **The relay must not require a
+   session**: guests are trackable once they grant consent, and a session requirement
+   would track nobody who is not signed in.
 4. **Two tabs must not disagree.** `setConsent` in one tab leaves another tab's
    in-memory cache stale, so a second tab keeps tracking after a refusal. Task 2 owns
    this; its test dispatches a `storage` event and asserts subscribers re-read.
@@ -1470,6 +1475,14 @@ a D1 outage means the site is down anyway — and write down the decision either
 - **Missing credentials is a silent no-op** (`index.ts:163-166`), and the handler
   answers `202` regardless. Keep that: a site whose analytics vendor is unconfigured
   must still serve pages.
+- **No session is required, and that is deliberate** (the original has no auth check
+  either). A guest who granted consent is trackable, and their gate is client-side
+  because there is no row to look up for someone with no account. When the request
+  *does* carry a session, check the account's most recent `user-consents` row and
+  refuse on `analyticsConsent: false` — that costs one indexed read and closes the
+  case where a signed-in visitor's browser state disagrees with what they told the
+  server. Do not write a comment claiming the relay verifies consent: for guests it
+  verifies origin, vocabulary and rate, and nothing more.
 
 - [ ] **Step 6: Write the relay's tests — Review Focus 3**
 
@@ -1795,8 +1808,19 @@ if (getAnalyticsConsent() !== true) {
 }
 ```
 
-**Strict `!== true`, so that `null` and `false` both drop the payload.** Reproduce that
-exactly, reading from `@/lib/consentStore` rather than from a second copy of the state.
+**Carry the property, not the identifier.** `getAnalyticsConsent` is `apps/web`'s API
+and does not exist on this stack; Task 2 ships `readConsent(): ConsentState`. The
+property worth reproducing is that the check is positive rather than falsy — undecided
+and denied must BOTH drop the payload, which `if (!consent)` would also do today and
+would stop doing the moment a fourth state appears. So:
+
+```ts
+if (readConsent() !== "granted") {
+  return;
+}
+```
+
+Read from `@/lib/consentStore`, never from a second copy of the state.
 Its test asserts that an undecided visitor and a refusing visitor both send nothing —
 with `fetch` spied, so the assertion is about the network and not about a return value.
 
