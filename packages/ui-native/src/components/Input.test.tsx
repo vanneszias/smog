@@ -59,5 +59,6 @@ describe("Input", () => {
     expect(
       screen.getByLabelText("Email").props.accessibilityHint
     ).toBeUndefined();
+    expect(screen.queryByTestId("root-error")).not.toBeOnTheScreen();
   });
 });

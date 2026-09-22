@@ -9,22 +9,15 @@ import { cn } from "../lib/cn";
  * `surfaceRaised` is white, so a skeleton painted with it would be invisible
  * against the surface it stands in for.
  *
- * No `animate-pulse`, unlike web — a deliberate product difference, not a
- * workaround left in place to dodge a test. NativeWind routes `animate-*`
- * classes through `react-native-reanimated`, and — verified directly, not
- * assumed — `react-native-reanimated`'s own documented Jest mock
- * (`jest.mock("react-native-reanimated", () =>
- * require("react-native-reanimated/mock"))`) does not make this installed
- * version safe to render under `jest-expo`: `mock.ts` itself imports real,
- * non-type-only symbols from `./index`, which requires
- * `react-native-worklets`, whose `NativeWorklets.native.ts` constructs the
- * real native module at import time and throws `WorkletsError: Native part
- * of Worklets doesn't seem to be initialized` — because `react-native-
- * worklets` ships no mock of its own for that relative-path chain to resolve
- * to instead. See `task-4-report.md`'s "Fix round 1" section for the
- * verbatim error and the full chain.
+ * `animate-pulse` renders under `jest-expo` because `jest.setup.ts` mocks
+ * both `react-native-worklets` and `react-native-reanimated` — NativeWind
+ * routes `animate-*` classes through reanimated, and its own mock still
+ * requires the real worklets package unless worklets' mock is registered
+ * first. See `jest.setup.ts` for the registration and why the order matters.
  */
-export const skeletonVariants = cva("rounded-md bg-border-subtle");
+export const skeletonVariants = cva(
+  "animate-pulse rounded-md bg-border-subtle"
+);
 
 export type SkeletonProps = ViewProps & { className?: string };
 
