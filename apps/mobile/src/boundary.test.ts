@@ -76,6 +76,26 @@ describe("the mobile app's dependency boundary", () => {
     expect(offenders).toEqual([]);
   });
 
+  /**
+   * Expo Router builds its route table with `require.context` over the whole
+   * of `app/`, so **every** file there is bundled — including a test file,
+   * which drags `@testing-library/react-native` in with it. That package
+   * imports node's `console`, which Metro cannot resolve, and `expo export`
+   * fails outright while `bun -F mobile test` stays perfectly green.
+   *
+   * That is exactly what happened: a screen test written at
+   * `app/(auth)/sign-up.test.tsx` passed locally and turned `release-check`
+   * red. Screen tests live in `src/screens/` and import the route module
+   * from `app/`; nothing under `app/` is anything but a route.
+   */
+  it("keeps test files out of the route directory", () => {
+    const inRoutes = sources(join(ROOT, "app")).filter((file) =>
+      /\.(test|spec)\.tsx?$/.test(file)
+    );
+
+    expect(inRoutes).toEqual([]);
+  });
+
   it("lists none of them in package.json either", () => {
     const manifest = JSON.parse(
       readFileSync(join(ROOT, "package.json"), "utf8")

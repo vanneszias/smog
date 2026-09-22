@@ -6,7 +6,17 @@ import {
 } from "@testing-library/react-native";
 import { router } from "expo-router";
 import { signUp } from "@/lib/session";
-import SignUpScreen from "./sign-up";
+import SignUpScreen from "../../app/(auth)/sign-up";
+
+/**
+ * **Screen tests live under `src/`, never under `app/`.** Expo Router builds
+ * its route table with `require.context` over the whole `app/` directory, so
+ * anything placed there is bundled — and a test file drags
+ * `@testing-library/react-native` in with it, which imports node's `console`
+ * and fails `expo export` outright. This file started life at
+ * `app/(auth)/sign-up.test.tsx` and turned CI red for exactly that reason;
+ * `src/boundary.test.ts` now fails if a test file appears under `app/` again.
+ */
 
 /**
  * `expo-router`'s real module chain (`getPathFromState` → `query-string` →

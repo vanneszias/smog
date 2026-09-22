@@ -88,7 +88,8 @@
 | `src/lib/session.ts` | token storage, refresh, sign-out |
 | `src/lib/locale.ts` | device locale → `nl \| en \| fr` |
 | `src/lib/guest.ts` | signed-out favourites and lists, `AsyncStorage` only |
-| `src/boundary.test.ts` | nothing here imports a package Stage 10 deletes |
+| `src/boundary.test.ts` | nothing here imports a package Stage 10 deletes, and no test file sits under `app/` |
+| `src/screens/` | **screen tests live here, never under `app/`.** Expo Router builds its route table with `require.context` over all of `app/`, so a test file there is bundled — dragging `@testing-library/react-native` in with it, which imports node's `console` and fails `expo export` outright while `bun -F mobile test` stays green. Tasks 10–12 add screens; put their tests here and import the route module from `app/` |
 | `app/**` | Expo Router screens |
 
 **Modified — `apps/site`**
