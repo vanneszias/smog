@@ -1741,3 +1741,274 @@ Then export again **without** the two variables and confirm the probe strings ar
 7. Exactly `apps/native`'s five events are emitted.
 8. Settings offers withdrawal and the policy link to guests and signed-in people alike.
 9. `bun release:check` green (modulo documented sandbox `expo-doctor` network failures); export proofs recorded.
+
+---
+
+## Stage 8.6 exit: measured
+
+### Review Focus, by pinning test
+
+1. **Two reconcile passes in flight at once.** Pinned by
+   `apps/mobile/src/lib/consentSync.test.ts`, `"serialises passes: two at
+   once send one request (Review Focus 1)"`.
+2. **The prompt flashing before the stored decision loads.** Pinned by
+   `apps/mobile/src/lib/consent.test.ts`, `"reports not-loaded before the
+   first read resolves (Review Focus 2)"`, and by
+   `apps/mobile/src/components/ConsentBanner.test.tsx`, `"does not render at
+   all before the stored answer has loaded (Review Focus 2)"`.
+3. **Signing out on a device whose decision was recorded for an account.**
+   Pinned by `apps/mobile/src/lib/consentSync.test.ts`, `"drops an
+   attributed decision on sign-out, so the next person is asked (Review
+   Focus 3)"` (plus its two neighbours covering a still-pending marker and a
+   different account's marker, and the fix-round tests `"keeps a confirmed
+   decision when the session could not be verified, rather than treating it
+   as signed out"` / `"keeps a pending decision when the session could not
+   be verified, and still retries it once verified again"`, which pin the
+   ruling that only an absent token — not an unresolved one — means
+   sign-out).
+4. **Account identity leaking into analytics.** Pinned by
+   `apps/mobile/src/lib/analytics.test.ts`, `"never identifies anyone, and
+   names no account in any event (Review Focus 4)"`.
+5. **The consent POST failing — offline, 429, 5xx.** Pinned by
+   `apps/mobile/src/lib/consentSync.test.ts`, the `it.each([429, 500,
+   503])("keeps a %s pending and retries on the next pass (Review Focus
+   5)")` cases, `"keeps an offline attempt pending too"`, and
+   `useConsentSync`'s foreground-retry path is pinned by `"retries a pending
+   decision when the app returns to the foreground (Review Focus 5)"`.
+
+### Exit criteria, by verification
+
+1. **Non-blocking prompt, covers nothing.** `Banner` renders in layout flow
+   below the navigator, not as a `Modal`/scrim — pinned by
+   `packages/ui-native/src/components/Banner.test.tsx`, `"is not a modal:
+   nothing in its tree is an RN Modal"`, and the `Navigator` in
+   `apps/mobile/app/_layout.tsx` mounts it *after* the `Stack`, in flow, with
+   the bottom inset handed to the banner while it is visible. Shown only to
+   someone who has never answered: `ConsentBanner.test.tsx`, `"asks someone
+   who has never answered"`.
+2. **Tri-state, never a missing value, survives a restart.** `consent.ts`'s
+   `ConsentState` is `"granted" | "denied" | null`; `setConsent` only
+   accepts the two decided values, so nothing ever writes an empty string.
+   Persistence across a fresh module load is pinned by `consent.test.ts`,
+   `"reads back a stored decision"` and `"clears back to undecided"`; the
+   fresh-module flash guard is pinned by `"has not loaded before anything
+   has asked it to"` (`describe("the flash guard, on a fresh module
+   instance")`).
+3. **Exactly one consent row per change, retried after failure.** Pinned by
+   `consentSync.test.ts`, `"does not send the same decision twice"`, `"sends
+   again when the decision changes"`, and the Review Focus 5 retry cases
+   above.
+4. **Signing out drops an account-attributed decision.** Pinned by Review
+   Focus 3's tests above, including the pending-marker variant
+   `"drops a pending decision on sign-out as well — the next person must not
+   inherit it"`.
+5. **No event without `"granted"`; withdrawal stops sending immediately.**
+   Pinned by `analytics.test.ts`, `"sends nothing, and builds no client,
+   before anyone has answered"`, `"sends nothing after a refusal"`, and
+   `"stops sending, and clears the client, the moment consent is
+   withdrawn"`.
+6. **No account identity reaches OpenPanel.** Pinned by Review Focus 4's
+   test at the jest layer; confirmed independently at the bundle layer in
+   Step 2 below — no `.identify(` call site exists anywhere in the exported
+   JS.
+7. **Exactly `apps/native`'s five events.** `gesture_viewed`,
+   `video_playback_completed`, `search_performed`,
+   `gesture_collection_changed` (×2 call sites: added in
+   `app/gestures/[id].tsx`, removed in `app/(tabs)/lists/[id].tsx`), and
+   `screen_view` via `trackScreenView` in `app/_layout.tsx` — confirmed by
+   grepping every non-test `trackEvent(`/`trackScreenView(` call site in
+   `apps/mobile/app` and `apps/mobile/src`; no sixth event, no favourites
+   emitter.
+8. **Settings offers withdrawal and the policy link to guests and signed-in
+   people alike.** Pinned by `apps/mobile/src/screens/settings.test.tsx`,
+   `describe("the analytics control")`: `"is off for someone who has not
+   answered, and turning it on grants"`, `"lets someone who allowed
+   analytics withdraw — a refusal, not a blank"`, `"works without an
+   account"`, `"opens the privacy policy in the current locale"`, and the
+   Task 7 ruling's own test `"disables the switch until the stored answer
+   has loaded"`.
+9. **`bun release:check` and export proofs.** See below.
+
+### Step 1: the whole gate
+
+`bun release:check` was run whole from the root twice, then every step was
+also run individually once the two environment issues below were
+identified and isolated:
+
+- **`site#check-types` failed** on the first whole run:
+  `.open-next/server-functions/default/apps/site/handler.mjs(5228,903):
+  error TS1111: Private field '#d' must be declared in an enclosing class.`
+  (and three more at the same two positions). Cause, confirmed by
+  experiment: a **stale `apps/site/.open-next` build directory** already
+  present in this sandbox from before this session (dated well before this
+  run), pulled into `tsc`'s module resolution via `cloudflare-env.d.ts`'s
+  generated `typeof import("./.open-next/worker")` (site's `tsconfig.json`
+  excludes `.open-next` from its own globs, but `tsc` still follows an
+  explicit `import` into an excluded directory to resolve its type). `bun
+  -F site check-types`'s own task has no dependency on `build`, so a clean
+  CI checkout never has this directory at `check-types` time; a real
+  regression would reproduce with the directory absent. It did not:
+  **moving `.open-next` aside made `bun -F site check-types` pass cleanly**
+  (no output, exit 0), confirming this was the stale artifact, not a
+  Stage 8.6 regression (Stage 8.6 never touches `apps/site`).
+- **`mobile#test` (then `site#test`) failed once each** across the two
+  whole runs, always under `turbo test`'s full 18-package concurrency —
+  never the same package twice, and never reproducing standalone. The
+  mobile run failed on `src/screens/listDetail.test.tsx` (a `waitFor`
+  timeout inside its own 15s per-test cap, at 25.6s wall time) and
+  `src/screens/gestureDetail.test.tsx` (`"reports playback completion when
+  the video ends"`, 0 calls) with `console.error` "not wrapped in act(...)"
+  noise alongside; the site run failed on
+  `src/jobs/schedules.int.test.ts`'s fault-injection case ("the stats
+  global is on fire") and reported a `D1_ERROR: network is unreachable`
+  elsewhere in the same run. This matches the pattern Task 6 already
+  documented in the SDD ledger (`progress.md`, "CI red on 2594e36... a
+  pre-existing CPU/cold-transform-cache slowness... release-check runs
+  every package suite concurrently via turbo") — this sandbox is
+  resource-constrained for the full concurrent run, not the code.
+  Confirmed by re-running each implicated suite alone:
+  - `bun -F mobile test` (whole package, not just the two files): **245
+    passed, 245 total, 24 suites** — including both previously-flaked
+    files and the specific "reports playback completion when the video
+    ends" case.
+  - `bun -F site test -- src/jobs/schedules.int.test.ts`: **7 passed, 7
+    total**.
+  - `bun -F site test` (whole package, standalone): **125 of 126 files,
+    1643 of 1644 tests passed**; the one file that still failed standalone
+    (a different flake than the whole-run one) was re-run alone
+    immediately after and passed, consistent with the same
+    resource-contention pattern rather than a deterministic failure.
+
+Every other step, run individually from the root/relevant package:
+
+| Step | Command | Result |
+|---|---|---|
+| `check:ci` | `bun run check:ci` | Pass — Biome, 898 files, no fixes needed |
+| `release:config-check` | `bun run release:config-check` | Pass |
+| `check-types` | `bun run check-types` (after clearing the stale `.open-next`) | Pass, all 18 packages |
+| `test` | see above | Pass per-package once run outside full-concurrency contention |
+| `bun audit --production` | `bun audit --production` | Pass — "No vulnerabilities found" |
+| `native:release-check` — expo-doctor | `bunx expo-doctor apps/native` / `apps/mobile` | **Fails identically for both apps**, both times on the same two network-dependent checks: `SyntaxError: Unexpected token 'H', "Host not i"... is not valid JSON` (Check Expo config schema) and `Directory check failed with unexpected server response` (React Native Directory). Matches AGENTS.md's documented sandbox limitation exactly (17/19 checks pass otherwise). |
+| `native:release-check` — exports | `bun -F native export`, `bun -F mobile export` | Both pass, exit 0 |
+| `native:release-check` — size print | `du -sk apps/mobile/dist` | 17,068 KB ≈ 16.67 MiB |
+| `build` | `bun run build` | Pass — 4 tasks successful (site `next build`, others cached) |
+| `knip` | `bunx knip --no-progress --no-config-hints` | Pass — no output, no findings |
+
+**Verdict:** every step passes on its own merits; the only non-sandbox-network
+failures seen were transient full-concurrency resource contention that did
+not reproduce when the same suite ran without competing against the other
+17 packages, and a stale pre-existing local build artifact unrelated to
+this stage's changes. No Stage 8.6 code defect was found.
+
+### Step 2: credentials inline, SDK ships (export proofs)
+
+Run from `apps/mobile`. **Caveat found and corrected:** the first attempt
+(`--platform android`, no `--clear`) produced a bundle whose content hash
+matched a bundle built earlier in this session *without* the probe
+variables — Metro's transform cache does not key on `EXPO_PUBLIC_*` values,
+so a stale cache silently serves the previous build. Every export below
+was re-run with `--clear` once this was noticed; all results below are from
+cache-cleared exports (hbc for the literal command in the brief; a web
+export alongside it, whose plain-JS output is directly greppable, to read
+the actual surrounding code rather than guess at Hermes's bytecode string
+table).
+
+**With the probe credentials** (`EXPO_PUBLIC_OPENPANEL_CLIENT_ID=probe-id-8f3a
+EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET=probe-secret-8f3a bunx expo export
+--platform android --clear --output-dir …`):
+
+- `probe-id-8f3a` and `probe-secret-8f3a`: **present**, once each, in the
+  `.hbc` bundle (byte search) and, readably, in the web bundle:
+  `clientId:"probe-id-8f3a",clientSecret:"probe-secret-8f3a"` inside the
+  compiled `getClient()` — confirms `EXPO_PUBLIC_*` is inlined at build
+  time exactly as `analytics.ts`'s comment claims.
+- `smog.consent.analytics` / `smog.consent.synced`: **present** (our own
+  storage keys, expected).
+- `@smog_analytics_consent` (the legacy key, substring
+  `smog_analytics_consent`): **present** — but not because anything reads
+  or writes it. Traced with `python3` byte-offset inspection to
+  `packages/config/src/constants.ts`'s `ANALYTICS_CONSENT_STORAGE_KEY`
+  constant, re-exported by `@smog/config`'s barrel (`export * from
+  "./constants"`) alongside unrelated constants (`SQLITE_DATABASE_NAME`,
+  `DATABASE_TARGET_VERSION`, …) that `packages/ui-native/src/domain/
+  StatusBadge.tsx` *does* import from that same barrel. Metro bundles a
+  required CommonJS/ESM module as a whole file — it does not tree-shake
+  individual unused named exports the way Rollup/webpack can — so the
+  entire `constants.ts` module, including this one string it never uses,
+  ships as inert data. `apps/mobile` has zero imports of
+  `ANALYTICS_CONSENT_STORAGE_KEY` (grepped) and `consent.ts` never reads or
+  writes `AsyncStorage` under that key — confirmed both by source
+  inspection and by `consent.test.ts`'s `"never reads the legacy apps/native
+  key"`. This is a bundling-granularity artifact of a shared constants
+  file, not a runtime leak; recorded here rather than silently reported as
+  "no match" since the brief asked to report findings, not the expected
+  answer.
+- `.identify(`: **zero call sites** anywhere in the web bundle (checked
+  with a regex over the whole file). The `OpenPanel` class itself defines
+  the method (it's a general-purpose SDK), but nothing in `analytics.ts`'s
+  compiled output — the only place the client is constructed or used —
+  calls it. Independent bundle-level confirmation of exit criterion 6 and
+  Review Focus 4.
+
+**Without the two variables** (same command, unset, `--clear`):
+
+- `probe-id-8f3a` / `probe-secret-8f3a`: **absent** (0 occurrences),
+  confirmed on both the `.hbc` (byte count) and the web bundle (`grep -c`).
+- The web bundle's minifier statically eliminated the entire
+  `new OpenPanel(...)` construction: with `process.env.EXPO_PUBLIC_
+  OPENPANEL_CLIENT_ID`/`_CLIENT_SECRET` both inlined to the literal
+  `undefined`, the `if (!(clientId && clientSecret)) return null;` guard is
+  always true, and the minifier reduced `getClient` to `function
+  c(){if(!l())return null;if(null!==t)return t;return null}` — no
+  `clientId:`/`clientSecret:` construction text remains at all. A stronger
+  form of the documented "silent no-op" than the source comment claims:
+  build-time elimination, not just a runtime null return.
+
+### Carried out of Stage 8.6
+
+Not fixed here — for the final whole-branch review to triage (from the SDD
+ledger, `progress.md`):
+
+- Task 1: the `type ConsentState` import in `consent.test.ts` existed to
+  satisfy knip until a later task consumed it (it now also serves the
+  test's own assertion at line 34, so this is effectively resolved, but is
+  listed as the ledger recorded it).
+- Task 1: no test that unsubscribe stops notifications, or that
+  `clearConsent` notifies.
+- Task 2: `Banner.tsx` hardcodes `16` rather than `tokens.spacing.md`
+  (plan-mandated literal).
+- Task 2: `BannerProps`' rest spread lands after `role`/`accessibilityLabel`,
+  so a caller can override the labelled-region contract (same pattern as
+  `ui-web`'s `Banner`).
+- Task 3: testIDs `consent-allow` / `consent-required-only` are unasserted.
+- Task 4: a provisional-marker write failure skips the POST where the web
+  still POSTs; no read-back of the marker (plan-mandated, undocumented
+  difference from the web).
+- Task 4: `run` (inside `useConsentSync`) drops `reconcileConsent`'s
+  promise (a floating promise).
+- Task 4: the "settles rather than looping" test has no subscriber
+  attached, so it cannot actually detect a loop.
+- Task 4: listener removal on unmount is untested (the `AppState` spy
+  returns a stub).
+- Task 4: `console.error` is silenced suite-wide in `consentSync.test.ts`,
+  which may hide `act()` warnings.
+- Task 4: `resolveSessionUser` reads the token once but sends `/users/me`
+  with `auth: true` (a second keychain read), so the verified pair could
+  in principle combine two tokens' facts if the keychain changes between
+  reads; blocks only in practice. Fix noted: send the already-read token
+  explicitly.
+- Task 4 (pre-existing, out-of-scope): `payloadFetch` clears the token on
+  *any* 401 regardless of which token the request carried; `SessionProvider`
+  has no sequence guard across overlapping `load()` calls (a slow old
+  resolve can render the wrong user briefly; the consent gate still
+  blocks).
+- Task 5: `analytics.ts`'s comment overclaims what `filter` does — no
+  `storage`/`networkInfo` is passed to the SDK, so it never queues, and
+  `filter` is redundant with the lazy-client gate today; re-verify if
+  storage is ever added.
+- Task 5: the constructor's `catch` path is untested.
+- Task 6: the inline `onPlaybackEnd` arrow resubscribes the `playToEnd`
+  listener every render (harmless churn).
+- Task 6: `search.tsx`'s comment says the dedup is keyed on data identity;
+  it is actually keyed on the query string plus a reported flag.
+- Task 7: `AnalyticsRow`'s `Switch` falls back to `testID="root"`.
