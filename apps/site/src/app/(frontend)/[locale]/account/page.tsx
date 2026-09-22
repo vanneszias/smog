@@ -2,7 +2,9 @@ import { Button, Field, Input } from "@smog/ui-web";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { AccountConsentControl } from "@/components/AccountConsentControl";
+import { newestConsentDecision } from "@/lib/accountConsent";
 import { isLocale, resolveLocale } from "@/lib/locale";
+import { getPayloadClient } from "@/lib/payloadClient";
 import { readSession } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -84,6 +86,18 @@ export default async function AccountPage({
   const noticeMessage = notice === undefined ? undefined : NOTICES[notice];
   const pendingEmail = user.pendingEmail;
 
+  /*
+   * Read-only, server-rendered, the same way `FavoriteButton` receives
+   * `initialFavorite`: the account's own newest recorded decision, never
+   * merged into `AccountConsentControl`'s switch. See that component's
+   * "Ruling" doc comment for why the two must stay separate.
+   */
+  const payload = await getPayloadClient();
+  const initialConsent = await newestConsentDecision({
+    payload,
+    userId: user.id,
+  });
+
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-8">
       <div className="flex flex-col gap-2">
@@ -157,7 +171,10 @@ export default async function AccountPage({
          * `AccountConsentControl` is a client leaf; this page stays a Server
          * Component around it, same shape as every other section here.
          */}
-        <AccountConsentControl />
+        <AccountConsentControl
+          initialConsent={initialConsent}
+          locale={current}
+        />
       </section>
 
       <section className="flex flex-col gap-4">
