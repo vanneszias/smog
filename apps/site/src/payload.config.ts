@@ -30,6 +30,7 @@ import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
 import { jobsEndpoints } from "./endpoints/jobs";
 import { listsEndpoints } from "./endpoints/lists";
+import { mobileEndpoints } from "./endpoints/mobile";
 import { mobileSessionEndpoints } from "./endpoints/mobileSession";
 import { mollieEndpoints } from "./endpoints/mollie";
 import { oauthEndpoints } from "./endpoints/oauth";
@@ -253,12 +254,21 @@ export default buildConfig({
    * cookie; this is the other half, trading that code for the real session
    * over HTTPS so the token itself never rides in a redirect URL. See
    * `endpoints/mobileSession.ts`.
+   *
+   * `mobileEndpoints` adds `GET /api/mobile/gestures` — the browse and
+   * search screens' one non-trivial read, calling `gestureQuery.ts`'s
+   * stable, clamped sort and `search.ts`'s two-pass locale fallback rather
+   * than re-deriving either as a query string. A gesture by id and the
+   * category list are ordinary `GET /api/gestures/:id` and
+   * `GET /api/categories` reads and need no endpoint of their own — see
+   * `endpoints/mobile.ts`.
    */
   endpoints: [
     ...crawlerEndpoints,
     ...authEndpoints,
     ...mobileAuthEndpoints,
     ...mobileSessionEndpoints,
+    ...mobileEndpoints,
     ...oauthEndpoints,
     ...favoritesEndpoints,
     ...accountEndpoints,
