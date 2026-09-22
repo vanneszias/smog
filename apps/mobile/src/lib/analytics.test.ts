@@ -52,6 +52,9 @@ jest.mock("expo-router", () => ({
   useSegments: () => mockSegments,
 }));
 
+/** Property names that would tie an event to an account. */
+const FORBIDDEN_KEYS = ["user_id", "userId", "profileId", "email"] as const;
+
 const onRoute = (segments: string[], pathname: string): void => {
   mockSegments = segments;
   mockPathname = pathname;
@@ -137,6 +140,18 @@ describe("mobile analytics", () => {
 
   it("never identifies anyone, and names no account in any event (Review Focus 4)", async () => {
     await setConsent("granted");
+    onRoute(["gestures", "[id]"], "/gestures/1");
+    renderHook(() => analytics.useScreenViews());
+    analytics.trackEvent("gesture_collection_changed", {
+      action: "added",
+      collection: "favorites",
+      gesture_id: "1",
+      source: "gesture_detail",
+    });
+    analytics.trackEvent("gesture_viewed", {
+      gesture_id: "1",
+      source: "direct",
+    });
     analytics.trackEvent("search_performed", {
       category_count: 0,
       has_results: true,
@@ -144,18 +159,25 @@ describe("mobile analytics", () => {
       result_count: 2,
       source: "submit",
     });
-    onRoute(["gestures", "[id]"], "/gestures/1");
-    renderHook(() => analytics.useScreenViews());
+    analytics.trackEvent("video_playback_completed", { gesture_id: "1" });
 
     expect(mockIdentify).not.toHaveBeenCalled();
     expect(mockConstructed.mock.calls[0][0]).not.toHaveProperty("profileId");
+    // Every event type and a screen view really went out, so the loop
+    // below cannot pass by having nothing to look at.
+    expect(mockTrack).toHaveBeenCalledTimes(4);
+    expect(mockScreenView).toHaveBeenCalledTimes(1);
+    // One assertion per key: any single one of them present fails the test.
+    // (An `arrayContaining` of all four, which this replaced, failed only
+    // when every one of them was present at once.)
     for (const [, properties] of [
       ...mockTrack.mock.calls,
       ...mockScreenView.mock.calls,
+      ...mockWire.mock.calls,
     ]) {
-      expect(Object.keys(properties ?? {})).not.toEqual(
-        expect.arrayContaining(["user_id", "userId", "profileId", "email"])
-      );
+      for (const key of FORBIDDEN_KEYS) {
+        expect(properties ?? {}).not.toHaveProperty(key);
+      }
     }
   });
 
