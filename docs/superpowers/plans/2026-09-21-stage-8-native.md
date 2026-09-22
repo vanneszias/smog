@@ -1746,13 +1746,28 @@ import { join } from "node:path";
  * fails it. A reordering does not, which is the one difference worth
  * tolerating to keep this readable.
  */
-function summaryFields(source: string): string[] {
-  const body = source.slice(
-    source.indexOf("GestureSummary"),
-    source.indexOf("}", source.indexOf("GestureSummary"))
-  );
+function summaryBody(source: string): string {
+  const start = source.indexOf("GestureSummary");
+  const open = source.indexOf("{", start);
+  let depth = 0;
 
-  return body
+  for (let i = open; i < source.length; i += 1) {
+    if (source[i] === "{") {
+      depth += 1;
+    } else if (source[i] === "}") {
+      depth -= 1;
+
+      if (depth === 0) {
+        return source.slice(open + 1, i);
+      }
+    }
+  }
+
+  throw new Error("GestureSummary's declaration is unterminated");
+}
+
+function summaryFields(source: string): string[] {
+  return summaryBody(source)
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.endsWith(";"))
@@ -1779,9 +1794,22 @@ describe("GestureSummary", () => {
 });
 ```
 
+**Brace-depth counting, not `indexOf("}")`.** An earlier draft of this plan
+sliced to the first closing brace, which is the one inside `categories`' own
+inline object type — so the scan stopped after three fields and `categories`
+itself, the only field with structure and therefore the one most likely to
+drift, was invisible to the guard. Task 6 hit it: the parser returned three
+fields against a four-field type, and the `> 2` self-check passed anyway,
+which is exactly how a partial guard passes for a complete one.
+
+Counting depth also brings the nested `id` and `name` inside the body, so a
+change to the nested shape fails the comparison too. Both platforms parse
+identically, so they stay comparable.
+
 The second test is the self-check this repository has needed three times now:
 two empty arrays are equal, and a broken path is how an assertion becomes
-decoration.
+decoration. Assert the **real** field count — a threshold calibrated to a
+broken parser is a threshold that ratifies it.
 
 - [ ] **Step 3: Write the remaining domain tests**
 
