@@ -22,6 +22,7 @@
       "!packages/ui-web/src/styles/theme.css",
       "!packages/ui-native/global.css",
       "!packages/ui-native/tailwind.config.js",
+      "!apps/mobile/global.css",
       "!**/.source",
       "!**/_generated",
       "!**/.agents"

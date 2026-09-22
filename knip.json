@@ -40,6 +40,15 @@
       "ignore": ["src/payload-types.ts", "src/migrations/**"],
       "payload": false
     },
+    "apps/mobile": {
+      "entry": [
+        "app/**/*.{ts,tsx}",
+        "src/**/*.ts",
+        "metro.config.js",
+        "tailwind.config.js"
+      ],
+      "ignoreDependencies": ["@babel/core", "tailwindcss"]
+    },
     "apps/native": {
       "entry": ["app/**/*.{ts,tsx}", "metro.config.js", "plugins/*.js"],
       "ignoreDependencies": ["@babel/core"]

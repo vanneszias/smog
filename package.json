@@ -59,6 +59,7 @@
     "release:config-check": "bun scripts/release-config-check.ts",
     "native:release-check": "bun scripts/native-release-check.ts",
     "dev:native": "turbo -F native dev",
+    "dev:mobile": "turbo -F mobile dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
     "dev:site": "turbo -F site dev",
@@ -67,6 +68,8 @@
     "native:ios:debug": "turbo -F native ios -- --configuration Debug",
     "native:android": "turbo -F native android --",
     "native:android:release": "turbo -F native android -- --variant release",
+    "mobile:ios": "turbo -F mobile ios --",
+    "mobile:android": "turbo -F mobile android --",
     "convex:codegen": "turbo -F @smog/convex codegen",
     "convex:dev": "turbo -F @smog/convex dev",
     "convex:deploy": "turbo -F @smog/convex deploy"

@@ -19,6 +19,15 @@ bun -F native test           # Run Jest tests
 bun -F native check-types    # Typecheck with tsc
 ```
 
+### Mobile App (Expo/React Native, Payload-backed)
+```bash
+bun -F mobile dev            # Start Expo dev server
+bun -F mobile ios            # Run iOS simulator
+bun -F mobile android        # Run Android emulator
+bun -F mobile test           # Run Jest tests
+bun -F mobile check-types    # Typecheck with tsc
+```
+
 ### Web App (Vite/React)
 ```bash
 bun -F web dev               # Start dev server (port 3001)
