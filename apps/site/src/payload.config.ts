@@ -30,6 +30,7 @@ import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
 import { jobsEndpoints } from "./endpoints/jobs";
 import { listsEndpoints } from "./endpoints/lists";
+import { mobileSessionEndpoints } from "./endpoints/mobileSession";
 import { mollieEndpoints } from "./endpoints/mollie";
 import { oauthEndpoints } from "./endpoints/oauth";
 import { renderEndpoints } from "./endpoints/render";
@@ -245,11 +246,19 @@ export default buildConfig({
    * renders it — a redirect for the form, a JSON body here — so the
    * enumeration-safety property this file exists for cannot agree in one
    * response shape and quietly drift in the other. See `endpoints/auth.ts`.
+   *
+   * `mobileSessionEndpoints` adds `POST /api/mobile/session` — Stage 8's
+   * Google sign-in on the phone. `oauthEndpoints`' own callback, when asked
+   * for `?client=mobile`, hands back a single-use exchange code instead of a
+   * cookie; this is the other half, trading that code for the real session
+   * over HTTPS so the token itself never rides in a redirect URL. See
+   * `endpoints/mobileSession.ts`.
    */
   endpoints: [
     ...crawlerEndpoints,
     ...authEndpoints,
     ...mobileAuthEndpoints,
+    ...mobileSessionEndpoints,
     ...oauthEndpoints,
     ...favoritesEndpoints,
     ...accountEndpoints,

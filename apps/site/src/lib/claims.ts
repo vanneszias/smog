@@ -85,6 +85,17 @@ import type { Payload } from "payload";
 export const CLAIM_KINDS = {
   /** `endpoints/jobs.ts` — a lease on the scheduled-job runner. Expires. */
   jobRun: "job-run",
+  /**
+   * `endpoints/mobileSession.ts` — a lease on one Google-sign-in exchange
+   * code's `jti`. Expires, deliberately outliving the sixty-second code it
+   * guards: the code is a `purpose`-checked JWT signed over `PAYLOAD_SECRET`
+   * and this claim is what makes redeeming it single-use. A claim TTL
+   * shorter than the code's own would let a code outlive the lock meant to
+   * consume it, and a replay would win the gap between the two expiries —
+   * see the module note on a lease and the thing it protects sharing an
+   * expiry policy.
+   */
+  mobileExchange: "mobile-exchange",
   /** `endpoints/mollie.ts` — one payment delivery. Kept for ever. */
   mollieDelivery: "mollie-delivery",
   /** `endpoints/render.ts` — one render callback. Kept for ever. */

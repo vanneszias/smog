@@ -1009,4 +1009,102 @@ describe("oauth endpoints", () => {
       }
     });
   });
+
+  describe("a native client", () => {
+    /** Same as `start()`, but begins the flow with `?client=mobile`. */
+    const startMobile = async () => {
+      const response = await get("/api/auth/google?locale=nl&client=mobile");
+      const cookie = cookiePair(response, "payload-oauth-state");
+
+      if (response.status !== 303 || cookie === null) {
+        throw new Error(
+          `the start endpoint did not begin a mobile flow (status ${response.status})`
+        );
+      }
+
+      const location = new URL(response.headers.get("Location") ?? "");
+
+      return {
+        cookie,
+        nonce: location.searchParams.get("nonce") ?? "",
+        state: location.searchParams.get("state") ?? "",
+      };
+    };
+
+    it("redirects to the app's own scheme with a single-use code, and sets no session cookie", async () => {
+      const flow = await startMobile();
+      const response = await get(
+        `/api/auth/google/callback?code=${issueCode({
+          email: unique("mobile"),
+          nonce: flow.nonce,
+          sub: `sub-${crypto.randomUUID()}`,
+        })}&state=${flow.state}`,
+        { cookie: flow.cookie }
+      );
+
+      expect(response.status).toBe(303);
+
+      const location = response.headers.get("Location") ?? "";
+
+      expect(location.startsWith("smogmobile://auth-callback?code=")).toBe(
+        true
+      );
+      expect(new URL(location).searchParams.get("code")).toEqual(
+        expect.any(String)
+      );
+      expect(cookiePair(response, "payload-token")).toBeNull();
+      // Cleared on this branch too — every response the callback ever
+      // returns clears it, which is what makes the web `state` single-use
+      // regardless of which client asked for the flow.
+      expect(isCleared(response, "payload-oauth-state")).toBe(true);
+    });
+
+    it("refuses a mobile callback whose state does not match, before minting anything", async () => {
+      const flow = await startMobile();
+      const code = issueCode({
+        email: unique("mobile-forged-state"),
+        nonce: flow.nonce,
+      });
+      const before = tokenRequests;
+
+      const response = await get(
+        `/api/auth/google/callback?code=${code}&state=not-the-state`,
+        { cookie: flow.cookie }
+      );
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get("Location")).toBe("/nl/sign-in?error=oauth");
+      expect(cookiePair(response, "payload-token")).toBeNull();
+      expect(tokenRequests).toBe(before);
+    });
+
+    /**
+     * The regression this branch can cause, and the reason it gets its own
+     * test rather than being left to the pre-existing `accounts` and
+     * `the session it issues` tests (all of which omit `?client=`) to catch
+     * incidentally: an absent `client` must still run the byte-for-byte same
+     * web path — a home redirect and a session cookie, nothing about the
+     * app's custom scheme anywhere in the response.
+     */
+    it("leaves the web branch unchanged when ?client= is absent", async () => {
+      const flow = await start();
+      const response = await get(
+        `/api/auth/google/callback?code=${issueCode({
+          email: unique("web-unchanged"),
+          nonce: flow.nonce,
+          sub: `sub-${crypto.randomUUID()}`,
+        })}&state=${flow.state}`,
+        { cookie: flow.cookie }
+      );
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get("Location")).toBe("/nl");
+      expect(cookiePair(response, "payload-token")).not.toBeNull();
+
+      const location = response.headers.get("Location") ?? "";
+
+      expect(location).not.toContain("smogmobile://");
+      expect(location).not.toContain("code=");
+    });
+  });
 });

@@ -13,6 +13,7 @@ import { homePath, seeOther, signInPath } from "@/lib/authFlow";
 import { equalConstantTime } from "@/lib/constantTime";
 import { type Locale, resolveLocale } from "@/lib/locale";
 import type { User } from "@/payload-types";
+import { mintExchangeCode } from "./mobileSession";
 
 /**
  * `/auth/google` and `/auth/google/callback`, as Payload endpoints.
@@ -62,7 +63,28 @@ const USERS = "users";
 /** The Google flow. A second provider is another entry here. */
 const GOOGLE = "google";
 
+/**
+ * Where the callback sends a `client=mobile` flow instead of a page.
+ *
+ * `apps/mobile`'s own registered scheme, not the illustrative `smog://` a
+ * sketch of this flow would use — `apps/native/app.json` already claims
+ * `smog://` for an unrelated flow with its own `auth-callback` route, and
+ * this literal has to match `apps/mobile/src/lib/google.ts`'s `REDIRECT_URI`
+ * exactly or `WebBrowser.openAuthSessionAsync` never sees the callback as
+ * the flow's own redirect and just keeps waiting for it.
+ */
+const MOBILE_REDIRECT_URI = "smogmobile://auth-callback";
+
 interface StateCookie extends JWTPayload {
+  /**
+   * The client that started this flow, carried inside the signed state
+   * rather than as a query parameter on the callback. Only `"mobile"` means
+   * anything today; absent means the ordinary web flow. Putting this on the
+   * callback's own query string instead would let anyone turn a web sign-in
+   * into a redirect to a custom scheme — the state already has a TTL and a
+   * signature, so a claim rides along for free.
+   */
+  c?: string;
   /** Locale to return the visitor to. */
   l: string;
   n: string;
@@ -70,6 +92,9 @@ interface StateCookie extends JWTPayload {
   p: string;
   s: string;
 }
+
+/** The one recognised value of {@link StateCookie.c}. */
+const MOBILE_CLIENT = "mobile";
 
 /**
  * JWKS fetchers, one per URI, kept for the life of the isolate.
@@ -200,7 +225,11 @@ async function readState(
       { algorithms: ["HS256"] }
     );
 
-    if (typeof claims.s !== "string" || typeof claims.n !== "string") {
+    if (
+      typeof claims.s !== "string" ||
+      typeof claims.n !== "string" ||
+      (claims.c !== undefined && typeof claims.c !== "string")
+    ) {
       return null;
     }
 
@@ -240,6 +269,7 @@ function startHandler(providerId: string): PayloadHandler {
 
     const state = randomToken();
     const nonce = randomToken();
+    const client = req.searchParams.get("client");
 
     const authorize = new URL(provider.authorizationEndpoint);
 
@@ -251,6 +281,14 @@ function startHandler(providerId: string): PayloadHandler {
     authorize.searchParams.set("state", state);
 
     const cookie = await signState(req.payload.secret, {
+      /*
+       * Only ever `"mobile"` or absent. `?client=` is untrusted input and
+       * carrying it verbatim would let a query string mint an arbitrary
+       * claim inside a signed token; narrowing it to the one recognised
+       * value here is what makes that safe, not the signature — the
+       * signature only proves *this server* wrote whatever value went in.
+       */
+      ...(client === MOBILE_CLIENT ? { c: MOBILE_CLIENT } : {}),
       l: locale,
       n: nonce,
       p: providerId,
@@ -531,20 +569,62 @@ function callbackHandler(providerId: string): PayloadHandler {
       req,
     });
 
-    const { token } = await createOAuthSession({
-      payload: req.payload,
+    return await finishCallback({
+      cleared,
+      client: state.c,
+      locale,
       providerId,
+      req,
       user,
     });
-
-    const session = generatePayloadCookie({
-      collectionAuthConfig: req.payload.collections[USERS].config.auth,
-      cookiePrefix: req.payload.config.cookiePrefix,
-      token,
-    });
-
-    return seeOther(homePath(locale), [cleared, session]);
   };
+}
+
+/**
+ * The one branch in this handler, and it sits at the very end, after every
+ * guard above has already run identically for both clients — split out of
+ * `callbackHandler` only to keep that function's own complexity under
+ * control, not because the two clients share any less logic for it.
+ *
+ * A native caller gets no session cookie at all: see
+ * `endpoints/mobileSession.ts` for why the real session is minted only once
+ * the exchange code this mints is redeemed over HTTPS. Everything a web
+ * sign-in does is unchanged, byte for byte.
+ */
+async function finishCallback({
+  cleared,
+  client,
+  locale,
+  providerId,
+  req,
+  user,
+}: {
+  cleared: string;
+  client: string | undefined;
+  locale: Locale;
+  providerId: string;
+  req: PayloadRequest;
+  user: User;
+}): Promise<Response> {
+  if (client === MOBILE_CLIENT) {
+    const code = await mintExchangeCode(req.payload, String(user.id));
+
+    return seeOther(`${MOBILE_REDIRECT_URI}?code=${code}`, [cleared]);
+  }
+
+  const { token } = await createOAuthSession({
+    payload: req.payload,
+    providerId,
+    user,
+  });
+
+  const session = generatePayloadCookie({
+    collectionAuthConfig: req.payload.collections[USERS].config.auth,
+    cookiePrefix: req.payload.config.cookiePrefix,
+    token,
+  });
+
+  return seeOther(homePath(locale), [cleared, session]);
 }
 
 export const oauthEndpoints: Endpoint[] = [

@@ -366,8 +366,14 @@ const signOut: PayloadHandler = async (req) => {
  *
  * Files are deliberately not handled: this parses bodies for the login
  * endpoint, and a login carries no upload.
+ *
+ * Exported for `endpoints/mobileSession.ts`, which needs the same
+ * JSON/form/multipart tolerance for its own JSON-only client and has no
+ * reason to reimplement it.
  */
-async function readBody(req: PayloadRequest): Promise<Record<string, unknown>> {
+export async function readBody(
+  req: PayloadRequest
+): Promise<Record<string, unknown>> {
   const [type] = (req.headers.get("content-type") ?? "").split(";", 1);
 
   try {

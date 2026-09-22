@@ -30,6 +30,7 @@
         "expo-system-ui": "~55.0.22",
         "expo-updates": "~55.0.31",
         "expo-video": "~55.0.21",
+        "expo-web-browser": "~55.0.20",
         "nativewind": "^4.1.23",
         "react": "19.2.0",
         "react-native": "0.83.10",
