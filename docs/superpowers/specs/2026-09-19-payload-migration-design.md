@@ -1824,3 +1824,56 @@ the checklist.
 
 **The favourites-listing analytics emitter stays out.** `apps/web` never tracked
 that interaction, so adding it would be new collection rather than a migration.
+
+## What the production export actually contains (read 2026-09-22)
+
+Measured from the Convex production export, aggregates only — no row was
+printed, quoted or logged. The export lives outside the repository and is never
+committed.
+
+| table | rows | Stage 9 |
+|---|---|---|
+| `categories` | 27 | import |
+| `gestures` | 496 | import into the `nl` locale |
+| `user_favorites` | 5 | drop — see below |
+| `users` | 0 | nothing to migrate |
+| `sponsorships` | 0 | nothing to migrate |
+| `user_consents` | 0 | nothing to migrate (and the decision is to import none regardless) |
+| `adminLogs` | 0 | nothing to migrate |
+| `gesture_lists` | absent | never deployed to production |
+
+**Stage 9 is therefore two tables, not seven.** The spec anticipated migrating
+accounts, sponsorships and consent; production holds none of them. Every person
+signs up fresh on the new site, which removes the password-hash and WorkOS-mapping
+questions this section used to anticipate.
+
+**`packages/convex/convex/schema.ts` is ahead of production.** It defines
+`gesture_lists`, but that table is absent from the export entirely — not even
+present as an empty table, the way `users` and `sponsorships` are. Confirmed by
+the user: production was never deployed with it. The schema file is not a
+reliable picture of what production holds, which is exactly why Stage 9 waited
+for an export rather than building against the schema.
+
+**The old stack's GDPR deletion does not cascade to `user_favorites`.** All five
+favourites reference `v.id("users")` values — Convex-format ids, not WorkOS ids —
+for users who no longer exist. `gdpr.ts` and `gdprCron.ts` both delete, so the
+likeliest cause is a deletion that removed the user and left their favourites.
+They are dropped, not migrated: they cannot be attached to anyone, and the person
+they belonged to asked to be deleted, so carrying them forward would partly undo
+that request. The migration's verification report states the count so the drop
+is visible rather than silent.
+
+**Gestures are single-language in the source.** `name` and `info` are plain
+strings; the new `Gestures` collection is localized. They import into `nl`, the
+default locale, and `en`/`fr` fall back to Dutch — behaviour
+`Gestures.int.test.ts` already proves.
+
+**Source shapes, for the Stage 9 planner** — keys and JSON types, present on
+every row unless noted:
+
+- `categories`: `_id` string, `_creationTime` number, `name` string, `isActive` bool
+- `gestures`: `_id` string, `_creationTime` number, `name` string, `info` string,
+  `concept` array, `categoryIds` array, `playbackId` string, `lastUpdated`
+  number, `isActive` bool
+- `user_favorites`: `_id`, `_creationTime`, `createdAt` number, `gestureId`
+  string, `userId` string
