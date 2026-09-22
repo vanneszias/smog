@@ -170,6 +170,89 @@ describe("the search screen", () => {
     expect(trackEvent).toHaveBeenCalledTimes(2);
   });
 
+  describe("a query refined into another (final review, Important)", () => {
+    const EMPTY = { docs: [], page: 1, totalDocs: 0, totalPages: 1 };
+    const byQuery = (answers: Record<string, () => Promise<Response>>) =>
+      jest.fn((url: string) => {
+        const q = new URL(String(url)).searchParams.get("q") ?? "";
+        return answers[q]();
+      }) as unknown as typeof fetch;
+
+    it("reports the new query's own counts, never the previous query's", async () => {
+      global.fetch = byQuery({
+        hal: () => json(PAGE),
+        halzzz: () => json(EMPTY),
+      });
+
+      render(<SearchScreen />);
+      type("hal");
+      await screen.findByText("Hallo");
+      expect(trackEvent).toHaveBeenCalledTimes(1);
+
+      type("halzzz");
+      await screen.findByText(/geen gebaren gevonden/i);
+
+      expect(trackEvent).toHaveBeenCalledTimes(2);
+      expect(trackEvent).toHaveBeenLastCalledWith("search_performed", {
+        category_count: 0,
+        has_results: false,
+        query_length: 6,
+        result_count: 0,
+        source: "submit",
+      });
+      expect(trackEvent).not.toHaveBeenCalledWith(
+        "search_performed",
+        expect.objectContaining({ has_results: true, query_length: 6 })
+      );
+    });
+
+    it("reports nothing for a refined query that fails", async () => {
+      global.fetch = byQuery({
+        hal: () => json(PAGE),
+        halx: () => Promise.reject(new TypeError("Network request failed")),
+      });
+
+      render(<SearchScreen />);
+      type("hal");
+      await screen.findByText("Hallo");
+
+      type("halx");
+      await screen.findByText(/probeer opnieuw/i);
+
+      expect(trackEvent).toHaveBeenCalledTimes(1);
+      expect(trackEvent).toHaveBeenCalledWith(
+        "search_performed",
+        expect.objectContaining({ query_length: 3 })
+      );
+    });
+
+    it("reports a failed refined query once its retry succeeds, with the retry's counts", async () => {
+      let halzzz: () => Promise<Response> = () =>
+        Promise.reject(new TypeError("Network request failed"));
+      global.fetch = byQuery({ hal: () => json(PAGE), halzzz: () => halzzz() });
+
+      render(<SearchScreen />);
+      type("hal");
+      await screen.findByText("Hallo");
+      type("halzzz");
+      await screen.findByText(/probeer opnieuw/i);
+      expect(trackEvent).toHaveBeenCalledTimes(1);
+
+      halzzz = () => json(EMPTY);
+      fireEvent.press(screen.getByTestId("retry"));
+      await screen.findByText(/geen gebaren gevonden/i);
+
+      expect(trackEvent).toHaveBeenCalledTimes(2);
+      expect(trackEvent).toHaveBeenLastCalledWith("search_performed", {
+        category_count: 0,
+        has_results: false,
+        query_length: 6,
+        result_count: 0,
+        source: "submit",
+      });
+    });
+  });
+
   it("reports a settled query with no results", async () => {
     global.fetch = jest.fn(() =>
       json({ docs: [], page: 1, totalDocs: 0, totalPages: 1 })

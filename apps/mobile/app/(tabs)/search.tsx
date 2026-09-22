@@ -40,24 +40,43 @@ export default function SearchScreen() {
 
   /**
    * Once per *settlement* of a query, when its first page of results
-   * arrives — never for a failed search, which leaves `data` unset. A
-   * settlement is scoped to one value of `query`: dedup is keyed on
-   * `data`'s identity (via a per-query "have we already reported this
-   * one" flag), not on the query string alone, so a bare re-render or a
-   * later page for the same still-current query does not fire twice, but
-   * changing the query away and later settling on that exact same string
-   * again — apps/native fired on every submit
-   * (`apps/native/screens/SearchScreen.tsx` ~111-125) — counts as a new
-   * search and fires again. Whenever `query` itself changes, the tracked
-   * record is replaced with a fresh, unreported one for that string.
+   * arrives — never for a failed search. A settlement is scoped to one
+   * value of `query`: the ref below is replaced with a fresh, unreported
+   * record whenever `query` changes (including to empty), so settling on
+   * the same string again after changing it counts as a new search, as
+   * every submit did in apps/native (`apps/native/screens/SearchScreen.tsx`
+   * ~111-125), while a bare re-render or a later page for the same
+   * still-current query does not fire twice (the `reported` flag).
+   *
+   * **Only data that arrived for the current query is reported.**
+   * `useGestures` (`src/data/gestures.ts`) never clears `data` when a new
+   * query starts, and it flips `loading` on only in its own effect — so in
+   * the render where `query` changes, `data` is still the *previous*
+   * query's page with `loading` false, and a failed new query leaves it
+   * there for good. The record therefore remembers the `data` object that
+   * was on hand the moment the query changed (`stale`) and ignores it; the
+   * current query's page is always a new object (each response is parsed
+   * afresh), so identity tells the two apart without having to observe a
+   * loading render in between.
    */
-  const settlement = useRef<{ query: string; reported: boolean } | null>(null);
+  const settlement = useRef<{
+    query: string;
+    reported: boolean;
+    stale: typeof data;
+  } | null>(null);
   useEffect(() => {
     if (settlement.current?.query !== query) {
-      settlement.current = { query, reported: false };
+      settlement.current = { query, reported: false, stale: data };
     }
 
-    if (!enabled || loading || error || !data || settlement.current.reported) {
+    if (
+      !enabled ||
+      loading ||
+      error ||
+      !data ||
+      data === settlement.current.stale ||
+      settlement.current.reported
+    ) {
       return;
     }
 
