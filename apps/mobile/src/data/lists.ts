@@ -1,12 +1,13 @@
+import { getLocales } from "expo-localization";
 import { useCallback, useEffect, useState } from "react";
 import { API_BASE_URL, ApiError, payloadFetch } from "@/lib/api";
-import { DEFAULT_LOCALE } from "@/lib/locale";
+import { type Locale, resolveLocale } from "@/lib/locale";
 import { getToken } from "@/lib/session";
 
 /**
- * The owner's lists: read as ordinary Payload REST, written through the six
- * flat form endpoints `apps/site/src/endpoints/lists.ts` ships for its own,
- * JavaScript-free owner pages.
+ * The owner's lists: read as ordinary Payload REST, written through
+ * `apps/site/src/endpoints/lists.ts`'s `/api/mobile/lists/*` — the JSON
+ * sibling of that file's six owner-page form endpoints.
  *
  * ## Reads: plain `GET /api/lists` and `GET /api/lists/:id`
  *
@@ -19,33 +20,26 @@ import { getToken } from "@/lib/session";
  * to ask for "my lists" — every list this account is allowed to read *is*
  * this account's own.
  *
- * ## Writes: form bodies and a redirect, not JSON
+ * ## Writes: `/api/mobile/lists/*`, not the owner pages' form endpoints
  *
- * This is the one place in this task where the brief's own snippets were
- * wrong, and the task brief said to expect exactly that. `endpoints/
- * lists.ts` reads every one of its six handlers' bodies with `readForm`
- * (`req.formData()`) and `field()` — `application/x-www-form-urlencoded`,
- * never JSON — and answers with `seeOther(...)`: a 303 whose `Location`
- * carries the outcome as a page path plus a `notice=` or `error=` query
- * parameter, because these endpoints exist for the site's script-free owner
- * pages, which the browser navigates to on every submit. There is no JSON
- * body on any of the six answers.
+ * The owner pages' six writes (`/api/account/lists/*`) read
+ * `application/x-www-form-urlencoded` bodies and answer with a 303 whose
+ * `Location` carries the outcome as a page path plus a `notice=`/`error=`
+ * code — a shape built for a `<form>` a browser navigates, and unreadable
+ * from here: React Native's `fetch` is a bare re-export of `whatwg-fetch`
+ * (`Libraries/Network/fetch.js`), which reads no `redirect` option at all —
+ * `redirect: "manual"` does nothing, the underlying `XMLHttpRequest` has
+ * already followed the redirect by the time `onload` fires, and the page it
+ * followed into is a cookie-authenticated Next.js route this app has no
+ * session for. That was this module's first version, and it did not work.
  *
- * `postListForm` below is what a client that is not a browser navigating a
- * `<form>` has to do instead: send the same `x-www-form-urlencoded` body,
- * follow none of the redirect (`redirect: "manual"`, so the fetch resolves
- * with the 303 itself rather than whatever page it points at — that page is
- * an authenticated Next.js route reading a cookie session this app does not
- * have, and following it would answer with a sign-in page's HTML, not this
- * request's outcome), and read the created or affected list's id and the
- * `notice`/`error` code back out of the `Location` header's own path and
- * query string.
- *
- * `guardOrigin` (`apps/site/src/lib/formPost.ts`) treats an absent `Origin`
- * header as trusted — the case a same-origin browser POST can never
- * produce, but the case this app's own `fetch` calls are, since a native
- * process is not a page navigating within an origin. Nothing here needs to
- * — and nothing here does — send one.
+ * `/api/mobile/lists/*` is the fix: the same six decisions
+ * (`endpoints/lists.ts`'s `decide*` functions), rendered as a JSON body
+ * instead of a redirect. `postListJson` below is deliberately not routed
+ * through `payloadFetch` — the same call `session.ts`'s `signUp` makes and
+ * documents: a refusal here is `{ status: "invalid", field: "name" }`, not
+ * Payload's own `{ errors: [...] }`, and `payloadFetch`'s error handling
+ * reads the latter shape, not this one.
  */
 
 interface RawGesture {
@@ -105,6 +99,9 @@ export interface ListDetail {
  * the server enforces its own copy regardless of what this app does with
  * this one — this exists so the app can show the limit before the request
  * rather than only report the refusal after it, per the task brief.
+ * `lists.test.ts` pins this against the server's own value so the two
+ * cannot silently drift apart, the same way `favorites.ts`'s
+ * `MAX_RESOLVED_FAVORITES` is pinned against `lib/guest.ts`'s cap.
  */
 export const MAX_LIST_ITEMS = 50;
 
@@ -256,110 +253,126 @@ export function useList(id: string): HookResult<ListDetail> {
   return { data, error, loading, refetch };
 }
 
-/** What one of the six form writes below answers, parsed off its redirect. */
-interface ListFormResult {
-  error: null | string;
-  id: null | string;
+function currentLocale(): Locale {
+  return resolveLocale(getLocales().map((locale) => locale.languageTag));
 }
 
-/** The list id in `/{locale}/account/lists/:id`, if the path has one. */
-function idFromPath(pathname: string): null | string {
-  const match = pathname.match(/\/lists\/(\d+)(?:\/|$)/);
+/** What one of the six writes below answers. */
+interface ListWriteResult {
+  field?: string;
+  id?: string;
+  status: string;
+}
 
-  return match ? (match[1] ?? null) : null;
+/** The body shape a caller of `postListJson` narrows before returning it. */
+function isListWriteResult(value: unknown): value is ListWriteResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { status?: unknown }).status === "string"
+  );
 }
 
 /**
- * Posts one of the six owner writes as the form body
- * `endpoints/lists.ts` expects, and reads the outcome back out of the 303's
- * `Location` rather than a JSON body — see the module comment above for why
- * there is no JSON body to read instead.
+ * Posts one of the six owner writes as JSON to `/api/mobile/lists/*`, and
+ * reads the outcome back out of the JSON body.
  *
- * A response with no `Location` at all (a network failure `fetch` did not
- * throw for, or a host answering with something that is not this endpoint)
- * is treated as `"unknown"` rather than being trusted as a success — success
- * is never the default a caller falls into here.
+ * Deliberately not routed through `payloadFetch`, for the reason
+ * `session.ts`'s `signUp` gives about its own endpoint: a refusal here is
+ * `{ status: "invalid", field: "name" }`, and Payload's own error body is
+ * `{ errors: [{ message }] }` — shapes `payloadFetch`'s error handling is
+ * not built to read.
+ *
+ * A response whose body cannot be read as JSON, or that has no `status`
+ * string in it, is treated as `network` rather than trusted as a success —
+ * success is never the default a caller falls into here.
  */
-async function postListForm(
+async function postListJson(
   path: string,
-  fields: Record<string, string>
-): Promise<ListFormResult> {
+  body: Record<string, string>
+): Promise<ListWriteResult> {
   const token = await getToken();
-  const headers = new Headers({
-    "Content-Type": "application/x-www-form-urlencoded",
-  });
+  const headers = new Headers({ "Content-Type": "application/json" });
 
   if (token !== null) {
     headers.set("Authorization", `JWT ${token}`);
   }
 
+  const url = new URL(`${API_BASE_URL}/api${path}`);
+  url.searchParams.set("locale", currentLocale());
+
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}/api${path}`, {
-      body: new URLSearchParams({
-        locale: DEFAULT_LOCALE,
-        ...fields,
-      }).toString(),
+    response = await fetch(url.toString(), {
+      body: JSON.stringify(body),
       headers,
       method: "POST",
-      redirect: "manual",
     });
   } catch {
     throw new ApiError("network", 0);
   }
 
-  const location = response.headers.get("Location");
+  let parsed: unknown;
 
-  if (location === null) {
-    return { error: "unknown", id: null };
+  try {
+    parsed = await response.json();
+  } catch {
+    throw new ApiError("network", response.status);
   }
 
-  const target = new URL(location, API_BASE_URL);
-
-  if (target.pathname.includes("/sign-in")) {
-    return { error: "signed-out", id: null };
+  if (!isListWriteResult(parsed)) {
+    throw new ApiError("network", response.status);
   }
 
-  return {
-    error: target.searchParams.get("error"),
-    id: idFromPath(target.pathname),
-  };
+  return parsed;
 }
 
-/** Throws with the code the endpoint's redirect carried, or does nothing. */
-function throwOnError(result: ListFormResult): void {
-  if (result.error !== null) {
-    throw new ApiError(result.error, 0);
+/**
+ * Throws with the code the endpoint's body carried, for every status that is
+ * not a success, or does nothing.
+ *
+ * `"invalid"` throws with the specific field the endpoint refused
+ * (`"name"`, `"full"`, `"confirm"`, …) so a caller can show the message that
+ * matches; `"signed-out"` and `"unknown-list"` throw with their own status
+ * as the code, since neither carries a field.
+ */
+function throwOnError(result: ListWriteResult): void {
+  if (result.status === "invalid") {
+    throw new ApiError(result.field ?? "invalid", 0);
+  }
+
+  if (result.status === "signed-out" || result.status === "unknown-list") {
+    throw new ApiError(result.status, 0);
   }
 }
 
-/** `POST /account/lists/create`. Resolves to the new list's id. */
+/** `POST /api/mobile/lists/create`. Resolves to the new list's id. */
 export async function createList(input: {
   description?: string;
   name: string;
 }): Promise<{ id: string }> {
-  const result = await postListForm("/account/lists/create", {
+  const result = await postListJson("/mobile/lists/create", {
     description: input.description ?? "",
     name: input.name,
   });
 
   throwOnError(result);
 
-  if (result.id === null) {
-    throw new ApiError("unknown", 0);
+  if (typeof result.id !== "string") {
+    throw new ApiError("network", 0);
   }
 
   return { id: result.id };
 }
 
-/** `POST /account/lists/rename`. */
+/** `POST /api/mobile/lists/rename`. */
 export async function renameList(input: {
   description?: string;
   id: string;
   name: string;
 }): Promise<void> {
-  const result = await postListForm("/account/lists/rename", {
+  const result = await postListJson("/mobile/lists/rename", {
     description: input.description ?? "",
     id: input.id,
     name: input.name,
@@ -369,16 +382,16 @@ export async function renameList(input: {
 }
 
 /**
- * `POST /account/lists/delete`. `confirmName` must match the list's current
- * name — case- and space-insensitively, the same as the endpoint checks it
- * — or the request is refused with `error: "confirm"` before anything is
- * deleted.
+ * `POST /api/mobile/lists/delete`. `confirmName` must match the list's
+ * current name — case- and space-insensitively, the same as the endpoint
+ * checks it — or the request is refused with `field: "confirm"` before
+ * anything is deleted.
  */
 export async function deleteList(input: {
   confirmName: string;
   id: string;
 }): Promise<void> {
-  const result = await postListForm("/account/lists/delete", {
+  const result = await postListJson("/mobile/lists/delete", {
     confirmName: input.confirmName,
     id: input.id,
   });
@@ -386,12 +399,16 @@ export async function deleteList(input: {
   throwOnError(result);
 }
 
-/** `POST /account/lists/add`. */
+/**
+ * `POST /api/mobile/lists/add`. Refuses with `field: "full"` once the list
+ * already holds {@link MAX_LIST_ITEMS} gestures — the server's own bound,
+ * shown before the request by whichever screen calls this.
+ */
 export async function addToList(input: {
   gestureId: string;
   id: string;
 }): Promise<void> {
-  const result = await postListForm("/account/lists/add", {
+  const result = await postListJson("/mobile/lists/add", {
     gestureId: input.gestureId,
     id: input.id,
   });
@@ -399,12 +416,12 @@ export async function addToList(input: {
   throwOnError(result);
 }
 
-/** `POST /account/lists/remove`. */
+/** `POST /api/mobile/lists/remove`. */
 export async function removeFromList(input: {
   gestureId: string;
   id: string;
 }): Promise<void> {
-  const result = await postListForm("/account/lists/remove", {
+  const result = await postListJson("/mobile/lists/remove", {
     gestureId: input.gestureId,
     id: input.id,
   });
@@ -412,12 +429,15 @@ export async function removeFromList(input: {
   throwOnError(result);
 }
 
-/** `POST /account/lists/share` — the endpoint's own name for this write is `setVisibility`. */
+/**
+ * `POST /api/mobile/lists/share` — the endpoint's own name for this write is
+ * `decideSetVisibility`.
+ */
 export async function shareList(input: {
   id: string;
   visibility: ListVisibility;
 }): Promise<void> {
-  const result = await postListForm("/account/lists/share", {
+  const result = await postListJson("/mobile/lists/share", {
     id: input.id,
     visibility: input.visibility,
   });

@@ -1,8 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { renderHook, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
+import { MAX_GUEST_FAVORITES } from "@/lib/guest";
 import { SessionProvider } from "@/lib/session";
-import { useFavoriteGestures, useFavorites } from "./favorites";
+import {
+  MAX_RESOLVED_FAVORITES,
+  useFavoriteGestures,
+  useFavorites,
+} from "./favorites";
 
 jest.mock("expo-secure-store");
 
@@ -204,5 +209,15 @@ describe("useFavoriteGestures", () => {
 
     expect(result.current.error).not.toBeNull();
     expect(result.current.data).toEqual([]);
+  });
+});
+
+describe("MAX_RESOLVED_FAVORITES", () => {
+  it("is lib/guest.ts's own MAX_GUEST_FAVORITES, not an independent number", () => {
+    // Fix round 1, Minor 4: this was a second `= 200` literal, free to
+    // drift from `lib/guest.ts`'s. It is a re-export now (see this
+    // constant's own doc comment), so this pins the re-export itself
+    // rather than two numbers that merely happen to match today.
+    expect(MAX_RESOLVED_FAVORITES).toBe(MAX_GUEST_FAVORITES);
   });
 });

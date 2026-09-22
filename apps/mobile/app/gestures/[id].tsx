@@ -4,17 +4,33 @@ import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useFavorites } from "@/data/favorites";
 import { useGesture } from "@/data/gestures";
-import { addToList, useLists } from "@/data/lists";
+import { addToList, MAX_LIST_ITEMS, useLists } from "@/data/lists";
 import { useSession } from "@/lib/session";
 
 const LOAD_ERROR = "Er ging iets mis bij het laden van dit gebaar.";
 const RETRY_LABEL = "Probeer opnieuw";
+
+const ADD_TO_LIST_ERROR = "Niet gelukt";
+const LIST_FULL_LABEL = `Lijst is vol (max. ${MAX_LIST_ITEMS})`;
 
 /**
  * The list picker `packages/ui-native/src/components/Sheet.tsx`'s own
  * comment names as one of this component's two intended callers (the other
  * is Task 10's category filter): every one of the account's lists, each row
  * adding this gesture to it on press.
+ *
+ * **A list already at {@link MAX_LIST_ITEMS} is shown as full and its row is
+ * disabled**, rather than only reporting the server's refusal after the
+ * tap — the task brief's own requirement, and the one place in this app
+ * that needs it, since `useLists`'s `itemCount` is already known before any
+ * gesture is ever picked to add.
+ *
+ * **A refusal for any other reason is rendered, not swallowed.** The first
+ * version of this handler was a `try { … } finally { … }` with no `catch`,
+ * which is the exact defect Task 8 shipped and fixed on `sign-up.tsx`: a
+ * `full`, `signed-out` or network refusal became an unhandled rejection, the
+ * row silently did nothing, and the person had no way to tell a failed tap
+ * from a slow one.
  */
 function AddToListSheet({
   gestureId,
@@ -28,13 +44,18 @@ function AddToListSheet({
   const { data: lists, loading } = useLists();
   const [addingId, setAddingId] = useState<string | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
+  const [erroredId, setErroredId] = useState<string | null>(null);
 
   const handleAdd = async (listId: string) => {
     setAddingId(listId);
+    setErroredId(null);
 
     try {
       await addToList({ gestureId, id: listId });
       setAddedId(listId);
+    } catch (error) {
+      console.error("[gestures] Failed to add the gesture to the list:", error);
+      setErroredId(listId);
     } finally {
       setAddingId(null);
     }
@@ -48,24 +69,36 @@ function AddToListSheet({
           Je hebt nog geen lijsten. Maak er een op het tabblad Lijsten.
         </Text>
       ) : null}
-      {(lists ?? []).map((list) => (
-        <Pressable
-          accessibilityRole="button"
-          className="flex-row items-center justify-between border-border-subtle border-b py-md"
-          key={list.id}
-          onPress={() => handleAdd(list.id)}
-          testID={`add-to-list-${list.id}`}
-        >
-          <Text>{list.name}</Text>
-          <Text variant="muted">
-            {addedId === list.id
+      {(lists ?? []).map((list) => {
+        const isFull = list.itemCount >= MAX_LIST_ITEMS;
+        const status =
+          erroredId === list.id
+            ? ADD_TO_LIST_ERROR
+            : addedId === list.id
               ? "Toegevoegd"
               : addingId === list.id
                 ? "Bezig…"
-                : ""}
-          </Text>
-        </Pressable>
-      ))}
+                : isFull
+                  ? LIST_FULL_LABEL
+                  : "";
+
+        return (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isFull }}
+            className="flex-row items-center justify-between border-border-subtle border-b py-md"
+            disabled={isFull}
+            key={list.id}
+            onPress={() => handleAdd(list.id)}
+            testID={`add-to-list-${list.id}`}
+          >
+            <Text>{list.name}</Text>
+            <Text testID={`add-to-list-${list.id}-status`} variant="muted">
+              {status}
+            </Text>
+          </Pressable>
+        );
+      })}
     </Sheet>
   );
 }

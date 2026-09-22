@@ -2,7 +2,11 @@ import type { GestureSummary } from "@smog/ui-native";
 import { getLocales } from "expo-localization";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, payloadFetch } from "@/lib/api";
-import { readGuestFavorites, toggleGuestFavorite } from "@/lib/guest";
+import {
+  MAX_GUEST_FAVORITES,
+  readGuestFavorites,
+  toggleGuestFavorite,
+} from "@/lib/guest";
 import { type Locale, resolveLocale } from "@/lib/locale";
 import { useSession } from "@/lib/session";
 
@@ -155,8 +159,16 @@ export interface UseFavoriteGesturesResult {
   loading: boolean;
 }
 
-/** How many favourite ids one request resolves — see `favoritesQuery.ts`. */
-export const MAX_RESOLVED_FAVORITES = 200;
+/**
+ * How many favourite ids one request resolves — see `favoritesQuery.ts`'s
+ * `MAX_FAVORITE_IDS` for the same bound on the web.
+ *
+ * Re-exported from `lib/guest.ts`'s `MAX_GUEST_FAVORITES` rather than
+ * declared again here: the two describe the same bound (how many ids one
+ * `where[id][in]` request may carry) and a second literal is a second place
+ * for that number to drift. `favorites.test.ts` pins this re-export by name.
+ */
+export const MAX_RESOLVED_FAVORITES = MAX_GUEST_FAVORITES;
 
 interface RawGesture {
   id: number | string;

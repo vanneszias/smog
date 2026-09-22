@@ -29,7 +29,7 @@ import { authEndpoints, mobileAuthEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
 import { jobsEndpoints } from "./endpoints/jobs";
-import { listsEndpoints } from "./endpoints/lists";
+import { listsEndpoints, mobileListsEndpoints } from "./endpoints/lists";
 import { mobileEndpoints } from "./endpoints/mobile";
 import { mobileSessionEndpoints } from "./endpoints/mobileSession";
 import { mollieEndpoints } from "./endpoints/mollie";
@@ -262,6 +262,13 @@ export default buildConfig({
    * category list are ordinary `GET /api/gestures/:id` and
    * `GET /api/categories` reads and need no endpoint of their own — see
    * `endpoints/mobile.ts`.
+   *
+   * `mobileListsEndpoints` adds the native app's six list writes, under
+   * `/mobile/lists/*` — a flat sibling of `/account/lists/*` for the same
+   * matcher reason as `mobileAuthEndpoints`. Each shares its decision with
+   * `listsEndpoints`' own form handler through a `decide*` function rather
+   * than reimplementing it: a 303 for the owner pages, a JSON body here, one
+   * outcome computed once. See `endpoints/lists.ts`.
    */
   endpoints: [
     ...crawlerEndpoints,
@@ -269,6 +276,7 @@ export default buildConfig({
     ...mobileAuthEndpoints,
     ...mobileSessionEndpoints,
     ...mobileEndpoints,
+    ...mobileListsEndpoints,
     ...oauthEndpoints,
     ...favoritesEndpoints,
     ...accountEndpoints,

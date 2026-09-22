@@ -106,12 +106,7 @@ describe("the lists screen, signed in", () => {
       )
       .mockImplementationOnce(() => json({ docs: [] }))
       .mockImplementationOnce(() =>
-        Promise.resolve(
-          new Response(null, {
-            headers: { Location: "/nl/account/lists/9?notice=created" },
-            status: 303,
-          })
-        )
+        json({ id: "9", status: "created" })
       ) as unknown as typeof fetch;
 
     renderScreen();

@@ -27,11 +27,6 @@ const json = (body: unknown, status = 200) =>
     })
   );
 
-const redirect = (location: string) =>
-  Promise.resolve(
-    new Response(null, { headers: { Location: location }, status: 303 })
-  );
-
 const LIST = {
   description: null,
   id: 7,
@@ -92,9 +87,9 @@ describe("the list detail screen", () => {
     let current = LIST;
 
     global.fetch = jest.fn((url: unknown) => {
-      if (typeof url === "string" && url.includes("/account/lists/remove")) {
+      if (typeof url === "string" && url.includes("/mobile/lists/remove")) {
         current = { ...LIST, items: [LIST.items[0]] };
-        return redirect("/nl/account/lists/7?notice=removed");
+        return json({ status: "removed" });
       }
 
       return json(current);
@@ -132,8 +127,8 @@ describe("the list detail screen", () => {
 
   it("deletes the list once the name is confirmed and goes back", async () => {
     global.fetch = jest.fn((url: unknown) => {
-      if (typeof url === "string" && url.includes("/account/lists/delete")) {
-        return redirect("/nl/account/lists?notice=deleted");
+      if (typeof url === "string" && url.includes("/mobile/lists/delete")) {
+        return json({ status: "deleted" });
       }
 
       return json(LIST);
@@ -154,8 +149,8 @@ describe("the list detail screen", () => {
 
   it("shows an error rather than deleting when the typed name does not match", async () => {
     global.fetch = jest.fn((url: unknown) => {
-      if (typeof url === "string" && url.includes("/account/lists/delete")) {
-        return redirect("/nl/account/lists/7?error=confirm");
+      if (typeof url === "string" && url.includes("/mobile/lists/delete")) {
+        return json({ field: "confirm", status: "invalid" }, 400);
       }
 
       return json(LIST);

@@ -81,27 +81,29 @@ describe("guest favourites", () => {
     await expect(readGuestFavorites()).resolves.toEqual(["a"]);
   });
 
-  it("does not grow without bound", async () => {
-    for (let i = 0; i < 600; i += 1) {
+  /**
+   * Fix round 1, Important 3: an earlier version of this module truncated
+   * storage at `MAX_GUEST_FAVORITES`, silently deleting the reader's oldest
+   * favourite once they passed it — a destructive "fix" for a cap
+   * `guestStore.ts` never actually enforced. `MAX_GUEST_FAVORITES` is a
+   * query-time bound now (`data/favorites.ts` imports it for exactly one
+   * request's `where[id][in]` list); nothing here may ever throw a stored id
+   * away to satisfy it. This fixture is the one that would have failed
+   * against the truncating version: it favourites more ids than the bound
+   * and asserts every one of them survived.
+   */
+  it("keeps every id, however many are favourited — storage is never truncated", async () => {
+    const total = MAX_GUEST_FAVORITES + 50;
+
+    for (let i = 0; i < total; i += 1) {
       await toggleGuestFavorite(`g${i}`);
     }
-
-    await expect(readGuestFavorites()).resolves.toHaveLength(
-      MAX_GUEST_FAVORITES
-    );
-  });
-
-  it("drops the oldest favourite once the cap is reached, not the newest", async () => {
-    for (let i = 0; i < MAX_GUEST_FAVORITES; i += 1) {
-      await toggleGuestFavorite(`g${i}`);
-    }
-
-    await toggleGuestFavorite("newest");
 
     const ids = await readGuestFavorites();
 
-    expect(ids).not.toContain("g0");
-    expect(ids).toContain("newest");
+    expect(ids).toHaveLength(total);
+    expect(ids).toContain("g0"); // the oldest — not evicted
+    expect(ids).toContain(`g${total - 1}`); // the newest
   });
 
   it("forgets the whole list when it is cleared", async () => {
