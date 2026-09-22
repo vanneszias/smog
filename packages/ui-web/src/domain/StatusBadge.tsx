@@ -1,11 +1,15 @@
-import { SPONSORSHIP_STATUSES, type SponsorshipStatus } from "@smog/config";
+import type { SponsorshipStatus } from "@smog/config";
 import { forwardRef } from "react";
 import { Badge, type BadgeProps } from "../components/Badge";
+import { SPONSORSHIP_STATUS_LABELS } from "../vocabulary";
 
-interface StatusStyle {
-  label: string;
-  variant: NonNullable<BadgeProps["variant"]>;
-}
+/**
+ * Re-exported from its original home so no existing call site changes.
+ * The labels themselves now live in `../vocabulary`, the one module in this
+ * package `packages/ui-native` can also import: this file reaches `Badge.tsx`
+ * and, through it, React DOM, which a React Native bundle cannot load.
+ */
+export { SPONSORSHIP_STATUS_LABELS } from "../vocabulary";
 
 /*
  * Typed as `Record<SponsorshipStatus, …>` on purpose: the seven statuses come
@@ -14,26 +18,21 @@ interface StatusStyle {
  * The list is imported, never copied — see the note in
  * `packages/config/src/sponsorships.ts`.
  */
-const STATUS_STYLES: Record<SponsorshipStatus, StatusStyle> = {
-  pending_payment: { label: "Wacht op betaling", variant: "warning" },
-  pending_approval: { label: "Wacht op goedkeuring", variant: "warning" },
-  pending_resubmission: { label: "Wacht op aanpassing", variant: "warning" },
-  active: { label: "Actief", variant: "success" },
-  expired: { label: "Verlopen", variant: "neutral" },
-  rejected: { label: "Afgewezen", variant: "danger" },
-  cancelled: { label: "Geannuleerd", variant: "danger" },
+const STATUS_VARIANTS: Record<
+  SponsorshipStatus,
+  NonNullable<BadgeProps["variant"]>
+> = {
+  pending_payment: "warning",
+  pending_approval: "warning",
+  pending_resubmission: "warning",
+  active: "success",
+  expired: "neutral",
+  rejected: "danger",
+  cancelled: "danger",
 };
 
-/**
- * The Dutch label for each status, exported so a page can say the same words
- * in a heading, a filter or a table cell that the badge says.
- */
-export const SPONSORSHIP_STATUS_LABELS = Object.fromEntries(
-  SPONSORSHIP_STATUSES.map((status) => [status, STATUS_STYLES[status].label])
-) as Record<SponsorshipStatus, string>;
-
 const isKnownStatus = (status: string): status is SponsorshipStatus =>
-  Object.hasOwn(STATUS_STYLES, status);
+  Object.hasOwn(SPONSORSHIP_STATUS_LABELS, status);
 
 export type StatusBadgeProps = Omit<BadgeProps, "children" | "variant"> & {
   /*
@@ -66,14 +65,13 @@ export type StatusBadgeProps = Omit<BadgeProps, "children" | "variant"> & {
  */
 export const StatusBadge = forwardRef<HTMLSpanElement, StatusBadgeProps>(
   ({ status, labels, ...props }, ref) => {
-    const style: StatusStyle = isKnownStatus(status)
-      ? STATUS_STYLES[status]
-      : { label: status, variant: "neutral" };
-    const label =
-      (isKnownStatus(status) ? labels?.[status] : undefined) ?? style.label;
+    const variant = isKnownStatus(status) ? STATUS_VARIANTS[status] : "neutral";
+    const label = isKnownStatus(status)
+      ? (labels?.[status] ?? SPONSORSHIP_STATUS_LABELS[status])
+      : status;
 
     return (
-      <Badge ref={ref} variant={style.variant} {...props}>
+      <Badge ref={ref} variant={variant} {...props}>
         {label}
       </Badge>
     );

@@ -33,4 +33,18 @@ export {
   toastVariants,
   useToast,
 } from "./components/Toast";
+export {
+  CategoryFilter,
+  type CategoryFilterProps,
+  type CategoryOption,
+} from "./domain/CategoryFilter";
+export {
+  GestureCard,
+  type GestureCardProps,
+  type GestureSummary,
+} from "./domain/GestureCard";
+export { GestureGrid, type GestureGridProps } from "./domain/GestureGrid";
+export { SearchBar, type SearchBarProps } from "./domain/SearchBar";
+export { StatusBadge, type StatusBadgeProps } from "./domain/StatusBadge";
+export { VideoPlayer, type VideoPlayerProps } from "./domain/VideoPlayer";
 export { cn } from "./lib/cn";
