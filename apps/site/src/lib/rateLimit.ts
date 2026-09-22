@@ -94,6 +94,44 @@ const MS_PER_SECOND = 1000;
 const RETAIN_SECONDS = 60 * 60;
 
 /**
+ * How many spent rows one pass of {@link pruneRateLimits} reads.
+ *
+ * Bounded for the reason the neighbouring sweeps record: an unbounded read
+ * has already broken this suite once, at 132 bound parameters against D1's
+ * documented cap of 100 (`jobs/cleanupOrphanedMedia.ts`).
+ *
+ * Oldest first, so a backlog cannot leave the oldest rows behind every newer
+ * one.
+ */
+const PAGE = 200;
+
+/**
+ * How many rows go into one `payload.delete`, and why it is not `PAGE`.
+ *
+ * **The `where` is not what costs the parameters; the deleted rows are.**
+ * `payload.delete` resolves the filter, deletes the rows, and then emits
+ * `delete from "payload_preferences" where key in (?, …)` carrying **one bind
+ * parameter per deleted document**. D1 refuses at 100 — measured, with the
+ * exact statement in the failure:
+ *
+ * ```
+ * D1_ERROR: too many SQL variables at offset 372: SQLITE_ERROR
+ *   on: delete from "payload_preferences" where key in (?, ? … 150 of them)
+ * ```
+ *
+ * The damage from getting this wrong is quiet in the worst way. The rows *are*
+ * deleted before the throw, so retention keeps happening and no data is lost —
+ * what breaks is the job: `NO_RETRIES` files every hourly run failed, and the
+ * closing log line `jobs/schedules.int.test.ts` asserts stops appearing in
+ * production while every test still passes. A public beacon crosses a hundred
+ * distinct addresses in an hour trivially, so this is the steady state rather
+ * than a spike.
+ *
+ * Fifty leaves half the cap spare for whatever else a delete of one row emits.
+ */
+const DELETE_BATCH = 50;
+
+/**
  * The shape of the adapter this module reaches past Payload for.
  *
  * Structural and minimal, rather than importing the D1 adapter's own type:
@@ -205,6 +243,20 @@ export async function takeRateLimit(args: {
  *
  * `now` is a parameter so a test can assert a decision rather than race one,
  * exactly as the other sweeps take it.
+ *
+ * ## It drains, where its two neighbours take one page and stop
+ *
+ * `cleanupStalePayments` and `cleanupOrphanedMedia` both read one `PAGE` and
+ * leave the rest to the next tick, which is right for them: an abandoned
+ * checkout and a stray logo are rare, so a page an hour is more capacity than
+ * either will ever need. This is the opposite shape. One row per client per
+ * window means a busy hour leaves thousands, and a sweep that took two hundred
+ * of them per tick would fall permanently behind the thing it exists to bound.
+ * So it loops until a pass finds nothing.
+ *
+ * The loop cannot spin: a pass that deletes nothing ends it, whether because
+ * the table is drained or because the deletes are failing. The alternative —
+ * retrying rows that just refused — is an hourly job that never returns.
  */
 export async function pruneRateLimits(
   payload: Payload,
@@ -212,13 +264,55 @@ export async function pruneRateLimits(
 ): Promise<void> {
   const cutoff = Math.floor(now.getTime() / MS_PER_SECOND) - RETAIN_SECONDS;
 
-  const { docs, errors } = await payload.delete({
-    collection: "rate-limits",
-    overrideAccess: true,
-    where: { windowStart: { less_than: cutoff } },
-  });
+  let deleted = 0;
+  let failures = 0;
+  let draining = true;
+
+  while (draining) {
+    const { docs } = await payload.find({
+      collection: "rate-limits",
+      depth: 0,
+      limit: PAGE,
+      overrideAccess: true,
+      sort: "windowStart",
+      where: { windowStart: { less_than: cutoff } },
+    });
+
+    if (docs.length === 0) {
+      break;
+    }
+
+    const before = deleted;
+
+    for (let start = 0; start < docs.length; start += DELETE_BATCH) {
+      const ids = docs.slice(start, start + DELETE_BATCH).map((row) => row.id);
+
+      try {
+        const { docs: removed, errors } = await payload.delete({
+          collection: "rate-limits",
+          overrideAccess: true,
+          where: { id: { in: ids } },
+        });
+
+        deleted += removed.length;
+        failures += errors.length;
+      } catch (error) {
+        // One batch that cannot be deleted must not end the sweep: the rows
+        // behind it are the older ones, and giving up here gives up on them
+        // too. The pass-level guard below is what stops this repeating for
+        // ever.
+        failures += ids.length;
+        payload.logger.error(
+          { err: error },
+          "[pruneRateLimits] A batch of spent counters could not be deleted; they stay until the next sweep"
+        );
+      }
+    }
+
+    draining = deleted > before;
+  }
 
   payload.logger.info(
-    `[pruneRateLimits] Deleted ${docs.length} spent counter(s); ${errors.length} failure(s)`
+    `[pruneRateLimits] Deleted ${deleted} spent counter(s); ${failures} failure(s)`
   );
 }

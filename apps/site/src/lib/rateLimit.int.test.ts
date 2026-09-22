@@ -17,6 +17,8 @@ const WINDOW_SECONDS = 60;
 const SERIAL_LIMIT = 3;
 const CONCURRENT_LIMIT = 10;
 const CONCURRENT_CALLS = 20;
+/** Rows per teardown delete, under D1's cap of 100 bind parameters. */
+const TEARDOWN_BATCH = 50;
 
 describe("the rate limiter, against a real database", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
@@ -25,12 +27,34 @@ describe("the rate limiter, against a real database", () => {
     payload = await getPayload({ config });
   });
 
+  /*
+   * Batched for the same reason `pruneRateLimits` is: `payload.delete` emits
+   * one bind parameter per deleted document into its trailing
+   * `payload_preferences` delete, and D1 refuses at 100. The backlog test
+   * below leaves nothing behind when it passes — but when it *fails* it
+   * leaves a hundred and fifty rows, and a teardown that then threw would
+   * bury the failure this file exists to report under a second one.
+   */
   afterAll(async () => {
-    await payload.delete({
-      collection: "rate-limits",
-      overrideAccess: true,
-      where: { key: { like: RUN } },
-    });
+    for (;;) {
+      const { docs } = await payload.find({
+        collection: "rate-limits",
+        depth: 0,
+        limit: TEARDOWN_BATCH,
+        overrideAccess: true,
+        where: { key: { like: RUN } },
+      });
+
+      if (docs.length === 0) {
+        return;
+      }
+
+      await payload.delete({
+        collection: "rate-limits",
+        overrideAccess: true,
+        where: { id: { in: docs.map((row) => row.id) } },
+      });
+    }
   });
 
   const take = (key: string, limit = SERIAL_LIMIT) =>
@@ -120,6 +144,65 @@ describe("the rate limiter, against a real database", () => {
 
     expect(allowed).toBe(CONCURRENT_LIMIT);
   });
+
+  it("drains a backlog larger than D1's bind-parameter cap", async () => {
+    /*
+     * **The sweep's own bound, which is not the same thing as its filter.**
+     *
+     * `payload.delete` with a `where` resolves every matching row and then
+     * emits one bind parameter per row into the trailing
+     * `delete from "payload_preferences" where key in (?, …)`. D1's documented
+     * cap is 100, so an unbounded sweep deletes the rows and *then* throws —
+     * retention still happens, but the hourly task is filed failed on every
+     * run and the closing log line `jobs/schedules.int.test.ts` asserts never
+     * appears in production. `jobs/cleanupOrphanedMedia.ts` records this
+     * repo's earlier encounter with the same cap, at 132 parameters.
+     *
+     * A public beacon sees far more than a hundred distinct addresses in an
+     * hour, so the count here is above the cap on purpose: at ninety this test
+     * passes against the unbounded version and proves nothing.
+     */
+    const BACKLOG = 150;
+    const SPAWN = 50;
+    const key = `backlog-${crypto.randomUUID()}`;
+
+    for (let start = 0; start < BACKLOG; start += SPAWN) {
+      await Promise.all(
+        Array.from({ length: Math.min(SPAWN, BACKLOG - start) }, (_, index) =>
+          payload.create({
+            collection: "rate-limits",
+            data: {
+              count: 1,
+              key: `test-${RUN}:${key}-${start + index}`,
+              windowStart: 0,
+            },
+            overrideAccess: true,
+          })
+        )
+      );
+    }
+
+    await pruneRateLimits(payload, new Date());
+
+    const { totalDocs } = await payload.count({
+      collection: "rate-limits",
+      overrideAccess: true,
+      where: { key: { like: key } },
+    });
+
+    expect(totalDocs).toBe(0);
+    /*
+     * Its own timeout, and the one test in this file that needs one. The
+     * assertion costs a hundred and fifty round trips to a real D1 before it
+     * asserts anything: measured at 13.9s and 14.2s locally and unloaded,
+     * against the suite's 30s default. `vitest.config.mts` records what
+     * happens when a test sits at twice its limit while CI runs one worker
+     * under load — whichever is slowest that run goes red. Sixty seconds is
+     * roughly four times the measurement; a genuinely hung test still fails,
+     * just later. Lowering the count instead is the wrong trade: below a
+     * hundred rows this test passes against the defect it exists to catch.
+     */
+  }, 60_000);
 
   it("keeps the live window and takes the spent ones", async () => {
     /*

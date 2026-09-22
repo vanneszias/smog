@@ -210,6 +210,52 @@ describe("migration chain", () => {
     ).toThrow(/UNIQUE/i);
   });
 
+  it("gives rate_limits a UNIQUE index on the key", async () => {
+    // The same claim as for `claims`, for a mechanism with a different failure
+    // mode. `lib/rateLimit.ts` counts with
+    // `INSERT … ON CONFLICT(key) DO UPDATE SET count = count + 1 RETURNING
+    // count`, and that statement is atomic only because this index is the
+    // constraint it conflicts against.
+    //
+    // **This is the assertion nothing else in the suite makes.** The
+    // integration tests build their schema with `pushDevSchema` from the
+    // collection config, so the mutation that proves the mechanism proves it
+    // against the *pushed* schema; production builds from these migrations. A
+    // migration emitting `CREATE INDEX` here instead of `CREATE UNIQUE INDEX`
+    // would pass every other test in this project and deploy a public
+    // unauthenticated write endpoint whose limiter accepts everything —
+    // silently, because the endpoint answers 202 either way.
+    const { database } = await chain();
+    const byName = new Map(
+      indexesOn(database, "rate_limits").map((i) => [i.name, i.unique])
+    );
+
+    expect(byName.get("rate_limits_key_idx")).toBe(1);
+    // And the column the hourly prune filters on is indexed but emphatically
+    // not unique: every client in one window shares a `window_start`.
+    expect(byName.get("rate_limits_window_start_idx")).toBe(0);
+  });
+
+  it("refuses a second rate_limits row for one key", async () => {
+    // The index asserted as behaviour rather than as metadata, exactly as for
+    // `claims` above — and here the behaviour is the whole limiter. SQLite
+    // rejects an `ON CONFLICT` target that matches no constraint, so without
+    // this index the counter throws rather than miscounting; measured, the
+    // limiter's own fail-closed path then refuses everything. Either way the
+    // second INSERT below is what the upsert rests on.
+    const { database } = await chain();
+
+    database.exec(
+      `INSERT INTO rate_limits (id, key, count, window_start) VALUES (7400, 'analytics:203.0.113.7:1770000000', 1, 1770000000);`
+    );
+
+    expect(() =>
+      database.exec(
+        `INSERT INTO rate_limits (id, key, count, window_start) VALUES (7401, 'analytics:203.0.113.7:1770000000', 1, 1770000000);`
+      )
+    ).toThrow(/UNIQUE/i);
+  });
+
   it("lets two kinds hold the same underlying identifier", async () => {
     // The reason the stored key is `${kind}:${key}` and not the caller's
     // string. A Mollie payment id and a Remotion job id are both opaque
