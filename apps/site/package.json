@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#open-next-worker": {
+      "types": "./open-next-worker.d.ts",
+      "default": "./.open-next/worker.js"
+    }
+  },
   "scripts": {
     "dev": "NODE_OPTIONS=--no-deprecation next dev --port 3003",
     "build": "NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",

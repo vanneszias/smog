@@ -4,12 +4,14 @@ import { onScheduled, runScheduledTick } from "@/jobs/cron";
 /**
  * The tick a Cron Trigger's `scheduled()` handler makes.
  *
- * A unit test with no Worker, because there is no Worker to have: OpenNext
- * generates the entry module and it exports only `fetch`, so the handler this
- * is half of does not exist yet and Task 7 owns it. `jobs/cron.ts` says why at
- * length. What can be asserted without a deploy is the request — the path it
- * is aimed at, the header it carries, and what it does when the two things it
- * needs are missing.
+ * A unit test against `runScheduledTick` and `onScheduled` directly rather
+ * than against the deployed handler: the actual `scheduled()` is `worker.ts`,
+ * at the package root, and its own import (of OpenNext's build output) only
+ * resolves after a build, so it cannot be unit tested against a tree with no
+ * build the way this file is. `jobs/cron.ts` says more. What's asserted here
+ * is the request — the path it is aimed at, the headers it carries, and what
+ * happens when the two things it needs are missing — and, below, that
+ * `onScheduled` holds the tick open and logs rather than throws.
  */
 describe("the scheduled tick", () => {
   const environment = {
@@ -20,6 +22,16 @@ describe("the scheduled tick", () => {
   const ok = () => Promise.resolve(Response.json({ status: "ok" }));
 
   it("asks the run endpoint for a run, carrying the shared secret", async () => {
+    /*
+     * `host` is not decoration. OpenNext's edge converter rebuilds the
+     * dispatched request from `x-forwarded-host`, which it reads off
+     * `Request`'s own `host` header (`@opennextjs/aws`'s
+     * `overrides/converters/edge.js`), Next then builds `initURL` from that
+     * header (falling back to `localhost` if it's missing), and Payload's
+     * `createPayloadRequest` sets `req.origin` from `initURL` — so a tick
+     * with no `host` header reaches `send-renewal-reminders` as
+     * `https://undefined` or `https://localhost`, not `SITE_ORIGIN`.
+     */
     let seen: null | Request = null;
 
     await runScheduledTick(environment, (request) => {
@@ -33,6 +45,7 @@ describe("the scheduled tick", () => {
     expect(sent?.url).toBe("https://smog.example/api/jobs/run");
     expect(sent?.method).toBe("GET");
     expect(sent?.headers.get("authorization")).toBe("Bearer cron-test-token");
+    expect(sent?.headers.get("host")).toBe("smog.example");
   });
 
   it("builds the request on the configured origin, not on a guess", async () => {

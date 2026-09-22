@@ -1,50 +1,33 @@
 /**
- * The seam a Cloudflare Cron Trigger has to be wired into, and an honest
- * account of why it is a seam rather than the wiring.
+ * The two testable primitives a Cloudflare Cron Trigger's `scheduled()`
+ * handler is built from: the request one tick makes (`runScheduledTick`) and
+ * the handler itself, minus the two platform arguments it does not need
+ * (`onScheduled`). The handler that actually ships is `worker.ts`, at the
+ * package root — it re-exports OpenNext's generated `fetch` and adds
+ * `scheduled`, calling `onScheduled` below. That split exists because
+ * `worker.ts`'s own import (of OpenNext's build output) only resolves after
+ * `opennextjs-cloudflare build` has run, so unlike this file it cannot be
+ * unit tested against a tree with no build; proving the *deployed* Worker
+ * really ticks is Task 2's job, in `docs/superpowers/plans/2026-09-22-cron-wiring.md`.
  *
- * ## The plan is wrong twice about how a cron reaches this application
- *
- * The plan's architecture note says "a Cloudflare Cron Trigger calling
- * `GET /api/payload-jobs/run`". Task 2 found the second half of that wrong —
- * that endpoint is Payload's own, it did not exist until a task was
- * registered, and it is now closed to everybody — and flagged the first half
- * for this task. It is wrong too, and in a way that a `"crons"` entry in
- * `wrangler.jsonc` would hide rather than reveal:
+ * ## What a Cron Trigger invokes, and why that rules out a "crons" entry alone
  *
  * **A Cron Trigger does not call a URL.** It invokes the Worker's
  * `scheduled(controller, env, ctx)` handler. Nothing in `wrangler.jsonc` can
  * point a cron at a path, and a Worker whose entry module exports no
  * `scheduled` gets an invocation error on every firing — while the dashboard
  * shows a cron that is configured and an operator has every reason to believe
- * the jobs are running.
+ * the jobs are running. `wrangler.jsonc`'s `main` therefore points at
+ * `worker.ts`, not at OpenNext's generated entry module directly.
  *
- * ## Why the wiring is not done here
- *
- * The Worker's entry module is `.open-next/worker.js`, and this application
- * does not write it. `@opennextjs/cloudflare` copies it verbatim from
- * `cli/templates/worker.js` on every build
- * (`build/utils/copy-package-cli-files.js`), it exports `fetch` and three
- * Durable Object classes and nothing else, and there is no configuration hook
- * that adds an export to it. Reaching a `scheduled()` handler therefore means
- * changing `main` to a wrapper module of this application's own that
- * re-exports the generated worker's `fetch` and its Durable Objects and adds
- * `scheduled` beside them — which is a build-entry change whose only proof is
- * a deployed Worker, cannot be typechecked in a tree where `.open-next` does
- * not exist, and would make `check-types` depend on whether somebody has run
- * a build.
- *
- * **Task 7 owns first contact either way**, so what is here is the part that
- * can be proven without one: what that handler has to do, with everything it
- * depends on passed in.
- *
- * `dispatch` is the generated worker's own `fetch`. Calling it directly rather
- * than going out over the network is deliberate and is the reason this takes a
- * function rather than doing the fetch itself: `wrangler.jsonc` sets
- * `global_fetch_strictly_public`, so a Worker fetching its own public hostname
- * leaves Cloudflare and comes back through the edge — which costs a request,
- * needs the site to be publicly resolvable from inside the runtime, and fails
- * in exactly the environments where a scheduled invocation has no browser to
- * report to.
+ * `dispatch` is the generated worker's own `fetch` (see `worker.ts`). Calling
+ * it directly rather than going out over the network is deliberate and is
+ * the reason `runScheduledTick` takes a function rather than doing the fetch
+ * itself: `wrangler.jsonc` sets `global_fetch_strictly_public`, so a Worker
+ * fetching its own public hostname leaves Cloudflare and comes back through
+ * the edge — which costs a request, needs the site to be publicly resolvable
+ * from inside the runtime, and fails in exactly the environments where a
+ * scheduled invocation has no browser to report to.
  *
  * ## The two inputs, and why neither may be defaulted
  *
@@ -106,6 +89,18 @@ function required(value: string | undefined, name: string): string {
  * used as an oracle for its own secret. What happened goes to the log, where
  * only an operator reads it. A caller that branched on this response would be
  * branching on a constant.
+ *
+ * The `host` header is not decoration, and dropping it does not fail loudly —
+ * it fails as a wrong link in a sponsor's inbox. `dispatch` is `fetch` from
+ * OpenNext's generated worker, not a raw HTTP client: its edge converter
+ * rebuilds the request it hands to Next from `x-forwarded-host`, which it
+ * reads off the incoming request's own `host` header
+ * (`@opennextjs/aws/dist/overrides/converters/edge.js`), Next's server then
+ * builds `initURL` from that header — falling back to `localhost` when it is
+ * absent — and Payload's `createPayloadRequest` sets `req.origin` from
+ * `initURL`. `SITE_ORIGIN` alone only picks the URL this `Request` is
+ * constructed with; it says nothing about the `Host` the request carries, and
+ * `new Request(url)` does not set one on its own.
  */
 export async function runScheduledTick(
   environment: CronEnvironment,
@@ -116,7 +111,10 @@ export async function runScheduledTick(
 
   return await dispatch(
     new Request(`${origin}${RUN_PATH}`, {
-      headers: { authorization: `Bearer ${token}` },
+      headers: {
+        authorization: `Bearer ${token}`,
+        host: new URL(origin).host,
+      },
       method: "GET",
     })
   );
