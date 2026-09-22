@@ -300,15 +300,24 @@ which is exactly why the browser must.
 - Produces, and later tasks rely on these names exactly:
 
 ```ts
-export type ConsentChoice = "granted" | "denied";
+// NOT exported, either of them — see below.
+type ConsentChoice = "granted" | "denied";
 /** `null` means the visitor has not answered. It is not a refusal. */
-export type ConsentState = ConsentChoice | null;
+type ConsentState = ConsentChoice | null;
 export const ANALYTICS_CONSENT_KEY = "smog.consent.analytics";
 export function readConsent(): ConsentState;
 export function writeConsent(choice: ConsentChoice): void;
 export function clearConsent(): void;
 export function subscribeConsent(listener: () => void): () => void;
 ```
+
+**Neither type is exported by this task**, and that is a CI requirement rather than a
+style preference. knip runs inside `bun release:check` and fails on an exported symbol
+nothing imports; `ConsentChoice` has no importer anywhere in this plan, and
+`ConsentState`'s first importer arrives in Task 4. Task 4 adds `export` to
+`ConsentState` in the same commit that introduces the import. Every commit on this
+branch has to be individually green — AGENTS.md names this exact trap as the one that
+catches people out.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -924,6 +933,10 @@ git commit -m "feat(ui-web): Banner, a notice that does not trap the reader"
 - Consumes: `Banner` from `@smog/ui-web` (Task 3); `readConsent`, `subscribeConsent`,
   `writeConsent`, `type ConsentState` from `@/lib/consentStore` (Task 2);
   `type Locale` from `@/lib/locale`.
+- **Also modifies `@/lib/consentStore`**: add the `export` keyword to `ConsentState`.
+  Task 2 deliberately left both its types unexported so that its own commit passed
+  knip; this is the commit that gives `ConsentState` an importer, so it is the commit
+  that may export it. Leave `ConsentChoice` unexported — nothing imports it.
 - Produces: `export function ConsentBanner({ locale }: { locale: Locale }): JSX.Element | null`.
 
 **The copy already exists and does not need writing.** `packages/i18n/src/locales/*.json`
