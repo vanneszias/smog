@@ -287,7 +287,15 @@ describe("recordConsent", () => {
     });
   });
 
-  it("writes with a string userId too, since the id arrives as one over HTTP", async () => {
+  it("writes with a string userId too, since the signature promises both", async () => {
+    /*
+     * Every caller in this codebase today hands `recordConsent` a number —
+     * `req.user.id` is typed `number` on `User` — so the HTTP-level suite
+     * above never exercises this branch at all. The signature accepts
+     * `number | string` regardless, and the conversion this depends on
+     * (`Number(userId)` before the relationship write, required because
+     * `isValidID` rejects a string id) has no other test proving it holds.
+     */
     await recordConsent({
       analyticsConsent: false,
       req,
