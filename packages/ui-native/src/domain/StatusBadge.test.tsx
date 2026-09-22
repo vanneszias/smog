@@ -1,6 +1,5 @@
-import { SPONSORSHIP_STATUSES } from "@smog/config";
+import { SPONSORSHIP_STATUS_LABELS, SPONSORSHIP_STATUSES } from "@smog/config";
 import { tokens } from "@smog/styles";
-import { SPONSORSHIP_STATUS_LABELS } from "@smog/ui-web/vocabulary";
 import { render, screen } from "@testing-library/react-native";
 import { resolvedColor } from "../test/resolvedColor";
 import { StatusBadge } from "./StatusBadge";

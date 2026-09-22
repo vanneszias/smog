@@ -5,9 +5,10 @@ import { SPONSORSHIP_STATUS_LABELS } from "../vocabulary";
 
 /**
  * Re-exported from its original home so no existing call site changes.
- * The labels themselves now live in `../vocabulary`, the one module in this
- * package `packages/ui-native` can also import: this file reaches `Badge.tsx`
- * and, through it, React DOM, which a React Native bundle cannot load.
+ * The labels themselves now live in `@smog/config` (via `../vocabulary`,
+ * which re-exports them): this file reaches `Badge.tsx` and, through it,
+ * React DOM, which `packages/ui-native` cannot load, so it was never where
+ * a value shared with the native package could live.
  */
 export { SPONSORSHIP_STATUS_LABELS } from "../vocabulary";
 

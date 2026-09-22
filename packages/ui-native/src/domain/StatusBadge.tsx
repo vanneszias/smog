@@ -1,5 +1,7 @@
-import type { SponsorshipStatus } from "@smog/config";
-import { SPONSORSHIP_STATUS_LABELS } from "@smog/ui-web/vocabulary";
+import {
+  SPONSORSHIP_STATUS_LABELS,
+  type SponsorshipStatus,
+} from "@smog/config";
 import { Badge, type BadgeProps } from "../components/Badge";
 
 /*
@@ -7,8 +9,9 @@ import { Badge, type BadgeProps } from "../components/Badge";
  * from `@smog/config`, and an eighth added there fails `check-types` here
  * rather than shipping a badge that reads `pending_resubmission` at a
  * sponsor. Mirrors `packages/ui-web/src/domain/StatusBadge.tsx`'s own map;
- * the labels themselves come from `@smog/ui-web/vocabulary` rather than a
- * second copy of the seven Dutch strings.
+ * the labels themselves come from `@smog/config` too — the one package both
+ * component libraries can depend on at runtime without one depending on the
+ * other — rather than a second copy of the seven Dutch strings.
  */
 const STATUS_VARIANTS: Record<
   SponsorshipStatus,

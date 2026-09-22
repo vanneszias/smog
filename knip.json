@@ -80,7 +80,7 @@
         "babel.config.js",
         "scripts/*.ts"
       ],
-      "ignoreDependencies": ["@babel/core", "@smog/config", "tailwindcss"]
+      "ignoreDependencies": ["@babel/core", "tailwindcss"]
     }
   }
 }

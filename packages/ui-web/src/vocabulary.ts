@@ -1,18 +1,19 @@
 /**
  * The names both component libraries answer to.
  *
- * Imported by `packages/ui-native`, which is why this module takes no import
- * that reaches React DOM: it is read inside a React Native test runtime,
- * where anything reaching for React DOM does not load. `@smog/config` is
- * safe — it declares no React dependency of its own — which is what lets
- * `SPONSORSHIP_STATUS_LABELS` live here rather than in
- * `packages/ui-web/src/domain/StatusBadge.tsx`, which does reach React DOM
- * through `Badge.tsx`.
- *
- * Adding a name here without implementing it on both platforms fails two
- * test suites, which is the entire purpose.
+ * Historically this module took no import that reached React DOM, because
+ * `packages/ui-native` imported it directly and a React Native test runtime
+ * cannot load anything that does. `SPONSORSHIP_STATUS_LABELS` has since
+ * moved to `@smog/config` itself (alongside `SPONSORSHIP_STATUSES`, which
+ * already lived there) for a stricter reason than "it happens not to reach
+ * React DOM today": `packages/ui-native` existing at all is the choice that
+ * the two component libraries share a philosophy and not code, and a
+ * runtime `dependencies` edge from the native library onto the web one
+ * contradicts that regardless of what the web library's module graph
+ * currently contains. Re-exported here under its old name so no existing
+ * call site in this package changes.
  */
-import type { SponsorshipStatus } from "@smog/config";
+export { SPONSORSHIP_STATUS_LABELS } from "@smog/config";
 
 export const BUTTON_VARIANTS = [
   "primary",
@@ -43,21 +44,3 @@ export type ButtonSize = (typeof BUTTON_SIZES)[number];
 export type BadgeVariant = (typeof BADGE_VARIANTS)[number];
 export type BadgeSize = (typeof BADGE_SIZES)[number];
 export type InputSize = (typeof INPUT_SIZES)[number];
-
-/**
- * The Dutch label for each sponsorship status, in words a sponsor can read.
- *
- * Moved here from `packages/ui-web/src/domain/StatusBadge.tsx` (Task 6),
- * which still re-exports it under its old name so no call site changes.
- * `StatusBadge.tsx` reaches `Badge.tsx` and React DOM, so it cannot be the
- * home for a constant `packages/ui-native` also needs — this module is.
- */
-export const SPONSORSHIP_STATUS_LABELS: Record<SponsorshipStatus, string> = {
-  pending_payment: "Wacht op betaling",
-  pending_approval: "Wacht op goedkeuring",
-  pending_resubmission: "Wacht op aanpassing",
-  active: "Actief",
-  expired: "Verlopen",
-  rejected: "Afgewezen",
-  cancelled: "Geannuleerd",
-};
