@@ -3,9 +3,12 @@ import * as SecureStore from "expo-secure-store";
 import { ApiError, payloadFetch } from "./api";
 import { readGuestFavorites, toggleGuestFavorite } from "./guest";
 import {
+  changePassword,
+  deleteAccount,
   getToken,
   INSTALL_MARKER,
   refresh,
+  requestEmailChange,
   signIn,
   signOut,
   signUp,
@@ -284,5 +287,133 @@ describe("signUp", () => {
     await signUp("new@example.test", "correct horse battery staple");
 
     expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe("changePassword", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("t");
+  });
+
+  it("signs this device out once the server confirms the change", async () => {
+    global.fetch = jest.fn(() =>
+      json({ status: "changed" })
+    ) as unknown as typeof fetch;
+
+    await expect(changePassword("old", "a-much-better-one-123")).resolves.toBe(
+      "changed"
+    );
+
+    // The server already ended every session on its side; this only makes
+    // the local state agree.
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalled();
+  });
+
+  it("reports a refused current password without signing out", async () => {
+    global.fetch = jest.fn(() =>
+      json({ field: "credentials", status: "invalid" }, 400)
+    ) as unknown as typeof fetch;
+
+    await expect(changePassword("wrong", "a-fine-password-000")).resolves.toBe(
+      "credentials"
+    );
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+  });
+
+  it("reports a weak new password without signing out", async () => {
+    global.fetch = jest.fn(() =>
+      json({ field: "password", status: "invalid" }, 400)
+    ) as unknown as typeof fetch;
+
+    await expect(changePassword("old", "short")).resolves.toBe("password");
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe("requestEmailChange", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("t");
+  });
+
+  it("parks the change and leaves the session untouched", async () => {
+    global.fetch = jest.fn(() =>
+      json({ status: "pending" })
+    ) as unknown as typeof fetch;
+
+    await expect(
+      requestEmailChange("pw", "new@example.test", "nl")
+    ).resolves.toBe("pending");
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+  });
+
+  it("carries the locale on the query string, for the queued confirmation mail", async () => {
+    global.fetch = jest.fn(() =>
+      json({ status: "pending" })
+    ) as unknown as typeof fetch;
+
+    await requestEmailChange("pw", "new@example.test", "fr");
+
+    const [url] = (global.fetch as unknown as jest.Mock).mock.calls[0];
+    expect(new URL(url as string).searchParams.get("locale")).toBe("fr");
+  });
+
+  it("reports the refusal the server names", async () => {
+    global.fetch = jest.fn(() =>
+      json({ field: "email-unchanged", status: "invalid" }, 400)
+    ) as unknown as typeof fetch;
+
+    await expect(
+      requestEmailChange("pw", "same@example.test", "nl")
+    ).resolves.toBe("email-unchanged");
+  });
+});
+
+describe("deleteAccount", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("t");
+  });
+
+  it("signs out locally after a successful delete", async () => {
+    global.fetch = jest.fn(() =>
+      json({ status: "deleted" })
+    ) as unknown as typeof fetch;
+
+    await deleteAccount("a@b.test");
+
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalled();
+  });
+
+  it("does not sign out when the delete is refused", async () => {
+    global.fetch = jest.fn(() =>
+      json({ status: "invalid" }, 400)
+    ) as unknown as typeof fetch;
+
+    await expect(deleteAccount("wrong@b.test")).rejects.toThrow();
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+  });
+
+  it("does not sign out when the server fails to delete the account", async () => {
+    global.fetch = jest.fn(() =>
+      json({ status: "failed" }, 500)
+    ) as unknown as typeof fetch;
+
+    await expect(deleteAccount("a@b.test")).rejects.toThrow();
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+  });
+
+  it("sends the account's own address, not a password, to the endpoint", async () => {
+    global.fetch = jest.fn(() =>
+      json({ status: "deleted" })
+    ) as unknown as typeof fetch;
+
+    await deleteAccount("a@b.test");
+
+    const [, init] = (global.fetch as unknown as jest.Mock).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({
+      confirmEmail: "a@b.test",
+    });
   });
 });

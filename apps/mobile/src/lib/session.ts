@@ -10,6 +10,7 @@ import {
 } from "react";
 import { API_BASE_URL, ApiError, payloadFetch } from "./api";
 import { clearGuestFavorites, readGuestFavorites } from "./guest";
+import type { Locale } from "./locale";
 
 /**
  * The session this app keeps: one JWT, in the iOS/Android keychain via
@@ -255,6 +256,169 @@ export async function refresh(): Promise<void> {
   if (typeof result.refreshedToken === "string") {
     await storeToken(result.refreshedToken);
   }
+}
+
+/**
+ * The body every `/mobile/account/*` JSON endpoint answers with — see
+ * `endpoints/account.ts`'s renderer 2. Never Payload's own `{ errors: [...] }`
+ * shape, which is exactly why these three calls below are not routed through
+ * `payloadFetch`: same reasoning as `signUp`'s own comment above.
+ */
+interface AccountOutcome {
+  field?: string;
+  status?: unknown;
+}
+
+/** `Authorization: JWT …` when there is a token, built the same way `payloadFetch` builds it. */
+async function authorizedAccountRequest(
+  path: string,
+  body: Record<string, unknown>,
+  locale?: Locale
+): Promise<Response> {
+  const token = await getToken();
+  const url = new URL(`${API_BASE_URL}/api${path}`);
+
+  if (locale !== undefined) {
+    url.searchParams.set("locale", locale);
+  }
+
+  const headers = new Headers({ "Content-Type": "application/json" });
+
+  if (token !== null) {
+    headers.set("Authorization", `JWT ${token}`);
+  }
+
+  const response = await fetch(url.toString(), {
+    body: JSON.stringify(body),
+    headers,
+    method: "POST",
+  });
+
+  if (response.status === 401) {
+    // Matches `payloadFetch`'s own rule: a 401 means the stored token is no
+    // longer good, so nothing here should keep offering it as one.
+    await clearToken();
+  }
+
+  return response;
+}
+
+/**
+ * `POST /api/mobile/account/password` — `endpoints/account.ts`'s
+ * `decideChangePassword`, rendered as JSON. `"credentials"`: the current
+ * password was refused, or the account is locked. `"password"`: the new
+ * password did not clear the policy.
+ *
+ * **A successful change signs this device out.** The server ends every
+ * session on a password change, including the one that made it
+ * (`logoutOperation({ allSessions: true })` — see that decide function's own
+ * comment), so the token this device holds is already dead the moment the
+ * response arrives; `clearToken` here only makes the local state agree with
+ * what the server already did.
+ */
+export async function changePassword(
+  current: string,
+  next: string
+): Promise<"changed" | "credentials" | "password"> {
+  const response = await authorizedAccountRequest("/mobile/account/password", {
+    current,
+    next,
+  });
+  const body = (await response.json()) as AccountOutcome;
+
+  if (body.status === "changed") {
+    await clearToken();
+
+    return "changed";
+  }
+
+  if (body.field === "credentials" || body.field === "password") {
+    return body.field;
+  }
+
+  throw new ApiError(
+    response.status === 401 ? "signed-out" : "unknown",
+    response.status
+  );
+}
+
+/**
+ * `POST /api/mobile/account/email` — `endpoints/account.ts`'s
+ * `decideRequestEmailChange`, rendered as JSON. On `"pending"`, a
+ * confirmation link has been queued to the new address; the session is
+ * untouched, so there is nothing for this call to change locally.
+ */
+export async function requestEmailChange(
+  current: string,
+  email: string,
+  locale: Locale
+): Promise<"pending" | "credentials" | "email" | "email-unchanged"> {
+  const response = await authorizedAccountRequest(
+    "/mobile/account/email",
+    { current, email },
+    locale
+  );
+  const body = (await response.json()) as AccountOutcome;
+
+  if (body.status === "pending") {
+    return "pending";
+  }
+
+  if (
+    body.field === "credentials" ||
+    body.field === "email" ||
+    body.field === "email-unchanged"
+  ) {
+    return body.field;
+  }
+
+  throw new ApiError(
+    response.status === 401 ? "signed-out" : "unknown",
+    response.status
+  );
+}
+
+/**
+ * `POST /api/mobile/account/delete` — `endpoints/account.ts`'s
+ * `decideDeleteAccount`, rendered as JSON.
+ *
+ * **Takes the account's own address, not a password.** The endpoint checks
+ * a typed address against the signed-in account's own — see that decide
+ * function's comment for why a password is neither asked for nor checked
+ * here, on either renderer.
+ *
+ * **The local sign-out happens only once the server has actually deleted the
+ * account.** A thrown `ApiError` — a mismatched address, or the cascade
+ * refusing — leaves the token exactly as it was; only the `"deleted"`
+ * branch clears it. Reporting an account gone when it is not would be worse
+ * than reporting nothing, which is the whole reason this function does not
+ * clear first and ask questions after, the way a careless "log out on any
+ * response" would.
+ */
+export async function deleteAccount(confirmEmail: string): Promise<void> {
+  const response = await authorizedAccountRequest("/mobile/account/delete", {
+    confirmEmail,
+  });
+  const body = (await response.json()) as AccountOutcome;
+
+  if (body.status === "deleted") {
+    await clearToken();
+
+    return;
+  }
+
+  if (body.status === "invalid") {
+    throw new ApiError("confirm", response.status);
+  }
+
+  if (body.status === "failed") {
+    throw new ApiError("delete", response.status);
+  }
+
+  throw new ApiError(
+    response.status === 401 ? "signed-out" : "unknown",
+    response.status
+  );
 }
 
 interface SessionContextValue {

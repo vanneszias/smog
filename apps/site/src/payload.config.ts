@@ -24,7 +24,7 @@ import { Sponsorships } from "./collections/Sponsorships";
 import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
 import { cloudflareEmailAdapter } from "./email/adapter";
-import { accountEndpoints } from "./endpoints/account";
+import { accountEndpoints, mobileAccountEndpoints } from "./endpoints/account";
 import { authEndpoints, mobileAuthEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
@@ -201,7 +201,10 @@ export default buildConfig({
    *
    * `accountEndpoints` adds the four writes the account page makes —
    * `/account/password`, `/account/email`, `/account/confirm-email` and
-   * `/account/delete` — on the same terms.
+   * `/account/delete` — on the same terms. `mobileAccountEndpoints` adds the
+   * native app's JSON twin of three of those four, under
+   * `/mobile/account/*` — see `endpoints/account.ts`'s module comment for
+   * why `/account/confirm-email` has no such twin.
    *
    * `listsEndpoints` adds the six writes the owner's list pages make, under
    * `/account/lists/*`. Flat siblings rather than nested paths — `create`,
@@ -280,6 +283,7 @@ export default buildConfig({
     ...oauthEndpoints,
     ...favoritesEndpoints,
     ...accountEndpoints,
+    ...mobileAccountEndpoints,
     ...jobsEndpoints,
     ...listsEndpoints,
     ...sponsorshipEndpoints,

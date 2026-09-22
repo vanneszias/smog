@@ -2,6 +2,29 @@ import fs from "node:fs";
 import path from "node:path";
 import "@testing-library/react-native";
 import { jest } from "@jest/globals";
+
+/**
+ * `nativewind/dist/tailwind/index.js` picks its "web" Tailwind plugin
+ * whenever `NATIVEWIND_OS` is unset or `"web"` — which is unset under Jest,
+ * a Node environment with no Metro to set it. That plugin's dark-mode rule
+ * (`nativewind/dist/tailwind/dark-mode.js`) then emits a plain CSS custom
+ * property (`:root { --css-interop-darkMode: class dark }`) instead of the
+ * `@cssInterop set darkMode class dark;` at-rule the *native* plugin emits —
+ * and `cssToReactNativeRuntime` (what `registerCSS` below calls) only reads
+ * the at-rule form into the `darkMode` flag. Left unset, every screen's
+ * `darkMode: "class"` config (`tailwind.config.js`) compiles under Jest as
+ * though it were still `"media"`, and `useColorScheme().setColorScheme(...)`
+ * (`nativewind/dist/stylesheet.js`) throws "Unable to manually set color
+ * scheme without using darkMode: class" the moment a test presses the
+ * settings screen's theme control — confirmed by a throwaway probe test
+ * before this line existed. This only has to run before `beforeAll` below
+ * calls `tailwindcss(tailwindConfig)` — the check happens when the preset is
+ * invoked, not when `nativewind`/`tailwindcss` are required — but it is set
+ * here, at the top, so nothing later in this file could accidentally read
+ * the compiled CSS before it does.
+ */
+process.env.NATIVEWIND_OS ??= "ios";
+
 import postcss from "postcss";
 import { registerCSS, setupAllComponents } from "react-native-css-interop/test";
 import tailwindcss from "tailwindcss";

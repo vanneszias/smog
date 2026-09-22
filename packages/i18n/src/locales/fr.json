@@ -128,7 +128,8 @@
   },
   "languages": {
     "en": "Anglais",
-    "fr": "Français"
+    "fr": "Français",
+    "nl": "Néerlandais"
   },
   "settings": {
     "title": "Paramètres",
@@ -151,7 +152,8 @@
     "analyticsPromptDescription": "Avec votre autorisation, nous collectons des données d'analyse limitées pour comprendre comment SMOG & Co est utilisé et améliorer l'application. Nous n'utilisons pas ces données à des fins publicitaires et ne vous suivons pas dans d'autres applications ou sur d'autres sites web.",
     "analyticsAllow": "Autoriser l'analyse",
     "analyticsRequiredOnly": "Utiliser sans analyse",
-    "privacyPolicy": "Lire la politique de confidentialité"
+    "privacyPolicy": "Lire la politique de confidentialité",
+    "sponsorLink": "Parrainer un geste (ouvre le navigateur)"
   },
   "about": {
     "title": "À propos",
@@ -164,6 +166,7 @@
     "error": "Erreur",
     "success": "Succès",
     "comingSoon": "Bientôt disponible",
+    "confirm": "Confirmer",
     "edit": "Modifier",
     "delete": "Supprimer",
     "continue": "Continuer",
@@ -216,7 +219,22 @@
     "deleteAccountMessage": "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action ne peut pas être annulée.",
     "editProfileComingSoon": "La modification du profil sera bientôt disponible.",
     "changePasswordComingSoon": "Le changement de mot de passe sera bientôt disponible.",
-    "deleteAccountComingSoon": "La suppression du compte sera bientôt disponible."
+    "deleteAccountComingSoon": "La suppression du compte sera bientôt disponible.",
+    "currentPasswordLabel": "Mot de passe actuel",
+    "newPasswordLabel": "Nouveau mot de passe",
+    "passwordChanged": "Mot de passe modifié. Reconnectez-vous.",
+    "newEmailLabel": "Nouvelle adresse e-mail",
+    "changeEmail": "Changer l'adresse e-mail",
+    "emailChangePending": "Vérifiez votre e-mail pour un lien de confirmation.",
+    "confirmEmailLabel": "Tapez votre adresse e-mail pour confirmer",
+    "deleteMismatch": "Cette adresse e-mail ne correspond pas à votre compte.",
+    "deleteFailed": "La suppression du compte a échoué. Veuillez réessayer.",
+    "networkError": "Une erreur s'est produite. Vérifiez votre connexion et réessayez.",
+    "currentPasswordIncorrect": "Le mot de passe actuel est incorrect.",
+    "emailInvalid": "Saisissez une adresse e-mail valide.",
+    "emailUnchanged": "C'est déjà l'adresse e-mail de votre compte.",
+    "passwordWeak": "Choisissez un mot de passe d'au moins 12 caractères qui n'est pas facile à deviner.",
+    "signInRequired": "Connectez-vous pour gérer les paramètres de votre compte."
   },
   "contact": {
     "title": "Contact",

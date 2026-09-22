@@ -1,5 +1,10 @@
 import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
-import { generateExpiredPayloadCookie, logoutOperation } from "payload";
+import {
+  generateExpiredPayloadCookie,
+  headersWithCors,
+  logoutOperation,
+} from "payload";
+import { readBody } from "@/endpoints/auth";
 import { SEND_EMAIL } from "@/jobs/sendEmail";
 import {
   accountPath,
@@ -13,12 +18,36 @@ import {
 } from "@/lib/authFlow";
 import { sha256Hex } from "@/lib/emailChange";
 import { field, guardOrigin, pad, readForm } from "@/lib/formPost";
-import type { Locale } from "@/lib/locale";
+import { type Locale, resolveLocale } from "@/lib/locale";
 import type { User } from "@/payload-types";
 
 /**
  * The account page's four writes: change password, ask to change the address,
  * confirm the address, delete the account.
+ *
+ * ## Two renderers over three shared decisions
+ *
+ * `decideChangePassword`, `decideRequestEmailChange` and
+ * `decideDeleteAccount` are each called from two places: the form handler
+ * below it (unchanged behaviour — same guard, same order, same redirects,
+ * proven by `account.int.test.ts`, unedited) and its `mobile*` twin near the
+ * bottom of this file, which renders the identical decision as a JSON body
+ * for the Stage 8 native app instead of a 303. `confirmEmailChange` has no
+ * such twin: the link it confirms is a web URL mailed to the visitor, and
+ * confirming it in a browser is correct — there is nothing for a mobile
+ * renderer to add. Same shape as `endpoints/lists.ts`'s `decideCreateList`
+ * and friends, for the same reason: one answer computed once, rendered
+ * twice, rather than a second implementation that can drift from the first.
+ *
+ * **The timing floor travels with the decision, not with either renderer.**
+ * `decideChangePassword` and `decideRequestEmailChange` take `started` and
+ * call `pad(started)` themselves on every branch that compares a secret —
+ * exactly where the un-extracted handlers used to — so a JSON caller is held
+ * to the same 500 ms floor as a browser. `decideDeleteAccount` takes no
+ * `started` and pads nothing, matching that handler's own original comment:
+ * nothing on that path depends on a secret the answer could leak, because it
+ * acts on the caller's own account and the confirmation is compared against
+ * an address the caller already knows.
  *
  * ## Why these are endpoints and not `app/**​/route.ts`
  *
@@ -171,26 +200,35 @@ function signedOut(locale: Locale): Response {
   return seeOther(signInPath(locale));
 }
 
-const changePassword: PayloadHandler = async (req) => {
-  const crossSiteResponse = guardOrigin(req);
+/** What `changePassword` and `mobileChangePassword` both answer. */
+type ChangePasswordOutcome =
+  | { status: "signed-out" }
+  /** `credentials`: the current password was refused, or the account is
+   * locked. `password`: the new password did not clear the policy. */
+  | { status: "invalid"; field: "credentials" | "password" }
+  | { status: "changed" };
 
-  if (crossSiteResponse) {
-    return crossSiteResponse;
-  }
-
-  const started = Date.now();
-  const form = await readForm(req);
-  const locale = localeFromForm(form.get("locale"));
+/**
+ * The one decision behind both change-password surfaces. See the module
+ * comment above for why `started` is a parameter rather than measured
+ * inside: both renderers set it at the same point (right after
+ * `guardOrigin`, before the body is read) and hand it in unchanged.
+ */
+async function decideChangePassword(
+  req: PayloadRequest,
+  started: number,
+  input: { current: string; next: string }
+): Promise<ChangePasswordOutcome> {
   const user = signedInUser(req);
 
   if (user === null) {
-    return signedOut(locale);
+    return { status: "signed-out" };
   }
 
-  if (!(await currentPasswordAccepted(req, user, field(form, "current")))) {
+  if (!(await currentPasswordAccepted(req, user, input.current))) {
     await pad(started);
 
-    return seeOther(accountPath(locale, { error: "credentials" }));
+    return { field: "credentials", status: "invalid" };
   }
 
   try {
@@ -208,7 +246,7 @@ const changePassword: PayloadHandler = async (req) => {
      */
     await req.payload.update({
       collection: USERS,
-      data: { password: field(form, "next") },
+      data: { password: input.next },
       depth: 0,
       id: user.id,
       overrideAccess: false,
@@ -230,7 +268,7 @@ const changePassword: PayloadHandler = async (req) => {
      */
     await pad(started);
 
-    return seeOther(accountPath(locale, { error: "password" }));
+    return { field: "password", status: "invalid" };
   }
 
   /*
@@ -249,7 +287,8 @@ const changePassword: PayloadHandler = async (req) => {
    * risks signing everybody out of an account whose password did not
    * change. This way the worst case is a changed password with stale
    * sessions still live, which the visitor can fix by changing it again —
-   * and the cookie is expired below regardless.
+   * and the cookie (or, for the mobile renderer, the token) is invalid
+   * regardless.
    */
   await logoutOperation({
     allSessions: true,
@@ -259,13 +298,10 @@ const changePassword: PayloadHandler = async (req) => {
 
   await pad(started);
 
-  return seeOther(
-    signInPath(locale, { notice: "password-changed" }),
-    expiredCookie(req)
-  );
-};
+  return { status: "changed" };
+}
 
-const requestEmailChange: PayloadHandler = async (req) => {
+const changePassword: PayloadHandler = async (req) => {
   const crossSiteResponse = guardOrigin(req);
 
   if (crossSiteResponse) {
@@ -275,30 +311,71 @@ const requestEmailChange: PayloadHandler = async (req) => {
   const started = Date.now();
   const form = await readForm(req);
   const locale = localeFromForm(form.get("locale"));
-  const user = signedInUser(req);
 
-  if (user === null) {
+  const outcome = await decideChangePassword(req, started, {
+    current: field(form, "current"),
+    next: field(form, "next"),
+  });
+
+  if (outcome.status === "signed-out") {
     return signedOut(locale);
   }
 
-  const email = normaliseEmail(form.get("email"));
+  if (outcome.status === "invalid") {
+    return seeOther(accountPath(locale, { error: outcome.field }));
+  }
+
+  return seeOther(
+    signInPath(locale, { notice: "password-changed" }),
+    expiredCookie(req)
+  );
+};
+
+/** What `requestEmailChange` and `mobileRequestEmailChange` both answer. */
+type RequestEmailChangeOutcome =
+  | { status: "signed-out" }
+  /** `email`: not shaped like an address. `email-unchanged`: the one
+   * already on the account. `credentials`: the current password was
+   * refused, or the account is locked. */
+  | { status: "invalid"; field: "credentials" | "email" | "email-unchanged" }
+  | { status: "pending" };
+
+/**
+ * The one decision behind both request-email-change surfaces. `locale` is a
+ * parameter, not read from the request, because the two renderers carry it
+ * differently — a form field here, `?locale=` on the JSON surface — and both
+ * need it for the same reason: the queued confirmation mail is sent in it.
+ */
+async function decideRequestEmailChange(
+  req: PayloadRequest,
+  started: number,
+  locale: Locale,
+  input: { current: string; email: string }
+): Promise<RequestEmailChangeOutcome> {
+  const user = signedInUser(req);
+
+  if (user === null) {
+    return { status: "signed-out" };
+  }
+
+  const email = normaliseEmail(input.email);
 
   if (!isEmailShaped(email)) {
     await pad(started);
 
-    return seeOther(accountPath(locale, { error: "email" }));
+    return { field: "email", status: "invalid" };
   }
 
   if (email === normaliseEmail(user.email)) {
     await pad(started);
 
-    return seeOther(accountPath(locale, { error: "email-unchanged" }));
+    return { field: "email-unchanged", status: "invalid" };
   }
 
-  if (!(await currentPasswordAccepted(req, user, field(form, "current")))) {
+  if (!(await currentPasswordAccepted(req, user, input.current))) {
     await pad(started);
 
-    return seeOther(accountPath(locale, { error: "credentials" }));
+    return { field: "credentials", status: "invalid" };
   }
 
   /*
@@ -384,6 +461,33 @@ const requestEmailChange: PayloadHandler = async (req) => {
   }
 
   await pad(started);
+
+  return { status: "pending" };
+}
+
+const requestEmailChange: PayloadHandler = async (req) => {
+  const crossSiteResponse = guardOrigin(req);
+
+  if (crossSiteResponse) {
+    return crossSiteResponse;
+  }
+
+  const started = Date.now();
+  const form = await readForm(req);
+  const locale = localeFromForm(form.get("locale"));
+
+  const outcome = await decideRequestEmailChange(req, started, locale, {
+    current: field(form, "current"),
+    email: field(form, "email"),
+  });
+
+  if (outcome.status === "signed-out") {
+    return signedOut(locale);
+  }
+
+  if (outcome.status === "invalid") {
+    return seeOther(accountPath(locale, { error: outcome.field }));
+  }
 
   return seeOther(accountPath(locale, { notice: "email-pending" }));
 };
@@ -519,38 +623,46 @@ const confirmEmailChange: PayloadHandler = async (req) => {
   return seeOther(signInPath(locale, { notice: "email-changed" }));
 };
 
-const deleteAccount: PayloadHandler = async (req) => {
-  const crossSiteResponse = guardOrigin(req);
+/** What `deleteAccount` and `mobileDeleteAccount` both answer. */
+type DeleteAccountOutcome =
+  | { status: "signed-out" }
+  /** The typed address did not match the account's. */
+  | { status: "invalid" }
+  /** The cascade refused; the account still exists. */
+  | { status: "failed" }
+  | { status: "deleted" };
 
-  if (crossSiteResponse) {
-    return crossSiteResponse;
-  }
-
-  const form = await readForm(req);
-  const locale = localeFromForm(form.get("locale"));
+/**
+ * The one decision behind both delete-account surfaces.
+ *
+ * **Typing the address, not a password — on either surface.** The plan asks
+ * for the address and it is the right control for two reasons. It is a
+ * confirmation of *intent* rather than of identity — the session already
+ * settled identity — and deletion, unlike a password or address change,
+ * hands the attacker nothing: it is the one destructive action that cannot
+ * be used to take an account over. And a password requirement would lock out
+ * precisely the accounts that have no usable password: a Google-created
+ * account is given a random 288-bit value nobody knows (`endpoints/
+ * oauth.ts`), so its owner could never delete it. A mobile client asking for
+ * a password here would be asking for something this endpoint neither wants
+ * nor checks.
+ *
+ * Normalised on both sides, because `users.email` is stored lower-cased and
+ * nobody should lose their account over a capital letter — or fail to delete
+ * it over one.
+ */
+async function decideDeleteAccount(
+  req: PayloadRequest,
+  input: { confirmEmail: string }
+): Promise<DeleteAccountOutcome> {
   const user = signedInUser(req);
 
   if (user === null) {
-    return signedOut(locale);
+    return { status: "signed-out" };
   }
 
-  /*
-   * **Typing the address, not a password.** The plan asks for the address
-   * and it is the right control for two reasons. It is a confirmation of
-   * *intent* rather than of identity — the session already settled identity
-   * — and deletion, unlike a password or address change, hands the attacker
-   * nothing: it is the one destructive action that cannot be used to take an
-   * account over. And a password requirement would lock out precisely the
-   * accounts that have no usable password: a Google-created account is given
-   * a random 288-bit value nobody knows (`endpoints/oauth.ts`), so its owner
-   * could never delete it.
-   *
-   * Normalised on both sides, because `users.email` is stored lower-cased
-   * and nobody should lose their account over a capital letter — or fail to
-   * delete it over one.
-   */
-  if (normaliseEmail(form.get("confirmEmail")) !== normaliseEmail(user.email)) {
-    return seeOther(accountPath(locale, { error: "confirm" }));
+  if (normaliseEmail(input.confirmEmail) !== normaliseEmail(user.email)) {
+    return { status: "invalid" };
   }
 
   try {
@@ -586,22 +698,51 @@ const deleteAccount: PayloadHandler = async (req) => {
      * The cascade refused — `cascadeListsOnUserDelete` throws an `APIError`
      * naming the lists it could not remove, rather than letting the user
      * delete proceed into a foreign-key failure. The account still exists,
-     * so the visitor is sent back to the page that says so instead of
-     * getting Payload's JSON error body in a browser window.
+     * so the caller is told so instead of getting Payload's JSON error body
+     * in a browser window, or a 500 with no explanation on the JSON surface.
      */
     req.payload.logger.error(
       { err: error, userId: user.id },
       "[account] Failed to delete an account"
     );
 
+    return { status: "failed" };
+  }
+
+  return { status: "deleted" };
+}
+
+/*
+ * Not padded, on either renderer. Nothing on this path depends on a secret
+ * the answer could leak — it acts on the caller's own account and the
+ * typed-address check compares against an address the caller already knows.
+ */
+const deleteAccount: PayloadHandler = async (req) => {
+  const crossSiteResponse = guardOrigin(req);
+
+  if (crossSiteResponse) {
+    return crossSiteResponse;
+  }
+
+  const form = await readForm(req);
+  const locale = localeFromForm(form.get("locale"));
+
+  const outcome = await decideDeleteAccount(req, {
+    confirmEmail: field(form, "confirmEmail"),
+  });
+
+  if (outcome.status === "signed-out") {
+    return signedOut(locale);
+  }
+
+  if (outcome.status === "invalid") {
+    return seeOther(accountPath(locale, { error: "confirm" }));
+  }
+
+  if (outcome.status === "failed") {
     return seeOther(accountPath(locale, { error: "delete" }));
   }
 
-  /*
-   * Not padded. Nothing on this path depends on a secret the answer could
-   * leak — it acts on the caller's own account and the typed-address check
-   * compares against an address the caller already knows.
-   */
   return seeOther(
     signInPath(locale, { notice: "deleted" }),
     expiredCookie(req)
@@ -617,4 +758,154 @@ export const accountEndpoints: Endpoint[] = [
     path: "/account/confirm-email",
   },
   { handler: deleteAccount, method: "post", path: "/account/delete" },
+];
+
+/* -------------------------------------------------------------------- *
+ * Renderer 2: the native app's JSON surface, under `/api/mobile/account/*`.
+ * Every outcome above rendered as a body instead of a redirect; no logic
+ * lives here beyond that translation. Same shape as `endpoints/lists.ts`'s
+ * `/api/mobile/lists/*` renderer.
+ * -------------------------------------------------------------------- */
+
+/** `no-store`, CORS-permissive JSON, matching `mobileSignUp`'s own answers. */
+function jsonResponse(
+  status: number,
+  body: unknown,
+  req: PayloadRequest
+): Response {
+  return Response.json(body, {
+    headers: headersWithCors({
+      headers: new Headers({ "Cache-Control": "no-store" }),
+      req,
+    }),
+    status,
+  });
+}
+
+/** The locale a JSON caller named in `?locale=`, or the default. */
+function localeFromRequest(req: PayloadRequest): Locale {
+  return resolveLocale(req.searchParams?.get("locale") ?? undefined);
+}
+
+/** A body field as a string, whatever the JSON actually carried. */
+function stringField(body: Record<string, unknown>, name: string): string {
+  const value = body[name];
+
+  return typeof value === "string" ? value : "";
+}
+
+const mobileChangePassword: PayloadHandler = async (req) => {
+  const crossSiteResponse = guardOrigin(req);
+
+  if (crossSiteResponse) {
+    return crossSiteResponse;
+  }
+
+  const started = Date.now();
+  const body = await readBody(req);
+
+  const outcome = await decideChangePassword(req, started, {
+    current: stringField(body, "current"),
+    next: stringField(body, "next"),
+  });
+
+  if (outcome.status === "signed-out") {
+    return jsonResponse(401, { status: "signed-out" }, req);
+  }
+
+  if (outcome.status === "invalid") {
+    return jsonResponse(400, { field: outcome.field, status: "invalid" }, req);
+  }
+
+  return jsonResponse(200, { status: "changed" }, req);
+};
+
+const mobileRequestEmailChange: PayloadHandler = async (req) => {
+  const crossSiteResponse = guardOrigin(req);
+
+  if (crossSiteResponse) {
+    return crossSiteResponse;
+  }
+
+  const started = Date.now();
+  const body = await readBody(req);
+
+  const outcome = await decideRequestEmailChange(
+    req,
+    started,
+    localeFromRequest(req),
+    {
+      current: stringField(body, "current"),
+      email: stringField(body, "email"),
+    }
+  );
+
+  if (outcome.status === "signed-out") {
+    return jsonResponse(401, { status: "signed-out" }, req);
+  }
+
+  if (outcome.status === "invalid") {
+    return jsonResponse(400, { field: outcome.field, status: "invalid" }, req);
+  }
+
+  return jsonResponse(200, { status: "pending" }, req);
+};
+
+/**
+ * **Requires the account's address, not a password** — see
+ * `decideDeleteAccount`'s own comment. A client built from the wrong
+ * assumption here would ask its visitor for a password the endpoint never
+ * checks, and would have nothing to send when the endpoint asked for the
+ * address instead.
+ */
+const mobileDeleteAccount: PayloadHandler = async (req) => {
+  const crossSiteResponse = guardOrigin(req);
+
+  if (crossSiteResponse) {
+    return crossSiteResponse;
+  }
+
+  const body = await readBody(req);
+
+  const outcome = await decideDeleteAccount(req, {
+    confirmEmail: stringField(body, "confirmEmail"),
+  });
+
+  if (outcome.status === "signed-out") {
+    return jsonResponse(401, { status: "signed-out" }, req);
+  }
+
+  if (outcome.status === "invalid") {
+    return jsonResponse(400, { status: "invalid" }, req);
+  }
+
+  if (outcome.status === "failed") {
+    return jsonResponse(500, { status: "failed" }, req);
+  }
+
+  return jsonResponse(200, { status: "deleted" }, req);
+};
+
+/**
+ * The native app's three writes, at flat `/api/mobile/account/*` paths — see
+ * `endpoints/lists.ts`'s own `mobileListsEndpoints` for why these are flat
+ * siblings rather than nested under a per-action subpath. There is no
+ * mobile twin of `confirmEmailChange`: see the module comment.
+ */
+export const mobileAccountEndpoints: Endpoint[] = [
+  {
+    handler: mobileChangePassword,
+    method: "post",
+    path: "/mobile/account/password",
+  },
+  {
+    handler: mobileRequestEmailChange,
+    method: "post",
+    path: "/mobile/account/email",
+  },
+  {
+    handler: mobileDeleteAccount,
+    method: "post",
+    path: "/mobile/account/delete",
+  },
 ];

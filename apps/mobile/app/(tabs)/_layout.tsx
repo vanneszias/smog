@@ -13,6 +13,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="search" options={{ title: "Zoeken" }} />
       <Tabs.Screen name="favorites" options={{ title: "Favorieten" }} />
       <Tabs.Screen name="lists" options={{ title: "Lijsten" }} />
+      <Tabs.Screen name="settings" options={{ title: "Instellingen" }} />
     </Tabs>
   );
 }

@@ -170,6 +170,7 @@
     "error": "Error",
     "success": "Success",
     "comingSoon": "Coming Soon",
+    "confirm": "Confirm",
     "edit": "Edit",
     "delete": "Delete",
     "continue": "Continue",
@@ -207,7 +208,22 @@
     "deleteAccountMessage": "Are you sure you want to delete your account? This action cannot be undone.",
     "editProfileComingSoon": "Profile editing will be available soon.",
     "changePasswordComingSoon": "Password changing will be available soon.",
-    "deleteAccountComingSoon": "Account deletion will be available soon."
+    "deleteAccountComingSoon": "Account deletion will be available soon.",
+    "currentPasswordLabel": "Current password",
+    "newPasswordLabel": "New password",
+    "passwordChanged": "Password changed. Please sign in again.",
+    "newEmailLabel": "New email address",
+    "changeEmail": "Change email address",
+    "emailChangePending": "Check your email for a confirmation link.",
+    "confirmEmailLabel": "Type your email address to confirm",
+    "deleteMismatch": "That email address doesn't match your account.",
+    "deleteFailed": "Deleting your account did not work. Please try again.",
+    "networkError": "Something went wrong. Check your connection and try again.",
+    "currentPasswordIncorrect": "Current password is incorrect.",
+    "emailInvalid": "Enter a valid email address.",
+    "emailUnchanged": "That's already the email address on your account.",
+    "passwordWeak": "Choose a password of at least 12 characters that isn't easy to guess.",
+    "signInRequired": "Sign in to manage your account settings."
   },
   "noGesturesFound": "No gestures found",
   "tabs": {
@@ -274,7 +290,8 @@
     "analyticsPromptDescription": "With your permission, we collect limited usage analytics to understand how SMOG & Co is used and improve the app. We do not use this data for advertising or track you across other apps or websites.",
     "analyticsAllow": "Allow analytics",
     "analyticsRequiredOnly": "Use without analytics",
-    "privacyPolicy": "Read the privacy policy"
+    "privacyPolicy": "Read the privacy policy",
+    "sponsorLink": "Sponsor a gesture (opens your browser)"
   },
   "about": {
     "title": "About Us",
