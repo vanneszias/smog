@@ -16,17 +16,30 @@ const PASSWORD_ERROR =
 const EMAIL_ERROR = "Vul een geldig e-mailadres in.";
 const PASSWORD_HELP = "Minstens 12 tekens. Langer mag altijd.";
 
+/**
+ * Review Focus item 3: the device is offline, or the request fails for any
+ * other reason `signUp` doesn't turn into `"invalid-email"` /
+ * `"weak-password"` (see `session.ts`'s `ApiError("unknown", …)` fallback).
+ * Same wording pattern as `sign-in.tsx`'s `SIGN_IN_ERROR` and
+ * `forgot-password.tsx`'s `NETWORK_ERROR` — a network failure says nothing
+ * about whether the address is registered, so it is safe to be plain about.
+ */
+const SIGN_UP_ERROR =
+  "Registreren is niet gelukt. Controleer je internetverbinding en probeer het opnieuw.";
+
 export default function SignUpScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async () => {
     setSubmitting(true);
     setEmailError(false);
     setPasswordError(false);
+    setFailed(false);
 
     try {
       const outcome = await signUp(email, password);
@@ -56,6 +69,12 @@ export default function SignUpScreen() {
         params: { notice: "registered" },
         pathname: "/sign-in",
       });
+    } catch {
+      // A network failure, or any status `signUp` doesn't recognise — see
+      // `SIGN_UP_ERROR` above. Without this, the `finally` below still
+      // resets `submitting` and the screen does nothing else: a silent
+      // no-op indistinguishable from a rejected address.
+      setFailed(true);
     } finally {
       setSubmitting(false);
     }
@@ -66,6 +85,12 @@ export default function SignUpScreen() {
       <Text size="xl" variant="heading">
         Registreren
       </Text>
+
+      {failed ? (
+        <Text className="text-danger" testID="sign-up-error">
+          {SIGN_UP_ERROR}
+        </Text>
+      ) : null}
 
       <Input
         autoCapitalize="none"

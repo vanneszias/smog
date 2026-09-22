@@ -118,8 +118,18 @@ export async function payloadFetch<T>(
     const token = await getToken();
 
     if (token !== null) {
-      // Payload's `extractJWT` reads `Authorization: JWT <token>`, not the
-      // `Bearer` scheme — see `payload/dist/auth/extractJWT.js`.
+      /*
+       * `JWT`, not `Bearer`. `extractJWT` (`payload/dist/auth/
+       * extractJWT.js`) implements all three of `Bearer`, `cookie` and
+       * `JWT`, tried in `payload.config.auth.jwtOrder` — which defaults to
+       * `['JWT', 'Bearer', 'cookie']` (`payload/dist/config/defaults.js`)
+       * and `apps/site/src/payload.config.ts` does not override. `JWT` is
+       * tried first and is what this app's own shadowed `/users/login`
+       * (`endpoints/auth.ts`'s `usersLogin`) and every other Payload client
+       * send, so it is used here too — not because `Bearer` would be
+       * refused (it would still be accepted, second in that order), but to
+       * match what the rest of this system actually sends.
+       */
       requestHeaders.set("Authorization", `JWT ${token}`);
     }
   }
