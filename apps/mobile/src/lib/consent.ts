@@ -26,6 +26,15 @@ let loaded = false;
 let loading: Promise<ConsentState> | null = null;
 const listeners = new Set<() => void>();
 
+/**
+ * Bumped by every `setConsent`/`clearConsent` call. `loadConsent`'s pending
+ * read captures this when it starts; if a decision is made before that read
+ * resolves, the generation has moved on and the stale stored value must not
+ * overwrite the decision that was just made (Settings' switch renders, and
+ * can be used, before the first read finishes).
+ */
+let writeGeneration = 0;
+
 function emit(): void {
   for (const listener of listeners) {
     listener();
@@ -41,6 +50,7 @@ export function loadConsent(): Promise<ConsentState> {
     return Promise.resolve(current);
   }
   if (loading === null) {
+    const generationAtStart = writeGeneration;
     loading = AsyncStorage.getItem(ANALYTICS_CONSENT_KEY)
       .then(parse)
       .catch((error: unknown) => {
@@ -48,11 +58,17 @@ export function loadConsent(): Promise<ConsentState> {
         return null;
       })
       .then((value) => {
-        current = value;
-        loaded = true;
         loading = null;
+        // A decision made while this read was in flight already set
+        // `current` (and bumped the generation) — that decision wins, and
+        // the stale value this read just fetched must be dropped rather
+        // than overwriting it.
+        if (writeGeneration === generationAtStart) {
+          current = value;
+        }
+        loaded = true;
         emit();
-        return value;
+        return current;
       });
   }
   return loading;
@@ -67,6 +83,7 @@ export function isConsentLoaded(): boolean {
 }
 
 export async function setConsent(value: "granted" | "denied"): Promise<void> {
+  writeGeneration++;
   current = value;
   loaded = true;
   emit();
@@ -78,6 +95,7 @@ export async function setConsent(value: "granted" | "denied"): Promise<void> {
 }
 
 export async function clearConsent(): Promise<void> {
+  writeGeneration++;
   current = null;
   loaded = true;
   emit();
@@ -126,5 +144,6 @@ export function resetConsentForTests(): void {
   current = null;
   loaded = false;
   loading = null;
+  writeGeneration = 0;
   snapshot = { consent: null, loaded: false };
 }
