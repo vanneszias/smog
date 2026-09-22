@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { ApiError, payloadFetch } from "./api";
+import { readGuestFavorites, toggleGuestFavorite } from "./guest";
 import {
   getToken,
   INSTALL_MARKER,
@@ -20,6 +21,8 @@ const json = (body: unknown, status = 200) =>
       status,
     })
   );
+
+const LOGIN_OK = () => json({ token: "t", user: { id: "1" } });
 
 describe("the session", () => {
   beforeEach(() => jest.resetAllMocks());
@@ -112,6 +115,109 @@ describe("the session", () => {
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
       expect.any(String),
       "t2"
+    );
+  });
+});
+
+/**
+ * The guest-favourites merge that runs inside `signIn`.
+ *
+ * **A private in-memory store, reinstalled every test, rather than the
+ * shared `@react-native-async-storage/async-storage` jest mock's own
+ * default implementation.** That mock is a module-level singleton, loaded
+ * once for this whole file, and the "the session" describe above calls
+ * `jest.resetAllMocks()` in its own `beforeEach` — which does not merely
+ * clear call history, it strips the *implementation* `getItem`/`setItem`
+ * ship with, permanently, because nothing re-runs the `jest.mock()` factory
+ * between tests. Once those tests run, every later test in this file that
+ * calls `AsyncStorage.getItem` gets back `undefined` rather than a working
+ * read. `toggleGuestFavorite`/`readGuestFavorites` need it to actually work
+ * here, so this block gives it one that does not depend on file order.
+ */
+describe("the guest-favourites merge on sign-in", () => {
+  let store: Record<string, string>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    store = {};
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
+      Promise.resolve(store[key] ?? null)
+    );
+    (
+      AsyncStorage.setItem as unknown as jest.Mock<
+        Promise<void>,
+        [string, string]
+      >
+    ).mockImplementation((key, value) => {
+      store[key] = value;
+      return Promise.resolve();
+    });
+    (AsyncStorage.removeItem as jest.Mock).mockImplementation((key: string) => {
+      delete store[key];
+      return Promise.resolve();
+    });
+  });
+
+  it("merges the device's favourites into the account on sign-in", async () => {
+    await toggleGuestFavorite("a");
+
+    global.fetch = jest
+      .fn()
+      .mockImplementationOnce(LOGIN_OK) // POST /users/login
+      .mockImplementationOnce(() =>
+        json({ added: ["a"], favorites: ["a"] })
+      ) as unknown as typeof fetch; // POST /account/merge-favorites
+
+    await signIn("a@b.test", "pw");
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/account/merge-favorites"),
+      expect.objectContaining({
+        body: JSON.stringify({ ids: ["a"] }),
+        method: "POST",
+      })
+    );
+    await expect(readGuestFavorites()).resolves.toEqual([]);
+  });
+
+  /**
+   * The load-bearing one. A fixture that made *every* fetch call reject —
+   * including the login itself — would pass this even with the clear moved
+   * above the merge request: `signIn` would already have thrown from the
+   * login before either statement ran, and the assertion below would never
+   * have been exercised by the code it is meant to guard. So login and merge
+   * are given distinct outcomes here: the first call (login) succeeds, the
+   * second (merge) fails, which is the only fixture that actually reaches
+   * the ordering this test is named for.
+   *
+   * Step 5 of the task brief: with `clearGuestFavorites()` moved above the
+   * merge request in `session.ts`, this test fails — see the task report for
+   * the pasted transcript.
+   */
+  it("clears the device's copy only after the merge succeeds", async () => {
+    await toggleGuestFavorite("a");
+
+    global.fetch = jest
+      .fn()
+      .mockImplementationOnce(LOGIN_OK) // POST /users/login succeeds
+      .mockImplementationOnce(() =>
+        Promise.reject(new TypeError("offline"))
+      ) as unknown as typeof fetch; // POST /account/merge-favorites fails
+
+    // The merge failure is not a sign-in failure: the password was correct
+    // and the token is already stored by the time the merge runs.
+    await expect(signIn("a@b.test", "pw")).resolves.toBeUndefined();
+    await expect(readGuestFavorites()).resolves.toEqual(["a"]);
+  });
+
+  it("does not merge an empty device list", async () => {
+    global.fetch = jest.fn(LOGIN_OK) as unknown as typeof fetch;
+
+    await signIn("a@b.test", "pw");
+
+    expect(global.fetch).not.toHaveBeenCalledWith(
+      expect.stringContaining("merge-favorites"),
+      expect.anything()
     );
   });
 });

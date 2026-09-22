@@ -10,6 +10,7 @@ import {
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
+import { useFavorites } from "@/data/favorites";
 import { useCategories, useGestures } from "@/data/gestures";
 
 /**
@@ -46,6 +47,7 @@ export default function GesturesScreen() {
     page,
   });
   const { data: categories } = useCategories();
+  const { ids: favoriteIds, toggle: toggleFavorite } = useFavorites();
 
   useEffect(() => {
     if (data === null) {
@@ -116,6 +118,8 @@ export default function GesturesScreen() {
           renderItem={(gesture) => (
             <GestureCard
               gesture={gesture}
+              isFavorite={favoriteIds.includes(gesture.id)}
+              onFavorite={toggleFavorite}
               onPress={(id) => router.push(`/gestures/${id}`)}
             />
           )}

@@ -4,6 +4,8 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react-native";
+import * as SecureStore from "expo-secure-store";
+import { SessionProvider } from "@/lib/session";
 import GesturesScreen from "../../app/(tabs)/index";
 
 /**
@@ -15,6 +17,17 @@ import GesturesScreen from "../../app/(tabs)/index";
 jest.mock("expo-router", () => ({
   router: { back: jest.fn(), push: jest.fn() },
 }));
+
+/**
+ * `expo-secure-store` mocked, and set to answer "no token" rather than left
+ * on its bare automock: `SessionProvider` — needed here since Task 11 wired
+ * `useFavorites` (and so `useSession`) into this screen — resolves `token`
+ * with `token === null` as its literal "signed out" check. An unconfigured
+ * automock answers `undefined`, which fails that check and would make the
+ * provider issue a `/users/me` request this file's fetch mocks do not
+ * account for.
+ */
+jest.mock("expo-secure-store");
 
 const PAGE = {
   docs: [{ categories: [], id: "1", name: "Hallo", playbackId: "abc" }],
@@ -31,13 +44,21 @@ const json = (body: unknown, status = 200) =>
     })
   );
 
+function renderScreen() {
+  return render(<GesturesScreen />, { wrapper: SessionProvider });
+}
+
 describe("the gestures screen", () => {
+  beforeEach(() => {
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+  });
+
   it("shows a loading state before the first response", () => {
     global.fetch = jest.fn(
       () => new Promise(() => undefined)
     ) as unknown as typeof fetch;
 
-    render(<GesturesScreen />);
+    renderScreen();
 
     expect(screen.getByLabelText(/gebaren laden/i)).toBeOnTheScreen();
   });
@@ -45,7 +66,7 @@ describe("the gestures screen", () => {
   it("shows the gestures once they arrive", async () => {
     global.fetch = jest.fn(() => json(PAGE)) as unknown as typeof fetch;
 
-    render(<GesturesScreen />);
+    renderScreen();
 
     expect(await screen.findByText("Hallo")).toBeOnTheScreen();
   });
@@ -53,7 +74,7 @@ describe("the gestures screen", () => {
   it("does not show the loading state once loaded", async () => {
     global.fetch = jest.fn(() => json(PAGE)) as unknown as typeof fetch;
 
-    render(<GesturesScreen />);
+    renderScreen();
 
     // Proves the screen actually rendered this far before checking an
     // absence — Stage 6's own lesson: an absence assertion passes just as
@@ -69,7 +90,7 @@ describe("the gestures screen", () => {
     );
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    render(<GesturesScreen />);
+    renderScreen();
 
     expect(await screen.findByText(/probeer opnieuw/i)).toBeOnTheScreen();
   });
@@ -81,7 +102,7 @@ describe("the gestures screen", () => {
     );
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    render(<GesturesScreen />);
+    renderScreen();
 
     fireEvent.press(
       await screen.findByRole("button", { name: /probeer opnieuw/i })
@@ -95,7 +116,7 @@ describe("the gestures screen", () => {
       json({ docs: [], page: 1, totalDocs: 0, totalPages: 1 })
     ) as unknown as typeof fetch;
 
-    render(<GesturesScreen />);
+    renderScreen();
 
     expect(await screen.findByText(/geen gebaren gevonden/i)).toBeOnTheScreen();
     expect(screen.queryByText(/probeer opnieuw/i)).toBeNull();
@@ -106,7 +127,7 @@ describe("the gestures screen", () => {
       json({ docs: [{ id: "3", name: "Groeten" }] })
     ) as unknown as typeof fetch;
 
-    render(<GesturesScreen />);
+    renderScreen();
 
     fireEvent.press(await screen.findByTestId("open-filter"));
 
@@ -133,7 +154,7 @@ describe("the gestures screen", () => {
       .mockImplementationOnce(() => json(second));
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    render(<GesturesScreen />);
+    renderScreen();
 
     const list = await screen.findByText("Een");
 

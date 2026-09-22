@@ -1,10 +1,74 @@
-import { Badge, Button, Text, VideoPlayer } from "@smog/ui-native";
+import { Badge, Button, Sheet, Text, VideoPlayer } from "@smog/ui-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { ScrollView, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, View } from "react-native";
+import { useFavorites } from "@/data/favorites";
 import { useGesture } from "@/data/gestures";
+import { addToList, useLists } from "@/data/lists";
+import { useSession } from "@/lib/session";
 
 const LOAD_ERROR = "Er ging iets mis bij het laden van dit gebaar.";
 const RETRY_LABEL = "Probeer opnieuw";
+
+/**
+ * The list picker `packages/ui-native/src/components/Sheet.tsx`'s own
+ * comment names as one of this component's two intended callers (the other
+ * is Task 10's category filter): every one of the account's lists, each row
+ * adding this gesture to it on press.
+ */
+function AddToListSheet({
+  gestureId,
+  onClose,
+  open,
+}: {
+  gestureId: string;
+  onClose: () => void;
+  open: boolean;
+}) {
+  const { data: lists, loading } = useLists();
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [addedId, setAddedId] = useState<string | null>(null);
+
+  const handleAdd = async (listId: string) => {
+    setAddingId(listId);
+
+    try {
+      await addToList({ gestureId, id: listId });
+      setAddedId(listId);
+    } finally {
+      setAddingId(null);
+    }
+  };
+
+  return (
+    <Sheet onClose={onClose} open={open} title="Aan lijst toevoegen">
+      {loading ? <Text>Laden…</Text> : null}
+      {!loading && (lists === null || lists.length === 0) ? (
+        <Text testID="no-lists" variant="muted">
+          Je hebt nog geen lijsten. Maak er een op het tabblad Lijsten.
+        </Text>
+      ) : null}
+      {(lists ?? []).map((list) => (
+        <Pressable
+          accessibilityRole="button"
+          className="flex-row items-center justify-between border-border-subtle border-b py-md"
+          key={list.id}
+          onPress={() => handleAdd(list.id)}
+          testID={`add-to-list-${list.id}`}
+        >
+          <Text>{list.name}</Text>
+          <Text variant="muted">
+            {addedId === list.id
+              ? "Toegevoegd"
+              : addingId === list.id
+                ? "Bezig…"
+                : ""}
+          </Text>
+        </Pressable>
+      ))}
+    </Sheet>
+  );
+}
 
 /**
  * One gesture: its video, or the labelled placeholder `VideoPlayer` already
@@ -19,6 +83,10 @@ export default function GestureDetailScreen() {
     : (params.id ?? "");
 
   const { data: gesture, error, loading, refetch } = useGesture(id);
+  const { ids: favoriteIds, toggle: toggleFavorite } = useFavorites();
+  const { user } = useSession();
+  const [listSheetOpen, setListSheetOpen] = useState(false);
+  const isFavorite = favoriteIds.includes(id);
 
   return (
     <ScrollView
@@ -66,7 +134,35 @@ export default function GestureDetailScreen() {
               ))}
             </View>
           ) : null}
+
+          <View className="flex-row gap-sm">
+            <Button
+              accessibilityState={{ selected: isFavorite }}
+              onPress={() => toggleFavorite(id)}
+              testID="toggle-favorite"
+              variant={isFavorite ? "primary" : "secondary"}
+            >
+              {isFavorite ? "♥ Favoriet" : "♡ Favoriet"}
+            </Button>
+            {user === null ? null : (
+              <Button
+                onPress={() => setListSheetOpen(true)}
+                testID="open-add-to-list"
+                variant="secondary"
+              >
+                Aan lijst toevoegen
+              </Button>
+            )}
+          </View>
         </View>
+      ) : null}
+
+      {listSheetOpen ? (
+        <AddToListSheet
+          gestureId={id}
+          onClose={() => setListSheetOpen(false)}
+          open={listSheetOpen}
+        />
       ) : null}
     </ScrollView>
   );

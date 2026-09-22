@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { API_BASE_URL, ApiError, payloadFetch } from "./api";
+import { clearGuestFavorites, readGuestFavorites } from "./guest";
 
 /**
  * The session this app keeps: one JWT, in the iOS/Android keychain via
@@ -103,6 +104,55 @@ export async function getToken(): Promise<string | null> {
 }
 
 /**
+ * Hands this device's guest favourites to the account that just signed in,
+ * and clears them once — and only once — the account has them.
+ *
+ * **The ordering is the whole point, not a detail of it.** There are no
+ * transactions on any write path this app has, so `clearGuestFavorites()`
+ * runs only after `POST /account/merge-favorites` has answered. Clearing
+ * first and then failing would throw the favorites away with nothing left
+ * to retry from — the device's copy is the *only* copy until the account has
+ * them too. Mirrors `apps/site/src/lib/mergeGuestState.ts`'s
+ * `syncGuestFavorites`, which documents the identical rule for the identical
+ * reason on the web side of this same merge.
+ *
+ * **Never throws.** A failed merge is not a failed sign-in — the token is
+ * already stored by the time this runs, and a reader who typed the right
+ * password should not see a sign-in error because their network stuttered
+ * on an unrelated request. The device's list survives untouched, and the
+ * next sign-in on this device offers it again: the server half is
+ * idempotent (`mergeGuestFavorites` only ever adds what the account does
+ * not already hold), so re-offering the same ids is safe.
+ */
+async function mergeGuestFavoritesIntoAccount(): Promise<void> {
+  const ids = await readGuestFavorites();
+
+  if (ids.length === 0) {
+    // No request at all for the overwhelmingly common case: someone who
+    // never favourited anything as a guest.
+    return;
+  }
+
+  try {
+    await payloadFetch("/account/merge-favorites", {
+      auth: true,
+      body: JSON.stringify({ ids }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+  } catch (error) {
+    console.error(
+      "[session] Failed to merge guest favorites on sign-in:",
+      error
+    );
+    return;
+  }
+
+  // Last, and only here. See the ordering note above.
+  await clearGuestFavorites();
+}
+
+/**
  * Signs in against the shadowed `POST /api/users/login`
  * (`endpoints/auth.ts`'s `usersLogin`), which answers JSON with the token
  * in the body rather than a cookie — the shape a native client needs,
@@ -110,6 +160,13 @@ export async function getToken(): Promise<string | null> {
  *
  * Throws `ApiError` on a refusal (`payloadFetch`'s own behaviour); nothing
  * is stored in that case.
+ *
+ * On success, the device's guest favourites are merged into the newly
+ * signed-in account — see {@link mergeGuestFavoritesIntoAccount}. This is
+ * the one call site that decides a guest favourite becomes an account
+ * favourite; `useFavorites` (`data/favorites.ts`) is the one call site that
+ * decides which of the two a *new* favourite goes to. Two places deciding
+ * either question would be one of them deciding it wrong.
  */
 export async function signIn(email: string, password: string): Promise<void> {
   const result = await payloadFetch<{ token?: string }>("/users/login", {
@@ -120,6 +177,7 @@ export async function signIn(email: string, password: string): Promise<void> {
 
   if (typeof result.token === "string") {
     await storeToken(result.token);
+    await mergeGuestFavoritesIntoAccount();
   }
 }
 
