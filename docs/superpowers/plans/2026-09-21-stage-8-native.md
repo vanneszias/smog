@@ -1815,7 +1815,7 @@ broken parser is a threshold that ratifies it.
 
 | component | the tests that earn their keep |
 |---|---|
-| `GestureGrid` | renders every gesture; renders `empty` when the list is empty **and** does not render it when the list is not; calls `onEndReached` once when the end is reached, not once per render |
+| `GestureGrid` | renders every gesture; renders `empty` when the list is empty **and** does not render it when the list is not; `onEndReached` fires **exactly once** — assert the count is 1 after the end is reached and still 1 after two rerenders. **A baseline captured before the callback can have fired makes this `0 === 0`**, which passes on a grid that never wires the prop at all; Task 6 shipped exactly that and it was sent back. If the environment cannot drive the near-end path (FlashList's check lands on a mocked rAF), assert the *wiring* instead and rename the test to say so — a narrower true test beats a broad false one |
 | `SearchBar` | typing is debounced (one call for a word typed at speed, verified with fake timers); submitting reports immediately **and** cancels the pending debounce, so the query does not arrive twice; clearing reports `""` immediately and returns focus to the field |
 | `CategoryFilter` | the "all" chip is selected when `selected` is empty; pressing a chip calls `onChange` with that id; pressing a selected chip calls `onChange` with `null` — a filter you cannot turn off is the bug |
 | `VideoPlayer` | renders a player for a `playbackId`; renders a labelled placeholder for a `null` one rather than an empty box; the accessible name is the gesture's `title` |
