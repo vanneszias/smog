@@ -26,13 +26,17 @@ import { Text } from "./Text";
  * documented for Task 7's bundle measurement rather than assumed here.
  *
  * No internal open state: `open` is read straight from the caller, same
- * contract as a controlled `Dialog` on web. Rendering `null` while closed
- * (rather than trusting `Modal`'s own `visible={false}`) matters for a
- * concrete reason, not just belt-and-braces — it is what makes "renders
- * nothing while closed" a real assertion about this component's own
- * behaviour, distinct from "renders its contents while open", instead of a
- * pair where the first would pass on a `Sheet` that never renders anything
- * at all.
+ * contract as a controlled `Dialog` on web. Rendering `null` while closed,
+ * rather than trusting `Modal`'s own `visible={false}`, is not what makes
+ * "renders nothing while closed" pass under Jest — `react-native`'s own jest
+ * preset replaces `Modal` with a mock (`react-native/jest/mocks/Modal.js`)
+ * whose `render()` already returns `null` when `visible === false`, so that
+ * assertion is carried by the test environment either way. What this guard
+ * earns instead is real: it keeps a closed `Sheet` from mounting a `Modal`
+ * instance at all — no native listeners registered, no chance of tripping
+ * `Modal`'s iOS-only `isRendered` latch — which the mock cannot stand in for
+ * and nothing here tests. See `Sheet.test.tsx` for where the closed/open
+ * pair's real coverage actually sits.
  */
 export const sheetVariants = cva("flex-1 bg-surface-raised");
 

@@ -3,6 +3,18 @@ import { Text } from "react-native";
 import { Sheet } from "./Sheet";
 
 describe("Sheet", () => {
+  /**
+   * This pair's real coverage sits entirely on the "open" case below, not
+   * this one: `react-native`'s own jest preset swaps `Modal` for a mock
+   * (`react-native/jest/mocks/Modal.js`) whose `render()` already returns
+   * `null` when `visible === false`, so this assertion passes whether or not
+   * `Sheet` has its own `if (!open) return null` guard — the test
+   * environment carries it either way. It stays in the suite as the
+   * half of the pair a dead, always-null `Sheet` would still satisfy; it is
+   * "renders its contents while open" that a component with no real
+   * open/closed branch cannot pass, and that is the one actually asserting
+   * this component's behaviour.
+   */
   it("renders nothing while closed", () => {
     render(
       <Sheet onClose={() => undefined} open={false} title="Filters">
