@@ -16,7 +16,7 @@ its own plan document, per `superpowers:writing-plans`.
 | 6 | Video pipeline | [`2026-09-21-stage-6-video.md`](./2026-09-21-stage-6-video.md) | 0 gate 1, 5 | landed |
 | 7 | Email and jobs | [`2026-09-21-stage-7-email-jobs.md`](./2026-09-21-stage-7-email-jobs.md) | 5 | landed |
 | 8 | Native | [`2026-09-21-stage-8-native.md`](./2026-09-21-stage-8-native.md) | 4 | **landed** — nine of ten exit criteria; the tenth needs a device |
-| 8.5 | Consent | **next** — write it now that Stage 8 has landed | 1, 4 | — |
+| 8.5 | Consent | [`2026-09-22-stage-8-5-consent.md`](./2026-09-22-stage-8-5-consent.md) | 1, 4, 8 | plan written |
 | 9 | Data migration | written when Stages 1, 4, 5 land | 1, 4, 5, 8.5 | — |
 | 10 | Cutover | written when Stage 9 lands | all | — |
 
