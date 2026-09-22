@@ -15,6 +15,7 @@ import {
   ConsentBanner,
   useConsentBannerVisible,
 } from "@/components/ConsentBanner";
+import { useConsentSync } from "@/lib/consentSync";
 import { setLocale } from "@/lib/i18n";
 import { resolveLocale } from "@/lib/locale";
 import { SessionProvider } from "@/lib/session";
@@ -61,6 +62,7 @@ function useInitialLocale(): void {
  * second time for a home indicator the banner is already sitting on.
  */
 function Navigator() {
+  useConsentSync();
   const insets = useSafeAreaInsets();
   const bannerVisible = useConsentBannerVisible();
 
