@@ -23,6 +23,7 @@
 
 export * from "./components/Avatar";
 export * from "./components/Badge";
+export { Banner, type BannerProps, bannerVariants } from "./components/Banner";
 export * from "./components/Button";
 export * from "./components/Card";
 export * from "./components/Checkbox";

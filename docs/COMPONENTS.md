@@ -5,14 +5,20 @@
 
 ## Overview
 
-SMOG components are split across four locations:
+SMOG components are split across five locations:
 
 | Location | Purpose |
 |----------|---------|
-| `packages/ui/src/` | Shared web components (used by web + remotion) |
+| `packages/ui/src/` | Shared web components (used by `apps/web`) |
+| `packages/ui-web/src/` | Shared web components (used by `apps/site`) |
 | `apps/web/src/components/` | Web-only components |
 | `apps/native/components/` | Native-only components |
 | `apps/web/src/routes/*/components/` | Route-scoped components |
+
+`packages/ui` and `packages/ui-web` are two separate packages with no shared
+code between them — `apps/web` depends on `@smog/ui` only, and `apps/site`
+depends on `@smog/ui-web` only (`apps/site/package.json`). Do not assume a
+component that exists in one also exists in the other.
 
 ---
 
@@ -25,8 +31,24 @@ Type used by the sponsor selection page. Each gesture has a `status` field:
 - `"pending"` — payment or approval in progress
 
 ### shadcn/ui Components
-The following shadcn/ui components are re-exported from `@smog/ui`:
+The following shadcn/ui components are re-exported from `@smog/ui` for use by
+`apps/web`:
 `Badge`, `Button`, `Dialog`, `Input`, `Select`, `Switch`, `Table`, `TableBody`, `TableCell`, `TableHead`, `TableHeader`, `TableRow`, `Tabs`, etc.
+
+---
+
+## Shared UI (`packages/ui-web/`)
+
+The component library for `apps/site`. Exports are listed in
+`packages/ui-web/src/index.ts` and include `Avatar`, `Badge`, `Banner`,
+`Button`, `Card`, `Checkbox`, `Dialog`, `DropdownMenu`, `EmptyState`, `Field`,
+`Input`, `Label`, `Pagination`, `Select`, `Sheet`, `Skeleton`, `Switch`,
+`Table`, `Tabs`, `Textarea`, `Toast`, `Tooltip`, and several domain
+components (`GestureCard`, `GestureGrid`, `CategoryFilter`, `SearchBar`,
+`StatusBadge`, `VideoPlayer`).
+
+`"use client"` is placed on individual components, never on `index.ts` — see
+that file's own comment for why.
 
 ---
 
