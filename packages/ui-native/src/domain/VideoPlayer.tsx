@@ -1,4 +1,5 @@
 import { useVideoPlayer, VideoView } from "expo-video";
+import { useEffect } from "react";
 import { View, type ViewProps } from "react-native";
 import { EmptyState } from "../components/EmptyState";
 import { cn } from "../lib/cn";
@@ -11,6 +12,8 @@ export type VideoPlayerProps = Omit<ViewProps, "children"> & {
   autoPlay?: boolean;
   loop?: boolean;
   className?: string;
+  /** Called once each time playback reaches the end of the video. */
+  onPlaybackEnd?: () => void;
 };
 
 /**
@@ -43,6 +46,7 @@ export function VideoPlayer({
   autoPlay = false,
   className,
   loop = false,
+  onPlaybackEnd,
   playbackId,
   testID = "root",
   title,
@@ -58,6 +62,15 @@ export function VideoPlayer({
       }
     }
   );
+
+  useEffect(() => {
+    if (!(hasVideo && onPlaybackEnd)) {
+      return;
+    }
+
+    const subscription = player.addListener("playToEnd", onPlaybackEnd);
+    return () => subscription.remove();
+  }, [hasVideo, onPlaybackEnd, player]);
 
   return (
     <View

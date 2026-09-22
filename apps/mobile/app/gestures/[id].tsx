@@ -1,10 +1,11 @@
 import { Badge, Button, Sheet, Text, VideoPlayer } from "@smog/ui-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useFavorites } from "@/data/favorites";
 import { useGesture } from "@/data/gestures";
 import { addToList, MAX_LIST_ITEMS, useLists } from "@/data/lists";
+import { trackEvent } from "@/lib/analytics";
 import { useSession } from "@/lib/session";
 
 const LOAD_ERROR = "Er ging iets mis bij het laden van dit gebaar.";
@@ -52,6 +53,12 @@ function AddToListSheet({
 
     try {
       await addToList({ gestureId, id: listId });
+      trackEvent("gesture_collection_changed", {
+        action: "added",
+        collection: "list",
+        gesture_id: gestureId,
+        source: "gesture_detail",
+      });
       setAddedId(listId);
     } catch (error) {
       console.error("[gestures] Failed to add the gesture to the list:", error);
@@ -121,6 +128,23 @@ export default function GestureDetailScreen() {
   const [listSheetOpen, setListSheetOpen] = useState(false);
   const isFavorite = favoriteIds.includes(id);
 
+  /**
+   * Once per id, when the gesture has loaded — a `useRef` rather than a
+   * dependency array keyed on `gesture`'s identity, because a refetch of the
+   * same gesture (`refetch` above) hands back a new object and would
+   * otherwise read as a second view. Biome's exhaustive-deps rule (this
+   * repo lints with Biome, not eslint) rejects a dependency array that
+   * knowingly omits a value the effect reads, so this is the accepted
+   * fallback rather than a suppression comment.
+   */
+  const reportedGestureId = useRef<string | null>(null);
+  useEffect(() => {
+    if (gesture && reportedGestureId.current !== id) {
+      reportedGestureId.current = id;
+      trackEvent("gesture_viewed", { gesture_id: id, source: "direct" });
+    }
+  }, [gesture, id]);
+
   return (
     <ScrollView
       className="flex-1 bg-background"
@@ -157,6 +181,9 @@ export default function GestureDetailScreen() {
             {gesture.name}
           </Text>
           <VideoPlayer
+            onPlaybackEnd={() =>
+              trackEvent("video_playback_completed", { gesture_id: id })
+            }
             playbackId={gesture.playbackId ?? null}
             title={gesture.name}
           />

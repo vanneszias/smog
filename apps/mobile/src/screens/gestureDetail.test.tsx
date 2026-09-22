@@ -6,12 +6,19 @@ import {
 } from "@testing-library/react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as SecureStore from "expo-secure-store";
+import { trackEvent } from "@/lib/analytics";
 import { SessionProvider } from "@/lib/session";
+import { emitOnLastPlayer } from "@/test/expoVideoMock";
 import GestureDetailScreen from "../../app/gestures/[id]";
 
 jest.mock("expo-router", () => ({
   router: { back: jest.fn(), push: jest.fn() },
   useLocalSearchParams: jest.fn(),
+}));
+
+jest.mock("@/lib/analytics", () => ({
+  trackEvent: jest.fn(),
+  trackScreenView: jest.fn(),
 }));
 
 /**
@@ -36,6 +43,7 @@ function renderScreen() {
 
 describe("the gesture detail screen", () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: "7" });
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
   });
@@ -113,6 +121,42 @@ describe("the gesture detail screen", () => {
 
     expect(router.back).toHaveBeenCalled();
   });
+
+  it("reports the gesture as viewed once it has loaded, and not again on re-render", async () => {
+    global.fetch = jest.fn(() =>
+      json({ categories: [], id: 7, name: "Hallo", playbackId: "abc" })
+    ) as unknown as typeof fetch;
+
+    const { rerender } = renderScreen();
+    await screen.findByText("Hallo");
+
+    expect(trackEvent).toHaveBeenCalledWith("gesture_viewed", {
+      gesture_id: "7",
+      source: "direct",
+    });
+    expect(trackEvent).toHaveBeenCalledTimes(1);
+
+    rerender(<GestureDetailScreen />);
+    await screen.findByText("Hallo");
+
+    expect(trackEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports playback completion when the video ends", async () => {
+    global.fetch = jest.fn(() =>
+      json({ categories: [], id: 7, name: "Hallo", playbackId: "abc" })
+    ) as unknown as typeof fetch;
+
+    renderScreen();
+    await screen.findByText("Hallo");
+    (trackEvent as jest.Mock).mockClear();
+
+    emitOnLastPlayer("playToEnd");
+
+    expect(trackEvent).toHaveBeenCalledWith("video_playback_completed", {
+      gesture_id: "7",
+    });
+  });
 });
 
 const GESTURE = { categories: [], id: 7, name: "Hallo", playbackId: "abc" };
@@ -157,6 +201,7 @@ function routedFetch(lists: unknown[], addResult: () => Promise<Response>) {
 
 describe("the add-to-list sheet", () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     (useLocalSearchParams as jest.Mock).mockReturnValue({ id: "7" });
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("t");
   });
@@ -259,5 +304,51 @@ describe("the add-to-list sheet", () => {
     fireEvent.press(await screen.findByTestId("open-add-to-list"));
 
     expect(await screen.findByTestId("no-lists")).toBeOnTheScreen();
+  });
+
+  it("reports the gesture as added to the list once the add succeeds", async () => {
+    global.fetch = routedFetch(
+      [{ id: 1, items: [], name: "Verjaardag", visibility: "private" }],
+      () => json({ status: "added" })
+    );
+
+    renderScreen();
+    fireEvent.press(await screen.findByTestId("open-add-to-list"));
+    await screen.findByText("Verjaardag");
+
+    fireEvent.press(screen.getByTestId("add-to-list-1"));
+
+    await waitFor(() =>
+      expect(trackEvent).toHaveBeenCalledWith("gesture_collection_changed", {
+        action: "added",
+        collection: "list",
+        gesture_id: "7",
+        source: "gesture_detail",
+      })
+    );
+  });
+
+  it("reports nothing when the add fails", async () => {
+    global.fetch = routedFetch(
+      [{ id: 1, items: [], name: "Verjaardag", visibility: "private" }],
+      () => Promise.reject(new TypeError("offline"))
+    );
+
+    renderScreen();
+    fireEvent.press(await screen.findByTestId("open-add-to-list"));
+    await screen.findByText("Verjaardag");
+
+    fireEvent.press(screen.getByTestId("add-to-list-1"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("add-to-list-1-status")).toHaveTextContent(
+        "Niet gelukt"
+      )
+    );
+
+    expect(trackEvent).not.toHaveBeenCalledWith(
+      "gesture_collection_changed",
+      expect.anything()
+    );
   });
 });

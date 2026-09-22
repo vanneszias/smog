@@ -6,6 +6,7 @@ import {
 } from "@testing-library/react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as SecureStore from "expo-secure-store";
+import { trackEvent } from "@/lib/analytics";
 import ListDetailScreen from "../../app/(tabs)/lists/[id]";
 
 /**
@@ -18,6 +19,10 @@ jest.mock("expo-router", () => ({
   useLocalSearchParams: jest.fn(),
 }));
 jest.mock("expo-secure-store");
+jest.mock("@/lib/analytics", () => ({
+  trackEvent: jest.fn(),
+  trackScreenView: jest.fn(),
+}));
 
 const json = (body: unknown, status = 200) =>
   Promise.resolve(
@@ -110,6 +115,57 @@ describe("the list detail screen", () => {
       timeout: 10_000,
     });
   }, 15_000);
+
+  it("reports the gesture as removed from the list once the remove succeeds", async () => {
+    let current = LIST;
+
+    global.fetch = jest.fn((url: unknown) => {
+      if (typeof url === "string" && url.includes("/mobile/lists/remove")) {
+        current = { ...LIST, items: [LIST.items[0]] };
+        return json({ status: "removed" });
+      }
+
+      return json(current);
+    }) as unknown as typeof fetch;
+
+    render(<ListDetailScreen />);
+    await screen.findByText("Hallo");
+
+    fireEvent.press(screen.getByTestId("remove-42"));
+
+    await waitFor(() =>
+      expect(trackEvent).toHaveBeenCalledWith("gesture_collection_changed", {
+        action: "removed",
+        collection: "list",
+        gesture_id: "42",
+        source: "gesture_list",
+      })
+    );
+  });
+
+  it("reports nothing when the remove fails", async () => {
+    global.fetch = jest.fn((url: unknown) => {
+      if (typeof url === "string" && url.includes("/mobile/lists/remove")) {
+        return Promise.reject(new TypeError("offline"));
+      }
+
+      return json(LIST);
+    }) as unknown as typeof fetch;
+
+    render(<ListDetailScreen />);
+    await screen.findByText("Hallo");
+
+    fireEvent.press(screen.getByTestId("remove-42"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("remove-42")).toBeOnTheScreen()
+    );
+
+    expect(trackEvent).not.toHaveBeenCalledWith(
+      "gesture_collection_changed",
+      expect.anything()
+    );
+  });
 
   it("shows the full-list notice once the cap is reached", async () => {
     const full = {

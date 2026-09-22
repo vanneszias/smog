@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react-native";
+import { act, render, screen } from "@testing-library/react-native";
+import { emitOnLastPlayer } from "../test/expoVideoMock";
 import { VideoPlayer } from "./VideoPlayer";
 
 describe("VideoPlayer", () => {
@@ -67,5 +68,35 @@ describe("VideoPlayer", () => {
     );
 
     expect(screen.getByTestId("subject")).toHaveStyle({ borderRadius: 0 });
+  });
+
+  it("reports the end of playback once per end", () => {
+    const onPlaybackEnd = jest.fn();
+    render(
+      <VideoPlayer
+        onPlaybackEnd={onPlaybackEnd}
+        playbackId="abc"
+        title="Hallo"
+      />
+    );
+
+    act(() => emitOnLastPlayer("playToEnd"));
+
+    expect(onPlaybackEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports nothing when there is no video", () => {
+    const onPlaybackEnd = jest.fn();
+    render(
+      <VideoPlayer
+        onPlaybackEnd={onPlaybackEnd}
+        playbackId={null}
+        title="Hallo"
+      />
+    );
+
+    act(() => emitOnLastPlayer("playToEnd"));
+
+    expect(onPlaybackEnd).not.toHaveBeenCalled();
   });
 });

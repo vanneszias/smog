@@ -10,6 +10,7 @@ import {
   shareList,
   useList,
 } from "@/data/lists";
+import { trackEvent } from "@/lib/analytics";
 
 const LOAD_ERROR = "Er ging iets mis bij het laden van deze lijst.";
 const RETRY_LABEL = "Probeer opnieuw";
@@ -124,7 +125,18 @@ export default function ListDetailScreen() {
 
     try {
       await removeFromList({ gestureId, id: list.id });
+      trackEvent("gesture_collection_changed", {
+        action: "removed",
+        collection: "list",
+        gesture_id: gestureId,
+        source: "gesture_list",
+      });
       refetch();
+    } catch (error) {
+      console.error(
+        "[lists] Failed to remove the gesture from the list:",
+        error
+      );
     } finally {
       setRemovingId(null);
     }

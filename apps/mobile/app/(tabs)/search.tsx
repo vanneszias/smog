@@ -6,9 +6,10 @@ import {
   Text,
 } from "@smog/ui-native";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { useGestures } from "@/data/gestures";
+import { trackEvent } from "@/lib/analytics";
 
 const LOAD_ERROR = "Er ging iets mis bij het zoeken.";
 const RETRY_LABEL = "Probeer opnieuw";
@@ -36,6 +37,29 @@ export default function SearchScreen() {
     enabled,
     q: query,
   });
+
+  /**
+   * Once per settled query, when its first page of results arrives — never
+   * for a failed search, which leaves `data` unset. Keyed on the query
+   * string rather than `data`'s identity, so re-searching the same term a
+   * second time (its `data` is a fresh object even though the string is
+   * unchanged) does not report a second search.
+   */
+  const reported = useRef<string | null>(null);
+  useEffect(() => {
+    if (!enabled || loading || error || !data || reported.current === query) {
+      return;
+    }
+
+    reported.current = query;
+    trackEvent("search_performed", {
+      category_count: 0,
+      has_results: data.docs.length > 0,
+      query_length: query.trim().length,
+      result_count: data.totalDocs ?? data.docs.length,
+      source: "submit",
+    });
+  }, [data, enabled, error, loading, query]);
 
   return (
     <View className="flex-1 gap-md bg-background p-lg">
