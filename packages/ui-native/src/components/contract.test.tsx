@@ -35,8 +35,17 @@ describe.each(CASES)("%s", (_name, Component) => {
   it("lets a caller's className reach the root and win", () => {
     render(<Component className="bg-danger" />);
 
-    // Every component roots at `testID="root"`; see the package convention.
-    expect(screen.getByTestId("root")).toHaveStyle({
+    /**
+     * `includeHiddenElements` is scoped to this one query, not set globally:
+     * `Skeleton`'s root is hidden from assistive technology by design (its
+     * own test asserts exactly that), and `@testing-library/react-native` 13
+     * excludes anything hidden from every query by default — including the
+     * queried element itself, not just its descendants. Every component
+     * roots at `testID="root"`; see the package convention.
+     */
+    expect(
+      screen.getByTestId("root", { includeHiddenElements: true })
+    ).toHaveStyle({
       backgroundColor: resolvedColor(tokens.semantic.light.danger),
     });
   });

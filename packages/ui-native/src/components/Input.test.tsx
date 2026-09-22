@@ -24,18 +24,9 @@ describe("Input", () => {
     expect(screen.queryByText("Email")).not.toBeOnTheScreen();
   });
 
-  it("sets accessibilityState.invalid, not only a border colour", () => {
+  it("changes the border colour when invalid, independently of any message", () => {
     const valid = render(<Input label="Email" testID="valid" />);
     const invalid = render(<Input invalid label="Email" testID="invalid" />);
-
-    expect(valid.getByTestId("valid")).toHaveProp(
-      "accessibilityState",
-      expect.objectContaining({ invalid: false })
-    );
-    expect(invalid.getByTestId("invalid")).toHaveProp(
-      "accessibilityState",
-      expect.objectContaining({ invalid: true })
-    );
 
     expect(invalid.getByTestId("invalid")).toHaveStyle({
       borderColor: resolvedColor(tokens.semantic.light.danger),
@@ -43,5 +34,30 @@ describe("Input", () => {
     expect(valid.getByTestId("valid")).not.toHaveStyle({
       borderColor: resolvedColor(tokens.semantic.light.danger),
     });
+  });
+
+  it("surfaces an error message as an accessibility hint and as visible text", () => {
+    /**
+     * `accessibilityState` has no `invalid` key that either platform's
+     * accessibility consumer reads (see the comment in `Input.tsx`, verified
+     * against the installed `react-native` source) — so an error is carried
+     * by `accessibilityHint`, a prop both VoiceOver and TalkBack actually
+     * announce, and mirrored as text for a sighted user.
+     */
+    render(<Input errorMessage="Enter a valid email" label="Email" />);
+
+    expect(screen.getByLabelText("Email")).toHaveProp(
+      "accessibilityHint",
+      "Enter a valid email"
+    );
+    expect(screen.getByText("Enter a valid email")).toBeOnTheScreen();
+  });
+
+  it("has neither a hint nor visible error text when errorMessage is absent", () => {
+    render(<Input label="Email" />);
+
+    expect(
+      screen.getByLabelText("Email").props.accessibilityHint
+    ).toBeUndefined();
   });
 });
