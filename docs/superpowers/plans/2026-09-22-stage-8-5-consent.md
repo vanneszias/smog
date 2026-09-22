@@ -2053,6 +2053,58 @@ critical path moved from `release-check` (8m16s) to `site-e2e` (7m00s). The
 job that was the bottleneck roughly halved; the workflow got about a minute
 faster. Load reduction was the goal and wall clock was never it.
 
+### The prediction failed, and the desync had an upstream cause
+
+**The desync recurred in `site-tests`** on `8286152` (job 106867445368), a
+docs-only commit: `src/seed/seed.int.test.ts`, `assert (message?.id === id)`,
+1,620 of 1,634 passing. That is the outcome Task 1 said would kill the load
+hypothesis, and it did — contention with the rest of `release:check` was not
+the cause, or not the whole of it.
+
+**The shelved `isolate: true` experiment was run, and rejected.** Measured
+locally on the same tree, one run each: `isolate: false` 269 s,
+`isolate: true` 502 s (+87%; import time 12% → 23%, because every
+integration file re-imports Payload). Scoping isolation to the files that
+reach the proxy saves little, since those are 58 of the 126 files and carry
+most of the cost. Both runs were green, so the experiment could not show the
+setting prevents the desync — only what it costs.
+
+**Reading miniflare's `SynchronousFetcher` showed why it would not have
+prevented it.** The race is inside a single fetcher, not between files. The
+host resets a shared `Int32Array` flag to 0, posts request K+1 and
+`Atomics.wait`s; the worker posts its reply, *then* stores 1 and notifies. A
+worker preempted between request K's store and its notify wakes the host
+during K+1, `receiveMessageOnPort` returns nothing, the assertion fires, and
+the port queue stays offset by one for the rest of that instance's life —
+which is why one occurrence took down every later query in the file. Load
+makes preemption likelier, which is why it tracked CI load without being
+caused by the other jobs.
+
+Upstream fixed exactly this in
+[cloudflare/workers-sdk#15552](https://github.com/cloudflare/workers-sdk/pull/15552)
+(merged 2026-09-16): the flag becomes a per-request generation (`id + 1`),
+and the host loops until it sees its own. The fix first ships in miniflare
+`5.20260917.0-alpha`, which wrangler **4.134.0** is the first to depend on —
+verified by unpacking the published tarballs, not from the changelog.
+
+**So `wrangler` goes from `~4.116.0` to `~4.136.3`.** The old pin came in
+with the scaffold template (`ab16300`); nothing chose it. It was also
+already outside the installed `@opennextjs/cloudflare@1.20.6`'s declared
+peer range (`wrangler ^4.125.0`). On the new version: site suite green,
+1,634 of 1,634, in 179 s (vs 269 s); site e2e 118 of 118; lint, typecheck,
+the non-site suites, `bun audit`, `bun run build` and knip green; Payload
+types, admin import map and `cloudflare-env.d.ts` regenerate with no diff.
+`expo-doctor` failed locally on its two network checks (the sandbox proxy
+answers Expo's hosts with "Host not in allowlist") — the environment, as
+AGENTS.md warns, and in `apps/native`, which this change does not touch. The
+bundle-size job needs Cloudflare credentials and is left to CI.
+
+**What would falsify this:** a recurrence of `message?.id === id` on a
+commit carrying wrangler ≥ 4.134.0. The fixed code no longer contains that
+assertion in the fetch path — it lives in `receiveReply`, after the
+generation loop — so a recurrence would point at a different bug, not at
+this one surviving.
+
 ### A randomised fixture is not an isolated one
 
 Run 133's failure is the most instructive thing this stage produced after the
