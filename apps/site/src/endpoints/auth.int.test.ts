@@ -1,4 +1,5 @@
 // @vitest-environment node
+import type { PayloadRequest } from "payload";
 import {
   AuthenticationError,
   Forbidden,
@@ -9,9 +10,10 @@ import {
   ValidationError,
 } from "payload";
 import { beforeAll, describe, expect, it } from "vitest";
-import { isCredentialFailure } from "@/lib/authFlow";
+import { AUTH_FLOOR_MS, isCredentialFailure } from "@/lib/authFlow";
 import { resolveSession } from "@/lib/session";
 import config from "../payload.config";
+import { decideSignUp } from "./auth";
 
 /**
  * The auth endpoints, driven through `handleEndpoints` against a real
@@ -29,6 +31,16 @@ import config from "../payload.config";
  */
 describe("auth endpoints", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
+  /**
+   * A minimal stand-in for a real `PayloadRequest`, for calling
+   * `decideSignUp` directly rather than through `handleEndpoints`.
+   *
+   * `decideSignUp` only ever reaches `req.payload.create`, so a bare
+   * `{ payload }` is everything it needs — the same shape
+   * `Users.escalation.int.test.ts` uses to call `payload.create` with a
+   * forged `req.user`.
+   */
+  let req: PayloadRequest;
 
   const SITE = "http://localhost:3003";
   const PASSWORD = "endpoint-int-password";
@@ -39,6 +51,7 @@ describe("auth endpoints", () => {
 
   beforeAll(async () => {
     payload = await getPayload({ config });
+    req = { payload } as unknown as PayloadRequest;
   });
 
   const post = (
@@ -471,6 +484,144 @@ describe("auth endpoints", () => {
       );
 
       expect(response.status).toBe(403);
+    });
+  });
+
+  describe("decideSignUp", () => {
+    it("answers the same for a free address and a registered one", async () => {
+      const free = await decideSignUp(req, {
+        email: "nobody@example.test",
+        password: "correct horse battery staple",
+      });
+
+      // The first call registered it. The second is the taken-address branch.
+      const taken = await decideSignUp(req, {
+        email: "nobody@example.test",
+        password: "correct horse battery staple",
+      });
+
+      expect(free).toBe("accepted");
+      expect(taken).toBe("accepted");
+    });
+
+    it("reports a malformed address", async () => {
+      await expect(
+        decideSignUp(req, {
+          email: "not-an-address",
+          password: "correct horse battery staple",
+        })
+      ).resolves.toBe("invalid-email");
+    });
+
+    it("reports a weak password", async () => {
+      await expect(
+        decideSignUp(req, { email: "weak@example.test", password: "x" })
+      ).resolves.toBe("weak-password");
+    });
+
+    it("really did create the first account", async () => {
+      const found = await payload.find({
+        collection: "users",
+        where: { email: { equals: "nobody@example.test" } },
+      });
+
+      expect(found.totalDocs).toBe(1);
+    });
+  });
+
+  describe("POST /api/mobile/sign-up", () => {
+    /**
+     * `handleEndpoints`, not a real `fetch`, for the same reason every other
+     * endpoint in this file is driven this way — there is no live server
+     * under Vitest. `handleEndpoints` still resolves the request through the
+     * real endpoint matcher, which is what a routing mistake (the flat-path
+     * concern `mobileSignUp`'s own comment raises) would actually fail.
+     */
+    const postJson = (body: unknown, init: { origin?: string } = {}) => {
+      const headers = new Headers({ "Content-Type": "application/json" });
+
+      if (init.origin !== undefined) {
+        headers.set("Origin", init.origin);
+      }
+
+      return handleEndpoints({
+        config,
+        request: new Request(`${SITE}/api/mobile/sign-up`, {
+          body: JSON.stringify(body),
+          headers,
+          method: "POST",
+        }),
+      });
+    };
+
+    it("answers byte-identically for a free address and a registered one", async () => {
+      const first = await snapshot(
+        await postJson({ email: "json@example.test", password: PASSWORD })
+      );
+      const second = await snapshot(
+        await postJson({ email: "json@example.test", password: PASSWORD })
+      );
+
+      expect(first).toEqual(second);
+    });
+
+    it("created the account on the first call", async () => {
+      const found = await payload.find({
+        collection: "users",
+        where: { email: { equals: "json@example.test" } },
+      });
+
+      expect(found.totalDocs).toBe(1);
+    });
+
+    it("never returns a token", async () => {
+      const body = await (
+        await postJson({ email: "token@example.test", password: PASSWORD })
+      ).text();
+
+      expect(body).not.toMatch(/token/i);
+    });
+
+    it("gives the new account the user role, not admin", async () => {
+      await postJson({ email: "role@example.test", password: PASSWORD });
+
+      const found = await payload.find({
+        collection: "users",
+        where: { email: { equals: "role@example.test" } },
+      });
+
+      expect(found.docs[0]?.role).toBe("user");
+    });
+
+    it("cannot be used to mint an admin", async () => {
+      await postJson({
+        email: "admin@example.test",
+        password: PASSWORD,
+        role: "admin",
+      });
+
+      const found = await payload.find({
+        collection: "users",
+        where: { email: { equals: "admin@example.test" } },
+      });
+
+      expect(found.docs[0]?.role).toBe("user");
+    });
+
+    it("refuses a cross-site POST", async () => {
+      const response = await postJson(
+        { email: "csrf@example.test", password: PASSWORD },
+        { origin: "https://evil.test" }
+      );
+
+      expect(response.status).toBe(403);
+    });
+
+    it("takes at least the auth floor even for a malformed address", async () => {
+      const started = Date.now();
+      await postJson({ email: "nope", password: PASSWORD });
+
+      expect(Date.now() - started).toBeGreaterThanOrEqual(AUTH_FLOOR_MS);
     });
   });
 

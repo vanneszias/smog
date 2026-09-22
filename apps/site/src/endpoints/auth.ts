@@ -145,22 +145,43 @@ const signIn: PayloadHandler = async (req) => {
   }
 };
 
-const signUp: PayloadHandler = async (req) => {
-  const crossSiteResponse = guardOrigin(req);
-
-  if (crossSiteResponse) {
-    return crossSiteResponse;
-  }
-
-  const started = Date.now();
-  const form = await readForm(req);
-  const locale = localeFromForm(form.get("locale"));
-  const email = normaliseEmail(form.get("email"));
+/**
+ * The one decision behind both sign-up surfaces: the form POST and
+ * `mobileSignUp` below.
+ *
+ * **This is the whole point of the extraction.** Sign-up's only real
+ * property is that a free address and a taken one are indistinguishable to
+ * whoever is asking, and a decision that exists in two places is a decision
+ * that can agree in one and drift in the other — the same failure mode the
+ * header comment on this file argues against for the response *shape*. So
+ * "created" and "already registered" are one value, computed once, and each
+ * caller only renders it: a redirect here, a JSON body there.
+ *
+ * Everything below is moved from the previous single-surface `signUp`
+ * handler **unchanged** — same guards, same order, same comments. Stage 4's
+ * mutation sweep proved that removing any *two* of `context: {
+ * [SELF_REGISTRATION]: true } }`, the field-by-field `data` object, the
+ * literal `role: "user"` and `overrideAccess: false` mints an admin, and
+ * that removing either one alone changes no answer — which is exactly why
+ * none of them may be dropped as redundant here either.
+ *
+ * **Why `"accepted"` covers both a created account and an address already
+ * registered, rather than telling them apart.** Neither renderer signs the
+ * caller in on this outcome — see each renderer's own comment — because
+ * auto-signing-in a new account would mean the taken-address branch had to
+ * answer without a session, which is a one-request oracle no matter how
+ * carefully the rest of the response is matched. Verifying by email would be
+ * the usual way to tell them apart safely, and this app has no email adapter
+ * (Stage 0), so the two stay merged into the one neutral outcome instead.
+ */
+export async function decideSignUp(
+  req: PayloadRequest,
+  input: { email: string; password: string }
+): Promise<"accepted" | "invalid-email" | "weak-password"> {
+  const { email, password } = input;
 
   if (!isEmailShaped(email)) {
-    await pad(started);
-
-    return seeOther(signUpPath(locale, { error: "email" }));
+    return "invalid-email";
   }
 
   try {
@@ -200,7 +221,7 @@ const signUp: PayloadHandler = async (req) => {
        * arriving over the network can forge this — see `access/index.ts`.
        */
       context: { [SELF_REGISTRATION]: true },
-      data: { email, password: field(form, "password"), role: "user" },
+      data: { email, password, role: "user" },
       overrideAccess: false,
     });
   } catch (error) {
@@ -218,9 +239,7 @@ const signUp: PayloadHandler = async (req) => {
        * *before* the uniqueness check — so a weak password produces exactly
        * this answer whether or not the address is already registered.
        */
-      await pad(started);
-
-      return seeOther(signUpPath(locale, { error: "password" }));
+      return "weak-password";
     }
 
     if (!paths.every((path) => path === "email")) {
@@ -230,23 +249,47 @@ const signUp: PayloadHandler = async (req) => {
     /*
      * An `email`-path validation error, with the format already screened
      * above, is "that address is already registered" — and this is the one
-     * branch that must be invisible. It falls through to the same response
+     * branch that must be invisible. It falls through to the same outcome
      * the successful path returns. Review Focus item 5.
      */
   }
 
-  /*
-   * **Sign-up does not sign you in**, and that is what makes the two outcomes
-   * identical rather than merely similar. Auto-signing-in a new account would
-   * mean the taken-address branch had to answer without a session, which a
-   * browser shows as landing signed-out — a one-request oracle no matter how
-   * carefully the body is matched. Verifying by email would be the usual way
-   * out, and this app has no email adapter (Stage 0), so the neutral landing
-   * is the sign-in page with a notice that says "if that address was free,
-   * your account is ready".
-   */
+  return "accepted";
+}
+
+const signUp: PayloadHandler = async (req) => {
+  const crossSiteResponse = guardOrigin(req);
+
+  if (crossSiteResponse) {
+    return crossSiteResponse;
+  }
+
+  const started = Date.now();
+  const form = await readForm(req);
+  const locale = localeFromForm(form.get("locale"));
+
+  const outcome = await decideSignUp(req, {
+    email: normaliseEmail(form.get("email")),
+    password: field(form, "password"),
+  });
+
   await pad(started);
 
+  if (outcome === "invalid-email") {
+    return seeOther(signUpPath(locale, { error: "email" }));
+  }
+
+  if (outcome === "weak-password") {
+    return seeOther(signUpPath(locale, { error: "password" }));
+  }
+
+  /*
+   * Both a created account and an address already registered land here, and
+   * **sign-up does not sign you in** — see the note this comment was
+   * extracted from. Auto-signing-in would make the taken-address branch
+   * answer without a session, which is a one-request oracle no matter how
+   * carefully the body is matched.
+   */
   return seeOther(signInPath(locale, { notice: "registered" }));
 };
 
@@ -462,6 +505,53 @@ const usersLogin: PayloadHandler = async (req) => {
 };
 
 /**
+ * `POST /api/mobile/sign-up` — the JSON sign-up surface the Stage 8 native
+ * app needs, and the second (and only other) renderer over
+ * {@link decideSignUp}.
+ *
+ * `/mobile/sign-up` is a **flat sibling**, not `/auth/sign-up/json` or
+ * anything nested under `/auth/sign-up`. Same reasoning as
+ * `endpoints/lists.ts` gives for `/account/confirm-email`: overlapping
+ * endpoint patterns leave Payload's matcher (`handleEndpoints`, first match
+ * wins) to choose between them, and the wrong choice here answers
+ * "accepted" without accepting anything.
+ *
+ * Reads the body with `readBody` rather than `readForm`, because a native
+ * client posts `application/json` and `readForm` only ever parses form
+ * bodies. Everything after that — the origin guard, the timing floor, the
+ * shared decision — is identical in spirit to `signUp` above; only the
+ * rendering differs, which is the entire point of the extraction.
+ */
+const mobileSignUp: PayloadHandler = async (req) => {
+  const crossSiteResponse = guardOrigin(req);
+
+  if (crossSiteResponse) {
+    return crossSiteResponse;
+  }
+
+  const started = Date.now();
+  const body = await readBody(req);
+
+  const outcome = await decideSignUp(req, {
+    email: normaliseEmail(typeof body.email === "string" ? body.email : ""),
+    password: typeof body.password === "string" ? body.password : "",
+  });
+
+  await pad(started);
+
+  return Response.json(
+    { status: outcome },
+    {
+      headers: headersWithCors({
+        headers: new Headers({ "Cache-Control": "no-store" }),
+        req,
+      }),
+      status: outcome === "accepted" ? 200 : 400,
+    }
+  );
+};
+
+/**
  * Endpoints declared on the `users` collection itself.
  *
  * One entry, and it deliberately shadows a built-in. Kept here rather than
@@ -476,4 +566,14 @@ export const authEndpoints: Endpoint[] = [
   { handler: signIn, method: "post", path: "/auth/sign-in" },
   { handler: signUp, method: "post", path: "/auth/sign-up" },
   { handler: signOut, method: "post", path: "/auth/sign-out" },
+];
+
+/**
+ * The one endpoint the native app adds to this file. See `mobileSignUp`'s
+ * own comment for why it lives at a flat path, and `decideSignUp`'s for why
+ * it shares a decision with the form endpoint above rather than
+ * reimplementing it.
+ */
+export const mobileAuthEndpoints: Endpoint[] = [
+  { handler: mobileSignUp, method: "post", path: "/mobile/sign-up" },
 ];

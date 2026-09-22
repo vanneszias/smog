@@ -25,7 +25,7 @@ import { UserConsents } from "./collections/UserConsents";
 import { Users } from "./collections/Users";
 import { cloudflareEmailAdapter } from "./email/adapter";
 import { accountEndpoints } from "./endpoints/account";
-import { authEndpoints } from "./endpoints/auth";
+import { authEndpoints, mobileAuthEndpoints } from "./endpoints/auth";
 import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
 import { jobsEndpoints } from "./endpoints/jobs";
@@ -232,10 +232,24 @@ export default buildConfig({
    * calls, it carries a shared secret in `Authorization`, and it answers every
    * caller the same bytes so that a right token cannot be told from a wrong
    * one. See `endpoints/jobs.ts`.
+   *
+   * `mobileAuthEndpoints` adds `POST /api/mobile/sign-up` — the Stage 8
+   * native app's one missing auth endpoint; sign-in, "who am I", refresh,
+   * sign-out and forgot-password are all covered by `/api/users/*` already
+   * (the first shadowed by `usersCollectionEndpoints` above, the rest
+   * Payload's own). It is a flat sibling of `/mobile/*` for the same
+   * matcher reason as `listsEndpoints`, and it shares its accept/refuse
+   * decision with `authEndpoints`' own `/auth/sign-up` through
+   * `decideSignUp` rather than reimplementing it: "created" and "already
+   * registered" are one value computed once, and each endpoint only
+   * renders it — a redirect for the form, a JSON body here — so the
+   * enumeration-safety property this file exists for cannot agree in one
+   * response shape and quietly drift in the other. See `endpoints/auth.ts`.
    */
   endpoints: [
     ...crawlerEndpoints,
     ...authEndpoints,
+    ...mobileAuthEndpoints,
     ...oauthEndpoints,
     ...favoritesEndpoints,
     ...accountEndpoints,

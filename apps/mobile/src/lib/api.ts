@@ -1,5 +1,5 @@
 import { DEFAULT_LOCALE, type Locale } from "./locale";
-import { clearSession, getToken } from "./session";
+import { clearToken, getToken } from "./session";
 
 /**
  * Where Payload lives when nothing overrides it — the staging Worker
@@ -118,7 +118,9 @@ export async function payloadFetch<T>(
     const token = await getToken();
 
     if (token !== null) {
-      requestHeaders.set("Authorization", `Bearer ${token}`);
+      // Payload's `extractJWT` reads `Authorization: JWT <token>`, not the
+      // `Bearer` scheme — see `payload/dist/auth/extractJWT.js`.
+      requestHeaders.set("Authorization", `JWT ${token}`);
     }
   }
 
@@ -135,7 +137,7 @@ export async function payloadFetch<T>(
 
   if (!response.ok) {
     if (response.status === 401) {
-      await clearSession();
+      await clearToken();
     }
 
     throw new ApiError(await errorCodeFrom(response), response.status);

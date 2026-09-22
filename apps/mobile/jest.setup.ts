@@ -87,6 +87,20 @@ jest.mock("expo-video", () => ({
   VideoView: mockExpoVideo.VideoView,
 }));
 
+/**
+ * `@react-native-async-storage/async-storage` reaches for its native module
+ * at import time too — `[@RNC/AsyncStorage]: NativeModule: AsyncStorage is
+ * null.`, confirmed against a bare import under this same test renderer —
+ * so every test that reaches `src/lib/session.ts`, including `api.test.ts`
+ * (through `payloadFetch`'s import of `./session`), needs this registered
+ * globally rather than per file. The package ships its own jest mock for
+ * exactly this reason; this reproduces the one line its own docs recommend
+ * rather than hand-rolling an equivalent.
+ */
+jest.mock("@react-native-async-storage/async-storage", () =>
+  require("@react-native-async-storage/async-storage/jest/async-storage-mock")
+);
+
 const globalCss = fs.readFileSync(path.join(__dirname, "global.css"), "utf8");
 const tailwindConfig = require(path.join(__dirname, "tailwind.config.js"));
 
