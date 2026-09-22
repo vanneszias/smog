@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { renderHook, waitFor } from "@testing-library/react-native";
+import { act, renderHook, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { ApiError, payloadFetch } from "./api";
 import { readGuestFavorites, toggleGuestFavorite } from "./guest";
@@ -354,6 +354,117 @@ describe("getVerifiedSession", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(getVerifiedSession()).toBeNull();
+  });
+});
+
+/**
+ * Stage 8.6 final review: Payload's `/users/me` answers an expired or
+ * otherwise invalid JWT with `200 { user: null }`, not a 401
+ * (`payload/dist/auth/operations/me.js`), and nothing in this app
+ * refreshes a token before its 7200s expiry. A successful answer naming
+ * nobody is therefore definitive — the token is dead and is cleared, which
+ * notifies every listener exactly as a sign-out does. Only a request that
+ * could not get an answer (offline, 429, 5xx) leaves the token in place as
+ * "could not verify".
+ */
+describe("resolveSessionUser, a token /users/me names nobody for", () => {
+  let keychain: string | null;
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue("1");
+    setVerifiedSessionForTests(null);
+    keychain = "t";
+    (SecureStore.getItemAsync as jest.Mock).mockImplementation(() =>
+      Promise.resolve(keychain)
+    );
+    (SecureStore.setItemAsync as jest.Mock).mockImplementation(
+      (_key: string, value: string) => {
+        keychain = value;
+        return Promise.resolve();
+      }
+    );
+    (SecureStore.deleteItemAsync as jest.Mock).mockImplementation(() => {
+      keychain = null;
+      return Promise.resolve();
+    });
+  });
+
+  it("clears the token and the verified pair on a 200 with no user", async () => {
+    // A pair confirmed earlier for this very token, since expired.
+    setVerifiedSessionForTests({ token: "t", userId: "1" });
+    global.fetch = jest.fn(() =>
+      json({ user: null })
+    ) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useSession(), {
+      wrapper: SessionProvider,
+    });
+    await waitFor(() => expect(SecureStore.deleteItemAsync).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(TOKEN_KEY);
+    expect(keychain).toBeNull();
+    expect(await getToken()).toBeNull();
+    expect(getVerifiedSession()).toBeNull();
+    expect(result.current.user).toBeNull();
+  });
+
+  it.each([
+    ["a network failure", () => Promise.reject(new TypeError("offline"))],
+    ["a 429", () => json({ errors: [{ message: "slow down" }] }, 429)],
+    ["a 500", () => json({ errors: [{ message: "boom" }] }, 500)],
+    ["a 503", () => json({ errors: [{ message: "down" }] }, 503)],
+  ])('keeps the token after %s — that is "could not verify", not a sign-out', async (_label, answer) => {
+    global.fetch = jest.fn(answer) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useSession(), {
+      wrapper: SessionProvider,
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+    expect(keychain).toBe("t");
+    expect(result.current.user).toBeNull();
+  });
+
+  it("does not clear a newer token stored while the old one's answer was in flight", async () => {
+    let answerOld: (response: Response) => void = () => undefined;
+    global.fetch = jest.fn((_url: string, init?: RequestInit) => {
+      const auth = new Headers(init?.headers).get("Authorization");
+      if (auth === "JWT t") {
+        return new Promise<Response>((resolve) => {
+          answerOld = resolve;
+        });
+      }
+      return json({ user: { email: "b@b.test", id: "2", role: "user" } });
+    }) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useSession(), {
+      wrapper: SessionProvider,
+    });
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
+
+    // Someone signs in while the expired token's check is still out.
+    await act(async () => {
+      await storeToken("new");
+    });
+    await waitFor(() => expect(result.current.user?.id).toBe("2"));
+
+    await act(async () => {
+      answerOld(
+        new Response(JSON.stringify({ user: null }), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+    expect(keychain).toBe("new");
+    expect(getVerifiedSession()).toEqual({ token: "new", userId: "2" });
   });
 });
 

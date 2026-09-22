@@ -462,8 +462,10 @@ interface VerifiedSession {
  * is stale the instant the keychain moves on) — never silently sent under
  * whichever token now happens to be in the keychain.
  *
- * Cleared, not merely left stale, when the keychain has no token at all:
- * there is nothing left it could still legitimately confirm.
+ * Cleared, not merely left stale, when the keychain has no token at all,
+ * or when `/users/me` answers for its token with no user (an expired JWT;
+ * see {@link resolveSessionUser}): there is nothing left it could still
+ * legitimately confirm.
  */
 let verifiedSession: VerifiedSession | null = null;
 
@@ -488,6 +490,22 @@ export function setVerifiedSessionForTests(
  * outright. Kept separate from {@link SessionProvider} so the provider's
  * own effect stays a plain "resolve, then set state" shape rather than a
  * nested try/catch/finally.
+ *
+ * **A successful answer naming nobody signs this device out.** Payload
+ * answers an expired or otherwise invalid JWT with `200 { user: null }`,
+ * not a 401 (`payload/dist/auth/operations/me.js`), and this app never
+ * refreshes a token before its expiry (Payload's default `tokenExpiration`
+ * is 7200s) — so a dead token would otherwise stay stored forever beside a
+ * signed-out screen, and `consentSync.ts` would read "token present" as
+ * "could not verify" and keep the account's decision on the device
+ * (Stage 8.6 final review). It is cleared through {@link clearToken}, so
+ * every listener hears it exactly as it hears a sign-out, and the verified
+ * pair goes with it. Only a request that got no answer — offline, a 429, a
+ * 5xx: the `catch` below — keeps the token as "could not verify".
+ *
+ * The clear happens only if the keychain still holds the token that was
+ * asked about: a sign-in that stored a new token while this answer was in
+ * flight must not be undone by the old token's verdict.
  */
 async function resolveSessionUser(): Promise<SessionUser | null> {
   const token = await getToken();
@@ -498,25 +516,32 @@ async function resolveSessionUser(): Promise<SessionUser | null> {
     return null;
   }
 
+  let result: { user: SessionUser | null };
+
   try {
-    const result = await payloadFetch<{ user: SessionUser | null }>(
-      "/users/me",
-      { auth: true }
-    );
-
-    // The only assignment: a real response, for this exact token, naming
-    // a real account. A failed request (the `catch` below) or a `200`
-    // with no user leaves `verifiedSession` exactly as it was — see its
-    // own comment for why that is the safe default rather than clearing
-    // it, and why it is never set before this line.
-    if (result.user !== null) {
-      verifiedSession = { token, userId: result.user.id };
-    }
-
-    return result.user;
+    result = await payloadFetch<{ user: SessionUser | null }>("/users/me", {
+      auth: true,
+    });
   } catch {
     return null;
   }
+
+  if (result.user === null) {
+    if ((await getToken()) === token) {
+      verifiedSession = null;
+      await clearToken();
+    }
+    return null;
+  }
+
+  // The only assignment: a real response, for this exact token, naming a
+  // real account. A failed request (the `catch` above) leaves
+  // `verifiedSession` exactly as it was — see its own comment for why that
+  // is the safe default rather than clearing it, and why it is never set
+  // before this line.
+  verifiedSession = { token, userId: result.user.id };
+
+  return result.user;
 }
 
 /**

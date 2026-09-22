@@ -29,10 +29,15 @@ import { getToken, getVerifiedSession, useSession } from "@/lib/session";
  * asynchrony rather than `AsyncStorage`'s:
  *
  * - `user === null` does not mean "signed out". `resolveSessionUser`
- *   (`session.ts`) answers `null` both for a genuine sign-out (no token)
- *   and for a token it could not verify (offline, a stalled request, a
- *   429/5xx) — `pass` tells the two apart with `getToken()` before it will
- *   drop a decision.
+ *   (`session.ts`) answers `null` both for a genuine sign-out and for a
+ *   token it could not verify (offline, a stalled request, a 429/5xx) —
+ *   `pass` tells the two apart with `getToken()` before it will drop a
+ *   decision. A sign-out always leaves no token: `signOut` clears it, a 401
+ *   clears it (`api.ts`), and so does an expired token, which Payload
+ *   answers with `200 { user: null }` rather than a 401 —
+ *   `resolveSessionUser` clears the token on that answer (Stage 8.6 final
+ *   review; before that fix a dead token stayed stored and its account's
+ *   decision was kept on a signed-out device forever).
  * - A pass carries the `userId` it was enqueued for, but the keychain can
  *   already hold another account's token by the time it runs
  *   (`SessionProvider` does not re-verify the instant a token changes).
@@ -184,11 +189,13 @@ async function pass(userId: string | null): Promise<void> {
     // `resolveSessionUser` unable to verify one (offline, a stalled
     // request, a 429/5xx from `/users/me`), and `useConsentSync` reports
     // that the exact same way it reports a real sign-out: `user === null`.
-    // Only the absence of a token itself — which a 401 does clear, in
-    // `api.ts` — means this device has actually signed out; anything else
-    // must leave an attributed decision exactly as it is, pending or not,
-    // for the next pass to resolve once the session can be verified again
-    // (fix round 1, Review Focus 3 and 5).
+    // Only the absence of a token itself means this device has actually
+    // signed out — and every way of signing out leaves none: `signOut`, a
+    // 401 (`api.ts`), and an expired token, which `/users/me` answers with
+    // `200 { user: null }` and `resolveSessionUser` then clears. Anything
+    // else must leave an attributed decision exactly as it is, pending or
+    // not, for the next pass to resolve once the session can be verified
+    // again (fix round 1, Review Focus 3 and 5; Stage 8.6 final review).
     if (marker !== null && (await getToken()) === null) {
       await dropForeignDecision();
     }

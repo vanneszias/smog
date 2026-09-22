@@ -221,8 +221,10 @@ describe("reconcileConsent", () => {
 
 /**
  * Fix round 1, finding 1: a session that could not be verified — a stored
- * token, but no user back from it — must not be treated the same as a
- * genuine sign-out. `pass` now tells the two apart with `getToken()`
+ * token, but no answer from `/users/me` (offline, 429, 5xx) — must not be
+ * treated the same as a genuine sign-out. (An *answer* naming no user is an
+ * expired token, which `session.ts` now clears; see the `useConsentSync`
+ * test for that case.) `pass` now tells the two apart with `getToken()`
  * itself, since `useConsentSync` reports both cases identically
  * (`userId === null`).
  */
@@ -539,6 +541,44 @@ describe("useConsentSync", () => {
     expect(consentPosts()).toHaveLength(0);
     expect(readConsent()).toBe("granted");
     expect(await marker()).toEqual({ userId: "7", value: "granted" });
+  });
+
+  it("drops the decision and its marker when the session has expired (final review)", async () => {
+    // Payload answers an expired JWT with `200 { user: null }`, not a 401
+    // (`payload/dist/auth/operations/me.js`). `session.ts` now treats that
+    // as a sign-out and clears the token, so this pass sees no token and
+    // drops the account's decision — rather than reading the dead token
+    // as "could not verify" and keeping it on a signed-out device forever.
+    let keychain: string | null = "token";
+    (SecureStore.getItemAsync as jest.Mock).mockImplementation(() =>
+      Promise.resolve(keychain)
+    );
+    (SecureStore.deleteItemAsync as jest.Mock).mockImplementation(() => {
+      keychain = null;
+      return Promise.resolve();
+    });
+    global.fetch = jest.fn((url: string) =>
+      String(url).includes("/users/me")
+        ? Promise.resolve(
+            new Response(JSON.stringify({ user: null }), {
+              headers: { "Content-Type": "application/json" },
+              status: 200,
+            })
+          )
+        : ok()
+    ) as unknown as typeof fetch;
+    await setConsent("granted");
+    await AsyncStorage.setItem(
+      CONSENT_SYNCED_KEY,
+      JSON.stringify({ userId: "7", value: "granted" })
+    );
+
+    renderHook(() => useConsentSync(), { wrapper: SessionProvider });
+
+    await waitFor(() => expect(readConsent()).toBeNull());
+    expect(await marker()).toBeNull();
+    expect(keychain).toBeNull();
+    expect(consentPosts()).toHaveLength(0);
   });
 
   it("logs a pass that fails, rather than leaving its rejection unhandled", async () => {
