@@ -13,7 +13,11 @@ import {
   reconcileConsent,
   useConsentSync,
 } from "./consentSync";
-import { INSTALL_MARKER, SessionProvider } from "./session";
+import {
+  INSTALL_MARKER,
+  SessionProvider,
+  setVerifiedTokenForTests,
+} from "./session";
 
 jest.mock("expo-secure-store");
 
@@ -53,6 +57,14 @@ beforeEach(async () => {
   resetConsentForTests();
   await loadConsent();
   (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("token");
+  // `pass`'s finding-2 fix (fix round 1) refuses to POST unless the
+  // keychain's current token matches the one the session was last verified
+  // with. None of these tests drive a real `resolveSessionUser()` round
+  // trip, so that "verified" state is set directly to the same "token"
+  // `SecureStore` answers with above — the precondition a real app would
+  // already be in by the time `useConsentSync` ever calls `reconcileConsent`
+  // for a signed-in user.
+  setVerifiedTokenForTests("token");
   global.fetch = jest.fn(ok) as unknown as typeof fetch;
   jest.spyOn(console, "error").mockImplementation(() => undefined);
   jest.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -140,6 +152,10 @@ describe("reconcileConsent", () => {
   it("drops an attributed decision on sign-out, so the next person is asked (Review Focus 3)", async () => {
     await setConsent("granted");
     await reconcileConsent("7");
+    // A real sign-out: no token left in the keychain at all, not merely a
+    // `userId` of `null` (fix round 1, finding 1 — see (c) in the block
+    // below for the case this line exists to keep apart).
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
     await reconcileConsent(null);
     expect(readConsent()).toBeNull();
     expect(await marker()).toBeNull();
@@ -149,6 +165,7 @@ describe("reconcileConsent", () => {
     global.fetch = jest.fn(() => status(500)) as unknown as typeof fetch;
     await setConsent("granted");
     await reconcileConsent("7");
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
     await reconcileConsent(null);
     expect(readConsent()).toBeNull();
   });
@@ -185,6 +202,7 @@ describe("reconcileConsent", () => {
     await setConsent("granted");
     await reconcileConsent("7");
     (global.fetch as unknown as jest.Mock).mockClear();
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
 
     await reconcileConsent(null);
     // A second, "re-entrant" pass — standing in for the one the consent
@@ -194,6 +212,119 @@ describe("reconcileConsent", () => {
     expect(consentPosts()).toHaveLength(0);
     expect(readConsent()).toBeNull();
     expect(await marker()).toBeNull();
+  });
+});
+
+/**
+ * Fix round 1, finding 1: a session that could not be verified — a stored
+ * token, but no user back from it — must not be treated the same as a
+ * genuine sign-out. `pass` now tells the two apart with `getToken()`
+ * itself, since `useConsentSync` reports both cases identically
+ * (`userId === null`).
+ */
+describe("reconcileConsent, an unverified session (Review Focus 3 and 5, fix round 1)", () => {
+  it("keeps a confirmed decision when the session could not be verified, rather than treating it as signed out", async () => {
+    await setConsent("granted");
+    await reconcileConsent("7");
+    (global.fetch as unknown as jest.Mock).mockClear();
+
+    // The token is still in the keychain — this is "could not verify",
+    // not "signed out" — see the sign-out tests above for the case where
+    // it genuinely is absent.
+    await reconcileConsent(null);
+
+    expect(readConsent()).toBe("granted");
+    expect(await marker()).toEqual({ userId: "7", value: "granted" });
+    expect(consentPosts()).toHaveLength(0);
+  });
+
+  it("keeps a pending decision when the session could not be verified, and still retries it once verified again", async () => {
+    global.fetch = jest.fn(() => status(500)) as unknown as typeof fetch;
+    await setConsent("granted");
+    await reconcileConsent("7");
+    expect((await marker()).pending).toBe(true);
+    (global.fetch as unknown as jest.Mock).mockClear();
+
+    await reconcileConsent(null);
+
+    expect(await marker()).toEqual({
+      pending: true,
+      userId: "7",
+      value: "granted",
+    });
+    expect(consentPosts()).toHaveLength(0);
+
+    // The session is verified again (a foreground pass, say); the pending
+    // decision is still there to retry.
+    global.fetch = jest.fn(ok) as unknown as typeof fetch;
+    await reconcileConsent("7");
+
+    expect(consentPosts()).toHaveLength(1);
+    expect(await marker()).toEqual({ userId: "7", value: "granted" });
+  });
+});
+
+/**
+ * Fix round 1, finding 2: a pass carries the `userId` it was enqueued for,
+ * but by the time it actually runs the keychain can already hold another
+ * account's token — `SessionProvider` does not re-verify the instant a
+ * token changes. `pass` now refuses to POST unless the keychain's current
+ * token still matches the one the session was verified with.
+ */
+describe("reconcileConsent, a token the session has moved on from (Review Focus 5, fix round 1)", () => {
+  it("does not POST when the keychain now holds a different token than the one this session verified", async () => {
+    setVerifiedTokenForTests("tA");
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("tB");
+    await AsyncStorage.setItem(
+      CONSENT_SYNCED_KEY,
+      JSON.stringify({ pending: true, userId: "7", value: "granted" })
+    );
+    await setConsent("granted");
+
+    await reconcileConsent("7");
+
+    expect(consentPosts()).toHaveLength(0);
+    expect(await marker()).toEqual({
+      pending: true,
+      userId: "7",
+      value: "granted",
+    });
+  });
+
+  it("aborts a stalled consent POST after 15s, leaving it pending for the next pass to retry", async () => {
+    jest.useFakeTimers();
+    try {
+      // A real `fetch` rejects when its `AbortSignal` fires; this stands in
+      // for one that would otherwise hang forever.
+      global.fetch = jest.fn(
+        (_url: string, init?: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => {
+              reject(new DOMException("Aborted", "AbortError"));
+            });
+          })
+      ) as unknown as typeof fetch;
+      await setConsent("granted");
+
+      const pending = reconcileConsent("7");
+      // Let the pass run up to the point it has registered the abort
+      // timer (a handful of awaited `AsyncStorage` round trips) before
+      // fast-forwarding fake time past it.
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await jest.advanceTimersByTimeAsync(15_000);
+      await pending;
+
+      expect((await marker()).pending).toBe(true);
+
+      global.fetch = jest.fn(ok) as unknown as typeof fetch;
+      await reconcileConsent("7");
+
+      expect(await marker()).toEqual({ userId: "7", value: "granted" });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
@@ -213,20 +344,47 @@ describe("useConsentSync", () => {
       )
     );
 
-  it("does nothing while the session is still loading", async () => {
-    // /users/me never resolves, so `loading` never turns false.
+  it("does nothing while the session is still loading (fix round 1, finding 3)", async () => {
+    // Seeded with a confirmed marker + matching consent: the original
+    // version of this test seeded neither, so it stayed green with the
+    // `if (loading) { return; }` guard deleted outright — nothing was ever
+    // at stake for it to protect. `AsyncStorage.getItem` is spied on
+    // directly (rather than only checking the outcome) because a *later*
+    // guard inside `pass` itself (fix round 1, finding 1: a stored token
+    // with no resolved user is not treated as signed out) would otherwise
+    // leave this decision looking untouched even with the loading guard
+    // gone — reading `CONSENT_SYNCED_KEY` at all is `readMarker`'s doing,
+    // the first thing any pass touches, so it is true regardless of what a
+    // pass then decides to do with what it read.
     global.fetch = jest.fn(
       () => new Promise(() => undefined)
-    ) as unknown as typeof fetch;
+    ) as unknown as typeof fetch; // /users/me never resolves, so `loading` never turns false.
     await setConsent("granted");
+    await AsyncStorage.setItem(
+      CONSENT_SYNCED_KEY,
+      JSON.stringify({ userId: "7", value: "granted" })
+    );
+    // `AsyncStorage.getItem` is one `jest.fn()` shared for the whole file
+    // (the package's own jest mock, not something `jest.spyOn` freshly
+    // wraps here), so its call history is cleared first — otherwise every
+    // earlier test's reads of this same key would already satisfy the
+    // `.some(...)` check below before this test has done anything at all.
+    const getItem = jest.spyOn(AsyncStorage, "getItem");
+    getItem.mockClear();
 
     renderHook(() => useConsentSync(), { wrapper: SessionProvider });
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
+      await Promise.resolve();
     });
 
+    expect(getItem.mock.calls.some(([key]) => key === CONSENT_SYNCED_KEY)).toBe(
+      false
+    );
     expect(consentPosts()).toHaveLength(0);
+    expect(readConsent()).toBe("granted");
+    expect(await marker()).toEqual({ userId: "7", value: "granted" });
   });
 
   it("retries a pending decision when the app returns to the foreground (Review Focus 5)", async () => {

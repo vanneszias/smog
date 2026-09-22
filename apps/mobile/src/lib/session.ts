@@ -429,6 +429,40 @@ interface SessionContextValue {
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 /**
+ * The token {@link resolveSessionUser} most recently read from the
+ * keychain when it (attempted to) resolve `/users/me` — whether or not
+ * that request found a user, and regardless of whether it even completed.
+ *
+ * `consentSync.ts`'s reconciler compares this against a fresh
+ * {@link getToken} immediately before every `POST /api/consent`: this
+ * provider does not flip `loading` back to `true` the instant a new token
+ * is stored (`storeToken`'s `notifySessionChanged` starts a fresh
+ * `resolveSessionUser` call, but the component tree keeps rendering
+ * whoever `user` was before that call resolves), so a reconciliation pass
+ * already queued for the outgoing account can still run after a different
+ * account's token has already been written. Sending that pass's POST with
+ * whatever token the keychain holds *right now* would attribute the
+ * outgoing account's decision to whoever the new token belongs to — this
+ * lets the reconciler tell "the token I was verified with" apart from
+ * "the token that happens to be in the keychain this instant" and refuse
+ * to POST when they differ.
+ */
+let verifiedToken: string | null = null;
+
+/** See {@link verifiedToken}. */
+export function getVerifiedToken(): string | null {
+  return verifiedToken;
+}
+
+/**
+ * Tests only: pretend the session was last verified against this token,
+ * without driving a real `resolveSessionUser()` round trip to set it.
+ */
+export function setVerifiedTokenForTests(token: string | null): void {
+  verifiedToken = token;
+}
+
+/**
  * The signed-in user, if there is a stored token, from `GET /api/users/me`
  * — or `null` for no token, an expired one, or a request that failed
  * outright. Kept separate from {@link SessionProvider} so the provider's
@@ -437,6 +471,12 @@ const SessionContext = createContext<SessionContextValue | null>(null);
  */
 async function resolveSessionUser(): Promise<SessionUser | null> {
   const token = await getToken();
+
+  // Recorded before the request even starts, and whether or not it
+  // succeeds: a token this call attempted (and failed) to verify is still
+  // the token "this session" is currently associated with, for
+  // {@link getVerifiedToken}'s purposes — see that function's own comment.
+  verifiedToken = token;
 
   if (token === null) {
     return null;

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { renderHook, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { ApiError, payloadFetch } from "./api";
 import { readGuestFavorites, toggleGuestFavorite } from "./guest";
@@ -6,13 +7,16 @@ import {
   changePassword,
   deleteAccount,
   getToken,
+  getVerifiedToken,
   INSTALL_MARKER,
   refresh,
   requestEmailChange,
+  SessionProvider,
   signIn,
   signOut,
   signUp,
   TOKEN_KEY,
+  useSession,
 } from "./session";
 
 jest.mock("expo-secure-store");
@@ -253,6 +257,64 @@ describe("the reinstall case", () => {
     expect(token).toBe("t");
     expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * `getVerifiedToken` — added for `consentSync.ts`'s fix-round-1 fix
+ * (finding 2): the token `resolveSessionUser` most recently read, whether
+ * or not `/users/me` found a user with it. `resolveSessionUser` itself is
+ * not exported, so these drive it the only way anything outside this file
+ * can: through a mounted `SessionProvider`.
+ */
+describe("getVerifiedToken", () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue("1");
+  });
+
+  it("records the token /users/me was verified with", async () => {
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("t");
+    global.fetch = jest.fn(() =>
+      json({ user: { email: "a@b.test", id: "1", role: "user" } })
+    ) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useSession(), {
+      wrapper: SessionProvider,
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(getVerifiedToken()).toBe("t");
+  });
+
+  it("still records the token when /users/me could not verify it", async () => {
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("t");
+    global.fetch = jest.fn(() =>
+      Promise.reject(new TypeError("offline"))
+    ) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useSession(), {
+      wrapper: SessionProvider,
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // `resolveSessionUser` answered `null` (could not verify), but it did
+    // attempt this token — `consentSync.ts`'s reconciler needs to know
+    // *that*, not whether the attempt succeeded, to tell "unverified" apart
+    // from "the keychain has since moved on to a different token".
+    expect(getVerifiedToken()).toBe("t");
+    expect(result.current.user).toBeNull();
+  });
+
+  it("records no token when there is none to verify", async () => {
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+
+    const { result } = renderHook(() => useSession(), {
+      wrapper: SessionProvider,
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(getVerifiedToken()).toBeNull();
   });
 });
 

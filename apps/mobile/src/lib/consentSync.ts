@@ -8,7 +8,7 @@ import {
   readConsent,
   subscribeConsent,
 } from "@/lib/consent";
-import { useSession } from "@/lib/session";
+import { getToken, getVerifiedToken, useSession } from "@/lib/session";
 
 /**
  * Writes a signed-in person's analytics decision to `POST /api/consent`, once
@@ -24,8 +24,36 @@ import { useSession } from "@/lib/session";
  * - There is no page load to retry on, so the hook also runs a pass when the
  *   app returns to the foreground. A failed write leaves its marker
  *   `pending`, and the next pass sends it again.
+ *
+ * Two more things a fix-round review found, both about `useSession`'s
+ * asynchrony rather than `AsyncStorage`'s:
+ *
+ * - `user === null` does not mean "signed out". `resolveSessionUser`
+ *   (`session.ts`) answers `null` both for a genuine sign-out (no token)
+ *   and for a token it could not verify (offline, a stalled request, a
+ *   429/5xx) — `pass` tells the two apart with `getToken()` before it will
+ *   drop a decision.
+ * - A pass carries the `userId` it was enqueued for, but the keychain can
+ *   already hold a *different* account's token by the time it runs
+ *   (`SessionProvider` does not re-verify the instant a token changes) —
+ *   `pass` refuses to POST unless `getToken()` still matches
+ *   `getVerifiedToken()`, so an outgoing account's decision is never sent
+ *   under an incoming one's token. And `postConsent`'s request now carries
+ *   a hand-rolled timeout, so a stalled one fails into the retry path
+ *   instead of holding every later pass queued behind it forever.
  */
 export const CONSENT_SYNCED_KEY = "smog.consent.synced";
+
+/**
+ * How long a `POST /api/consent` is given before it is treated as failed.
+ * Without this, a stalled request (a dropped connection that never errors,
+ * a captive portal that never answers) would hold the shared `queue`
+ * forever — every later pass, including the one that would drop a marker
+ * on a real sign-out, waits behind it. Fifteen seconds is generous for one
+ * small JSON POST and short enough that a person who backgrounds and
+ * reopens the app is not stuck behind yesterday's stalled request.
+ */
+const CONSENT_POST_TIMEOUT_MS = 15_000;
 
 interface SyncMarker {
   pending?: true;
@@ -94,16 +122,30 @@ async function postConsent(
     return;
   }
 
+  // `AbortSignal.timeout` is not relied on — it does not exist on every
+  // Hermes build this app ships to — so the timeout is wired by hand: an
+  // `AbortController` whose `abort()` a plain `setTimeout` calls, cleared
+  // the moment the request settles either way. Without this, a request
+  // that never errors and never resolves would hold this pass — and every
+  // later one queued behind it in `reconcileConsent`'s chain — forever.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, CONSENT_POST_TIMEOUT_MS);
+
   try {
     await payloadFetch("/consent", {
       auth: true,
       body: JSON.stringify({ analyticsConsent: value === "granted" }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
+      signal: controller.signal,
     });
   } catch (error) {
     console.error("[consentSync] Failed to record consent:", error);
     return;
+  } finally {
+    clearTimeout(timeout);
   }
 
   if (!(await writeMarker({ userId, value }))) {
@@ -117,7 +159,16 @@ async function pass(userId: string | null): Promise<void> {
   const marker = await readMarker();
 
   if (userId === null) {
-    if (marker !== null) {
+    // A stored token with no resolved user is not a sign-out — it is
+    // `resolveSessionUser` unable to verify one (offline, a stalled
+    // request, a 429/5xx from `/users/me`), and `useConsentSync` reports
+    // that the exact same way it reports a real sign-out: `user === null`.
+    // Only the absence of a token itself — which a 401 does clear, in
+    // `api.ts` — means this device has actually signed out; anything else
+    // must leave an attributed decision exactly as it is, pending or not,
+    // for the next pass to resolve once the session can be verified again
+    // (fix round 1, Review Focus 3 and 5).
+    if (marker !== null && (await getToken()) === null) {
       await dropForeignDecision();
     }
     return;
@@ -132,6 +183,19 @@ async function pass(userId: string | null): Promise<void> {
   if (marker !== null && marker.value === consent && marker.pending !== true) {
     return;
   }
+
+  // The keychain may already hold a different token than the one `userId`
+  // was verified with: `SessionProvider` does not re-verify the instant a
+  // token changes (see `session.ts`'s `getVerifiedToken` comment), so a
+  // pass enqueued for the outgoing account can still run after the
+  // incoming account's token has already been written. POSTing with
+  // whatever token is in the keychain *now* would file this decision under
+  // whoever that token belongs to — refuse, and let the next pass, once
+  // the session has caught up, reconcile for real (fix round 1, finding 2).
+  if ((await getToken()) !== getVerifiedToken()) {
+    return;
+  }
+
   await postConsent(userId, consent);
 }
 
