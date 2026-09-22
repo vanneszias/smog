@@ -42,7 +42,7 @@ export const ANALYTICS_CONSENT_KEY = "smog.consent.analytics";
 type ConsentChoice = "denied" | "granted";
 
 /** `null` means the visitor has not answered. It is not a refusal. */
-type ConsentState = ConsentChoice | null;
+export type ConsentState = ConsentChoice | null;
 
 const listeners = new Set<() => void>();
 

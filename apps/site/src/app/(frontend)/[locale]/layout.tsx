@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { type ReactNode, Suspense } from "react";
 import { AccountNav } from "@/components/AccountNav";
+import { ConsentBanner } from "@/components/ConsentBanner";
 import { GuestFavoritesSync } from "@/components/GuestFavoritesSync";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { SiteDocument } from "@/components/SiteDocument";
@@ -191,6 +192,7 @@ export default async function LocaleLayout({
          * `components/GuestFavoritesSync.tsx`.
          */}
         {user === null ? null : <GuestFavoritesSync />}
+        <ConsentBanner locale={locale} />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
           {children}
         </main>
