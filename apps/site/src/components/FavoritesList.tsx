@@ -10,7 +10,6 @@ import { HeartOff } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { writeAccountFavorite } from "@/lib/accountFavorites";
-import { trackEvent } from "@/lib/analytics";
 import {
   favoriteGesturesUrl,
   readFavoriteGestures,
@@ -145,16 +144,6 @@ export function FavoritesList({
     );
   }, []);
 
-  /*
-   * `source: "gesture_list"` rather than a new value of its own: the
-   * vocabulary in `packages/shared/src/analytics.ts` only names
-   * "gesture_detail" | "gesture_list" | "search_results", this page is a
-   * grid of gesture cards exactly like the browse listing (`GestureResults`,
-   * which reports the same value), and this stage adds no new event names or
-   * property values (Task 7's brief). Reported only once removal is
-   * confirmed — a guest press that did not actually remove anything, or an
-   * account write that failed, changed nothing and reports nothing.
-   */
   const unfavorite = useCallback(
     async (id: string) => {
       if (accountFavoriteIds === null) {
@@ -162,12 +151,6 @@ export function FavoritesList({
 
         if (!remaining.includes(id)) {
           drop(id);
-          trackEvent("gesture_collection_changed", {
-            action: "removed",
-            collection: "favorites",
-            gesture_id: id,
-            source: "gesture_list",
-          });
         }
 
         return;
@@ -185,12 +168,6 @@ export function FavoritesList({
 
       setWriteError(null);
       drop(id);
-      trackEvent("gesture_collection_changed", {
-        action: "removed",
-        collection: "favorites",
-        gesture_id: id,
-        source: "gesture_list",
-      });
     },
     [accountFavoriteIds, drop]
   );

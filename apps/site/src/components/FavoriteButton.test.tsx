@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ANALYTICS_CONSENT_KEY } from "@/lib/consentStore";
+import { ANALYTICS_CONSENT_KEY, writeConsent } from "@/lib/consentStore";
 import { GUEST_FAVORITES_KEY } from "@/lib/guestStore";
 import { FavoriteButton } from "./FavoriteButton";
 
@@ -414,6 +414,63 @@ describe("FavoriteButton on an account", () => {
 
     expect(button().getAttribute("aria-pressed")).toBe("false");
     expect(error()).toContain("Bewaren is niet gelukt");
+  });
+
+  /*
+   * Every "offline" / "never answers" case above stubs the *global* `fetch`,
+   * which backs both `writeAccountFavorite` and `trackEvent`'s beacon — so
+   * those tests fail the account write itself and never reach the tracking
+   * call at all. That leaves a real property unguarded: the write commits
+   * (`setState`) before `trackEvent` runs, and `trackEvent` never `await`s
+   * its own `fetch`, so a failing or hanging analytics beacon must never
+   * hold up the heart. Nothing above would notice someone adding an `await`
+   * in front of that call — see the Task 7 fix-round-1 finding.
+   *
+   * This stub answers the favourites write successfully and fails only the
+   * request to `/api/analytics/track`, so it is the tracking call and
+   * nothing else that misbehaves in each of the two cases below.
+   */
+  const respondToWriteButFailAnalytics = (
+    analyticsOutcome: "hangs" | "rejects"
+  ) =>
+    vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.includes("/analytics/track")) {
+        return analyticsOutcome === "rejects"
+          ? Promise.reject(new Error("beacon down"))
+          : new Promise<never>(() => {
+              // Deliberately never settles.
+            });
+      }
+
+      return Promise.resolve({
+        json: () => Promise.resolve({ favorite: true }),
+        ok: true,
+        status: 200,
+      });
+    });
+
+  it("flips the heart even when the analytics beacon rejects", async () => {
+    writeConsent("granted");
+    vi.stubGlobal("fetch", respondToWriteButFailAnalytics("rejects"));
+
+    await mount(signedIn({ initialFavorite: false }));
+    await press();
+
+    expect(button().getAttribute("aria-pressed")).toBe("true");
+    expect(error()).toBeNull();
+  });
+
+  it("flips the heart even when the analytics beacon never answers", async () => {
+    writeConsent("granted");
+    vi.stubGlobal("fetch", respondToWriteButFailAnalytics("hangs"));
+
+    await mount(signedIn({ initialFavorite: false }));
+    await press();
+
+    expect(button().getAttribute("aria-pressed")).toBe("true");
+    expect(error()).toBeNull();
   });
 
   it("refuses a second press while the first is still in flight", async () => {
