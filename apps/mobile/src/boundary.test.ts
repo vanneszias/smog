@@ -19,7 +19,7 @@ import { join } from "node:path";
  * bound for deletion alongside Convex and the oRPC client) — not this app's
  * required `@smog/ui-native`. A plain substring match on `@smog/ui` would
  * also match `from "@smog/ui-native"`, which is exactly the import the
- * kitchen-sink route in `app/index.tsx` must make, so `forbiddenPattern`
+ * kitchen-sink route in `app/dev/kitchen-sink.tsx` must make, so `forbiddenPattern`
  * requires the specifier to end (a closing quote) or continue as a subpath
  * (`/`) right where `@smog/ui` does — never a hyphen straight into another
  * package's name.
