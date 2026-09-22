@@ -89,8 +89,8 @@ export default async function AccountPage({
   /*
    * Read-only, server-rendered, the same way `FavoriteButton` receives
    * `initialFavorite`: the account's own newest recorded decision, never
-   * merged into `AccountConsentControl`'s switch. See that component's
-   * "Ruling" doc comment for why the two must stay separate.
+   * merged into the consent switch. See `AccountConsentControl`'s "Ruling
+   * 11" doc comment for why the two must stay separate.
    */
   const payload = await getPayloadClient();
   const initialConsent = await newestConsentDecision({
@@ -174,7 +174,6 @@ export default async function AccountPage({
         <AccountConsentControl
           initialConsent={initialConsent}
           locale={current}
-          userId={user.id}
         />
       </section>
 

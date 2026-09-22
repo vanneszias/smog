@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ANALYTICS_CONSENT_KEY } from "@/lib/consentStore";
+import { ANALYTICS_CONSENT_KEY, writeConsent } from "@/lib/consentStore";
 import { ConsentSync } from "./ConsentSync";
 
 /*
@@ -32,7 +32,7 @@ describe("ConsentSync", () => {
     vi.restoreAllMocks();
   });
 
-  const mount = async (userId: number | string = 1) => {
+  const mount = async (userId: null | number | string = 1) => {
     await act(async () => {
       root.render(<ConsentSync userId={userId} />);
     });
@@ -43,6 +43,18 @@ describe("ConsentSync", () => {
       headers: { "Content-Type": "application/json" },
       status: 200,
     });
+
+  const markerFor = (userId: string, value: string) =>
+    window.localStorage.setItem(SYNCED_KEY, JSON.stringify({ userId, value }));
+
+  /** A second page load in the same browser: unmount, then mount again. */
+  const reload = async (userId: null | number | string) => {
+    await act(async () => {
+      root.unmount();
+    });
+    root = createRoot(container);
+    await mount(userId);
+  };
 
   it("renders nothing at all", async () => {
     await mount();
@@ -194,12 +206,6 @@ describe("ConsentSync", () => {
    * so the banner asks account 2 for themselves.
    */
   describe("when the marker names a different account", () => {
-    const markerFor = (userId: string, value: string) =>
-      window.localStorage.setItem(
-        SYNCED_KEY,
-        JSON.stringify({ userId, value })
-      );
-
     it("clears the browser's decision instead of syncing it to the new account", async () => {
       window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
       markerFor("1", "granted");
@@ -244,6 +250,234 @@ describe("ConsentSync", () => {
 
       expect(fetchMock).not.toHaveBeenCalled();
       expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
+    });
+
+    /*
+     * **Steps 3 and 4, which the four cases above all stop short of.** They
+     * prove the mismatch is detected once; they cannot see what happens
+     * after account 2 answers, because none of them lets account 2 answer.
+     * That is where the real defect lived: clearing the decision without
+     * clearing the marker leaves the marker naming account 1 for ever, so
+     * account 2's own answer is wiped again on every later page load and
+     * account 2 is asked, and re-asked, and never recorded.
+     */
+    it("keeps the new account's own answer instead of wiping it on the next page load", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      markerFor("1", "granted");
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(okResponse());
+
+      // Step 2: account 2 signs in, and account 1's answer is cleared.
+      await mount(2);
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
+
+      // Step 3: account 2 answers the banner for themselves.
+      await act(async () => {
+        writeConsent("denied");
+      });
+
+      // Step 4: the next page load must still find account 2's own answer.
+      await reload(2);
+
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBe("denied");
+    });
+
+    it("records the new account's refusal, once, rather than never", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      markerFor("1", "granted");
+      const fetchMock = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(okResponse());
+
+      await mount(2);
+      await act(async () => {
+        writeConsent("denied");
+      });
+      await reload(2);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [, init] = fetchMock.mock.calls[0];
+      expect(JSON.parse(String(init?.body))).toEqual({
+        analyticsConsent: false,
+      });
+      expect(window.localStorage.getItem(SYNCED_KEY)).toBe(
+        JSON.stringify({ userId: "2", value: "denied" })
+      );
+    });
+  });
+
+  /*
+   * The answer has to reach the server when it is given, not on whatever
+   * later page load happens to come next. A visitor who declines on the
+   * landing page and closes the tab leaves no evidence of the refusal
+   * otherwise — and a refusal that is not recorded is, in this table, the
+   * same as never having been asked.
+   */
+  describe("when the decision is made on the page this is already mounted on", () => {
+    it("records it there and then, without waiting for another page load", async () => {
+      const fetchMock = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(okResponse());
+
+      await mount(3);
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      await act(async () => {
+        writeConsent("denied");
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [, init] = fetchMock.mock.calls[0];
+      expect(JSON.parse(String(init?.body))).toEqual({
+        analyticsConsent: false,
+      });
+    });
+
+    it("does not record it twice when the next page load comes anyway", async () => {
+      const fetchMock = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(okResponse());
+
+      await mount(3);
+      await act(async () => {
+        writeConsent("granted");
+      });
+      await reload(3);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  /*
+   * Failure mode 1, on the path Ruling 12 left uncovered. Ruling 12 reasoned
+   * about account A followed by account B; A followed by *nobody* is the
+   * same shared machine with the same consequence — the next person is
+   * tracked on A's "granted" without ever being asked — and it is the more
+   * common half, because signing out is a thing people do on purpose.
+   */
+  describe("when nobody is signed in", () => {
+    it("does not leave the previous account's decision for the next visitor", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      markerFor("1", "granted");
+      const fetchMock = vi.spyOn(globalThis, "fetch");
+
+      await mount(null);
+
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
+      expect(window.localStorage.getItem(SYNCED_KEY)).toBeNull();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("leaves a guest's own answer alone, because no account ever synced here", async () => {
+      /*
+       * The opposite mistake, and the reason the signal is the *marker*
+       * rather than the session: a guest who answered the banner and never
+       * signed in has made a decision of their own. Clearing on every
+       * signed-out load would ask them again on every page, for ever, and
+       * would post nothing for anyone.
+       */
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      const fetchMock = vi.spyOn(globalThis, "fetch");
+
+      await mount(null);
+
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBe(
+        "granted"
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("asks the next visitor rather than posting the old answer when they sign in", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      markerFor("1", "granted");
+      const fetchMock = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(okResponse());
+
+      await mount(null);
+      await reload(2);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
+    });
+  });
+
+  /*
+   * The residual risk under `markSynced`'s old comment. If the marker cannot
+   * be written, the decision that outlives it has no account attached to it,
+   * and the *next* account to sign in reads it as its own — which is the
+   * outcome Ruling 12 names the worst of the three, reached by a route
+   * Ruling 12 did not close.
+   */
+  describe("when the sync marker cannot be persisted", () => {
+    /*
+     * Patched on `Storage.prototype`, not on `window.localStorage`: jsdom's
+     * `localStorage` is a Proxy, and a spy installed as an own property on
+     * it is never consulted — the `get` trap hands back the prototype's
+     * method. A spy on the instance therefore *passes* against code that
+     * still writes the marker, which is the worst shape a test can have.
+     */
+    const breakMarkerWrites = (mode: "no-op" | "throw") => {
+      const write = Storage.prototype.setItem;
+
+      vi.spyOn(console, "warn").mockImplementation(() => {
+        // The failure is logged; silenced here, not asserted.
+      });
+
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+        this: Storage,
+        key: string,
+        value: string
+      ) {
+        if (key === SYNCED_KEY) {
+          if (mode === "throw") {
+            throw new DOMException("quota exceeded", "QuotaExceededError");
+          }
+
+          return;
+        }
+
+        write.call(this, key, value);
+      });
+    };
+
+    it("does not keep a decision it could not attach an account to", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      const fetchMock = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(okResponse());
+      breakMarkerWrites("throw");
+
+      await mount(1);
+
+      // The row was written — the decision is on the record for account 1.
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      // What is not kept is the browser's copy, because this browser can no
+      // longer say whose it is.
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
+    });
+
+    it("catches a store that accepts the write and keeps nothing, not only one that throws", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(okResponse());
+      breakMarkerWrites("no-op");
+
+      await mount(1);
+
+      expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
+    });
+
+    it("so the next account does not inherit it", async () => {
+      window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      const fetchMock = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(okResponse());
+      breakMarkerWrites("throw");
+
+      await mount(1);
+      await reload(2);
+
+      // One row, for account 1, and nothing fabricated for account 2.
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
 });

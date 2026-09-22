@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ANALYTICS_CONSENT_KEY } from "@/lib/consentStore";
 import { AccountConsentControl } from "./AccountConsentControl";
+import { ConsentSync } from "./ConsentSync";
 
 let container: HTMLDivElement;
 let root: Root;
@@ -29,11 +30,28 @@ describe("AccountConsentControl", () => {
     props: Parameters<typeof AccountConsentControl>[0] = {
       initialConsent: null,
       locale: "nl",
-      userId: 1,
     }
   ) => {
     await act(async () => {
       root.render(<AccountConsentControl {...props} />);
+    });
+  };
+
+  /**
+   * The account page as it really renders: this section, plus the
+   * reconciler `[locale]/layout.tsx` mounts above it. The two halves of one
+   * toggle — write the store, record the row — live in different components
+   * now, so the property that there is exactly *one* row per toggle is only
+   * visible with both of them mounted.
+   */
+  const mountWithReconciler = async (userId: number | string = 42) => {
+    await act(async () => {
+      root.render(
+        <>
+          <AccountConsentControl initialConsent={null} locale="nl" />
+          <ConsentSync userId={userId} />
+        </>
+      );
     });
   };
 
@@ -52,30 +70,24 @@ describe("AccountConsentControl", () => {
     // `ConsentBanner`. The recorded-decision caption is unaffected: it is
     // server-known already, see the next tests.
     const html = renderToStaticMarkup(
-      <AccountConsentControl initialConsent={null} locale="nl" userId={1} />
+      <AccountConsentControl initialConsent={null} locale="nl" />
     );
     expect(html).not.toContain('role="switch"');
   });
 
-  it("reflects a granted decision as checked", async () => {
-    window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
-    await mount();
-
-    expect(switchEl()?.getAttribute("aria-checked")).toBe("true");
-  });
-
-  it("reflects a denied decision, and an undecided one, as unchecked", async () => {
-    await mount();
-
-    expect(switchEl()?.getAttribute("aria-checked")).toBe("false");
-  });
-
-  it("writes the store and posts a new row when toggled on", async () => {
+  /*
+   * The switch's own behaviour is `ConsentDeviceControl.test.tsx`'s subject
+   * — it is the same component the privacy page renders for guests. What is
+   * asserted here is what only this composition can show: one toggle, one
+   * row, and the two Ruling 11 pins below, which belong to the component
+   * that actually receives the account's recorded row.
+   */
+  it("records a toggle exactly once, through the reconciler and not twice", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(okResponse());
 
-    await mount();
+    await mountWithReconciler(42);
     await act(async () => {
       switchEl().click();
     });
@@ -85,21 +97,34 @@ describe("AccountConsentControl", () => {
     const [path, init] = fetchMock.mock.calls[0];
     expect(path).toBe("/api/consent");
     expect(JSON.parse(String(init?.body))).toEqual({ analyticsConsent: true });
-    expect(switchEl().getAttribute("aria-checked")).toBe("true");
+    // Written for the account the layout passed down, not a hardcoded id.
+    expect(window.localStorage.getItem("smog.consent.synced")).toBe(
+      JSON.stringify({ userId: "42", value: "granted" })
+    );
   });
 
-  it("withdraws consent — a second row, not an update", async () => {
+  it("records a withdrawal as its own row, not as an amendment", async () => {
     window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+    /*
+     * Already reconciled for this account before the page loads — otherwise
+     * the reconciler's own first-sync POST would be counted here as well,
+     * and this test is about what the *toggle* causes.
+     */
+    window.localStorage.setItem(
+      "smog.consent.synced",
+      JSON.stringify({ userId: "42", value: "granted" })
+    );
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(okResponse());
 
-    await mount();
+    await mountWithReconciler(42);
     await act(async () => {
       switchEl().click();
     });
 
     expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBe("denied");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     const [, init] = fetchMock.mock.calls[0];
     expect(JSON.parse(String(init?.body))).toEqual({
       analyticsConsent: false,
@@ -122,7 +147,6 @@ describe("AccountConsentControl", () => {
         recordedAt: "2026-01-05T00:00:00.000Z",
       },
       locale: "nl",
-      userId: 1,
     });
 
     expect(switchEl()?.getAttribute("aria-checked")).toBe("false");
@@ -154,7 +178,6 @@ describe("AccountConsentControl", () => {
         recordedAt: "2026-01-05T00:00:00.000Z",
       },
       locale: "nl",
-      userId: 1,
     });
 
     expect(switchEl()?.getAttribute("aria-checked")).toBe("false");
@@ -167,7 +190,6 @@ describe("AccountConsentControl", () => {
         recordedAt: "2026-01-05T00:00:00.000Z",
       },
       locale: "nl",
-      userId: 1,
     });
 
     const caption = container.querySelector(
@@ -184,7 +206,6 @@ describe("AccountConsentControl", () => {
         recordedAt: "2026-02-11T00:00:00.000Z",
       },
       locale: "en",
-      userId: 1,
     });
 
     const caption = container.querySelector(
@@ -195,7 +216,7 @@ describe("AccountConsentControl", () => {
   });
 
   it("renders the no-answer state when there is no recorded row, not a default that reads as a refusal", async () => {
-    await mount({ initialConsent: null, locale: "fr", userId: 1 });
+    await mount({ initialConsent: null, locale: "fr" });
 
     const caption = container.querySelector(
       '[data-testid="account-consent-record"]'
@@ -205,7 +226,7 @@ describe("AccountConsentControl", () => {
     );
   });
 
-  it("speaks each locale for the device-scoped label", async () => {
+  it("speaks each locale for the recorded-answer caption", async () => {
     const rendered = new Set<string>();
 
     for (const locale of ["nl", "en", "fr"] as const) {
@@ -213,29 +234,10 @@ describe("AccountConsentControl", () => {
         root.unmount();
       });
       root = createRoot(container);
-      await mount({ initialConsent: null, locale, userId: 1 });
+      await mount({ initialConsent: null, locale });
       rendered.add(container.textContent ?? "");
     }
 
     expect(rendered.size).toBe(3);
-  });
-
-  it("posts with this account's own id when toggled", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(okResponse());
-
-    await mount({ initialConsent: null, locale: "nl", userId: 42 });
-    await act(async () => {
-      switchEl().click();
-    });
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    // The marker `postConsent` writes is keyed by the id passed in, not a
-    // hardcoded one — asserted indirectly here via the stored marker, since
-    // `ConsentSync.test.tsx` covers the marker's shape directly.
-    expect(window.localStorage.getItem("smog.consent.synced")).toBe(
-      JSON.stringify({ userId: "42", value: "granted" })
-    );
   });
 });

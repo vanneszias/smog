@@ -192,19 +192,19 @@ export default async function LocaleLayout({
          * component that merges renders on gesture pages. See
          * `components/GuestFavoritesSync.tsx`.
          */}
-        {user === null ? null : (
-          <>
-            <GuestFavoritesSync />
-            {/*
-             * Only when there is a session, for the same reason
-             * `GuestFavoritesSync` is: a guest has nothing to reconcile —
-             * their decision is not attached to an account yet, and stays in
-             * `localStorage` until there is one. See
-             * `components/ConsentSync.tsx`.
-             */}
-            <ConsentSync userId={user.id} />
-          </>
-        )}
+        {user === null ? null : <GuestFavoritesSync />}
+        {/*
+         * Outside the session guard, unlike `GuestFavoritesSync`, and for a
+         * reason the guard itself used to hide: a guest has nothing to
+         * *post*, but a browser that was signed in a moment ago still holds
+         * the decision that account made — and mounted only for a session,
+         * this component never sees the sign-out that leaves it there. The
+         * next person on a shared machine would then be tracked on somebody
+         * else's "granted", with no banner and no decision of their own. It
+         * takes `null` for a guest and clears exactly that case; see
+         * `components/ConsentSync.tsx`.
+         */}
+        <ConsentSync userId={user === null ? null : user.id} />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
           {children}
         </main>
