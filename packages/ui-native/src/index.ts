@@ -9,6 +9,7 @@
  */
 export { Avatar, type AvatarProps, avatarVariants } from "./components/Avatar";
 export { Badge, type BadgeProps, badgeVariants } from "./components/Badge";
+export { Banner, type BannerProps } from "./components/Banner";
 export { Button, type ButtonProps, buttonVariants } from "./components/Button";
 export { Card, type CardProps, cardVariants } from "./components/Card";
 export {
