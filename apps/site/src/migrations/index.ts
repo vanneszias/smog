@@ -23,6 +23,7 @@ import * as migration_20260921_200000_add_payload_jobs from "./20260921_200000_a
 import * as migration_20260921_220000_add_job_schedules from "./20260921_220000_add_job_schedules";
 import * as migration_20260922_100000_add_rate_limits from "./20260922_100000_add_rate_limits";
 import * as migration_20260923_001946_add_legacy_ids from "./20260923_001946_add_legacy_ids";
+import * as migration_20260923_015408_sync_snapshot from "./20260923_015408_sync_snapshot";
 
 export const migrations = [
   {
@@ -149,5 +150,10 @@ export const migrations = [
     up: migration_20260923_001946_add_legacy_ids.up,
     down: migration_20260923_001946_add_legacy_ids.down,
     name: "20260923_001946_add_legacy_ids",
+  },
+  {
+    up: migration_20260923_015408_sync_snapshot.up,
+    down: migration_20260923_015408_sync_snapshot.down,
+    name: "20260923_015408_sync_snapshot",
   },
 ];
