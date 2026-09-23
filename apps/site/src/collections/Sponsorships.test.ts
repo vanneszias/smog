@@ -127,7 +127,7 @@ describe("Sponsorships collection", () => {
      * rows carrying one payment id, which a unique index refuses — so the
      * constraint made the shipped bulk purchase impossible rather than safer.
      * `Sponsorships.int.test.ts` proves two rows may now share one id, and
-     * `migrations/migrations.test.ts` proves a *deployed* database gets an
+     * `migrations.test.ts` proves a *deployed* database gets an
      * ordinary index.
      */
     expect(field("molliePaymentId")).not.toHaveProperty("unique", true);

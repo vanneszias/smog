@@ -10,7 +10,7 @@ import { DatabaseSync } from "node:sqlite";
 import type { MigrateDownArgs, MigrateUpArgs } from "@payloadcms/db-d1-sqlite";
 import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
-import { migrations } from "./index";
+import { migrations } from "./migrations/index";
 
 /**
  * @fileoverview Replays the migration chain against a real SQLite database.
@@ -138,13 +138,55 @@ describe("migration chain", () => {
     // invisible to `payload migrate` — it simply never runs, and the schema
     // silently drifts from the collection configs.
     const { readdir } = await import("node:fs/promises");
-    const files = (await readdir(new URL(".", import.meta.url)))
+    const files = (await readdir(new URL("./migrations/", import.meta.url)))
       .filter((f) => f.endsWith(".ts"))
       .filter((f) => f !== "index.ts" && !f.endsWith(".test.ts"))
       .map((f) => f.replace(/\.ts$/, ""))
       .sort();
 
     expect(migrations.map((m) => m.name).sort()).toEqual(files);
+  });
+
+  it("keeps src/migrations/ free of anything Payload's migrate loader would import as a migration", async () => {
+    // `readMigrationFiles` (payload/dist/database/migrations/readMigrationFiles.js)
+    // imports every `.ts`/`.js` file in this directory except `index.ts` /
+    // `index.js` — full stop. It does not know Vitest exists and does not
+    // exclude `*.test.ts`, so a colocated test file crashes `payload migrate`
+    // calling `describe()` outside a test runner, before any database
+    // connection is made. That is exactly what this suite used to be, sitting
+    // right here as `src/migrations/migrations.test.ts`, and exactly why it
+    // no longer does.
+    //
+    // The test above only compares against the *barrel*, and explicitly
+    // excludes `*.test.ts` while doing it — so it would not have caught that
+    // file. This one reads the directory the way Payload's loader does: no
+    // `*.test.ts` exclusion, and every survivor must both look like a
+    // migration filename and actually be one.
+    const { readdir } = await import("node:fs/promises");
+    const dir = new URL("./migrations/", import.meta.url);
+    const loadedByPayload = (await readdir(dir))
+      .filter((f) => f.endsWith(".ts") || f.endsWith(".js"))
+      .filter((f) => f !== "index.ts" && f !== "index.js");
+
+    // Matches this directory's actual naming, e.g.
+    // `20260922_100000_add_rate_limits.ts` or the bare `20250929_111647.ts`.
+    const migrationFilename = /^\d{8}_\d{6}(?:_[a-z0-9]+)*\.ts$/;
+
+    for (const file of loadedByPayload) {
+      expect(file).toMatch(migrationFilename);
+    }
+
+    // And a file that merely looks like a migration but was never wired into
+    // the barrel — or was wired in without a real `up`/`down` — is exactly
+    // as dangerous as one Payload can't parse: `readMigrationFiles` reads
+    // `migration.up`/`migration.down` off whatever the module exports.
+    const names = loadedByPayload.map((f) => f.replace(/\.(ts|js)$/, ""));
+    expect(migrations.map((m) => m.name).sort()).toEqual(names.sort());
+
+    for (const migration of migrations) {
+      expect(typeof migration.up).toBe("function");
+      expect(typeof migration.down).toBe("function");
+    }
   });
 
   it("ends with the re-edit token uniquely indexed and the payment id not", async () => {
