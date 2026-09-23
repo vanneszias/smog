@@ -372,3 +372,13 @@ after cleanup showed only the intended source changes (`.gitignore`; docs).
   `src/migrations.test.ts` (so `readMigrationFiles` never sees it) and a
   guard test was added so a stray file in `src/migrations/` that merely
   looks like a migration is caught rather than silently imported.
+
+## Rulings made during execution
+
+Every decision taken during execution without a human, in order, each with its cost if wrong. Note: the Step 3 row "No JOBS_RUN_TOKEN → loud log, no throw" was observed before the final review made onScheduled log *and rethrow*; today that case logs and then rejects the waitUntil promise so Cron Past Events records it as failed.
+
+- Task 1: Ruling: plan defect — runScheduledTick builds a Request with no Host header; through OpenNext's edge converter and Next's initURL the job sees req.origin = https://undefined or https://localhost, breaking the renewal/confirmation links SITE_ORIGIN exists for. Rule: set `host: new URL(origin).host` on the tick request, unit-test it, and make Task 2 prove the origin a job actually sees — cost if wrong: one redundant header.
+- Task 1: Ruling: prefer the package.json subpath import `#open-next-worker` with a `types` condition (verified with tsc 6.0.3 and esbuild) over global `allowJs: false` + a hand-written importMap.d.ts; restore allowJs and delete importMap.d.ts. If knip rejects the `#` import, fall back to allowJs:false and say so — cost if wrong: one package.json `imports` entry.
+- Ruling: onScheduled logs then rethrows in both branches so the failing waitUntil is recorded in Cron Past Events (Cloudflare docs: the first failing waitUntil sets the status), and wrangler.jsonc gains top-level "observability": {"enabled": true} (inheritable) so the [cron]/[jobs] lines persist in Workers Logs — corrects the plan's "never rejects" — cost if wrong: a cron failure shows as failed in the dashboard (the intent) and Workers Logs usage counts against the plan's log quota.
+- Ruling: migrations guard regex widened to /^\d{8}_\d{6}(?:_\w+)?\.ts$/ to accept every name payload migrate:create can emit (drizzle builds names with \W→_) — cost if wrong: none; the barrel-equality and up/down checks still catch strays.
+- Final review: parked — the plan's Step 3 proof table row "No JOBS_RUN_TOKEN → loud log, no throw — Observed" predates the rethrow fix; it is history, not current behaviour — Ruling: annotate it in the rulings section rather than rewrite the observed record — cost if wrong: a skimming reader misreads one table row.
