@@ -164,9 +164,7 @@ function buildStartPayload(input: StartRenderInput): Record<string, unknown> {
     jpegQuality: 80, // `?? 80`
     maxRetries: 1,
     // Public because Mux ingests the output by its URL, and the Mux asset made
-    // from it is `playback_policy: "public"` anyway
-    // (`docs/superpowers/specs/2026-09-19-payload-migration-design.md`,
-    // lines 1332-1354).
+    // from it is `playback_policy: "public"` anyway.
     privacy: "public",
     // "warn", not the client's "info" default. At "info" every routine's
     // `printLoggingGrepHelper` (`@remotion/serverless`,

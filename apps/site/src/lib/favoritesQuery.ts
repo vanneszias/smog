@@ -6,22 +6,22 @@ import type { Locale } from "./locale";
  * Turning a guest's stored ids into cards, without a server route of our own.
  *
  * **Why this is a query builder and not an endpoint.** The first version of
- * this task added `GET /[locale]/favorites/gestures`: a narrow route that ran
+ * this added `GET /[locale]/favorites/gestures`: a narrow route that ran
  * `payload.find` on the server and answered with exactly `GestureSummary`.
  * It was nicer code. It also cost **519 KiB gzipped**, measured three ways:
  *
  * | build | gzipped |
  * |---|---|
- * | before this task | 7,406.37 KiB |
+ * | before favorites | 7,406.37 KiB |
  * | favorites, with a Payload-free stub route | 7,446.27 KiB |
  * | favorites, with the route calling Payload | 7,964.99 KiB |
  *
  * Every route entry that reaches Payload bundles the Payload/D1/drizzle graph
- * again — the same per-route duplication Stage 3 Task 5 recorded for Mux. The
- * page, the island and the button together are the 40 KiB in the middle row;
- * the other half-megabyte was one `import` in a route handler. Against a
- * budget with 786 KiB of headroom and three tasks still to land, that is not
- * a trade worth making for a projection.
+ * again — the same per-route duplication already measured for Mux. The page,
+ * the island and the button together are the 40 KiB in the middle row; the
+ * other half-megabyte was one `import` in a route handler. Against a budget
+ * with 786 KiB of headroom at the time, that is not a trade worth making for a
+ * projection.
  *
  * So the browser asks Payload's own `/api/gestures`, which is already
  * bundled, already public and already access-filtered. **The properties that

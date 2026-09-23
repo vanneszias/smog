@@ -7,30 +7,29 @@
  *
  * | build | gzipped | delta |
  * |---|---:|---:|
- * | baseline (Stage 5 Task 2) | 7,483.37 KiB | — |
+ * | baseline | 7,483.37 KiB | — |
  * | + `@mollie/api-client` reachable from an endpoint | 7,649.08 KiB | **+165.71** |
  * | this module (`fetch`) | 7,483.37 KiB | **0.00** |
  *
- * That is 166 KiB out of the 2.69 MiB left in a 10.00 MiB Worker, which
- * Stages 6 (video) and 7 (email and jobs) still have to fit inside — and the
- * plan's bar was "under 100 KiB gzipped *and* say what it buys". It is over
+ * That is 166 KiB out of the 2.69 MiB then left in a 10.00 MiB Worker, which
+ * video, email and jobs still had to fit inside — and the bar for a
+ * dependency is "under 100 KiB gzipped *and* say what it buys". It is over
  * the bar and it buys two URL templates, so: `fetch`. (The 0.00 on the last
- * row is real but temporary: nothing reaches this module from the Worker
- * graph until Task 4 and Task 7 import it.)
+ * row was measured before anything in the Worker graph imported this module.)
  *
  * A second finding from that measurement, worth more than the number:
- * `createMollieClient({ apiKey: "" })` **throws at module evaluation**. The
- * shipped `packages/auth/src/lib/payments.ts` constructs the client at module
- * scope with `process.env.MOLLIE_API_KEY || ""`, so anything that imports it
- * without the variable set dies on import — which is how the probe build
- * failed here, during `next build`'s page-data collection. The functions
- * below read the key per call instead, so an unset key is an error on the one
- * request that needed it rather than a dead Worker.
+ * `createMollieClient({ apiKey: "" })` **throws at module evaluation**. A
+ * module that constructs the client at module scope with
+ * `process.env.MOLLIE_API_KEY || ""` therefore dies on import without the
+ * variable set — which is how the probe build failed here, during
+ * `next build`'s page-data collection. The functions below read the key per
+ * call instead, so an unset key is an error on the one request that needed it
+ * rather than a dead Worker.
  *
  * **The secret.** `process.env.MOLLIE_API_KEY` is read on exactly one line of
  * this file and leaves it only as an `Authorization: Bearer` header. It is not
  * interpolated into a URL, a body, a log line or an error message, and this
- * file never logs at all — the callers (Task 4's webhook, Task 7's checkout)
+ * file never logs at all — the callers (the webhook, the checkout)
  * do the logging, from messages constructed here that are safe to print. The
  * variable's name is not restated in any string, so that
  *
@@ -56,13 +55,12 @@ const REQUEST_TIMEOUT_MS = 10_000;
 /**
  * What `createMolliePayment` needs to open a checkout.
  *
- * Not exported, and neither is `MolliePayment` below, although both are part
- * of this module's contract. knip fails the build on an exported symbol
- * nothing imports, and nothing imports these until Task 4's webhook and Task
- * 7's checkout land — a type exported "for later" is precisely what that
- * gate exists to catch. Callers pass an object literal, which is checked
- * against this shape just the same; the `export` keyword goes on at the
- * moment a caller needs to name it.
+ * Not exported, and neither is `MolliePayment` below, although both are part of
+ * this module's contract. knip fails the build on an exported symbol nothing
+ * imports, and nothing outside this module names these — a type exported "for
+ * later" is precisely what that gate exists to catch. Callers pass an object
+ * literal, which is checked against this shape just the same; the `export`
+ * keyword goes on at the moment a caller needs to name it.
  */
 interface CreateMolliePaymentInput {
   /** The whole order, in euro cents. `lib/pricing.ts` computes it. */
@@ -222,12 +220,11 @@ function stringMetadata(value: unknown): Record<string, string> {
  *
  * The sponsorship ids travel in `metadata.sponsorshipIds` as a JSON array of
  * strings, which is the only thing that lets the webhook work out what a
- * payment paid for — Mollie hands metadata back verbatim on read. The
- * shipped product also sets `isBulkPayment: "true"`; this does not, because
- * `apps/site` writes one sponsorship row per selected gesture, so every
- * payment names a list and a flag that is always true carries no
- * information. Task 4's webhook is the only reader of this metadata and is
- * written against this shape.
+ * payment paid for — Mollie hands metadata back verbatim on read. There is no
+ * `isBulkPayment` flag: `apps/site` writes one sponsorship row per selected
+ * gesture, so every payment names a list and a flag that is always true would
+ * carry no information. The webhook (`endpoints/mollie.ts`) is the only reader
+ * of this metadata and is written against this shape.
  *
  * @throws If the amount is not a positive whole number of cents, if no
  *   sponsorship is named, if the key is unset, or if Mollie refuses,

@@ -179,7 +179,7 @@ describe("fetchGesture", () => {
   });
 
   it("serves the Dutch name to a French visitor rather than a blank page", async () => {
-    // Review Focus item 1 reaches the detail page too: most content has no
+    // The locale fallback reaches the detail page too: most content has no
     // French translation, and `fallback: true` applies to the read. The
     // *inactive* gesture is the Dutch-only one here, so it is read as the
     // admin who is allowed to see it.

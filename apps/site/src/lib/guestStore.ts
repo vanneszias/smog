@@ -1,16 +1,15 @@
 /**
  * Guest favorites, kept in the browser.
  *
- * `users.favorites` exists from Stage 1 Task 4, but nothing can write it
- * without auth and auth is Stage 4. The product decision of 2026-09-19 is
- * that a guest keeps this state locally and is prompted to sign in when they
- * want it synced — so there is deliberately **no guest identity** here: no
+ * `users.favorites` holds a signed-in reader's favorites. A guest keeps this
+ * state locally and is prompted to sign in when they want it synced — a
+ * product decision — so there is deliberately **no guest identity** here: no
  * generated id, no anonymous account, no server-side session. A row of ids in
  * `localStorage` and nothing else.
  *
  * **Every function in this module degrades to "no favorites" and none of them
- * throws.** That is Review Focus item 3 and it is the whole point of the
- * module. The reasons are not hypothetical:
+ * throws.** That is the whole point of the module. The reasons are not
+ * hypothetical:
  *
  * - `localStorage` is a *getter* on `window`, and in private browsing or with
  *   site data blocked it throws `SecurityError` when read. It does not return
@@ -167,7 +166,7 @@ export function toggleGuestFavorite(id: string): string[] {
 /**
  * Forgets the whole guest list, or gives up quietly.
  *
- * The one irreversible step in Task 6's sign-in merge, which is why it is a
+ * The one irreversible step in the sign-in merge, which is why it is a
  * function of its own rather than `toggleGuestFavorite` in a loop: the merge
  * has to be able to say "and only now" about exactly this, and a caller that
  * cleared id by id would leave a half-cleared list behind on the write that

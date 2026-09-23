@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Renders } from "@/collections/Renders";
 import { canAdvance, RENDER_STATES, type RenderState } from "@/lib/renderState";
 
-/** The `state` column's options, read off the shipped collection config. */
+/** The `state` column's options, read off the collection config. */
 function collectionStates(): string[] {
   const field = Renders.fields.find(
     (candidate) => "name" in candidate && candidate.name === "state"
@@ -51,7 +51,7 @@ describe("the render state table", () => {
     // `ready` means a Mux asset exists and plays. The only code that can know
     // that is the code that uploaded it, and it passes through `uploading` on
     // the way — so this edge is what stops a sponsorship being pointed at an
-    // asset that was never created. Stage 6 exit criterion 7.
+    // asset that was never created.
     expect(canAdvance("rendering", "ready")).toBe(false);
     expect(canAdvance("queued", "ready")).toBe(false);
   });

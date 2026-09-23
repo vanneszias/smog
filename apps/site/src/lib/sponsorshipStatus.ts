@@ -3,10 +3,9 @@ import type { SponsorshipStatus } from "@smog/config/sponsorships";
 /**
  * Which status may follow which.
  *
- * Stage 1 defined the seven values and deliberately left every transition
- * between them legal — the spec records it as deferred. This is the table
- * that closes it, and it is data rather than a chain of `if`s so that the
- * whole policy can be read, tested and diffed in one place.
+ * Without this table every transition between the seven values would be legal.
+ * This is the table that closes that, and it is data rather than a chain of
+ * `if`s so that the whole policy can be read, tested and diffed in one place.
  *
  * A status staying put is allowed by `canTransition` rather than by a
  * self-edge here, because *every* update re-submits `status`: renaming a
@@ -18,15 +17,11 @@ import type { SponsorshipStatus } from "@smog/config/sponsorships";
  * sponsorship, which is a new row with its own payment. Re-opening one
  * would silently reuse a paid-for record.
  *
- * `rejected` is *not* one of them, and the plan this table came from was
- * wrong to say so. The shipped product re-opens a rejected sponsorship:
- * `packages/convex/convex/sponsorships.ts`'s `generateReEditLink` lists
- * `rejected` among the statuses it accepts, and
- * `apps/web/src/components/admin/sponsorships/SponsorshipDetailsPanel.tsx`
- * renders the "Let Sponsor Re-edit" button for it. The migration's non-goal
- * is that sponsorship behaviour does not change, so the product wins. Note
- * it is the only edge out: a rejected sponsorship cannot be approved
- * straight back to `active` without passing through the queue again.
+ * `rejected` is *not* one of them, however terminal it looks. An administrator
+ * may re-open a rejected sponsorship for a re-edit, which is established
+ * sponsorship behaviour, so it wins over a tidier table. Note it is the only
+ * edge out: a rejected sponsorship cannot be approved straight back to `active`
+ * without passing through the queue again.
  *
  * The subpath import rather than the `@smog/config` barrel is the same
  * constraint `collections/Sponsorships.ts` documents: this module reaches

@@ -238,8 +238,8 @@ describe("the render callback signature", () => {
      * `scheme.header === scheme.header` would pass under every mutation, and a
      * test that built the expected signature from the same constant the
      * implementation reads would pass under a changed algorithm too — which is
-     * exactly the trap Task 2 recorded, where signing and verifying change
-     * together and nothing notices.
+     * exactly the trap where signing and verifying change together and nothing
+     * notices.
      *
      * `endpoints/render.ts` reads the header name from here rather than
      * repeating it, so changing this constant moves the endpoint with it.

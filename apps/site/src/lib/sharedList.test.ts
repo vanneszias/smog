@@ -45,7 +45,7 @@ describe("fetchSharedList", () => {
    * dropping either one alone changes no answer and only a structural
    * assertion can see it. Asserting both in one test means a sweep cannot
    * tell which brace it broke, which is how a removed guard gets waved
-   * through as "some other test caught it". See task-7-report.md, M22/M23.
+   * through as "some other test caught it".
    */
   it("reads through the access layer rather than around it", async () => {
     await fetchSharedList({ locale: "nl", token: "abc123" });

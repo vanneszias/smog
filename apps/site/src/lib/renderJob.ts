@@ -11,9 +11,9 @@ import { claimRenderJob, releaseRenderJob } from "@/lib/renderState";
  *
  * ## Decision: `fetch` and SigV4 rather than `@remotion/lambda`. Measured.
  *
- * The plan asked for a measurement before either was chosen, on the grounds
- * that Stage 5 rejected the Mollie SDK at +165.71 KiB gzipped for two REST
- * calls. Measured the same way
+ * Measured before either was chosen, on the grounds that the Mollie SDK was
+ * rejected at +165.71 KiB gzipped for two REST calls (`lib/mollie.ts`).
+ * Measured the same way
  * (`CLOUDFLARE_ENV=staging bun run build:app && bun run check-bundle-size`),
  * with `renderMediaOnLambda` imported from `@remotion/lambda/client` into an
  * endpoint so it could not be tree-shaken away:
@@ -23,13 +23,13 @@ import { claimRenderJob, releaseRenderJob } from "@/lib/renderState";
  * | without it | 7514.73 KiB | 27% |
  * | with it | 8268.12 KiB | 19% |
  *
- * **+753.39 KiB gzipped**, which is four and a half times what Stage 5 refused
- * to spend. The dependency is therefore not added: `lib/remotionLambda.ts`
- * sends the one request itself, and its test holds it byte-identical to the
- * official client's.
+ * **+753.39 KiB gzipped**, which is four and a half times what the Mollie SDK
+ * was refused for. The dependency is therefore not added:
+ * `lib/remotionLambda.ts` sends the one request itself, and its test holds it
+ * byte-identical to the official client's.
  *
  * `@remotion/lambda/client` does **not** pull in the AWS SDK, contrary to the
- * plan's original reasoning: it re-exports `@remotion/lambda-client`, whose
+ * obvious assumption: it re-exports `@remotion/lambda-client`, whose
  * `dependencies` are empty. The cost is the rest of the Remotion client
  * surface — its zod schemas and serverless protocol types.
  *

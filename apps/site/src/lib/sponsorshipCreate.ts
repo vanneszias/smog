@@ -9,23 +9,23 @@ import type { Sponsorship } from "@/payload-types";
  * Payload generates `status` and `durationYears` as required on create
  * because they are `required: true` on the field, and does not account for
  * `defaultValue` — so the call the default exists to serve does not
- * typecheck. The spec records this and asks for one central fix rather than
- * a cast at each call site, which is what this is.
+ * typecheck. This is one central fix for that, rather than a cast at each
+ * call site.
  *
  * `Omit` plus `Partial` rather than a bare `as`: a cast would also silence a
  * genuinely missing `sponsorName`, and every field except these two is
  * still checked. The test file pins that with a `@ts-expect-error`, which is
  * the only thing that makes a widening of this type to `any` visible.
  *
- * The plan offered a second formulation —
+ * There is a tempting second formulation —
  * `Parameters<Payload["create"]>[0] extends { data: infer D } ? D : never` —
- * and it does not work. `payload.create` is generic over the collection
- * slug, so `Parameters<...>[0]` resolves the parameter to its constraint and
- * yields a `data` type for *no particular collection*:
- * `A extends { sponsorName: string }` is false, and the resulting type is
- * not assignable to `create`'s own parameter. `RequiredDataFromCollectionSlug`
- * is the named export Payload provides for exactly this, and it is what is
- * used below.
+ * and it does not work. `payload.create` is generic over the collection slug,
+ * so `Parameters<...>[0]` resolves the parameter to its constraint and yields a
+ * `data` type for *no particular collection*:
+ * `A extends { sponsorName: string }` is false, and the resulting type is not
+ * assignable to `create`'s own parameter. `RequiredDataFromCollectionSlug` is
+ * the named export Payload provides for exactly this, and it is what is used
+ * below.
  */
 export type NewSponsorship = Omit<
   RequiredDataFromCollectionSlug<"sponsorships">,

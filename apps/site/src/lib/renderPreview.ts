@@ -1,21 +1,21 @@
 /**
- * **The Stage 6 seam, opened.**
+ * **A seam, deliberately.**
  *
  * Which video the review step plays, given the sponsorship in front of it.
  *
  * ## What this returns, and what changed
  *
  * The composed preview when there is one, and the gesture's own video until
- * there is. Stage 5 built this function to return the original *always*, and
- * said so as a test rather than as a comment: `renderPreview.test.ts` asserted
- * that a subject carrying a composed preview still played the original, with
- * the note that the test was supposed to fail in Stage 6. Task 4 is that
- * failure, and the body is all that changed — **the signature did not**, so
- * the two callers (`sponsor/preview/page.tsx` and `sponsor/re-edit/page.tsx`)
- * are untouched by this commit and keep calling it exactly as before.
+ * there is. It once returned the original *always*, and said so as a test
+ * rather than as a comment: `renderPreview.test.ts` asserted that a subject
+ * carrying a composed preview still played the original, with the note that
+ * the test was meant to fail once composition existed. It did, and the body
+ * is all that changed — **the signature did not**, so the two callers
+ * (`sponsor/preview/page.tsx` and `sponsor/re-edit/page.tsx`) keep calling it
+ * exactly as before.
  *
- * That is what the seam bought. Without it, Stage 6 could have written
- * `previewVideoPlaybackId` from the render callback, never preferred it here,
+ * That is what the seam bought. Without it, the render callback could have
+ * written `previewVideoPlaybackId`, nothing would have preferred it here,
  * and no test in the repository would have noticed that the sponsor was still
  * approving a video with no logo on it.
  *
@@ -23,10 +23,11 @@
  *
  * A render takes minutes and this page is reachable the whole time. A sponsor
  * who reloads mid-render must see the video they are sponsoring with the
- * overlay drawn in HTML on top — which is exactly what Stage 5 shipped — and
- * not an error or an empty player. The fallback is also what covers a render
- * that failed outright: `endpoints/render.ts` records the failure and attaches
- * nothing, so the column stays NULL and this keeps answering.
+ * overlay drawn in HTML on top — which is exactly what the preview did before
+ * composition existed — and not an error or an empty player. The fallback is
+ * also what covers a render that failed outright: `endpoints/render.ts` records
+ * the failure and attaches nothing, so the column stays NULL and this keeps
+ * answering.
  *
  * The empty string is treated as absent along with `null`. A `??` alone would
  * hand the player `""`, which is a broken video rather than the original one,

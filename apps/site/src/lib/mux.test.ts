@@ -32,8 +32,8 @@ const PLAYBACK_ID = "pbSourceForTestsOnly001";
 /**
  * Stand-ins, never real credentials. The key below is generated in this
  * process, used by this file and thrown away — there is no Mux signing key in
- * this project (see the plan's "BLOCKED ON CREDENTIALS"), and one committed to
- * a repository would be a finding rather than a fixture.
+ * this repository, and one committed to a repository would be a finding rather
+ * than a fixture.
  */
 const STUB_KEY_ID = "signing-key-for-tests-only";
 
@@ -99,10 +99,10 @@ function tokenOf(url: string): string {
  * **Nothing here is evidence about Mux.** There are no Mux credentials in this
  * project, so the signing key below is one this file generates. What the tests
  * prove is that the token this application mints is a real RS256 JWT over
- * claims that include an expiry and the playback id it was asked for — which
- * is the half that is this application's to get right. Whether Mux accepts it
- * is Task 6's first contact, and a fake proves the shape of a protocol and
- * never a provider's behaviour.
+ * claims that include an expiry and the playback id it was asked for — which is
+ * the half that is this application's to get right. Whether Mux accepts it is
+ * for a deployed environment to show, and a fake proves the shape of a protocol
+ * and never a provider's behaviour.
  */
 describe("the Mux source URL", () => {
   let publicKey: CryptoKey;
@@ -368,11 +368,11 @@ const ASSET_ID = "assetForTestsOnly001";
  * Mux's protocol and nothing else.
  *
  * **Nothing here is evidence about Mux.** There are no Mux credentials in this
- * project (see the plan's "BLOCKED ON CREDENTIALS"), so what these prove is
- * that this application asks the right question and reads the answer the way
- * it says it does. Whether `DELETE /video/v1/assets/:id` really answers `204`,
- * and whether a missing asset really answers `404`, is Task 6's first contact.
- * Stage 4's Google strategy is the precedent and the warning.
+ * repository, so what these prove is that this application asks the right
+ * question and reads the answer the way it says it does. Whether
+ * `DELETE /video/v1/assets/:id` really answers `204`, and whether a missing
+ * asset really answers `404`, is for a deployed environment to show. The Google
+ * strategy's tests are the precedent and the warning.
  */
 describe("Mux's back half", () => {
   /** Every request this file's code made, in order. */
@@ -615,13 +615,13 @@ describe("Mux's back half", () => {
   });
 
   it("reports an errored asset as errored rather than throwing", async () => {
-    // Review Focus 4. `errored` is Mux's answer, not a failure to answer, and
-    // the caller acts on it — a throw here would be indistinguishable from an
-    // outage, which the caller must not act on.
-    // With its playback id intact, which is what Mux really answers: the ids
-    // are minted when the asset is created, long before ingest can fail. An
-    // errored asset is therefore one that has an id and plays nothing, and a
-    // caller that only looked for a missing id would call it healthy.
+    // `errored` is Mux's answer, not a failure to answer, and the caller acts
+    // on it — a throw here would be indistinguishable from an outage, which the
+    // caller must not act on. With its playback id intact, which is what Mux
+    // really answers: the ids are minted when the asset is created, long before
+    // ingest can fail. An errored asset is therefore one that has an id and
+    // plays nothing, and a caller that only looked for a missing id would call
+    // it healthy.
     answer = () =>
       json({
         data: {

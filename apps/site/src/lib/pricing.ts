@@ -18,9 +18,9 @@ const CENTS_PER_EURO = 100;
 /**
  * What a sponsorship order costs, in euro cents.
  *
- * **Transcribed, not designed.** The migration's non-goal is that pricing
- * does not change, so this is `apps/web/src/lib/pricing.ts`'s
- * `calculateSimplifiedPrice` reduced to the one number the payment needs:
+ * **Fixed, not designed here.** Pricing is behaviour sponsors already pay
+ * against, so this is the established calculation reduced to the one number
+ * the payment needs:
  *
  * ```
  * subtotal  = PRICE_PER_YEAR_CENTS * gestureCount
@@ -28,18 +28,15 @@ const CENTS_PER_EURO = 100;
  * total     = subtotal + logoTotal
  * ```
  *
- * The constants come from `@smog/config`, which both apps share and which
- * survives until Stage 10 — a second copy in `apps/site` would be a second
- * thing to forget the next time a price changes.
+ * The constants come from `@smog/config`, which the apps share — a second
+ * copy in `apps/site` would be a second thing to forget the next time a
+ * price changes.
  *
- * **`FIXED_DURATION_YEARS` is deliberately absent from the arithmetic.**
- * The plan's interface list names it as an input, but the shipped
- * calculation does not multiply by it: it multiplies by `gestureCount`
- * alone and reports `durationYears` alongside the total as a separate field
- * of the breakdown. The two agree today only because the constant is 1, and
- * multiplying here would silently double every price the day somebody set
- * it to 2 while `apps/web` kept charging the old amount. Transcription wins
- * over the plan.
+ * **`FIXED_DURATION_YEARS` is deliberately absent from the arithmetic.** The
+ * calculation multiplies by `gestureCount` alone and reports `durationYears`
+ * alongside the total rather than multiplying it in. The two agree today only
+ * because the constant is 1, and multiplying here would silently double every
+ * price the day somebody set it to 2.
  *
  * @param gestureCount How many gestures the order covers.
  * @param includeLogo Whether the sponsor's logo is overlaid on each of them.
@@ -50,7 +47,7 @@ export function sponsorshipAmountCents(
   gestureCount: number,
   includeLogo: boolean
 ): number {
-  // Not belt-and-braces around Task 6's selection cap, which refuses an
+  // Not belt-and-braces around the selection endpoint's cap, which refuses an
   // over-long selection with a sentence a person can read. This is the
   // money path: a fractional count multiplies into a fractional cent
   // amount, which `toFixed(2)` turns into a rounded charge nobody agreed

@@ -46,7 +46,7 @@ interface GestureOverlay {
  * The four display fields a sponsored gesture page needs, and nothing else.
  *
  * **This is a narrow read path, not a widened one.** `sponsorships.read` has
- * never been public and is not now: Stage 5 widened it only as far as
+ * never been public and is not now: it is widened only as far as
  * `access/sponsorships.ts`, which resolves one unexpired re-edit token to one
  * row and denies everything else. A row carries the sponsor's email, contact
  * name, VAT number, invoice details and re-edit token, and every one of those
@@ -66,13 +66,12 @@ interface GestureOverlay {
  * on it: Payload always returns `id`, and `select` is not a guarantee about
  * what a *relationship* drags along with it.
  *
- * **"Active" is not enough; the term has to be checked too.** Stage 1 shipped
- * no status-transition enforcement and no expiry job, so a row with
- * `status: "active"` and an `endDate` in the past genuinely exists in the
- * data. Rendering it would put a sponsorship nobody is paying for on a public
- * page. All three conditions are therefore in the `where`, where the database
- * applies them to the row it is already reading rather than in a filter over
- * a result the query was free to get wrong.
+ * **"Active" is not enough; the term has to be checked too.** A row with
+ * `status: "active"` and an `endDate` in the past genuinely exists in the data
+ * until the expiry job catches up with it. Rendering it would put a sponsorship
+ * nobody is paying for on a public page. All three conditions are therefore in
+ * the `where`, where the database applies them to the row it is already reading
+ * rather than in a filter over a result the query was free to get wrong.
  *
  * The dates are compared as ISO-8601 strings, which is what the D1 adapter
  * stores and what sorts identically lexically and chronologically. `now` is
@@ -140,14 +139,11 @@ export async function fetchGestureOverlay(
 /**
  * The sponsor's logo, when the sponsor paid for one.
  *
- * Both halves matter, which is why this is a named rule and not an `&&` in
- * the middle of some JSX. `hasLogo` records whether the logo option was part
- * of the package — `packages/convex/convex/schema.ts` says so in as many
- * words ("whether user paid for logo"), and
- * `apps/server/src/services/sponsorship.ts` gates the old renderer on exactly
- * this pair — so an image uploaded against a package that did not include one
- * must not be rendered. An overlay with `hasLogo` set and no image is the
- * other way round: nothing to draw.
+ * Both halves matter, which is why this is a named rule and not an `&&` in the
+ * middle of some JSX. `hasLogo` records whether the logo option was part of the
+ * package — whether the sponsor paid for a logo — so an image uploaded against
+ * a package that did not include one must not be rendered. An overlay with
+ * `hasLogo` set and no image is the other way round: nothing to draw.
  */
 export function sponsorLogo(
   overlay: GestureOverlay

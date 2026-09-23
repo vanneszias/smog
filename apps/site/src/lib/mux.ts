@@ -1,20 +1,19 @@
 /**
  * Mux's Video API, as `fetch`.
  *
- * **Why not `@mux/mux-node`.** The same ruling `lib/mollie.ts` records, for
- * the same two reasons and against the same budget. The Worker has 27% of
- * 10.00 MiB left and Stage 7 shares it; the SDK would buy this module one URL
- * template and a `btoa`. Stage 6 Task 6 re-measures once there are credentials
- * to point it at, and that is the moment to revisit it — not before, because a
- * measurement of an unreachable module is a measurement of nothing.
+ * **Why not `@mux/mux-node`.** The same reasoning `lib/mollie.ts` records, for
+ * the same two reasons and against the same budget. The Worker had 27% of 10.00
+ * MiB left when this was decided; the SDK would buy this module one URL
+ * template and a `btoa`. Re-measure once there are credentials to point it at;
+ * that is the moment to revisit it — not before, because a measurement of an
+ * unreachable module is a measurement of nothing.
  *
  * The second reason is sharper than the first and is why the credentials are
  * read *inside* the function rather than at module scope. A client built at
  * module scope from an unset variable is dead on import:
  * `createMollieClient({ apiKey: "" })` throws in its constructor and killed a
  * whole `next build` here, and `new Mux({ tokenId, tokenSecret })` has exactly
- * the same shape — `apps/server/src/services/mux.ts` constructs it lazily and
- * throws when the pair is missing, which is the behaviour transcribed below.
+ * the same shape — so the pair is read lazily below, and a missing one throws.
  * An unset credential must be an error on the one request that needed it, not
  * a Worker that will not boot.
  *
@@ -40,10 +39,9 @@
  * that sets a fake one.)
  *
  * **Nothing here is proven against Mux.** There are no credentials in this
- * project (see the plan's "BLOCKED ON CREDENTIALS"), so every test that
- * reaches this module answers it with a local fake. A fake proves the shape of
- * a protocol and never the provider's behaviour — Stage 4's Google strategy is
- * the precedent and the warning.
+ * repository, so every test that reaches this module answers it with a local
+ * fake. A fake proves the shape of a protocol and never the provider's
+ * behaviour — the Google strategy's tests are the precedent and the warning.
  */
 
 const MUX_API_BASE = "https://api.mux.com/video/v1";
@@ -191,8 +189,7 @@ function publicPlaybackId(asset: Record<string, unknown>): null | string {
  * that asked for it. `endpoints/render.ts` logs that possibility on a
  * timeout.
  *
- * `playback_policy: ["public"]` matches what this product already creates —
- * `packages/api/src/lib/mux.ts` sets the same on every upload — because the
+ * `playback_policy: ["public"]` matches every other gesture video, because the
  * gesture videos it replaces are played by an unauthenticated public page.
  *
  * @throws If the credentials are unset, or Mux refuses, answers with a
@@ -386,7 +383,7 @@ function pkcs8Bytes(value: string): Uint8Array<ArrayBuffer> {
  * not the video, which the public gesture page already streams. What the
  * endpoint protects is the *enumeration* — which playback ids exist and which
  * gesture each belongs to — and it is the seam that becomes load-bearing the
- * moment a source moves to a signed policy. **Task 6 owns that decision**, and
+ * moment a source moves to a signed policy. **That decision is separate**, and
  * it is a `playback_policy` on the asset rather than a change here.
  *
  * `now` is a parameter rather than read inside, for the reason

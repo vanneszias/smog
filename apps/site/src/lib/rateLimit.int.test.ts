@@ -137,11 +137,11 @@ describe("the rate limiter, against a real database", () => {
   });
 
   /*
-   * The whole reason this module could not be ported. The Redis original used
-   * INCR, which is atomic in the store; D1 has no transactions, so whatever
-   * replaces it has to be atomic in the INSERT or honest about not being.
+   * The whole reason for design (b). A counter in a separate store is
+   * atomic in that store; D1 has no transactions, so a counter here has to be
+   * atomic in the INSERT or honest about not being.
    *
-   * This is the Step 1 gate, and it asserts design (b) — upsert-and-return —
+   * This is the gate, and it asserts design (b) — upsert-and-return —
    * exactly. Measured against design (a), count-then-insert, the same twenty
    * calls at the same limit of ten yielded **twenty** allowed: not an
    * overshoot to be bounded but no limiter at all under the traffic shape a

@@ -9,14 +9,14 @@ import config from "../payload.config";
 /**
  * The server half of the guest-to-account merge, against a real database.
  *
- * Everything the plan asks of this function is a claim about *rows*, not
- * about a return value, so the assertions read the account back rather than
- * trusting what `mergeGuestFavorites` says it did. Two of the five named
- * tests cannot be written any other way: "is idempotent" is a statement
- * about what two runs leave behind, and "ignores a guest id that no longer
- * exists" is a statement about what Payload will happily store if nobody
- * stops it — `isValidID` is a `typeof` check, so a dangling relationship
- * passes validation and only a read of the row shows it.
+ * Everything asked of this function is a claim about *rows*, not about a return
+ * value, so the assertions read the account back rather than trusting what
+ * `mergeGuestFavorites` says it did. Two of the five named tests cannot be
+ * written any other way: "is idempotent" is a statement about what two runs
+ * leave behind, and "ignores a guest id that no longer exists" is a statement
+ * about what Payload will happily store if nobody stops it — `isValidID` is a
+ * `typeof` check, so a dangling relationship passes validation and only a read
+ * of the row shows it.
  *
  * A fresh account per test. The merge is a whole-array write, so tests that
  * shared one would order-depend on each other in exactly the way the

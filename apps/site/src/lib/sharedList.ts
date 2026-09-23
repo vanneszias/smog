@@ -25,8 +25,8 @@ import { getPayloadClient } from "./payloadClient";
  * `{ viewShareToken: { equals: token } }` — so removing either alone changes
  * no answer, and a mutation sweep confirmed exactly that. Removing **both**
  * is caught, loudly, by every resolution test in
- * `shareTokens.int.test.ts`. This is the same pairing Task 3's plan asked for
- * on `isActive`, kept for the same reason: the query stays correct the day
+ * `shareTokens.int.test.ts`. This is the same pairing the gestures list uses
+ * for `isActive`, kept for the same reason: the query stays correct the day
  * someone loosens the access rule for an unrelated reason, and it costs one
  * term in a query that was being built anyway. `sharedList.test.ts` pins each
  * half by name so neither can be dropped as "redundant".
@@ -45,16 +45,15 @@ import { getPayloadClient } from "./payloadClient";
  *
  * **The read is anonymous even when the reader is signed in**, and that is a
  * decision rather than an omission. `listReadAccess` widens a signed-in
- * reader's filter with their token rather than replacing it (the spec's gap
- * 2), so passing the viewer through would work — but it would answer
- * identically, because the token is the whole capability and the `where`
- * pins it either way. A mutation sweep proved it: ignoring the viewer
- * argument failed no test at all, which is what an extra `payload.auth` per
- * request with no observable effect looks like. The widened branch is still
- * needed, and still proven, for the path where the user genuinely arrives on
- * their own — a signed-in browser hitting Payload's REST `/api/lists?
- * shareToken=...`, which `shareTokens.int.test.ts` covers directly. See
- * task-7-report.md, mutation M25.
+ * reader's filter with their token rather than replacing it, so passing the
+ * viewer through would work — but it would answer identically, because the
+ * token is the whole capability and the `where` pins it either way. A mutation
+ * sweep proved it: ignoring the viewer argument failed no test at all, which is
+ * what an extra `payload.auth` per request with no observable effect looks
+ * like. The widened branch is still needed, and still proven, for the path
+ * where the user genuinely arrives on their own — a signed-in browser hitting
+ * Payload's REST `/api/lists? shareToken=...`, which `shareTokens.int.test.ts`
+ * covers directly.
  */
 export async function fetchSharedList({
   locale,

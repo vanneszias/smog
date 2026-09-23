@@ -6,28 +6,24 @@
  * under jsdom and so the two endpoints and the preview page can all reach for
  * it without dragging anything with them.
  *
- * ## Every bound here is transcribed, not designed
+ * ## Every bound here is fixed, not designed
  *
- * The migration's non-goal is that the sponsor purchase flow behaves as it
- * does today, so the numbers come from the shipped product rather than from
- * taste: `apps/web/src/routes/sponsors/components/-StepDetails.tsx` for the
- * sponsor name (`maxLength={35}`) and the logo (2 MB,
- * `image/png,image/jpeg,image/webp`), `.../utils/-validation.ts` for the
- * Belgian VAT rule, and `packages/api/src/routers/sponsorships.ts` for the
- * rest of the lengths.
+ * The sponsor purchase flow keeps the bounds sponsors already know, so the
+ * numbers are the established ones rather than a matter of taste: a
+ * 35-character sponsor name, a 2 MB logo in `image/png`, `image/jpeg` or
+ * `image/webp`, the Belgian VAT rule, and the lengths below.
  *
- * **There is no separate "overlay text" field, and the plan implies there is
- * one.** The shipped wizard collects `sponsorName` once and sends
- * `overlayText: form.sponsorName` — one input, two columns. A second input
- * would be a new field in the product, so this keeps the shipped shape and
+ * **There is no separate "overlay text" field.** The wizard collects
+ * `sponsorName` once and the overlay text is that same value — one input, two
+ * columns. A second input would be a new field in the product, so
  * `endpoints/sponsorships.ts` writes the same value to both. The bound is
- * therefore the sponsor name's 35, not the API's more generous 100.
+ * therefore the sponsor name's 35.
  */
 
 import { SPONSOR_NAME_MAX_LENGTH } from "@smog/types/render";
 
 /**
- * The sponsor name, which is also the overlay text. 35 is the shipped cap.
+ * The sponsor name, which is also the overlay text. 35 is the established cap.
  *
  * Exported because the re-edit form in `endpoints/sponsorships.ts` collects
  * this one field on its own, without the contact and invoice half
@@ -49,16 +45,15 @@ const MAX_VAT = 32;
 /**
  * How big a logo may be, in bytes.
  *
- * 2 MB, from `-StepDetails.tsx`'s `file.size > 2 * 1024 * 1024`. The check is
- * here as well as there because that one runs in a browser this app does not
- * control, and R2 will happily store whatever arrives.
+ * 2 MB. The check is on the server because the browser is not something this
+ * app controls, and R2 will happily store whatever arrives.
  */
 export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
 /**
  * The image types a logo may be.
  *
- * The same three the shipped file input accepts. An `accept` attribute is a
+ * The same three the form's file input accepts. An `accept` attribute is a
  * filter in a file picker and nothing else — it is not enforced on submit, on
  * a drag-and-drop, or by anybody posting the form directly.
  */
@@ -175,9 +170,9 @@ function ticked(form: FormData, name: string): boolean {
  *
  * Ten digits, where the last two equal `97 - (first eight mod 97)`; spaces and
  * dots are stripped first because that is how the number is printed on every
- * invoice. Transcribed from `apps/web/src/routes/sponsors/utils/-validation.ts`
- * rather than re-derived — an invoice is a legal document and a VAT number
- * that does not check is one the accountant sends back.
+ * invoice. The established rule rather than a re-derived one — an invoice is a
+ * legal document and a VAT number that does not check is one the accountant
+ * sends back.
  */
 function isVatNumber(value: string): boolean {
   const digits = value.replace(/[\s.]/g, "");
@@ -230,8 +225,7 @@ function refuseInvoice(
  * **The invoice fields are read only when an invoice was asked for**, and
  * blanked otherwise. A sponsor who fills the invoice box, changes their mind
  * and unticks it must not have their VAT number stored anyway — it is
- * identifying data with no purpose left, and the shipped mutation drops it
- * the same way.
+ * identifying data with no purpose left.
  */
 export function readSponsorDetails(
   form: FormData,

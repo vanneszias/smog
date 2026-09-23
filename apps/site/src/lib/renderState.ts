@@ -46,7 +46,7 @@ export type RenderState = (typeof RENDER_STATES)[number];
  * - **`rendering -> ready` is refused.** `ready` means a Mux asset exists and
  *   plays; the only thing that can know that is the code that uploaded it,
  *   which passes through `uploading` on the way. A render marked ready without
- *   one is a sponsorship pointing at nothing — Stage 6 exit criterion 7.
+ *   one is a sponsorship pointing at nothing.
  *
  * Every non-terminal state may go straight to `failed`: Lambda can report a
  * failure at any point, including before it started.
@@ -89,9 +89,8 @@ export function canAdvance(from: RenderState, to: RenderState): boolean {
  * A unique index is the one atomic primitive left, because SQLite evaluates it
  * inside the INSERT. That is what `renders.jobId` is for, and the whole of why
  * `collections/Renders.ts` exists. See its doc block, and `lib/claims.ts`,
- * which now holds the pattern `collections/WebhookDeliveries.ts` established
- * in Stage 5 — that collection and `render-completions` were folded into one
- * `claims` table in Stage 7 once there were four consumers.
+ * which holds the pattern — `webhook-deliveries` and `render-completions`
+ * were folded into one `claims` table once there were four consumers.
  *
  * ## Why the failure is confirmed by reading the row back
  *
@@ -148,7 +147,7 @@ export async function claimRenderJob(
  *
  * A claim that outlives the work it covers is worse than no claim at all: the
  * row says this job was taken care of, so the retry that would have finished
- * it is waved through as a replay and the render is lost. Stage 5's webhook
+ * it is waved through as a replay and the render is lost. The Mollie webhook
  * deletes its claim on exactly this reasoning — see `endpoints/mollie.ts` —
  * and the rule is the same here: **hand the claim back if the work did not
  * complete.**

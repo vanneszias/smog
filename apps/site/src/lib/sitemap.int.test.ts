@@ -69,15 +69,15 @@ describe("the sitemap against a real database", () => {
 
   it("omits an inactive gesture", async () => {
     /*
-     * The assertion the plan asks for, and it does catch the failure it is
-     * named for — *if both guards go*. A mutation sweep pinned down what it
-     * cannot do: `fetchSitemapGestures` asks for `isActive` twice, once
-     * through `overrideAccess: false` (which runs `publicReadActive`) and
-     * once through an explicit `where`, and the two filter on the same
-     * predicate — so flipping `overrideAccess` alone leaves this green, and no
-     * fixture can change that, because no row is hidden by one guard and not
-     * the other. Each half is pinned by name in `sitemap.test.ts`; this is
-     * what proves the pair against a real access layer and a real database.
+     * The obvious assertion, and it does catch the failure it is named for —
+     * *if both guards go*. A mutation sweep pinned down what it cannot do:
+     * `fetchSitemapGestures` asks for `isActive` twice, once through
+     * `overrideAccess: false` (which runs `publicReadActive`) and once through
+     * an explicit `where`, and the two filter on the same predicate — so
+     * flipping `overrideAccess` alone leaves this green, and no fixture can
+     * change that, because no row is hidden by one guard and not the other.
+     * Each half is pinned by name in `sitemap.test.ts`; this is what proves the
+     * pair against a real access layer and a real database.
      */
     const ids = (await fetchSitemapGestures(payload)).map(
       (gesture) => gesture.id

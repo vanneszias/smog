@@ -17,9 +17,9 @@ describe("the sponsorship status machine", () => {
     expect(canTransition("pending_payment", "pending_approval")).toBe(true);
   });
 
-  it("refuses the move the spec names as currently possible", () => {
-    // The spec: "nothing stops `active` -> `pending_payment`". This is the
-    // line that makes that false.
+  it("refuses a move from active back to pending_payment", () => {
+    // Without the table nothing would stop `active` -> `pending_payment`.
+    // This is the line that makes that false.
     expect(canTransition("active", "pending_payment")).toBe(false);
   });
 
@@ -38,9 +38,9 @@ describe("the sponsorship status machine", () => {
   });
 
   it("lets nothing out of a terminal status", () => {
-    // `rejected` is deliberately absent: the current product offers "Let
-    // Sponsor Re-edit" on a rejected sponsorship, so it is re-openable.
-    // See the next test, and the doc block on ALLOWED_TRANSITIONS.
+    // `rejected` is deliberately absent: an administrator may offer a rejected
+    // sponsorship a re-edit, so it is re-openable. See the next test, and the
+    // doc block on ALLOWED_TRANSITIONS.
     for (const terminal of ["expired", "cancelled"] as const) {
       const reachable = SPONSORSHIP_STATUSES.filter(
         (to) => to !== terminal && canTransition(terminal, to)
@@ -51,10 +51,9 @@ describe("the sponsorship status machine", () => {
   });
 
   it("lets a rejected sponsorship be re-opened for resubmission, and nothing else", () => {
-    // Transcribed from the shipped product, not chosen here:
-    // `sponsorships.generateReEditLink` accepts `rejected` in its allowlist
-    // and the admin panel renders the button for it. The migration's
-    // non-goal is that sponsorship behaviour does not change.
+    // Established sponsorship behaviour, not chosen here: a rejected
+    // sponsorship may be re-opened for a re-edit, and nothing else leaves
+    // `rejected`.
     expect(canTransition("rejected", "pending_resubmission")).toBe(true);
 
     const reachable = SPONSORSHIP_STATUSES.filter(

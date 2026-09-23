@@ -5,12 +5,11 @@ import type { Payload } from "payload";
  *
  * ## Why there is one table and not four
  *
- * `webhook-deliveries` (Stage 5) and `render-completions` (Stage 6) were the
- * same table twice: one row per opaque key, one unique index, an insert that
- * either wins or loses. `collections/RenderCompletions.ts` said so at the time
- * and deferred the merge to the stage where all the consumers would be
- * visible. There are now four — the Mollie webhook, the render callback, the
- * job runner, and `cleanup-stale-payments` after it — so this is that merge.
+ * `webhook-deliveries` and `render-completions` were the same table twice: one
+ * row per opaque key, one unique index, an insert that either wins or loses.
+ * The merge was deferred until all the consumers were visible. There are now
+ * four — the Mollie webhook, the render callback, the job runner, and
+ * `cleanup-stale-payments` after it — so this is that merge.
  *
  * **Nothing about the mechanism changes**, because the mechanism is the only
  * part that was ever load-bearing:

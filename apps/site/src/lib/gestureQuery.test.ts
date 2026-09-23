@@ -28,7 +28,7 @@ describe("buildGestureWhere", () => {
 
 describe("buildGestureWhere search seam", () => {
   it("constrains to the resolved ids when a query matched something", () => {
-    // Task 4 resolves the ids; this is where they plug in.
+    // `search.ts` resolves the ids; this is where they plug in.
     expect(buildGestureWhere({ q: "hallo", searchIds: [3, 7] })).toEqual({
       and: [{ isActive: { equals: true } }, { id: { in: [3, 7] } }],
     });
@@ -43,7 +43,7 @@ describe("buildGestureWhere search seam", () => {
   });
 
   it("does not constrain when no search has been resolved", () => {
-    // Task 3's own state: `q` reaches the URL, nothing resolves it yet.
+    // `q` reached the URL, and nothing resolved it.
     expect(buildGestureWhere({ q: "hallo" })).toEqual({
       isActive: { equals: true },
     });

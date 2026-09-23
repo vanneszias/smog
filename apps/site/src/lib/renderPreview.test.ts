@@ -2,19 +2,17 @@ import { describe, expect, it } from "vitest";
 import { previewPlaybackId } from "./renderPreview";
 
 /**
- * **The Stage 6 half of the Stage 5 seam, and the commit that opens it.**
+ * **Which video the review step plays, and why that is a seam.**
  *
- * Stage 5 wrote these assertions to be *changed* here rather than to survive:
- * it shipped an uncomposited preview on purpose, because composition is
- * Remotion and Mux and the spec orders those after that stage. The middle test
- * below used to assert that a composed preview was *ignored*, and its comment
- * said in as many words that Stage 6's job is to prefer it and that changing
- * the line is how it says so out loud. This is that change.
+ * The preview once played the uncomposited original on purpose, before
+ * composition existed. The middle test below used to assert that a composed
+ * preview was *ignored*, and its comment said in as many words that
+ * preferring it would be done by changing that line. It has been.
  *
- * What the seam was worth is visible in the diff: without it, Stage 6 could
- * have written `previewVideoPlaybackId` from the callback, forgotten to prefer
- * it here, and no test anywhere would have noticed that the sponsor was still
- * reviewing a video with no logo on it.
+ * What the seam was worth: without it, the callback could have written
+ * `previewVideoPlaybackId`, nothing would have preferred it here, and no test
+ * anywhere would have noticed that the sponsor was still reviewing a video
+ * with no logo on it.
  */
 describe("previewPlaybackId", () => {
   it("plays the gesture's own video when nothing has been composed", () => {
@@ -24,11 +22,11 @@ describe("previewPlaybackId", () => {
   });
 
   it("previewPlaybackId returns the composed video once there is one", () => {
-    // The Stage 6 contract, replacing Stage 5's. `POST /api/render/callback`
-    // writes `previewVideoPlaybackId` when Remotion Lambda's composite reaches
-    // Mux, and the review step is the whole reason it exists: the sponsor
-    // approves the video that will run, logo burned in, rather than an
-    // approximation of it drawn in HTML.
+    // The composed contract. `POST /api/render/callback` writes
+    // `previewVideoPlaybackId` when Remotion Lambda's composite reaches Mux,
+    // and the review step is the whole reason it exists: the sponsor approves
+    // the video that will run, logo burned in, rather than an approximation of
+    // it drawn in HTML.
     expect(
       previewPlaybackId({
         originalVideoPlaybackId: "pb-original",
@@ -38,7 +36,7 @@ describe("previewPlaybackId", () => {
   });
 
   it("falls back to the original while the render is still running", () => {
-    // Stage 5's contract, deliberately kept: a render takes minutes, and a
+    // The original contract, deliberately kept: a render takes minutes, and a
     // sponsor who reloads the preview page in that window must see the video
     // they are sponsoring rather than an error or an empty player.
     //

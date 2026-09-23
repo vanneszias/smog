@@ -225,7 +225,7 @@ describe("fetchGestures", () => {
   });
 
   it("serves the Dutch name to a French visitor rather than an empty grid", async () => {
-    // Review Focus item 1 reaches this task too: the *read* falls back even
+    // The locale fallback applies here too: the *read* falls back even
     // though a `where` clause would not, so the French page must render Dutch
     // names rather than 25 blank cards.
     const result = await fetchGestures({

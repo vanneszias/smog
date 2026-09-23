@@ -25,10 +25,10 @@ describe("sponsorLogo", () => {
   });
 
   it("hides an uploaded image the sponsor did not pay to show", () => {
-    // `hasLogo` is "whether user paid for logo", not "whether a file exists"
-    // (`packages/convex/convex/schema.ts`). A package without the logo option
-    // can still carry an image from an earlier draft, and rendering it gives
-    // away something nobody was billed for.
+    // `hasLogo` is "whether the sponsor paid for a logo", not "whether a file
+    // exists". A package without the logo option can still carry an image from
+    // an earlier draft, and rendering it gives away something nobody was billed
+    // for.
     expect(sponsorLogo(overlay({ hasLogo: false }))).toBeNull();
   });
 

@@ -6,15 +6,13 @@ import type { Payload } from "payload";
  *
  * ## Why this exists at all
  *
- * The shipped limiter is `apps/server/src/services/rateLimit.ts`: a Hono
- * middleware over a module-level `ioredis` client, using `INCR` — atomic in
- * the store — plus `EXPIRE` for the window. **It could not be ported.**
- * `apps/site` declares no Redis client, no Redis is reachable from a
- * Cloudflare Worker in this repo's infrastructure, and the whole binding
- * inventory of `wrangler.jsonc` is `ASSETS`, `D1`, `R2` and `EMAIL` — no KV,
- * no Durable Object, no Cloudflare Rate Limiting binding, no Analytics Engine.
- * So the store is the application's own database, and the atomic primitive has
- * to be found there.
+ * The usual limiter is a counter in a separate store — an atomic increment plus
+ * an expiry for the window. **None is available here.** `apps/site` declares no
+ * key-value client, none is reachable from a Cloudflare Worker in this repo's
+ * infrastructure, and the whole binding inventory of `wrangler.jsonc` is
+ * `ASSETS`, `D1`, `R2` and `EMAIL` — no KV, no Durable Object, no Cloudflare
+ * Rate Limiting binding, no Analytics Engine. So the store is the application's
+ * own database, and the atomic primitive has to be found there.
  *
  * ## Design (b): upsert-and-return, so the count is exact
  *
@@ -25,7 +23,7 @@ import type { Payload } from "payload";
  * atomic primitive**, because SQLite evaluates it inside the INSERT.
  *
  * Two designs were available. Count-then-insert — `payload.count` over the
- * window, then `payload.create` — uses only shipped primitives but is
+ * window, then `payload.create` — uses only Payload's own primitives but is
  * approximate: every caller that reads the count before any of them writes
  * sees the same number. Upsert-and-return is one statement,
  * `INSERT … ON CONFLICT(key) DO UPDATE SET count = count + 1 RETURNING count`,
@@ -50,13 +48,12 @@ import type { Payload } from "payload";
  * be documented as an overshoot bound: at a limit of 10 it is no limiter at
  * all for exactly the traffic shape a limiter is for. Hence (b).
  *
- * ## The fail-open contract is deliberately **not** carried across
+ * ## It fails closed, deliberately
  *
- * The Redis original swallows every store failure — in its own words,
- * "Availability wins if Redis is temporarily unavailable; the upstream
- * provider limits remain a secondary safety net" (`rateLimit.ts:58-59`) — and
- * that is right when the limiter's store is a *separate service*: Redis being
- * down is no reason for the API to be down.
+ * A limiter whose store is a *separate service* usually swallows every store
+ * failure — availability wins, and upstream provider limits remain a
+ * secondary safety net — and that is right there: the store being down is no
+ * reason for the API to be down.
  *
  * It stops being right when the store is the application's own database. There
  * is no state of the world where this site is serving requests and D1 is

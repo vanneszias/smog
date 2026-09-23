@@ -6,8 +6,7 @@ import type { Payload } from "payload";
  *
  * ## Why the token is minted by the thing that sends it
  *
- * Stage 4 minted it inside `POST /account/email` and wrote the link to the
- * log, because there was no adapter to send it with. Stage 7 has one, and the
+ * Minting it inside `POST /account/email` would be the obvious place. But the
  * send is a *queued job* — which moves the decision, because a job's `input`
  * is a row in `payload-jobs` and Payload's own error handler logs the whole
  * job, `input` and all, every time a task throws

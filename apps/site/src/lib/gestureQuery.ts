@@ -18,7 +18,7 @@ export const GESTURES_PER_PAGE = 12;
  * symbol nothing imports, and nothing outside this module names either type
  * today — callers pass object literals and read the result's fields. They
  * are still the module's contract; they are just spelled out in the function
- * signatures instead of re-exported. Task 4 kept it that way: `search.ts`
+ * signatures instead of re-exported. It stays that way: `search.ts`
  * produces the ids and the page passes them as a literal, so nothing outside
  * this file ever names the type.
  */
@@ -27,19 +27,17 @@ interface GestureListParams {
   categories?: string[];
   page?: number;
   /**
-   * **Task 4's seam, and deliberately not search itself.**
+   * **The search seam, and deliberately not search itself.**
    *
    * Search needs an explicit cross-locale fallback — Payload's `fallback: true`
    * applies to reads and not to `where` clauses, so a French visitor querying
-   * Dutch-only content matches nothing — and that belongs in `search.ts`, next
-   * task. What this task owns is *where the result plugs in*: a resolved id
-   * list becomes an `id: { in: [...] }` clause alongside the category filter.
+   * Dutch-only content matches nothing — and that belongs in `search.ts`. What
+   * this owns is *where the result plugs in*: a resolved id list becomes an
+   * `id: { in: [...] }` clause alongside the category filter.
    *
    * The three states are distinct and each means something different:
    *
-   * - `undefined` — nobody resolved a search, so nothing is constrained. This
-   *   is what Task 3 passes, which is why typing in the box currently filters
-   *   nothing. It is a seam, not a half-built search.
+   * - `undefined` — nobody resolved a search, so nothing is constrained.
    * - `[]` — a search ran and matched nothing, which must show an empty page.
    *   This is the one case where an empty `in` is correct, and it is why this
    *   is a separate field from `categories` rather than more of the same.
@@ -140,9 +138,9 @@ function normalizePage(page: number | undefined): number {
  * One page of gestures, filtered in the database.
  *
  * The count comes back from the same `where` the rows do, so the page numbers
- * describe the filtered set and not the table. That is the whole point of the
- * task: `apps/web` loads every gesture and filters the array in the browser,
- * which cannot be paginated honestly.
+ * describe the filtered set and not the table. That is the whole point:
+ * loading every gesture and filtering the array in the browser cannot be
+ * paginated honestly.
  *
  * **Payload does not clamp `page`, and reports a misleading total when it
  * overshoots.** Verified in

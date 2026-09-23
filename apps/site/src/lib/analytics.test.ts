@@ -9,8 +9,7 @@ import { trackEvent } from "./analytics";
  * the one that does not — so a test that only checked the return value would
  * pass against a client that fired the request and *then* returned early.
  * Spying on `fetch` and asserting it was never called is the only version of
- * this test that would catch that bug, which is exactly what the task brief
- * calls out.
+ * this test that would catch that bug.
  */
 describe("trackEvent", () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>;

@@ -16,16 +16,15 @@ describe("sponsorshipAmountCents", () => {
     expect(sponsorshipAmountCents(3, true)).toBe(18_000);
   });
 
-  it("agrees with the shipped calculation across the whole legal range", () => {
-    // Transcription is the risk here, not arithmetic. The numbers on the
+  it("agrees with the established calculation across the whole legal range", () => {
+    // A mistyped constant is the risk here, not arithmetic. The numbers on the
     // right are written out as literals on purpose: the implementation
     // imports them from `@smog/config/constants`, so if a constant is
     // mistyped — or if this app grows a second copy of it — these
     // expectations disagree and the suite says so. Reading the same
     // constant on both sides would make this test agree with itself.
     //
-    // `apps/web/src/lib/pricing.ts` is the shipped calculation being
-    // transcribed:
+    // The calculation:
     //   subtotal  = PRICE_PER_YEAR_CENTS * gestureCount
     //   logoTotal = includeLogo ? LOGO_ADDON_CENTS * gestureCount : 0
     for (let n = 1; n <= MAX_GESTURES_PER_SPONSORSHIP; n += 1) {
@@ -71,7 +70,7 @@ describe("sponsorshipAmountCents", () => {
   });
 
   it("refuses more gestures than one sponsorship may cover", () => {
-    // The order form's own cap is Task 6's, on the selection endpoint. This
+    // The order form's own cap is on the selection endpoint. This
     // is the same cap on the money path, reading the same constant, because
     // a hand-built POST that skips the form must not be able to talk this
     // function into quoting a price nobody offers.

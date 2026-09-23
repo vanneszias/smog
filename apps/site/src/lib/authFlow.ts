@@ -25,7 +25,7 @@ import { type Locale, resolveLocale } from "./locale";
  * answer came back faster than the fastest wrong-password answer. That is not
  * a statistical side channel needing thousands of samples to exploit — it is a
  * single-request classifier for "is this address registered", which is exactly
- * what Review Focus item 5 forbids. Flattening the `LockedAuth` *message* in
+ * what sign-in must not offer. Flattening the `LockedAuth` *message* in
  * `endpoints/auth.ts` closes the body half of the leak and leaves this half
  * wide open, so both are closed together.
  *
@@ -48,8 +48,7 @@ import { type Locale, resolveLocale } from "./locale";
  * price is half a second on a mistyped password and on every sign-up, which
  * is smaller than the navigation it is attached to.
  *
- * Re-measure this if the KDF, the database or the runtime changes. The
- * measurement lives in `.superpowers/sdd/2026-09-20-stage-4-auth/task-2-report.md`.
+ * Re-measure this if the KDF, the database or the runtime changes.
  */
 export const AUTH_FLOOR_MS = 500;
 
@@ -417,11 +416,10 @@ export function sponsorPreviewPath(
 /**
  * Where Mollie returns the sponsor, whatever they decided there.
  *
- * No `?paymentId={id}` placeholder, which the shipped flow passes and Mollie
- * substitutes. The shipped success page uses it to poll for the webhook
- * landing; this one has no client JavaScript to poll with, so the id would be
- * a payment identifier sitting in a browser history, a `Referer` header and a
- * proxy log for nothing.
+ * No `?paymentId={id}` placeholder for Mollie to substitute. A success page
+ * could use it to poll for the webhook landing; this one has no client
+ * JavaScript to poll with, so the id would be a payment identifier sitting in a
+ * browser history, a `Referer` header and a proxy log for nothing.
  */
 export function sponsorSuccessPath(locale: Locale): string {
   return `/${locale}/sponsor/success`;

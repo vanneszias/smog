@@ -2,12 +2,10 @@ import type { AnalyticsEventMap, AnalyticsEventName } from "@smog/shared";
 import { readConsent } from "@/lib/consentStore";
 
 /**
- * The browser's one way to reach OpenPanel: the relay from Task 6.
+ * The browser's one way to reach OpenPanel: the relay.
  *
  * `POST /api/analytics/track` (`endpoints/analytics.ts`), mounted on this
- * same origin, so no rewrite and no `VITE_SERVER_URL`-style base URL are
- * needed — unlike `apps/web`, which posted cross-origin to a separate
- * server.
+ * same origin, so no rewrite and no base URL are needed.
  */
 const TRACK_URL = "/api/analytics/track";
 
@@ -17,7 +15,7 @@ const TRACK_URL = "/api/analytics/track";
  * this shape and not `if (!consent)`.
  *
  * `readConsent()` comes from `@/lib/consentStore`, the one copy of this
- * decision (Task 2); this module keeps no state of its own.
+ * decision; this module keeps no state of its own.
  */
 function hasConsent(): boolean {
   return readConsent() === "granted";
@@ -33,9 +31,7 @@ function hasConsent(): boolean {
  * must drop the payload. `if (!consent)` reads as the same check today only
  * because both refusal states happen to be falsy strings/`null`; the moment
  * a fourth state is added it silently starts sending on it. Positive checks
- * do not have that failure mode. Ported from `apps/web/src/lib/
- * openpanel.ts:37`, whose `getAnalyticsConsent() !== true` is the same
- * property against that stack's own boolean-shaped store.
+ * do not have that failure mode.
  *
  * ## Never throws, never blocks
  *
@@ -43,8 +39,7 @@ function hasConsent(): boolean {
  * (offline, an aborted navigation, a blocked request) is caught and logged,
  * never rethrown. A gesture card, a search box or a favorite button firing
  * this must complete its own job — saving a favorite, updating the URL —
- * whether or not the beacon ever lands. Transcribed from the same
- * reasoning in `openpanel.ts`'s `sendAnalyticsPayload`.
+ * whether or not the beacon ever lands.
  *
  * `keepalive: true` lets the request outlive a navigation that starts right
  * after — the common case, since every call site here fires from a click or

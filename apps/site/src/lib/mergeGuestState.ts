@@ -31,9 +31,8 @@ import { clearGuestFavorites, readGuestFavorites } from "./guestStore";
  * There are no transactions on any write path in this app: the D1 adapter
  * takes `defaultBeginTransaction()`, which resolves to `null`, so
  * `initTransaction` never begins anything and `killTransaction` rolls
- * nothing back (spec, "There are no transactions on any write path"). A
- * multi-step write here is therefore partially committed on failure, and the
- * two defences the spec prescribes are both used:
+ * nothing back. A multi-step write here is therefore partially committed on
+ * failure, and both of the two available defences are used:
  *
  * - **Idempotence.** Re-running the merge over the same ids is the *normal*
  *   case, not the exceptional one: a second sign-in in the same browser

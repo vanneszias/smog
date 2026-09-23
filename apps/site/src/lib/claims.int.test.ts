@@ -54,7 +54,7 @@ describe("the claims table", () => {
   });
 
   it("serialises a Mollie webhook replay exactly as before", async () => {
-    // Stage 5's guarantee, through the table that replaced its own. Both
+    // The webhook's guarantee, through the table that replaced its own. Both
     // deliveries insert; with no transactions the unique index inside the
     // INSERT is the only thing that can decide between them.
     const key = keyFor("tr_replay");
@@ -75,10 +75,10 @@ describe("the claims table", () => {
   });
 
   it("serialises a render callback replay exactly as before", async () => {
-    // Stage 6's guarantee, through the same table. The thing being serialised
-    // is `POST https://api.mux.com/video/v1/assets`: two callbacks that both
-    // get past this claim create two Mux assets for one render, and the one
-    // nothing points at is a bill that arrives every month for ever.
+    // The render callback's guarantee, through the same table. The thing being
+    // serialised is `POST https://api.mux.com/video/v1/assets`: two callbacks
+    // that both get past this claim create two Mux assets for one render, and
+    // the one nothing points at is a bill that arrives every month for ever.
     const key = keyFor("render-replay");
     const claim = { key, kind: CLAIM_KINDS.renderCompletion } as const;
 

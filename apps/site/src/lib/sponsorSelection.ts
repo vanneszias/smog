@@ -30,23 +30,16 @@ import { activeAndInTerm } from "./sponsorOverlay";
 /**
  * The statuses that make a gesture unavailable *whatever* the dates say.
  *
- * **Transcribed from the shipped product, and wider than the plan asked
- * for.** Stage 5's plan names only "an active sponsorship in term". The
- * shipped rule is `packages/convex/convex/lib/sponsorshipValidation.ts`'s
- * `checkExistingSponsorship`, which every create path runs and which refuses
- * a gesture that has an `active`, `pending_payment` or `pending_approval`
- * sponsorship; `listGesturesWithSponsorship` greys the same set out on the
- * selection screen. The in-term rule alone cannot express those, because a
+ * **Wider than "an active sponsorship in term", deliberately.** A
+ * `pending_payment` or `pending_approval` sponsorship blocks the gesture too,
+ * and the in-term rule alone cannot express that, because a
  * `pending_payment` row has a term nobody has paid for yet — so two sponsors
  * could both select one gesture, both check out, both pay, and the admin
- * queue would hold two sponsorships for one window. That is exactly the
- * "selling the same window twice" the plan calls the failure that costs money
- * to unwind, and the migration's non-goal is that this flow behaves as it
- * does today.
+ * queue would hold two sponsorships for one window. That is exactly
+ * "selling the same window twice", the failure that costs money to unwind.
  *
- * `pending_resubmission` is here too: Stage 1 split the shipped `pending`
- * into it, and it is a live sponsorship waiting on its sponsor, not a free
- * slot.
+ * `pending_resubmission` is here too: it is a live sponsorship waiting on its
+ * sponsor, not a free slot.
  *
  * `expired`, `rejected` and `cancelled` are deliberately absent — those are
  * answers, the window is free, and blocking on them would make a gesture
@@ -157,12 +150,12 @@ export async function sponsoredGestureIds(
  * ids and is refused by the row-count comparison; an id that is not a number
  * at all resolves to nothing and is refused by the same line. A second screen
  * in front of either could not be made to fail by any mutation, which is the
- * ruling Stage 4 already made twice.
+ * conclusion those two files already reached.
  *
  * `overrideAccess: false` is what makes "a gesture an editor deactivated" and
  * "a gesture that never existed" the same answer: `publicReadActive` narrows
  * the query to `isActive: true`, so neither resolves and both are refused
- * with `gesture`. Review Focus 2 asks for exactly that screen here.
+ * with `gesture`.
  */
 export async function resolveSponsorSelection(
   payload: Payload,

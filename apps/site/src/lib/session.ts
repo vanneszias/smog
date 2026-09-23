@@ -67,7 +67,7 @@ export function hasSessionCookie(cookieHeader: null | string): boolean {
  * request, so a function that reaches for it directly can only be tested by
  * rendering a page.
  *
- * **Stage 3 Task 5 built `fetchViewer` for this and then deleted it**, because
+ * **A `fetchViewer` was once built for this and then deleted**, because
  * a mutation proved it dead: the page that called it — the shared-list page —
  * answers identically for a signed-in and an anonymous reader, since the share
  * token is the entire capability. Ignoring the viewer there failed no test, so
@@ -105,13 +105,12 @@ export async function resolveSession(
  * that must not drag Next's server runtime in with it.
  *
  * **Calling this opts the route out of static rendering.** Reading request
- * headers is what makes a page dynamic; the cost is measured and recorded in
- * the Stage 4 Task 2 report rather than left as a surprise. Task 4 revisited
- * which routes should pay it and left the answer unchanged; its report has
- * the route table and the argument.
+ * headers is what makes a page dynamic; the cost was measured rather than
+ * left as a surprise, and which routes should pay it was revisited once and
+ * left unchanged.
  *
  * **Wrapped in React's `cache`, so a layout and the page inside it share one
- * `payload.auth` per request.** Before Task 4 there was exactly one caller —
+ * `payload.auth` per request.** There was once exactly one caller —
  * the locale layout — and memoising it would have been decoration. There are
  * two now: `/{locale}/favorites` needs the account's favorite ids in the same
  * render the header needs the account's address. Without this that page would

@@ -139,7 +139,7 @@ export async function writeAccountFavorite({
     });
 
     /*
-     * 401 is the case the plan asks to decide: the session expired while the
+     * 401 is the case that has to be decided: the session expired while the
      * page was open. The page still shows the account nav it was rendered
      * with, so the reader believes they are signed in and the heart would
      * otherwise appear to work. It is called out separately here so the

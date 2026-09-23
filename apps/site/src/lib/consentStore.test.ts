@@ -17,9 +17,9 @@ describe("consentStore", () => {
   });
 
   /*
-   * Review Focus 1. The three states are asserted against each other rather
-   * than one at a time: the bug this guards is `if (consent)`, which collapses
-   * `null` and `"denied"` into one branch and reads identically in a diff.
+   * The three states are asserted against each other rather than one at a time:
+   * the bug this guards is `if (consent)`, which collapses `null` and
+   * `"denied"` into one branch and reads identically in a diff.
    */
   it("tells undecided, granted and denied apart", () => {
     expect(readConsent()).toBeNull();
@@ -72,9 +72,9 @@ describe("consentStore", () => {
   });
 
   /*
-   * Review Focus 4. `storage` fires in every OTHER tab, never the one that
-   * wrote, so a store that only notifies on its own writes leaves a second tab
-   * tracking after a refusal — and nothing in a single-tab test would show it.
+   * `storage` fires in every OTHER tab, never the one that wrote, so a store
+   * that only notifies on its own writes leaves a second tab tracking after a
+   * refusal — and nothing in a single-tab test would show it.
    */
   it("notifies subscribers when another tab writes", () => {
     const listener = vi.fn();

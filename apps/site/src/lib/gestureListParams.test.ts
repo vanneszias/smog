@@ -28,7 +28,7 @@ describe("parseGestureListParams", () => {
     expect(parse("")).toEqual(EMPTY);
   });
 
-  it("reads the comma-separated category form apps/web already emits", () => {
+  it("reads the comma-separated category form existing links carry", () => {
     expect(parse("category=3,7").categories).toEqual(["3", "7"]);
   });
 

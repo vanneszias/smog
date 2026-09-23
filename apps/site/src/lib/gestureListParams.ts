@@ -58,8 +58,8 @@ export function toSearchParams(raw: RawSearchParams): URLSearchParams {
  * Reads the list's state out of a query string.
  *
  * `category` is accepted both as a repeated key and as one comma-separated
- * value, because `apps/web` emits the comma form and its links are already
- * pasted into documents and chat messages. Emitting the comma form (see
+ * value, because the comma form is what existing links carry, and those are
+ * already pasted into documents and chat messages. Emitting the comma form (see
  * `gestureListHref`) keeps those links working unchanged.
  *
  * Every value is defended rather than trusted — this is a URL a stranger can

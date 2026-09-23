@@ -142,8 +142,8 @@ describe("fetchGestureOverlay", () => {
     activeSponsorshipId = active.id;
 
     // `status: "active"` with an `endDate` in the past is not a contrived
-    // fixture: Stage 1 shipped no expiry job and no status-transition
-    // enforcement, so this row shape genuinely exists in the data.
+    // fixture: it is what a sponsorship looks like until the expiry job
+    // catches up with it.
     await createSponsorship("verlopen", {
       endDate: iso(-DAY),
       gesture: gestures.verlopen as number,
@@ -203,7 +203,7 @@ describe("fetchGestureOverlay", () => {
   it("never returns the sponsor's contact details", async () => {
     const overlay = await fetchGestureOverlay(gestures.actief as number);
 
-    // Sorted on both sides rather than written in the plan's order: Biome's
+    // Sorted on both sides rather than written in a fixed order: Biome's
     // `useSortedKeys` assist rewrites the object literal in the
     // implementation, so pinning insertion order would pin a formatter's
     // behaviour instead of the projection's. The assertion that matters is

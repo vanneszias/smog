@@ -151,7 +151,7 @@ describe("fetchSitemapGestures", () => {
    * belt-and-braces theatre.
    *
    * `sitemap.int.test.ts` asserts against a real database that an inactive
-   * gesture never reaches the sitemap — the assertion the plan asks for — but
+   * gesture never reaches the sitemap — the obvious assertion — but
    * it cannot tell the two guards apart: `publicReadActive` filters on
    * exactly the predicate the explicit `where` filters on, so flipping
    * `overrideAccess` to `true` leaves that test green. No fixture can

@@ -29,12 +29,9 @@
  * public site, the Payload admin and anything else this Worker serves share
  * one origin and therefore one `localStorage`.
  *
- * Deliberately NOT the old stack's key. `apps/web` uses
- * `"smog_analytics_consent"` and `apps/native` uses `"@smog_analytics_consent"`
- * (`packages/config/src/constants.ts:96`) — two different keys for one
- * decision, which is a bug this migration does not carry over. The new site
- * never runs on the same origin as `apps/web`, so there is nothing to read
- * back and nothing to collide with.
+ * Its own key, deliberately, rather than one shared with another client:
+ * nothing else runs on this origin, so there is nothing to read back and
+ * nothing to collide with.
  */
 export const ANALYTICS_CONSENT_KEY = "smog.consent.analytics";
 

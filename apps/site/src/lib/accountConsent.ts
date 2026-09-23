@@ -24,12 +24,12 @@ import type { Payload } from "payload";
  *
  * ## Why this must never feed the switch
  *
- * Ruling: the server never writes the browser's consent flag, and the
+ * The rule: the server never writes the browser's consent flag, and the
  * corollary is that it must never feed the *switch's* displayed state
  * either. `AccountConsentControl` reads and writes `localStorage` alone for
  * that; this function's answer is wired in beside it as a read-only caption
  * of what the account has on record, never merged into the toggle. See that
- * component's doc comment for the shared-device reasoning the ruling rests
+ * component's doc comment for the shared-device reasoning the rule rests
  * on: a "granted" recorded on a phone must not silently turn tracking on for
  * a library computer someone happens to sign into.
  */
@@ -58,13 +58,13 @@ export async function newestConsentDecision({
 
   if (newest === undefined) {
     /*
-     * No row at all — this account has never answered, on any device. This
-     * is distinct from a row whose `analyticsConsent` is `false`, which is a
-     * decision. The whole reason this stage exists is that the database's
-     * own `analytics_consent integer DEFAULT false NOT NULL` cannot tell
-     * "never asked" from "said no" — this function's one job, on the read
-     * side, is to keep the UI from repeating that confusion by collapsing
-     * both into the same falsy value.
+     * No row at all — this account has never answered, on any device. This is
+     * distinct from a row whose `analyticsConsent` is `false`, which is a
+     * decision. The whole reason consent is recorded this way is that the
+     * database's own `analytics_consent integer DEFAULT false NOT NULL` cannot
+     * tell "never asked" from "said no" — this function's one job, on the read
+     * side, is to keep the UI from repeating that confusion by collapsing both
+     * into the same falsy value.
      */
     return null;
   }
