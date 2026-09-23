@@ -29,9 +29,8 @@ describe("listReadAccess", () => {
   });
 
   it("widens a signed-in reader's filter with a share token instead of ignoring it", () => {
-    // Gap 2 of the spec's "Sharing is inert until Stage 3". The signed-in
-    // branch used to *replace* the filter, so an authenticated recipient of
-    // a share link saw nothing.
+    // The signed-in branch used to *replace* the filter, so an authenticated
+    // recipient of a share link saw nothing.
     //
     // Exact shape, not `toMatchObject`, and deliberately so: dropping the
     // `or` (back to owner-only), swapping `viewShareToken` for
@@ -75,9 +74,9 @@ describe("listUpdateAccess", () => {
   });
 
   it("widens a signed-in editor's filter with an edit token, still requiring allowSharedEditing", () => {
-    // The update half of gap 2. The widened clause is the whole anonymous
-    // rule as one branch of the `or`, not a bare token match: an edit link
-    // that stopped honouring `allowSharedEditing` the moment its holder
+    // The update half of the same widening. The widened clause is the whole
+    // anonymous rule as one branch of the `or`, not a bare token match: an edit
+    // link that stopped honouring `allowSharedEditing` the moment its holder
     // signed in would be a way around the owner's revocation switch.
     expect(
       listUpdateAccess(req({ id: 5, role: "user" }, "edit-token-123"))
@@ -113,8 +112,7 @@ describe("listUpdateAccess", () => {
     // `viewShareToken` (an edit link that's secretly a read-only link) or
     // dropping the `allowSharedEditing` clause (an edit link that works
     // even after the owner turns sharing off) would both still pass a
-    // looser assertion. This one fails either mutation — see
-    // task-5-report.md for the mutation runs that prove it.
+    // looser assertion. This one fails either mutation.
     expect(listUpdateAccess(req(null, "edit-token-123"))).toEqual({
       and: [
         { editShareToken: { equals: "edit-token-123" } },
@@ -146,8 +144,8 @@ describe("listDeleteAccess", () => {
   });
 
   it("does not widen a signed-in non-owner's filter with a token, unlike read and update", () => {
-    // Task 7 widened the signed-in branch of the other two access functions
-    // so a token adds to what its holder can reach. This one must not follow
+    // The other two access functions widen the signed-in branch so a token
+    // adds to what its holder can reach. This one must not follow
     // suit, and the likeliest way for it to is somebody copying the widened
     // branch across all three. Exact shape, so an added `or` fails here.
     expect(

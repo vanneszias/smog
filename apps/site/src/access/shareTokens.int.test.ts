@@ -7,23 +7,24 @@ import config from "../payload.config";
 /**
  * @fileoverview Share links, against a real database.
  *
- * The spec's "Sharing is inert until Stage 3" records four gaps. Three of
- * them are closed here and every one is a claim about what the *database*
- * answers, not about what a function returns:
+ * Share links were once inert, for four reasons. Three of them are closed here
+ * and every one is a claim about what the *database* answers, not about what a
+ * function returns:
  *
  * 1. nothing minted the tokens, so both columns were always NULL;
  * 2. a signed-in recipient's access filter replaced their token instead of
  *    widening with it, so they saw nothing;
  * 3. `visibility` was never consulted, so un-sharing revoked nothing.
  *
- * The fourth (foreign-key behaviour) is Task 8 and is deliberately untouched.
+ * The fourth (foreign-key behaviour) is `20260920_114500_list_fk_behaviour`'s,
+ * and is deliberately not asserted here.
  *
  * Why an integration file rather than more unit tests: the unit tests in
  * `lists.test.ts` assert the *shape* of the `Where` each access function
  * returns, which cannot tell a filter Payload honours from one it silently
  * drops, and cannot see a `beforeChange` hook at all. In particular the
  * tokenless guard (`if (!token) return false`) is only provably load-bearing
- * against a row whose token column is genuinely NULL — see `legacyListId`
+ * against a row whose token column is genuinely NULL — see `tokenlessListId`
  * below, which is kept NULL for exactly that purpose.
  */
 
@@ -57,7 +58,7 @@ describe("share tokens against a real database", () => {
   let gestureId: number;
 
   /**
-   * A list created before this task existed: both token columns NULL.
+   * A list created before token minting existed: both token columns NULL.
    *
    * It is the whole reason the tokenless guard can be proven at all. With
    * minting in place every *new* row has a token, so a mutated access
@@ -65,7 +66,7 @@ describe("share tokens against a real database", () => {
    * match no row and the mutation would survive by accident. This row is the
    * row it matches.
    */
-  let legacyListId: number;
+  let tokenlessListId: number;
 
   const createList = async (
     overrides: Record<string, unknown> = {}
@@ -141,18 +142,18 @@ describe("share tokens against a real database", () => {
     });
     strangerId = stranger.id;
 
-    const legacy = await createList({ name: `Legacy ${RUN}` });
-    // Minting happens on create, so the only way to get a pre-Task-7 row is
+    const tokenless = await createList({ name: `Tokenless ${RUN}` });
+    // Minting happens on create, so the only way to get a pre-minting row is
     // to clear the columns afterwards. `overrideAccess: true` is what gets
     // past the owner-only field guard; the update hook only rotates on a
     // transition to `private`, so it does not re-mint them.
     await payload.update({
       collection: "lists",
       data: { editShareToken: null, viewShareToken: null },
-      id: legacy.id,
+      id: tokenless.id,
       overrideAccess: true,
     });
-    legacyListId = legacy.id;
+    tokenlessListId = tokenless.id;
   });
 
   describe("minting", () => {
@@ -200,21 +201,21 @@ describe("share tokens against a real database", () => {
       // carrying a token, `{ equals: undefined }` matches nothing and a
       // mutation that deletes the guard survives by luck. This fails first
       // and says why.
-      const legacy = await payload.findByID({
+      const tokenless = await payload.findByID({
         collection: "lists",
-        id: legacyListId,
+        id: tokenlessListId,
         overrideAccess: true,
       });
 
-      expect(legacy.viewShareToken).toBeNull();
-      expect(legacy.editShareToken).toBeNull();
+      expect(tokenless.viewShareToken).toBeNull();
+      expect(tokenless.editShareToken).toBeNull();
     });
 
     it("shows an anonymous request with no token nothing, even though a list exists with no token either", async () => {
-      // The trap the spec records: without `if (!token) return false` this
-      // builds `{ viewShareToken: { equals: undefined } }`, which the query
-      // layer matches against every row whose column is NULL. `legacyListId`
-      // is such a row, so this assertion is the one that notices.
+      // The trap: without `if (!token) return false` this builds
+      // `{ viewShareToken: { equals: undefined } }`, which the query layer
+      // matches against every row whose column is NULL. `tokenlessListId` is
+      // such a row, so this assertion is the one that notices.
       const result = await findAs({});
 
       expect(result.docs).toHaveLength(0);
@@ -226,10 +227,10 @@ describe("share tokens against a real database", () => {
       expect(result.docs).toHaveLength(0);
     });
 
-    it("cannot reach the tokenless legacy list with any token at all", async () => {
+    it("cannot reach the tokenless list with any token at all", async () => {
       const result = await findAs({ token: "anything" });
 
-      expect(result.docs.map((doc) => doc.id)).not.toContain(legacyListId);
+      expect(result.docs.map((doc) => doc.id)).not.toContain(tokenlessListId);
     });
   });
 
@@ -269,9 +270,9 @@ describe("share tokens against a real database", () => {
     });
 
     it("shows a signed-in non-owner the list its view token names", async () => {
-      // Gap 2. Before this task the signed-in branch *replaced* the filter
-      // with `{ owner: { equals: req.user.id } }`, so an authenticated
-      // recipient of a share link saw nothing at all.
+      // Gap 2. The signed-in branch used to *replace* the filter with
+      // `{ owner: { equals: req.user.id } }`, so an authenticated recipient of
+      // a share link saw nothing at all.
       const list = await createList();
 
       const result = await findAs({
@@ -325,7 +326,7 @@ describe("share tokens against a real database", () => {
 
   describe("revocation by rotation", () => {
     it("stops honouring a share link after the list is made private", async () => {
-      // Review Focus item 4, and the assertion the whole task turns on.
+      // The assertion revocation by rotation turns on.
       const list = await createList();
       const sharedToken = list.viewShareToken ?? "";
 
@@ -463,10 +464,10 @@ describe("share tokens against a real database", () => {
 
     it("resolves a list for a reader who is signed in, since it never asks who they are", async () => {
       // The page reads anonymously on purpose — see `fetchSharedList`. The
-      // signed-in half of the spec's gap 2 is asserted against the access
-      // layer instead, in "shows a signed-in non-owner the list its view
-      // token names" above, because that is the path (Payload's REST API)
-      // where `req.user` is set by Payload rather than by us.
+      // signed-in half of gap 2 is asserted against the access layer instead,
+      // in "shows a signed-in non-owner the list its view token names" above,
+      // because that is the path (Payload's REST API) where `req.user` is set
+      // by Payload rather than by us.
       const list = await createList();
 
       const found = await fetchSharedList({

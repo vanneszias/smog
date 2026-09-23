@@ -19,8 +19,7 @@ export const isAuthenticated: Access = ({ req: { user } }) => Boolean(user);
  * `isActive` is nullable in the generated schema (`integer DEFAULT true`,
  * no `NOT NULL`), so `equals: true` and `not_equals: false` disagree on NULL
  * rows. This uses `equals: true` deliberately: a NULL `isActive` (e.g. a row
- * Stage 9's Convex import forgot to set) is hidden rather than published by
- * default.
+ * an import forgot to set) is hidden rather than published by default.
  */
 export const publicReadActive: Access = ({ req: { user } }) => {
   if (user?.role === "admin") {
@@ -61,15 +60,13 @@ export const SELF_REGISTRATION = "smog:selfRegistration";
  *
  * ## Why `create` is no longer `() => true`
  *
- * It was, deliberately, so that people could register — and `Users.ts` said
- * in as many words that Stage 4 would revisit it "when social login lands".
- * This is that revisit, and what forces it is not tidiness: a public
- * `create` makes `POST /api/users` the most direct email-enumeration oracle
- * on the site. One unauthenticated request separates a registered address
- * (400, "A user with the given email is already registered") from a free one
- * (201). Reproduced against a running dev server; the transcript is in the
- * Task 3 report. No amount of care in `/auth/sign-up` closes that while
- * Payload's REST API is mounted and its `create` is public.
+ * It was, deliberately, so that people could register. What forces the change
+ * is not tidiness: a public `create` makes `POST /api/users` the most direct
+ * email-enumeration oracle on the site. One unauthenticated request separates a
+ * registered address (400, "A user with the given email is already registered")
+ * from a free one (201), reproduced against a running dev server. No amount of
+ * care in `/auth/sign-up` closes that while Payload's REST API is mounted and
+ * its `create` is public.
  *
  * ## Why `req.context` is a real guard and not a password in a cookie
  *
@@ -84,12 +81,11 @@ export const SELF_REGISTRATION = "smog:selfRegistration";
  * ## Why not simply create with `overrideAccess: true`
  *
  * Because that would throw away the *field*-level guard at the same time.
- * `role` carries `create: isAdminField`, and `overrideAccess: true` skips
- * field access entirely — so the sign-up endpoint would be relying on its
- * literal `role: "user"` alone. Task 2's mutation sweep (S1–S3) showed that
- * each of those two guards alone is invisible and only the pair is provable;
- * this keeps both, by letting the endpoint through `access.create` rather
- * than around it.
+ * `role` carries `create: isAdminField`, and `overrideAccess: true` skips field
+ * access entirely — so the sign-up endpoint would be relying on its literal
+ * `role: "user"` alone. A mutation sweep showed that each of those two guards
+ * alone is invisible and only the pair is provable; this keeps both, by letting
+ * the endpoint through `access.create` rather than around it.
  */
 export const isAdminOrSelfRegistration: Access = ({ req }) =>
   req.user?.role === "admin" || req.context?.[SELF_REGISTRATION] === true;
@@ -107,9 +103,8 @@ export const isAdminField: FieldAccess = ({ req: { user } }) =>
 
 /**
  * Unconditionally public read. Exists so collections never carry an inline
- * `() => true`: the plan requires every access rule to be a named, tested
- * function, and "this one is deliberately public" is exactly the decision
- * worth making legible.
+ * `() => true`: every access rule is a named, tested function, and "this one is
+ * deliberately public" is exactly the decision worth making legible.
  */
 export const publicRead: Access = () => true;
 

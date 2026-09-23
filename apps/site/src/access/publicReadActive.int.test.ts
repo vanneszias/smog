@@ -60,9 +60,9 @@ describe("publicReadActive against a real database", () => {
       },
     });
 
-    // The local API's checkbox field always coerces to a boolean, so the
-    // only way to reproduce the NULL row Stage 9's Convex import can leave
-    // behind is to write it directly, the same way migrations do.
+    // The local API's checkbox field always coerces to a boolean, so the only
+    // way to reproduce the NULL row an import can leave behind is to write it
+    // directly, the same way migrations do.
     await payload.db.drizzle.run(
       sql`UPDATE gestures SET is_active = NULL WHERE id = ${created.id}`
     );

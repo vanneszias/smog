@@ -29,13 +29,12 @@ function reEditToken(req: { searchParams?: URLSearchParams }): string | null {
 /**
  * The two conditions a live re-edit link satisfies.
  *
- * **The expiry is enforced here and nowhere else.** `reEditTokenExpiresAt`
- * has existed since Stage 1 with nothing reading it — the spec's Review Focus
- * 5 is exactly that — and this conjunct is what makes the column mean
- * something. Putting it in the access filter rather than in each caller's
- * `where` means every door honours it at once: the page, the re-edit
- * endpoint's own lookup, and Payload's REST API, which is mounted and will
- * answer `GET /api/sponsorships?reEditToken=…` for anybody who asks.
+ * **The expiry is enforced here and nowhere else.** Without this conjunct
+ * `reEditTokenExpiresAt` is a column nothing reads, and this is what makes it
+ * mean something. Putting it in the access filter rather than in each caller's
+ * `where` means every door honours it at once: the page, the re-edit endpoint's
+ * own lookup, and Payload's REST API, which is mounted and will answer
+ * `GET /api/sponsorships?reEditToken=…` for anybody who asks.
  *
  * A NULL expiry is refused, not accepted: SQL's `>` is false against NULL, so
  * a row carrying a token and no expiry is unreachable. That is the safe
@@ -61,7 +60,7 @@ function liveToken(token: string, now: string): Where {
  * unexpired `reEditToken` query parameter names, and nothing at all without
  * one.
  *
- * The spec's rule is "sponsor reads own by token; admin has full access", and
+ * The rule is "sponsor reads own by token; admin has full access", and
  * **read** is the whole of it. `create`, `update` and `delete` stay `isAdmin`
  * in `collections/Sponsorships.ts`, which is a decision rather than an
  * omission:

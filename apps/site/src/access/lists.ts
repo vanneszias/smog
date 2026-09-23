@@ -26,12 +26,12 @@ function shareToken(req: { searchParams?: URLSearchParams }): string | null {
  *
  * **Why the signed-in branch widens rather than replaces.** It used to return
  * `{ owner: { equals: req.user.id } }` unconditionally, which meant an
- * authenticated recipient of a share link saw nothing — anonymous-only
- * sharing, which is not the product intent (spec, "Sharing is inert until
- * Stage 3", gap 2). A token now *adds* to what its holder can reach, in both
- * directions: they keep their own lists, and they gain the shared one.
+ * authenticated recipient of a share link saw nothing — anonymous-only sharing,
+ * which is not the product intent. A token now *adds* to what its holder can
+ * reach, in both directions: they keep their own lists, and they gain the
+ * shared one.
  *
- * **Why the tokenless guard survives Task 7.** Minting means most rows now
+ * **Why the tokenless guard survives minting.** Minting means most rows now
  * carry a token, so the reasoning "the columns are no longer NULL, the guard
  * is dead code" is available and is wrong twice over. Rows created before
  * minting still hold NULL, and `viewShareToken` has no `required: true` to
@@ -117,8 +117,8 @@ export const listUpdateAccess: Access = ({ req }): AccessResult => {
  * edit link or not — is denied outright, regardless of what token it
  * presents.
  *
- * Task 7 widened the signed-in branch of read and update so a token adds to
- * what its holder can reach. This one deliberately did **not** follow, and
+ * Read and update widen the signed-in branch so a token adds to what its
+ * holder can reach. This one deliberately does **not** follow, and
  * the likeliest way for it to start is somebody applying the same edit to all
  * three. `lists.test.ts` asserts the exact shape here for that reason.
  */

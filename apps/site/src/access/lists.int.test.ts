@@ -24,15 +24,14 @@ describe("share-token field protection against a real database", () => {
   let listId: number;
 
   // Suffixed with Date.now(), like every other fixture value in this test
-  // suite, because viewShareToken/editShareToken are `unique: true`.
-  // R3 finding: a run against a local D1 persistence directory left over
-  // from an earlier invocation (apps/site/.wrangler/state/vitest/worker-N,
-  // not cleared between separate `bun run test` calls — the same reuse
-  // documented in the Task 5 report) hit a real
+  // suite, because viewShareToken/editShareToken are `unique: true`. A run
+  // against a local D1 persistence directory left over from an earlier
+  // invocation (apps/site/.wrangler/state/vitest/worker-N, not cleared between
+  // separate `bun run test` calls) hit a real
   // `UNIQUE constraint failed: lists.view_share_token` in this file's own
   // `beforeAll`, which skipped all 4 of its tests without any one of them
-  // failing individually — this file colliding with its own prior run's
-  // data, not a cross-file cascade.
+  // failing individually — this file colliding with its own prior run's data,
+  // not a cross-file cascade.
   const originalViewToken = `view-original-${Date.now()}`;
   const editToken = `edit-original-${Date.now()}`;
 

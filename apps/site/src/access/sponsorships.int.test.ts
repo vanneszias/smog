@@ -6,9 +6,9 @@ import config from "../payload.config";
 /**
  * @fileoverview The re-edit token, against a real database.
  *
- * Review Focus 5 of the Stage 5 plan: "the re-edit token is a capability URL
- * that outlives its purpose. It is stored in the clear, has an expiry column
- * nothing enforces yet, and grants writes to a paid sponsorship." Every claim
+ * The hazard: the re-edit token is a capability URL that can outlive its
+ * purpose. It is stored in the clear, carries an expiry only the access
+ * filter enforces, and grants writes to a paid sponsorship. Every claim
  * here is about what the *database* answers rather than about what a function
  * returns, because the three things that can go wrong — an access filter
  * Payload silently drops, a `beforeChange` hook, and a field guard that
@@ -66,10 +66,10 @@ describe("the re-edit token against a real database", () => {
    * the sort.
    *
    * This is not a contrived row. `reEditTokenExpiresAt` is an ordinary date
-   * field in the admin panel with no field guard on it, while `reEditToken`
-   * is `hidden: true` and cannot be typed in at all — so "an expiry in the
-   * future and no token" is precisely the row an administrator produces by
-   * touching that date picker, and Stage 9's import can produce it too.
+   * field in the admin panel with no field guard on it, while `reEditToken` is
+   * `hidden: true` and cannot be typed in at all — so "an expiry in the future
+   * and no token" is precisely the row an administrator produces by touching
+   * that date picker.
    */
   let tokenlessWithExpiryId: number;
 
