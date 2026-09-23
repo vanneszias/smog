@@ -525,9 +525,9 @@ gestures, 4 skipped, 5 favourites dropped); a different count alone is not a
 reason to stop. But in the export's source every admin edit also writes an
 `adminLogs` row, which the planner refuses, so any editing since the
 rehearsal shows up as a refusal, not as drift. The gates are the ones that do
-not depend on old numbers: the planner's refusals (it will not plan an export with users,
-sponsorships, consents, admin logs, a `gesture_lists` table, duplicate
-`_id`s, malformed rows or a missing table), and re-reviewing the
+not depend on old numbers: the planner's refusals (it will not plan an export
+with users, sponsorships, consents, admin logs, a `gesture_lists` table,
+duplicate `_id`s, malformed rows or a missing table), and re-reviewing the
 skipped-gestures list the dry run's `skipped` count stands for, which the
 apply's report names in full (a dry run writes no report).
 

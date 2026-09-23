@@ -365,8 +365,8 @@ describe("reconcileConsent, a token the session has moved on from", () => {
    * A is genuinely verified (a real `/users/me` answering A's id, against
    * "tA"), then the keychain is handed B's token while B's own
    * `/users/me` is still in flight. `getVerifiedSession()` still names A
-   * during that whole window — this is `session.ts`'s own fix-round-2
-   * correction at work, not anything this test sets up directly — so a
+   * during that whole window — this is `session.ts`'s own rule at work,
+   * not anything this test sets up directly — so a
    * pass enqueued for A while the tree still rendered A (exactly what
    * `useConsentSync`'s own closure would have done) must not send A's
    * decision under B's token. Once B's `/users/me` finally answers, the

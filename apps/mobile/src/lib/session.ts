@@ -441,9 +441,8 @@ interface VerifiedSession {
  * The token/account pair {@link resolveSessionUser} most recently
  * confirmed — set only once `/users/me` has answered, for this exact
  * token, with a real user, never before that response and never on a
- * failed or empty one. A fix-round-2 correction: an earlier version of
- * this recorded the token the instant it was read, before `/users/me`
- * even answered, which meant a POST could go out for a token nobody had
+ * failed or empty one. An earlier version of this recorded the token the
+ * instant it was read, before `/users/me` even answered, which meant a POST could go out for a token nobody had
  * actually confirmed belonged to anybody yet.
  *
  * `consentSync.ts`'s reconciler treats a pass as safe to POST only when
