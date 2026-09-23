@@ -152,9 +152,9 @@ answer next to each item when it is made.
    Mollie webhook's move from `pending_payment` to `pending_approval` asks for
    it, off the request path, never checkout (user decision, 2026-09-23). The
    composite exists only for paid sponsorships, and an administrator reviews
-   it in the approval queue as before. Either the operator does the deploy
-   below before the window, or launching without composed sponsor videos is
-   an explicit decision — production holds no sponsorships today, so nothing
+   it in the approval queue. Either the operator does the deploy below
+   before the window, or launching without composed sponsor videos is an
+   explicit decision — production holds no sponsorships today, so nothing
    is lost by deferring it.
 
    **Setup order, once — staging first, production only after staging has

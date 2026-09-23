@@ -14,18 +14,7 @@ exactly those props. A rename on either side fails `check-types`.
 Mollie webhook's move from `pending_payment` to `pending_approval` asks for it
 (`apps/site/src/lib/paidRenders.ts`), never checkout. The composite therefore
 exists only for paid sponsorships, and an administrator reviews it in the
-approval queue as before.
-
-**The workspace is named `render`, and `apps/remotion` is named `remotion`** —
-the same name as the `remotion` npm package. Filter this workspace with
-`bun -F render …`; `bun -F remotion …` means the legacy `apps/remotion`, not
-the package and not this app.
-
-The compositions are a copy of `apps/remotion`'s. The legacy Docker render
-stack still runs `apps/remotion` until the cutover's 30-day hold ends
-(`docs/cutover-runbook.md`, section 5), and the copy ends when `apps/remotion`
-is deleted. Until then, change a composition in both places, or here only if
-the legacy stack no longer matters.
+approval queue.
 
 ## Scripts
 
