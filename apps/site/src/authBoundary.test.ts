@@ -39,17 +39,17 @@ const ROOTS = ["src", "scripts", "tests"];
 const EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".json"];
 
 /**
- * The two things that must not appear.
+ * What must not appear.
  *
- * `@smog/auth` is matched as a bare string rather than as an import
- * statement, because a dynamic `import()`, a `require`, a re-export and a
- * `vi.mock` are all ways in and only one of them looks like an import. The
- * WorkOS pattern is case-insensitive for the same reason: `WorkOS`,
- * `workos`, `WORKOS_API_KEY` and `@workos-inc/node` are all the same hazard
- * wearing different capitalisation.
+ * `packages/auth` is gone, so an import of it no longer resolves and needs no
+ * guard here. WorkOS itself is still an npm package anybody could add. The
+ * pattern is matched as a bare, case-insensitive string rather than as an
+ * import statement, because a dynamic `import()`, a `require`, a re-export
+ * and a `vi.mock` are all ways in and only one of them looks like an import;
+ * `WorkOS`, `workos`, `WORKOS_API_KEY` and `@workos-inc/node` are all the same
+ * hazard wearing different capitalisation.
  */
 const FORBIDDEN: { name: string; pattern: RegExp }[] = [
-  { name: "@smog/auth", pattern: /@smog\/auth/ },
   { name: "WorkOS", pattern: /workos/i },
 ];
 
@@ -114,7 +114,7 @@ describe("the auth boundary around apps/site", () => {
     expect(hits(pattern)).toEqual([]);
   });
 
-  it("does not depend on @smog/auth or a WorkOS package", () => {
+  it("does not depend on a WorkOS package", () => {
     const manifest = readFileSync(join(APP_ROOT, "package.json"), "utf8");
 
     /*
@@ -122,7 +122,6 @@ describe("the auth boundary around apps/site", () => {
      * dependency can be declared long before anything imports it — and a
      * declared dependency is what makes the import typecheck later.
      */
-    expect(manifest).not.toMatch(/@smog\/auth/);
     expect(manifest).not.toMatch(/workos/i);
   });
 

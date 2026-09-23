@@ -2,37 +2,23 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * Nothing in this app may import a package Stage 10 deletes.
+ * Nothing in this app may import the legacy stack's backend clients.
  *
- * `apps/mobile` exists to replace `apps/native`, and the whole point of it
- * being a new app rather than an edit of the old one is that it never
- * acquires a dependency on Convex, WorkOS or the oRPC client. An import
- * added "just for now" is how the cutover stage discovers it has a migration
- * to do rather than a deletion.
+ * `apps/mobile` talks to the Payload API in `apps/site` and nothing else. The
+ * workspace packages that wrapped Convex, WorkOS and the oRPC client are gone,
+ * so an import of one of those fails to resolve on its own; what can still
+ * creep back in is the npm packages themselves, added "just for now".
  *
  * Modelled on `apps/site/src/authBoundary.test.ts`, including its
  * file-count self-check: a glob that matches nothing passes every assertion
  * in this file.
  *
- * One correction from the plan's own draft of this file: `@smog/ui` here
- * means the legacy package literally named `@smog/ui` (`apps/web`'s kit,
- * bound for deletion alongside Convex and the oRPC client) — not this app's
- * required `@smog/ui-native`. A plain substring match on `@smog/ui` would
- * also match `from "@smog/ui-native"`, which is exactly the import the
- * kitchen-sink route in `app/dev/kitchen-sink.tsx` must make, so `forbiddenPattern`
- * requires the specifier to end (a closing quote) or continue as a subpath
- * (`/`) right where `@smog/ui` does — never a hyphen straight into another
- * package's name.
+ * `forbiddenPattern` requires the specifier to end (a closing quote) or
+ * continue as a subpath (`/`) right where the forbidden name does, so
+ * `convex` does not also match an unrelated package whose name merely starts
+ * with it.
  */
-const FORBIDDEN = [
-  "@smog/api",
-  "@smog/auth",
-  "@smog/convex",
-  "@smog/hooks",
-  "@smog/ui",
-  "convex",
-  "@workos-inc",
-];
+const FORBIDDEN = ["convex", "@workos-inc", "@orpc"];
 
 const ROOT = join(__dirname, "..");
 
@@ -101,8 +87,12 @@ describe("the mobile app's dependency boundary", () => {
       readFileSync(join(ROOT, "package.json"), "utf8")
     ) as { dependencies?: Record<string, string> };
 
+    const declared = Object.keys(manifest.dependencies ?? {});
+
     expect(
-      FORBIDDEN.filter((pkg) => manifest.dependencies?.[pkg] !== undefined)
+      FORBIDDEN.filter((pkg) =>
+        declared.some((name) => name === pkg || name.startsWith(`${pkg}/`))
+      )
     ).toEqual([]);
   });
 });
