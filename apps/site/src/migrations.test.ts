@@ -36,6 +36,19 @@ import { migrations } from "./migrations/index";
 
 const dialect = new SQLiteSyncDialect();
 
+/**
+ * Matches this directory's actual naming, e.g.
+ * `20260922_100000_add_rate_limits.ts` or the bare `20250929_111647.ts` —
+ * and also whatever `payload migrate:create` actually emits. Drizzle builds
+ * the name suffix with `name.replace(/\W/g, '_')`
+ * (`@payloadcms/drizzle/dist/utilities/buildCreateMigration.js` ~l.32),
+ * which preserves case (`AddFoo`) and replaces each non-word character with
+ * its own `_` rather than collapsing a run (`add-foo!` → `add_foo_`,
+ * `a  b` → `a__b`) — not the lowercase, single-underscore shape an earlier,
+ * narrower pattern assumed.
+ */
+const MIGRATION_FILENAME = /^\d{8}_\d{6}(?:_\w+)?\.ts$/;
+
 /** The migration that folded `webhook_deliveries` and `render_completions` into one table. */
 const MERGE_MIGRATION = "20260921_180000_add_claims";
 
@@ -168,12 +181,8 @@ describe("migration chain", () => {
       .filter((f) => f.endsWith(".ts") || f.endsWith(".js"))
       .filter((f) => f !== "index.ts" && f !== "index.js");
 
-    // Matches this directory's actual naming, e.g.
-    // `20260922_100000_add_rate_limits.ts` or the bare `20250929_111647.ts`.
-    const migrationFilename = /^\d{8}_\d{6}(?:_[a-z0-9]+)*\.ts$/;
-
     for (const file of loadedByPayload) {
-      expect(file).toMatch(migrationFilename);
+      expect(file).toMatch(MIGRATION_FILENAME);
     }
 
     // And a file that merely looks like a migration but was never wired into
@@ -187,6 +196,24 @@ describe("migration chain", () => {
       expect(typeof migration.up).toBe("function");
       expect(typeof migration.down).toBe("function");
     }
+  });
+
+  it.each([
+    // Existing names in this directory.
+    ["20250929_111647.ts", true],
+    ["20260922_100000_add_rate_limits.ts", true],
+    ["20260923_001946_add_legacy_ids.ts", true],
+    // What `payload migrate:create` can actually emit: drizzle builds the
+    // suffix with `name.replace(/\W/g, '_')`, which preserves case and never
+    // lowercases or hyphen-joins anything.
+    ["20260101_000000_AddFoo.ts", true],
+    ["20260101_000000_add_foo_.ts", true],
+    // Not a migration filename at all.
+    ["foo.test.ts", false],
+    ["helpers.ts", false],
+    ["20260101_000000.test.ts", false],
+  ])("%s is accepted: %s", (name, accepted) => {
+    expect(MIGRATION_FILENAME.test(name)).toBe(accepted);
   });
 
   it("ends with the re-edit token uniquely indexed and the payment id not", async () => {
