@@ -53,10 +53,10 @@ describe("the message bodies", () => {
 
   it("tells the sponsor which gesture and which date the reminder is about", () => {
     /*
-     * The three facts the shipped `RenewalReminderEmail` carries, which are
-     * the three a sponsor needs to decide: who it is addressed to, what is
-     * ending, and when. A reminder that said only "your sponsorship ends soon"
-     * is unanswerable by a company sponsoring more than one gesture.
+     * The three facts the reminder carries, which are the three a sponsor needs
+     * to decide: who it is addressed to, what is ending, and when. A reminder
+     * that said only "your sponsorship ends soon" is unanswerable by a company
+     * sponsoring more than one gesture.
      */
     const message = renderEmail({
       endDate: "31 oktober 2027",

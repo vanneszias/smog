@@ -14,15 +14,13 @@ import type { Locale } from "@/lib/locale";
  *
  * ## Text only, deliberately
  *
- * The shipped product renders React Email components to HTML
- * (`apps/server/src/services/emailQueue.ts`). These two messages are one
- * sentence and one link each, and a text body has three properties an HTML
- * one would have to be given: there is no markup for an interpolated value to
- * escape into, no images or styles for a mail client to strip, and no second
- * copy of the wording to drift out of step with the first. If a future message
- * needs layout, `SendEmailOptions` carries `html` beside `text` and the
- * adapter already passes both through — this returning only `text` is not a
- * limit of anything below it.
+ * The messages here are one sentence and one link each, and a text body has
+ * three properties an HTML one would have to be given: there is no markup for
+ * an interpolated value to escape into, no images or styles for a mail client
+ * to strip, and no second copy of the wording to drift out of step with the
+ * first. If a future message needs layout, `SendEmailOptions` carries `html`
+ * beside `text` and the adapter already passes both through — this returning
+ * only `text` is not a limit of anything below it.
  *
  * ## Nothing here reads a token
  *
@@ -54,7 +52,7 @@ function oneLine(value: string): string {
  * The email-change confirmation, and the sponsor's re-edit invitation.
  *
  * Not exported: `renderEmail` is the only thing that names it, and knip fails
- * the build on an exported symbol nothing imports — the ruling `lib/mollie.ts`
+ * the build on an exported symbol nothing imports — the rule `lib/mollie.ts`
  * records for `CreateMolliePaymentInput`. Callers build the object inline and
  * the signature checks it, which is the same guarantee with one fewer name.
  */
@@ -93,8 +91,7 @@ interface RenderedEmail {
 }
 
 /**
- * Dutch first, because the product is Flemish and every existing transactional
- * message in `apps/server` is Dutch only. English and French are the two
+ * Dutch first, because the product is Flemish. English and French are the two
  * locales the public site already serves (`lib/locale.ts`), so a visitor who
  * read the form in French is answered in French rather than in the language of
  * whoever set the site up.
@@ -180,16 +177,10 @@ const RE_EDIT: Record<Locale, (name: string, url: string) => RenderedEmail> = {
 /**
  * The renewal reminder, one month before the sponsorship's term ends.
  *
- * Transcribed from the shipped `RenewalReminderEmail`
- * (`apps/server/src/emails/renewalReminder.tsx`) rather than written here: the
- * subject is its subject, and the three things it says are the three things it
- * said — the term ends on this date, the gesture goes back to its own video
- * afterwards, and renewing keeps it. Two differences, both deliberate.
- *
- * The shipped footer says "over ongeveer 7 dagen", which contradicts the same
- * file's own thirty-day query and is a copy bug rather than a rule; this says
- * the number the job actually applies. And this is text rather than a React
- * Email layout with a button, for the reason at the top of this module.
+ * It says three things — the term ends on this date, the gesture goes back to
+ * its own video afterwards, and renewing keeps it — which are the three a
+ * sponsor needs to decide. It is text rather than an HTML layout with a
+ * button, for the reason at the top of this module.
  */
 const RENEWAL_REMINDER: Record<
   Locale,

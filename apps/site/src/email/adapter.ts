@@ -10,8 +10,7 @@ import { requireBinding } from "@/lib/env";
  * shape. Everything below is the translation between that shape and
  * Cloudflare's.
  *
- * ## The plan said to build a MIME message. It is wrong, and doing so would
- * be worse than unnecessary
+ * ## Why this builds no MIME message, which would be worse than unnecessary
  *
  * There are two products behind the name `send_email`, and they take
  * different arguments:
@@ -19,8 +18,8 @@ import { requireBinding } from "@/lib/env";
  * - **Email Routing**'s binding takes an `EmailMessage` built from raw MIME,
  *   constructed with `new EmailMessage(from, to, raw)` out of the
  *   `cloudflare:email` module.
- * - **Email Service**'s binding — the one whose error table the whole of
- *   Stage 7 is written against (`E_SENDER_NOT_VERIFIED`,
+ * - **Email Service**'s binding — the one whose error table the whole mail
+ *   queue is written against (`E_SENDER_NOT_VERIFIED`,
  *   `E_DAILY_LIMIT_EXCEEDED`, `E_RECIPIENT_NOT_ALLOWED`) — additionally takes
  *   a structured `EmailMessageBuilder`: `{ to, from, subject, text, html }`,
  *   and composes the MIME itself.
@@ -45,12 +44,12 @@ import { requireBinding } from "@/lib/env";
  * passes `() => cloudflare.env.EMAIL`, so an absent binding is an error on the
  * one request that tried to send, not a module that cannot be imported.
  *
- * The precedent is measured, not hypothetical: `createMollieClient({ apiKey:
- * "" })` throws inside its constructor, and the shipped
- * `packages/auth/src/lib/payments.ts` builds one at module scope — which killed
- * an entire `next build` from a file that had nothing to do with payments. An
- * `EMAIL` binding is absent in exactly the same places a Mollie key is: during
- * a build, and in any environment that has not been given one.
+ * The precedent is measured, not hypothetical:
+ * `createMollieClient({ apiKey: "" })` throws inside its constructor, and a
+ * module that built one at module scope once killed an entire `next build` from
+ * a file that had nothing to do with payments. An `EMAIL` binding is absent in
+ * exactly the same places a Mollie key is: during a build, and in any
+ * environment that has not been given one.
  *
  * ## Nothing here logs
  *
@@ -65,10 +64,11 @@ import { requireBinding } from "@/lib/env";
  * The refusals that will still refuse on the next attempt.
  *
  * The list is of *permanent* failures rather than transient ones, so that
- * anything unrecognised defers. That direction is deliberate: Task 3 bounds
- * the number of attempts, so treating an unknown failure as transient costs a
- * handful of retries, while treating it as permanent drops a message for good
- * on the strength of a code nobody has seen before.
+ * anything unrecognised defers. That direction is deliberate: the queue
+ * (`jobs/index.ts`) bounds the number of attempts, so treating an unknown
+ * failure as transient costs a handful of retries, while treating it as
+ * permanent drops a message for good on the strength of a code nobody has seen
+ * before.
  *
  * From Cloudflare's own error table:
  *
@@ -82,14 +82,14 @@ import { requireBinding } from "@/lib/env";
  * | `E_SENDER_NOT_VERIFIED` | the sender domain is not verified |
  * | `E_SENDER_DOMAIN_NOT_AVAILABLE` | the domain is not onboarded to Email Service |
  *
- * The last two are the pair Stage 7 is blocked on, and they are the
- * uncomfortable entries: they are an operator's misconfiguration rather than
- * anything about the recipient, and classing them permanent means a queue
- * drains into the failure log while the DNS record is missing. That is still
- * the better trade. Retrying them changes nothing until a human acts, and a
- * queue that retries every message for ever is how the *next* misconfiguration
- * goes unnoticed. Task 3 records the reason it gave up, which is what makes
- * the failure visible.
+ * The last two are the pair a sending domain that is not yet set up produces,
+ * and they are the uncomfortable entries: they are an operator's
+ * misconfiguration rather than anything about the recipient, and classing them
+ * permanent means a queue drains into the failure log while the DNS record is
+ * missing. That is still the better trade. Retrying them changes nothing until
+ * a human acts, and a queue that retries every message for ever is how the
+ * *next* misconfiguration goes unnoticed. The queue records the reason it gave
+ * up, which is what makes the failure visible.
  */
 const PERMANENT_REFUSALS = new Set([
   "E_CONTENT_TOO_LARGE",
@@ -110,7 +110,7 @@ const PERMANENT_REFUSALS = new Set([
  * "sending failed" is what produces either a reminder nobody was ever asked
  * for or a queue that never drains.
  *
- * Deliberately not exported, even now that Task 3's retry policy exists.
+ * Deliberately not exported, even though the queue has a retry policy.
  * `isRetryableSendFailure` below is what that policy asks, and it answers for
  * a raw refusal as readily as for one of these — so the queue never has to
  * know which shape it caught, and knip has nothing exported that nothing

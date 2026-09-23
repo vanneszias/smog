@@ -25,18 +25,18 @@ const WRANGLER_CONFIG = path.resolve(dirname, "..", "..", "wrangler.jsonc");
 /**
  * The binding restrictions a `send_email` entry may carry, all four of them.
  *
- * The plan names only `allowed_destination_addresses`. Cloudflare's own
+ * The obvious one is `allowed_destination_addresses`. Cloudflare's own
  * "Configure send bindings" page lists two more that silently narrow where
  * mail can go, and one that narrows where it can come from:
  *
  * - `destination_address` — a *single* permitted recipient, and worse than
  *   the allowlist: "If you call `send()` with `to` set to `null` or
  *   `undefined`, the configured address is used", so it can also redirect.
- * - `allowed_destination_addresses` — the allowlist the plan names.
+ * - `allowed_destination_addresses` — the destination allowlist.
  * - `allowed_sender_addresses` — restricts the `from`.
  *
  * With none of them present the binding "can send to any verified destination
- * address in your account", and once a sending domain is onboarded (Task 7),
+ * address in your account", and once a sending domain is onboarded,
  * to any recipient at all. That is what transactional mail needs, so the
  * assertion is the strong one: the entry carries its `name` and nothing else.
  */
@@ -273,7 +273,7 @@ describe("the Cloudflare email adapter", () => {
 
   it("answers a quota refusal differently from a bad address", async () => {
     // E_DAILY_LIMIT_EXCEEDED must defer; a rejected recipient must stop.
-    // Task 3's retry policy is built on this distinction.
+    // The queue's retry policy is built on this distinction.
     const send = (code: string) =>
       failureOf(
         adapterFor(() => failingBinding(refusal(code))).sendEmail({
