@@ -1,0 +1,31 @@
+{
+  "name": "render",
+  "version": "2.0.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bundle": "remotion bundle",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "dev:studio": "remotion studio",
+    "deploy:function": "remotion lambda functions deploy --region=eu-central-1 --memory=3009 --timeout=240 --disk=2048 --yes",
+    "deploy:site": "remotion lambda sites create src/index.ts --site-name=smog-render --region=eu-central-1"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.484",
+    "@remotion/media": "4.0.484",
+    "@remotion/zod-types": "4.0.484",
+    "@smog/types": "workspace:*",
+    "mediabunny": "1.50.3",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.484",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@remotion/lambda": "4.0.484",
+    "@types/react": "19.2.14",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}

@@ -126,10 +126,10 @@ describe("the render submission", () => {
   it("carries the sponsor's overlay text as the name Remotion draws", async () => {
     // One input, two columns: the wizard collects `sponsorName` once and
     // writes it to both `sponsorName` and `overlayText`, and what is composited
-    // is the overlay text. `MAX_SPONSOR_NAME` is 35 here and the Remotion
-    // schema caps `sponsorName` at 35 too, so the two agree by coincidence
-    // rather than by construction — a longer text would be refused by zod
-    // inside the render rather than by the wizard.
+    // is the overlay text. `MAX_SPONSOR_NAME` here and the `apps/render`
+    // schema's cap on `sponsorName` are both `SPONSOR_NAME_MAX_LENGTH` from
+    // `@smog/types/render`, so they agree by construction: a text the wizard
+    // accepts is never refused by zod inside the render.
     const submission = await renderSubmission(
       input({ overlayText: "Met dank aan Acme" })
     );

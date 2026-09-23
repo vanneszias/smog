@@ -13,6 +13,7 @@
     "apps/native/context/ListsContext.tsx": ["types"],
     "apps/remotion/src/server/jobs.ts": ["types"],
     "apps/remotion/src/utils/get-media-metadata.ts": ["types"],
+    "apps/render/src/utils/get-media-metadata.ts": ["types"],
     "apps/server/src/services/email.ts": ["types"],
     "apps/server/src/services/emailQueue.ts": ["types"],
     "apps/server/src/services/mux.ts": ["types"],
@@ -52,6 +53,10 @@
     "apps/remotion": {
       "entry": ["remotion.config.ts", "src/index.ts"],
       "ignoreDependencies": ["remotion"]
+    },
+    "apps/render": {
+      "entry": ["remotion.config.ts", "src/index.ts"],
+      "ignoreDependencies": ["@remotion/lambda"]
     },
     "packages/api": {
       "entry": ["src/context.ts", "src/index.ts", "src/routers/index.ts"],

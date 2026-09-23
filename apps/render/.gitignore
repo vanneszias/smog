@@ -1,0 +1,6 @@
+# Remotion bundle output
+build/
+out/
+
+# Remotion cache
+.remotion/
