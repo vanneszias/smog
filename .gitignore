@@ -13,9 +13,6 @@ build
 .env*
 !.env.example
 
-# Docker
-docker-compose.override.yml
-
 # IDEs and editors
 .vscode/*
 !.vscode/settings.json
@@ -39,9 +36,6 @@ lerna-debug.log*
 # Turbo
 .turbo
 
-# Better-T-Stack
-.alchemy
-
 # Testing
 coverage
 .nyc_output
@@ -50,7 +44,6 @@ coverage
 *.tgz
 .cache
 tmp
-packages/convex/.bak/
 
 # React Native / Expo
 .expo
