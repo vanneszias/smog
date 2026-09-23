@@ -2,7 +2,6 @@ import { availableLocales } from "@smog/i18n";
 import { Button, Card, Switch, Text } from "@smog/ui-native";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useColorScheme } from "nativewind";
 import { Pressable, View } from "react-native";
 import { API_BASE_URL } from "@/lib/api";
 import { setConsent, useConsent } from "@/lib/consent";
@@ -10,6 +9,7 @@ import { t, useLocale } from "@/lib/i18n";
 import type { Locale } from "@/lib/locale";
 import { signOut, useSession } from "@/lib/session";
 import { privacyPolicyUrl } from "@/lib/site";
+import { type ThemePreference, useThemePreference } from "@/lib/theme";
 
 /**
  * Every option this screen offers is one press, with nothing destructive on
@@ -19,8 +19,7 @@ import { privacyPolicyUrl } from "@/lib/site";
  * or a delete can.
  */
 
-type ThemeOption = "system" | "light" | "dark";
-const THEME_OPTIONS: ThemeOption[] = ["system", "light", "dark"];
+const THEME_OPTIONS: ThemePreference[] = ["system", "light", "dark"];
 
 function LanguageRow() {
   const { locale, setLocale } = useLocale();
@@ -55,12 +54,10 @@ function LanguageRow() {
 }
 
 function ThemeRow() {
-  const { colorScheme, setColorScheme } = useColorScheme();
-  // NativeWind's own hook answers `undefined` for "follow the system" —
-  // there is no third value it returns for that. This screen needs one, to
-  // know which of the three options is selected, and treats "no override"
-  // as its own state instead of guessing from `colorScheme`.
-  const active: ThemeOption = colorScheme ?? "system";
+  // The choice, not NativeWind's `colorScheme`: that is the scheme in
+  // effect, always "light" or "dark", so it can never select "system" (see
+  // `lib/theme.ts`).
+  const { preference: active, setPreference } = useThemePreference();
 
   return (
     <Card className="gap-sm p-md">
@@ -76,7 +73,7 @@ function ThemeRow() {
                 : "rounded-md border border-border px-md py-sm"
             }
             key={option}
-            onPress={() => setColorScheme(option)}
+            onPress={() => setPreference(option)}
             testID={`theme-${option}`}
           >
             <Text

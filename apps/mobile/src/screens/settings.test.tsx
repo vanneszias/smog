@@ -17,6 +17,7 @@ import {
 } from "@/lib/consent";
 import { setLocale } from "@/lib/i18n";
 import { SessionProvider } from "@/lib/session";
+import { resetThemePreferenceForTests } from "@/lib/theme";
 import SettingsScreen from "../../app/(tabs)/settings/index";
 
 /**
@@ -46,6 +47,7 @@ describe("the settings screen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     setLocale("nl");
+    resetThemePreferenceForTests();
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
     global.fetch = jest.fn() as unknown as typeof fetch;
   });
@@ -78,6 +80,40 @@ describe("the settings screen", () => {
     // than this screen keeping (and possibly disagreeing with) its own copy.
     const { result } = renderHook(() => useColorScheme());
     expect(result.current.colorScheme).toBe("dark");
+  });
+
+  it("shows following the system as the theme until another is chosen", async () => {
+    renderScreen();
+
+    expect(
+      (await screen.findByTestId("theme-system")).props.accessibilityState
+        .selected
+    ).toBe(true);
+    expect(
+      screen.getByTestId("theme-light").props.accessibilityState.selected
+    ).toBe(false);
+  });
+
+  it("shows the system option as selected again once it is chosen back", async () => {
+    renderScreen();
+
+    fireEvent.press(await screen.findByTestId("theme-light"));
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("theme-light").props.accessibilityState.selected
+      ).toBe(true)
+    );
+
+    fireEvent.press(screen.getByTestId("theme-system"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("theme-system").props.accessibilityState.selected
+      ).toBe(true)
+    );
+    expect(
+      screen.getByTestId("theme-light").props.accessibilityState.selected
+    ).toBe(false);
   });
 
   it("shows no account controls while signed out", async () => {
