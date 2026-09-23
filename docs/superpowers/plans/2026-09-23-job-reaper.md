@@ -249,3 +249,15 @@ git commit -m "fix(site): time out calls to Mollie, Mux and OpenPanel so a silen
 git add docs/deployment-checklist.md docs/superpowers/plans/2026-09-23-job-reaper.md
 git commit -m "docs: what a recovered or abandoned job looks like to an operator"
 ```
+
+## Exit
+
+- **Task 1** (`a875d8c`, fix round `25802c0`): `src/jobs/reapStrandedJobs.ts`, wired into `endpoints/jobs.ts` inside the lease before `handleSchedules`. 10 int tests: release, fail-at-budget, sweep filed failed, the 29-minute and exact-30-minute boundaries, non-processing untouched, unknown task slug, `REAP_LIMIT` (51 seeded → 50 reaped), and two through the endpoint (a stranded scheduled row no longer blocks its schedule; a throwing reaper still drains the queue and releases the lease). Each endpoint case was seen failing with the fix removed.
+- **Task 2** (`567a96e`, plus `78834c4`): `AbortSignal.timeout(10_000)` on Mollie, the three Mux calls and the OpenPanel relay; the email binding documented as deliberately untimed. `mollieRequest` refuses a caller `signal` at the type level rather than silently replacing it.
+- **Task 3**: `docs/deployment-checklist.md` step 8 describes the recovery log line, the duplicate/lost-message consequences, and a query for abandoned jobs (column names checked against `20260921_200000_add_payload_jobs.ts`).
+- Full site suite 1830/1830 after Task 2; knip, `bun check` and `check-types` clean.
+
+**What the shipped code contradicted:**
+- Payload's `deleteJobOnComplete` defaults to `true` (`payload/dist/config/defaults.js:64`), so a job that succeeds is deleted and cannot be read back. The endpoint tests prove a fresh job ran through the prune sweep's own log line and a sent message in the outbox, not through the row.
+- `payload.update` accepts `totalTried`, `error` and `hasError` on `payload-jobs` through the Local API; no `payload.db` write was needed outside the test fixtures.
+- No existing test covered `createMuxAssetFromUrl` directly, or a rejected OpenPanel relay; both were added against the code's actual contract (the relay swallows and answers 202).

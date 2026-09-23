@@ -260,6 +260,26 @@ steps 4–9 with `production`.
    `[cron]`/`[jobs]` lines — with `observability.enabled` on
    (`wrangler.jsonc`), they persist there and are not only visible to a live
    tail.
+
+   **A killed run, and what it leaves behind.** A run the platform cuts off
+   (the fifteen-minute ceiling, an eviction, a deploy mid-tick) leaves the
+   jobs it had claimed marked `processing`. Every tick now recovers any
+   such job untouched for thirty minutes (`src/jobs/reapStrandedJobs.ts`)
+   and logs `[jobs] Recovered stranded jobs: N released to run again, M
+   filed as failed`. Seeing that line means a run was killed; look for why
+   around the same time in Workers Logs. A released `send-email` may send
+   its message twice (at-least-once, as the old queue did). A job **filed as
+   failed** was given up on; for a `send-email` row that is a message that
+   may never have been sent. List them with:
+
+   ```bash
+   bunx wrangler d1 execute smog-staging --remote --env=staging --command \
+     "SELECT id, task_slug, total_tried, updated_at FROM payload_jobs WHERE has_error = 1 AND json_extract(error, '$.message') LIKE '[jobs] Stranded%'"
+   ```
+
+   (`smog-production` / `--env=production` for production.) The query reads
+   only ids, task names and times — never `input`, which holds the
+   recipient.
 9. Mobile: `eas env:create …EXPO_PUBLIC_API_URL…` for the matching EAS
    environment, then build. Only production builds should point at production.
 
