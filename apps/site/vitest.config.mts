@@ -21,8 +21,8 @@ export default defineConfig({
     // Vitest's 10s default is tuned for unit tests. Every `*.int.test.ts`
     // file's `beforeAll` boots a real Payload instance and pushes the whole
     // schema into a fresh miniflare D1, which costs most of those 10s on its
-    // own — and grows with every collection added. Stage 1 Task 6 took the
-    // suite from 19 files to 25, and the slowest hook crossed the line: CI
+    // own — and grows with every collection added. Once the suite grew from
+    // 19 files to 25, the slowest hook crossed the line: CI
     // failed at 10032ms, and a local run reproduced it at 10093ms in a
     // *different* file. Whichever integration file happens to be slowest on
     // a given run was going to fail, so this is a threshold the suite

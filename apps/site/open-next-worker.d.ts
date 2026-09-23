@@ -32,7 +32,7 @@
  * import only suppresses the diagnostic on *that* line, not the requirement
  * to still parse whatever it resolves to for the file three imports away
  * (OpenNext's own generated `worker.js` already carries `@ts-expect-error`
- * on this exact import, and it did not help). This is Review Focus 5. With
+ * on this exact import, and it did not help). With
  * `#open-next-worker` in place of the relative path, TypeScript's program
  * never reaches `.open-next/worker.js` — or `handler.mjs` — at all, in
  * either state, so the crash cannot recur; `bun -F site check-types` was

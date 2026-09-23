@@ -2,13 +2,8 @@
 
 Payload CMS 3 on Next.js 16, deployed to Cloudflare Workers via OpenNext.
 
-This app will eventually serve the Payload admin panel, the public API and the
-redesigned public website from a single Worker. Today it holds the template's
-two collections and nothing else — see
-[the migration spec](../../docs/superpowers/specs/2026-09-19-payload-migration-design.md).
-
-While the migration runs, the existing stack (`apps/web`, `apps/native`,
-`apps/server`, `apps/remotion`) keeps serving production untouched.
+This app serves the Payload admin panel, the public API (including the
+endpoints `apps/mobile` calls) and the public website from a single Worker.
 
 ## Stack
 
@@ -26,9 +21,6 @@ All Payload packages sit on exactly `3.89.0`. Upgrade them together or not at al
 ```bash
 bun -F site dev          # http://localhost:3003
 ```
-
-Port 3003 keeps out of the way of web (3001), server (3000) and Remotion (3002),
-which keep running during the parallel run.
 
 You need `PAYLOAD_SECRET` in your environment for anything that boots Payload.
 Generate one with `openssl rand -hex 32`. Set `CLOUDFLARE_ENV=staging` too —
@@ -112,7 +104,7 @@ It has never been seen in CI across 30+ runs. The likely cause is the same D1
 contention documented above — vitest runs many workers against one persisted
 directory, and the seed test writes more than most.
 
-**Fourth sighting, Stage 4 Task 4.** Twice in 31 consecutive whole-suite runs
+**Fourth sighting.** Twice in 31 consecutive whole-suite runs
 of a mutation sweep, against a persistence directory that had grown past D1's
 parameter cap (the capture above came out of the same sweep). The error text
 is still not captured, but the *shape* now is, from the JSON reporter:
@@ -159,10 +151,10 @@ afternoon:
   so deployed environments are unaffected — but it makes a perfectly good
   branch look broken on first run.
 
-  Stage 4 Task 5 is the worked example, and it cost most of a session. It
-  added three `users` columns and one index. Against a directory left over
-  from before that change, the suite failed in a **different set of files on
-  every run** — including files the task never touched — and the failures
+  The worked example cost most of a session: a change that added three
+  `users` columns and one index. Against a directory left over from before
+  that change, the suite failed in a **different set of files on every run**
+  — including files the change never touched — and the failures
   clustered on `users`, which made it look like tests were leaking login
   lockouts into each other. They were not. `rm -rf .wrangler/state` and the
   same commit ran 885/885 green four times over. If failures move between
@@ -189,7 +181,7 @@ afternoon:
   anything that turns a caller-supplied list into an `IN (...)` —
   `fetchGesturesByIds`, for one — caps its input.
 
-  **Two details here were wrong until Stage 4 Task 4 captured the error.** A
+  **Two details here were wrong until the error was captured in full.** A
   31-mutation sweep grew the directory past the cap and the failure was
   caught in full:
 
@@ -226,8 +218,7 @@ bundle: a Next metadata route is its own entry and re-bundles the
 Payload/D1/drizzle graph into it, where the REST route
 (`app/(payload)/api/[...slug]/route.ts`) already carries that graph. Measured
 against the same commit, the naive `sitemap.ts` cost **+523.65 KiB gzipped**
-and the endpoint cost **+5.06 KiB**. Full table in
-[the Stage 0 findings](../../docs/superpowers/specs/2026-09-19-stage-0-findings.md).
+and the endpoint cost **+5.06 KiB**.
 
 Two consequences worth knowing before touching either file:
 
@@ -290,7 +281,7 @@ So: run `bun -F site generate:types` (or `generate:types:cloudflare`) with no
 build present. `rm -rf apps/site/.open-next` first, or regenerate before you
 build.
 
-A Stage 3 Task 9 note claimed the line is emitted either way and cannot be
+An earlier note claimed the line is emitted either way and cannot be
 removed. That is wrong; both directions were re-tested afterwards on wrangler
 4.116, and the results are worth keeping because the claim is easy to arrive
 at from a half-finished state:
@@ -312,8 +303,9 @@ symptom. CI never sees any of this: `release:check` runs `next build`, which
 writes `.next` and not `.open-next`, and the typecheck runs before it anyway.
 
 
-The Worker has a **10 MiB gzipped** limit on the Workers Paid plan, and Stage 0
-already uses **6.45 MiB of it** with two collections and no public site.
+The Worker has a **10 MiB gzipped** limit on the Workers Paid plan, and the
+bare scaffold, with two collections and no public site, already used
+**6.45 MiB of it**.
 
 Measure before you add anything large:
 

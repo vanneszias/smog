@@ -199,8 +199,8 @@ export default buildConfig({
    * `favoritesEndpoints` adds `/api/account/favorites`, reached at
    * `/account/favorites`. It is the signed-in half of the favourite control
    * on the detail page and the favorites list, and it is here rather than in
-   * `app/` for the same half-megabyte reason as everything above — Stage 3
-   * Task 6 measured that exact route and recorded the number in
+   * `app/` for the same half-megabyte reason as everything above — that exact
+   * route was measured, and the number is recorded in
    * `lib/favoritesQuery.ts`.
    *
    * `accountEndpoints` adds the four writes the account page makes —
@@ -219,7 +219,7 @@ export default buildConfig({
    *
    * `sponsorshipEndpoints` adds the sponsor wizard's writes, under
    * `/sponsor/*`. They are the only endpoints here with no session check at
-   * all: sponsoring is a public purchase flow in the shipped product, so what
+   * all: sponsoring is a public purchase flow, so what
    * stands in for authentication is that nothing the form says is believed —
    * see `endpoints/sponsorships.ts`.
    *
@@ -242,8 +242,8 @@ export default buildConfig({
    * caller the same bytes so that a right token cannot be told from a wrong
    * one. See `endpoints/jobs.ts`.
    *
-   * `mobileAuthEndpoints` adds `POST /api/mobile/sign-up` — the Stage 8
-   * native app's one missing auth endpoint; sign-in, "who am I", refresh,
+   * `mobileAuthEndpoints` adds `POST /api/mobile/sign-up` — the native
+   * app's one missing auth endpoint; sign-in, "who am I", refresh,
    * sign-out and forgot-password are all covered by `/api/users/*` already
    * (the first shadowed by `usersCollectionEndpoints` above, the rest
    * Payload's own). It is a flat sibling of `/mobile/*` for the same
@@ -255,8 +255,8 @@ export default buildConfig({
    * enumeration-safety property this file exists for cannot agree in one
    * response shape and quietly drift in the other. See `endpoints/auth.ts`.
    *
-   * `mobileSessionEndpoints` adds `POST /api/mobile/session` — Stage 8's
-   * Google sign-in on the phone. `oauthEndpoints`' own callback, when asked
+   * `mobileSessionEndpoints` adds `POST /api/mobile/session` — the native
+   * app's Google sign-in. `oauthEndpoints`' own callback, when asked
    * for `?client=mobile`, hands back a single-use exchange code instead of a
    * cookie; this is the other half, trading that code for the real session
    * over HTTPS so the token itself never rides in a redirect URL. See
@@ -277,16 +277,15 @@ export default buildConfig({
    * than reimplementing it: a 303 for the owner pages, a JSON body here, one
    * outcome computed once. See `endpoints/lists.ts`.
    * `analyticsEndpoints` adds `POST /api/analytics/track`, the browser's only
-   * route to OpenPanel. It exists so the ingest secret stays on the server:
-   * a page holding it would be handing it to every visitor. It requires **no
-   * session** — a guest who granted consent is trackable, and their gate is
-   * the client-side consent store, because there is no row to look up for
-   * somebody with no account. What it refuses is a cross-site post, an event
-   * outside its allowlist, anything over a rate limit counted in D1
-   * (`lib/rateLimit.ts`, which replaces a Redis limiter that could not be
-   * ported), and a signed-in visitor whose latest `user-consents` row says
-   * no. See `endpoints/analytics.ts`, which is careful about which of those
-   * is a consent check and which is not.
+   * route to OpenPanel. It exists so the ingest secret stays on the server: a
+   * page holding it would be handing it to every visitor. It requires **no
+   * session** — a guest who granted consent is trackable, and their gate is the
+   * client-side consent store, because there is no row to look up for somebody
+   * with no account. What it refuses is a cross-site post, an event outside its
+   * allowlist, anything over a rate limit counted in D1 (`lib/rateLimit.ts`),
+   * and a signed-in visitor whose latest `user-consents` row says no. See
+   * `endpoints/analytics.ts`, which is careful about which of those is a
+   * consent check and which is not.
    */
   endpoints: [
     ...analyticsEndpoints,
@@ -370,8 +369,7 @@ export default buildConfig({
       collections: { media: true },
     }),
     /**
-     * Maintains a `search` collection synced from `gestures`, replacing the
-     * Convex `search_content` index.
+     * Maintains a `search` collection synced from `gestures`.
      *
      * Access is spelled out rather than left to the plugin, whose defaults are
      * `create: () => false`, `read: () => true` and — for `update`/`delete`,

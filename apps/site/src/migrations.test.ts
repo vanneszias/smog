@@ -223,12 +223,12 @@ describe("migration chain", () => {
     // config asserting the *intent* is not the same claim as the migration
     // chain producing it.
     //
-    // `molliePaymentId` is the opposite, and Stage 1 had it backwards. The
-    // webhook resolves a payment through `metadata.sponsorshipIds`, not
-    // through this column; one checkout covering three gestures writes three
-    // rows carrying one payment id, which a unique index refuses. Stage 5
-    // Task 7 drops it — see
-    // `20260921_120000_sponsorship_payment_id_not_unique`.
+    // `molliePaymentId` is the opposite, and the first schema had it
+    // backwards. The webhook resolves a payment through
+    // `metadata.sponsorshipIds`, not through this column; one checkout
+    // covering three gestures writes three rows carrying one payment id,
+    // which a unique index refuses.
+    // `20260921_120000_sponsorship_payment_id_not_unique` drops it.
     const indexes = indexesOn(database, "sponsorships");
 
     const byName = new Map(indexes.map((i) => [i.name, i.unique]));
@@ -467,10 +467,10 @@ describe("migration chain", () => {
 
     expect(jobColumns).toContain("meta");
 
-    // And still no relationship column for the stats global: a global is
-    // locked through `payload_locked_documents.global_slug`, which has existed
-    // since Stage 1, rather than through a column of its own. A migration that
-    // rebuilt that table anyway would disagree with the pushed schema.
+    // And still no relationship column for the stats global: a global is locked
+    // through `payload_locked_documents.global_slug`, which has existed since
+    // the first migration, rather than through a column of its own. A migration
+    // that rebuilt that table anyway would disagree with the pushed schema.
     const lockColumns = (
       database
         .prepare(
@@ -626,7 +626,7 @@ describe("migration chain", () => {
     // this delete fail — probed against a real D1, where it surfaced as a raw
     // `Failed query: delete from "sponsorships"`. Only an actual delete
     // distinguishes a rule SQLite honours from one it rejects, which is the
-    // same ruling `user_consents` reached one collection earlier.
+    // same conclusion `user_consents` reached one collection earlier.
     //
     // Keeping the row is also the behaviour that matters: `mux_asset_id` is
     // what Mux charges for every month, and a render deleted with its
@@ -698,7 +698,7 @@ describe("migration chain", () => {
 
   it("lets a user be deleted and leaves the consent row behind with a null user", async () => {
     const { database } = await chain();
-    // The payoff for the referential-integrity ruling, asserted against the
+    // The payoff for the referential-integrity decision, asserted against the
     // *migrated* schema rather than the one `pushDevSchema` derives from the
     // collection configs. Payload writes `ON DELETE set null` for every
     // relationship whether or not the column can hold NULL, so only an actual
@@ -752,13 +752,13 @@ describe("migration chain", () => {
   });
 
   it("gives every pre-existing list its own pair of share tokens", async () => {
-    // Task 7 mints tokens in a `beforeChange` hook, which fixes every future
-    // list and no existing one. The backfill is what reaches the rows Stage 1
-    // and Stage 2 created, and the failure that matters is not "no token" —
-    // it is *one* token shared by every legacy list, which is what a single
+    // `Lists` mints tokens in a `beforeChange` hook, which fixes every future
+    // list and no existing one. The backfill is what reaches the rows created
+    // before that hook, and the failure that matters is not "no token" — it is
+    // *one* token shared by every pre-existing list, which is what a single
     // `UPDATE ... SET x = <one value>` would produce and which no structural
-    // assertion would notice. So this replays a chain with two tokenless
-    // lists already in it and compares them to each other.
+    // assertion would notice. So this replays a chain with two tokenless lists
+    // already in it and compares them to each other.
     const database = new DatabaseSync(":memory:");
     database.exec("PRAGMA foreign_keys = ON;");
     const runner = migrationRunner(database);
@@ -1007,8 +1007,7 @@ describe("migration chain", () => {
     // the second that makes a bulk checkout possible at all.
     //
     // This is the exact shape `endpoints/sponsorships.ts` writes — one row
-    // per selected gesture, all naming one Mollie payment — and the exact
-    // shape `apps/server/src/webhooks/mollie.ts` has always written.
+    // per selected gesture, all naming one Mollie payment.
     database.exec(
       `INSERT INTO gestures (id, playback_id)
        VALUES (9100, 'pb-bulk-a'), (9101, 'pb-bulk-b'), (9102, 'pb-bulk-c');`
@@ -1043,8 +1042,9 @@ describe("migration chain", () => {
   });
 
   it("gives categories and gestures a UNIQUE index on legacyId", async () => {
-    // Stage 9's importer (Task 3) looks up every category and gesture by
-    // this column to decide whether it already created that Convex document,
+    // The catalogue importer (`scripts/migrate-convex`) looks up every
+    // category and gesture by this column to decide whether it already
+    // created that Convex document,
     // and a plain `create` is the whole of its idempotency: there are no
     // transactions on this adapter, an import can fail halfway, and a rerun
     // must converge on the same result without duplicating anything. That

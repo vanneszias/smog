@@ -3,24 +3,19 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Stage 4 exit criterion 8: **nothing under `apps/site` imports `@smog/auth`
- * or reaches WorkOS.**
+ * **Nothing under `apps/site` reaches WorkOS.**
  *
- * ## Why this is a test and not a note in the plan
+ * ## Why this is a test and not a note
  *
- * `packages/auth` is not deleted at this stage and will not be until Stage 10
- * — `apps/server`, `apps/web`, `apps/native` and `packages/api` all still
- * import it, and all four are still running. So the package stays installed
- * and resolvable from this workspace for several more stages, which means
- * `import { … } from "@smog/auth"` in this app would typecheck, lint, build
- * and pass every other test in the suite. The boundary is not enforced by
- * anything except this file.
+ * Sessions here are Payload's own, and a hosted identity provider is an npm
+ * install away: an import of one would typecheck, lint, build and pass every
+ * other test in the suite. The boundary is not enforced by anything except
+ * this file.
  *
- * The failure it prevents is not hypothetical and it is quiet: somebody
- * reaches for a helper that already exists rather than the Payload one, the
- * site acquires a second session notion, and the cutover in Stage 10 finds
- * out. The spec's line is that WorkOS token exchange and refresh "are
- * deleted, not ported" — this is what makes that true rather than intended.
+ * The failure it prevents is quiet: somebody reaches for a provider's helper
+ * rather than the Payload one, and the site acquires a second session notion.
+ * WorkOS token exchange and refresh are deliberately absent — this is what
+ * makes that true rather than intended.
  *
  * ## What it reads
  *
@@ -41,13 +36,11 @@ const EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".json"];
 /**
  * What must not appear.
  *
- * `packages/auth` is gone, so an import of it no longer resolves and needs no
- * guard here. WorkOS itself is still an npm package anybody could add. The
- * pattern is matched as a bare, case-insensitive string rather than as an
- * import statement, because a dynamic `import()`, a `require`, a re-export
- * and a `vi.mock` are all ways in and only one of them looks like an import;
- * `WorkOS`, `workos`, `WORKOS_API_KEY` and `@workos-inc/node` are all the same
- * hazard wearing different capitalisation.
+ * WorkOS is an npm package anybody could add. The pattern is matched as a bare,
+ * case-insensitive string rather than as an import statement, because a dynamic
+ * `import()`, a `require`, a re-export and a `vi.mock` are all ways in and only
+ * one of them looks like an import; `WorkOS`, `workos`, `WORKOS_API_KEY` and
+ * `@workos-inc/node` are all the same hazard wearing different capitalisation.
  */
 const FORBIDDEN: { name: string; pattern: RegExp }[] = [
   { name: "WorkOS", pattern: /workos/i },
@@ -90,7 +83,7 @@ function hits(pattern: RegExp): string[] {
   const found: string[] = [];
 
   for (const path of ROOTS.flatMap(filesUnder)) {
-    // This file names both strings on purpose, so it cannot be its own
+    // This file names the string on purpose, so it cannot be its own
     // violation. Excluded by path rather than by a magic comment, because a
     // magic comment is something a violating file could also write.
     if (path === "src/authBoundary.test.ts") {

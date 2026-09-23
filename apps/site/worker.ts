@@ -16,7 +16,7 @@ import { type CronEnvironment, onScheduled } from "./src/jobs/cron";
  * checkout, and once a build has produced it, it is real JavaScript pulling
  * in Next's whole bundled server — see `open-next-worker.d.ts` for why a
  * plain relative import there once broke `check-types` after a build
- * (Review Focus 5) and why this subpath, resolving to that same `.d.ts` file
+ * and why this subpath, resolving to that same `.d.ts` file
  * for TypeScript and to the real `./.open-next/worker.js` for esbuild
  * (wrangler's bundler, which has no `types` condition), does not.
  *

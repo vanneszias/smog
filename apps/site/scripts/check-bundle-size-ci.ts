@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * CI entry point for the bundle-size budget check (Stage 0 Task 4, Gate 2).
+ * CI entry point for the bundle-size budget check.
  *
  * Runs `wrangler deploy --dry-run`, extracts the gzipped "Total Upload"
  * figure from its output, and calls checkBundleSize against the Workers
