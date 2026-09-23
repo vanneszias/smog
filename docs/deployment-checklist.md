@@ -1,9 +1,9 @@
 # Deployment checklist — apps/site + apps/mobile
 
-Covers the Payload stack only: `apps/site` (Payload 3.89 / Next.js 16 on
-Cloudflare Workers via OpenNext, D1 + R2) and `apps/mobile` (Expo, talks to
-`apps/site`'s REST API). The legacy stack (`apps/server`, `apps/web`,
-`apps/native`, `apps/remotion` Docker service) is out of scope.
+Covers `apps/site` (Payload 3.89 / Next.js 16 on Cloudflare Workers via
+OpenNext, D1 + R2) and `apps/mobile` (Expo, talks to `apps/site`'s REST API).
+The render function in `apps/render` is set up from the cutover runbook
+(section 1, decision 7).
 
 Every name below was checked against the code that reads it. All `wrangler`
 commands run **from `apps/site`** (`cd apps/site`), where `bunx wrangler`
@@ -82,7 +82,7 @@ tested against Remotion's own fixtures; nothing here needs the `@remotion/lambda
 dependency or a real AWS call. What it needs to actually submit a render are
 the AWS credentials in §1 above and the three `REMOTION_*` vars in this
 table — until every one of the five is set, `submitRenderJob` logs and does
-nothing, exactly as before this stage.
+nothing.
 
 ## 3. Bindings and Cloudflare resources
 
@@ -124,9 +124,7 @@ CI does **not** deploy. These feed only the `site-bundle-size` job.
 
 Jobs that need no secrets: `release-check`, `site-tests`, `site-e2e` (uses a
 hard-coded local-only `PAYLOAD_SECRET`), `site-payload-types-drift`
-(`PAYLOAD_SECRET=ignore`). `publish` (legacy Docker images) uses the
-automatic `GITHUB_TOKEN` and repo **variables** `VITE_*` for `apps/web` —
-out of scope here.
+(`PAYLOAD_SECRET=ignore`).
 
 ## 6. Mobile / EAS (`apps/mobile`)
 
@@ -144,7 +142,7 @@ relying on inference. Google sign-in on mobile needs nothing in the app: it
 goes through the site's `/auth/google?client=mobile` and returns via
 `smogmobile://auth-callback` (hard-coded; the `scheme` in `app.json`).
 
-### Mobile analytics (Stage 8.6)
+### Mobile analytics
 
 `apps/mobile` sends analytics events straight from the device to OpenPanel
 (`src/lib/analytics.ts`), gated on the on-device consent decision — never
@@ -160,7 +158,7 @@ during bundling — so it ships inside the compiled app and is extractable
 from any installed copy. It is **public by construction**, not a secret in
 the normal sense, regardless of the name. This is exactly why these three
 values must be a **separate, least-privileged** OpenPanel client scoped to
-this native app, and must never be the web pair (`OPENPANEL_CLIENT_ID` /
+the mobile app, and must never be the web pair (`OPENPANEL_CLIENT_ID` /
 `OPENPANEL_CLIENT_SECRET`, set as Worker secrets in §6 above) — the web
 pair's blast radius (the whole `analytics.zias.be` project as seen from the
 Worker) is not something to also hand out in an APK/IPA.
@@ -170,8 +168,8 @@ Set each with `eas env:create`, matching the form already used for
 
 ```bash
 eas env:create --environment production --name EXPO_PUBLIC_OPENPANEL_API_URL --value https://analytics.zias.be/api --visibility plaintext
-eas env:create --environment production --name EXPO_PUBLIC_OPENPANEL_CLIENT_ID --value <native-client-id> --visibility plaintext
-eas env:create --environment production --name EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET --value <native-client-secret> --visibility sensitive
+eas env:create --environment production --name EXPO_PUBLIC_OPENPANEL_CLIENT_ID --value <mobile-client-id> --visibility plaintext
+eas env:create --environment production --name EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET --value <mobile-client-secret> --visibility sensitive
 ```
 
 `--visibility plaintext` for the URL and client id (there is nothing to hide
@@ -195,10 +193,9 @@ variables set — only the OpenPanel send is affected.
 
 **Local dev:** `apps/mobile` has no `.env.example` of its own; the three
 `EXPO_PUBLIC_OPENPANEL_*` names are already documented in the **root**
-`.env.example` (written for the legacy `apps/native`, reused here — the
-comment there calls out the native pair specifically, distinct from the web
-`OPENPANEL_CLIENT_*` pair above it). Copy the root `.env.example` values (or
-your own least-privileged native-client credentials) into `apps/mobile`'s
+`.env.example`, where the comment calls out the mobile pair specifically,
+distinct from the web `OPENPANEL_CLIENT_*` pair above it. Copy the root
+`.env.example` values (or your own least-privileged mobile-client credentials) into `apps/mobile`'s
 local environment however Expo picks up `EXPO_PUBLIC_*` for that dev flow
 (e.g. a `.env` file read by `expo start`); nothing further to add per-app.
 
@@ -288,7 +285,7 @@ steps 4–9 with `production`.
    `[jobs] Failed to reap stranded job <id>` error per row. Seeing the line
    at all means a run was killed; look for why
    around the same time in Workers Logs. A released `send-email` may send
-   its message twice (at-least-once, as the old queue did). A job **filed as
+   its message twice (delivery is at-least-once). A job **filed as
    failed** was given up on; for a `send-email` row that is a message that
    may never have been sent. List them with:
 
@@ -319,7 +316,7 @@ steps 4–9 with `production`.
   address.
 - **Remotion Lambda is not deployed.** The submit transport, the callback and
   the stalled-render sweep are built and tested against Remotion's own
-  fixtures (no AWS account is available to this work); what is left is the
+  fixtures, not yet against a real AWS account; what is left is the
   operator's own deploy. `docs/cutover-runbook.md`, section 1, decision 7 has
   the full setup order, staging first: AWS account, the deploy and Worker IAM
   users, `bun -F render deploy:function`, `deploy:site:staging`, staging's
@@ -338,10 +335,10 @@ steps 4–9 with `production`.
   sponsorship on staging and confirm its `renders` row in `/admin` ends
   `ready`, with a Mux playback id on the sponsorship's preview. The likeliest
   failure is the source video: `lib/mux.ts` renders from Mux's `high.mp4`,
-  which exists only for assets with MP4 static renditions, and the legacy
-  uploader never enabled them. The two known fixes — a `highest` static
-  rendition on every gesture asset, or a master-access source as the legacy
-  renderer used — are in the runbook.
+  which exists only for assets with MP4 static renditions, and the
+  catalogue's existing assets were uploaded without them. The two known
+  fixes — a `highest` static rendition on every gesture asset, or a
+  master-access source — are in the runbook.
 
 - **Privacy policy EN/FR:** `apps/site/src/app/(frontend)/[locale]/privacy/page.tsx`
   — only the Dutch text is reviewed. English and French are machine-assisted
@@ -363,9 +360,8 @@ steps 4–9 with `production`.
   `scheduled()`, `wrangler.jsonc`'s hourly `triggers.crons`) and drains the
   job queue every hour once `JOBS_RUN_TOKEN` and `SITE_ORIGIN` are set (see
   §1–§2 above) — proven against a real build and a real local scheduled
-  trigger, `docs/superpowers/plans/2026-09-22-cron-wiring.md`'s "Exit:
-  measured". What is still open is either deploying Remotion Lambda (this
+  trigger. What is still open is either deploying Remotion Lambda (this
   checklist's "Open items" above) or an explicit decision to launch
   sponsorship with rendering off. Production holds no sponsorships today
-  (spec, "What the production export actually contains"), which makes that a
-  product decision, not a data risk.
+  (the 2026-09-22 production export had none), which makes that a product
+  decision, not a data risk.
