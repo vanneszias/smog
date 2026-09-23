@@ -52,30 +52,45 @@ answer next to each item when it is made.
 
 1. **The Cloudflare API token that was exposed has been rotated**
    (checklist, "Before you start", item 1). Blocks everything below.
-2. **The production address, and exactly how it switches.** Recommended:
-   serve `apps/site` at the legacy address, `app.smog.vlaanderen`, so the
-   address users and sponsors know keeps working. Record:
-   - **Route type: a Workers custom domain** — a `routes` entry
-     `{ "pattern": "app.smog.vlaanderen", "custom_domain": true }` in
-     `env.production` of `apps/site/wrangler.jsonc`. Deploying it creates the
-     DNS record and certificate, so **the switch is the deploy**. Change
-     `env.production.vars.SITE_ORIGIN` to the address **in the same commit**
-     (the checklist's "Open items" says why), and keep that commit on its own
-     branch, on top of the release tag, until the switch (section 3, step 8):
-     deploying `main` with it switches the address early.
-   - **The zone moves first.** `smog.vlaanderen` must be an active zone in the
-     Worker's Cloudflare account. If it is not, move it **well before the
-     window**: resolvers cache nameservers for up to days, and no record TTL
-     shortens that. Recreate every record in Cloudflare before changing
-     nameservers, **grey-clouded (DNS only)**, with `app` still pointing at
-     the legacy host, so the move itself changes nothing.
-   - **Switch:** deploy that branch (section 3, step 8). Wrangler finds the
-     legacy `app` record and asks to replace it (`You already have DNS
-     records that conflict for these Custom Domains`); yes is the switch.
-   - **Un-switch:** remove the custom domain from the Worker in the
-     Cloudflare dashboard, recreate the legacy `app` record exactly as it was
-     (write down its type, value and proxy status before the window), and
-     revert the route commit so no later deploy adds it back.
+2. **The production address, and exactly how it switches — decided
+   2026-09-23: `app.smog.vlaanderen`, served as a Cloudflare for SaaS custom
+   hostname on the `zias.be` zone.** `smog.vlaanderen` cannot be moved into
+   the Worker's Cloudflare account (its DNS owner can add records, not
+   transfer the zone), so a Workers custom domain is not possible. Instead
+   `zias.be`, which is in the account, is the SaaS zone, and the DNS owner
+   points `app.smog.vlaanderen` at it with a CNAME. Custom hostnames are
+   available on every plan, the first 100 free
+   ([docs](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/domain-support/)).
+   **Set up well before the window**, in the `zias.be` zone:
+   - **Enable Custom Hostnames** (SSL/TLS → Custom Hostnames).
+   - **Create the fallback origin**: an originless, proxied record
+     `smog-origin.zias.be AAAA 100::`, and set `smog-origin.zias.be` as the
+     fallback origin. The Worker answers, so the address never reaches it
+     ([Workers as your fallback origin](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/start/advanced-settings/worker-as-origin/)).
+   - **Add the custom hostname `app.smog.vlaanderen`** with TXT validation.
+     Cloudflare shows an ownership TXT record and a certificate-validation
+     TXT record. **Ask the DNS owner to add both** now, while `app` still
+     points at the legacy host; both only prove control and change no
+     traffic. Wait until the hostname and its certificate show **Active**.
+   - **Prepare the route commit** and keep it on its own branch, on top of the
+     release tag, until the switch (section 3, step 8): in `env.production`
+     of `apps/site/wrangler.jsonc`, add
+     `"routes": [{ "pattern": "app.smog.vlaanderen/*", "zone_name": "zias.be" }]`
+     and change `vars.SITE_ORIGIN` to `https://app.smog.vlaanderen` **in the
+     same commit** (the checklist's "Open items" says why). The route is
+     scoped to the one hostname, never `*/*`, so nothing else on `zias.be`
+     (such as `analytics.zias.be`) is captured. Deploying `main` with it
+     would only matter once DNS points here, but keep it off `main` anyway so
+     the switch is one deliberate step.
+   - **Book the DNS owner for the window.** The switch and the un-switch are
+     both their changes, not ours.
+   - **Switch:** deploy the route branch, then the DNS owner **replaces the
+     `app` record with `app.smog.vlaanderen CNAME smog-origin.zias.be`**. The
+     DNS change is the switch; the deploy alone changes nothing public.
+   - **Un-switch:** the DNS owner restores the legacy `app` record exactly as
+     it was (write down its type, value and TTL before the window). Then
+     revert the route commit and redeploy, so `SITE_ORIGIN` is not left on an
+     address the Worker no longer serves.
 3. **How the mobile app reaches existing users — decided 2026-09-23:
    `apps/mobile` takes over the existing store identity**, so existing
    installs update in place. Done in `apps/mobile/app.json`: name
@@ -226,9 +241,10 @@ down.
   store's 2.0.2** and starts cleanly. It still reaches the legacy host, so
   check only the install and the start. An internal APK cannot do this on
   Android: its signing key differs from Play's.
-- **Lower the TTL of the `app` record** to 300 seconds at least a day before,
-  so the switch and any un-switch propagate in minutes. This is the record's
-  TTL; it does nothing for a nameserver change (decision 2).
+- **Ask the DNS owner to lower the TTL of the `app` record** to 300 seconds
+  at least a day before, so the switch and any un-switch propagate in
+  minutes, and confirm the custom hostname and its certificate are still
+  **Active** in the `zias.be` zone (decision 2).
 - **Set the window's length** from the staging apply's measured time, plus
   one `deploy:app` build, plus up to 60 minutes if the email check waits for
   the `:00` tick.
@@ -337,8 +353,10 @@ being free.
    CLOUDFLARE_ENV=production bun -F site deploy:app
    ```
 
-   If wrangler asks to replace the conflicting DNS record for the address,
-   answer yes: that is the switch. From here, rollback is not free.
+   That adds the route and the new `SITE_ORIGIN`; nothing public changes yet.
+   Then the DNS owner replaces the `app` record with
+   `app.smog.vlaanderen CNAME smog-origin.zias.be`. **That DNS change is the
+   switch. From here, rollback is not free.**
 9. **Checks that need the real address**, from a network that has not cached
    the old record: the address serves `apps/site` over HTTPS, and Google
    sign-in works on it.

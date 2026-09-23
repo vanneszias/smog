@@ -296,14 +296,18 @@ steps 4–9 with `production`.
 
 ## Open items (not configured in the repo yet — do not invent config)
 
-- **Production origin / custom domain.** `wrangler.jsonc` has no `routes`;
-  production is served at `smog-site-production.<account>.workers.dev`, which
-  is also today's `vars.SITE_ORIGIN` for that environment (§2 above). Decide
-  the domain before setting `EXPO_PUBLIC_API_URL` and the Google redirect
-  URI — and update `SITE_ORIGIN` to the new domain in the same commit that
-  adds its `routes` entry (already called out at both `wrangler.jsonc`'s
-  `SITE_ORIGIN` comment and its row in §2), since a stale `SITE_ORIGIN` after
-  the domain moves is a working link to nowhere in a sponsor's inbox.
+- **Production origin — decided 2026-09-23: `https://app.smog.vlaanderen`,
+  as a Cloudflare for SaaS custom hostname on the `zias.be` zone**
+  (`docs/cutover-runbook.md`, section 1, decision 2, has every step and the
+  records the `smog.vlaanderen` DNS owner adds). Until the cutover's switch
+  `wrangler.jsonc` has no `routes` and production answers at
+  `smog-site-production.<account>.workers.dev`, which is also today's
+  `vars.SITE_ORIGIN`. The route
+  (`app.smog.vlaanderen/*` on zone `zias.be`) and `SITE_ORIGIN` change
+  together in one commit, since a stale `SITE_ORIGIN` after the address moves
+  is a working link to nowhere in a sponsor's inbox. `EXPO_PUBLIC_API_URL`
+  for the production store build and the Google redirect URI use the final
+  address.
 - **Remotion Lambda** is not deployed and the submit transport is a stub; the
   `REMOTION_*`, Mux signing-key, service-token and callback secrets are inert
   until Stage 6 Task 6.
