@@ -20,6 +20,8 @@ interface ReportInput {
   target: Target;
   database: string;
   startedAt: Date;
+  /** Catalogue documents already in the target with no legacy id. */
+  withoutLegacyId: { categories: number; gestures: number };
   plan: ImportPlan;
   result: ApplyResult;
   /** Undefined when verification threw; the report then says so. */
@@ -103,6 +105,9 @@ export function buildReport(input: ReportInput): string {
   out.push(`- **Target:** ${input.target}`);
   out.push(`- **Database:** ${input.database}`);
   out.push(`- **Run started:** ${input.startedAt.toISOString()}`);
+  out.push(
+    `- **Already in the target without a legacy id (not from this import):** ${input.withoutLegacyId.categories} categories, ${input.withoutLegacyId.gestures} gestures`
+  );
   out.push(
     `- **Outcome:** ${failed ? "FAILED — exit code 1" : "passed — exit code 0"}`,
     ""
@@ -235,14 +240,15 @@ function verificationSection(verification: VerifyResult): string[] {
     out.push("None.", "");
   } else {
     out.push(
-      "Each of these is in a state no legal save produces — a create that stopped part-way. The Remedy column says what to do. **delete and rerun**: the importer never updates a document, so delete it in the admin (or by id) and rerun; the rerun creates it whole. **re-save or reindex the gesture**: the gesture existed before this run and only its search entry is wrong; saving it in the admin (or the search collection's Reindex) rebuilds that entry and keeps any editor's work.",
+      "Each of these is in a state no legal save produces — a create that stopped part-way. The Remedy column says what to do. **delete and rerun**: the importer never updates a document, so delete it in the admin by the id given here and rerun; the rerun creates it whole. **re-save the gesture**: the gesture existed before this run and only its search entries are wrong (where it had none, every field was also checked against the export and matches); saving it in the admin rebuilds its one entry and keeps any editor's work. Never use the search collection's Reindex button on D1: it deletes every search entry in one statement that exceeds D1's 100-parameter cap, and leaves the index empty.",
       ""
     );
     out.push(
       table(
-        ["Collection", "Legacy id", "Name", "Check failed", "Remedy"],
+        ["Collection", "Id", "Legacy id", "Name", "Check failed", "Remedy"],
         verification.incomplete.map((entry) => [
           entry.collection,
+          entry.id,
           code(entry.legacyId),
           entry.name,
           entry.check,
@@ -272,14 +278,22 @@ function verificationSection(verification: VerifyResult): string[] {
       ""
     );
     out.push(
-      "These documents were already in the target when this run started, so they belong to the editors and the import left them alone. Most likely an editor changed them; check any you do not recognise.",
+      "These documents were already in the target when this run started, so they belong to the editors and the import left them alone. Most likely an editor changed them; check any you do not recognise. During the production cutover nobody edits, so on a production rerun any row here is the import's own fault: stop and investigate.",
       ""
     );
     out.push(
       table(
-        ["Collection", "Legacy id", "Name (export)", "Field", "Difference"],
+        [
+          "Collection",
+          "Id",
+          "Legacy id",
+          "Name (export)",
+          "Field",
+          "Difference",
+        ],
         verification.differs.map((entry) => [
           entry.collection,
+          entry.id,
           code(entry.legacyId),
           entry.name,
           entry.field,
@@ -328,7 +342,8 @@ function verificationSection(verification: VerifyResult): string[] {
   out.push("### How verification decides", "");
   out.push(
     "- **Incomplete** (fails): an empty Dutch name, a gesture with no categories, or a gesture without exactly one search entry. Validation forbids the first two and the search plugin re-syncs on every save, so no editor can cause them; every way a create can stop part-way ends in one of them.",
-    "- **Mismatch** (fails): a planned document missing; a document this run created that differs from the plan (name, categories, concepts, active); a count that disagrees.",
+    "- A gesture with **no search entry at all** has never been saved by an editor, so it is compared with the export on every field the import writes; any difference is incomplete, delete and rerun, however old the gesture is.",
+    "- **Mismatch** (fails): a planned document missing; a document this run created that differs from the plan (name, categories, concepts, playback id, info, active, created); a count that disagrees.",
     "- **Differs from the export** (does not fail): the same comparisons on a document that existed before this run, which an editor may legitimately have changed.",
     "- Expected counts use the plan for documents this run created and the document as found for ones that already existed.",
     "- **user-consents** is information only: consent writes are refused for the whole run, so the import cannot have changed it; other writers on a live database can.",

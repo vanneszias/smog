@@ -39,6 +39,18 @@
  * count as `existing` and never touch. So any other failure also looks the
  * `legacyId` up, and if a row is there the failure says so and names it.
  *
+ * ## A category without its Dutch name is not linked to
+ *
+ * A category create that died after its row but before its `_locales` row
+ * leaves a category with a legacy id and no Dutch name. Counted `existing`
+ * and linked, it would take gestures with it: verification's remedy for it
+ * is delete and rerun, the delete cascades the links away, and the rerun
+ * then finds those gestures `existing` and a category short, for good. So
+ * an existing category whose Dutch name is blank is recorded as failed and
+ * left out of the map gestures link through; its gestures are skipped
+ * (`skippedForFailedCategory`), the run fails, and after the category is
+ * deleted the rerun creates both whole.
+ *
  * ## What a create triggers
  *
  * A gesture create runs the search plugin's afterChange hook, which creates
@@ -115,6 +127,22 @@ function isLegacyIdConflict(
     current = current.cause;
   }
   return false;
+}
+
+/** True when the category's Dutch name, the one it is imported in, is blank. */
+async function lacksDutchName(payload: Payload, id: number): Promise<boolean> {
+  const { docs } = await payload.find({
+    collection: "categories",
+    depth: 0,
+    limit: 1,
+    pagination: false,
+    locale: IMPORT_LOCALE,
+    fallbackLocale: false,
+    overrideAccess: true,
+    select: { name: true },
+    where: { id: { equals: id } },
+  });
+  return (docs[0]?.name ?? "").trim().length === 0;
 }
 
 function messageOf(error: unknown): string {
@@ -195,6 +223,14 @@ export async function applyPlan(
             },
           })
       );
+      if (
+        outcome.kind === "existing" &&
+        (await lacksDutchName(payload, outcome.id))
+      ) {
+        throw new Error(
+          `document ${outcome.id} with this legacyId has no Dutch name, so an earlier create stopped part-way; delete it and rerun (its gestures are skipped until then)`
+        );
+      }
       categoryIds.set(category.legacyId, outcome.id);
       result.categories[outcome.kind] += 1;
       log(`category ${category.legacyId} "${category.name}": ${outcome.kind}`);

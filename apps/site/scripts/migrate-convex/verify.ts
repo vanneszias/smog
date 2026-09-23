@@ -37,11 +37,28 @@
  *
  * Each incomplete entry carries a remedy. The default is "delete and
  * rerun": the importer never updates, so only a fresh create makes the
- * document whole. The exception is a gesture that existed before this run
- * and whose *only* fault is its search-entry count: the document itself is
- * whole and may carry an editor's work, and a save (or the search
- * collection's Reindex) rebuilds its one entry — the plugin's afterChange
- * updates the first entry and deletes any duplicates.
+ * document whole. The one exception is "re-save the gesture", for a
+ * gesture that existed before this run, whose *only* fault is its
+ * search-entry count, and whose fields all match the plan whenever it has
+ * no search entry at all: the document itself is whole and may carry an
+ * editor's work, and a save in the admin rebuilds its one entry — the
+ * plugin's afterChange creates it, or updates the first and deletes any
+ * duplicates. Never the search collection's Reindex: on D1 its one
+ * unbounded delete of every search entry exceeds the 100-parameter cap and
+ * leaves the index empty.
+ *
+ * ## Zero search entries: never saved by an editor
+ *
+ * The search plugin syncs a gesture's entry on every save, so a gesture
+ * with no entry at all has never been saved by anyone but the import —
+ * whatever the snapshot says about when it arrived. A create that died
+ * after its row, locales and relationships but before its concepts looks
+ * exactly like that: name and categories present, concepts and search
+ * entry missing. Re-saving it would index the loss and leave it as a
+ * passing "differs". So a gesture with zero search entries is compared
+ * with the plan strictly, on every field the plan writes, and any
+ * difference makes it incomplete with "delete and rerun". Categories have
+ * no search entry, so this applies to gestures only.
  *
  * The `user-consents` count before and after is reported as information.
  * It is not a check: the CLI refuses consent writes for the whole run
@@ -78,6 +95,13 @@ type ImportedCollection = "categories" | "gestures";
 
 interface RunSnapshot {
   preexisting: { categories: Set<string>; gestures: Set<string> };
+  /**
+   * Catalogue documents with no legacy id — made in the admin, not by this
+   * import. Information for the banner and report; the CLI refuses a
+   * production apply when either is nonzero, since production is empty at
+   * a big-bang cutover.
+   */
+  withoutLegacyId: { categories: number; gestures: number };
   userConsents: number;
 }
 
@@ -85,6 +109,8 @@ export interface VerifyResult {
   ok: boolean;
   incomplete: Array<{
     collection: ImportedCollection;
+    /** The Payload document id, to delete it by in the admin. */
+    id: number;
     legacyId: string;
     name: string;
     check: string;
@@ -98,9 +124,10 @@ export interface VerifyResult {
   }>;
   differs: Array<{
     collection: ImportedCollection;
+    id: number;
     legacyId: string;
     name: string;
-    field: "name" | "categories" | "concepts" | "isActive";
+    field: Field;
     detail: string;
   }>;
   counts: {
@@ -116,7 +143,16 @@ export interface VerifyResult {
   };
 }
 
-type Remedy = "delete and rerun" | "re-save or reindex the gesture";
+type Remedy = "delete and rerun" | "re-save the gesture";
+
+type Field =
+  | "name"
+  | "categories"
+  | "concepts"
+  | "playbackId"
+  | "info"
+  | "isActive"
+  | "createdAt";
 
 const SEARCH_CHECK_PREFIX = "search entries:";
 
@@ -131,7 +167,10 @@ interface GestureRow {
   name: string;
   categoryIds: number[];
   concepts: string[];
+  playbackId: string;
+  info: string;
   isActive: boolean;
+  createdAt: string;
 }
 
 function chunks<T>(items: T[], size: number = CHUNK): T[][] {
@@ -167,6 +206,20 @@ async function presentLegacyIds(
   return present;
 }
 
+async function countWithoutLegacyId(
+  payload: Payload,
+  collection: ImportedCollection
+): Promise<number> {
+  const { totalDocs } = await payload.count({
+    collection,
+    overrideAccess: true,
+    where: {
+      or: [{ legacyId: { exists: false } }, { legacyId: { equals: "" } }],
+    },
+  });
+  return totalDocs;
+}
+
 async function countUserConsents(payload: Payload): Promise<number> {
   const { totalDocs } = await payload.count({
     collection: "user-consents",
@@ -192,6 +245,10 @@ export async function snapshotBeforeRun(
         "gestures",
         plan.gestures.map((entry) => entry.legacyId)
       ),
+    },
+    withoutLegacyId: {
+      categories: await countWithoutLegacyId(payload, "categories"),
+      gestures: await countWithoutLegacyId(payload, "gestures"),
     },
     userConsents: await countUserConsents(payload),
   };
@@ -244,7 +301,10 @@ async function readGestures(
         name: true,
         categories: true,
         concepts: true,
+        playbackId: true,
+        info: true,
         isActive: true,
+        createdAt: true,
       },
       where: { legacyId: { in: chunk } },
     });
@@ -257,7 +317,10 @@ async function readGestures(
             typeof entry === "number" ? entry : entry.id
           ),
           concepts: doc.concepts ?? [],
+          playbackId: doc.playbackId ?? "",
+          info: doc.info ?? "",
           isActive: doc.isActive === true,
+          createdAt: doc.createdAt,
         });
       }
     }
@@ -313,7 +376,11 @@ const sameSet = (a: string[], b: string[]): boolean => {
 
 const show = (value: unknown): string => JSON.stringify(value);
 
-type Field = VerifyResult["differs"][number]["field"];
+interface Difference {
+  field: Field;
+  expected: unknown;
+  actual: unknown;
+}
 
 /** Collects findings; a difference is routed by whether the run created it. */
 class Findings {
@@ -347,10 +414,8 @@ class Findings {
    */
   difference(
     collection: ImportedCollection,
-    entry: { legacyId: string; name: string },
-    field: Field,
-    expected: unknown,
-    actual: unknown
+    entry: { id: number; legacyId: string; name: string },
+    { field, expected, actual }: Difference
   ): void {
     const detail = `plan ${show(expected)}, target ${show(actual)}`;
     if (this.existedBefore(collection, entry.legacyId)) {
@@ -358,7 +423,8 @@ class Findings {
     } else {
       this.mismatches.push({
         subject: collection,
-        ...entry,
+        legacyId: entry.legacyId,
+        name: entry.name,
         problem: `${field} differs from the plan: ${detail}`,
       });
     }
@@ -380,23 +446,27 @@ function checkCategories(
     if (isBlank(row.name)) {
       findings.incomplete.push({
         collection: "categories",
+        id: row.id,
         ...entry,
         check: "empty nl name",
         remedy: "delete and rerun",
       });
       continue;
     }
+    const found = { id: row.id, ...entry };
     if (row.name !== planned.name) {
-      findings.difference("categories", entry, "name", planned.name, row.name);
+      findings.difference("categories", found, {
+        field: "name",
+        expected: planned.name,
+        actual: row.name,
+      });
     }
     if (row.isActive !== planned.isActive) {
-      findings.difference(
-        "categories",
-        entry,
-        "isActive",
-        planned.isActive,
-        row.isActive
-      );
+      findings.difference("categories", found, {
+        field: "isActive",
+        expected: planned.isActive,
+        actual: row.isActive,
+      });
     }
   }
 }
@@ -416,43 +486,63 @@ function incompleteChecks(row: GestureRow, searchEntries: number): string[] {
   return checks;
 }
 
-function compareGesture(
+/** Every field the plan writes on a gesture that the target disagrees on. */
+function gestureDifferences(
   planned: ImportPlan["gestures"][number],
   row: GestureRow,
-  categoryKeys: string[],
-  findings: Findings
-): void {
-  const entry = { legacyId: planned.legacyId, name: planned.name };
+  categoryKeys: string[]
+): Difference[] {
+  const differences: Difference[] = [];
+  const add = (field: Field, expected: unknown, actual: unknown): void => {
+    differences.push({ field, expected, actual });
+  };
   if (row.name !== planned.name) {
-    findings.difference("gestures", entry, "name", planned.name, row.name);
+    add("name", planned.name, row.name);
   }
   if (!sameSet(categoryKeys, planned.categoryLegacyIds)) {
-    findings.difference(
-      "gestures",
-      entry,
-      "categories",
-      planned.categoryLegacyIds,
-      categoryKeys
-    );
+    add("categories", planned.categoryLegacyIds, categoryKeys);
   }
   if (!sameList(row.concepts, planned.concepts)) {
-    findings.difference(
-      "gestures",
-      entry,
-      "concepts",
-      planned.concepts,
-      row.concepts
-    );
+    add("concepts", planned.concepts, row.concepts);
+  }
+  if (row.playbackId !== planned.playbackId) {
+    add("playbackId", planned.playbackId, row.playbackId);
+  }
+  if (row.info !== planned.info) {
+    add("info", planned.info, row.info);
   }
   if (row.isActive !== planned.isActive) {
-    findings.difference(
-      "gestures",
-      entry,
-      "isActive",
-      planned.isActive,
-      row.isActive
-    );
+    add("isActive", planned.isActive, row.isActive);
   }
+  if (row.createdAt !== planned.createdAt) {
+    add("createdAt", planned.createdAt, row.createdAt);
+  }
+  return differences;
+}
+
+const NEVER_SAVED = "and no editor has saved it (no search entry)";
+
+const onlySearch = (checks: string[]): boolean =>
+  checks.every((check) => check.startsWith(SEARCH_CHECK_PREFIX));
+
+/**
+ * Every incomplete check for one gesture. A gesture with no search entry
+ * that is not already incomplete for another reason has never been saved
+ * by an editor, so each difference from the plan is the import's own and
+ * is one more check (see the module doc).
+ */
+function gestureChecks(
+  row: GestureRow,
+  searchCount: number,
+  differences: Difference[]
+): string[] {
+  const checks = incompleteChecks(row, searchCount);
+  if (searchCount === 0 && onlySearch(checks)) {
+    for (const { field } of differences) {
+      checks.push(`${field} does not match the plan, ${NEVER_SAVED}`);
+    }
+  }
+  return checks;
 }
 
 function checkGestures(
@@ -469,20 +559,24 @@ function checkGestures(
       findings.missing("gestures", entry);
       continue;
     }
-    const checks = incompleteChecks(row, searchEntries.get(row.id) ?? 0);
+    const differences = gestureDifferences(planned, row, categoryKeys(row));
+    const checks = gestureChecks(
+      row,
+      searchEntries.get(row.id) ?? 0,
+      differences
+    );
     if (checks.length > 0) {
       // Listed once, as incomplete: comparing a half-written document
       // with the plan would only repeat what is missing.
-      const searchOnly = checks.every((check) =>
-        check.startsWith(SEARCH_CHECK_PREFIX)
-      );
       const remedy: Remedy =
-        searchOnly && findings.existedBefore("gestures", planned.legacyId)
-          ? "re-save or reindex the gesture"
+        onlySearch(checks) &&
+        findings.existedBefore("gestures", planned.legacyId)
+          ? "re-save the gesture"
           : "delete and rerun";
       for (const check of checks) {
         findings.incomplete.push({
           collection: "gestures",
+          id: row.id,
           ...entry,
           check,
           remedy,
@@ -490,7 +584,9 @@ function checkGestures(
       }
       continue;
     }
-    compareGesture(planned, row, categoryKeys(row), findings);
+    for (const difference of differences) {
+      findings.difference("gestures", { id: row.id, ...entry }, difference);
+    }
   }
 }
 

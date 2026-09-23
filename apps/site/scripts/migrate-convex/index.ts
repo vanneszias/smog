@@ -17,7 +17,9 @@
  * 3. The target, its database name from `wrangler.jsonc`, and the planned
  *    counts are printed. Without `--apply` the run ends here, exit 0,
  *    having loaded no Payload and written nothing.
- * 4. With `--apply`: connect, note what already exists, apply the plan
+ * 4. With `--apply`: connect, note what already exists — refusing a
+ *    production target that already holds catalogue documents without a
+ *    legacy id, since production is empty at cutover — apply the plan
  *    (`./apply`), verify the result (`./verify`), write the report
  *    (`./report`), and exit non-zero on any failure, mismatch or
  *    incomplete document.
@@ -234,12 +236,28 @@ export async function runCli(options: RunCliOptions): Promise<number> {
       log(
         `Already in the target: ${before.preexisting.categories.size} of the categories, ${before.preexisting.gestures.size} of the gestures.`
       );
+      const { withoutLegacyId } = before;
+      log(
+        `Already in the target without a legacy id: ${withoutLegacyId.categories} categories, ${withoutLegacyId.gestures} gestures.`
+      );
+      // Production is empty at a big-bang cutover: anything already there
+      // that this import did not write means the target is not the one the
+      // operator thinks it is.
+      if (
+        cli.target === "production" &&
+        withoutLegacyId.categories + withoutLegacyId.gestures > 0
+      ) {
+        throw new Error(
+          `[migrate-convex] Refusing: the production target already holds ${withoutLegacyId.categories} categories and ${withoutLegacyId.gestures} gestures without a legacy id, and production must be empty at cutover. Nothing was written.`
+        );
+      }
 
       const result = await applyPlan(payload, plan, { log });
       const report = {
         target: cli.target,
         database,
         startedAt,
+        withoutLegacyId,
         plan,
         result,
       };

@@ -81,6 +81,47 @@ function plan(categories: PlanCategory[], gestures: PlanGesture[]): ImportPlan {
   };
 }
 
+type DbInsert = Payload["db"]["insert"];
+
+/**
+ * The fault injection for one statement of a create: the real Payload with
+ * `create` wrapped so that, while `legacyId`'s create runs, the adapter's
+ * `insert` into `tableName` throws. `@payloadcms/drizzle`'s `upsertRow`
+ * (3.89.0) writes every child table through `adapter.insert`, so this stops
+ * the create exactly there, with every earlier statement landed — the
+ * state a create that died part-way leaves on D1, with no transaction.
+ */
+function failingInsertInto(
+  payload: Payload,
+  tableName: string,
+  legacyId: string
+): Payload {
+  return new Proxy(payload, {
+    get(target, property) {
+      if (property === "create") {
+        return async (args: Parameters<Payload["create"]>[0]) => {
+          if ((args.data as { legacyId?: unknown }).legacyId !== legacyId) {
+            return target.create(args);
+          }
+          const db = target.db;
+          const realInsert: DbInsert = db.insert;
+          db.insert = ((insertArgs: Parameters<DbInsert>[0]) =>
+            insertArgs.tableName === tableName
+              ? Promise.reject(new Error(`injected: insert into ${tableName}`))
+              : realInsert.call(db, insertArgs)) as DbInsert;
+          try {
+            return await target.create(args);
+          } finally {
+            db.insert = realInsert;
+          }
+        };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
 const checksFor = (result: VerifyResult, legacyId: string): string[] =>
   result.incomplete
     .filter((entry) => entry.legacyId === legacyId)
@@ -201,6 +242,43 @@ describe("verify, against a real database", () => {
         before: before.userConsents + 1,
         after: before.userConsents,
       });
+    });
+  });
+
+  describe("catalogue documents without a legacy id", () => {
+    const home = category("zonder-legacy-thuis");
+    const importPlan = plan([home], []);
+    let delta: { categories: number; gestures: number };
+
+    beforeAll(async () => {
+      const before = await snapshotBeforeRun(payload, importPlan);
+      // Made the way the admin makes it: no legacy id at all.
+      const made = await payload.create({
+        collection: "categories",
+        locale: "nl",
+        overrideAccess: true,
+        data: { name: `Zonder legacy id ${RUN}`, isActive: true },
+      });
+      try {
+        const after = await snapshotBeforeRun(payload, importPlan);
+        delta = {
+          categories:
+            after.withoutLegacyId.categories -
+            before.withoutLegacyId.categories,
+          gestures:
+            after.withoutLegacyId.gestures - before.withoutLegacyId.gestures,
+        };
+      } finally {
+        await payload.delete({
+          collection: "categories",
+          id: made.id,
+          overrideAccess: true,
+        });
+      }
+    });
+
+    it("are counted before the run, per collection", () => {
+      expect(delta).toEqual({ categories: 1, gestures: 0 });
     });
   });
 
@@ -419,8 +497,9 @@ describe("verify, against a real database", () => {
 
     /*
      * A pre-existing gesture whose only fault is its search entry is
-     * otherwise whole, and an editor may have worked on it since: saving it
-     * (or reindexing) rebuilds the entry without losing that work.
+     * otherwise whole — every field still matches the plan — and an editor
+     * may have worked on it since: saving it rebuilds the entry without
+     * losing that work.
      */
     it("says to re-save a pre-existing gesture whose only fault is its search entry", () => {
       const remedies = (legacyId: string): string[] =>
@@ -428,9 +507,7 @@ describe("verify, against a real database", () => {
           .filter((entry) => entry.legacyId === legacyId)
           .map((entry) => entry.remedy);
 
-      expect(remedies(noSearch.legacyId)).toEqual([
-        "re-save or reindex the gesture",
-      ]);
+      expect(remedies(noSearch.legacyId)).toEqual(["re-save the gesture"]);
       expect(remedies(noLinks.legacyId)).toEqual(["delete and rerun"]);
       expect(remedies(noName.legacyId)).toEqual(["delete and rerun"]);
     });
@@ -551,6 +628,92 @@ describe("verify, against a real database", () => {
           remedy: "delete and rerun",
         }),
       ]);
+    });
+  });
+
+  /*
+   * The final review's case. A gesture create that dies after its row,
+   * locales and relationships but before its concepts (`gestures_texts`)
+   * leaves a gesture with a name and categories, no concepts, and — since
+   * the search plugin's afterChange never ran — no search entry. On the
+   * rerun it is pre-existing. A search entry is written by every save, so
+   * zero of them means no editor ever saved it: it is still the import's
+   * own, and has to match the plan in full. Re-saving it would only index
+   * the loss and turn it into a passing "differs".
+   */
+  describe("a gesture create that died writing its concepts, seen by the rerun", () => {
+    const home = category("teksten-thuis");
+    const lost = gesture("teksten-kwijt", [home]);
+    const whole = gesture("teksten-heel", [home]);
+    const importPlan = plan([home], [lost, whole]);
+
+    let faulted: Awaited<ReturnType<typeof applyPlan>>;
+    let rerun: VerifyResult;
+    let lostId: number;
+    let afterDeleteAndRerun: VerifyResult;
+
+    beforeAll(async () => {
+      faulted = await applyPlan(
+        failingInsertInto(payload, "gestures_texts", lost.legacyId),
+        importPlan,
+        { log: silent }
+      );
+      lostId = await idOf("gestures", lost.legacyId);
+
+      const before = await snapshotBeforeRun(payload, importPlan);
+      await applyPlan(payload, importPlan, { log: silent });
+      rerun = await verify(payload, importPlan, before);
+
+      // The remedy, followed.
+      await payload.delete({
+        collection: "gestures",
+        id: lostId,
+        overrideAccess: true,
+      });
+      const beforeRetry = await snapshotBeforeRun(payload, importPlan);
+      await applyPlan(payload, importPlan, { log: silent });
+      afterDeleteAndRerun = await verify(payload, importPlan, beforeRetry);
+    });
+
+    it("left a half-written gesture behind on the faulted run", () => {
+      expect(faulted.gestures.failed.map((entry) => entry.legacyId)).toEqual([
+        lost.legacyId,
+      ]);
+    });
+
+    it("fails verification on the rerun", () => {
+      expect(rerun.ok).toBe(false);
+    });
+
+    it("lists it as incomplete with delete and rerun, never re-save", () => {
+      const entries = rerun.incomplete.filter(
+        (entry) => entry.legacyId === lost.legacyId
+      );
+
+      expect(entries.map((entry) => entry.check)).toEqual([
+        "search entries: 0 (expected 1)",
+        "concepts does not match the plan, and no editor has saved it (no search entry)",
+      ]);
+      for (const entry of entries) {
+        expect(entry.remedy).toBe("delete and rerun");
+        expect(entry.id).toBe(lostId);
+      }
+    });
+
+    it("does not bury the loss under Differs", () => {
+      expect(
+        rerun.differs.filter((entry) => entry.legacyId === lost.legacyId)
+      ).toEqual([]);
+    });
+
+    it("leaves the whole gesture alone", () => {
+      expect(checksFor(rerun, whole.legacyId)).toEqual([]);
+    });
+
+    it("passes once the gesture is deleted and the import rerun", () => {
+      expect(afterDeleteAndRerun.incomplete).toEqual([]);
+      expect(afterDeleteAndRerun.mismatches).toEqual([]);
+      expect(afterDeleteAndRerun.ok).toBe(true);
     });
   });
 

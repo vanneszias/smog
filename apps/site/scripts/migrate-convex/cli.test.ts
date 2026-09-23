@@ -514,6 +514,65 @@ describe("runCli refusals", () => {
     expect(result.loads).toBe(0);
   });
 
+  /*
+   * Production is empty at a big-bang cutover, so a catalogue document
+   * without a legacy id there means the target is not what the operator
+   * thinks it is. The stand-in Payload answers the pre-run reads — every
+   * count says 3, no planned document exists yet — and records any call
+   * that could write.
+   */
+  it("refuses a production apply when the target already holds catalogue documents without a legacy id", async () => {
+    const lines: string[] = [];
+    const writes: string[] = [];
+    const counted: unknown[] = [];
+    const standIn = {
+      collections: { "user-consents": { config: { hooks: {} } } },
+      count: (args: { collection: string; where?: unknown }) => {
+        counted.push(args.collection);
+        return Promise.resolve({ totalDocs: 3 });
+      },
+      find: () => Promise.resolve({ docs: [], hasNextPage: false }),
+      create: () => {
+        writes.push("create");
+        return Promise.reject(new Error("must not write"));
+      },
+      update: () => {
+        writes.push("update");
+        return Promise.reject(new Error("must not write"));
+      },
+      delete: () => {
+        writes.push("delete");
+        return Promise.reject(new Error("must not write"));
+      },
+    } as unknown as Payload;
+
+    const code = await runCli({
+      argv: [
+        "--export",
+        outsideExport,
+        "--report",
+        outsideReport,
+        "--target=production",
+        "--apply",
+        "--i-have-a-maintenance-window",
+      ],
+      env: { CLOUDFLARE_ENV: "production" },
+      log: (line) => lines.push(line),
+      error: (line) => lines.push(line),
+      loadPayload: () => Promise.resolve(standIn),
+    });
+    const output = lines.join("\n");
+
+    expect(code).not.toBe(0);
+    expect(counted).toEqual(expect.arrayContaining(["categories", "gestures"]));
+    expect(output).toMatch(/without a legacy id: 3 categories, 3 gestures/);
+    expect(output).toMatch(
+      /\[migrate-convex\] Refusing: .*production.*without a legacy id/
+    );
+    expect(writes).toEqual([]);
+    expect(existsSync(outsideReport)).toBe(false);
+  });
+
   it("prints the banner before connecting, and connects to the named target", async () => {
     const lines: string[] = [];
     const targets: string[] = [];

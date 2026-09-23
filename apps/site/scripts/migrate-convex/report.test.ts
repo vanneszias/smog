@@ -89,6 +89,7 @@ const input = (
   target: "local" as const,
   database: "smog-staging (local emulation)",
   startedAt: new Date("2026-09-23T10:00:00.000Z"),
+  withoutLegacyId: { categories: 0, gestures: 0 },
   plan,
   result,
   verification,
@@ -136,6 +137,7 @@ describe("buildReport", () => {
         incomplete: [
           {
             collection: "gestures",
+            id: 12,
             legacyId: "ges_rep_2",
             name: "Blauw | donker",
             check: "no categories",
@@ -155,13 +157,15 @@ describe("buildReport", () => {
       incomplete: [
         {
           collection: "gestures",
+          id: 11,
           legacyId: "ges_rep_1",
           name: "Rood",
           check: "search entries: 0 (expected 1)",
-          remedy: "re-save or reindex the gesture",
+          remedy: "re-save the gesture",
         },
         {
           collection: "gestures",
+          id: 12,
           legacyId: "ges_rep_2",
           name: "Blauw",
           check: "no categories",
@@ -174,10 +178,10 @@ describe("buildReport", () => {
     expect(report).toMatch(/## Verification\s+\*\*Failed\.\*\*/);
     const section = report.split("### Incomplete — delete and rerun")[1] ?? "";
     expect(section).toMatch(
-      /\| gestures \| `ges_rep_1` \| Rood \| search entries: 0 \(expected 1\) \| re-save or reindex the gesture \|/
+      /\| gestures \| 11 \| `ges_rep_1` \| Rood \| search entries: 0 \(expected 1\) \| re-save the gesture \|/
     );
     expect(section).toMatch(
-      /\| gestures \| `ges_rep_2` \| Blauw \| no categories \| delete and rerun \|/
+      /\| gestures \| 12 \| `ges_rep_2` \| Blauw \| no categories \| delete and rerun \|/
     );
     expect(runFailed(clean, failing)).toBe(true);
   });
@@ -188,6 +192,7 @@ describe("buildReport", () => {
       differs: [
         {
           collection: "gestures",
+          id: 11,
           legacyId: "ges_rep_1",
           name: "Rood",
           field: "name",
@@ -200,7 +205,45 @@ describe("buildReport", () => {
     expect(report).toMatch(/## Verification\s+\*\*Passed\.\*\*/);
     expect(report).toContain("### Differs from the export");
     expect(report).toContain("Rood (bewerkt)");
+    expect(report).toMatch(
+      /\| gestures \| 11 \| `ges_rep_1` \| Rood \| name \|/
+    );
     expect(runFailed(clean, edited)).toBe(false);
+  });
+
+  it("never offers the search collection's Reindex as a remedy", () => {
+    const report = buildReport(
+      input(clean, {
+        ...passed,
+        ok: false,
+        incomplete: [
+          {
+            collection: "gestures",
+            id: 11,
+            legacyId: "ges_rep_1",
+            name: "Rood",
+            check: "search entries: 0 (expected 1)",
+            remedy: "re-save the gesture",
+          },
+        ],
+      })
+    );
+
+    expect(report).not.toMatch(
+      /re-save or reindex|or the search collection's Reindex/i
+    );
+    expect(report).toMatch(/Never use the search collection's Reindex button/);
+  });
+
+  it("states how many catalogue documents already in the target have no legacy id", () => {
+    const report = buildReport({
+      ...input(),
+      withoutLegacyId: { categories: 2, gestures: 5 },
+    });
+
+    expect(report).toMatch(
+      /without a legacy id \(not from this import\):\*\* 2 categories, 5 gestures/
+    );
   });
 
   it("shows the user-consents count before and after, as information only", () => {

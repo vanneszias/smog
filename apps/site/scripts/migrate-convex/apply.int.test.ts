@@ -100,6 +100,38 @@ function legacyIdOf(args: CreateArgs): unknown {
   return (args.data as { legacyId?: unknown }).legacyId;
 }
 
+type DbInsert = Payload["db"]["insert"];
+
+/**
+ * A finer fault: while `legacyId`'s create runs, the adapter's `insert`
+ * into `tableName` throws. `@payloadcms/drizzle`'s `upsertRow` (3.89.0)
+ * writes every child table through `adapter.insert`, so the create stops
+ * exactly there with every earlier statement landed — what a create that
+ * died part-way leaves on D1, which has no transactions.
+ */
+function withFailingInsert(
+  payload: Payload,
+  tableName: string,
+  legacyId: string
+): Payload {
+  return withCreate(payload, async (args, real) => {
+    if (legacyIdOf(args) !== legacyId) {
+      return real(args);
+    }
+    const db = payload.db;
+    const realInsert: DbInsert = db.insert;
+    db.insert = ((insertArgs: Parameters<DbInsert>[0]) =>
+      insertArgs.tableName === tableName
+        ? Promise.reject(new Error(`injected: insert into ${tableName}`))
+        : realInsert.call(db, insertArgs)) as DbInsert;
+    try {
+      return await real(args);
+    } finally {
+      db.insert = realInsert;
+    }
+  });
+}
+
 describe("applyPlan, against a real database", () => {
   let payload: Payload;
 
@@ -424,6 +456,74 @@ describe("applyPlan, against a real database", () => {
     it("leaves one document per legacy id across the faulted run and the rerun", async () => {
       expect(await copies("categories", importPlan.categories)).toEqual([1, 1]);
       expect(await copies("gestures", importPlan.gestures)).toEqual([1, 1, 1]);
+    });
+  });
+
+  /*
+   * The final review's case. A category create that died after its row but
+   * before its Dutch name (`categories_locales`) leaves a row carrying the
+   * legacy id. Counted `existing` and linked, its gestures would be created
+   * against it — and deleting it, as verification says to, would cascade
+   * those links away while the gestures stayed `existing`, one category
+   * short, for good. So a nameless category is treated as failed.
+   */
+  describe("a category left without its Dutch name by an earlier run", () => {
+    const nameless = category("naamloos", "2021-09-10T11:12:13.000Z");
+    const named = category("benoemd", "2021-10-11T12:13:14.000Z");
+    const both = gesture("naamloos-beide", [named, nameless]);
+    const onlyNamed = gesture("alleen-benoemd", [named]);
+    const importPlan = plan([nameless, named], [both, onlyNamed]);
+
+    let faulted: ApplyResult;
+    let rerun: ApplyResult;
+    let copiesAfterRerun: number[];
+    let afterDelete: ApplyResult;
+
+    beforeAll(async () => {
+      faulted = await applyPlan(
+        withFailingInsert(payload, "categories_locales", nameless.legacyId),
+        importPlan,
+        { log: silent }
+      );
+      rerun = await applyPlan(payload, importPlan, { log: silent });
+      copiesAfterRerun = await copies("gestures", importPlan.gestures);
+
+      // The remedy, followed: delete the half-written category, rerun.
+      await payload.delete({
+        collection: "categories",
+        id: await categoryId(nameless),
+        overrideAccess: true,
+      });
+      afterDelete = await applyPlan(payload, importPlan, { log: silent });
+    });
+
+    it("left the category's row without its name on the faulted run", () => {
+      expect(faulted.categories.failed.map((entry) => entry.legacyId)).toEqual([
+        nameless.legacyId,
+      ]);
+    });
+
+    it("counts the nameless category as failed on the rerun, not existing", () => {
+      expect(rerun.categories.existing).toBe(1);
+      expect(rerun.categories.failed.map((entry) => entry.legacyId)).toEqual([
+        nameless.legacyId,
+      ]);
+      expect(rerun.categories.failed[0]?.error).toMatch(/no Dutch name/);
+    });
+
+    it("skips the gestures that need it, so the run fails", () => {
+      expect(rerun.gestures.skippedForFailedCategory).toEqual([both.legacyId]);
+      expect(copiesAfterRerun).toEqual([0, 1]);
+    });
+
+    it("creates the gesture whole, with both categories, after delete and rerun", async () => {
+      expect(afterDelete.categories.failed).toEqual([]);
+      expect(afterDelete.gestures.skippedForFailedCategory).toEqual([]);
+      expect(afterDelete.gestures.created).toBe(1);
+      expect((await gestureDoc(both)).categories).toEqual([
+        await categoryId(named),
+        await categoryId(nameless),
+      ]);
     });
   });
 
