@@ -79,7 +79,7 @@ describe("AccountConsentControl", () => {
    * The switch's own behaviour is `ConsentDeviceControl.test.tsx`'s subject
    * — it is the same component the privacy page renders for guests. What is
    * asserted here is what only this composition can show: one toggle, one
-   * row, and the two Ruling 11 pins below, which belong to the component
+   * row, and the two device-rule pins below, which belong to the component
    * that actually receives the account's recorded row.
    */
   it("records a toggle exactly once, through the reconciler and not twice", async () => {
@@ -132,11 +132,11 @@ describe("AccountConsentControl", () => {
   });
 
   /*
-   * Ruling 11 (per the coordinator's decision on this task): the server
-   * never writes the browser's consent flag, so the switch's state must
-   * come from `localStorage` alone, never from the account's recorded row.
-   * Two tests pin this, because a reviewer proved one alone does not: this
-   * one covers an *explicit* local decision that disagrees with the row.
+   * The device rule: the server never writes the browser's consent flag, so the
+   * switch's state must come from `localStorage` alone, never from the
+   * account's recorded row. Two tests pin this, because a reviewer proved one
+   * alone does not: this one covers an *explicit* local decision that disagrees
+   * with the row.
    */
   it("the switch is unaffected by what the account's row says", async () => {
     window.localStorage.setItem(ANALYTICS_CONSENT_KEY, "denied");
@@ -167,7 +167,7 @@ describe("AccountConsentControl", () => {
    *   setChecked(local === "granted");
    *
    * this test fails (`aria-checked` becomes `"true"`), and it was restored
-   * byte for byte afterwards. See the Task 6 report for the transcript.
+   * byte for byte afterwards.
    */
   it("does not fall back to the account's row when this device has not decided", async () => {
     // `beforeEach` already clears localStorage — no key at all, the

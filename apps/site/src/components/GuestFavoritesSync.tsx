@@ -13,9 +13,9 @@ import { syncGuestFavorites } from "@/lib/mergeGuestState";
  * page — and **sign-in redirects to the home page** (`endpoints/auth.ts`
  * answers a successful sign-in with `seeOther(homePath(locale))`). So the
  * merge that `FavoriteButton` triggers does not happen at sign-in; it happens
- * whenever the reader next opens a gesture, which may be never. Stage 4 exit
- * criterion 6 asks for the favorites to merge *on first sign-in*, and without
- * this component they do not.
+ * whenever the reader next opens a gesture, which may be never. The
+ * favorites have to merge *on first sign-in*, and without this component
+ * they do not.
  *
  * It renders `null`. It is a place to hang one effect, not a piece of UI.
  *

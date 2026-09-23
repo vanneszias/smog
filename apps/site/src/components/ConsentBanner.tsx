@@ -25,14 +25,14 @@ import type { Locale } from "@/lib/locale";
  *
  * ## Why the strings are a map and not a translation call
  *
- * `apps/site` has no i18n library and every shipped component holds its copy
+ * `apps/site` has no i18n library and every component holds its copy
  * as a `Record<Locale, string>` at the call site (`LocaleSwitcher.tsx:11`,
  * `[locale]/layout.tsx:21`). The wording is copied verbatim from
  * `packages/i18n/src/locales/*.json`'s `settings.*` keys
  * (`analyticsPromptTitle`, `analyticsPromptDescription`, `analyticsAllow`,
- * `analyticsRequiredOnly`, `privacyPolicy`) so that this notice and the old
- * stack's say the same thing while both are live; the dependency on
- * `@smog/i18n` is deliberately not added.
+ * `analyticsRequiredOnly`, `privacyPolicy`) so that this notice and the
+ * mobile app's say the same thing; the dependency on `@smog/i18n` is
+ * deliberately not added.
  */
 const COPY: Record<
   Locale,
@@ -167,14 +167,13 @@ export function ConsentBanner({ locale }: { locale: Locale }) {
         </Banner>
       </div>
       {/*
-       * The spacer, not the banner: `Banner`'s own root is `position:
-       * fixed`, so it takes no flow height regardless of where this
-       * component sits in the tree — nothing here would push page content
-       * if this div were absent. Rendered as a sibling rather than as
-       * padding on `<main>` because `ConsentBanner` is a client leaf and
-       * `[locale]/layout.tsx` is a Server Component with no state to hold
-       * this height in; a plain flow element after `<main>` in that layout
-       * (see Task 4's fix-round commit) achieves the same reserved space
+       * The spacer, not the banner: `Banner`'s own root is `position: fixed`,
+       * so it takes no flow height regardless of where this component sits in
+       * the tree — nothing here would push page content if this div were
+       * absent. Rendered as a sibling rather than as padding on `<main>`
+       * because `ConsentBanner` is a client leaf and `[locale]/layout.tsx` is a
+       * Server Component with no state to hold this height in; a plain flow
+       * element after `<main>` in that layout achieves the same reserved space
        * without inventing a channel to pass a number up to a server parent.
        */}
       <div aria-hidden="true" style={{ height: reservedSpace }} />

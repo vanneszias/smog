@@ -17,15 +17,14 @@ import type { User } from "@/payload-types";
  * is not sent on a cross-site POST, so the session cookie the endpoint needs
  * simply is not there for an attacker's form.
  *
- * **Still a nav and not a menu, now that there is somewhere to go.** Task 4
- * deferred the plan's "account menu" on the grounds that a disclosure widget
- * wrapping one address and one button buys nothing, and said Task 5's
- * `/{locale}/account` would be the point at which a menu starts paying for
- * itself. It is not: the account page arrived, and the link to it is the
- * address, so the header still holds exactly two tab stops. A menu would add
- * an `aria-expanded`, an escape handler and a `"use client"` boundary to the
- * layout of every page in order to hide one of them. Revisit when there are
- * three or more destinations.
+ * **Still a nav and not a menu, now that there is somewhere to go.** An account
+ * menu was deferred on the grounds that a disclosure widget wrapping one
+ * address and one button buys nothing, with `/{locale}/account` named as the
+ * point at which a menu starts paying for itself. It is not: the account page
+ * arrived, and the link to it is the address, so the header still holds exactly
+ * two tab stops. A menu would add an `aria-expanded`, an escape handler and a
+ * `"use client"` boundary to the layout of every page in order to hide one of
+ * them. Revisit when there are three or more destinations.
  */
 export function AccountNav({
   locale,

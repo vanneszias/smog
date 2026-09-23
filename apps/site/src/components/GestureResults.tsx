@@ -17,10 +17,6 @@ import type { Locale } from "@/lib/locale";
  * rows themselves are still fetched and flattened on the server; what crosses
  * the boundary is plain data.
  *
- * The detail route lands in Task 5. The links are built now rather than later
- * because a card nobody can click is not a list of gestures, and because the
- * href shape is what Task 5 has to match.
- *
  * It is also where `search_performed` fires. That event needs the *results*
  * of a query — `has_results`, `result_count` — and on this route those only
  * exist once the Server Component above has re-queried the database, so the
@@ -54,9 +50,8 @@ export function GestureResults({
     lastReported.current = filterKey;
 
     /*
-     * Matches `apps/web/src/routes/gestures.tsx:74-90`: nothing is reported
-     * for the unfiltered list, only for an actual query or an actual
-     * category selection. A visitor who lands on `/gestures` with no
+     * Nothing is reported for the unfiltered list, only for an actual query or
+     * an actual category selection. A visitor who lands on `/gestures` with no
      * `?q=` and no `?category=` has not performed a search.
      */
     if (q.trim() === "" && categories.length === 0) {

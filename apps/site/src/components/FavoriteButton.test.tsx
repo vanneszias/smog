@@ -116,7 +116,7 @@ describe("FavoriteButton", () => {
   });
 
   it("renders unpressed instead of throwing when localStorage is denied", async () => {
-    // Review Focus item 3, at the component rather than the helper. A throw
+    // The guarded store, at the component rather than the helper. A throw
     // inside the mount effect is an unhandled error in the client tree,
     // which blanks everything below the nearest boundary.
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
@@ -184,9 +184,10 @@ describe("FavoriteButton", () => {
 });
 
 /*
- * The signed-in half. Everything above this point is the guest path and is
- * unchanged from Stage 3 — deliberately, because "signed out behaves exactly
- * as it did" is one of the two things the mode switch has to get right.
+ * The signed-in half. Everything above this point is the guest path, and it
+ * is untouched by the signed-in one — deliberately, because "signed out
+ * behaves exactly as it did" is one of the two things the mode switch has to
+ * get right.
  *
  * `fetch` is stubbed rather than mocked at the module boundary, so these
  * exercise `writeAccountFavorite` for real: the URL, the method, the body and
@@ -222,12 +223,12 @@ describe("FavoriteButton on an account", () => {
      * signing in must not see a filled heart for a favourite the account
      * does not have.
      *
-     * Task 6 reconciles those two, and it reconciles them through the
-     * *server*: the merge below is refused, so the account still does not
-     * hold gesture 7 and the heart must say so. A component that had taken
-     * the easy route — reading `localStorage` on the account path — would
-     * fill the heart here and the reader would believe a favourite was
-     * saved that is not.
+     * The sign-in merge reconciles those two, and it reconciles them through
+     * the *server*: the merge below is refused, so the account still does not
+     * hold gesture 7 and the heart must say so. A component that had taken the
+     * easy route — reading `localStorage` on the account path — would fill the
+     * heart here and the reader would believe a favourite was saved that is
+     * not.
      */
     localStorage.setItem(GUEST_FAVORITES_KEY, '["7"]');
     vi.stubGlobal("fetch", respondWith({}, 500));
@@ -254,7 +255,7 @@ describe("FavoriteButton on an account", () => {
 
   it("does not claim to be ready before it has hydrated", () => {
     /*
-     * The regression this task caused and then fixed, pinned so it cannot
+     * A regression the signed-in path once caused, pinned so it cannot
      * come back. Deriving `data-ready` from "the answer is known" makes it
      * true in the *server's* markup for a signed-in reader — so
      * `expect(heart).toHaveAttribute("data-ready", "true")` returns instantly,
@@ -301,7 +302,7 @@ describe("FavoriteButton on an account", () => {
   it("asks for the state it wants rather than for a toggle", async () => {
     /*
      * There are no transactions on any write path in this app and a press
-     * can be retried by the reader, by a flaky connection or by Task 6's
+     * can be retried by the reader, by a flaky connection or by the sign-in
      * merge. A toggle applied twice undoes itself; a desired state applied
      * twice is the same state.
      */
@@ -370,7 +371,7 @@ describe("FavoriteButton on an account", () => {
 
   it("says the session ended when the write comes back unauthenticated", async () => {
     /*
-     * The case the plan asks to decide: the cookie expired while the page
+     * The case that has to be decided: the cookie expired while the page
      * sat open. The header still shows the account the page was rendered
      * with, so without this the press looks like it worked and the
      * favourite is nowhere. The message is separate from the generic
@@ -424,7 +425,7 @@ describe("FavoriteButton on an account", () => {
    * (`setState`) before `trackEvent` runs, and `trackEvent` never `await`s
    * its own `fetch`, so a failing or hanging analytics beacon must never
    * hold up the heart. Nothing above would notice someone adding an `await`
-   * in front of that call — see the Task 7 fix-round-1 finding.
+   * in front of that call.
    *
    * This stub answers the favourites write successfully and fails only the
    * request to `/api/analytics/track`, so it is the tracking call and
@@ -511,19 +512,18 @@ describe("FavoriteButton on an account", () => {
 
   it("never reads the guest store for its own state", async () => {
     /*
-     * **This test used to assert the guest store was not read at all**, and
-     * Task 6 is the reason it no longer can: the account path now reads it
-     * once, on mount, to hand it to the merge. The property that mattered is
-     * unchanged and is asserted more precisely here — the store is read
-     * exactly once, by the merge, and a press consults the account and
-     * nothing else.
+     * **This test used to assert the guest store was not read at all**, and the
+     * sign-in merge is the reason it no longer can: the account path now reads
+     * it once, on mount, to hand it to the merge. The property that mattered is
+     * unchanged and is asserted more precisely here — the store is read exactly
+     * once, by the merge, and a press consults the account and nothing else.
      *
      * Weakening it to "reads it sometimes" would have thrown away the
      * assertion that catches a mutation pointing the heart at
      * `localStorage`, so the count is pinned and the sibling test above
      * pins the state with a merge that fails.
      *
-     * Task 7 adds a second, unrelated read: `trackEvent`'s consent gate,
+     * There is a second, unrelated read: `trackEvent`'s consent gate,
      * fired once the write resolves as `ok`. It is not a second read of
      * *the guest store* — a different key, for a different reason — so it
      * is pinned alongside the merge's read rather than making this

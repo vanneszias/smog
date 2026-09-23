@@ -82,8 +82,8 @@ export function FavoritesList({
      * `readGuestFavorites` never throws, so a denied store lands here as an
      * empty list and the page renders "no favorites yet". An effect that
      * threw would be an unhandled error in the client tree and would blank
-     * everything below the nearest boundary — the failure mode Stage 3's
-     * Review Focus item 3 is about, and one this component is still on the
+     * everything below the nearest boundary — the failure mode the guarded
+     * store exists to prevent, and one this component is still on the
      * hook for on the guest path.
      */
     const ids = usableFavoriteIds(accountFavoriteIds ?? readGuestFavorites());

@@ -29,8 +29,8 @@ import {
  * rule for the same reason (no transactions on any write path, so
  * idempotence is a design requirement rather than a nicety). Posting a row
  * on every page load would turn `user-consents` from a legal-evidence table
- * into a log of page views, which is exactly the shape Review Focus 2 exists
- * to keep this table from becoming in the *other* direction (every refusal
+ * into a log of page views, which is exactly the shape this component exists
+ * to keep the table from becoming in the *other* direction (every refusal
  * silently dropped) — and a table that grows one row per page view for every
  * signed-in visitor is the same failure with the sign flipped.
  *
@@ -61,7 +61,7 @@ import {
  * landing page and closed the tab left *no row at all* — the refusal existed
  * only in a browser nobody would ever read it back from. A refusal that is
  * not recorded is, in this table, indistinguishable from never having been
- * asked, which is the one ambiguity this whole stage exists to remove.
+ * asked, which is the one ambiguity this table exists to remove.
  *
  * The subscription is also why this component is now the **only** caller of
  * {@link postConsent}, and why that function is no longer exported.
@@ -70,7 +70,7 @@ import {
  * every single time. So every control in this app writes the store, and the
  * store's one reader-and-reconciler is here.
  *
- * ## Ruling 12: the marker is scoped to an account, and a mismatch clears
+ * ## The account rule: the marker is scoped to an account, and a mismatch clears
  *
  * The marker used to hold only a value ("granted"/"denied"). That was wrong,
  * and a real walkthrough is what found it, not a hypothetical: account A
@@ -78,7 +78,7 @@ import {
  * browser; `localStorage` still says "granted" and the old marker still says
  * "granted", so nothing would post — B would be tracked with *no row at
  * all*, which is the exact "no row is indistinguishable from a refusal"
- * ambiguity this whole stage exists to remove, reappearing on the read side
+ * ambiguity this table exists to remove, reappearing on the read side
  * (`endpoints/analytics.ts`'s `withdrewConsent` treats an absent row as "not
  * withdrawn").
  *
@@ -108,13 +108,13 @@ import {
  *
  * ## The same machine, with nobody signed in
  *
- * Ruling 12 reasoned about A followed by B. A followed by *nobody* is the
- * same shared computer with the same consequence, and it is the more common
+ * The account rule reasoned about A followed by B. A followed by *nobody* is
+ * the same shared computer with the same consequence, and it is the more common
  * half, because signing out is something people do on purpose. So this
- * component is mounted for guests too, and a **marker with no session** is
- * the signal: some account synced a decision in this browser, there is no
- * longer an account to own it, so it is cleared and the next visitor is
- * asked for themselves.
+ * component is mounted for guests too, and a **marker with no session** is the
+ * signal: some account synced a decision in this browser, there is no longer an
+ * account to own it, so it is cleared and the next visitor is asked for
+ * themselves.
  *
  * The signal is deliberately the marker rather than "no session". A guest who
  * answered the banner and never signed in has made a decision of their own
@@ -213,13 +213,13 @@ function clearSyncMarker(): void {
  *
  * ## What a marker-less decision really costs — the honest version
  *
- * This used to say that a lost marker "only risks one duplicate row on the
- * next page load, not a lost decision". Since Ruling 12 that is false, and it
+ * This used to say that a lost marker "only risks one duplicate row on the next
+ * page load, not a lost decision". Since the account rule that is false, and it
  * is false in the direction that matters: a decision sitting in this browser
  * with **nothing saying whose it is** cannot be recognised by the
  * account-mismatch branch or by the signed-out branch, so the next guest is
  * tracked on it and the next account has a row written from it — the outcome
- * Ruling 12 calls the worst of the three options it weighed.
+ * the account rule calls the worst of the three options it weighed.
  *
  * ## The gap that actually bit, and what closes it
  *
@@ -243,10 +243,10 @@ function clearSyncMarker(): void {
  *
  * Both writes are read back, which catches a store that throws *and* one that
  * accepts the write and keeps nothing. When the marker is not durable the
- * caller drops the browser's decision: a decision this browser cannot
- * attribute is one it must not keep, because keeping it is what hands it to
- * the next account. The cost is that the banner asks again — the safe failure
- * Ruling 12 already priced, and the same one a person gets for signing out.
+ * caller drops the browser's decision: a decision this browser cannot attribute
+ * is one it must not keep, because keeping it is what hands it to the next
+ * account. The cost is that the banner asks again — the safe failure the
+ * account rule already priced, and the same one a person gets for signing out.
  *
  * **What is left, stated rather than implied.** A marker that was written and
  * is *later* evicted leaves the same decision-with-no-owner, and it cannot be
@@ -388,9 +388,9 @@ function reconcileConsent(userId: null | number | string): void {
   }
 
   if (marker !== null && marker.userId !== String(userId)) {
-    // Ruling 12: a different account's answer is sitting in this browser's
-    // storage. See the module doc comment for why this clears rather than
-    // syncs — and why the marker goes with it.
+    // The account rule: a different account's answer is sitting in this
+    // browser's storage. See the module doc comment for why this clears rather
+    // than syncs — and why the marker goes with it.
     dropForeignDecision();
 
     return;

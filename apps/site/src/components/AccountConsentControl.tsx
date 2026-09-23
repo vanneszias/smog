@@ -9,7 +9,7 @@ import type { Locale } from "@/lib/locale";
  * The account page's consent section: the device-scoped switch, plus what
  * this account has on record.
  *
- * ## Ruling 11: the switch reflects this device, and only this device
+ * ## The device rule: the switch reflects this device, and only this device
  *
  * This was a live question and it was settled deliberately, against the more
  * convenient answer. The switch's state comes from `localStorage` alone — the
@@ -103,9 +103,9 @@ export function AccountConsentControl({
     <div className="flex flex-col gap-4">
       <ConsentDeviceControl locale={locale} />
       {/*
-       * Read-only, and never merged into the switch above — see "Ruling 11"
-       * in the module doc comment. This is what makes the page honest about
-       * scope: the switch alone would show "off" to someone whose account
+       * Read-only, and never merged into the switch above — see "The device
+       * rule" in the module doc comment. This is what makes the page honest
+       * about scope: the switch alone would show "off" to someone whose account
        * says otherwise, with nothing telling them that is what is happening.
        */}
       <p

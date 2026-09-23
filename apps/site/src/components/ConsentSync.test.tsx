@@ -215,13 +215,13 @@ describe("ConsentSync", () => {
   });
 
   /*
-   * Ruling 12: the shared/library computer walkthrough. Account 1 granted
-   * and its marker is on record; account 2 signs in on the same browser.
-   * `localStorage` still says "granted" — that is account 1's answer, not
-   * account 2's — and the realistic bug is treating it as already
-   * reconciled (or worse, syncing it as if account 2 had said so). Neither
-   * may happen: the browser's decision must be cleared, and nothing posted,
-   * so the banner asks account 2 for themselves.
+   * The account rule: the shared/library computer walkthrough. Account 1
+   * granted and its marker is on record; account 2 signs in on the same
+   * browser. `localStorage` still says "granted" — that is account 1's answer,
+   * not account 2's — and the realistic bug is treating it as already
+   * reconciled (or worse, syncing it as if account 2 had said so). Neither may
+   * happen: the browser's decision must be cleared, and nothing posted, so the
+   * banner asks account 2 for themselves.
    */
   describe("when the marker names a different account", () => {
     it("clears the browser's decision instead of syncing it to the new account", async () => {
@@ -366,9 +366,9 @@ describe("ConsentSync", () => {
   });
 
   /*
-   * Failure mode 1, on the path Ruling 12 left uncovered. Ruling 12 reasoned
-   * about account A followed by account B; A followed by *nobody* is the
-   * same shared machine with the same consequence — the next person is
+   * Failure mode 1, on the path the account rule left uncovered. The account
+   * rule reasoned about account A followed by account B; A followed by *nobody*
+   * is the same shared machine with the same consequence — the next person is
    * tracked on A's "granted" without ever being asked — and it is the more
    * common half, because signing out is a thing people do on purpose.
    */
@@ -420,13 +420,13 @@ describe("ConsentSync", () => {
   });
 
   /*
-   * **The blocker the first fix wave did not close.** The signed-out branch
+   * **The gap the first fix did not close.** The signed-out branch
    * keys on the marker being present, and the marker was written only after
    * a 200 — so "a decision made while signed in whose POST never landed" was
-   * byte-identical to "a guest's own decision". Both of this stage's named
-   * failure modes fall out of that: the next guest is tracked on it, and the
-   * next account has a row written from it. `POST /api/consent` acquired a
-   * rate limiter in the same wave, which put a fresh, ordinary route into it
+   * byte-identical to "a guest's own decision". Both of the named failure
+   * modes fall out of that: the next guest is tracked on it, and the next
+   * account has a row written from it. `POST /api/consent` acquired a rate
+   * limiter at the same time, which put a fresh, ordinary route into it
    * — a 429 on the first post for that account on that browser lands exactly
    * here.
    */
@@ -462,7 +462,7 @@ describe("ConsentSync", () => {
       await reload(2);
 
       // One attempt, for account 1. Nothing fabricated for account 2 — the
-      // outcome Ruling 12 calls the worst of the three it weighed.
+      // outcome the account rule calls the worst of the three it weighed.
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(window.localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
     });
@@ -535,8 +535,8 @@ describe("ConsentSync", () => {
    * The residual risk under `markSynced`'s old comment. If the marker cannot
    * be written, the decision that outlives it has no account attached to it,
    * and the *next* account to sign in reads it as its own — which is the
-   * outcome Ruling 12 names the worst of the three, reached by a route
-   * Ruling 12 did not close.
+   * outcome the account rule names the worst of the three, reached by a route
+   * the account rule did not close.
    */
   describe("when the sync marker cannot be persisted", () => {
     /*

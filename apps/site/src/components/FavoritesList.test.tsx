@@ -128,7 +128,7 @@ describe("FavoritesList", () => {
   });
 
   it("degrades to the empty state when localStorage is denied", async () => {
-    // Review Focus item 3 at the page level: a private window must show "no
+    // The guarded store at the page level: a private window must show "no
     // favorites", not a blank page.
     const fetchMock = respondWith({ docs: [] });
     vi.stubGlobal("fetch", fetchMock);

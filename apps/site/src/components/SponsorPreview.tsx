@@ -4,12 +4,11 @@ import { Card, VideoPlayer } from "@smog/ui-web";
  * One gesture as the review step shows it: the video, and the overlay text
  * beside it.
  *
- * **Beside, not burned in.** Stage 5 has no compositing — that is Remotion
- * and Mux, which the spec puts in Stage 6 — so `lib/renderPreview.ts` hands
- * this the gesture's own playback id and the sponsor's text is a caption. The
- * public gesture page renders a live sponsorship the same way, in a `Card`
- * under the player, so a sponsor reviewing an order sees the same two pieces
- * they will get.
+ * **Beside, not burned in.** Until Remotion has composed a preview,
+ * `lib/renderPreview.ts` hands this the gesture's own playback id, so the
+ * sponsor's text is a caption. The public gesture page renders a live
+ * sponsorship the same way, in a `Card` under the player, so a sponsor
+ * reviewing an order sees the same two pieces they will get.
  *
  * No `"use client"`: `VideoPlayer` carries its own, and every prop crossing
  * this boundary is a string.

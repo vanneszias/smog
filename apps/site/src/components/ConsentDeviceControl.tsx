@@ -22,7 +22,7 @@ import type { Locale } from "@/lib/locale";
  * not, that consent "kan altijd worden ingetrokken". For a guest that was
  * simply untrue: they could grant, and then had no way back.
  *
- * **Ruling: the control goes on the privacy page itself, for everybody.** The
+ * **Decision: the control goes on the privacy page itself, for everybody.** The
  * decision is device-scoped and needs no account to hold it — that is the
  * whole design of `lib/consentStore.ts` — so nothing about withdrawing it
  * requires one either. A guest gets this switch; a signed-in visitor gets the
@@ -31,7 +31,7 @@ import type { Locale } from "@/lib/locale";
  * extracted rather than copied, so the two pages cannot drift into offering
  * two different switches for one decision.
  *
- * ## Ruling 11 lives here now
+ * ## The device rule lives here now
  *
  * The switch's state comes from `localStorage` alone. The account's own
  * recorded row is never read into it, not even as a fallback when this device
@@ -101,7 +101,7 @@ export function ConsentDeviceControl({ locale }: { locale: Locale }) {
   const [checked, setChecked] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
-    // Only ever `localStorage`. See "Ruling 11 lives here now" above.
+    // Only ever `localStorage`. See "The device rule lives here now" above.
     const read = () => setChecked(readConsent() === "granted");
 
     read();

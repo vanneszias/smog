@@ -111,7 +111,7 @@ describe("ConsentBanner", () => {
   });
 
   /*
-   * Fix round 1: `site-e2e` caught the fixed-position banner intercepting
+   * `site-e2e` once caught the fixed-position banner intercepting
    * clicks on real page-bottom controls (`account.spec.ts`,
    * `account-lists.spec.ts`, `sponsor.spec.ts`) — a consent wall reintroduced
    * at the layout level, which no unit test could have seen because none of

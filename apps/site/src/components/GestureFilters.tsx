@@ -12,9 +12,9 @@ import {
  *
  * **They hold no results and no state.** Every change is pushed into the URL
  * and the Server Component above re-queries the database — which is the whole
- * point of the task. `apps/web` keeps the filter state in React, loads every
- * gesture once and narrows the array; that cannot paginate honestly and
- * cannot be shared as a link.
+ * point. Keeping the filter state in React, loading every gesture once and
+ * narrowing the array cannot paginate honestly and cannot be shared as a
+ * link.
  *
  * `"use client"` because `useRouter`, `usePathname` and `useSearchParams` are
  * client hooks, and because `CategoryFilter` and `SearchBar` take `onChange`

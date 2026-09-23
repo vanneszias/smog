@@ -20,13 +20,12 @@ import { syncGuestFavorites } from "@/lib/mergeGuestState";
  * tidiness: the detail page is already `force-dynamic` and already resolves
  * the viewer for its access check, so the answer is free there, and a heart
  * that knew who you were only after a round trip would start every page
- * visit by lying about your favorites. See the Task 4 report for the
- * route-by-route version of that argument.
+ * visit by lying about your favorites.
  *
  * The two paths are deliberately asymmetric, because their failure modes
  * are:
  *
- * - **Signed out** is exactly what Stage 3 shipped, down to the three-state
+ * - **Signed out** is the guest path, down to the three-state
  *   dance below. `localStorage` is not readable during the server render, so
  *   "not favourited" is a claim this component cannot back up until its
  *   effect has run — and a first client render that consulted the store
@@ -40,15 +39,16 @@ import { syncGuestFavorites } from "@/lib/mergeGuestState";
  *
  * The attribute exists because a server-rendered button is not wired to
  * anything: React has not hydrated, a press does nothing, and it does so
- * silently. Stage 3 added it after the e2e suite pressed a dead button and
+ * silently. It was added after the e2e suite pressed a dead button and
  * failed depending on how fast the route compiled.
  *
- * The first version of this task derived it from `state !== "unknown"`,
- * which for a signed-in reader is true *in the server's markup* — so the
- * attribute appeared before hydration, `expect(heart).toHaveAttribute(
- * "data-ready", "true")` returned instantly, and six new specs pressed a
- * dead button. Exactly the failure the attribute was invented to stop,
- * reintroduced by making the state it was derived from arrive earlier.
+ * The first version of the signed-in path derived it from
+ * `state !== "unknown"`, which for a signed-in reader is true *in the server's
+ * markup* — so the attribute appeared before hydration,
+ * `expect(heart).toHaveAttribute( "data-ready", "true")` returned instantly,
+ * and six new specs pressed a dead button. Exactly the failure the attribute
+ * was invented to stop, reintroduced by making the state it was derived from
+ * arrive earlier.
  *
  * So it is now its own flag, set by the mount effect on **both** paths:
  * "the answer is known" and "this control is alive" are different claims,
@@ -81,25 +81,21 @@ import { syncGuestFavorites } from "@/lib/mergeGuestState";
  * for the heart** — the state that comes back is the account's, after the
  * merge.
  *
- * **It does mean the merge only runs on a page that renders this button.**
- * A reader who signs in and goes straight to `/{locale}/favorites` keeps
- * their guest list until they open a gesture. That is a real gap in the
- * plan's design rather than an oversight here, and it is recorded in the
- * Task 6 report; the fix is another caller of `syncGuestFavorites`, not a
- * different shape for it.
+ * **It is not the only place the merge runs.** A reader who signs in and goes
+ * straight to `/{locale}/favorites` never renders this button, so
+ * `GuestFavoritesSync` in the locale layout is another caller of
+ * `syncGuestFavorites` rather than a different shape for it.
  *
  * ## It reports what it did, not what it tried
  *
  * `gesture_collection_changed` fires once the outcome is known — after
  * `toggleGuestFavorite` on the guest path, after the endpoint's `ok` on the
- * account path — never before. A press that lands on `signed-out` or
- * `failed` reports nothing, because nothing changed. `collection:
- * "favorites"` and `source: "gesture_detail"` are this component's fixed
- * values: this stack keeps favorites as its own collection rather than
- * `apps/web`'s "a default list named Favorites", so unlike that stack's
- * `lists-context.tsx` (always `collection: "list"`), this control's
- * `collection` never varies. `trackEvent` itself is the consent gate; this
- * component does not check `readConsent()` a second time.
+ * account path — never before. A press that lands on `signed-out` or `failed`
+ * reports nothing, because nothing changed. `collection: "favorites"` and
+ * `source: "gesture_detail"` are this component's fixed values: favorites are
+ * their own collection here rather than a default list named Favorites, so this
+ * control's `collection` never varies. `trackEvent` itself is the consent gate;
+ * this component does not check `readConsent()` a second time.
  */
 export function FavoriteButton({
   className,
@@ -201,8 +197,7 @@ export function FavoriteButton({
      * nothing, because a disabled button does not deliver a click. It stays
      * because `disabled` is a rendering concern that a restyle can drop, and
      * because a caller that is not a click — a keyboard shortcut, a future
-     * "favourite all" — would not be stopped by it. Transcripts M8, M8b and
-     * M8c in the Task 4 report.
+     * "favourite all" — would not be stopped by it.
      */
     if (busy) {
       return;
