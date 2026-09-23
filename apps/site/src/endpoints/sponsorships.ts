@@ -403,13 +403,13 @@ async function logoUrlFor(
  * log line below. So every refusal is caught and named, and the redirect
  * happens either way.
  *
- * ## What it does today, stated plainly
+ * ## What it does
  *
- * Nothing is submitted. `lib/renderJob.ts` is a seam with an empty transport —
- * there is no deployed Remotion Lambda, and the plan's "BLOCKED ON
- * CREDENTIALS" forbids this task from creating one — so each call records that
- * no render was submitted and for which sponsorship. Task 6 fills the seam and
- * this loop does not change.
+ * Each call claims a `renders` row and starts a render on Remotion Lambda, or
+ * — until the deploy fills in `REMOTION_FUNCTION_NAME` and
+ * `REMOTION_SERVE_URL` — records that there is no Lambda to submit to. See
+ * `lib/renderJob.ts`. `submitRenderJob` catches and logs its own failures;
+ * the `catch` below is the second line, for a fault in the logging itself.
  *
  * Sequentially rather than `Promise.all`, for the reason `createSponsorships`
  * gives about D1: concurrency here buys milliseconds and costs a known order

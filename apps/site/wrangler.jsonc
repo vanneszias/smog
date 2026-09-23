@@ -86,10 +86,21 @@
       // Cloudflare account and `smog.vlaanderen` cannot be moved into it
       // (`payload.config.ts`, the `email` note). Staging says so in the name,
       // so a message from it is never mistaken for production's.
+      //
+      // REMOTION_REGION: where the Remotion Lambda function lives, and the
+      // `--region` of every `apps/render` deploy script. It is not a target on
+      // its own: `lib/renderJob.ts` submits nothing until
+      // REMOTION_FUNCTION_NAME and REMOTION_SERVE_URL join it here, which
+      // happens after the function and site are deployed (both are printed by
+      // that deploy). The AWS credentials are secrets, never `vars`:
+      //
+      //   wrangler secret put REMOTION_AWS_ACCESS_KEY_ID --env=staging
+      //   wrangler secret put REMOTION_AWS_SECRET_ACCESS_KEY --env=staging
       "vars": {
         "EMAIL_FROM_ADDRESS": "no-reply@zias.be",
         "EMAIL_FROM_NAME": "SMOG & Co (staging)",
         "OPENPANEL_API_URL": "https://analytics.zias.be/api",
+        "REMOTION_REGION": "eu-central-1",
         "SITE_ORIGIN": "https://smog-site-staging.vanneszias.workers.dev",
       },
       // Cloudflare Email Service. It carries `name` and nothing else, on
@@ -150,10 +161,14 @@
       // custom domain's route to this environment — a stale origin here is a
       // renewal link in a sponsor's inbox pointing at a host nobody visits.
       // EMAIL_FROM_*: see the note in `staging` above.
+      // REMOTION_REGION: see the note in `staging` above.
+      // REMOTION_FUNCTION_NAME and REMOTION_SERVE_URL join it after the
+      // Remotion Lambda deploy; until then no render is submitted.
       "vars": {
         "EMAIL_FROM_ADDRESS": "no-reply@zias.be",
         "EMAIL_FROM_NAME": "SMOG & Co",
         "OPENPANEL_API_URL": "https://analytics.zias.be/api",
+        "REMOTION_REGION": "eu-central-1",
         "SITE_ORIGIN": "https://smog-site-production.vanneszias.workers.dev",
       },
       // See the note in `staging` above: `name` only, and once per environment.

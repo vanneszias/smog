@@ -29,8 +29,9 @@
  *
  * ## HMAC rather than a digest of the secret and the body
  *
- * `SHA-256(secret || body)` is forgeable without knowing the secret: SHA-256
- * is a Merkle–Damgård construction, so from one valid `(body, signature)` pair
+ * `SHA-512(secret || body)` is forgeable without knowing the secret: SHA-512,
+ * like SHA-256, is a Merkle–Damgård construction, so from one valid
+ * `(body, signature)` pair
  * an attacker can compute the signature for `body || padding || anything`
  * without the secret at all. HMAC exists precisely to close that, and this is
  * a case where an appended suffix would matter — a JSON body with a second
@@ -39,29 +40,26 @@
  * known-answer vector rather than asserting the string "HMAC" appears
  * somewhere.
  *
- * ## Which scheme, and why that is a constant rather than a decision
+ * ## Which scheme: Remotion's, read from its source
  *
- * **This could not be settled in the environment Task 4 was written in, and
- * guessing was not an option.** Task 2 chose HMAC-SHA-256 as hex in
- * `X-Render-Signature`. Remotion Lambda's own webhook is *reported* to sign
- * HMAC-SHA-512 as `X-Remotion-Signature: sha512=<hex>`, and that report could
- * not be confirmed: `@remotion/lambda` is not a dependency here — Task 4
- * measured it at **+753.39 KiB gzipped** against 27% of headroom and rejected
- * it — no installed Remotion package mentions the header, and `remotion.dev`
- * is blocked by this environment's egress proxy.
+ * The callback is Remotion Lambda's own webhook, so the scheme is whatever
+ * Remotion signs with — and that is now read rather than reported.
+ * `@remotion/serverless@4.0.484`, `dist/invoke-webhook.js`:
  *
- * Which scheme is right depends on something only Task 6 can observe: whether
- * the submission configures Remotion's built-in webhook, or posts this
- * callback itself. Picking one and hoping produces the worst available
- * failure — a verifier that passes every test in this repository and answers
- * 401 to every real callback, discovered against a deployed Lambda with a
- * render already paid for.
+ *     const hmac = Crypto.createHmac('sha512', secret);
+ *     const signature = 'sha512=' + hmac.update(payload).digest('hex');
  *
- * So the algorithm, the header name and the value prefix are one exported
- * constant and nothing restates them, and **both candidate schemes are pinned
- * by published known-answer vectors** in `renderSignature.test.ts`. Adopting
- * the other one is an edit to the three fields below, and the test that proves
- * it already exists.
+ * over `payload = JSON.stringify(body)`, the exact bytes it posts, sent as
+ * `X-Remotion-Signature` beside `X-Remotion-Status: <type>`. With no secret
+ * configured it sends the literal `NO_SECRET_PROVIDED`, which no HMAC equals;
+ * `lib/renderJob.ts` refuses to start a render without one for that reason.
+ *
+ * Earlier this was HMAC-SHA-256 as bare hex in `X-Render-Signature`, chosen
+ * before Remotion's code could be read. The algorithm, the header name and the
+ * value prefix are still one constant that nothing restates, and
+ * `renderSignature.test.ts` still pins both constructions by published
+ * known-answer vectors, so the verifier keeps being tested for the scheme it
+ * is not configured with.
  */
 
 import { equalConstantTime } from "@/lib/constantTime";
@@ -98,9 +96,9 @@ interface RenderSignatureScheme {
  * so a change is a deliberate diff rather than a silent drift.
  */
 export const RENDER_SIGNATURE_SCHEME: RenderSignatureScheme = {
-  algorithm: "SHA-256",
-  header: "x-render-signature",
-  prefix: "",
+  algorithm: "SHA-512",
+  header: "x-remotion-signature",
+  prefix: "sha512=",
 };
 
 function toHex(bytes: Uint8Array): string {

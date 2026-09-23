@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { getPayload, handleEndpoints } from "payload";
 import {
@@ -29,7 +30,7 @@ const RUN = crypto.randomUUID();
 
 const SITE = "http://localhost:3003";
 const CALLBACK_PATH = "/api/render/callback";
-const SIGNATURE_HEADER = "x-render-signature";
+const SIGNATURE_HEADER = "x-remotion-signature";
 const DAY = 24 * 60 * 60 * 1000;
 const PRICE = 5000;
 
@@ -50,6 +51,28 @@ const ORIGINAL_MUX_ID = process.env.MUX_TOKEN_ID;
 const ORIGINAL_MUX_SECRET = process.env.MUX_TOKEN_SECRET;
 
 const MUX_PREFIX = "https://api.mux.com/";
+
+/**
+ * The signature Remotion Lambda puts on a webhook, as
+ * `@remotion/serverless@4.0.484` computes it (`dist/invoke-webhook.js`,
+ * `calculateSignature`): `sha512=` and the hex HMAC-SHA-512 of the posted
+ * bytes, in `X-Remotion-Signature`. `node:crypto`, as Remotion writes it,
+ * rather than the Web Crypto code under test — so every delivery below is
+ * signed by an implementation the handler does not share.
+ */
+function remotionSignature(body: string, secret: string): string {
+  return `sha512=${createHmac("sha512", secret).update(body).digest("hex")}`;
+}
+
+/**
+ * The scheme this application verified before it adopted Remotion's, for the
+ * test that proves it is no longer accepted.
+ */
+const LEGACY_SHA256_SCHEME = {
+  algorithm: "SHA-256",
+  header: "x-render-signature",
+  prefix: "",
+} as const;
 
 /**
  * Puts a variable back the way it was, including back to *absent*.
@@ -194,12 +217,47 @@ describe("the render callback", () => {
     return { id, sponsorship };
   };
 
-  /** What Remotion Lambda posts when a render finishes. */
-  const successReport = (id: string) => ({
-    outputUrl: `https://remotionlambda-test.s3.amazonaws.com/renders/${id}/out.mp4`,
-    renderId: id,
-    type: "success",
+  /**
+   * Remotion's own id for the render behind job `id`: deliberately a
+   * different string, so a handler that settled by `renderId` instead of by
+   * `customData.jobId` finds no row and every test below notices.
+   */
+  const remotionRenderIdOf = (id: string) => `rr-${id}`;
+
+  /**
+   * What Remotion Lambda posts about job `id`, in the shape and key order
+   * `@remotion/serverless@4.0.484`'s `dist/handlers/launch.js` builds: its own
+   * `renderId`, the bucket, and `customData` echoed from the submission —
+   * which is where our job id travels. `fields` are the per-type ones:
+   * `outputUrl` and friends on a success, `errors` on an error, none on a
+   * timeout.
+   */
+  const lambdaReport = (
+    id: string,
+    type: "error" | "success" | "timeout",
+    fields: Record<string, unknown> = {}
+  ) => ({
+    type,
+    renderId: remotionRenderIdOf(id),
+    expectedBucketOwner: "123456789012",
+    bucketName: "remotionlambda-eucentral1-test",
+    customData: { jobId: id },
+    ...fields,
   });
+
+  /** What Remotion Lambda posts when a render finishes. */
+  const successReport = (id: string) => {
+    const outputUrl = `https://remotionlambda-test.s3.amazonaws.com/renders/${remotionRenderIdOf(id)}/out.mp4`;
+
+    return {
+      ...lambdaReport(id, "success"),
+      outputUrl,
+      lambdaErrors: [],
+      outputFile: outputUrl,
+      timeToFinish: 41_234,
+      costs: { accruedSoFar: 0.0123, currency: "USD" },
+    };
+  };
 
   /**
    * One callback, exactly as Lambda makes it: a JSON body, an HMAC over those
@@ -221,7 +279,7 @@ describe("the render callback", () => {
 
     const signature =
       options.header === undefined
-        ? await signRenderCallback(body, options.signWith ?? STUB_SECRET)
+        ? remotionSignature(body, options.signWith ?? STUB_SECRET)
         : options.header;
 
     if (signature !== null) {
@@ -432,7 +490,7 @@ describe("the render callback", () => {
     // A signature this application really produced, over a body it really
     // sent — just not this one. That is the replay an attacker has: one
     // observed callback, re-posted with the job id changed.
-    const stolen = await signRenderCallback(
+    const stolen = remotionSignature(
       JSON.stringify(successReport(other.id)),
       STUB_SECRET
     );
@@ -766,14 +824,14 @@ describe("the render callback", () => {
   it("records a failed render with the reason Lambda gave", async () => {
     const { id } = await seedJob("failed");
 
-    const response = await deliver({
-      errors: [
-        { message: "Timed out after 120000ms", name: "TimeoutError" },
-        { message: "and the retry did too", name: "TimeoutError" },
-      ],
-      renderId: id,
-      type: "error",
-    });
+    const response = await deliver(
+      lambdaReport(id, "error", {
+        errors: [
+          { message: "Timed out after 120000ms", name: "TimeoutError" },
+          { message: "and the retry did too", name: "TimeoutError" },
+        ],
+      })
+    );
 
     expect(response.status).toBe(200);
 
@@ -791,7 +849,7 @@ describe("the render callback", () => {
     // did not say".
     const { id } = await seedJob("failed-silent");
 
-    await deliver({ renderId: id, type: "timeout" });
+    await deliver(lambdaReport(id, "timeout"));
 
     const row = await renderRow(id);
     expect(row?.state).toBe("failed");
@@ -804,11 +862,9 @@ describe("the render callback", () => {
     const { id, sponsorship: sponsorshipId } =
       await seedJob("failed-no-upload");
 
-    await deliver({
-      errors: [{ message: "Out of memory" }],
-      renderId: id,
-      type: "error",
-    });
+    await deliver(
+      lambdaReport(id, "error", { errors: [{ message: "Out of memory" }] })
+    );
 
     expect(muxUploads).toEqual([]);
     expect(
@@ -828,7 +884,7 @@ describe("the render callback", () => {
     // fact worth recording rather than a 400 AWS would retry for ever.
     const { id } = await seedJob("no-output");
 
-    expect((await deliver({ renderId: id, type: "success" })).status).toBe(200);
+    expect((await deliver(lambdaReport(id, "success"))).status).toBe(200);
     expect(muxUploads).toEqual([]);
 
     const row = await renderRow(id);
@@ -985,18 +1041,138 @@ describe("the render callback", () => {
     expect(await completionsFor(jobId("oracle-never-submitted"))).toBe(0);
   });
 
+  it("settles the render by our job id in customData, not by Remotion's renderId", async () => {
+    /*
+     * Remotion picks its `renderId` inside the start routine, after the row
+     * was claimed, so the only id both sides know in advance is ours — and
+     * Remotion echoes it back in `customData`. Priced so the two cannot be
+     * confused: the body's `renderId` is *another* seeded job's id, so a
+     * handler that still matched on `renderId` settles the wrong render.
+     */
+    const { id, sponsorship: sponsorshipId } = await seedJob("by-custom-data");
+    const decoy = await seedJob("by-custom-data-decoy");
+    const report = { ...successReport(id), renderId: decoy.id };
+    const body = JSON.stringify(report);
+
+    const response = await deliver(report);
+
+    expect(response.status).toBe(200);
+    // The header really was Remotion's scheme, computed independently.
+    expect(remotionSignature(body, STUB_SECRET)).toMatch(
+      /^sha512=[0-9a-f]{128}$/
+    );
+    expect((await renderRow(id))?.state).toBe("ready");
+    expect((await sponsorship(sponsorshipId)).previewVideoPlaybackId).toBe(
+      `pb-${RUN}-0`
+    );
+    // And the job Remotion's id happens to name is untouched.
+    expect((await renderRow(decoy.id))?.state).toBe("queued");
+    expect(await completionsFor(decoy.id)).toBe(0);
+    expect(muxUploads).toHaveLength(1);
+  });
+
+  it("refuses the same body signed under the old SHA-256 scheme", async () => {
+    /*
+     * The scheme this handler verified before it adopted Remotion's. A
+     * callback signed that way is now forged as far as this handler knows —
+     * whichever header it arrives in.
+     */
+    const { id } = await seedJob("legacy-signature");
+    const report = successReport(id);
+    const body = JSON.stringify(report);
+    const legacy = await signRenderCallback(
+      body,
+      STUB_SECRET,
+      LEGACY_SHA256_SCHEME
+    );
+
+    // In the header it used to go in, and alone.
+    const oldHeader = await handleEndpoints({
+      config,
+      request: new Request(`${SITE}${CALLBACK_PATH}`, {
+        body,
+        headers: {
+          "Content-Type": "application/json",
+          [LEGACY_SHA256_SCHEME.header]: legacy,
+        },
+        method: "POST",
+      }),
+    });
+
+    expect(oldHeader.status).toBe(401);
+    // And in Remotion's header, where it is the wrong hash.
+    expect((await deliver(report, { header: legacy })).status).toBe(401);
+    expect(muxUploads).toEqual([]);
+    expect((await renderRow(id))?.state).toBe("queued");
+    expect(await completionsFor(id)).toBe(0);
+
+    // The positive beside the negatives: the same bytes, signed Remotion's
+    // way, settle the render.
+    expect((await deliver(report)).status).toBe(200);
+    expect((await renderRow(id))?.state).toBe("ready");
+  });
+
+  it("answers a body with no job id of ours as an unknown job, and changes nothing", async () => {
+    /*
+     * Review Focus 3. A signed body that names no job this application
+     * claimed is answered as an unknown job is: 200 `{"status":"ok"}`, byte
+     * for byte, and no work — so Lambda stops retrying, and the answer is no
+     * oracle.
+     *
+     * `customData: null` is not hypothetical: it is what `launch.js` sends
+     * (`params.webhook.customData ?? null`) for a render submitted without
+     * any. Every body here carries a real seeded job's id as its `renderId`,
+     * so a handler that fell back to Remotion's id would settle that render
+     * and the assertions below would see it.
+     */
+    const { id } = await seedJob("no-custom-data");
+    const reference = await snapshot(
+      await deliver(successReport(jobId("no-custom-data-never-submitted")))
+    );
+    const { customData: _dropped, ...withoutCustomData } = {
+      ...successReport(id),
+      renderId: id,
+    };
+
+    for (const report of [
+      withoutCustomData,
+      { ...withoutCustomData, customData: null },
+      { ...withoutCustomData, customData: {} },
+      { ...withoutCustomData, customData: { jobId: "" } },
+      { ...withoutCustomData, customData: { jobId: 7 } },
+      { ...withoutCustomData, customData: { jobId: [id] } },
+      { ...withoutCustomData, customData: id },
+    ]) {
+      expect(await snapshot(await deliver(report))).toEqual(reference);
+    }
+
+    expect(reference.status).toBe(200);
+    expect(JSON.parse(reference.body)).toEqual({ status: "ok" });
+    expect(muxUploads).toEqual([]);
+    expect((await renderRow(id))?.state).toBe("queued");
+    expect(await completionsFor(id)).toBe(0);
+
+    // The positive beside the negatives: with its job id where Remotion puts
+    // it, the same render settles.
+    expect((await deliver(successReport(id))).status).toBe(200);
+    expect((await renderRow(id))?.state).toBe("ready");
+  });
+
   it("answers 400 to a signed body that is not a render report", async () => {
     // Signed, so it came from this application's own secret, and a retry of
     // the same bytes will be refused the same way. There is nothing to be
     // idempotent about and nothing to claim.
+    //
+    // A JSON object is a report even when it names no job of ours; that case
+    // is answered 200 — see "answers a body with no job id of ours".
     for (const body of [
       "not json at all",
-      JSON.stringify([{ renderId: "x", type: "success" }]),
-      JSON.stringify({ type: "success" }),
-      JSON.stringify({ renderId: "", type: "success" }),
-      JSON.stringify({ renderId: 7, type: "success" }),
+      JSON.stringify([successReport(jobId("not-a-report"))]),
+      JSON.stringify("success"),
+      JSON.stringify(null),
+      JSON.stringify(7),
     ]) {
-      const signature = await signRenderCallback(body, STUB_SECRET);
+      const signature = remotionSignature(body, STUB_SECRET);
       const response = await handleEndpoints({
         config,
         request: new Request(`${SITE}${CALLBACK_PATH}`, {

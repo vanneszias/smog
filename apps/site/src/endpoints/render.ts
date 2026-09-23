@@ -104,15 +104,16 @@ import type { Render } from "@/payload-types";
  * ## What every answer says
  *
  * A settled decision answers `200 {"status":"ok"}`, byte for byte, whatever it
- * decided — including for a job id this application has never heard of. A 404
- * there would make this an oracle for which renders exist, and a non-2xx for a
- * replay would have Lambda retrying a decision that will not change.
+ * decided — including for a job id this application has never heard of, and
+ * for a body that names no job id of ours at all. A 404 there would make this
+ * an oracle for which renders exist, and a non-2xx for a replay would have
+ * Lambda retrying a decision that will not change.
  *
  * There are exactly three exceptions:
  *
  * - **An unsigned, empty or wrong signature** answers 401. Nothing about the
  *   request is believed, so there is nothing to be idempotent about.
- * - **A body that is not a render report** answers 400. It is signed, so it
+ * - **A body that is not a JSON object** answers 400. It is signed, so it
  *   came from this application's own secret, and a retry of the same bytes
  *   will be refused the same way.
  * - **Mux could not be asked** answers 502, and hands the claim back. A
@@ -121,15 +122,12 @@ import type { Render } from "@/payload-types";
  */
 
 /**
- * The header Remotion Lambda is configured to sign the body into.
+ * The header Remotion Lambda signs the body into: `X-Remotion-Signature`.
  *
  * Read from `lib/renderSignature.ts` rather than restated, because the header
- * name, the HMAC and the value's prefix are one decision and Task 4 could not
- * settle it: Remotion Lambda's own webhook is reported to send
- * `X-Remotion-Signature: sha512=<hex>`, and nothing in this environment could
- * confirm that. Both schemes are pinned by known-answer vectors there, and
- * adopting the other one is an edit to that constant — which moves this
- * handler with it instead of leaving a second copy behind.
+ * name, the HMAC and the value's prefix are one decision, taken there from
+ * `@remotion/serverless`'s own `invoke-webhook.js` — so a change to it moves
+ * this handler with it instead of leaving a second copy behind.
  */
 const SIGNATURE_HEADER = RENDER_SIGNATURE_SCHEME.header;
 
@@ -187,7 +185,12 @@ function problem(status: number, error: string): Response {
 
 /** What Lambda said happened, reduced to the four things this handler acts on. */
 interface RenderReport {
-  jobId: string;
+  /**
+   * Our own job id, from `customData.jobId` — the `renders.jobId` the
+   * submitter claimed — or `null` when the body carries none. Never
+   * Remotion's `renderId`, which is chosen after the row is written.
+   */
+  jobId: null | string;
   /** Where Lambda put the composed video. Empty when the render failed. */
   outputUrl: string;
   /** Whatever Lambda said went wrong, verbatim. Empty when it succeeded. */
@@ -239,11 +242,35 @@ function failureReason(payload: Record<string, unknown>): string {
 }
 
 /**
+ * The job id `lib/renderJob.ts` put in `webhook.customData`, or `null`.
+ *
+ * Remotion echoes `customData` into every webhook body as it was submitted,
+ * and as `null` when there was none (`launch.js`: `customData ?? null`).
+ * Anything but a non-empty string is no id of ours.
+ */
+function ourJobId(customData: unknown): null | string {
+  if (customData === null || typeof customData !== "object") {
+    return null;
+  }
+
+  const jobId = (customData as { jobId?: unknown }).jobId;
+
+  return typeof jobId === "string" && jobId !== "" ? jobId : null;
+}
+
+/**
  * The render report out of a signed body, or `null` if it is not one.
  *
- * The shape is Remotion Lambda's own webhook payload — `type`, `renderId`,
- * `outputUrl`, `errors` — rather than one invented here, so that Task 6's
- * first contact with a real Lambda has one fewer thing to differ about.
+ * The shape is Remotion Lambda's own webhook payload, as
+ * `@remotion/serverless@4.0.484`'s `dist/handlers/launch.js` builds it: `type`
+ * (`success`, `error` or `timeout`), Remotion's `renderId`, `outputUrl` on a
+ * success, `errors` on an error, and `customData` — where our job id is.
+ * The other fields it sends (`bucketName`, `expectedBucketOwner`, `costs`,
+ * `lambdaErrors`, …) are not read.
+ *
+ * Any JSON object is a report. One with no job id of ours is still answered
+ * as a decision — an unknown job — rather than a 400, because a retry of the
+ * same bytes would name no job either.
  *
  * A `success` with no `outputUrl` is **not** a parse failure: Lambda said the
  * render finished, which is a fact worth recording, and there is simply
@@ -264,12 +291,7 @@ function parseReport(raw: string): null | RenderReport {
   }
 
   const payload = parsed as Record<string, unknown>;
-  const jobId = payload.renderId;
-
-  if (typeof jobId !== "string" || jobId === "") {
-    return null;
-  }
-
+  const jobId = ourJobId(payload.customData);
   const succeeded = payload.type === "success";
   const outputUrl = payload.outputUrl;
   const usableUrl = typeof outputUrl === "string" ? outputUrl : "";
@@ -552,6 +574,14 @@ const renderCallback: PayloadHandler = async (
 
   if (report === null) {
     return problem(BAD_REQUEST, "The callback body is not a render report.");
+  }
+
+  if (report.jobId === null) {
+    req.payload.logger.warn(
+      "[render] A callback carried no job id in customData, so it names no render this application submitted"
+    );
+
+    return acknowledged();
   }
 
   const render = await findRender(req, report.jobId);

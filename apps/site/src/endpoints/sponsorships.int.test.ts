@@ -8,9 +8,11 @@ import {
   describe,
   expect,
   it,
+  type MockInstance,
   vi,
 } from "vitest";
 import { sponsorshipAmountCents } from "@/lib/pricing";
+import * as remotionLambda from "@/lib/remotionLambda";
 import {
   decodeSponsorDraft,
   MAX_LOGO_BYTES,
@@ -19,6 +21,18 @@ import {
 import { sponsoredGestureIds } from "@/lib/sponsorSelection";
 import nextConfig from "../../next.config";
 import config from "../payload.config";
+
+/*
+ * Remotion Lambda's transport, stubbed: a checkout under test must never reach
+ * AWS, and `remotionLambda.test.ts` is where the request itself is held to the
+ * official client's. Only the configured-render tests below get as far as
+ * calling it; everything else runs with no `REMOTION_*` set.
+ *
+ * A spy on the module rather than `vi.mock`, for the reason
+ * `lib/renderJob.test.ts` gives: with `isolate: false` the modules are shared
+ * between files, and a spy is the one stub every importer sees.
+ */
+let startRender: MockInstance<typeof remotionLambda.startRemotionRender>;
 
 /*
  * Unique per run: the local D1 under `.wrangler/state/vitest` is never cleared
@@ -740,6 +754,9 @@ describe("the sponsor wizard, steps 2 and 3", () => {
 
   beforeAll(async () => {
     process.env.MOLLIE_API_KEY = STUB_KEY;
+    startRender = vi
+      .spyOn(remotionLambda, "startRemotionRender")
+      .mockRejectedValue(new Error("startRemotionRender was not stubbed"));
     payload = await getPayload({ config });
 
     vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
@@ -772,6 +789,7 @@ describe("the sponsor wizard, steps 2 and 3", () => {
 
   afterAll(() => {
     vi.unstubAllGlobals();
+    startRender.mockRestore();
     process.env.MOLLIE_API_KEY = ORIGINAL_KEY;
   });
 
@@ -1248,17 +1266,14 @@ describe("the sponsor wizard, steps 2 and 3", () => {
 
   it("asks for a render of every gesture it just sold", async () => {
     /*
-     * **The Stage 6 seam at the other end.** `lib/renderJob.ts` cannot submit
-     * anything — there is no deployed Remotion Lambda, and the plan forbids
-     * this task from creating one — so what checkout can be held to today is
-     * that it *asks*, once per sponsorship it created, and that the gap is
-     * recorded rather than silent. A checkout that quietly submitted nothing
-     * would leave a sponsor waiting for a composite nobody ever requested,
-     * with nothing in any log to find.
+     * Unconfigured, which every environment is until the Remotion Lambda
+     * deploy fills in `REMOTION_FUNCTION_NAME` and `REMOTION_SERVE_URL`. What
+     * checkout can be held to then is that it *asks*, once per sponsorship it
+     * created, and that the gap is recorded rather than silent. A checkout
+     * that quietly submitted nothing would leave a sponsor waiting for a
+     * composite nobody ever requested, with nothing in any log to find.
      *
-     * The log line is the only observable the empty seam has, which is the
-     * point: when Task 6 fills it, this assertion is what has to change, the
-     * same way `renderPreview.test.ts` had to change here.
+     * The configured path is the tests below.
      */
     const gestures = await newGestures(2, "render-ask");
     const ids = gestures.map((gesture) => gesture.id);
@@ -1309,26 +1324,138 @@ describe("the sponsor wizard, steps 2 and 3", () => {
     expect(totalDocs).toBe(0);
   });
 
-  it("completes the checkout even when the render submission throws", async () => {
-    /*
-     * The sponsor has an open Mollie payment by the time a render is asked
-     * for. A video pipeline that is misconfigured — here: a Lambda named but
-     * no Mux signing key, which is exactly the half-finished state Task 6 will
-     * pass through — must not be able to turn a completed purchase into an
-     * error page.
-     *
-     * The failure is priced so only the `catch` can absorb it: the three
-     * `REMOTION_*` variables are set, so the seam gets past its "not
-     * configured" branch and into building the submission, where the missing
-     * signing key throws.
-     */
+  /**
+   * Points `submitRenderJob` at a Remotion Lambda — mocked, see the top of the
+   * file — with a Mux signing key generated in this process and thrown away,
+   * and returns what puts every variable back, including back to absent.
+   */
+  const configureRenders = async (): Promise<() => void> => {
+    const names = [
+      "MUX_SIGNING_KEY_ID",
+      "MUX_SIGNING_KEY_PRIVATE",
+      "REMOTION_FUNCTION_NAME",
+      "REMOTION_REGION",
+      "REMOTION_SERVE_URL",
+      "RENDER_CALLBACK_SECRET",
+    ] as const;
+    const original = Object.fromEntries(
+      names.map((name) => [name, process.env[name]])
+    );
+    const pair = await crypto.subtle.generateKey(
+      {
+        hash: "SHA-256",
+        modulusLength: 2048,
+        name: "RSASSA-PKCS1-v1_5",
+        publicExponent: new Uint8Array([1, 0, 1]),
+      },
+      true,
+      ["sign", "verify"]
+    );
+    const pkcs8 = new Uint8Array(
+      await crypto.subtle.exportKey("pkcs8", pair.privateKey)
+    );
+    const body = btoa(
+      Array.from(pkcs8, (byte) => String.fromCharCode(byte)).join("")
+    ).replace(/(.{64})/g, "$1\n");
+
+    process.env.MUX_SIGNING_KEY_ID = "signing-key-for-tests-only";
+    process.env.MUX_SIGNING_KEY_PRIVATE = btoa(
+      `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`
+    );
     process.env.REMOTION_FUNCTION_NAME = "remotion-render-for-tests-only";
     process.env.REMOTION_REGION = "eu-central-1";
     process.env.REMOTION_SERVE_URL = "https://example.invalid/sites/smog";
+    process.env.RENDER_CALLBACK_SECRET = "stub-render-secret-for-tests-only";
 
+    return () => {
+      for (const name of names) {
+        restoreEnv(name, original[name]);
+      }
+    };
+  };
+
+  const rendersFor = async (sponsorshipIds: number[]) => {
+    const { docs } = await payload.find({
+      collection: "renders",
+      depth: 0,
+      overrideAccess: true,
+      pagination: false,
+      where: { sponsorship: { in: sponsorshipIds } },
+    });
+
+    return docs;
+  };
+
+  it("submits a render per sponsorship, under the job id its row was claimed with", async () => {
+    /*
+     * The id the callback will settle by. Each sponsorship gets a `queued`
+     * `renders` row, and the start sent for it carries that row's `jobId` in
+     * `webhook.customData` — which Remotion echoes back in its webhook — and
+     * the callback address this deployment publishes.
+     */
+    const restore = await configureRenders();
+    const gestures = await newGestures(2, "render-submit");
+    const ids = gestures.map((gesture) => gesture.id);
+
+    startRender.mockClear();
+    startRender.mockImplementation(() =>
+      Promise.resolve({
+        bucketName: "remotionlambda-eucentral1-test",
+        renderId: `rr-${crypto.randomUUID()}`,
+      })
+    );
+
+    let response: Response;
+
+    try {
+      response = await formPost(CHECKOUT_PATH, goodDetails(), ids);
+    } finally {
+      restore();
+    }
+
+    expect(response.status).toBe(303);
+    expect(destination(response)).toContain("https://www.mollie.com/checkout/");
+
+    const rows = await rowsFor(ids);
+    const renders = await rendersFor(rows.map((row) => row.id));
+
+    expect(rows).toHaveLength(2);
+    expect(renders).toHaveLength(2);
+    expect(startRender).toHaveBeenCalledTimes(2);
+
+    for (const row of rows) {
+      const render = renders.find((entry) => entry.sponsorship === row.id);
+
+      expect(render?.state).toBe("queued");
+
+      const sent = startRender.mock.calls.find(
+        ([request]) => request.webhook.customData.jobId === render?.jobId
+      )?.[0];
+
+      expect(sent?.webhook.url).toBe(`${SITE}/render/callback`);
+      expect(sent?.inputProps.sponsorName).toBe(row.overlayText);
+    }
+  });
+
+  it("completes the checkout even when the render submission throws", async () => {
+    /*
+     * The sponsor has an open Mollie payment by the time a render is asked
+     * for. A video pipeline that fails — here Lambda refusing the start, the
+     * way `lib/remotionLambda.ts` reports it — must not be able to turn a
+     * completed purchase into an error page, and must not leave a `queued`
+     * row behind for a render that was never started.
+     */
+    const restore = await configureRenders();
     const gestures = await newGestures(1, "render-throws");
     const ids = gestures.map((gesture) => gesture.id);
     const errors = vi.spyOn(payload.logger, "error");
+
+    startRender.mockClear();
+    startRender.mockRejectedValue(
+      new Error(
+        "[remotionLambda] Lambda refused the invoke with HTTP 403 (AccessDeniedException)"
+      )
+    );
 
     let response: Response;
     let logged: string[] = [];
@@ -1338,20 +1465,59 @@ describe("the sponsor wizard, steps 2 and 3", () => {
     } finally {
       logged = errors.mock.calls.map((call) => JSON.stringify(call));
       errors.mockRestore();
-      restoreEnv("REMOTION_FUNCTION_NAME", undefined);
-      restoreEnv("REMOTION_REGION", undefined);
-      restoreEnv("REMOTION_SERVE_URL", undefined);
+      restore();
     }
 
     expect(response.status).toBe(303);
     expect(destination(response)).toContain("https://www.mollie.com/checkout/");
-    expect(await rowsFor(ids)).toHaveLength(1);
+
+    const rows = await rowsFor(ids);
+
+    expect(rows).toHaveLength(1);
+    expect(startRender).toHaveBeenCalledTimes(1);
+    // The claim was taken and handed back.
+    expect(await rendersFor(rows.map((row) => row.id))).toEqual([]);
 
     // And it is recorded rather than swallowed: a sponsorship that is paid for
     // and has no video coming is something an operator has to be able to find.
-    expect(
-      logged.filter((line) => line.includes("No render could be submitted"))
-    ).toHaveLength(1);
+    const failed = logged.filter((line) =>
+      line.includes("[renderJob] Failed to submit")
+    );
+
+    expect(failed).toHaveLength(1);
+    expect(failed[0]).toContain(`sponsorship ${rows[0]?.id}`);
+    expect(failed[0]).toContain("AccessDeniedException");
+    expect(failed[0]).not.toContain("token=");
+  });
+
+  it("completes the checkout when the render cannot even be prepared", async () => {
+    // The half-configured state a deploy passes through: a Lambda named and
+    // no Mux signing key. Nothing is claimed and nothing is started.
+    const restore = await configureRenders();
+
+    restoreEnv("MUX_SIGNING_KEY_ID", undefined);
+
+    const gestures = await newGestures(1, "render-unprepared");
+    const ids = gestures.map((gesture) => gesture.id);
+
+    startRender.mockClear();
+
+    let response: Response;
+
+    try {
+      response = await formPost(CHECKOUT_PATH, goodDetails(), ids);
+    } finally {
+      restore();
+    }
+
+    expect(response.status).toBe(303);
+    expect(destination(response)).toContain("https://www.mollie.com/checkout/");
+
+    const rows = await rowsFor(ids);
+
+    expect(rows).toHaveLength(1);
+    expect(startRender).not.toHaveBeenCalled();
+    expect(await rendersFor(rows.map((row) => row.id))).toEqual([]);
   });
 
   it("does not create rows when Mollie refuses the payment — it leaves them for cleanup-stale-payments", async () => {
