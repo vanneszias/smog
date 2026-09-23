@@ -261,3 +261,21 @@ git commit -m "docs: what a recovered or abandoned job looks like to an operator
 - Payload's `deleteJobOnComplete` defaults to `true` (`payload/dist/config/defaults.js:64`), so a job that succeeds is deleted and cannot be read back. The endpoint tests prove a fresh job ran through the prune sweep's own log line and a sent message in the outbox, not through the row.
 - `payload.update` accepts `totalTried`, `error` and `hasError` on `payload-jobs` through the Local API; no `payload.db` write was needed outside the test fixtures.
 - No existing test covered `createMuxAssetFromUrl` directly, or a rejected OpenPanel relay; both were added against the code's actual contract (the relay swallows and answers 202).
+
+## Rulings made during execution
+
+Copied from the SDD ledger when the branch review closed. Each reads: what was decided — why — what it costs if wrong.
+
+- T1 case 9 (reaper read throws) may use vi.spyOn on the Payload instance's find filtered to collection "payload-jobs" for one call — no new export for testability — cost if wrong: a slightly brittle test.
+- plan sketch of reapStrandedJobs is guidance; shipped Payload types win (e.g. retries typed number|config) — cost if wrong: none.
+- Important fixed by controller at the type level (init: Omit<RequestInit,"signal">) — compile-time guard beats a comment; check-types + mollie 28/28 green — cost if wrong: none; no re-review needed for a one-line type narrowing that typechecks.
+- Minor parked — the swallow contract is pinned by the 202; logging is observability — cost if wrong: a silent swallow regression goes untested.
+- Task 3 (two doc edits) done inline by controller — a subagent per 20-line doc edit costs more than it buys; the final review covers it — cost if wrong: docs slip past a task gate.
+- fix I1 — reaper writes via payload.db.updateOne (as Payload's own runner files unregistered tasks), per-row try/catch counting errors, case 7 forces an unregistered slug via forceRow — a deregistered task row otherwise halts reaping for every older row (confirmed) — cost if wrong: none.
+- fix I2 — state the real invariant (the whole run ends within 30 min of its claim; guaranteed for scheduled runs, and for HTTP callers only when they bound their own time); add --max-time 600 to every checklist curl of /api/jobs/run — cheap, closes a double-send on a slow manual run — cost if wrong: a manual curl run is cut at 10 min and becomes an ordinary killed run.
+- fix I3 — correct render.ts's "no asset was created" comment; pass Mux `passthrough` (a non-personal render/sponsorship id) on asset create so an orphan from a timed-out create is traceable in the Mux dashboard; log the possibility on a create timeout — cost if wrong: an orphan still bills until someone looks, but it is findable.
+- fix all minors — comment accuracy (37-38, 45-48, copied Mollie/analytics comment, Review Focus label), rename TimeoutError tests to what they pin, add a released-row-runs-next-tick test, filter the reaper by queue — cost if wrong: none.
+- timeout detection read by `name` without instanceof (controller, same commit as plan premise correction) — DOMException's Error lineage on workerd untested — cost if wrong: none.
+- accept passthrough `render:<id>` (Lambda job id unbounded vs 255 cap); accept orphan logged-not-prevented (as ruled); accept theoretical 50-row starvation by permanently unwritable rows (errored count is logged every tick, so it is visible).
+
+**Parked for later:** the reaper writes only plain fields through `payload.db.updateOne`; adding an array or localized field to that write would make the adapter rewrite (and so delete) the job's `log` rows.
