@@ -25,32 +25,86 @@ import { jobsConfig } from "@/jobs";
  * `GET /api/jobs/run` keeps answering `200 {"status":"ok"}` every hour,
  * because *this* tick has nothing stranded of its own.
  *
- * ## Why thirty minutes
+ * ## Why thirty minutes, and the invariant it rests on
  *
- * `updateJob` stamps `updatedAt` on every write a live run makes
- * (`queues/utilities/updateJob.js`), so a row a run is genuinely still working
- * on has a recent `updatedAt`. A scheduled Worker invocation has a fifteen
- * minute wall-clock ceiling and the cron tick runs inside one
- * (`worker.ts` -> `onScheduled` -> `ctx.waitUntil`), so no live run can still
- * own a row whose `updatedAt` is older than that ceiling. `STRANDED_AFTER_MS`
- * is twice it: long enough that a live run within its own budget is never
- * mistaken for a corpse, short enough that a kill costs at most one extra
- * lease's worth of downtime before this sweep finds it.
+ * Payload does not heartbeat a job while it runs. A row's `updatedAt` is
+ * stamped when the run claims it (the claim is one `updateJobs` call over
+ * every claimed row, `runJobs/index.js`), and next when that row's *own* job
+ * writes — a task finishing or failing, the job completing
+ * (`queues/utilities/updateJob.js` stamps each of those). So rows 2..N of a
+ * sequential batch keep their claim-time `updatedAt` for as long as the jobs
+ * ahead of them take, and a stale `updatedAt` does not by itself mean nobody
+ * holds the row.
+ *
+ * The invariant this module actually relies on is about the run, not the row:
+ * **a whole run, from its claim to its last job, ends within thirty minutes.**
+ * Given that, a `processing: true` row last written more than thirty minutes
+ * ago belongs to a run that has ended — normally or by being killed — and
+ * nothing is still working on it.
+ *
+ * It holds for every scheduled run: the cron tick runs inside a scheduled
+ * Worker invocation (`worker.ts` -> `onScheduled` -> `ctx.waitUntil`), whose
+ * wall-clock ceiling is fifteen minutes, half of `STRANDED_AFTER_MS`. It does
+ * **not** hold for `GET /api/jobs/run` called over HTTP on its own account:
+ * an HTTP request has no wall-clock limit on Workers for as long as the
+ * client stays connected, so a manual run that is still going after thirty
+ * minutes could have rows reaped from under it by the next tick (whose lease
+ * is free again after `LEASE_MS`) and run twice. It holds for an HTTP caller
+ * that bounds its own time — `docs/deployment-checklist.md` gives every
+ * manual `curl` a `--max-time 600`, and a client that disconnects ends the
+ * request, which is just an ordinary killed run.
+ *
+ * What the window costs: with the hourly cron (`wrangler.jsonc`), a killed
+ * scheduled run's rows were last written at most fifteen minutes after its
+ * tick began, so they are at least forty-five minutes old when the next tick
+ * arrives, and that tick always recovers them. The window delays recovery by
+ * nothing beyond the hour the cron waits anyway; it would only cost a further
+ * tick under a cadence shorter than thirty minutes.
  *
  * ## Release, or file as failed — and why `totalTried` is what decides
  *
  * A kill writes no task log entry, so the ordinary retry accounting in
  * `handleTaskError` never sees it and a released job's retry budget is not
  * spent by the crash that stranded it. The job-level `totalTried` field is
- * the one counter Payload bumps on every *ordinary* failure
- * (`errors/handleTaskError.js`) and otherwise leaves alone, so it is what this
- * sweep uses to bound how many times a row may be reaped rather than actually
- * run: a job that has already been reaped up to its task's `retries.attempts`
- * is filed as failed instead of released a further time, on the working
- * assumption that whatever keeps killing the run that holds it is the job's
- * own doing. Filing it sets `error`, which is what takes it out of
- * `countRunnableOrActiveJobsForQueue` and lets the next `handleSchedules`
+ * what this sweep uses to bound how many times a row may be reaped rather
+ * than actually run: a job whose `totalTried` has reached its task's
+ * `retries.attempts` is filed as failed instead of released a further time,
+ * on the working assumption that whatever keeps killing the run that holds it
+ * is the job's own doing. Filing it sets `error`, which is what takes it out
+ * of `countRunnableOrActiveJobsForQueue` and lets the next `handleSchedules`
  * queue a fresh attempt at the *task*, even though this one row is done.
+ *
+ * That budget is **shared with ordinary failures**, not a separate one:
+ * Payload bumps the same `totalTried` on every ordinary failure
+ * (`errors/handleTaskError.js`), so a `send-email` (three attempts) that has
+ * already failed twice can be reaped once more and is filed as failed on the
+ * strand after that. Payload also bumps it on success
+ * (`operations/runJobs/runJob/index.js:52`), which is harmless here: a job
+ * that succeeds is deleted (`deleteJobOnComplete` defaults to `true`), so no
+ * successful row is ever left for this sweep to count.
+ *
+ * ## Why it writes beneath the Local API, one row at a time
+ *
+ * `payload.update` validates the whole document, and a row whose `taskSlug`
+ * names a task since removed from `jobsConfig` fails that validation
+ * (`ValidationError: … Task Slug`) — so a Local API write threw on exactly the
+ * row most in need of filing, and, the read being newest first, stopped every
+ * older stranded row behind it from ever being reaped. Payload's own runner
+ * files such a row beneath validation too: `runJobs/index.js` fails a job
+ * whose task "is not registered in payload.config.jobs" through
+ * `getUpdateJobFunction` -> `utilities/updateJob.js`, which writes with
+ * `payload.db.updateJobs` and stamps `updatedAt` itself. This sweep writes
+ * with `payload.db.updateOne` — for these scalar fields the same adapter
+ * `upsertRow` call — and stamps `updatedAt` explicitly for the same reason.
+ * The operation's hooks change nothing here either: `payload-jobs` has one
+ * `beforeChange` hook, which pins `processing: false, hasError: true` on a
+ * row already *cancelled* — both of which a cancelled row carries anyway —
+ * and an `afterRead` that only derives the virtual `taskStatus`
+ * (`queues/config/collection.js`).
+ *
+ * And each row is written in its own `try`: whatever else can make one row's
+ * write fail costs that row alone. It stays `processing: true` and stale, is
+ * counted as `errored`, and the next tick tries it again.
  *
  * ## The consequence this does not engineer away
  *
@@ -65,7 +119,8 @@ import { jobsConfig } from "@/jobs";
  * about because a lease was never released.
  */
 
-/** Twice a scheduled invocation's wall-clock ceiling; see the comment above. */
+/** Twice a scheduled invocation's wall-clock ceiling, and the longest a
+ * whole run may take for this sweep to be safe; see the comment above. */
 const STRANDED_AFTER_MS = 30 * 60 * 1000;
 
 /** The most rows one tick reaps. A backlog larger than this is not lost —
@@ -105,19 +160,23 @@ function attemptsFor(taskSlug: unknown): number {
 }
 
 /**
- * Finds every `payload-jobs` row still `processing: true` from before
- * `cutoff`, and either releases it to run again or files it as failed —
- * never both, and never a third thing.
+ * Finds every `payload-jobs` row in `queue` still `processing: true` from
+ * before `cutoff`, and either releases it to run again or files it as failed
+ * — never both, and never a third thing. A row whose write fails is counted
+ * as `errored` and left exactly as it was.
  *
  * `now` is a parameter rather than read inside, the convention
  * `expireSponsorships(payload, now)` set: a test asserts a decision instead of
- * racing a clock.
+ * racing a clock. `queue` is the one `endpoints/jobs.ts` drives, so a row
+ * another queue's runner claimed is never judged by this one's lease.
  */
 export async function reapStrandedJobs(
   payload: Payload,
-  now: Date
-): Promise<{ failed: number; released: number }> {
+  now: Date,
+  queue: string
+): Promise<{ errored: number; failed: number; released: number }> {
   const cutoff = new Date(now.getTime() - STRANDED_AFTER_MS).toISOString();
+  const stamped = now.toISOString();
 
   const { docs } = await payload.find({
     collection: "payload-jobs",
@@ -127,6 +186,7 @@ export async function reapStrandedJobs(
     pagination: false,
     where: {
       and: [
+        { queue: { equals: queue } },
         { processing: { equals: true } },
         { updatedAt: { less_than: cutoff } },
       ],
@@ -135,32 +195,46 @@ export async function reapStrandedJobs(
 
   let released = 0;
   let failed = 0;
+  let errored = 0;
 
   for (const job of docs) {
     const tried = job.totalTried ?? 0;
 
-    if (tried >= attemptsFor(job.taskSlug)) {
-      await payload.update({
-        collection: "payload-jobs",
-        data: {
-          error: { message: STRANDED_MESSAGE },
-          hasError: true,
-          processing: false,
-        },
-        id: job.id,
-        overrideAccess: true,
-      });
-      failed += 1;
-    } else {
-      await payload.update({
-        collection: "payload-jobs",
-        data: { processing: false, totalTried: tried + 1 },
-        id: job.id,
-        overrideAccess: true,
-      });
-      released += 1;
+    try {
+      if (tried >= attemptsFor(job.taskSlug)) {
+        await payload.db.updateOne({
+          collection: "payload-jobs",
+          data: {
+            error: { message: STRANDED_MESSAGE },
+            hasError: true,
+            processing: false,
+            updatedAt: stamped,
+          },
+          id: job.id,
+        });
+        failed += 1;
+      } else {
+        await payload.db.updateOne({
+          collection: "payload-jobs",
+          data: {
+            processing: false,
+            totalTried: tried + 1,
+            updatedAt: stamped,
+          },
+          id: job.id,
+        });
+        released += 1;
+      }
+    } catch (error) {
+      // The id only. The job's own fields — its input above all — never reach
+      // a log line from here; see `STRANDED_MESSAGE`.
+      payload.logger.error(
+        { err: error },
+        `[jobs] Failed to reap stranded job ${job.id}; it is left as it was for the next tick`
+      );
+      errored += 1;
     }
   }
 
-  return { failed, released };
+  return { errored, failed, released };
 }

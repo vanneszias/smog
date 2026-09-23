@@ -172,11 +172,13 @@ const runJobs: PayloadHandler = async (
      * this one failing.
      */
     try {
-      const reaped = await reapStrandedJobs(req.payload, new Date());
+      const reaped = await reapStrandedJobs(req.payload, new Date(), QUEUE);
 
-      if (reaped.released + reaped.failed > 0) {
+      // Counts only, never a job's fields. A row counted `errored` was logged
+      // by id where it failed, and is still stranded for the next tick.
+      if (reaped.released + reaped.failed + reaped.errored > 0) {
         req.payload.logger.warn(
-          `[jobs] Recovered stranded jobs: ${reaped.released} released to run again, ${reaped.failed} filed as failed`
+          `[jobs] Recovered stranded jobs: ${reaped.released} released to run again, ${reaped.failed} filed as failed, ${reaped.errored} could not be recovered and are left for the next tick`
         );
       }
     } catch (error) {

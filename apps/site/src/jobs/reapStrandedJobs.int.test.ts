@@ -34,8 +34,11 @@ const HOUR = 60 * MINUTE;
 const STRANDED_MESSAGE =
   "[jobs] Stranded: the run that claimed this job ended without finishing it";
 
+/** The one queue `endpoints/jobs.ts` drives, and so the one it reaps. */
+const QUEUE = "default";
+
 /** The claim key `endpoints/jobs.ts` serialises the runner with. */
-const LEASE_KEY = "job-run:default";
+const LEASE_KEY = `job-run:${QUEUE}`;
 
 /*
  * A stand-in for the run endpoint's shared secret, never a real credential.
@@ -60,7 +63,7 @@ function setToken(value: string | undefined): void {
 
 /**
  * The reaper, both directly and through the one door that ever calls it —
- * `GET /api/jobs/run`, exactly as Review Focus 4 asks: reaping is only useful
+ * `GET /api/jobs/run`, exactly as Review Focus 2 asks: reaping is only useful
  * if the tick that follows a reap actually queues and runs the freed work,
  * and a bug in the wiring would pass every test that calls the function
  * alone.
@@ -85,7 +88,7 @@ describe("reaping a job a killed run left processing", () => {
   const seedJob = (data: Record<string, unknown>) =>
     payload.create({
       collection: "payload-jobs",
-      data: { queue: "default", ...data },
+      data: { queue: QUEUE, ...data },
       overrideAccess: true,
     });
 
@@ -212,7 +215,7 @@ describe("reaping a job a killed run left processing", () => {
     setToken(STUB_TOKEN);
     payload = await getPayload({ config });
 
-    // Case 9 proves a `send-email` job still runs, not that Cloudflare's
+    // The `send-email` cases prove a job still runs, not that Cloudflare's
     // binding does — `jobs/sendEmail.int.test.ts` owns that evidence. This
     // outbox is the same stand-in `jobs/schedules.int.test.ts` uses.
     realSendEmail = payload.sendEmail;
@@ -276,7 +279,7 @@ describe("reaping a job a killed run left processing", () => {
 
   /*
    * ---------------------------------------------------------------------
-   * Cases 1–7: the function alone, against a fixed clock.
+   * The function alone, against a fixed clock.
    * ---------------------------------------------------------------------
    */
 
@@ -285,9 +288,9 @@ describe("reaping a job a killed run left processing", () => {
 
     await forceRow(job.id, { updatedAt: minutesAgo(31) });
 
-    const result = await reapStrandedJobs(payload, NOW);
+    const result = await reapStrandedJobs(payload, NOW, QUEUE);
 
-    expect(result).toEqual({ failed: 0, released: 1 });
+    expect(result).toEqual({ errored: 0, failed: 0, released: 1 });
 
     const row = await reload(job.id);
 
@@ -295,6 +298,10 @@ describe("reaping a job a killed run left processing", () => {
     expect(row.totalTried).toBe(1);
     expect(row.hasError).toBeFalsy();
     expect(row.error).toBeFalsy();
+    // Stamped with the reap's own instant, as Payload's `updateJob` stamps
+    // every write it makes (`queues/utilities/updateJob.js`) — the reaper
+    // writes beneath the operation that would otherwise do it.
+    expect(row.updatedAt).toBe(NOW.toISOString());
   });
 
   it("files a row as failed once its retry budget is spent", async () => {
@@ -306,15 +313,19 @@ describe("reaping a job a killed run left processing", () => {
 
     await forceRow(job.id, { updatedAt: minutesAgo(31) });
 
-    const result = await reapStrandedJobs(payload, NOW);
+    const result = await reapStrandedJobs(payload, NOW, QUEUE);
 
-    expect(result).toEqual({ failed: 1, released: 0 });
+    expect(result).toEqual({ errored: 0, failed: 1, released: 0 });
 
     const row = await reload(job.id);
 
     expect(row.processing).toBe(false);
     expect(row.hasError).toBe(true);
     expect((row.error as { message: string }).message).toBe(STRANDED_MESSAGE);
+    // Filing does not spend a further attempt: the counter is left where
+    // the budget check found it.
+    expect(row.totalTried).toBe(3);
+    expect(row.updatedAt).toBe(NOW.toISOString());
   });
 
   it("files a stranded sweep as failed on its first strand, its own attempts being zero", async () => {
@@ -325,9 +336,9 @@ describe("reaping a job a killed run left processing", () => {
 
     await forceRow(job.id, { updatedAt: minutesAgo(31) });
 
-    const result = await reapStrandedJobs(payload, NOW);
+    const result = await reapStrandedJobs(payload, NOW, QUEUE);
 
-    expect(result).toEqual({ failed: 1, released: 0 });
+    expect(result).toEqual({ errored: 0, failed: 1, released: 0 });
 
     const row = await reload(job.id);
 
@@ -341,9 +352,9 @@ describe("reaping a job a killed run left processing", () => {
 
     await forceRow(job.id, { updatedAt: minutesAgo(29) });
 
-    const result = await reapStrandedJobs(payload, NOW);
+    const result = await reapStrandedJobs(payload, NOW, QUEUE);
 
-    expect(result).toEqual({ failed: 0, released: 0 });
+    expect(result).toEqual({ errored: 0, failed: 0, released: 0 });
 
     const row = await reload(job.id);
 
@@ -357,9 +368,9 @@ describe("reaping a job a killed run left processing", () => {
 
     await forceRow(job.id, { updatedAt: minutesAgo(30) });
 
-    const result = await reapStrandedJobs(payload, NOW);
+    const result = await reapStrandedJobs(payload, NOW, QUEUE);
 
-    expect(result).toEqual({ failed: 0, released: 0 });
+    expect(result).toEqual({ errored: 0, failed: 0, released: 0 });
 
     const row = await reload(job.id);
 
@@ -371,9 +382,9 @@ describe("reaping a job a killed run left processing", () => {
 
     await forceRow(job.id, { updatedAt: minutesAgo(120) });
 
-    const result = await reapStrandedJobs(payload, NOW);
+    const result = await reapStrandedJobs(payload, NOW, QUEUE);
 
-    expect(result).toEqual({ failed: 0, released: 0 });
+    expect(result).toEqual({ errored: 0, failed: 0, released: 0 });
 
     const row = await reload(job.id);
 
@@ -381,23 +392,144 @@ describe("reaping a job a killed run left processing", () => {
     expect(row.hasError).toBeFalsy();
   });
 
-  it("files a row whose task no longer exists in jobsConfig as failed", async () => {
-    // `inline` is a real option on the `taskSlug` select — every jobs
-    // collection carries it — and is not one of `jobsConfig.tasks`, which is
-    // exactly the case this asserts: a row naming a task nothing here
-    // registers is bounded at zero attempts, the same as a sweep.
-    const job = await seedJob({ processing: true, taskSlug: "inline" });
+  it("files a row whose task was removed from jobsConfig as failed, and still reaches the rows after it", async () => {
+    /*
+     * A task deleted from `jobsConfig` after its row was queued leaves a
+     * `taskSlug` the collection's own select no longer accepts. Any write
+     * through the Local API validates the whole document and throws
+     * `ValidationError: … Task Slug` on that row — so a reaper that wrote
+     * that way stopped at it, and every older stranded row behind it (the
+     * read is newest first, `-createdAt`) was never reaped, on this tick or
+     * any other. That is the permanent stall this module exists to end.
+     *
+     * `forceRow` goes beneath validation to put the unregistered slug on the
+     * row, and pins `createdAt` so the unregistered row is read first.
+     */
+    const older = await seedJob({
+      processing: true,
+      taskSlug: "prune-rate-limits",
+    });
+    const removed = await seedJob({
+      processing: true,
+      taskSlug: "prune-rate-limits",
+    });
 
-    await forceRow(job.id, { updatedAt: minutesAgo(31) });
+    await forceRow(older.id, {
+      createdAt: minutesAgo(120),
+      updatedAt: minutesAgo(90),
+    });
+    await forceRow(removed.id, {
+      createdAt: minutesAgo(60),
+      taskSlug: "removed-task",
+      updatedAt: minutesAgo(31),
+    });
 
-    const result = await reapStrandedJobs(payload, NOW);
+    const result = await reapStrandedJobs(payload, NOW, QUEUE);
 
-    expect(result).toEqual({ failed: 1, released: 0 });
+    expect(result).toEqual({ errored: 0, failed: 2, released: 0 });
 
-    const row = await reload(job.id);
+    const removedRow = await reload(removed.id);
 
-    expect(row.hasError).toBe(true);
-    expect((row.error as { message: string }).message).toBe(STRANDED_MESSAGE);
+    expect(removedRow.taskSlug).toBe("removed-task");
+    expect(removedRow.processing).toBe(false);
+    expect(removedRow.hasError).toBe(true);
+    expect((removedRow.error as { message: string }).message).toBe(
+      STRANDED_MESSAGE
+    );
+
+    const olderRow = await reload(older.id);
+
+    expect(olderRow.processing).toBe(false);
+    expect(olderRow.hasError).toBe(true);
+  });
+
+  it("counts a row it could not write as errored and carries on with the rest", async () => {
+    /*
+     * Any per-row write failure — not only the one above — must cost that
+     * row alone. The failing row stays `processing: true` and stale, so the
+     * next tick finds it again; the rows after it are reaped on this one.
+     */
+    const older = await seedJob({ processing: true, taskSlug: "send-email" });
+    const failing = await seedJob({
+      processing: true,
+      taskSlug: "send-email",
+    });
+
+    await forceRow(older.id, {
+      createdAt: minutesAgo(120),
+      updatedAt: minutesAgo(90),
+    });
+    await forceRow(failing.id, {
+      createdAt: minutesAgo(60),
+      updatedAt: minutesAgo(31),
+    });
+
+    const realUpdateOne = payload.db.updateOne.bind(payload.db);
+
+    vi.spyOn(payload.db, "updateOne").mockImplementation((args) => {
+      if (args.collection === "payload-jobs" && args.id === failing.id) {
+        return Promise.reject(new Error("this row's write blew up"));
+      }
+
+      return realUpdateOne(args);
+    });
+
+    const realUpdate = payload.update.bind(payload);
+
+    // The same failure on the Local API path, so this case pins the
+    // per-row catch whichever write the reaper uses.
+    vi.spyOn(payload, "update").mockImplementation(((
+      args: Parameters<typeof payload.update>[0]
+    ) => {
+      if (
+        args.collection === "payload-jobs" &&
+        "id" in args &&
+        args.id === failing.id
+      ) {
+        return Promise.reject(new Error("this row's write blew up"));
+      }
+
+      return realUpdate(args);
+    }) as typeof payload.update);
+
+    const result = await reapStrandedJobs(payload, NOW, QUEUE);
+
+    vi.restoreAllMocks();
+
+    expect(result).toEqual({ errored: 1, failed: 0, released: 1 });
+
+    expect((await reload(failing.id)).processing).toBe(true);
+
+    const olderRow = await reload(older.id);
+
+    expect(olderRow.processing).toBe(false);
+    expect(olderRow.totalTried).toBe(1);
+
+    // The id, and nothing about the job, is what the log carries.
+    const line = logLines.find((entry) =>
+      entry.includes("[jobs] Failed to reap stranded job")
+    );
+
+    expect(line).toContain(String(failing.id));
+  });
+
+  it("reaps only the queue it was asked about", async () => {
+    const elsewhere = await seedJob({
+      processing: true,
+      queue: "elsewhere",
+      taskSlug: "prune-rate-limits",
+    });
+
+    await forceRow(elsewhere.id, { updatedAt: minutesAgo(90) });
+
+    const result = await reapStrandedJobs(payload, NOW, QUEUE);
+
+    expect(result).toEqual({ errored: 0, failed: 0, released: 0 });
+
+    const row = await reload(elsewhere.id);
+
+    expect(row.processing).toBe(true);
+    expect(row.hasError).toBeFalsy();
   });
 
   it("bounds one tick's work at REAP_LIMIT, leaving the rest for the next tick", async () => {
@@ -426,7 +558,7 @@ describe("reaping a job a killed run left processing", () => {
       where: { id: { in: seeded } },
     });
 
-    const result = await reapStrandedJobs(payload, NOW);
+    const result = await reapStrandedJobs(payload, NOW, QUEUE);
 
     // `prune-rate-limits` has no retries, so every row this tick reaches is
     // filed as failed rather than released — the split does not matter here,
@@ -455,7 +587,7 @@ describe("reaping a job a killed run left processing", () => {
 
   /*
    * ---------------------------------------------------------------------
-   * Cases 8–9: through the endpoint, where the reaper actually lives.
+   * Through the endpoint, where the reaper actually lives.
    * ---------------------------------------------------------------------
    */
 
@@ -508,6 +640,69 @@ describe("reaping a job a killed run left processing", () => {
 
     expect(strandedAfter.processing).toBe(false);
     expect(strandedAfter.hasError).toBe(true);
+  });
+
+  it("releases a stranded send-email and sends it in the same tick", async () => {
+    /*
+     * One tick both reaps and runs: `endpoints/jobs.ts` calls the reaper
+     * before `payload.jobs.run`, so a row released here is `processing:
+     * false` by the time the runner's candidate query looks for work, and is
+     * taken by this same tick rather than the next one.
+     */
+    const email = `reap-tick-${RUN}@example.test`;
+    const account = await payload.create({
+      collection: "users",
+      data: { email, password: "reap-int-password", role: "user" },
+    });
+
+    try {
+      await payload.update({
+        collection: "users",
+        data: {
+          pendingEmail: `reap-tick-new-${RUN}@example.test`,
+          pendingEmailExpiresAt: new Date(Date.now() + HOUR).toISOString(),
+        },
+        id: account.id,
+        overrideAccess: true,
+      });
+
+      const stranded = await seedJob({
+        input: {
+          kind: "email-change",
+          locale: "nl",
+          origin: SITE,
+          userId: account.id,
+        },
+        processing: true,
+        taskSlug: "send-email",
+      });
+
+      await forceRow(stranded.id, {
+        updatedAt: new Date(Date.now() - 31 * MINUTE).toISOString(),
+      });
+
+      expect((await tick()).status).toBe(200);
+
+      expect(
+        logLines.some((line) =>
+          line.includes(
+            "[jobs] Recovered stranded jobs: 1 released to run again, 0 filed as failed, 0 could not be recovered"
+          )
+        )
+      ).toBe(true);
+
+      // Actually sent, not merely released — a job that completes is deleted
+      // (`deleteJobOnComplete`), so the outbox is the evidence left.
+      expect(
+        outbox.some((entry) => entry.to.startsWith(`reap-tick-new-${RUN}`))
+      ).toBe(true);
+    } finally {
+      await payload.delete({
+        collection: "users",
+        id: account.id,
+        overrideAccess: true,
+      });
+    }
   });
 
   it("does not let the reaper's own failure stop the queue draining or the lease releasing", async () => {
