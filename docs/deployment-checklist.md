@@ -59,7 +59,7 @@ no bindings by design. Verify afterwards with
 | `RENDER_CALLBACK_SECRET` | secret | both (once rendering is live) | `bunx wrangler secret put RENDER_CALLBACK_SECRET --env=<env>` (same value must be configured on the Remotion Lambda side — generate, store in a password manager, paste at both prompts) | Fails closed: `POST /render/callback` answers **401** to every callback, so composed sponsor videos never get attached. HMAC over the body; header/scheme pinned in `src/lib/renderSignature.ts`. |
 | `OPENPANEL_CLIENT_ID` | secret | both (per-env OpenPanel project) | `bunx wrangler secret put OPENPANEL_CLIENT_ID --env=<env>` | Analytics silently off: `POST /api/analytics/track` still answers 202, logs a warning, and **drops the event**. Needs both id and secret. |
 | `OPENPANEL_CLIENT_SECRET` | secret | both | `bunx wrangler secret put OPENPANEL_CLIENT_SECRET --env=<env>` | Same as `OPENPANEL_CLIENT_ID`. Must never be a `vars` entry. |
-| `JOBS_RUN_TOKEN` | secret | both | `openssl rand -hex 32 \| bunx wrangler secret put JOBS_RUN_TOKEN --env=<env>` | Fails closed and silently: `GET /api/jobs/run` answers `200 {"status":"ok"}` and **runs nothing**. Queued jobs never execute: no email is ever sent (address-change confirmation, sponsor re-edit invitation, renewal reminders), sponsorships never expire, stale payments/orphaned media/rate-limit rows are never cleaned. **Note:** today nothing calls this endpoint at all — the cron is not wired (see Open items), so the queue does not drain even with the token set, unless an operator calls it with `Authorization: Bearer <token>`. |
+| `JOBS_RUN_TOKEN` | secret | both | `openssl rand -hex 32 \| bunx wrangler secret put JOBS_RUN_TOKEN --env=<env>` | The hourly cron (`wrangler.jsonc`'s `triggers.crons`, `worker.ts`'s `scheduled()`) calls this endpoint every hour on its own — an operator no longer has to. **A missing or wrong token does not show up as an error.** `endpoints/jobs.ts` answers `200 {"status":"ok"}` for a missing/mismatched token exactly the same as for a real run — `acknowledged()` is not an oracle for the token, by design — so the only visible symptom is `[jobs] A run was requested without a usable token; nothing was run` in the Worker log (`bunx wrangler tail --env=<env>`), and queued jobs quietly never execute: no email is ever sent, sponsorships never expire, stale payments/orphaned media/rate-limit rows are never cleaned. Check that warning is absent after setting the secret. |
 
 ## 2. Worker vars (plain, non-secret)
 
@@ -72,7 +72,7 @@ no bindings by design. Verify afterwards with
 | `REMOTION_FUNCTION_NAME` | var (plan lists it as a Worker secret) | both, once a Lambda is deployed | `bunx wrangler secret put REMOTION_FUNCTION_NAME --env=<env>` | Rendering off: checkout logs "No render was submitted" and completes normally. All three `REMOTION_*` must be set to count as configured. **Even when set, nothing is submitted** — the Lambda transport is a stub (Stage 6 Task 6); the code only builds the request and logs a warning. |
 | `REMOTION_REGION` | var | both, with the above | `bunx wrangler secret put REMOTION_REGION --env=<env>` | Same as `REMOTION_FUNCTION_NAME`. |
 | `REMOTION_SERVE_URL` | var | both, with the above | `bunx wrangler secret put REMOTION_SERVE_URL --env=<env>` | Same as `REMOTION_FUNCTION_NAME`. |
-| `SITE_ORIGIN` | var — **pending (Task 7)**, not in `wrangler.jsonc` | both, when the cron lands | Task 7 adds it to `env.<env>.vars`. Do not set it now. | Read only by `src/jobs/cron.ts`, which no deployed code imports yet. When wired: the scheduled tick throws "SITE_ORIGIN is not set" and no jobs run. Must be the real public origin — renewal-reminder links are built from it. |
+| `SITE_ORIGIN` | var — **already in `wrangler.jsonc`**, per environment | both | Nothing to do; deployed from the file. staging: `https://smog-site-staging.vanneszias.workers.dev`. production: `https://smog-site-production.vanneszias.workers.dev` — **must change in the same commit that adds a custom-domain route** for that environment. | Read by `src/jobs/cron.ts`'s hourly scheduled tick. Missing it: the tick throws `[cron] SITE_ORIGIN is not set`, logged (not thrown out of `scheduled()`), and no jobs run that tick. Renewal and confirmation links in queued email are built from it, so a stale value here is a working link to nowhere in a sponsor's inbox. |
 
 No AWS credentials are read anywhere in `apps/site`: the Remotion Lambda
 invoke (SigV4) is not written yet, so its credential vars do not exist yet.
@@ -253,12 +253,6 @@ steps 4–9 with `production`.
 
 ## Open items (not configured in the repo yet — do not invent config)
 
-- **Cron is not wired.** `wrangler.jsonc` deliberately has no `"crons"`
-  entry: the OpenNext entry module exports no `scheduled()` handler, so a cron
-  would error on every firing. Task 7 adds a wrapper entry module, a
-  `"crons": ["0 * * * *"]` entry, `SITE_ORIGIN` as a per-env var and relies on
-  `JOBS_RUN_TOKEN`. Until then the job queue (all email, expiry, cleanup)
-  runs only when someone calls `GET /api/jobs/run` with the bearer token.
 - **Production origin / custom domain.** `wrangler.jsonc` has no `routes`;
   production would be served at `smog-site-production.<account>.workers.dev`.
   Decide the domain before setting `EXPO_PUBLIC_API_URL`, the Google redirect
@@ -282,9 +276,12 @@ steps 4–9 with `production`.
   domain must be published and verified in Cloudflare; until then no email
   can be sent from either environment, and `EMAIL_FROM_ADDRESS` must match
   that domain.
-- **Code work still open before cutover** (see Open items): the cron wrapper
-  (without it no queued job ever runs, so no email is sent and sponsorships
-  never expire), and either the Remotion Lambda submit transport or an
-  explicit decision to launch sponsorship with rendering off. Production holds
-  no sponsorships today (spec, "What the production export actually
-  contains"), which makes the second a product decision, not a data risk.
+- **Code work still open before cutover:** the cron is wired (`worker.ts`'s
+  `scheduled()`, `wrangler.jsonc`'s hourly `triggers.crons`) and drains the
+  job queue every hour once `JOBS_RUN_TOKEN` and `SITE_ORIGIN` are set (see
+  §1–§2 above) — proven against a real build and a real local scheduled
+  trigger, `docs/superpowers/plans/2026-09-22-cron-wiring.md`'s "Exit:
+  measured". What is still open is either the Remotion Lambda submit
+  transport or an explicit decision to launch sponsorship with rendering off.
+  Production holds no sponsorships today (spec, "What the production export
+  actually contains"), which makes that a product decision, not a data risk.
