@@ -253,9 +253,20 @@ function failureReason(payload: Record<string, unknown>): string {
   return withoutUrls(rawFailureReason(payload));
 }
 
-/** Every `http(s)://…` run in `text`, replaced by `<url>`. */
+/**
+ * Every `http(s)://…` run in `text`, in any case, replaced by `<url>`.
+ *
+ * Trailing punctuation a sentence puts after a URL — `.` `,` `;` `:` `)` `]`
+ * `}` `!` `?` — is given back rather than swallowed, so `(https://…).` reads
+ * `(<url>).`. A URL genuinely ending in one of them loses that character to
+ * the sentence, which only ever errs towards redacting less of the prose.
+ */
 function withoutUrls(text: string): string {
-  return text.replace(/https?:\/\/[^\s"'<>]+/g, "<url>");
+  return text.replace(/https?:\/\/[^\s"'<>`]+/gi, (match) => {
+    const trailing = /[.,;:)\]}!?]+$/.exec(match)?.[0] ?? "";
+
+    return `<url>${trailing}`;
+  });
 }
 
 function rawFailureReason(payload: Record<string, unknown>): string {

@@ -335,7 +335,15 @@ function executionContext(): null | {
   waitUntil(promise: Promise<unknown>): void;
 } {
   try {
-    return getCloudflareContext().ctx;
+    const ctx: unknown = getCloudflareContext().ctx;
+
+    // Checked, not assumed: a context without a callable `waitUntil` would
+    // throw synchronously in `afterAnswering`, which is a 500 on a payment
+    // that is already recorded.
+    return typeof (ctx as { waitUntil?: unknown } | undefined)?.waitUntil ===
+      "function"
+      ? (ctx as { waitUntil(promise: Promise<unknown>): void })
+      : null;
   } catch {
     return null;
   }

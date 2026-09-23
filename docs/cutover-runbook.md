@@ -162,9 +162,10 @@ answer next to each item when it is made.
    2. From `apps/render`: `bun -F render deploy:function`, then
       `bun -F render deploy:site:staging` (`--site-name=smog-render-staging`).
       Both run in **`eu-central-1`**, always. The function is **shared** by
-      both environments: there is one per Remotion version, and redeploying
-      it (a version bump) changes it for staging and production at once. The
-      sites are per environment.
+      both environments: there is one per Remotion version. A version bump
+      deploys a *new* function name, and each environment moves to it only
+      when its own `REMOTION_FUNCTION_NAME` changes, so a bump can go to
+      staging first as well. The sites are per environment.
    3. **Staging's vars**: the printed function name as
       `REMOTION_FUNCTION_NAME` and staging's serve URL as
       `REMOTION_SERVE_URL`, in `env.staging.vars` in

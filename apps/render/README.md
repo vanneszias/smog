@@ -202,11 +202,18 @@ bunx remotion still src/index.ts SponsoredVideo out/still.png --frame=-1 \
   administrator can still approve it, and the gesture page then plays the
   gesture's own video. A re-render needs a code change (an admin action that
   calls `submitRenderJob` for the sponsorship), recorded as a follow-up.
+- **A sponsorship with no render row at all** is the other way a paid
+  sponsorship ends up without a composite: the platform stops `waitUntil`
+  work a bounded time after the webhook is answered, and a submission cut off
+  before its claim is written leaves no `renders` row and nothing for the
+  sweep to fail. Its only trace is a missing `[renderJob] Submitted render …`
+  line for that sponsorship; the same follow-up covers it.
 - **Where the signed source URL can still end up.** Not in the Worker's logs
   or in CloudWatch at `logLevel: "warn"`, but in two places this app does
   not control: Remotion's private S3 progress file for the render
   (`renderMetadata.inputProps`), and any Lambda error text that quotes it,
-  which the callback stores verbatim as the render's `failureReason`. The
+  which the callback stores as the render's `failureReason` with every URL
+  replaced by `<url>` (`endpoints/render.ts`, `withoutUrls`). The
   sensitivity is low: the URL expires after two hours, and it is for a
   public playback id that Mux serves without a token anyway.
 

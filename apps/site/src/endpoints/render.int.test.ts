@@ -943,6 +943,25 @@ describe("the render callback", () => {
     expect(row?.failureReason).not.toContain("token=");
   });
 
+  it("redacts a URL in any case, and gives back the punctuation after it", async () => {
+    const { id } = await seedJob("failed-url-punctuation");
+
+    await deliver(
+      lambdaReport(id, "error", {
+        errors: [
+          {
+            message:
+              "Source (HTTPS://Stream.Mux.com/abc/high.mp4?token=eyJ.a.b) failed. Retry https://example.test/x?token=t2.",
+            name: "Error",
+          },
+        ],
+      })
+    );
+
+    const row = await renderRow(id);
+    expect(row?.failureReason).toBe("Source (<url>) failed. Retry <url>.");
+  });
+
   it("records a reason even when Lambda gave none", async () => {
     // An empty `failureReason` reads as "nobody recorded why", which is a
     // different and much worse thing to find in an admin panel than "Lambda

@@ -1022,6 +1022,55 @@ describe("the Mollie webhook", () => {
       );
     });
 
+    it("starts every sponsorship's render at once, not one after another", async () => {
+      // `ctx.waitUntil` work is cut off a bounded time after the webhook is
+      // answered, so a slow start must not hold the next one back
+      // (`lib/paidRenders.ts`). Each start is held open until both have
+      // begun; run sequentially, the second would never begin and this
+      // would time out.
+      const first = await seed("render-parallel-a", "pending_payment");
+      const second = await seed("render-parallel-b", "pending_payment");
+      const paymentId = newPaymentId("renderparallel");
+      mollieWillSay({
+        amountCents: PRICE * 2,
+        id: paymentId,
+        sponsorshipIds: [first, second],
+        status: "paid",
+      });
+
+      let begun = 0;
+      let releaseAll: () => void = () => undefined;
+      const bothBegun = new Promise<void>((resolve) => {
+        releaseAll = resolve;
+      });
+      startRender.mockImplementation(async () => {
+        begun += 1;
+        if (begun === 2) {
+          releaseAll();
+        }
+        await Promise.race([
+          bothBegun,
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error("the starts ran one at a time")),
+              5000
+            )
+          ),
+        ]);
+
+        return started();
+      });
+
+      expect((await deliver(paymentId)).status).toBe(200);
+
+      expect(begun).toBe(2);
+      const renders = await rendersFor([first, second]);
+      expect(renders.map((render) => render.state)).toEqual([
+        "queued",
+        "queued",
+      ]);
+    });
+
     it("submits exactly one render per sponsorship the paid delivery moved", async () => {
       const logo = await seedLogo("paid");
       const plain = await seed("render-plain", "pending_payment");
