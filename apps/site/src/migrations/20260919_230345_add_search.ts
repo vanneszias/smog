@@ -13,9 +13,15 @@ import {
  * the polymorphic `doc` relationship back to the gesture.
  *
  * Nothing backfills existing gestures — the sync hooks only fire on a save.
- * After deploying this, run the admin panel's Reindex action on `gestures`
- * (or POST /api/search/reindex) to populate the index for content that is
- * already there.
+ * The catalogue import (`scripts/migrate-convex`) creates every gesture
+ * through the Local API, so each one gets its search document then.
+ *
+ * **Do not use the Reindex action (or POST /api/search/reindex) on D1.** It
+ * first deletes every search document in one unbounded delete, whose
+ * follow-up statement binds one parameter per id and exceeds D1's cap of 100;
+ * the plugin swallows that error and skips the rebuild, leaving the index
+ * empty. Re-save a gesture in the admin to repair its entry instead
+ * (`docs/cutover-runbook.md`).
  */
 export async function up({
   db,
