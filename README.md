@@ -76,6 +76,7 @@ apps/
   mobile/       Expo mobile app
   render/       Remotion compositions for Remotion Lambda
 packages/
+  brand/        Logo artwork and the generator for every icon and logo size
   config/       Shared constants, sponsorship statuses, base tsconfig
   i18n/         Locale catalogues (en, fr, nl) for apps/mobile
   shared/       Analytics event types shared by site and mobile

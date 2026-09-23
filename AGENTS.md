@@ -52,6 +52,7 @@ bun -F render check-types    # Typecheck with tsc
 ```bash
 bun -F @smog/ui-web test     # Also: @smog/ui-native, @smog/styles
 bun -F @smog/ui-web generate:theme # Also: @smog/ui-native
+bun -F @smog/brand generate  # Rewrite the icons and logos in apps/site/public and apps/mobile/assets
 ```
 
 ## Code Style
@@ -99,7 +100,7 @@ try {
 
 ## Project Structure
 - `apps/*`: Application code (site, mobile, render)
-- `packages/*`: Shared packages (config, i18n, shared, styles, types, ui-native, ui-web)
+- `packages/*`: Shared packages (brand, config, i18n, shared, styles, types, ui-native, ui-web)
 - `scripts/*`: The release checks `release:check` runs
 - `docs/*`: Operating documentation
 
