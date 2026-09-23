@@ -30,6 +30,7 @@ import {
   vi,
 } from "vitest";
 import {
+  RemotionStartError,
   type StartRenderInput,
   startRemotionRender,
 } from "@/lib/remotionLambda";
@@ -346,7 +347,7 @@ describe("the signed request", () => {
   ])("refuses the region %j before any fetch", async (region) => {
     await expect(
       startRemotionRender({ ...startInput(), region })
-    ).rejects.toThrow(new Error("[remotionLambda] Invalid region"));
+    ).rejects.toMatchObject({ message: "[remotionLambda] Invalid region" });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -385,9 +386,9 @@ describe("the signed request", () => {
       new DOMException("The operation timed out.", "TimeoutError")
     );
     expect(request.signal.aborted).toBe(true);
-    await expect(started).rejects.toThrow(
-      new Error("[remotionLambda] Lambda did not answer within 30000 ms")
-    );
+    await expect(started).rejects.toMatchObject({
+      message: "[remotionLambda] Lambda did not answer within 30000 ms",
+    });
   });
 
   it("does not retry, as the official client sets maxAttempts: 1", async () => {
@@ -444,9 +445,9 @@ describe("the answer", () => {
   ])("throws on %s", async (_name, fixture, message) => {
     answerFetchWith(fixture);
 
-    await expect(startRemotionRender(startInput())).rejects.toThrow(
-      new Error(message)
-    );
+    await expect(startRemotionRender(startInput())).rejects.toMatchObject({
+      message,
+    });
   });
 
   it("throws a distinct message for each failure", async () => {
@@ -474,9 +475,9 @@ describe("the answer", () => {
       new DOMException("The operation timed out.", "TimeoutError")
     );
 
-    await expect(startRemotionRender(startInput())).rejects.toThrow(
-      new Error("[remotionLambda] Lambda did not answer within 30000 ms")
-    );
+    await expect(startRemotionRender(startInput())).rejects.toMatchObject({
+      message: "[remotionLambda] Lambda did not answer within 30000 ms",
+    });
   });
 
   it("says when Lambda timed out while the body was being read", async () => {
@@ -493,9 +494,9 @@ describe("the answer", () => {
       )
     );
 
-    await expect(startRemotionRender(startInput())).rejects.toThrow(
-      new Error("[remotionLambda] Lambda did not answer within 30000 ms")
-    );
+    await expect(startRemotionRender(startInput())).rejects.toMatchObject({
+      message: "[remotionLambda] Lambda did not answer within 30000 ms",
+    });
   });
 
   it("says when the body could not be read", async () => {
@@ -510,9 +511,9 @@ describe("the answer", () => {
       )
     );
 
-    await expect(startRemotionRender(startInput())).rejects.toThrow(
-      new Error("[remotionLambda] Failed to read Lambda's response: TypeError")
-    );
+    await expect(startRemotionRender(startInput())).rejects.toMatchObject({
+      message: "[remotionLambda] Failed to read Lambda's response: TypeError",
+    });
   });
 
   it.each([
@@ -541,9 +542,9 @@ describe("the answer", () => {
   it("says when Lambda could not be reached", async () => {
     fetchSpy.mockRejectedValue(new TypeError("fetch failed"));
 
-    await expect(startRemotionRender(startInput())).rejects.toThrow(
-      new Error("[remotionLambda] Failed to reach Lambda: TypeError")
-    );
+    await expect(startRemotionRender(startInput())).rejects.toMatchObject({
+      message: "[remotionLambda] Failed to reach Lambda: TypeError",
+    });
   });
 
   it("never puts a body, a credential, a prop or a URL in an error", async () => {
@@ -573,6 +574,111 @@ describe("the answer", () => {
   });
 });
 
+/** A body whose read fails with `error` after the headers said 200. */
+function unreadableBody(error: Error): Response {
+  return new Response(
+    new ReadableStream({
+      pull(controller) {
+        controller.error(error);
+      },
+    }),
+    { status: 200 }
+  );
+}
+
+/**
+ * Whether a failure proves no render was started, which is what decides
+ * whether `lib/renderJob.ts` hands the job's claim back or keeps it.
+ *
+ * **Definite** — the function was never run, or ran and refused: the claim
+ * can go, because no webhook will ever name it. **Not definite** — the start
+ * may have been accepted and the answer lost: the claim stays, so a late
+ * webhook still finds its row and the stalled-render sweep fails it
+ * otherwise. Every throw is classified; none is a bare `Error`.
+ */
+describe("the failure's class", () => {
+  type Arrange = () => StartRenderInput;
+  const answer =
+    (fixture: Fixture): Arrange =>
+    () => {
+      answerFetchWith(fixture);
+
+      return startInput();
+    };
+  const reject =
+    (error: unknown): Arrange =>
+    () => {
+      fetchSpy.mockRejectedValue(error);
+
+      return startInput();
+    };
+  const respond =
+    (response: () => Response): Arrange =>
+    () => {
+      fetchSpy.mockImplementation(() => Promise.resolve(response()));
+
+      return startInput();
+    };
+  const timeout = () =>
+    new DOMException("The operation timed out.", "TimeoutError");
+
+  it.each<[string, Arrange, boolean]>([
+    // Definite: Lambda certainly did not start a render.
+    ["an invalid region", () => ({ ...startInput(), region: "nope" }), true],
+    [
+      "missing credentials",
+      () => {
+        vi.stubEnv("REMOTION_AWS_ACCESS_KEY_ID", undefined);
+
+        return startInput();
+      },
+      true,
+    ],
+    ["HTTP 403", answer(FIXTURES.forbidden), true],
+    ["HTTP 400", answer({ body: "{}", status: 400 }), true],
+    [
+      "HTTP 429",
+      answer({
+        body: "{}",
+        headers: { "x-amzn-errortype": "TooManyRequestsException" },
+        status: 429,
+      }),
+      true,
+    ],
+    ["an x-amz-function-error", answer(FIXTURES.functionError), true],
+    ['a { type: "error" } body', answer(FIXTURES.routineError), true],
+    // Not definite: it may have started one.
+    ["a timeout", reject(timeout()), false],
+    ["a network TypeError", reject(new TypeError("fetch failed")), false],
+    ["HTTP 500", answer({ body: "", status: 500 }), false],
+    ["HTTP 503", answer({ body: "", status: 503 }), false],
+    [
+      "a body-read failure after a 2xx",
+      respond(() => unreadableBody(new TypeError("terminated"))),
+      false,
+    ],
+    [
+      "a body-read timeout after a 2xx",
+      respond(() => unreadableBody(timeout())),
+      false,
+    ],
+    ["an empty body after a 2xx", answer({ body: "", status: 200 }), false],
+    ["a non-JSON body after a 2xx", answer(FIXTURES.notJson), false],
+    ["a success without ids", answer(FIXTURES.noIds), false],
+  ])("classifies %s", async (_name, arrange, definite) => {
+    const error = await startRemotionRender(arrange()).catch(
+      (caught: unknown) => caught
+    );
+
+    expect(error).toBeInstanceOf(RemotionStartError);
+    expect((error as RemotionStartError).name).toBe("RemotionStartError");
+    expect((error as RemotionStartError).definite).toBe(definite);
+    expect((error as RemotionStartError).message).toMatch(
+      /^\[remotionLambda\] /
+    );
+  });
+});
+
 describe("credentials", () => {
   it.each([
     ["REMOTION_AWS_ACCESS_KEY_ID"],
@@ -580,9 +686,9 @@ describe("credentials", () => {
   ])("throws before any fetch when %s is missing", async (name) => {
     vi.stubEnv(name, undefined);
 
-    await expect(startRemotionRender(startInput())).rejects.toThrow(
-      new Error("[remotionLambda] AWS credentials are not set")
-    );
+    await expect(startRemotionRender(startInput())).rejects.toMatchObject({
+      message: "[remotionLambda] AWS credentials are not set",
+    });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

@@ -2,7 +2,7 @@ import type { SponsoredVideoInputProps } from "@smog/types/render";
 import { SPONSORED_VIDEO_COMPOSITION_ID } from "@smog/types/render";
 import type { Payload } from "payload";
 import { signedMuxSourceUrl } from "@/lib/mux";
-import { startRemotionRender } from "@/lib/remotionLambda";
+import { RemotionStartError, startRemotionRender } from "@/lib/remotionLambda";
 import { claimRenderJob, releaseRenderJob } from "@/lib/renderState";
 
 /**
@@ -52,9 +52,11 @@ import { claimRenderJob, releaseRenderJob } from "@/lib/renderState";
  * Where Lambda is told to report, as a path rather than the endpoint's own.
  *
  * `/render/callback` is the rewrite in `next.config.ts`; the handler is
- * mounted at `/api/render/callback`. AWS holds this URL for the life of the
- * render and retries against it, which is exactly why the address a third
- * party keeps is the one this application publishes on purpose.
+ * mounted at `/api/render/callback`. Remotion holds this URL for the life of
+ * the render — it travels in the start payload — and its `invokeWebhook`
+ * delivers to it up to three times, about 1 s and 2 s apart, each attempt with
+ * a 10 s timeout. That is exactly why the address a third party keeps is the
+ * one this application publishes on purpose.
  */
 const CALLBACK_PATH = "/render/callback";
 
@@ -64,10 +66,14 @@ const CALLBACK_PATH = "/render/callback";
  * Not exported, for the reason `lib/mux.ts` gives about its own result type:
  * knip fails `bun release:check` on an exported symbol nothing imports.
  *
- * **The callback secret is deliberately not a field.** Remotion Lambda stores
- * a render's payload in S3 for the life of the job, and the secret is what
- * makes a callback admissible — anybody holding it can put any video on any
- * gesture — so it is added only at the moment the start is sent.
+ * **The callback secret is deliberately not a field**, so that this object
+ * can be asserted on and compared whole, and so that a stray log of it would
+ * leak at most the short-lived signed source URL it does hold — never the
+ * long-lived secret that makes every callback admissible (anybody holding it
+ * can put any video on any gesture). It joins the request only in the
+ * `startRemotionRender` call itself. It does then travel in the start
+ * payload, which Remotion keeps; that is Remotion's design, and nothing this
+ * object can change.
  */
 interface RenderSubmission {
   codec: "h264";
@@ -108,6 +114,22 @@ function lambdaTarget(): null | {
   return { functionName, region, serveUrl };
 }
 
+/** Where Lambda reports for a deployment at `origin`. */
+function callbackUrl(origin: string): string {
+  return `${origin}${CALLBACK_PATH}`;
+}
+
+/** Whether `url` is absolute and `https:` or `http:` — somewhere Lambda can post. */
+function isWebUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 /** An error's message and nothing else: no stack, no cause, no body. */
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : "unknown error";
@@ -140,7 +162,7 @@ export async function renderSubmission(
       sponsorName: input.overlayText,
       videoSrc: source.url,
     },
-    webhook: { url: `${input.origin}${CALLBACK_PATH}` },
+    webhook: { url: callbackUrl(input.origin) },
   };
 }
 
@@ -153,13 +175,27 @@ export async function renderSubmission(
  *
  * - **Unconfigured** (no function name, region or serve URL) says so and does
  *   no work, so a checkout needs no Mux signing key.
- * - **No `RENDER_CALLBACK_SECRET`** refuses before anything is claimed or
- *   started: the callback would be answered 401, so the render would be paid
- *   for and never settled.
- * - **Configured** builds the submission, claims a `renders` row under a fresh
- *   job id, and starts the render with that id in `webhook.customData`. If
- *   anything after the claim throws, the claim is handed back: a `queued` row
- *   for a render that was never started is a job nothing will ever settle.
+ * - **No `RENDER_CALLBACK_SECRET`**, or a callback URL that is not absolute
+ *   `https:` or `http:` (an empty origin, say), refuses before anything is
+ *   claimed or started: the callback would be refused or sent nowhere, so the
+ *   render would be paid for and never settled.
+ * - **Configured** builds the submission, mints a job id, claims a `renders`
+ *   row under it, and starts the render with that id in `webhook.customData`.
+ *   The id is minted only once the submission exists, so no log line names a
+ *   job that was never claimed.
+ *
+ * What happens to the claim when the start fails depends on whether Lambda
+ * may have started the render anyway (`RemotionStartError.definite`):
+ *
+ * - **Definitely not started** (a refused invoke, a 4xx, a routine error): the
+ *   claim is handed back. No webhook will ever name the job, and a `queued`
+ *   row would only wait for the stalled-render sweep to fail it.
+ * - **Maybe started** (a timeout, a dropped connection, a 5xx, an unreadable
+ *   answer): the claim is **kept**. The row stays `queued`, so a late webhook
+ *   still finds it and settles it; if none ever comes, the stalled-render
+ *   sweep fails it with a reason. Releasing here would turn a render that ran
+ *   into "a job this application never submitted", paid for and discarded.
+ * - **Any other error** after the claim: handed back, as before.
  *
  * Logs carry ids and error messages only — never the submission, which holds
  * a signed source URL, and never the secret. `lib/remotionLambda.ts` builds
@@ -191,11 +227,31 @@ export async function submitRenderJob(
     return;
   }
 
+  if (!isWebUrl(callbackUrl(input.origin))) {
+    // The origin itself is not logged: it came from the request.
+    payload.logger.error(
+      `[renderJob] No render was submitted for sponsorship ${input.sponsorshipId}: its callback URL would not be an absolute https: or http: URL, so Lambda could not report back.`
+    );
+
+    return;
+  }
+
+  let submission: RenderSubmission;
+
+  try {
+    submission = await renderSubmission(input);
+  } catch (error) {
+    payload.logger.error(
+      `[renderJob] Failed to submit a render for sponsorship ${input.sponsorshipId}: ${messageOf(error)}`
+    );
+
+    return;
+  }
+
   const jobId = crypto.randomUUID();
   let claimed = false;
 
   try {
-    const submission = await renderSubmission(input);
     const claim = await claimRenderJob(payload, {
       jobId,
       sponsorship: input.sponsorshipId,
@@ -228,13 +284,25 @@ export async function submitRenderJob(
       `[renderJob] Submitted render ${jobId} for sponsorship ${input.sponsorshipId} (Remotion render ${started.renderId})`
     );
   } catch (error) {
-    // Only a claim this call took is handed back. A claim that threw was
-    // confirmed absent by `claimRenderJob`, and releasing it would only add a
-    // misleading "could not release" line beside the real fault.
-    if (claimed) {
-      await releaseRenderJob(payload, jobId);
+    if (!claimed) {
+      // `claimRenderJob` threw, having confirmed no row exists: nothing was
+      // claimed, so nothing is handed back and no job is named.
+      payload.logger.error(
+        `[renderJob] Failed to submit a render for sponsorship ${input.sponsorshipId}: ${messageOf(error)}`
+      );
+
+      return;
     }
 
+    if (error instanceof RemotionStartError && !error.definite) {
+      payload.logger.error(
+        `[renderJob] Render ${jobId} may have started; keeping its claim for the callback or the stalled-render sweep: ${error.message}`
+      );
+
+      return;
+    }
+
+    await releaseRenderJob(payload, jobId);
     payload.logger.error(
       `[renderJob] Failed to submit render ${jobId} for sponsorship ${input.sponsorshipId}: ${messageOf(error)}`
     );

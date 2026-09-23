@@ -70,6 +70,39 @@ const AWS_REGION_PATTERN = /^[a-z]{2}(-[a-z]+)+-\d+$/;
 /** Longest a Remotion error message may be when it is put in ours. */
 const MAX_REMOTE_MESSAGE_LENGTH = 300;
 
+/**
+ * Every failure `startRemotionRender` throws, with whether it is **definite**:
+ * whether Lambda certainly did not start a render.
+ *
+ * The distinction is the caller's whole decision about its claim on the job.
+ *
+ * - `definite: true`: the request was refused before it was sent, or Lambda
+ *   answered that it did not start one. That covers an invalid region,
+ *   missing credentials, HTTP 4xx (429 included: throttled invokes are not
+ *   run), an `x-amz-function-error`, and a `{ type: "error" }` body. No webhook
+ *   will ever name this job, so its claim can be handed back.
+ * - `definite: false`: the invoke may have run and only the answer was lost.
+ *   That covers a timeout, a network failure, HTTP 5xx, a body that could not
+ *   be read after a 2xx, and a 2xx body that is empty, not JSON, or has no ids.
+ *   A render may be under way, and its webhook will come looking for the job,
+ *   so the claim must stay.
+ *
+ * The message is always `[remotionLambda] …` and never carries a body, a
+ * credential, a prop or a URL.
+ */
+export class RemotionStartError extends Error {
+  readonly definite: boolean;
+
+  constructor(
+    message: string,
+    options: { cause?: unknown; definite: boolean }
+  ) {
+    super(message, { cause: options.cause });
+    this.name = "RemotionStartError";
+    this.definite = options.definite;
+  }
+}
+
 /** One render of the sponsored-video composition, as the Worker asks for it. */
 export interface StartRenderInput {
   composition: string;
@@ -185,7 +218,10 @@ function credentialsOrThrow(): {
   const secretAccessKey = process.env.REMOTION_AWS_SECRET_ACCESS_KEY?.trim();
 
   if (!(accessKeyId && secretAccessKey)) {
-    throw new Error("[remotionLambda] AWS credentials are not set");
+    throw new RemotionStartError(
+      "[remotionLambda] AWS credentials are not set",
+      { definite: true }
+    );
   }
 
   return { accessKeyId, secretAccessKey };
@@ -217,19 +253,29 @@ function remoteMessage(message: unknown): string {
  * A transport failure, named. `AbortSignal.timeout` rejects with a
  * `TimeoutError` both while waiting for the response and while its body is
  * being read, so both land on the same message.
+ *
+ * Never definite: a request that timed out, or whose connection dropped, may
+ * have reached Lambda and started the render.
  */
-function transportError(error: unknown, doing: string): Error {
+function transportError(error: unknown, doing: string): RemotionStartError {
   if (error instanceof Error && error.name === "TimeoutError") {
-    return new Error(
+    return new RemotionStartError(
       `[remotionLambda] Lambda did not answer within ${REQUEST_TIMEOUT_MS} ms`,
-      { cause: error }
+      { cause: error, definite: false }
     );
   }
 
   const name = error instanceof Error ? error.name : "unknown error";
 
-  return new Error(`[remotionLambda] ${doing}: ${name}`, { cause: error });
+  return new RemotionStartError(`[remotionLambda] ${doing}: ${name}`, {
+    cause: error,
+    definite: false,
+  });
 }
+
+/** HTTP statuses that bound "Lambda refused, and ran nothing": the 4xx range. */
+const CLIENT_ERROR_MIN = 400;
+const SERVER_ERROR_MIN = 500;
 
 /**
  * Releases a body that will not be read, best-effort: an unread body holds
@@ -286,13 +332,16 @@ async function invoke(
  * `internalRenderMediaOnLambdaRaw` (76071) takes `renderId` and `bucketName`
  * from what is left. The AWS SDK throws on a non-2xx status; so does this.
  *
- * @throws `[remotionLambda] …`, naming the case, on every failure.
+ * @throws `RemotionStartError`, naming the case and whether it is definite,
+ * on every failure.
  */
 export async function startRemotionRender(
   input: StartRenderInput
 ): Promise<StartedRender> {
   if (!AWS_REGION_PATTERN.test(input.region)) {
-    throw new Error("[remotionLambda] Invalid region");
+    throw new RemotionStartError("[remotionLambda] Invalid region", {
+      definite: true,
+    });
   }
 
   const credentials = credentialsOrThrow();
@@ -300,16 +349,27 @@ export async function startRemotionRender(
 
   if (!response.ok) {
     await discardBody(response);
-    throw new Error(
-      `[remotionLambda] Lambda refused the invoke with HTTP ${response.status} (${awsErrorType(response)})`
+    // A 4xx is Lambda refusing the invoke — throttling, permissions, a
+    // missing function — and nothing ran. A 5xx is Lambda's own fault, and
+    // says nothing about whether the function was already started.
+    throw new RemotionStartError(
+      `[remotionLambda] Lambda refused the invoke with HTTP ${response.status} (${awsErrorType(response)})`,
+      {
+        definite:
+          response.status >= CLIENT_ERROR_MIN &&
+          response.status < SERVER_ERROR_MIN,
+      }
     );
   }
 
   const functionError = response.headers.get("x-amz-function-error");
   if (functionError) {
     await discardBody(response);
-    throw new Error(
-      `[remotionLambda] The Lambda function failed (${functionError.slice(0, MAX_REMOTE_MESSAGE_LENGTH)})`
+    // The start routine threw before answering. It creates the render and
+    // invokes `launch` as its last steps, so a routine that failed did not.
+    throw new RemotionStartError(
+      `[remotionLambda] The Lambda function failed (${functionError.slice(0, MAX_REMOTE_MESSAGE_LENGTH)})`,
+      { definite: true }
     );
   }
 
@@ -320,8 +380,9 @@ export async function startRemotionRender(
     throw transportError(error, "Failed to read Lambda's response");
   }
   if (text.length === 0) {
-    throw new Error(
-      `[remotionLambda] Lambda returned no payload (HTTP ${response.status})`
+    throw new RemotionStartError(
+      `[remotionLambda] Lambda returned no payload (HTTP ${response.status})`,
+      { definite: false }
     );
   }
 
@@ -329,8 +390,9 @@ export async function startRemotionRender(
   try {
     result = JSON.parse(text);
   } catch {
-    throw new Error(
-      "[remotionLambda] The start routine's response is not JSON"
+    throw new RemotionStartError(
+      "[remotionLambda] The start routine's response is not JSON",
+      { definite: false }
     );
   }
 
@@ -342,8 +404,9 @@ export async function startRemotionRender(
   };
 
   if (answer.type === "error") {
-    throw new Error(
-      `[remotionLambda] The start routine failed: ${remoteMessage(answer.message)}`
+    throw new RemotionStartError(
+      `[remotionLambda] The start routine failed: ${remoteMessage(answer.message)}`,
+      { definite: true }
     );
   }
 
@@ -351,8 +414,9 @@ export async function startRemotionRender(
     typeof answer.renderId !== "string" ||
     typeof answer.bucketName !== "string"
   ) {
-    throw new Error(
-      "[remotionLambda] The start routine's response has no renderId and bucketName"
+    throw new RemotionStartError(
+      "[remotionLambda] The start routine's response has no renderId and bucketName",
+      { definite: false }
     );
   }
 

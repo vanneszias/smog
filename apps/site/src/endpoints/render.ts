@@ -14,9 +14,10 @@ import type { Render } from "@/payload-types";
  *
  * ## The body is the evidence, so it has to be signed
  *
- * This is a public URL. It carries a playback id, and what this handler does
- * with a playback id is put the video it names onto a gesture's page. Anyone
- * who can post an accepted body can therefore put any video on any gesture.
+ * This is a public URL. It carries an `outputUrl`, and what this handler does
+ * with it is have Mux ingest the video it points at and put the playback id
+ * Mux hands back onto a gesture's sponsorship. Anyone who can post an accepted
+ * body can therefore put any video on any gesture.
  *
  * That is the opposite situation from `endpoints/mollie.ts`, and the two are
  * worth comparing because they look alike. Mollie does not sign its webhooks,
@@ -36,8 +37,12 @@ import type { Render } from "@/payload-types";
  *
  * ## Exactly one Mux asset per job
  *
- * AWS's delivery contract is at-least-once and Lambda retries any non-2xx, so
- * two callbacks for one render are ordinary rather than exceptional. Two Mux
+ * Delivery is at-least-once: Remotion's `invokeWebhook`
+ * (`@remotion/serverless`, `dist/invoke-webhook.js`) retries any non-2xx or
+ * timeout, for at most three deliveries about 1 s and 2 s apart, each attempt
+ * with a 10 s timeout. So two callbacks for one render are ordinary rather
+ * than exceptional — a slow answer that outlives the 10 s is retried while it
+ * is still running. Two Mux
  * assets are not: only one can ever be referenced, and the other is a bill
  * that arrives every month, for ever, for a video nobody can name.
  *
@@ -70,8 +75,8 @@ import type { Render } from "@/payload-types";
  * The claim carries **no expiry**, and that is load-bearing rather than a
  * default. `endpoints/jobs.ts` leases its claim, because a runner that dies
  * must not stop the queue for ever. A completion claim that expired would let
- * a Lambda retry — AWS's delivery contract is at-least-once — upload the same
- * render again once the lease lapsed, which is the second Mux asset and the
+ * a retried delivery — Remotion's `invokeWebhook` is at-least-once — upload
+ * the same render again once the lease lapsed, which is the second Mux asset and the
  * monthly bill this whole mechanism exists to prevent. A render job id is used
  * once, so nothing legitimate ever needs the row back.
  *
@@ -119,6 +124,9 @@ import type { Render } from "@/payload-types";
  * - **Mux could not be asked** answers 502, and hands the claim back. A
  *   timeout, a 503 or a rate limit says nothing about the render, and
  *   swallowing it would throw away a composite that cost real money to make.
+ *   The retry is Remotion's, and it is short: at most three deliveries in
+ *   all, about 1 s and 2 s apart. A Mux outage longer than that leaves the
+ *   render `uploading`, for the stalled-render sweep to report.
  */
 
 /**
@@ -275,7 +283,7 @@ function ourJobId(customData: unknown): null | string {
  * A `success` with no `outputUrl` is **not** a parse failure: Lambda said the
  * render finished, which is a fact worth recording, and there is simply
  * nothing to upload. It becomes a failed render with that as its reason,
- * rather than a 400 that Lambda would retry for ever.
+ * rather than a 400 that Remotion would deliver twice more to no effect.
  */
 function parseReport(raw: string): null | RenderReport {
   let parsed: unknown;
@@ -364,7 +372,7 @@ const completionClaim = (jobId: string) =>
   ({ key: jobId, kind: CLAIM_KINDS.renderCompletion }) as const;
 
 /**
- * Gives the lock back, so the retry Lambda is about to make can finish the job.
+ * Gives the lock back, so the retry Remotion is about to make can finish the job.
  *
  * A claim that outlives the work it covers is worse than no claim at all: the
  * row says this callback was handled, so the retry that would have completed
@@ -635,8 +643,9 @@ const renderCallback: PayloadHandler = async (
      * request may have arrived and the asset been made, with only the answer
      * lost — so handing the claim back can orphan a billed asset, and the
      * retry can make a second. It is handed back anyway, because without it
-     * the retry this 502 asks for is turned away as a replay and the
-     * composite is lost outright; what a timeout adds is a log line naming
+     * the retry this 502 asks for — Remotion's `invokeWebhook` makes at most
+     * two more deliveries, about 1 s and 2 s later — is turned away as a
+     * replay and the composite is lost outright; what a timeout adds is a log line naming
      * the passthrough, so the possible orphan can be found in Mux and
      * deleted.
      */

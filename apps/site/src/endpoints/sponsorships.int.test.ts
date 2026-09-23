@@ -13,6 +13,7 @@ import {
 } from "vitest";
 import { sponsorshipAmountCents } from "@/lib/pricing";
 import * as remotionLambda from "@/lib/remotionLambda";
+import * as renderJobModule from "@/lib/renderJob";
 import {
   decodeSponsorDraft,
   MAX_LOGO_BYTES,
@@ -1488,6 +1489,43 @@ describe("the sponsor wizard, steps 2 and 3", () => {
     expect(failed[0]).toContain(`sponsorship ${rows[0]?.id}`);
     expect(failed[0]).toContain("AccessDeniedException");
     expect(failed[0]).not.toContain("token=");
+  });
+
+  it("completes the checkout even if submitRenderJob itself throws", async () => {
+    /*
+     * `submitRenderJob` catches its own failures, so this is the second line:
+     * the `catch` in `submitRenders` is what stands between a fault there (a
+     * logger that throws, say) and the sponsor's redirect to Mollie. Without
+     * this test, deleting that `catch` passes the whole suite.
+     */
+    const gestures = await newGestures(1, "render-second-line");
+    const ids = gestures.map((gesture) => gesture.id);
+    const submit = vi
+      .spyOn(renderJobModule, "submitRenderJob")
+      .mockRejectedValueOnce(new Error("[renderJob] a fault it did not catch"));
+    const errors = vi.spyOn(payload.logger, "error");
+
+    let response: Response;
+    let logged: string[] = [];
+    let submitted = 0;
+
+    try {
+      response = await formPost(CHECKOUT_PATH, goodDetails(), ids);
+    } finally {
+      // Read before restoring: `mockRestore` clears the recorded calls.
+      logged = errors.mock.calls.map((call) => JSON.stringify(call));
+      submitted = submit.mock.calls.length;
+      errors.mockRestore();
+      submit.mockRestore();
+    }
+
+    expect(submitted).toBe(1);
+    expect(response.status).toBe(303);
+    expect(destination(response)).toContain("https://www.mollie.com/checkout/");
+    expect(await rowsFor(ids)).toHaveLength(1);
+    expect(
+      logged.filter((line) => line.includes("No render could be submitted"))
+    ).toHaveLength(1);
   });
 
   it("completes the checkout when the render cannot even be prepared", async () => {

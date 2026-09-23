@@ -4,9 +4,10 @@
  * ## What this protects
  *
  * `POST /api/render/callback` is a public URL that a third party — Remotion
- * Lambda, running in AWS — posts to. It carries a Mux playback id, and what
- * the application does with that playback id is put the video it names on a
- * public page in place of the one that is there. Anyone who can post an
+ * Lambda, running in AWS — posts to. It carries an `outputUrl`, and what the
+ * application does with it is have Mux ingest that video and attach the
+ * playback id Mux returns to a sponsorship, whose video is what a public page
+ * then shows. Anyone who can post an
  * accepted body can therefore put any video on any gesture. There is no
  * session, no origin and no source address to lean on: AWS Lambda posts from
  * wherever it likes, with no `Origin` header, exactly as Mollie's webhook
@@ -35,8 +36,7 @@
  * an attacker can compute the signature for `body || padding || anything`
  * without the secret at all. HMAC exists precisely to close that, and this is
  * a case where an appended suffix would matter — a JSON body with a second
- * `muxPlaybackId` after the padding is exactly the forgery that swaps the
- * video. `renderSignature.test.ts` pins the construction with a published
+ * `outputUrl` after the padding is exactly the forgery that swaps the video. `renderSignature.test.ts` pins the construction with a published
  * known-answer vector rather than asserting the string "HMAC" appears
  * somewhere.
  *

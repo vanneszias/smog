@@ -49,17 +49,21 @@ function remotionSignature(body: string, secret: string): string {
   return `sha512=${createHmac("sha512", secret).update(body).digest("hex")}`;
 }
 
+/** A trimmed Remotion success webhook: what the handler acts on. */
 const BODY = JSON.stringify({
-  jobId: "render-1234",
-  muxPlaybackId: "pb-composed",
-  state: "ready",
+  type: "success",
+  renderId: "8l1xk2p3qz",
+  customData: { jobId: "render-1234" },
+  outputUrl:
+    "https://s3.eu-central-1.amazonaws.com/remotionlambda-eucentral1-abcdef1234/renders/8l1xk2p3qz/out.mp4",
 });
 
 /** The same fields, one value changed — what a forger would want accepted. */
 const TAMPERED = JSON.stringify({
-  jobId: "render-1234",
-  muxPlaybackId: "pb-attacker-controlled",
-  state: "ready",
+  type: "success",
+  renderId: "8l1xk2p3qz",
+  customData: { jobId: "render-1234" },
+  outputUrl: "https://attacker.example/any-video-at-all.mp4",
 });
 
 /** A sibling module's source, for the assertion that reads one. */
@@ -78,9 +82,9 @@ describe("the render callback signature", () => {
   });
 
   it("refuses a body that was altered after signing", async () => {
-    // The whole point: the playback id in the body decides which video a
-    // public page plays, so a body that changed on the way is a different
-    // instruction wearing a valid envelope.
+    // The whole point: the `outputUrl` in the body decides which video Mux
+    // ingests and so which video the sponsorship gets, so a body that changed
+    // on the way is a different instruction wearing a valid envelope.
     const signature = await signRenderCallback(BODY, SECRET);
 
     expect(await verifyRenderCallback(TAMPERED, signature, SECRET)).toBe(false);
@@ -322,8 +326,8 @@ describe("the render callback signature", () => {
     /*
      * The failure mode this whole arrangement exists for, made visible: a
      * verifier configured for the wrong scheme refuses every genuine callback.
-     * Better to see it here, in three assertions, than in Task 6 against a
-     * deployed Lambda.
+     * Better to see it here, in three assertions, than against a deployed
+     * Lambda.
      *
      * All three parts of a scheme are load-bearing, so all three are
      * exercised: the hash (a SHA-256 hex is not a SHA-512 one), the prefix (the
@@ -364,7 +368,7 @@ describe("the render callback signature", () => {
      * `SHA-256(secret || body)` would satisfy every other test in this file
      * while being forgeable without the secret — SHA-256 is Merkle–Damgård,
      * so a valid pair yields a signature for `body || padding || anything`.
-     * Here that suffix is a second `muxPlaybackId`, which is precisely the
+     * Here that suffix is a second `outputUrl`, which is precisely the
      * video swap this signature exists to prevent.
      */
     expect(

@@ -17,6 +17,7 @@ import {
   vi,
 } from "vitest";
 import * as remotionLambda from "@/lib/remotionLambda";
+import { RemotionStartError } from "@/lib/remotionLambda";
 import { renderSubmission, submitRenderJob } from "@/lib/renderJob";
 
 /*
@@ -31,6 +32,12 @@ import { renderSubmission, submitRenderJob } from "@/lib/renderJob";
  * file with that file's mock bound into it, and a second `vi.mock` factory
  * would hand this file a function nothing calls. A spy patches the one shared
  * module every importer reads through.
+ *
+ * That relies on Vitest's transformed module namespace being writable, which
+ * it is under this config (Vite's SSR transform, `node` and `jsdom`
+ * environments). It would not hold under native ESM, where a namespace's
+ * bindings are read-only, or in Vitest's browser mode; there, `vi.mock` with
+ * `isolate: true` for these files is the way back.
  */
 let startRender: MockInstance<typeof remotionLambda.startRemotionRender>;
 
@@ -483,8 +490,9 @@ describe("submitting a configured render job", () => {
     expect(renders).toEqual([]);
     expect(startRender).not.toHaveBeenCalled();
     expect(logger.error).toHaveBeenCalledTimes(1);
+    // No job id is named: none was minted, because none was ever claimed.
     expect(String(logger.error.mock.calls[0]?.[0])).toMatch(
-      /^\[renderJob\] Failed to submit render .+ for sponsorship 42: \[mux\] /
+      /^\[renderJob\] Failed to submit a render for sponsorship 42: \[mux\] /
     );
   });
 
@@ -521,8 +529,107 @@ describe("submitting a configured render job", () => {
     expect(startRender).not.toHaveBeenCalled();
     expect(payload.delete).not.toHaveBeenCalled();
     expect(logger.error).toHaveBeenCalledTimes(1);
-    expect(String(logger.error.mock.calls[0]?.[0])).toContain(
-      "D1 is unreachable"
+    expect(logger.error.mock.calls[0]?.[0]).toBe(
+      "[renderJob] Failed to submit a render for sponsorship 42: D1 is unreachable"
+    );
+  });
+
+  it.each([
+    [
+      "HTTP 403",
+      "[remotionLambda] Lambda refused the invoke with HTTP 403 (AccessDeniedException)",
+    ],
+    [
+      "HTTP 429",
+      "[remotionLambda] Lambda refused the invoke with HTTP 429 (TooManyRequestsException)",
+    ],
+  ])("hands the claim back when Lambda definitely did not start (%s)", async (_name, message) => {
+    // Lambda refused the invoke, so no render exists and no webhook will ever
+    // name this job: a `queued` row would only wait for the sweep to fail it.
+    const { logger, payload, renders } = fakePayload();
+
+    startRender.mockRejectedValue(
+      new RemotionStartError(message, { definite: true })
+    );
+
+    await expect(submitRenderJob(payload, input())).resolves.toBeUndefined();
+
+    const jobId = startRender.mock.calls[0]?.[0].webhook.customData.jobId;
+
+    expect(renders).toEqual([]);
+    expect(logger.error.mock.calls).toEqual([
+      [
+        `[renderJob] Failed to submit render ${jobId} for sponsorship 42: ${message}`,
+      ],
+    ]);
+  });
+
+  it.each([
+    ["a timeout", "[remotionLambda] Lambda did not answer within 30000 ms"],
+    [
+      "HTTP 503",
+      "[remotionLambda] Lambda refused the invoke with HTTP 503 (ServiceException)",
+    ],
+  ])("keeps the claim when Lambda may have started the render (%s)", async (_name, message) => {
+    /*
+     * The start may have been accepted and only the answer lost. Handing the
+     * claim back would turn that render's webhook into "a job this
+     * application never submitted" — paid for and thrown away. Kept, the row
+     * stays `queued`: a late webhook settles it, and the stalled-render sweep
+     * fails it if none ever comes.
+     */
+    const { logger, payload, renders } = fakePayload();
+
+    startRender.mockRejectedValue(
+      new RemotionStartError(message, { definite: false })
+    );
+
+    await expect(submitRenderJob(payload, input())).resolves.toBeUndefined();
+
+    const jobId = startRender.mock.calls[0]?.[0].webhook.customData.jobId;
+
+    expect(renders).toHaveLength(1);
+    expect(renders[0]?.jobId).toBe(jobId);
+    expect(renders[0]?.state).toBe("queued");
+    expect(payload.delete).not.toHaveBeenCalled();
+    expect(logger.error.mock.calls).toEqual([
+      [
+        `[renderJob] Render ${jobId} may have started; keeping its claim for the callback or the stalled-render sweep: ${message}`,
+      ],
+    ]);
+  });
+
+  it.each([
+    ["an empty origin", ""],
+    ["a relative origin", "/somewhere"],
+    ["a non-web scheme", "ftp://smog.example"],
+    ["a javascript: origin", "javascript:alert(1)//"],
+  ])("refuses before claiming when the callback URL is not absolute http(s): %s", async (_name, origin) => {
+    // Lambda would post its result to nowhere, so the render would be paid
+    // for and never settled.
+    const { logger, payload, renders } = fakePayload();
+
+    await expect(
+      submitRenderJob(payload, input({ origin }))
+    ).resolves.toBeUndefined();
+
+    expect(renders).toEqual([]);
+    expect(startRender).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(String(logger.error.mock.calls[0]?.[0])).toMatch(
+      /^\[renderJob\] No render was submitted for sponsorship 42: .*callback URL/
+    );
+  });
+
+  it("accepts a plain http callback origin, as local development has", async () => {
+    // The positive beside the refusals above.
+    const { payload, renders } = fakePayload();
+
+    await submitRenderJob(payload, input({ origin: "http://localhost:3003" }));
+
+    expect(renders).toHaveLength(1);
+    expect(startRender.mock.calls[0]?.[0].webhook.url).toBe(
+      "http://localhost:3003/render/callback"
     );
   });
 });
