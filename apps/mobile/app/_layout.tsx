@@ -1,8 +1,10 @@
 import "../global.css";
 
 import { ToastProvider } from "@smog/ui-native";
+import { isRunningInExpoGo } from "expo";
 import { getLocales } from "expo-localization";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { View } from "react-native";
 import {
@@ -27,6 +29,24 @@ import { SessionProvider } from "@/lib/session";
  * mounts, same as `@react-navigation`'s own setup docs.
  */
 enableScreens();
+
+/**
+ * The splash screen hides on its own: nothing here holds back the first
+ * frame (the session, consent and locale all resolve after the navigator
+ * has rendered, and each screen shows its own loading state meanwhile), so
+ * expo-router's default — hide once the first route has rendered — is
+ * already "when the app is ready". There is deliberately no
+ * `preventAutoHideAsync()`; add one, with a matching `hideAsync()`, only if
+ * something ever gates that first render.
+ *
+ * What this does set is how it leaves: a short cross-fade from the green
+ * splash into the first screen, instead of iOS's default hard cut (Android
+ * always fades; `duration` shortens its 400 ms default to match). Expo Go
+ * ignores these options and warns about them, so it is skipped there.
+ */
+if (!isRunningInExpoGo()) {
+  SplashScreen.setOptions({ duration: 200, fade: true });
+}
 
 /**
  * Seeds `lib/i18n.ts`'s active locale from the device's own preferred

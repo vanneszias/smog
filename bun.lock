@@ -30,6 +30,7 @@
         "expo-localization": "~55.0.19",
         "expo-router": "~55.0.18",
         "expo-secure-store": "~55.0.18",
+        "expo-splash-screen": "~55.0.25",
         "expo-system-ui": "~55.0.22",
         "expo-updates": "~55.0.31",
         "expo-video": "~55.0.21",
@@ -2213,6 +2214,8 @@
     "expo-secure-store": ["expo-secure-store@55.0.18", "", { "peerDependencies": { "expo": "*" } }, "sha512-shKZYQf7/KA45Z3oEIXUkXdrfRNFxsc+fJC182bbpuKqS4nLPZslsJUqruQ937Zkkbev126N/QJv+zmd6FpZjA=="],
 
     "expo-server": ["expo-server@55.0.12", "", {}, "sha512-yuNHbxobUKCXWn9Z/H+lgYk6heXEFub6q1h8Yo9kCLxgL2afluWZ/YylbtxgHgmFwDVUmi6milQYfL+wwQMlzw=="],
+
+    "expo-splash-screen": ["expo-splash-screen@55.0.25", "", { "dependencies": { "@expo/prebuild-config": "^55.0.22" }, "peerDependencies": { "expo": "*" } }, "sha512-Jl3VPbNqbgGjXlkH93hi4Y4p6GB5DasLNbpL2Gb4kl8grujKaIGi4rXL25qYbYxIzefSlt96NqG9czanxxooPg=="],
 
     "expo-structured-headers": ["expo-structured-headers@55.0.2", "", {}, "sha512-KITovrWigTOtsII5hRQ9/3ydaNcxCux5g6O+eTPLyjnye9dpkDKl5GmCLVPVKIL/d7253OtbGtWMD4m0gha5pw=="],
 

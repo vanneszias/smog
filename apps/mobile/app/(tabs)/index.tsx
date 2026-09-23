@@ -10,6 +10,7 @@ import {
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useFavorites } from "@/data/favorites";
 import { useCategories, useGestures } from "@/data/gestures";
 
@@ -74,6 +75,7 @@ export default function GesturesScreen() {
 
   return (
     <View className="flex-1 gap-md bg-background p-lg">
+      <BrandLogo />
       <View className="flex-row items-center justify-between">
         <Text size="xl" variant="heading">
           Gebaren

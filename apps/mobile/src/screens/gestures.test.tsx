@@ -2,10 +2,12 @@ import {
   act,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
+import { useColorScheme } from "nativewind";
 import { SessionProvider } from "@/lib/session";
 import GesturesScreen from "../../app/(tabs)/index";
 
@@ -176,5 +178,75 @@ describe("the gestures screen", () => {
     // The first page's own gesture is still there — this is
     // accumulation, not replacement.
     expect(screen.getByText("Een")).toBeOnTheScreen();
+  });
+});
+
+describe("the gestures screen's logo", () => {
+  const GREEN_LOGO = require("../../assets/logo-green.png");
+  const WHITE_LOGO = require("../../assets/logo-white.png");
+
+  beforeEach(() => {
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+    global.fetch = jest.fn(() => json(PAGE)) as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    const { result } = renderHook(() => useColorScheme());
+    act(() => result.current.setColorScheme("system"));
+  });
+
+  /* Two identical sources would pass both variant tests below. */
+  it("has a distinct asset per colour", () => {
+    expect(GREEN_LOGO).not.toEqual(WHITE_LOGO);
+  });
+
+  it("shows the logo as a labelled image", async () => {
+    renderScreen();
+
+    const logo = await screen.findByLabelText("SMOG & Co");
+
+    expect(logo).toBeOnTheScreen();
+    expect(logo.props.accessibilityRole).toBe("image");
+    await screen.findByText("Hallo");
+  });
+
+  it("uses the green logo in light mode", async () => {
+    const { result } = renderHook(() => useColorScheme());
+    act(() => result.current.setColorScheme("light"));
+
+    renderScreen();
+
+    expect((await screen.findByLabelText("SMOG & Co")).props.source).toEqual(
+      GREEN_LOGO
+    );
+    await screen.findByText("Hallo");
+  });
+
+  it("uses the white logo in dark mode", async () => {
+    const { result } = renderHook(() => useColorScheme());
+    act(() => result.current.setColorScheme("dark"));
+
+    renderScreen();
+
+    expect((await screen.findByLabelText("SMOG & Co")).props.source).toEqual(
+      WHITE_LOGO
+    );
+    await screen.findByText("Hallo");
+  });
+
+  it("switches colour when the theme changes while it is on screen", async () => {
+    const { result } = renderHook(() => useColorScheme());
+    act(() => result.current.setColorScheme("light"));
+
+    renderScreen();
+    await screen.findByText("Hallo");
+
+    act(() => result.current.setColorScheme("dark"));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("SMOG & Co").props.source).toEqual(
+        WHITE_LOGO
+      )
+    );
   });
 });
