@@ -157,7 +157,20 @@ export function useGestures(
   return { data, error, loading, refetch };
 }
 
-/** `GET /api/gestures/:id?depth=1` — an ordinary read; see the module note. */
+/** A gesture's primary key, the only kind of id the site ever issues. */
+const GESTURE_ID = /^\d+$/;
+
+/**
+ * `GET /api/gestures/:id?depth=1` — an ordinary read; see the module note.
+ *
+ * An id that is not all digits is answered as not found without a request.
+ * The id is whatever a link put in the URL, a gesture link from outside the
+ * app included, and `payloadFetch` resolves its path with `new URL`, which
+ * collapses a `.` or `..` segment (encoded or not): `..` would fetch
+ * `/api/`, and `.` the gesture *list*, which this hook would then render as
+ * one nameless gesture. Every id this app itself navigates with comes from
+ * the API and is numeric, so nothing real is turned away.
+ */
 export function useGesture(id: string): HookResult<GestureSummary> {
   const [data, setData] = useState<GestureSummary | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
@@ -166,17 +179,19 @@ export function useGesture(id: string): HookResult<GestureSummary> {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: see useGestures's identical note above.
   useEffect(() => {
+    if (!GESTURE_ID.test(id)) {
+      setData(null);
+      setError(new ApiError("Not Found", 404));
+      setLoading(false);
+
+      return;
+    }
+
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    /*
-     * Encoded, because the id is whatever a link put in the URL — a gesture
-     * link from outside the app included — and an id carrying `../` must
-     * stay one path segment rather than steer a signed-in request somewhere
-     * else on the API.
-     */
-    payloadFetch<RawGesture>(`/gestures/${encodeURIComponent(id)}?depth=1`, {
+    payloadFetch<RawGesture>(`/gestures/${id}?depth=1`, {
       locale: currentLocale(),
     }).then(
       (raw) => {

@@ -157,18 +157,27 @@ describe("useGesture", () => {
     expect(url).toContain("depth=1");
   });
 
-  it("keeps an id from a link to one path segment", async () => {
+  it.each([
+    ".",
+    "..",
+    "%2E%2E",
+    "../users/me",
+    "abc",
+    "",
+  ])("answers the id %j as not found without a request", async (id) => {
     global.fetch = jest.fn(() =>
-      json({ errors: [{ message: "Not Found" }] }, 404)
+      json({ docs: [], totalDocs: 0 })
     ) as unknown as typeof fetch;
 
-    renderHook(() => useGesture("../users/me"));
+    const { result } = renderHook(() => useGesture(id));
 
-    await waitFor(() => expect(fetchMock()).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
-    const [url] = fetchMock().mock.calls[0];
-
-    expect(url).toContain("/api/gestures/..%2Fusers%2Fme?");
+    // `payloadFetch` resolves paths with `new URL`, so `..` would have
+    // fetched `/api/` and `.` the gesture list.
+    expect(fetchMock()).not.toHaveBeenCalled();
+    expect(result.current.data).toBeNull();
+    expect(result.current.error?.status).toBe(404);
   });
 
   it("surfaces a 404 as an error rather than a crash", async () => {

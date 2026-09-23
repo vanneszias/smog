@@ -40,7 +40,7 @@ function launchWith(initialUrl: string): ReturnType<typeof renderRouter> {
       },
       "(tabs)/_layout": () => <Tabs screenOptions={{ headerShown: false }} />,
       "(tabs)/index": () => <Text testID="home">home</Text>,
-      "(tabs)/search": () => <Text>search</Text>,
+      "(tabs)/search": () => <Text testID="search">search</Text>,
       "gestures/[id]": () => (
         <Pressable onPress={() => router.back()} testID="back">
           <Text testID="gesture">gesture</Text>
@@ -80,6 +80,13 @@ describe("launching the app from a link", () => {
 
     expect(app.getPathname()).toBe("/");
     expect(screen.getByTestId("home")).toBeTruthy();
+  });
+
+  it("opens a link to the gesture list on the search tab", () => {
+    const app = launchWith("https://app.smog.vlaanderen/nl/gestures?q=hallo");
+
+    expect(app.getPathname()).toBe("/search");
+    expect(screen.getByTestId("search")).toBeTruthy();
   });
 
   it("still opens on the home tab when launched without a link", () => {

@@ -42,6 +42,42 @@ describe("redirectSystemPath", () => {
     expect(redirect(`${ORIGIN}/nl/gestures/abc`)).toBe("/gestures/abc");
   });
 
+  it.each([
+    `${ORIGIN}/nl/gestures`,
+    `${ORIGIN}/nl/gestures/`,
+    `${ORIGIN}/en/gestures?q=hallo`,
+    `${ORIGIN}/fr/gestures/?q=bonjour&page=2`,
+    "/nl/gestures?q=hallo",
+  ])("opens the gesture list %s on the search tab", (path) => {
+    // The search screen reads no parameters, so `q` has nowhere to go.
+    expect(redirect(path)).toBe("/search");
+  });
+
+  it.each([
+    `${ORIGIN}/nl/gestures/12/video`,
+    `${ORIGIN}/en/gestures/12/extra/deep?x=1`,
+    "/fr/gestures/a/b",
+  ])("sends %s, which the app has no screen for, home", (path) => {
+    expect(redirect(path)).toBe("/");
+  });
+
+  it.each([
+    ".",
+    "..",
+    "%2E",
+    "%2E%2E",
+    "%2e.",
+  ])("sends the dot-segment id %s home rather than to the gesture screen", (id) => {
+    expect(redirect(`${ORIGIN}/nl/gestures/${id}`)).toBe("/");
+    expect(redirect(`${ORIGIN}/nl/gestures/${id}?x=1`)).toBe("/");
+  });
+
+  it("does not throw on a malformed escape in the id", () => {
+    expect(redirect(`${ORIGIN}/nl/gestures/%E0%A4%A`)).toBe(
+      "/gestures/%E0%A4%A"
+    );
+  });
+
   it("does not navigate for the Google sign-in return", () => {
     // `openAuthSessionAsync` consumes this URL; routing it as well would put
     // the unmatched-route screen over the sign-in being finished.
@@ -56,10 +92,9 @@ describe("redirectSystemPath", () => {
     "smogmobile://gestures/12",
     "smogmobile://settings",
     `${ORIGIN}/nl`,
-    `${ORIGIN}/nl/gestures`,
+    `${ORIGIN}/nl/gesturesx/12`,
     `${ORIGIN}/nl/favorites`,
     `${ORIGIN}/de/gestures/12`,
-    `${ORIGIN}/nl/gestures/12/video`,
     `${ORIGIN}/api/gestures/12`,
     "https://example.com/nl/gestures/12",
     "http://app.smog.vlaanderen/nl/gestures/12",
