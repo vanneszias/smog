@@ -5,6 +5,12 @@
  * `apps/site` (which submits renders of it to Remotion Lambda) must agree on,
  * so a rename on either side is a typecheck failure rather than a render that
  * fails at Lambda's own validation.
+ *
+ * `apps/site` imports it as `@smog/types/render`, not from the package root,
+ * and this file must stay free of imports. Payload's `generate:types` and
+ * `migrate` load the config under Node, and the root barrel's runtime
+ * re-exports (`export * from "./presets"`) fail there with `ENOENT … .ts?
+ * namespace=…`; a self-contained leaf module loads cleanly.
  */
 
 /** The one composition `apps/render` registers and `apps/site` renders. */

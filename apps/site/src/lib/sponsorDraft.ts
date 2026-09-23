@@ -24,7 +24,7 @@
  * therefore the sponsor name's 35, not the API's more generous 100.
  */
 
-import { SPONSOR_NAME_MAX_LENGTH } from "@smog/types";
+import { SPONSOR_NAME_MAX_LENGTH } from "@smog/types/render";
 
 /**
  * The sponsor name, which is also the overlay text. 35 is the shipped cap.

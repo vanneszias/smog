@@ -1,5 +1,5 @@
-import type { SponsoredVideoInputProps } from "@smog/types";
-import { SPONSORED_VIDEO_COMPOSITION_ID } from "@smog/types";
+import type { SponsoredVideoInputProps } from "@smog/types/render";
+import { SPONSORED_VIDEO_COMPOSITION_ID } from "@smog/types/render";
 import type { Payload } from "payload";
 import { signedMuxSourceUrl } from "@/lib/mux";
 
