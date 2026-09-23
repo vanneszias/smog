@@ -22,9 +22,11 @@ const GESTURE_PAGE = new RegExp(
  * gets the detail screen's own load error, as a stale link would.
  *
  * The Google sign-in return, {@link REDIRECT_URI}, answers `null`, which
- * tells expo-router not to navigate at all. `openAuthSessionAsync` is the
- * only thing that URL is for (`lib/google.ts`), and on Android it also
- * arrives as an ordinary incoming link: routed, it would open the unmatched
+ * tells expo-router not to navigate at all. That URL belongs to
+ * `openAuthSessionAsync` (`lib/google.ts`), which consumes it to finish the
+ * sign-in, but on Android it also arrives as an ordinary incoming link.
+ * Returned unchanged, expo-router would navigate to it — to
+ * `/auth-callback`, which is no route in this app — and open the unmatched
  * route screen over the sign-in the app is in the middle of finishing.
  *
  * Every other URL is returned unchanged, for expo-router to route as it

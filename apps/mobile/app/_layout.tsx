@@ -31,6 +31,20 @@ import { SessionProvider } from "@/lib/session";
 enableScreens();
 
 /**
+ * The tabs sit beneath every screen the root stack pushes, including one the
+ * app was launched straight into. A gesture link that cold-starts the app
+ * (`app/+native-intent.tsx`) opens `/gestures/<id>` directly; without an
+ * anchor that screen would be alone on the stack, and its "Terug" button
+ * would have nowhere to go back to. With it, expo-router puts `(tabs)` under
+ * the deep-linked screen, so back lands on the home tab.
+ *
+ * `anchor` is SDK 55's name for what was `initialRouteName`
+ * (`getRoutesCore.js` in expo-router reads both). It changes nothing for an
+ * ordinary launch, which opens on `(tabs)` anyway.
+ */
+export const unstable_settings = { anchor: "(tabs)" };
+
+/**
  * The splash screen hides on its own: nothing here holds back the first
  * frame (the session, consent and locale all resolve after the navigator
  * has rendered, and each screen shows its own loading state meanwhile), so
