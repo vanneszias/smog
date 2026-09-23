@@ -54,7 +54,8 @@ Read this before scheduling anything; it is what users will notice.
 - **Existing links keep working, one hop later.** The previous website's
   unprefixed URLs redirect (308) to their Dutch replacements, query string
   kept: `/gestures/<id>` looks the export's `_id` up as the imported
-  gesture's `legacyId` and lands on its page, or on the gesture list when no
+  gesture's `legacyId` and lands on its page, or — temporarily (307), so a
+  gesture published later is still found — on the gesture list when no
   active gesture matches; `/favorites`, `/privacy`, `/sponsor`, `/login` and
   the rest are fixed rows (`apps/site/src/lib/legacyRedirects.ts`,
   `apps/site/src/endpoints/legacy.ts`). Lists were not imported, so

@@ -321,7 +321,7 @@ export default buildConfig({
    *
    * `legacyEndpoints` adds `GET` and `HEAD /api/legacy/gestures/:id`,
    * reached at `/gestures/:id`: the previous website's gesture URL, answered
-   * with a 308 to the gesture's page or to the list. See
+   * with a 308 to the gesture's page or a 307 to the list. See
    * `endpoints/legacy.ts`.
    */
   endpoints: [

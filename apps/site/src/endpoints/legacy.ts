@@ -65,10 +65,14 @@ async function findActiveGestureId(
   return byLegacyId.docs[0]?.id ?? null;
 }
 
-function permanentRedirect(location: string, cacheControl: string): Response {
+function redirect(
+  status: 307 | 308,
+  location: string,
+  cacheControl: string
+): Response {
   return new Response(null, {
     headers: { "Cache-Control": cacheControl, Location: location },
-    status: 308,
+    status,
   });
 }
 
@@ -84,14 +88,17 @@ function permanentRedirect(location: string, cacheControl: string): Response {
  * Payload graph, while a handler here rides on the REST entry that already
  * carries it.
  *
- * Every answer is a 308, with the request's query string kept:
+ * Every answer is a redirect with the request's query string kept:
  *
- * - an active gesture → its page in the default locale. The mapping from an
- *   old id to a new one never changes, so the answer may be cached for a day;
- * - anything else — unknown, inactive, malformed → the gesture list. That is
- *   `no-store`, because a gesture that is inactive today (an imported one
- *   still waiting for an editor, say) may be published tomorrow, and a
- *   browser that had cached the list as the answer would never find it.
+ * - an active gesture → a 308 to its page in the default locale. The mapping
+ *   from an old id to a new one never changes, so the answer is permanent
+ *   and may be cached for a day;
+ * - anything else — unknown, inactive, malformed → a 307 to the gesture
+ *   list, `no-store`. Temporary on purpose: a gesture that is inactive today
+ *   (an imported one still waiting for an editor, say) may be published
+ *   tomorrow, and a permanent redirect to the list would be cached by
+ *   browsers and taken by search engines as the old URL's new home, so the
+ *   gesture would never be found there again.
  *
  * Nothing here throws for an id it does not recognise; a database failure
  * still does, and surfaces as Payload's own error response.
@@ -104,10 +111,11 @@ const redirectLegacyGesture: PayloadHandler = async (req) => {
   const gestureId = id === "" ? null : await findActiveGestureId(req, id);
 
   if (gestureId === null) {
-    return permanentRedirect(`${GESTURES}${search}`, "no-store");
+    return redirect(307, `${GESTURES}${search}`, "no-store");
   }
 
-  return permanentRedirect(
+  return redirect(
+    308,
     `${GESTURES}/${gestureId}${search}`,
     "public, max-age=86400"
   );

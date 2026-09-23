@@ -121,9 +121,11 @@ describe("GET /api/legacy/gestures/:id", () => {
     expect((await get(`active-${RUN}`, "?ref=qr&x=1")).location).toBe(
       `/nl/gestures/${activeId}?ref=qr&x=1`
     );
-    expect((await get(`unknown-${RUN}`, "?ref=qr")).location).toBe(
-      "/nl/gestures?ref=qr"
-    );
+    expect(await get(`unknown-${RUN}`, "?ref=qr")).toEqual({
+      cache: "no-store",
+      location: "/nl/gestures?ref=qr",
+      status: 307,
+    });
   });
 
   it.each([
@@ -133,11 +135,21 @@ describe("GET /api/legacy/gestures/:id", () => {
     ["a numeric id nothing has", () => "999999999999999"],
     ["an id no gesture URL was ever built with", () => "not an id!"],
     ["an absurdly long id", () => "a".repeat(500)],
-  ])("sends %s to the list, uncached", async (_label, id) => {
+  ])("sends %s to the list, temporarily and uncached", async (_label, id) => {
+    // A 307, not a 308: an inactive gesture may be published later, and a
+    // permanent redirect would be cached as the old URL's answer for good.
     expect(await get(id())).toEqual({
       cache: "no-store",
       location: "/nl/gestures",
-      status: 308,
+      status: 307,
+    });
+  });
+
+  it("answers a HEAD for an unknown id the same way", async () => {
+    expect(await get(`unknown-${RUN}`, "", "HEAD")).toEqual({
+      cache: "no-store",
+      location: "/nl/gestures",
+      status: 307,
     });
   });
 });

@@ -200,11 +200,11 @@ const nextConfig: NextConfig = {
        * backend issued, so where it goes takes a lookup, and a lookup that
        * reads Payload belongs on Payload's REST entry for the bundle reason
        * above: `src/endpoints/legacy.ts` answers with a 308 to the gesture's
-       * page, or to the list when nothing matches.
+       * page, or a 307 to the list when nothing matches.
        *
        * Only the unprefixed path: `/{locale}/gestures/<id>` does not match
-       * `/gestures/:id`, so the real pages are never rewritten and the 308
-       * they are the target of cannot loop. And nothing in `app/` is a
+       * `/gestures/:id`, so the real pages are never rewritten and the
+       * redirect they are the target of cannot loop. And nothing in `app/` is a
        * static page at `/gestures/<id>`, while afterFiles rewrites are
        * checked before dynamic routes, so `[locale]` never gets to read
        * `gestures` as a locale. `src/lib/legacyRedirects.test.ts` pins the
