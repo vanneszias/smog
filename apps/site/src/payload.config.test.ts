@@ -59,6 +59,9 @@ describe.skipIf(!process.env.PAYLOAD_SECRET)(
       const icons = meta.icons as { url: string }[];
 
       expect(meta.titleSuffix).toBe("— SMOG & Co");
+      // No image: the admin resolves relative URLs against localhost.
+      expect(meta.defaultOGImageType).toBe("off");
+      expect(meta.openGraph).toEqual({ siteName: "SMOG & Co" });
       expect(icons.map((icon) => icon.url)).toEqual([
         "/favicon.ico",
         "/icon.svg",

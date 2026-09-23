@@ -1,4 +1,5 @@
 import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
+import { parseGestureListParams } from "@/lib/gestureListParams";
 import { DEFAULT_LOCALE } from "@/lib/locale";
 
 const GESTURES = `/${DEFAULT_LOCALE}/gestures`;
@@ -121,16 +122,133 @@ const redirectLegacyGesture: PayloadHandler = async (req) => {
   );
 };
 
+/**
+ * More `category` values than any real filter carries. The rest are dropped
+ * rather than looked up, which keeps both lookups below well inside D1's
+ * limit on bound parameters.
+ */
+const MAX_CATEGORIES = 20;
+
+/**
+ * Each of `values` as the id of the active category it names, in order and
+ * without duplicates; a value that names none is left out, and `dropped`
+ * says whether any was.
+ *
+ * A numeric value that is an active category's own id stays as it is, since
+ * that is what the site's own filter links carry. Otherwise the value is
+ * tried as a category's `legacyId`, the previous backend's id, as the
+ * gesture lookup above does. Both reads are anonymous (`overrideAccess:
+ * false`, no user), so `publicReadActive` limits them to active categories
+ * exactly as the list's own filter would, and neither selects more than the
+ * id and, for the second, the `legacyId` it matched on.
+ */
+async function translateCategories(
+  req: PayloadRequest,
+  values: string[]
+): Promise<{ dropped: boolean; ids: string[] }> {
+  const numeric = values.filter((value) => NUMERIC_ID.test(value));
+  const legacy = values.filter((value) => LEGACY_ID.test(value));
+
+  const byId =
+    numeric.length === 0
+      ? []
+      : (
+          await req.payload.find({
+            collection: "categories",
+            depth: 0,
+            limit: numeric.length,
+            overrideAccess: false,
+            select: {},
+            where: { id: { in: numeric.map(Number) } },
+          })
+        ).docs;
+
+  const byLegacyId =
+    legacy.length === 0
+      ? []
+      : (
+          await req.payload.find({
+            collection: "categories",
+            depth: 0,
+            limit: legacy.length,
+            overrideAccess: false,
+            select: { legacyId: true },
+            where: { legacyId: { in: legacy } },
+          })
+        ).docs;
+
+  const active = new Set(byId.map((doc) => String(doc.id)));
+  const fromLegacy = new Map(
+    byLegacyId.map((doc) => [doc.legacyId ?? "", String(doc.id)])
+  );
+
+  const translated = values.map((value) =>
+    active.has(value) ? value : fromLegacy.get(value)
+  );
+  const ids = translated.filter((id): id is string => id !== undefined);
+
+  return {
+    dropped: ids.length < translated.length,
+    ids: [...new Set(ids)],
+  };
+}
+
+/**
+ * `GET /api/legacy/gestures` (and `HEAD`), reached at `/gestures` through a
+ * rewrite in `next.config.ts` — the previous website's gesture list, whose
+ * `category` filter carried the previous backend's category ids (imported
+ * as `legacyId`), so a static redirect would keep the filter and land on an
+ * empty list.
+ *
+ * Every `category` value, repeated or comma-separated as the list itself
+ * accepts (`parseGestureListParams`), becomes the id of the active category
+ * it names; every other parameter (`q`, `page`, anything else) is kept as it
+ * came. Then:
+ *
+ * - every value translated → a 308 to `/nl/gestures` with the translated
+ *   filter. The mapping is fixed, so the answer is permanent and may be
+ *   cached for a day;
+ * - any value dropped (unknown, inactive, malformed, over the limit) → a
+ *   307, `no-store`, with the values that did translate. Temporary for the
+ *   reason the gesture redirect gives: a category inactive today may be
+ *   published tomorrow, and a cached permanent answer would lose it for good.
+ */
+const redirectLegacyGestureList: PayloadHandler = async (req) => {
+  const { searchParams } = new URL(req.url ?? "", "http://legacy.invalid");
+  const values = [...new Set(parseGestureListParams(searchParams).categories)];
+  const { dropped, ids } = await translateCategories(
+    req,
+    values.slice(0, MAX_CATEGORIES)
+  );
+
+  const query = new URLSearchParams(searchParams);
+  query.delete("category");
+  if (ids.length > 0) {
+    // The comma form, as `gestureListHref` writes it.
+    query.set("category", ids.join(","));
+  }
+
+  const rest = query.toString();
+  const search = rest === "" ? "" : `?${rest}`;
+
+  return dropped || values.length > MAX_CATEGORIES
+    ? redirect(307, `${GESTURES}${search}`, "no-store")
+    : redirect(308, `${GESTURES}${search}`, "public, max-age=86400");
+};
+
 /*
  * `head` as well as `get`, because these are exactly the URLs link checkers
  * probe. Next answers a `HEAD` by calling the route's `GET` with the method
  * unchanged, and Payload matches endpoints by method, so without the second
  * entry a `HEAD` of a working old link is a 404.
  */
-export const legacyEndpoints: Endpoint[] = (["get", "head"] as const).map(
-  (method) => ({
-    handler: redirectLegacyGesture,
-    method,
-    path: "/legacy/gestures/:id",
-  })
+export const legacyEndpoints: Endpoint[] = (["get", "head"] as const).flatMap(
+  (method) => [
+    { handler: redirectLegacyGestureList, method, path: "/legacy/gestures" },
+    {
+      handler: redirectLegacyGesture,
+      method,
+      path: "/legacy/gestures/:id",
+    },
+  ]
 );

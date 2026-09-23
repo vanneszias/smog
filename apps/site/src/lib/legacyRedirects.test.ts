@@ -29,7 +29,6 @@ async function route(path: string) {
 }
 
 const TABLE: [source: string, destination: string][] = [
-  ["/gestures", "/nl/gestures"],
   ["/favorites", "/nl/favorites"],
   ["/lists", "/nl/account/lists"],
   ["/lists/abc123", "/nl/account/lists"],
@@ -63,6 +62,20 @@ describe("the previous website's URLs", () => {
     const { redirect } = await route(`${source}?q=hand&page=2`);
 
     expect(redirect).toBe(`${SITE}${target}?q=hand&page=2`);
+  });
+
+  it.each([
+    ["/gestures", "/api/legacy/gestures"],
+    [
+      "/gestures?q=hand&category=jd7abc,12",
+      "/api/legacy/gestures?q=hand&category=jd7abc%2C12",
+    ],
+  ])("sends the old list %s to the lookup endpoint", async (path, destination) => {
+    expect(await route(path)).toEqual({
+      redirect: null,
+      rewrite: `${SITE}${destination}`,
+      status: 200,
+    });
   });
 
   it("sends /gestures/<id> to the lookup endpoint, query and all", async () => {

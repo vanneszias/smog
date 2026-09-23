@@ -18,8 +18,9 @@ const home = `/${DEFAULT_LOCALE}`;
  * bundled code; Next passes the query string through to the destination on
  * its own (`legacyRedirects.test.ts` pins that).
  *
- * `/gestures/<id>` is not here, because its destination depends on a
- * lookup: see `endpoints/legacy.ts`. `/lists/<token>` goes to the owner's
+ * `/gestures` and `/gestures/<id>` are not here, because their destinations
+ * depend on a lookup (the old list's `category` filter and the old gesture
+ * id both carried the previous backend's ids): see `endpoints/legacy.ts`. `/lists/<token>` goes to the owner's
  * lists page rather than to a shared list, because the old lists were not
  * carried over and no old token names anything any more. `/admin` is
  * absent on purpose: it is Payload's admin, and still is.
@@ -28,7 +29,6 @@ const home = `/${DEFAULT_LOCALE}`;
  * dependency here is one more module the config has to load.
  */
 export const LEGACY_REDIRECTS: LegacyRedirect[] = [
-  { destination: `${home}/gestures`, source: "/gestures" },
   { destination: `${home}/favorites`, source: "/favorites" },
   { destination: `${home}/account/lists`, source: "/lists" },
   { destination: `${home}/account/lists`, source: "/lists/:token" },

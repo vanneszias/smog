@@ -237,12 +237,13 @@ does work. Check the build's route table, not the file's existence.
 
 ## The previous website's URLs, and app links
 
-The previous website's unprefixed URLs (`/gestures`, `/favorites`,
-`/login`, …) are permanent redirects in `next.config.ts`, from the table in
-`src/lib/legacyRedirects.ts`. `/gestures/<id>` needs a lookup, since its id
-may be an imported gesture's `legacyId`, so it is a rewrite to a Payload
-endpoint (`src/endpoints/legacy.ts`) for the same bundle reason as the
-crawler files above. `src/lib/legacyRedirects.test.ts` runs every row
+The previous website's unprefixed URLs (`/favorites`, `/login`, …) are
+permanent redirects in `next.config.ts`, from the table in
+`src/lib/legacyRedirects.ts`. `/gestures/<id>` and `/gestures` need a
+lookup, since the gesture id and the list's `category` filter may be an
+imported row's `legacyId`, so they are rewrites to a Payload endpoint
+(`src/endpoints/legacy.ts`) for the same bundle reason as the crawler files
+above. `src/lib/legacyRedirects.test.ts` runs every row and both rewrites
 through the real config.
 
 `public/.well-known/` holds the files iOS and Android check before opening

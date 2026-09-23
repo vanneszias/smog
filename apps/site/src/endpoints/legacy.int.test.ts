@@ -153,3 +153,142 @@ describe("GET /api/legacy/gestures/:id", () => {
     });
   });
 });
+
+/**
+ * `GET /api/legacy/gestures` — the path `next.config.ts` rewrites the old
+ * list, `/gestures`, to — against a real database, for the same reasons as
+ * the gesture redirect above.
+ */
+describe("GET /api/legacy/gestures", () => {
+  let legacyCategoryId: number;
+  let plainCategoryId: number;
+  let inactiveCategoryId: number;
+  let numericLegacyCategoryId: number;
+  let numericCategoryLegacyId: string;
+
+  const get = async (query = "", method = "GET") => {
+    const response = await handleEndpoints({
+      config,
+      request: new Request(`${SITE}/api/legacy/gestures${query}`, { method }),
+    });
+
+    return {
+      cache: response.headers.get("cache-control"),
+      location: response.headers.get("location"),
+      status: response.status,
+    };
+  };
+
+  const permanent = (location: string) => ({
+    cache: "public, max-age=86400",
+    location,
+    status: 308,
+  });
+
+  const temporary = (location: string) => ({
+    cache: "no-store",
+    location,
+    status: 307,
+  });
+
+  beforeAll(async () => {
+    const payload = await getPayload({ config });
+
+    const category = async (data: { isActive: boolean; legacyId?: string }) =>
+      (
+        await payload.create({
+          collection: "categories",
+          data: { name: `List ${RUN} ${data.legacyId ?? "none"}`, ...data },
+          locale: "nl",
+        })
+      ).id;
+
+    legacyCategoryId = await category({
+      isActive: true,
+      legacyId: `cat-${RUN}`,
+    });
+    plainCategoryId = await category({ isActive: true });
+    inactiveCategoryId = await category({
+      isActive: false,
+      legacyId: `cat-hidden-${RUN}`,
+    });
+    // All digits, like a primary key, but far beyond any the local database
+    // will reach, so only the `legacyId` can match.
+    numericCategoryLegacyId = `${Date.now()}${Math.floor(Math.random() * 90) + 10}`;
+    numericLegacyCategoryId = await category({
+      isActive: true,
+      legacyId: numericCategoryLegacyId,
+    });
+  });
+
+  it("boots with the fixtures this file assumes", () => {
+    expect(legacyCategoryId).toBeGreaterThan(0);
+    expect(plainCategoryId).toBeGreaterThan(0);
+    expect(inactiveCategoryId).toBeGreaterThan(0);
+    expect(numericLegacyCategoryId).toBeGreaterThan(0);
+  });
+
+  it("tries a numeric value as an old id when no category has it as its own", async () => {
+    expect(await get(`?category=${numericCategoryLegacyId}`)).toEqual(
+      permanent(`/nl/gestures?category=${numericLegacyCategoryId}`)
+    );
+  });
+
+  it("sends the bare list to the list", async () => {
+    expect(await get()).toEqual(permanent("/nl/gestures"));
+  });
+
+  it("keeps a search, and anything else, as it came", async () => {
+    expect(await get("?q=hallo&page=2&ref=qr")).toEqual(
+      permanent("/nl/gestures?q=hallo&page=2&ref=qr")
+    );
+  });
+
+  it("translates an old category id into the imported category's id", async () => {
+    expect(await get(`?category=cat-${RUN}`)).toEqual(
+      permanent(`/nl/gestures?category=${legacyCategoryId}`)
+    );
+  });
+
+  it("keeps a numeric id that is an active category", async () => {
+    expect(await get(`?category=${plainCategoryId}`)).toEqual(
+      permanent(`/nl/gestures?category=${plainCategoryId}`)
+    );
+  });
+
+  it.each([
+    ["an unknown old id", () => `unknown-${RUN}`],
+    ["an inactive category's old id", () => `cat-hidden-${RUN}`],
+    ["an inactive category's own id", () => String(inactiveCategoryId)],
+    ["a numeric id nothing has", () => "999999999999999"],
+    ["a value no filter link was ever built with", () => "not a category!"],
+  ])("drops %s, temporarily and uncached", async (_label, value) => {
+    // A 307: the category may be published later, and a cached permanent
+    // answer without it would lose the filter for good.
+    expect(
+      await get(`?q=hallo&category=${encodeURIComponent(value())}`)
+    ).toEqual(temporary("/nl/gestures?q=hallo"));
+  });
+
+  it("translates a mix, keeps what matches and drops the rest", async () => {
+    const query = `?q=hallo&category=cat-${RUN},unknown-${RUN}&category=${plainCategoryId}&page=3`;
+
+    expect(await get(query)).toEqual(
+      temporary(
+        `/nl/gestures?q=hallo&page=3&category=${encodeURIComponent(`${legacyCategoryId},${plainCategoryId}`)}`
+      )
+    );
+  });
+
+  it("does not call a value dropped when two name the same category", async () => {
+    expect(await get(`?category=cat-${RUN},${legacyCategoryId}`)).toEqual(
+      permanent(`/nl/gestures?category=${legacyCategoryId}`)
+    );
+  });
+
+  it("answers a HEAD the same way", async () => {
+    expect(await get(`?category=cat-${RUN}`, "HEAD")).toEqual(
+      permanent(`/nl/gestures?category=${legacyCategoryId}`)
+    );
+  });
+});

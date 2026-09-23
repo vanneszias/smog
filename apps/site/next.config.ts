@@ -214,6 +214,13 @@ const nextConfig: NextConfig = {
         destination: "/api/legacy/gestures/:id",
         source: "/gestures/:id",
       },
+      /*
+       * The previous website's gesture list, for the same reason: its
+       * `category` filter carried the old backend's category ids, which only
+       * a lookup can turn into this site's. `src/endpoints/legacy.ts` answers
+       * with a redirect to `/nl/gestures` carrying the translated filter.
+       */
+      { destination: "/api/legacy/gestures", source: "/gestures" },
     ];
   },
 

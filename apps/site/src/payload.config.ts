@@ -41,7 +41,7 @@ import { oauthEndpoints } from "./endpoints/oauth";
 import { renderEndpoints } from "./endpoints/render";
 import { sponsorshipEndpoints } from "./endpoints/sponsorships";
 import { jobsConfig } from "./jobs";
-import { FAVICONS, SHARE_IMAGE, SITE_NAME } from "./lib/brand";
+import { FAVICONS, SITE_NAME } from "./lib/brand";
 import { requireBinding, requireEnv } from "./lib/env";
 import { beforeSyncGesture } from "./search/beforeSync";
 
@@ -178,13 +178,19 @@ export default buildConfig({
     },
     meta: {
       /*
-       * `off` because the share image below replaces the card Payload would
-       * generate at `/api/og`, and `off` also stops the admin serving that
-       * endpoint for nobody.
+       * `off` so the admin neither generates an Open Graph card at `/api/og`
+       * nor serves that endpoint for nobody.
+       *
+       * No share image either. Payload resolves the admin's metadata against
+       * its own `serverURL`, which this config does not set (the site's
+       * origin differs per environment), so a relative `/og.png` would render
+       * as `http://localhost:3000/og.png` in production
+       * (`@payloadcms/next/dist/utilities/meta.js`, 3.89.0). An admin link
+       * pasted into a chat previews without an image, which is fine.
        */
       defaultOGImageType: "off",
       icons: FAVICONS,
-      openGraph: { images: [SHARE_IMAGE], siteName: SITE_NAME },
+      openGraph: { siteName: SITE_NAME },
       /*
        * No leading space: Payload joins the page title and the suffix with
        * one itself (`appendTitleSuffix` in
@@ -319,10 +325,11 @@ export default buildConfig({
    * `endpoints/analytics.ts`, which is careful about which of those is a
    * consent check and which is not.
    *
-   * `legacyEndpoints` adds `GET` and `HEAD /api/legacy/gestures/:id`,
-   * reached at `/gestures/:id`: the previous website's gesture URL, answered
-   * with a 308 to the gesture's page or a 307 to the list. See
-   * `endpoints/legacy.ts`.
+   * `legacyEndpoints` adds `GET` and `HEAD /api/legacy/gestures/:id` and
+   * `/api/legacy/gestures`, reached at `/gestures/:id` and `/gestures`: the
+   * previous website's gesture page and list, whose ids (the gesture's, and
+   * the list's `category` filter) were the previous backend's. Each answers
+   * with a redirect to this site's page. See `endpoints/legacy.ts`.
    */
   endpoints: [
     ...analyticsEndpoints,
