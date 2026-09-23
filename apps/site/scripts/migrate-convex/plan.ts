@@ -37,7 +37,7 @@ interface ExportGesture {
 
 type SkipReason = "no-category" | "no-playback-id" | "unknown-category";
 
-interface ImportPlan {
+export interface ImportPlan {
   categories: Array<{
     legacyId: string;
     name: string;
