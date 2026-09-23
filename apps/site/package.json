@@ -39,6 +39,7 @@
     "@smog/shared": "workspace:*",
     "@smog/types": "workspace:*",
     "@smog/ui-web": "workspace:*",
+    "aws4fetch": "1.0.20",
     "dotenv": "16.4.7",
     "graphql": "^16.8.1",
     "jose": "^6.2.3",
@@ -50,6 +51,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
+    "@remotion/lambda-client": "4.0.484",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "24.12.3",
     "@types/react": "19.2.14",
