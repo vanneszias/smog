@@ -254,9 +254,13 @@ steps 4–9 with `production`.
 ## Open items (not configured in the repo yet — do not invent config)
 
 - **Production origin / custom domain.** `wrangler.jsonc` has no `routes`;
-  production would be served at `smog-site-production.<account>.workers.dev`.
-  Decide the domain before setting `EXPO_PUBLIC_API_URL`, the Google redirect
-  URI and (later) `SITE_ORIGIN`.
+  production is served at `smog-site-production.<account>.workers.dev`, which
+  is also today's `vars.SITE_ORIGIN` for that environment (§2 above). Decide
+  the domain before setting `EXPO_PUBLIC_API_URL` and the Google redirect
+  URI — and update `SITE_ORIGIN` to the new domain in the same commit that
+  adds its `routes` entry (already called out at both `wrangler.jsonc`'s
+  `SITE_ORIGIN` comment and its row in §2), since a stale `SITE_ORIGIN` after
+  the domain moves is a working link to nowhere in a sponsor's inbox.
 - **Remotion Lambda** is not deployed and the submit transport is a stub; the
   `REMOTION_*`, Mux signing-key, service-token and callback secrets are inert
   until Stage 6 Task 6.

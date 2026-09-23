@@ -229,8 +229,21 @@ with `onScheduled`'s body inlined a few lines above it, including both
 literal `[cron]` log strings (`"[cron] Scheduled job run answered ${...}"`,
 `"[cron] Scheduled job run failed:"`), and `endpoints/jobs.ts`'s
 `"[jobs] A run was requested without a usable token; nothing was run"` also
-present in the bundle (twice — main route + a duplicate module instance).
-`--dry-run --outdir` needed no Cloudflare authentication.
+present in the bundle. Re-verified after fold-in commit `28d90bb`:
+
+```
+CLOUDFLARE_ENV=staging PAYLOAD_SECRET=local-build-only bun run build:app
+CLOUDFLARE_ENV=staging bunx wrangler deploy --dry-run --env=staging --outdir=<scratch>
+grep -c "A run was requested without a usable token; nothing was run" <scratch>/worker.js
+```
+```
+2
+```
+
+— present twice, at lines 162234 and 385208 of the emitted `worker.js`: the
+route registered on the live queue plus a duplicate module instance esbuild
+kept from a second import path into the bundle. `--dry-run --outdir` needed
+no Cloudflare authentication.
 
 ### Step 3 — a real local tick
 
