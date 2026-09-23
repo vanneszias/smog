@@ -37,7 +37,7 @@ const SITE = "http://localhost:3003";
  *    `redirect()` in a server component and only a request exercises.
  *
  * Absence is never the assertion on its own. An element that has not rendered
- * yet satisfies `toBeHidden()` — the mistake Stage 4 Task 6 recorded — so
+ * yet satisfies `toBeHidden()` — a mistake this suite has made before — so
  * every "it is gone" here is paired with something whose presence proves the
  * page has settled.
  */

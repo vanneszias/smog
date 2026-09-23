@@ -33,7 +33,7 @@ const HOVER_ATTEMPT_MS = 1000;
  *
  * It is the same hazard `FavoriteButton` grew its `data-ready` attribute for,
  * and it does not announce itself: the test passes on an idle machine and
- * fails on a busy one. Measured, when Stage 5's sponsor spec was added ahead
+ * fails on a busy one. Measured, when the sponsor spec was added ahead
  * of this file: flaky in 2 of 2 full runs, clean in 3 of 3 runs of this spec
  * alone, and clean in a full run with only that spec excluded. The dev server
  * was simply slower to serve this route.

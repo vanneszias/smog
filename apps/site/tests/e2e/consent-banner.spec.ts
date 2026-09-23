@@ -6,8 +6,8 @@ const SITE = "http://localhost:3003";
  * The consent banner itself, in a real browser.
  *
  * Every other spec in this suite now seeds a decision before it drives a
- * page-bottom control (`seedConsent`, added in the same fix round as this
- * file), precisely so the banner stops being incidental noise in tests about
+ * page-bottom control (`seedConsent`, added alongside this file),
+ * precisely so the banner stops being incidental noise in tests about
  * something else. That made it necessary to put the banner's own first-visit
  * behaviour somewhere: an undecided visitor still has to see it, a refusal
  * still has to dismiss it, and the dismissal still has to hold across a
@@ -16,7 +16,7 @@ const SITE = "http://localhost:3003";
  * what the first one wrote.
  *
  * `account.spec.ts`'s "deletes the account when the address is typed" is the
- * other half of this fix round: it proves a page-bottom control stays
+ * other half of this: it proves a page-bottom control stays
  * reachable *while the banner shown here is still up*, which this file does
  * not repeat.
  */

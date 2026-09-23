@@ -76,7 +76,7 @@ test.describe("Guest favorites", () => {
   });
 
   test("survives a reload of the detail page", async ({ page }) => {
-    // Stage 3 exit criterion 4. The state is in `localStorage`, so this is
+    // The state is in `localStorage`, so this is
     // the assertion that it is actually written and read back rather than
     // held in React.
     await stallMux(page);
@@ -149,12 +149,12 @@ test.describe("Guest favorites", () => {
     page,
   }) => {
     /*
-     * Review Focus item 3, through the whole stack rather than at the helper.
+     * The guarded store, through the whole stack rather than at the helper.
      *
      * This is what a private window and a "block site data" setting actually
      * do: the `localStorage` *getter* throws rather than returning null. An
      * unguarded read is then an exception during render, and an exception
-     * during render is a blank page — which is the failure this whole task
+     * during render is a blank page — which is the failure the guarded store
      * exists to prevent, and which no happy-path test would ever see.
      *
      * `addInitScript` installs it before any page script runs, so the app

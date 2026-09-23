@@ -157,7 +157,7 @@ test.describe("Gestures list", () => {
   test("finds a Dutch-only gesture when searching in French", async ({
     page,
   }) => {
-    // Review Focus item 1, through the whole stack. The fixtures are indexed
+    // The locale fallback, through the whole stack. The fixtures are indexed
     // in `nl` only, so a French search that queried `fr` alone would show a
     // French visitor an empty site and no error.
     const query = new URLSearchParams({ q: `${fixtures.run} gebaar 0` });

@@ -27,9 +27,9 @@ const DAY = 24 * 60 * 60 * 1000;
  * a database it did not fill is a spec that passes on one machine.
  *
  * The expired sponsorship is the important fixture. Its `status` is still
- * `active` and only its `endDate` has passed, which is the row shape Stage 1
- * genuinely produces — no expiry job, no status-transition enforcement — and
- * the one a status-only check would render a paid-for overlay for.
+ * `active` and only its `endDate` has passed, which is the row shape a
+ * sponsorship has until the expiry job catches up with it — and the one a
+ * status-only check would render a paid-for overlay for.
  *
  * No logo image: uploading through the dev server's R2 binding from a second
  * process is a race this spec does not need to take, and the image path is

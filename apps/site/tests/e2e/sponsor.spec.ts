@@ -125,10 +125,11 @@ test.describe("Sponsor wizard", () => {
     await expect(page).toHaveURL(`${SITE}/nl/sponsor/preview`);
     // The details crossed the redirect, which is the draft cookie working.
     await expect(page.getByTestId("review-sponsor-name")).toHaveText("Acme NV");
-    // Two gestures at €50 each, the price `lib/pricing.ts` transcribes.
+    // Two gestures at €50 each, the price `lib/pricing.ts` sets.
     await expect(page.getByTestId("sponsor-total")).toContainText("100,00");
     // One preview per gesture, each showing the overlay text as HTML over the
-    // *original* video — the Stage 5 half of `lib/renderPreview.ts`'s seam.
+    // *original* video — `lib/renderPreview.ts`'s fallback while no composed
+    // preview exists.
     await expect(page.getByTestId("sponsor-preview-overlay")).toHaveCount(2);
     await expect(
       page.getByTestId("sponsor-preview-overlay").first()

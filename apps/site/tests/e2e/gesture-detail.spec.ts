@@ -37,8 +37,8 @@ test.describe("Gesture detail", () => {
   });
 
   test("arrives from a card on the list page", async ({ page }) => {
-    // The list page's links were built in Task 3 against a route that did not
-    // exist yet. This is the assertion that they now resolve.
+    // The list page's links were built before this route existed. This is
+    // the assertion that they now resolve.
     await stallMux(page);
     await page.goto(`${SITE}/nl/gestures?q=${fixtures.run} actief`, {
       waitUntil: "domcontentloaded",

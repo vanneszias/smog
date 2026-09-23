@@ -17,7 +17,7 @@ const SITE = "http://localhost:3003";
  * 1. **The rewrites.** `/auth/sign-in` is a `next.config.ts` entry pointing
  *    at a Payload endpoint at `/api/auth/sign-in`. Delete it and the form
  *    posts into a 404 — which typechecks, unit-tests and builds cleanly.
- * 2. **The cookie's scope.** Review Focus item 1: every URL on this site is
+ * 2. **The cookie's scope.** Every URL on this site is
  *    locale-prefixed, and a session cookie scoped to the path it was set from
  *    signs the visitor out the moment they switch language. Every
  *    single-locale test passes against that bug.
@@ -67,7 +67,7 @@ test.describe("Email and password auth", () => {
     page,
   }) => {
     /*
-     * Review Focus item 1, end to end. `Set-Cookie` without an explicit
+     * The cookie's scope, end to end. `Set-Cookie` without an explicit
      * `Path` defaults to the directory of the request URI, so a cookie issued
      * from a `/nl/...` URL would apply to `/nl` and nothing else — and this
      * navigation would land signed out. `generatePayloadCookie` hard-codes

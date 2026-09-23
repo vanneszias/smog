@@ -16,7 +16,7 @@ const SITE = "http://localhost:3003";
  * imports Payload costs ~520 KiB of Worker bundle — and that indirection has
  * two ways to fail silently that no unit test can see: the rewrite can stop
  * matching, and `handleEndpoints` can stop matching the path. Next 16 already
- * demonstrated the class of failure during this task, by ignoring a
+ * demonstrated the class of failure once already, by ignoring a
  * `robots.ts` placed inside a route group without a word of warning.
  *
  * `request` rather than `page`: these are files, not documents, and a browser

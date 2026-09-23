@@ -21,7 +21,7 @@ export interface SharedListFixtures {
  * a *token*, so there is no "find a suitable existing row" fallback at all.
  *
  * The token is read back from the created document rather than supplied,
- * which is the point: nothing in this file writes one. If Task 7's minting
+ * which is the point: nothing in this file writes one. If `Lists`' minting
  * hook regressed, `viewShareToken` would come back null and the spec would
  * fail in its `beforeAll` with a message that says so.
  */
@@ -114,8 +114,8 @@ export async function unshareList(listId: number): Promise<void> {
 /**
  * Removes everything the seed created, the list first.
  *
- * Order is not tidiness: `lists_items.gesture_id` still carries Stage 1's
- * `NOT NULL` with `ON DELETE set null` — the defect Task 8 fixes — so
+ * Order is not tidiness: Payload emits `lists_items.gesture_id` as
+ * `NOT NULL` with `ON DELETE set null`, so
  * deleting the gesture while a list row points at it fails with a raw SQL
  * error and leaves the whole fixture set behind.
  */

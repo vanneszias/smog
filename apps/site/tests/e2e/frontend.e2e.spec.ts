@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 const SITE = "http://localhost:3003";
 
 /**
- * What this file asserted before Stage 3 Task 2: that `/` served Payload's
+ * What this file once asserted: that `/` served Payload's
  * blank-template home page — the title `Payload Blank Template` and the
  * heading "Welcome to your new project." That page is gone; `/` is now a
  * redirect to the default locale.

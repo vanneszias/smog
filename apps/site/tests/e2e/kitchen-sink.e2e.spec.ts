@@ -2,9 +2,10 @@ import { expect, test } from "@playwright/test";
 import { abortMux, stallMux } from "../helpers/mux";
 
 /**
- * The three things Stage 2 deliberately did not fake under jsdom.
+ * The three things the kitchen sink's unit tests deliberately do not fake
+ * under jsdom.
  *
- * Every other test in this stage runs in jsdom, which computes no layout,
+ * Every other kitchen-sink test runs in jsdom, which computes no layout,
  * upgrades no custom element and resolves no CSS variable. Each assertion
  * here needs at least one of those three, which is why it lives in a real
  * browser and not in the unit suite.
@@ -141,8 +142,8 @@ test.describe("kitchen sink", () => {
    *
    * `@mux/mux-player-react` server-renders the element with its own software
    * name and version but no `playback-id`, so the first paint is a player
-   * pointing at nothing and the video cannot start until hydration. The Task
-   * 7 agent saw the same thing on the `/lazy` entry point; this pins it for
+   * pointing at nothing and the video cannot start until hydration. The
+   * `/lazy` entry point does the same; this pins it for
    * the eager one too, so a change of behaviour in a future Mux release is
    * visible rather than silent.
    */
@@ -190,10 +191,10 @@ test.describe("kitchen sink", () => {
   /*
    * Light-theme surface hierarchy, as the browser resolves it.
    *
-   * Stage 2 measured light `background` and `surface` 1.06:1 apart and
-   * `surfaceRaised` identical to `background`, with nothing but a 1.32:1
-   * border separating a card from the page. Stage 3 Task 1 moved `background`
-   * to `neutral[100]` and both surfaces to white. `contrast.test.ts` holds the
+   * The first light theme measured `background` and `surface` 1.06:1 apart
+   * and `surfaceRaised` identical to `background`, with nothing but a 1.32:1
+   * border separating a card from the page. `background` then moved to
+   * `neutral[100]` and both surfaces to white. `contrast.test.ts` holds the
    * ratio; this reads the compiled custom properties, so a theme regenerated
    * from stale tokens cannot pass it.
    */
@@ -222,7 +223,7 @@ test.describe("kitchen sink", () => {
     expect(light.background).not.toBe(light.surface);
     /*
      * `surface` and `surfaceRaised` are the same white in light mode on
-     * purpose, since Stage 3 moved `background` down the neutral ramp instead
+     * purpose, since `background` moved down the neutral ramp instead
      * of pushing the surfaces grey. The step that has to exist is
      * card-versus-page, asserted on the line above and held at 1.12:1 by
      * `contrast.test.ts`; elevation between two stacked surfaces is carried by

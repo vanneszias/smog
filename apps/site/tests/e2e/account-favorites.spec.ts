@@ -222,10 +222,9 @@ test.describe("Account favorites", () => {
     page,
   }) => {
     /*
-     * **Stage 4 exit criterion 6, end to end.** This replaces a test that
-     * asserted the opposite — that a guest's local favorites stay invisible
-     * to a signed-in reader — which was correct until Task 6 and whose own
-     * comment named Task 6 as the thing that would change it.
+     * **The sign-in merge, end to end.** This replaces a test that asserted
+     * the opposite — that a guest's local favorites stay invisible to a
+     * signed-in reader — which was correct until the merge existed.
      *
      * It is deliberately asserted on `/nl`, the page sign-in redirects to
      * (`endpoints/auth.ts` answers with `seeOther(homePath(locale))`), and
