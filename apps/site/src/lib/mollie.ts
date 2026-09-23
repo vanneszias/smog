@@ -175,7 +175,9 @@ function refusalMessage(body: Record<string, unknown>): string {
 async function mollieRequest(
   url: string,
   what: string,
-  init: RequestInit
+  // No `signal`: this function owns the call's deadline, and a caller's own
+  // signal would otherwise be silently replaced by the timeout below.
+  init: Omit<RequestInit, "signal">
 ): Promise<Record<string, unknown>> {
   const response = await fetch(url, {
     ...init,
