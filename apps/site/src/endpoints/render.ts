@@ -610,7 +610,13 @@ const renderCallback: PayloadHandler = async (
      * the passthrough, so the possible orphan can be found in Mux and
      * deleted.
      */
-    const timedOut = error instanceof Error && error.name === "TimeoutError";
+    // Read by name rather than `instanceof Error`: an abort surfaces as a
+    // `DOMException`, whose prototype chain is the runtime's business.
+    const timedOut =
+      typeof error === "object" &&
+      error !== null &&
+      "name" in error &&
+      error.name === "TimeoutError";
 
     req.payload.logger.error(
       { err: error },
