@@ -26,8 +26,9 @@ import { decideSignUp } from "./auth";
  * `tests/e2e/crawler.spec.ts`, one layer down.
  *
  * **The enumeration assertions compare whole responses, not status codes.**
- * A test that asserts "both fail" passes against the exact leak this task
- * exists to close, because Payload fails both — with different sentences.
+ * A test that asserts "both fail" passes against the exact leak these
+ * endpoints exist to close, because Payload fails both — with different
+ * sentences.
  */
 describe("auth endpoints", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
@@ -119,8 +120,7 @@ describe("auth endpoints", () => {
    * It asserts the lock rather than assuming it. Without that, a change that
    * stopped accounts locking would leave the two tests below comparing one
    * wrong-password response against another — passing, and proving nothing
-   * about `LockedAuth`, which is precisely the failure mode this task was
-   * handed as a finding.
+   * about `LockedAuth`, which is precisely a failure mode once found here.
    */
   const lockOut = async (email: string) => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -160,7 +160,7 @@ describe("auth endpoints", () => {
 
     it("scopes the session cookie to the whole site, not to one locale", async () => {
       /*
-       * Review Focus item 1, at the unit of the header itself. Every URL on
+       * The cookie's scope, at the unit of the header itself. Every URL on
        * this site is locale-prefixed, so a cookie without `Path=/` applies to
        * the directory it was set from and disappears the moment the visitor
        * switches language — while passing every single-locale test there is.
@@ -204,10 +204,10 @@ describe("auth endpoints", () => {
 
     it("answers a locked account exactly as it answers an unknown address", async () => {
       /*
-       * **The assertion this task exists for.** Payload throws `LockedAuth`
-       * here — "This user is locked due to having too many failed login
-       * attempts" — and an address that was never registered can never lock,
-       * so that sentence is proof the account exists. Task 1 measured it
+       * **The assertion these endpoints exist for.** Payload throws
+       * `LockedAuth` here — "This user is locked due to having too many failed
+       * login attempts" — and an address that was never registered can never
+       * lock, so that sentence is proof the account exists. It was measured
        * against a real database; `endpoints/auth.ts` flattens it.
        */
       const email = await createUser("locked");
@@ -339,8 +339,8 @@ describe("auth endpoints", () => {
 
     it("answers a taken address exactly as it answers a fresh one", async () => {
       /*
-       * Review Focus item 5 for sign-up. There is no email adapter in this
-       * app (Stage 0), so the usual "we have sent you a link" landing is not
+       * The no-enumeration rule for sign-up. Sign-up sends no verification
+       * mail, so the usual "we have sent you a link" landing is not
        * available — which is why sign-up does not sign you in: a branch that
        * could not issue a session would be visibly different no matter how
        * carefully the bytes matched.

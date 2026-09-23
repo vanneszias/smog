@@ -26,10 +26,10 @@ import { searchGestureIds } from "@/lib/search";
  *   return nothing for `en` and `fr`, the two locales with no content of
  *   their own yet.
  *
- * The handler below calls both shipped helpers and holds no rule of its
- * own: no `where` clause is built here, and none should be added. A filter
- * this endpoint needed that `gestureQuery.ts` did not already express would
- * belong there, not here, for the same reason the sort and the fallback do.
+ * The handler below calls both helpers and holds no rule of its own: no `where`
+ * clause is built here, and none should be added. A filter this endpoint needed
+ * that `gestureQuery.ts` did not already express would belong there, not here,
+ * for the same reason the sort and the fallback do.
  */
 const listGestures: PayloadHandler = async (req) => {
   const locale = resolveLocale(req.searchParams.get("locale") ?? undefined);

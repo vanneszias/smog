@@ -15,16 +15,15 @@ import { readBody } from "./auth";
  *
  * `endpoints/oauth.ts`'s callback ends by setting an `httpOnly` cookie, and a
  * native app has no cookie jar to catch it in. The obvious fix —
- * `smog://auth-callback#token=<jwt>` — puts a two-hour session credential
- * into a URL: the system browser's history, the OS log of the open-URL
- * intent, and, on Android, any app that has registered the same custom
- * scheme all get to read it. (This repository does not have to imagine that
- * last one: `apps/native/app.json` already claims `smog://` for an unrelated
- * sign-in flow with its own `auth-callback` route, so a real second claimant
- * to the scheme sits one workspace over — which is exactly why
- * `apps/mobile`'s own `REDIRECT_URI` is `smogmobile://…`, its own registered
- * scheme, and not the illustrative `smog://` a sketch of this flow would
- * otherwise use.)
+ * `smog://auth-callback#token=<jwt>` — puts a two-hour session credential into
+ * a URL: the system browser's history, the OS log of the open-URL intent, and,
+ * on Android, any app that has registered the same custom scheme all get to
+ * read it. (That last one is not hypothetical: the SMOG app currently in the
+ * stores already claims `smog://` for an unrelated sign-in flow with its own
+ * `auth-callback` route, so a real second claimant to the scheme exists — which
+ * is exactly why `apps/mobile`'s own `REDIRECT_URI` is `smogmobile://…`, its
+ * own registered scheme, and not the illustrative `smog://` a sketch of this
+ * flow would otherwise use.)
  *
  * So the callback hands back a **single-use exchange code with a
  * sixty-second life** instead, and this endpoint is the other half: it
@@ -168,8 +167,7 @@ async function redeem(payload: Payload, code: string): Promise<null | User> {
    * reach here without one *unless* that check has been removed, in which
    * case the fallback below is what turns "no `jti` at all" into a single
    * successful claim on the empty key rather than a thrown type error —
-   * see the module note and the task report's mutation proof for exactly
-   * this path.
+   * see the module note for exactly this path.
    */
   const jti = typeof claims.jti === "string" ? claims.jti : "";
 

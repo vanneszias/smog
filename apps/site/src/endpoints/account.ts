@@ -32,7 +32,7 @@ import type { User } from "@/payload-types";
  * below it (unchanged behaviour — same guard, same order, same redirects,
  * proven by `account.int.test.ts`, unedited) and its `mobile*` twin near the
  * bottom of this file, which renders the identical decision as a JSON body
- * for the Stage 8 native app instead of a 303. `confirmEmailChange` has no
+ * for the native app instead of a 303. `confirmEmailChange` has no
  * such twin: the link it confirms is a web URL mailed to the visitor, and
  * confirming it in a browser is correct — there is nothing for a mobile
  * renderer to add. Same shape as `endpoints/lists.ts`'s `decideCreateList`
@@ -123,8 +123,7 @@ function signedInUser(req: PayloadRequest): null | User {
    * exactly one auth collection, so no request can produce a user whose
    * `collection` is anything else — the two forms are the same function
    * until a second one exists. That is the day the guard earns its place,
-   * and the day nobody will be looking for it. Transcript M7 in the Task 5
-   * report.
+   * and the day nobody will be looking for it.
    */
   return req.user?.collection === USERS ? (req.user as User) : null;
 }
@@ -419,9 +418,9 @@ async function decideRequestEmailChange(
   });
 
   /*
-   * **Queued, not sent here, and not logged any more.** Stage 4 wrote the
-   * confirmation link to the console because there was no adapter; Stage 7
-   * has one, and this is the line that became a send.
+   * **Queued, not sent here, and not logged any more.** The confirmation link
+   * was once written to the console, when there was no adapter; this is the
+   * line that became a send.
    *
    * It goes through the queue rather than straight to the binding for two
    * reasons. A send inside this handler would hold the account page open for
@@ -635,17 +634,16 @@ type DeleteAccountOutcome =
 /**
  * The one decision behind both delete-account surfaces.
  *
- * **Typing the address, not a password — on either surface.** The plan asks
- * for the address and it is the right control for two reasons. It is a
- * confirmation of *intent* rather than of identity — the session already
- * settled identity — and deletion, unlike a password or address change,
- * hands the attacker nothing: it is the one destructive action that cannot
- * be used to take an account over. And a password requirement would lock out
- * precisely the accounts that have no usable password: a Google-created
- * account is given a random 288-bit value nobody knows (`endpoints/
- * oauth.ts`), so its owner could never delete it. A mobile client asking for
- * a password here would be asking for something this endpoint neither wants
- * nor checks.
+ * **Typing the address, not a password — on either surface.** The address is
+ * the right control for two reasons. It is a confirmation of *intent* rather
+ * than of identity — the session already settled identity — and deletion,
+ * unlike a password or address change, hands the attacker nothing: it is the
+ * one destructive action that cannot be used to take an account over. And a
+ * password requirement would lock out precisely the accounts that have no
+ * usable password: a Google-created account is given a random 288-bit value
+ * nobody knows (`endpoints/ oauth.ts`), so its owner could never delete it. A
+ * mobile client asking for a password here would be asking for something this
+ * endpoint neither wants nor checks.
  *
  * Normalised on both sides, because `users.email` is stored lower-cased and
  * nobody should lose their account over a capital letter — or fail to delete
@@ -680,7 +678,7 @@ async function decideDeleteAccount(
      * - **The user's lists go**, through `hooks/cascadeListsOnUserDelete`. A
      *   private list without an owner is unreachable by any access filter.
      * - **The user's consent records stay**, with a null `user`. That is a
-     *   legal-retention requirement from the spec and the entire reason
+     *   legal-retention requirement and the entire reason
      *   `user_consents.user` is optional: the column is nullable so the
      *   foreign key's `ON DELETE set null` can execute and the evidence
      *   survives the account it describes. Nothing here may be "tidied up"

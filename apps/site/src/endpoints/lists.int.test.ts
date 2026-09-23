@@ -17,14 +17,14 @@ import config from "../payload.config";
  *
  * Two properties this file exists for above all others:
  *
- * 1. **The UI does not walk around the Stage 3 access rules.** A signed-in
+ * 1. **The UI does not walk around the list access rules.** A signed-in
  *    stranger, an administrator and the holder of an edit share link each try
  *    every write here, and each is refused — by `listUpdateAccess`,
  *    `listDeleteAccess` and the owner filter in `lib/ownedLists.ts`, none of
- *    which this task rewrote.
+ *    which these endpoints reimplement.
  * 2. **Every write is safe to re-run.** There are no transactions on any
- *    write path in this project (spec, "There are no transactions on any
- *    write path"), so a double-submitted form, a back button and a reload are
+ *    write path in this project, so a double-submitted form, a back button
+ *    and a reload are
  *    all the normal case rather than the exception.
  */
 
@@ -192,9 +192,9 @@ describe("the owner's list endpoints", () => {
 
   afterAll(async () => {
     /*
-     * Lists first: `lists_items.gesture_id` still carries Stage 1's
-     * `NOT NULL` with `ON DELETE set null`, so deleting a gesture a list row
-     * points at fails with a raw SQL error and leaves the rest behind.
+     * Lists first: Payload emits `lists_items.gesture_id` as `NOT NULL` with
+     * `ON DELETE set null`, so deleting a gesture a list row points at fails
+     * with a raw SQL error and leaves the rest behind.
      */
     await payload.delete({
       collection: "lists",
@@ -483,10 +483,10 @@ describe("the owner's list endpoints", () => {
     it("refuses the holder of an edit share link, token and all", async () => {
       /*
        * The "a UI quietly bypasses an access rule" case, aimed at the widest
-       * door Stage 3 opened: `listUpdateAccess` lets a request carrying a
-       * valid `editShareToken` update a list whose `allowSharedEditing` is
-       * on, *including* a signed-in one. The owner filter in
-       * `lib/ownedLists.ts` is what keeps that capability out of this
+       * door the list access rules open: `listUpdateAccess` lets a request
+       * carrying a valid `editShareToken` update a list whose
+       * `allowSharedEditing` is on, *including* a signed-in one. The owner
+       * filter in `lib/ownedLists.ts` is what keeps that capability out of this
        * surface, and the token is presented here exactly as the access rule
        * would want to read it.
        */
@@ -783,8 +783,8 @@ describe("the owner's list endpoints", () => {
 
     it("refuses a gesture id that names no gesture, and writes no dangling row", async () => {
       /*
-       * The spec's "A relationship field accepts an id for a row that does
-       * not exist": `isValidID` is a `typeof` test, no query and no existence
+       * "A relationship field accepts an id for a row that does not exist":
+       * `isValidID` is a `typeof` test, no query and no existence
        * check, so without the lookup this write would store a reference to a
        * gesture that never existed.
        */
@@ -1073,11 +1073,10 @@ describe("the owner's list endpoints", () => {
 
     it("un-shares a list and kills the link that was out there", async () => {
       /*
-       * Un-sharing revokes by rotation — the spec's ruling on gap 3, against
-       * folding `visibility` into the access filters, because two mechanisms
-       * that can disagree is the worse option. The property is not that the
-       * column flipped: it is that the link somebody already has stops
-       * resolving.
+       * Un-sharing revokes by rotation — chosen over folding `visibility` into
+       * the access filters, because two mechanisms that can disagree is the
+       * worse option. The property is not that the column flipped: it is that
+       * the link somebody already has stops resolving.
        */
       const list = await seedList(owner.user, { visibility: "shared" });
       const token = (await reload(list.id)).viewShareToken ?? "";

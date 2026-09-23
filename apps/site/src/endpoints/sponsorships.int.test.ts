@@ -90,7 +90,7 @@ describe("the sponsor wizard endpoints", () => {
    *
    * `payload.create` rather than `createSponsorship`, so the fixture states
    * every field it depends on instead of inheriting a default that a later
-   * task could change underneath it.
+   * change could alter underneath it.
    */
   const sponsor = async (input: {
     endsIn: number;
@@ -213,9 +213,9 @@ describe("the sponsor wizard endpoints", () => {
     });
 
     /*
-     * Active, but its term ran out and no job has expired it — Stage 7 owns
-     * `expire-sponsorships` and does not exist yet, so this row genuinely
-     * occurs in the data. The window is free and the gesture is for sale.
+     * Active, but its term ran out and no job has expired it yet — this row
+     * genuinely occurs in the data until `expire-sponsorships` catches up.
+     * The window is free and the gesture is for sale.
      */
     await sponsor({
       endsIn: -DAY,
@@ -348,9 +348,9 @@ describe("the sponsor wizard endpoints", () => {
       `/nl/sponsor/details?gestures=${gestures.vrij}`
     );
     // A deactivated gesture is not merely absent from the grid: it cannot be
-    // bought by posting its id, which is Review Focus 2's "the selection
-    // screen refusing it up front". `publicReadActive` is what does it, so
-    // this also pins that the lookup runs with `overrideAccess: false`.
+    // bought by posting its id — the selection screen refuses it up front.
+    // `publicReadActive` is what does it, so this also pins that the lookup
+    // runs with `overrideAccess: false`.
     expect(destination(withdrawn)).toBe("/nl/sponsor?error=gesture");
   });
 
@@ -381,8 +381,8 @@ describe("the sponsor wizard endpoints", () => {
   it("refuses a selection of more than MAX_GESTURES_PER_SPONSORSHIP gestures", async () => {
     // **Ten, not twenty**, and imported rather than written as a literal.
     // Every one of the eleven is a real, active, unsponsored gesture, so the
-    // cap is the only thing that can refuse this — priced the same way Task
-    // 4's 21-sponsorship test had to be, or the resolve would mask it.
+    // cap is the only thing that can refuse this — priced the same way the
+    // webhook's 21-sponsorship test had to be, or the resolve would mask it.
     const atCap = await start(overCap.slice(0, MAX_GESTURES_PER_SPONSORSHIP));
     const overTheCap = await start(overCap);
 
@@ -460,8 +460,7 @@ describe("the sponsor wizard endpoints", () => {
     // The positive assertion beside the negative one. Without it, a screen
     // that refused *every* gesture with any sponsorship row would pass the
     // test above and quietly take the whole catalogue off sale as it aged —
-    // `expire-sponsorships` is Stage 7 and does not exist yet, so rows like
-    // this one are real.
+    // rows like this one are real until `expire-sponsorships` catches up.
     const response = await start([gestures.verlopen as number]);
 
     expect(detailsLanding(response)).toBe(
@@ -470,11 +469,9 @@ describe("the sponsor wizard endpoints", () => {
   });
 
   it("refuses a gesture whose sponsorship is still awaiting payment", async () => {
-    // **Wider than the plan asked for, and transcribed from the shipped
-    // product.** `checkExistingSponsorship` in
-    // `packages/convex/convex/lib/sponsorshipValidation.ts` refuses a gesture
-    // with a `pending_payment` or `pending_approval` row, and every shipped
-    // create path runs it. Without this, two sponsors can both select one
+    // **Wider than "an active sponsorship in term", deliberately.** A gesture
+    // with a `pending_payment` or `pending_approval` row is refused, on every
+    // create path. Without this, two sponsors can both select one
     // gesture, both pay, and the queue holds two sponsorships for one window.
     const response = await start([gestures.onbetaald as number]);
 
@@ -527,9 +524,9 @@ describe("the sponsor wizard endpoints", () => {
   });
 
   it("writes nothing at all", async () => {
-    // Step 1 is a validation step. A sponsorship row created here would be
-    // one nothing sweeps until Stage 7's `cleanup-stale-payments`, for a
-    // sponsor who only pressed "next".
+    // Step 1 is a validation step. A sponsorship row created here would be one
+    // nothing sweeps until `cleanup-stale-payments`, for a sponsor who only
+    // pressed "next".
     const before = await payload.count({
       collection: "sponsorships",
       overrideAccess: true,
@@ -862,11 +859,9 @@ describe("the sponsor wizard, steps 2 and 3", () => {
 
   it("requires overlay text, and bounds its length", async () => {
     /*
-     * **The overlay text is the sponsor name.** The shipped wizard has one
-     * input for both — `apps/web/.../-StepDetails.tsx` caps it at 35 and
-     * `-useSponsorshipMutation.ts` sends `overlayText: form.sponsorName` — so
-     * this bounds `sponsorName` and the row's `overlayText` is asserted to be
-     * the same string further down.
+     * **The overlay text is the sponsor name.** The wizard has one input for
+     * both, capped at 35 — so this bounds `sponsorName` and the row's
+     * `overlayText` is asserted to be the same string further down.
      */
     const [gesture] = await newGestures(1, "overlay");
     const id = gesture?.id as number;
@@ -1037,7 +1032,7 @@ describe("the sponsor wizard, steps 2 and 3", () => {
 
     // The same three fields, posted with the box unticked. They must not be
     // stored: a VAT number is identifying data with no purpose left once the
-    // sponsor changes their mind, and the shipped mutation drops it too.
+    // sponsor changes their mind.
     const uninvoiced = await formPost(
       DETAILS_PATH,
       {
@@ -1068,8 +1063,7 @@ describe("the sponsor wizard, steps 2 and 3", () => {
   });
 
   it("refuses an invoice whose ondernemingsnummer does not check out", async () => {
-    // Ten digits, right shape, wrong modulo-97 check digits. The shipped
-    // wizard validates this in `utils/-validation.ts`, and an invoice is a
+    // Ten digits, right shape, wrong modulo-97 check digits. An invoice is a
     // legal document the accountant sends back.
     const [gesture] = await newGestures(1, "bad-vat");
     const id = gesture?.id as number;
@@ -1147,15 +1141,14 @@ describe("the sponsor wizard, steps 2 and 3", () => {
      * sponsorships and compares the sum with what Mollie charged. Writing the
      * order total on each row would make a three-gesture order look like it
      * cost three times what it did, and the webhook would refuse a payment
-     * the sponsor had already made. The shipped `createBulkSimplified` writes
-     * the per-gesture amount for the same reason.
+     * the sponsor had already made.
      */
     const gestures = await newGestures(3, "price");
     const ids = gestures.map((gesture) => gesture.id);
 
     // Through the real step 2 first, because the logo option is priced and a
     // logo has to exist to be priced: `checkout` refuses `wantsLogo` with no
-    // uploaded file, exactly as the shipped wizard's own validation does.
+    // uploaded file, exactly as the wizard's own validation does.
     const details = await multipartDetails(
       { ...goodDetails(), wantsLogo: "on" },
       ids,
@@ -1204,13 +1197,11 @@ describe("the sponsor wizard, steps 2 and 3", () => {
 
   it("writes one payment id onto every sponsorship in the order", async () => {
     /*
-     * **The unique constraint this task drops, asserted end to end.** Stage 1
-     * made `molliePaymentId` unique; `apps/server/src/webhooks/mollie.ts`
-     * writes the same id to every sponsorship in a bulk payment and
-     * `packages/convex/convex/schema.ts` declares a plain index, so the
-     * constraint made the shipped purchase impossible. Under it, the second
-     * row here was refused by D1 and the sponsor paid for three gestures
-     * while one of them carried the payment.
+     * **The unique constraint that was dropped, asserted end to end.**
+     * `molliePaymentId` was once unique, and a bulk payment writes the same id
+     * to every sponsorship it covers, so the constraint made the purchase
+     * impossible. Under it, the second row here was refused by D1 and the
+     * sponsor paid for three gestures while one of them carried the payment.
      */
     const gestures = await newGestures(3, "payment-id");
     const ids = gestures.map((gesture) => gesture.id);
@@ -1297,14 +1288,13 @@ describe("the sponsor wizard, steps 2 and 3", () => {
     expect(totalDocs).toBe(0);
   });
 
-  it("does not create rows when Mollie refuses the payment — it leaves them for cleanup-stale-payments", async () => {
+  it("leaves its rows for cleanup-stale-payments when Mollie refuses the payment", async () => {
     /*
-     * **The name is the plan's; the assertion is what the plan's own comment
-     * asks for**, and the two disagree. There are no transactions, and the
+     * **The rows exist, deliberately.** There are no transactions, and the
      * payment's metadata has to name the rows, so the rows are necessarily
      * written first. What is asserted is therefore the *recovery*: they exist,
      * in `pending_payment`, with no `molliePaymentId` — which is exactly the
-     * shape Stage 7's `cleanup-stale-payments` collects. Deleting them on this
+     * shape `cleanup-stale-payments` collects. Deleting them on this
      * path would be a second multi-step write with no transaction behind it
      * either, and a half-done delete leaves rows worse than these.
      */
@@ -1328,9 +1318,9 @@ describe("the sponsor wizard, steps 2 and 3", () => {
   it("gives Mollie a webhook URL for a public origin and none for a local one", async () => {
     /*
      * Mollie refuses a `webhookUrl` it cannot reach, and refuses the whole
-     * payment with it — so a developer on `localhost` would get no checkout
-     * at all. The shipped flow makes the same exception. The URL is the
-     * rewrite source, which is what Mollie posts back to for weeks.
+     * payment with it — so a developer on `localhost` would get no checkout at
+     * all. The URL is the rewrite source, which is what Mollie posts back to
+     * for weeks.
      */
     const local = await newGestures(1, "webhook-local");
     const remote = await newGestures(1, "webhook-remote");
@@ -1377,20 +1367,20 @@ describe("the sponsor wizard, steps 2 and 3", () => {
     expect(started).toBeGreaterThanOrEqual(before - 1000);
     expect(ends - started).toBe(365 * 24 * 60 * 60 * 1000);
     /*
-     * `startDate` is now and not the shipped mutation's `0`. That column is
-     * `required` here and nothing in this app fills it in later, so a
-     * sentinel would make every sponsorship fail `lib/sponsorOverlay.ts`'s
-     * in-term test for ever — the overlay would never render.
+     * `startDate` is now and not a sentinel `0`. That column is `required` here
+     * and nothing in this app fills it in later, so a sentinel would make every
+     * sponsorship fail `lib/sponsorOverlay.ts`'s in-term test for ever — the
+     * overlay would never render.
      */
     expect(started).toBeLessThanOrEqual(Date.now());
   });
 
   it("copies the gesture's own playback id onto the sponsorship", async () => {
-    // `originalVideoPlaybackId` is what the preview step plays in this stage
-    // (`lib/renderPreview.ts`) and what Stage 6 has to put back when a term
-    // ends. It is required, so a gesture with no video cannot be sponsored at
-    // all — which `gestures.playbackId` being `required: true` already makes
-    // impossible.
+    // `originalVideoPlaybackId` is what the preview step plays until a
+    // composite exists (`lib/renderPreview.ts`) and what expiry puts back when
+    // a term ends. It is required, so a gesture with no video cannot be
+    // sponsored at all — which `gestures.playbackId` being `required: true`
+    // already makes impossible.
     const gestures = await newGestures(1, "playback");
     const ids = gestures.map((gesture) => gesture.id);
 
@@ -1772,7 +1762,7 @@ describe("the sponsor wizard, the re-edit link", () => {
 
   it("refuses a token on a sponsorship that is not awaiting a resubmission", async () => {
     // A live token on another status is a row that was *created* holding one
-    // — an admin, or Stage 9's import — rather than one this flow produced.
+    // — an admin, or an import — rather than one this flow produced.
     // Without the status check it would push a rejected sponsorship into the
     // approval queue without anybody asking for a resubmission.
     const { id, token } = await awaitingReEdit({ status: "rejected" });

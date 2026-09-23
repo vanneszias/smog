@@ -15,8 +15,7 @@ import { type RateLimitVerdict, takeRateLimit } from "@/lib/rateLimit";
  * could then write whatever they liked into this project's analytics, for as
  * long as it took someone to notice and rotate it. So the page posts here, and
  * this handler — running on the server, holding the secret from the
- * environment — posts onward. Ported from `apps/server/src/index.ts:414-454`
- * and `:159-200`, which exists for exactly this reason.
+ * environment — posts onward.
  *
  * ## What it refuses, stated precisely, because it is less than it looks
  *
@@ -25,13 +24,13 @@ import { type RateLimitVerdict, takeRateLimit } from "@/lib/rateLimit";
  * carries a session** — an event whose account's most recent `user-consents`
  * row says `analyticsConsent: false` (403).
  *
- * **This handler does not verify consent**, and a comment claiming it did
- * would be worth less than none. Consent in this stage lives in the visitor's
- * browser: a guest has no account, so there is no row to look up and nothing
- * server-side to check — for a guest this endpoint verifies origin, vocabulary
- * and rate, and nothing else. The gate that decides whether a guest is tracked
- * at all is the client-side consent store from Tasks 2-4, which is what
- * decides whether a request is made in the first place.
+ * **This handler does not verify consent**, and a comment claiming it did would
+ * be worth less than none. Consent lives in the visitor's browser: a guest has
+ * no account, so there is no row to look up and nothing server-side to check —
+ * for a guest this endpoint verifies origin, vocabulary and rate, and nothing
+ * else. The gate that decides whether a guest is tracked at all is the
+ * client-side consent store (`lib/consentStore.ts`), which is what decides
+ * whether a request is made in the first place.
  *
  * Requiring a session instead was considered and is the wrong shape: it would
  * track nobody who is not signed in, which is most visitors, and so would
@@ -42,10 +41,10 @@ import { type RateLimitVerdict, takeRateLimit } from "@/lib/rateLimit";
  * ## An unconfigured vendor is a no-op, not an error
  *
  * Missing credentials mean nothing is forwarded and the caller still gets
- * `202`, transcribed from `index.ts:163-166`. A site whose analytics vendor is
- * not configured — every local checkout, and CI — must still serve pages, and
- * a browser that got a 500 from the analytics beacon would log an error on
- * every page view for a fault that is nobody's problem.
+ * `202`. A site whose analytics vendor is not configured — every local
+ * checkout, and CI — must still serve pages, and a browser that got a 500 from
+ * the analytics beacon would log an error on every page view for a fault that
+ * is nobody's problem.
  */
 
 /** Where OpenPanel is, and who this application is to it. */
@@ -64,7 +63,7 @@ const SDK_VERSION = "2.0.0";
  */
 const REQUEST_TIMEOUT_MS = 10_000;
 
-/** Transcribed from `rateLimit({ namespace: "analytics", limit: 120, windowSeconds: 60 })`. */
+/** 120 events a minute per client, in the `analytics` namespace. */
 const NAMESPACE = "analytics";
 export const ANALYTICS_LIMIT = 120;
 const WINDOW_SECONDS = 60;
@@ -75,13 +74,12 @@ const MAX_VALUE_LENGTH = 512;
 /**
  * Every event name this relay will forward.
  *
- * `ANALYTICS_TRACK_EVENTS` (`apps/server/src/index.ts:132-138`) is a
- * hand-maintained second copy of the vocabulary, and it has already drifted
- * from the first: `screen_view` is not in `AnalyticsEventMap`
+ * A hand-maintained second copy of the vocabulary drifts from the first:
+ * `screen_view` is not in `AnalyticsEventMap`
  * (`packages/shared/src/analytics.ts`) at all, which has four members. So this
  * is a `Record` keyed on the type rather than a `Set` of literals — adding a
- * member to `AnalyticsEventMap` without adding it here stops the typecheck,
- * and removing one leaves a key with nothing to match.
+ * member to `AnalyticsEventMap` without adding it here stops the typecheck, and
+ * removing one leaves a key with nothing to match.
  *
  * The type import erases, so nothing from `@smog/shared` reaches the Worker
  * bundle.
@@ -92,8 +90,7 @@ const TRACK_EVENTS: Record<keyof AnalyticsEventMap | "screen_view", true> = {
   /*
    * The one name that is **not** in `AnalyticsEventMap`, listed separately so
    * the gap is deliberate rather than a copy that fell behind. The native app
-   * and the web app both send it; typing it is Stage 10's job, when the two
-   * analytics clients become one.
+   * sends it, and it is not typed yet.
    */
   screen_view: true,
   search_performed: true,
@@ -116,11 +113,10 @@ function isString(value: unknown): value is string {
  * The address OpenPanel should geolocate, which is **not** the address the
  * limiter counts.
  *
- * Transcribed from `getClientIp` (`index.ts:148-157`), which prefers
- * `cf-connecting-ip` and falls back through three headers a client can set
- * for itself. That is right for a geolocation hint — the worst a spoofer
- * achieves is wrong geography on their own events — and it is exactly wrong
- * for a budget key: see {@link rateLimitKey}.
+ * Prefers `cf-connecting-ip` and falls back through three headers a client can
+ * set for itself. That is right for a geolocation hint — the worst a spoofer
+ * achieves is wrong geography on their own events — and it is exactly wrong for
+ * a budget key: see {@link rateLimitKey}.
  */
 function clientIpForGeolocation(headers: Headers): null | string {
   const forwardedFor = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
@@ -174,7 +170,7 @@ function refused(error: string, status: number): Response {
   );
 }
 
-/** Accepted. The same body the shipped relay answers with. */
+/** Accepted, with the body the relay's clients expect. */
 function accepted(): Response {
   return Response.json(
     { success: true },
@@ -215,9 +211,8 @@ async function withdrewConsent(req: PayloadRequest): Promise<boolean> {
  * Never throws and never reports back. The caller has already answered `202`
  * on the strength of having accepted the event, and a beacon is not something
  * a page can act on: an error here is an operator's problem, so it goes to the
- * log and no further. Transcribed from `forwardToOpenPanel`
- * (`index.ts:159-200`), including the `x-client-ip` and `user-agent`
- * pass-through, without which OpenPanel geolocates the Worker rather than the
+ * log and no further. The `x-client-ip` and `user-agent` pass-through
+ * matters: without it OpenPanel geolocates the Worker rather than the
  * visitor.
  *
  * The environment is read per request rather than at module scope. On Workers

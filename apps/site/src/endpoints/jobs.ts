@@ -14,7 +14,7 @@ import { equalConstantTime } from "@/lib/constantTime";
  * calls on a schedule. That makes the scheduler an HTTP surface, with the two
  * problems an HTTP surface has.
  *
- * ## Review Focus 2 — a public URL that executes work
+ * ## A public URL that executes work
  *
  * Unauthenticated, this is a free denial-of-service and a way to make the
  * application send mail on demand. So it carries a shared secret, in
@@ -40,7 +40,7 @@ import { equalConstantTime } from "@/lib/constantTime";
  *   argument, and what happened goes to the log where only an operator reads
  *   it.
  *
- * ## Review Focus 1 — two invocations
+ * ## Two invocations
  *
  * A cron can fire twice, and a slow run can still be going when the next tick
  * arrives. Three of the four jobs this will drive have irreversible effects —
@@ -242,15 +242,15 @@ const runJobs: PayloadHandler = async (
        */
       req,
       /*
-       * **One job at a time.** Payload runs a tick's jobs through
-       * `Promise.all` unless told otherwise
-       * (`queues/operations/runJobs/index.js`), and this database has no
-       * transactions — which is the premise every guard in this application
-       * rests on. Two jobs writing the same document in one tick therefore
-       * race, and it is not theoretical: the first run of Task 3's tests, with
-       * two `send-email` jobs in one tick, died on `Failed query: insert into
-       * "users_sessions" …` from inside `Promise.all`, because updating a
-       * document rewrites its array tables and two rewrites overlapped.
+       * **One job at a time.** Payload runs a tick's jobs through `Promise.all`
+       * unless told otherwise (`queues/operations/runJobs/index.js`), and this
+       * database has no transactions — which is the premise every guard in this
+       * application rests on. Two jobs writing the same document in one tick
+       * therefore race, and it is not theoretical: the first run of the mail
+       * queue's tests, with two `send-email` jobs in one tick, died on
+       * `Failed query: insert into "users_sessions" …` from inside
+       * `Promise.all`, because updating a document rewrites its array tables
+       * and two rewrites overlapped.
        *
        * Serialising them costs a tick that takes as long as its jobs added up,
        * against a queue measured in a handful of messages. It buys the same
@@ -267,7 +267,7 @@ const runJobs: PayloadHandler = async (
     // A job that throws must not take the lease down with it. Note that an
     // empty queue is *not* this branch: `payload.jobs.run` answers
     // `noJobsRemaining` rather than throwing, which is also what it did before
-    // Task 3 registered the first task and there was no queue at all. Either
+    // any task was registered and there was no queue at all. Either
     // way the caller gets the same bytes; see the note above about why.
     req.payload.logger.error(
       { err: error },

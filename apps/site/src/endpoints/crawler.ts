@@ -7,25 +7,24 @@ import { buildSitemap, renderSitemapXml } from "@/lib/sitemap";
  * entry rather than from Next's metadata routes.
  *
  * **This is a bundle decision, and it was measured rather than assumed.**
- * Stage 0's findings record that a `route.ts`, `sitemap.ts` or
- * `opengraph-image.tsx` becomes its own bundle entry and re-bundles the
- * Payload/D1/drizzle graph into it, while a `page.tsx` shares the SSR server
- * bundle and costs nothing. Task 9 built it four ways against the same
- * commit:
+ * A `route.ts`, `sitemap.ts` or `opengraph-image.tsx` becomes its own bundle
+ * entry and re-bundles the Payload/D1/drizzle graph into it, while a
+ * `page.tsx` shares the SSR server bundle and costs nothing. This was built
+ * four ways against the same commit:
  *
  * | build | gzipped | delta |
  * |---|---:|---:|
- * | baseline (Task 8) | 7,423.13 KiB | — |
+ * | baseline | 7,423.13 KiB | — |
  * | + `app/robots.ts` (no Payload import) | 7,459.26 KiB | +36.13 |
  * | + `app/(frontend)/sitemap.ts` calling Payload | 7,982.91 KiB | **+523.65** |
  * | both as the endpoints below | 7,428.19 KiB | **+5.06** |
  *
- * (The task shipped at 7,428.58 KiB; the remaining 0.39 KiB is the
+ * (The change landed at 7,428.58 KiB; the remaining 0.39 KiB is the
  * locale-aware metadata added alongside, not these two files.)
  *
  * The naive pair fits — 7,982.91 KiB is still under CI's 8 MiB warning — but
  * it spends 560 of the 769 KiB of headroom on two text files, and the next
- * route that renders the Mux player costs 437 KiB on its own (Stage 5's
+ * route that renders the Mux player costs 437 KiB on its own (the
  * sponsor preview is exactly that route). Two text files are not worth the
  * whole budget.
  *

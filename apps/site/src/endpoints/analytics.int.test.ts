@@ -509,8 +509,8 @@ describe("the analytics relay", () => {
   it("accepts the event and forwards nothing when the vendor is not configured", async () => {
     /*
      * A site whose analytics vendor is unconfigured must still serve pages —
-     * every local checkout and CI is in this state. `index.ts:163-166` answers
-     * 202 and drops the event, and so does this.
+     * every local checkout and CI is in this state. This answers 202 and
+     * drops the event.
      */
     const sent = vi.fn(() =>
       Promise.resolve(new Response(null, { status: 202 }))

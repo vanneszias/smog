@@ -198,13 +198,11 @@ describe("the account endpoints", () => {
    * Runs `write`, drains the queue, and returns the confirmation URL the
    * account holder was actually sent.
    *
-   * **This helper is the Stage 4 deferral closing.** It used to read the link
-   * out of a log line, because there was no adapter and the endpoint wrote the
-   * URL to the console — and it carried a note saying it was what would have
-   * to change when Stage 7 wired one up. This is that change: nothing is
-   * logged any more, the link comes out of the outbox, and
-   * `sends the email-change confirmation instead of logging it` asserts both
-   * halves of that sentence.
+   * **This helper reads what was actually sent.** It used to read the link out
+   * of a log line, when there was no adapter and the endpoint wrote the URL to
+   * the console. Nothing is logged any more, the link comes out of the outbox,
+   * and `sends the email-change confirmation instead of logging it` asserts
+   * both halves of that sentence.
    */
   const capturedConfirmLink = async (
     write: () => Promise<unknown>,
@@ -317,7 +315,7 @@ describe("the account endpoints", () => {
 
     it("answers a locked account exactly as it answers a wrong password", async () => {
       /*
-       * Review Focus item 5's shape, applied to a signed-in surface. Payload
+       * The no-enumeration rule, applied to a signed-in surface. Payload
        * raises `LockedAuth` here, with a message only a real account can
        * provoke — and on this endpoint it would additionally tell whoever
        * holds a stolen cookie exactly when their guessing budget refills.
@@ -521,8 +519,8 @@ describe("the account endpoints", () => {
         { cookie: member.cookie }
       );
       /*
-       * The digest is written by the send and not by the request. Stage 7
-       * moved the minting into `jobs/sendEmail.ts`, because a job's input is
+       * The digest is written by the send and not by the request. The
+       * minting is in `jobs/sendEmail.ts`, because a job's input is
        * logged in full by Payload whenever a task throws and a deferred send
        * is an ordinary event — `lib/emailChange.ts` says so at length. Until
        * the queue runs there is a pending address and no credential, which is
@@ -540,11 +538,11 @@ describe("the account endpoints", () => {
 
     it("sends the email-change confirmation instead of logging it", async () => {
       /*
-       * Stage 4 Task 5's deferral, closed. The endpoint wrote the confirmation
-       * link to the console because no adapter existed; **deleting that log
-       * without sending anything is the failure this test exists to prevent**,
-       * so it asserts both halves — a message went out carrying the link, and
-       * nothing anywhere wrote the token to a log.
+       * The endpoint once wrote the confirmation link to the console, when no
+       * adapter existed; **deleting that log without sending anything is the
+       * failure this test exists to prevent**, so it asserts both halves — a
+       * message went out carrying the link, and nothing anywhere wrote the
+       * token to a log.
        */
       const member = await createMember("email-sent");
       const wanted = target();
@@ -721,7 +719,7 @@ describe("the account endpoints", () => {
 
     it("says nothing about whether the new address is already registered", async () => {
       /*
-       * Review Focus item 5, on the one surface where it is easiest to
+       * The no-enumeration rule, on the one surface where it is easiest to
        * forget: a "that address is taken" answer here is a one-request
        * enumeration oracle for any address an attacker cares to name, from
        * inside a throwaway account they registered themselves.
@@ -776,7 +774,7 @@ describe("the account endpoints", () => {
        * the endpoint's own slow path was still padded, so the assertion
        * stayed green while two of the three refusals had become instant.
        * The property is "one answer, one timing class"; a test that samples
-       * one branch cannot say that. Transcript M15 in the Task 5 report.
+       * one branch cannot say that.
        */
       const member = await createMember("email-timing");
 
@@ -1244,12 +1242,11 @@ describe("the account endpoints", () => {
 
     it("keeps the consent record, with a null user", async () => {
       /*
-       * A legal-retention requirement from the spec, not a nicety.
-       * `user_consents.user` was deliberately left optional — see
-       * `collections/UserConsents.ts` — so the column is nullable and the
-       * record survives the account it describes, anonymised rather than
-       * destroyed. A cascade that took the consents with it would destroy
-       * evidence, and no happy-path test would notice.
+       * A legal-retention requirement, not a nicety. `user_consents.user` was
+       * deliberately left optional — see `collections/UserConsents.ts` — so the
+       * column is nullable and the record survives the account it describes,
+       * anonymised rather than destroyed. A cascade that took the consents with
+       * it would destroy evidence, and no happy-path test would notice.
        */
       expect(consentUserBefore).toBe(victim.id);
 

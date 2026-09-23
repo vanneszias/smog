@@ -25,21 +25,21 @@ import { field, guardOrigin, pad, readForm } from "@/lib/formPost";
  *
  * ## Why these are not `app/**​/route.ts`
  *
- * Same reason as `endpoints/crawler.ts`, and it is a measurement rather than
- * a preference: a Next route handler that imports Payload becomes its own
- * bundle entry and re-bundles the Payload/D1/drizzle graph into it, measured
- * at **+523.65 KiB gzipped** during Stage 3 Task 9 against roughly 760 KiB of
- * remaining headroom. `app/(payload)/api/[...slug]/route.ts` already carries
- * that graph, so a handler added here costs only the handler. The public
- * paths — `/auth/sign-in` and friends — are rewrites in `next.config.ts`,
- * which are routing-manifest entries and bundle nothing at all.
+ * Same reason as `endpoints/crawler.ts`, and it is a measurement rather than a
+ * preference: a Next route handler that imports Payload becomes its own bundle
+ * entry and re-bundles the Payload/D1/drizzle graph into it, measured at
+ * **+523.65 KiB gzipped** against roughly 760 KiB of remaining headroom.
+ * `app/(payload)/api/[...slug]/route.ts` already carries that graph, so a
+ * handler added here costs only the handler. The public paths — `/auth/sign-in`
+ * and friends — are rewrites in `next.config.ts`, which are routing-manifest
+ * entries and bundle nothing at all.
  *
  * ## Why forms and not Server Actions
  *
- * The plan allows either and demands the cost be measured. These are plain
+ * Either would work, and the cost was measured. These are plain
  * `<form method="post">` posts to a URL, which means the pages need no client
  * JavaScript, no hydration and no `"use client"` boundary, and sign-in works
- * with scripting switched off. The measurement is in the task report.
+ * with scripting switched off.
  *
  * ## Every response is a redirect
  *
@@ -48,8 +48,8 @@ import { field, guardOrigin, pad, readForm } from "@/lib/formPost";
  * three sign-in outcomes are byte-identical and two sign-up outcomes are
  * byte-identical; a second response format is a second place for that
  * property to be true in and a second place for it to quietly stop being
- * true. When a JSON surface is needed — the Stage 8 native app — it should be
- * built here, next to these, and held to the same assertions.
+ * true. The JSON surface the native app needs is therefore built here, next
+ * to these, and held to the same assertions.
  */
 
 /** The only collection these endpoints will authenticate against. */
@@ -100,7 +100,7 @@ const signIn: PayloadHandler = async (req) => {
 
     /*
      * `generatePayloadCookie` rather than a hand-rolled `Set-Cookie`, and
-     * that is the fix for Review Focus item 1 as much as a convenience:
+     * that is the fix for the cookie's scope as much as a convenience:
      * `payload/dist/auth/cookies.js` hard-codes `path: '/'` and
      * `httpOnly: true`, and takes `sameSite` and `secure` from the
      * collection's auth config. Every URL on this site is locale-prefixed,
@@ -128,8 +128,8 @@ const signIn: PayloadHandler = async (req) => {
      * distinguishes them — it throws `LockedAuth` with "This user is locked
      * due to having too many failed login attempts" for the last two — and an
      * address that was never registered can never lock, so passing that
-     * message through would prove the account exists. Task 1 measured all
-     * four cases against a real database; the table is in its report.
+     * message through would prove the account exists. All four cases were
+     * measured against a real database.
      *
      * What that costs: a visitor who really is locked out is told only that
      * the credentials are wrong, with no hint that waiting ten minutes fixes
@@ -158,7 +158,7 @@ const signIn: PayloadHandler = async (req) => {
  * caller only renders it: a redirect here, a JSON body there.
  *
  * Everything below is moved from the previous single-surface `signUp`
- * handler **unchanged** — same guards, same order, same comments. Stage 4's
+ * handler **unchanged** — same guards, same order, same comments. A
  * mutation sweep proved that removing any *two* of `context: {
  * [SELF_REGISTRATION]: true } }`, the field-by-field `data` object, the
  * literal `role: "user"` and `overrideAccess: false` mints an admin, and
@@ -171,8 +171,8 @@ const signIn: PayloadHandler = async (req) => {
  * auto-signing-in a new account would mean the taken-address branch had to
  * answer without a session, which is a one-request oracle no matter how
  * carefully the rest of the response is matched. Verifying by email would be
- * the usual way to tell them apart safely, and this app has no email adapter
- * (Stage 0), so the two stay merged into the one neutral outcome instead.
+ * the usual way to tell them apart safely, and sign-up sends no verification
+ * mail, so the two stay merged into the one neutral outcome instead.
  */
 export async function decideSignUp(
   req: PayloadRequest,
@@ -208,8 +208,7 @@ export async function decideSignUp(
      * loudly, by `cannot be used to mint an admin`. That is the same
      * belt-and-braces shape as `lib/sharedList.ts`, kept for the same
      * reason: each half stops being decorative the day the other is loosened
-     * for an unrelated reason, and `access.create` is explicitly slated to
-     * be revisited in this stage. Transcripts in the Task 2 report, S1–S3.
+     * for an unrelated reason.
      */
     await req.payload.create({
       collection: USERS,
@@ -250,7 +249,7 @@ export async function decideSignUp(
      * An `email`-path validation error, with the format already screened
      * above, is "that address is already registered" — and this is the one
      * branch that must be invisible. It falls through to the same outcome
-     * the successful path returns. Review Focus item 5.
+     * the successful path returns.
      */
   }
 
@@ -405,22 +404,21 @@ export async function readBody(
  *
  * ## Why this exists
  *
- * Task 2 closed email enumeration on `/auth/sign-in` and reported that the
- * site as deployed still leaked, because `app/(payload)/api/[...slug]/route.ts`
- * mounts Payload's REST API and its `loginHandler` answers a locked account
- * with "This user is locked due to having too many failed login attempts."
- * An address that was never registered can never lock, so that sentence is a
- * one-request proof that an account exists — the exact leak `/auth/sign-in`
- * was changed to close, still wide open one path over. Reproduced against a
- * running dev server before this was written; the transcript is in the Task 3
- * report.
+ * Closing email enumeration on `/auth/sign-in` left the site as deployed still
+ * leaking, because `app/(payload)/api/[...slug]/route.ts` mounts Payload's REST
+ * API and its `loginHandler` answers a locked account with "This user is locked
+ * due to having too many failed login attempts." An address that was never
+ * registered can never lock, so that sentence is a one-request proof that an
+ * account exists — the exact leak `/auth/sign-in` was changed to close, still
+ * wide open one path over. Reproduced against a running dev server before this
+ * was written.
  *
  * ## Why shadowing works
  *
  * `collections/config/sanitize.js` pushes `authCollectionEndpoints` onto
  * whatever the collection already declares, and `handleEndpoints` takes the
  * **first** match — so a `post /login` declared on `Users` wins over
- * Payload's. Task 2 verified the mechanism; this is the use of it.
+ * Payload's. The mechanism is verified; this is the use of it.
  *
  * ## What it costs, stated plainly
  *
@@ -511,7 +509,7 @@ const usersLogin: PayloadHandler = async (req) => {
 };
 
 /**
- * `POST /api/mobile/sign-up` — the JSON sign-up surface the Stage 8 native
+ * `POST /api/mobile/sign-up` — the JSON sign-up surface the native
  * app needs, and the second (and only other) renderer over
  * {@link decideSignUp}.
  *

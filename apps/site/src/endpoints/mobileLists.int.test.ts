@@ -12,13 +12,13 @@ import config from "../payload.config";
  * here is routing and authentication, and a handler called with a hand-built
  * `req` exercises neither.
  *
- * **This file exists because `lists.int.test.ts` could not change.** The
- * form endpoints' `decide*` functions (`endpoints/lists.ts`) are shared with
- * these; that file's 47 tests, run unedited alongside this one, are what
- * prove the extraction changed no guard, no order and no answer for the
- * surface that already shipped. What this file adds is the second renderer:
- * a JSON body instead of a 303, and `Authorization: JWT …` instead of a
- * cookie — the native app carries no cookie jar at all.
+ * **This file exists because `lists.int.test.ts` could not change.** The form
+ * endpoints' `decide*` functions (`endpoints/lists.ts`) are shared with these;
+ * that file's 47 tests, run unedited alongside this one, are what prove the
+ * extraction changed no guard, no order and no answer for the web surface. What
+ * this file adds is the second renderer: a JSON body instead of a 303, and
+ * `Authorization: JWT …` instead of a cookie — the native app carries no cookie
+ * jar at all.
  */
 
 const RUN = crypto.randomUUID();
@@ -417,11 +417,10 @@ describe("the native app's list endpoints", () => {
     });
 
     /**
-     * The brief's own requirement: "the app shows the limit before the
-     * request." This is the server side of that — the bound is enforced
-     * here regardless of what the client showed, and the mobile client must
-     * be able to read this refusal by name to show the same message the
-     * cap-reached UI shows before the tap.
+     * The app shows the limit before the request. This is the server side of
+     * that — the bound is enforced here regardless of what the client showed,
+     * and the mobile client must be able to read this refusal by name to show
+     * the same message the cap-reached UI shows before the tap.
      */
     it("refuses to add past MAX_LIST_ITEMS, and adds nothing", async () => {
       const list = await seedList(owner.user, {

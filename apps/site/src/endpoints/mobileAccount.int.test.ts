@@ -10,21 +10,19 @@ import config from "../payload.config";
  * wrong here is routing and authentication, and a handler called with a
  * hand-built `req` exercises neither.
  *
- * **This file exists because `account.int.test.ts` could not change.** The
- * form endpoints' `decide*` functions (`endpoints/account.ts`) are shared
- * with these; that file's 41 tests, run unedited alongside this one, are
- * what prove the extraction changed no guard, no order and no answer for
- * the surface that already shipped. What this file adds is the second
- * renderer: a JSON body instead of a 303, and `Authorization: JWT …`
- * instead of a cookie — the native app carries no cookie jar at all.
+ * **This file exists because `account.int.test.ts` could not change.** The form
+ * endpoints' `decide*` functions (`endpoints/account.ts`) are shared with
+ * these; that file's 41 tests, run unedited alongside this one, are what prove
+ * the extraction changed no guard, no order and no answer for the web surface.
+ * What this file adds is the second renderer: a JSON body instead of a 303, and
+ * `Authorization: JWT …` instead of a cookie — the native app carries no cookie
+ * jar at all.
  *
  * **`/mobile/account/delete` asks for the account's address, not a
- * password.** The Stage 8 native task brief describes this endpoint as
- * password-protected and timing-padded; `endpoints/account.ts`'s
- * `decideDeleteAccount` is neither — it compares a typed address, and the
- * handler is explicitly not padded. This file asserts the shipped contract,
- * not the brief's description of it; see the Task 12 report for the
- * discrepancy.
+ * password.** It is easy to assume this endpoint is password-protected and
+ * timing-padded; `endpoints/account.ts`'s `decideDeleteAccount` is neither —
+ * it compares a typed address, and the handler is explicitly not padded.
+ * This file asserts that contract.
  */
 describe("the native app's account endpoints", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
@@ -405,12 +403,12 @@ describe("the native app's account endpoints", () => {
 
   describe("delete account", () => {
     /**
-     * The load-bearing assertion of this describe block. The task brief
-     * claims this endpoint wants a password; the shipped
-     * `decideDeleteAccount` wants the account's own address and nothing
-     * else. A client sending `{ current: PASSWORD }` here — the brief's
-     * shape — would get exactly the same `invalid` answer as one sending
-     * no confirmation at all, because the field it reads is `confirmEmail`.
+     * The load-bearing assertion of this describe block. It is easy to assume
+     * this endpoint wants a password; `decideDeleteAccount` wants the account's
+     * own address and nothing else. A client sending `{ current: PASSWORD }`
+     * here — the password-change shape — would get exactly the same `invalid`
+     * answer as one sending no confirmation at all, because the field it reads
+     * is `confirmEmail`.
      */
     it("refuses a password where the address belongs", async () => {
       const member = await createMember("delete-password-not-accepted");

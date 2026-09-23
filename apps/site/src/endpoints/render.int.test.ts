@@ -126,8 +126,8 @@ type Status =
  *
  * **None of this is evidence about Mux.** There are no Mux credentials in this
  * project, so everything below is a fake that answers the shape of the
- * protocol. Stage 4's Google strategy is the precedent and the warning: a fake
- * proves a shape and never a provider's behaviour.
+ * protocol. The Google strategy's tests are the precedent and the warning: a
+ * fake proves a shape and never a provider's behaviour.
  */
 describe("the render callback", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
@@ -748,7 +748,7 @@ describe("the render callback", () => {
   it("does not resurrect a rejected one", async () => {
     /*
      * `rejected` looks terminal and is not. `lib/sponsorshipStatus.ts` allows
-     * `rejected -> pending_resubmission`, because the shipped product re-opens
+     * `rejected -> pending_resubmission`, because an administrator may re-open
      * a rejected sponsorship — so attaching the composite here means the
      * *rejected* submission's video goes live the moment the sponsor's re-edit
      * is approved. That is the sharpest version of this whole guard, and the
@@ -801,7 +801,7 @@ describe("the render callback", () => {
 
   it("is refused by the callback's own guard, not by enforceStatusTransitions", async () => {
     /*
-     * **The plan expected `hooks/enforceStatusTransitions.ts` to refuse the
+     * **`hooks/enforceStatusTransitions.ts` looks as if it would refuse the
      * write to a dead sponsorship. It does not, and this is the proof.**
      *
      * That hook compares `originalDoc.status` with `data.status`, and `data`
@@ -1114,7 +1114,7 @@ describe("the render callback", () => {
   it("ignores a playback id that is not public", async () => {
     // A signed playback id is not something an unauthenticated gesture page
     // can play, so an asset that only has one is as unplayable as an asset
-    // with none. Stage 6 exit criterion 7.
+    // with none.
     const { id } = await seedJob("signed-only");
     muxCreatesAnAsset({
       playbackIds: [{ id: `pb-signed-${RUN}`, policy: "signed" }],
@@ -1234,10 +1234,9 @@ describe("the render callback", () => {
 
   it("answers a body with no job id of ours as an unknown job, and changes nothing", async () => {
     /*
-     * Review Focus 3. A signed body that names no job this application
-     * claimed is answered as an unknown job is: 200 `{"status":"ok"}`, byte
-     * for byte, and no work — so Lambda stops retrying, and the answer is no
-     * oracle.
+     * A signed body that names no job this application claimed is answered as
+     * an unknown job is: 200 `{"status":"ok"}`, byte for byte, and no work — so
+     * Lambda stops retrying, and the answer is no oracle.
      *
      * `customData: null` is not hypothetical: it is what `launch.js` sends
      * (`params.webhook.customData ?? null`) for a render submitted without
@@ -1324,10 +1323,10 @@ describe("the render callback", () => {
  *
  * **None of this is evidence about Mux.** It proves that this application
  * refuses the right callers and mints a real signed token for the right ones.
- * Whether Mux honours the token is Task 6's first contact, and `lib/mux.ts`
- * records the one thing already known to differ: a `public` playback policy —
- * which is what every asset in this product has — is served by Mux to anyone
- * who asks, token or not.
+ * Whether Mux honours the token is for a deployed environment to show, and
+ * `lib/mux.ts` records the one thing already known to differ: a `public`
+ * playback policy — which is what every asset in this product has — is served
+ * by Mux to anyone who asks, token or not.
  */
 describe("the Mux source endpoint", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
@@ -1594,9 +1593,9 @@ describe("the Mux source endpoint", () => {
      * measurement, because a timing measurement in CI fails on a busy machine
      * instead of on a regression.
      *
-     * `lib/constantTime.ts` is the third caller this helper now has — Task 2
-     * extracted it from `endpoints/oauth.ts` when a second copy appeared, and
-     * this is the copy that did not get written.
+     * `lib/constantTime.ts` has three callers now — it was extracted from
+     * `endpoints/oauth.ts` when a second copy appeared, and this is the copy
+     * that did not get written.
      */
     const source = await readFile(
       new URL("./render.ts", import.meta.url),

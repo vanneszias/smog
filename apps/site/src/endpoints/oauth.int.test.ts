@@ -20,11 +20,11 @@ import config from "../payload.config";
  * with a real form body, the ID token is a real RS256 JWT, and the signature
  * is verified against a real JWKS document fetched over the network.
  *
- * What that leaves unproven is listed in the task report: everything that is
- * specifically *Google's* — the exact shape of its `error` responses, its
- * consent screen, whether its `email_verified` arrives as a boolean or the
- * string `"true"` (both are accepted here, and only one of them is exercised
- * against the real thing) and whether the registered redirect URI matches.
+ * What that leaves unproven is everything that is specifically *Google's* — the
+ * exact shape of its `error` responses, its consent screen, whether its
+ * `email_verified` arrives as a boolean or the string `"true"` (both are
+ * accepted here, and only one of them is exercised against the real thing) and
+ * whether the registered redirect URI matches.
  *
  * ## Why the provider is configured through the environment
  *
@@ -316,7 +316,7 @@ describe("oauth endpoints", () => {
      * it promises is a broken fixture, and it has to say so from here — the
      * alternative is every state test below silently comparing one refusal
      * against another and passing while proving nothing, which is the
-     * failure mode Task 2 was handed as a finding.
+     * failure mode that has been found here before.
      */
     if (response.status !== 303 || cookie === null) {
       throw new Error(

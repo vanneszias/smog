@@ -10,14 +10,13 @@ import type { User } from "@/payload-types";
  *
  * ## Why there is no unauthenticated path
  *
- * The decision was recorded before this task was written: a guest's choice
- * stays in the browser (`lib/consentStore.ts`), and a row is written only
- * once there is an account to attach it to. `user-consents` denies `create`
- * to everyone — see `collections/UserConsents.ts` — so the only door is the
- * local API with `overrideAccess: true`, and that door is not exposed to a
- * signed-out caller here. A public writer onto an append-only, undeletable
- * table would be a public way to fill a legal-evidence table with rows
- * nobody can ever remove.
+ * The decision is deliberate: a guest's choice stays in the browser
+ * (`lib/consentStore.ts`), and a row is written only once there is an account
+ * to attach it to. `user-consents` denies `create` to everyone — see
+ * `collections/UserConsents.ts` — so the only door is the local API with
+ * `overrideAccess: true`, and that door is not exposed to a signed-out caller
+ * here. A public writer onto an append-only, undeletable table would be a
+ * public way to fill a legal-evidence table with rows nobody can ever remove.
  *
  * ## The mechanism, copied rather than reinvented
  *
@@ -39,9 +38,9 @@ import type { User } from "@/payload-types";
  * Any account in good standing could append them, so a session is not on its
  * own a limit.
  *
- * The limiter is `lib/rateLimit.ts`, the one Task 5 built, under its own
- * namespace so that this endpoint and the relay cannot spend each other's
- * budget — the property `takeRateLimit`'s `namespace` argument exists for.
+ * The limiter is `lib/rateLimit.ts`, under its own namespace so that this
+ * endpoint and the relay cannot spend each other's budget — the property
+ * `takeRateLimit`'s `namespace` argument exists for.
  */
 
 /** The only collection this endpoint authenticates against. */
@@ -111,13 +110,12 @@ export const CONSENT_VERSION = "2026-09-22";
  *
  * ## Why a refusal is written at all
  *
- * The column is `integer DEFAULT false NOT NULL`, so "no row" and "a row
- * saying no" are indistinguishable in SQL, and Stage 9 imports into this
- * table. Writing only on `analyticsConsent === true` would record nothing for
- * everyone who declined, and an import reading this table could never tell
- * them apart from someone who was never asked. This function does not branch
- * on the value at all, on purpose: there is exactly one write path, for
- * exactly two outcomes.
+ * The column is `integer DEFAULT false NOT NULL`, so "no row" and "a row saying
+ * no" are indistinguishable in SQL. Writing only on `analyticsConsent === true`
+ * would record nothing for everyone who declined, and nothing reading this
+ * table could ever tell them apart from someone who was never asked. This
+ * function does not branch on the value at all, on purpose: there is exactly
+ * one write path, for exactly two outcomes.
  *
  * ## Why this always adds a row rather than upserting one
  *

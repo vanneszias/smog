@@ -41,7 +41,7 @@ import type { Sponsorship } from "@/payload-types";
  * - **Mollie could not be asked** answers 502. Mollie retries every non-2xx,
  *   and that is the point: a timeout, a 503 or a rate limit says nothing
  *   about the payment, so swallowing it would drop a real payment on the
- *   floor and leave a paying sponsor in `pending_payment` for ever — Stage 7's
+ *   floor and leave a paying sponsor in `pending_payment` for ever —
  *   `cleanup-stale-payments` would eventually cancel them. A 404 is *not* in
  *   this bucket: it is Mollie's definite answer about that id, so it takes the
  *   ordinary 200 along with everything else. `MollieRefusedError.status` is
@@ -54,7 +54,7 @@ import type { Sponsorship } from "@/payload-types";
  * `transactionOptions`, so `beginTransaction` resolves to `null` and nothing
  * on any write path is atomic.
  *
- * The plan proposed handling this with a conditional update — an `update`
+ * The obvious way to handle this is a conditional update — an `update`
  * whose `where` names the status being moved *from*, treating "zero rows
  * changed" as "somebody else got there first". **That was measured on this
  * adapter and it does not work.** `collections/operations/update.js` (3.89.0)
@@ -69,11 +69,10 @@ import type { Sponsorship } from "@/payload-types";
  * the INSERT, which makes it the one atomic operation available, and of two
  * concurrent deliveries exactly one gets the row. See `lib/claims.ts`.
  *
- * That was `webhook-deliveries`, a table of its own, until Stage 7 folded it
- * and `render-completions` into one generic table with four consumers — the
- * refactor `collections/RenderCompletions.ts` deferred until they were all
- * visible. **Nothing about this handler's behaviour changed**, and the way
- * that is known is that Stage 5's concurrency mutation still fails Stage 5's
+ * That was `webhook-deliveries`, a table of its own, until it and
+ * `render-completions` were folded into one generic table with four
+ * consumers. **Nothing about this handler's behaviour changed**, and the way
+ * that is known is that this handler's concurrency mutation still fails its
  * test through the new table: drop `unique` from `claims.key` and `survives
  * two concurrent deliveries of the same payment` fails, alone.
  *
@@ -117,19 +116,18 @@ const PAID_TARGET = "pending_approval";
  *
  * Note the two spellings. Mollie's payment status is the American `canceled`;
  * this app's sponsorship status is the British `cancelled`, fixed by
- * `@smog/config`'s tuple since Stage 1. They are different words for different
- * things and the mapping between them is this constant pair.
+ * `@smog/config`'s tuple. They are different words for different things and the
+ * mapping between them is this constant pair.
  */
 const FAILED_TARGET = "cancelled";
 
 /**
  * The Mollie payment statuses that mean the sponsorship will never be paid.
  *
- * The shipped handler in `apps/server` skips everything that is not `paid` and
- * answers 200, which leaves a failed payment's sponsorship in
- * `pending_payment` for ever — and `cleanup-stale-payments` does not exist
- * until Stage 7. Cancelling here is a deliberate change from the shipped
- * behaviour, and the only one in this file.
+ * Skipping everything that is not `paid` and answering 200 would leave a
+ * failed payment's sponsorship in `pending_payment`, holding its gesture off
+ * the market until `cleanup-stale-payments` caught up with it. Cancelling
+ * here closes that at once.
  */
 const FINAL_FAILURE_STATUSES = new Set(["canceled", "expired", "failed"]);
 
@@ -140,8 +138,7 @@ const FINAL_FAILURE_STATUSES = new Set(["canceled", "expired", "failed"]);
  * this is deliberately not that constant: it is a bound on how much work one
  * unauthenticated request may ask for, not a rule about how many gestures an
  * order may cover, and tying them together would mean raising the second
- * silently raised the first. Twenty is what the shipped webhook allows and
- * what this transcribes.
+ * silently raised the first. Twenty is the established bound.
  */
 const MAX_SPONSORSHIPS_PER_PAYMENT = 20;
 
@@ -172,10 +169,9 @@ function problem(status: number, error: string): Response {
 /**
  * The payment id out of the request, whichever way Mollie sent it.
  *
- * Mollie posts `id=tr_xxx` as a form, and the shipped handler in `apps/server`
- * accepts JSON as well — so this does too, because the migration's non-goal is
- * that the purchase flow behaves as it does today and a body shape is exactly
- * the kind of thing a provider changes between API versions.
+ * Mollie posts `id=tr_xxx` as a form, and this accepts JSON as well, because
+ * a body shape is exactly the kind of thing a provider changes between API
+ * versions.
  *
  * A body that is neither, or carries no id, yields `""`.
  */
@@ -214,13 +210,13 @@ async function readPaymentId(req: PayloadRequest): Promise<string> {
  * not something this app wrote.
  *
  * `lib/mollie.ts` writes `{ sponsorshipIds: JSON.stringify(ids) }` and nothing
- * else — deliberately without the shipped product's `isBulkPayment` flag,
- * since `apps/site` creates one sponsorship row per selected gesture and so
- * every payment names a list.
+ * else — deliberately without an `isBulkPayment` flag, since `apps/site`
+ * creates one sponsorship row per selected gesture and so every payment names a
+ * list.
  *
  * Every clause below is a way a payment can name work this handler must not
  * do. They are not defensive: Mollie hands metadata back verbatim, and a row
- * written by an older version of this app, by the shipped `apps/server`, or by
+ * written by an older version of this app, by another client, or by
  * hand in Mollie's dashboard reaches here through the same door as a good one.
  */
 function parseSponsorshipIds(raw: string | undefined): null | string[] {
@@ -248,17 +244,17 @@ function parseSponsorshipIds(raw: string | undefined): null | string[] {
     return null;
   }
 
-  // The shipped handler screens for duplicate ids here as well, and that check
-  // is load-bearing *there*: `apps/server` resolves each id with its own
-  // `getById`, so `[a, a]` yields two copies of one sponsorship and the
+  // A duplicate-id screen is load-bearing only where each id is resolved with
+  // its own lookup: there `[a, a]` yields two copies of one sponsorship and the
   // expected amount is double what the sponsor owes. It is not load-bearing
-  // here, because `resolveSponsorships` asks for the whole set in one query
-  // and compares the number of rows it got with the number of ids it asked
-  // for — `[a, a]` comes back as one row against two ids and is refused there.
-  // A second screen in front of it could not be made to fail by any mutation,
-  // which is the same ruling as the `isGestureId` screen Stage 4 removed, so
-  // it is absent and `refuses a payment that names the same sponsorship twice`
-  // pins the behaviour where it actually lives.
+  // here, because `resolveSponsorships` asks for the whole set in one query and
+  // compares the number of rows it got with the number of ids it asked for —
+  // `[a, a]` comes back as one row against two ids and is refused there. A
+  // second screen in front of it could not be made to fail by any mutation,
+  // which is the same conclusion as the `isGestureId` screen that was removed,
+  // so it is absent and
+  // `refuses a payment that names the same sponsorship twice` pins the
+  // behaviour where it actually lives.
   return parsed as string[];
 }
 
@@ -278,7 +274,7 @@ const deliveryClaim = (paymentId: string) =>
  * Gives the lock back, so a delivery that only half applied can be replayed.
  *
  * Mollie will not retry a 200, but an operator can re-fire the webhook and
- * Stage 7's `cleanup-stale-payments` will find the rows that never moved. A
+ * `cleanup-stale-payments` will find the rows that never moved. A
  * claim left behind by a delivery that failed part-way would turn both of
  * those into no-ops — the lock would say the payment was handled when some of
  * its sponsorships never were.
@@ -296,10 +292,10 @@ function releaseDelivery(
 /**
  * The sponsorships a payment names, or `null` if any of them is missing.
  *
- * All or nothing, transcribed from the shipped handler: the expected amount is
- * the sum of every named sponsorship's `paymentAmount`, so one row that is not
- * there makes the comparison meaningless rather than merely incomplete. A
- * payment that has half its rows is a payment this handler must not act on.
+ * All or nothing: the expected amount is the sum of every named sponsorship's
+ * `paymentAmount`, so one row that is not there makes the comparison
+ * meaningless rather than merely incomplete. A payment that has half its rows
+ * is a payment this handler must not act on.
  */
 async function resolveSponsorships(
   req: PayloadRequest,

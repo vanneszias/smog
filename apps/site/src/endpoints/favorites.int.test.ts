@@ -187,7 +187,7 @@ describe("the account favorites endpoint", () => {
      * The property the whole design rests on, and the reason the request
      * carries a wanted state rather than a toggle: there are no transactions
      * on any write path in this app, a double-submitted press is ordinary,
-     * and Task 6's merge re-runs over the same ids on every sign-in. A
+     * and the sign-in merge re-runs over the same ids on every sign-in. A
      * toggle applied twice undoes itself.
      *
      * `Users.ts`'s `beforeChange` dedupe hook is the second half of this and
@@ -229,7 +229,7 @@ describe("the account favorites endpoint", () => {
      * mutation that replaced the whole array on every add — `[gestureId]`
      * instead of the union — passed it: adding A then B leaves `[B]`,
      * removing A leaves `[B]`, and the final expectation is `[B]` either
-     * way. Green, and proving nothing. Transcript M21 in the Task 4 report.
+     * way. Green, and proving nothing.
      */
     await setFavorite(activeId, true);
     await setFavorite(secondId, true);
@@ -386,7 +386,7 @@ describe("the account favorites endpoint", () => {
      * form would use to smuggle a valid JSON body in. `SameSite=Lax` keeps
      * the session cookie off that request, which is why this is the second
      * lock and not the first — but a second lock that no test can tell from
-     * an unlocked door is not a lock. Transcript M28 in the Task 4 report.
+     * an unlocked door is not a lock.
      */
     const response = await post(null, {
       contentType: "text/plain",

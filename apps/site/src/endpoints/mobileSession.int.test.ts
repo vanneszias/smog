@@ -16,18 +16,17 @@ import { mintExchangeCode } from "./mobileSession";
  * exercises neither.
  *
  * The eighth test — "survives two concurrent redemptions" — is the property
- * `takeClaim`'s unique index exists for, written the same way Stage 5's
- * "survives two concurrent deliveries of the same payment" is: `unique:
- * false` on the claims `key` field fails this one, and Stage 5's and Stage
- * 6's own concurrency tests through the same table with it, which is the
- * point of merging them into one mechanism. See the task report for that
- * mutation's output.
+ * `takeClaim`'s unique index exists for, written the same way the Mollie
+ * webhook's "survives two concurrent deliveries of the same payment" is:
+ * `unique: false` on the claims `key` field fails this one, and the
+ * webhook's and the render callback's own concurrency tests through the same
+ * table with it, which is the point of merging them into one mechanism.
  *
  * The sixth — "refuses a session token presented as an exchange code" — is
  * the one that is easy to omit and expensive to omit: without the `purpose`
  * claim checked in `redeem`, a session token verifies as a perfectly good
- * exchange code, because both are JWTs signed over `payload.secret`. See the
- * task report for what removing that check does to this test.
+ * exchange code, because both are JWTs signed over `payload.secret`.
+ * Removing that check is what this test catches.
  *
  * **That test presents a Google session token — `createOAuthSession`'s own
  * — and not a plain password one**, and the difference is load-bearing
@@ -37,12 +36,12 @@ import { mintExchangeCode } from "./mobileSession";
  * satisfy `redeem`'s `typeof claims.sub === "string"` check whether or not
  * `purpose` is being checked, and a mutation that deletes the `purpose`
  * check would still pass a test written against it — the exact "could not
- * fail" shape this stage's assertions are checked against. A Google session
+ * fail" shape these assertions are checked against. A Google session
  * token, from the same `createOAuthSession` the callback and this endpoint
  * both call, carries `sub: String(user.id)` — see `auth/googleStrategy.ts`
  * — so it is a real, minted, HS256-over-`payload.secret` token that only
  * `purpose` stands between and a fresh session. Confirmed against the
- * removed check: see the task report.
+ * removed check.
  */
 describe("POST /api/mobile/session", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;

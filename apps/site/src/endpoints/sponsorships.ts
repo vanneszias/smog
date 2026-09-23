@@ -51,9 +51,8 @@ import type { Gesture, Sponsorship } from "@/payload-types";
  * ## There is no sign-in check anywhere in this file, and that is the product
  *
  * Every other write in this app begins with "who is this". Sponsoring does
- * not: `apps/web/src/routes/sponsors/` is reachable by anyone, collects the
- * sponsor's contact details in the form itself, and the shipped oRPC
- * procedures behind it are `publicProcedure`. A sponsor is a company buying
+ * not: the sponsor wizard is reachable by anyone and collects the sponsor's
+ * contact details in the form itself. A sponsor is a company buying
  * one thing once, not an account. So the thing that stands in for
  * authentication here is that **nothing the form says is believed**: every
  * gesture id is resolved against real rows with `overrideAccess: false`,
@@ -75,10 +74,10 @@ const MOLLIE_WEBHOOK_PATH = "/webhooks/mollie";
 /** Origins Mollie cannot reach, so it is never offered a webhook for them. */
 const LOCAL_HOSTS = new Set(["0.0.0.0", "127.0.0.1", "::1", "localhost"]);
 
-/** One day, for the term arithmetic the shipped mutation does. */
+/** One day, for the term arithmetic. */
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** The shipped term: `Date.now() + durationYears * 365 * 24 * 60 * 60 * 1000`. */
+/** The term is `durationYears * 365` days from now. */
 const DAYS_PER_YEAR = 365;
 
 /** Which extension a stored logo gets, by the type it was accepted as. */
@@ -138,8 +137,7 @@ function draftCookie(req: PayloadRequest, value: string): string {
  * **Omitted for a local origin, and that is not a convenience.** Mollie
  * refuses a `webhookUrl` it cannot reach, and it refuses the whole payment
  * with it — so a developer running `bun -F site dev` would get no checkout at
- * all rather than a checkout with no webhook. The shipped flow makes the same
- * exception with `baseUrl.includes("localhost")`; this matches on the host
+ * all rather than a checkout with no webhook. This matches on the host
  * rather than on a substring, so a real domain with "localhost" in its name
  * still gets its webhook.
  *
@@ -165,20 +163,18 @@ function webhookUrlFor(origin: string): string | undefined {
  * The sponsor's logo in `media`, or the code that refuses the file.
  *
  * **Nothing is uploaded unless the logo was asked for.** `hasLogo` records
- * whether the option was *paid* for — `packages/convex/convex/schema.ts` says
- * so in as many words and `lib/sponsorOverlay.ts` gates the public overlay on
- * exactly that pair — so a file posted alongside an unticked box is dropped,
- * not stored.
+ * whether the option was *paid* for — `lib/sponsorOverlay.ts` gates the public
+ * overlay on exactly that pair — so a file posted alongside an unticked box is
+ * dropped, not stored.
  *
  * **`overrideAccess: true` on a write an anonymous visitor caused.**
- * `media.create` is `isAdmin`, deliberately: Stage 3 closed a hole where one
- * signup bought arbitrary R2 uploads. Sponsoring needs no account at all, so
- * the access layer cannot be what authorises this — what stands in for it is
- * the pair of checks above the create, which bound the file to 2 MB and to
- * three image types *before* anything reaches R2. That leaves an
- * unauthenticated upload surface, bounded at 2 MB a request; it is the same
- * surface the shipped `generatePreview` procedure exposes, and Stage 7's
- * cleanup is where an unreferenced upload should eventually be swept.
+ * `media.create` is `isAdmin`, deliberately: otherwise one signup would buy
+ * arbitrary R2 uploads. Sponsoring needs no account at all, so the access layer
+ * cannot be what authorises this — what stands in for it is the pair of checks
+ * above the create, which bound the file to 2 MB and to three image types
+ * *before* anything reaches R2. That leaves an unauthenticated upload surface,
+ * bounded at 2 MB a request, and an unreferenced upload is swept by
+ * `jobs/cleanupOrphanedMedia.ts`.
  *
  * The stored filename is this app's, not the browser's. A client-supplied
  * name is a client-supplied R2 key, and two sponsors uploading `logo.png`
@@ -277,21 +273,19 @@ async function resolveLogo(
  *
  * ## Why one row per gesture, and what `paymentAmount` means
  *
- * Transcribed from `createBulkSimplified` in
- * `packages/convex/convex/sponsorships.ts`: a sponsorship is a contract
- * about exactly one gesture's video for a term, so three gestures is three
- * rows and one payment, not one row naming three. `paymentAmount` is therefore the
- * **per-gesture** amount and not the order total — which is exactly what
- * `endpoints/mollie.ts` assumes when it sums it across a payment's
- * sponsorships and compares the sum with what Mollie charged. Writing the
- * total on each row would make a three-gesture order look like it cost three
- * times what it did, and the webhook would refuse the payment the sponsor
- * had already made.
+ * A sponsorship is a contract about exactly one gesture's video for a term, so
+ * three gestures is three rows and one payment, not one row naming three.
+ * `paymentAmount` is therefore the **per-gesture** amount and not the order
+ * total — which is exactly what `endpoints/mollie.ts` assumes when it sums it
+ * across a payment's sponsorships and compares the sum with what Mollie
+ * charged. Writing the total on each row would make a three-gesture order look
+ * like it cost three times what it did, and the webhook would refuse the
+ * payment the sponsor had already made.
  *
  * ## The two dates
  *
  * `startDate` is now and `endDate` is now plus the term, both written here.
- * The shipped mutation writes `startDate: 0` and fills it in after payment;
+ * A sentinel such as `startDate: 0`, filled in after payment, would not do:
  * this column is `required` in Payload and — more to the point — nothing in
  * this app ever sets it later, so a sentinel would make every sponsorship
  * fail `lib/sponsorOverlay.ts`'s in-term test for ever. Now is honest: the
@@ -335,15 +329,15 @@ function createSponsorships(
           invoiceRequested: details.invoiceRequested,
           invoiceVatNumber:
             details.invoiceVatNumber === "" ? null : details.invoiceVatNumber,
-          // The gesture's own video, kept so Stage 6 can put it back when the
+          // The gesture's own video, kept so expiry can put it back when the
           // term ends and so the preview step has something to play.
           originalVideoPlaybackId: gesture.playbackId,
           overlayImage: order.overlayImage,
           /*
-           * **The overlay text is the sponsor name**, because that is what
-           * the shipped wizard sends: one input, two columns. See
-           * `lib/sponsorDraft.ts` — there is no second field in the product
-           * and adding one here would be a change to it.
+           * **The overlay text is the sponsor name**, because the wizard
+           * collects one input for two columns. See `lib/sponsorDraft.ts` —
+           * there is no second field in the product and adding one here would
+           * be a change to it.
            */
           overlayText: details.sponsorName,
           paymentAmount: perGestureCents,
@@ -409,8 +403,7 @@ const startSponsorship: PayloadHandler = async (req) => {
  * `media`. The sponsorship rows are deliberately *not* created here. A
  * sponsor who fills this form and closes the tab is the common case, and a
  * row created at this step would sit in `pending_payment` blocking its
- * gesture until Stage 7's `cleanup-stale-payments` exists to sweep it —
- * which, today, is never.
+ * gesture until `cleanup-stale-payments` swept it a day later.
  *
  * Everything else travels to step 3 in the draft cookie. See
  * `lib/sponsorDraft.ts` for why it is a cookie and not the query string, and
@@ -494,7 +487,7 @@ const submitDetails: PayloadHandler = async (req) => {
  * oversight: deleting them would be a second multi-step write with no
  * transaction behind it either, and a half-done delete leaves rows that
  * are worse still than the ones it was cleaning up. What the rows are is exactly what
- * Stage 7's `cleanup-stale-payments` collects — `pending_payment`, no payment
+ * `cleanup-stale-payments` collects — `pending_payment`, no payment
  * id, older than its window — and `sponsorships.int.test.ts` asserts that
  * shape by name rather than asserting "nothing happened".
  *
@@ -634,7 +627,7 @@ const checkout: PayloadHandler = async (req) => {
  * between them leaves an unreferenced `media` row rather than a sponsorship
  * pointing at an upload that does not exist. That is the same direction
  * `checkout` orders its two writes in, for the same reason, and the leftover
- * is what Stage 7's cleanup collects.
+ * is what `jobs/cleanupOrphanedMedia.ts` collects.
  */
 const reEdit: PayloadHandler = async (req) => {
   const crossSiteResponse = guardOrigin(req);
@@ -659,11 +652,9 @@ const reEdit: PayloadHandler = async (req) => {
   }
 
   /*
-   * Transcribed from `reSubmitSponsorshipVideo` in
-   * `packages/convex/convex/sponsorships.ts`, which refuses the same way.
    * `manageReEditToken` clears the token whenever a sponsorship leaves
    * `pending_resubmission`, so a live token on any other status is a row that
-   * was *created* holding one — a fixture, an admin, or Stage 9's import —
+   * was *created* holding one — a fixture, an admin, or an import —
    * rather than one the flow produced. Without this, such a token would move
    * a rejected sponsorship into the approval queue without anybody asking
    * for a resubmission.
@@ -683,7 +674,6 @@ const reEdit: PayloadHandler = async (req) => {
   /*
    * A replacement logo, and only for a sponsorship that paid for one.
    * `hasLogo` records whether the option was *bought* —
-   * `packages/convex/convex/schema.ts` says so in as many words and
    * `lib/sponsorOverlay.ts` gates the public overlay on exactly that pair —
    * so a file posted against a sponsorship without it is dropped rather than
    * stored, which is the same rule `uploadLogo` applies at step 2 to a file
@@ -710,10 +700,9 @@ const reEdit: PayloadHandler = async (req) => {
     data: {
       ...(overlayImage === undefined ? {} : { overlayImage }),
       /*
-       * One input, two columns, exactly as step 2 writes them: the shipped
-       * wizard collects `sponsorName` once and sends
-       * `overlayText: form.sponsorName`. A second input here would be a
-       * field the product does not have.
+       * One input, two columns, exactly as step 2 writes them: the wizard
+       * collects `sponsorName` once, and it is the overlay text too. A second
+       * input here would be a field the product does not have.
        */
       overlayText: sponsorName,
       sponsorName,

@@ -160,12 +160,11 @@ describe("the consent endpoint", () => {
 
   it("records a refusal as a row, not as an absence", async () => {
     /*
-     * Review Focus 2, and the reason this stage exists. The column is
+     * The reason consent is recorded as rows at all. The column is
      * `integer DEFAULT false NOT NULL`, so "no row" and "a row saying no" are
-     * indistinguishable in SQL — and Stage 9 imports into this table. A
-     * reconciler that only writes on `true` therefore records nothing for
-     * everyone who declined, and the import cannot tell them from the people
-     * who were never asked.
+     * indistinguishable in SQL. A reconciler that only writes on `true`
+     * therefore records nothing for everyone who declined, and nothing
+     * reading the table can tell them from the people who were never asked.
      */
     const member = await createMember("declined");
 
@@ -228,8 +227,8 @@ describe("the consent endpoint", () => {
   });
 
   it("records the account from the session, never one the body names", async () => {
-    // The same guard Stage 8 added to the mobile account endpoints, for the
-    // same reason: the body must not be able to name a victim.
+    // The same guard the mobile account endpoints carry, for the same reason:
+    // the body must not be able to name a victim.
     const owner = await createMember("consent-owner");
     const stranger = await createMember("consent-stranger");
 

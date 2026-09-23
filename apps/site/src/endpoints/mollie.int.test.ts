@@ -540,8 +540,8 @@ describe("the Mollie webhook", () => {
 
   it("answers 502 when Mollie cannot be reached, so the payment is redelivered", async () => {
     // A Mollie outage must not silently drop a payment. Mollie retries every
-    // non-2xx, which is the whole recovery mechanism while Stage 7's
-    // `cleanup-stale-payments` does not exist.
+    // non-2xx, which is the recovery mechanism short of
+    // `cleanup-stale-payments` cancelling the row.
     const id = await seed("outage", "pending_payment");
     const paymentId = newPaymentId("outage");
     mollieWillAnswer(paymentId, () =>
@@ -595,14 +595,13 @@ describe("the Mollie webhook", () => {
   });
 
   it("refuses the whole payment when a sponsorship it names no longer exists", async () => {
-    // **The plan asked for "when the gesture row is gone entirely", and that
-    // cannot happen.** `blockDeleteWhenSponsored` refuses to delete a gesture
-    // any sponsorship points at, with no filter on status — the plan's premise
-    // that "a `pending_payment` row is not yet sponsored" is not what the hook
-    // does — and Payload's `NOT NULL` + `ON DELETE set null` foreign key
-    // refuses it a second time underneath. The reachable version of the same
-    // worry is a *sponsorship* row that is gone, which is asserted here, and
-    // the unreachable one is pinned below so this is not merely a claim.
+    // **"When the gesture row is gone entirely" cannot happen.**
+    // `blockDeleteWhenSponsored` refuses to delete a gesture any sponsorship
+    // points at, with no filter on status — a `pending_payment` row counts —
+    // and Payload's `NOT NULL` + `ON DELETE set null` foreign key refuses it a
+    // second time underneath. The reachable version of the same worry is a
+    // *sponsorship* row that is gone, which is asserted here, and the
+    // unreachable one is pinned below so this is not merely a claim.
     const surviving = await seed("survivor", "pending_payment");
     const doomed = await seed("doomed", "pending_payment");
 
@@ -628,7 +627,7 @@ describe("the Mollie webhook", () => {
     expect(await claimsFor(paymentId)).toBe(0);
 
     // The gesture behind a sponsorship awaiting payment cannot be deleted, so
-    // the case the plan named has no way to arise.
+    // the gone-gesture case has no way to arise.
     await expect(
       payload.delete({
         collection: "gestures",
@@ -707,7 +706,7 @@ describe("the Mollie webhook", () => {
     // Without transactions a bulk update is not all-or-nothing: Payload
     // collects a per-document error and carries on. The answer is still 200,
     // because Mollie retrying will not change a decision — but the delivery
-    // claim is handed back, so re-firing the webhook (or Stage 7's
+    // claim is handed back, so re-firing the webhook (or
     // `cleanup-stale-payments`) can finish what this one started rather than
     // being waved through as a replay.
     const id = await seed("reported", "pending_payment");
@@ -835,7 +834,7 @@ describe("the Mollie webhook", () => {
     }
 
     // Metadata with no `sponsorshipIds` key at all, which is what a payment
-    // opened by the shipped `apps/server` looks like.
+    // this app did not open looks like.
     const bare = newPaymentId("shape-bare");
     mollieWillSay({ id: bare, metadata: {}, status: "paid" });
 

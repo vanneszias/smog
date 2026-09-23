@@ -13,7 +13,7 @@ import type { User } from "@/payload-types";
  * Same measurement as `endpoints/auth.ts` and `endpoints/crawler.ts`: an
  * `app/**​/route.ts` that imports Payload becomes its own bundle entry and
  * re-bundles the Payload/D1/drizzle graph into it, measured at **+519 KiB
- * gzipped** when Stage 3 Task 6 tried exactly this for the favorites page.
+ * gzipped** when exactly this was tried for the favorites page.
  * `app/(payload)/api/[...slug]/route.ts` already carries that graph, so a
  * handler hung off it costs only the handler. `/account/favorites` is a
  * `next.config.ts` rewrite, which is a routing-manifest entry and bundles
@@ -187,8 +187,7 @@ const setFavorite: PayloadHandler = async (req) => {
    * `/auth/sign-up`, kept for the same reason — each half stops being
    * decorative the day the other is loosened, and a field hook in another
    * file is not something this endpoint should have to depend on for a
-   * property it advertises in its own response. Transcripts M18–M20 in the
-   * Task 4 report.
+   * property it advertises in its own response.
    */
   const current = accountFavoriteIds(account);
   const next = body.favorite

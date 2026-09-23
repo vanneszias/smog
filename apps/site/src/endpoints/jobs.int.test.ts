@@ -61,16 +61,15 @@ function setToken(value: string | undefined): void {
  * at.
  *
  * **The queue exists and is empty here.** It did not exist at all when this
- * file was written — `jobs.enabled` is false until a task is registered, and
- * Task 3 registered the first one — but nothing changed for these tests: an
- * empty queue answers `noJobsRemaining`, so the endpoint logs "Ran 0 jobs"
- * and returns, exactly as it did when there was no queue to ask. That is left
- * alone rather than worked around, because an endpoint that answers
- * differently when the queue is empty is an endpoint that tells an
- * unauthenticated caller whether their token was right, and one of the tests
- * below is exactly that comparison. Everywhere the *run* is the subject
- * rather than the answer, `payload.jobs.run` is spied on, so what is asserted
- * is whether the queue was reached and not what it found.
+ * file was written — `jobs.enabled` is false until a task is registered — but
+ * nothing changed for these tests once one was: an empty queue answers
+ * `noJobsRemaining`, so the endpoint logs "Ran 0 jobs" and returns, exactly as
+ * it did when there was no queue to ask. That is left alone rather than worked
+ * around, because an endpoint that answers differently when the queue is empty
+ * is an endpoint that tells an unauthenticated caller whether their token was
+ * right, and one of the tests below is exactly that comparison. Everywhere the
+ * *run* is the subject rather than the answer, `payload.jobs.run` is spied on,
+ * so what is asserted is whether the queue was reached and not what it found.
  */
 describe("the job run endpoint", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
@@ -114,12 +113,12 @@ describe("the job run endpoint", () => {
   /**
    * Empties the queue.
    *
-   * Every run below now evaluates the schedules before it runs anything —
-   * Task 5's `handleSchedules` call, without which the four `schedule`
-   * properties in `jobs/index.ts` would be decoration — so a tick here leaves
-   * one pending row per scheduled task behind. They are not this file's
-   * subject, and `.wrangler/state/vitest` is persisted: a row left here is a
-   * scheduled job that runs against another file's fixtures the next time
+   * Every run below now evaluates the schedules before it runs anything — the
+   * `handleSchedules` call in `endpoints/jobs.ts`, without which the four
+   * `schedule` properties in `jobs/index.ts` would be decoration — so a tick
+   * here leaves one pending row per scheduled task behind. They are not this
+   * file's subject, and `.wrangler/state/vitest` is persisted: a row left here
+   * is a scheduled job that runs against another file's fixtures the next time
    * anything drains the queue.
    */
   const emptyQueue = () =>

@@ -46,14 +46,13 @@ import type { Render } from "@/payload-types";
  * assets are not: only one can ever be referenced, and the other is a bill
  * that arrives every month, for ever, for a video nobody can name.
  *
- * **The plan said to reuse Task 1's claim on the `renders` row, and that
- * cannot work.** That row is created by the submitter — the Mollie webhook,
- * once the payment is paid — so it already exists by the time Lambda calls
- * back: two concurrent callbacks would both *lose* an insert against it and
- * neither would upload. It cannot be an `update` with a `where` either,
- * however phrased — **a `where` on an update is a SELECT**, measured on this
- * adapter, with two concurrent conditional updates both reporting a changed
- * row.
+ * **Reusing the claim on the `renders` row cannot work.** That row is created
+ * by the submitter — the Mollie webhook, once the payment is paid — so it
+ * already exists by the time Lambda calls back: two concurrent callbacks would
+ * both *lose* an insert against it and neither would upload. It cannot be an
+ * `update` with a `where` either, however phrased — **a `where` on an update is
+ * a SELECT**, measured on this adapter, with two concurrent conditional updates
+ * both reporting a changed row.
  *
  * So the claim is its own insert against its own unique index: one `claims`
  * row per job id, taken **before any Mux call**. First callback inserts and
@@ -70,13 +69,12 @@ import type { Render } from "@/payload-types";
  * before the claim is even tried, and takes none: nothing it says can change
  * an answer, and a claim taken for it would be a row nothing ever settles.
  *
- * That was `render-completions`, a table of its own, until Stage 7 folded it
- * and `webhook-deliveries` into one generic `claims` table — the refactor
- * `collections/RenderCompletions.ts` deferred until all four consumers were
- * visible. **Nothing about this handler's behaviour changed**, and the way
- * that is known is that Stage 6's concurrency mutation still fails Stage 6's
- * tests through the new table: drop `unique` from `claims.key` and `survives
- * two concurrent callbacks for one job` fails.
+ * That was `render-completions`, a table of its own, until it and
+ * `webhook-deliveries` were folded into one generic `claims` table. **Nothing
+ * about this handler's behaviour changed**, and the way that is known is that
+ * this handler's concurrency mutation still fails its tests through the new
+ * table: drop `unique` from `claims.key` and
+ * `survives two concurrent callbacks for one job` fails.
  *
  * The claim carries **no expiry**, and that is load-bearing rather than a
  * default. `endpoints/jobs.ts` leases its claim, because a runner that dies
@@ -94,7 +92,7 @@ import type { Render } from "@/payload-types";
  * So the playback id is attached only to a sponsorship still in a status that
  * is waiting for one — see `STATUSES_AWAITING_A_COMPOSITION`.
  *
- * **The plan expected `hooks/enforceStatusTransitions.ts` to refuse that, and
+ * **`hooks/enforceStatusTransitions.ts` looks as if it would refuse that, and
  * it does not.** That hook compares `originalDoc.status` with `data.status`,
  * and `data` is the whole merged document by the time a `beforeChange` runs —
  * `fields/hooks/beforeValidate/promise.js` (3.89.0) fills every absent field
@@ -167,7 +165,7 @@ const BEARER = "Bearer ";
  *
  * - `cancelled` and `expired` are terminal. Nothing will ever play this.
  * - `rejected` looks terminal and is not: `lib/sponsorshipStatus.ts` allows
- *   `rejected -> pending_resubmission`, because the shipped product re-opens a
+ *   `rejected -> pending_resubmission`, because an administrator may re-open a
  *   rejected sponsorship. Attaching here means the *rejected* submission's
  *   video goes live the moment the sponsor's re-edit is approved.
  * - `pending_resubmission` is the same worry one step earlier: the sponsor is
@@ -460,16 +458,14 @@ async function recordFailure(
  *
  * `previewVideoPlaybackId` and not `sponsoredVideoPlaybackId`, which is the
  * column the public gesture page reads (`lib/sponsorOverlay.ts`). That copy is
- * made when an administrator approves the sponsorship, which is the shipped
- * product's own flow — `apps/server/src/services/sponsorship.ts` writes
- * `sponsoredVideoPlaybackId: sponsorship.previewVideoPlaybackId` at exactly
- * that moment and calls it the "simplified flow". Keeping the two columns
- * distinct means no callback, however well signed, can reach a public page
- * without a person in between.
+ * made when an administrator approves the sponsorship
+ * (`hooks/publishComposedVideo.ts`). Keeping the two columns distinct means no
+ * callback, however well signed, can reach a public page without a person in
+ * between.
  *
  * `overrideAccess: true` because `sponsorships.update` is `isAdmin` and this
- * request has no user at all. It is the same arrangement every writer in this
- * stage uses, and the reason the guards here are code rather than access
+ * request has no user at all. It is the same arrangement every server-side
+ * writer uses, and the reason the guards here are code rather than access
  * rules: an access rule this handler bypasses is not a guard this handler is
  * subject to.
  */
@@ -552,7 +548,7 @@ async function attachToSponsorship(
  * protects is the enumeration above, and it is the seam that becomes
  * load-bearing the moment a source asset moves to a `signed` policy. The
  * expiry it mints is real, signed and verifiable; Mux is simply not the thing
- * enforcing it today. See `lib/mux.ts`, and Task 6.
+ * enforcing it today. See `lib/mux.ts`.
  */
 const muxSource: PayloadHandler = async (
   req: PayloadRequest

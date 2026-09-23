@@ -32,7 +32,7 @@ import { readBody } from "./auth";
  * build on a route handler that imports Payload, so this is enforced rather
  * than remembered.
  *
- * ## Two renderers over one decision, per write — added for Stage 8 Task 11
+ * ## Two renderers over one decision, per write
  *
  * The owner pages have no client JavaScript, so every button here was
  * originally a `<form method="post">` answered with a 303 whose `Location`
@@ -67,7 +67,7 @@ import { readBody } from "./auth";
  *
  * ## Access
  *
- * **The Stage 3 access rules do the authorisation and are not reimplemented
+ * **The list access rules do the authorisation and are not reimplemented
  * here.** Every read and every write below runs `overrideAccess: false` with
  * the session's user, so `listReadAccess`, `listUpdateAccess` and
  * `listDeleteAccess` decide, as they already do for the REST API. What this
@@ -417,18 +417,18 @@ async function decideAddGesture(
    *
    * Payload's relationship validation is `isValidID`, which for a numeric key
    * is a `typeof value === 'number'` test and nothing more
-   * (`payload/dist/utilities/isValidID.js`) — no query, no existence check.
-   * The spec draws from that ("A relationship field accepts an id for a row
-   * that does not exist") the conclusion that an unresolved id lands in the
-   * database as a dangling reference. **On this table it does not, and that
-   * was measured rather than assumed:** `lists_items.gesture_id` carries a
-   * real foreign key, so `{ gesture: 999000001 }` fails at D1 with
+   * (`payload/dist/utilities/isValidID.js`) — no query, no existence check. The
+   * natural conclusion ("a relationship field accepts an id for a row that does
+   * not exist") is that an unresolved id lands in the database as a dangling
+   * reference. **On this table it does not, and that was measured rather than
+   * assumed:** `lists_items.gesture_id` carries a real foreign key, so
+   * `{ gesture: 999000001 }` fails at D1 with
    * `FOREIGN KEY constraint failed: SQLITE_CONSTRAINT_FOREIGNKEY`, wrapped in
    * drizzle's `Failed query: insert into "lists_items" …`. So does
    * `users.favorites`, through `users_rels`, which is the very case that
    * finding was written from.
    *
-   * That makes this lookup worth *more* than the spec's reasoning, not less,
+   * That makes this lookup worth *more* than that reasoning suggests, not less,
    * and for two reasons it can show:
    *
    * - without it, an id for a gesture that does not exist is an unhandled
