@@ -157,6 +157,20 @@ describe("useGesture", () => {
     expect(url).toContain("depth=1");
   });
 
+  it("keeps an id from a link to one path segment", async () => {
+    global.fetch = jest.fn(() =>
+      json({ errors: [{ message: "Not Found" }] }, 404)
+    ) as unknown as typeof fetch;
+
+    renderHook(() => useGesture("../users/me"));
+
+    await waitFor(() => expect(fetchMock()).toHaveBeenCalled());
+
+    const [url] = fetchMock().mock.calls[0];
+
+    expect(url).toContain("/api/gestures/..%2Fusers%2Fme?");
+  });
+
   it("surfaces a 404 as an error rather than a crash", async () => {
     global.fetch = jest.fn(() =>
       json({ errors: [{ message: "Not Found" }] }, 404)

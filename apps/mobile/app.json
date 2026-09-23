@@ -19,7 +19,8 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "buildNumber": "51",
-      "appleTeamId": "96XKP6MU2A"
+      "appleTeamId": "96XKP6MU2A",
+      "associatedDomains": ["applinks:app.smog.vlaanderen"]
     },
     "android": {
       "adaptiveIcon": {
@@ -28,7 +29,31 @@
         "backgroundColor": "#00805F"
       },
       "package": "be.zias.smog",
-      "versionCode": 79
+      "versionCode": 79,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "app.smog.vlaanderen",
+              "pathPrefix": "/nl/gestures/"
+            },
+            {
+              "scheme": "https",
+              "host": "app.smog.vlaanderen",
+              "pathPrefix": "/en/gestures/"
+            },
+            {
+              "scheme": "https",
+              "host": "app.smog.vlaanderen",
+              "pathPrefix": "/fr/gestures/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

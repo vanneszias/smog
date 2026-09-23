@@ -1,8 +1,12 @@
 module.exports = {
   preset: "jest-expo",
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
+  // `query-string` and the three packages after it ship ES modules only and
+  // are imported by expo-router's own linking code, which only
+  // `expo-router/testing-library`'s `renderRouter` loads unmocked (see
+  // `src/nativeIntentRouting.test.tsx`).
   transformIgnorePatterns: [
-    "/node_modules/(?!(\\.bun/|\\.pnpm|react-native|@react-native|@react-native-community|expo|@expo|react-navigation|@react-navigation|nativewind|react-native-css-interop))",
+    "/node_modules/(?!(\\.bun/|\\.pnpm|react-native|@react-native|@react-native-community|expo|@expo|react-navigation|@react-navigation|nativewind|react-native-css-interop|query-string|decode-uri-component|filter-obj|split-on-first))",
   ],
   // Jest's 5s default failed CI on 2594e36: `src/screens/search.test.tsx`'s
   // "shows the matching gestures once a query is submitted" hit the

@@ -170,7 +170,13 @@ export function useGesture(id: string): HookResult<GestureSummary> {
     setLoading(true);
     setError(null);
 
-    payloadFetch<RawGesture>(`/gestures/${id}?depth=1`, {
+    /*
+     * Encoded, because the id is whatever a link put in the URL — a gesture
+     * link from outside the app included — and an id carrying `../` must
+     * stay one path segment rather than steer a signed-in request somewhere
+     * else on the API.
+     */
+    payloadFetch<RawGesture>(`/gestures/${encodeURIComponent(id)}?depth=1`, {
       locale: currentLocale(),
     }).then(
       (raw) => {
