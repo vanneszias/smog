@@ -1,3 +1,5 @@
+import type { SponsoredVideoInputProps } from "@smog/types";
+import { SPONSORED_VIDEO_COMPOSITION_ID } from "@smog/types";
 import type { Payload } from "payload";
 import { signedMuxSourceUrl } from "@/lib/mux";
 
@@ -55,18 +57,6 @@ import { signedMuxSourceUrl } from "@/lib/mux";
  */
 
 /**
- * The composition in `apps/remotion` this renders.
- *
- * `apps/remotion/src/Root.tsx` registers exactly one composition under this
- * id, and `SponsoredVideoSchema` in that app's `src/types/schema.ts` is the
- * shape of `inputProps` below. **Nothing enforces that agreement**: the two
- * apps share no code, so a rename there is a runtime failure here rather than
- * a typecheck failure. Task 6 deploys a serve URL built from that project and
- * is the first thing that would notice.
- */
-const COMPOSITION_ID = "SponsoredVideo";
-
-/**
  * Where Lambda is told to report, as a path rather than the endpoint's own.
  *
  * `/render/callback` is the rewrite in `next.config.ts`; the handler is
@@ -75,13 +65,6 @@ const COMPOSITION_ID = "SponsoredVideo";
  * party keeps is the one this application publishes on purpose.
  */
 const CALLBACK_PATH = "/render/callback";
-
-/** The props `SponsoredVideoSchema` declares. `logoUrl` is optional there. */
-interface SponsoredVideoProps {
-  logoUrl?: string;
-  sponsorName: string;
-  videoSrc: string;
-}
 
 /**
  * The render request, minus the transport's own configuration.
@@ -97,7 +80,7 @@ interface SponsoredVideoProps {
 interface RenderSubmission {
   codec: "h264";
   composition: string;
-  inputProps: SponsoredVideoProps;
+  inputProps: SponsoredVideoInputProps;
   webhook: { url: string };
 }
 
@@ -146,7 +129,7 @@ export async function renderSubmission(
 
   return {
     codec: "h264",
-    composition: COMPOSITION_ID,
+    composition: SPONSORED_VIDEO_COMPOSITION_ID,
     inputProps: {
       // Spread rather than `logoUrl: input.logoUrl ?? undefined`, because
       // `SponsoredVideoSchema` marks it `z.string().optional()` and zod refuses

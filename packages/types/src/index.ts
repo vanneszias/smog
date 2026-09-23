@@ -39,6 +39,11 @@ export type {
   SearchFilters,
   SearchResult,
 } from "./gestures";
+export type { SponsoredVideoInputProps } from "./render";
+export {
+  SPONSOR_NAME_MAX_LENGTH,
+  SPONSORED_VIDEO_COMPOSITION_ID,
+} from "./render";
 export type {
   CreateSponsorshipInput,
   OverlayConfig,

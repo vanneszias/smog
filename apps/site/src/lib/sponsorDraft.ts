@@ -24,6 +24,8 @@
  * therefore the sponsor name's 35, not the API's more generous 100.
  */
 
+import { SPONSOR_NAME_MAX_LENGTH } from "@smog/types";
+
 /**
  * The sponsor name, which is also the overlay text. 35 is the shipped cap.
  *
@@ -31,8 +33,13 @@
  * this one field on its own, without the contact and invoice half
  * `readSponsorDetails` requires, and the two bounds must be the same number:
  * a name the wizard accepted must not be one the re-edit refuses.
+ *
+ * Sourced from `@smog/types`' `SPONSOR_NAME_MAX_LENGTH` rather than repeated
+ * here: that is the same 35 the `SponsoredVideo` composition's overlay fits,
+ * so this bound and the render's are one number, not two that happen to
+ * agree.
  */
-export const MAX_SPONSOR_NAME = 35;
+export const MAX_SPONSOR_NAME = SPONSOR_NAME_MAX_LENGTH;
 const MAX_CONTACT_NAME = 120;
 const MAX_COMPANY = 120;
 const MAX_EMAIL = 254;
