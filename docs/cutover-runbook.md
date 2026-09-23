@@ -557,8 +557,10 @@ page. Decide it before the window.
 - **Then delete the legacy code** from the repository (`apps/server`,
   `apps/web`, `apps/native`, `packages/convex` and the packages only they
   use), in its own reviewed change — the spec's last step for Stage 10.
-  Delete `apps/remotion` only once its compositions have moved to the
-  planned render app (`apps/render` in the spec): it is their only copy.
+  `apps/remotion` goes too: its compositions now live in `apps/render`,
+  which deploys them to Lambda, and `apps/remotion`'s copy exists only for
+  the legacy Docker stack. Deleting it also ends the package-name collision
+  `apps/render/README.md` describes (the workspace package named `remotion`).
 
 ## Import the catalogue
 

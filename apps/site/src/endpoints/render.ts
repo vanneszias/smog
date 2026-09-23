@@ -242,8 +242,23 @@ async function readBody(req: PayloadRequest): Promise<string> {
  * support ticket that cannot be answered. A report with no usable message
  * still yields a sentence, because an empty `failureReason` reads as "nobody
  * recorded why" rather than as "Lambda did not say".
+ *
+ * **Verbatim except for URLs**, which become `<url>`. Lambda's error text can
+ * quote the source it failed to fetch, and that is the signed Mux URL
+ * `lib/renderJob.ts` minted; the reason is stored on the row and written to
+ * the log, neither of which is where a credential goes. The sentence around
+ * it is what an operator needs, and it stays.
  */
 function failureReason(payload: Record<string, unknown>): string {
+  return withoutUrls(rawFailureReason(payload));
+}
+
+/** Every `http(s)://…` run in `text`, replaced by `<url>`. */
+function withoutUrls(text: string): string {
+  return text.replace(/https?:\/\/[^\s"'<>]+/g, "<url>");
+}
+
+function rawFailureReason(payload: Record<string, unknown>): string {
   const errors = payload.errors;
 
   if (Array.isArray(errors)) {

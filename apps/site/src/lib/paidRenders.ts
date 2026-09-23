@@ -140,10 +140,14 @@ async function logoUrlFor(
  * failures; the `catch` below is the second line, for a fault in the lookups
  * here or in the logging itself.
  *
- * Sequentially rather than `Promise.all`, for the reason
- * `endpoints/sponsorships.ts`'s `createSponsorships` gives about D1:
- * concurrency here buys milliseconds and costs a known order if something
- * dies half way.
+ * **Concurrently**, each sponsorship in its own `try`. This runs inside
+ * `ctx.waitUntil` (`endpoints/mollie.ts`), and the platform keeps that work
+ * alive only for a bounded time after the response is sent; one Lambda start
+ * after another — each allowed up to 30 s by `lib/remotionLambda.ts` — would
+ * let a slow start cost every later sponsorship in the order its render.
+ * Unlike `createSponsorships`' writes in `endpoints/sponsorships.ts`, these
+ * touch no shared row: each claims its own `renders` row under its own job
+ * id, so there is no order to preserve.
  */
 export async function submitPaidRenders(
   payload: Payload,
@@ -151,28 +155,40 @@ export async function submitPaidRenders(
 ): Promise<void> {
   const now = Date.now();
 
-  for (const sponsorship of input.sponsorships) {
-    try {
-      if (await hasRenderInHand(payload, sponsorship.id)) {
-        payload.logger.info(
-          `[renderJob] No render was submitted for sponsorship ${sponsorship.id}: it already has one that has not failed.`
-        );
+  await Promise.all(
+    input.sponsorships.map((sponsorship) =>
+      submitOne(payload, input.origin, now, sponsorship)
+    )
+  );
+}
 
-        continue;
-      }
-
-      await submitRenderJob(payload, {
-        logoUrl: await logoUrlFor(payload, input.origin, sponsorship),
-        now,
-        origin: input.origin,
-        overlayText: sponsorship.overlayText,
-        playbackId: sponsorship.originalVideoPlaybackId,
-        sponsorshipId: sponsorship.id,
-      });
-    } catch (error) {
-      payload.logger.error(
-        `[renderJob] No render could be submitted for sponsorship ${sponsorship.id}; it is paid for and has no composited video: ${messageOf(error)}`
+/** One sponsorship's submission; never throws (see `submitPaidRenders`). */
+async function submitOne(
+  payload: Payload,
+  origin: string,
+  now: number,
+  sponsorship: Sponsorship
+): Promise<void> {
+  try {
+    if (await hasRenderInHand(payload, sponsorship.id)) {
+      payload.logger.info(
+        `[renderJob] No render was submitted for sponsorship ${sponsorship.id}: it already has one that has not failed.`
       );
+
+      return;
     }
+
+    await submitRenderJob(payload, {
+      logoUrl: await logoUrlFor(payload, origin, sponsorship),
+      now,
+      origin,
+      overlayText: sponsorship.overlayText,
+      playbackId: sponsorship.originalVideoPlaybackId,
+      sponsorshipId: sponsorship.id,
+    });
+  } catch (error) {
+    payload.logger.error(
+      `[renderJob] No render could be submitted for sponsorship ${sponsorship.id}; it is paid for and has no composited video: ${messageOf(error)}`
+    );
   }
 }

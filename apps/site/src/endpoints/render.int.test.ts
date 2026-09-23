@@ -918,6 +918,31 @@ describe("the render callback", () => {
     );
   });
 
+  it("redacts URLs from the reason, which may carry a signed source token", async () => {
+    // Lambda's own error text can quote the source it failed to fetch, and
+    // that is the signed Mux URL `lib/renderJob.ts` minted. The reason is
+    // stored on the row and logged, so the URL is replaced; the rest of the
+    // sentence is what an operator needs, and it stays.
+    const { id } = await seedJob("failed-url");
+
+    await deliver(
+      lambdaReport(id, "error", {
+        errors: [
+          {
+            message:
+              'Could not fetch "https://stream.mux.com/abc/high.mp4?token=eyJ.secret.sig": 404',
+            name: "Error",
+          },
+        ],
+      })
+    );
+
+    const row = await renderRow(id);
+    expect(row?.state).toBe("failed");
+    expect(row?.failureReason).toBe('Could not fetch "<url>": 404');
+    expect(row?.failureReason).not.toContain("token=");
+  });
+
   it("records a reason even when Lambda gave none", async () => {
     // An empty `failureReason` reads as "nobody recorded why", which is a
     // different and much worse thing to find in an admin panel than "Lambda
