@@ -1,0 +1,2 @@
+{"_id":"ges_norm_concepts","_creationTime":1700000000000,"name":"Testgebaar Concept Normalisatie","info":"","concept":[" hond ","kat","hond","   ",""],"categoryIds":["cat_norm_1"],"playbackId":"pb_norm_concepts","lastUpdated":1700000000000,"isActive":true}
+{"_id":"ges_norm_categories","_creationTime":1700000000000,"name":"Testgebaar Categorie Normalisatie","info":"","concept":[],"categoryIds":["cat_norm_1","cat_norm_1","cat_norm_1"],"playbackId":"pb_norm_categories","lastUpdated":1700000000000,"isActive":true}

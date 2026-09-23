@@ -49,6 +49,49 @@ describe("readExport", () => {
       /not valid json/
     );
   });
+
+  it("refuses a missing data table (e.g. no gestures/ directory) rather than treating it as empty", async () => {
+    await expect(
+      readExport(`${FIXTURES}/missing-gestures-table`)
+    ).rejects.toThrow(
+      /\[migrate-convex\] Export is missing gestures\/documents\.jsonl at .*gestures\/documents\.jsonl/
+    );
+  });
+
+  it("refuses a missing must-be-empty table (e.g. no users/ directory) rather than treating it as empty", async () => {
+    await expect(readExport(`${FIXTURES}/missing-users-table`)).rejects.toThrow(
+      /\[migrate-convex\] Export is missing users\/documents\.jsonl at .*users\/documents\.jsonl/
+    );
+  });
+
+  it("refuses a missing _tables/documents.jsonl rather than treating the export as tableless", async () => {
+    await expect(readExport(`${FIXTURES}/missing-tables-file`)).rejects.toThrow(
+      /\[migrate-convex\] Export is missing _tables\/documents\.jsonl at .*_tables\/documents\.jsonl/
+    );
+  });
+
+  it("still treats a present-but-empty table file as a valid zero (not a missing table)", async () => {
+    // fixtures/valid/users, /sponsorships, /user_consents and /adminLogs are
+    // all present, zero-byte files — the missing-table refusal must not
+    // fire for them.
+    const result = await readExport(`${FIXTURES}/valid`);
+
+    expect(result.counts.users).toBe(0);
+    expect(result.counts.sponsorships).toBe(0);
+    expect(result.counts.user_consents).toBe(0);
+    expect(result.counts.adminLogs).toBe(0);
+  });
+
+  it("tolerates a CRLF line ending when splitting and parsing a row", async () => {
+    // fixtures/crlf-line-ending/categories/documents.jsonl's one row ends
+    // in \r\n rather than \n: JSON.parse must still accept the trailing \r
+    // as insignificant whitespace, and line-splitting must not miscount.
+    const result = await readExport(`${FIXTURES}/crlf-line-ending`);
+
+    expect(result.categories).toHaveLength(1);
+    expect(result.categories[0]?.name).toBe("Testgebaar Categorie CRLF");
+    expect(result.gestures).toHaveLength(1);
+  });
 });
 
 describe("buildPlan", () => {
@@ -97,6 +140,26 @@ describe("buildPlan", () => {
     expect(
       result.gestures.find((g) => g.legacyId === "ges_ok_1")?.concepts
     ).toEqual(["hond", "kat"]);
+  });
+
+  it("trims each concept, drops empty/whitespace-only ones, then dedupes keeping order", async () => {
+    const result = await plan("gesture-normalization");
+
+    expect(
+      result.gestures.find((g) => g.legacyId === "ges_norm_concepts")?.concepts
+    ).toEqual(["hond", "kat"]);
+  });
+
+  it("dedupes categoryIds per gesture, keeping order, before the unknown-category check", async () => {
+    const result = await plan("gesture-normalization");
+
+    const gesture = result.gestures.find(
+      (g) => g.legacyId === "ges_norm_categories"
+    );
+    expect(gesture?.categoryLegacyIds).toEqual(["cat_norm_1"]);
+    expect(result.skipped).not.toContainEqual(
+      expect.objectContaining({ legacyId: "ges_norm_categories" })
+    );
   });
 
   it("skips a gesture with zero categoryIds as no-category", async () => {

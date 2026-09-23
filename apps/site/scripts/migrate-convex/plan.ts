@@ -99,6 +99,23 @@ async function readFileIfExists(filePath: string): Promise<string | undefined> {
   }
 }
 
+/**
+ * Reads `<dir>/<table>/documents.jsonl`, refusing a missing table outright
+ * rather than treating it as empty. A present-but-empty file is still a
+ * valid zero; only a missing directory or file is a refusal. The error
+ * names the table and the path, nothing from the export's rows.
+ */
+async function readRequiredFile(dir: string, table: string): Promise<string> {
+  const filePath = tableFile(dir, table);
+  const content = await readFileIfExists(filePath);
+  if (content === undefined) {
+    throw new Error(
+      `[migrate-convex] Export is missing ${table}/documents.jsonl at ${filePath}`
+    );
+  }
+  return content;
+}
+
 /** Non-blank, 1-indexed lines, paired with their line number in the file. */
 function splitLines(
   content: string
@@ -112,10 +129,7 @@ function splitLines(
 /** Parses every non-blank line of `<dir>/<table>/documents.jsonl` as JSON. */
 async function readJsonlTable<T>(dir: string, table: string): Promise<T[]> {
   const filePath = tableFile(dir, table);
-  const content = await readFileIfExists(filePath);
-  if (content === undefined) {
-    return [];
-  }
+  const content = await readRequiredFile(dir, table);
 
   const rows: T[] = [];
   for (const { line, lineNumber } of splitLines(content)) {
@@ -135,20 +149,14 @@ async function readJsonlTable<T>(dir: string, table: string): Promise<T[]> {
  * parsing them. Used for tables this import never reads beyond a count.
  */
 async function countJsonlLines(dir: string, table: string): Promise<number> {
-  const content = await readFileIfExists(tableFile(dir, table));
-  if (content === undefined) {
-    return 0;
-  }
+  const content = await readRequiredFile(dir, table);
   return splitLines(content).length;
 }
 
 /** Reads the table names listed in `_tables/documents.jsonl`. */
 async function readTableNames(dir: string): Promise<string[]> {
   const filePath = tableFile(dir, "_tables");
-  const content = await readFileIfExists(filePath);
-  if (content === undefined) {
-    return [];
-  }
+  const content = await readRequiredFile(dir, "_tables");
 
   const names: string[] = [];
   for (const { line, lineNumber } of splitLines(content)) {
@@ -205,22 +213,96 @@ const REFUSAL_TABLES: Array<{
   { key: "adminLogs", label: "adminLogs" },
 ];
 
-export function buildPlan(
-  input: Awaited<ReturnType<typeof readExport>>
-): ImportPlan {
+/** Keeps first-occurrence order, drops repeats. */
+function dedupe(items: string[]): string[] {
+  const result: string[] = [];
+  for (const item of items) {
+    if (!result.includes(item)) {
+      result.push(item);
+    }
+  }
+  return result;
+}
+
+function refuseOnNonMigratableData(
+  counts: ImportPlan["counts"],
+  tables: string[]
+): void {
   for (const { key, label } of REFUSAL_TABLES) {
-    const count = input.counts[key];
+    const count = counts[key];
     if (count > 0) {
       throw new Error(
         `[migrate-convex] Export has ${count} ${label}, refusing import`
       );
     }
   }
-  if (input.tables.includes("gesture_lists")) {
+  if (tables.includes("gesture_lists")) {
     throw new Error(
       "[migrate-convex] Export has a gesture_lists table, refusing import"
     );
   }
+}
+
+type GestureOutcome =
+  | { kind: "skip"; entry: ImportPlan["skipped"][number] }
+  | { kind: "import"; entry: ImportPlan["gestures"][number] };
+
+/**
+ * Applies every per-gesture rule: dedupes `categoryIds` (keep order) before
+ * any check, skips `no-category` / `no-playback-id` / `unknown-category`,
+ * then trims, drops empty, and dedupes concepts (keep order).
+ */
+function planGesture(
+  gesture: ExportGesture,
+  knownCategoryIds: Set<string>
+): GestureOutcome {
+  const name = gesture.name.trim();
+  const categoryIds = dedupe(gesture.categoryIds);
+
+  if (categoryIds.length === 0) {
+    return {
+      kind: "skip",
+      entry: { legacyId: gesture._id, name, reason: "no-category" },
+    };
+  }
+  if (gesture.playbackId.trim().length === 0) {
+    return {
+      kind: "skip",
+      entry: { legacyId: gesture._id, name, reason: "no-playback-id" },
+    };
+  }
+  if (categoryIds.some((id) => !knownCategoryIds.has(id))) {
+    return {
+      kind: "skip",
+      entry: { legacyId: gesture._id, name, reason: "unknown-category" },
+    };
+  }
+
+  const concepts = dedupe(
+    gesture.concept
+      .map((concept) => concept.trim())
+      .filter((concept) => concept.length > 0)
+  );
+
+  return {
+    kind: "import",
+    entry: {
+      legacyId: gesture._id,
+      name,
+      info: gesture.info,
+      concepts,
+      categoryLegacyIds: categoryIds,
+      playbackId: gesture.playbackId,
+      isActive: gesture.isActive,
+      createdAt: new Date(gesture._creationTime).toISOString(),
+    },
+  };
+}
+
+export function buildPlan(
+  input: Awaited<ReturnType<typeof readExport>>
+): ImportPlan {
+  refuseOnNonMigratableData(input.counts, input.tables);
 
   const categories: ImportPlan["categories"] = input.categories.map(
     (category) => ({
@@ -239,42 +321,12 @@ export function buildPlan(
   const skipped: ImportPlan["skipped"] = [];
 
   for (const gesture of input.gestures) {
-    const name = gesture.name.trim();
-
-    if (gesture.categoryIds.length === 0) {
-      skipped.push({ legacyId: gesture._id, name, reason: "no-category" });
-      continue;
+    const outcome = planGesture(gesture, knownCategoryIds);
+    if (outcome.kind === "skip") {
+      skipped.push(outcome.entry);
+    } else {
+      gestures.push(outcome.entry);
     }
-    if (gesture.playbackId.trim().length === 0) {
-      skipped.push({ legacyId: gesture._id, name, reason: "no-playback-id" });
-      continue;
-    }
-    if (gesture.categoryIds.some((id) => !knownCategoryIds.has(id))) {
-      skipped.push({
-        legacyId: gesture._id,
-        name,
-        reason: "unknown-category",
-      });
-      continue;
-    }
-
-    const concepts: string[] = [];
-    for (const concept of gesture.concept) {
-      if (!concepts.includes(concept)) {
-        concepts.push(concept);
-      }
-    }
-
-    gestures.push({
-      legacyId: gesture._id,
-      name,
-      info: gesture.info,
-      concepts,
-      categoryLegacyIds: gesture.categoryIds,
-      playbackId: gesture.playbackId,
-      isActive: gesture.isActive,
-      createdAt: new Date(gesture._creationTime).toISOString(),
-    });
   }
 
   return {
