@@ -7,15 +7,14 @@ import {
 /**
  * Backfills the share tokens on lists that predate token minting.
  *
- * **No schema change.** Both columns and both unique indexes have existed
- * since `20260919_200842_add_lists`; what never existed was anything that
- * wrote them, so every row Stage 1 and Stage 2 created carries NULL in both
- * and its share links are inert (the spec's "Sharing is inert until Stage 3",
- * gap 1). Stage 3 Task 7 adds a `beforeChange` hook that mints on create,
- * which fixes every *future* row and no existing one — an owner of an older
- * list has no way to obtain a link, because nothing mints on update either
- * (and nothing should: an explicitly cleared token is how a link is killed
- * permanently, and re-minting on the next save would resurrect it).
+ * **No schema change.** Both columns and both unique indexes have existed since
+ * `20260919_200842_add_lists`; what never existed was anything that wrote them,
+ * so every row created before token minting carries NULL in both and its share
+ * links are inert. The `beforeChange` hook in `collections/Lists.ts` mints on
+ * create, which fixes every *future* row and no existing one — an owner of an
+ * older list has no way to obtain a link, because nothing mints on update
+ * either (and nothing should: an explicitly cleared token is how a link is
+ * killed permanently, and re-minting on the next save would resurrect it).
  *
  * Hence a data migration rather than a hook. It is deliberately the only
  * thing in this file, and there is deliberately no `.json` snapshot beside
@@ -24,12 +23,12 @@ import {
  * baseline the next one diffs from.
  *
  * **`hex(randomblob(16))` rather than a UUID.** SQLite has no UUID function,
- * and the format carries no meaning — the token is a bearer credential and
- * what matters is its entropy, which is the same 128 bits either way.
- * `randomblob` is non-deterministic and SQLite evaluates it per row, so one
- * `UPDATE` gives every row its own value rather than one value to all of
- * them; `migrations.test.ts` asserts exactly that against real SQLite,
- * because a single shared token across every legacy list would be the worst
+ * and the format carries no meaning — the token is a bearer credential and what
+ * matters is its entropy, which is the same 128 bits either way. `randomblob`
+ * is non-deterministic and SQLite evaluates it per row, so one `UPDATE` gives
+ * every row its own value rather than one value to all of them;
+ * `migrations.test.ts` asserts exactly that against real SQLite, because a
+ * single shared token across every pre-existing list would be the worst
  * possible outcome of this file and no schema assertion would notice it.
  *
  * `WHERE ... IS NULL` keeps it idempotent and keeps it off rows that already

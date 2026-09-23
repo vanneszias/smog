@@ -19,13 +19,13 @@ import {
  *
  * ## `payload_locked_documents_rels` is deliberately untouched
  *
- * Every other collection added since Stage 1 has cost a twelve-step rebuild
- * of that table, because Payload adds a relationship column per collection.
- * This one does not: the jobs collection sets `lockDocuments: false`
- * (`queues/config/collection.js`), so it never takes an admin edit lock and
- * gets no column. Checked against the pushed schema rather than assumed — the
- * table's DDL is byte-identical before and after — which is why this
- * migration is two `CREATE TABLE`s and nothing else.
+ * Every other collection added since the first migration has cost a twelve-step
+ * rebuild of that table, because Payload adds a relationship column per
+ * collection. This one does not: the jobs collection sets
+ * `lockDocuments: false` (`queues/config/collection.js`), so it never takes an
+ * admin edit lock and gets no column. Checked against the pushed schema rather
+ * than assumed — the table's DDL is byte-identical before and after — which is
+ * why this migration is two `CREATE TABLE`s and nothing else.
  *
  * ## Why the queue is a database table at all
  *

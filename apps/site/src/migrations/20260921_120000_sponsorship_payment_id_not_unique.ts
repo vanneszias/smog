@@ -5,22 +5,18 @@ import {
 } from "@payloadcms/db-d1-sqlite";
 
 /**
- * `sponsorships.molliePaymentId` stops being unique (Stage 5 Task 7).
+ * `sponsorships.molliePaymentId` stops being unique.
  *
- * Stage 1 made it unique — `20260919_214755_add_sponsorship_token_unique_indexes`
- * is the migration — on the reasoning that "the Mollie webhook resolves a
- * payment to a sponsorship through this column". It does not.
- * `endpoints/mollie.ts` resolves through `metadata.sponsorshipIds`, and the
- * column means "which payment paid for this", which is many-to-one: a
- * checkout covering three gestures writes three rows carrying one payment id,
- * and D1 refused the second of them. The constraint made the shipped bulk
- * purchase impossible rather than safer.
+ * `20260919_214755_add_sponsorship_token_unique_indexes` made it unique on the
+ * reasoning that "the Mollie webhook resolves a payment to a sponsorship
+ * through this column". It does not. `endpoints/mollie.ts` resolves through
+ * `metadata.sponsorshipIds`, and the column means "which payment paid for
+ * this", which is many-to-one: a checkout covering three gestures writes three
+ * rows carrying one payment id, and D1 refused the second of them. The
+ * constraint made bulk purchase impossible rather than safer.
  *
- * Checked against the product rather than argued:
- * `packages/convex/convex/schema.ts` declares `by_payment_id` as a **plain**
- * index and `apps/server/src/webhooks/mollie.ts` writes the same payment id to
- * every sponsorship in a bulk payment. One payment id across many rows has
- * always been the intended behaviour.
+ * One payment id across many rows has always been the intended behaviour: a
+ * bulk payment writes the same payment id to every sponsorship it covers.
  *
  * `reEditToken` keeps its unique index and must: it is a bearer credential,
  * where a collision hands one sponsor's token holder another sponsor's

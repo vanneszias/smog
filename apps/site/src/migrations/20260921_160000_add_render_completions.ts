@@ -6,7 +6,7 @@ import {
 
 /**
  * `render_completions` — the unique-index claim one render *callback* is taken
- * with (Stage 6 Task 3).
+ * with.
  *
  * One table and one **unique** index, plus the `payload_locked_documents_rels`
  * column Payload adds for every collection. The DDL is read back out of

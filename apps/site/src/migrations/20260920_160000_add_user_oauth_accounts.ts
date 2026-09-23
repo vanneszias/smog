@@ -6,7 +6,7 @@ import {
 
 /**
  * `users.oauthAccounts` — the identities at external providers that may sign
- * in to an account (Stage 4 Task 3).
+ * in to an account.
  *
  * The DDL is the DDL Payload's own `pushDevSchema` derives from the array
  * field, read back out of `sqlite_master` rather than hand-written, so a

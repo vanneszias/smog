@@ -6,7 +6,7 @@ import {
 
 /**
  * `claims` — one table in place of `webhook_deliveries` and
- * `render_completions` (Stage 7 Task 2).
+ * `render_completions`.
  *
  * The two tables were the same table twice: one row per opaque key, one unique
  * index, an insert that either wins or loses. There are four consumers now —

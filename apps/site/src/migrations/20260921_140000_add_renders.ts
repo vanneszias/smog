@@ -5,8 +5,7 @@ import {
 } from "@payloadcms/db-d1-sqlite";
 
 /**
- * `renders` — the unique-index claim one render job is taken with (Stage 6
- * Task 1).
+ * `renders` — the unique-index claim one render job is taken with.
  *
  * One table and one **unique** index, plus the `payload_locked_documents_rels`
  * column Payload adds for every collection. The DDL is read back out of

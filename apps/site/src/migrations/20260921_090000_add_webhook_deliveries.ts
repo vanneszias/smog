@@ -6,7 +6,7 @@ import {
 
 /**
  * `webhook-deliveries` — the unique-index lock the Mollie webhook claims a
- * payment with (Stage 5 Task 4).
+ * payment with.
  *
  * One table and one **unique** index, plus the `payload_locked_documents_rels`
  * column Payload adds for every collection. The DDL is read back out of

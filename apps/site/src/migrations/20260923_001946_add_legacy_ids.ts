@@ -6,23 +6,20 @@ import {
 
 /**
  * `legacy_id` on `categories` and `gestures` — the Convex `_id` each row was
- * migrated from (Stage 9 Task 1).
+ * imported from.
  *
- * The importer built in Task 3 has to decide, on every run, whether it
- * already created a given Convex document — there are no transactions on
- * this adapter, an import can fail halfway, and a rerun must converge on the
- * same result without duplicating anything it already wrote. The importer
- * checks first: it looks every document up by `legacyId` and creates only
- * what is absent. The lookup and the create are two statements, so a second
- * run can insert the same document in between; `legacyId` being UNIQUE is
- * the backstop for that race — the losing insert fails on this index, and
- * the importer re-reads the row and counts it as existing instead of
- * creating a duplicate (see `scripts/migrate-convex/apply.ts`). The
- * alternatives considered and rejected in the migration plan were keying
- * on `name` (not unique — two gestures already share one) and on
- * `playbackId` (two gestures have none). See "Rulings taken when writing
- * this plan" in
- * `docs/superpowers/plans/2026-09-22-stage-9-data-migration.md`.
+ * The catalogue importer (`scripts/migrate-convex`) has to decide, on every
+ * run, whether it already created a given Convex document — there are no
+ * transactions on this adapter, an import can fail halfway, and a rerun must
+ * converge on the same result without duplicating anything it already wrote.
+ * The importer checks first: it looks every document up by `legacyId` and
+ * creates only what is absent. The lookup and the create are two statements, so
+ * a second run can insert the same document in between; `legacyId` being UNIQUE
+ * is the backstop for that race — the losing insert fails on this index, and
+ * the importer re-reads the row and counts it as existing instead of creating a
+ * duplicate (see `scripts/migrate-convex/apply.ts`). The alternatives, both
+ * rejected, were keying on `name` (not unique — two gestures already share one)
+ * and on `playbackId` (two gestures have none).
  *
  * Both columns are nullable with no default and not required: every row
  * created in the admin before or after cutover simply has no `legacyId`,

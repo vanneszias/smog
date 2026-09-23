@@ -5,7 +5,7 @@ import {
 } from "@payloadcms/db-d1-sqlite";
 
 /**
- * `users.pendingEmail` and its confirmation token (Stage 4 Task 5).
+ * `users.pendingEmail` and its confirmation token.
  *
  * An address change is parked on the row until whoever reads the mail at the
  * new address confirms it — see `endpoints/account.ts` for why the address

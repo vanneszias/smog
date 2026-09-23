@@ -5,14 +5,12 @@ import {
 } from "@payloadcms/db-d1-sqlite";
 
 /**
- * `rate_limits` — the counter the analytics relay cannot ship without
- * (Stage 8.5 Task 5).
+ * `rate_limits` — the counter the analytics relay cannot ship without.
  *
- * The Redis limiter this replaces is `apps/server/src/services/rateLimit.ts`,
- * and it could not be ported: there is no Redis reachable from a Worker here,
- * and `wrangler.jsonc`'s whole binding inventory is `ASSETS`, `D1`, `R2` and
- * `EMAIL` — no KV, no Durable Object, no Rate Limiting binding. So the store
- * is D1, and the counter is `lib/rateLimit.ts`.
+ * A counter needs a store every isolate shares, and `wrangler.jsonc`'s whole
+ * binding inventory is `ASSETS`, `D1`, `R2` and `EMAIL` — no KV, no Durable
+ * Object, no Rate Limiting binding. So the store is D1, and the counter is
+ * `lib/rateLimit.ts`.
  *
  * `rate_limits_key_idx` being UNIQUE is the whole point of the table, for the
  * same reason `claims_key_idx` is (see `20260921_180000_add_claims` and

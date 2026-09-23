@@ -5,17 +5,17 @@ import {
 } from "@payloadcms/db-d1-sqlite";
 
 /**
- * Makes the database agree with the spec's referential-integrity ruling for
- * lists: `lists.owner_id` cascades, `lists_items.gesture_id` cascades.
+ * Makes the database agree with the referential-integrity rules for lists:
+ * `lists.owner_id` cascades, `lists_items.gesture_id` cascades.
  *
  * Payload emits every `required` relationship as `NOT NULL` with
  * `ON DELETE set null`, which SQLite cannot honour — it refuses the parent
  * delete with a raw `Failed query: delete from "users" ...` rather than
- * cleaning up or refusing legibly. That is the one defect the spec rules on
- * in four places; Stage 1 closed `user_consents.user` (nullable, so `set
- * null` became legal) and `sponsorships.gesture` (a hook that refuses). The
- * two `lists` references are the remaining pair, and for both of them the
- * ruled behaviour is removal, so `cascade` is the constraint that says it.
+ * cleaning up or refusing legibly. That one defect affects four references;
+ * `user_consents.user` was closed by making it nullable (so `set null` became
+ * legal) and `sponsorships.gesture` by a hook that refuses. The two `lists`
+ * references are the remaining pair, and for both of them the intended
+ * behaviour is removal, so `cascade` is the constraint that says it.
  *
  * **This does not replace the hooks, and the hooks do not replace this.**
  * `hooks/cascadeListsOnUserDelete` and `hooks/dropDeletedGestureFromLists`
@@ -33,7 +33,7 @@ import {
  *
  * **Hand-written, and with no `.json` snapshot beside it, deliberately.**
  * `payload migrate:create` derives its DDL from the collection configs, and
- * this task changes no field on any collection. Nor could it: a single
+ * this migration changes no field on any collection. Nor could it: a single
  * `relationship` field's foreign key is emitted with a literal
  * `onDelete: 'set null'` in `@payloadcms/drizzle`'s
  * `dist/schema/traverseFields.js` (3.89.0, the `targetTable[fieldName]`

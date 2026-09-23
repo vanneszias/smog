@@ -5,7 +5,7 @@ import {
 } from "@payloadcms/db-d1-sqlite";
 
 /**
- * What putting the four jobs on a clock costs the database (Stage 7 Task 5).
+ * What putting the four jobs on a clock costs the database.
  *
  * Three unrelated-looking changes, all consequences of the same commit, and
  * all of the kind that no collection file declares — so the DDL below is read
@@ -28,10 +28,10 @@ import {
  *
  * It is a global rather than a collection, which is why
  * `payload_locked_documents_rels` is untouched for the second migration
- * running: a global is locked through `payload_locked_documents.global_slug`,
- * a column that has existed since Stage 1, rather than through a relationship
- * column of its own. Checked against the pushed schema rather than assumed —
- * the rels table's DDL is byte-identical before and after — and
+ * running: a global is locked through `payload_locked_documents.global_slug`, a
+ * column that has existed since the first migration, rather than through a
+ * relationship column of its own. Checked against the pushed schema rather than
+ * assumed — the rels table's DDL is byte-identical before and after — and
  * `migrations.test.ts` asserts the absence as well as the presence.
  *
  * Every column is nullable, including `created_at` and `updated_at`, and that
@@ -56,10 +56,10 @@ import {
  *
  * ## `renders.settled_at`
  *
- * The other half of Task 5, and the one carried item Stage 6 left by name: the
- * readiness sweep could starve. It read every render still holding a Mux asset
- * — one page, newest first — so once the product had more healthy live assets
- * than fit in a page, an older render sat behind every newer one for ever.
+ * The other half of this migration: the readiness sweep could starve. It read
+ * every render still holding a Mux asset — one page, newest first — so once the
+ * product had more healthy live assets than fit in a page, an older render sat
+ * behind every newer one for ever.
  *
  * A column the sweep writes turns that set from a history into a work queue.
  * `jobs/expireSponsorships.ts` stamps a render the moment Mux calls its asset
