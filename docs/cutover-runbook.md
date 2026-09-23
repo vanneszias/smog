@@ -293,7 +293,9 @@ down.
   take the window's row counts just before pausing, with the maintenance page
   already up; the dry run refuses the same tables either way.
 - **The maintenance image is built the day before**, on the legacy host from
-  `/opt/smog`: `docker compose -f maintenance/compose.yml build`. A build in
+  `/opt/smog`: `docker compose -f maintenance/compose.yml build`. Leave that
+  checkout on the legacy release it runs: `main` no longer has `compose.yml`
+  or `maintenance/`, so never pull it there. A build in
   the window is time with the site down. Its Caddy keeps certificates in its
   own volume, so its **first** start in the window fetches a new certificate
   for the legacy address — which works because the address still points at
@@ -406,7 +408,16 @@ being free.
    record them, so refund each by hand.
 3. **Take a fresh Convex export**, after the freeze, to local disk outside
    any git repository (**Import the catalogue → Preconditions**). From
-   `packages/convex` (the Convex CLI needs its `package.json`):
+   `packages/convex` (the Convex CLI needs its `package.json`). The package is
+   no longer on `main`: use a worktree of `113f8b9`, the last commit that has
+   it, set up the day before:
+
+   ```bash
+   git worktree add /absolute/path/to/smog-legacy 113f8b9
+   cd /absolute/path/to/smog-legacy && bun install --frozen-lockfile
+   ```
+
+   Then, in the window, from `/absolute/path/to/smog-legacy/packages/convex`:
 
    ```bash
    read -rs CONVEX_DEPLOY_KEY && export CONVEX_DEPLOY_KEY

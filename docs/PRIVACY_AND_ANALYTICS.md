@@ -1,58 +1,21 @@
 # Privacy and Analytics
 
-> Last updated: June 10, 2026
-
-The public Dutch [privacy policy](../apps/web/src/routes/privacy.tsx) and
-[terms](../apps/web/src/routes/terms.tsx) are the canonical legal copy. Legal
-text should be reviewed by qualified Belgian counsel before a material launch
-or business-model change.
-
-## Data Inventory
-
-| Area | Data |
-|---|---|
-| WorkOS account | user ID, email, name, session/token data |
-| Guest mode | random guest ID and last activity |
-| Learning | favorites, lists, list share tokens |
-| Sponsorship | contact/sponsor identity, email, text/logo, videos, status |
-| Payment/invoice | Mollie ID, amount, invoice name, VAT number, invoice email |
-| Operations | admin logs, security/error logs, email queue payloads |
-| Analytics | paths and typed events listed below, only after consent |
-
-Recent search strings are stored locally on native. Analytics sends query
-length and aggregate counts, not search text.
-
-## Processors and Services
-
-- WorkOS: authentication
-- Convex: database, functions, and file storage
-- Mux: video processing, hosting, and streaming
-- Mollie: hosted payment processing
-- Expo: native app distribution and updates
-- SMTP/IMAP infrastructure: transactional email
-- Redis/BullMQ: temporary email job queue
-- OpenPanel software at `https://analytics.zias.be`: self-hosted product
-  analytics; event data is not sent to OpenPanel Cloud
+The public [privacy page](../apps/site/src/app/(frontend)/[locale]/privacy/page.tsx)
+in `apps/site` is the canonical copy shown to visitors. Legal text should be
+reviewed by qualified Belgian counsel before a material launch or
+business-model change.
 
 ## Consent
 
-Analytics is disabled by default on web and native. The SDK is not initialized
-until stored consent is `true`. Refusal leaves core functionality available.
-Users can change their choice from the privacy page or app settings.
+Analytics is disabled by default on web and mobile. `apps/site` sends nothing
+to its relay, and `apps/mobile` does not create its OpenPanel client, until the
+stored consent is `granted`. Refusal leaves core functionality available.
+Users can change their choice from the privacy page or the app's settings.
 
-On withdrawal, new events stop and the local SDK identity is cleared. Withdrawal
+On withdrawal, new events stop, and on mobile the SDK's device and session ids
+are cleared. Neither app identifies a signed-in account to OpenPanel. Withdrawal
 does not itself erase historical events; handle deletion requests through the
 privacy contact.
-
-## Identity
-
-- Web visitors remain anonymous until authentication resolves.
-- Native guests use `guest:<guestId>`.
-- Authenticated users use the WorkOS user ID with email and name.
-- Logout calls `clearAnalyticsIdentity`.
-
-Do not add sensitive, free-text, payment, invoice, authentication, or search
-content to analytics properties.
 
 ## Event Taxonomy
 
@@ -79,22 +42,11 @@ EXPO_PUBLIC_OPENPANEL_CLIENT_ID=
 EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET=
 ```
 
-The web sends consent-gated analytics to the SMOG server relay, which forwards
-events to OpenPanel with server-only credentials. Use separate web/native
+`apps/site` sends consent-gated analytics to its own relay,
+`POST /api/analytics/track`, which forwards events to OpenPanel with
+server-only credentials; `apps/mobile` sends straight to OpenPanel. Use separate web/native
 OpenPanel clients. Treat the native secret as extractable from the compiled
 application and scope it accordingly.
-
-## Retention
-
-- Guest users, favorites, and lists: 12 months after inactivity
-- Admin logs: 3 years
-- Unpaid sponsorship attempt: cancelled after 24 hours
-- Account/favorites/lists: until deletion or account removal
-- Payment/invoice records: as required for the agreement and Belgian legal
-  retention, up to 10 years where applicable
-- Analytics: the configured OpenPanel retention, limited to product analysis
-
-Changing a retention setting requires updating the public policy and this file.
 
 ## Legal References
 
@@ -113,5 +65,5 @@ Changing a retention setting requires updating the public policy and this file.
 2. Grant consent and navigate on web/native.
 3. Verify screen and typed events in OpenPanel real-time view.
 4. Confirm search terms and session replay are absent.
-5. Sign in, verify identification, then log out and verify identity clearing.
+5. Sign in and confirm the events carry no account identifier.
 6. Withdraw consent and verify no new events are sent.
