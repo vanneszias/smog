@@ -174,29 +174,41 @@ function publicPlaybackId(asset: Record<string, unknown>): null | string {
  * nobody can name. Everything that can refuse the work is done before this
  * call, and nothing after it can undo it.
  *
- * A throw from here means **no asset was created** — the request was refused,
- * or never arrived, or came back unreadable — so the caller may safely retry.
+ * A refusal from here means **no asset was created**: every non-2xx is an
+ * asset that was not made, and the only question is whether to ask again.
  * That is why a refusal is not split into "Mux's definite answer" and "Mux
  * could not be asked" the way `lib/mollie.ts` splits a payment read: there,
- * a 404 is an answer about a payment that exists independently of the request;
- * here, every non-2xx is an asset that was not made, and the only question is
- * whether to ask again.
+ * a 404 is an answer about a payment that exists independently of the request.
+ *
+ * **A timeout is the exception, and it is not a refusal.** When
+ * `REQUEST_TIMEOUT_MS` runs out, `fetch` rejects with a `TimeoutError`
+ * without saying whether Mux received the request — it may have created the
+ * asset and merely not answered in time. So an asset may exist that nothing
+ * here recorded. `passthrough` is what makes such an asset findable: Mux
+ * stores it verbatim on the asset (a string of at most 255 characters), and
+ * the caller passes an identifier of the render — never a name, an email or
+ * anything else about a person — so an orphan can be traced to the render
+ * that asked for it. `endpoints/render.ts` logs that possibility on a
+ * timeout.
  *
  * `playback_policy: ["public"]` matches what this product already creates —
  * `packages/api/src/lib/mux.ts` sets the same on every upload — because the
  * gesture videos it replaces are played by an unauthenticated public page.
  *
  * @throws If the credentials are unset, or Mux refuses, answers with a
- *   non-JSON body, or answers with an asset that has no id.
+ *   non-JSON body, answers with an asset that has no id, or does not answer
+ *   within `REQUEST_TIMEOUT_MS` (a `TimeoutError`; see above).
  */
 export async function createMuxAssetFromUrl(
-  sourceUrl: string
+  sourceUrl: string,
+  passthrough: string
 ): Promise<MuxAsset> {
   const authorization = authorizationOrThrow();
 
   const response = await fetch(`${MUX_API_BASE}/assets`, {
     body: JSON.stringify({
       input: [{ url: sourceUrl }],
+      passthrough,
       playback_policy: ["public"],
     }),
     headers: {

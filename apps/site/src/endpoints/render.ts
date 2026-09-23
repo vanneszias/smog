@@ -592,16 +592,32 @@ const renderCallback: PayloadHandler = async (
   });
 
   let asset: Awaited<ReturnType<typeof createMuxAssetFromUrl>>;
+  // The render row's own id, and nothing about the sponsorship or the sponsor:
+  // Mux stores it on the asset, where anyone with dashboard access reads it.
+  const passthrough = `render:${render.id}`;
 
   try {
-    asset = await createMuxAssetFromUrl(report.outputUrl);
+    asset = await createMuxAssetFromUrl(report.outputUrl, passthrough);
   } catch (error) {
+    /*
+     * A refusal, or a request that never reached Mux, made no asset, and
+     * handing the claim back orphans nothing. A timeout is different: the
+     * request may have arrived and the asset been made, with only the answer
+     * lost — so handing the claim back can orphan a billed asset, and the
+     * retry can make a second. It is handed back anyway, because without it
+     * the retry this 502 asks for is turned away as a replay and the
+     * composite is lost outright; what a timeout adds is a log line naming
+     * the passthrough, so the possible orphan can be found in Mux and
+     * deleted.
+     */
+    const timedOut = error instanceof Error && error.name === "TimeoutError";
+
     req.payload.logger.error(
       { err: error },
-      `[render] Mux would not take the output of render job ${report.jobId}; answering 502 so it is delivered again`
+      timedOut
+        ? `[render] Creating the Mux asset for render job ${report.jobId} timed out; an asset may exist in Mux with passthrough ${passthrough} that nothing records — answering 502 so it is delivered again`
+        : `[render] Mux would not take the output of render job ${report.jobId}; answering 502 so it is delivered again`
     );
-    // No asset was created, so handing the claim back cannot orphan one — and
-    // without it the retry this 502 asks for would be turned away as a replay.
     await releaseCompletion(req, report.jobId);
 
     return problem(BAD_GATEWAY, "The composed video could not be uploaded.");

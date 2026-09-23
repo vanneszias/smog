@@ -380,6 +380,7 @@ describe("Mux's back half", () => {
     method: string;
     url: string;
     authorization: string;
+    body: string;
     signal: AbortSignal | null | undefined;
   }[] = [];
   /** What the fake answers next. Set per test. */
@@ -408,6 +409,7 @@ describe("Mux's back half", () => {
 
       calls.push({
         authorization: headers.get("authorization") ?? "",
+        body: typeof init?.body === "string" ? init.body : "",
         method: init?.method ?? "GET",
         signal: init?.signal,
         url,
@@ -448,10 +450,41 @@ describe("Mux's back half", () => {
         },
       });
 
-    await createMuxAssetFromUrl("https://example.test/source.mp4");
+    await createMuxAssetFromUrl(
+      "https://example.test/source.mp4",
+      "render:test-only"
+    );
 
     expect(calls[0]?.signal).toBeInstanceOf(AbortSignal);
     expect(calls[0]?.signal?.aborted).toBe(false);
+  });
+
+  it("sends the identifier it was given as the asset's passthrough, so an asset a timed-out create made can be found", async () => {
+    // A create that times out may still have made the asset on Mux's side.
+    // `passthrough` is the one field Mux stores verbatim on the asset and
+    // lets a person search by, so it is what ties an orphan back to the
+    // render that asked for it.
+    answer = () =>
+      json({
+        data: {
+          id: ASSET_ID,
+          playback_ids: [{ id: "pbCreateForTestsOnly", policy: "public" }],
+          status: "preparing",
+        },
+      });
+
+    await createMuxAssetFromUrl(
+      "https://example.test/source.mp4",
+      "render:passthrough-test"
+    );
+
+    expect(calls[0]?.method).toBe("POST");
+    expect(calls[0]?.url).toBe("https://api.mux.com/video/v1/assets");
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      input: [{ url: "https://example.test/source.mp4" }],
+      passthrough: "render:passthrough-test",
+      playback_policy: ["public"],
+    });
   });
 
   it("gives readMuxAsset's request a signal that will abort a call which never answers", async () => {

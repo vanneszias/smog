@@ -381,8 +381,11 @@ describe("the render callback", () => {
     // Exactly one asset, and it was made from the output Lambda named.
     expect(muxUploads).toHaveLength(1);
     expect(muxUploads[0]?.url).toBe("https://api.mux.com/video/v1/assets");
+    // `passthrough` names the render row — an id, never anything about the
+    // sponsor — so an asset can be traced back from Mux's dashboard.
     expect(JSON.parse(muxUploads[0]?.body ?? "{}")).toEqual({
       input: [{ url: successReport(id).outputUrl }],
+      passthrough: `render:${row?.id}`,
       playback_policy: ["public"],
     });
 
@@ -851,6 +854,46 @@ describe("the render callback", () => {
     muxCreatesAnAsset();
     expect((await deliver(successReport(id))).status).toBe(200);
     expect((await renderRow(id))?.state).toBe("ready");
+  });
+
+  it("says an asset may exist in Mux when the create times out, and hands the claim back", async () => {
+    /*
+     * A timeout is not "no asset was created": Mux may have made the asset
+     * and the answer simply never arrived. The claim is still handed back —
+     * without it the retry the 502 asks for is turned away as a replay and
+     * the composite is lost — so the log has to say that a possibly billed
+     * asset may exist, under the passthrough that names this render.
+     */
+    const { id } = await seedJob("mux-timeout");
+    const renderId = (await renderRow(id))?.id;
+    const errorLog = vi.spyOn(payload.logger, "error");
+
+    muxWillAnswer = () =>
+      Promise.reject(
+        new DOMException("The operation timed out.", "TimeoutError")
+      );
+
+    try {
+      const response = await deliver(successReport(id));
+
+      expect(response.status).toBe(502);
+      expect(await completionsFor(id)).toBe(0);
+
+      const lines = errorLog.mock.calls.map((call) =>
+        call.filter((arg) => typeof arg === "string").join(" ")
+      );
+
+      expect(
+        lines.some(
+          (line) =>
+            line.startsWith("[render] ") &&
+            line.includes("may exist in Mux") &&
+            line.includes(`passthrough render:${renderId}`)
+        )
+      ).toBe(true);
+    } finally {
+      errorLog.mockRestore();
+    }
   });
 
   it("answers 502 when Mux refuses the upload", async () => {
