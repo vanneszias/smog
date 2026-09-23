@@ -61,6 +61,12 @@ const REMOTION_VERSION = "4.0.484";
  */
 const REQUEST_TIMEOUT_MS = 30_000;
 
+/**
+ * An AWS region's shape, checked before it goes into the hostname: without
+ * it, `region: "attacker.example/"` would send the signed request elsewhere.
+ */
+const AWS_REGION_PATTERN = /^[a-z]{2}(-[a-z]+)+-\d+$/;
+
 /** Longest a Remotion error message may be when it is put in ours. */
 const MAX_REMOTE_MESSAGE_LENGTH = 300;
 
@@ -92,7 +98,7 @@ interface StartedRender {
  * options))` from `@remotion/lambda-client@4.0.484` (`dist/esm/index.mjs`,
  * lines 75828 and 76121), for
  * `{ codec: "h264", composition, serveUrl, region, functionName, inputProps,
- * privacy: "public", webhook, logLevel: "info", maxRetries: 1 }` and every
+ * privacy: "public", webhook, logLevel: "warn", maxRetries: 1 }` and every
  * other option at its default. The keys are in the order that function
  * returns them, so that `JSON.stringify` is byte-identical, and each value
  * notes where its default comes from when it is not one of ours.
@@ -121,9 +127,16 @@ function buildStartPayload(input: StartRenderInput): Record<string, unknown> {
     jpegQuality: 80, // `?? 80`
     maxRetries: 1,
     // Public because Mux ingests the output by its URL, and the Mux asset made
-    // from it is `playback_policy: "public"` anyway (spec, lines 1332-1354).
+    // from it is `playback_policy: "public"` anyway
+    // (`docs/superpowers/specs/2026-09-19-payload-migration-design.md`,
+    // lines 1332-1354).
     privacy: "public",
-    logLevel: "info",
+    // "warn", not the client's "info" default. At "info" every routine's
+    // `printLoggingGrepHelper` (`@remotion/serverless`,
+    // `dist/print-logging-grep-helper.js`) logs `inputProps` to CloudWatch,
+    // and ours carry the signed Mux `videoSrc`; at "warn" that line is not
+    // written. Warnings and errors still are.
+    logLevel: "warn",
     frameRange: null, // `?? null`
     outName: null, // `?? null`
     timeoutInMilliseconds: 30_000, // `?? 30000`
@@ -200,6 +213,36 @@ function remoteMessage(message: unknown): string {
   return firstLine.slice(0, MAX_REMOTE_MESSAGE_LENGTH);
 }
 
+/**
+ * A transport failure, named. `AbortSignal.timeout` rejects with a
+ * `TimeoutError` both while waiting for the response and while its body is
+ * being read, so both land on the same message.
+ */
+function transportError(error: unknown, doing: string): Error {
+  if (error instanceof Error && error.name === "TimeoutError") {
+    return new Error(
+      `[remotionLambda] Lambda did not answer within ${REQUEST_TIMEOUT_MS} ms`,
+      { cause: error }
+    );
+  }
+
+  const name = error instanceof Error ? error.name : "unknown error";
+
+  return new Error(`[remotionLambda] ${doing}: ${name}`, { cause: error });
+}
+
+/**
+ * Releases a body that will not be read, best-effort: an unread body holds
+ * the connection until it is collected. A failure to cancel changes nothing.
+ */
+async function discardBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // Nothing to do: the response is being refused either way.
+  }
+}
+
 /** The signed invoke, with transport failures named rather than rethrown raw. */
 async function invoke(
   input: StartRenderInput,
@@ -226,17 +269,7 @@ async function invoke(
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
-      throw new Error(
-        `[remotionLambda] Lambda did not answer within ${REQUEST_TIMEOUT_MS} ms`,
-        { cause: error }
-      );
-    }
-
-    const name = error instanceof Error ? error.name : "unknown error";
-    throw new Error(`[remotionLambda] Failed to reach Lambda: ${name}`, {
-      cause: error,
-    });
+    throw transportError(error, "Failed to reach Lambda");
   }
 }
 
@@ -258,10 +291,15 @@ async function invoke(
 export async function startRemotionRender(
   input: StartRenderInput
 ): Promise<StartedRender> {
+  if (!AWS_REGION_PATTERN.test(input.region)) {
+    throw new Error("[remotionLambda] Invalid region");
+  }
+
   const credentials = credentialsOrThrow();
   const response = await invoke(input, credentials);
 
   if (!response.ok) {
+    await discardBody(response);
     throw new Error(
       `[remotionLambda] Lambda refused the invoke with HTTP ${response.status} (${awsErrorType(response)})`
     );
@@ -269,12 +307,18 @@ export async function startRemotionRender(
 
   const functionError = response.headers.get("x-amz-function-error");
   if (functionError) {
+    await discardBody(response);
     throw new Error(
       `[remotionLambda] The Lambda function failed (${functionError.slice(0, MAX_REMOTE_MESSAGE_LENGTH)})`
     );
   }
 
-  const text = await response.text();
+  let text: string;
+  try {
+    text = await response.text();
+  } catch (error) {
+    throw transportError(error, "Failed to read Lambda's response");
+  }
   if (text.length === 0) {
     throw new Error(
       `[remotionLambda] Lambda returned no payload (HTTP ${response.status})`

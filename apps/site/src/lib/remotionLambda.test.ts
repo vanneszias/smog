@@ -13,6 +13,7 @@
  * @vitest-environment node
  */
 
+import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { renderMediaOnLambda } from "@remotion/lambda-client";
@@ -38,6 +39,8 @@ const FAKE_SECRET_ACCESS_KEY = "fake-secret-for-tests-only-never-real-000";
 
 const REGION = "eu-central-1";
 const FUNCTION_NAME = "remotion-render-4-0-484-mem2048mb-disk2048mb-120sec";
+const FUNCTION_ARN =
+  "arn:aws:lambda:eu-central-1:123456789012:function:remotion-render-x";
 const SERVE_URL =
   "https://remotionlambda-eucentral1-abcdef1234.s3.eu-central-1.amazonaws.com/sites/smog-render/index.html";
 
@@ -208,7 +211,9 @@ function officialStart(input: StartRenderInput) {
     composition: input.composition,
     functionName: input.functionName,
     inputProps: input.inputProps as unknown as Record<string, unknown>,
-    logLevel: "info",
+    // "warn", not "info": at "info" the start routine logs `inputProps`
+    // (the signed `videoSrc` among them) to CloudWatch.
+    logLevel: "warn",
     maxRetries: 1,
     privacy: "public",
     region: input.region as "eu-central-1",
@@ -218,13 +223,17 @@ function officialStart(input: StartRenderInput) {
 }
 
 describe("the request, against @remotion/lambda-client 4.0.484", () => {
-  it("sends the official client's body byte for byte, to the same path", async () => {
-    const official = await officialStart(startInput());
+  it.each([
+    ["a function name", FUNCTION_NAME],
+    ["a function ARN", FUNCTION_ARN],
+  ])("sends the official client's body byte for byte, to the same path, for %s", async (_name, functionName) => {
+    const input = { ...startInput(), functionName };
+    const official = await officialStart(input);
     expect(captured).toHaveLength(1);
     const wire = captured[0] as CapturedRequest;
 
     const ours = answerFetchWith(FIXTURES.success);
-    await startRemotionRender(startInput());
+    await startRemotionRender(input);
     expect(ours).toHaveLength(1);
     const request = ours[0] as Request;
     const url = new URL(request.url);
@@ -233,6 +242,12 @@ describe("the request, against @remotion/lambda-client 4.0.484", () => {
     const body = await request.text();
     expect(body).toBe(wire.body);
     expect(JSON.parse(body)).toStrictEqual(JSON.parse(wire.body));
+
+    // Credentials travel only in the signature, in both clients.
+    for (const credential of [FAKE_ACCESS_KEY_ID, FAKE_SECRET_ACCESS_KEY]) {
+      expect(body).not.toContain(credential);
+      expect(wire.body).not.toContain(credential);
+    }
 
     expect(request.method).toBe(wire.method);
     expect(`${url.pathname}${url.search}`).toBe(wire.path);
@@ -257,7 +272,7 @@ describe("the request, against @remotion/lambda-client 4.0.484", () => {
       version: "4.0.484",
       codec: "h264",
       privacy: "public",
-      logLevel: "info",
+      logLevel: "warn",
       maxRetries: 1,
       webhook: WEBHOOK,
       inputProps: { type: "payload", payload: JSON.stringify(INPUT_PROPS) },
@@ -321,15 +336,57 @@ describe("the signed request", () => {
     });
   });
 
-  it("encodes the function name into the path", async () => {
-    const requests = answerFetchWith(FIXTURES.success);
-    await startRemotionRender({
-      ...startInput(),
-      functionName: "arn:aws:lambda:eu-central-1:123456789012:function:render",
+  it.each([
+    [""],
+    ["eu-central-1.attacker.example"],
+    ["attacker.example/"],
+    ["EU-CENTRAL-1"],
+    ["eu-central"],
+    ["eu-central-1#"],
+  ])("refuses the region %j before any fetch", async (region) => {
+    await expect(
+      startRemotionRender({ ...startInput(), region })
+    ).rejects.toThrow(new Error("[remotionLambda] Invalid region"));
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("accepts a real region's shape", async () => {
+    answerFetchWith(FIXTURES.success);
+
+    await expect(
+      startRemotionRender({ ...startInput(), region: "us-gov-west-1" })
+    ).resolves.toMatchObject({ renderId: "8l1xk2p3qz" });
+  });
+
+  it("hands fetch a 30 s timeout signal that aborts the request", async () => {
+    const controller = new AbortController();
+    const timeoutSpy = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(controller.signal);
+    const requests: Request[] = [];
+    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
+      const request = input as Request;
+      requests.push(request);
+
+      return new Promise<Response>((_resolve, reject) => {
+        request.signal.addEventListener("abort", () =>
+          reject(request.signal.reason)
+        );
+      });
     });
 
-    expect(new URL((requests[0] as Request).url).pathname).toBe(
-      "/2015-03-31/functions/arn%3Aaws%3Alambda%3Aeu-central-1%3A123456789012%3Afunction%3Arender/invocations"
+    const started = startRemotionRender(startInput());
+    await vi.waitFor(() => expect(requests).toHaveLength(1));
+    const request = requests[0] as Request;
+
+    expect(timeoutSpy).toHaveBeenCalledWith(30_000);
+    expect(request.signal.aborted).toBe(false);
+    controller.abort(
+      new DOMException("The operation timed out.", "TimeoutError")
+    );
+    expect(request.signal.aborted).toBe(true);
+    await expect(started).rejects.toThrow(
+      new Error("[remotionLambda] Lambda did not answer within 30000 ms")
     );
   });
 
@@ -422,6 +479,65 @@ describe("the answer", () => {
     );
   });
 
+  it("says when Lambda timed out while the body was being read", async () => {
+    fetchSpy.mockResolvedValue(
+      new Response(
+        new ReadableStream({
+          pull(controller) {
+            controller.error(
+              new DOMException("The operation timed out.", "TimeoutError")
+            );
+          },
+        }),
+        { status: 200 }
+      )
+    );
+
+    await expect(startRemotionRender(startInput())).rejects.toThrow(
+      new Error("[remotionLambda] Lambda did not answer within 30000 ms")
+    );
+  });
+
+  it("says when the body could not be read", async () => {
+    fetchSpy.mockResolvedValue(
+      new Response(
+        new ReadableStream({
+          pull(controller) {
+            controller.error(new TypeError("terminated"));
+          },
+        }),
+        { status: 200 }
+      )
+    );
+
+    await expect(startRemotionRender(startInput())).rejects.toThrow(
+      new Error("[remotionLambda] Failed to read Lambda's response: TypeError")
+    );
+  });
+
+  it.each([
+    ["HTTP 403", FIXTURES.forbidden],
+    ["a function error", FIXTURES.functionError],
+  ])("cancels the unread body on %s", async (_name, fixture) => {
+    const cancel = vi.fn();
+    fetchSpy.mockResolvedValue(
+      new Response(
+        new ReadableStream({
+          cancel,
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(fixture.body));
+          },
+        }),
+        { headers: fixture.headers, status: fixture.status }
+      )
+    );
+
+    await expect(startRemotionRender(startInput())).rejects.toThrow(
+      "[remotionLambda]"
+    );
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
   it("says when Lambda could not be reached", async () => {
     fetchSpy.mockRejectedValue(new TypeError("fetch failed"));
 
@@ -478,5 +594,41 @@ describe("credentials", () => {
     expect((requests[0] as Request).headers.get("authorization")).toContain(
       "Credential=AKIASECONDFAKEKEY001/"
     );
+  });
+});
+
+describe("the Remotion version", () => {
+  /** Read from the source, so the constant needs no export for this. */
+  function remotionVersion(): string {
+    const source = readFileSync(
+      new URL("./remotionLambda.ts", import.meta.url),
+      "utf8"
+    );
+    const match = /^const REMOTION_VERSION = "([^"]+)";$/m.exec(source);
+    if (!match?.[1]) {
+      throw new Error("REMOTION_VERSION not found in remotionLambda.ts");
+    }
+
+    return match[1];
+  }
+
+  function pin(packageJson: string, section: string, name: string): unknown {
+    const manifest = JSON.parse(
+      readFileSync(new URL(packageJson, import.meta.url), "utf8")
+    ) as Record<string, Record<string, string> | undefined>;
+
+    return manifest[section]?.[name];
+  }
+
+  it("is the one apps/render deploys the function with", () => {
+    expect(
+      pin("../../../render/package.json", "devDependencies", "@remotion/lambda")
+    ).toBe(remotionVersion());
+  });
+
+  it("is the official client the contract tests run against", () => {
+    expect(
+      pin("../../package.json", "devDependencies", "@remotion/lambda-client")
+    ).toBe(remotionVersion());
   });
 });
