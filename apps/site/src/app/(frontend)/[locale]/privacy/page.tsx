@@ -48,13 +48,13 @@ const COPY: Record<Locale, PolicyCopy> = {
   nl: {
     metaTitle: "Privacybeleid",
     metaDescription:
-      "Wat SMOG verzamelt met analytics, wie dat verwerkt, en hoe u uw toestemming intrekt.",
+      "Wat SMOG & Co verzamelt met analytics, wie dat verwerkt, en hoe u uw toestemming intrekt.",
     draft: null,
     intro:
       "Dit beleid gaat over de analytics-toestemming die u op deze website kunt geven of weigeren.",
     collectHeading: "Wat we verzamelen",
     collectUsage:
-      "Met uw toestemming verzamelen we beperkte gebruiksanalytics — bijvoorbeeld welke pagina's bezocht worden, welke gebaren bekeken worden en waarnaar gezocht wordt — om te begrijpen hoe SMOG gebruikt wordt en de app te verbeteren.",
+      "Met uw toestemming verzamelen we beperkte gebruiksanalytics — bijvoorbeeld welke pagina's bezocht worden, welke gebaren bekeken worden en waarnaar gezocht wordt — om te begrijpen hoe SMOG & Co gebruikt wordt en de app te verbeteren.",
     collectNotAnonymous:
       "Deze gegevens zijn niet anoniem. Bij elke gebeurtenis sturen we ook uw IP-adres en de useragent van uw browser mee; daarmee kan bij benadering bepaald worden vanwaar u de site bezoekt. De gebeurtenissen zelf bevatten geen accountgegevens: ze worden niet aan uw account gekoppeld, ook niet wanneer u aangemeld bent. Het record van uw toestemming is dat wel — zie hieronder — en daarbij bewaren we uw IP-adres en useragent eveneens.",
     collectNoAccount:
@@ -78,7 +78,7 @@ const COPY: Record<Locale, PolicyCopy> = {
   en: {
     metaTitle: "Privacy policy",
     metaDescription:
-      "What SMOG collects with analytics, who processes it, and how to withdraw your consent.",
+      "What SMOG & Co collects with analytics, who processes it, and how to withdraw your consent.",
     draft: {
       notice:
         "Unreviewed draft translation. This English text has not yet been checked by a translator or reviewed by a lawyer. Only the Dutch version applies.",
@@ -88,7 +88,7 @@ const COPY: Record<Locale, PolicyCopy> = {
       "This policy covers the analytics consent you can give or refuse on this website.",
     collectHeading: "What we collect",
     collectUsage:
-      "With your consent, we collect limited usage analytics — for example, which pages are visited, which gestures are viewed and what is searched for — to understand how SMOG is used and to improve the app.",
+      "With your consent, we collect limited usage analytics — for example, which pages are visited, which gestures are viewed and what is searched for — to understand how SMOG & Co is used and to improve the app.",
     collectNotAnonymous:
       "This data is not anonymous. With every event we also send your IP address and your browser's user agent, which can be used to work out roughly where you are visiting the site from. The events themselves contain no account details: they are not linked to your account, even when you are signed in. The record of your consent is — see below — and we store your IP address and user agent with it as well.",
     collectNoAccount:
@@ -111,7 +111,7 @@ const COPY: Record<Locale, PolicyCopy> = {
   fr: {
     metaTitle: "Politique de confidentialité",
     metaDescription:
-      "Ce que SMOG collecte avec ses données d'analyse, qui les traite et comment retirer votre consentement.",
+      "Ce que SMOG & Co collecte avec ses données d'analyse, qui les traite et comment retirer votre consentement.",
     draft: {
       notice:
         "Traduction provisoire non relue. Ce texte français n'a encore été vérifié ni par un traducteur ni par un juriste. Seule la version néerlandaise fait foi.",
@@ -121,7 +121,7 @@ const COPY: Record<Locale, PolicyCopy> = {
       "Cette politique porte sur le consentement aux données d'analyse que vous pouvez donner ou refuser sur ce site.",
     collectHeading: "Ce que nous collectons",
     collectUsage:
-      "Avec votre consentement, nous collectons des données d'analyse limitées — par exemple les pages visitées, les gestes consultés et les recherches effectuées — afin de comprendre comment SMOG est utilisé et d'améliorer l'application.",
+      "Avec votre consentement, nous collectons des données d'analyse limitées — par exemple les pages visitées, les gestes consultés et les recherches effectuées — afin de comprendre comment SMOG & Co est utilisé et d'améliorer l'application.",
     collectNotAnonymous:
       "Ces données ne sont pas anonymes. Avec chaque événement, nous envoyons aussi votre adresse IP et l'agent utilisateur (user agent) de votre navigateur, ce qui permet de déterminer approximativement d'où vous consultez le site. Les événements eux-mêmes ne contiennent aucune donnée de compte : ils ne sont pas liés à votre compte, même lorsque vous êtes connecté. L'enregistrement de votre consentement l'est — voir ci-dessous — et nous y conservons également votre adresse IP et votre agent utilisateur.",
     collectNoAccount:

@@ -82,7 +82,7 @@
   },
   "auth": {
     "welcome": {
-      "title": "Bienvenue à SMOG",
+      "title": "Bienvenue sur SMOG & Co",
       "subtitle": "Apprenez les gestes de la langue des signes",
       "footer": "En continuant, vous acceptez nos Conditions de service et notre Politique de confidentialité",
       "signInSignUp": "Se connecter"
@@ -148,7 +148,7 @@
     "openDeveloperTools": "Ouvrir les outils développeur",
     "analyticsTitle": "Analyse d'utilisation",
     "analyticsDescription": "Les données d'analyse d'utilisation sont facultatives. Si vous les autorisez, nous collectons des données d'analyse limitées pour comprendre comment SMOG & Co est utilisé et améliorer l'application. Nous n'utilisons pas ces données à des fins publicitaires, ne vous suivons pas dans d'autres applications ou sur d'autres sites web, ne collectons pas les termes de recherche et n'enregistrons pas les sessions.",
-    "analyticsPromptTitle": "Aidez-nous à améliorer SMOG",
+    "analyticsPromptTitle": "Aidez-nous à améliorer SMOG & Co",
     "analyticsPromptDescription": "Avec votre autorisation, nous collectons des données d'analyse limitées pour comprendre comment SMOG & Co est utilisé et améliorer l'application. Nous n'utilisons pas ces données à des fins publicitaires et ne vous suivons pas dans d'autres applications ou sur d'autres sites web.",
     "analyticsAllow": "Autoriser l'analyse",
     "analyticsRequiredOnly": "Utiliser sans analyse",
@@ -170,7 +170,7 @@
     "edit": "Modifier",
     "delete": "Supprimer",
     "continue": "Continuer",
-    "initializing": "Démarrage de SMOG...",
+    "initializing": "Démarrage de SMOG & Co...",
     "pause": "Mettre la vidéo en pause",
     "play": "Lire la vidéo",
     "total": "Total",
@@ -193,7 +193,7 @@
       "navigation": "Navigation principale"
     },
     "logo": {
-      "alt": "Logo SMOG"
+      "alt": "Logo SMOG & Co"
     },
     "keys": {
       "escape": "Échap"
@@ -297,7 +297,7 @@
   },
   "appStore": {
     "new": "Nouveau",
-    "headline": "SMOG est maintenant disponible sur votre téléphone !",
+    "headline": "SMOG & Co est maintenant disponible sur votre téléphone !",
     "subheadline": "Téléchargez l’application et apprenez les gestes où que vous soyez",
     "downloadOn": "Télécharger dans l’",
     "getItOn": "Disponible sur",
@@ -407,7 +407,7 @@
         "contact": "Contact",
         "selection": {
           "title": "Parrainer un geste",
-          "description": "Soutenez un geste pendant un an. Votre nom apparaît dans sa vidéo tout en aidant le projet SMOG.",
+          "description": "Soutenez un geste pendant un an. Votre nom apparaît dans sa vidéo tout en aidant le projet SMOG & Co.",
           "perGesture": "Par geste, par an",
           "nameInVideo": "Votre nom dans chaque vidéo",
           "optionalLogo": "Ajoutez votre logo (facultatif)",
@@ -887,7 +887,7 @@
       "message": "Voulez-vous partager le lien vers ce geste ({{name}}) ?",
       "cancel": "Annuler",
       "share": "Partager",
-      "shareTitle": "{{name}} - SMOG",
+      "shareTitle": "{{name}} - SMOG & Co",
       "shareMessage": "Découvrez ce geste : {{name}}"
     }
   },
@@ -944,7 +944,7 @@
     }
   },
   "seo": {
-    "defaultTitle": "SMOG - Apprendre la langue des signes",
+    "defaultTitle": "SMOG & Co - Apprendre la langue des signes",
     "defaultDescription": "Découvrez et maîtrisez les gestes de la langue des signes avec notre bibliothèque vidéo complète. Recherchez, apprenez et pratiquez à votre rythme.",
     "keywords": "langue des signes, apprentissage de la langue des signes, SMOG, gestes, dictionnaire de langue des signes, apprendre à signer, vidéo de langue des signes, éducation des sourds",
     "ogType": "website",

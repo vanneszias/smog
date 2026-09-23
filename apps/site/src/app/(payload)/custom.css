@@ -1,0 +1,34 @@
+/*
+ * The admin's brand graphics (`components/admin/`).
+ *
+ * The admin themes itself with `data-theme` on `<html>`, so the logo swaps on
+ * that attribute: the green file on the light theme, the white one on the dark.
+ */
+.smog-admin-logo {
+  display: flex;
+  justify-content: center;
+  max-width: 100%;
+}
+
+.smog-admin-logo img {
+  height: auto;
+  max-width: 100%;
+}
+
+.smog-admin-logo__dark {
+  display: none;
+}
+
+html[data-theme="dark"] .smog-admin-logo__light {
+  display: none;
+}
+
+html[data-theme="dark"] .smog-admin-logo__dark {
+  display: block;
+}
+
+.smog-admin-icon {
+  display: block;
+  height: 100%;
+  width: 100%;
+}

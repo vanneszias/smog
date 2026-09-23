@@ -67,7 +67,9 @@ describe("the message bodies", () => {
       url: URL_FOR,
     });
 
-    expect(message.subject).toBe("Je SMOG-sponsoring verloopt binnenkort");
+    expect(message.subject).toBe(
+      "Je sponsoring bij SMOG & Co verloopt binnenkort"
+    );
     expect(message.text).toContain("Jan Janssens");
     expect(message.text).toContain("Dank u wel");
     expect(message.text).toContain("31 oktober 2027");

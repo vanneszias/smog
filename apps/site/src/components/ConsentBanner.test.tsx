@@ -40,7 +40,7 @@ describe("ConsentBanner", () => {
   it("asks an undecided visitor", () => {
     mount();
     expect(container.querySelector("section")).not.toBeNull();
-    expect(container.textContent).toContain("Help SMOG verbeteren");
+    expect(container.textContent).toContain("Help SMOG & Co verbeteren");
   });
 
   it("says nothing to a visitor who already answered, either way", () => {

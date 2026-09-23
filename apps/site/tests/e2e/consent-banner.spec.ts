@@ -26,7 +26,9 @@ test.describe("The consent banner", () => {
   }) => {
     await page.goto(`${SITE}/nl`);
 
-    const banner = page.getByRole("region", { name: "Help SMOG verbeteren" });
+    const banner = page.getByRole("region", {
+      name: "Help SMOG & Co verbeteren",
+    });
 
     await expect(banner).toBeVisible();
 
@@ -45,7 +47,7 @@ test.describe("The consent banner", () => {
     // not just a re-render.
     await page.goto(`${SITE}/nl/gestures`);
     await expect(
-      page.getByRole("region", { name: "Help SMOG verbeteren" })
+      page.getByRole("region", { name: "Help SMOG & Co verbeteren" })
     ).toHaveCount(0);
   });
 });

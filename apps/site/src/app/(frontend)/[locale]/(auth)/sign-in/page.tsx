@@ -5,7 +5,7 @@ import { resolveProvider } from "@/auth/oauthProvider";
 import { isLocale, resolveLocale } from "@/lib/locale";
 
 export const metadata: Metadata = {
-  description: "Meld je aan op je SMOG-account.",
+  description: "Meld je aan met je account bij SMOG & Co.",
   title: "Aanmelden",
   // A sign-in form has nothing to index and every reason not to be a search
   // result; `follow` stays on so the links out of it still count.
@@ -69,7 +69,7 @@ const OAUTH_ERRORS: Record<string, string> = {
  */
 const NOTICES: Record<string, string> = {
   deleted:
-    "Je account en je lijsten zijn verwijderd. Bedankt voor het gebruiken van SMOG.",
+    "Je account en je lijsten zijn verwijderd. Bedankt voor het gebruiken van SMOG & Co.",
   "email-changed":
     "Je e-mailadres is gewijzigd. Meld je hieronder aan met je nieuwe adres.",
   "password-changed":

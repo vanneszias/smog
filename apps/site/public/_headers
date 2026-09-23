@@ -1,2 +1,9 @@
 /_next/static/*
   Cache-Control: public,max-age=31536000,immutable
+
+# The brand artwork keeps its URL when it changes (nothing here is
+# content-addressed), so it gets a day rather than a year: long enough that a
+# visitor paging through the site fetches the header logo once, short enough
+# that a new logo reaches everyone by the next day.
+/brand/*
+  Cache-Control: public,max-age=86400

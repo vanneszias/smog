@@ -100,7 +100,7 @@ const EMAIL_CHANGE: Record<Locale, (url: string) => RenderedEmail> = {
   nl: (url) => ({
     subject: "Bevestig je nieuwe e-mailadres",
     text: [
-      "Je hebt gevraagd om het e-mailadres van je SMOG-account te wijzigen.",
+      "Je hebt gevraagd om het e-mailadres van je account bij SMOG & Co te wijzigen.",
       "",
       "Bevestig het via deze link:",
       url,
@@ -111,7 +111,7 @@ const EMAIL_CHANGE: Record<Locale, (url: string) => RenderedEmail> = {
   en: (url) => ({
     subject: "Confirm your new email address",
     text: [
-      "You asked to change the email address on your SMOG account.",
+      "You asked to change the email address on your SMOG & Co account.",
       "",
       "Confirm it with this link:",
       url,
@@ -122,7 +122,7 @@ const EMAIL_CHANGE: Record<Locale, (url: string) => RenderedEmail> = {
   fr: (url) => ({
     subject: "Confirmez votre nouvelle adresse e-mail",
     text: [
-      "Vous avez demandé à modifier l'adresse e-mail de votre compte SMOG.",
+      "Vous avez demandé à modifier l'adresse e-mail de votre compte SMOG & Co.",
       "",
       "Confirmez-la avec ce lien :",
       url,
@@ -134,7 +134,7 @@ const EMAIL_CHANGE: Record<Locale, (url: string) => RenderedEmail> = {
 
 const RE_EDIT: Record<Locale, (name: string, url: string) => RenderedEmail> = {
   nl: (name, url) => ({
-    subject: "Pas je SMOG-sponsoring aan",
+    subject: "Pas je sponsoring bij SMOG & Co aan",
     text: [
       `Beste ${name},`,
       "",
@@ -147,7 +147,7 @@ const RE_EDIT: Record<Locale, (name: string, url: string) => RenderedEmail> = {
     ].join("\n"),
   }),
   en: (name, url) => ({
-    subject: "Please update your SMOG sponsorship",
+    subject: "Please update your SMOG & Co sponsorship",
     text: [
       `Dear ${name},`,
       "",
@@ -160,7 +160,7 @@ const RE_EDIT: Record<Locale, (name: string, url: string) => RenderedEmail> = {
     ].join("\n"),
   }),
   fr: (name, url) => ({
-    subject: "Modifiez votre parrainage SMOG",
+    subject: "Modifiez votre parrainage SMOG & Co",
     text: [
       `Bonjour ${name},`,
       "",
@@ -187,7 +187,7 @@ const RENEWAL_REMINDER: Record<
   (name: string, gesture: string, endDate: string, url: string) => RenderedEmail
 > = {
   nl: (name, gesture, endDate, url) => ({
-    subject: "Je SMOG-sponsoring verloopt binnenkort",
+    subject: "Je sponsoring bij SMOG & Co verloopt binnenkort",
     text: [
       `Beste ${name},`,
       "",
@@ -202,7 +202,7 @@ const RENEWAL_REMINDER: Record<
     ].join("\n"),
   }),
   en: (name, gesture, endDate, url) => ({
-    subject: "Your SMOG sponsorship ends soon",
+    subject: "Your SMOG & Co sponsorship ends soon",
     text: [
       `Dear ${name},`,
       "",
@@ -217,7 +217,7 @@ const RENEWAL_REMINDER: Record<
     ].join("\n"),
   }),
   fr: (name, gesture, endDate, url) => ({
-    subject: "Votre parrainage SMOG se termine bientôt",
+    subject: "Votre parrainage SMOG & Co se termine bientôt",
     text: [
       `Bonjour ${name},`,
       "",

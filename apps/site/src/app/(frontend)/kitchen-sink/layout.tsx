@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description:
     "Every component in @smog/ui-web, in every state, in both themes.",
   robots: { follow: false, index: false },
-  title: "Kitchen sink — SMOG design system",
+  title: "Kitchen sink — SMOG & Co design system",
 };
 
 /**

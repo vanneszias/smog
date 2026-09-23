@@ -50,7 +50,7 @@ const COPY: Record<
     description:
       "With your permission, we collect limited usage analytics to understand how SMOG & Co is used and improve the app. We do not use this data for advertising or track you across other apps or websites.",
     policy: "Read the privacy policy",
-    title: "Help improve SMOG",
+    title: "Help improve SMOG & Co",
   },
   fr: {
     accept: "Autoriser l'analyse",
@@ -58,7 +58,7 @@ const COPY: Record<
     description:
       "Avec votre autorisation, nous collectons des données d'analyse limitées pour comprendre comment SMOG & Co est utilisé et améliorer l'application. Nous n'utilisons pas ces données à des fins publicitaires et ne vous suivons pas dans d'autres applications ou sur d'autres sites web.",
     policy: "Lire la politique de confidentialité",
-    title: "Aidez-nous à améliorer SMOG",
+    title: "Aidez-nous à améliorer SMOG & Co",
   },
   nl: {
     accept: "Analytics toestaan",
@@ -66,7 +66,7 @@ const COPY: Record<
     description:
       "Met uw toestemming verzamelen we beperkte gebruiksanalytics om te begrijpen hoe SMOG & Co wordt gebruikt en de app te verbeteren. We gebruiken deze gegevens niet voor advertenties en volgen u niet in andere apps of op andere websites.",
     policy: "Lees het privacybeleid",
-    title: "Help SMOG verbeteren",
+    title: "Help SMOG & Co verbeteren",
   },
 };
 
@@ -83,7 +83,7 @@ export function ConsentBanner({ locale }: { locale: Locale }) {
    * done, it sits on top of whatever the last thing on the page happens to
    * be. On `/nl/account`, `/nl/account/lists/:id` and the sponsor wizard that
    * "whatever" is a submit button, and Playwright's real click caught it
-   * first: `<section aria-label="Help SMOG verbeteren" …> intercepts pointer
+   * first: `<section aria-label="Help SMOG & Co verbeteren" …> intercepts pointer
    * events`. A fixed element covering an interactive one is exactly the
    * consent-wall failure `Banner`'s design doc rules out — it had just moved
    * from "traps focus inside the notice" to "blocks a control the notice

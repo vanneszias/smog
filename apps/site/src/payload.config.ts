@@ -40,6 +40,7 @@ import { oauthEndpoints } from "./endpoints/oauth";
 import { renderEndpoints } from "./endpoints/render";
 import { sponsorshipEndpoints } from "./endpoints/sponsorships";
 import { jobsConfig } from "./jobs";
+import { FAVICONS, SHARE_IMAGE, SITE_NAME } from "./lib/brand";
 import { requireBinding, requireEnv } from "./lib/env";
 import { beforeSyncGesture } from "./search/beforeSync";
 
@@ -158,8 +159,38 @@ const cloudflare = isNextBuild
 export default buildConfig({
   admin: {
     user: Users.slug,
+    /*
+     * The admin's own branding, kept apart from the public layout's metadata
+     * because the admin renders its own document under `app/(payload)`.
+     *
+     * Paths relative to `importMap.baseDir` (this directory), which is the
+     * form `generate:importmap` resolves into `app/(payload)/admin/importMap.js`.
+     */
+    components: {
+      graphics: {
+        Icon: "/components/admin/Icon#Icon",
+        Logo: "/components/admin/Logo#Logo",
+      },
+    },
     importMap: {
       baseDir: path.resolve(dirname),
+    },
+    meta: {
+      /*
+       * `off` because the share image below replaces the card Payload would
+       * generate at `/api/og`, and `off` also stops the admin serving that
+       * endpoint for nobody.
+       */
+      defaultOGImageType: "off",
+      icons: FAVICONS,
+      openGraph: { images: [SHARE_IMAGE], siteName: SITE_NAME },
+      /*
+       * No leading space: Payload joins the page title and the suffix with
+       * one itself (`appendTitleSuffix` in
+       * `@payloadcms/next/dist/utilities/meta.js`, 3.89.0), so " — SMOG & Co"
+       * would render "Dashboard  — SMOG & Co".
+       */
+      titleSuffix: "— SMOG & Co",
     },
   },
   collections: [

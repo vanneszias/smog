@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { isLocale, resolveLocale } from "@/lib/locale";
 
 export const metadata: Metadata = {
-  description: "Maak een SMOG-account aan.",
+  description: "Maak een account aan bij SMOG & Co.",
   title: "Registreren",
   robots: { follow: true, index: false },
 };

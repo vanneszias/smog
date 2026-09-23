@@ -276,4 +276,25 @@ describe("fetchCategoryOptions", () => {
       String(inactiveId)
     );
   });
+
+  /*
+   * The home page's bounded read. Asserted as a prefix of the unbounded list
+   * rather than against fixed names, because this database keeps every
+   * category earlier runs created: what has to hold is that a limit cuts the
+   * same ordered list the filter shows, rather than picking some other eight.
+   * Two categories created here guarantee there are at least two to cut.
+   */
+  it("cuts the same ordered list when asked for only the first few", async () => {
+    await payload.create({
+      collection: "categories",
+      data: { isActive: true, name: `Zichtbaar ${RUN} twee` },
+      locale: "nl",
+    });
+
+    const all = await fetchCategoryOptions("nl");
+    const firstTwo = await fetchCategoryOptions("nl", { limit: 2 });
+
+    expect(all.length).toBeGreaterThanOrEqual(2);
+    expect(firstTwo).toEqual(all.slice(0, 2));
+  });
 });

@@ -84,10 +84,9 @@ export function localeHref(pathname: string, next: Locale): string {
  * is set and emits them unchanged when it is not — verified in
  * `next/dist/lib/metadata/resolvers/resolve-url.js` (16.3.3), whose
  * `resolveAbsoluteUrlWithPathname` returns the string untouched without a
- * base. This app sets no `metadataBase`, because the only honest value is the
- * host the request arrived on and reading that in `generateMetadata` would
- * opt every prerendered page out of static rendering. The sitemap, which must
- * carry absolute URLs, builds its own from the request origin instead.
+ * base. The locale layout sets one (`lib/siteOrigin.ts`), so the rendered
+ * alternates are absolute. The sitemap, which is not metadata, builds its
+ * own absolute URLs from the request origin.
  */
 export function localeAlternates(path: string): Record<Locale, string> {
   return Object.fromEntries(

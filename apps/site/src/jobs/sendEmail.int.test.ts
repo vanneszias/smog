@@ -316,7 +316,7 @@ describe("the send-email task", () => {
 
     expect(token).not.toBe("");
     expect(message).toBeDefined();
-    expect(message?.subject).toBe("Pas je SMOG-sponsoring aan");
+    expect(message?.subject).toBe("Pas je sponsoring bij SMOG & Co aan");
     expect(message?.text).toContain("Acme invite");
     expect(message?.text).toContain(`/nl/sponsor/re-edit?token=${token}`);
 

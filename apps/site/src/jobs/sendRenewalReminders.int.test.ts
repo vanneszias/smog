@@ -256,7 +256,9 @@ describe("reminding a sponsor that their term is nearly up", () => {
     const [sent] = mailTo("soon");
 
     expect(sent).toBeDefined();
-    expect(sent?.subject).toBe("Je SMOG-sponsoring verloopt binnenkort");
+    expect(sent?.subject).toBe(
+      "Je sponsoring bij SMOG & Co verloopt binnenkort"
+    );
     // The three things the message says, so this is the message and
     // not merely a message: who it is to, which gesture, and when it ends.
     expect(sent?.text).toContain("Contact soon");

@@ -8,7 +8,7 @@ import { getPayloadClient } from "@/lib/payloadClient";
 import { readSession } from "@/lib/session";
 
 export const metadata: Metadata = {
-  description: "Beheer je SMOG-account.",
+  description: "Beheer je account bij SMOG & Co.",
   title: "Account",
   /*
    * Nothing here belongs in an index, and a crawler that reached it would be

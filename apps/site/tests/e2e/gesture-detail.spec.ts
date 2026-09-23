@@ -171,7 +171,7 @@ test.describe("Gesture detail", () => {
       waitUntil: "domcontentloaded",
     });
 
-    await expect(page).toHaveTitle(`${fixtures.activeName} — SMOG`);
+    await expect(page).toHaveTitle(`${fixtures.activeName} — SMOG & Co`);
   });
 
   test("advertises the same gesture in all three locales", async ({ page }) => {
@@ -191,12 +191,17 @@ test.describe("Gesture detail", () => {
     for (const locale of ["nl", "en", "fr"]) {
       await expect(
         page.locator(`link[rel="alternate"][hreflang="${locale}"]`)
-      ).toHaveAttribute("href", `/${locale}/gestures/${fixtures.activeId}`);
+      ).toHaveAttribute(
+        "href",
+        `${SITE}/${locale}/gestures/${fixtures.activeId}`
+      );
     }
 
+    // Absolute, because the layout sets `metadataBase` (`lib/siteOrigin.ts`);
+    // the dev server has no `SITE_ORIGIN`, so the base is its own origin.
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       "href",
-      `/nl/gestures/${fixtures.activeId}`
+      `${SITE}/nl/gestures/${fixtures.activeId}`
     );
   });
 

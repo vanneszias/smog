@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { SanitizedConfig, SanitizedLocalizationConfig } from "payload";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -50,6 +52,42 @@ describe.skipIf(!process.env.PAYLOAD_SECRET)(
       expect(config.collections.map((collection) => collection.slug)).toContain(
         "categories"
       );
+    });
+
+    it("brands the admin as SMOG & Co, with the site's own icons", () => {
+      const { meta } = config.admin;
+      const icons = meta.icons as { url: string }[];
+
+      expect(meta.titleSuffix).toBe("— SMOG & Co");
+      expect(icons.map((icon) => icon.url)).toEqual([
+        "/favicon.ico",
+        "/icon.svg",
+      ]);
+      for (const { url } of icons) {
+        expect(existsSync(join(process.cwd(), "public", url)), url).toBe(true);
+      }
+    });
+
+    /*
+     * A component path that is registered but missing from the generated
+     * import map renders nothing in the admin, with only a console warning to
+     * say so. `generate:importmap` has to be rerun whenever one is added, and
+     * this is where forgetting it shows.
+     */
+    it("finds both brand graphics in the generated import map", () => {
+      const importMap = readFileSync(
+        join(process.cwd(), "src/app/(payload)/admin/importMap.js"),
+        "utf8"
+      );
+      const { graphics } = config.admin.components;
+
+      expect(graphics).toEqual({
+        Icon: "/components/admin/Icon#Icon",
+        Logo: "/components/admin/Logo#Logo",
+      });
+      for (const path of Object.values(graphics ?? {})) {
+        expect(importMap).toContain(`"${String(path)}"`);
+      }
     });
   }
 );

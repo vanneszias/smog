@@ -445,7 +445,9 @@ describe("the scheduled jobs", () => {
     );
 
     expect(sent).toBeDefined();
-    expect(sent?.subject).toBe("Je SMOG-sponsoring verloopt binnenkort");
+    expect(sent?.subject).toBe(
+      "Je sponsoring bij SMOG & Co verloopt binnenkort"
+    );
 
     /*
      * The link is built on *this* host, which is the whole reason

@@ -204,14 +204,18 @@ export async function fetchGestures(
 }
 
 /**
- * The active categories, for the filter control.
+ * The active categories, for the filter control and the home page.
  *
  * Sorted the same way the gestures are and read as an anonymous visitor, so a
  * category an editor deactivated cannot be offered as a filter that returns
- * nothing.
+ * nothing. The home page shows the first few in the same order the filter
+ * lists them, which is why it asks here rather than running its own query.
+ *
+ * `limit` bounds the one query; left out, it is every category.
  */
 export async function fetchCategoryOptions(
-  locale: Locale
+  locale: Locale,
+  { limit = 0 }: { limit?: number } = {}
 ): Promise<{ id: string; name: string }[]> {
   const payload = await getPayloadClient();
 
@@ -219,11 +223,16 @@ export async function fetchCategoryOptions(
     collection: "categories",
     depth: 0,
     /*
-     * Every category, not a page of them: a filter that silently omits the
-     * categories past an arbitrary cut-off is worse than a long row of
-     * buttons. There are five.
+     * Every category by default, not a page of them: a filter that silently
+     * omits the categories past an arbitrary cut-off is worse than a long row
+     * of buttons. There are five. `0` is Payload's "no limit".
+     *
+     * `pagination: false` because nothing here reads a total: without it, a
+     * bounded read also runs a `COUNT` for page numbers nobody shows
+     * (`@payloadcms/drizzle/dist/find/findMany.js`, 3.89.0).
      */
-    limit: 0,
+    limit,
+    pagination: false,
     locale,
     overrideAccess: false,
     sort: ["name", "id"],

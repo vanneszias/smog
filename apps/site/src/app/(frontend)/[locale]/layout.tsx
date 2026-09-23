@@ -1,16 +1,26 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { type ReactNode, Suspense } from "react";
 import { AccountNav } from "@/components/AccountNav";
+import { BrandArt } from "@/components/BrandArt";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { ConsentSync } from "@/components/ConsentSync";
 import { GuestFavoritesSync } from "@/components/GuestFavoritesSync";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { SiteDocument } from "@/components/SiteDocument";
+import {
+  APPLE_TOUCH_ICON,
+  BRAND_PRIMARY,
+  DARK_BACKGROUND,
+  FAVICONS,
+  MANIFEST_PATH,
+  SHARE_IMAGE,
+  SITE_NAME,
+} from "@/lib/brand";
 import { isLocale, LOCALES, type Locale } from "@/lib/locale";
 import { readSession } from "@/lib/session";
-
-const SITE_NAME = "SMOG";
+import { resolveSiteOrigin } from "@/lib/siteOrigin";
 
 /**
  * The site's own description, per locale.
@@ -23,7 +33,7 @@ const SITE_NAME = "SMOG";
 const DESCRIPTIONS: Record<Locale, string> = {
   en: "Look up, watch and save SMOG gestures.",
   fr: "Rechercher, regarder et enregistrer les gestes SMOG.",
-  nl: "Gebaren opzoeken, bekijken en bewaren — de openbare SMOG-website.",
+  nl: "Gebaren opzoeken, bekijken en bewaren — de website van SMOG & Co.",
 };
 
 /**
@@ -55,8 +65,16 @@ const OG_LOCALES: Record<Locale, string> = {
  * **No `openGraph.title` or `openGraph.description`.** `postProcessMetadata`
  * (same file) fills both from the *page's* resolved title and description
  * when Open Graph leaves them unset, so omitting them gives every page an
- * accurate `og:title` — where setting them here would stamp "SMOG" on all of
- * them.
+ * accurate `og:title` — where setting them here would stamp "SMOG & Co" on
+ * all of them.
+ *
+ * `openGraph.images` and `twitter` *are* here, because they are the same on
+ * every page and Next inherits them into each child that sets no Open Graph
+ * of its own — none does. A page that ever adds an `openGraph` must repeat the
+ * image, since a child's `openGraph` replaces the parent's whole object.
+ *
+ * `metadataBase` turns every relative URL above into an absolute one, which
+ * the share image requires; see `lib/siteOrigin.ts` for where it comes from.
  */
 export async function generateMetadata({
   params,
@@ -64,27 +82,50 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const title = { default: SITE_NAME, template: `%s — ${SITE_NAME}` };
+  const shared: Metadata = {
+    icons: { apple: [APPLE_TOUCH_ICON], icon: FAVICONS },
+    manifest: MANIFEST_PATH,
+    metadataBase: resolveSiteOrigin(process.env.SITE_ORIGIN, await headers()),
+    title: { default: SITE_NAME, template: `%s — ${SITE_NAME}` },
+  };
 
   if (!isLocale(locale)) {
     // The layout 404s below; this only has to avoid indexing a wrong locale
     // into the title of the not-found page.
-    return { title };
+    return shared;
   }
 
   return {
+    ...shared,
     description: DESCRIPTIONS[locale],
     openGraph: {
       alternateLocale: LOCALES.filter((other) => other !== locale).map(
         (other) => OG_LOCALES[other]
       ),
+      images: [SHARE_IMAGE],
       locale: OG_LOCALES[locale],
       siteName: SITE_NAME,
       type: "website",
     },
-    title,
+    twitter: { card: "summary_large_image", images: [SHARE_IMAGE] },
   };
 }
+
+/**
+ * The browser chrome's colour: the brand green in light mode, the page
+ * background in dark mode, so a dark page does not sit under a green bar.
+ *
+ * Keyed on `prefers-color-scheme`, which is the only condition a `<meta>` can
+ * express. A stored theme choice that differs from the operating system's
+ * (`lib/theme.ts`) still gets the operating system's bar colour: the theme
+ * class is set by script, and no media query can see it.
+ */
+export const viewport: Viewport = {
+  themeColor: [
+    { color: BRAND_PRIMARY, media: "(prefers-color-scheme: light)" },
+    { color: DARK_BACKGROUND, media: "(prefers-color-scheme: dark)" },
+  ],
+};
 
 /**
  * The three locales, so all of them prerender.
@@ -145,11 +186,25 @@ export default async function LocaleLayout({
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         <header className="border-border border-b bg-surface">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 py-4">
+            {/*
+             * The logo is a mask over `/brand/logo.svg` painted `bg-primary`
+             * rather than an inline SVG: the file is 18 KB of path data, which
+             * inlined would ride along in every page's HTML and RSC payload,
+             * whereas a static file is fetched once and cached. The mask keeps
+             * it on the theme's primary colour in both themes, which an
+             * `<img>` could not do. The link is named by the screen-reader
+             * text beside the mask, so its name is "SMOG & Co" and not an
+             * image's alt.
+             */}
             <a
-              className="font-bold text-foreground text-lg"
+              className="flex rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               href={`/${locale}`}
             >
-              SMOG
+              <BrandArt
+                className="aspect-[2667/579] h-8 md:h-10"
+                src="/brand/logo.svg"
+              />
+              <span className="sr-only">{SITE_NAME}</span>
             </a>
             <nav aria-label="Hoofdnavigatie">
               <ul className="flex items-center gap-4">
@@ -171,7 +226,11 @@ export default async function LocaleLayout({
                 </li>
               </ul>
             </nav>
-            <div className="flex items-center gap-4">
+            {/*
+             * Wraps, so the account links and the three locales can sit on
+             * two rows rather than push a 320px screen sideways.
+             */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <AccountNav locale={locale} user={user} />
               {/*
                * `LocaleSwitcher` reads `useSearchParams`, which opts its route
