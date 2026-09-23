@@ -24,16 +24,16 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run release:check:ci
 
-  # Split out of `release-check` on 2026-09-22, after three intermittent CI kills on
-  # the Stage 8 branch — two of them miniflare's sync-proxy desync
+  # Split out of `release-check` on 2026-09-22, after three intermittent CI
+  # kills — two of them miniflare's sync-proxy desync
   # (`assert (message?.id === id)`, fetch-sync.ts:147), which took down 10 files and
   # 44 tests on `1bfb970` and then passed on the next commit untouched.
   #
   # The fault has never reproduced outside CI, so this is not a fix and is not
-  # claimed as one: it is the load reduction the Stage 8 exit assigned, and it is
-  # falsifiable. If the desync recurs HERE — in a job running nothing but the site
-  # suite — then contention with the other release:check tasks was not the cause,
-  # and the next step is vitest's `isolate` setting rather than another re-run.
+  # claimed as one: it is a load reduction, and it is falsifiable. If the desync
+  # recurs HERE — in a job running nothing but the site suite — then contention
+  # with the other release:check tasks was not the cause, and the next step is
+  # vitest's `isolate` setting rather than another re-run.
   site-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -96,12 +96,10 @@ jobs:
 
   # Measured before it was added, because a browser job that is red one run in
   # five gets ignored within a week and then disabled — which is worse than not
-  # having one. Stage 3 Task 9 ran the suite five times at this exact
-  # configuration (`--workers=1`, retries disabled) plus once more against a
-  # deleted local D1 directory, which is the state a fresh checkout starts in:
-  # six runs, 69 specs, 0 failures, 96-101 s wall each. The timings and the
-  # reasoning are in `.superpowers/sdd/2026-09-20-stage-3-public-web/
-  # task-9-report.md`.
+  # having one. The suite ran five times at this exact configuration
+  # (`--workers=1`, retries disabled) plus once more against a deleted local D1
+  # directory, which is the state a fresh checkout starts in: six runs, 69
+  # specs, 0 failures, 96-101 s wall each.
   #
   # It is its own job rather than another step in `release-check` because it is
   # about as long as that job is, and the two have no reason to be serial.
