@@ -288,8 +288,9 @@ describe("createMolliePayment", () => {
 
   it("gives mollieRequest's fetch a signal that will abort a call which never answers", async () => {
     // Workers `fetch` has no default timeout, and a call that never answers
-    // holds the request — or, from a job, the whole queue run — open until
-    // the platform kills it. See `REQUEST_TIMEOUT_MS` in `mollie.ts`.
+    // holds the checkout or webhook request that made it open until the
+    // client or the platform gives up. See `REQUEST_TIMEOUT_MS` in
+    // `mollie.ts`.
     const mock = stubFetch(jsonResponse(createdPayment()));
 
     await createMolliePayment(VALID_INPUT);
@@ -300,7 +301,7 @@ describe("createMolliePayment", () => {
     expect(init.signal?.aborted).toBe(false);
   });
 
-  it("rejects rather than hanging when Mollie never answers before the timeout", async () => {
+  it("rejects to its caller when the Mollie call times out, rather than resolving", async () => {
     // Pinning the rejection only, not a message the code does not produce:
     // the timeout is `fetch` throwing, which `mollieRequest` does not catch.
     const mock = vi

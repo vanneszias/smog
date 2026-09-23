@@ -1593,7 +1593,7 @@ describe("a composed video Mux never made ready", () => {
     expect((await renderRow(render)).failureReason ?? null).toBeNull();
   });
 
-  it("leaves everything exactly as it was when Mux times out, as any other Mux failure does", async () => {
+  it("counts a timed-out Mux read as unreadable and leaves the render pending, as any other Mux failure", async () => {
     /*
      * Review Focus 5. A timeout is `fetch` rejecting with an `AbortError` /
      * `TimeoutError`, which is not distinguished from any other failure to

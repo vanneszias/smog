@@ -57,9 +57,10 @@ const SDK_VERSION = "2.0.0";
  * How long one call to OpenPanel may take before it is abandoned.
  *
  * Workers `fetch` has no default timeout, and a call that never answers holds
- * the request — or, from a job, the whole queue run — until the platform
- * kills it, which strands every job that run had claimed. Ten seconds is the
- * value `endpoints/oauth.ts` already uses for the same reason.
+ * the browser's beacon request open — `track` awaits the relay before it
+ * answers `202` — until the client or the platform gives up on it. No job
+ * calls OpenPanel. Ten seconds is the value `endpoints/oauth.ts` already uses
+ * for the same reason.
  */
 const REQUEST_TIMEOUT_MS = 10_000;
 

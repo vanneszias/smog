@@ -469,7 +469,7 @@ describe("the analytics relay", () => {
     expect(init.signal?.aborted).toBe(false);
   });
 
-  it("still answers the client when the relay call times out", async () => {
+  it("swallows a timed-out relay call and answers 202, as it does any other relay failure", async () => {
     // `forwardToOpenPanel` never throws and never reports back — the caller
     // has already answered 202 on the strength of having accepted the event,
     // and a beacon is not something a page can act on. A timeout is just

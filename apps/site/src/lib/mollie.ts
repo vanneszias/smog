@@ -46,9 +46,10 @@ const CENTS_PER_EURO = 100;
  * How long one call to Mollie may take before it is abandoned.
  *
  * Workers `fetch` has no default timeout, and a call that never answers holds
- * the request — or, from a job, the whole queue run — until the platform
- * kills it, which strands every job that run had claimed. Ten seconds is the
- * value `endpoints/oauth.ts` already uses for the same reason.
+ * the request that made it — a checkout (`endpoints/sponsorships.ts`) or
+ * Mollie's own webhook delivery (`endpoints/mollie.ts`) — open until the
+ * client or the platform gives up on it. No job calls Mollie. Ten seconds is
+ * the value `endpoints/oauth.ts` already uses for the same reason.
  */
 const REQUEST_TIMEOUT_MS = 10_000;
 

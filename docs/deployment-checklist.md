@@ -59,7 +59,7 @@ no bindings by design. Verify afterwards with
 | `RENDER_CALLBACK_SECRET` | secret | both (once rendering is live) | `bunx wrangler secret put RENDER_CALLBACK_SECRET --env=<env>` (same value must be configured on the Remotion Lambda side — generate, store in a password manager, paste at both prompts) | Fails closed: `POST /render/callback` answers **401** to every callback, so composed sponsor videos never get attached. HMAC over the body; header/scheme pinned in `src/lib/renderSignature.ts`. |
 | `OPENPANEL_CLIENT_ID` | secret | both (per-env OpenPanel project) | `bunx wrangler secret put OPENPANEL_CLIENT_ID --env=<env>` | Analytics silently off: `POST /api/analytics/track` still answers 202, logs a warning, and **drops the event**. Needs both id and secret. |
 | `OPENPANEL_CLIENT_SECRET` | secret | both | `bunx wrangler secret put OPENPANEL_CLIENT_SECRET --env=<env>` | Same as `OPENPANEL_CLIENT_ID`. Must never be a `vars` entry. |
-| `JOBS_RUN_TOKEN` | secret | both | `openssl rand -hex 32 \| bunx wrangler secret put JOBS_RUN_TOKEN --env=<env>` | The hourly cron (`wrangler.jsonc`'s `triggers.crons`, `worker.ts`'s `scheduled()`) calls this endpoint every hour on its own — an operator no longer has to. **A missing or wrong token does not show up as an error.** `endpoints/jobs.ts` answers `200 {"status":"ok"}` for a missing/mismatched token exactly the same as for a real run — `acknowledged()` is not an oracle for the token, by design — so the only visible symptom is `[jobs] A run was requested without a usable token; nothing was run` in the Worker log (`bunx wrangler tail --env=<env>`), and queued jobs quietly never execute: no email is ever sent, sponsorships never expire, stale payments/orphaned media/rate-limit rows are never cleaned. Check that warning is absent after setting the secret. **Positive confirmation, not just the absence of a warning:** keep `bunx wrangler tail --env=<env>` open across the next `:00` and expect to see `[jobs] Ran N jobs from the default queue`; or, while tailing, `curl -H "Authorization: Bearer <token>" https://<origin>/api/jobs/run` (it answers `200` either way, so read the log line, not the status). A tick that fails now also shows as **failed** in that Worker's **Cron Triggers → Past Events** table in the dashboard, not as a success — and with `observability.enabled` on (`wrangler.jsonc`), these `[cron]`/`[jobs]` lines persist in **Workers Logs** too, so they're readable after the fact and not only during a live tail. |
+| `JOBS_RUN_TOKEN` | secret | both | `openssl rand -hex 32 \| bunx wrangler secret put JOBS_RUN_TOKEN --env=<env>` | The hourly cron (`wrangler.jsonc`'s `triggers.crons`, `worker.ts`'s `scheduled()`) calls this endpoint every hour on its own — an operator no longer has to. **A missing or wrong token does not show up as an error.** `endpoints/jobs.ts` answers `200 {"status":"ok"}` for a missing/mismatched token exactly the same as for a real run — `acknowledged()` is not an oracle for the token, by design — so the only visible symptom is `[jobs] A run was requested without a usable token; nothing was run` in the Worker log (`bunx wrangler tail --env=<env>`), and queued jobs quietly never execute: no email is ever sent, sponsorships never expire, stale payments/orphaned media/rate-limit rows are never cleaned. Check that warning is absent after setting the secret. **Positive confirmation, not just the absence of a warning:** keep `bunx wrangler tail --env=<env>` open across the next `:00` and expect to see `[jobs] Ran N jobs from the default queue`; or, while tailing, `curl --max-time 600 -H "Authorization: Bearer <token>" https://<origin>/api/jobs/run` (it answers `200` either way, so read the log line, not the status; `--max-time` because an HTTP run has no wall-clock limit while the client stays connected, and the stranded-job recovery assumes every run ends within thirty minutes). A tick that fails now also shows as **failed** in that Worker's **Cron Triggers → Past Events** table in the dashboard, not as a success — and with `observability.enabled` on (`wrangler.jsonc`), these `[cron]`/`[jobs]` lines persist in **Workers Logs** too, so they're readable after the fact and not only during a live tail. |
 
 ## 2. Worker vars (plain, non-secret)
 
@@ -253,8 +253,11 @@ steps 4–9 with `production`.
    dashboard's "configured" badge: keep `bunx wrangler tail --env=staging`
    open across the next `:00` and expect
    `[jobs] Ran N jobs from the default queue`; or, while tailing,
-   `curl -H "Authorization: Bearer <token>" https://<origin>/api/jobs/run`
-   (it answers `200` either way, so read the log line, not the status).
+   `curl --max-time 600 -H "Authorization: Bearer <token>" https://<origin>/api/jobs/run`
+   (it answers `200` either way, so read the log line, not the status;
+   `--max-time` because an HTTP run has no wall-clock limit while the client
+   stays connected, and the recovery below assumes every run ends within
+   thirty minutes).
    Check the Worker's **Cron Triggers → Past Events** tab: a failing tick
    now records as failed there. And check **Workers Logs** for the same
    `[cron]`/`[jobs]` lines — with `observability.enabled` on
@@ -264,9 +267,14 @@ steps 4–9 with `production`.
    **A killed run, and what it leaves behind.** A run the platform cuts off
    (the fifteen-minute ceiling, an eviction, a deploy mid-tick) leaves the
    jobs it had claimed marked `processing`. Every tick now recovers any
-   such job untouched for thirty minutes (`src/jobs/reapStrandedJobs.ts`)
-   and logs `[jobs] Recovered stranded jobs: N released to run again, M
-   filed as failed`. Seeing that line means a run was killed; look for why
+   such job in the `default` queue that has not been written for thirty
+   minutes (`src/jobs/reapStrandedJobs.ts`) — safe because a scheduled run
+   cannot outlive its fifteen-minute ceiling, and a manual `curl` is held to
+   ten minutes by `--max-time 600` above — and logs `[jobs] Recovered
+   stranded jobs: N released to run again, M filed as failed, K could not
+   be recovered and are left for the next tick`. A non-zero K comes with a
+   `[jobs] Failed to reap stranded job <id>` error per row. Seeing the line
+   at all means a run was killed; look for why
    around the same time in Workers Logs. A released `send-email` may send
    its message twice (at-least-once, as the old queue did). A job **filed as
    failed** was given up on; for a `send-email` row that is a message that
