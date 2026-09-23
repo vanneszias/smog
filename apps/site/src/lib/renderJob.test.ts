@@ -594,7 +594,7 @@ describe("submitting a configured render job", () => {
     expect(payload.delete).not.toHaveBeenCalled();
     expect(logger.error.mock.calls).toEqual([
       [
-        `[renderJob] Render ${jobId} may have started; keeping its claim for the callback or the stalled-render sweep: ${message}`,
+        `[renderJob] Render ${jobId} for sponsorship 42 may have started; keeping its claim for the callback or the stalled-render sweep: ${message}`,
       ],
     ]);
   });

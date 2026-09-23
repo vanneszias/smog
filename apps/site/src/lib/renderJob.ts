@@ -192,9 +192,12 @@ export async function renderSubmission(
  * What happens to the claim when the start fails depends on whether Lambda
  * may have started the render anyway (`RemotionStartError.definite`):
  *
- * - **Definitely not started** (a refused invoke, a 4xx, a routine error): the
- *   claim is handed back. No webhook will ever name the job, and a `queued`
- *   row would only wait for the stalled-render sweep to fail it.
+ * - **Definitely not started** (a request that could not be prepared, a
+ *   refused invoke, a 4xx, a routine error): the claim is handed back, since
+ *   a `queued` row would only wait for the stalled-render sweep to fail it. A
+ *   routine error can, rarely, follow a render that was launched anyway (see
+ *   `lib/remotionLambda.ts`); its webhook then names a job with no row, and
+ *   the cost is an orphaned output, never a second render.
  * - **Maybe started** (a timeout, a dropped connection, a 5xx, an unreadable
  *   answer): the claim is **kept**. The row stays `queued`, so a late webhook
  *   still finds it and settles it; if none ever comes, the stalled-render
@@ -301,7 +304,7 @@ export async function submitRenderJob(
 
     if (error instanceof RemotionStartError && !error.definite) {
       payload.logger.error(
-        `[renderJob] Render ${jobId} may have started; keeping its claim for the callback or the stalled-render sweep: ${error.message}`
+        `[renderJob] Render ${jobId} for sponsorship ${input.sponsorshipId} may have started; keeping its claim for the callback or the stalled-render sweep: ${error.message}`
       );
 
       return;

@@ -76,11 +76,15 @@ const MAX_REMOTE_MESSAGE_LENGTH = 300;
  *
  * The distinction is the caller's whole decision about its claim on the job.
  *
- * - `definite: true`: the request was refused before it was sent, or Lambda
- *   answered that it did not start one. That covers an invalid region,
- *   missing credentials, HTTP 4xx (429 included: throttled invokes are not
- *   run), an `x-amz-function-error`, and a `{ type: "error" }` body. No webhook
- *   will ever name this job, so its claim can be handed back.
+ * - `definite: true`: the request was never sent, or Lambda answered that
+ *   the start failed. That covers an invalid region, missing credentials, a
+ *   request that could not be prepared (the function name will not encode,
+ *   the payload will not serialise, signing failed), HTTP 4xx (429 included:
+ *   throttled invokes are not run), an `x-amz-function-error`, and a
+ *   `{ type: "error" }` body. The claim can be handed back. For the last two
+ *   that is a judgement rather than a certainty — the start routine can fail
+ *   after it has launched the render (see below) — and the cost of being
+ *   wrong is at most an orphaned output, never a second render.
  * - `definite: false`: the invoke may have run and only the answer was lost.
  *   That covers a timeout, a network failure, HTTP 5xx, a body that could not
  *   be read after a 2xx, and a 2xx body that is empty, not JSON, or has no ids.
@@ -289,23 +293,38 @@ async function discardBody(response: Response): Promise<void> {
   }
 }
 
-/** The signed invoke, with transport failures named rather than rethrown raw. */
+/**
+ * The signed invoke, with every failure named rather than rethrown raw.
+ *
+ * Two stages, because they fail differently. **Preparing** the request —
+ * encoding the function name, serialising the payload, signing — happens
+ * entirely here, so a failure there (a `URIError`, a `TypeError` from
+ * `JSON.stringify`, a signing fault) is **definite**: nothing was sent.
+ * **Sending** it is where the answer can be lost after Lambda has acted, so a
+ * failure there never is.
+ *
+ * `fetch` is called once, on the request `AwsClient.sign` built, rather than
+ * through `AwsClient.fetch`, whose default is to retry a 5xx or 429 ten
+ * times. The official client builds its `LambdaClient` with `maxAttempts: 1`
+ * (`getServiceClient`, lines 72909-72970), and a retried start is a second
+ * render. `AwsClient.fetch` with `retries: 0` is exactly this call, so the
+ * bytes on the wire are unchanged.
+ */
 async function invoke(
   input: StartRenderInput,
   credentials: { accessKeyId: string; secretAccessKey: string }
 ): Promise<Response> {
-  const client = new AwsClient({
-    ...credentials,
-    region: input.region,
-    // The official client builds its `LambdaClient` with `maxAttempts: 1`
-    // (`getServiceClient`, lines 72909-72970). A retried start is a second render.
-    retries: 0,
-    service: "lambda",
-  });
-  const url = `https://lambda.${input.region}.amazonaws.com/2015-03-31/functions/${encodeURIComponent(input.functionName)}/invocations`;
+  let request: Request;
 
   try {
-    return await client.fetch(url, {
+    const client = new AwsClient({
+      ...credentials,
+      region: input.region,
+      service: "lambda",
+    });
+    const url = `https://lambda.${input.region}.amazonaws.com/2015-03-31/functions/${encodeURIComponent(input.functionName)}/invocations`;
+
+    request = await client.sign(url, {
       body: JSON.stringify(buildStartPayload(input)),
       headers: {
         "content-type": "application/octet-stream",
@@ -314,6 +333,17 @@ async function invoke(
       method: "POST",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "unknown error";
+
+    throw new RemotionStartError(
+      `[remotionLambda] The invoke could not be prepared: ${name}`,
+      { cause: error, definite: true }
+    );
+  }
+
+  try {
+    return await fetch(request);
   } catch (error) {
     throw transportError(error, "Failed to reach Lambda");
   }
@@ -365,8 +395,14 @@ export async function startRemotionRender(
   const functionError = response.headers.get("x-amz-function-error");
   if (functionError) {
     await discardBody(response);
-    // The start routine threw before answering. It creates the render and
-    // invokes `launch` as its last steps, so a routine that failed did not.
+    // The start routine threw before answering. That usually means it never
+    // invoked `launch`, but not always: `@remotion/serverless@4.0.484`'s
+    // `dist/handlers/start.js` invokes `launch` and only *then* awaits
+    // `initialFile`, its S3 write, so a failed write can follow a render that
+    // was launched. It is classed as definite anyway, because releasing the
+    // claim then costs at most an orphaned output in S3 — the launched
+    // render's webhook names a job with no row, and is answered as unknown —
+    // and never a second render.
     throw new RemotionStartError(
       `[remotionLambda] The Lambda function failed (${functionError.slice(0, MAX_REMOTE_MESSAGE_LENGTH)})`,
       { definite: true }
@@ -404,6 +440,10 @@ export async function startRemotionRender(
   };
 
   if (answer.type === "error") {
+    // Definite, with the same caveat as `x-amz-function-error` above: the
+    // routine can fail on its `initialFile` write after `launch` was invoked,
+    // and releasing then costs at most an orphaned output, never a double
+    // render.
     throw new RemotionStartError(
       `[remotionLambda] The start routine failed: ${remoteMessage(answer.message)}`,
       { definite: true }

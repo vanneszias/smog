@@ -17,6 +17,7 @@ import {
 } from "@/lib/renderSignature";
 import { canAdvance, claimRenderJob } from "@/lib/renderState";
 import nextConfig from "../../next.config";
+import { failStalledRenders } from "../jobs/expireSponsorships";
 import config from "../payload.config";
 
 /*
@@ -402,8 +403,9 @@ describe("the render callback", () => {
   });
 
   it("is reachable at the path next.config.ts rewrites /render/callback to", async () => {
-    // The URL in this line is one AWS holds: a render submission hands it over
-    // and Lambda posts back to whatever it was given, minutes later and on
+    // The URL in this line is one Remotion holds: a render submission hands
+    // it over in the start payload and Lambda posts back to whatever it was
+    // given, minutes later and on
     // retries, for jobs submitted before any deploy. Deleting the rewrite does
     // not fail a handler test — the handler is still mounted — it just makes
     // every callback a 404 and every composed video one nobody uploads.
@@ -518,14 +520,16 @@ describe("the render callback", () => {
 
   it("is idempotent: the same callback twice uploads to Mux once", async () => {
     /*
-     * Sequential, and **two things stop the second one**: the completion claim
-     * short-circuits it, and the render state table would refuse it anyway —
-     * `ready` has no outgoing edges, so `ready -> uploading` is not a legal
-     * move. They fail differently and only one of them is what this task
-     * built, so this test is not proof of the claim on its own. The two below
-     * are: the concurrent case, where both callbacks read the row as `queued`
-     * and the state table allows both; and the isolation test, which puts the
-     * row back in `queued` so the claim is the only thing left standing.
+     * Sequential, and **three things stop the second one**: the handler sees
+     * the render is already `ready` and ignores the callback before claiming
+     * anything; the completion claim would short-circuit it after that; and
+     * the render state table would refuse it anyway — `ready` has no outgoing
+     * edges, so `ready -> uploading` is not a legal move. So this test is not
+     * proof of the claim on its own. The two below are: the concurrent case,
+     * where both callbacks read the row as `queued` and neither the state
+     * check nor the state table can tell them apart; and the isolation test,
+     * which puts the row back in `queued` so the claim is the only thing left
+     * standing.
      */
     const { id } = await seedJob("replayed");
 
@@ -537,9 +541,9 @@ describe("the render callback", () => {
   });
 
   it("answers 200 to a replay, so Lambda stops retrying", async () => {
-    // Whole responses, not status codes: AWS retries on any non-2xx, and a
-    // body or a header that differs is a different answer to the same
-    // question.
+    // Whole responses, not status codes: Remotion's `invokeWebhook` retries
+    // on any non-2xx, and a body or a header that differs is a different
+    // answer to the same question.
     const { id } = await seedJob("replay-200");
 
     const first = await snapshot(await deliver(successReport(id)));
@@ -623,6 +627,73 @@ describe("the render callback", () => {
     expect(muxUploads).toHaveLength(2);
   });
 
+  it("ignores a callback that arrives after the stalled-render sweep failed the render", async () => {
+    /*
+     * The sweep gives up on a render six hours after its claim; Remotion can
+     * still deliver after that (a render that ran long, a delivery retried).
+     * The render is already an answer — `failed` has no outgoing edge — so
+     * the callback must not take the completion claim, must not ask Mux for
+     * an asset nothing could ever record, and must answer as a settled
+     * decision rather than a 500 Lambda would retry.
+     */
+    const { id } = await seedJob("after-sweep");
+    const row = await renderRow(id);
+
+    // Seven hours old, beneath the layer that re-stamps timestamps, the way
+    // `expireSponsorships.int.test.ts` backdates its stalled renders.
+    await payload.db.updateOne({
+      collection: "renders",
+      data: {
+        createdAt: new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString(),
+      },
+      id: row?.id as number,
+    });
+    await failStalledRenders(payload, new Date());
+    expect((await renderRow(id))?.state).toBe("failed");
+
+    const info = vi.spyOn(payload.logger, "info");
+    let response: Response;
+    let logged: string[] = [];
+
+    try {
+      response = await deliver(successReport(id));
+    } finally {
+      logged = info.mock.calls.map((call) => String(call[0]));
+      info.mockRestore();
+    }
+
+    expect(await snapshot(response)).toEqual({
+      body: '{"status":"ok"}',
+      headers: expect.any(Array),
+      status: 200,
+    });
+    expect(await completionsFor(id)).toBe(0);
+    expect(muxUploads).toEqual([]);
+    expect((await renderRow(id))?.state).toBe("failed");
+    expect(logged).toContain(
+      `[render] Ignored a callback for render ${id}, already failed`
+    );
+  });
+
+  it("ignores a callback for a render that is already ready, before taking any claim", async () => {
+    const { id } = await seedJob("already-ready");
+
+    await deliver(successReport(id));
+    expect((await renderRow(id))?.state).toBe("ready");
+
+    // The claim the first callback took is handed back by hand, so that only
+    // the state check is left to stop the second one.
+    await payload.delete({
+      collection: "claims",
+      overrideAccess: true,
+      where: { key: { equals: `render-completion:${id}` } },
+    });
+
+    expect((await deliver(successReport(id))).status).toBe(200);
+    expect(muxUploads).toHaveLength(1);
+    expect(await completionsFor(id)).toBe(0);
+  });
+
   it("answers a non-2xx when the completion claim cannot be taken at all", async () => {
     /*
      * A create can fail because another callback already holds the claim, and
@@ -655,7 +726,7 @@ describe("the render callback", () => {
     expect(muxUploads).toEqual([]);
     expect((await renderRow(id))?.state).toBe("queued");
 
-    // And the retry AWS will now make gets through.
+    // And the retry Remotion's `invokeWebhook` will now make gets through.
     expect((await deliver(successReport(id))).status).toBe(200);
     expect(muxUploads).toHaveLength(1);
   });
@@ -800,8 +871,8 @@ describe("the render callback", () => {
   });
 
   it("answers 200 to all of those, so Lambda stops retrying a settled decision", async () => {
-    // A 4xx or 5xx makes AWS retry a decision that will not change, and then
-    // give up. Every status a sponsorship can be in when a render lands gets
+    // A 4xx or 5xx makes Remotion's `invokeWebhook` retry a decision that
+    // will not change, and then give up. Every status a sponsorship can be in when a render lands gets
     // the same answer, and the answer is byte for byte the one the happy path
     // gives.
     const reference = await snapshot(
@@ -885,7 +956,8 @@ describe("the render callback", () => {
 
   it("treats a success with no output as a failed render", async () => {
     // Lambda said the render finished and named nothing to upload. That is a
-    // fact worth recording rather than a 400 AWS would retry for ever.
+    // fact worth recording rather than a 400 Remotion's `invokeWebhook` would
+    // retry twice more to no effect.
     const { id } = await seedJob("no-output");
 
     expect((await deliver(lambdaReport(id, "success"))).status).toBe(200);

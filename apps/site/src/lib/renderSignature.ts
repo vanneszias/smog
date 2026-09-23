@@ -36,7 +36,8 @@
  * an attacker can compute the signature for `body || padding || anything`
  * without the secret at all. HMAC exists precisely to close that, and this is
  * a case where an appended suffix would matter — a JSON body with a second
- * `outputUrl` after the padding is exactly the forgery that swaps the video. `renderSignature.test.ts` pins the construction with a published
+ * `outputUrl` after the padding is exactly the forgery that swaps the video.
+ * `renderSignature.test.ts` pins the construction with a published
  * known-answer vector rather than asserting the string "HMAC" appears
  * somewhere.
  *

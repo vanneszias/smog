@@ -49,11 +49,11 @@ import type { Render } from "@/payload-types";
  * **The plan said to reuse Task 1's claim on the `renders` row, and that
  * cannot work.** That row is created by the submitter — the Mollie webhook,
  * once the payment is paid — so it already exists by the time Lambda calls
- * back: two concurrent callbacks would
- * both *lose* an insert against it and neither would upload. It cannot be an
- * `update` with a `where` either, however phrased — **a `where` on an update
- * is a SELECT**, measured on this adapter, with two concurrent conditional
- * updates both reporting a changed row.
+ * back: two concurrent callbacks would both *lose* an insert against it and
+ * neither would upload. It cannot be an `update` with a `where` either,
+ * however phrased — **a `where` on an update is a SELECT**, measured on this
+ * adapter, with two concurrent conditional updates both reporting a changed
+ * row.
  *
  * So the claim is its own insert against its own unique index: one `claims`
  * row per job id, taken **before any Mux call**. First callback inserts and
@@ -64,6 +64,11 @@ import type { Render } from "@/payload-types";
  *
  * The claim is handed back whenever the work did not complete, which is what
  * keeps that safe — see `releaseCompletion`.
+ *
+ * A callback for a render that is already `ready` or `failed` — most often
+ * one that arrives after the stalled-render sweep gave up on it — is answered
+ * before the claim is even tried, and takes none: nothing it says can change
+ * an answer, and a claim taken for it would be a row nothing ever settles.
  *
  * That was `render-completions`, a table of its own, until Stage 7 folded it
  * and `webhook-deliveries` into one generic `claims` table — the refactor
@@ -175,6 +180,13 @@ const STATUSES_AWAITING_A_COMPOSITION = new Set([
   "pending_payment",
   "pending_approval",
 ]);
+
+/**
+ * Render states a callback can no longer change: `lib/renderState.ts` gives
+ * `ready` and `failed` no outgoing edge. A callback for one is answered as a
+ * settled decision before anything is claimed or asked of Mux.
+ */
+const TERMINAL_RENDER_STATES = new Set<Render["state"]>(["failed", "ready"]);
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
@@ -604,6 +616,18 @@ const renderCallback: PayloadHandler = async (
   if (render === null) {
     req.payload.logger.warn(
       `[render] A callback named render job ${report.jobId}, which this application did not submit`
+    );
+
+    return acknowledged();
+  }
+
+  if (TERMINAL_RENDER_STATES.has(render.state)) {
+    // Before the claim, not after it: a claim taken here would sit for ever
+    // on a render nothing can settle again, and the `uploading` write below
+    // would be refused by the state table as a 4xx Lambda retries. The late
+    // callback is most often one the stalled-render sweep beat to it.
+    req.payload.logger.info(
+      `[render] Ignored a callback for render ${report.jobId}, already ${render.state}`
     );
 
     return acknowledged();

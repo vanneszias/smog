@@ -1919,6 +1919,42 @@ describe("a render whose Lambda callback never arrived, or whose Mux upload neve
     expect(row.failureReason ?? null).toBeNull();
   });
 
+  it("leaves a queued render alone at exactly six hours since its claim", async () => {
+    // The cutoff is strict: `createdAt < now - 6 h`. A row claimed at the
+    // cutoff instant is not yet stalled.
+    const sponsorshipId = await seedSponsorship("queued-boundary");
+    const render = await seedStalledRender("queued-boundary", sponsorshipId, {
+      createdAt: hoursAgo(6),
+      state: "queued",
+    });
+
+    await failStalledRenders(payload, NOW);
+
+    const row = await renderRow(render);
+    expect(row.state).toBe("queued");
+    expect(row.failureReason ?? null).toBeNull();
+  });
+
+  it("leaves an uploading render alone at exactly six hours since it entered that state", async () => {
+    // The same strict cutoff, on `updatedAt`.
+    const sponsorshipId = await seedSponsorship("uploading-boundary");
+    const render = await seedStalledRender(
+      "uploading-boundary",
+      sponsorshipId,
+      {
+        createdAt: hoursAgo(9),
+        state: "uploading",
+        updatedAt: hoursAgo(6),
+      }
+    );
+
+    await failStalledRenders(payload, NOW);
+
+    const row = await renderRow(render);
+    expect(row.state).toBe("uploading");
+    expect(row.failureReason ?? null).toBeNull();
+  });
+
   it("keeps whatever preview the sponsorship has; it is untouched", async () => {
     const sponsorshipId = await seedSponsorship("preview-kept");
     const before = await sponsorshipRow(sponsorshipId);

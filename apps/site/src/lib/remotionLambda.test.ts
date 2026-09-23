@@ -18,6 +18,7 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { renderMediaOnLambda } from "@remotion/lambda-client";
 import type { SponsoredVideoInputProps } from "@smog/types/render";
+import { AwsClient } from "aws4fetch";
 import {
   afterAll,
   afterEach,
@@ -679,6 +680,52 @@ describe("the failure's class", () => {
   });
 });
 
+/**
+ * A failure before anything is sent — the function name will not encode, the
+ * payload will not serialise, the request will not sign — is **definite**:
+ * nothing reached Lambda, so nothing can have started, and the claim can go.
+ * Each is named, never a raw `URIError` or `TypeError` from under the call.
+ */
+describe("a failure before the request is sent", () => {
+  it.each<[string, () => StartRenderInput]>([
+    [
+      "a function name that will not encode",
+      () => ({ ...startInput(), functionName: "remotion-render-\uD800" }),
+    ],
+    [
+      "input props that will not serialise",
+      () => ({
+        ...startInput(),
+        inputProps: {
+          ...INPUT_PROPS,
+          sponsorName: 1n as unknown as string,
+        },
+      }),
+    ],
+    [
+      "a request that will not sign",
+      () => {
+        vi.spyOn(AwsClient.prototype, "sign").mockRejectedValue(
+          new Error("signing failed")
+        );
+
+        return startInput();
+      },
+    ],
+  ])("is definite, named, and sends nothing, for %s", async (_name, arrange) => {
+    const error = await startRemotionRender(arrange()).catch(
+      (caught: unknown) => caught
+    );
+
+    expect(error).toBeInstanceOf(RemotionStartError);
+    expect((error as RemotionStartError).definite).toBe(true);
+    expect((error as RemotionStartError).message).toMatch(
+      /^\[remotionLambda\] The invoke could not be prepared: /
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe("credentials", () => {
   it.each([
     ["REMOTION_AWS_ACCESS_KEY_ID"],
@@ -730,6 +777,18 @@ describe("the Remotion version", () => {
     expect(
       pin("../../../render/package.json", "devDependencies", "@remotion/lambda")
     ).toBe(remotionVersion());
+  });
+
+  it.each([
+    ["remotion"],
+    ["@remotion/cli"],
+  ])("is apps/render's %s pin, which bundles the site the function renders", (name) => {
+    // The deployed site's bundle is built by `@remotion/cli` from
+    // compositions importing `remotion`; a site on another version than the
+    // function it runs in is exactly the mismatch Remotion refuses.
+    expect(pin("../../../render/package.json", "dependencies", name)).toBe(
+      remotionVersion()
+    );
   });
 
   it("is the official client the contract tests run against", () => {

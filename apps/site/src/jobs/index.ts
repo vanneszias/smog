@@ -283,9 +283,14 @@ export const jobsConfig: JobsConfig = {
        * the same reason the other two do: it is a sweep on the same clock,
        * over the same collection, and splitting it into its own cron would
        * make "runs after the other two" a coincidence rather than a fact.
-       * Unlike the other two it does not depend on their having run first —
-       * a stalled render never holds a Mux asset — so its position in the
-       * sequence is not load-bearing, only its membership in this task.
+       * Unlike the other two it does not depend on their having run first,
+       * so its position in the sequence is not load-bearing, only its
+       * membership in this task. That is not because a stalled render never
+       * holds a Mux asset: one stuck in `uploading` after Mux's create timed
+       * out may have one in Mux that nothing records (the callback logs its
+       * passthrough, `render:<id>`, so it can be found and deleted). It is
+       * because failing the row neither creates, deletes nor reads an asset,
+       * so nothing the other two sweeps do changes what this one decides.
        *
        * `now` is the job's own clock, shared by all three operations. It is a
        * parameter so a test can assert a decision rather than race one;
