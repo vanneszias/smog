@@ -22,57 +22,176 @@ jobs:
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
-      - run: bun run release:check
+      - run: bun run release:check:ci
 
-  publish:
-    needs: release-check
-    if: github.event_name == 'push'
+  # Split out of `release-check` on 2026-09-22, after three intermittent CI
+  # kills — two of them miniflare's sync-proxy desync
+  # (`assert (message?.id === id)`, fetch-sync.ts:147), which took down 10 files and
+  # 44 tests on `1bfb970` and then passed on the next commit untouched.
+  #
+  # The fault has never reproduced outside CI, so this is not a fix and is not
+  # claimed as one: it is a load reduction, and it is falsifiable. If the desync
+  # recurs HERE — in a job running nothing but the site suite — then contention
+  # with the other release:check tasks was not the cause, and the next step is
+  # vitest's `isolate` setting rather than another re-run.
+  site-tests:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - app: server
-            dockerfile: apps/server/Dockerfile
-          - app: web
-            dockerfile: apps/web/Dockerfile
-            build_args: |
-              VITE_SERVER_URL=${{ vars.VITE_SERVER_URL }}
-              VITE_WORKOS_CLIENT_ID=${{ vars.VITE_WORKOS_CLIENT_ID }}
-              VITE_WORKOS_REDIRECT_URI=${{ vars.VITE_WORKOS_REDIRECT_URI }}
-              VITE_CONVEX_URL=${{ vars.VITE_CONVEX_URL }}
-              VITE_OPENPANEL_API_URL=${{ vars.VITE_OPENPANEL_API_URL || 'https://analytics.zias.be/api' }}
-              VITE_OPENPANEL_CLIENT_ID=${{ vars.VITE_OPENPANEL_CLIENT_ID }}
-          - app: remotion
-            dockerfile: apps/remotion/Dockerfile
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/smog-${{ matrix.app }}
-          flavor: latest=false
-          tags: |
-            type=sha,format=short,prefix=
-            type=ref,event=tag
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun -F site test
+
+  site-bundle-size:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for required secrets
+        id: secrets-check
+        run: |
+          if [ -n "${CF_API_TOKEN}" ] && [ -n "${CF_ACCOUNT_ID}" ] && [ -n "${SITE_PAYLOAD_SECRET}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Skipping the apps/site bundle-size budget check: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and/or PAYLOAD_SECRET are not configured as repository secrets."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
         env:
-          DOCKER_METADATA_SHORT_SHA_LENGTH: 12
-      - uses: docker/build-push-action@v7
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SITE_PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+      - uses: actions/checkout@v5
+        if: steps.secrets-check.outputs.present == 'true'
+      - uses: oven-sh/setup-bun@v2
+        if: steps.secrets-check.outputs.present == 'true'
         with:
-          context: .
-          file: ${{ matrix.dockerfile }}
-          target: production
-          push: true
-          build-args: ${{ matrix.build_args }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+        if: steps.secrets-check.outputs.present == 'true'
+      - name: Build apps/site for staging
+        if: steps.secrets-check.outputs.present == 'true'
+        working-directory: apps/site
+        env:
+          CLOUDFLARE_ENV: staging
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+        run: bun run build:app
+      # Measures the real upload size via `wrangler deploy --dry-run` and
+      # parses its `Total Upload: X KiB / gzip: Y KiB` line — NOT a gzip of
+      # `.open-next/worker.js`, which is a ~2 KB entry stub that understates
+      # the true bundle size by three orders of magnitude. See
+      # apps/site/scripts/check-bundle-size-ci.ts for the parser and
+      # apps/site/scripts/check-bundle-size.ts for the 10 MiB limit / 8 MiB
+      # warning check itself.
+      - name: Enforce the 10 MiB gzipped bundle-size budget (8 MiB warning)
+        if: steps.secrets-check.outputs.present == 'true'
+        working-directory: apps/site
+        env:
+          CLOUDFLARE_ENV: staging
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bun run check-bundle-size
+
+  # Measured before it was added, because a browser job that is red one run in
+  # five gets ignored within a week and then disabled — which is worse than not
+  # having one. The suite ran five times at this exact configuration
+  # (`--workers=1`, retries disabled) plus once more against a deleted local D1
+  # directory, which is the state a fresh checkout starts in: six runs, 69
+  # specs, 0 failures, 96-101 s wall each.
+  #
+  # It is its own job rather than another step in `release-check` because it is
+  # about as long as that job is, and the two have no reason to be serial.
+  #
+  # What it guards that nothing else does: the compiled-stylesheet assertions in
+  # `kitchen-sink.e2e.spec.ts` read the *resolved* CSS in a real browser, which
+  # is the only layer that would have caught `max-w-lg` collapsing to 24px. Every
+  # other spacing guard reads source. A guard nobody executes is documentation.
+  site-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      # `playwright.config.ts` pins `channel: "chromium"`, so this is the one
+      # browser the suite needs. `--with-deps` installs the shared libraries
+      # the runner image does not carry.
+      - name: Install Playwright's chromium
+        working-directory: apps/site
+        run: bunx playwright install --with-deps chromium
+      # PAYLOAD_SECRET is not a secret here and deliberately not read from one:
+      # the suite runs against an ephemeral local D1 (miniflare) that this job
+      # creates and throws away, and the only thing the value does is sign the
+      # admin spec's own session cookie. Taking it from repository secrets would
+      # make the job silently skip on a fork. CLOUDFLARE_ENV selects which
+      # wrangler environment's bindings to emulate locally; nothing remote is
+      # reached.
+      #
+      # `CI` is set by Actions, which is what makes `playwright.config.ts` use
+      # one worker: the suite is flaky at two, because a spec helper's Payload
+      # instance and the dev server both write `.wrangler/state/v3` and SQLite
+      # answers the second writer with SQLITE_BUSY rather than queuing.
+      - name: Run the site e2e suite
+        working-directory: apps/site
+        env:
+          CLOUDFLARE_ENV: staging
+          PAYLOAD_SECRET: ci-e2e-local-database-only
+        run: bun run test:e2e
+      - name: Upload the Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/site/playwright-report
+          retention-days: 7
+
+  site-payload-types-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      # Regenerates apps/site/src/payload-types.ts from the live collection
+      # config and fails if that changes anything: a non-empty diff means a
+      # collection was edited without regenerating the committed types.
+      #
+      # Needs no repository secrets. Type generation signs nothing and issues
+      # no query, so any non-empty PAYLOAD_SECRET satisfies the runtime check —
+      # the same reason deploy:database passes PAYLOAD_SECRET=ignore. Bindings
+      # resolve locally because NODE_ENV is not production here.
+      - name: Guard committed Payload types against drift
+        env:
+          CLOUDFLARE_ENV: staging
+          PAYLOAD_SECRET: ignore
+        run: |
+          bun -F site generate:types:payload
+          git diff --exit-code apps/site/src/payload-types.ts
+
+      # The admin import map is a committed *data* file listing every client
+      # component a plugin contributes. A stale one does not fail typecheck,
+      # the test suite, or even a forced uncached build -- all three were
+      # verified green against a deliberately stale map -- it fails at runtime
+      # in the admin panel, which nothing in CI exercises. Adding the search
+      # plugin without regenerating it would have shipped broken admin search
+      # views past a fully green pipeline.
+      #
+      # Biome reformats what Payload emits (quotes, semicolons, import
+      # grouping), so the generator's raw output never matches the committed
+      # file. Formatting after regenerating is exactly what a developer's
+      # `bun check` does, and the pair round-trips byte-identically.
+      - name: Guard the committed admin import map against drift
+        env:
+          CLOUDFLARE_ENV: staging
+          PAYLOAD_SECRET: ignore
+        run: |
+          bun -F site generate:importmap
+          bunx biome check --write "apps/site/src/app/(payload)/admin/importMap.js"
+          git diff --exit-code "apps/site/src/app/(payload)/admin/importMap.js"
+

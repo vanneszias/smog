@@ -7,7 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./constants": "./src/constants.ts",
-    "./urls": "./src/urls.ts",
+    "./sponsorships": "./src/sponsorships.ts",
     "./tsconfig.base.json": "./tsconfig.base.json"
   },
   "scripts": {

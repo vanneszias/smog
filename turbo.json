@@ -5,17 +5,32 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**", "build/**"]
-    },
-    "lint": {
-      "dependsOn": ["^lint"]
+      "outputs": [
+        "dist/**",
+        "build/**",
+        ".next/**",
+        "!.next/cache/**",
+        ".open-next/**"
+      ]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^check-types", "generate:types:cloudflare"]
     },
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "generate:types:cloudflare": {
+      "cache": false,
+      "outputs": ["cloudflare-env.d.ts"]
+    },
+    "generate:types": {
+      "cache": false,
+      "outputs": ["cloudflare-env.d.ts", "src/payload-types.ts"]
+    },
+    "generate:importmap": {
+      "cache": false,
+      "outputs": ["src/app/(payload)/admin/importMap.js"]
     },
     "ios": {
       "cache": false,
@@ -26,17 +41,6 @@
       "persistent": true
     },
     "test": {
-      "cache": false
-    },
-    "convex:codegen": {
-      "cache": false,
-      "outputs": ["convex/_generated/**"]
-    },
-    "convex:dev": {
-      "cache": false,
-      "persistent": true
-    },
-    "convex:deploy": {
       "cache": false
     }
   }

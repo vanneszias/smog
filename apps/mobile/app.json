@@ -1,0 +1,91 @@
+{
+  "expo": {
+    "name": "SMOG & Co",
+    "slug": "smog",
+    "version": "3.0.0",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "sdkVersion": "55.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "smogmobile",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "be.zias.smog",
+      "icon": "./assets/smog.icon",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "buildNumber": "51",
+      "appleTeamId": "96XKP6MU2A",
+      "associatedDomains": ["applinks:app.smog.vlaanderen"]
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#00805F"
+      },
+      "package": "be.zias.smog",
+      "versionCode": 79,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "app.smog.vlaanderen",
+              "pathPrefix": "/nl/gestures/"
+            },
+            {
+              "scheme": "https",
+              "host": "app.smog.vlaanderen",
+              "pathPrefix": "/en/gestures/"
+            },
+            {
+              "scheme": "https",
+              "host": "app.smog.vlaanderen",
+              "pathPrefix": "/fr/gestures/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-localization",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#00805F",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#00805F"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9fa68b63-dfa5-498a-9196-5eba93ecac29"
+      }
+    },
+    "owner": "smog-and-co",
+    "updates": {
+      "url": "https://u.expo.dev/9fa68b63-dfa5-498a-9196-5eba93ecac29"
+    }
+  }
+}

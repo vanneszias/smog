@@ -1,28 +1,11 @@
 /**
  * @fileoverview Main entry point for the @smog/shared package.
  *
- * Re-exports the logger, error handler, and associated types for easy
- * consumption across all apps and packages in the SMOG monorepo.
+ * The analytics event vocabulary that `apps/site` and `apps/mobile` both send,
+ * so the two cannot drift.
  *
  * @example
- * import { createLogger, tryCatch, DatabaseError } from "@smog/shared";
+ * import type { AnalyticsEventMap, AnalyticsEventName } from "@smog/shared";
  */
 
 export type { AnalyticsEventMap, AnalyticsEventName } from "./analytics";
-export {
-  AppError,
-  ConvexError,
-  DatabaseError,
-  isAppError,
-  isRecoverable,
-  logError,
-  NetworkError,
-  SyncError,
-  tryCatch,
-  tryCatchSync,
-  ValidationError,
-} from "./errorHandler";
-export type { Logger } from "./logger";
-export { createLogger, logger } from "./logger";
-export type { LogEntry, LoggerConfig } from "./types/logger";
-export { LogLevel } from "./types/logger";

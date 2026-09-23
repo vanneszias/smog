@@ -82,14 +82,14 @@
   },
   "auth": {
     "welcome": {
-      "title": "Welkom bij SMOG",
+      "title": "Welkom bij SMOG & Co",
       "subtitle": "Leer SMOG",
       "footer": "Door verder te gaan, ga je akkoord met onze Servicevoorwaarden en Privacybeleid",
       "signInSignUp": "Inloggen"
     },
     "signUp": {
       "title": "Account aanmaken",
-      "subtitle": "Word lid van SMOG om je voortgang op te slaan",
+      "subtitle": "Word lid van SMOG & Co om je voortgang op te slaan",
       "button": "Registreren",
       "hasAccount": "Heb je al een account?"
     },
@@ -143,10 +143,11 @@
     "error": "Fout",
     "success": "Succes",
     "comingSoon": "Binnenkort beschikbaar",
+    "confirm": "Bevestigen",
     "edit": "Bewerken",
     "delete": "Verwijderen",
     "continue": "Doorgaan",
-    "initializing": "SMOG starten...",
+    "initializing": "SMOG & Co starten...",
     "pause": "Video pauzeren",
     "play": "Video afspelen",
     "total": "Totaal",
@@ -180,7 +181,22 @@
     "deleteAccountMessage": "Weet je zeker dat je je account wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
     "editProfileComingSoon": "Profiel bewerken wordt binnenkort beschikbaar.",
     "changePasswordComingSoon": "Wachtwoord wijzigen wordt binnenkort beschikbaar.",
-    "deleteAccountComingSoon": "Account verwijderen wordt binnenkort beschikbaar."
+    "deleteAccountComingSoon": "Account verwijderen wordt binnenkort beschikbaar.",
+    "currentPasswordLabel": "Huidig wachtwoord",
+    "newPasswordLabel": "Nieuw wachtwoord",
+    "passwordChanged": "Wachtwoord gewijzigd. Meld je opnieuw aan.",
+    "newEmailLabel": "Nieuw e-mailadres",
+    "changeEmail": "E-mailadres wijzigen",
+    "emailChangePending": "Controleer je e-mail voor een bevestigingslink.",
+    "confirmEmailLabel": "Typ je e-mailadres om te bevestigen",
+    "deleteMismatch": "Dat e-mailadres komt niet overeen met je account.",
+    "deleteFailed": "Account verwijderen is niet gelukt. Probeer het opnieuw.",
+    "networkError": "Er ging iets mis. Controleer je internetverbinding en probeer het opnieuw.",
+    "currentPasswordIncorrect": "Huidig wachtwoord is onjuist.",
+    "emailInvalid": "Vul een geldig e-mailadres in.",
+    "emailUnchanged": "Dit is al het e-mailadres van je account.",
+    "passwordWeak": "Kies een wachtwoord van minstens 12 tekens dat niet makkelijk te raden is.",
+    "signInRequired": "Meld je aan om je accountinstellingen te beheren."
   },
   "noGesturesFound": "Geen gebaren gevonden met deze zoekterm",
   "tabs": {
@@ -243,15 +259,16 @@
     "openDeveloperTools": "Ontwikkelaarstools openen",
     "analyticsTitle": "Gebruiksanalytics",
     "analyticsDescription": "Gebruiksanalytics zijn optioneel. Als u ze toestaat, verzamelen we beperkte gebruiksanalytics om te begrijpen hoe SMOG & Co wordt gebruikt en de app te verbeteren. We gebruiken deze gegevens niet voor advertenties, volgen u niet in andere apps of op andere websites, verzamelen geen zoektermen en maken geen sessie-opnames.",
-    "analyticsPromptTitle": "Help SMOG verbeteren",
+    "analyticsPromptTitle": "Help SMOG & Co verbeteren",
     "analyticsPromptDescription": "Met uw toestemming verzamelen we beperkte gebruiksanalytics om te begrijpen hoe SMOG & Co wordt gebruikt en de app te verbeteren. We gebruiken deze gegevens niet voor advertenties en volgen u niet in andere apps of op andere websites.",
     "analyticsAllow": "Analytics toestaan",
     "analyticsRequiredOnly": "Gebruiken zonder analytics",
-    "privacyPolicy": "Lees het privacybeleid"
+    "privacyPolicy": "Lees het privacybeleid",
+    "sponsorLink": "Sponsor een gebaar (opent je browser)"
   },
   "about": {
     "title": "Over ons",
-    "heading": "Welkom bij SMOG&Co!",
+    "heading": "Welkom bij SMOG & Co!",
     "content": "SMOG, Spreken met Ondersteuning van Gebaren, is een dienst van de sociaal-culturele organisatie Gezin en Handicap. Zij zijn het aanspreekpunt voor ouders van een kind met een handicap.",
     "missionTitle": "Met onze SMOG-dienst",
     "mission1Bold": "1. Bieden we SMOG aan in Vlaanderen, ",
@@ -325,7 +342,7 @@
   },
   "appStore": {
     "new": "Nieuw",
-    "headline": "SMOG is nu beschikbaar op je telefoon!",
+    "headline": "SMOG & Co is nu beschikbaar op je telefoon!",
     "subheadline": "Download de app en leer gebaren waar je ook bent",
     "downloadOn": "Download in de",
     "getItOn": "Beschikbaar op",
@@ -365,7 +382,7 @@
         "terms": "Voorwaarden",
         "privacy": "Privacy"
       },
-      "copyright": "© 2026 SMOG&Co. Alle rechten voorbehouden."
+      "copyright": "© 2026 SMOG & Co. Alle rechten voorbehouden."
     },
     "gestures": {
       "searchPlaceholder": "Zoek gebaren op naam, concept of beschrijving...",
@@ -595,7 +612,7 @@
         "contact": "Contact",
         "selection": {
           "title": "Steun een gebaar",
-          "description": "Steun een gebaar voor één jaar. Jouw naam verschijnt in de video en helpt het SMOG-project.",
+          "description": "Steun een gebaar voor één jaar. Jouw naam verschijnt in de video en helpt het project SMOG & Co.",
           "perGesture": "Per gebaar, per jaar",
           "nameInVideo": "Jouw naam in elke video",
           "optionalLogo": "Voeg je logo toe (optioneel)",
@@ -973,7 +990,7 @@
       "message": "Wil je de link naar dit gebaar ({{name}}) delen?",
       "cancel": "Annuleren",
       "share": "Delen",
-      "shareTitle": "{{name}} - SMOG",
+      "shareTitle": "{{name}} - SMOG & Co",
       "shareMessage": "Bekijk dit gebaar: {{name}}"
     }
   },
@@ -1006,7 +1023,7 @@
       "navigation": "Hoofdnavigatie"
     },
     "logo": {
-      "alt": "SMOG Logo"
+      "alt": "Logo van SMOG & Co"
     },
     "keys": {
       "escape": "Escape"
@@ -1045,7 +1062,7 @@
     }
   },
   "seo": {
-    "defaultTitle": "SMOG - Leer gebarentaal",
+    "defaultTitle": "SMOG & Co - Leer gebarentaal",
     "defaultDescription": "Ontdek en leer gebarentaal gebaren met onze uitgebreide videobibliotheek. Zoek, leer en oefen in je eigen tempo.",
     "keywords": "gebarentaal, gebarentaal leren, SMOG, gebaren, gebarentaal woordenboek, leer gebaren, gebarentaal video, dovenonderwijs",
     "ogType": "website",

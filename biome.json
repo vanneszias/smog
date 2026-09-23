@@ -6,20 +6,16 @@
       "!**/.next",
       "!**/dist",
       "!**/.turbo",
-      "!**/dev-dist",
       "!**/.zed",
       "!**/.vscode",
-      "!**/routeTree.gen.ts",
-      "!**/src-tauri",
-      "!**/.nuxt",
-      "!bts.jsonc",
       "!**/.expo",
       "!**/.wrangler",
-      "!**/.alchemy",
-      "!**/.svelte-kit",
       "!**/wrangler.jsonc",
-      "!**/.source",
-      "!**/_generated",
+      "!**/payload-types.ts",
+      "!packages/ui-web/src/styles/theme.css",
+      "!packages/ui-native/global.css",
+      "!packages/ui-native/tailwind.config.js",
+      "!apps/mobile/global.css",
       "!**/.agents"
     ]
   },
@@ -27,6 +23,14 @@
   "javascript": {
     "globals": ["__DEV__", "Bun"]
   },
+  "overrides": [
+    {
+      "includes": ["**/*.test.ts", "**/*.test.tsx"],
+      "javascript": {
+        "globals": ["jest"]
+      }
+    }
+  ],
   "linter": {
     "rules": {
       "performance": {

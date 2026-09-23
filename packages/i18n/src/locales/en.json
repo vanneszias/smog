@@ -82,14 +82,14 @@
   },
   "auth": {
     "welcome": {
-      "title": "Welcome to SMOG",
+      "title": "Welcome to SMOG & Co",
       "subtitle": "Learn SMOG",
       "footer": "By continuing, you agree to our Terms of Service and Privacy Policy",
       "signInSignUp": "Sign In"
     },
     "signUp": {
       "title": "Create Account",
-      "subtitle": "Join SMOG to save your progress",
+      "subtitle": "Join SMOG & Co to save your progress",
       "button": "Sign Up",
       "hasAccount": "Already have an account?",
       "steps": {
@@ -170,10 +170,11 @@
     "error": "Error",
     "success": "Success",
     "comingSoon": "Coming Soon",
+    "confirm": "Confirm",
     "edit": "Edit",
     "delete": "Delete",
     "continue": "Continue",
-    "initializing": "Starting SMOG...",
+    "initializing": "Starting SMOG & Co...",
     "pause": "Pause video",
     "play": "Play video",
     "total": "Total",
@@ -207,7 +208,22 @@
     "deleteAccountMessage": "Are you sure you want to delete your account? This action cannot be undone.",
     "editProfileComingSoon": "Profile editing will be available soon.",
     "changePasswordComingSoon": "Password changing will be available soon.",
-    "deleteAccountComingSoon": "Account deletion will be available soon."
+    "deleteAccountComingSoon": "Account deletion will be available soon.",
+    "currentPasswordLabel": "Current password",
+    "newPasswordLabel": "New password",
+    "passwordChanged": "Password changed. Please sign in again.",
+    "newEmailLabel": "New email address",
+    "changeEmail": "Change email address",
+    "emailChangePending": "Check your email for a confirmation link.",
+    "confirmEmailLabel": "Type your email address to confirm",
+    "deleteMismatch": "That email address doesn't match your account.",
+    "deleteFailed": "Deleting your account did not work. Please try again.",
+    "networkError": "Something went wrong. Check your connection and try again.",
+    "currentPasswordIncorrect": "Current password is incorrect.",
+    "emailInvalid": "Enter a valid email address.",
+    "emailUnchanged": "That's already the email address on your account.",
+    "passwordWeak": "Choose a password of at least 12 characters that isn't easy to guess.",
+    "signInRequired": "Sign in to manage your account settings."
   },
   "noGesturesFound": "No gestures found",
   "tabs": {
@@ -270,15 +286,16 @@
     "manageAccount": "Manage Account",
     "analyticsTitle": "Usage analytics",
     "analyticsDescription": "Usage analytics are optional. If you allow them, we collect limited usage analytics to understand how SMOG & Co is used and improve the app. We do not use this data for advertising, track you across other apps or websites, collect search terms, or record sessions.",
-    "analyticsPromptTitle": "Help improve SMOG",
+    "analyticsPromptTitle": "Help improve SMOG & Co",
     "analyticsPromptDescription": "With your permission, we collect limited usage analytics to understand how SMOG & Co is used and improve the app. We do not use this data for advertising or track you across other apps or websites.",
     "analyticsAllow": "Allow analytics",
     "analyticsRequiredOnly": "Use without analytics",
-    "privacyPolicy": "Read the privacy policy"
+    "privacyPolicy": "Read the privacy policy",
+    "sponsorLink": "Sponsor a gesture (opens your browser)"
   },
   "about": {
     "title": "About Us",
-    "heading": "Welcome to SMOG&Co!",
+    "heading": "Welcome to SMOG & Co!",
     "content": "SMOG, Speaking with Support of Signs, is a service from the socio-cultural organization Gezin en Handicap. They are the point of contact for parents of a child with a disability.",
     "missionTitle": "With our SMOG service",
     "mission1Bold": "1. We offer SMOG in Flanders, ",
@@ -352,7 +369,7 @@
   },
   "appStore": {
     "new": "New",
-    "headline": "SMOG is now available on your phone!",
+    "headline": "SMOG & Co is now available on your phone!",
     "subheadline": "Download the app and learn gestures wherever you are",
     "downloadOn": "Download on the",
     "getItOn": "Get it on",
@@ -392,7 +409,7 @@
         "description": "Filter gestures by topic and category to focus on what you need to learn.",
         "action": "Start learning"
       },
-      "copyright": "© 2024 SMOG. All rights reserved."
+      "copyright": "© 2024 SMOG & Co. All rights reserved."
     },
     "gestures": {
       "searchPlaceholder": "Search gestures by name, concept, or description...",
@@ -622,7 +639,7 @@
         "contact": "Contact",
         "selection": {
           "title": "Sponsor a gesture",
-          "description": "Support a gesture for one year. Your name appears in its video while helping the SMOG project.",
+          "description": "Support a gesture for one year. Your name appears in its video while helping the SMOG & Co project.",
           "perGesture": "Per gesture, per year",
           "nameInVideo": "Your name in every video",
           "optionalLogo": "Add your logo (optional)",
@@ -1000,7 +1017,7 @@
       "message": "Would you like to share the link to this gesture ({{name}})?",
       "cancel": "Cancel",
       "share": "Share",
-      "shareTitle": "{{name}} - SMOG",
+      "shareTitle": "{{name}} - SMOG & Co",
       "shareMessage": "Check out this gesture: {{name}}"
     }
   },
@@ -1033,7 +1050,7 @@
       "navigation": "Main navigation"
     },
     "logo": {
-      "alt": "SMOG Logo"
+      "alt": "SMOG & Co logo"
     },
     "keys": {
       "escape": "Escape"
@@ -1072,7 +1089,7 @@
     }
   },
   "seo": {
-    "defaultTitle": "SMOG - Learn Sign Language",
+    "defaultTitle": "SMOG & Co - Learn Sign Language",
     "defaultDescription": "Discover and master sign language gestures with our comprehensive video library. Search, learn, and practice at your own pace.",
     "keywords": "sign language, sign language learning, SMOG, gestures, sign language dictionary, learn to sign, sign language video, deaf education",
     "ogType": "website",

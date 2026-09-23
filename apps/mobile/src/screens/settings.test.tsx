@@ -1,0 +1,228 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react-native";
+import { router } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import * as WebBrowser from "expo-web-browser";
+import { useColorScheme } from "nativewind";
+import {
+  ANALYTICS_CONSENT_KEY,
+  readConsent,
+  resetConsentForTests,
+} from "@/lib/consent";
+import { setLocale } from "@/lib/i18n";
+import { SessionProvider } from "@/lib/session";
+import { resetThemePreferenceForTests } from "@/lib/theme";
+import SettingsScreen from "../../app/(tabs)/settings/index";
+
+/**
+ * Screen tests live under `src/`, never under `app/` — see
+ * `src/boundary.test.ts`.
+ */
+
+jest.mock("expo-router", () => ({
+  router: { push: jest.fn(), replace: jest.fn() },
+}));
+jest.mock("expo-web-browser", () => ({ openBrowserAsync: jest.fn() }));
+jest.mock("expo-secure-store");
+
+const json = (body: unknown, status = 200) =>
+  Promise.resolve(
+    new Response(JSON.stringify(body), {
+      headers: { "Content-Type": "application/json" },
+      status,
+    })
+  );
+
+function renderScreen() {
+  return render(<SettingsScreen />, { wrapper: SessionProvider });
+}
+
+describe("the settings screen", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setLocale("nl");
+    resetThemePreferenceForTests();
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+    global.fetch = jest.fn() as unknown as typeof fetch;
+  });
+
+  it("switches the app's language, live", async () => {
+    renderScreen();
+
+    fireEvent.press(await screen.findByTestId("language-fr"));
+
+    expect(await screen.findByText("Paramètres")).toBeOnTheScreen();
+  });
+
+  it("hands the theme control straight to NativeWind's colour scheme", async () => {
+    renderScreen();
+
+    fireEvent.press(await screen.findByTestId("theme-dark"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("theme-dark").props.accessibilityState.selected
+      ).toBe(true)
+    );
+    expect(
+      screen.getByTestId("theme-system").props.accessibilityState.selected
+    ).toBe(false);
+
+    // The one thing this screen must not do itself: decide what "dark"
+    // means. It hands the choice straight to NativeWind's own store, and
+    // reading it back through the same hook is what proves that, rather
+    // than this screen keeping (and possibly disagreeing with) its own copy.
+    const { result } = renderHook(() => useColorScheme());
+    expect(result.current.colorScheme).toBe("dark");
+  });
+
+  it("shows following the system as the theme until another is chosen", async () => {
+    renderScreen();
+
+    expect(
+      (await screen.findByTestId("theme-system")).props.accessibilityState
+        .selected
+    ).toBe(true);
+    expect(
+      screen.getByTestId("theme-light").props.accessibilityState.selected
+    ).toBe(false);
+  });
+
+  it("shows the system option as selected again once it is chosen back", async () => {
+    renderScreen();
+
+    fireEvent.press(await screen.findByTestId("theme-light"));
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("theme-light").props.accessibilityState.selected
+      ).toBe(true)
+    );
+
+    fireEvent.press(screen.getByTestId("theme-system"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("theme-system").props.accessibilityState.selected
+      ).toBe(true)
+    );
+    expect(
+      screen.getByTestId("theme-light").props.accessibilityState.selected
+    ).toBe(false);
+  });
+
+  it("shows no account controls while signed out", async () => {
+    renderScreen();
+
+    await screen.findByTestId("theme-system");
+
+    expect(screen.queryByTestId("manage-account")).toBeNull();
+    expect(screen.queryByTestId("sign-out")).toBeNull();
+  });
+
+  it("opens the sponsor page in the system browser, not in the app", async () => {
+    renderScreen();
+
+    fireEvent.press(await screen.findByTestId("sponsor-link"));
+
+    expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(
+      expect.stringContaining("/nl/sponsor")
+    );
+  });
+});
+
+describe("the settings screen, signed in", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setLocale("nl");
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue("t");
+  });
+
+  it("offers to manage the account and to sign out", async () => {
+    global.fetch = jest.fn(() =>
+      json({ user: { email: "a@b.test", id: "1", role: "user" } })
+    ) as unknown as typeof fetch;
+
+    renderScreen();
+
+    expect(await screen.findByTestId("manage-account")).toBeOnTheScreen();
+    expect(screen.getByTestId("sign-out")).toBeOnTheScreen();
+  });
+
+  it("signs out and returns to the sign-in screen", async () => {
+    global.fetch = jest
+      .fn()
+      .mockImplementationOnce(() =>
+        json({ user: { email: "a@b.test", id: "1", role: "user" } })
+      ) // useSession's own /users/me
+      .mockImplementationOnce(() =>
+        json({ message: "ok" })
+      ) as unknown as typeof fetch; // POST /users/logout
+
+    renderScreen();
+
+    fireEvent.press(await screen.findByTestId("sign-out"));
+
+    await waitFor(() => expect(SecureStore.deleteItemAsync).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith("/(auth)/sign-in")
+    );
+  });
+});
+
+describe("the analytics control", () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    resetConsentForTests();
+    setLocale("nl");
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+    global.fetch = jest.fn() as unknown as typeof fetch;
+  });
+
+  it("is off for someone who has not answered, and turning it on grants", async () => {
+    renderScreen();
+    const toggle = await screen.findByLabelText(/analytics/i);
+    expect(toggle.props.value).toBe(false);
+    fireEvent(toggle, "valueChange", true);
+    await waitFor(() => expect(readConsent()).toBe("granted"));
+  });
+
+  it("lets someone who allowed analytics withdraw — a refusal, not a blank", async () => {
+    await AsyncStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+    renderScreen();
+    const toggle = await screen.findByLabelText(/analytics/i);
+    await waitFor(() => expect(toggle.props.value).toBe(true));
+    fireEvent(toggle, "valueChange", false);
+    await waitFor(() => expect(readConsent()).toBe("denied"));
+  });
+
+  it("disables the switch until the stored answer has loaded", async () => {
+    await AsyncStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+    renderScreen();
+    const toggle = screen.getByLabelText(/analytics/i);
+    expect(toggle.props.disabled).toBe(true);
+    expect(toggle.props.value).toBe(false);
+
+    await waitFor(() => expect(toggle.props.disabled).toBe(false));
+    expect(toggle.props.value).toBe(true);
+  });
+
+  it("works without an account", async () => {
+    renderScreen(); // no token in SecureStore: signed out
+    expect(await screen.findByLabelText(/analytics/i)).toBeTruthy();
+  });
+
+  it("opens the privacy policy in the current locale", async () => {
+    setLocale("en");
+    renderScreen();
+    fireEvent.press(await screen.findByTestId("settings-privacy"));
+    expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(
+      expect.stringMatching(/\/en\/privacy$/)
+    );
+  });
+});

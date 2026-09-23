@@ -1,0 +1,178 @@
+// D1 and R2 bindings live only inside the named `staging` and `production`
+// environments below, never at the top level, so neither can be reached by
+// accident: a deploy with no --env resolves this bindingless top level and
+// fails rather than silently touching the wrong database.
+//
+// Because of that, `wrangler types` emits D1 and R2 as optional on the base
+// CloudflareEnv, which is why payload.config.ts asserts them via
+// requireBinding() instead of a non-null assertion.
+//
+// Deploy order is always schema then code: `deploy:database`, then
+// `deploy:app`. Both refuse to run unless CLOUDFLARE_ENV is exactly
+// "staging" or "production".
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": "worker.ts",
+  "name": "smog-site",
+  "compatibility_date": "2025-08-15",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Without this, `[cron]`/`[jobs]` console lines only exist for whoever has
+  // a `wrangler tail` open at the moment they're printed; with it, they also
+  // land in Workers Logs, so a failed tick is still readable after the fact.
+  // Confirmed inheritable (wrangler normalizes it with `inheritable()`, not
+  // `notInheritable()`, in `wrangler-dist/cli.js`), so one entry here covers
+  // both named environments below.
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  // The hourly job-queue drain. `worker.ts` is this application's own Worker
+  // entry — it re-exports OpenNext's generated `fetch` and adds `scheduled`,
+  // which is `src/jobs/cron.ts`'s `onScheduled` dispatching an authenticated
+  // `GET /api/jobs/run` into that same `fetch`, in-process. `triggers` is
+  // inherited by every named environment below (confirmed against wrangler's
+  // own config normalization, which runs it through `inheritable()` rather
+  // than `notInheritable()`), so it is declared once here rather than
+  // repeated in `staging` and `production` the way `vars` and `send_email`
+  // must be. `src/jobs/index.ts` owns the per-task schedules; this only has
+  // to fire at least as often as the most frequent of them.
+  //
+  // `JOBS_RUN_TOKEN` is a secret, not a var, and is never written to this
+  // file: `wrangler secret put JOBS_RUN_TOKEN --env=<env>`.
+  "triggers": { "crons": ["0 * * * *"] },
+  "env": {
+    "staging": {
+      "name": "smog-site-staging",
+      "d1_databases": [
+        {
+          "binding": "D1",
+          "database_name": "smog-staging",
+          "database_id": "de652ee5-3851-4b02-85fb-f4eb8bddfe29",
+          "remote": true,
+        },
+      ],
+      "r2_buckets": [{ "binding": "R2", "bucket_name": "smog-staging-media" }],
+      // OpenPanel, the analytics vendor `endpoints/analytics.ts` relays to.
+      //
+      // The URL is a var because it is not a secret. It does **not** keep this
+      // environment's events out of the other one's project, which this
+      // comment used to claim: staging and production carry the identical
+      // URL, because there is one self-hosted OpenPanel behind both. What
+      // separates the two projects is the client id and secret, which are
+      // per-environment **secrets** and are never written in this file:
+      //
+      //   wrangler secret put OPENPANEL_CLIENT_ID --env=staging
+      //   wrangler secret put OPENPANEL_CLIENT_SECRET --env=staging
+      //
+      // Naming the URL here at all, rather than leaning on `DEFAULT_API_URL`
+      // in `endpoints/analytics.ts`, is so that a deploy states where events
+      // go instead of inheriting it from a constant in the source.
+      //
+      // The secret is the entire reason the relay exists — a browser holding
+      // it could write anything into this project's analytics — so a `vars`
+      // entry for it would undo the feature while looking like configuration.
+      // Until both are set the relay accepts events and drops them, which is
+      // the state every local checkout and CI is in.
+      //
+      // SITE_ORIGIN is the real public origin the scheduled tick dispatches
+      // its request against, with no trailing slash — `src/jobs/cron.ts`'s
+      // doc comment says why it may not be defaulted or guessed: renewal and
+      // confirmation links in queued email are built from this origin
+      // (`src/jobs/index.ts`, `src/jobs/sendEmail.ts`).
+      //
+      // EMAIL_FROM_*: the sender for every transactional message. On
+      // `zias.be` because Email Service only sends from a domain in this
+      // Cloudflare account and `smog.vlaanderen` cannot be moved into it
+      // (`payload.config.ts`, the `email` note). Staging says so in the name,
+      // so a message from it is never mistaken for production's.
+      //
+      // REMOTION_REGION: where the Remotion Lambda function lives, and the
+      // `--region` of every `apps/render` deploy script. It is not a target on
+      // its own: `lib/renderJob.ts` submits nothing until
+      // REMOTION_FUNCTION_NAME and REMOTION_SERVE_URL join it here, which
+      // happens after the function and site are deployed (both are printed by
+      // that deploy). The AWS credentials are secrets, never `vars`:
+      //
+      //   wrangler secret put REMOTION_AWS_ACCESS_KEY_ID --env=staging
+      //   wrangler secret put REMOTION_AWS_SECRET_ACCESS_KEY --env=staging
+      "vars": {
+        "EMAIL_FROM_ADDRESS": "no-reply@zias.be",
+        "EMAIL_FROM_NAME": "SMOG & Co (staging)",
+        "OPENPANEL_API_URL": "https://analytics.zias.be/api",
+        "REMOTION_REGION": "eu-central-1",
+        "SITE_ORIGIN": "https://smog-site-staging.vanneszias.workers.dev",
+      },
+      // Cloudflare Email Service. It carries `name` and nothing else, on
+      // purpose: `destination_address`, `allowed_destination_addresses` and
+      // `allowed_sender_addresses` each narrow what this binding may do, and
+      // `E_RECIPIENT_NOT_ALLOWED` fires only when one of the destination
+      // restrictions exists. For transactional mail the addresses are every
+      // sponsor and every user, so an allowlist would silently drop nearly
+      // all of it — and `destination_address` would additionally redirect a
+      // message whose `to` went missing. Unrestricted, the binding may send
+      // to any verified destination address today and to any recipient once
+      // `zias.be` is onboarded as the sending domain.
+      //
+      // Repeated per environment rather than declared at the top level:
+      // wrangler's own config schema says `send_email` "is not automatically
+      // inherited from the top level environment, and so must be specified in
+      // every named environment", so a single top-level entry would leave
+      // both deployed Workers unable to send at all.
+      "send_email": [{ "name": "EMAIL" }],
+    },
+    "production": {
+      "name": "smog-site-production",
+      "d1_databases": [
+        {
+          "binding": "D1",
+          "database_name": "smog-production",
+          "database_id": "6f48c5c2-43f3-44a9-a083-46d18bf44831",
+          "remote": true,
+        },
+      ],
+      "r2_buckets": [
+        { "binding": "R2", "bucket_name": "smog-production-media" },
+      ],
+      // OpenPanel, the analytics vendor `endpoints/analytics.ts` relays to.
+      //
+      // The URL is a var because it is not a secret. It does **not** keep this
+      // environment's events out of the other one's project, which this
+      // comment used to claim: staging and production carry the identical
+      // URL, because there is one self-hosted OpenPanel behind both. What
+      // separates the two projects is the client id and secret, which are
+      // per-environment **secrets** and are never written in this file:
+      //
+      //   wrangler secret put OPENPANEL_CLIENT_ID --env=production
+      //   wrangler secret put OPENPANEL_CLIENT_SECRET --env=production
+      //
+      // Naming the URL here at all, rather than leaning on `DEFAULT_API_URL`
+      // in `endpoints/analytics.ts`, is so that a deploy states where events
+      // go instead of inheriting it from a constant in the source.
+      //
+      // The secret is the entire reason the relay exists — a browser holding
+      // it could write anything into this project's analytics — so a `vars`
+      // entry for it would undo the feature while looking like configuration.
+      // Until both are set the relay accepts events and drops them, which is
+      // the state every local checkout and CI is in.
+      //
+      // SITE_ORIGIN: see the note in `staging` above. This value is the
+      // *.workers.dev origin, and must change in the same commit that adds a
+      // custom domain's route to this environment — a stale origin here is a
+      // renewal link in a sponsor's inbox pointing at a host nobody visits.
+      // EMAIL_FROM_*: see the note in `staging` above.
+      // REMOTION_REGION: see the note in `staging` above.
+      // REMOTION_FUNCTION_NAME and REMOTION_SERVE_URL join it after the
+      // Remotion Lambda deploy; until then no render is submitted.
+      "vars": {
+        "EMAIL_FROM_ADDRESS": "no-reply@zias.be",
+        "EMAIL_FROM_NAME": "SMOG & Co",
+        "OPENPANEL_API_URL": "https://analytics.zias.be/api",
+        "REMOTION_REGION": "eu-central-1",
+        "SITE_ORIGIN": "https://smog-site-production.vanneszias.workers.dev",
+      },
+      // See the note in `staging` above: `name` only, and once per environment.
+      "send_email": [{ "name": "EMAIL" }],
+    },
+  },
+}

@@ -27,16 +27,13 @@
 coverage
 .nyc_output
 
-# Docker and local artifacts
-docker-compose.override.yml
+# Local artifacts
 *.log
 *.tgz
 tmp
 /upload
 
 # Native build artifacts and credentials
-apps/native/ios
-apps/native/android
 **/ios/Pods
 **/ios/build
 **/android/app/build

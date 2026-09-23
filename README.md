@@ -1,68 +1,97 @@
 # SMOG
 
-Sign-language learning platform with native, web, API, video composition,
-payments, and administration.
+Sign-language learning platform: a public website with accounts, lists and
+sponsorships, a mobile app, and the video renderer behind sponsored videos.
 
 ## Stack
 
-- **Native:** React Native 0.83 + Expo 55 + Expo Router
-- **Web:** React 19 + Vite + TanStack Router/Query
-- **API:** Hono + oRPC on Bun
-- **Data:** Convex real-time database and functions
-- **Authentication:** WorkOS
-- **Video:** Mux streaming + Remotion composition
+- **Site (`apps/site`):** Payload CMS 3 on Next.js 16, deployed to Cloudflare
+  Workers through OpenNext, with D1 for data and R2 for files. It serves the
+  admin panel, the public website and the API the mobile app uses.
+- **Mobile (`apps/mobile`):** React Native 0.83 + Expo 55 + Expo Router,
+  talking to the site's Payload API.
+- **Render (`apps/render`):** Remotion compositions, rendered on Remotion
+  Lambda when a sponsorship is paid for.
+- **Video:** Mux streaming
 - **Payments:** Mollie
 - **Analytics:** consent-gated, self-hosted OpenPanel
-- **Monorepo:** Turborepo + Bun
+- **Monorepo:** Turborepo + Bun workspaces, Biome, knip
 
 ## Quick Start
 
 ```bash
-cp .env.example .env
 bun install
-bun dev
+bun dev                  # every app's dev server, through turbo
 ```
 
-Web runs on `http://localhost:3001`, the API on
-`http://localhost:3000`, and Remotion on `http://localhost:3002`.
+`apps/site` runs on `http://localhost:3003` and needs `PAYLOAD_SECRET` and
+`CLOUDFLARE_ENV=staging`; see [`apps/site/README.md`](./apps/site/README.md).
+[`.env.example`](./.env.example) lists every variable the apps read.
 
 ## Commands
 
 ```bash
-bun check
-bun check-types
-bun run build
+bun check                # Biome, with auto-fix
+bun run check:ci         # Biome, as CI runs it
+bun check-types          # typecheck every workspace
+bun run test             # every workspace's tests
+bun run build            # build every workspace
+bun run release:check    # the full release gate (see below)
 
-bun -F web test
-bun -F native test
-bun -F @smog/convex test
-bun -F @smog/hooks test
-bun -F @smog/shared test
+bun run dev:site         # or: bun -F site dev
+bun run dev:mobile       # or: bun -F mobile dev
+bun run mobile:ios
+bun run mobile:android
 ```
+
+Per app:
+
+```bash
+bun -F site dev | test | test:e2e | check-types | generate:types | generate:importmap | seed
+bun -F mobile dev | ios | android | test | check-types | export
+bun -F render dev:studio | bundle | test | check-types
+```
+
+`apps/site` and `apps/render` also have deploy scripts (`deploy:database`,
+`deploy:app`, `deploy:function`, `deploy:site:*`); they reach Cloudflare or
+AWS, so run them only as
+[`docs/deployment-checklist.md`](./docs/deployment-checklist.md) describes.
+
+## Release check
+
+`bun run release:check` is what has to pass before a push. It runs Biome,
+`release:config-check` (the CI workflow's required steps), the typecheck, the
+tests, `bun audit --production`, `mobile:release-check` (`expo-doctor` and an
+`expo export` of `apps/mobile`), the build and knip.
+
+CI runs `bun run release:check:ci`, the same gate with the `apps/site` suite
+moved to its own `site-tests` job, alongside `site-bundle-size`, `site-e2e`
+and `site-payload-types-drift` (`.github/workflows/ci.yml`).
 
 ## Layout
 
 ```text
 apps/
-  native/       Expo mobile app
-  web/          Vite web app and admin/sponsor portal
-  server/       Hono API, auth callbacks, webhooks, email jobs
-  remotion/     Sponsorship video renderer
+  site/         Payload + Next.js on Cloudflare Workers: website, admin, API
+  mobile/       Expo mobile app
+  render/       Remotion compositions for Remotion Lambda
 packages/
-  api/          oRPC routers
-  auth/         WorkOS utilities and Mollie client
-  convex/       Schema, queries, mutations, and cron jobs
-  config/       Shared constants
-  hooks/        Shared React hooks
-  i18n/         Locale resources
-  shared/       Analytics taxonomy, logging, and utilities
+  brand/        Logo artwork and the generator for every icon and logo size
+  config/       Shared constants, sponsorship statuses, base tsconfig
+  i18n/         Locale catalogues (en, fr, nl) for apps/mobile
+  shared/       Analytics event types shared by site and mobile
   styles/       Design tokens
-  types/        Domain types
-  ui/           Shared web UI
-docs/           Architecture and operating documentation
+  types/        The render contract and the sponsor overlay configuration
+  ui-native/    React Native component kit (NativeWind) for apps/mobile
+  ui-web/       Web component kit for apps/site
+docs/           Operating documentation
+scripts/        Release checks run by release:check
 ```
 
-Start with [Getting Started](./docs/GETTING_STARTED.md), then read
-[Architecture](./docs/ARCHITECTURE.md),
-[Privacy and Analytics](./docs/PRIVACY_AND_ANALYTICS.md), and the
-[Release Guide](./docs/RELEASE.md).
+Start with [`apps/site/README.md`](./apps/site/README.md),
+[`apps/mobile/AGENTS.md`](./apps/mobile/AGENTS.md) and
+[`apps/render/README.md`](./apps/render/README.md), then read
+[the deployment checklist](./docs/deployment-checklist.md),
+[the cutover runbook](./docs/cutover-runbook.md),
+[Privacy and Analytics](./docs/PRIVACY_AND_ANALYTICS.md) and
+[Components](./docs/COMPONENTS.md).
