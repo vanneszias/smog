@@ -353,7 +353,7 @@ describe("oauth endpoints", () => {
     /**
      * The forged value above is short, which a length check alone would
      * refuse. This one is the same length as the real `state`, so only an
-     * actual comparison of the two rejects it. Mutation M1 survived without
+     * actual comparison of the two rejects it. A mutation survived without
      * this test: neutering the comparison left the early length check doing
      * the work, and nothing noticed.
      */
@@ -593,8 +593,8 @@ describe("oauth endpoints", () => {
      * into that, because `getKtyFromAlg` throws on any `alg` that is not
      * asymmetric (`jose/dist/webapi/jwks/local.js`). What it does is refuse
      * a token signed with a *different asymmetric* algorithm **for which the
-     * provider publishes a perfectly good key**. Mutation S2 widens the pin
-     * and this is what fails.
+     * provider publishes a perfectly good key**. Widening the pin is what
+     * this fails on.
      */
     it("refuses a token signed with an algorithm the pin excludes", async () => {
       const flow = await start();

@@ -34,7 +34,7 @@ import { type RateLimitVerdict, takeRateLimit } from "@/lib/rateLimit";
  *
  * Requiring a session instead was considered and is the wrong shape: it would
  * track nobody who is not signed in, which is most visitors, and so would
- * defeat the port. The signed-in check is kept because it is cheap — one
+ * defeat the relay. The signed-in check is kept because it is cheap — one
  * indexed read — and closes the one case the client cannot: a signed-in
  * visitor whose browser state disagrees with what they told the server.
  *

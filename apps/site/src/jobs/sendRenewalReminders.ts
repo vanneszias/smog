@@ -26,8 +26,8 @@ import { DEFAULT_LOCALE } from "@/lib/locale";
  * policy.
  *
  * Marking the reminder sent immediately after the enqueue would be simpler,
- * and wrong: the mark would then record a message that had merely been
- * *accepted for delivery*, which is not the fact the column is used for.
+ * and wrong: the mark would then record a message that had merely
+ * been *accepted for delivery*, which is not the fact the column is used for.
  *
  * ## The window
  *

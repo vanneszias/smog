@@ -451,8 +451,8 @@ describe("reminding a sponsor that their term is nearly up", () => {
     expect(deferred?.totalTried).toBe(1);
     expect(Date.parse(String(deferred?.waitUntil))).toBeGreaterThan(Date.now());
 
-    // **And the column is still empty**, which is the half of this that the
-    // plan names: a deferred reminder must not look like a sent one.
+    // **And the column is still empty**, which is the half of this that
+    // matters most: a deferred reminder must not look like a sent one.
     expect((await reload(id)).renewalReminderSentAt ?? null).toBeNull();
 
     // Then the retry really does send, rather than merely being permitted to.

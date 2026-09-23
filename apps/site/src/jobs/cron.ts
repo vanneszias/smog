@@ -58,8 +58,8 @@
  * rather than structurally allowing. This is the one case the `lib/mollie.ts` /
  * `jobs/expireSponsorships.ts` rule against exporting a parameter-shape type
  * doesn't cover: those types have a caller in the same module tree that can
- * just accept the function's inferred parameter; this one is intersected into a
- * *different* type one file over.
+ * just accept the function's inferred parameter; this one is intersected into
+ * a *different* type one file over.
  */
 export interface CronEnvironment {
   JOBS_RUN_TOKEN?: string;

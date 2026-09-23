@@ -67,9 +67,10 @@ function setToken(value: string | undefined): void {
  * it did when there was no queue to ask. That is left alone rather than worked
  * around, because an endpoint that answers differently when the queue is empty
  * is an endpoint that tells an unauthenticated caller whether their token was
- * right, and one of the tests below is exactly that comparison. Everywhere the
- * *run* is the subject rather than the answer, `payload.jobs.run` is spied on,
- * so what is asserted is whether the queue was reached and not what it found.
+ * right, and one of the tests below is exactly that comparison. Everywhere
+ * the *run* is the subject rather than the answer, `payload.jobs.run` is spied
+ * on, so what is asserted is whether the queue was reached and not what it
+ * found.
  */
 describe("the job run endpoint", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
@@ -181,8 +182,8 @@ describe("the job run endpoint", () => {
      * `jobs.access.run ?? defaultAccess` — where `defaultAccess` is
      * `Boolean(user)`. Left at the default, every signed-in account could run
      * every scheduled job on demand: a way to force mail, and a way to run the
-     * queue *beside* the lease above rather than behind it, which is Review
-     * Focus 1 and 2 undone by a config key nobody wrote.
+     * queue *beside* the lease above rather than behind it — both of this
+     * endpoint's guarantees undone by a config key nobody wrote.
      *
      * So all three callers are asserted — anonymous, a signed-in non-admin and
      * an admin — because a rule that only refuses anonymous callers is

@@ -460,12 +460,12 @@ describe("applyPlan, against a real database", () => {
   });
 
   /*
-   * The final review's case. A category create that died after its row but
-   * before its Dutch name (`categories_locales`) leaves a row carrying the
-   * legacy id. Counted `existing` and linked, its gestures would be created
-   * against it — and deleting it, as verification says to, would cascade
-   * those links away while the gestures stayed `existing`, one category
-   * short, for good. So a nameless category is treated as failed.
+   * A category create that died after its row but before its Dutch name
+   * (`categories_locales`) leaves a row carrying the legacy id. Counted
+   * `existing` and linked, its gestures would be created against it — and
+   * deleting it, as verification says to, would cascade those links away while
+   * the gestures stayed `existing`, one category short, for good. So a nameless
+   * category is treated as failed.
    */
   describe("a category left without its Dutch name by an earlier run", () => {
     const nameless = category("naamloos", "2021-09-10T11:12:13.000Z");

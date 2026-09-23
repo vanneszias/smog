@@ -87,9 +87,9 @@ import { requireBinding } from "@/lib/env";
  * misconfiguration rather than anything about the recipient, and classing them
  * permanent means a queue drains into the failure log while the DNS record is
  * missing. That is still the better trade. Retrying them changes nothing until
- * a human acts, and a queue that retries every message for ever is how the
- * *next* misconfiguration goes unnoticed. The queue records the reason it gave
- * up, which is what makes the failure visible.
+ * a human acts, and a queue that retries every message for ever is how
+ * the *next* misconfiguration goes unnoticed. The queue records the reason it
+ * gave up, which is what makes the failure visible.
  */
 const PERMANENT_REFUSALS = new Set([
   "E_CONTENT_TOO_LARGE",

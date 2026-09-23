@@ -11,11 +11,11 @@ import config from "../payload.config";
  * failing the whole request or leaking it through anyway. Both require a
  * real update against a real database, which is what this file exercises.
  *
- * Review-round finding: `listUpdateAccess` alone lets an anonymous request
- * holding a valid edit link update a list's `items`, but with no field-level
- * guard on `viewShareToken` / `editShareToken` / `allowSharedEditing`, that
- * same anonymous editor could rotate both tokens in the same request and
- * lock the owner out of their own list.
+ * `listUpdateAccess` alone lets an anonymous request holding a valid edit link
+ * update a list's `items`, but with no field-level guard on `viewShareToken` /
+ * `editShareToken` / `allowSharedEditing`, that same anonymous editor could
+ * rotate both tokens in the same request and lock the owner out of their own
+ * list.
  */
 describe("share-token field protection against a real database", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;

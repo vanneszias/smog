@@ -217,7 +217,7 @@ export default async function LocaleLayout({
          * is, so a visitor can scroll clear of the banner to reach it. Placed
          * before `<main>` instead, it would only push the real content down
          * by the same amount and leave the page's true bottom exactly as
-         * covered as before — the bug this fix-round exists to close.
+         * covered as before — the bug this placement exists to close.
          */}
         <ConsentBanner locale={locale} />
       </div>

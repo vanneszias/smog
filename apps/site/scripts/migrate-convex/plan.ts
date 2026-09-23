@@ -225,7 +225,7 @@ export async function readExport(dir: string): Promise<{
 }
 
 // Tables this import refuses to run against if the export has any rows in
-// them (Global Constraints: "Refuse to run if any of ... is non-empty").
+// them.
 const REFUSAL_TABLES: Array<{
   key: (typeof AGGREGATE_ONLY_TABLES)[number];
   label: string;

@@ -9,7 +9,7 @@ const ANALYTICS_CONSENT_KEY = "smog.consent.analytics";
  * For a spec whose point is something else entirely — a password change, a
  * list delete, a sponsor order — driving the page with the banner
  * unanswered means fighting a fixed-position notice that a first-time
- * visitor has not seen yet, on every run. `site-e2e`'s fix-round-1 failure
+ * visitor has not seen yet, on every run. An earlier `site-e2e` failure
  * (`account.spec.ts`, `account-lists.spec.ts`, `sponsor.spec.ts`) was this
  * exactly: the banner's own "use without analytics" button intercepting a
  * click meant for the page underneath it.

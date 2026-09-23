@@ -632,14 +632,13 @@ describe("verify, against a real database", () => {
   });
 
   /*
-   * The final review's case. A gesture create that dies after its row,
-   * locales and relationships but before its concepts (`gestures_texts`)
-   * leaves a gesture with a name and categories, no concepts, and — since
-   * the search plugin's afterChange never ran — no search entry. On the
-   * rerun it is pre-existing. A search entry is written by every save, so
-   * zero of them means no editor ever saved it: it is still the import's
-   * own, and has to match the plan in full. Re-saving it would only index
-   * the loss and turn it into a passing "differs".
+   * A gesture create that dies after its row, locales and relationships but
+   * before its concepts (`gestures_texts`) leaves a gesture with a name and
+   * categories, no concepts, and — since the search plugin's afterChange never
+   * ran — no search entry. On the rerun it is pre-existing. A search entry is
+   * written by every save, so zero of them means no editor ever saved it: it is
+   * still the import's own, and has to match the plan in full. Re-saving it
+   * would only index the loss and turn it into a passing "differs".
    */
   describe("a gesture create that died writing its concepts, seen by the rerun", () => {
     const home = category("teksten-thuis");

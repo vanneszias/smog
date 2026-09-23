@@ -171,9 +171,9 @@ function webhookUrlFor(origin: string): string | undefined {
  * `media.create` is `isAdmin`, deliberately: otherwise one signup would buy
  * arbitrary R2 uploads. Sponsoring needs no account at all, so the access layer
  * cannot be what authorises this — what stands in for it is the pair of checks
- * above the create, which bound the file to 2 MB and to three image types
- * *before* anything reaches R2. That leaves an unauthenticated upload surface,
- * bounded at 2 MB a request, and an unreferenced upload is swept by
+ * above the create, which bound the file to 2 MB and to three image
+ * types *before* anything reaches R2. That leaves an unauthenticated upload
+ * surface, bounded at 2 MB a request, and an unreferenced upload is swept by
  * `jobs/cleanupOrphanedMedia.ts`.
  *
  * The stored filename is this app's, not the browser's. A client-supplied
@@ -236,8 +236,8 @@ async function uploadLogo(
  * `overlayImage` carries a real foreign key, which means an id for a row that
  * does not exist is an unhandled `DrizzleQueryError` — a 500 with a JSON body
  * in a browser window, on a page whose every other refusal is a sentence.
- * Resolving it first is the difference, and it is the Global Constraint the
- * spec states for every id that arrives in a request.
+ * Resolving it first is the difference, and it is the rule for every id that
+ * arrives in a request.
  *
  * It resolves to *any* media row, because `media.read` is public and always
  * has been — the worst a forged id buys is a sponsorship whose overlay names

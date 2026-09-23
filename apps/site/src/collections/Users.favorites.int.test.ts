@@ -50,8 +50,8 @@ describe("User favorites", () => {
 
   /**
    * Payload's hasMany relationship does NOT dedupe on its own — verified
-   * against a real database, where `[id, id]` round-tripped as `[3, 3]`. The
-   * spec originally claimed dropping the join table made this structural; it
+   * against a real database, where `[id, id]` round-tripped as `[3, 3]`. It
+   * was once assumed that dropping the join table made this structural; it
    * did not, so a `beforeChange` hook on the field enforces it. This test
    * pins the hook: remove it and the assertion fails.
    */

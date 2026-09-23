@@ -206,8 +206,8 @@ export const Users: CollectionConfig = {
        * on email would mean somebody who changes their Google address to one
        * we already know gets handed that account.
        *
-       * **An array, and `provider` is stored beside `subject`**, because the
-       * plan requires Apple to slot in later. A subject is only unique
+       * **An array, and `provider` is stored beside `subject`**, because
+       * Apple sign-in has to slot in later. A subject is only unique
        * within its provider.
        */
       name: "oauthAccounts",
