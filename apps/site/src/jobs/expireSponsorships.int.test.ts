@@ -95,9 +95,9 @@ type RenderState = "failed" | "queued" | "ready" | "rendering" | "uploading";
  * neighbour's row can neither satisfy nor fail one.
  *
  * **None of this is evidence about Mux.** There are no Mux credentials in this
- * project (see the plan's "BLOCKED ON CREDENTIALS"), so what follows proves
- * the shape of the protocol and the order of this application's own steps.
- * Stage 4's Google strategy is the precedent and the warning.
+ * test environment, so what follows proves the shape of the protocol and the
+ * order of this application's own steps. The Google strategy's tests are the
+ * precedent and the warning.
  */
 describe("expiring a sponsorship whose term has ended", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
@@ -369,10 +369,10 @@ describe("expiring a sponsorship whose term has ended", () => {
 
   it("restores the gesture's original video before deleting anything", async () => {
     /*
-     * Review Focus 5. The order is the whole test: a Mux asset cannot be
-     * un-deleted, so deleting it before the sponsorship has left the page and
-     * then failing to move it leaves a gesture playing an asset that no longer
-     * exists, with no way back.
+     * The order is the whole test: a Mux asset cannot be un-deleted, so
+     * deleting it before the sponsorship has left the page and then failing to
+     * move it leaves a gesture playing an asset that no longer exists, with no
+     * way back.
      *
      * The proof is taken *inside* the Mux delete rather than after the job:
      * the fake reads the sponsorship out of the database at the instant Mux is
@@ -412,12 +412,12 @@ describe("expiring a sponsorship whose term has ended", () => {
 
   it("does not delete the asset of a sponsorship that is still on the page", async () => {
     /*
-     * Where Review Focus 5's harm actually lands in this data model. An
-     * out-of-term sponsorship has already stopped being drawn — `activeAndInTerm`
-     * bounds the term as well as the status — so the row that a mis-scoped
-     * guard would destroy is an `active` one whose term is still running, and
-     * it would be destroyed by the outstanding-deletion sweep rather than by
-     * the due loop.
+     * Where the harm of deleting too early actually lands in this data model.
+     * An out-of-term sponsorship has already stopped being drawn —
+     * `activeAndInTerm` bounds the term as well as the status — so the row that
+     * a mis-scoped guard would destroy is an `active` one whose term is still
+     * running, and it would be destroyed by the outstanding-deletion sweep
+     * rather than by the due loop.
      *
      * Asserted through `fetchGestureOverlay`, which is what the gesture page
      * calls, so the claim is about what a visitor sees rather than about a
@@ -743,12 +743,12 @@ describe("expiring a sponsorship whose term has ended", () => {
 
   it("reaches an orphaned render the readiness sweep has already settled", async () => {
     /*
-     * **The orphan sweep is keyed off the indexed `sponsorship` column now,
-     * not filtered out of a page of every render holding an asset.** Stage 6
-     * recorded the starvation that filter caused: with more live assets than
-     * fit in one page, an orphan behind them was never in the page to be kept
-     * — and an orphan is the one row nobody will ever notice, because it is a
-     * bill every month for a video nothing points at.
+     * **The orphan sweep is keyed off the indexed `sponsorship` column now, not
+     * filtered out of a page of every render holding an asset.** That filter
+     * caused a starvation: with more live assets than fit in one page, an
+     * orphan behind them was never in the page to be kept — and an orphan is
+     * the one row nobody will ever notice, because it is a bill every month for
+     * a video nothing points at.
      *
      * A page of two hundred healthy renders is not a fixture; this asserts the
      * same defect from the other side. The render below is stamped `settledAt`
@@ -940,7 +940,7 @@ describe("expiring a sponsorship whose term has ended", () => {
 
 /*
  * ---------------------------------------------------------------------------
- * Review Focus 4
+ * Failure mode: Mux accepts the upload and then fails to process it
  * ---------------------------------------------------------------------------
  */
 
@@ -968,7 +968,8 @@ describe("a composed video Mux never made ready", () => {
    * plays nothing. A fixture answering `playback_ids: []` would let the
    * missing-id check stand in for the `errored` check, and the mutation that
    * deletes the latter survived this whole file until that was corrected —
-   * Task 4's M9, one guard masked by another, arrived at the same way.
+   * one guard masked by another, the same way a mutation survived in the
+   * render callback's tests.
    */
   const erroredAsset = (assetId: string) =>
     jsonResponse({
@@ -1165,7 +1166,7 @@ describe("a composed video Mux never made ready", () => {
 
   it("does not point a sponsorship at an asset that never became ready", async () => {
     /*
-     * The whole of Review Focus 4, asserted through the approval that would
+     * The whole of this failure mode, asserted through the approval that would
      * publish it. `hooks/publishComposedVideo.ts` copies
      * `previewVideoPlaybackId` to the column the public gesture page reads the
      * moment an administrator approves, and nothing at that moment asks Mux
@@ -1289,13 +1290,13 @@ describe("a composed video Mux never made ready", () => {
 
   it("records the reason on a render the state table will not let it fail", async () => {
     /*
-     * The plan asks for `it("marks a render failed when Mux reports the asset
-     * errored")` without qualification, and for a render the callback has
-     * already marked `ready` that is not possible: `ready` has no outgoing
-     * edge, on purpose, because re-opening a finished render would let a
-     * second callback overwrite its Mux ids. The reason is recorded anyway,
-     * because a `failureReason` beside a `ready` state is the honest
-     * description of what happened.
+     * "Marks a render failed when Mux reports the asset errored" cannot hold
+     * without qualification: for a render the callback has already marked
+     * `ready` that is not possible: `ready` has no outgoing edge, on purpose,
+     * because re-opening a finished render would let a second callback
+     * overwrite its Mux ids. The reason is recorded anyway, because a
+     * `failureReason` beside a `ready` state is the honest description of what
+     * happened.
      */
     const gesture = await seedGesture("terminal");
     const assetId = `asset-settle-terminal-${RUN}`;
@@ -1391,11 +1392,11 @@ describe("a composed video Mux never made ready", () => {
 
   it("reads the readiness sweep off an index, not a scan", async () => {
     /*
-     * **Stage 6 handed this to Stage 7 by name**: the sweep could starve. It
-     * read every render still holding a `muxAssetId`, newest first, capped at
-     * one page — so the set it read was the product's whole history of healthy
-     * live assets, and once that passed a page an older render sat behind
-     * every newer one and was never asked about again.
+     * **The sweep could starve.** It read every render still holding a
+     * `muxAssetId`, newest first, capped at one page — so the set it read was
+     * the product's whole history of healthy live assets, and once that passed
+     * a page an older render sat behind every newer one and was never asked
+     * about again.
      *
      * The fix is a column the sweep writes, so the set drains. The assertion
      * is in two parts because the two halves fail differently:
@@ -1597,11 +1598,11 @@ describe("a composed video Mux never made ready", () => {
 
   it("counts a timed-out Mux read as unreadable and leaves the render pending, as any other Mux failure", async () => {
     /*
-     * Review Focus 5. A timeout is `fetch` rejecting with an `AbortError` /
-     * `TimeoutError`, which is not distinguished from any other failure to
-     * reach Mux — `readMuxAsset` lets it propagate, and this sweep must treat
-     * it exactly as it treats the 503 case above: the render is left pending
-     * for the next sweep, not marked failed.
+     * A timeout is `fetch` rejecting with an `AbortError` / `TimeoutError`,
+     * which is not distinguished from any other failure to reach Mux —
+     * `readMuxAsset` lets it propagate, and this sweep must treat it exactly as
+     * it treats the 503 case above: the render is left pending for the next
+     * sweep, not marked failed.
      */
     const gesture = await seedGesture("timeout");
     const assetId = `asset-settle-timeout-${RUN}`;
@@ -1694,7 +1695,7 @@ describe("a composed video Mux never made ready", () => {
 
 /*
  * ---------------------------------------------------------------------------
- * Review Focus 4 (continued): a callback that never arrives at all
+ * Failure mode: a callback that never arrives at all
  * ---------------------------------------------------------------------------
  */
 
@@ -1854,8 +1855,9 @@ describe("a render whose Lambda callback never arrived, or whose Mux upload neve
   });
 
   it("fails a rendering render whose claim is seven hours old", async () => {
-    // Task 4's ambiguous-start case: the claim is kept so a late webhook can
-    // still settle it, and this sweep is what eventually gives up on it.
+    // The render submission's ambiguous-start case: the claim is kept so a late
+    // webhook can still settle it, and this sweep is what eventually gives up
+    // on it.
     const sponsorshipId = await seedSponsorship("rendering-old");
     const render = await seedStalledRender("rendering-old", sponsorshipId, {
       createdAt: hoursAgo(7),

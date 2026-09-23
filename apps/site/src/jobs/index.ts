@@ -104,9 +104,9 @@ const denyRun: RunJobAccess = () => false;
 /**
  * How many times a deferred send is tried again.
  *
- * Three, transcribed from the shipped queue rather than chosen:
- * `apps/server/src/services/emailQueue.ts` adds every message with
- * `{ attempts: 3, backoff: { type: "exponential", delay: 5000 } }`.
+ * Three: enough for a transient refusal to clear, and a bound, so a message
+ * that never stops being refused is filed rather than retried for ever. The
+ * backoff beside it is exponential from five seconds.
  *
  * Payload counts this as *retries*, not as total tries — `handleTaskError`
  * gives up when the task's own `totalTried` has reached `attempts` — so a
@@ -128,20 +128,15 @@ const SEND_EMAIL_ATTEMPTS = 3;
 const QUEUE = "default";
 
 /**
- * The three cron expressions, transcribed from the shipped `node-cron` jobs
- * rather than chosen.
+ * The three cron expressions: expiry daily at 00:00, the renewal reminder
+ * daily at 08:00 so that it arrives in inboxes at a reasonable time, and
+ * `cleanup-stale-payments` hourly.
  *
- * `apps/server/src/cron.ts` runs expiry daily at 00:00 and the renewal
- * reminder daily at 08:00 — "to arrive in inboxes at a reasonable time", in
- * its own words — and `cleanup-stale-payments` is hourly, from the spec.
- *
- * **They are evaluated in UTC here and were evaluated in Europe/Brussels
- * there.** croner is given no timezone, so it uses the process's, and a
- * Worker's is UTC with no way to set it per cron. So the reminder goes out at
- * 09:00 or 10:00 Brussels time depending on the season rather than at 08:00,
- * which is still "a reasonable time" and is the whole of the difference.
- * Writing 07:00 to compensate would be right for half the year and wrong for
- * the other half.
+ * **They are evaluated in UTC.** croner is given no timezone, so it uses the
+ * process's, and a Worker's is UTC with no way to set it per cron. So the
+ * reminder goes out at 09:00 or 10:00 Brussels time depending on the season
+ * rather than at 08:00, which is still a reasonable time. Writing 07:00 to
+ * compensate would be right for half the year and wrong for the other half.
  */
 const HOURLY = "0 * * * *";
 const DAILY_MIDNIGHT = "0 0 * * *";
@@ -182,7 +177,7 @@ export const jobsConfig: JobsConfig = {
        * Sends one message, and decides whether a refusal is worth trying
        * again.
        *
-       * The decision is the whole of Review Focus 4, and it is two lines
+       * The decision is whether to try again, and it is two lines
        * because `email/adapter.ts` owns the classification:
        *
        * - **a refusal that could answer differently next time** — a quota or
@@ -197,11 +192,11 @@ export const jobsConfig: JobsConfig = {
        *   (`queues/operations/runJobs/index.js`). A bad address retried for
        *   ever is a queue that never drains and a log nobody reads.
        *
-       * The reason is recorded rather than logged, and the difference
-       * matters: `job.error.message` carries the code, so an operator reading
-       * the failed jobs sees `E_SENDER_NOT_VERIFIED` — the exact thing Stage 7
-       * is blocked on — rather than a hundred identical lines in a console.
-       * The message is the code and never the body, for the reason
+       * The reason is recorded rather than logged, and the difference matters:
+       * `job.error.message` carries the code, so an operator reading the failed
+       * jobs sees `E_SENDER_NOT_VERIFIED` — the code a sending domain that is
+       * not yet verified produces — rather than a hundred identical lines in a
+       * console. The message is the code and never the body, for the reason
        * `jobs/sendEmail.ts` gives at length.
        */
       handler: async ({ input, req }) => {
@@ -277,20 +272,20 @@ export const jobsConfig: JobsConfig = {
        * playable, and fails every render Remotion Lambda or Mux never
        * finished settling.
        *
-       * **The first two halves were built and mutation-proven in Stage 6 Task
-       * 5**; this is the wiring the plan says it is. `failStalledRenders` is
-       * Render Lambda Stage's Task 5, and it belongs in this same task for
-       * the same reason the other two do: it is a sweep on the same clock,
-       * over the same collection, and splitting it into its own cron would
-       * make "runs after the other two" a coincidence rather than a fact.
-       * Unlike the other two it does not depend on their having run first,
-       * so its position in the sequence is not load-bearing, only its
-       * membership in this task. That is not because a stalled render never
-       * holds a Mux asset: one stuck in `uploading` after Mux's create timed
-       * out may have one in Mux that nothing records (the callback logs its
-       * passthrough, `render:<id>`, so it can be found and deleted). It is
-       * because failing the row neither creates, deletes nor reads an asset,
-       * so nothing the other two sweeps do changes what this one decides.
+       * **The first two halves are built and mutation-proven in
+       * `jobs/expireSponsorships.ts`**; this is only the wiring.
+       * `failStalledRenders` belongs in this same task for the same reason the
+       * other two do: it is a sweep on the same clock, over the same
+       * collection, and splitting it into its own cron would make "runs after
+       * the other two" a coincidence rather than a fact. Unlike the other two
+       * it does not depend on their having run first, so its position in the
+       * sequence is not load-bearing, only its membership in this task. That is
+       * not because a stalled render never holds a Mux asset: one stuck in
+       * `uploading` after Mux's create timed out may have one in Mux that
+       * nothing records (the callback logs its passthrough, `render:<id>`, so
+       * it can be found and deleted). It is because failing the row neither
+       * creates, deletes nor reads an asset, so nothing the other two sweeps do
+       * changes what this one decides.
        *
        * `now` is the job's own clock, shared by all three operations. It is a
        * parameter so a test can assert a decision rather than race one;
@@ -338,20 +333,20 @@ export const jobsConfig: JobsConfig = {
        * `pending_payment` row holding a gesture nobody can buy, and a logo in
        * R2 that nothing will ever point at.
        *
-       * Hourly, from the spec, and the cadence is part of the design rather
-       * than a preference: both windows are twenty-four hours, so an hourly
-       * sweep means an abandoned checkout blocks its gesture for at most
-       * twenty-five and a stray upload survives at most a day. The row-level
-       * lease in `jobs/cleanupStalePayments.ts` is fifteen minutes — shorter
-       * than the interval, so one crashed sweep costs no ticks at all.
+       * Hourly, and the cadence is part of the design rather than a preference:
+       * both windows are twenty-four hours, so an hourly sweep means an
+       * abandoned checkout blocks its gesture for at most twenty-five and a
+       * stray upload survives at most a day. The row-level lease in
+       * `jobs/cleanupStalePayments.ts` is fifteen minutes — shorter than the
+       * interval, so one crashed sweep costs no ticks at all.
        *
        * **Two operations in one task, and the split between them is the
        * point.** `jobs/cleanupOrphanedMedia.ts` says why it is a sibling
        * module rather than more of its neighbour: they read different
        * collections and are dangerous in different ways, one cancelling a
        * purchase and the other destroying a file. What they share is a clock,
-       * so what they share is a task — which is also what keeps the spec's
-       * four tasks four.
+       * so what they share is a task — which is also what keeps the four
+       * tasks four.
        *
        * The media sweep runs second, and not for a reason worth relying on:
        * nothing it looks at is touched by the cancellation, because

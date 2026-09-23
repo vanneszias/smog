@@ -4,32 +4,31 @@ import { SPONSOR_LOGO_PREFIX } from "@/lib/sponsorDraft";
 /**
  * Removes a sponsor logo that was stored and then never attached to anything.
  *
- * Stage 7 owns the scheduler. **This module owns the operation**, on the
- * precedent the other three jobs set.
+ * `jobs/index.ts` owns the scheduler. **This module owns the operation**, on
+ * the precedent the other three jobs set.
  *
  * ## A sibling, not an extension of `cleanupStalePayments`
  *
- * The plan says to decide and say which. This is a sibling module, registered
- * inside the same hourly `cleanup-stale-payments` task, and the split is along
- * the line the other files in this directory already draw: a module is an
- * operation, and these are two operations with nothing in common but a
- * cadence. They read different collections, they are dangerous in different
- * ways — one cancels a purchase, the other destroys a file — and
- * `cleanupStalePayments.ts`'s doc block is a long argument about Mollie that
- * has nothing to say about R2.
+ * This is a sibling module, registered inside the same hourly
+ * `cleanup-stale-payments` task, and the split is along the line the other
+ * files in this directory already draw: a module is an operation, and these are
+ * two operations with nothing in common but a cadence. They read different
+ * collections, they are dangerous in different ways — one cancels a purchase,
+ * the other destroys a file — and `cleanupStalePayments.ts`'s doc block is a
+ * long argument about Mollie that has nothing to say about R2.
  *
- * Sharing the *task* rather than the module is what keeps the spec's four
- * tasks four, and it is the right cadence besides: hourly against a
- * twenty-four hour age bound means a stray upload survives at most a day.
+ * Sharing the *task* rather than the module is what keeps the four tasks four,
+ * and it is the right cadence besides: hourly against a twenty-four hour age
+ * bound means a stray upload survives at most a day.
  *
- * ## The gap this closes, recorded at Stage 5's exit and again in Stage 6
+ * ## The gap this closes
  *
  * `endpoints/sponsorships.ts` stores the logo at step 2 and writes the
  * sponsorship at checkout, and there is no transaction between them — so a
  * sponsor who uploads a logo and then closes the tab leaves a row in `media`
- * and an object in R2 that nothing will ever point at or ever delete. Stage 6
- * added a second source of the same shape: a re-edit that replaces
- * `overlayImage` strands the logo it replaced.
+ * and an object in R2 that nothing will ever point at or ever delete. There is
+ * a second source of the same shape: a re-edit that replaces `overlayImage`
+ * strands the logo it replaced.
  *
  * ## The dangerous half is the timing, not the reachability
  *
@@ -96,7 +95,7 @@ const WINDOW_MS = 24 * 60 * 60 * 1000;
  * of 100.
  *
  * Oldest first, so a backlog cannot leave the oldest orphan behind every newer
- * one — the starvation Stage 6 flagged for the readiness sweep, avoided here
+ * one — the starvation the readiness sweep once had, avoided here
  * by ordering rather than by a column, because a swept row is deleted and so
  * leaves the candidate set by definition.
  */

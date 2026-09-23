@@ -33,19 +33,17 @@ interface SentMessage {
 }
 
 /**
- * `send-renewal-reminders` — Review Focus 3, against a real database and a
- * real queue.
+ * `send-renewal-reminders` — never twice and never dropped, against a real
+ * database and a real queue.
  *
- * **`renewalReminderSentAt` has existed since Stage 1 and nothing has ever
- * written it.** The whole of this file is about the two ways that column can
+ * The whole of this file is about the two ways `renewalReminderSentAt` can
  * be got wrong, and they pull in opposite directions:
  *
  * - **written too eagerly** and a reminder that was refused is filed as sent.
  *   The sponsorship lapses, nobody was asked, and there is no trace — the
  *   column says the sponsor was told.
  * - **not written at all, or written and then ignored** and the sponsor is
- *   asked twice, which is the failure the column exists to prevent and the one
- *   the plan names.
+ *   asked twice, which is the failure the column exists to prevent.
  *
  * So the sweep queues and `jobs/sendEmail.ts` stamps, after the send. The
  * mechanism that stops a *second* reminder is therefore the stamp read at send
@@ -259,7 +257,7 @@ describe("reminding a sponsor that their term is nearly up", () => {
 
     expect(sent).toBeDefined();
     expect(sent?.subject).toBe("Je SMOG-sponsoring verloopt binnenkort");
-    // The three things the shipped message says, so this is the message and
+    // The three things the message says, so this is the message and
     // not merely a message: who it is to, which gesture, and when it ends.
     expect(sent?.text).toContain("Contact soon");
     expect(sent?.text).toContain(`Gebaar soon ${RUN}`);
@@ -268,9 +266,9 @@ describe("reminding a sponsor that their term is nearly up", () => {
 
   it("writes renewalReminderSentAt", async () => {
     /*
-     * The column exists since Stage 1 and nothing has ever written it. It is
-     * written by the *send* and not by the sweep, which is the difference
-     * between "a sponsor was asked" and "a message was accepted for delivery".
+     * The column is written by the *send* and not by the sweep, which is the
+     * difference between "a sponsor was asked" and "a message was accepted for
+     * delivery".
      */
     const id = await seedSponsorship("stamp");
 
@@ -291,9 +289,9 @@ describe("reminding a sponsor that their term is nearly up", () => {
 
   it("does not send a second reminder", async () => {
     /*
-     * Review Focus 3, and the reason the column exists. **Two different
-     * mechanisms could stop a second reminder and a test that simply ran the
-     * sweep twice would not say which one did**, so they are separated.
+     * The reason the column exists. **Two different mechanisms could stop a
+     * second reminder and a test that simply ran the sweep twice would not say
+     * which one did**, so they are separated.
      *
      * The stamp read at send time first, because that is the guard. The
      * sponsorship below is left exactly as the candidate query wants it — it
@@ -406,9 +404,9 @@ describe("reminding a sponsor that their term is nearly up", () => {
 
   it("leaves a sponsorship just outside the window alone, and takes one just inside", async () => {
     /*
-     * The boundary, asserted rather than assumed. Thirty days is the shipped
-     * `getExpiringSoon({ daysUntilExpiry: 30 })`, and `<` against `<=` is the
-     * whole of whether a sponsor is asked a day early or a day late.
+     * The boundary, asserted rather than assumed. Thirty days is the window,
+     * and `<` against `<=` is the whole of whether a sponsor is asked a day
+     * early or a day late.
      *
      * The window is moved rather than the rows, for the reason
      * `cleanupStalePayments.int.test.ts` gives: `endDate` is real data here,

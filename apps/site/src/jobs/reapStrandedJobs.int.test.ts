@@ -63,10 +63,9 @@ function setToken(value: string | undefined): void {
 
 /**
  * The reaper, both directly and through the one door that ever calls it —
- * `GET /api/jobs/run`, exactly as Review Focus 2 asks: reaping is only useful
- * if the tick that follows a reap actually queues and runs the freed work,
- * and a bug in the wiring would pass every test that calls the function
- * alone.
+ * `GET /api/jobs/run`, deliberately: reaping is only useful if the tick that
+ * follows a reap actually queues and runs the freed work, and a bug in the
+ * wiring would pass every test that calls the function alone.
  *
  * A fixed `NOW` for the direct cases, so every `updatedAt` below is arithmetic
  * against the same instant rather than a race against `Date.now()`. The
@@ -593,12 +592,11 @@ describe("reaping a job a killed run left processing", () => {
 
   it("frees a stranded scheduled sweep so the same tick queues and runs a fresh one", async () => {
     /*
-     * Without the reaper this fails: the stranded row has no `completedAt`
-     * and no `error`, so `countRunnableOrActiveJobsForQueue` counts it as
-     * still active and `defaultBeforeSchedule` never queues a second one —
-     * the exact failure this whole task exists to close. Step 3 of the plan
-     * confirms this file fails here before `endpoints/jobs.ts` is wired to
-     * call `reapStrandedJobs` at all.
+     * Without the reaper this fails: the stranded row has no `completedAt` and
+     * no `error`, so `countRunnableOrActiveJobsForQueue` counts it as still
+     * active and `defaultBeforeSchedule` never queues a second one — the exact
+     * failure the reaper exists to close. This file was confirmed to fail here
+     * before `endpoints/jobs.ts` was wired to call `reapStrandedJobs` at all.
      */
     const stranded = await seedJob({
       meta: { scheduled: true },

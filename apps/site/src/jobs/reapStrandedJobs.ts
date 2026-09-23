@@ -113,10 +113,9 @@ import { jobsConfig } from "@/jobs";
  * again. There is no way to tell "the binding call happened and then the
  * Worker died" apart from "the binding call never started" from outside that
  * call, and `email/adapter.ts` gives that same call no timeout for the same
- * reason. At-least-once is the shipped behaviour elsewhere in this codebase —
- * `apps/server/src/services/emailQueue.ts` recovers a stalled BullMQ job the
- * same way — and it is preferable to a renewal reminder nobody was asked
- * about because a lease was never released.
+ * reason. At-least-once is the accepted trade for a mail queue, and it is
+ * preferable to a renewal reminder nobody was asked about because a lease was
+ * never released.
  */
 
 /** Twice a scheduled invocation's wall-clock ceiling, and the longest a

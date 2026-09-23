@@ -38,12 +38,11 @@ const PIXEL = Buffer.from(
  * in a form, and no query can see it. So every test about deletion below has a
  * twin about age, and the boundary is asserted rather than assumed.
  *
- * The second danger is subtler and is not in the plan at all: `media` is a
- * general collection an administrator may upload to, and an image they have
- * uploaded but not yet used is unreferenced in the same way. A sweep keyed on
- * reachability alone would delete their library a day later. So the sweep only
- * ever looks at the filenames this application writes, and there is a test for
- * that too.
+ * The second danger is subtler: `media` is a general collection an
+ * administrator may upload to, and an image they have uploaded but not yet used
+ * is unreferenced in the same way. A sweep keyed on reachability alone would
+ * delete their library a day later. So the sweep only ever looks at the
+ * filenames this application writes, and there is a test for that too.
  *
  * R2 is real here: the objects are read back through the collection's own
  * static handler over HTTP, so "the file is gone" is a fetch rather than an
@@ -271,11 +270,11 @@ describe("sweeping up a logo nothing points at", () => {
 
   it("leaves media this application did not upload for a sponsor alone", async () => {
     /*
-     * **Not in the plan, and it is the difference between a cleanup and a
-     * disaster.** `media.create` is `isAdmin`, so an administrator may upload
-     * anything to this collection — and an image they have uploaded but not
-     * yet used is exactly as unreferenced as an abandoned logo. A sweep keyed
-     * on reachability alone deletes their library a day later, silently.
+     * **The difference between a cleanup and a disaster.** `media.create` is
+     * `isAdmin`, so an administrator may upload anything to this collection —
+     * and an image they have uploaded but not yet used is exactly as
+     * unreferenced as an abandoned logo. A sweep keyed on reachability alone
+     * deletes their library a day later, silently.
      *
      * The filename is the evidence, and it is evidence rather than a
      * convention: `endpoints/sponsorships.ts` names every logo itself, because
@@ -286,8 +285,8 @@ describe("sweeping up a logo nothing points at", () => {
      * And one whose name *contains* the prefix without starting with it.
      * Without it this test would pass against a sweep that had only the
      * candidate query's `like`, which is a substring match on this adapter —
-     * one guard standing in for another, which is how Task 3 had two
-     * mutations survive.
+     * one guard standing in for another, which is how two mutations once
+     * survived.
      */
     const lookalike = await seedMedia("tricky", "admin-sponsor-logo-");
     const logo = await seedMedia("alongside");

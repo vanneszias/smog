@@ -61,7 +61,7 @@ interface SentMessage {
  * `payload-jobs-stats` global and the run are all Payload's own, against a
  * real database and through the real HTTP endpoint. `payload.sendEmail` is
  * replaced with an outbox, so **nothing here is evidence about Cloudflare**;
- * Task 7 is first contact.
+ * a deployed environment is first contact.
  *
  * The one thing no test can stage is the Cloudflare Cron Trigger itself,
  * because a Cron Trigger invokes a Worker's `scheduled()` handler rather than
@@ -256,12 +256,10 @@ describe("the scheduled jobs", () => {
     expect(await jobs()).toEqual([]);
   });
 
-  it("registers all four tasks with the schedules the spec names", () => {
+  it("registers all four tasks with their schedules", () => {
     /*
-     * The spec's "Jobs and scheduling" names four tasks and three clocks:
-     * expiry daily, the renewal reminder daily, stale payments hourly, and
-     * `send-email` queued on demand by hooks. The cron expressions are the
-     * shipped `node-cron` ones (`apps/server/src/cron.ts`), transcribed.
+     * Four tasks and three clocks: expiry daily, the renewal reminder daily,
+     * stale payments hourly, and `send-email` queued on demand by hooks.
      *
      * Structural, and kept beside the behavioural tests below rather than
      * instead of them: this catches a cron string nobody meant to change, and
@@ -438,8 +436,7 @@ describe("the scheduled jobs", () => {
       }
     }
 
-    // Tick three: the message is sent, and the column that has existed since
-    // Stage 1 with nothing to write it is finally written.
+    // Tick three: the message is sent, and the column is written.
     await clearWaits();
     await tick();
 

@@ -6,8 +6,8 @@ import { DEFAULT_LOCALE } from "@/lib/locale";
  * Asks the sponsors whose term is nearly up whether they would like another
  * one.
  *
- * Stage 7 owns the scheduler. **This module owns the operation**, on the
- * precedent `jobs/expireSponsorships.ts` and `jobs/cleanupStalePayments.ts`
+ * `jobs/index.ts` owns the scheduler. **This module owns the operation**, on
+ * the precedent `jobs/expireSponsorships.ts` and `jobs/cleanupStalePayments.ts`
  * set, so scheduling it is wiring rather than design.
  *
  * ## What this sweep does, and the one thing it deliberately does not
@@ -16,28 +16,26 @@ import { DEFAULT_LOCALE } from "@/lib/locale";
  * `renewalReminderSentAt` — `jobs/sendEmail.ts` does both, in that order, and
  * says at length why.
  *
- * The short version is Review Focus 3's second half. A reminder refused for
- * quota must *defer*, not drop: `E_DAILY_LIMIT_EXCEEDED` says nothing about
- * this sponsorship, and the `send-email` task is where a refusal is classified
- * and a deferral is given a backoff. A sweep that sent directly would have to
- * reimplement that classification, or drop the message, or block the whole
- * sweep on one recipient. Handing the queue an identifier costs one row and
- * inherits the policy.
+ * The short version is the "never dropped" half of the rule `jobs/sendEmail.ts`
+ * states. A reminder refused for quota must *defer*, not drop:
+ * `E_DAILY_LIMIT_EXCEEDED` says nothing about this sponsorship, and the
+ * `send-email` task is where a refusal is classified and a deferral is given a
+ * backoff. A sweep that sent directly would have to reimplement that
+ * classification, or drop the message, or block the whole sweep on one
+ * recipient. Handing the queue an identifier costs one row and inherits the
+ * policy.
  *
- * The shipped `startRenewalReminderCronJob` (`apps/server/src/cron.ts`) marks
- * the reminder sent immediately after its enqueue. This does not, and that is
- * the one place this port departs from it: the mark would then record a
- * message that had been *accepted for delivery*, which is not the fact the
- * column is used for.
+ * Marking the reminder sent immediately after the enqueue would be simpler,
+ * and wrong: the mark would then record a message that had merely been
+ * *accepted for delivery*, which is not the fact the column is used for.
  *
- * ## The window, and why it is the shipped one
+ * ## The window
  *
- * Thirty days, from `getExpiringSoon({ daysUntilExpiry: 30 })` and from the
- * spec's "one reminder ~30 days before expiry". A sponsorship whose term has
- * already ended is excluded as well, and that is not the same condition: the
- * status only becomes `expired` once `expire-sponsorships` has run, so
- * between the two there is a row that is `active`, out of term, and would
- * otherwise be told its sponsorship ends on a date in the past.
+ * Thirty days: one reminder about a month before expiry. A sponsorship whose
+ * term has already ended is excluded as well, and that is not the same
+ * condition: the status only becomes `expired` once `expire-sponsorships` has
+ * run, so between the two there is a row that is `active`, out of term, and
+ * would otherwise be told its sponsorship ends on a date in the past.
  *
  * ## Nothing here is claimed
  *

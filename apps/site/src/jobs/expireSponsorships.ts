@@ -8,24 +8,17 @@ import type { Render, Sponsorship } from "@/payload-types";
  * The back half of a composed video's life: taking a sponsorship off the
  * public page when its term ends, and taking the Mux asset off Mux.
  *
- * Stage 7 owns the scheduler. **This module owns the operation**, so that
- * scheduling it is wiring rather than design.
+ * `jobs/index.ts` owns the scheduler. **This module owns the operation**, so
+ * that scheduling it is wiring rather than design.
  *
- * ## Review Focus 5, and what "restore the original video" means here
+ * ## What "restore the original video" means here
  *
- * The plan says expiry "restores the gesture's original video *and* deletes
- * the sponsored Mux asset", and that deleting first and failing to restore
- * leaves a gesture pointing at an asset that no longer exists.
+ * Expiry restores the gesture's original video *and* deletes the sponsored
+ * Mux asset, and deleting first and failing to restore would leave a gesture
+ * pointing at an asset that no longer exists.
  *
- * **That sentence describes the shipped Convex product's data model, not this
- * one, and following it literally here would be a bug.** In
- * `packages/convex/convex/sponsorships.ts` approval *overwrites*
- * `gesture.playbackId` with the sponsored id (`ctx.db.patch(gestureId, {
- * playbackId: args.sponsoredVideoPlaybackId })`) and `expire` writes
- * `originalVideoPlaybackId` back over it — the gesture row is the pointer, so
- * restoring it is a write.
- *
- * This application never touches `gestures.playbackId`. Nothing in
+ * **Restoring is not a write to the gesture here, and treating it as one would
+ * be a bug.** This application never touches `gestures.playbackId`. Nothing in
  * `apps/site` writes it outside the seed and the admin panel;
  * `hooks/publishComposedVideo.ts` writes the composite to
  * `sponsorships.sponsoredVideoPlaybackId`, and the page composes the two at
@@ -44,8 +37,8 @@ import type { Render, Sponsorship } from "@/payload-types";
  * `lib/renderPreview.ts` and the re-edit page render against, and it is the
  * record of what the sponsor was sold.
  *
- * **The restore is therefore the status move to `expired`**, and the second
- * half of that sentence is worth stating plainly rather than leaving as an
+ * **The restore is therefore the status move to `expired`**, and the danger
+ * in deleting first is worth stating plainly rather than leaving as an
  * implication, because it changes where the danger in this job actually is.
  * `fetchGestureOverlay` bounds the *term* as well as the status —
  * `activeAndInTerm` is `status = active AND startDate <= now AND endDate >=
@@ -55,17 +48,17 @@ import type { Render, Sponsorship } from "@/payload-types";
  * with what the page is already doing, and it is what every deletion in this
  * module is keyed off.
  *
- * So the harm Review Focus 5 describes does not arrive by way of an
- * out-of-term row. It arrives if the guard below is ever wrong about *which*
- * sponsorships have left the page: the sweep also reaches assets belonging to
- * `cancelled` sponsorships, whose term may still be running, and an asset
- * deleted out from under an `active` in-term sponsorship is a dead player on a
- * live page with no way back. That is what `it("does not delete the asset of a
- * sponsorship that is still on the page")` asserts, through
- * `fetchGestureOverlay` rather than through a column, so the claim is about
- * what a visitor sees.
+ * So the harm of deleting too early does not arrive by way of an out-of-term
+ * row. It arrives if the guard below is ever wrong about *which* sponsorships
+ * have left the page: the sweep also reaches assets belonging to `cancelled`
+ * sponsorships, whose term may still be running, and an asset deleted out from
+ * under an `active` in-term sponsorship is a dead player on a live page with no
+ * way back. That is what
+ * `it("does not delete the asset of a sponsorship that is still on the page")`
+ * asserts, through `fetchGestureOverlay` rather than through a column, so the
+ * claim is about what a visitor sees.
  *
- * ## The order is the whole task
+ * ## The order is the whole job
  *
  * Deleting a Mux asset cannot be undone. There is no transaction to lean on —
  * `sqliteD1Adapter` is built without `transactionOptions`, so
@@ -89,23 +82,23 @@ import type { Render, Sponsorship } from "@/payload-types";
  *
  * ## Why there is no claim, unlike `POST /api/render/callback`
  *
- * Stage 5 and Task 3 established that the only atomic primitive here is a
- * unique index, and that anything needing exactly-once semantics needs its own
- * claim row. **This job does not need one**, and the difference is worth
- * stating rather than assumed: the irreversible step in the callback is
- * `POST /assets`, where a second one is a second asset and a monthly bill for
- * ever. The irreversible step here is `DELETE /assets/:id`, and Mux answers a
- * second one `404`, which `lib/mux.ts` treats as success. Two schedulers
- * running this job concurrently therefore cost one wasted request and nothing
- * else: the restore is `active -> expired` and a second one is `expired ->
- * expired`, which `hooks/enforceStatusTransitions.ts` allows and
+ * The only atomic primitive here is a unique index (`lib/claims.ts`), and
+ * anything needing exactly-once semantics needs its own claim row. **This job
+ * does not need one**, and the difference is worth stating rather than assumed:
+ * the irreversible step in the callback is `POST /assets`, where a second one
+ * is a second asset and a monthly bill for ever. The irreversible step here is
+ * `DELETE /assets/:id`, and Mux answers a second one `404`, which `lib/mux.ts`
+ * treats as success. Two schedulers running this job concurrently therefore
+ * cost one wasted request and nothing else: the restore is `active -> expired`
+ * and a second one is `expired -> expired`, which
+ * `hooks/enforceStatusTransitions.ts` allows and
  * `hooks/logSponsorshipTransitions.ts` declines to log twice, because it logs
  * only a change.
  *
  * So this job wants at-least-once with an idempotent effect, which is what it
- * has, rather than exactly-once, which would cost a table. The plan's note
- * stands: when Stage 7 has four consumers, one generic `claims` collection is
- * the right abstraction — and this job will not be one of them.
+ * has, rather than exactly-once, which would cost a table. `claims` is the
+ * one generic collection for the consumers that do need exactly-once — and
+ * this job is not one of them.
  *
  * ## Resumability
  *
@@ -138,7 +131,7 @@ import type { Render, Sponsorship } from "@/payload-types";
  *
  * `rejected` is the one that makes deriving this worth the line. It *looks*
  * terminal and is not — `rejected -> pending_resubmission` is legal because
- * the shipped product re-opens a rejected sponsorship — so a rejected
+ * an administrator may re-open a rejected sponsorship — so a rejected
  * sponsorship's composite can still reach a public page, by way of a
  * resubmission an administrator approves. A hand-written list would have had
  * `rejected` in it, and the asset would have been deleted out from under the
@@ -168,9 +161,9 @@ const TERMINAL_STATUSES: ReadonlySet<string> = new Set(
  *   moments before it died.
  * - the render sweeps read *renders*, oldest first, over sets that a
  *   successful sweep removes rows from: `settledAt` for the readiness sweep
- *   and a null `sponsorship` for the orphan sweep. Stage 6 recorded the
- *   starvation those two filters close, and Stage 7 Task 5 closed it — before
- *   them, one page of `-createdAt` over *every* render holding an asset meant
+ *   and a null `sponsorship` for the orphan sweep. Those two filters close a
+ *   starvation — before them, one page of `-createdAt` over *every* render
+ *   holding an asset meant
  *   a render from a year ago sat behind every healthy live asset and was never
  *   reached at all.
  */
@@ -246,7 +239,7 @@ async function rendersForSponsorship(
 /**
  * Whether the asset this render holds may be deleted.
  *
- * **The whole of Review Focus 5.** Every deletion in this application goes
+ * **The one gate on deletion.** Every deletion in this application goes
  * through it, both callers share it, and it answers from the database rather
  * than from anything a caller is holding.
  *
@@ -372,11 +365,10 @@ async function sponsorshipsPastTheEnd(
  * the only things that clear it are a completed deletion and an asset Mux says
  * is dead.
  *
- * **`settledAt` is what stops this sweep starving**, which is the one piece of
- * carried work Stage 6 handed to Stage 7 by name. This query used to be every
- * render holding an asset, `-createdAt`, capped at one page — so the moment
- * the product had more than `PAGE` healthy live assets, the sweep read the
- * same newest page every hour for ever and an older render was never asked
+ * **`settledAt` is what stops this sweep starving.** This query used to be
+ * every render holding an asset, `-createdAt`, capped at one page — so the
+ * moment the product had more than `PAGE` healthy live assets, the sweep read
+ * the same newest page every hour for ever and an older render was never asked
  * about again. The filter, not the ordering, is the fix: a render Mux has
  * called `ready` is stamped and leaves this set permanently, so the set is the
  * work outstanding rather than the whole history, and it drains.
@@ -541,7 +533,7 @@ export async function expireSponsorships(
 
 /*
  * ---------------------------------------------------------------------------
- * Review Focus 4 (continued): a callback that never arrives at all
+ * Failure mode: a callback that never arrives at all
  * ---------------------------------------------------------------------------
  */
 
@@ -726,7 +718,7 @@ export async function failStalledRenders(
 
 /*
  * ---------------------------------------------------------------------------
- * Review Focus 4: Mux accepts the upload and then fails to process it
+ * Failure mode: Mux accepts the upload and then fails to process it
  * ---------------------------------------------------------------------------
  */
 
@@ -770,14 +762,14 @@ interface SettlementReport {
  * render whose asset dies afterwards is already terminal, and `canAdvance`
  * refuses `ready -> failed`.
  *
- * **This contradicts the plan, which asks for `it("marks a render failed when
- * Mux reports the asset errored")` without qualification.** The state is
- * advanced where the table allows it — a render still `uploading`, which is
- * what a crash between the Mux create and the render update leaves behind —
- * and where it does not, the reason is recorded on the row anyway, because a
- * `failureReason` beside a `ready` state is exactly the honest description of
- * what happened and is what an operator has to go on. Widening the table
- * instead would undo a decision Task 1 mutation-proved.
+ * **So "marks a render failed when Mux reports the asset errored" holds only
+ * where the state table allows it.** The state is advanced where the table
+ * allows it — a render still `uploading`, which is what a crash between the Mux
+ * create and the render update leaves behind — and where it does not, the
+ * reason is recorded on the row anyway, because a `failureReason` beside a
+ * `ready` state is exactly the honest description of what happened and is what
+ * an operator has to go on. Widening the table instead would undo a
+ * mutation-proven decision.
  *
  * ## Why this does not delete anything
  *
@@ -787,7 +779,7 @@ interface SettlementReport {
  * id verbatim in `failureReason` rather than calling Mux a second way. An
  * `errored` asset holds no media; if Mux nevertheless bills for one, the id is
  * in the row for an operator. The alternative — a second deletion site with a
- * second guard — is how the one irreversible operation in this stage ends up
+ * second guard — is how the one irreversible operation in this module ends up
  * with two sets of rules.
  */
 /**

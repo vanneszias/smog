@@ -136,7 +136,7 @@ describe("onScheduled", () => {
 
   it("holds the run open with waitUntil and dispatches the authenticated tick", async () => {
     const { held, context } = capture();
-    // Typed with its `Request` parameter (rather than the brief's `() => …`)
+    // Typed with its `Request` parameter (rather than as `() => …`)
     // so `dispatch.mock.calls[0]` is `[Request]` on its own: this workspace's
     // global `Request` is workers-types', and casting a zero-arg mock's `[]`
     // call tuple to `[Request]` is a `TS2352` "insufficient overlap" under
@@ -154,7 +154,7 @@ describe("onScheduled", () => {
     expect(request.headers.get("authorization")).toBe("Bearer cron-test-token");
   });
 
-  it("logs a refused tick with its status, then rejects, so Cron Trigger Past Events records the failure (Review Focus 1)", async () => {
+  it("logs a refused tick with its status, then rejects, so Cron Trigger Past Events records the failure", async () => {
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -169,7 +169,7 @@ describe("onScheduled", () => {
     error.mockRestore();
   });
 
-  it("logs a missing variable, then rejects (Review Focus 2)", async () => {
+  it("logs a missing variable, then rejects", async () => {
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);

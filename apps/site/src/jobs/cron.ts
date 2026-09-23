@@ -52,14 +52,14 @@
  * Exported for one reason only: `worker.ts` types its `env` as
  * `CloudflareEnv & CronEnvironment`. `wrangler types` builds `CloudflareEnv`
  * from `wrangler.jsonc`'s `vars` and bindings, so it never carries
- * `JOBS_RUN_TOKEN` — a secret is deliberately absent from that file (Global
- * Constraints) — and without this intersection `CloudflareEnv` alone shares
- * no property name with this type, which TypeScript's weak-type check
- * (`TS2559`) rejects outright rather than structurally allowing. This is the
- * one case the `lib/mollie.ts` / `jobs/expireSponsorships.ts` ruling against
- * exporting a parameter-shape type doesn't cover: those types have a caller
- * in the same module tree that can just accept the function's inferred
- * parameter; this one is intersected into a *different* type one file over.
+ * `JOBS_RUN_TOKEN` — a secret is deliberately absent from that file — and
+ * without this intersection `CloudflareEnv` alone shares no property name with
+ * this type, which TypeScript's weak-type check (`TS2559`) rejects outright
+ * rather than structurally allowing. This is the one case the `lib/mollie.ts` /
+ * `jobs/expireSponsorships.ts` rule against exporting a parameter-shape type
+ * doesn't cover: those types have a caller in the same module tree that can
+ * just accept the function's inferred parameter; this one is intersected into a
+ * *different* type one file over.
  */
 export interface CronEnvironment {
   JOBS_RUN_TOKEN?: string;

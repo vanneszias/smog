@@ -12,11 +12,11 @@ import type { Gesture, Sponsorship, User } from "@/payload-types";
 /**
  * The two messages this application sends, and the one rule they share.
  *
- * Stage 7 owns the scheduler and `jobs/index.ts` owns the retry policy.
- * **This module owns the operation**, on the precedent
- * `jobs/expireSponsorships.ts` set: what is queued, what is read, what is
- * rendered and what is handed to `payload.sendEmail` is testable without a
- * queue, and scheduling it is wiring rather than design.
+ * `jobs/index.ts` owns the scheduler and the retry policy. **This module owns
+ * the operation**, on the precedent `jobs/expireSponsorships.ts` set: what is
+ * queued, what is read, what is rendered and what is handed to
+ * `payload.sendEmail` is testable without a queue, and scheduling it is wiring
+ * rather than design.
  *
  * ## The rule: the queue carries identifiers, never a credential
  *
@@ -35,13 +35,13 @@ import type { Gesture, Sponsorship, User } from "@/payload-types";
  *
  * So the credential is obtained here, at the last moment before the send:
  *
- * - **the address change** mints one (`lib/emailChange.ts`), because Stage 4
- *   stores only its SHA-256 and a digest cannot be turned back into a link;
+ * - **the address change** mints one (`lib/emailChange.ts`), because the
+ *   account stores only its SHA-256 and a digest cannot be turned back into a
+ *   link;
  * - **the re-edit invitation** reads one back with `showHiddenFields: true`,
  *   because `collections/Sponsorships.ts` stores that token in the clear and
- *   marks it `hidden: true` — which strips it from every API response and,
- *   until now, from every reader. Stage 5 minted it and nothing has ever read
- *   it out. This is the read it was waiting for.
+ *   marks it `hidden: true` — which strips it from every API response and
+ *   from every other reader. This is its one read.
  *
  * ## Why every refusal below is a success and not an error
  *
@@ -61,14 +61,14 @@ import type { Gesture, Sponsorship, User } from "@/payload-types";
  *
  * ## The locale
  *
- * A parameter, carried from whoever queued the message. The address change
- * has a real answer — the locale of the form the account holder just
- * submitted. **The re-edit invitation does not: a `sponsorships` row records
- * no language**, so the plan's "renders every message in the recipient's
- * locale" is only half-answerable today. `hooks/queueReEditEmail.ts` passes
- * the site default and says why reading the administrator's own session
- * instead would be worse: that is the language of the person clicking the
- * button, not of the sponsor reading the mail.
+ * A parameter, carried from whoever queued the message. The address change has
+ * a real answer — the locale of the form the account holder just submitted.
+ * **The re-edit invitation does not: a `sponsorships` row records no
+ * language**, so "every message in the recipient's locale" is only
+ * half-answerable today. `hooks/queueReEditEmail.ts` passes the site default
+ * and says why reading the administrator's own session instead would be worse:
+ * that is the language of the person clicking the button, not of the sponsor
+ * reading the mail.
  */
 
 /**
@@ -186,8 +186,8 @@ async function sendEmailChange(
  * `showHiddenFields: true` is the whole point of this function. Payload
  * deletes a `hidden` field in the `afterRead` field pass unless the caller
  * asks for it (`payload/dist/fields/hooks/afterRead/promise.js`), which is
- * what has kept `reEditToken` out of every response since Stage 5 — including
- * out of the reach of anything that could deliver it.
+ * what keeps `reEditToken` out of every response — and out of the reach of
+ * anything else that could deliver it.
  */
 async function sendReEditInvitation(
   payload: Payload,
@@ -305,15 +305,12 @@ async function gestureName(
 /**
  * The renewal reminder, about thirty days before the term ends.
  *
- * ## Review Focus 3: never twice, and never dropped
+ * ## Never twice, and never dropped
  *
- * `renewalReminderSentAt` has existed since Stage 1 and nothing has ever
- * written it. **This is the write, and it happens here rather than in the
- * sweep that queued the message** — which is the one place this port departs
- * from the shipped `startRenewalReminderCronJob`, where the mark is made
- * immediately after the enqueue (`apps/server/src/cron.ts`).
+ * **`renewalReminderSentAt` is written here, rather than in the sweep that
+ * queued the message.**
  *
- * The reason is the other half of Review Focus 3. A quota refusal must defer
+ * The reason is the "never dropped" half. A quota refusal must defer
  * rather than drop: `E_DAILY_LIMIT_EXCEEDED` says nothing about this
  * sponsorship, and `jobs/index.ts` defers the job so it is tried again with a
  * backoff. Stamping at queue time would mean the deferral it is *supposed* to

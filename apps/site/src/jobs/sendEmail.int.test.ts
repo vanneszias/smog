@@ -49,13 +49,13 @@ interface SentMessage {
  * The `send-email` task, driven through Payload's own queue against a real
  * database, with the binding replaced by an outbox.
  *
- * **What is real here and what is not.** The queue is real: the rows, the
- * retry counting, the backoff and the cancellation are Payload's, and the
- * distinction between "deferred" and "given up on" is read off the job row
- * rather than off a counter this file keeps. `payload.sendEmail` is replaced,
- * so **nothing below is evidence about Cloudflare** — the adapter's own tests
- * cover the translation, and Task 7 is first contact. What these prove is the
- * shape of the protocol and the decisions this application makes about it,
+ * **What is real here and what is not.** The queue is real: the rows, the retry
+ * counting, the backoff and the cancellation are Payload's, and the distinction
+ * between "deferred" and "given up on" is read off the job row rather than off
+ * a counter this file keeps. `payload.sendEmail` is replaced, so **nothing
+ * below is evidence about Cloudflare** — the adapter's own tests cover the
+ * translation, and a deployed environment is first contact. What these prove is
+ * the shape of the protocol and the decisions this application makes about it,
  * which is the same standing as every other provider in this project.
  *
  * The queue is shared state. `.wrangler/state/vitest` is persisted, so jobs
@@ -137,7 +137,7 @@ describe("the send-email task", () => {
   /**
    * Every `send-email` job still in the queue, newest first.
    *
-   * Filtered by task since Task 5 put the other three on a clock: the tick
+   * Filtered by task since the other three are on a clock: the tick
    * driven through `GET /api/jobs/run` below now evaluates the schedules
    * first, so `payload-jobs` also holds one pending row per scheduled task,
    * waiting for its own next occurrence. Those are not this file's subject,
@@ -299,11 +299,10 @@ describe("the send-email task", () => {
 
   it("sends the re-edit link to the sponsor", async () => {
     /*
-     * Stage 5 minted this token, stored it `hidden: true` and left it there:
-     * nothing in the application could read it back out, so no sponsor has
-     * ever been able to be sent one. This is that delivery, end to end — an
-     * administrator moves the status, and what comes out of the queue is a
-     * link that resolves to the sponsorship it was minted for.
+     * The token is minted and stored `hidden: true`, and the mail job is the
+     * only thing that reads it back out. This is that delivery, end to end — an
+     * administrator moves the status, and what comes out of the queue is a link
+     * that resolves to the sponsorship it was minted for.
      */
     const id = await seedSponsorship("invite");
 
@@ -363,11 +362,10 @@ describe("the send-email task", () => {
 
   it("retries a quota refusal", async () => {
     /*
-     * Review Focus 4, the half that must wait. A quota refusal says nothing
-     * about the recipient, so the job is deferred with a backoff and tried
-     * again — and the assertion is on the job row rather than on a retry
-     * happening, because "still runnable, later" is the state that makes the
-     * retry inevitable.
+     * The half that must wait. A quota refusal says nothing about the
+     * recipient, so the job is deferred with a backoff and tried again — and
+     * the assertion is on the job row rather than on a retry happening, because
+     * "still runnable, later" is the state that makes the retry inevitable.
      */
     const id = await seedSponsorship("quota");
 

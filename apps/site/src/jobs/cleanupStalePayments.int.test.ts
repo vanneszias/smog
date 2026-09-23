@@ -25,13 +25,12 @@ const LATER = new Date(Date.now() + 25 * HOUR);
 /**
  * `cleanup-stale-payments`, against a real database.
  *
- * **The gap this closes was recorded as live at Stage 5's exit**: a checkout
- * whose Mollie call failed sits in `pending_payment` for ever, and
- * `lib/sponsorSelection.ts` refuses to sell that gesture to anybody else. So
- * every assertion about a cancellation is paired with one about the gesture,
- * through `resolveSponsorSelection` — the same function the wizard's first
- * screen and its checkout both ask — because "the status changed" is not what
- * anybody wanted from this job.
+ * **The gap this closes**: a checkout whose Mollie call failed sits in
+ * `pending_payment` for ever, and `lib/sponsorSelection.ts` refuses to sell
+ * that gesture to anybody else. So every assertion about a cancellation is
+ * paired with one about the gesture, through `resolveSponsorSelection` — the
+ * same function the wizard's first screen and its checkout both ask — because
+ * "the status changed" is not what anybody wanted from this job.
  *
  * **The window is moved rather than the rows.** `createdAt` is Payload's own
  * column and a fixture cannot honestly backdate it, so the tests pass a `now`
@@ -220,9 +219,9 @@ describe("cleaning up abandoned checkouts", () => {
 
   it("leaves one that has a molliePaymentId alone", async () => {
     /*
-     * Review Focus 5. A row with a payment id is a checkout in flight at
-     * Mollie; the webhook may still arrive. Cancelling it takes money for a
-     * sponsorship the sponsor will never get.
+     * A row with a payment id is a checkout in flight at Mollie; the webhook
+     * may still arrive. Cancelling it takes money for a sponsorship the sponsor
+     * will never get.
      */
     const { gesture, id } = await seedCheckout("inflight", {
       molliePaymentId: `tr_stale_${RUN.slice(0, 8)}`,
@@ -338,10 +337,10 @@ describe("cleaning up abandoned checkouts", () => {
 
   it("does not cancel a row the webhook advanced mid-sweep", async () => {
     /*
-     * Review Focus 5's sharp edge. The candidate query answers "abandoned",
-     * and then — before the write — Mollie's webhook lands and moves the row
-     * into the approval queue. A job that trusted the document it was holding
-     * would cancel a sponsorship somebody had just paid for.
+     * The sharp edge. The candidate query answers "abandoned", and then —
+     * before the write — Mollie's webhook lands and moves the row into the
+     * approval queue. A job that trusted the document it was holding would
+     * cancel a sponsorship somebody had just paid for.
      *
      * The webhook is simulated by advancing the row from inside the candidate
      * query itself, which is the exact window: the result is already decided,

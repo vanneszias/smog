@@ -6,11 +6,11 @@ import type { Sponsorship } from "@/payload-types";
  * Cancels a checkout nobody ever paid for, so the gesture it reserved can be
  * sold again.
  *
- * Stage 7 owns the scheduler. **This module owns the operation**, on the
- * precedent `jobs/expireSponsorships.ts` set, so scheduling it is wiring
+ * `jobs/index.ts` owns the scheduler. **This module owns the operation**, on
+ * the precedent `jobs/expireSponsorships.ts` set, so scheduling it is wiring
  * rather than design.
  *
- * ## The gap this closes, recorded as live at Stage 5's exit
+ * ## The gap this closes
  *
  * `lib/sponsorSelection.ts` refuses to sell a gesture that has a
  * `pending_payment` sponsorship against it — deliberately, because two
@@ -22,7 +22,7 @@ import type { Sponsorship } from "@/payload-types";
  * asserts a cancellation asserts the gesture through `resolveSponsorSelection`
  * as well, because "the status changed" is not the thing anybody wanted.
  *
- * ## Review Focus 5: not a checkout the sponsor is still paying for
+ * ## Not a checkout the sponsor is still paying for
  *
  * Two different rows look alike from a distance, and only one of them may be
  * cancelled:
@@ -38,7 +38,7 @@ import type { Sponsorship } from "@/payload-types";
  *
  * **The guard is applied to a re-read of the row, immediately before the
  * write, and not to the row the candidate query returned.** That is the same
- * ruling `expireSponsorships.ts` records for `releaseAsset`: a decision made
+ * rule `expireSponsorships.ts` records for `releaseAsset`: a decision made
  * from a document a caller is holding is a decision about the past. The
  * webhook can land between the query and the write, and re-reading is what
  * makes "the payment arrived mid-sweep" a decision rather than a race.
@@ -86,11 +86,11 @@ const LEASE_MS = 15 * 60 * 1000;
 /**
  * How old a `pending_payment` row must be before it is abandoned.
  *
- * Twenty-four hours, from the spec. It is not a guess about Mollie's own
- * expiry — Mollie's is shorter, and a payment that expires there arrives here
- * as a webhook — it is a bound on how long a *failed* checkout may hold a
- * gesture. Long enough that no sponsor is interrupted mid-purchase by any
- * margin, short enough that a gesture is not off the market for a week.
+ * Twenty-four hours. It is not a guess about Mollie's own expiry — Mollie's is
+ * shorter, and a payment that expires there arrives here as a webhook — it is a
+ * bound on how long a *failed* checkout may hold a gesture. Long enough that no
+ * sponsor is interrupted mid-purchase by any margin, short enough that a
+ * gesture is not off the market for a week.
  */
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -105,8 +105,8 @@ const WINDOW_MS = 24 * 60 * 60 * 1000;
  * Oldest first, which is the opposite of that job's sweeps and for the
  * opposite reason: the row this one is looking for has been stuck the
  * longest, and a backlog larger than one page must not leave the oldest
- * abandoned checkout behind every newer one — the starvation Stage 6 Task 5
- * flagged, in the one ordering where it is trivial to avoid.
+ * abandoned checkout behind every newer one — the starvation the readiness
+ * sweep once had, in the one ordering where it is trivial to avoid.
  */
 const PAGE = 200;
 
@@ -226,8 +226,8 @@ export async function cleanupStalePayments(
     }
 
     // Asked of the database, not of `candidate`: the webhook may have advanced
-    // this row since the query above, and the whole of Review Focus 5 is that
-    // a sponsorship with a payment behind it is not this job's to cancel.
+    // this row since the query above, and the whole point is that a
+    // sponsorship with a payment behind it is not this job's to cancel.
     if (!isAbandoned(await reread(payload, candidate.id))) {
       report.skipped += 1;
       await releaseClaim(payload, {
