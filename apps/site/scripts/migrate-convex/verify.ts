@@ -31,8 +31,8 @@
  *   concepts document therefore needs no concepts check of its own to be
  *   caught — which matters, because an editor may clear concepts.
  * - **Mismatch** (fails) — a planned document that is absent; a document
- *   created by this run whose name, categories, concepts or active flag
- *   differ from the plan (nobody else has had the chance to change it, so
+ *   created by this run whose name, categories, concepts, active flag,
+ *   playbackId, info or createdAt differ from the plan (nobody else has had the chance to change it, so
  *   the difference is the import's own); a count that disagrees.
  *
  * Each incomplete entry carries a remedy. The default is "delete and

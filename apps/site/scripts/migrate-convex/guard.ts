@@ -221,7 +221,10 @@ function insideAnyGitRepository(directory: string): boolean {
     return true;
   } catch (error) {
     const { status, stderr } = error as { status?: unknown; stderr?: unknown };
-    if (status === 128 && /not a git repository/.test(String(stderr ?? ""))) {
+    if (
+      status === 128 &&
+      /^fatal: not a git repository/.test(String(stderr ?? ""))
+    ) {
       return false;
     }
     refuse(

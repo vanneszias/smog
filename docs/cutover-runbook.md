@@ -188,9 +188,18 @@ Under "## Verification":
   Treat it as a failure: stop and investigate before going further.
 
 **Never use the search collection's Reindex button on D1.** The search
-plugin's reindex deletes every search entry in one unbounded statement,
-which exceeds D1's cap of 100 bound parameters and leaves the search index
-empty. Re-save the individual gesture instead.
+plugin's reindex first deletes every search entry; the statement that
+follows binds one parameter per deleted id, exceeds D1's cap of 100, and
+the plugin swallows that error and skips the rebuild — leaving the search
+index empty. Re-save the individual gesture instead.
+
+The "delete and rerun" remedy for a gesture with no search entry rests on
+that entry being proof nobody has saved it since the import. If the search
+index was ever emptied — a Reindex, or search entries deleted in the admin
+— that proof is gone. This cannot happen on production before cutover
+(nothing is there yet), but on **staging**, before deleting a gesture
+flagged this way on a rerun, check with the editors that nobody has
+changed it.
 
 **A rerun is always safe.** The importer looks every document up by
 `legacyId` first and only creates what is missing; it never updates or
@@ -210,7 +219,10 @@ way to converge — not something to avoid.
 - **Mismatches**: stop and investigate before rerunning blind. A count
   disagreement or a missing planned document on an otherwise-clean run
   usually means the target was not what the banner said, or something
-  else wrote to it concurrently.
+  else wrote to it concurrently. The one expected exception: gestures
+  missing because their category is listed under "Failed" (a category left
+  without its Dutch name) are resolved by that category's remedy — delete
+  the category and rerun — not investigated separately.
 - **Follow the Remedy column, including for documents from an earlier
   run.** A document a previous run left half-written is pre-existing on
   the rerun, and verification still reports it under "Incomplete" with

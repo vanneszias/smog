@@ -240,7 +240,7 @@ function verificationSection(verification: VerifyResult): string[] {
     out.push("None.", "");
   } else {
     out.push(
-      "Each of these is in a state no legal save produces — a create that stopped part-way. The Remedy column says what to do. **delete and rerun**: the importer never updates a document, so delete it in the admin by the id given here and rerun; the rerun creates it whole. **re-save the gesture**: the gesture existed before this run and only its search entries are wrong (where it had none, every field was also checked against the export and matches); saving it in the admin rebuilds its one entry and keeps any editor's work. Never use the search collection's Reindex button on D1: it deletes every search entry in one statement that exceeds D1's 100-parameter cap, and leaves the index empty.",
+      "Each of these is in a state no legal save produces — a create that stopped part-way. The Remedy column says what to do. **delete and rerun**: the importer never updates a document, so delete it in the admin by the id given here and rerun; the rerun creates it whole. **re-save the gesture**: the gesture existed before this run and only its search entries are wrong (where it had none, every field was also checked against the export and matches); saving it in the admin rebuilds its one entry and keeps any editor's work. Never use the search collection's Reindex button on D1: it deletes every search entry, the follow-up statement exceeds D1's 100-parameter cap, and the plugin skips the rebuild, leaving the index empty.",
       ""
     );
     out.push(
