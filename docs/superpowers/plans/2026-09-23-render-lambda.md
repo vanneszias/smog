@@ -253,3 +253,14 @@ Tests:
 ## Exit
 
 (Filled in when the branch review closes.)
+
+Notes recorded by the final-review fix wave, for the Exit:
+
+- **Renders are submitted after payment, not at checkout** (user decision,
+  2026-09-23). The Goal above says "at checkout"; the shipped code submits
+  from the Mollie webhook's `pending_payment → pending_approval` move, off
+  the request path (`apps/site/src/lib/paidRenders.ts`).
+- **Package-name collision.** `apps/remotion`'s workspace is named
+  `remotion`, the same as the `remotion` npm package; this plan's app is
+  `render`. `bun -F remotion …` targets the legacy app. No code change;
+  noted in `apps/render/README.md`. It ends when `apps/remotion` is deleted.

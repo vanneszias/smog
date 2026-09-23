@@ -9,7 +9,8 @@
     "test": "vitest run",
     "dev:studio": "remotion studio",
     "deploy:function": "remotion lambda functions deploy --region=eu-central-1 --memory=3009 --timeout=240 --disk=2048 --yes",
-    "deploy:site": "remotion lambda sites create src/index.ts --site-name=smog-render --region=eu-central-1"
+    "deploy:site:staging": "remotion lambda sites create src/index.ts --site-name=smog-render-staging --region=eu-central-1",
+    "deploy:site:production": "remotion lambda sites create src/index.ts --site-name=smog-render-production --region=eu-central-1"
   },
   "dependencies": {
     "@remotion/cli": "4.0.484",

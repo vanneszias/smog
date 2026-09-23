@@ -44,7 +44,7 @@ const FUNCTION_NAME = "remotion-render-4-0-484-mem2048mb-disk2048mb-120sec";
 const FUNCTION_ARN =
   "arn:aws:lambda:eu-central-1:123456789012:function:remotion-render-x";
 const SERVE_URL =
-  "https://remotionlambda-eucentral1-abcdef1234.s3.eu-central-1.amazonaws.com/sites/smog-render/index.html";
+  "https://remotionlambda-eucentral1-abcdef1234.s3.eu-central-1.amazonaws.com/sites/smog-render-staging/index.html";
 
 const INPUT_PROPS: SponsoredVideoInputProps = {
   logoUrl: "https://smog.example/media/logo.png",

@@ -136,29 +136,88 @@ answer next to each item when it is made.
 7. **Video rendering — built; the deploy is what is left.** The submit
    transport, the callback and the six-hour stalled-render sweep are done and
    tested against Remotion's own fixtures (no AWS account was available to
-   that work). Either the operator does the deploy below before the window,
-   or launching without composed sponsor videos is an explicit decision —
-   production holds no sponsorships today, so nothing is lost by deferring it.
+   that work). **A render is submitted once the sponsorship is paid**: the
+   Mollie webhook's move from `pending_payment` to `pending_approval` asks for
+   it, off the request path, never checkout (user decision, 2026-09-23). The
+   composite exists only for paid sponsorships, and an administrator reviews
+   it in the approval queue as before. Either the operator does the deploy
+   below before the window, or launching without composed sponsor videos is
+   an explicit decision — production holds no sponsorships today, so nothing
+   is lost by deferring it.
 
-   **Setup order, once:**
-   1. Create the AWS account that pays for rendering, and the IAM role and
-      user in it (`apps/render/README.md`, "One-time AWS setup").
+   **Setup order, once — staging first, production only after staging has
+   rendered:**
+   1. Create the AWS account that pays for rendering, the IAM role, and **two
+      IAM users** (`apps/render/README.md`, "One-time AWS setup"): the
+      **deploy** user from `npx remotion lambda policies user`, whose key
+      stays on the operator's machine for `deploy:function` /
+      `deploy:site:*` and is never given to the Worker; and a **Worker**
+      user with only `lambda:InvokeFunction` on
+      `arn:aws:lambda:eu-central-1:<account-id>:function:remotion-render-*`.
+      The Worker needs nothing else because the start routine runs as the
+      Lambda role and the props travel inline, so it touches no S3 and no
+      IAM; a leaked Worker key can only start renders. Check the account's
+      Lambda concurrency quota too (`npx remotion lambda quotas`): a new
+      account's may need raising before a render can run.
    2. From `apps/render`: `bun -F render deploy:function`, then
-      `bun -F render deploy:site`. Both run in **`eu-central-1`**, always.
-   3. Put the printed function name and serve URL into `REMOTION_FUNCTION_NAME`
-      and `REMOTION_SERVE_URL`, in **both environments'** `vars` in
+      `bun -F render deploy:site:staging` (`--site-name=smog-render-staging`).
+      Both run in **`eu-central-1`**, always. The function is **shared** by
+      both environments: there is one per Remotion version, and redeploying
+      it (a version bump) changes it for staging and production at once. The
+      sites are per environment.
+   3. **Staging's vars**: the printed function name as
+      `REMOTION_FUNCTION_NAME` and staging's serve URL as
+      `REMOTION_SERVE_URL`, in `env.staging.vars` in
       `apps/site/wrangler.jsonc`, in one reviewed commit
-      (`docs/deployment-checklist.md` §2). `REMOTION_REGION` is already there.
-   4. Set the secrets with `wrangler secret put`, per environment:
-      `REMOTION_AWS_ACCESS_KEY_ID`, `REMOTION_AWS_SECRET_ACCESS_KEY` (the same
-      IAM user's access key), `RENDER_CALLBACK_SECRET`, and the Mux signing
-      key (`MUX_SIGNING_KEY_ID`/`MUX_SIGNING_KEY_PRIVATE`) if not already set
-      (`docs/deployment-checklist.md` §1).
-   5. **One real staging checkout before the window**: buy a sponsorship on
-      staging, and confirm the render lands in `/admin` (`renders` collection)
-      with a Mux playback id attached to the sponsorship's preview.
+      (`docs/deployment-checklist.md` §2). `REMOTION_REGION` is already
+      there.
+   4. **Staging's secrets** with `wrangler secret put --env=staging`:
+      `REMOTION_AWS_ACCESS_KEY_ID` and `REMOTION_AWS_SECRET_ACCESS_KEY` (the
+      **Worker** user's key, never the deploy user's),
+      `RENDER_CALLBACK_SECRET`, and the Mux signing key
+      (`MUX_SIGNING_KEY_ID`/`MUX_SIGNING_KEY_PRIVATE`) if not already set
+      (`docs/deployment-checklist.md` §1). `MUX_SOURCE_SERVICE_TOKEN` is
+      **not needed for Lambda renders**: nothing on this path calls
+      `/api/mux/source`, because the Worker mints the signed source URL
+      itself. It still guards that endpoint against enumerating playback ids
+      if anything ever calls it; set it only then.
+   5. **Launch-blocking: one real staging render must reach `ready`.** Pay
+      for a sponsorship on staging (Mollie test mode), then confirm in
+      `/admin` that its `renders` row reaches **`ready`** and the
+      sponsorship's preview carries a Mux playback id. A render that ends
+      `failed`, or never leaves `queued`, blocks launch with rendering on.
+      The likeliest cause is the **source video URL**:
+      `apps/site/src/lib/mux.ts` renders from
+      `https://stream.mux.com/<playbackId>/high.mp4?token=…`, and that file
+      exists only when the gesture's asset has MP4 static renditions — which
+      the legacy uploader (`packages/api/src/lib/mux.ts`) never enabled. If
+      the render fails fetching its source (the failed render's reason in
+      `/admin`, or the function's CloudWatch log), the two known fixes, both
+      code changes, are:
+      - (a) add a `highest` static rendition to every gesture asset through
+        Mux's static renditions API, and render from that rendition's URL;
+        or
+      - (b) render from a Mux **master access** URL instead, which is what
+        the legacy renderer did (`apps/remotion/src/server/mux.ts`).
 
-   **What to watch for in the first renders, not blockers:**
+      See Mux's documentation on static renditions and on master access for
+      the current API. Note too that the `token` on the source URL is not
+      checked: gesture playback ids are `public`, and Mux serves a public id
+      without a token, so the expiry it carries is minted but unenforced.
+   6. **Then production**: `bun -F render deploy:site:production`
+      (`--site-name=smog-render-production`), production's vars in
+      `env.production.vars` (the same `REMOTION_FUNCTION_NAME`, production's
+      own `REMOTION_SERVE_URL`) in a reviewed commit, and production's
+      secrets as in step 4 with `--env=production` — its own
+      `RENDER_CALLBACK_SECRET`, and the same Worker user's key or a second
+      Worker user with the same policy.
+
+   Troubleshooting (the `wrangler tail` lines to expect, the CloudWatch log
+   group, and what to do with a `failed` render — it is not re-submitted
+   automatically) is in `apps/render/README.md`, "When a render goes wrong".
+
+   **What to watch for in the first renders, not blockers** (each has a
+   one-line pointer beside its row in `docs/deployment-checklist.md` §1–§2):
    - **Callback length.** Remotion sets the webhook's `Content-Length` from
      `JSON.stringify(payload).length`, which counts characters, not bytes. A
      webhook body with non-ASCII text (an error message, say) may be rejected
