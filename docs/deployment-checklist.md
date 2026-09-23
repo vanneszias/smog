@@ -21,7 +21,8 @@ resolves the pinned wrangler 4.136 and finds `wrangler.jsonc`.
    reads the value from an interactive, non-echoing prompt (or from a pipe,
    e.g. `openssl rand -hex 32 | bunx wrangler secret put …`, so the value is
    never displayed). Keep any value a second system also needs (e.g.
-   `RENDER_CALLBACK_SECRET`) in a password manager, not a file in the repo.
+   `RENDER_CALLBACK_SECRET`), or an operator needs again (`JOBS_RUN_TOKEN`),
+   in a password manager, not a file in the repo.
 3. **Do not put a secret in `vars`.** `vars` are committed and visible to
    anyone with repo access; `wrangler.jsonc` says so for the OpenPanel secret.
 4. **Anything not already in `wrangler.jsonc` must be set with
@@ -59,7 +60,7 @@ no bindings by design. Verify afterwards with
 | `RENDER_CALLBACK_SECRET` | secret | both (once rendering is live) | `bunx wrangler secret put RENDER_CALLBACK_SECRET --env=<env>` (same value must be configured on the Remotion Lambda side — generate, store in a password manager, paste at both prompts) | Fails closed: `POST /render/callback` answers **401** to every callback, so composed sponsor videos never get attached. HMAC over the body; header/scheme pinned in `src/lib/renderSignature.ts`. |
 | `OPENPANEL_CLIENT_ID` | secret | both (per-env OpenPanel project) | `bunx wrangler secret put OPENPANEL_CLIENT_ID --env=<env>` | Analytics silently off: `POST /api/analytics/track` still answers 202, logs a warning, and **drops the event**. Needs both id and secret. |
 | `OPENPANEL_CLIENT_SECRET` | secret | both | `bunx wrangler secret put OPENPANEL_CLIENT_SECRET --env=<env>` | Same as `OPENPANEL_CLIENT_ID`. Must never be a `vars` entry. |
-| `JOBS_RUN_TOKEN` | secret | both | `openssl rand -hex 32 \| bunx wrangler secret put JOBS_RUN_TOKEN --env=<env>` | The hourly cron (`wrangler.jsonc`'s `triggers.crons`, `worker.ts`'s `scheduled()`) calls this endpoint every hour on its own — an operator no longer has to. **A missing or wrong token does not show up as an error.** `endpoints/jobs.ts` answers `200 {"status":"ok"}` for a missing/mismatched token exactly the same as for a real run — `acknowledged()` is not an oracle for the token, by design — so the only visible symptom is `[jobs] A run was requested without a usable token; nothing was run` in the Worker log (`bunx wrangler tail --env=<env>`), and queued jobs quietly never execute: no email is ever sent, sponsorships never expire, stale payments/orphaned media/rate-limit rows are never cleaned. Check that warning is absent after setting the secret. **Positive confirmation, not just the absence of a warning:** keep `bunx wrangler tail --env=<env>` open across the next `:00` and expect to see `[jobs] Ran N jobs from the default queue`; or, while tailing, `curl --max-time 600 -H "Authorization: Bearer <token>" https://<origin>/api/jobs/run` (it answers `200` either way, so read the log line, not the status; `--max-time` because an HTTP run has no wall-clock limit while the client stays connected, and the stranded-job recovery assumes every run ends within thirty minutes). A tick that fails now also shows as **failed** in that Worker's **Cron Triggers → Past Events** table in the dashboard, not as a success — and with `observability.enabled` on (`wrangler.jsonc`), these `[cron]`/`[jobs]` lines persist in **Workers Logs** too, so they're readable after the fact and not only during a live tail. |
+| `JOBS_RUN_TOKEN` | secret | both | Generate it in the password manager and save it there first (64 letters and digits) — an operator needs it again for a manual run — then `bunx wrangler secret put JOBS_RUN_TOKEN --env=<env>` and paste it at the prompt. | The hourly cron (`wrangler.jsonc`'s `triggers.crons`, `worker.ts`'s `scheduled()`) calls this endpoint every hour on its own — an operator no longer has to. **A missing or wrong token does not show up as an error.** `endpoints/jobs.ts` answers `200 {"status":"ok"}` for a missing/mismatched token exactly the same as for a real run — `acknowledged()` is not an oracle for the token, by design — so the only visible symptom is `[jobs] A run was requested without a usable token; nothing was run` in the Worker log (`bunx wrangler tail --env=<env>`), and queued jobs quietly never execute: no email is ever sent, sponsorships never expire, stale payments/orphaned media/rate-limit rows are never cleaned. Check that warning is absent after setting the secret. **Positive confirmation, not just the absence of a warning:** keep `bunx wrangler tail --env=<env>` open across the next `:00` and expect to see `[jobs] Ran N jobs from the default queue`; or, while tailing, `read -rs JOBS_RUN_TOKEN` (paste it from the password manager; never type it into a command) and then `curl --max-time 600 -H "Authorization: Bearer $JOBS_RUN_TOKEN" https://<origin>/api/jobs/run` (it answers `200` either way, so read the log line, not the status; `--max-time` because an HTTP run has no wall-clock limit while the client stays connected, and the stranded-job recovery assumes every run ends within thirty minutes). A tick that fails now also shows as **failed** in that Worker's **Cron Triggers → Past Events** table in the dashboard, not as a success — and with `observability.enabled` on (`wrangler.jsonc`), these `[cron]`/`[jobs]` lines persist in **Workers Logs** too, so they're readable after the fact and not only during a live tail. |
 
 ## 2. Worker vars (plain, non-secret)
 
@@ -219,7 +220,7 @@ steps 4–9 with `production`.
    `PAYLOAD_SECRET` is set.
    ```bash
    openssl rand -hex 32 | bunx wrangler secret put PAYLOAD_SECRET --env=staging
-   openssl rand -hex 32 | bunx wrangler secret put JOBS_RUN_TOKEN --env=staging
+   bunx wrangler secret put JOBS_RUN_TOKEN --env=staging            # paste from the password manager (§1)
    bunx wrangler secret put MOLLIE_API_KEY --env=staging
    bunx wrangler secret put OPENPANEL_CLIENT_ID --env=staging
    bunx wrangler secret put OPENPANEL_CLIENT_SECRET --env=staging
@@ -252,8 +253,11 @@ steps 4–9 with `production`.
    view. Then confirm the cron actually ticks, rather than trusting the
    dashboard's "configured" badge: keep `bunx wrangler tail --env=staging`
    open across the next `:00` and expect
-   `[jobs] Ran N jobs from the default queue`; or, while tailing,
-   `curl --max-time 600 -H "Authorization: Bearer <token>" https://<origin>/api/jobs/run`
+   `[jobs] Ran N jobs from the default queue`; or, while tailing:
+   ```bash
+   read -rs JOBS_RUN_TOKEN     # from the password manager
+   curl --max-time 600 -H "Authorization: Bearer $JOBS_RUN_TOKEN" https://<origin>/api/jobs/run
+   ```
    (it answers `200` either way, so read the log line, not the status;
    `--max-time` because an HTTP run has no wall-clock limit while the client
    stays connected, and the recovery below assumes every run ends within

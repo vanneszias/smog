@@ -28,9 +28,11 @@ Read this before scheduling anything; it is what users will notice.
   `users`, `sponsorships`, `user_consents` or `adminLogs` rows, or a
   `gesture_lists` table (`apps/site/scripts/migrate-convex/plan.ts`). The
   2026-09-22 production export had none of those, which is why this is
-  possible at all. **If the fresh export on the day has any, the import stops
-  and the window is aborted** (section 3, step 3): there is no path for
-  accounts, lists or sponsorships from Convex to Payload, by design.
+  possible at all. The old stack can still create them (section 2 says how),
+  so they are counted the day before and again at the freeze. **If the export
+  on the day has any, the window is aborted** (section 3, steps 2 and 4):
+  there is no path for accounts, lists or sponsorships from Convex to
+  Payload, by design.
 - **Favourites** in Convex belong to users that no longer exist (5 rows in the
   rehearsal); they are dropped and counted in the report.
 - **Consent is not imported** (decided 2026-09-22): every visitor sees the
@@ -38,6 +40,10 @@ Read this before scheduling anything; it is what users will notice.
 - **Sign-in changes.** The legacy stack signs in through WorkOS; `apps/site`
   has its own accounts (email and password, optionally Google). Nobody carries
   a session across.
+- **Old deep links break.** If the address stays the same (decision 2), the
+  address itself keeps working, but links into the old web app do not:
+  `/gestures/<id>` carried a Convex id, and the new site does not look those
+  up.
 
 ## 1. Decisions that must be made before a date is set
 
@@ -46,35 +52,69 @@ answer next to each item when it is made.
 
 1. **The Cloudflare API token that was exposed has been rotated**
    (checklist, "Before you start", item 1). Blocks everything below.
-2. **The production address.** Recommended: serve `apps/site` at the legacy
-   address, `app.smog.vlaanderen`, so existing links, bookmarks and the
-   address sponsors know keep working. That needs the `smog.vlaanderen` zone
-   in the same Cloudflare account as the Worker (a Workers custom domain), or a
-   different address chosen instead. Whatever is chosen: add the `routes` /
-   custom-domain entry to `apps/site/wrangler.jsonc` and change
-   `env.production.vars.SITE_ORIGIN` to it **in the same commit** (the
-   checklist's "Open items" says why).
+2. **The production address, and exactly how it switches.** Recommended:
+   serve `apps/site` at the legacy address, `app.smog.vlaanderen`, so the
+   address users and sponsors know keeps working. Record:
+   - **Route type: a Workers custom domain** — a `routes` entry
+     `{ "pattern": "app.smog.vlaanderen", "custom_domain": true }` in
+     `env.production` of `apps/site/wrangler.jsonc`. Deploying it creates the
+     DNS record and certificate, so **the switch is the deploy**. Change
+     `env.production.vars.SITE_ORIGIN` to the address **in the same commit**
+     (the checklist's "Open items" says why), and keep that commit on its own
+     branch, on top of the release tag, until the switch (section 3, step 8):
+     deploying `main` with it switches the address early.
+   - **The zone moves first.** `smog.vlaanderen` must be an active zone in the
+     Worker's Cloudflare account. If it is not, move it **well before the
+     window**: resolvers cache nameservers for up to days, and no record TTL
+     shortens that. Recreate every record in Cloudflare before changing
+     nameservers, **grey-clouded (DNS only)**, with `app` still pointing at
+     the legacy host, so the move itself changes nothing.
+   - **Switch:** deploy that branch (section 3, step 8). Wrangler finds the
+     legacy `app` record and asks to replace it (`You already have DNS
+     records that conflict for these Custom Domains`); yes is the switch.
+   - **Un-switch:** remove the custom domain from the Worker in the
+     Cloudflare dashboard, recreate the legacy `app` record exactly as it was
+     (write down its type, value and proxy status before the window), and
+     revert the route commit so no later deploy adds it back.
 3. **How the mobile app reaches existing users.** `apps/mobile` is currently
    a *different app* from the one in the stores: bundle id and Android package
-   `be.zias.smog.next` versus `be.zias.smog`, scheme `smogmobile` versus
-   `smog`, and no EAS project linked (`apps/mobile/app.json` versus
-   `apps/native/app.json`). Nothing forces an update in either app. Options:
-   - **(Recommended) Ship `apps/mobile` under the existing identity**
-     (`be.zias.smog`, the existing EAS project and owner), with a version above
-     the store's current one (`2.0.2`, iOS build 50, Android versionCode 78).
-     Existing installs then update in place. This is a code change to
-     `apps/mobile/app.json` and must keep the OAuth callback scheme in step
-     with `apps/site/src/endpoints/oauth.ts` (`smogmobile://auth-callback`
-     today), plus a rebuild and store review.
-   - Ship it as a new listing, and use the old app's EAS Update channel
-     (`apps/native/app.json` → `updates.url`) to push a JavaScript update
-     telling users where the new app is, **before** the window.
-   Either way, allow for store review time: the production build must be
-   approved and held for release before the window, not submitted during it.
+   `be.zias.smog.next` versus `be.zias.smog`, slug `smog-mobile` versus
+   `smog`, and no EAS project, owner or update URL (`apps/mobile/app.json`
+   versus `apps/native/app.json`). Nothing forces an update in either app.
+   Options:
+   - **(Recommended) Ship `apps/mobile` under the existing identity**, so
+     existing installs update in place. In `apps/mobile/app.json`: `slug`
+     `"smog"`, `owner` `"smog-and-co"`, `extra.eas.projectId` and
+     `updates.url` as in `apps/native/app.json`, `ios.bundleIdentifier` and
+     `android.package` `be.zias.smog`, `ios.appleTeamId`, a `version` above
+     `2.0.2`, and an explicit `ios.buildNumber` of at least 51 and
+     `android.versionCode` of at least 79. Take the real current numbers from
+     App Store Connect and the Play Console, not from `apps/native/app.json`:
+     production builds auto-increment them. Keep the scheme `smogmobile`;
+     `apps/mobile/src/lib/google.ts:19` and
+     `apps/site/src/endpoints/oauth.ts:76` must stay identical. Then a
+     rebuild and store review.
+   - Ship it as a new listing, and publish an EAS Update to the old app
+     (`apps/native/app.json` → `updates.url`) telling users where the new app
+     is, **before** the window. Its `runtimeVersion` policy is `fingerprint`,
+     so the update reaches 2.0.2 installs only if it is published from the
+     exact tree that built 2.0.2. Find that commit first: the repository's
+     tags stop at `v2.0.1`.
+
+   **The store build carries the final production address** in
+   `EXPO_PUBLIC_API_URL` (checklist §6), because installs keep it for years.
+   Until the switch that address still reaches the legacy host, so store
+   reviewers see the old site or the maintenance page: give them reviewer
+   notes that say so, with demo instructions. (The alternative, a store build
+   against the `workers.dev` address, is reviewable at once but leaves every
+   install on `workers.dev` until another store release.) Either way, allow
+   for store review time: the build must be approved and held for release
+   before the window, not submitted during it.
 4. **Email can actually send.** The Email Service sending domain is onboarded
    and verified, and `EMAIL_FROM_ADDRESS` matches it (checklist, "Launch
-   blockers that are not variables"). Without it no confirmation, email-change
-   or renewal email leaves either environment.
+   blockers that are not variables"). Without it none of the site's three
+   messages — the email-change confirmation, the sponsor re-edit link, the
+   renewal reminder — leaves either environment.
 5. **Analytics** — OpenPanel projects exist for production, or it is accepted
    that analytics is off at launch (checklist §1, §6).
 6. **The privacy policy** EN/FR drafts have been professionally translated and
@@ -85,119 +125,261 @@ answer next to each item when it is made.
 
 ## 2. Readiness, the week before
 
-Every item is done on **staging** first, and the result written down.
+Every item that can be is done on **staging** first, and the result written
+down.
 
 - **Staging rehearsal of the whole import** with a fresh export, exactly as
-  in **Import the catalogue → Staging rehearsal**, including a rerun.
-- **Production deployed and idle.** `deploy:database` then `deploy:app` for
-  production (checklist, "First deploy, in order"), with every secret set.
-  Serving at its `workers.dev` address with an empty catalogue harms nobody,
-  and it moves the slow, error-prone part out of the window.
+  in **Import the catalogue → Staging rehearsal**, including a rerun. Time the
+  apply: the window's length depends on it.
+- **Production deployed and idle**, from the release tag (checklist, "First
+  deploy, in order"), with every secret in the checklist's step 4 set — the
+  rendering secrets only once rendering goes live:
+
+  ```bash
+  CLOUDFLARE_ENV=production bun -F site deploy:database
+  CLOUDFLARE_ENV=production bun -F site deploy:app
+  ```
+
+  Serving at its `workers.dev` address
+  (`https://smog-site-production.vanneszias.workers.dev`) with an empty
+  catalogue harms nobody, and it moves the slow, error-prone part out of the
+  window.
+- **The first admin, immediately after that first deploy.** With no users,
+  `/admin` shows Payload's create-first-user screen, and anyone who finds it
+  can use it until a user exists. Create the operator's account there with
+  Role set to Admin. Create the editors' accounts (also Admin: it is the only
+  role that opens `/admin`) before go-live.
+- **No Convex deploy to production** from the rehearsal until the window.
+  `packages/convex/convex/schema.ts` defines `gesture_lists`, which production
+  has never had; a deploy creates it and the importer refuses the export.
+- **The refusal gate, the day before.** In the Convex production dashboard,
+  read **row counts only** — never open rows — for `users`, `sponsorships`,
+  `user_consents` and `adminLogs`, and confirm `gesture_lists` does not exist.
+  Any non-zero count, or the table, aborts the window, so decide what to do
+  now, not on the day. The old stack still writes them: every edit in the
+  legacy admin writes `adminLogs`; the old app writes `users` for guests and
+  on sign-in; the legacy sponsor form writes `sponsorships` before checkout.
+  The same check runs again right after the freeze.
+- **End legacy sponsor checkout at least a day before**: announce it, and
+  stop it if you can (the repository has no switch for it). A sponsor caught
+  mid-checkout by the freeze is stranded: the maintenance page 404s Mollie's
+  success redirect (`/sponsors/success`) and errors its webhook POST
+  (`/webhooks/mollie`), and a retry that reaches the new Worker after the
+  switch is answered `200` and never recorded
+  (`apps/site/src/endpoints/mollie.ts`).
+- **The Convex export works on a paused deployment.** The window exports
+  after pausing; prove it on a paused non-production deployment (pausing
+  production would take the old app down). The production deploy key comes
+  from the Convex dashboard; keep it in the password manager.
+- **The maintenance image is built the day before**, on the legacy host from
+  `/opt/smog`: `docker compose -f maintenance/compose.yml build`. A build in
+  the window is time with the site down.
 - **The cron ticks on production**: `[jobs] Ran N jobs from the default queue`
-  in the Worker log across an hour boundary (checklist, step 8). Any manual
-  call to `/api/jobs/run` uses `curl --max-time 600`.
+  in the Worker log across an hour boundary (checklist, step 8).
 - **Email**: one real message received from production (for example an
-  email-change confirmation to an operator's own address).
+  email-change confirmation to an operator's own address). Messages are
+  queued and sent by the next job run, at the next `:00` tick; to send it
+  sooner, run the queue by hand:
+
+  ```bash
+  read -rs JOBS_RUN_TOKEN     # from the password manager
+  curl --max-time 600 -H "Authorization: Bearer $JOBS_RUN_TOKEN" \
+    https://smog-site-production.vanneszias.workers.dev/api/jobs/run
+  ```
+
+  The token was stored in the password manager when it was set (checklist,
+  step 4). If it was not, set a new one that way now.
 - **Payments**: one full test-mode checkout on staging with a `test_` key,
-  including the webhook turning it `paid`. Production's `live_` key is set but
-  not exercised until after the window.
+  including the webhook moving the sponsorship to `pending_approval` (Mollie
+  shows the payment `paid`). Production's `live_` key is set but not
+  exercised until after the window.
 - **Google sign-in**: the redirect URI for the **final** production address
   (`https://<address>/auth/google/callback`) is registered in Google Cloud,
   in addition to the `workers.dev` one.
-- **Admin checks on production**: an admin account exists; the search
-  collection's Reindex button answers with an error (it must — it empties the
-  index on D1; see **Reading the report**); deleting a single search entry by
-  hand is refused.
-- **Device checks on the production mobile build** (a TestFlight / internal
-  track build with `EXPO_PUBLIC_API_URL` set to production — checklist §6):
-  the consent banner lays out correctly on a small and a large phone and does
-  not sit under a toast; sign-in survives an app restart; after **deleting and
-  reinstalling** the app no previous session is silently reused from the
-  keychain (iOS keeps keychain items across reinstalls).
-- **Lower the DNS TTL** of the production address to 300 seconds at least a
-  day before, so the switch and any rollback propagate in minutes.
-- **Announce the window** to editors (they must stop editing in the old admin
-  at its start; anything edited after the freeze is lost) and, if there is a
-  channel for it, to users.
+- **Admin checks**: on production, the search collection's Reindex button
+  answers with an error (it must — it empties the index on D1; see **Reading
+  the report**). Deleting a single search entry by hand is refused — check
+  that on staging, deployed from the same commit: production has no entries
+  yet.
+- **Device checks on an internal / TestFlight build** with
+  `EXPO_PUBLIC_API_URL` set to the production `workers.dev` address
+  (checklist §6) — the store build's final address does not reach the new
+  stack until the switch: the consent banner lays out correctly on a small
+  and a large phone and does not sit under a toast; sign-in survives an app
+  restart; after **deleting and reinstalling** the app no previous session is
+  silently reused from the keychain (iOS keeps keychain items across
+  reinstalls); and, if decision 3 keeps the existing identity, it installs
+  as an **upgrade over the store's 2.0.2** and starts cleanly.
+- **Lower the TTL of the `app` record** to 300 seconds at least a day before,
+  so the switch and any un-switch propagate in minutes. This is the record's
+  TTL; it does nothing for a nameserver change (decision 2).
+- **Set the window's length** from the staging apply's measured time, plus
+  one `deploy:app` build, plus up to 60 minutes if the email check waits for
+  the `:00` tick.
+- **Announce the window** to editors — they stop editing in the old admin
+  before the day-before check, since each edit writes `adminLogs` — and, if
+  there is a channel for it, to users.
 
 ## 3. The window, in order
 
-Allow two hours. Roles: one operator at the keyboard, one person checking.
-Stop at any step whose check fails and go to section 4.
+Roles: one operator at the keyboard, one person checking. Stop at any step
+whose check fails and go to section 4. Steps 0–6 test everything that can be
+tested against production's `workers.dev` address — the same Worker and the
+same D1 the real address will serve — while the public sees the maintenance
+page. Step 7 decides; step 8 moves the address, and is where rollback stops
+being free.
 
+0. **Check out the release tag** that production was deployed from in
+   section 2 — not the route branch. The importer runs from this checkout, so
+   it must match what is deployed. Then:
+
+   ```bash
+   CLOUDFLARE_ENV=production bun -F site deploy:database
+   ```
+
+   It applies only pending migrations, so on the right tag it does nothing.
+   If it applied anything, the deployed Worker is older than this checkout:
+   run `CLOUDFLARE_ENV=production bun -F site deploy:app` too.
 1. **Freeze the legacy stack.** On the legacy host, from the production
    checkout (`/opt/smog`):
 
    ```bash
-   docker compose stop server
+   docker compose config --quiet
+   docker compose stop web server remotion
+   docker compose ps -a         # web, server, remotion: exited
    docker compose -f maintenance/compose.yml up -d
    ```
 
-   The maintenance page takes over `app.smog.vlaanderen` (the web app and
-   every legacy API route behind it). **The old native app writes to Convex
-   directly** (`apps/native` calls Convex mutations for lists, favourites and
-   account deletion, and creates Convex user rows on sign-in), so stopping the
-   server is not enough: **pause the Convex production deployment** from the
-   Convex dashboard. (The dashboard control is not in this repository — find
-   it before the window.) Check: the legacy address shows the maintenance
-   page, and the old app can no longer load or save anything.
-2. **Take a fresh Convex export**, after the freeze, to local disk outside any
-   git repository (**Import the catalogue → Preconditions**).
-3. **Dry run** it against production (**Import the catalogue → Production**).
-   Check: the planner does not refuse. **A refusal for users, sponsorships,
-   consents or admin logs aborts the window** — unfreeze (section 4) and
-   decide what to do about that data before rescheduling. Re-read the
-   skipped-gestures list.
-4. **Apply** it, then read the report (**Reading the report**). Check:
-   `ok: true`, no Incomplete, no Mismatches. Follow **If verification fails**
-   otherwise; a rerun is always safe.
-5. **Editorial fixes** for the gestures the importer could not bring in
-   (**After the import: the editorial task**) can wait until after the window
-   — they are missing from the site, not broken on it.
-6. **Point the production address at the Worker.** Deploy the commit from
-   decision 2 (route plus `SITE_ORIGIN`) with `bun -F site deploy:app`, then
-   move DNS. Check, from a network that has not cached the old record: the
-   address serves `apps/site` over HTTPS.
-7. **Smoke checks on the real address**, in a private window:
+   `web` is the Caddy that holds ports 80 and 443 (`compose.yml`), so it
+   stops first or the maintenance container cannot bind them. The
+   maintenance page serves `/` only; every other path answers 404 and a POST
+   errors. **The old native app writes to Convex directly** (`apps/native`
+   calls Convex mutations for lists, favourites — its default list, not
+   `user_favorites` — and account deletion, and creates Convex user rows for
+   guests and on sign-in), so stopping the server is not enough: **pause the
+   Convex production deployment** from the Convex dashboard. (The dashboard
+   control is not in this repository — find it before the window.) Check:
+   the legacy address shows the maintenance page, a deep link such as
+   `/gestures` answers 404, and the old app can no longer load or save
+   anything.
+2. **Confirm nothing slipped in.** Repeat the refusal gate from section 2:
+   row counts only. Any non-zero count, or a `gesture_lists` table, aborts
+   the window here (section 4). In the Mollie dashboard, look for legacy
+   payments open or paid since checkout ended: the legacy stack will never
+   record them, so refund each by hand.
+3. **Take a fresh Convex export**, after the freeze, to local disk outside
+   any git repository (**Import the catalogue → Preconditions**). From
+   `packages/convex` (the Convex CLI needs its `package.json`):
+
+   ```bash
+   read -rs CONVEX_DEPLOY_KEY && export CONVEX_DEPLOY_KEY
+   npx convex export --prod --path /absolute/path/outside/any/repo/convex-export.zip
+   unset CONVEX_DEPLOY_KEY
+   unzip /absolute/path/outside/any/repo/convex-export.zip \
+     -d /absolute/path/outside/any/repo/convex-export
+   ```
+
+   The CLI warns that it is ignoring `--prod` and using the deployment from
+   `CONVEX_DEPLOY_KEY`: the key decides, so it must be production's.
+4. **Dry run** it against production (**Import the catalogue → Production**).
+   Check the banner (target, `smog-production (remote)`, paths) and that the
+   planner does not refuse. **Any refusal aborts the window** — the four
+   tables, `gesture_lists`, duplicate `_id`s, malformed rows, a missing table:
+   unfreeze (section 4) and decide what to do before rescheduling. The dry
+   run prints only the skipped count; the list comes with the report.
+5. **Apply** it, then read the report (**Reading the report**). Check: exit
+   code 0; the CLI prints
+   `Verification passed: 0 incomplete, 0 mismatches.`; the report's
+   Verification section says **Passed.**, and the report has no `### Failed`
+   section and no "Differs from the export" rows. Otherwise follow **If
+   verification fails**; a rerun is always safe. Then re-read the report's
+   "Needs editorial action" list. Fixing those gestures (**After the import:
+   the editorial task**) can wait until after the window — they are missing
+   from the site, not broken on it.
+6. **Smoke checks on the `workers.dev` address**, in a private window, with
+   `bunx wrangler tail --env=production` running from `apps/site`:
    - the home page, a category, a gesture page with its video, and search in
      Dutch and French;
    - sign up with a new address, sign out and back in, and sign in with
      Google; change that account's email address and receive the
-     confirmation message (sign-up itself sends no email);
+     confirmation message (sign-up itself sends no email). It goes out at the
+     next job run: wait for the `:00` tick, or run the queue by hand as in
+     section 2;
    - add and remove a favourite; create a list and open its share link while
      signed out;
    - the consent banner appears once and is remembered;
-   - the Worker log (`bunx wrangler tail --env=production`) shows no errors
-     while doing the above.
+   - the Worker log shows no errors while doing the above.
    A live checkout is not part of the window: it takes real money.
-8. **Go / no-go.** This is the last point at which rollback costs nothing
-   (section 4). Decide with the person checking. On "go": the window is over
-   on the web.
-9. **Release the mobile app** that was approved ahead of time (a phased
-   release where the store offers one).
-10. **Leave the legacy stack frozen** — maintenance page up, server stopped,
-    Convex paused — and do not delete anything (section 5).
+7. **Go / no-go.** Decide with the person checking. This is the last point at
+   which rollback costs nothing (section 4): after the next step the public
+   can sign up, save and pay on the new stack.
+8. **Switch the address.** From the route branch (decision 2):
+
+   ```bash
+   CLOUDFLARE_ENV=production bun -F site deploy:app
+   ```
+
+   If wrangler asks to replace the conflicting DNS record for the address,
+   answer yes: that is the switch. From here, rollback is not free.
+9. **Checks that need the real address**, from a network that has not cached
+   the old record: the address serves `apps/site` over HTTPS, and Google
+   sign-in works on it.
+10. **Release the mobile app** that was approved ahead of time, **to 100% at
+    once**: no Android staged rollout, and iOS phased release off. The old
+    app stopped working when Convex was paused; holding the new one back
+    protects nobody.
+11. **Merge the route branch into `main`**, so the next deploy from `main`
+    keeps the address and `SITE_ORIGIN`.
+12. **Leave the legacy stack frozen** — maintenance page up, `web`, `server`
+    and `remotion` stopped, Convex paused — and do not delete anything
+    (section 5).
 
 ## 4. Rollback
 
-**Before step 8 (go / no-go):** nothing has been written to the new stack
-by users, so rollback is free:
+**Unfreeze**, in this order, so the old stack is whole before anyone reaches
+it:
 
-1. Move DNS back (the lowered TTL makes this minutes) and revert the route
-   commit if it was deployed.
-2. On the legacy host: `docker compose -f maintenance/compose.yml down`, then
-   `docker compose start server`.
-3. Unpause the Convex deployment.
-4. Tell editors they can edit again. The imported production catalogue can
-   stay; the next attempt's import skips what is already there, or the
-   production D1 can be emptied before trying again.
+1. Unpause the Convex production deployment.
+2. On the legacy host, from `/opt/smog`:
 
-**After step 8:** every account, favourite, list, consent and sponsorship
-created on the new stack exists **only in Payload**. Nothing in `apps/site` or
-`apps/mobile` writes to Convex, and there is no reverse sync. Rolling back
-then loses all of it, so the answer after go-live is to fix forward. If the
-site must come down while that happens, put a maintenance response in front
-of the Worker rather than reviving the legacy stack.
+   ```bash
+   docker compose -f maintenance/compose.yml down
+   docker compose start server remotion web
+   ```
+
+3. After the switch only: un-switch the address (decision 2).
+
+**Before the address switch (section 3, step 8): free.** Only the import and
+the operators' own checks have written to production. Unfreeze, and tell
+editors they can edit again. Then **empty the production catalogue before
+the next attempt**: editors' changes in the meantime would surface as
+"Differs from the export" rows, a failure on production, and their deletions
+would linger. Recreate the database rather than deleting rows — Payload
+spreads a gesture across locale, relationship and search tables, and a
+hand-written `DELETE` is easy to get wrong. From `apps/site`:
+
+```bash
+bunx wrangler d1 delete smog-production
+bunx wrangler d1 create smog-production   # answer no to adding it to the config
+```
+
+Put the new id in `env.production.d1_databases[0].database_id` in
+`apps/site/wrangler.jsonc`, in a reviewed commit, then run
+`CLOUDFLARE_ENV=production bun -F site deploy:database` and `deploy:app`
+(the Worker binds the database by id). Recreate the admin and editor
+accounts (section 2). This is allowed only while nothing but the import and
+the operators' checks has written to the database: before the switch.
+
+**After the address switch: not free.** The public can sign up, save and
+pay, and all of it exists **only in Payload**: nothing in `apps/site` or
+`apps/mobile` writes to Convex, and there is no reverse sync. Before rolling
+back, list in the admin the accounts that are not operators' and every
+sponsorship created on production. Any sponsorship still `pending_payment`,
+or whose Mollie payment is `paid`, needs a refund decision in Mollie before
+the address moves back. Then unfreeze, including step 3. Otherwise, fix
+forward. Taking the site down while fixing forward has no mechanism yet —
+undecided; one option is a Worker route on the address serving a static
+page. Decide it before the window.
 
 ## 5. After the window
 
@@ -206,18 +388,33 @@ of the Worker rather than reviving the legacy stack.
   the run was killed (checklist, step 8); renewal and expiry jobs are
   queued.
 - **The first real sponsorship** is watched end to end: checkout, webhook,
-  `paid`, confirmation email.
+  `pending_approval`, visible in the admin. There is no payment-confirmation
+  email.
+- **Admins work only on the final address.** Links in email-change and
+  re-edit messages use the host of the request that queued them (`req.origin`
+  in `apps/site/src/endpoints/account.ts` and
+  `apps/site/src/hooks/queueReEditEmail.ts`), so a re-edit started on the
+  `workers.dev` address sends the sponsor there.
 - **Keep the legacy stack frozen, not deleted, for 30 days**: the host with
   the maintenance page, and the paused Convex deployment. It is the only copy
   of anything the import did not carry.
 - **Store the final Convex export encrypted and offline**, and delete every
   other copy (including the rehearsal copies). It contains personal data.
+- **Decommission on dates written down at go-live:**
+  - the encrypted export: destroyed after its retention period — 90 days
+    proposed, a decision to confirm;
+  - after the 30-day hold: delete the Convex production deployment and the
+    legacy host's `redis_data` volume (`compose.yml`);
+  - revoke the legacy secrets: WorkOS, SMTP and IMAP, the Convex deploy key,
+    `INTERNAL_API_KEY`, `REMOTION_API_KEY`, and the Mux tokens only if the
+    new stack does not share them; delete the WorkOS users and application.
 - **Retire the old app's store listing** if the mobile app shipped as a new
   listing (decision 3), after its users have had time to move.
 - **Then delete the legacy code** from the repository (`apps/server`,
-  `apps/web`, `apps/native`, `apps/remotion`, `packages/convex` and the
-  packages only they use), in its own reviewed change — the spec's last step
-  for Stage 10.
+  `apps/web`, `apps/native`, `packages/convex` and the packages only they
+  use), in its own reviewed change — the spec's last step for Stage 10.
+  Delete `apps/remotion` only once its compositions have moved to the
+  planned render app (`apps/render` in the spec): it is their only copy.
 
 ## Import the catalogue
 
@@ -252,8 +449,9 @@ of the Worker rather than reviving the legacy stack.
 
 Always in this order, and never an older export:
 
-1. **Freeze writes on the old stack** — section 3, step 1: the server
-   stopped, the maintenance page up, and the Convex deployment paused.
+1. **Freeze writes on the old stack** — section 3, step 1: `web`, `server`
+   and `remotion` stopped, the maintenance page up, and the Convex
+   deployment paused.
 2. **Take a fresh Convex export**, after the freeze, so nothing an editor
    did on the old stack is missing from it.
 3. **Dry run** that export against the target and check the banner.
@@ -265,8 +463,9 @@ working on the old stack after it. That drift is expected and is not a
 reason to stop. The gates are the ones that do not depend on old numbers:
 the planner's refusals (it will not plan an export with users,
 sponsorships, consents, admin logs, a `gesture_lists` table, duplicate
-`_id`s or malformed rows), and re-reviewing the skipped-gestures list the
-dry run's `skipped` count stands for, which the report names in full.
+`_id`s, malformed rows or a missing table), and re-reviewing the
+skipped-gestures list the dry run's `skipped` count stands for, which the
+apply's report names in full (a dry run writes no report).
 
 Credentials (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
 `CLOUDFLARE_ENV`) are set up exactly as in
