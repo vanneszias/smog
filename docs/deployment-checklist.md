@@ -142,6 +142,28 @@ relying on inference. Google sign-in on mobile needs nothing in the app: it
 goes through the site's `/auth/google?client=mobile` and returns via
 `smogmobile://auth-callback` (hard-coded; the `scheme` in `app.json`).
 
+### App links
+
+Gesture pages on the production address open in the app:
+`app.json` claims `https://app.smog.vlaanderen/{nl,en,fr}/gestures/*` (iOS
+`associatedDomains`, Android `intentFilters` with `autoVerify`), and the site
+serves the two files the phones check it against,
+`apps/site/public/.well-known/apple-app-site-association` and
+`assetlinks.json`. Nothing needs setting, but none of it can be checked before
+the address switches (staging has no custom domain). After the switch
+(`docs/cutover-runbook.md`, section 3, steps 7 and 8):
+
+```bash
+curl -sI https://app.smog.vlaanderen/.well-known/apple-app-site-association   # 200, content-type: application/json, no location
+curl -sI https://app.smog.vlaanderen/.well-known/assetlinks.json              # the same
+curl -s https://app-site-association.cdn-apple.com/a/v1/app.smog.vlaanderen    # Apple's CDN serves the same JSON (may lag; recheck)
+adb shell pm get-app-links be.zias.smog                                       # after installing the store build: app.smog.vlaanderen verified
+```
+
+A redirect on either file fails verification (Apple refuses one outright).
+The Android file carries the Play app signing key's fingerprint, so only a
+build installed from Play verifies.
+
 ### Mobile analytics
 
 `apps/mobile` sends analytics events straight from the device to OpenPanel

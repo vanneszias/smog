@@ -1,5 +1,6 @@
 import { withPayload } from "@payloadcms/next/withPayload";
 import type { NextConfig } from "next";
+import { LEGACY_REDIRECTS } from "./src/lib/legacyRedirects";
 
 const nextConfig: NextConfig = {
   // Next 16 writes an AGENTS.md and a CLAUDE.md into this directory on boot.
@@ -193,7 +194,41 @@ const nextConfig: NextConfig = {
        * entry exists and that its destination really resolves to the handler.
        */
       { destination: "/api/render/callback", source: "/render/callback" },
+      /*
+       * The previous website's gesture URL, `/gestures/<id>`, which is in
+       * shared links, QR codes and search indexes. Its id may be one the old
+       * backend issued, so where it goes takes a lookup, and a lookup that
+       * reads Payload belongs on Payload's REST entry for the bundle reason
+       * above: `src/endpoints/legacy.ts` answers with a 308 to the gesture's
+       * page, or to the list when nothing matches.
+       *
+       * Only the unprefixed path: `/{locale}/gestures/<id>` does not match
+       * `/gestures/:id`, so the real pages are never rewritten and the 308
+       * they are the target of cannot loop. And nothing in `app/` is a
+       * static page at `/gestures/<id>`, while afterFiles rewrites are
+       * checked before dynamic routes, so `[locale]` never gets to read
+       * `gestures` as a locale. `src/lib/legacyRedirects.test.ts` pins the
+       * rewrite and that the locale-prefixed pages pass through untouched.
+       */
+      {
+        destination: "/api/legacy/gestures/:id",
+        source: "/gestures/:id",
+      },
     ];
+  },
+
+  /**
+   * The previous website's other unprefixed URLs, each a permanent redirect
+   * to its locale-prefixed replacement. See `src/lib/legacyRedirects.ts`.
+   *
+   * Redirects run before every rewrite and every page, so these sources must
+   * never overlap a path the site still serves. Each matches one exact path
+   * (`/lists/:token`, one segment below `/lists`), which is what keeps them
+   * off the locale-free form targets above: `/account` and `/sponsor` are
+   * redirected, `/account/password` and `/sponsor/start` are not.
+   */
+  async redirects() {
+    return LEGACY_REDIRECTS;
   },
 
   images: {

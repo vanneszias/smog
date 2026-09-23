@@ -51,10 +51,14 @@ Read this before scheduling anything; it is what users will notice.
   consent banner once on the new site.
 - **Sign-in changes.** `apps/site` has its own accounts (email and password,
   optionally Google). Nobody carries an account or a session across.
-- **Existing deep links break.** If the address stays the same (decision 2),
-  the address itself keeps working, but links to individual gestures do not:
-  `/gestures/<id>` carried the export's `_id`, and the site does not look
-  those up.
+- **Existing links keep working, one hop later.** The previous website's
+  unprefixed URLs redirect (308) to their Dutch replacements, query string
+  kept: `/gestures/<id>` looks the export's `_id` up as the imported
+  gesture's `legacyId` and lands on its page, or on the gesture list when no
+  active gesture matches; `/favorites`, `/privacy`, `/sponsor`, `/login` and
+  the rest are fixed rows (`apps/site/src/lib/legacyRedirects.ts`,
+  `apps/site/src/endpoints/legacy.ts`). Lists were not imported, so
+  `/lists/<token>` lands on the account's lists page.
 
 ## 1. Decisions that must be made before a date is set
 
@@ -120,10 +124,21 @@ answer next to each item when it is made.
      published from elsewhere would reach `apps/mobile`'s installs only if
      fingerprints matched — do not find out.
    - The scheme stays `smogmobile`; `apps/mobile/src/lib/google.ts:18` and
-     `apps/site/src/endpoints/oauth.ts:76` must stay identical. The `smog://`
-     links and `app.smog.vlaanderen` universal links that the current store
-     release (2.0.2) handles are not carried over (`apps/mobile` declares no
-     associated domains), so shared links open in the browser, on the site.
+     `apps/site/src/endpoints/oauth.ts:76` must stay identical. The current
+     store release's `smog://` links are not carried over.
+   - **App links are carried over, for gesture pages only.** `apps/mobile`
+     claims `https://app.smog.vlaanderen/{nl,en,fr}/gestures/*` (iOS
+     associated domains, Android verified intent filters in `app.json`) and
+     opens them on the gesture screen (`app/+native-intent.tsx`); the site
+     serves the matching `/.well-known/apple-app-site-association` and
+     `/.well-known/assetlinks.json` from `apps/site/public/`. The Android
+     file names the Play app signing key's SHA-256 fingerprint, which signs
+     every build Play delivers of `be.zias.smog`; if Play Console shows a
+     different one under **App integrity → App signing**, the file is wrong
+     and verification fails. (A build installed from anywhere but Play is
+     signed with another key and never verifies; that is expected.) Both are checked after the switch (section 3,
+     steps 7 and 8). Links to anything but a gesture page open in the
+     browser, on the site.
 
    **The store build carries the final production address** in
    `EXPO_PUBLIC_API_URL` (checklist §6), because installs keep it for years.
@@ -405,11 +420,37 @@ stops being free.
    switch. From here, rollback is not free.**
 7. **Checks that need the real address**, from a network that has not cached
    the previous record: the address serves `apps/site` over HTTPS, and Google
-   sign-in works on it.
+   sign-in works on it. Then the app-link files:
+
+   ```bash
+   curl -sI https://app.smog.vlaanderen/.well-known/apple-app-site-association
+   curl -sI https://app.smog.vlaanderen/.well-known/assetlinks.json
+   ```
+
+   Each must answer `200` with `content-type: application/json` and no
+   `location` — Apple does not follow a redirect for this file. Apple's
+   devices fetch it through Apple's CDN, not from the site; once the CDN has
+   picked the new file up (it can take a while, so recheck until it does),
+   this returns the same JSON:
+
+   ```bash
+   curl -s https://app-site-association.cdn-apple.com/a/v1/app.smog.vlaanderen
+   ```
+
 8. **Release the mobile app** that was approved ahead of time, **to 100% at
    once**: no Android staged rollout, and iOS phased release off. Installs of
    the current store release lost their backend at the freeze; holding the new
-   one back protects nobody.
+   one back protects nobody. Once the store build is installed on an Android
+   device, confirm Android verified the domain:
+
+   ```bash
+   adb shell pm get-app-links be.zias.smog
+   ```
+
+   `app.smog.vlaanderen` must read `verified`. Then open a gesture link (from
+   a chat or email app, not by typing it into the browser) on an iPhone and
+   an Android phone with the app installed: it must open in the app, on that
+   gesture.
 9. **Merge the route branch into `main`**, so the next deploy from `main`
    keeps the address and `SITE_ORIGIN`.
 

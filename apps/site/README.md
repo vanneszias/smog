@@ -235,6 +235,23 @@ If a future change does move them back into `app/`, note that Next 16 ignores
 because its matcher is anchored at the app root. `sitemap.ts` in a route group
 does work. Check the build's route table, not the file's existence.
 
+## The previous website's URLs, and app links
+
+The previous website's unprefixed URLs (`/gestures`, `/favorites`,
+`/login`, …) are permanent redirects in `next.config.ts`, from the table in
+`src/lib/legacyRedirects.ts`. `/gestures/<id>` needs a lookup, since its id
+may be an imported gesture's `legacyId`, so it is a rewrite to a Payload
+endpoint (`src/endpoints/legacy.ts`) for the same bundle reason as the
+crawler files above. `src/lib/legacyRedirects.test.ts` runs every row
+through the real config.
+
+`public/.well-known/` holds the files iOS and Android check before opening
+`/{locale}/gestures/*` links in the app; `public/_headers` serves both as
+JSON. They are static assets, served before the Worker runs, so nothing in
+`next.config.ts` can put a redirect in front of them. `next dev` serves
+`public/` itself and ignores `_headers`, so check the content type against
+a deployed Worker (`docs/deployment-checklist.md`, "App links").
+
 ## Deploying
 
 Always schema first, then code:

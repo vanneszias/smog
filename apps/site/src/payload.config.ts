@@ -32,6 +32,7 @@ import { consentEndpoints } from "./endpoints/consent";
 import { crawlerEndpoints } from "./endpoints/crawler";
 import { favoritesEndpoints } from "./endpoints/favorites";
 import { jobsEndpoints } from "./endpoints/jobs";
+import { legacyEndpoints } from "./endpoints/legacy";
 import { listsEndpoints, mobileListsEndpoints } from "./endpoints/lists";
 import { mobileEndpoints } from "./endpoints/mobile";
 import { mobileSessionEndpoints } from "./endpoints/mobileSession";
@@ -317,6 +318,11 @@ export default buildConfig({
    * and a signed-in visitor whose latest `user-consents` row says no. See
    * `endpoints/analytics.ts`, which is careful about which of those is a
    * consent check and which is not.
+   *
+   * `legacyEndpoints` adds `GET` and `HEAD /api/legacy/gestures/:id`,
+   * reached at `/gestures/:id`: the previous website's gesture URL, answered
+   * with a 308 to the gesture's page or to the list. See
+   * `endpoints/legacy.ts`.
    */
   endpoints: [
     ...analyticsEndpoints,
@@ -336,6 +342,7 @@ export default buildConfig({
     ...sponsorshipEndpoints,
     ...mollieEndpoints,
     ...renderEndpoints,
+    ...legacyEndpoints,
   ],
   localization: {
     locales: [

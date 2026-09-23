@@ -7,3 +7,16 @@
 # that a new logo reaches everyone by the next day.
 /brand/*
   Cache-Control: public,max-age=86400
+
+# The files the iOS and Android apps verify this domain with. Apple asks for
+# application/json, and the platform infers a type from the extension, so the
+# extensionless apple-app-site-association would otherwise go out with no
+# Content-Type at all (checked with a local `wrangler dev`). Both are static
+# assets, which the platform serves before the Worker runs: no Next route,
+# rewrite or redirect is ever in front of them, and Apple refuses a redirect
+# here outright.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+
+/.well-known/assetlinks.json
+  Content-Type: application/json

@@ -1,0 +1,23 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["96XKP6MU2A.be.zias.smog"],
+        "components": [
+          {
+            "/": "/nl/gestures/*",
+            "comment": "Gesture pages open in the app"
+          },
+          {
+            "/": "/en/gestures/*",
+            "comment": "Gesture pages open in the app"
+          },
+          {
+            "/": "/fr/gestures/*",
+            "comment": "Gesture pages open in the app"
+          }
+        ]
+      }
+    ]
+  }
+}
