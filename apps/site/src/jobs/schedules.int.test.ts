@@ -312,6 +312,42 @@ describe("the scheduled jobs", () => {
 
     expect(await jobs()).toEqual([]);
 
+    /*
+     * **Forget every earlier tick's schedule history first.** `nextRun` is
+     * computed from each task's `lastScheduledRun` in `payload-jobs-stats`,
+     * which is shared with every other file in this worker (CI runs one). Of
+     * the four, only `prune-rate-limits` ever has one recorded:
+     * `defaultAfterSchedule` rewrites the queue's entry from the snapshot
+     * `handleSchedules` read once, so the last schedule processed is the only
+     * one whose write survives. A tick in an earlier file at 03:59 therefore
+     * made this test's tick at 04:00 find `prune-rate-limits` already due —
+     * queued, run and deleted at once — and it went missing from the list
+     * below, while the three with no history waited as expected. With the
+     * history cleared, every `nextRun` counts from now, as it does on a fresh
+     * deploy.
+     */
+    const stats = await payload.findGlobal({
+      overrideAccess: true,
+      slug: "payload-jobs-stats",
+    });
+    const current = (stats.stats ?? {}) as Record<string, unknown>;
+    const scheduledRuns = (current.scheduledRuns ?? {}) as Record<
+      string,
+      unknown
+    >;
+    const queues = (scheduledRuns.queues ?? {}) as Record<string, unknown>;
+
+    await payload.updateGlobal({
+      data: {
+        stats: {
+          ...current,
+          scheduledRuns: { ...scheduledRuns, queues: { ...queues, default: {} } },
+        },
+      },
+      overrideAccess: true,
+      slug: "payload-jobs-stats",
+    });
+
     // Then the endpoint, which is the same run with `handleSchedules` in front
     // of it. Four scheduled tasks, four rows, each waiting for its own next
     // occurrence rather than running immediately.
