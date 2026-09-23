@@ -54,10 +54,12 @@ no bindings by design. Verify afterwards with
 | `MOLLIE_API_KEY` | secret | both (`test_…` key on staging, `live_…` on production) | `bunx wrangler secret put MOLLIE_API_KEY --env=<env>` | Sponsorship checkout fails: `POST /sponsor/checkout` logs the error and answers 303 back to the preview with `?error=payment`; the rows stay `pending_payment` with no payment id. The Mollie webhook `POST /webhooks/mollie` answers **502** to every delivery (Mollie keeps retrying). Rest of the site unaffected. The webhook URL is derived from the request origin — nothing to configure in Mollie. |
 | `MUX_TOKEN_ID` | secret | both | `bunx wrangler secret put MUX_TOKEN_ID --env=<env>` | Render callback `POST /render/callback` answers **502** "composed video could not be uploaded" (after a valid signature). The `expire-sponsorships` job cannot delete or read Mux assets (logged, counted as failures, retried next run). Needs both id and secret. |
 | `MUX_TOKEN_SECRET` | secret | both | `bunx wrangler secret put MUX_TOKEN_SECRET --env=<env>` | Same as `MUX_TOKEN_ID`. |
-| `MUX_SIGNING_KEY_ID` | secret | both (once rendering is live) | `bunx wrangler secret put MUX_SIGNING_KEY_ID --env=<env>` | `GET /api/mux/source/:id` throws → **500** for any caller holding the service token. If `REMOTION_*` are all set, checkout's render step throws inside the per-render try/catch (logged; checkout itself still completes). Needs both id and private key. |
+| `MUX_SIGNING_KEY_ID` | secret | both (once the Lambda function is deployed) | `bunx wrangler secret put MUX_SIGNING_KEY_ID --env=<env>` | `GET /api/mux/source/:id` throws → **500** for any caller holding the service token. If `REMOTION_*` are all set, checkout's render step throws inside the per-render try/catch (logged; checkout itself still completes). Needs both id and private key. |
 | `MUX_SIGNING_KEY_PRIVATE` | secret | both (with the above) | `bunx wrangler secret put MUX_SIGNING_KEY_PRIVATE --env=<env>` — paste Mux's **base64-encoded** private key at the prompt (single line) | Same as `MUX_SIGNING_KEY_ID`. **Format:** PKCS#8 PEM, either base64-wrapped (what Mux hands out — preferred, it is one line) or the raw PEM; anything else throws "not a PEM private key". |
-| `MUX_SOURCE_SERVICE_TOKEN` | secret | both (once rendering is live) | `openssl rand -hex 32 \| bunx wrangler secret put MUX_SOURCE_SERVICE_TOKEN --env=<env>` (store it too — the render container must present it) | Fails closed: `GET /api/mux/source/:id` answers **401** to every caller. Nothing calls it until Remotion Lambda submission is implemented (Stage 6 Task 6). |
-| `RENDER_CALLBACK_SECRET` | secret | both (once rendering is live) | `bunx wrangler secret put RENDER_CALLBACK_SECRET --env=<env>` (same value must be configured on the Remotion Lambda side — generate, store in a password manager, paste at both prompts) | Fails closed: `POST /render/callback` answers **401** to every callback, so composed sponsor videos never get attached. HMAC over the body; header/scheme pinned in `src/lib/renderSignature.ts`. |
+| `MUX_SOURCE_SERVICE_TOKEN` | secret | both (once the Lambda function is deployed) | `openssl rand -hex 32 \| bunx wrangler secret put MUX_SOURCE_SERVICE_TOKEN --env=<env>` (store it too — the render container must present it) | Fails closed: `GET /api/mux/source/:id` answers **401** to every caller. Nothing calls it until `REMOTION_FUNCTION_NAME`/`REMOTION_SERVE_URL` are set (see `apps/render/README.md`). |
+| `RENDER_CALLBACK_SECRET` | secret | both (once the Lambda function is deployed) | `bunx wrangler secret put RENDER_CALLBACK_SECRET --env=<env>` (same value goes in the start payload's `webhook.secret`, so Lambda signs with it — nothing to configure on a "Remotion side", there is no separate Remotion account) | Fails closed: `POST /render/callback` answers **401** to every callback, so composed sponsor videos never get attached. HMAC-SHA512 over the body, Remotion's own scheme (`X-Remotion-Signature: sha512=…`); pinned in `src/lib/renderSignature.ts`. |
+| `REMOTION_AWS_ACCESS_KEY_ID` | secret | both, once the Lambda function is deployed | `bunx wrangler secret put REMOTION_AWS_ACCESS_KEY_ID --env=<env>` — the IAM user's access key (`apps/render/README.md`, "One-time AWS setup") | Every render submission fails inside its per-render try/catch (logged, checkout still completes): `lib/remotionLambda.ts` cannot sign the Lambda invoke. Read from `process.env` per call, never at module scope; never logged. Needs both id and secret key. |
+| `REMOTION_AWS_SECRET_ACCESS_KEY` | secret | both (with the above) | `bunx wrangler secret put REMOTION_AWS_SECRET_ACCESS_KEY --env=<env>` | Same as `REMOTION_AWS_ACCESS_KEY_ID`. |
 | `OPENPANEL_CLIENT_ID` | secret | both (per-env OpenPanel project) | `bunx wrangler secret put OPENPANEL_CLIENT_ID --env=<env>` | Analytics silently off: `POST /api/analytics/track` still answers 202, logs a warning, and **drops the event**. Needs both id and secret. |
 | `OPENPANEL_CLIENT_SECRET` | secret | both | `bunx wrangler secret put OPENPANEL_CLIENT_SECRET --env=<env>` | Same as `OPENPANEL_CLIENT_ID`. Must never be a `vars` entry. |
 | `JOBS_RUN_TOKEN` | secret | both | Generate it in the password manager and save it there first (64 letters and digits) — an operator needs it again for a manual run — then `bunx wrangler secret put JOBS_RUN_TOKEN --env=<env>` and paste it at the prompt. | The hourly cron (`wrangler.jsonc`'s `triggers.crons`, `worker.ts`'s `scheduled()`) calls this endpoint every hour on its own — an operator no longer has to. **A missing or wrong token does not show up as an error.** `endpoints/jobs.ts` answers `200 {"status":"ok"}` for a missing/mismatched token exactly the same as for a real run — `acknowledged()` is not an oracle for the token, by design — so the only visible symptom is `[jobs] A run was requested without a usable token; nothing was run` in the Worker log (`bunx wrangler tail --env=<env>`), and queued jobs quietly never execute: no email is ever sent, sponsorships never expire, stale payments/orphaned media/rate-limit rows are never cleaned. Check that warning is absent after setting the secret. **Positive confirmation, not just the absence of a warning:** keep `bunx wrangler tail --env=<env>` open across the next `:00` and expect to see `[jobs] Ran N jobs from the default queue`; or, while tailing, `read -rs JOBS_RUN_TOKEN` (paste it from the password manager; never type it into a command) and then `printf 'Authorization: Bearer %s\n' "$JOBS_RUN_TOKEN" | curl --max-time 600 -H @- https://<origin>/api/jobs/run` (the header goes in on standard input, so the token is in neither shell history nor the process list) (it answers `200` either way, so read the log line, not the status; `--max-time` because an HTTP run has no wall-clock limit while the client stays connected, and the stranded-job recovery assumes every run ends within thirty minutes). A tick that fails now also shows as **failed** in that Worker's **Cron Triggers → Past Events** table in the dashboard, not as a success — and with `observability.enabled` on (`wrangler.jsonc`), these `[cron]`/`[jobs]` lines persist in **Workers Logs** too, so they're readable after the fact and not only during a live tail. |
@@ -70,13 +72,17 @@ no bindings by design. Verify afterwards with
 | `EMAIL_FROM_ADDRESS` | var — **already in `wrangler.jsonc`**, per environment | both | Nothing to do; deployed from the file: `no-reply@zias.be`. | Email Service only sends from a domain in this Cloudflare account, and `smog.vlaanderen` cannot be moved into it, so the sender is on `zias.be` (decided 2026-09-23). Until `zias.be` is onboarded as a sending domain every send fails with `E_SENDER_NOT_VERIFIED` / `E_SENDER_DOMAIN_NOT_AVAILABLE`. |
 | `EMAIL_FROM_NAME` | var — **already in `wrangler.jsonc`**, per environment | both | Nothing to do: `SMOG & Co` on production, `SMOG & Co (staging)` on staging. | Cosmetic. |
 | `PAYLOAD_LOG_LEVEL` | var — not in `wrangler.jsonc`; undocumented | optional | `bunx wrangler secret put PAYLOAD_LOG_LEVEL --env=<env>` | Defaults to `info`. |
-| `REMOTION_FUNCTION_NAME` | var (plan lists it as a Worker secret) | both, once a Lambda is deployed | `bunx wrangler secret put REMOTION_FUNCTION_NAME --env=<env>` | Rendering off: checkout logs "No render was submitted" and completes normally. All three `REMOTION_*` must be set to count as configured. **Even when set, nothing is submitted** — the Lambda transport is a stub (Stage 6 Task 6); the code only builds the request and logs a warning. |
-| `REMOTION_REGION` | var | both, with the above | `bunx wrangler secret put REMOTION_REGION --env=<env>` | Same as `REMOTION_FUNCTION_NAME`. |
-| `REMOTION_SERVE_URL` | var | both, with the above | `bunx wrangler secret put REMOTION_SERVE_URL --env=<env>` | Same as `REMOTION_FUNCTION_NAME`. |
+| `REMOTION_REGION` | var — **already in `wrangler.jsonc`** (`eu-central-1`, both envs) | both | Nothing to do; deployed from the file. | `lib/renderJob.ts` submits nothing until `REMOTION_FUNCTION_NAME` and `REMOTION_SERVE_URL` join it (below) — this var alone is not "configured". Also the `--region` of every `apps/render` deploy script; must never drift from those. |
+| `REMOTION_FUNCTION_NAME` | var — **not yet in `wrangler.jsonc`**, filled in after `bun -F render deploy:function` | both, once the function is deployed | Add it to `env.<env>.vars` in `apps/site/wrangler.jsonc`, in a **reviewed commit** (never `wrangler secret put`: it is not a secret, and a plain var set that way is wiped by the next deploy) — the exact value `deploy:function` prints, e.g. `remotion-render-4-0-484-mem3009mb-disk2048mb-240sec`. | Rendering off: checkout logs "No render was submitted" and completes normally, exactly as today. All three `REMOTION_*` must be set together to count as configured. Once all three are set, `submitRenderJob` really does invoke Lambda — this is no longer a stub. |
+| `REMOTION_SERVE_URL` | var — **not yet in `wrangler.jsonc`**, filled in after `bun -F render deploy:site` | both, with the above | Same commit as `REMOTION_FUNCTION_NAME` — the exact **serve URL** `deploy:site` prints (`https://remotionlambda-eucentral1-….s3.eu-central-1.amazonaws.com/sites/smog-render/index.html`). | Same as `REMOTION_FUNCTION_NAME`. |
 | `SITE_ORIGIN` | var — **already in `wrangler.jsonc`**, per environment | both | Nothing to do; deployed from the file. staging: `https://smog-site-staging.vanneszias.workers.dev`. production: `https://smog-site-production.vanneszias.workers.dev` — **must change in the same commit that adds a custom-domain route** for that environment. | Read by `src/jobs/cron.ts`'s hourly scheduled tick. Missing it: the tick throws `[cron] SITE_ORIGIN is not set`, logged (not thrown out of `scheduled()`), and no jobs run that tick. Renewal and confirmation links in queued email are built from it, so a stale value here is a working link to nowhere in a sponsor's inbox. |
 
-No AWS credentials are read anywhere in `apps/site`: the Remotion Lambda
-invoke (SigV4) is not written yet, so its credential vars do not exist yet.
+The Remotion Lambda invoke (SigV4, `lib/remotionLambda.ts`) is built and
+tested against Remotion's own fixtures; nothing here needs the `@remotion/lambda`
+dependency or a real AWS call. What it needs to actually submit a render are
+the AWS credentials in §1 above and the three `REMOTION_*` vars in this
+table — until every one of the five is set, `submitRenderJob` logs and does
+nothing, exactly as before this stage.
 
 ## 3. Bindings and Cloudflare resources
 
@@ -228,9 +234,11 @@ steps 4–9 with `production`.
    bunx wrangler secret put GOOGLE_CLIENT_SECRET --env=staging      # if offering Google sign-in
    bunx wrangler secret put MUX_TOKEN_ID --env=staging
    bunx wrangler secret put MUX_TOKEN_SECRET --env=staging
-   # When rendering goes live (Stage 6 Task 6), not before:
+   # Once the Remotion Lambda function and site are deployed (apps/render/README.md), not before:
    #   MUX_SIGNING_KEY_ID, MUX_SIGNING_KEY_PRIVATE, MUX_SOURCE_SERVICE_TOKEN,
-   #   RENDER_CALLBACK_SECRET, REMOTION_FUNCTION_NAME, REMOTION_REGION, REMOTION_SERVE_URL
+   #   RENDER_CALLBACK_SECRET, REMOTION_AWS_ACCESS_KEY_ID, REMOTION_AWS_SECRET_ACCESS_KEY
+   # REMOTION_REGION is already a var in wrangler.jsonc; REMOTION_FUNCTION_NAME and
+   # REMOTION_SERVE_URL are vars too, added in a reviewed commit once deployed — see §2.
    bunx wrangler secret list --env=staging                          # names only — check spelling
    ```
 5. Migrate the database (schema before code, always):
@@ -308,9 +316,15 @@ steps 4–9 with `production`.
   is a working link to nowhere in a sponsor's inbox. `EXPO_PUBLIC_API_URL`
   for the production store build and the Google redirect URI use the final
   address.
-- **Remotion Lambda** is not deployed and the submit transport is a stub; the
-  `REMOTION_*`, Mux signing-key, service-token and callback secrets are inert
-  until Stage 6 Task 6.
+- **Remotion Lambda is not deployed.** The submit transport, the callback and
+  the stalled-render sweep are built and tested against Remotion's own
+  fixtures (no AWS account is available to this work); what is left is the
+  operator's own deploy. `docs/cutover-runbook.md`, section 1, decision 7 has
+  the full setup order (AWS account, IAM user, `bun -F render deploy:function`,
+  `deploy:site`, the vars and secrets, one real staging render). Until then
+  the `REMOTION_*` vars, the two AWS secrets, `RENDER_CALLBACK_SECRET`,
+  `MUX_SIGNING_KEY_*` and `MUX_SOURCE_SERVICE_TOKEN` are unset and rendering
+  stays off, exactly as it is in every environment today.
 
 ## Launch blockers that are not variables
 
@@ -335,7 +349,8 @@ steps 4–9 with `production`.
   job queue every hour once `JOBS_RUN_TOKEN` and `SITE_ORIGIN` are set (see
   §1–§2 above) — proven against a real build and a real local scheduled
   trigger, `docs/superpowers/plans/2026-09-22-cron-wiring.md`'s "Exit:
-  measured". What is still open is either the Remotion Lambda submit
-  transport or an explicit decision to launch sponsorship with rendering off.
-  Production holds no sponsorships today (spec, "What the production export
-  actually contains"), which makes that a product decision, not a data risk.
+  measured". What is still open is either deploying Remotion Lambda (this
+  checklist's "Open items" above) or an explicit decision to launch
+  sponsorship with rendering off. Production holds no sponsorships today
+  (spec, "What the production export actually contains"), which makes that a
+  product decision, not a data risk.

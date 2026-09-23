@@ -133,9 +133,53 @@ answer next to each item when it is made.
    that analytics is off at launch (checklist §1, §6).
 6. **The privacy policy** EN/FR drafts have been professionally translated and
    legally reviewed; until then they are marked unreviewed on the site.
-7. **Video rendering.** The Remotion submit transport is a stub (checklist,
-   "Open items"). Either it is built and deployed, or launching without
-   composed sponsor videos is an explicit decision.
+7. **Video rendering — built; the deploy is what is left.** The submit
+   transport, the callback and the six-hour stalled-render sweep are done and
+   tested against Remotion's own fixtures (no AWS account was available to
+   that work). Either the operator does the deploy below before the window,
+   or launching without composed sponsor videos is an explicit decision —
+   production holds no sponsorships today, so nothing is lost by deferring it.
+
+   **Setup order, once:**
+   1. Create the AWS account that pays for rendering, and the IAM role and
+      user in it (`apps/render/README.md`, "One-time AWS setup").
+   2. From `apps/render`: `bun -F render deploy:function`, then
+      `bun -F render deploy:site`. Both run in **`eu-central-1`**, always.
+   3. Put the printed function name and serve URL into `REMOTION_FUNCTION_NAME`
+      and `REMOTION_SERVE_URL`, in **both environments'** `vars` in
+      `apps/site/wrangler.jsonc`, in one reviewed commit
+      (`docs/deployment-checklist.md` §2). `REMOTION_REGION` is already there.
+   4. Set the secrets with `wrangler secret put`, per environment:
+      `REMOTION_AWS_ACCESS_KEY_ID`, `REMOTION_AWS_SECRET_ACCESS_KEY` (the same
+      IAM user's access key), `RENDER_CALLBACK_SECRET`, and the Mux signing
+      key (`MUX_SIGNING_KEY_ID`/`MUX_SIGNING_KEY_PRIVATE`) if not already set
+      (`docs/deployment-checklist.md` §1).
+   5. **One real staging checkout before the window**: buy a sponsorship on
+      staging, and confirm the render lands in `/admin` (`renders` collection)
+      with a Mux playback id attached to the sponsorship's preview.
+
+   **What to watch for in the first renders, not blockers:**
+   - **Callback length.** Remotion sets the webhook's `Content-Length` from
+     `JSON.stringify(payload).length`, which counts characters, not bytes. A
+     webhook body with non-ASCII text (an error message, say) may be rejected
+     before sending or fail signature verification; the render then shows up
+     as failed via the six-hour sweep rather than the callback. Nothing to
+     fix on our side.
+   - **Old render files accumulate in S3.** Outputs are `privacy: "public"`
+     and kept indefinitely (`deleteAfter: null`); once Mux has ingested a
+     render, the S3 copy is dead weight. Remotion's own `enableFolderExpiry`
+     option (`@remotion/lambda-client`) only applies a bucket lifecycle rule
+     when the bucket is *created*, so switching it on later needs a new
+     bucket, not a flag flip on this one. An optional follow-up, not a
+     blocker — see Remotion's [Lambda docs](https://www.remotion.dev/docs/lambda)
+     for the current bucket-creation options.
+   - **Licence.** `licenseKey` is sent as `null` in the start payload
+     (`lib/remotionLambda.ts`). Whether a Remotion company licence applies to
+     this project is the account owner's decision; if it does, the key goes
+     there, and the contract test must pass it to the official client too.
+   - **Lambda log level.** The start payload deliberately uses
+     `logLevel: "warn"`. At `"info"`, Remotion logs the input props — including
+     the signed source URL — to CloudWatch, so leave it as `"warn"`.
 
 ## 2. Readiness, the week before
 
@@ -147,7 +191,7 @@ down.
   apply: the window's length depends on it.
 - **Production deployed and idle**, from the release tag (checklist, "First
   deploy, in order"), with every secret in the checklist's step 4 set — the
-  rendering secrets only once rendering goes live:
+  rendering secrets and vars only once the Lambda deploy above is done:
 
   ```bash
   CLOUDFLARE_ENV=production bun -F site deploy:database

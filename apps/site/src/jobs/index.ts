@@ -5,6 +5,7 @@ import { cleanupOrphanedMedia } from "@/jobs/cleanupOrphanedMedia";
 import { cleanupStalePayments } from "@/jobs/cleanupStalePayments";
 import {
   expireSponsorships,
+  failStalledRenders,
   settleComposedVideos,
 } from "@/jobs/expireSponsorships";
 import {
@@ -271,27 +272,31 @@ export const jobsConfig: JobsConfig = {
     {
       /**
        * Takes every sponsorship whose term has ended off the page, deletes
-       * the Mux assets nothing can point at any more, and then asks Mux
-       * whether the composites this application is still holding actually
-       * became playable.
+       * the Mux assets nothing can point at any more, asks Mux whether the
+       * composites this application is still holding actually became
+       * playable, and fails every render Remotion Lambda or Mux never
+       * finished settling.
        *
-       * **Both halves were built and mutation-proven in Stage 6 Task 5**;
-       * this is the wiring the plan says it is. They run in this order and in
-       * one task rather than two because the order matters and the split does
-       * not: `settleComposedVideos` deliberately skips a render whose
-       * sponsorship is in a terminal status, on the grounds that its asset is
-       * about to be deleted and asking Mux about it is a request for an
-       * answer nobody acts on — which is only true if the expiry has already
-       * run. Registering them as two tasks would make that guarantee a
-       * coincidence of two cron expressions.
+       * **The first two halves were built and mutation-proven in Stage 6 Task
+       * 5**; this is the wiring the plan says it is. `failStalledRenders` is
+       * Render Lambda Stage's Task 5, and it belongs in this same task for
+       * the same reason the other two do: it is a sweep on the same clock,
+       * over the same collection, and splitting it into its own cron would
+       * make "runs after the other two" a coincidence rather than a fact.
+       * Unlike the other two it does not depend on their having run first —
+       * a stalled render never holds a Mux asset — so its position in the
+       * sequence is not load-bearing, only its membership in this task.
        *
-       * `now` is the job's own clock. It is a parameter of the operation so a
-       * test can assert a decision rather than race one; there is nothing to
-       * carry it from here.
+       * `now` is the job's own clock, shared by all three operations. It is a
+       * parameter so a test can assert a decision rather than race one;
+       * there is nothing to carry it from here.
        */
       handler: async ({ req }) => {
-        await expireSponsorships(req.payload, new Date());
+        const now = new Date();
+
+        await expireSponsorships(req.payload, now);
         await settleComposedVideos(req.payload);
+        await failStalledRenders(req.payload, now);
 
         return { output: {} };
       },

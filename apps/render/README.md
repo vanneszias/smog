@@ -86,8 +86,9 @@ the same region.
    `REMOTION_FUNCTION_NAME` and the serve URL becomes `REMOTION_SERVE_URL`, in
    each environment's `vars` in `apps/site/wrangler.jsonc`. Both are
    non-secret. Until they are set, the site's render transport logs and does
-   nothing. `docs/deployment-checklist.md` and `docs/cutover-runbook.md` hold
-   the full operator steps.
+   nothing. [`docs/deployment-checklist.md`](../../docs/deployment-checklist.md)
+   and [`docs/cutover-runbook.md`](../../docs/cutover-runbook.md) (section 1,
+   decision 7) hold the full operator steps.
 
 ## When to redeploy
 

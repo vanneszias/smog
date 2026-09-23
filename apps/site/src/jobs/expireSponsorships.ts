@@ -541,6 +541,191 @@ export async function expireSponsorships(
 
 /*
  * ---------------------------------------------------------------------------
+ * Review Focus 4 (continued): a callback that never arrives at all
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * How long a render may sit in `queued`, `rendering` or `uploading` before
+ * this sweep gives up on it and marks it `failed`.
+ *
+ * ## Why a `queued` row can exist for a render that may still be running
+ *
+ * `lib/renderJob.ts` keeps the claim — leaves the row `queued` — when
+ * Remotion Lambda's start call fails ambiguously (`RemotionStartError` with
+ * `definite: false`: a timeout, a dropped connection, a 5xx, an unreadable
+ * 2xx). The render may have started anyway, and releasing the claim there
+ * would turn a render that runs into "a job this application never
+ * submitted", paid for and discarded the moment its callback arrived naming a
+ * row that no longer exists. So the row is left claimed, for a late webhook
+ * to settle — and **this sweep is what eventually fails it if none ever
+ * comes.**
+ *
+ * ## Why `uploading` is swept on the same clock
+ *
+ * `POST /api/render/callback` moves a render to `uploading` before it asks
+ * Mux to ingest the output, and only advances it to `ready` once Mux answers.
+ * Remotion's own webhook delivery (`@remotion/serverless`'s `invoke-webhook.js`)
+ * times out after 10s and is retried at most twice, about 1s and then 2s
+ * later — three deliveries in all. A Mux upload slower than that leaves
+ * nothing to settle a row stuck in `uploading`: the callback that would have
+ * advanced it has already given up, and no further delivery is coming.
+ *
+ * ## The two timestamps
+ *
+ * `queued` and `rendering` are read against `createdAt`, which is stamped
+ * once, at `claimRenderJob`'s insert, and never touched again — it is exactly
+ * "when this job was claimed", and neither state is entered by any other
+ * write. `uploading` is read against `updatedAt` instead, because it is
+ * **entered** by an ordinary update (`state: "uploading"`), and
+ * `collections/operations/utilities/update.js` stamps `updatedAt` with the
+ * real clock on every write regardless of what changed — so at the instant a
+ * row becomes `uploading`, `updatedAt` is exactly "when it entered this
+ * state". Confirmed by reading both: `createdAt` is written once by
+ * `@payloadcms/drizzle`'s `upsertRow` only `if (operation === 'create' &&
+ * !data.createdAt)`, and never again; `updatedAt` is overwritten by every
+ * subsequent update, so a row that only ever receives the one write that puts
+ * it in `uploading` carries that write's timestamp until something moves it
+ * on.
+ */
+const STALLED_RENDER_AFTER_MS = 6 * 60 * 60 * 1000;
+
+/** Why a `queued` or `rendering` render is failed by this sweep. */
+const NO_CALLBACK_REASON = "Remotion Lambda never reported back";
+
+/** Why an `uploading` render is failed by this sweep. */
+const NO_UPLOAD_REASON = "The upload to Mux never finished";
+
+/** What one stalled-render sweep found. Not exported; see `ExpiryReport`. */
+interface StalledRenderReport {
+  failed: number;
+}
+
+/**
+ * `queued` and `rendering` renders whose claim is older than `cutoff`, oldest
+ * first.
+ *
+ * Bounded and ordered exactly like the sweeps above: `PAGE` at a time, oldest
+ * first, over a set that drains as this sweep fails rows out of it — `failed`
+ * has no outgoing edge, so a row this sweep has already touched never
+ * reappears as a candidate.
+ */
+async function stalledSubmittedRenders(
+  payload: Payload,
+  cutoff: string
+): Promise<Render[]> {
+  const { docs } = await payload.find({
+    collection: "renders",
+    depth: 0,
+    limit: PAGE,
+    overrideAccess: true,
+    sort: "createdAt",
+    where: {
+      and: [
+        { state: { in: ["queued", "rendering"] } },
+        { createdAt: { less_than: cutoff } },
+      ],
+    },
+  });
+
+  return docs;
+}
+
+/** `uploading` renders that entered that state before `cutoff`, oldest first. */
+async function stalledUploadingRenders(
+  payload: Payload,
+  cutoff: string
+): Promise<Render[]> {
+  const { docs } = await payload.find({
+    collection: "renders",
+    depth: 0,
+    limit: PAGE,
+    overrideAccess: true,
+    sort: "updatedAt",
+    where: {
+      and: [
+        { state: { equals: "uploading" } },
+        { updatedAt: { less_than: cutoff } },
+      ],
+    },
+  });
+
+  return docs;
+}
+
+/**
+ * Fails one stalled render, and logs rather than throws if it cannot.
+ *
+ * A render this sweep selected is always still in a state `lib/renderState.ts`
+ * lets advance to `failed` — every non-terminal state may. The write can
+ * still lose a race to a webhook that arrives between the query above and
+ * this update (settling the row to `ready` or `failed` itself, both of which
+ * refuse a further move); that failure is left for the next run to re-read
+ * rather than treated as this sweep's own failure, exactly like a Mux delete
+ * failure above.
+ */
+async function failStalledRender(
+  payload: Payload,
+  render: Render,
+  reason: string,
+  report: StalledRenderReport
+): Promise<void> {
+  try {
+    await payload.update({
+      collection: "renders",
+      data: { failureReason: reason, state: "failed" },
+      id: render.id,
+      overrideAccess: true,
+    });
+    report.failed += 1;
+  } catch (error) {
+    payload.logger.error(
+      { err: error },
+      `[expireSponsorships] Could not fail stalled render job ${render.jobId}; the next sweep will try again`
+    );
+  }
+}
+
+/**
+ * Fails every render whose Lambda callback never arrived, or whose Mux
+ * upload never finished.
+ *
+ * `now` is a parameter for the reason `expireSponsorships` gives about its
+ * own clock: a test should be able to assert a decision rather than race one.
+ *
+ * The sponsorship a stalled render belongs to is never touched: it keeps
+ * whatever preview it already has, exactly as `recordUnplayable` leaves the
+ * sponsorship alone for a render that is not the composite it is holding.
+ * There is nothing to restore here, because nothing was ever attached —
+ * `attachToSponsorship` only runs once Mux has confirmed the asset, which is
+ * exactly the step that never happened.
+ */
+export async function failStalledRenders(
+  payload: Payload,
+  now: Date
+): Promise<StalledRenderReport> {
+  const cutoff = new Date(
+    now.getTime() - STALLED_RENDER_AFTER_MS
+  ).toISOString();
+  const report: StalledRenderReport = { failed: 0 };
+
+  for (const render of await stalledSubmittedRenders(payload, cutoff)) {
+    await failStalledRender(payload, render, NO_CALLBACK_REASON, report);
+  }
+
+  for (const render of await stalledUploadingRenders(payload, cutoff)) {
+    await failStalledRender(payload, render, NO_UPLOAD_REASON, report);
+  }
+
+  payload.logger.info(
+    `[expireSponsorships] Failed ${report.failed} stalled render(s)`
+  );
+
+  return report;
+}
+
+/*
+ * ---------------------------------------------------------------------------
  * Review Focus 4: Mux accepts the upload and then fails to process it
  * ---------------------------------------------------------------------------
  */

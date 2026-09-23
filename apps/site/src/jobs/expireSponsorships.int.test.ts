@@ -12,6 +12,7 @@ import {
 } from "vitest";
 import {
   expireSponsorships,
+  failStalledRenders,
   settleComposedVideos,
 } from "@/jobs/expireSponsorships";
 import { canAdvance, claimRenderJob } from "@/lib/renderState";
@@ -28,6 +29,7 @@ import config from "../payload.config";
 const RUN = crypto.randomUUID();
 
 const DAY = 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
 const PRICE = 5000;
 
 /** A fixed instant, so every date below is arithmetic and not a race. */
@@ -1687,5 +1689,250 @@ describe("a composed video Mux never made ready", () => {
     await settleComposedVideos(payload);
 
     expect(muxCalls.filter((call) => call.assetId === assetId)).toHaveLength(0);
+  });
+});
+
+/*
+ * ---------------------------------------------------------------------------
+ * Review Focus 4 (continued): a callback that never arrives at all
+ * ---------------------------------------------------------------------------
+ */
+
+describe("a render whose Lambda callback never arrived, or whose Mux upload never finished", () => {
+  let payload: Awaited<ReturnType<typeof getPayload>>;
+  let categoryId: number;
+
+  const hoursAgo = (hours: number) =>
+    new Date(NOW.getTime() - hours * HOUR).toISOString();
+
+  const seedGesture = async (label: string): Promise<number> => {
+    const gesture = await payload.create({
+      collection: "gestures",
+      data: {
+        categories: [categoryId],
+        isActive: true,
+        name: `Vastgelopen ${label} ${RUN}`,
+        playbackId: `pb-stalled-original-${label}-${RUN}`,
+      },
+      locale: "nl",
+    });
+
+    return gesture.id;
+  };
+
+  const seedSponsorship = async (label: string): Promise<number> => {
+    const gesture = await seedGesture(label);
+    const previewVideoPlaybackId = `pb-stalled-preview-${label}-${RUN}`;
+    const row = await payload.create({
+      collection: "sponsorships",
+      data: {
+        contactFullName: "Jan Janssens",
+        durationYears: 1,
+        endDate: new Date(NOW.getTime() + 365 * DAY).toISOString(),
+        gesture,
+        originalVideoPlaybackId: `pb-stalled-original-${label}-${RUN}`,
+        overlayText: `Met dank aan ${label}`,
+        paymentAmount: PRICE,
+        previewVideoPlaybackId,
+        sponsorEmail: `stalled-${label}-${RUN}@example.com`,
+        sponsorName: `Acme ${label}`,
+        startDate: new Date(NOW.getTime() - DAY).toISOString(),
+        status: "pending_approval",
+      },
+    });
+
+    return row.id;
+  };
+
+  /**
+   * Walks a freshly claimed render through the state table to `state`, then
+   * backdates `createdAt`/`updatedAt` straight into the row.
+   *
+   * The two steps cannot be merged. Every ordinary write through the Local
+   * API — including the ones this helper itself makes to reach `state` —
+   * re-stamps `updatedAt` with the real clock
+   * (`collections/operations/utilities/update.js`), so the backdating has to
+   * be the very last thing that touches the row and has to go beneath that
+   * layer: `payload.db.updateOne` writes the columns directly, the same way
+   * `jobs/reapStrandedJobs.int.test.ts`'s `forceRow` does.
+   */
+  const seedStalledRender = async (
+    label: string,
+    sponsorshipId: number,
+    options: {
+      createdAt: string;
+      state: "queued" | "ready" | "rendering" | "uploading";
+      updatedAt?: string;
+    }
+  ): Promise<number> => {
+    const jobId = `stalled-${label}-${RUN}`;
+    const claimed = await claimRenderJob(payload, {
+      jobId,
+      sponsorship: sponsorshipId,
+    });
+
+    if (claimed === null) {
+      throw new Error(`could not claim ${jobId}`);
+    }
+
+    const steps =
+      options.state === "ready"
+        ? (["uploading", "ready"] as const)
+        : options.state === "queued"
+          ? []
+          : ([options.state] as const);
+
+    for (const state of steps) {
+      await payload.update({
+        collection: "renders",
+        data: { state },
+        id: claimed.id,
+        overrideAccess: true,
+      });
+    }
+
+    await payload.db.updateOne({
+      collection: "renders",
+      data: {
+        createdAt: options.createdAt,
+        ...(options.updatedAt ? { updatedAt: options.updatedAt } : {}),
+      },
+      id: claimed.id,
+    });
+
+    return claimed.id;
+  };
+
+  const renderRow = (id: number) =>
+    payload.findByID({ collection: "renders", depth: 0, id });
+
+  const sponsorshipRow = (id: number) =>
+    payload.findByID({ collection: "sponsorships", depth: 0, id });
+
+  beforeAll(async () => {
+    payload = await getPayload({ config });
+
+    const category = await payload.create({
+      collection: "categories",
+      data: { isActive: true, name: `Vastgelopen ${RUN}` },
+      locale: "nl",
+    });
+    categoryId = category.id;
+  });
+
+  it("boots with the fixtures this file assumes", () => {
+    expect(categoryId).toBeGreaterThan(0);
+  });
+
+  it("fails a queued render whose claim is seven hours old", async () => {
+    const sponsorshipId = await seedSponsorship("queued-old");
+    const render = await seedStalledRender("queued-old", sponsorshipId, {
+      createdAt: hoursAgo(7),
+      state: "queued",
+    });
+
+    const report = await failStalledRenders(payload, NOW);
+
+    const row = await renderRow(render);
+    expect(row.state).toBe("failed");
+    expect(row.failureReason).toBe("Remotion Lambda never reported back");
+    expect(report.failed).toBeGreaterThanOrEqual(1);
+  });
+
+  it("leaves a five-hour-old queued render alone", async () => {
+    const sponsorshipId = await seedSponsorship("queued-fresh");
+    const render = await seedStalledRender("queued-fresh", sponsorshipId, {
+      createdAt: hoursAgo(5),
+      state: "queued",
+    });
+
+    await failStalledRenders(payload, NOW);
+
+    const row = await renderRow(render);
+    expect(row.state).toBe("queued");
+    expect(row.failureReason ?? null).toBeNull();
+  });
+
+  it("fails a rendering render whose claim is seven hours old", async () => {
+    // Task 4's ambiguous-start case: the claim is kept so a late webhook can
+    // still settle it, and this sweep is what eventually gives up on it.
+    const sponsorshipId = await seedSponsorship("rendering-old");
+    const render = await seedStalledRender("rendering-old", sponsorshipId, {
+      createdAt: hoursAgo(7),
+      state: "rendering",
+    });
+
+    await failStalledRenders(payload, NOW);
+
+    const row = await renderRow(render);
+    expect(row.state).toBe("failed");
+    expect(row.failureReason).toBe("Remotion Lambda never reported back");
+  });
+
+  it("leaves a ready render alone no matter how old its claim is", async () => {
+    const sponsorshipId = await seedSponsorship("ready-old");
+    const render = await seedStalledRender("ready-old", sponsorshipId, {
+      createdAt: hoursAgo(400),
+      state: "ready",
+    });
+
+    await failStalledRenders(payload, NOW);
+
+    const row = await renderRow(render);
+    expect(row.state).toBe("ready");
+    expect(row.failureReason ?? null).toBeNull();
+  });
+
+  it("fails an uploading render six hours after it entered that state", async () => {
+    // Remotion's webhook delivery times out after 10s and is retried at most
+    // twice (about 1s and then 2s later); a Mux upload slower than that can
+    // leave nothing to settle a row stuck here.
+    const sponsorshipId = await seedSponsorship("uploading-old");
+    const render = await seedStalledRender("uploading-old", sponsorshipId, {
+      createdAt: hoursAgo(9),
+      state: "uploading",
+      updatedAt: hoursAgo(7),
+    });
+
+    const report = await failStalledRenders(payload, NOW);
+
+    const row = await renderRow(render);
+    expect(row.state).toBe("failed");
+    expect(row.failureReason).toBe("The upload to Mux never finished");
+    expect(report.failed).toBeGreaterThanOrEqual(1);
+  });
+
+  it("leaves an uploading render alone before six hours have passed since it entered that state", async () => {
+    // Claimed long ago, but only recently moved into `uploading` — what
+    // matters is time in *this* state, not time since the original claim.
+    const sponsorshipId = await seedSponsorship("uploading-fresh");
+    const render = await seedStalledRender("uploading-fresh", sponsorshipId, {
+      createdAt: hoursAgo(9),
+      state: "uploading",
+      updatedAt: hoursAgo(5),
+    });
+
+    await failStalledRenders(payload, NOW);
+
+    const row = await renderRow(render);
+    expect(row.state).toBe("uploading");
+    expect(row.failureReason ?? null).toBeNull();
+  });
+
+  it("keeps whatever preview the sponsorship has; it is untouched", async () => {
+    const sponsorshipId = await seedSponsorship("preview-kept");
+    const before = await sponsorshipRow(sponsorshipId);
+    const render = await seedStalledRender("preview-kept", sponsorshipId, {
+      createdAt: hoursAgo(7),
+      state: "queued",
+    });
+
+    await failStalledRenders(payload, NOW);
+
+    expect((await renderRow(render)).state).toBe("failed");
+    expect((await sponsorshipRow(sponsorshipId)).previewVideoPlaybackId).toBe(
+      before.previewVideoPlaybackId
+    );
+    expect((await sponsorshipRow(sponsorshipId)).status).toBe(before.status);
   });
 });
