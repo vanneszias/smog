@@ -142,8 +142,7 @@ describe("Users password policy", () => {
      * and the twelve-character floor simply was not applied. What was applied
      * is Payload's own default parameter, `minLength = 3`.
      *
-     * Unreachable today only because no email adapter is configured. Stage 7
-     * configures one.
+     * Live wherever an email adapter delivers the reset link.
      */
     it("rejects a three-character password", async () => {
       const user = await create("pw-reset-short", "reset-floor-password");
@@ -221,8 +220,7 @@ describe("Users password policy", () => {
        * `loginOperation` has counted the attempt — which silently disables
        * lockout, the one brute-force control this project has. The sweep
        * caught the un-narrowed hook through an unrelated account-endpoint
-       * test; that is a finding, and this is the fix. Transcript M30 in the
-       * Task 5 report.
+       * test; that is a finding, and this is the fix.
        */
       const user = await create("pw-reset-narrow", "narrow-enough-password");
       const loggedIn = await payload.login({

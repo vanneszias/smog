@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import config from "../payload.config";
 
 /**
- * The half of the referential-integrity ruling that belongs to
+ * The half of the referential-integrity rules that belongs to
  * `sponsorships.gesture`: deleting a sponsored gesture must be refused, and
  * refused legibly.
  *

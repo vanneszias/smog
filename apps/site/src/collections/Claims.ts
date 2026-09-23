@@ -6,21 +6,20 @@ import { CLAIM_KIND_VALUES } from "@/lib/claims";
  * One row per unit of work this application has taken responsibility for. The
  * unique `key` is the lock.
  *
- * This replaces `webhook-deliveries` (Stage 5) and `render-completions`
- * (Stage 6), which were the same table twice. `lib/claims.ts` carries the
- * reasoning those two collections' doc blocks carried — why a unique index is
- * the only atomic primitive here, why the key is namespaced by kind, and why a
- * lease and a receipt are the same row with and without an expiry. This file
- * is only the shape.
+ * This replaces `webhook-deliveries` and `render-completions`, which were the
+ * same table twice. `lib/claims.ts` carries the reasoning those two
+ * collections' doc blocks carried — why a unique index is the only atomic
+ * primitive here, why the key is namespaced by kind, and why a lease and a
+ * receipt are the same row with and without an expiry. This file is only the
+ * shape.
  *
  * ## Why it is one table now and was two before
  *
- * `RenderCompletions.ts` deferred this deliberately: doing it at Stage 6 would
- * have meant editing Stage 5's shipped and mutation-proven webhook mid-stage to
- * serve an abstraction with two users. There are four now, so the merge is
- * done once — and the proof that it did not break anything is that Stage 5's
- * and Stage 6's concurrency mutations still fail their own tests through this
- * table.
+ * The merge was deferred deliberately: with two users, it would have meant
+ * editing a working, mutation-proven webhook to serve an abstraction. There
+ * are four now, so the merge is done once — and the proof that it did not
+ * break anything is that the webhook's and the render callback's concurrency
+ * mutations still fail their own tests through this table.
  *
  * ## Access
  *

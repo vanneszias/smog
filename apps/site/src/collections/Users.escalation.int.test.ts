@@ -6,7 +6,7 @@ import { SELF_REGISTRATION } from "@/access";
 /**
  * Privilege-escalation regression tests.
  *
- * These exist because the original Task 3 implementation guarded `role` on
+ * These exist because the original sign-up implementation guarded `role` on
  * update but not on create, while collection-level create was public. An
  * anonymous POST to /api/users carrying `role: "admin"` therefore produced an
  * admin account. The whole suite stayed green because every test that created
@@ -16,7 +16,7 @@ import { SELF_REGISTRATION } from "@/access";
  * So: every assertion here goes through `overrideAccess: false`. A test that
  * creates its attacker with elevated privileges is not testing the attack.
  *
- * ## What changed in Stage 4 Task 3, and why these tests changed with it
+ * ## What changed when registration closed, and why these tests did too
  *
  * `users.access.create` used to be `() => true` and is now
  * `isAdminOrSelfRegistration`. That is a deliberate semantic change, made

@@ -34,7 +34,7 @@ export const Categories: CollectionConfig = {
       defaultValue: true,
       index: true,
     },
-    // The Convex `_id` this category was migrated from (Stage 9). Unique so
+    // The Convex `_id` this category was imported from. Unique so
     // the importer's rerun cannot create a second category for one Convex
     // row, indexed because every lookup the importer makes is an equality
     // match on it. Hidden and read-only: this is bookkeeping for the

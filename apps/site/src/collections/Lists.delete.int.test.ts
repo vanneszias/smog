@@ -5,15 +5,15 @@ import { beforeAll, describe, expect, it } from "vitest";
 import config from "../payload.config";
 
 /**
- * The two halves of the referential-integrity ruling that belong to Stage 3:
+ * The two halves of the referential-integrity rules that belong to lists:
  * `lists.owner` cascades, `lists.items.gesture` drops the array row.
  *
- * Every assertion goes through a real delete against a real database, which
- * is the spec's explicit requirement ("Referential integrity"): Payload emits
- * both columns as `NOT NULL` with `ON DELETE set null`, a pair SQLite cannot
- * satisfy, so a schema-level assertion cannot tell a rule the database
- * honours from one it rejects at runtime. Before the hooks in this task, both
- * deletes failed with a raw `Failed query: delete from "users" ...` /
+ * Every assertion goes through a real delete against a real database, and
+ * deliberately so: Payload emits both columns as `NOT NULL` with
+ * `ON DELETE set null`, a pair SQLite cannot satisfy, so a schema-level
+ * assertion cannot tell a rule the database honours from one it rejects at
+ * runtime. Before the hooks, both deletes failed with a raw
+ * `Failed query: delete from "users" ...` /
  * `Failed query: delete from "gestures" ...`. That is the defect, and it is
  * only visible by deleting.
  *
@@ -317,11 +317,10 @@ describe("deleting a gesture that lists hold", () => {
         endDate: "2027-01-01T00:00:00.000Z",
         durationYears: 1,
         paymentAmount: 500,
-        // Payload's generated create type marks `status` and
-        // `durationYears` as required despite both carrying defaults — the
-        // Stage 1 hazard the spec records under "Deferred from Stage 1".
-        // Both are supplied above; the cast is only to satisfy the
-        // `data` union, exactly as `Gestures.delete.int.test.ts` does.
+        // Payload's generated create type marks `status` and `durationYears` as
+        // required despite both carrying defaults (see `SPONSORSHIP_DEFAULTS`).
+        // Both are supplied above; the cast is only to satisfy the `data`
+        // union, exactly as `Gestures.delete.int.test.ts` does.
       } as RequiredDataFromCollectionSlug<"sponsorships">,
     });
 

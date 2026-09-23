@@ -161,7 +161,7 @@ describe("user-consents append-only behaviour against a real database", () => {
 
   it("denies a signed-in non-admin reading consents, their own included", async () => {
     // Deliberate: `user-consents` is not `isAdminOrSelf`. A user asking what
-    // they consented to is a Stage 4 account-page concern with its own read
+    // they consented to is an account-page concern with its own read
     // path; widening this collection would also expose the ipAddress and
     // userAgent stored alongside the decision.
     const { id } = await seedConsent();
@@ -177,8 +177,8 @@ describe("user-consents append-only behaviour against a real database", () => {
 });
 
 /**
- * The half of the referential-integrity ruling that belongs to
- * `user_consents`: the record must survive the account it describes.
+ * The half of the referential-integrity rules that belongs to `user_consents`:
+ * the record must survive the account it describes.
  *
  * This is deliberately a *behavioural* test against a real database rather
  * than an assertion about the field config or the emitted DDL. Payload writes

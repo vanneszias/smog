@@ -89,15 +89,14 @@ describe("Gestures collection", () => {
   });
 
   it("carries the Convex _id as a hidden, read-only, unique legacyId", () => {
-    // The importer (Stage 9 Task 3) looks documents up by this field to
-    // decide whether it already created them, so its name and shape are a
-    // contract with code that does not exist in this repo yet. Unique so a
-    // rerun cannot create a second gesture for one Convex row; indexed
-    // because every lookup during import is an equality match on it; hidden
-    // and read-only because it is bookkeeping for the importer, not something
-    // an editor should see or change; not localized and not required because
-    // it exists only on rows the importer created — every gesture made in
-    // the admin after cutover has none.
+    // The importer (`scripts/migrate-convex`) looks documents up by this field
+    // to decide whether it already created them, so its name and shape are a
+    // contract with that code. Unique so a rerun cannot create a second gesture
+    // for one Convex row; indexed because every lookup during import is an
+    // equality match on it; hidden and read-only because it is bookkeeping for
+    // the importer, not something an editor should see or change; not localized
+    // and not required because it exists only on rows the importer created —
+    // every gesture made in the admin after cutover has none.
     const legacyId = field("legacyId");
     expect(legacyId).toMatchObject({
       name: "legacyId",

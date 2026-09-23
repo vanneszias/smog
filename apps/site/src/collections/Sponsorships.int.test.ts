@@ -236,7 +236,7 @@ describe("Sponsorships access against a real database", () => {
 
   it("lets one Mollie payment sit on every sponsorship it paid for", async () => {
     /*
-     * **The inverse of what Stage 1 asserted here, and the product decides
+     * **The inverse of what this test first asserted, and the product decides
      * it.** This test used to demand that a second row carrying the same
      * `molliePaymentId` be refused, on the reasoning that "the Mollie webhook
      * looks a sponsorship up by this id". It does not: `endpoints/mollie.ts`
@@ -245,12 +245,10 @@ describe("Sponsorships access against a real database", () => {
      *
      * `apps/site`'s checkout writes one row per selected gesture, so a
      * three-gesture order is three rows and one payment id — and under the
-     * unique index D1 refused the second, which made the shipped bulk
-     * purchase impossible. `apps/server/src/webhooks/mollie.ts` has always
-     * written the same id to every sponsorship in a bulk payment, and
-     * `packages/convex/convex/schema.ts` declares `by_payment_id` as a plain
-     * index. Stage 5 Task 7 drops the constraint; this is the behaviour that
-     * replaces it.
+     * unique index D1 refused the second, which made bulk purchase impossible.
+     * A bulk payment has always carried the same id on every sponsorship it
+     * covers. `20260921_120000_sponsorship_payment_id_not_unique` drops the
+     * constraint; this is the behaviour that replaces it.
      */
     const molliePaymentId = `tr_${runId.replaceAll("-", "")}`;
 

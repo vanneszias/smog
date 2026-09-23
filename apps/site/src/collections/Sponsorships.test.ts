@@ -24,9 +24,9 @@ describe("Sponsorships collection", () => {
   it("publishes the same tuple from the package root and the subpath", () => {
     // The collection imports the subpath, because the Payload CLI's loader
     // cannot follow the barrel's relative re-exports (see Sponsorships.ts).
-    // Stage 2's `@smog/ui-web` will import the root. This asserts the two
-    // entry points are the same array, so `export * from "./sponsorships"`
-    // in the barrel cannot quietly go missing.
+    // `@smog/ui-web` imports the root. This asserts the two entry points are
+    // the same array, so `export * from "./sponsorships"` in the barrel cannot
+    // quietly go missing.
     expect(SPONSORSHIP_STATUSES).toBe(SPONSORSHIP_STATUSES_SUBPATH);
   });
 
@@ -60,7 +60,7 @@ describe("Sponsorships collection", () => {
   });
 
   it("opens read to the re-edit token, and to nothing else", () => {
-    // The one operation Stage 5 widened, and the assertion is still
+    // The one operation widened beyond admins, and the assertion is still
     // reference equality rather than a shape: `sponsorshipReEditAccess`
     // denies a request that presents no token, and an inline rule written to
     // look like it would be one `!` away from handing over every row whose
@@ -71,10 +71,10 @@ describe("Sponsorships collection", () => {
   });
 
   it("localizes nothing, so no required field becomes unsaveable in en or fr", () => {
-    // Stage 1's hardest-won constraint: `required: true` plus
-    // `localized: true` makes a document unsaveable in any locale that has
-    // no translation yet. Nothing on a sponsorship is editorial content, so
-    // the rule here is the stronger one — no localized fields at all.
+    // The schema's hardest-won constraint: `required: true` plus
+    // `localized: true` makes a document unsaveable in any locale that has no
+    // translation yet. Nothing on a sponsorship is editorial content, so the
+    // rule here is the stronger one — no localized fields at all.
     const localized = Sponsorships.fields.filter(
       (f) => (f as { localized?: boolean }).localized === true
     );
@@ -121,14 +121,13 @@ describe("Sponsorships collection", () => {
     expect(field("reEditToken")).toHaveProperty("unique", true);
 
     /*
-     * `molliePaymentId` is the opposite, and Stage 1 had it backwards. The
-     * webhook resolves a payment through `metadata.sponsorshipIds`, not
+     * `molliePaymentId` is the opposite, and the first schema had it backwards.
+     * The webhook resolves a payment through `metadata.sponsorshipIds`, not
      * through this column; one checkout covering three gestures writes three
      * rows carrying one payment id, which a unique index refuses — so the
-     * constraint made the shipped bulk purchase impossible rather than safer.
+     * constraint made bulk purchase impossible rather than safer.
      * `Sponsorships.int.test.ts` proves two rows may now share one id, and
-     * `migrations.test.ts` proves a *deployed* database gets an
-     * ordinary index.
+     * `migrations.test.ts` proves a *deployed* database gets an ordinary index.
      */
     expect(field("molliePaymentId")).not.toHaveProperty("unique", true);
   });

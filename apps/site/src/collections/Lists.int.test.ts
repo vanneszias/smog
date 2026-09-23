@@ -6,9 +6,8 @@ import config from "../payload.config";
 describe("List item ordering", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
   // The D1/SQLite adapter uses integer autoincrement IDs, not UUID strings,
-  // so `number` is the real type here (the brief's sketch used
-  // `string | number`, presumably written against a Mongo-backed Payload
-  // project where document IDs are strings).
+  // so `number` is the real type here, not the `string | number` a
+  // Mongo-backed Payload project, where document IDs are strings, would use.
   let gestureIds: number[];
   let listId: number;
 
@@ -132,12 +131,11 @@ describe("List item deduplication", () => {
   });
 
   /**
-   * Same latent bug Task 4 found for `users.favorites` — Payload's array
-   * field does not dedupe on its own. Convex enforced one row per
-   * (list, gesture) via a `by_list_gesture` index plus an early return; the
-   * `beforeChange` hook on `items` is what restores that here. First
-   * occurrence wins so the gesture keeps its original position rather than
-   * jumping to wherever the duplicate was added.
+   * The same latent bug `users.favorites` had — Payload's array field does not
+   * dedupe on its own, and a list holds a gesture at most once. The
+   * `beforeChange` hook on `items` is what enforces that. First occurrence wins
+   * so the gesture keeps its original position rather than jumping to wherever
+   * the duplicate was added.
    */
   it("keeps only the first occurrence when the same gesture is added twice", async () => {
     const list = await payload.create({
@@ -219,14 +217,13 @@ describe("List item addedBy across a reorder", () => {
   });
 
   /**
-   * Review-round finding, then ruling: sending only `{ gesture }` on
-   * reorder (as the ordering tests above do, and as a "drag to reorder" UI
-   * naturally would) replaces the entire `items` array, including sibling
-   * fields the request didn't mention. `addedBy` is provenance, not
-   * user-editable content, so a reorder has no business clearing it — the
-   * `items` `beforeChange` hook now carries it forward for any gesture that
-   * was already in the list. See that hook's comments for the exact
-   * mechanics and why carry-forward runs before dedupe.
+   * Sending only `{ gesture }` on reorder (as the ordering tests above do, and
+   * as a "drag to reorder" UI naturally would) replaces the entire `items`
+   * array, including sibling fields the request didn't mention. `addedBy` is
+   * provenance, not user-editable content, so a reorder has no business
+   * clearing it — the `items` `beforeChange` hook now carries it forward for
+   * any gesture that was already in the list. See that hook's comments for the
+   * exact mechanics and why carry-forward runs before dedupe.
    */
   it("survives a reorder that only sends gesture ids", async () => {
     const gestureA = await makeGesture("Zes");

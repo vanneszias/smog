@@ -13,8 +13,8 @@ import { denyAll, isAdmin } from "@/access";
  *
  * There is no hand-written timestamp field. Payload maintains `createdAt`
  * on every collection, and a second, hook-supplied one could disagree with
- * it. The hooks that populate this collection arrive with the flows they
- * audit, in Stage 5.
+ * it. The hooks that populate this collection live with the flows they
+ * audit.
  */
 export const AdminLogs: CollectionConfig = {
   slug: "admin-logs",

@@ -41,9 +41,8 @@ const TEN_MINUTES_MS = 10 * 60 * 1000;
  * What follows from that: **resistance to online guessing has to come from
  * lockout rather than from the cost of a single guess.** Hence the two
  * settings below, the password floor in `hooks/enforcePasswordPolicy`, and
- * the stage's preference for Google sign-in, which gives us no password to
- * hash in the first place. Full write-up in
- * `docs/superpowers/specs/2026-09-19-stage-0-findings.md`.
+ * the preference for Google sign-in, which gives us no password to hash in
+ * the first place.
  *
  * ## Why these are written out when 3.89.0 already defaults to them
  *
@@ -125,8 +124,8 @@ export const Users: CollectionConfig = {
    * what the admin panel loses by it.
    */
   endpoints: usersCollectionEndpoints,
-  // A list without an owner has no meaning and no access filter can reach
-  // it, so the spec's referential-integrity table rules cascade. See
+  // A list without an owner has no meaning and no access filter can reach it,
+  // so the referential-integrity rule is cascade. See
   // `hooks/cascadeListsOnUserDelete`.
   hooks: {
     beforeDelete: [cascadeListsOnUserDelete],
@@ -313,7 +312,7 @@ export const Users: CollectionConfig = {
       hooks: {
         // Payload's hasMany relationship stores whatever array it is given,
         // duplicates included — verified against a real database, where
-        // [id, id] round-tripped as [3, 3]. The spec originally claimed
+        // [id, id] round-tripped as [3, 3]. It was once assumed that
         // dropping the join table made one-favorite-per-pair structural; it
         // did not, so it is enforced here.
         beforeChange: [

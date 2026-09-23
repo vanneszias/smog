@@ -33,28 +33,28 @@ export function resolveRelationshipId(
  * Mints the share tokens on create, and rotates them when a list is
  * un-shared.
  *
- * **Minting** closes gap 1 of the spec's "Sharing is inert until Stage 3":
- * nothing wrote `viewShareToken` or `editShareToken`, so both columns were
- * always NULL and every share link was inert. A value supplied by the caller
- * wins — `??`, not `||`, and not an unconditional assignment — because the
- * integration fixtures create lists with known tokens and read by them, and
- * because an owner rotating a token by hand is a legitimate write.
+ * **Minting** closes the first gap that left sharing inert: nothing wrote
+ * `viewShareToken` or `editShareToken`, so both columns were always NULL and
+ * every share link was inert. A value supplied by the caller wins — `??`, not
+ * `||`, and not an unconditional assignment — because the integration fixtures
+ * create lists with known tokens and read by them, and because an owner
+ * rotating a token by hand is a legitimate write.
  *
  * Both tokens are minted even for a list created `private`. `visibility` is
  * not consulted by the access filters at all (see below), so what a private
  * list's token buys is a link the owner can turn on later without a second
  * write path; nobody but the owner has ever seen it.
  *
- * **Rotation** closes gap 3. `visibility` being ignored meant setting a list
- * back to `private` revoked nothing — only clearing the token did. The spec
- * rules on rotation over folding `visibility` into the access filters, on the
+ * **Rotation** closes another. `visibility` being ignored meant setting a list
+ * back to `private` revoked nothing — only clearing the token did. Rotation
+ * was chosen over folding `visibility` into the access filters, on the
  * grounds that two mechanisms which can disagree is the worse option, and
- * that ruling is what this implements: the capability *is* the token, and
+ * that decision is what this implements: the capability *is* the token, and
  * un-sharing destroys the outstanding one.
  *
  * Three details, each of which is a decision rather than an accident:
  *
- * - **`beforeChange`, not the `afterChange` the plan sketched.** An
+ * - **`beforeChange`, not `afterChange`.** An
  *   `afterChange` hook cannot change the document it is told about; it would
  *   have to issue a second `payload.update` with `overrideAccess: true`, need
  *   a `context` flag to stop that update re-entering this hook, and return
@@ -285,12 +285,10 @@ export const Lists: CollectionConfig = {
 
             // --- Pass 2: dedupe.
             //
-            // Same latent bug Task 4 found for `users.favorites`: Payload's
-            // array field does not dedupe on its own, and Convex enforced
-            // one row per (list, gesture) via a `by_list_gesture` index
-            // plus an early return. First occurrence wins so a gesture
-            // keeps its original position rather than jumping to wherever
-            // a duplicate got added.
+            // The same latent bug `users.favorites` had: Payload's array field
+            // does not dedupe on its own, and a list holds a gesture at most
+            // once. First occurrence wins so a gesture keeps its original
+            // position rather than jumping to wherever a duplicate got added.
             //
             // Ambiguous case, deliberately pinned rather than special-cased
             // (see `Lists.int.test.ts`): if the *same* gesture appears

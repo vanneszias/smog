@@ -229,7 +229,7 @@ describe("claiming a render job", () => {
 
   it("refuses a state change the table does not allow, against a real row", async () => {
     // `lib/renderState.ts` decides the policy; this is the assertion that
-    // something enforces it. Every writer in this stage runs with
+    // something enforces it. Every server-side writer runs with
     // `overrideAccess: true`, so the enforcement has to be a hook rather than
     // an access rule, and `overrideAccess` here is what proves it.
     const id = jobId("transitions");

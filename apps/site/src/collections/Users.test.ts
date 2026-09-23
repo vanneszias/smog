@@ -71,10 +71,10 @@ describe("Users collection", () => {
   });
 
   /**
-   * Public REST registration was closed in Stage 4 Task 3. The behavioural
-   * half is in `Users.rest.int.test.ts`, which drives the mounted REST API;
-   * this pins the wiring, because a `create` that quietly went back to
-   * `() => true` would fail nothing else in this file.
+   * Public REST registration is closed. The behavioural half is in
+   * `Users.rest.int.test.ts`, which drives the mounted REST API; this pins the
+   * wiring, because a `create` that quietly went back to `() => true` would
+   * fail nothing else in this file.
    */
   it("no longer lets anybody create a user over the public API", () => {
     expect(Users.access?.create).toBe(isAdminOrSelfRegistration);

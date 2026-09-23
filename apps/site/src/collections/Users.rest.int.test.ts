@@ -6,10 +6,10 @@ import config from "@/payload.config";
 /**
  * Payload's **mounted REST API**, driven the way an attacker reaches it.
  *
- * `app/(payload)/api/[...slug]/route.ts` mounts the whole REST API, and Task
- * 2 closed enumeration only on the site's own `/auth/*` endpoints, reporting
- * — correctly — that the site as deployed still leaked on two of Payload's.
- * Reproduced against a running dev server before anything was changed:
+ * `app/(payload)/api/[...slug]/route.ts` mounts the whole REST API, and closing
+ * enumeration only on the site's own `/auth/*` endpoints left the site as
+ * deployed still leaking on two of Payload's. Reproduced against a running dev
+ * server before anything was changed:
  *
  * ```
  * POST /api/users       {fresh}    -> 201 {"doc":{...}}

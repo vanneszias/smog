@@ -29,10 +29,7 @@ import { stampReviewDecision } from "@/hooks/stampReviewDecision";
  * `reEditToken` now resolves exactly one row (`access/sponsorships.ts`), so
  * for the first time a non-admin can read a sponsorship document. What that
  * capability is *for* is fixing the overlay on a video, and nothing on the
- * re-edit page renders any of the fields below — the shipped
- * `getByReEditToken` projection does not return the review metadata at all,
- * and `apps/web/src/routes/sponsors/re-edit.tsx` never displays the contact
- * or invoice details it does return.
+ * re-edit page renders any of the fields below.
  *
  * So they are stripped by the field layer rather than by each caller's
  * `select`, because a capability URL is forwardable: it reaches whoever the
@@ -66,22 +63,19 @@ export const SPONSORSHIP_DEFAULTS = {
  * A sponsored gesture: a company pays for its name and logo to be overlaid
  * on one gesture's video for a fixed term.
  *
- * Stage 1 defined the shape only. Stage 5 filled it in: the status
- * transitions, the Mollie payment flow and the re-edit link all now write
- * and validate the columns that were left inert, and `renewalReminderSentAt`
- * is the one still waiting for Stage 7's jobs.
+ * The status transitions, the Mollie payment flow, the re-edit link and the
+ * renewal-reminder job are what write and validate its columns.
  *
- * **`create`, `update` and `delete` are admin-only; `read` is not, and that
- * is the one deliberate hole.** A row carries a sponsor's contact details,
- * invoice name and VAT number, so the public site still cannot read this
- * collection: Stage 2 exposes the handful of display fields a gesture page
- * needs through `lib/sponsorOverlay.ts`'s own privileged projection rather
- * than by widening anything here. What Stage 5 adds is
- * `access/sponsorships.ts`, which resolves an unexpired `reEditToken` to
- * exactly one row and refuses everything else — including, explicitly, a
- * request that presents no token at all, which would otherwise match every
- * row whose token column is NULL. The fields that capability must not see
- * carry `ADMIN_ONLY_READ`.
+ * **`create`, `update` and `delete` are admin-only; `read` is not, and that is
+ * the one deliberate hole.** A row carries a sponsor's contact details, invoice
+ * name and VAT number, so the public site still cannot read this collection:
+ * the gesture page gets the handful of display fields it needs through
+ * `lib/sponsorOverlay.ts`'s own privileged projection rather than by widening
+ * anything here. The hole is `access/sponsorships.ts`, which resolves an
+ * unexpired `reEditToken` to exactly one row and refuses everything else —
+ * including, explicitly, a request that presents no token at all, which would
+ * otherwise match every row whose token column is NULL. The fields that
+ * capability must not see carry `ADMIN_ONLY_READ`.
  */
 export const Sponsorships: CollectionConfig = {
   slug: "sponsorships",
@@ -164,8 +158,8 @@ export const Sponsorships: CollectionConfig = {
       defaultValue: SPONSORSHIP_DEFAULTS.status,
       index: true,
       // Built from the `@smog/config` tuple rather than restated here, so
-      // the admin panel's options and the values Stage 2's StatusBadge and
-      // Stage 5's payment flow switch on cannot drift apart.
+      // the admin panel's options and the values `StatusBadge` and the
+      // payment flow switch on cannot drift apart.
       options: SPONSORSHIP_STATUSES.map((value) => ({ label: value, value })),
     },
     { name: "startDate", type: "date", required: true },
@@ -179,19 +173,15 @@ export const Sponsorships: CollectionConfig = {
     /*
      * Indexed, and deliberately **not** unique.
      *
-     * Stage 1 made it unique, reasoning that "the Mollie webhook resolves a
+     * It was once unique, on the reasoning that "the Mollie webhook resolves a
      * payment to a sponsorship through this column". It does not: the webhook
      * resolves through `metadata.sponsorshipIds` (see `endpoints/mollie.ts`),
      * and the column means "which payment paid for this", which is
      * many-to-one by nature. One checkout covering three gestures writes three
      * rows carrying one payment id, and under a unique index D1 refused the
-     * second — so the unique constraint made the shipped bulk purchase
-     * impossible rather than safer.
-     *
-     * Checked against the product rather than argued:
-     * `packages/convex/convex/schema.ts` declares `by_payment_id` as a plain
-     * index, and `apps/server/src/webhooks/mollie.ts` writes the same
-     * `molliePaymentId` to *every* sponsorship in a bulk payment.
+     * second — so the unique constraint made bulk purchase impossible rather
+     * than safer. A bulk payment carries the same `molliePaymentId` on
+     * *every* sponsorship it covers.
      *
      * Uniqueness has not disappeared from the design; it moved to where it
      * works. `webhook-deliveries.paymentId` is one row per payment and is the
@@ -226,14 +216,13 @@ export const Sponsorships: CollectionConfig = {
      *
      * `endpoints/account.ts` stores the email-change confirmation token as
      * its **SHA-256**, and records why: a database dump is otherwise a set of
-     * usable links. This column deliberately does not follow, and the reason
-     * is checked in the source rather than argued. `getReEditLinkForAdmin` in
-     * `packages/convex/convex/sponsorships.ts` returns
-     * `token: sponsorship.reEditToken` — the raw value — so the admin panel's
-     * `ReEditLinkBox` can rebuild the URL behind a copy button. A SHA-256
-     * cannot be un-hashed, so hashing would delete a shipped feature, which
-     * this migration's non-goals forbid. The difference from the account
-     * token is simply that nothing ever redisplays that one.
+     * usable links. This column deliberately does not follow. The token is
+     * minted when the status changes (`hooks/manageReEditToken.ts`) and mailed
+     * later, by a queued job that reads the raw value back to build the link
+     * (`jobs/sendEmail.ts`). A SHA-256 cannot be un-hashed, so hashing would
+     * leave that job nothing to send. The difference from the account token
+     * is that the job mints that one itself, at the moment of sending, so
+     * nothing ever reads it back.
      *
      * **State the cost rather than bury it: a database dump contains usable
      * re-edit links.** Three things bound it.
@@ -244,20 +233,17 @@ export const Sponsorships: CollectionConfig = {
      *   Payload 3.89.0 deletes a hidden field in the `afterRead` field pass
      *   unless the caller asks for `showHiddenFields`, which only server-side
      *   code can (`payload/dist/fields/hooks/afterRead/promise.js`). That is
-     *   also how an admin surface would fetch the value to rebuild the link,
-     *   and it is why `hidden: true` and the copy button are not in conflict.
-     *   Nothing in this stage displays it; Stage 7 owns the mail that carries
-     *   it, and until then the token is minted and stored and nothing reads
-     *   it back out.
+     *   also how the mail job fetches the value to build the link, and it is
+     *   why `hidden: true` and a mailed link are not in conflict. Nothing
+     *   displays it; the job that mails it is its one reader.
      * - It grants exactly one thing. `access.read` resolves it to one row and
      *   `access.update` is `isAdmin`, so it cannot approve that sponsorship,
      *   cannot change its amount and cannot reach another row. That is the
      *   position Payload itself takes with `resetPasswordToken`.
      *
-     * If the product owner would rather have the hash than the copy button,
-     * that is a product decision and a small change: hash the column, and
-     * have the admin panel mint a fresh token instead of redisplaying the
-     * old one.
+     * If the product owner would rather have the hash, that is a product
+     * decision and a small change: hash the column, and have the job mint a
+     * fresh token at the moment of sending, as the address change does.
      */
     {
       name: "reEditToken",

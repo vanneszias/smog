@@ -11,9 +11,9 @@ const BAD_REQUEST = 400;
  * Refuses a state change the table in `lib/renderState.ts` does not allow.
  *
  * Modelled on `hooks/enforceStatusTransitions.ts`, and a hook rather than an
- * access rule for the same reason: every writer this stage adds runs with
+ * access rule for the same reason: every server-side writer runs with
  * `overrideAccess: true`, so a guard the access layer could bypass would be a
- * guard nothing in this stage is subject to. It lives in this file rather than
+ * guard none of them is subject to. It lives in this file rather than
  * in `hooks/` because it has exactly one collection and no second caller.
  *
  * `data` is the whole merged document by the time a collection `beforeChange`
@@ -76,7 +76,7 @@ const enforceRenderStateTransitions: CollectionBeforeChangeHook<Render> = ({
  * for — `claimRenderJob` will not create one without it.
  *
  * **That has a consequence for the callback, and it is worth stating here
- * rather than letting the next task discover it.** Because the row already
+ * rather than letting the next change discover it.** Because the row already
  * exists by the time Remotion Lambda calls back, the callback cannot claim
  * the job by inserting this row — both of two concurrent callbacks would lose
  * the insert and neither would upload. Serialising two callbacks for one job
@@ -175,12 +175,11 @@ export const Renders: CollectionConfig = {
     /**
      * When Mux last confirmed this render's asset is playable.
      *
-     * **This column exists so the readiness sweep cannot starve**, which Stage
-     * 6 recorded as carried work and Stage 7 Task 5 closes. That sweep reads
-     * every render still holding a `muxAssetId`, and until now the set it read
-     * was every healthy live asset the product has ever made, newest first and
-     * capped at one page — so once the backlog passed that page, an older
-     * render sat behind every newer one and was never asked about again.
+     * **This column exists so the readiness sweep cannot starve.** That sweep
+     * reads every render still holding a `muxAssetId`, and without it the set
+     * it read was every healthy live asset the product has ever made, newest
+     * first and capped at one page — so once the backlog passed that page, an
+     * older render sat behind every newer one and was never asked about again.
      *
      * A column the sweep *writes* is what turns that set from a history into a
      * work queue: a render Mux has called `ready` can never become anything

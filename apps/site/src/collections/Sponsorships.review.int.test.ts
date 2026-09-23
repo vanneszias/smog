@@ -6,20 +6,19 @@ import config from "../payload.config";
 /**
  * @fileoverview Admin review, against a real database.
  *
- * The Payload panel already renders this collection, so Task 9 is the
+ * The Payload panel already renders this collection, so admin review is the
  * transitions rather than a screen: approve, reject with a reason, ask for
  * a resubmission. Everything asserted here is a claim about what the database
  * ends up holding after a write, because the guard under test is a
  * `beforeChange` hook and a unit test of it would assert the shape of an
  * object this app never builds.
  *
- * **Why the guards are a hook rather than the field access the plan named.**
- * `sponsorships.update` is `isAdmin` at the document level, and the writers
- * that get past it — the Mollie webhook, the re-edit endpoint — all run
- * `overrideAccess: true`, which skips field access as well. So
- * `access.update: isAdminField` on `reviewedBy` would be unreachable from
- * both directions at once, and every mutation of it would survive. See
- * `hooks/stampReviewDecision.ts`.
+ * **Why the guards are a hook rather than field access.** `sponsorships.update`
+ * is `isAdmin` at the document level, and the writers that get past it — the
+ * Mollie webhook, the re-edit endpoint — all run `overrideAccess: true`, which
+ * skips field access as well. So `access.update: isAdminField` on `reviewedBy`
+ * would be unreachable from both directions at once, and every mutation of it
+ * would survive. See `hooks/stampReviewDecision.ts`.
  */
 
 /*
@@ -410,9 +409,8 @@ describe("reviewing a sponsorship", () => {
     });
 
     it("does not stamp a reviewer when an admin asks for a resubmission", async () => {
-      // Transcribed from the shipped product: `setReEditToken` writes no
-      // `reviewedBy` and no `reviewedAt`, where `approve` and `reject` both
-      // do. Asking for changes is not yet a verdict.
+      // Asking for changes writes no `reviewedBy` and no `reviewedAt`, where
+      // approving and rejecting both do. It is not yet a verdict.
       const row = await sponsor();
 
       await payload.update({
@@ -445,8 +443,9 @@ describe("reviewing a sponsorship", () => {
   });
 
   it("files the approval in admin-logs like every other transition", async () => {
-    // Task 5's hook gets this for free, and the assertion is here so that a
-    // second logger added for review decisions would show up as a duplicate.
+    // `logSponsorshipTransitions` gets this for free, and the assertion is here
+    // so that a second logger added for review decisions would show up as a
+    // duplicate.
     const row = await sponsor();
 
     await payload.update({
