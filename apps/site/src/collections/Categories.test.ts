@@ -51,6 +51,30 @@ describe("Categories collection", () => {
     expect(Categories.access?.update).toBe(isAdmin);
     expect(Categories.access?.delete).toBe(isAdmin);
   });
+
+  it("carries the Convex _id as a hidden, read-only, unique legacyId", () => {
+    // The importer (Stage 9 Task 3) looks documents up by this field to
+    // decide whether it already created them, so its name and shape are a
+    // contract with code that does not exist in this repo yet. Unique so a
+    // rerun cannot create a second category for one Convex row; indexed
+    // because every lookup during import is an equality match on it; hidden
+    // and read-only because it is bookkeeping for the importer, not something
+    // an editor should see or change; not localized and not required because
+    // it exists only on rows the importer created — every category made in
+    // the admin after cutover has none.
+    const legacyId = Categories.fields.find(
+      (field) => "name" in field && field.name === "legacyId"
+    );
+    expect(legacyId).toMatchObject({
+      name: "legacyId",
+      type: "text",
+      unique: true,
+      index: true,
+      admin: { readOnly: true, hidden: true },
+    });
+    expect(legacyId).not.toHaveProperty("localized", true);
+    expect(legacyId).not.toHaveProperty("required", true);
+  });
 });
 
 describe("Categories name field validation", () => {

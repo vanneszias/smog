@@ -34,5 +34,22 @@ export const Categories: CollectionConfig = {
       defaultValue: true,
       index: true,
     },
+    // The Convex `_id` this category was migrated from (Stage 9). Unique so
+    // the importer's rerun cannot create a second category for one Convex
+    // row, indexed because every lookup the importer makes is an equality
+    // match on it. Hidden and read-only: this is bookkeeping for the
+    // importer, not something an editor picks or edits, and a category
+    // created in the admin after cutover simply has none. See
+    // `20260923_001946_add_legacy_ids.ts` for the column and index this adds.
+    {
+      name: "legacyId",
+      type: "text",
+      unique: true,
+      index: true,
+      admin: {
+        readOnly: true,
+        hidden: true,
+      },
+    },
   ],
 };

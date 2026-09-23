@@ -220,6 +220,7 @@ export interface Gesture {
   concepts?: string[] | null;
   info?: string | null;
   isActive?: boolean | null;
+  legacyId?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -231,6 +232,7 @@ export interface Category {
   id: number;
   name?: string | null;
   isActive?: boolean | null;
+  legacyId?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -696,6 +698,7 @@ export interface MediaSelect<T extends boolean = true> {
 export interface CategoriesSelect<T extends boolean = true> {
   name?: T;
   isActive?: T;
+  legacyId?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -710,6 +713,7 @@ export interface GesturesSelect<T extends boolean = true> {
   concepts?: T;
   info?: T;
   isActive?: T;
+  legacyId?: T;
   updatedAt?: T;
   createdAt?: T;
 }

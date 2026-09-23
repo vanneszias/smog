@@ -1014,4 +1014,118 @@ describe("migration chain", () => {
         .all()
     ).toEqual([{ rows: 3 }]);
   });
+
+  it("gives categories and gestures a UNIQUE index on legacyId", async () => {
+    // Stage 9's importer (Task 3) looks up every category and gesture by
+    // this column to decide whether it already created that Convex document,
+    // and a plain `create` is the whole of its idempotency: there are no
+    // transactions on this adapter, an import can fail halfway, and a rerun
+    // must converge on the same result without duplicating anything. That
+    // only works if a second `create` for the same `legacyId` fails, which
+    // is this index's whole job — an ordinary index would let a rerun quietly
+    // create a second category or gesture for one Convex row.
+    const { database } = await chain();
+    const categories = new Map(
+      indexesOn(database, "categories").map((i) => [i.name, i.unique])
+    );
+    const gestures = new Map(
+      indexesOn(database, "gestures").map((i) => [i.name, i.unique])
+    );
+
+    expect(categories.get("categories_legacy_id_idx")).toBe(1);
+    expect(gestures.get("gestures_legacy_id_idx")).toBe(1);
+  });
+
+  it("refuses a second categories row and a second gestures row for one legacyId", async () => {
+    // The index asserted as behaviour rather than as metadata, exactly as
+    // for `claims` and `renders` above: a unique index SQLite reports but
+    // does not apply would satisfy the assertion above, and the whole
+    // guard the importer rests on is this INSERT failing.
+    const { database } = await chain();
+
+    database.exec(
+      `INSERT INTO categories (id, legacy_id) VALUES (7700, 'convex-category-1');`
+    );
+    expect(() =>
+      database.exec(
+        `INSERT INTO categories (id, legacy_id) VALUES (7701, 'convex-category-1');`
+      )
+    ).toThrow(/UNIQUE/i);
+
+    database.exec(
+      `INSERT INTO gestures (id, playback_id, legacy_id) VALUES (7710, 'pb-legacy-migration', 'convex-gesture-1');`
+    );
+    expect(() =>
+      database.exec(
+        `INSERT INTO gestures (id, playback_id, legacy_id) VALUES (7711, 'pb-legacy-migration-2', 'convex-gesture-1');`
+      )
+    ).toThrow(/UNIQUE/i);
+  });
+
+  it("lets many categories and gestures have no legacyId at all", async () => {
+    // Nullable with no default: every row created in the admin, before or
+    // after cutover, has no `legacyId`, and a NOT NULL / unique pairing
+    // would let only one such row ever exist. NULL is exempt from a UNIQUE
+    // index in SQLite, which is exactly the behaviour this depends on.
+    const { database } = await chain();
+
+    expect(() => {
+      database.exec("INSERT INTO categories (id) VALUES (7720);");
+      database.exec("INSERT INTO categories (id) VALUES (7721);");
+      database.exec(
+        `INSERT INTO gestures (id, playback_id) VALUES (7730, 'pb-no-legacy-1');`
+      );
+      database.exec(
+        `INSERT INTO gestures (id, playback_id) VALUES (7731, 'pb-no-legacy-2');`
+      );
+    }).not.toThrow();
+  });
+
+  it("removes legacyId from categories and gestures on down", async () => {
+    // The other half of the guard: `down` has to leave neither column nor
+    // index behind, or a rollback would look clean while the schema still
+    // disagreed with the collection configs.
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys = ON;");
+    const runner = migrationRunner(database);
+    const legacyIdMigration = migrations.findIndex(
+      (m) => m.name === "20260923_001946_add_legacy_ids"
+    );
+
+    expect(legacyIdMigration).toBeGreaterThan(0);
+
+    for (const migration of migrations.slice(0, legacyIdMigration + 1)) {
+      await migration.up(runner.args);
+    }
+
+    expect(indexesOn(database, "categories").map((i) => i.name)).toContain(
+      "categories_legacy_id_idx"
+    );
+    expect(indexesOn(database, "gestures").map((i) => i.name)).toContain(
+      "gestures_legacy_id_idx"
+    );
+
+    await migrations[legacyIdMigration]?.down(runner.args);
+
+    expect(indexesOn(database, "categories").map((i) => i.name)).not.toContain(
+      "categories_legacy_id_idx"
+    );
+    expect(indexesOn(database, "gestures").map((i) => i.name)).not.toContain(
+      "gestures_legacy_id_idx"
+    );
+
+    const categoryColumns = (
+      database
+        .prepare("SELECT name FROM pragma_table_info('categories')")
+        .all() as { name: string }[]
+    ).map((c) => c.name);
+    const gestureColumns = (
+      database
+        .prepare("SELECT name FROM pragma_table_info('gestures')")
+        .all() as { name: string }[]
+    ).map((c) => c.name);
+
+    expect(categoryColumns).not.toContain("legacy_id");
+    expect(gestureColumns).not.toContain("legacy_id");
+  });
 });
