@@ -351,7 +351,7 @@ describe("applyPlan, against a real database", () => {
     });
 
     /*
-     * The ruling was to preserve `createdAt` if Payload accepts it and to
+     * The rule is to preserve `createdAt` if Payload accepts it and to
      * record it if not. It does accept it: `@payloadcms/drizzle`'s
      * `upsertRow` (3.89.0) only stamps `createdAt` when the data has none.
      * Were that to change, this is the test that says so.

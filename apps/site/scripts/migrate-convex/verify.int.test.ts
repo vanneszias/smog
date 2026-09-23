@@ -558,7 +558,7 @@ describe("verify, against a real database", () => {
   });
 
   /*
-   * The brief's case: a link removed right after the import. Seen by the
+   * A link removed right after the import. Seen by the
    * run that created the document, nobody else can have changed it, so any
    * difference from the plan is the import's own and fails.
    */
@@ -793,7 +793,7 @@ describe("verify, against a real database", () => {
       expect(section).toContain("Testgebaar Onbekende Categorie");
     });
 
-    it("states the dropped favourites as a count with the spec's reason", () => {
+    it("states the dropped favourites as a count with the reason", () => {
       expect(report).toMatch(/3 favourites dropped/);
       expect(report).toMatch(/asked to be deleted/);
     });

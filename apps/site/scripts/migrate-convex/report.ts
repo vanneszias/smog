@@ -210,7 +210,7 @@ export function buildReport(input: ReportInput): string {
 
   out.push("## Dropped favourites", "");
   out.push(
-    `${plan.dropped.favourites} favourites dropped, not migrated. They reference Convex ids of users who no longer exist — the old stack's GDPR deletion did not cascade to them — so they cannot be attached to anyone, and the people they belonged to asked to be deleted. No ids are recorded here.`,
+    `${plan.dropped.favourites} favourites dropped, not migrated. They reference Convex ids of users who no longer exist — deleting those users did not cascade to their favourites — so they cannot be attached to anyone, and the people they belonged to asked to be deleted. No ids are recorded here.`,
     ""
   );
 

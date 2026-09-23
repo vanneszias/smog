@@ -1,10 +1,10 @@
 /**
- * Pure reader and planner for the Stage 9 Convex → Payload catalogue import.
+ * Pure reader and planner for the Convex → Payload catalogue import.
  *
  * `readExport` parses a Convex export directory (one `<table>/documents.jsonl`
  * file per table, plus `_tables/documents.jsonl` listing the tables that
  * exist) into typed rows. `buildPlan` turns those rows into an `ImportPlan`
- * that a later, effectful task applies through Payload's local API.
+ * that `./apply` applies through Payload's local API.
  *
  * Both functions are pure I/O-in, data-out: no Payload, no network, no
  * writes. `readExport` never logs a row's content, only file paths and line

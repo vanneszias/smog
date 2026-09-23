@@ -122,7 +122,7 @@ describe("buildReport", () => {
     );
   });
 
-  it("states dropped favourites as a count and the spec's reason", () => {
+  it("states dropped favourites as a count and the reason", () => {
     const report = buildReport(input());
 
     expect(report).toMatch(/5 favourites dropped/);

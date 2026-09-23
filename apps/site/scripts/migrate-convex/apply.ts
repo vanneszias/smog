@@ -307,7 +307,7 @@ const CONSENT_REFUSAL =
 
 /**
  * Makes every consent create, update and delete throw until the returned
- * function is called. No consent is imported, ever (spec), and nothing the
+ * function is called. No consent is imported, ever, and nothing the
  * importer calls should write one; this turns "should" into a refusal, on
  * the Payload instance the run uses, rather than a count compared after
  * the fact. The hooks run inside Payload's own operations (`beforeChange`

@@ -119,7 +119,7 @@ describe("parseCliArgs", () => {
 });
 
 /*
- * Review Focus 2: the real export must never land inside the repository,
+ * The real export must never land inside the repository,
  * and neither may the report, which names catalogue rows from it.
  */
 describe("assertOutsideWorkTree", () => {
@@ -320,7 +320,7 @@ describe("assertOutsideWorkTree", () => {
   });
 });
 
-/* Review Focus 4: the wrong database. */
+/* The wrong database. */
 describe("assertTargetAllowed", () => {
   it("allows local only with CLOUDFLARE_ENV=staging and a non-production NODE_ENV", () => {
     expect(() => assertTargetAllowed(options(), LOCAL_ENV)).not.toThrow();
