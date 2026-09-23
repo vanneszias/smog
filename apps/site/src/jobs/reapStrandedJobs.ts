@@ -48,8 +48,8 @@ import { jobsConfig } from "@/jobs";
  * run: a job that has already been reaped up to its task's `retries.attempts`
  * is filed as failed instead of released a further time, on the working
  * assumption that whatever keeps killing the run that holds it is the job's
- * own doing. Filing it clears `error`'s absence, which is what takes it out
- * of `countRunnableOrActiveJobsForQueue` and lets the next `handleSchedules`
+ * own doing. Filing it sets `error`, which is what takes it out of
+ * `countRunnableOrActiveJobsForQueue` and lets the next `handleSchedules`
  * queue a fresh attempt at the *task*, even though this one row is done.
  *
  * ## The consequence this does not engineer away
@@ -68,8 +68,11 @@ import { jobsConfig } from "@/jobs";
 /** Twice a scheduled invocation's wall-clock ceiling; see the comment above. */
 const STRANDED_AFTER_MS = 30 * 60 * 1000;
 
-/** The most rows one tick reaps, so a large backlog cannot make a tick run
- * for ever — the same bound `expireSponsorships.ts` and its siblings use. */
+/** The most rows one tick reaps. A backlog larger than this is not lost —
+ * the rows left over are exactly as stranded on the next tick as they were
+ * on this one, and get taken then — but one tick's own work stays bounded
+ * rather than growing with however large a backlog has been left to build
+ * up. */
 const REAP_LIMIT = 50;
 
 /**

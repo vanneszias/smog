@@ -400,6 +400,59 @@ describe("reaping a job a killed run left processing", () => {
     expect((row.error as { message: string }).message).toBe(STRANDED_MESSAGE);
   });
 
+  it("bounds one tick's work at REAP_LIMIT, leaving the rest for the next tick", async () => {
+    const OVERFLOW = 51;
+
+    // Sequential rather than `Promise.all` — 51 concurrent writes against
+    // the same table is contention this test has no reason to invite, and
+    // this bound is not itself timing-sensitive.
+    const seeded: number[] = [];
+
+    for (let index = 0; index < OVERFLOW; index += 1) {
+      const job = await seedJob({
+        processing: true,
+        taskSlug: "prune-rate-limits",
+      });
+
+      seeded.push(job.id);
+    }
+
+    // One write for all 51: `updatedAt` is what the candidate query keys on,
+    // and every row here needs the same stale value, not 51 individually
+    // forced ones.
+    await payload.db.updateMany({
+      collection: "payload-jobs",
+      data: { updatedAt: minutesAgo(31) },
+      where: { id: { in: seeded } },
+    });
+
+    const result = await reapStrandedJobs(payload, NOW);
+
+    // `prune-rate-limits` has no retries, so every row this tick reaches is
+    // filed as failed rather than released — the split does not matter here,
+    // only that the tick touched exactly `REAP_LIMIT` of the 51.
+    expect(result.failed + result.released).toBe(50);
+    expect(result.released).toBe(0);
+
+    const { docs: after } = await payload.find({
+      collection: "payload-jobs",
+      depth: 0,
+      limit: OVERFLOW,
+      overrideAccess: true,
+      where: { id: { in: seeded } },
+    });
+
+    expect(after).toHaveLength(OVERFLOW);
+    expect(after.filter((job) => job.processing).length).toBe(1);
+    expect(after.filter((job) => job.hasError).length).toBe(50);
+
+    await payload.delete({
+      collection: "payload-jobs",
+      overrideAccess: true,
+      where: { id: { in: seeded } },
+    });
+  });
+
   /*
    * ---------------------------------------------------------------------
    * Cases 8–9: through the endpoint, where the reaper actually lives.
@@ -486,7 +539,7 @@ describe("reaping a job a killed run left processing", () => {
 
     const realFind = payload.find.bind(payload);
 
-    vi.spyOn(payload, "find").mockImplementation((args) => {
+    const findSpy = vi.spyOn(payload, "find").mockImplementation((args) => {
       if (args.collection === "payload-jobs") {
         return Promise.reject(new Error("the reaper's read blew up"));
       }
@@ -494,30 +547,47 @@ describe("reaping a job a killed run left processing", () => {
       return realFind(args);
     });
 
-    const response = await tick();
+    try {
+      const response = await tick();
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "ok" });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ status: "ok" });
 
-    vi.restoreAllMocks();
+      vi.restoreAllMocks();
 
-    // The queued `send-email` job still ran this tick, and actually sent —
-    // the strongest evidence available, since a successfully completed job
-    // is deleted by `deleteJobOnComplete` before this test could read the
-    // row back.
-    const sent = outbox.find((entry) => entry.to.startsWith(`reap-new-${RUN}`));
+      // The reaper's own read is what actually threw — not some other call
+      // that happened to share a mock — and the endpoint's own catch is what
+      // caught it, rather than the throw going unnoticed some other way.
+      expect(findSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ collection: "payload-jobs" })
+      );
+      expect(
+        logLines.some((line) =>
+          line.includes("[jobs] Could not recover stranded jobs")
+        )
+      ).toBe(true);
 
-    expect(sent).toBeDefined();
+      // The queued `send-email` job still ran this tick, and actually sent —
+      // the strongest evidence available, since a successfully completed job
+      // is deleted by `deleteJobOnComplete` before this test could read the
+      // row back.
+      const sent = outbox.find((entry) =>
+        entry.to.startsWith(`reap-new-${RUN}`)
+      );
 
-    // And the lease is released, exactly as it is when the run itself
-    // throws — a reaper failure is caught before the run, not instead of the
-    // `finally` that releases it.
-    expect(await leases()).toBe(0);
+      expect(sent).toBeDefined();
 
-    await payload.delete({
-      collection: "users",
-      id: account.id,
-      overrideAccess: true,
-    });
+      // And the lease is released, exactly as it is when the run itself
+      // throws — a reaper failure is caught before the run, not instead of
+      // the `finally` that releases it.
+      expect(await leases()).toBe(0);
+    } finally {
+      vi.restoreAllMocks();
+      await payload.delete({
+        collection: "users",
+        id: account.id,
+        overrideAccess: true,
+      });
+    }
   });
 });
