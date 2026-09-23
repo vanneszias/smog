@@ -31,6 +31,7 @@
         "src/payload.config.ts",
         "src/seed/index.ts",
         "scripts/*.ts",
+        "scripts/migrate-convex/index.ts",
         "next.config.ts",
         "open-next.config.ts",
         "playwright.config.ts",
