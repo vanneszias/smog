@@ -1,4 +1,5 @@
 import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
+import { reapStrandedJobs } from "@/jobs/reapStrandedJobs";
 import { CLAIM_KINDS, releaseClaim, takeClaim } from "@/lib/claims";
 import { equalConstantTime } from "@/lib/constantTime";
 
@@ -137,6 +138,54 @@ const runJobs: PayloadHandler = async (
   }
 
   try {
+    /*
+     * **Recovering a job a killed run left claimed, before anything else in
+     * this lease.**
+     *
+     * `payload.jobs.run` marks up to `JOBS_PER_RUN` rows `processing: true`
+     * in one write, before the first of them has actually run
+     * (`queues/operations/runJobs/index.js`), and this tick runs them
+     * `sequential: true`. A Worker killed partway through — its own CPU
+     * budget, a bad deploy — leaves the rest claimed and untouched, and
+     * nothing in Payload ever resets `processing: true` on its own: the
+     * runner's candidate query requires `processing: false`. Left alone, a
+     * killed run does not cost one tick, it costs every tick forever, and
+     * silently — `countRunnableOrActiveJobsForQueue` treats a stranded row
+     * as still active, so `handleSchedules` refuses to queue the scheduled
+     * task it was holding, ever again, while this endpoint keeps answering
+     * `200 {"status":"ok"}` every hour. `jobs/reapStrandedJobs.ts` is the
+     * fix; this call is the only place it runs.
+     *
+     * It is inside the lease, for the reason the lease exists at all: two
+     * overlapping ticks must not both decide the same row is stranded and
+     * both release it, which is a `where`-on-an-update race this database
+     * cannot serialise any other way. And it is *before* `handleSchedules`,
+     * not after, so a schedule this reap just freed is queued by this same
+     * tick rather than left to wait for the next one — the same ordering
+     * argument the comment below makes for running `handleSchedules` before
+     * the queue itself.
+     *
+     * A reaper failure does not stop the queue draining, for the reason the
+     * catch two levels down gives about the run itself: the jobs already
+     * queued are work somebody is waiting for, and the next tick re-reads
+     * `processing` and `updatedAt` from scratch, so nothing here is lost by
+     * this one failing.
+     */
+    try {
+      const reaped = await reapStrandedJobs(req.payload, new Date());
+
+      if (reaped.released + reaped.failed > 0) {
+        req.payload.logger.warn(
+          `[jobs] Recovered stranded jobs: ${reaped.released} released to run again, ${reaped.failed} filed as failed`
+        );
+      }
+    } catch (error) {
+      req.payload.logger.error(
+        { err: error },
+        "[jobs] Could not recover stranded jobs; the queue is still drained and the next tick tries again"
+      );
+    }
+
     /*
      * **The schedules, before the queue — and this call is the whole of
      * whether they exist.**
