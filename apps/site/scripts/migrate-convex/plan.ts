@@ -37,6 +37,8 @@ interface ExportGesture {
 
 type SkipReason = "no-category" | "no-playback-id" | "unknown-category";
 
+type CatalogueTable = "categories" | "gestures";
+
 export interface ImportPlan {
   categories: Array<{
     legacyId: string;
@@ -126,12 +128,19 @@ function splitLines(
     .filter(({ line }) => line.trim().length > 0);
 }
 
-/** Parses every non-blank line of `<dir>/<table>/documents.jsonl` as JSON. */
-async function readJsonlTable<T>(dir: string, table: string): Promise<T[]> {
+/**
+ * Parses every non-blank line of `<dir>/<table>/documents.jsonl` as JSON,
+ * keeping each row's line number so a later refusal can point at it.
+ */
+async function readJsonlTable<T>(
+  dir: string,
+  table: string
+): Promise<{ rows: T[]; lineNumbers: number[] }> {
   const filePath = tableFile(dir, table);
   const content = await readRequiredFile(dir, table);
 
   const rows: T[] = [];
+  const lineNumbers: number[] = [];
   for (const { line, lineNumber } of splitLines(content)) {
     try {
       rows.push(JSON.parse(line) as T);
@@ -140,8 +149,9 @@ async function readJsonlTable<T>(dir: string, table: string): Promise<T[]> {
         `[migrate-convex] Malformed JSON in ${filePath}:${lineNumber}`
       );
     }
+    lineNumbers.push(lineNumber);
   }
-  return rows;
+  return { rows, lineNumbers };
 }
 
 /**
@@ -179,12 +189,16 @@ async function readTableNames(dir: string): Promise<string[]> {
 export async function readExport(dir: string): Promise<{
   categories: ExportCategory[];
   gestures: ExportGesture[];
+  /** Each row's line in its `documents.jsonl`, index for index. */
+  lineNumbers: Record<CatalogueTable, number[]>;
   counts: ImportPlan["counts"];
   tables: string[];
 }> {
   const tables = await readTableNames(dir);
-  const categories = await readJsonlTable<ExportCategory>(dir, "categories");
-  const gestures = await readJsonlTable<ExportGesture>(dir, "gestures");
+  const categoryTable = await readJsonlTable<ExportCategory>(dir, "categories");
+  const gestureTable = await readJsonlTable<ExportGesture>(dir, "gestures");
+  const categories = categoryTable.rows;
+  const gestures = gestureTable.rows;
 
   const aggregateCounts = await Promise.all(
     AGGREGATE_ONLY_TABLES.map((table) => countJsonlLines(dir, table))
@@ -198,7 +212,16 @@ export async function readExport(dir: string): Promise<{
     counts[table] = aggregateCounts[index];
   });
 
-  return { categories, gestures, counts, tables };
+  return {
+    categories,
+    gestures,
+    lineNumbers: {
+      categories: categoryTable.lineNumbers,
+      gestures: gestureTable.lineNumbers,
+    },
+    counts,
+    tables,
+  };
 }
 
 // Tables this import refuses to run against if the export has any rows in
@@ -243,6 +266,38 @@ function refuseOnNonMigratableData(
   }
 }
 
+/** "2 and 4", "1, 2 and 3". */
+function listLines(lines: number[]): string {
+  const head = lines.slice(0, -1).join(", ");
+  return lines.length > 1 ? `${head} and ${lines.at(-1)}` : String(lines[0]);
+}
+
+/**
+ * Refuses a table in which two rows share an `_id`: which one is the real
+ * document is not this import's call to make. The error names the table
+ * and the lines, never the id or anything else from the rows.
+ */
+function refuseDuplicateIds(
+  table: CatalogueTable,
+  rows: Array<{ _id: string }>,
+  lineNumbers: number[]
+): void {
+  const linesById = new Map<string, number[]>();
+  rows.forEach((row, index) => {
+    const lines = linesById.get(row._id) ?? [];
+    lines.push(lineNumbers[index] ?? index + 1);
+    linesById.set(row._id, lines);
+  });
+  const duplicates = [...linesById.values()].filter(
+    (lines) => lines.length > 1
+  );
+  if (duplicates.length > 0) {
+    throw new Error(
+      `[migrate-convex] Export has duplicate _id rows in ${table}/documents.jsonl at lines ${duplicates.map(listLines).join("; lines ")}, refusing import`
+    );
+  }
+}
+
 type GestureOutcome =
   | { kind: "skip"; entry: ImportPlan["skipped"][number] }
   | { kind: "import"; entry: ImportPlan["gestures"][number] };
@@ -250,7 +305,8 @@ type GestureOutcome =
 /**
  * Applies every per-gesture rule: dedupes `categoryIds` (keep order) before
  * any check, skips `no-category` / `no-playback-id` / `unknown-category`,
- * then trims, drops empty, and dedupes concepts (keep order).
+ * then trims, drops empty, and dedupes concepts (keep order). The playback
+ * id is stored trimmed, exactly as it is checked.
  */
 function planGesture(
   gesture: ExportGesture,
@@ -265,7 +321,8 @@ function planGesture(
       entry: { legacyId: gesture._id, name, reason: "no-category" },
     };
   }
-  if (gesture.playbackId.trim().length === 0) {
+  const playbackId = gesture.playbackId.trim();
+  if (playbackId.length === 0) {
     return {
       kind: "skip",
       entry: { legacyId: gesture._id, name, reason: "no-playback-id" },
@@ -292,7 +349,7 @@ function planGesture(
       info: gesture.info,
       concepts,
       categoryLegacyIds: categoryIds,
-      playbackId: gesture.playbackId,
+      playbackId,
       isActive: gesture.isActive,
       createdAt: new Date(gesture._creationTime).toISOString(),
     },
@@ -303,6 +360,12 @@ export function buildPlan(
   input: Awaited<ReturnType<typeof readExport>>
 ): ImportPlan {
   refuseOnNonMigratableData(input.counts, input.tables);
+  refuseDuplicateIds(
+    "categories",
+    input.categories,
+    input.lineNumbers.categories
+  );
+  refuseDuplicateIds("gestures", input.gestures, input.lineNumbers.gestures);
 
   const categories: ImportPlan["categories"] = input.categories.map(
     (category) => ({

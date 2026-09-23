@@ -20,6 +20,12 @@
  *   opens the report with `O_NOFOLLOW`, so a link swapped in after this
  *   check fails the write instead of following it.
  *
+ * That comparison only knows this checkout. As defence in depth, the
+ * export directory and the report's directory are also refused when git
+ * says they are inside *any* git repository (`git -C <dir> rev-parse
+ * --is-inside-work-tree` succeeds): a second clone, a worktree, an
+ * unrelated project. If git cannot be asked, the path is refused too.
+ *
  * ## The target is named twice, and both names must agree
  *
  * `--target` says what the operator meant; `CLOUDFLARE_ENV` is what
@@ -185,6 +191,45 @@ function lstatIfExists(candidate: string): Stats | undefined {
   }
 }
 
+/**
+ * True when git finds a repository at or above `directory`. Only git's
+ * own "not a git repository" answer counts as outside; anything else it
+ * says — a work tree, a `.git` directory, dubious ownership — or failing
+ * to run at all is inside or a refusal, never "checked and fine".
+ */
+function insideAnyGitRepository(directory: string): boolean {
+  // Nothing inherited may point git elsewhere or stop its search early
+  // (GIT_DIR, GIT_CEILING_DIRECTORIES, ...), and its message must be the
+  // untranslated one matched below.
+  const env: Record<string, string | undefined> = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))
+    ),
+    LC_ALL: "C",
+    GIT_DISCOVERY_ACROSS_FILESYSTEM: "1",
+  };
+  try {
+    execFileSync(
+      "git",
+      ["-C", directory, "rev-parse", "--is-inside-work-tree"],
+      {
+        encoding: "utf8",
+        env: env as NodeJS.ProcessEnv,
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
+    return true;
+  } catch (error) {
+    const { status, stderr } = error as { status?: unknown; stderr?: unknown };
+    if (status === 128 && /not a git repository/.test(String(stderr ?? ""))) {
+      return false;
+    }
+    refuse(
+      `could not ask git whether ${directory} is inside a git work tree (${error instanceof Error ? error.message : String(error)}).`
+    );
+  }
+}
+
 export function assertOutsideWorkTree(
   candidate: string,
   label: "export" | "report",
@@ -201,6 +246,13 @@ export function assertOutsideWorkTree(
     refuse(
       `the ${label} ${candidate} is inside the git work tree (${workTree}). ` +
         "The export is real user data and the report names rows from it; keep both outside the repository."
+    );
+  }
+  const directory = label === "export" ? real : path.dirname(real);
+  if (insideAnyGitRepository(directory)) {
+    refuse(
+      `the ${label} ${candidate} is inside a git work tree (git finds a repository at or above ${directory}). ` +
+        "The export is real user data and the report names rows from it; keep both outside every repository."
     );
   }
 }
@@ -272,11 +324,22 @@ export function parseJsonc(text: string): unknown {
 interface WranglerConfig {
   env?: Record<
     string,
-    { d1_databases?: Array<{ binding?: string; database_name?: string }> }
+    {
+      d1_databases?: Array<{
+        binding?: string;
+        database_name?: string;
+        remote?: unknown;
+      }>;
+    }
   >;
 }
 
-/** The D1 database `target` writes to, named as `wrangler.jsonc` names it. */
+/**
+ * The D1 database `target` writes to, named as `wrangler.jsonc` names it.
+ * A remote target's entry must say `"remote": true`: without it the
+ * platform proxy emulates that binding on local disk, and the import would
+ * pass against a database nobody deploys.
+ */
 export function databaseNameFor(target: Target, wranglerJsonc: string): string {
   const config = parseJsonc(wranglerJsonc) as WranglerConfig;
   const environment = target === "local" ? LOCAL_CLOUDFLARE_ENV : target;
@@ -285,6 +348,11 @@ export function databaseNameFor(target: Target, wranglerJsonc: string): string {
   );
   if (!database?.database_name) {
     refuse(`wrangler.jsonc has no D1 binding under env.${environment}.`);
+  }
+  if (target !== "local" && database.remote !== true) {
+    refuse(
+      `wrangler.jsonc's D1 binding under env.${environment} is not marked "remote": true, so it would be emulated locally rather than reach ${database.database_name}.`
+    );
   }
   return target === "local"
     ? `${database.database_name} (local emulation under .wrangler/state, not the remote database)`

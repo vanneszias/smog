@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import {
   cp,
@@ -248,6 +249,65 @@ describe("assertOutsideWorkTree", () => {
     }
   });
 
+  /*
+   * Defence in depth: the comparison above only knows this checkout. An
+   * export or report in any other git work tree — a second clone, a
+   * worktree, some unrelated repository — is just as one `git add -A` away
+   * from a commit.
+   */
+  describe("inside some other git work tree", () => {
+    let otherRepo: string;
+
+    beforeAll(async () => {
+      otherRepo = await mkdtemp(path.join(os.tmpdir(), "migrate-convex-repo-"));
+      execFileSync("git", ["init", "--quiet", otherRepo]);
+      await mkdir(path.join(otherRepo, "deep", "export"), { recursive: true });
+    });
+
+    afterAll(async () => {
+      await rm(otherRepo, { recursive: true, force: true });
+    });
+
+    it("refuses an export there", () => {
+      expect(() =>
+        assertOutsideWorkTree(
+          path.join(otherRepo, "deep", "export"),
+          "export",
+          root
+        )
+      ).toThrow(
+        /\[migrate-convex\] Refusing: the export .* is inside a git work tree/
+      );
+    });
+
+    it("refuses a report there", () => {
+      expect(() =>
+        assertOutsideWorkTree(
+          path.join(otherRepo, "deep", "report.md"),
+          "report",
+          root
+        )
+      ).toThrow(/the report .* is inside a git work tree/);
+    });
+
+    /*
+     * "Could not check" must not read as "checked and fine": with no git
+     * to ask, the path is refused. PATH is emptied for the call and
+     * restored.
+     */
+    it("refuses when git cannot be run to ask", () => {
+      const saved = process.env.PATH;
+      process.env.PATH = path.join(outside, "no-such-bin");
+      try {
+        expect(() => assertOutsideWorkTree(outside, "export", root)).toThrow(
+          /could not ask git/
+        );
+      } finally {
+        process.env.PATH = saved;
+      }
+    });
+  });
+
   it("finds this repository's work tree, and refuses the fixtures where they live", () => {
     const top = workTreeRoot();
 
@@ -325,6 +385,35 @@ describe("parseJsonc and databaseNameFor", () => {
         "list": [1, 2,],
       }`)
     ).toEqual({ url: "https://example.test/a//b", list: [1, 2] });
+  });
+
+  /*
+   * A remote target must be a D1 entry wrangler marks `remote: true`: one
+   * without it is emulated locally by the platform proxy, so the import
+   * would "succeed" against a database nobody deploys.
+   */
+  it("refuses a remote target whose D1 entry is not marked remote", () => {
+    const wrangler = (remote: string): string => `{
+      "env": {
+        "staging": { "d1_databases": [{ "binding": "D1", "database_name": "smog-staging"${remote} }] },
+        "production": { "d1_databases": [{ "binding": "D1", "database_name": "smog-production"${remote} }] },
+      },
+    }`;
+
+    for (const target of ["staging", "production"] as const) {
+      for (const remote of ["", ', "remote": false', ', "remote": "true"']) {
+        expect(() => databaseNameFor(target, wrangler(remote))).toThrow(
+          new RegExp(`Refusing: .*env\\.${target}.*remote`)
+        );
+      }
+      expect(databaseNameFor(target, wrangler(', "remote": true'))).toBe(
+        `smog-${target} (remote)`
+      );
+    }
+    // Local is the emulation by definition and never needs the flag.
+    expect(databaseNameFor("local", wrangler(""))).toMatch(
+      /^smog-staging \(local emulation/
+    );
   });
 
   it("reads each target's D1 database name from wrangler.jsonc", async () => {

@@ -1,9 +1,59 @@
 // @vitest-environment node
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { buildPlan, readExport } from "./plan";
 
 const FIXTURES = fileURLToPath(new URL("./fixtures", import.meta.url));
+
+const scratchDirs: string[] = [];
+
+afterAll(async () => {
+  for (const dir of scratchDirs) {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+/**
+ * A copy of `fixtures/valid` in the OS temp directory with the given
+ * tables' rows replaced — synthetic rows written by the test itself.
+ */
+async function exportWith(
+  rows: Partial<Record<"categories" | "gestures", unknown[]>>
+): Promise<string> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "migrate-convex-plan-"));
+  scratchDirs.push(dir);
+  await cp(path.join(FIXTURES, "valid"), dir, { recursive: true });
+  for (const [table, tableRows] of Object.entries(rows)) {
+    await writeFile(
+      path.join(dir, table, "documents.jsonl"),
+      `${tableRows.map((row) => JSON.stringify(row)).join("\n")}\n`
+    );
+  }
+  return dir;
+}
+
+const syntheticCategory = (id: string) => ({
+  _id: id,
+  _creationTime: 1_700_000_000_000,
+  name: `Categorie ${id}`,
+  isActive: true,
+});
+
+const syntheticGesture = (id: string, overrides: object = {}) => ({
+  _id: id,
+  _creationTime: 1_700_000_100_000,
+  name: `Gebaar ${id}`,
+  info: "",
+  concept: [],
+  categoryIds: ["cat_syn_1"],
+  playbackId: "pb_syn",
+  lastUpdated: 1_700_000_200_000,
+  isActive: true,
+  ...overrides,
+});
 
 describe("readExport", () => {
   it("reads categories and gestures from their documents.jsonl files", async () => {
@@ -240,6 +290,59 @@ describe("buildPlan", () => {
   it("refuses when the export has adminLogs", async () => {
     await expect(plan("refusal-adminlogs")).rejects.toThrow(
       /\[migrate-convex\] Export has 1 adminLogs/
+    );
+  });
+
+  it("stores the playbackId trimmed, as it is checked", async () => {
+    const dir = await exportWith({
+      categories: [syntheticCategory("cat_syn_1")],
+      gestures: [
+        syntheticGesture("ges_syn_padded", {
+          playbackId: "  pb_syn_padded \t",
+        }),
+      ],
+    });
+    const result = buildPlan(await readExport(dir));
+
+    expect(result.gestures).toEqual([
+      expect.objectContaining({
+        legacyId: "ges_syn_padded",
+        playbackId: "pb_syn_padded",
+      }),
+    ]);
+  });
+
+  it("refuses duplicate _id rows in gestures, naming the table and lines only", async () => {
+    const dir = await exportWith({
+      categories: [syntheticCategory("cat_syn_1")],
+      gestures: [
+        syntheticGesture("ges_syn_a"),
+        syntheticGesture("ges_syn_dup", { name: "Eerste" }),
+        syntheticGesture("ges_syn_b"),
+        syntheticGesture("ges_syn_dup", { name: "Tweede" }),
+      ],
+    });
+    const input = await readExport(dir);
+
+    expect(() => buildPlan(input)).toThrow(
+      /\[migrate-convex\] Export has duplicate _id rows in gestures\/documents\.jsonl at lines 2 and 4, refusing import/
+    );
+    expect(() => buildPlan(input)).not.toThrow(/ges_syn_dup|Eerste|Tweede/);
+  });
+
+  it("refuses duplicate _id rows in categories too", async () => {
+    const dir = await exportWith({
+      categories: [
+        syntheticCategory("cat_syn_1"),
+        syntheticCategory("cat_syn_1"),
+        syntheticCategory("cat_syn_1"),
+      ],
+    });
+
+    await expect(
+      readExport(dir).then((read) => buildPlan(read))
+    ).rejects.toThrow(
+      /duplicate _id rows in categories\/documents\.jsonl at lines 1, 2 and 3/
     );
   });
 
