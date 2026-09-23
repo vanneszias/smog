@@ -28,12 +28,10 @@ const ERRORS: Record<string, string> = {
 /**
  * Step 3 of the sponsor wizard: review, then pay.
  *
- * **The preview is uncomposited, on purpose.** `lib/renderPreview.ts` is the
- * seam: in this stage it plays the gesture's own video and the overlay text
- * is drawn as HTML on top of it, because composition is Remotion and Mux and
- * the spec puts those in Stage 6. The product owner confirmed the ordering on
- * 2026-09-21. Stage 6 replaces that function's body, not its signature, and
- * not this page.
+ * **Which video plays is not this page's decision.** `lib/renderPreview.ts`
+ * is the seam: it plays the composed preview once Remotion has made one, and
+ * until then the gesture's own video with the overlay text drawn as HTML on
+ * top of it. Either way this page calls it the same way.
  *
  * The sponsor's details come out of the draft cookie step 2 set, and go
  * straight back out as hidden fields — `checkout` reads the *form*, not the

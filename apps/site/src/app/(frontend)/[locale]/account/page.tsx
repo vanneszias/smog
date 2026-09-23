@@ -45,10 +45,9 @@ const ERRORS: Record<string, string> = {
  * The one notice this page shows, worded so it promises nothing it cannot
  * keep.
  *
- * It says a link *was made*, not that it *arrived*: no email adapter is
- * configured yet (Stage 7 does that), so today the link is written to the
- * server log and nothing lands in the inbox. Telling the visitor "check your
- * inbox" would be a lie the page cannot currently make true.
+ * It says a link *was made*, not that it *arrived*: the mail goes out later,
+ * through the queue, and can be deferred or refused there. Telling the
+ * visitor "check your inbox" would be a promise the page cannot know it keeps.
  */
 const NOTICES: Record<string, string> = {
   "email-pending":
@@ -89,8 +88,8 @@ export default async function AccountPage({
   /*
    * Read-only, server-rendered, the same way `FavoriteButton` receives
    * `initialFavorite`: the account's own newest recorded decision, never
-   * merged into the consent switch. See `AccountConsentControl`'s "Ruling
-   * 11" doc comment for why the two must stay separate.
+   * merged into the consent switch. See `AccountConsentControl`'s "The
+   * device rule" doc comment for why the two must stay separate.
    */
   const payload = await getPayloadClient();
   const initialConsent = await newestConsentDecision({
@@ -146,8 +145,8 @@ export default async function AccountPage({
           Maak lijsten met gebaren, en deel ze met een link.
         </p>
         {/*
-         * A link from here rather than a second item in the header. Task 4
-         * deferred an account menu on the grounds that a disclosure widget
+         * A link from here rather than a second item in the header. An
+         * account menu was deferred on the grounds that a disclosure widget
          * wrapping one address and one button buys nothing, and said the
          * point to revisit was three destinations; this is the second, and it
          * belongs on the page the first one already is.
@@ -166,7 +165,7 @@ export default async function AccountPage({
       <section className="flex flex-col gap-4">
         <h2 className="font-semibold text-foreground text-lg">Privacy</h2>
         {/*
-         * The control the privacy page (Task 4) already promises exists: a
+         * The control the privacy page already promises exists: a
          * signed-in visitor can withdraw — or give — analytics consent here.
          * `AccountConsentControl` is a client leaf; this page stays a Server
          * Component around it, same shape as every other section here.

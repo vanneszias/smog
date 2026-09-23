@@ -127,7 +127,7 @@ export function DomainSection() {
       </Specimen>
 
       {/*
-       * The overflow probe. jsdom computes no layout, so Task 7 could only
+       * The overflow probe. jsdom computes no layout, so a unit test can only
        * assert that `truncate`, `min-w-0` and `overflow-hidden` are on the
        * right elements. This column is 180px wide and holds the longest name
        * in the fixtures; whether the card clips or is pushed open is a

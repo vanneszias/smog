@@ -72,7 +72,7 @@ function gesturePlaybackId(gesture: unknown): null | string {
  * ## What it shows, and what it deliberately does not
  *
  * The gesture, its video with the sponsor's text drawn over it by
- * `lib/renderPreview.ts`'s Stage 5 seam, and the two things a sponsor may
+ * `lib/renderPreview.ts`'s seam, and the two things a sponsor may
  * change. It does not show the sponsor's email, contact name, company,
  * invoice details or the review notes: `collections/Sponsorships.ts` strips
  * those at the field layer for this reader, so they are not in the document

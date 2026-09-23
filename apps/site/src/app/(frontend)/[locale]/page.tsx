@@ -31,10 +31,10 @@ export async function generateMetadata({
 /**
  * The locale root, so `/` has somewhere to redirect to.
  *
- * Deliberately thin. Stage 3's remaining tasks build the gestures list, the
- * detail page, favorites and lists; this exists because a redirect that lands
- * on a 404 is a broken redirect, and because the layout above it needs a page
- * to wrap before any of it can be looked at in a browser.
+ * Deliberately thin. The gestures list, the detail page, favorites and lists
+ * are their own routes; this exists because a redirect that lands on a 404
+ * is a broken redirect, and because the layout above it needs a page to
+ * wrap.
  *
  * It repeats the layout's locale check rather than trusting it: `notFound()`
  * in the layout is caught by the boundary *above* the layout, so the two

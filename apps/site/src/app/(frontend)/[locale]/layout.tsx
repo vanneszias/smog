@@ -118,12 +118,12 @@ export function generateStaticParams(): { locale: Locale }[] {
  * **Reading the session here is what makes every page under it dynamic.**
  * `readSession` reads request headers, and a route that reads request headers
  * cannot be prerendered — so `/{locale}` and `/{locale}/favorites`, the two
- * pages in this group that were still static, are not any more. That is a
- * real cost and it is measured in the Stage 4 Task 2 report rather than
- * discovered later. It is paid here, in the layout, because the account nav
- * belongs in the header of every page and a per-page session read would be
- * the same cost with three places to forget it. `hasSessionCookie` keeps the
- * common case — a signed-out visitor — from booting Payload at all.
+ * pages in this group that were still static, are not any more. That is a real
+ * cost, and a measured one rather than one discovered later. It is paid here,
+ * in the layout, because the account nav belongs in the header of every page
+ * and a per-page session read would be the same cost with three places to
+ * forget it. `hasSessionCookie` keeps the common case — a signed-out visitor —
+ * from booting Payload at all.
  */
 export default async function LocaleLayout({
   children,

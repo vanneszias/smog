@@ -78,9 +78,7 @@ export const dynamic = "force-dynamic";
  * round trip, no client data layer, and **no load-all-then-filter**. The
  * `where` clause carries the category filter, `page`/`limit` carry the
  * pagination, and the row count comes back from the same query as the rows,
- * so the page numbers describe the filtered set. `apps/web/src/routes/
- * gestures.tsx` loads every gesture and narrows the array in the browser;
- * this is what replaces it.
+ * so the page numbers describe the filtered set.
  *
  * `params` and `searchParams` are both Promises in Next 16 — checked against
  * `node_modules/next/dist/server/request/search-params.d.ts`, whose

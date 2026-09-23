@@ -178,13 +178,10 @@ export async function generateMetadata({
  * The page `ConsentBanner` links to.
  *
  * Scoped to what the banner's own consent decision is about — analytics —
- * rather than a full restatement of every processing activity on the site.
- * `apps/web`'s `routes/privacy.tsx` covers the old stack's accounts,
- * sponsorship and billing; this page does not duplicate it, because this
- * site does not run any of that yet. What it must say, and does say below,
- * is the set Task 4's brief names: what is collected, who processes it,
- * that consent is optional and withdrawable, where to withdraw it, and that
- * the record of the decision itself outlives the account it describes.
+ * rather than a full restatement of every processing activity on the site. What
+ * it must say, and does say below, is: what is collected, who processes it,
+ * that consent is optional and withdrawable, where to withdraw it, and that the
+ * record of the decision itself outlives the account it describes.
  *
  * ## The withdrawal control is on this page, not only behind a sign-in
  *

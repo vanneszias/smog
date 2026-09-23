@@ -78,10 +78,9 @@ export async function generateMetadata({
  * - **The reader's identity is not consulted, signed in or not.** The token
  *   is the whole capability, and `fetchSharedList` says why in detail: the
  *   answer is provably the same either way, so the page does not spend a
- *   `payload.auth` per request to arrive at it. The spec's gap 2 — a
- *   signed-in recipient seeing nothing — is fixed in `listReadAccess` and
- *   matters on the path where Payload sets `req.user` itself, which is the
- *   REST API a Stage 4 client will use.
+ *   `payload.auth` per request to arrive at it. A signed-in recipient
+ *   seeing nothing is fixed in `listReadAccess`, and matters on the path
+ *   where Payload sets `req.user` itself, which is the REST API.
  *
  * The locale check is repeated from the layout because `notFound()` in a
  * layout is caught by the boundary *above* it, so the two render different

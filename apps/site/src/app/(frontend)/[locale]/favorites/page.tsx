@@ -23,8 +23,7 @@ export const metadata: Metadata = {
  * "force-dynamic"` here, and its absence is still deliberate: this page
  * issues no query of its own, so there is nothing for the build-phase
  * placeholder bindings to fail on. It is nonetheless rendered per request,
- * because the layout above it reads the session — the route table and the
- * reasoning are in the Stage 4 Task 4 report.
+ * because the layout above it reads the session.
  *
  * **The session read here is free, and that is why it is here.** `readSession`
  * is `cache`d, so the layout's header and this page share one `payload.auth`.

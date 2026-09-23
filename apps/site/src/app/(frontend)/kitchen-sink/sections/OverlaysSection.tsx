@@ -147,11 +147,11 @@ export function OverlaysSection() {
        * The open tooltip believes it is the top layer in its stack, calls
        * `event.preventDefault()` on Escape, and the dialog's copy — which
        * does `if (!event.defaultPrevented && onDismiss)` — then declines to
-       * close. Measured, not inferred; see the Task 8 report.
+       * close. Measured, not inferred.
        *
        * Hover-driven tooltips close before a dialog opens, so the pairing is
        * not reachable here any more. Deduping the two copies is the real fix
-       * and is not Task 8's to make.
+       * and is not this page's to make.
        */}
       <Specimen label="Tooltip — hover or focus either trigger">
         <TooltipProvider>

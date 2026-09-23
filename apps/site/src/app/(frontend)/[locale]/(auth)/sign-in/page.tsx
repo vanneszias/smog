@@ -161,8 +161,7 @@ export default async function SignInPage({
 
       {/*
        * A plain form post to a Payload endpoint. No `"use client"`, no
-       * hydration, no Server Action — see `endpoints/auth.ts` for why, and
-       * the task report for the bundle measurement that settled it.
+       * hydration, no Server Action — see `endpoints/auth.ts` for why.
        */}
       <form
         action="/auth/sign-in"

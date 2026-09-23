@@ -33,7 +33,7 @@ export const dynamic = "force-dynamic";
  * serves the Dutch name to a French visitor (pinned in
  * `gestureDetail.int.test.ts`), so this only covers a row whose Dutch name is
  * missing too — which `defaultLocaleRequired` prevents on write but which
- * Stage 9's import could still produce.
+ * an import could still produce.
  */
 const UNNAMED = "Gebaar";
 
@@ -131,11 +131,11 @@ export default async function GestureDetailPage({
   /*
    * The same `payload.auth` the access check above already paid for —
    * `loadViewer` is `cache`d, so asking again inside one request is free.
-   * This is the whole of Task 4's cost on this route: the page was already
-   * `force-dynamic` and already resolving the viewer, so the signed-in
-   * favourite path costs it no prerendering and no extra query. The routes
-   * where that was *not* true are the ones whose account state is resolved
-   * in the browser instead; the reasoning is in the Task 4 report.
+   * This is the whole cost of signed-in favourites on this route: the page
+   * was already `force-dynamic` and already resolving the viewer, so the
+   * signed-in favourite path costs it no prerendering and no extra query. The
+   * routes where that was *not* true are the ones whose account state is
+   * resolved in the browser instead.
    */
   const viewer = await loadViewer();
   const gestureId = String(gesture.id);
@@ -214,7 +214,7 @@ export default async function GestureDetailPage({
       </header>
 
       {/*
-       * `data-playback-id` is not decoration: Stage 2 established that
+       * `data-playback-id` is not decoration: it is established that
        * `@mux/mux-player-react` server-renders no `playback-id` and only sets
        * it after hydration, and that the element removes itself into an error
        * state when it cannot reach Mux — so "the player was given the right

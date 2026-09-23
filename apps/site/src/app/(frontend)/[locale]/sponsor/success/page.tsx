@@ -22,11 +22,10 @@ export const metadata: Metadata = {
  * this page says what is true of both outcomes: it is being processed, and
  * you will hear from us.
  *
- * The shipped success page polls `getSponsorshipsByPaymentId` with a
- * `?paymentId=` Mollie substitutes into the redirect URL. This one has no
- * client JavaScript to poll with, so it does not ask for the id — a payment
- * identifier in a URL is one in a browser history, in a `Referer` and in any
- * proxy log, in exchange for nothing.
+ * It could poll for the sponsorship with a `?paymentId=` Mollie substitutes
+ * into the redirect URL. This page has no client JavaScript to poll with, so it
+ * does not ask for the id — a payment identifier in a URL is one in a browser
+ * history, in a `Referer` and in any proxy log, in exchange for nothing.
  *
  * The draft cookie is deliberately *not* cleared here. Clearing it would need
  * this to be a write, and the cookie expires in an hour on its own; a sponsor

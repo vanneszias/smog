@@ -76,12 +76,12 @@ const ERRORS: Record<string, string> = {
  * re-submit it as a GET to this page. That is what makes a tick survive a
  * search or a page turn with scripting off — the ticked boxes travel with the
  * query, come back as `?gestureId=…`, and are re-ticked below. A second form
- * for the filters would throw the selection away on every keystroke, which is
- * what the shipped React wizard uses component state to avoid.
+ * for the filters would throw the selection away on every keystroke.
  *
- * `fetchGestures`, `searchGestureIds` and `fetchCategoryOptions` are Stage
- * 3's and are not reimplemented here; the overshoot clamping in particular is
- * mutation-proven and this page would only get it wrong differently.
+ * `fetchGestures`, `searchGestureIds` and `fetchCategoryOptions` are the
+ * gestures list's and are not reimplemented here; the overshoot clamping in
+ * particular is mutation-proven and this page would only get it wrong
+ * differently.
  */
 export default async function SponsorPage({
   params,
