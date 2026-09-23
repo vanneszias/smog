@@ -237,6 +237,8 @@ steps 4–9 with `production`.
    ```bash
    CLOUDFLARE_ENV=staging bun -F site deploy:database
    ```
+   For importing the Convex catalogue export into this database, see
+   [`docs/cutover-runbook.md`](./cutover-runbook.md).
 6. Build and upload the Worker:
    ```bash
    CLOUDFLARE_ENV=staging bun -F site deploy:app

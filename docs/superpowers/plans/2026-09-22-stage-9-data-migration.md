@@ -149,6 +149,108 @@ Tests: guard refusals (Review Focus 2 and 4); dry-run writes nothing (int); an e
 
 ## Task 5: Local rehearsal on the real export, and the runbook
 
-- [ ] **Controller-run, not an implementer:** run the CLI against the real export into **local** D1 (`--target=local --apply`) with the report written under the scratchpad, then rerun it and confirm the second run is all `existing`. Record **only aggregates** in the plan: planned/created/existing/skipped/failed counts, verification pass/fail, timings. The skipped gestures' ids and names stay in the scratch report and go to the user privately, not into the repo.
-- [ ] Write the Stage 10 import steps into `docs/deployment-checklist.md` (or a new `docs/cutover-runbook.md` if the checklist is the wrong home): staging rehearsal command, production command with the maintenance flag, where the report goes, what "verification failed" means and what to do, and the post-cutover editorial task for the skipped gestures. Staging and production runs are blocked on the Cloudflare token rotation; say so.
-- [ ] Record the exit in this plan; update `docs/superpowers/plans/README.md`.
+- [x] **Controller-run, not an implementer:** run the CLI against the real export into **local** D1 (`--target=local --apply`) with the report written under the scratchpad, then rerun it and confirm the second run is all `existing`. Record **only aggregates** in the plan: planned/created/existing/skipped/failed counts, verification pass/fail, timings. The skipped gestures' ids and names stay in the scratch report and go to the user privately, not into the repo.
+- [x] Write the Stage 10 import steps into `docs/deployment-checklist.md` (or a new `docs/cutover-runbook.md` if the checklist is the wrong home): staging rehearsal command, production command with the maintenance flag, where the report goes, what "verification failed" means and what to do, and the post-cutover editorial task for the skipped gestures. Staging and production runs are blocked on the Cloudflare token rotation; say so.
+- [x] Record the exit in this plan; update `docs/superpowers/plans/README.md`.
+
+## Stage 9 exit: measured
+
+**Rehearsed locally, on the real production export, controller-run
+(`--target=local`).** Staging and production not yet exercised — see below.
+
+### Rehearsal aggregates (real export; only aggregates, never row content)
+
+- **Dry run** (`--target=local`, no `--apply`): planned 27 categories, 492
+  gestures, 4 skipped (needing editorial action: 2 with no category, 2 with
+  no video), 5 favourites dropped. Exit 0; wrote nothing.
+- **Run 1** (`--target=local --apply`, against a fresh, empty local D1):
+  categories 27 created / 0 existing / 0 failed; gestures 492 created / 0
+  existing / 0 failed. Verification: 0 incomplete, 0 mismatches.
+  `user-consents` count 0 → 0. Exit 0; ~71 s.
+- **Run 2** (same command, run again immediately after): categories 0
+  created / 27 existing; gestures 0 created / 492 existing. Verification
+  clean. Exit 0; ~12 s. **The import is idempotent on the real data** — a
+  rerun creates nothing and reports everything as `existing`.
+
+### Finding
+
+`--target=local` must start from an **empty** local D1. With `NODE_ENV`
+unset (how `local` runs), Payload dev-pushes its schema at init; pushing
+that over a database already built by `payload migrate` fails with an
+error like `index lists_items_order_idx already exists`. Staging and
+production run with `NODE_ENV=production` (no push) after `deploy:database`
+has migrated the schema first, so they are unaffected — this only bites a
+local rehearsal. Recorded in `docs/cutover-runbook.md`'s local-rehearsal
+note, with the move-`.wrangler`-aside workaround.
+
+### Not yet exercised
+
+Staging and production runs are **blocked on the Cloudflare API token
+rotation** (`docs/deployment-checklist.md`, "Before you start", item 1),
+which must happen before any remote command. Once it has, follow
+`docs/cutover-runbook.md`'s staging and production sections. The remote
+path — `loadPayloadFor`'s platform-proxy binding, and its fail-closed check
+that Payload's D1 binding is the remote proxy's own — has so far only
+fake-based tests (`cli.test.ts`'s `loadPayloadFor` describe block); it has
+not been run against a real staging or production D1.
+
+### Review Focus, pinned
+
+1. **A rerun after a mid-run failure.** `apps/site/scripts/migrate-convex/apply.int.test.ts`,
+   describe `"a category that fails to import"`: `"completes the skipped
+   work on a rerun without the fault"` and `"leaves one document per legacy
+   id across the faulted run and the rerun"`.
+2. **The real export path leaking into the repo.**
+   `apps/site/scripts/migrate-convex/cli.test.ts`, describe
+   `"assertOutsideWorkTree"` (e.g. `"refuses a directory inside the work
+   tree"`, `"refuses an existing report symlink that points into the work
+   tree"`) and describe `"the fixture directory is synthetic by
+   construction"`: `"holds only prefixed ids, pb_ playback ids and marker
+   lines"`. Also `apps/site/scripts/migrate-convex/verify.int.test.ts`,
+   describe `"the CLI, end to end on the synthetic fixture"`: `"leaves
+   nothing of the export or report inside the work tree"`.
+3. **A gesture whose categories point at a category that failed to
+   import.** `apps/site/scripts/migrate-convex/apply.int.test.ts`, describe
+   `"a category that fails to import"`: `"skips every gesture that names
+   the failed category, even alongside a healthy one"`.
+4. **Running against the wrong database.**
+   `apps/site/scripts/migrate-convex/cli.test.ts`, describe `"runCli
+   without --apply"`: `"prints the target, the database and the planned
+   counts, loads no Payload, writes no report, and exits 0"`; describe
+   `"runCli refusals"` (e.g. `"refuses a staging run under
+   CLOUDFLARE_ENV=production"`, `"refuses production without the
+   maintenance flag"`); describe `"assertTargetAllowed"`.
+5. **An editor's changes after a first run.**
+   `apps/site/scripts/migrate-convex/apply.int.test.ts`, describe `"a first
+   run, then a rerun"`: `"leaves a gesture an editor changed after the
+   first run untouched"`. `apps/site/scripts/migrate-convex/verify.int.test.ts`,
+   describe `"an incomplete write, seen by a later run"`: `"does not report
+   an editor's rename or re-categorisation as incomplete or as a failure"`
+   and `"still shows those editorial changes, as differences from the
+   export"`.
+
+### Carried out of Stage 9
+
+From the SDD ledger (`.superpowers/sdd/2026-09-22-stage-9-data-migration/progress.md`),
+deferred rather than fixed in place:
+
+- Task 1: the newest committed drizzle snapshot predates this stage, so
+  every `payload migrate:create` re-derives several days of migrations and
+  needs manual trimming down to the one actually intended.
+- Task 2: a `Promise.all` over the aggregate tables (`users`,
+  `sponsorships`, `user_consents`, `adminLogs`) reports only one of several
+  simultaneously-missing tables, if more than one is missing at once.
+- Task 3: `apply.int.test.ts`'s teardown loops forever if a bulk delete
+  returns errors (e.g. a delete blocked by a hook like
+  `blockDeleteWhenSponsored`) instead of throwing on errors or on zero
+  progress.
+- Task 3: the "failed create left document N" message in a test/log can
+  misattribute a concurrent run's already-complete document to the wrong
+  failure.
+- Task 4: `workTreeRoot`'s git-missing code path is untested, and
+  `O_NOFOLLOW` on the report write does not cover a parent directory
+  swapped for a symlink between the guard's check and the open.
+
+None of these block the import described in `docs/cutover-runbook.md`;
+they are quality/coverage gaps to pick up opportunistically, not before
+staging or production runs.

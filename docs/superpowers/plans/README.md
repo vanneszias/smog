@@ -18,8 +18,13 @@ its own plan document, per `superpowers:writing-plans`.
 | 8 | Native | [`2026-09-21-stage-8-native.md`](./2026-09-21-stage-8-native.md) | 4 | **landed** — nine of ten exit criteria; the tenth needs a device |
 | 8.5 | Consent | [`2026-09-22-stage-8-5-consent.md`](./2026-09-22-stage-8-5-consent.md) | 1, 4, 8 | **landed** — all ten exit criteria met |
 | 8.6 | Mobile consent and analytics | [`2026-09-22-stage-8-6-mobile-consent.md`](./2026-09-22-stage-8-6-mobile-consent.md) | 1, 4, 8, 8.5 | **landed** — all nine exit criteria met after the final review's fixes (criteria 1, 4 and 6 were not, as first recorded); the banner layout still needs a device |
-| 9 | Data migration | **next** — write it now that 8.6 has landed | 1, 4, 5, 8.5 | — |
-| 10 | Cutover | written when Stage 9 lands | all | — |
+| 9 | Data migration | [`2026-09-22-stage-9-data-migration.md`](./2026-09-22-stage-9-data-migration.md) | 1, 4, 5, 8.5 | **landed** — the importer is built and rehearsed locally on the real production export (idempotent, verified); staging and production runs are pending the Cloudflare token rotation |
+| 10 | Cutover | **next** — write it now that 9 has landed | all | — |
+
+Alongside the numbered sequence, [`2026-09-22-cron-wiring.md`](./2026-09-22-cron-wiring.md)
+(wires the hourly job-queue cron into the deployed Worker) has also landed —
+see its own exit summary and `docs/deployment-checklist.md`'s "Code work
+still open before cutover" note.
 
 "Landed" means the plan's exit assessment is appended to it with the
 measurements, not that every criterion was met — each plan's own exit section
