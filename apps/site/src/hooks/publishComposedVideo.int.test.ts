@@ -42,10 +42,10 @@ type Status =
  * copy is the whole of "a person is in between": no callback, however well
  * signed, can put a video on a gesture page without one.
  *
- * ## Why the second hook exists, which the plan did not ask for
+ * ## Why the second hook exists
  *
  * `rejected -> pending_resubmission` is a legal move (`lib/sponsorshipStatus.ts`,
- * and the shipped product re-opens a rejected sponsorship), so a sponsorship
+ * and an administrator may re-open a rejected sponsorship), so a sponsorship
  * can carry a composite made *before* a rejection and then come back through
  * the approval queue with different text and a different logo. Copying blindly
  * on approval would put the rejected submission's video live the moment the
@@ -54,9 +54,8 @@ type Status =
  *
  * So a write that changes the overlay throws the composite away. That is a
  * property of the *content*, not of the endpoint that changed it, which is why
- * it is a hook and not a line in `endpoints/sponsorships.ts`: the re-edit form,
- * an administrator editing the text in the admin panel, and Stage 9's import
- * all go through it.
+ * it is a hook and not a line in `endpoints/sponsorships.ts`: the re-edit form
+ * and an administrator editing the text in the admin panel both go through it.
  *
  * `enforceStatusTransitions` is not a second line of defence behind either of
  * them. It compares `originalDoc.status` with `data.status` and allows
@@ -188,7 +187,7 @@ describe("publishing a composed video", () => {
     // A render that failed, or one that never ran because Remotion Lambda is
     // not configured — which is every environment today. The approval must
     // still work: the gesture page falls back to the original video and draws
-    // the overlay in HTML, exactly as Stage 5 shipped it.
+    // the overlay in HTML.
     const id = await seed("no-composite");
 
     const after = await update(id, { status: "active" });
@@ -236,10 +235,9 @@ describe("publishing a composed video", () => {
   });
 
   it("does not overwrite a video that is already the live one", async () => {
-    // The shipped flow's own rule — `apps/server/src/services/sponsorship.ts`
-    // copies the preview only `if (!sponsorship.sponsoredVideoPlaybackId)` —
-    // and it matters for a row imported with a composite already in place
-    // (Stage 9), where the preview column may hold something older.
+    // The preview is copied only when `sponsoredVideoPlaybackId` is empty,
+    // and that matters for a row imported with a composite already in place,
+    // where the preview column may hold something older.
     const id = await seed("already-live", {
       previewVideoPlaybackId: `pb-newer-${RUN}`,
       sponsoredVideoPlaybackId: `pb-already-live-${RUN}`,
@@ -329,9 +327,8 @@ describe("publishing a composed video", () => {
     /*
      * **The whole scenario, end to end**, and the reason the second hook
      * exists. A composite is made while the sponsorship is in the queue; an
-     * administrator rejects it; the shipped product re-opens it for a re-edit;
-     * the sponsor changes the text and it returns to the queue; an
-     * administrator approves.
+     * administrator rejects it, then re-opens it for a re-edit; the sponsor
+     * changes the text and it returns to the queue; an administrator approves.
      *
      * Every step is a legal transition, and without the invalidation the last
      * one publishes the video of the submission that was *rejected*.

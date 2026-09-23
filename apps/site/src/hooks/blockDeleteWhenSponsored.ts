@@ -30,13 +30,13 @@ const describeSponsorship = (sponsorship: Sponsorship): string => {
 /**
  * Refuses to delete a gesture that any sponsorship points at.
  *
- * Payload emits `sponsorships.gesture` as `NOT NULL` with
- * `ON DELETE set null`, which SQLite cannot honour: the delete fails with a
- * raw `Failed query: delete from "gestures" where ...` that tells the admin
- * nothing. Refusing is also the behaviour the spec's decision table asks for
- * — someone paid for the sponsorship, so a row pointing at nothing is worse
- * than a blocked delete — so this hook replaces an accidental failure with a
- * deliberate one that names what is in the way.
+ * Payload emits `sponsorships.gesture` as `NOT NULL` with `ON DELETE set null`,
+ * which SQLite cannot honour: the delete fails with a raw
+ * `Failed query: delete from "gestures" where ...` that tells the admin
+ * nothing. Refusing is also the right behaviour on its own terms — someone paid
+ * for the sponsorship, so a row pointing at nothing is worse than a blocked
+ * delete — so this hook replaces an accidental failure with a deliberate one
+ * that names what is in the way.
  *
  * It runs after `access.delete` (see `collections/operations/deleteByID.js`,
  * 3.89.0), so a non-admin still gets `Forbidden` rather than a list of
@@ -62,15 +62,15 @@ export const blockDeleteWhenSponsored: CollectionBeforeDeleteHook = async ({
     // The caller's `req`, so the lookup carries the same session as the
     // delete that triggered it.
     //
-    // Correcting the reason this line used to give (Stage 3 Task 8): it
-    // claimed the lookup would otherwise run outside the delete's
-    // transaction. There is no transaction. `sqliteD1Adapter` is
-    // constructed without `transactionOptions` (`payload.config.ts`), so the
-    // adapter takes Payload's `defaultBeginTransaction()`, which resolves to
-    // `null` and makes `initTransaction` a no-op. Passing `req` is still
-    // correct — it is what would enlist this read if that ever changed — but
-    // nothing on this collection's delete path is atomic, which is why the
-    // hook order in `Gestures.ts` is load-bearing rather than defensive.
+    // Correcting the reason this line used to give: it claimed the lookup would
+    // otherwise run outside the delete's transaction. There is no transaction.
+    // `sqliteD1Adapter` is constructed without `transactionOptions`
+    // (`payload.config.ts`), so the adapter takes Payload's
+    // `defaultBeginTransaction()`, which resolves to `null` and makes
+    // `initTransaction` a no-op. Passing `req` is still correct — it is what
+    // would enlist this read if that ever changed — but nothing on this
+    // collection's delete path is atomic, which is why the hook order in
+    // `Gestures.ts` is load-bearing rather than defensive.
     req,
   });
 

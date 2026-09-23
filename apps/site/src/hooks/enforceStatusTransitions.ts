@@ -25,10 +25,10 @@ const BAD_REQUEST = 400;
  * optional property for TypeScript, and dropping it fails the typecheck
  * rather than changing behaviour.
  *
- * It is a hook rather than an access rule on purpose. Every writer this
- * stage adds runs with `overrideAccess: true` — the Mollie webhook, the
+ * It is a hook rather than an access rule on purpose. Every server-side
+ * writer runs with `overrideAccess: true` — the Mollie webhook, the
  * admin-log hook, the re-edit endpoint — so a guard the access layer could
- * bypass would be a guard nothing in this stage is subject to.
+ * bypass would be a guard none of them is subject to.
  *
  * `APIError` with an explicit `isPublic`, for the reason
  * `blockDeleteWhenSponsored` documents: the bulk-update path collects

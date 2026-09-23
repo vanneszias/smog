@@ -5,14 +5,13 @@ import { resolveRelationshipId } from "@/collections/Lists";
  * Removes a gesture from every list that holds it, just before the gesture
  * itself is deleted.
  *
- * The spec's "Referential integrity" table rules *drop the array row* for
- * `lists.items.gesture` — "the list survives; it just loses an entry" — and
- * is equally clear that this is not the same answer as the one next door:
- * `sponsorships.gesture` refuses the delete outright, because someone paid
- * for it. Both rules live on `gestures.beforeDelete`, and conflating them
- * would either destroy list entries a refused delete should have left alone
- * or block an admin from deleting a gesture merely because somebody
- * favourited it.
+ * The referential-integrity rule for `lists.items.gesture` is *drop the array
+ * row* — the list survives; it just loses an entry — and that is deliberately
+ * not the same answer as the one next door: `sponsorships.gesture` refuses the
+ * delete outright, because someone paid for it. Both rules live on
+ * `gestures.beforeDelete`, and conflating them would either destroy list
+ * entries a refused delete should have left alone or block an admin from
+ * deleting a gesture merely because somebody favourited it.
  *
  * **Ordering is the only guard there is.** `blockDeleteWhenSponsored` is
  * registered first, and Payload runs `beforeDelete` hooks sequentially in

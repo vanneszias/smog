@@ -4,11 +4,9 @@ import type { Sponsorship } from "@/payload-types";
 /**
  * How long a re-edit link lives.
  *
- * Seven days, transcribed from `generateReEditLink` in
- * `packages/api/src/routers/admin.ts` — `Date.now() + 7 * 24 * 60 * 60 * 1000`
- * — rather than chosen. The migration's non-goal is that sponsorship
- * behaviour does not change, and "how long does the link I just sent a
- * sponsor work for" is behaviour.
+ * Seven days, and deliberately not up for tuning: "how long does the link I
+ * just sent a sponsor work for" is behaviour sponsors and administrators
+ * already rely on.
  */
 const RE_EDIT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -18,15 +16,13 @@ const RE_EDIT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  *
  * ## Why this is the whole of "generate a re-edit link"
  *
- * The shipped product has a `setReEditToken` mutation behind an admin button,
- * and what it does is one write: set the status to `pending_resubmission`,
- * set a fresh `crypto.randomUUID()` and set an expiry. Its status allowlist
- * is `["pending_approval", "pending_resubmission", "rejected"]`, which is
- * precisely the set of statuses `lib/sponsorshipStatus.ts` allows into
- * `pending_resubmission` — `rejected` included, which is why that edge exists
- * in the table. So in this port the admin does not need a bespoke button:
- * moving the status to `pending_resubmission` in the Payload panel *is* the
- * action, and this hook is what makes it mean something.
+ * Generating a re-edit link is one write: set the status to
+ * `pending_resubmission`, set a fresh `crypto.randomUUID()` and set an expiry.
+ * The statuses it may start from are `pending_approval`, `pending_resubmission`
+ * and `rejected`, which is precisely the set `lib/sponsorshipStatus.ts` allows
+ * into `pending_resubmission` — `rejected` included. So the admin does not need
+ * a bespoke button: moving the status to `pending_resubmission` in the Payload
+ * panel *is* the action, and this hook is what makes it mean something.
  *
  * `beforeChange` rather than `afterChange`, for the reason
  * `collections/Lists.ts` spells out for share tokens: an `afterChange` hook
@@ -44,12 +40,11 @@ const RE_EDIT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  *
  * ## Only on the transition, in both directions
  *
- * **Minting** fires when the status *becomes* `pending_resubmission`, and
- * mints unconditionally rather than with the `??` `Lists.ts` uses. Entering
- * this state is the act of issuing a capability; issuing one is issuing a new
- * one, with a new seven days, which is what `generateReEditLink` does every
- * time it is called. Honouring a token supplied in the same write would let a
- * caller choose the secret.
+ * **Minting** fires when the status *becomes* `pending_resubmission`, and mints
+ * unconditionally rather than with the `??` `Lists.ts` uses. Entering this
+ * state is the act of issuing a capability; issuing one is issuing a new one,
+ * with a new seven days, every time. Honouring a token supplied in the same
+ * write would let a caller choose the secret.
  *
  * **Clearing** fires when the status *leaves* `pending_resubmission`, for
  * whatever reason — the sponsor resubmitting, an admin cancelling, an admin

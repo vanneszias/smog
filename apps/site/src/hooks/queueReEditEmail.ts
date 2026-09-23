@@ -10,18 +10,13 @@ const RESUBMISSION = "pending_resubmission";
  * Queues the sponsor's re-edit invitation when an administrator asks them for
  * a change.
  *
- * ## Why here, and not in `endpoints/sponsorships.ts` as the plan says
+ * ## Why here, and not in `endpoints/sponsorships.ts`
  *
- * The plan lists `sponsorships.ts` as the file that "logs a link instead of
- * sending it". **It does not, and never did** — nothing in this application
- * has ever produced a re-edit link for anybody. Stage 5 removed the shipped
- * product's bespoke button on purpose: `packages/api`'s `generateReEditLink`
- * set a status, a token and an expiry and handed the URL back to an admin
- * screen with a copy button, and `hooks/manageReEditToken.ts` records the
- * decision that in this port **moving the status to `pending_resubmission` in
+ * No endpoint produces a re-edit link. There is deliberately no bespoke admin
+ * button that hands a URL back to be copied: `hooks/manageReEditToken.ts`
+ * records the decision that **moving the status to `pending_resubmission` in
  * the admin panel *is* that action**. So the event this hook listens for is
- * exactly the shipped mutation, and there is no endpoint involved at either
- * end.
+ * that status change, and there is no endpoint involved at either end.
  *
  * That makes the queue point a collection hook, and `afterChange` rather than
  * `beforeChange` for the reason `hooks/logSponsorshipTransitions.ts` gives:
@@ -49,15 +44,14 @@ const RESUBMISSION = "pending_resubmission";
  *
  * ## The locale is the site default, and that is an honest gap
  *
- * The plan asks for every message "in the recipient's locale". A
- * `sponsorships` row records no language — the wizard's locale lives in the
- * URL and is never stored — so the recipient's locale is genuinely unknown
- * here. `req.locale` is available and is *not* used: on an admin-panel write
- * that is the content locale the administrator is editing in, which is the
- * language of the person clicking the button rather than of the sponsor
- * reading the mail, and a wrong answer that looks derived is worse than a
- * default that is written down. Dutch is the site default and the language
- * every transactional message in the shipped product is written in.
+ * Every message should be in the recipient's locale, but a `sponsorships` row
+ * records no language — the wizard's locale lives in the URL and is never
+ * stored — so the recipient's locale is genuinely unknown here. `req.locale` is
+ * available and is *not* used: on an admin-panel write that is the content
+ * locale the administrator is editing in, which is the language of the person
+ * clicking the button rather than of the sponsor reading the mail, and a wrong
+ * answer that looks derived is worse than a default that is written down. Dutch
+ * is the site default.
  *
  * ## A failure here does not fail the administrator's save
  *

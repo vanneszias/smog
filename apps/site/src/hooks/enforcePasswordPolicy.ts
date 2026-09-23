@@ -152,25 +152,24 @@ export const enforcePasswordPolicy: CollectionBeforeValidateHook = ({
  * three-character password**, on an account whose twelve-character floor had
  * been enforced at every other door.
  *
- * It is unreachable today only because no email adapter is configured, so
- * `forgotPassword` writes the token to the console instead of delivering it.
- * Stage 7 configures one. It is also the *only* way into a Google-created
- * account that has never set a password — `endpoints/oauth.ts` gives those a
- * random 288-bit value nobody knows — so the reset path is not a corner of
- * this system, it is the main door for one class of account.
+ * Without an email adapter it would be unreachable, because `forgotPassword`
+ * would write the token to the console instead of delivering it; with one, it
+ * is live. It is also the *only* way into a Google-created account that has
+ * never set a password — `endpoints/oauth.ts` gives those a random 288-bit
+ * value nobody knows — so the reset path is not a corner of this system, it is
+ * the main door for one class of account.
  *
  * ## Why a `beforeOperation` hook and not an endpoint override
  *
  * The obvious fix is to shadow `POST /api/users/reset-password` the way
- * `endpoints/auth.ts` shadows `/login`, and that is what the stage plan
- * costed. It is not necessary. `resetPasswordOperation` calls
- * `buildBeforeOperation` as the first step inside its transaction —
- * **before the token is looked up, and long before
+ * `endpoints/auth.ts` shadows `/login`. It is not necessary.
+ * `resetPasswordOperation` calls `buildBeforeOperation` as the first step
+ * inside its transaction — **before the token is looked up, and long before
  * `generatePasswordSaltHash` is reached** — and that helper hands every
- * `beforeOperation` hook the operation's own `args`, `data.password`
- * included: the plaintext, exactly as submitted
- * (`collections/operations/utilities/buildBeforeOperation.js`). Verified at
- * the call site.
+ * `beforeOperation` hook the operation's own `args`, `data.password` included:
+ * the plaintext, exactly as submitted
+ * (`collections/operations/utilities/buildBeforeOperation.js`). Verified at the
+ * call site.
  *
  * A hook is strictly better than an endpoint override here: it covers the
  * REST endpoint, the GraphQL mutation, the admin panel's reset screen and

@@ -9,10 +9,9 @@ const BAD_REQUEST = 400;
  * The two statuses that are a *decision about* a sponsorship rather than a
  * step of the flow it is already in.
  *
- * `pending_resubmission` is deliberately not one of them, and the shipped
- * product agrees: `setReEditToken` in `packages/convex/convex/sponsorships.ts`
- * writes no `reviewedBy` and no `reviewedAt`, where `approve` and `reject`
- * both do. Asking for changes is not yet a verdict.
+ * `pending_resubmission` is deliberately not one of them: asking for changes
+ * is not yet a verdict, so it stamps no `reviewedBy` and no `reviewedAt`,
+ * where approving and rejecting both do.
  */
 const DECISIONS: ReadonlySet<string> = new Set(["active", "rejected"]);
 
@@ -29,10 +28,10 @@ function reviewerId(value: Sponsorship["reviewedBy"]): null | number {
  * Stamps who decided a sponsorship's fate and when, and refuses a rejection
  * with nothing to tell the sponsor.
  *
- * ## Why a hook, and not the field access the plan asked for
+ * ## Why a hook, and not field access
  *
- * The plan's Task 9 asks for "admin-only field access on `rejectionReason`,
- * `reviewedBy`, `reviewedAt`". Written as `access.update: isAdminField` those
+ * The obvious guard is admin-only field access on `rejectionReason`,
+ * `reviewedBy` and `reviewedAt`. Written as `access.update: isAdminField` those
  * three guards would be **unreachable**, and a mutation sweep would show all
  * three surviving: `sponsorships.update` is already `isAdmin` at the document
  * level, so a non-admin never reaches the field pass at all — and the writers
@@ -41,10 +40,10 @@ function reviewerId(value: Sponsorship["reviewedBy"]): null | number {
  * reach is not a weaker guard, it is a comment.
  *
  * So it is a hook, for exactly the reason `enforceStatusTransitions`
- * documents for the transition table: every writer this stage adds runs with
+ * documents for the transition table: every server-side writer runs with
  * `overrideAccess: true` — the Mollie webhook, the re-edit endpoint, the
  * admin-log hook — so a guard the access layer could bypass would be a guard
- * nothing in this stage is subject to. A hook is subject to all of them.
+ * none of them is subject to. A hook is subject to all of them.
  *
  * ## What it does
  *

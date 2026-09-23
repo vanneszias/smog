@@ -15,20 +15,17 @@ import type { Sponsorship } from "@/payload-types";
  *
  * The copy from the second to the third is made here, on approval, and that is
  * the whole of "a person is in between": no callback, however well signed, can
- * put a video on a public page without an administrator. It is also what the
- * shipped product does — `apps/server/src/services/sponsorship.ts` writes
- * `sponsoredVideoPlaybackId: sponsorship.previewVideoPlaybackId` and calls it
- * the "simplified flow".
+ * put a video on a public page without an administrator.
  *
- * ## Why `invalidateComposedVideo` exists, which the plan did not ask for
+ * ## Why `invalidateComposedVideo` exists
  *
  * A composite has the sponsor's words and logo burned into the frame, so it is
  * only ever a composite of *one* version of the overlay. And a sponsorship's
- * overlay can change after one has been made: `rejected ->
- * pending_resubmission` is a legal move (`lib/sponsorshipStatus.ts`, because
- * the shipped product re-opens a rejected sponsorship), so a row can carry a
- * composite made before a rejection and come back through the approval queue
- * with different text and a different logo.
+ * overlay can change after one has been made:
+ * `rejected -> pending_resubmission` is a legal move
+ * (`lib/sponsorshipStatus.ts`: an administrator may re-open a rejected
+ * sponsorship), so a row can carry a composite made before a rejection and come
+ * back through the approval queue with different text and a different logo.
  *
  * Copying blindly on approval would then put the *rejected* submission's video
  * live the moment the re-edit is approved, with the sponsor's correction
@@ -37,10 +34,10 @@ import type { Sponsorship } from "@/payload-types";
  *
  * That is a fact about the content rather than about whoever changed it, which
  * is why it is a hook and not a line in `endpoints/sponsorships.ts`: the
- * re-edit form, an administrator editing the text in the admin panel and
- * Stage 9's import all pass through here. **Order matters** — invalidation
- * runs first, so a single save that both fixes the text and approves cannot
- * publish the video of the text it just replaced.
+ * re-edit form and an administrator editing the text in the admin panel both
+ * pass through here. **Order matters** — invalidation runs first, so a single
+ * save that both fixes the text and approves cannot publish the video of the
+ * text it just replaced.
  *
  * ## What these hooks are not
  *
@@ -49,9 +46,9 @@ import type { Sponsorship } from "@/payload-types";
  * `from === to`, so it has nothing to say about a write that changes only a
  * playback id — `endpoints/render.int.test.ts` proves exactly that against a
  * cancelled sponsorship. Hooks rather than access rules for the reason
- * `enforceStatusTransitions` documents: every writer this stage adds runs with
+ * `enforceStatusTransitions` documents: every server-side writer runs with
  * `overrideAccess: true`, so a guard the access layer could bypass is a guard
- * nothing in this stage is subject to.
+ * none of them is subject to.
  *
  * ## One thing these deliberately do not do
  *
@@ -60,8 +57,7 @@ import type { Sponsorship } from "@/payload-types";
  * composite of the old words until something replaces it. Clearing it would
  * silently swap a running sponsor's video for the unsponsored original, which
  * is a bigger change to make from a hook than a stale caption is to leave. It
- * is recorded here rather than hidden: the proper answer is a re-render, which
- * needs the submission Task 6 owns.
+ * is recorded here rather than hidden: the proper answer is a re-render.
  */
 
 /** A relationship's id, whatever depth the document came back at. */
@@ -119,15 +115,14 @@ export const invalidateComposedVideo: CollectionBeforeChangeHook<
  * — the payment webhook's, the callback's, a rename, a rejection — leaves the
  * public column exactly as it was.
  *
- * An existing `sponsoredVideoPlaybackId` is never overwritten, which is the
- * shipped rule (`if (!sponsorship.sponsoredVideoPlaybackId)`) and matters for a
- * row imported with a composite already in place.
+ * An existing `sponsoredVideoPlaybackId` is never overwritten, which matters
+ * for a row imported with a composite already in place.
  *
- * A sponsorship with no composite is approved unchanged rather than refused.
- * A render can fail, and in every environment today none is even submitted —
- * the gesture page then falls back to the original video with the overlay drawn
- * in HTML, which is what Stage 5 shipped and is a working page rather than an
- * approval an administrator cannot complete.
+ * A sponsorship with no composite is approved unchanged rather than refused. A
+ * render can fail, and in every environment today none is even submitted — the
+ * gesture page then falls back to the original video with the overlay drawn in
+ * HTML, which is a working page rather than an approval an administrator cannot
+ * complete.
  */
 export const publishComposedVideo: CollectionBeforeChangeHook<Sponsorship> = ({
   data,

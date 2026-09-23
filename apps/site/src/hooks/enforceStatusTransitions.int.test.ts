@@ -168,10 +168,10 @@ describe("enforceStatusTransitions, through the collection it is registered on",
   });
 
   it("refuses the illegal move even with overrideAccess", async () => {
-    // The hook is the policy, not the access layer. Every writer in this
-    // stage runs with `overrideAccess: true` — the webhook, the admin-log
+    // The hook is the policy, not the access layer. Every server-side
+    // writer runs with `overrideAccess: true` — the webhook, the admin-log
     // hook, the re-edit endpoint — so a guard that access could bypass
-    // would be a guard nothing in this stage is subject to.
+    // would be a guard none of them is subject to.
     const id = await seed("override", "active");
 
     await expect(
@@ -225,10 +225,9 @@ describe("enforceStatusTransitions, through the collection it is registered on",
   });
 
   it("lets a rejected sponsorship be re-opened for resubmission", async () => {
-    // Transcribed from the shipped product, which offers "Let Sponsor
-    // Re-edit" on a rejected sponsorship — not chosen here. The plan's
-    // table called `rejected` terminal; the migration's non-goal is that
-    // sponsorship behaviour does not change, so the product wins.
+    // An administrator may offer a rejected sponsorship a re-edit, so
+    // `rejected` is not terminal: that is established sponsorship
+    // behaviour, and it wins over a tidier table.
     const id = await seed("reopened", "rejected");
 
     const updated = await payload.update({

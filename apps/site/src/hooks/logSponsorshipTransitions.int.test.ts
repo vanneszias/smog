@@ -292,7 +292,7 @@ describe("logSponsorshipTransitions", () => {
   });
 
   it("writes through overrideAccess, because admin-logs refuses everyone", async () => {
-    // The spec: `admin-logs` is append-only to everyone *including admins*,
+    // `admin-logs` is append-only to everyone *including admins*,
     // so a hook going through the local API with `overrideAccess: true` is
     // the only way in. Both halves are asserted, because either alone is
     // satisfied by a broken implementation: the refusal alone passes against

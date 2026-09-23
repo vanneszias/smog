@@ -20,11 +20,10 @@ const ACTION = "sponsorship.status_changed";
  *
  * There are no transactions on any write path — `sqliteD1Adapter` is built
  * without `transactionOptions`, so `beginTransaction` resolves to `null` and
- * nothing is ever rolled back (the spec records the three call sites). That
- * makes ordering the only tool available, and it points one way: the log
- * follows the change it describes. A `beforeChange` log would record
- * transitions that then failed their own write, and nothing would remove the
- * row.
+ * nothing is ever rolled back. That makes ordering the only tool available, and
+ * it points one way: the log follows the change it describes. A `beforeChange`
+ * log would record transitions that then failed their own write, and nothing
+ * would remove the row.
  *
  * The same reasoning is why the `catch` below swallows. By the time this runs
  * the sponsorship has already moved; rethrowing would report a failure for a
