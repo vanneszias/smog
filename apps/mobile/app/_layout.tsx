@@ -81,6 +81,15 @@ function useInitialLocale(): void {
  * inset itself (see `Banner`'s own comment), so the navigator's subtree is
  * told that inset is already spent — otherwise the tab bar pads itself a
  * second time for a home indicator the banner is already sitting on.
+ *
+ * The top inset is spent here too, once, for every screen: every navigator
+ * in this tree hides its header (`headerShown: false`), so nothing else
+ * would keep a screen's first row out from under the status bar and notch.
+ * Padding this one view covers the tabs, the gesture detail, the auth
+ * screens and the dev routes alike, and the subtree is then told `top: 0`
+ * so nothing inside it pads for the same inset again. Showing a navigator
+ * header somewhere would mean taking that screen out of this padding, since
+ * a header pads for the status bar itself.
  */
 function Navigator() {
   useConsentSync();
@@ -88,13 +97,20 @@ function Navigator() {
   useScreenViews();
   const insets = useSafeAreaInsets();
   const bannerVisible = useConsentBannerVisible();
+  const screenInsets = {
+    ...insets,
+    bottom: bannerVisible ? 0 : insets.bottom,
+    top: 0,
+  };
 
   return (
-    <View className="flex-1">
-      <SafeAreaInsetsContext.Provider
-        value={bannerVisible ? { ...insets, bottom: 0 } : insets}
-      >
-        <View className="flex-1">
+    <View className="flex-1 bg-background">
+      <SafeAreaInsetsContext.Provider value={screenInsets}>
+        <View
+          className="flex-1"
+          style={{ paddingTop: insets.top }}
+          testID="navigator"
+        >
           <Stack screenOptions={{ headerShown: false }} />
         </View>
       </SafeAreaInsetsContext.Provider>
