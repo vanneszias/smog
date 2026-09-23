@@ -254,3 +254,26 @@ deferred rather than fixed in place:
 None of these block the import described in `docs/cutover-runbook.md`;
 they are quality/coverage gaps to pick up opportunistically, not before
 staging or production runs.
+
+## Rulings made during execution
+
+Copied from the SDD ledger when the branch review closed. Each reads: what was decided — why — what it costs if wrong.
+
+- a missing <table>/documents.jsonl for any table the plan depends on (categories, gestures, user_favorites, users, sponsorships, user_consents, adminLogs, _tables) is an error naming the table — the plan's constraint is "a different export needs a new plan, not a silent partial import" — cost if wrong: an export with a legitimately absent empty table must be hand-fixed with an empty file.
+- concepts are trimmed and empty ones dropped (then deduped), and categoryIds are deduped per gesture — consistent with names/playbackId trimming; measured data has no such cases so the import result is unchanged — cost if wrong: none.
+- completeness checks live in Task 4's verify, not the importer — every imported doc must have a non-empty nl name, a category set equal to the plan's, concepts equal to the plan's, and exactly one search entry per gesture; failures are listed as "incomplete: delete and rerun"; verify runs on every --apply (reruns included) — Payload's D1 create is ~6 unatomic statements and the search plugin swallows its own errors — cost if wrong: a slower verification pass.
+- fail closed unless payload.db.binding === the remote proxy's env.D1, and pass configPath (apps/site/wrangler.jsonc) to getPlatformProxy so the printed name and the binding come from the same file — cost if wrong: one extra assertion.
+- the report path is lstat'ed and a symlink is refused outright (as is any path resolving into the work tree) — cost if wrong: an operator must pass a real path.
+- replace the post-hoc user-consents count assertion with prevention — beforeChange/beforeDelete hooks on user-consents that throw during the importer's run — keeping the count in the report as information; this also removes the false alarm on a live staging run — cost if wrong: none.
+- fix Important 1 — a gesture with zero search docs has never been saved by an editor, so it is the import's own: compare strictly to plan, any difference → "delete and rerun"; "re-save" only when fields match — restores the concepts check the completeness ruling named — cost if wrong: an editor-touched doc gets a delete remedy, but at cutover nobody edits.
+- fix Important 2 — applyPlan never maps an existing category with a blank nl name; its gestures are skipped (skippedForFailedCategory) so cascade can never strip a link — cost if wrong: one extra delete-and-rerun cycle.
+- fix Important 3 — remove every "reindex" remedy (runbook + report.ts); re-save only — plugin deleteIndexes breaks D1's 100-param cap and leaves the index empty (inferred, not executed) — cost if wrong: none, re-save is always safe.
+- fix Important 4 — rewrite the runbook's pre-existing paragraph to match verify; during cutover any Differs row on a rerun is a failure.
+- fix Important 5 — runbook orders freeze → fresh export → dry run; count drift from 27/492 is expected; gates are buildPlan refusals + re-reviewed skipped list.
+- fix Minors 1-8 (report id column; CLOUDFLARE_ENV in rehearsal commands; banner matches real output; databaseNameFor refuses a remote target without remote:true; stale migration comment; store trimmed playbackId; buildPlan refuses duplicate _id; guard refuses any dir inside any git work tree) — all cheap and in the importer.
+- fix Minor 9 as: count catalogue docs without legacyId, print in banner/report, and refuse --apply on production when nonzero — production is empty at a big-bang cutover — cost if wrong: operator deletes stray admin-created docs first.
+- deferred task minors carried as the reviewer recommends (none must-fix).
+- concern 1 (add_search migration comment recommends Reindex) — controller rewrote the comment only (no schema change) — same D1-unsafe action this wave removed — cost if wrong: none. Hiding the admin Reindex button is parked to Stage 10's device/admin checks.
+- concern 2 (editor edits to playbackId/info/createdAt now show under Differs) — accept; Differs is informational, and during cutover the runbook treats any Differs on a rerun as a failure.
+- concern 3 (git message match under LC_ALL=C) — accept; fails closed.
+- re-review M1-M4 fixed by controller in one commit — M1 anchor git match at ^fatal: (fail-open corner; no test, since reproducing needs dubious-ownership git), M2 runbook staging caveat on the zero-search-doc premise, M3 Mismatches exception for Failed-category gestures, M4 doc drift — cost if wrong: wording only.
