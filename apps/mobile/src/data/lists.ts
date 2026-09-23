@@ -98,7 +98,7 @@ interface ListDetail {
  * The same 50 `apps/site/src/lib/ownedLists.ts`'s `MAX_LIST_ITEMS` is, and
  * the server enforces its own copy regardless of what this app does with
  * this one — this exists so the app can show the limit before the request
- * rather than only report the refusal after it, per the task brief.
+ * rather than only report the refusal after it.
  * `lists.test.ts` pins this against the server's own value so the two
  * cannot silently drift apart, the same way `favorites.ts`'s
  * `MAX_RESOLVED_FAVORITES` is pinned against `lib/guest.ts`'s cap.

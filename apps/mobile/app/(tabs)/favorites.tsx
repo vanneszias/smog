@@ -13,7 +13,7 @@ const LOAD_ERROR = "Er ging iets mis bij het laden van je favorieten.";
  * where to write a change (device or account), the second only turns
  * whatever ids it is given into cards. Feeding the second the first's
  * output is what this screen does; a favourites-shaped list *inside* a
- * list screen (Task 11's own list detail) never needs the first at all.
+ * list screen (the list detail) never needs the first at all.
  *
  * **A stored id that no longer resolves is not rendered, and nothing here
  * has to notice that on its own.** `useFavoriteGestures` already filters to

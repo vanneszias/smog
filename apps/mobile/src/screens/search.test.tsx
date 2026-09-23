@@ -148,8 +148,8 @@ describe("the search screen", () => {
     expect(trackEvent).toHaveBeenCalledTimes(1);
 
     // Changing the query away — even clearing it — and then settling on
-    // the exact same string again is a new search, per `apps/native`
-    // (`SearchScreen.tsx` ~111-125), which fired on every submit. This is
+    // the exact same string again is a new search, as every submit is one.
+    // This is
     // the scenario the dedup guard must not overcount into silence:
     // clearing the query is what used to leave the "already reported"
     // marker stuck on "hal" forever.
@@ -170,7 +170,7 @@ describe("the search screen", () => {
     expect(trackEvent).toHaveBeenCalledTimes(2);
   });
 
-  describe("a query refined into another (final review, Important)", () => {
+  describe("a query refined into another", () => {
     const EMPTY = { docs: [], page: 1, totalDocs: 0, totalPages: 1 };
     const byQuery = (answers: Record<string, () => Promise<Response>>) =>
       jest.fn((url: string) => {

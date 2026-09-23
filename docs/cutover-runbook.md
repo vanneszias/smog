@@ -119,7 +119,7 @@ answer next to each item when it is made.
      other checkout): the identity and EAS project are shared, and an update
      published from elsewhere would reach `apps/mobile`'s installs only if
      fingerprints matched — do not find out.
-   - The scheme stays `smogmobile`; `apps/mobile/src/lib/google.ts:19` and
+   - The scheme stays `smogmobile`; `apps/mobile/src/lib/google.ts:18` and
      `apps/site/src/endpoints/oauth.ts:76` must stay identical. The `smog://`
      links and `app.smog.vlaanderen` universal links that the current store
      release (2.0.2) handles are not carried over (`apps/mobile` declares no

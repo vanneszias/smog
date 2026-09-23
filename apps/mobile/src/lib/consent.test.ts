@@ -36,13 +36,13 @@ describe("the consent store", () => {
   });
 
   it("treats a value it did not write as undecided", async () => {
-    // The legacy native store wrote "true"/"false" under another key; a
+    // The current store release wrote "true"/"false" under another key; a
     // garbage value under ours must re-ask, not be guessed at.
     await AsyncStorage.setItem(ANALYTICS_CONSENT_KEY, "true");
     expect(await loadConsent()).toBeNull();
   });
 
-  it("never reads the legacy apps/native key", async () => {
+  it("never reads the key the current store release wrote", async () => {
     await AsyncStorage.setItem("@smog_analytics_consent", "true");
     expect(await loadConsent()).toBeNull();
   });
@@ -78,7 +78,7 @@ describe("the consent store", () => {
     expect(readConsent()).toBe("granted");
   });
 
-  it("reports not-loaded before the first read resolves (Review Focus 2)", async () => {
+  it("reports not-loaded before the first read resolves", async () => {
     await AsyncStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
     const { result } = renderHook(() => useConsent());
 

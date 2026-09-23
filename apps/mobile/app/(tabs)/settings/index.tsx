@@ -95,7 +95,7 @@ function ThemeRow() {
  * The only place, guest or signed in, to change an analytics decision once
  * `ConsentBanner` has stopped asking: that banner renders nothing once
  * `consent` is no longer `null`, so without a control here the first answer
- * would otherwise be final (Stage 8.5 found the same gap on the web).
+ * would otherwise be final (the web account page closes the same gap).
  */
 function AnalyticsRow() {
   const { consent, loaded } = useConsent();

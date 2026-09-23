@@ -5,19 +5,18 @@ import { useEffect } from "react";
 import { readConsent, subscribeConsent, useConsent } from "@/lib/consent";
 
 /**
- * Analytics, direct from the device to OpenPanel — as `apps/native` did, and
- * as the spec decided on 2026-09-22 — with two deliberate differences.
+ * Analytics, direct from the device to OpenPanel, with two deliberate
+ * limits.
  *
- * **Nobody is identified.** `apps/native` called `identify` with the account
- * id. The privacy policy this app links to says events "are not linked to
+ * **Nobody is identified.** The privacy policy this app links to says events "are not linked to
  * your account, even when you are signed in", so there is no `identify`, no
  * `profileId`, and no account field in any property here.
  *
  * **The client is built lazily, only once consent is granted**, and every
  * send re-checks the store — the `filter` option too, so an event already
  * queued inside the SDK is dropped after a withdrawal. A client built at
- * module scope from an unset variable is dead on import (spec, same-named
- * section); built lazily, a missing variable is a silent no-op instead.
+ * module scope from an unset variable is dead on import; built lazily, a
+ * missing variable is a silent no-op instead.
  *
  * **Once built, it is kept for the app's life.** A withdrawal calls
  * `clear()` (the SDK's device and session ids go) and the gate above does
@@ -121,8 +120,7 @@ function screenPattern(segments: readonly string[]): string {
 
 /**
  * One screen view per route pattern the person lands on, while consent is
- * granted. Patterns, never concrete paths (Stage 8.6 final review,
- * Critical): a list has one owner and the lists tab is signed-in only, so
+ * granted. Patterns, never concrete paths: a list has one owner and the lists tab is signed-in only, so
  * `/lists/<id>` identifies an account — and the SDK keeps the last
  * screen-view path as `lastPath` and attaches it as `__path` to *every*
  * later `track` (`@openpanel/react-native/dist/index.js`), so a concrete

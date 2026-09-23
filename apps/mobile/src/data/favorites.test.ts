@@ -218,7 +218,7 @@ describe("useFavoriteGestures", () => {
 
 describe("MAX_RESOLVED_FAVORITES", () => {
   it("is lib/guest.ts's own MAX_GUEST_FAVORITES, not an independent number", () => {
-    // Fix round 1, Minor 4: this was a second `= 200` literal, free to
+    // This was once a second `= 200` literal, free to
     // drift from `lib/guest.ts`'s. It is a re-export now (see this
     // constant's own doc comment), so this pins the re-export itself
     // rather than two numbers that merely happen to match today.

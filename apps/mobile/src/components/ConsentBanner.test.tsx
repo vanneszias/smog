@@ -44,7 +44,7 @@ describe("ConsentBanner", () => {
     expect(await screen.findByText("Analytics toestaan")).toBeTruthy();
   });
 
-  it("does not render at all before the stored answer has loaded (Review Focus 2)", async () => {
+  it("does not render at all before the stored answer has loaded", async () => {
     // Synchronously after mount, the store has not resolved yet.
     renderBanner();
     expect(screen.queryByText("Analytics toestaan")).toBeNull();
@@ -89,7 +89,7 @@ describe("ConsentBanner", () => {
   });
 
   /**
-   * Stage 8.6 final review: side by side in a row, the Dutch labels
+   * Side by side in a row, the Dutch labels
    * ("Analytics toestaan" + "Gebruiken zonder analytics", ≈470pt) overflow
    * the ≈342pt a 390pt phone leaves inside the banner's padding, pushing the
    * refusal partly off-screen. Stacked, each full width, refusing is exactly

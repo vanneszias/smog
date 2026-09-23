@@ -34,8 +34,8 @@ const REGISTERED_NOTICE =
  * same way, with nothing stored. So this screen does not navigate straight
  * off the `await` the way the password form does below — it watches
  * {@link useSession}'s `user` instead, which only turns truthy once
- * `signInWithGoogle` has actually stored a token, via the same
- * `notifySessionChanged` reactivity Task 8 built for exactly this: a screen
+ * `signInWithGoogle` has actually stored a token, via the
+ * `notifySessionChanged` reactivity that exists for exactly this: a screen
  * mounted before the session changes elsewhere still notices.
  */
 const GOOGLE_ERROR =

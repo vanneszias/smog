@@ -37,8 +37,8 @@ const GESTURES = [
  * rather than under Jest — the native counterpart of `apps/site`'s web
  * kitchen-sink route.
  *
- * This screen is the only check in this stage that a running app actually
- * applies NativeWind's classes: the package's own 142 tests pass whether or
+ * This screen is the only check that a running app actually applies
+ * NativeWind's classes: the package's own 142 tests pass whether or
  * not `apps/mobile/tailwind.config.js`'s third `content` glob is present,
  * because Tailwind never runs under Jest at all (see
  * `packages/ui-native/jest.setup.ts`, which compiles `global.css` by hand

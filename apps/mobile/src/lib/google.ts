@@ -3,15 +3,14 @@ import { API_BASE_URL, ApiError, payloadFetch } from "./api";
 import { storeToken } from "./session";
 
 /**
- * The app's own deep-link scheme, registered as `"scheme"` in `app.json` —
- * **not** the illustrative `smog://` a sketch of this flow would use.
- * `apps/native` (this monorepo's other, pre-migration app) already claims
- * `smog://` for an unrelated WorkOS flow with its own `auth-callback`
- * route, and nothing stops two installed apps from registering the same
- * custom scheme — which is precisely the failure mode this whole design
- * avoids for the *session token*; reusing that scheme for the *redirect
- * itself* would reopen a smaller version of the same problem, handing a
- * one-shot code to whichever app the OS happens to pick. `endpoints/
+ * The app's own deep-link scheme, registered as `"scheme"` in `app.json`:
+ * `smogmobile`, **not** `smog`. The current store release (2.0.2) claims
+ * `smog://` for its own `auth-callback` route, so with a scheme of its own no
+ * older install's links can open this flow. Nothing stops two installed apps
+ * from registering the same custom scheme — which is precisely the failure
+ * mode this whole design avoids for the *session token*; reusing a scheme for
+ * the *redirect itself* would reopen a smaller version of the same problem,
+ * handing a one-shot code to whichever app the OS happens to pick. `endpoints/
  * oauth.ts`'s `MOBILE_REDIRECT_URI` has to match this literal exactly, or
  * `openAuthSessionAsync` never recognises the callback as this flow's own
  * redirect and just keeps waiting for it.

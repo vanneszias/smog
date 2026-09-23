@@ -9,9 +9,9 @@ import { useEffect, useSyncExternalStore } from "react";
  * exactly why the device must. The key and values match `apps/site`'s
  * `lib/consentStore.ts`, so the two apps describe one decision one way.
  *
- * The old app's `@smog_analytics_consent` is deliberately never read: every
- * person is re-asked under the new policy (spec, "Decisions taken
- * 2026-09-22").
+ * `@smog_analytics_consent`, the key the current store release (2.0.2) writes,
+ * is deliberately never read: every person who updates is re-asked under the
+ * new privacy policy.
  *
  * AsyncStorage is asynchronous, so unlike the web store this one has a
  * fourth state the UI must respect — *not loaded yet* — and `useConsent`

@@ -88,7 +88,7 @@ type PayloadFetchInit = RequestInit & {
  *
  * The base URL is read from `process.env.EXPO_PUBLIC_API_URL` **inside**
  * this function, not from the `API_BASE_URL` this module also exports.
- * Stage 5 lost a `next build` to a client constructed at module scope from
+ * `apps/site` once lost a `next build` to a client constructed at module scope from
  * an unset variable (`createMollieClient({ apiKey: "" })`, thrown from
  * inside its own constructor) — a failure that took down a file with
  * nothing to do with payments. Nothing here would throw either way (the

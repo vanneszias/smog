@@ -17,9 +17,9 @@ const EMAIL_ERROR = "Vul een geldig e-mailadres in.";
 const PASSWORD_HELP = "Minstens 12 tekens. Langer mag altijd.";
 
 /**
- * Review Focus item 3: the device is offline, or the request fails for any
- * other reason `signUp` doesn't turn into `"invalid-email"` /
- * `"weak-password"` (see `session.ts`'s `ApiError("unknown", …)` fallback).
+ * The device is offline, or the request fails for any other reason `signUp`
+ * doesn't turn into `"invalid-email"` / `"weak-password"` (see `session.ts`'s
+ * `ApiError("unknown", …)` fallback).
  * Same wording pattern as `sign-in.tsx`'s `SIGN_IN_ERROR` and
  * `forgot-password.tsx`'s `NETWORK_ERROR` — a network failure says nothing
  * about whether the address is registered, so it is safe to be plain about.

@@ -122,7 +122,7 @@ describe("useList", () => {
   });
 
   /**
-   * Review Focus item 5, for a list rather than for favourites — and the
+   * A deactivated gesture, for a list rather than for favourites — and the
    * two are handled differently on purpose. `publicReadActive` leaves a
    * deactivated gesture's row *unpopulated* rather than dropped
    * (`ownedLists.ts`'s own comment on `fetchOwnedList`), because the owner

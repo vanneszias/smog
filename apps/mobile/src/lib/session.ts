@@ -43,8 +43,8 @@ interface SessionUser {
  * {@link SessionProvider} re-reads `/users/me` instead of only reflecting
  * whatever the token happened to be when it first mounted. Module-private:
  * nothing outside this file needs to subscribe, and the exported surface —
- * `signIn`, `signOut`, `refresh`, `storeToken`, `clearToken` — is exactly
- * what the brief asks for.
+ * `signIn`, `signOut`, `refresh`, `storeToken`, `clearToken` — is all the
+ * rest of the app needs.
  */
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -183,8 +183,8 @@ export async function signIn(email: string, password: string): Promise<void> {
 }
 
 /**
- * `POST /api/mobile/sign-up` — the one endpoint Task 8 added on the site
- * side. `"accepted"` covers both a created account and an address already
+ * `POST /api/mobile/sign-up` — the site's one endpoint for this app's
+ * sign-up. `"accepted"` covers both a created account and an address already
  * registered; see `decideSignUp` in `apps/site/src/endpoints/auth.ts` for
  * why the two are one value.
  *
@@ -497,10 +497,9 @@ export function setVerifiedSessionForTests(
  * refreshes a token before its expiry (Payload's default `tokenExpiration`
  * is 7200s) — so a dead token would otherwise stay stored forever beside a
  * signed-out screen, and `consentSync.ts` would read "token present" as
- * "could not verify" and keep the account's decision on the device
- * (Stage 8.6 final review). It is cleared through {@link clearToken}, so
- * every listener hears it exactly as it hears a sign-out, and the verified
- * pair goes with it. Only a request that got no answer — offline, a 429, a
+ * "could not verify" and keep the account's decision on the device. It is
+ * cleared through {@link clearToken}, so every listener hears it exactly as
+ * it hears a sign-out, and the verified pair goes with it. Only a request that got no answer — offline, a 429, a
  * 5xx: the `catch` below — keeps the token as "could not verify".
  *
  * The clear happens only if the keychain still holds the token that was

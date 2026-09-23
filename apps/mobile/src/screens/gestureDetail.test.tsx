@@ -22,8 +22,8 @@ jest.mock("@/lib/analytics", () => ({
 }));
 
 /**
- * Task 11 wired `useFavorites` (and so `useSession`) into this screen, which
- * needs a `SessionProvider` above it and, transitively, `expo-secure-store`.
+ * This screen reads `useFavorites` (and so `useSession`), which needs a
+ * `SessionProvider` above it and, transitively, `expo-secure-store`.
  * See `screens/gestures.test.tsx`'s identical note on why the mock is set to
  * resolve `null` rather than left on its bare automock.
  */
@@ -248,8 +248,7 @@ describe("the add-to-list sheet", () => {
   });
 
   /**
-   * The brief's own requirement: "the app shows the limit before the
-   * request." A list already at `MAX_LIST_ITEMS` is shown as full — and its
+   * The app shows the limit before the request. A list already at `MAX_LIST_ITEMS` is shown as full — and its
    * row disabled — from the moment the sheet opens, not only after a tap
    * the server then refuses.
    */
@@ -284,7 +283,7 @@ describe("the add-to-list sheet", () => {
   });
 
   /**
-   * Review Focus / Fix round 1, item 2: `handleAdd` had no `catch`, so a
+   * `handleAdd` once had no `catch`, so a
    * refusal became an unhandled rejection and the row silently did nothing.
    * This is the test that would have failed against that version.
    */

@@ -12,9 +12,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
  * else.
  *
  * **Every function in this module degrades to "no favorites" and none of
- * them throws.** That is the same discipline `guestStore.ts` documents as
- * Review Focus item 3, and it holds here for the same reasons, adjusted for
- * the platform:
+ * them throws.** That is the same discipline `guestStore.ts` documents, and
+ * it holds here for the same reasons, adjusted for the platform:
  *
  * - `AsyncStorage` is a native module. A broken install, a full disk, or the
  *   handful of Android devices that ship without a working implementation
@@ -44,15 +43,15 @@ export const GUEST_FAVORITES_KEY = "smog.guest.favorites";
  * How many favourite ids `data/favorites.ts` resolves into cards in one
  * request — **not** a limit on how many this module will store.
  *
- * `guestStore.ts`, read for this value as the brief instructed, turns out to
- * enforce no storage cap at all — its test suite has no "does not grow
+ * `guestStore.ts`, read for this value, turns out to enforce no storage cap
+ * at all — its test suite has no "does not grow
  * without bound" case, and neither `toggleGuestFavorite` nor
  * `readGuestFavorites` there bounds the array. An earlier version of this
  * module took that gap as licence to invent a storage cap of its own,
  * truncating `AsyncStorage` with `.slice(-MAX_GUEST_FAVORITES)` on every
  * write past it — which is not matching the web's semantics, it is silently
- * deleting the reader's oldest favourite to satisfy a bound nothing shipped
- * ever asked for. Fixed: **every id this module is asked to store, it
+ * deleting the reader's oldest favourite to satisfy a bound nothing ever
+ * asked for. Fixed: **every id this module is asked to store, it
  * stores**, exactly like `guestStore.ts`. `MAX_GUEST_FAVORITES` is kept as
  * the *query-time* bound instead, matching `favoritesQuery.ts`'s
  * `MAX_FAVORITE_IDS` and its `usableFavoriteIds` — the array is capped only
@@ -140,7 +139,7 @@ async function writeGuestFavorites(ids: readonly string[]): Promise<void> {
  *
  * **Never truncated.** However many ids are already stored, this adds one
  * more (or removes one) and keeps the rest — matching `guestStore.ts`
- * exactly, and the property Fix round 1 restored after an earlier version
+ * exactly, and the property restored after an earlier version
  * of this function capped storage itself and silently dropped the oldest
  * id once a reader passed 200 favourites. See {@link MAX_GUEST_FAVORITES}'s
  * own comment for where that bound actually applies instead.

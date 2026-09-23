@@ -7,11 +7,9 @@ import { SessionProvider, signOut, useSession } from "./session";
 jest.mock("expo-secure-store");
 
 /**
- * Minor 1 from the review: `SessionProvider`/`useSession` had no test of
- * their own, and nothing in this diff calls `useSession` yet. Without this,
- * a screen mounted once and left alone would never notice `signOut` called
- * from elsewhere in the tree — a staleness bug Tasks 10–12 would be the
- * first to hit, not this one.
+ * `SessionProvider`/`useSession`'s own test. Without this, a screen mounted
+ * once and left alone would never notice `signOut` called from elsewhere in
+ * the tree — a staleness bug every screen that reads the session would hit.
  */
 function Probe() {
   const { loading, user } = useSession();

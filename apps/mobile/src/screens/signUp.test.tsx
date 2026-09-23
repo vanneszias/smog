@@ -42,7 +42,7 @@ describe("SignUpScreen", () => {
   };
 
   /**
-   * Review Focus item 3: a `try { … } finally { … }` with no `catch` lets a
+   * A `try { … } finally { … }` with no `catch` lets a
    * network failure (or any status `signUp` doesn't recognise — see
    * `session.ts`'s `ApiError("unknown", …)` fallback) escape as an
    * unhandled rejection. `finally` still resets `submitting`, so the

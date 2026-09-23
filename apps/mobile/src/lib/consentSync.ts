@@ -25,8 +25,8 @@ import { getToken, getVerifiedSession, useSession } from "@/lib/session";
  *   app returns to the foreground. A failed write leaves its marker
  *   `pending`, and the next pass sends it again.
  *
- * Three more things two fix-round reviews found, all about `useSession`'s
- * asynchrony rather than `AsyncStorage`'s:
+ * Three more things, all about `useSession`'s asynchrony rather than
+ * `AsyncStorage`'s:
  *
  * - `user === null` does not mean "signed out". `resolveSessionUser`
  *   (`session.ts`) answers `null` both for a genuine sign-out and for a
@@ -35,16 +35,16 @@ import { getToken, getVerifiedSession, useSession } from "@/lib/session";
  *   decision. A sign-out always leaves no token: `signOut` clears it, a 401
  *   clears it (`api.ts`), and so does an expired token, which Payload
  *   answers with `200 { user: null }` rather than a 401 —
- *   `resolveSessionUser` clears the token on that answer (Stage 8.6 final
- *   review; before that fix a dead token stayed stored and its account's
- *   decision was kept on a signed-out device forever).
+ *   `resolveSessionUser` clears the token on that answer (before it did, a
+ *   dead token stayed stored and its account's decision was kept on a
+ *   signed-out device forever).
  * - A pass carries the `userId` it was enqueued for, but the keychain can
  *   already hold another account's token by the time it runs
  *   (`SessionProvider` does not re-verify the instant a token changes).
  *   `pass` refuses to POST unless `session.ts`'s `getVerifiedSession()`
  *   names *both* the same token `getToken()` reads right now *and* the
  *   same `userId` this pass carries — see that function's own comment for
- *   why a token match alone (fix round 1's first attempt) was not enough:
+ *   why a token match alone was not enough:
  *   `resolveSessionUser` used to record a token the instant it read it,
  *   before `/users/me` had said whose it was, so a pass for the outgoing
  *   account could still see the incoming account's token as "verified"
@@ -134,7 +134,7 @@ async function postConsent(
 ): Promise<void> {
   // Provisional first: if the app dies mid-request, the decision is already
   // attributed to this account, so a different person signing in next drops
-  // it instead of inheriting it (Stage 8.5 whole-branch review, blocker A).
+  // it instead of inheriting it.
   if (!(await writeMarker({ pending: true, userId, value }))) {
     await clearConsent();
     return;
@@ -195,7 +195,7 @@ async function pass(userId: string | null): Promise<void> {
     // `200 { user: null }` and `resolveSessionUser` then clears. Anything
     // else must leave an attributed decision exactly as it is, pending or
     // not, for the next pass to resolve once the session can be verified
-    // again (fix round 1, Review Focus 3 and 5; Stage 8.6 final review).
+    // again.
     if (marker !== null && (await getToken()) === null) {
       await dropForeignDecision();
     }
@@ -215,12 +215,12 @@ async function pass(userId: string | null): Promise<void> {
   // A pass may only POST once *both* the account and the token it would
   // send are the ones `/users/me` actually confirmed together — see
   // `session.ts`'s `getVerifiedSession` comment for the window this
-  // closes, and why a token match alone (fix round 1's first attempt) was
-  // not enough. `userId` is checked here even though `marker.userId` was
+  // closes, and why a token match alone was not enough. `userId` is checked
+  // here even though `marker.userId` was
   // already checked above: the marker names whose *decision* this is, this
   // checks whose *session* is live right now, and the two can disagree
-  // (fix round 1, finding 2's account-switch race) even when they happen
-  // to name the same value the marker does.
+  // (an account switch racing this pass) even when they happen to name the
+  // same value the marker does.
   const verified = getVerifiedSession();
   if (
     verified === null ||
@@ -240,7 +240,7 @@ let queue: Promise<void> = Promise.resolve();
  * shared promise chain — not a boolean flag, because `AsyncStorage` is
  * asynchronous: a consent change and a session change can each be mid-`await`
  * at once, and a flag only guards against re-entry within a single
- * synchronous tick (Review Focus 1).
+ * synchronous tick.
  */
 export function reconcileConsent(userId: string | null): Promise<void> {
   const next = queue.then(() => pass(userId));
@@ -252,7 +252,7 @@ export function reconcileConsent(userId: string | null): Promise<void> {
  * Runs a pass on mount, whenever the signed-in user id changes, whenever the
  * device's own consent decision changes, and whenever the app returns to the
  * foreground — there is no page load to retry a failed write on, so the
- * foreground transition is this app's equivalent (Review Focus 5). Does
+ * foreground transition is this app's equivalent. Does
  * nothing while the session is still resolving, so a guest's brief
  * `loading: true` window before sign-in resolves is not mistaken for "no
  * account".

@@ -64,7 +64,7 @@ describe("the list detail screen", () => {
   });
 
   /**
-   * Review Focus item 5's opposite rule for a list, not for favourites: the
+   * The opposite rule for a list, not for favourites: the
    * row for a deactivated gesture stays on screen — as
    * `UNAVAILABLE_GESTURE`, with its remove control intact — rather than
    * disappearing, because the owner still has to be able to take it off.

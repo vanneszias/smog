@@ -82,7 +82,7 @@ describe("guest favourites", () => {
   });
 
   /**
-   * Fix round 1, Important 3: an earlier version of this module truncated
+   * An earlier version of this module truncated
    * storage at `MAX_GUEST_FAVORITES`, silently deleting the reader's oldest
    * favourite once they passed it — a destructive "fix" for a cap
    * `guestStore.ts` never actually enforced. `MAX_GUEST_FAVORITES` is a

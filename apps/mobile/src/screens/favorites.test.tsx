@@ -63,8 +63,8 @@ describe("the favorites screen", () => {
   });
 
   /**
-   * Review Focus item 5, exercised at the full screen rather than only at
-   * the hook: `AsyncStorage` holds two guest-favourited ids, one of them a
+   * A deactivated favourite, exercised at the full screen rather than only
+   * at the hook: `AsyncStorage` holds two guest-favourited ids, one of them a
    * gesture `GET /api/gestures` no longer returns (deactivated, per
    * `publicReadActive`), and the screen must render the one gesture that did
    * resolve — never a blank row, and never the word "undefined", which is

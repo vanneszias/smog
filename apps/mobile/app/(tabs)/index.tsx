@@ -28,8 +28,8 @@ const RETRY_LABEL = "Probeer opnieuw";
  * renders the retry control; an empty, error-free page renders
  * `GestureGrid`'s own built-in empty state instead — see that component's
  * own comment on why `loading` and an empty array are not the same thing
- * either. Collapsing either pair back into one branch is exactly the
- * mutation `task-10-report.md` records trying and catching.
+ * either. Collapsing either pair back into one branch is a mutation the
+ * screen tests catch.
  *
  * Pagination is driven by `data.page` — the page the server actually
  * answered, after its own clamp — rather than the `page` this screen asked

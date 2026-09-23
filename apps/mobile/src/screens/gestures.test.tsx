@@ -21,8 +21,8 @@ jest.mock("expo-router", () => ({
 
 /**
  * `expo-secure-store` mocked, and set to answer "no token" rather than left
- * on its bare automock: `SessionProvider` — needed here since Task 11 wired
- * `useFavorites` (and so `useSession`) into this screen — resolves `token`
+ * on its bare automock: `SessionProvider` — needed here because this screen
+ * reads `useFavorites` (and so `useSession`) — resolves `token`
  * with `token === null` as its literal "signed out" check. An unconfigured
  * automock answers `undefined`, which fails that check and would make the
  * provider issue a `/users/me` request this file's fetch mocks do not
@@ -87,8 +87,8 @@ describe("the gestures screen", () => {
     renderScreen();
 
     // Proves the screen actually rendered this far before checking an
-    // absence — Stage 6's own lesson: an absence assertion passes just as
-    // happily on a screen that never got this far.
+    // absence: an absence assertion passes just as happily on a screen that
+    // never got this far.
     expect(await screen.findByText("Hallo")).toBeOnTheScreen();
     expect(screen.queryByLabelText(/gebaren laden/i)).toBeNull();
   });

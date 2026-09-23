@@ -199,9 +199,8 @@ describe("the guest-favourites merge on sign-in", () => {
    * second (merge) fails, which is the only fixture that actually reaches
    * the ordering this test is named for.
    *
-   * Step 5 of the task brief: with `clearGuestFavorites()` moved above the
-   * merge request in `session.ts`, this test fails — see the task report for
-   * the pasted transcript.
+   * Checked by breaking it: with `clearGuestFavorites()` moved above the
+   * merge request in `session.ts`, this test fails.
    */
   it("clears the device's copy only after the merge succeeds", async () => {
     await toggleGuestFavorite("a");
@@ -232,7 +231,7 @@ describe("the guest-favourites merge on sign-in", () => {
 });
 
 /**
- * The reinstall case (Review Focus item 2): `expo-secure-store` items
+ * The reinstall case: `expo-secure-store` items
  * survive an iOS app deletion, `AsyncStorage` does not, so a token with no
  * install marker beside it belongs to a previous installation.
  */
@@ -263,20 +262,17 @@ describe("the reinstall case", () => {
 });
 
 /**
- * `getVerifiedSession` — added for `consentSync.ts`'s fix-round-1 fix
- * (finding 2) and corrected in fix round 2: the token/account pair
- * `resolveSessionUser` most recently *confirmed*, which it may only set
- * once `/users/me` has actually answered, for that exact token, naming a
- * real user. `resolveSessionUser` itself is not exported, so these drive
- * it the only way anything outside this file can: through a mounted
- * `SessionProvider`.
+ * `getVerifiedSession`, which `consentSync.ts` relies on: the token/account
+ * pair `resolveSessionUser` most recently *confirmed*, which it may only set
+ * once `/users/me` has actually answered, for that exact token, naming a real
+ * user. `resolveSessionUser` itself is not exported, so these drive it the only
+ * way anything outside this file can: through a mounted `SessionProvider`.
  *
- * Fix round 2's own review is what named the version of this describe
- * block below that no longer exists: it asserted `getVerifiedSession`'s
- * predecessor recorded a token the instant it was read, before `/users/me`
- * had answered — which was exactly the bug (a token could be "verified"
- * for an account that had not, in fact, been confirmed yet). The tests
- * below assert the opposite of that one, on purpose.
+ * An earlier version of this describe block asserted that
+ * `getVerifiedSession`'s predecessor recorded a token the instant it was read,
+ * before `/users/me` had answered — which was exactly the bug (a token could be
+ * "verified" for an account that had not, in fact, been confirmed yet). The
+ * tests below assert the opposite of that one, on purpose.
  */
 describe("getVerifiedSession", () => {
   beforeEach(() => {
@@ -313,7 +309,7 @@ describe("getVerifiedSession", () => {
     });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    // The bug fix round 2 found: this used to record `t` here regardless,
+    // The bug this guards: this used to record `t` here regardless,
     // because it was written the instant the token was read rather than
     // once a response had actually confirmed whose it was.
     expect(getVerifiedSession()).toBeNull();
@@ -358,7 +354,7 @@ describe("getVerifiedSession", () => {
 });
 
 /**
- * Stage 8.6 final review: Payload's `/users/me` answers an expired or
+ * Payload's `/users/me` answers an expired or
  * otherwise invalid JWT with `200 { user: null }`, not a 401
  * (`payload/dist/auth/operations/me.js`), and nothing in this app
  * refreshes a token before its 7200s expiry. A successful answer naming

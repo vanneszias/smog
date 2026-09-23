@@ -22,8 +22,8 @@ const UNAVAILABLE_GESTURE = "Dit gebaar is niet meer beschikbaar";
  * A row whose `gesture` is `null` — `data/lists.ts`'s own doc comment on
  * `ListItem` explains why that happens, a gesture an editor has since
  * deactivated — still renders, as {@link UNAVAILABLE_GESTURE}, with its
- * remove control intact. Review Focus item 5's rule for a list is the
- * opposite of the one for favourites: a list keeps the row so its owner can
+ * remove control intact. The rule for a list is the opposite of the one for
+ * favourites: a list keeps the row so its owner can
  * see it and take it off, rather than letting the id quietly fall out.
  */
 export default function ListDetailScreen() {

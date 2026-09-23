@@ -138,7 +138,7 @@ describe("mobile analytics", () => {
     );
   });
 
-  it("never identifies anyone, and names no account in any event (Review Focus 4)", async () => {
+  it("never identifies anyone, and names no account in any event", async () => {
     await setConsent("granted");
     onRoute(["gestures", "[id]"], "/gestures/1");
     renderHook(() => analytics.useScreenViews());
@@ -252,8 +252,7 @@ describe("mobile analytics", () => {
 });
 
 /**
- * Screen views carry route PATTERNS, never concrete paths (final-review
- * Critical finding, 2026-09-22). A list is owned by one account and the
+ * Screen views carry route PATTERNS, never concrete paths. A list is owned by one account and the
  * lists tab is signed-in only, so `/lists/<id>` names an account as surely
  * as a user id would — and the SDK then repeats that path as `__path` on
  * every later event. Each dynamic segment is sent as its `[param]` name.

@@ -44,8 +44,7 @@ export default function SearchScreen() {
    * value of `query`: the ref below is replaced with a fresh, unreported
    * record whenever `query` changes (including to empty), so settling on
    * the same string again after changing it counts as a new search, as
-   * every submit did in apps/native (`apps/native/screens/SearchScreen.tsx`
-   * ~111-125), while a bare re-render or a later page for the same
+   * every submit is one, while a bare re-render or a later page for the same
    * still-current query does not fire twice (the `reported` flag).
    *
    * **Only data that arrived for the current query is reported.**

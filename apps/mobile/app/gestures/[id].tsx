@@ -17,18 +17,18 @@ const LIST_FULL_LABEL = `Lijst is vol (max. ${MAX_LIST_ITEMS})`;
 /**
  * The list picker `packages/ui-native/src/components/Sheet.tsx`'s own
  * comment names as one of this component's two intended callers (the other
- * is Task 10's category filter): every one of the account's lists, each row
+ * is the category filter): every one of the account's lists, each row
  * adding this gesture to it on press.
  *
  * **A list already at {@link MAX_LIST_ITEMS} is shown as full and its row is
  * disabled**, rather than only reporting the server's refusal after the
- * tap — the task brief's own requirement, and the one place in this app
- * that needs it, since `useLists`'s `itemCount` is already known before any
+ * tap, so the limit is seen before it is hit. This is the one place in this
+ * app that needs it, since `useLists`'s `itemCount` is already known before any
  * gesture is ever picked to add.
  *
  * **A refusal for any other reason is rendered, not swallowed.** The first
  * version of this handler was a `try { … } finally { … }` with no `catch`,
- * which is the exact defect Task 8 shipped and fixed on `sign-up.tsx`: a
+ * which is the exact defect `sign-up.tsx` once had and fixed: a
  * `full`, `signed-out` or network refusal became an unhandled rejection, the
  * row silently did nothing, and the person had no way to tell a failed tap
  * from a slow one.

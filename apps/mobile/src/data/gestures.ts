@@ -6,7 +6,7 @@ import { resolveLocale } from "@/lib/locale";
 
 /**
  * Everything this app reads about gestures and categories, and the three
- * hooks every screen in Task 10 reads them through.
+ * hooks every catalogue screen reads them through.
  *
  * ## Which reads are endpoints, and which are plain REST
  *

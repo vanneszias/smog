@@ -5,7 +5,7 @@ import { setLocale, t, useLocale } from "@/lib/i18n";
 /**
  * `setLocale` is module-level state (see `i18n.ts`'s own comment), so it
  * outlives any one `it()` — every test resets it back to Dutch first,
- * rather than relying on running in brief-snippet order.
+ * rather than relying on the order tests run in.
  */
 beforeEach(() => {
   setLocale("nl");
@@ -23,9 +23,8 @@ describe("translations", () => {
   });
 
   /**
-   * `auth.forgotPassword` is a real gap in the shipped `@smog/i18n` catalog,
-   * not a made-up key: `en.json` never got it (see the Task 12 report's
-   * key-parity finding). The premise is asserted first so this test fails
+   * `auth.forgotPassword` is a real gap in the `@smog/i18n` catalog, not a
+   * made-up key: `en.json` never got it. The premise is asserted first so this test fails
    * loudly, rather than passing for the wrong reason, the day someone adds
    * the key to `en.json` and this stops exercising the fallback path at
    * all.
@@ -44,15 +43,11 @@ describe("translations", () => {
 
   /**
    * The one assertion in this file that is a finding rather than a check on
-   * code this task wrote: it fails today, against the shipped
-   * `@smog/i18n` catalog, on keys that belong to a legacy sign-up wizard and
-   * a handful of marketing pages this task never touches — not on anything
-   * `apps/mobile` reads. `it.failing` keeps the assertion in the suite
-   * (deleting it was the one thing the brief ruled out) while keeping
-   * `bun -F mobile test` green; the exact missing keys are recorded in the
-   * Task 12 report as a Stage 10 item. If a future change fills them, this
-   * test starts *passing*, which makes `it.failing` itself fail — the
-   * signal to flip it back to `it`.
+   * this app's code: it fails today, against the `@smog/i18n` catalog as it
+   * stands, on keys that no screen in `apps/mobile` reads. `it.failing` keeps
+   * the assertion in the suite while keeping `bun -F mobile test` green. If a
+   * future change fills them, this test starts *passing*, which makes
+   * `it.failing` itself fail — the signal to flip it back to `it`.
    */
   it.failing("has the same key set in all three locales", () => {
     const keys = (o: object, p = ""): string[] =>

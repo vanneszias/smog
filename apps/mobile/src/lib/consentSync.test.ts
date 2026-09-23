@@ -128,7 +128,7 @@ describe("reconcileConsent", () => {
 
   it.each([
     429, 500, 503,
-  ])("keeps a %s pending and retries on the next pass (Review Focus 5)", async (code) => {
+  ])("keeps a %s pending and retries on the next pass", async (code) => {
     global.fetch = jest.fn(() => status(code)) as unknown as typeof fetch;
     await setConsent("granted");
     await reconcileConsent("7");
@@ -153,12 +153,12 @@ describe("reconcileConsent", () => {
     expect((await marker()).pending).toBe(true);
   });
 
-  it("drops an attributed decision on sign-out, so the next person is asked (Review Focus 3)", async () => {
+  it("drops an attributed decision on sign-out, so the next person is asked", async () => {
     await setConsent("granted");
     await reconcileConsent("7");
     // A real sign-out: no token left in the keychain at all, not merely a
-    // `userId` of `null` (fix round 1, finding 1 — see (c) in the block
-    // below for the case this line exists to keep apart).
+    // `userId` of `null` (see the unverified-session block below for the
+    // case this line exists to keep apart).
     (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
     await reconcileConsent(null);
     expect(readConsent()).toBeNull();
@@ -186,14 +186,14 @@ describe("reconcileConsent", () => {
     expect(await marker()).toBeNull();
   });
 
-  it("serialises passes: two at once send one request (Review Focus 1)", async () => {
+  it("serialises passes: two at once send one request", async () => {
     await setConsent("granted");
     await Promise.all([reconcileConsent("7"), reconcileConsent("7")]);
     expect(consentPosts()).toHaveLength(1);
   });
 
   /**
-   * The subscription loop the brief calls out: `dropForeignDecision` calls
+   * The subscription loop: `dropForeignDecision` calls
    * `clearConsent`, which notifies `subscribeConsent`'s listeners, which
    * (through `useConsentSync`) queues another `reconcileConsent` pass. That
    * pass finds no marker and no consent left to act on, so it must return
@@ -220,7 +220,7 @@ describe("reconcileConsent", () => {
 });
 
 /**
- * Fix round 1, finding 1: a session that could not be verified — a stored
+ * A session that could not be verified — a stored
  * token, but no answer from `/users/me` (offline, 429, 5xx) — must not be
  * treated the same as a genuine sign-out. (An *answer* naming no user is an
  * expired token, which `session.ts` now clears; see the `useConsentSync`
@@ -228,7 +228,7 @@ describe("reconcileConsent", () => {
  * itself, since `useConsentSync` reports both cases identically
  * (`userId === null`).
  */
-describe("reconcileConsent, an unverified session (Review Focus 3 and 5, fix round 1)", () => {
+describe("reconcileConsent, an unverified session", () => {
   it("keeps a confirmed decision when the session could not be verified, rather than treating it as signed out", async () => {
     await setConsent("granted");
     await reconcileConsent("7");
@@ -271,7 +271,7 @@ describe("reconcileConsent, an unverified session (Review Focus 3 and 5, fix rou
 });
 
 /**
- * Fix round 1, finding 2 (corrected in fix round 2): a pass carries the
+ * A pass carries the
  * `userId` it was enqueued for, but by the time it actually runs the
  * keychain can already hold another account's token — `SessionProvider`
  * does not re-verify the instant a token changes. `pass` refuses to POST
@@ -280,18 +280,17 @@ describe("reconcileConsent, an unverified session (Review Focus 3 and 5, fix rou
  * exactly that verified token rather than letting `payloadFetch` re-read
  * the keychain for its own.
  *
- * Fix round 2's own review is why there are two kinds of test here rather
- * than one: the first two isolate each half of that comparison directly
- * (an internal-consistency check, using `setVerifiedSessionForTests` to
- * construct states that are simple to state precisely); the third
- * reproduces the actual account-switch race end to end, through a real
- * `SessionProvider`, without injecting any state production can't reach —
- * fix round 1's own version of this describe block did exactly that
- * (`setVerifiedTokenForTests("tA")` was never a value a real resolve could
- * have produced at that point), which is why it passed without actually
- * closing the race it was named for.
+ * There are two kinds of test here rather than one: the first two isolate each
+ * half of that comparison directly (an internal-consistency check, using
+ * `setVerifiedSessionForTests` to construct states that are simple to state
+ * precisely); the third reproduces the actual account-switch race end to end,
+ * through a real `SessionProvider`, without injecting any state production
+ * can't reach. An earlier version of this block did inject one
+ * (`setVerifiedTokenForTests("tA")` was never a value a real resolve could have
+ * produced at that point), which is why it passed without actually closing the
+ * race it was named for.
  */
-describe("reconcileConsent, a token the session has moved on from (Review Focus 5, fix round 2)", () => {
+describe("reconcileConsent, a token the session has moved on from", () => {
   it("sends the account's decision under the exact token the session was verified with", async () => {
     await setConsent("granted");
 
@@ -500,14 +499,14 @@ describe("useConsentSync", () => {
       )
     );
 
-  it("does nothing while the session is still loading (fix round 1, finding 3)", async () => {
+  it("does nothing while the session is still loading", async () => {
     // Seeded with a confirmed marker + matching consent: the original
     // version of this test seeded neither, so it stayed green with the
     // `if (loading) { return; }` guard deleted outright — nothing was ever
     // at stake for it to protect. `AsyncStorage.getItem` is spied on
     // directly (rather than only checking the outcome) because a *later*
-    // guard inside `pass` itself (fix round 1, finding 1: a stored token
-    // with no resolved user is not treated as signed out) would otherwise
+    // guard inside `pass` itself (a stored token with no resolved user is
+    // not treated as signed out) would otherwise
     // leave this decision looking untouched even with the loading guard
     // gone — reading `CONSENT_SYNCED_KEY` at all is `readMarker`'s doing,
     // the first thing any pass touches, so it is true regardless of what a
@@ -543,7 +542,7 @@ describe("useConsentSync", () => {
     expect(await marker()).toEqual({ userId: "7", value: "granted" });
   });
 
-  it("drops the decision and its marker when the session has expired (final review)", async () => {
+  it("drops the decision and its marker when the session has expired", async () => {
     // Payload answers an expired JWT with `200 { user: null }`, not a 401
     // (`payload/dist/auth/operations/me.js`). `session.ts` now treats that
     // as a sign-out and clears the token, so this pass sees no token and
@@ -610,7 +609,7 @@ describe("useConsentSync", () => {
     expect(consentPosts()).toHaveLength(0);
   });
 
-  it("retries a pending decision when the app returns to the foreground (Review Focus 5)", async () => {
+  it("retries a pending decision when the app returns to the foreground", async () => {
     let consentAnswer: () => Promise<Response> = () => status(500);
     global.fetch = jest.fn((url: string) =>
       String(url).includes("/users/me") ? me("7") : consentAnswer()

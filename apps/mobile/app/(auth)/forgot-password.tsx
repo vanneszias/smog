@@ -7,8 +7,7 @@ import { payloadFetch } from "@/lib/api";
 /**
  * The one thing this screen is allowed to say, whether or not the address
  * is registered. `POST /api/users/forgot-password` is Payload's own
- * `forgotPasswordHandler` — unmodified, per the Stage 8 brief's table — and
- * it already answers every address with the same `200 { message }`
+ * `forgotPasswordHandler`, unmodified, and it already answers every address with the same `200 { message }`
  * regardless of whether an account exists
  * (`payload/dist/auth/endpoints/forgotPassword.js` never branches on the
  * operation's result). This screen keeps that property rather than adding
