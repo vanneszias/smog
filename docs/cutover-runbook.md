@@ -173,7 +173,11 @@ down.
   from the Convex dashboard; keep it in the password manager.
 - **The maintenance image is built the day before**, on the legacy host from
   `/opt/smog`: `docker compose -f maintenance/compose.yml build`. A build in
-  the window is time with the site down.
+  the window is time with the site down. Its Caddy keeps certificates in its
+  own volume, so its **first** start in the window fetches a new certificate
+  for the legacy address — which works because the address still points at
+  the legacy host at that point, and is one issuance against Let's Encrypt's
+  weekly limit. Do not rehearse it by starting and stopping it repeatedly.
 - **The cron ticks on production**: `[jobs] Ran N jobs from the default queue`
   in the Worker log across an hour boundary (checklist, step 8).
 - **Email**: one real message received from production (for example an
@@ -183,11 +187,13 @@ down.
 
   ```bash
   read -rs JOBS_RUN_TOKEN     # from the password manager
-  curl --max-time 600 -H "Authorization: Bearer $JOBS_RUN_TOKEN" \
+  printf 'Authorization: Bearer %s\n' "$JOBS_RUN_TOKEN" |
+    curl --max-time 600 -H @- \
     https://smog-site-production.vanneszias.workers.dev/api/jobs/run
   ```
 
-  The token was stored in the password manager when it was set (checklist,
+  `printf` is a shell builtin and `-H @-` reads the header from standard
+  input, so the token is in neither shell history nor the process list. The token was stored in the password manager when it was set (checklist,
   step 4). If it was not, set a new one that way now.
 - **Payments**: one full test-mode checkout on staging with a `test_` key,
   including the webhook moving the sponsorship to `pending_approval` (Mollie
@@ -458,9 +464,13 @@ Always in this order, and never an older export:
 4. **Apply** it.
 
 The counts will almost certainly differ from the 2026-09-22 rehearsal (27
-categories, 492 gestures, 4 skipped, 5 favourites dropped): editors kept
-working on the old stack after it. That drift is expected and is not a
-reason to stop. The gates are the ones that do not depend on old numbers:
+categories, 492 gestures, 4 skipped, 5 favourites dropped) if editors kept
+working on the old stack after it, and that drift is not a reason to stop.
+Note the tension with the gates below: in this repository's legacy code
+every admin edit also writes an `adminLogs` row, which makes the planner
+refuse. The 2026-09-22 export had none, so production either runs older
+legacy code or nobody edited; the day-before row counts (section 2) settle
+which before the window, not during it. The gates are the ones that do not depend on old numbers:
 the planner's refusals (it will not plan an export with users,
 sponsorships, consents, admin logs, a `gesture_lists` table, duplicate
 `_id`s, malformed rows or a missing table), and re-reviewing the
