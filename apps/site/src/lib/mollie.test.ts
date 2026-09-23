@@ -285,6 +285,34 @@ describe("createMolliePayment", () => {
     expect(error.message).toContain("Unauthorized");
     expect(error.message).not.toContain(STUB_KEY);
   });
+
+  it("gives mollieRequest's fetch a signal that will abort a call which never answers", async () => {
+    // Workers `fetch` has no default timeout, and a call that never answers
+    // holds the request — or, from a job, the whole queue run — open until
+    // the platform kills it. See `REQUEST_TIMEOUT_MS` in `mollie.ts`.
+    const mock = stubFetch(jsonResponse(createdPayment()));
+
+    await createMolliePayment(VALID_INPUT);
+
+    const { init } = requestOf(mock);
+
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(init.signal?.aborted).toBe(false);
+  });
+
+  it("rejects rather than hanging when Mollie never answers before the timeout", async () => {
+    // Pinning the rejection only, not a message the code does not produce:
+    // the timeout is `fetch` throwing, which `mollieRequest` does not catch.
+    const mock = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new DOMException("The operation timed out.", "TimeoutError")
+      );
+
+    vi.stubGlobal("fetch", mock);
+
+    await expect(createMolliePayment(VALID_INPUT)).rejects.toThrow();
+  });
 });
 
 describe("readMolliePayment", () => {

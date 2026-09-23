@@ -436,6 +436,76 @@ describe("the analytics relay", () => {
     expect(JSON.parse(String(init.body))).toEqual(trackEvent());
   });
 
+  it("gives the relay's request a signal that will abort a call which never answers", async () => {
+    // Workers `fetch` has no default timeout, and a call that never answers
+    // holds the request open until the platform kills it. See
+    // `REQUEST_TIMEOUT_MS` in `endpoints/analytics.ts`.
+    const ip = freshClientIp();
+    const before = {
+      id: process.env.OPENPANEL_CLIENT_ID,
+      secret: process.env.OPENPANEL_CLIENT_SECRET,
+      url: process.env.OPENPANEL_API_URL,
+    };
+    const sent = vi.fn(() =>
+      Promise.resolve(new Response(null, { status: 202 }))
+    );
+
+    process.env.OPENPANEL_CLIENT_ID = `stub-id-${RUN}`;
+    process.env.OPENPANEL_CLIENT_SECRET = `stub-secret-${RUN}`;
+    process.env.OPENPANEL_API_URL = "https://analytics.invalid/api";
+    vi.stubGlobal("fetch", sent);
+
+    try {
+      expect((await post(trackEvent(), { ip })).status).toBe(202);
+    } finally {
+      restoreEnv("OPENPANEL_CLIENT_ID", before.id);
+      restoreEnv("OPENPANEL_CLIENT_SECRET", before.secret);
+      restoreEnv("OPENPANEL_API_URL", before.url);
+    }
+
+    const [, init] = sent.mock.calls[0] as unknown as [string, RequestInit];
+
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(init.signal?.aborted).toBe(false);
+  });
+
+  it("still answers the client when the relay call times out", async () => {
+    // `forwardToOpenPanel` never throws and never reports back — the caller
+    // has already answered 202 on the strength of having accepted the event,
+    // and a beacon is not something a page can act on. A timeout is just
+    // another way the relay call can fail, and must be swallowed the same way
+    // any other relay failure already is.
+    const ip = freshClientIp();
+    const before = {
+      id: process.env.OPENPANEL_CLIENT_ID,
+      secret: process.env.OPENPANEL_CLIENT_SECRET,
+      url: process.env.OPENPANEL_API_URL,
+    };
+    const sent = vi.fn(() =>
+      Promise.reject(
+        new DOMException("The operation timed out.", "TimeoutError")
+      )
+    );
+
+    process.env.OPENPANEL_CLIENT_ID = `stub-id-${RUN}`;
+    process.env.OPENPANEL_CLIENT_SECRET = `stub-secret-${RUN}`;
+    process.env.OPENPANEL_API_URL = "https://analytics.invalid/api";
+    vi.stubGlobal("fetch", sent);
+
+    let response: Response;
+
+    try {
+      response = await post(trackEvent(), { ip });
+    } finally {
+      restoreEnv("OPENPANEL_CLIENT_ID", before.id);
+      restoreEnv("OPENPANEL_CLIENT_SECRET", before.secret);
+      restoreEnv("OPENPANEL_API_URL", before.url);
+    }
+
+    expect(response.status).toBe(202);
+    expect(sent).toHaveBeenCalledTimes(1);
+  });
+
   it("accepts the event and forwards nothing when the vendor is not configured", async () => {
     /*
      * A site whose analytics vendor is unconfigured must still serve pages —

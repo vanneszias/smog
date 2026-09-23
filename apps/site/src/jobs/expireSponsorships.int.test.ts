@@ -1593,6 +1593,44 @@ describe("a composed video Mux never made ready", () => {
     expect((await renderRow(render)).failureReason ?? null).toBeNull();
   });
 
+  it("leaves everything exactly as it was when Mux times out, as any other Mux failure does", async () => {
+    /*
+     * Review Focus 5. A timeout is `fetch` rejecting with an `AbortError` /
+     * `TimeoutError`, which is not distinguished from any other failure to
+     * reach Mux — `readMuxAsset` lets it propagate, and this sweep must treat
+     * it exactly as it treats the 503 case above: the render is left pending
+     * for the next sweep, not marked failed.
+     */
+    const gesture = await seedGesture("timeout");
+    const assetId = `asset-settle-timeout-${RUN}`;
+    const playbackId = `pb-settle-timeout-${RUN}`;
+    const sponsorshipId = await seedSponsorship("timeout", {
+      gesture,
+      preview: playbackId,
+      status: "pending_approval",
+    });
+    const render = await seedRender("timeout", sponsorshipId, {
+      assetId,
+      playbackId,
+      state: "ready",
+    });
+
+    muxAnswers.set(`GET ${assetId}`, () =>
+      Promise.reject(
+        new DOMException("The operation timed out.", "TimeoutError")
+      )
+    );
+
+    const report = await settleComposedVideos(payload);
+
+    expect(report.unreadable).toBeGreaterThanOrEqual(1);
+    expect((await sponsorshipRow(sponsorshipId)).previewVideoPlaybackId).toBe(
+      playbackId
+    );
+    expect((await renderRow(render)).muxAssetId).toBe(assetId);
+    expect((await renderRow(render)).failureReason ?? null).toBeNull();
+  });
+
   it("leaves the composite of a different render alone", async () => {
     /*
      * A sponsorship can have more than one render — a re-render is a new job

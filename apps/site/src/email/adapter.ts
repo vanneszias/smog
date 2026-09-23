@@ -253,6 +253,14 @@ export function cloudflareEmailAdapter({
       }
 
       try {
+        // No timeout on this call, unlike every other outbound call in this
+        // application. A binding call cannot be given an `AbortSignal` and
+        // aborting it does not stop the send — it would only stop this
+        // Worker from waiting for the answer, which turns a slow send into a
+        // duplicate once the caller (or a retry) tries again. So a send that
+        // never returns is left running, and `jobs/reapStrandedJobs.ts` is
+        // the backstop: it reclaims the job that never got a callback rather
+        // than racing the send itself.
         return await send.send(builder);
       } catch (error) {
         throw new EmailSendFailure(codeOf(error), error);

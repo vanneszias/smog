@@ -13,7 +13,12 @@ import {
   it,
   vi,
 } from "vitest";
-import { deleteMuxAsset, readMuxAsset, signedMuxSourceUrl } from "@/lib/mux";
+import {
+  createMuxAssetFromUrl,
+  deleteMuxAsset,
+  readMuxAsset,
+  signedMuxSourceUrl,
+} from "@/lib/mux";
 
 /** Two hours, the window `lib/mux.ts` mints. Pinned here as a literal. */
 const TTL_SECONDS = 2 * 60 * 60;
@@ -371,7 +376,12 @@ const ASSET_ID = "assetForTestsOnly001";
  */
 describe("Mux's back half", () => {
   /** Every request this file's code made, in order. */
-  let calls: { method: string; url: string; authorization: string }[] = [];
+  let calls: {
+    method: string;
+    url: string;
+    authorization: string;
+    signal: AbortSignal | null | undefined;
+  }[] = [];
   /** What the fake answers next. Set per test. */
   let answer: () => Response = () => new Response(null, { status: 204 });
 
@@ -399,6 +409,7 @@ describe("Mux's back half", () => {
       calls.push({
         authorization: headers.get("authorization") ?? "",
         method: init?.method ?? "GET",
+        signal: init?.signal,
         url,
       });
 
@@ -422,6 +433,48 @@ describe("Mux's back half", () => {
     // run that stubbed nothing would look green having proven nothing.
     expect(process.env.MUX_TOKEN_ID).toBe(STUB_TOKEN_ID);
     expect(process.env.MUX_TOKEN_SECRET).toBe(STUB_TOKEN_SECRET);
+  });
+
+  it("gives createMuxAssetFromUrl's request a signal that will abort a call which never answers", async () => {
+    // Workers `fetch` has no default timeout, and a call that never answers
+    // holds the request — or, from a job, the whole queue run — open until the
+    // platform kills it. See `REQUEST_TIMEOUT_MS` in `mux.ts`.
+    answer = () =>
+      json({
+        data: {
+          id: ASSET_ID,
+          playback_ids: [{ id: "pbCreateForTestsOnly", policy: "public" }],
+          status: "preparing",
+        },
+      });
+
+    await createMuxAssetFromUrl("https://example.test/source.mp4");
+
+    expect(calls[0]?.signal).toBeInstanceOf(AbortSignal);
+    expect(calls[0]?.signal?.aborted).toBe(false);
+  });
+
+  it("gives readMuxAsset's request a signal that will abort a call which never answers", async () => {
+    answer = () =>
+      json({
+        data: {
+          id: ASSET_ID,
+          playback_ids: [{ id: "pbReadForTestsOnly", policy: "public" }],
+          status: "ready",
+        },
+      });
+
+    await readMuxAsset(ASSET_ID);
+
+    expect(calls[0]?.signal).toBeInstanceOf(AbortSignal);
+    expect(calls[0]?.signal?.aborted).toBe(false);
+  });
+
+  it("gives deleteMuxAsset's request a signal that will abort a call which never answers", async () => {
+    await deleteMuxAsset(ASSET_ID);
+
+    expect(calls[0]?.signal).toBeInstanceOf(AbortSignal);
+    expect(calls[0]?.signal?.aborted).toBe(false);
   });
 
   it("asks Mux to delete the asset it was given", async () => {

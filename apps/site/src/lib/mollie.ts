@@ -43,6 +43,16 @@ const MOLLIE_API_BASE = "https://api.mollie.com/v2";
 const CENTS_PER_EURO = 100;
 
 /**
+ * How long one call to Mollie may take before it is abandoned.
+ *
+ * Workers `fetch` has no default timeout, and a call that never answers holds
+ * the request — or, from a job, the whole queue run — until the platform
+ * kills it, which strands every job that run had claimed. Ten seconds is the
+ * value `endpoints/oauth.ts` already uses for the same reason.
+ */
+const REQUEST_TIMEOUT_MS = 10_000;
+
+/**
  * What `createMolliePayment` needs to open a checkout.
  *
  * Not exported, and neither is `MolliePayment` below, although both are part
@@ -167,7 +177,10 @@ async function mollieRequest(
   what: string,
   init: RequestInit
 ): Promise<Record<string, unknown>> {
-  const response = await fetch(url, init);
+  const response = await fetch(url, {
+    ...init,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
   // Parsed before the status is consulted, because Mollie's own explanation
   // of a refusal is in the body. A refusal whose body is an HTML error page
   // fails as a non-JSON body, which is still a throw.

@@ -49,6 +49,16 @@
 const MUX_API_BASE = "https://api.mux.com/video/v1";
 
 /**
+ * How long one call to Mux may take before it is abandoned.
+ *
+ * Workers `fetch` has no default timeout, and a call that never answers holds
+ * the request — or, from a job, the whole queue run — until the platform
+ * kills it, which strands every job that run had claimed. Ten seconds is the
+ * value `endpoints/oauth.ts` already uses for the same reason.
+ */
+const REQUEST_TIMEOUT_MS = 10_000;
+
+/**
  * A Mux asset as `createMuxAssetFromUrl` reports it.
  *
  * Not exported, for the reason `lib/mollie.ts` gives: knip fails
@@ -194,6 +204,7 @@ export async function createMuxAssetFromUrl(
       "Content-Type": "application/json",
     },
     method: "POST",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
   // Parsed before the status is consulted, because Mux's own explanation of a
@@ -467,7 +478,11 @@ export async function readMuxAsset(
 
   const response = await fetch(
     `${MUX_API_BASE}/assets/${encodeURIComponent(assetId)}`,
-    { headers: { Authorization: authorization }, method: "GET" }
+    {
+      headers: { Authorization: authorization },
+      method: "GET",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    }
   );
 
   if (response.status === NOT_FOUND) {
@@ -525,7 +540,11 @@ export async function deleteMuxAsset(assetId: string): Promise<void> {
 
   const response = await fetch(
     `${MUX_API_BASE}/assets/${encodeURIComponent(assetId)}`,
-    { headers: { Authorization: authorization }, method: "DELETE" }
+    {
+      headers: { Authorization: authorization },
+      method: "DELETE",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    }
   );
 
   // Mux answers a successful delete `204 No Content`, so the body is not read

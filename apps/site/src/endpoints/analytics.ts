@@ -53,6 +53,16 @@ const DEFAULT_API_URL = "https://analytics.zias.be/api";
 const SDK_NAME = "smog-site-relay";
 const SDK_VERSION = "2.0.0";
 
+/**
+ * How long one call to OpenPanel may take before it is abandoned.
+ *
+ * Workers `fetch` has no default timeout, and a call that never answers holds
+ * the request — or, from a job, the whole queue run — until the platform
+ * kills it, which strands every job that run had claimed. Ten seconds is the
+ * value `endpoints/oauth.ts` already uses for the same reason.
+ */
+const REQUEST_TIMEOUT_MS = 10_000;
+
 /** Transcribed from `rateLimit({ namespace: "analytics", limit: 120, windowSeconds: 60 })`. */
 const NAMESPACE = "analytics";
 export const ANALYTICS_LIMIT = 120;
@@ -254,6 +264,7 @@ async function forwardToOpenPanel(
       body: JSON.stringify(body),
       headers,
       method: "POST",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
 
     if (!(response.status === 200 || response.status === 202)) {
