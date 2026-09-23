@@ -240,10 +240,8 @@ grep -c "A run was requested without a usable token; nothing was run" <scratch>/
 2
 ```
 
-— present twice, at lines 162234 and 385208 of the emitted `worker.js`: the
-route registered on the live queue plus a duplicate module instance esbuild
-kept from a second import path into the bundle. `--dry-run --outdir` needed
-no Cloudflare authentication.
+— present twice, at lines 162234 and 385208 of the emitted `worker.js`.
+`--dry-run --outdir` needed no Cloudflare authentication.
 
 ### Step 3 — a real local tick
 
@@ -255,15 +253,15 @@ the bundle (confirmed: zero occurrences of `pushDevSchema` in the built
 "production"`) — so `wrangler dev` serving this build will never auto-create
 schema, unlike `next dev` (which is how `site-e2e`'s CI job gets schema for
 free). The CLI path production deploys use, `payload migrate`
-(`deploy:database`), also could not be used here: it currently crashes
+(`deploy:database`), also could not be used here at the time: it crashed
 locally, independent of environment, because `readMigrationFiles` (Payload
 core) dynamically imports every non-`index.*` file in `src/migrations`,
 including `migrations.test.ts` — which calls Vitest's `describe()` at module
-scope and throws `TypeError: Cannot read properties of undefined (reading
-'config')` outside a Vitest runner. **This looks like a real, pre-existing
-defect in the `deploy:database` path, unrelated to the cron work** — flagged
-here per this task's "stop and report" instruction rather than fixed, since
-fixing it is out of this task's scope. See "Concerns" below.
+scope and threw `TypeError: Cannot read properties of undefined (reading
+'config')` outside a Vitest runner. **Fixed since** by `28d90bb`, which
+moved the test out of `src/migrations/` (to `src/migrations.test.ts`) and
+added a guard so a colocated test file can no longer be picked up as a
+migration — see "Concerns" below for what that fix covers.
 
 Instead, seeded the same way `apps/site`'s own dev flow does (matching CI's
 approach, which relies on `next dev`'s live schema push, not `payload
@@ -367,9 +365,10 @@ after cleanup showed only the intended source changes (`.gitignore`; docs).
 ### Concerns for a future task
 
 - `bun run deploy:database` (`payload migrate`), independent of this task's
-  changes, appears to crash locally because `payload`'s `readMigrationFiles`
-  imports every non-`index.*` file under `src/migrations`, including
+  changes, crashed locally because `payload`'s `readMigrationFiles` imports
+  every non-`index.*` file under `src/migrations`, including
   `migrations.test.ts` (which calls Vitest's `describe()` at module scope).
-  Not exercised here beyond the one reproduction above — no code change was
-  made per this task's scope (proving the cron tick, not fixing migrations).
-  Worth its own task before the next real `deploy:database` run.
+  **Fixed by `28d90bb`**, out of this task's own scope: the test moved to
+  `src/migrations.test.ts` (so `readMigrationFiles` never sees it) and a
+  guard test was added so a stray file in `src/migrations/` that merely
+  looks like a migration is caught rather than silently imported.
