@@ -30,14 +30,6 @@
       "entry": ["remotion.config.ts", "src/index.ts"],
       "ignoreDependencies": ["@remotion/lambda"]
     },
-    "packages/shared": {
-      "entry": ["src/index.ts", "src/otel.ts"],
-      "ignoreDependencies": [
-        "@opentelemetry/exporter-logs-otlp-http",
-        "@opentelemetry/resources",
-        "@opentelemetry/sdk-logs"
-      ]
-    },
     "packages/ui-native": {
       "entry": [
         "src/index.ts",

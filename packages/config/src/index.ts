@@ -1,15 +1,14 @@
 /**
  * @fileoverview Main entry point for @smog/config runtime exports.
  *
- * Re-exports all constants and URLs for convenient single-import access.
+ * Re-exports the constants and sponsorship statuses for single-import access.
  *
  * Note: The `tsconfig.base.json` shared TypeScript configuration is consumed
  * separately via the `@smog/config/tsconfig.base.json` path in `extends`.
  *
  * @example
- * import { VIDEO_COMPLETE_COUNT, COURSE_URL } from "@smog/config";
+ * import { MAX_GESTURES_PER_SPONSORSHIP, SPONSORSHIP_STATUSES } from "@smog/config";
  */
 
 export * from "./constants";
 export * from "./sponsorships";
-export * from "./urls";

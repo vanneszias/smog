@@ -59,7 +59,6 @@
     "@biomejs/biome": "2.3.13",
     "@types/bun": "^1.4.2",
     "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
     "expo-doctor": "1.20.0",
     "knip": "^5.88.1",
     "turbo": "^2.11.2",

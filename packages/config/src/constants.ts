@@ -6,23 +6,10 @@
  * package that needs these values.
  *
  * @example
- * import { VIDEO_COMPLETE_COUNT, PRICE_PER_YEAR_CENTS } from "@smog/config/constants";
+ * import { MAX_GESTURES_PER_SPONSORSHIP, PRICE_PER_YEAR_CENTS } from "@smog/config/constants";
  */
 
-// ─── Video / Gesture Learning ─────────────────────────────────────────────────
-
-/**
- * Number of gesture videos a user must complete before seeing the
- * DisclaimerBanner prompt to enrol in a course.
- *
- * Previously hardcoded as `7` in `apps/native/components/DisclaimerBanner.tsx`.
- */
-export const VIDEO_COMPLETE_COUNT = 7;
-
-/**
- * Default number of gestures shown per page in list views.
- */
-export const DEFAULT_PAGE_SIZE = 20;
+// ─── Sponsorship ──────────────────────────────────────────────────────────────
 
 /**
  * Maximum number of gestures a sponsor can select in one sponsorship order.
@@ -54,60 +41,3 @@ export const LOGO_ADDON_CENTS = 1000;
  * Previously defined in `apps/web/src/lib/pricing.ts`.
  */
 export const FIXED_DURATION_YEARS = 1;
-
-// ─── Cache / Sync Timings ─────────────────────────────────────────────────────
-
-/**
- * Interval between background sync attempts in milliseconds.
- * 2 hours = 2 × 60 × 60 × 1000 ms.
- *
- * Previously hardcoded in `apps/native/services/convexSyncService.ts`.
- */
-export const SYNC_INTERVAL_MS = 2 * 60 * 60 * 1000;
-
-/**
- * Delay before retrying a failed sync, in milliseconds.
- * 5 minutes = 5 × 60 × 1000 ms.
- *
- * Previously hardcoded in `apps/native/services/convexSyncService.ts`.
- */
-export const SYNC_RETRY_DELAY_MS = 5 * 60 * 1000;
-
-/**
- * Maximum number of sync retries before giving up.
- *
- * Previously hardcoded in `apps/native/services/convexSyncService.ts`.
- */
-export const MAX_SYNC_RETRIES = 3;
-
-/**
- * If more than this amount of time has passed since the last sync, force a
- * full sync regardless of the remote timestamp comparison. Acts as a catch-all
- * for devices that got stuck due to a partial or stale sync.
- * 1 day = 1 × 24 × 60 × 60 × 1000 ms.
- */
-export const FORCE_SYNC_INTERVAL_MS = 1 * 24 * 60 * 60 * 1000;
-
-// ─── Privacy / Analytics ─────────────────────────────────────────────────────
-
-/**
- * Stores the user's explicit analytics consent choice.
- */
-export const ANALYTICS_CONSENT_STORAGE_KEY = "@smog_analytics_consent";
-
-// ─── Database ─────────────────────────────────────────────────────────────────
-
-/**
- * Name of the local SQLite database file.
- *
- * Previously hardcoded in `apps/native/services/databaseService.ts`.
- */
-export const SQLITE_DATABASE_NAME = "gestures.db";
-
-/**
- * Current target version of the local SQLite schema.
- * Increment this whenever a migration is added.
- *
- * Previously hardcoded in `apps/native/services/databaseService.ts`.
- */
-export const DATABASE_TARGET_VERSION = 3;
