@@ -56,8 +56,10 @@ Read this before scheduling anything; it is what users will notice.
   kept: `/gestures/<id>` looks the export's `_id` up as the imported
   gesture's `legacyId` and lands on its page, or — temporarily (307), so a
   gesture published later is still found — on the gesture list when no
-  active gesture matches; `/favorites`, `/privacy`, `/sponsor`, `/login` and
-  the rest are fixed rows (`apps/site/src/lib/legacyRedirects.ts`,
+  active gesture matches; `/gestures?category=<_id>` translates each category
+  `_id` the same way through the imported category's `legacyId`, and drops
+  (with a 307) any that match no active category; `/favorites`, `/privacy`,
+  `/sponsor`, `/login` and the rest are fixed rows (`apps/site/src/lib/legacyRedirects.ts`,
   `apps/site/src/endpoints/legacy.ts`). Lists were not imported, so
   `/lists/<token>` lands on the account's lists page.
 
@@ -137,9 +139,30 @@ answer next to each item when it is made.
      every build Play delivers of `be.zias.smog`; if Play Console shows a
      different one under **App integrity → App signing**, the file is wrong
      and verification fails. (A build installed from anywhere but Play is
-     signed with another key and never verifies; that is expected.) Both are checked after the switch (section 3,
-     steps 7 and 8). Links to anything but a gesture page open in the
+     signed with another key and never verifies; that is expected.) Both are
+     checked after the switch (section 3, steps 7 and 8). On a device running
+     the new build, links to anything but a gesture page open in the
      browser, on the site.
+   - **Until a device updates past 2.0.2, the old app still takes links.**
+     The current store release claims the whole host on Android (an
+     `autoVerify` filter for `https://app.smog.vlaanderen` with no path), and
+     Android verifies a domain per package, not per path: the new
+     `assetlinks.json` names the same package and key, so it keeps that
+     whole-host claim verified. On such a device **every**
+     `app.smog.vlaanderen` link — the Mollie return to `/nl/sponsor/success`,
+     the site's Google sign-in return, email confirmation and re-edit links,
+     `/admin` — can open in the old app, whose backend is gone. On iOS the
+     new AASA narrows the old app to the gesture paths, which it cannot
+     route, so gesture links open it on an error screen and everything else
+     opens in the browser.
+
+     `assetlinks.json` is served from the switch regardless. The new build
+     needs it to verify at all, and withholding it would not reliably
+     un-verify installs that already verified against the identical file, so
+     holding it back would cost the new build its links without fixing the
+     old one. What limits the window is the store release following the
+     switch as closely as section 3 orders it (steps 6–8), at 100%, and the
+     support note in step 8.
 
    **The store build carries the final production address** in
    `EXPO_PUBLIC_API_URL` (checklist §6), because installs keep it for years.
@@ -452,6 +475,14 @@ stops being free.
    a chat or email app, not by typing it into the browser) on an iPhone and
    an Android phone with the app installed: it must open in the app, on that
    gesture.
+
+   **Support note, from the switch until installs have updated.** A device
+   still on 2.0.2 opens site links in the old app (section 1, decision 3):
+   on Android every `app.smog.vlaanderen` link, payment and sign-in returns
+   included; on iOS gesture links. Anyone who reports "links open an app
+   that doesn't work" should update SMOG & Co from the store. On Android
+   they can also stop it at once with **Settings → Apps → SMOG & Co → Open
+   by default**, turning off opening supported links.
 9. **Merge the route branch into `main`**, so the next deploy from `main`
    keeps the address and `SITE_ORIGIN`.
 

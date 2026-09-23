@@ -164,6 +164,16 @@ A redirect on either file fails verification (Apple refuses one outright).
 The Android file carries the Play app signing key's fingerprint, so only a
 build installed from Play verifies.
 
+**The old app is covered by the same files until it updates.** The current
+store release (2.0.2) claims the whole host on Android, and Android verifies
+per package, not per path, so on a device still running it every
+`app.smog.vlaanderen` link — payment and sign-in returns included — can open
+in the old app, whose backend is gone; on iOS its claim narrows to the
+gesture paths, which it cannot route. The file is served anyway, because the
+new build needs it and withholding it would not reliably un-verify installs
+that already verified. The runbook (section 1, decision 3; section 3, step 8)
+has the release timing and the support note.
+
 ### Mobile analytics
 
 `apps/mobile` sends analytics events straight from the device to OpenPanel
