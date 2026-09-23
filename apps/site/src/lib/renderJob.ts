@@ -169,12 +169,17 @@ export async function renderSubmission(
 /**
  * Submits a render of one sponsored gesture to Remotion Lambda.
  *
- * **It never throws.** A sponsor has paid by the time this runs, and a video
- * pipeline that is unconfigured, misconfigured or unreachable must not be able
- * to fail a checkout. Every outcome is a log line naming the sponsorship.
+ * Called by `lib/paidRenders.ts` once the Mollie webhook has moved the
+ * sponsorship to `pending_approval`, never at checkout (user decision,
+ * 2026-09-23): a render is paid-for work, asked for only once it is paid for.
+ *
+ * **It never throws.** The sponsor has paid by the time this runs, and a
+ * video pipeline that is unconfigured, misconfigured or unreachable must not
+ * be able to fail the webhook that recorded it. Every outcome is a log line
+ * naming the sponsorship.
  *
  * - **Unconfigured** (no function name, region or serve URL) says so and does
- *   no work, so a checkout needs no Mux signing key.
+ *   no work, so recording a payment needs no Mux signing key.
  * - **No `RENDER_CALLBACK_SECRET`**, or a callback URL that is not absolute
  *   `https:` or `http:` (an empty origin, say), refuses before anything is
  *   claimed or started: the callback would be refused or sent nowhere, so the

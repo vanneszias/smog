@@ -2,15 +2,49 @@
 import { getPayload, handleEndpoints } from "payload";
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
   expect,
   it,
+  type MockInstance,
   vi,
 } from "vitest";
+import * as paidRenders from "@/lib/paidRenders";
+import * as remotionLambda from "@/lib/remotionLambda";
+import { RemotionStartError } from "@/lib/remotionLambda";
+import * as renderJob from "@/lib/renderJob";
+import { claimRenderJob } from "@/lib/renderState";
 import nextConfig from "../../next.config";
+import { configureRenders } from "../../tests/helpers/renderEnv";
 import config from "../payload.config";
+
+/*
+ * Remotion Lambda's transport, stubbed: a paid delivery submits renders, and
+ * a delivery under test must never reach AWS. `remotionLambda.test.ts` is
+ * where the request itself is held to the official client's.
+ *
+ * A spy on the module rather than `vi.mock`, for the reason
+ * `lib/renderJob.test.ts` gives: with `isolate: false` the modules are shared
+ * between files, and a spy is the one stub every importer sees.
+ */
+let startRender: MockInstance<typeof remotionLambda.startRemotionRender>;
+
+/**
+ * Where OpenNext's worker entry keeps the request's Cloudflare context
+ * (`@opennextjs/cloudflare`, `dist/cli/templates/init.js`), and where
+ * `getCloudflareContext` reads it. Spelled out rather than imported: the
+ * package exports no name for it, and the test is that the handler finds a
+ * context put exactly where the Worker puts one.
+ */
+const CLOUDFLARE_CONTEXT = Symbol.for("__cloudflare-context__");
+
+/** A one-pixel GIF: the smallest image `media` will store. */
+const PIXEL = Buffer.from(
+  "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+  "base64"
+);
 
 /*
  * Unique per run: the local D1 under `.wrangler/state/vitest` is never cleared
@@ -144,7 +178,7 @@ describe("the Mollie webhook", () => {
   const seed = async (
     label: string,
     status: Status,
-    overrides: { amountCents?: number; gesture?: number } = {}
+    overrides: { amountCents?: number; gesture?: number; logo?: number } = {}
   ): Promise<number> => {
     const now = Date.now();
     const row = await payload.create({
@@ -154,6 +188,9 @@ describe("the Mollie webhook", () => {
         durationYears: 1,
         endDate: new Date(now + 365 * DAY).toISOString(),
         gesture: overrides.gesture ?? gestureId,
+        ...(overrides.logo === undefined
+          ? {}
+          : { hasLogo: true, overlayImage: overrides.logo }),
         originalVideoPlaybackId: `wh-${RUN}-${label}`,
         overlayText: `Met dank aan ${label}`,
         paymentAmount: overrides.amountCents ?? PRICE,
@@ -215,6 +252,9 @@ describe("the Mollie webhook", () => {
 
   beforeAll(async () => {
     process.env.MOLLIE_API_KEY = STUB_KEY;
+    startRender = vi
+      .spyOn(remotionLambda, "startRemotionRender")
+      .mockRejectedValue(new Error("startRemotionRender was not stubbed"));
     payload = await getPayload({ config });
 
     vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
@@ -276,6 +316,7 @@ describe("the Mollie webhook", () => {
 
   afterAll(() => {
     vi.unstubAllGlobals();
+    startRender.mockRestore();
     process.env.MOLLIE_API_KEY = ORIGINAL_KEY;
   });
 
@@ -868,5 +909,460 @@ describe("the Mollie webhook", () => {
     expect(after.updatedAt).toBe(before.updatedAt);
     expect(await logsFor(id)).toHaveLength(0);
     expect(await claimsFor(paymentId)).toBe(1);
+  });
+
+  /**
+   * Renders are asked for here, on the move to `pending_approval`, and not at
+   * checkout: a checkout nobody pays for costs no Lambda time and leaves no
+   * `renders` row (user decision, 2026-09-23). Every test below points the
+   * submission at a stubbed Lambda, so what is observed is exactly what would
+   * have been sent.
+   */
+  describe("submitting renders once a payment is paid", () => {
+    let restoreRenders: () => void = () => undefined;
+
+    const started = () =>
+      Promise.resolve({
+        bucketName: "remotionlambda-eucentral1-test",
+        renderId: `rr-${crypto.randomUUID()}`,
+      });
+
+    const rendersFor = async (sponsorshipIds: number[]) => {
+      const { docs } = await payload.find({
+        collection: "renders",
+        depth: 0,
+        overrideAccess: true,
+        pagination: false,
+        where: { sponsorship: { in: sponsorshipIds } },
+      });
+
+      return docs;
+    };
+
+    /** A stored logo, as step 2 of the wizard leaves one in `media`. */
+    const seedLogo = async (label: string): Promise<number> => {
+      const media = await payload.create({
+        collection: "media",
+        data: { alt: `Logo ${label}` },
+        file: {
+          data: PIXEL,
+          mimetype: "image/gif",
+          name: `wh-logo-${label}-${RUN}.gif`,
+          size: PIXEL.length,
+        },
+        overrideAccess: true,
+      });
+
+      return media.id;
+    };
+
+    /** A render already held for `sponsorshipId`, walked on to `state`. */
+    const seedRender = async (
+      label: string,
+      sponsorshipId: number,
+      state: "failed" | "queued" | "ready" | "rendering" | "uploading"
+    ) => {
+      const claimed = await claimRenderJob(payload, {
+        jobId: `wh-render-${label}-${RUN}`,
+        sponsorship: sponsorshipId,
+      });
+
+      if (claimed === null) {
+        throw new Error(`could not claim a render for ${label}`);
+      }
+
+      const steps = {
+        failed: ["failed"],
+        queued: [],
+        ready: ["uploading", "ready"],
+        rendering: ["rendering"],
+        uploading: ["uploading"],
+      } as const;
+
+      for (const next of steps[state]) {
+        await payload.update({
+          collection: "renders",
+          data: { state: next },
+          id: claimed.id,
+          overrideAccess: true,
+        });
+      }
+    };
+
+    /** Every line logged at any level while `run` runs, one string each. */
+    const loggedDuring = async (run: () => Promise<unknown>) => {
+      const spies = (["error", "info", "warn"] as const).map((level) =>
+        vi.spyOn(payload.logger, level)
+      );
+
+      try {
+        await run();
+
+        return spies.flatMap((spy) =>
+          spy.mock.calls.map((call) => JSON.stringify(call))
+        );
+      } finally {
+        for (const spy of spies) {
+          spy.mockRestore();
+        }
+      }
+    };
+
+    beforeEach(async () => {
+      restoreRenders = await configureRenders();
+      startRender.mockReset();
+      startRender.mockImplementation(started);
+    });
+
+    afterEach(() => {
+      restoreRenders();
+      startRender.mockReset();
+      startRender.mockRejectedValue(
+        new Error("startRemotionRender was not stubbed")
+      );
+    });
+
+    it("submits exactly one render per sponsorship the paid delivery moved", async () => {
+      const logo = await seedLogo("paid");
+      const plain = await seed("render-plain", "pending_payment");
+      const branded = await seed("render-logo", "pending_payment", { logo });
+      const paymentId = newPaymentId("renderpaid");
+      mollieWillSay({
+        amountCents: PRICE * 2,
+        id: paymentId,
+        sponsorshipIds: [plain, branded],
+        status: "paid",
+      });
+
+      expect((await deliver(paymentId)).status).toBe(200);
+
+      const renders = await rendersFor([plain, branded]);
+
+      expect(renders).toHaveLength(2);
+      expect(startRender).toHaveBeenCalledTimes(2);
+
+      const media = await payload.findByID({
+        collection: "media",
+        depth: 0,
+        id: logo,
+      });
+      const logoUrl = String(media.url).startsWith("/")
+        ? `${SITE}${media.url}`
+        : String(media.url);
+
+      for (const id of [plain, branded]) {
+        const row = await sponsorship(id);
+        const render = renders.find((entry) => entry.sponsorship === id);
+
+        expect(render?.state).toBe("queued");
+
+        // The start carries the job id its row was claimed under, which is
+        // what the callback settles by, and the address this deployment
+        // publishes for it — built from the delivery's own origin.
+        const sent = startRender.mock.calls.find(
+          ([request]) => request.webhook.customData.jobId === render?.jobId
+        )?.[0];
+
+        expect(sent?.webhook.url).toBe(`${SITE}/render/callback`);
+        expect(sent?.inputProps.sponsorName).toBe(row.overlayText);
+        expect(sent?.inputProps.videoSrc).toContain(
+          `/${row.originalVideoPlaybackId}/`
+        );
+        expect(sent?.inputProps.logoUrl).toBe(
+          id === branded ? logoUrl : undefined
+        );
+      }
+    });
+
+    it("submits nothing new when the paid delivery is replayed", async () => {
+      const id = await seed("render-replayed", "pending_payment");
+      const paymentId = newPaymentId("renderreplay");
+      mollieWillSay({ id: paymentId, sponsorshipIds: [id], status: "paid" });
+
+      await deliver(paymentId);
+      await deliver(paymentId);
+
+      expect(startRender).toHaveBeenCalledTimes(1);
+      expect(await rendersFor([id])).toHaveLength(1);
+    });
+
+    it("submits one render for two concurrent deliveries of one payment", async () => {
+      // The delivery claim is what serialises these: only the delivery that
+      // inserts it reaches the update, and only that one's moved rows are
+      // submitted. Neither the `status` clause nor the render check below it
+      // is atomic on this adapter.
+      const id = await seed("render-concurrent", "pending_payment");
+      const paymentId = newPaymentId("renderconcurrent");
+      mollieWillSay({ id: paymentId, sponsorshipIds: [id], status: "paid" });
+
+      await Promise.all([deliver(paymentId), deliver(paymentId)]);
+
+      expect(startRender).toHaveBeenCalledTimes(1);
+      expect(await rendersFor([id])).toHaveLength(1);
+    });
+
+    it.each([
+      "authorized",
+      "canceled",
+      "expired",
+      "failed",
+      "open",
+      "pending",
+    ])("submits nothing for a payment that is %s", async (status) => {
+      const id = await seed(`render-${status}`, "pending_payment");
+      const paymentId = newPaymentId(`render${status}`);
+      mollieWillSay({ id: paymentId, sponsorshipIds: [id], status });
+
+      expect((await deliver(paymentId)).status).toBe(200);
+      expect(startRender).not.toHaveBeenCalled();
+      expect(await rendersFor([id])).toEqual([]);
+    });
+
+    it.each([
+      "queued",
+      "rendering",
+      "uploading",
+      "ready",
+    ] as const)("skips a sponsorship that already has a %s render", async (state) => {
+      // Not reachable through this app's own flow — nothing moves a
+      // sponsorship back to `pending_payment`, and the delivery claim is a
+      // receipt kept for ever — so the row is put there by hand. It is the
+      // guard that holds if either of those ever changes.
+      const id = await seed(`render-held-${state}`, "pending_payment");
+      await seedRender(`held-${state}`, id, state);
+      const paymentId = newPaymentId(`renderheld${state}`);
+      mollieWillSay({ id: paymentId, sponsorshipIds: [id], status: "paid" });
+
+      expect((await deliver(paymentId)).status).toBe(200);
+      expect(await statusOf(id)).toBe("pending_approval");
+      expect(startRender).not.toHaveBeenCalled();
+      expect(await rendersFor([id])).toHaveLength(1);
+    });
+
+    it("submits again for a sponsorship whose only render failed", async () => {
+      // A `failed` render is an answer, not a job in hand: the sponsorship
+      // has no composite, and a new job id is how one is asked for again
+      // (`lib/renderState.ts`). Reached by hand for the reason the test above
+      // gives.
+      const id = await seed("render-after-failure", "pending_payment");
+      await seedRender("after-failure", id, "failed");
+      const paymentId = newPaymentId("renderafterfailure");
+      mollieWillSay({ id: paymentId, sponsorshipIds: [id], status: "paid" });
+
+      expect((await deliver(paymentId)).status).toBe(200);
+      expect(startRender).toHaveBeenCalledTimes(1);
+
+      const states = (await rendersFor([id])).map((render) => render.state);
+
+      expect(states.sort()).toEqual(["failed", "queued"]);
+    });
+
+    it("still answers 200, and still advances, when Lambda refuses the start", async () => {
+      const id = await seed("render-refused", "pending_payment");
+      const paymentId = newPaymentId("renderrefused");
+      mollieWillSay({ id: paymentId, sponsorshipIds: [id], status: "paid" });
+      startRender.mockRejectedValue(
+        new RemotionStartError(
+          "[remotionLambda] Lambda refused the invoke with HTTP 403 (AccessDeniedException)",
+          { definite: true }
+        )
+      );
+
+      let response: Response | undefined;
+      const logged = await loggedDuring(async () => {
+        response = await deliver(paymentId);
+      });
+
+      expect(response?.status).toBe(200);
+      expect(await statusOf(id)).toBe("pending_approval");
+      // The claim was taken and handed back: nothing was started.
+      expect(startRender).toHaveBeenCalledTimes(1);
+      expect(await rendersFor([id])).toEqual([]);
+
+      const failed = logged.filter((line) =>
+        line.includes("[renderJob] Failed to submit")
+      );
+
+      expect(failed).toHaveLength(1);
+      expect(failed[0]).toContain(`sponsorship ${id}`);
+
+      // Ids and messages only: no signed URL, no sponsor name, no secret.
+      const row = await sponsorship(id);
+
+      for (const line of logged) {
+        expect(line).not.toContain("token=");
+        expect(line).not.toContain(row.sponsorName);
+        expect(line).not.toContain(row.overlayText);
+        expect(line).not.toContain("stub-render-secret-for-tests-only");
+      }
+    });
+
+    it("answers 200 even if the whole submission rejects", async () => {
+      // `submitPaidRenders` catches its own failures, so this is the second
+      // line: without the handler's own `catch`, a fault there would become a
+      // 500 whenever the work is awaited rather than handed to `waitUntil`,
+      // and Mollie would redeliver a payment already recorded.
+      const id = await seed("render-rejects", "pending_payment");
+      const paymentId = newPaymentId("renderrejects");
+      mollieWillSay({ id: paymentId, sponsorshipIds: [id], status: "paid" });
+      const submit = vi
+        .spyOn(paidRenders, "submitPaidRenders")
+        .mockRejectedValueOnce(
+          new Error("[renderJob] a fault it did not catch")
+        );
+
+      let response: Response | undefined;
+      let logged: string[] = [];
+
+      try {
+        logged = await loggedDuring(async () => {
+          response = await deliver(paymentId);
+        });
+      } finally {
+        submit.mockRestore();
+      }
+
+      expect(response?.status).toBe(200);
+      expect(await statusOf(id)).toBe("pending_approval");
+      expect(
+        logged.filter((line) => line.includes("No render could be submitted"))
+      ).toHaveLength(1);
+    });
+
+    it("answers 200 even if the submission throws before it returns a promise", async () => {
+      const id = await seed("render-throws", "pending_payment");
+      const paymentId = newPaymentId("renderthrows");
+      mollieWillSay({ id: paymentId, sponsorshipIds: [id], status: "paid" });
+      const submit = vi
+        .spyOn(paidRenders, "submitPaidRenders")
+        .mockImplementationOnce(() => {
+          throw new Error("[renderJob] a synchronous fault");
+        });
+
+      let response: Response | undefined;
+
+      try {
+        response = await deliver(paymentId);
+      } finally {
+        submit.mockRestore();
+      }
+
+      expect(response?.status).toBe(200);
+      expect(await statusOf(id)).toBe("pending_approval");
+    });
+
+    it("carries on with the rest of the order when one render's submission throws", async () => {
+      const first = await seed("render-first", "pending_payment");
+      const second = await seed("render-second", "pending_payment");
+      const paymentId = newPaymentId("renderrest");
+      mollieWillSay({
+        amountCents: PRICE * 2,
+        id: paymentId,
+        sponsorshipIds: [first, second],
+        status: "paid",
+      });
+      const submit = vi
+        .spyOn(renderJob, "submitRenderJob")
+        .mockRejectedValueOnce(
+          new Error("[renderJob] a fault it did not catch")
+        );
+
+      let response: Response | undefined;
+      let logged: string[] = [];
+
+      try {
+        logged = await loggedDuring(async () => {
+          response = await deliver(paymentId);
+        });
+      } finally {
+        submit.mockRestore();
+      }
+
+      expect(response?.status).toBe(200);
+      // One of the two was refused by the fault, and the other still went.
+      expect(startRender).toHaveBeenCalledTimes(1);
+      expect(await rendersFor([first, second])).toHaveLength(1);
+      expect(
+        logged.filter((line) => line.includes("No render could be submitted"))
+      ).toHaveLength(1);
+    });
+
+    it("says so, and claims nothing, when rendering is not configured", async () => {
+      restoreRenders();
+      restoreRenders = () => undefined;
+
+      const id = await seed("render-unconfigured", "pending_payment");
+      const paymentId = newPaymentId("renderunconfigured");
+      mollieWillSay({ id: paymentId, sponsorshipIds: [id], status: "paid" });
+
+      let response: Response | undefined;
+      const logged = await loggedDuring(async () => {
+        response = await deliver(paymentId);
+      });
+
+      expect(response?.status).toBe(200);
+      expect(startRender).not.toHaveBeenCalled();
+      expect(await rendersFor([id])).toEqual([]);
+      expect(
+        logged.filter(
+          (line) =>
+            line.includes("[renderJob] No render was submitted") &&
+            line.includes(`sponsorship ${id}`)
+        )
+      ).toHaveLength(1);
+    });
+
+    it("answers before the submission finishes when the Worker offers waitUntil", async () => {
+      // On Workers the webhook must not hold Mollie's request open for a
+      // Lambda start: the submission is handed to `ctx.waitUntil` and the
+      // answer goes out at once. The context is put where OpenNext's worker
+      // entry puts it, and the start is held open until the answer is in.
+      const id = await seed("render-wait-until", "pending_payment");
+      const paymentId = newPaymentId("renderwaituntil");
+      mollieWillSay({ id: paymentId, sponsorshipIds: [id], status: "paid" });
+
+      const held: Promise<unknown>[] = [];
+      let finishStart: () => void = () => undefined;
+
+      startRender.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishStart = () =>
+              resolve({
+                bucketName: "remotionlambda-eucentral1-test",
+                renderId: "rr-wait-until",
+              });
+          })
+      );
+
+      const global = globalThis as Record<symbol, unknown>;
+      global[CLOUDFLARE_CONTEXT] = {
+        cf: undefined,
+        ctx: { waitUntil: (promise: Promise<unknown>) => held.push(promise) },
+        env: {},
+      };
+
+      let response: Response;
+
+      try {
+        response = await deliver(paymentId);
+      } finally {
+        delete global[CLOUDFLARE_CONTEXT];
+      }
+
+      expect(response.status).toBe(200);
+      expect(await statusOf(id)).toBe("pending_approval");
+      expect(held).toHaveLength(1);
+
+      // The start is still in flight after the answer went out.
+      await vi.waitFor(() => expect(startRender).toHaveBeenCalledTimes(1));
+      finishStart();
+      await held[0];
+
+      const renders = await rendersFor([id]);
+
+      expect(renders).toHaveLength(1);
+      expect(renders[0]?.state).toBe("queued");
+    });
   });
 });

@@ -47,8 +47,9 @@ import type { Render } from "@/payload-types";
  * that arrives every month, for ever, for a video nobody can name.
  *
  * **The plan said to reuse Task 1's claim on the `renders` row, and that
- * cannot work.** That row is created by the submitter at checkout, so it
- * already exists by the time Lambda calls back: two concurrent callbacks would
+ * cannot work.** That row is created by the submitter — the Mollie webhook,
+ * once the payment is paid — so it already exists by the time Lambda calls
+ * back: two concurrent callbacks would
  * both *lose* an insert against it and neither would upload. It cannot be an
  * `update` with a `where` either, however phrased — **a `where` on an update
  * is a SELECT**, measured on this adapter, with two concurrent conditional
@@ -145,10 +146,16 @@ const BEARER = "Bearer ";
 /**
  * The sponsorship statuses a freshly composed video may be attached to.
  *
- * A render is submitted at checkout, while the sponsorship is
- * `pending_payment`, and the callback lands minutes later — by which time the
- * Mollie webhook may have moved it to `pending_approval`. Those two are the
- * whole of the legitimate window.
+ * A render is submitted by the Mollie webhook as it moves the sponsorship to
+ * `pending_approval` (`lib/paidRenders.ts`), and the callback lands minutes
+ * later, while the sponsorship waits in the approval queue with the
+ * composite still to come. That is the legitimate window.
+ *
+ * `pending_payment` stays in the set although this application no longer
+ * submits a render for a sponsorship in it — renders used to be submitted at
+ * checkout — because nothing moves a sponsorship back to `pending_payment`,
+ * so the entry can only admit a render that was really asked for, and taking
+ * it out was not part of the change that moved submission after payment.
  *
  * Every other status is excluded for its own reason, and none of them is
  * defensive:

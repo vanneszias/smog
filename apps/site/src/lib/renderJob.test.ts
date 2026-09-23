@@ -285,9 +285,9 @@ describe("submitting a render job", () => {
      * The state every deployment is in until the Remotion Lambda deploy fills
      * in `REMOTION_FUNCTION_NAME` and `REMOTION_SERVE_URL`: `wrangler.jsonc`
      * already sets the region, and that alone is not a target. What this
-     * asserts is that the gap is *stated* — a checkout that silently did
-     * nothing would leave a sponsor waiting for a composite that was never
-     * going to arrive, with nothing in any log saying so.
+     * asserts is that the gap is *stated* — a paid sponsorship that silently
+     * got nothing would leave a sponsor waiting for a composite that was
+     * never going to arrive, with nothing in any log saying so.
      */
     restoreEnv("REMOTION_FUNCTION_NAME", undefined);
     process.env.REMOTION_REGION = "eu-central-1";
@@ -311,7 +311,7 @@ describe("submitting a render job", () => {
       "REMOTION_FUNCTION_NAME"
     );
     // Nothing was prepared, so nothing was signed: an unconfigured deployment
-    // does not need a Mux signing key to complete a checkout.
+    // does not need a Mux signing key to record a payment.
     expect(logger.error).not.toHaveBeenCalled();
   });
 });
@@ -405,7 +405,7 @@ describe("submitting a configured render job", () => {
   });
 
   it("mints a new job id for every render", async () => {
-    // One sponsorship, two checkouts' worth of renders: two rows, two ids. A
+    // One sponsorship, two submissions' worth of renders: two rows, two ids. A
     // job id reused would make the second render's callback a replay.
     const { payload, renders } = fakePayload();
 

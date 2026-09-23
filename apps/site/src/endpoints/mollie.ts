@@ -1,6 +1,8 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { Endpoint, PayloadHandler, PayloadRequest } from "payload";
 import { CLAIM_KINDS, releaseClaim, takeClaim } from "@/lib/claims";
 import { MollieRefusedError, readMolliePayment } from "@/lib/mollie";
+import { submitPaidRenders } from "@/lib/paidRenders";
 import type { Sponsorship } from "@/payload-types";
 
 /**
@@ -88,6 +90,20 @@ import type { Sponsorship } from "@/payload-types";
  * with a read followed by a write by id is an equivalent mutant given the
  * claim — that is what `payload.update` does internally — and is recorded as
  * such rather than pretended to be caught.
+ *
+ * ## A paid payment asks for its renders, after the answer
+ *
+ * The move to `pending_approval` is where the composed videos are asked for
+ * (`lib/paidRenders.ts` has why: user decision, 2026-09-23). Exactly the rows
+ * this delivery's update moved are submitted, once each, so the delivery
+ * claim above is also what keeps two concurrent deliveries from submitting
+ * twice: only the one that inserted it reaches the update. A replay is turned
+ * away before it, and a delivery that finds a row already advanced moves
+ * nothing and so submits nothing for it.
+ *
+ * The submission runs **off the request path**, through the Worker's
+ * `ctx.waitUntil`, because Mollie is owed a prompt answer and a Lambda start
+ * takes seconds per gesture. See `afterAnswering`.
  */
 
 /** What a payment id must be resolvable to before anything is written. */
@@ -301,6 +317,66 @@ async function resolveSponsorships(
   return docs.length === ids.length ? docs : null;
 }
 
+/** An error's message and nothing else: no stack, no cause, no body. */
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : "unknown error";
+}
+
+/**
+ * The Worker's execution context for this request, or `null` outside one.
+ *
+ * OpenNext's worker entry runs every request inside an `AsyncLocalStorage`
+ * holding `{ env, ctx, cf }`, and `getCloudflareContext` reads it
+ * (`@opennextjs/cloudflare`, `dist/cli/templates/init.js`). Tests, `next dev`
+ * and the Payload CLI run without that entry, where the sync form throws —
+ * which is what `null` stands for here.
+ */
+function executionContext(): null | {
+  waitUntil(promise: Promise<unknown>): void;
+} {
+  try {
+    return getCloudflareContext().ctx;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Runs `work` after this request has been answered, where the platform allows
+ * it, and settles only once it is done where it does not.
+ *
+ * On Workers the promise goes to `ctx.waitUntil`, which keeps the invocation
+ * alive for it after the response is sent; the handler answers at once.
+ * Without a Worker context — tests, local runs — it is awaited instead, so
+ * the work still happens and a test can observe it.
+ *
+ * **The promise it runs never rejects**, and that is load-bearing for the
+ * awaited path: a fault in `work` would otherwise become a 500 on a payment
+ * that has already been recorded, and Mollie would redeliver it for nothing.
+ * `Promise.resolve().then(work)` rather than `work()`, so that even a
+ * synchronous throw lands in the `catch`.
+ */
+function afterAnswering(
+  req: PayloadRequest,
+  label: string,
+  work: () => Promise<void>
+): Promise<void> {
+  const settled = Promise.resolve()
+    .then(work)
+    .catch((error: unknown) => {
+      req.payload.logger.error(`[mollie] ${label}: ${messageOf(error)}`);
+    });
+  const context = executionContext();
+
+  if (context === null) {
+    return settled;
+  }
+
+  context.waitUntil(settled);
+
+  return Promise.resolve();
+}
+
 const mollieWebhook: PayloadHandler = async (
   req: PayloadRequest
 ): Promise<Response> => {
@@ -402,6 +478,9 @@ const mollieWebhook: PayloadHandler = async (
   const { docs, errors } = await req.payload.update({
     collection: "sponsorships",
     data: { status: target },
+    // Ids, not populated relations: `submitPaidRenders` reads `overlayImage`
+    // as a media id and looks it up itself.
+    depth: 0,
     overrideAccess: true,
     where: {
       and: [
@@ -422,6 +501,26 @@ const mollieWebhook: PayloadHandler = async (
   req.payload.logger.info(
     `[mollie] Payment ${paymentId} moved ${docs.length} of ${ids.length} sponsorships to ${target}`
   );
+
+  if (target === PAID_TARGET && docs.length > 0) {
+    /*
+     * The origin is this request's, which is the site's public origin by
+     * construction: Mollie posts to the `webhookUrl` checkout built from
+     * *its* request's origin (`endpoints/sponsorships.ts`, `webhookUrlFor`),
+     * and every other URL this app hands a third party on a request path —
+     * the Mollie redirect and webhook, the logo — is built the same way.
+     * `SITE_ORIGIN` exists for the scheduled tick, which has no request.
+     */
+    await afterAnswering(
+      req,
+      `No render could be submitted for payment ${paymentId}`,
+      () =>
+        submitPaidRenders(req.payload, {
+          origin: req.origin ?? "",
+          sponsorships: docs,
+        })
+    );
+  }
 
   return acknowledged();
 };

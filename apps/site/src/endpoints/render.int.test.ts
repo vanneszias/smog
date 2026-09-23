@@ -201,9 +201,10 @@ describe("the render callback", () => {
   };
 
   /**
-   * A sponsorship and a `queued` render row for it, exactly as Task 4's
-   * checkout will leave them: the submitter owns the `renders` row, which is
-   * the whole reason the callback needs a claim of its own.
+   * A sponsorship and a `queued` render row for it, exactly as the paid
+   * Mollie webhook leaves them (`lib/paidRenders.ts`): the submitter owns the
+   * `renders` row, which is the whole reason the callback needs a claim of
+   * its own.
    */
   const seedJob = async (
     label: string,
@@ -709,10 +710,13 @@ describe("the render callback", () => {
   });
 
   it("attaches to a sponsorship that is still waiting to be paid for", async () => {
-    // The positive beside all three negatives above. A render is submitted at
-    // checkout, while the sponsorship is `pending_payment`, so this is the
-    // ordinary case and not an edge — and without it every refusal above would
-    // also pass against a handler that never attached anything at all.
+    // The positive beside all three negatives above, for the second status
+    // `STATUSES_AWAITING_A_COMPOSITION` admits. The ordinary case is now
+    // `pending_approval` — renders are submitted once the payment is paid —
+    // and "advances the render and stores the Mux ids" covers it; this one
+    // pins that `pending_payment` is still admitted, as `endpoints/render.ts`
+    // explains. Without a positive, every refusal above would also pass
+    // against a handler that never attached anything at all.
     const { id, sponsorship: sponsorshipId } = await seedJob(
       "unpaid",
       "pending_payment"
