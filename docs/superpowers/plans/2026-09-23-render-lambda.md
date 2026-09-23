@@ -252,15 +252,44 @@ Tests:
 
 ## Exit
 
-(Filled in when the branch review closes.)
+Landed 2026-09-23, commits 3e6c347 → 8cccc18 on `claude/exciting-cerf-y8jun7`, CI green along the way. Nothing was deployed: no AWS, Cloudflare or Mux credentials existed in this session, and the first real render is the runbook's job (`docs/cutover-runbook.md`, section 1, decision 7).
 
-Notes recorded by the final-review fix wave, for the Exit:
+**What shipped, and where it departs from the plan above** (the installed code, and one user decision, won over the plan's text):
 
-- **Renders are submitted after payment, not at checkout** (user decision,
-  2026-09-23). The Goal above says "at checkout"; the shipped code submits
-  from the Mollie webhook's `pending_payment → pending_approval` move, off
-  the request path (`apps/site/src/lib/paidRenders.ts`).
-- **Package-name collision.** `apps/remotion`'s workspace is named
-  `remotion`, the same as the `remotion` npm package; this plan's app is
-  `render`. `bun -F remotion …` targets the legacy app. No code change;
-  noted in `apps/render/README.md`. It ends when `apps/remotion` is deleted.
+- **The start routine is a plain `RequestResponse` Invoke** (`POST /2015-03-31/functions/<name>/invocations`) answering one JSON object — not the event stream and `remotion_buffer:` framing the "Facts" section describes. Those are real, but belong to `still`, not `start` (`callLambdaSyncWithoutRetry` in `@remotion/lambda-client@4.0.484`). The contract test captures the real client's request over the wire, via `AWS_ENDPOINT_URL_LAMBDA` and a local server, rather than through an injected `requestHandler`, which this path ignores.
+- **Renders are submitted after payment**, from the Mollie webhook's move to `pending_approval`, inside `ctx.waitUntil`, concurrently, and at most once per sponsorship. That was the user's decision on 2026-09-23, replacing "at checkout": unpaid checkouts cost nothing, and checkout no longer waits on Lambda. The Goal line above still says "at checkout"; this section supersedes it.
+- **Start failures are a `RemotionStartError` with `definite`.** A definite failure releases the claim. An ambiguous one (timeout, network, 5xx, a malformed 2xx) keeps it, so a late webhook still settles the render, and the 6 h sweep fails it otherwise.
+- **The stalled sweep also covers `uploading`**, because Remotion allows 10 s per webhook delivery and retries at most twice.
+- **Lambda logs at `warn`**, because at `info` Remotion writes the input props, including the signed source URL, to CloudWatch. Failure reasons are stored with URLs replaced by `<url>`.
+- **Per-environment Remotion sites** (`smog-render-staging`, `smog-render-production`) share one function. The Worker has its own least-privilege IAM user (`lambda:InvokeFunction` only).
+- **Bundle:** 7.41 MiB gzipped of 10 MiB (26% headroom), from 7.40. Nothing from `@remotion/*` or `@aws-sdk` is reachable from the Worker; `aws4fetch` is the only new runtime dependency.
+
+**Tests:** the full site suite passed at 1948/1948 after the final fix wave, and the site's `lib`, `endpoints` and expiry-job suites passed 1031/1031 at the close. `apps/render` passes 4/4. Knip, `bun check`, `check-types` and `bun audit --production` are clean. Every behaviour test was seen failing first, directly or by mutation.
+
+**Open, and why they are not this plan's:**
+- **The source URL may not exist.** `…/high.mp4` needs Mux MP4 static renditions, which the legacy uploader never enabled. This is a launch-blocking check at the first staging render, with the two known fixes written down (runbook decision 7).
+- **No re-render path.** A failed render, a re-edit, or a submission cut off before its claim leaves the sponsorship without a composite until an admin action exists. This is documented as a follow-up.
+- **Licence.** `licenseKey` is `null`; whether a Remotion company licence applies is the owner's decision.
+- **The `remotion` package-name collision** with `apps/remotion` ends when the legacy app is deleted after cutover.
+
+## Rulings made during execution
+
+Copied from the SDD ledger when the branch review closed. Each reads: what was decided — why — what it costs if wrong.
+
+- T3's StartRenderInput / StartedRender are exported only if T4 imports them by name; otherwise keep them module-private (knip) — cost if wrong: a knip failure caught before commit.
+- the plan's "Facts read from Remotion source" were read from npm tarballs in scratch; implementers re-read installed node_modules and the code wins — cost if wrong: none.
+- carry the stale renderJob.test.ts:101-106 comment into Task 4 (it owns renderJob). Ruling: @aws-sdk root bump 3.984→3.986 accepted; Task 4's bundle re-measure is the check.
+- accept the code's transport over the plan's — start uses RequestResponse Invoke (callLambdaSyncWithoutRetry), single JSON response, no event stream/framing; no eventstream-codec / serverless deps — the installed client is the authority — cost if wrong: none (wire-captured).
+- aws4fetch retries: 0 (official client makes one attempt; a retried start = a second render). Accept 30 s timeout (start returns after launching); a timeout-then-release leaves at worst an ignored webhook for an unclaimed job.
+- licenseKey null (client default); whether a Remotion company licence applies is a user/policy question — surfaced to user, not blocking.
+- ambiguous start failures (TimeoutError, network/TypeError, HTTP 5xx/429) KEEP the claim (row stays queued) so a late webhook still settles it and Task 5's 6-hour sweep fails it otherwise; definite refusals (4xx, x-amz-function-error, type:error, invalid region, missing creds/secret) release — cost if wrong: a row lingers ≤6 h as queued.
+- Remotion's Content-Length = jsonPayload.length (chars) — document in Task 5's runbook note; nothing to fix our side.
+- RemotionStartError{definite}; definite = invalid region, missing creds, 4xx incl. 429, x-amz-function-error, type:error → release; ambiguous = timeout, network, 5xx, body-read failure / empty / non-JSON / missing ids after 2xx → keep claim — cost if wrong: row lingers ≤6 h.
+- Task 5's stalled sweep also covers `uploading` (reason "upload to Mux never finished") — cost if wrong: a slow-but-alive upload marked failed after 6 h.
+- minors 1-7,9 in fix round 1; 8 (Content-Length/undici) → Task 5 runbook note, worded as "the webhook may be rejected or fail verification".
+- I1 — docs: a separate least-privilege IAM user for the Worker (lambda:InvokeFunction on remotion-render-* in eu-central-1 only); the deploy user's key stays on the operator's machine.
+- I2 — the high.mp4 source likely needs Mux static renditions; cannot verify without Mux access → runbook launch-blocking check at the staging render, with the two fixes (add a "highest" static rendition to gesture assets, or a master-access flow). Code unchanged.
+- all 10 minors in the same fix wave (per-environment site names for staging/production; version test extended to remotion + @remotion/cli; callback checks render state before claiming).
+- concern 1 (sequential starts vs waitUntil's bounded lifetime) — controller made submissions concurrent (own row per sponsorship, no shared order) — cost if wrong: concurrent D1 inserts of distinct rows, safe.
+- concern 2 (Lambda error text may quote the signed URL; stored + logged) — controller redacts http(s) URLs to <url> in failureReason, test red→green — cost if wrong: operator loses the URL (it was a credential anyway).
+- concerns 3 (no re-render path) and 4 (hand-edited Mollie payment race) accepted as documented known limitations. Concern 5 runbook line fixed by controller. Concern 6: controller measured the bundle: 7.41 MiB gzipped (26% headroom).
