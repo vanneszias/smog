@@ -1,15 +1,16 @@
 /**
- * Representative development content for Stages 2 through 5.
+ * Representative development content.
  *
- * This is *not* the Stage 9 production migration from Convex. It exists so the
- * design system, the public site and the sponsor flow have something honest to
- * render against: real Flemish/Dutch SMOG vocabulary, names of wildly
- * different lengths, gestures in more than one category, one deactivated
- * gesture, and enough documents that a list view actually paginates.
+ * This is *not* the production catalogue import (`scripts/migrate-convex`). It
+ * exists so the design system, the public site and the sponsor flow have
+ * something honest to render against: real Flemish/Dutch SMOG vocabulary, names
+ * of wildly different lengths, gestures in more than one category, one
+ * deactivated gesture, and enough documents that a list view actually
+ * paginates.
  *
- * Localization follows the spec: Dutch (`nl`) is the source of truth, `en` and
- * `fr` are optional. Some fixtures carry translations and some deliberately do
- * not, so Stage 2 meets locale fallback here rather than discovering it in
+ * Localization: Dutch (`nl`) is the source of truth, `en` and `fr` are
+ * optional. Some fixtures carry translations and some deliberately do not, so
+ * the public site meets locale fallback here rather than discovering it in
  * production.
  */
 
@@ -43,11 +44,10 @@ export interface GestureFixture {
  * Mux's public sample asset, used throughout Mux's own documentation, so a
  * seeded gesture plays a real video locally instead of erroring on a dead id.
  *
- * The plan asked for "a real Mux playback ID from the existing production
- * data". No production playback id exists anywhere in this repository — they
- * live in Convex — and hard-coding one from the live product into a committed
- * fixture would publish a customer's video id. When Stage 9 brings the real
- * data across, swapping this one constant is the whole change.
+ * Not a real production playback id: none exists anywhere in this repository
+ * — they arrive with the catalogue import — and hard-coding one from the live
+ * product into a committed fixture would publish a customer's video id.
+ * Swapping this one constant is the whole change if one is ever wanted.
  */
 export const SEED_PLAYBACK_ID =
   "qxb01i6T202018GFS02vp9RIe01icTcDCjVzQpmaB00CUisJ4";

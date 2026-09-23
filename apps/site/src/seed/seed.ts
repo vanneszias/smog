@@ -32,7 +32,7 @@ import {
  * pointed at a local emulated database.
  */
 
-/** Dutch is the source of truth; see the spec's Localization section. */
+/** Dutch is the source of truth; `en` and `fr` are optional translations. */
 const DEFAULT_LOCALE = "nl";
 
 export interface SeedCounts {

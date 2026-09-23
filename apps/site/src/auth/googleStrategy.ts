@@ -245,7 +245,7 @@ function oauthSessionStrategy(providerId: string): AuthStrategy {
  * The only provider wired up today.
  *
  * The factory above is deliberately **not** exported: knip fails the build on
- * an export nothing imports, and "exported for the Apple task to use later"
+ * an export nothing imports, and "exported for Apple sign-in to use later"
  * is exactly the shape of unused export it exists to catch. Apple's line goes
  * next to this one.
  */

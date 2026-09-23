@@ -141,10 +141,10 @@ describe("search index sync", () => {
    * search document per gesture, with per-locale values filled in as editors
    * translate, NOT one document per locale and NOT every locale on every save.
    *
-   * The consequence that matters for Stage 2: `fallback: true` applies when a
-   * document is *read*, but not to a `where` clause. An entry indexed only in
-   * `nl` is returned (with its Dutch title) by a French read, and is NOT
-   * matched by a French query. A search UI must therefore query the default
+   * The consequence that matters for the public site: `fallback: true` applies
+   * when a document is *read*, but not to a `where` clause. An entry indexed
+   * only in `nl` is returned (with its Dutch title) by a French read, and is
+   * NOT matched by a French query. A search UI must therefore query the default
    * locale, or query the user's locale and fall back to `nl` itself.
    */
   describe("localization", () => {

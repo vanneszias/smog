@@ -200,9 +200,9 @@ function assertsVerifiedEmail(value: unknown): boolean {
  * object: signature verification needs the network and a key, and these
  * rules need neither.
  *
- * **The address must be verified even when no account exists yet.** The plan
- * only demands it for *linking* to an existing password account, which is
- * the account-takeover case. Requiring it for registration too closes the
+ * **The address must be verified even when no account exists yet.**
+ * *Linking* to an existing password account is the obvious case, because it
+ * is the account-takeover one. Requiring it for registration too closes the
  * quieter one: an unverified address creates an account holding a name that
  * is not the signer's, and the real owner then cannot register it and cannot
  * be told why without leaking that it is taken.
