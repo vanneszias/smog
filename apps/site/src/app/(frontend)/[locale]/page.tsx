@@ -159,6 +159,29 @@ export async function generateMetadata({
 export const dynamic = "force-dynamic";
 
 /**
+ * The categories to offer, or none when they cannot be read.
+ *
+ * The one place on this page that reads the database, and the page must not
+ * fall over with it: before this section existed the home page issued no query
+ * at all for a signed-out visitor, so a database hiccup — a locked local D1
+ * while the e2e fixtures are being written is the one seen so far — would now
+ * turn the front door into an error page over a list of shortcuts. The
+ * section is left out instead, which is what an empty list already does, and
+ * the failure is logged, not hidden.
+ */
+async function loadCategories(
+  locale: Locale
+): Promise<{ id: string; name: string }[]> {
+  try {
+    return await fetchCategoryOptions(locale, { limit: HOME_CATEGORY_LIMIT });
+  } catch (error) {
+    console.error("[home] Failed to load the categories:", error);
+
+    return [];
+  }
+}
+
+/**
  * The locale home: search, what SMOG is, a way into the categories, the app
  * and sponsoring.
  *
@@ -187,9 +210,7 @@ export default async function LocaleHomePage({
 
   const copy = COPY[locale];
   const gesturesPath = `/${locale}/gestures`;
-  const categories = await fetchCategoryOptions(locale, {
-    limit: HOME_CATEGORY_LIMIT,
-  });
+  const categories = await loadCategories(locale);
   // The list's own URL builder, so a category link is exactly the URL the
   // filter on the list page would have produced for the same choice.
   const unfiltered = parseGestureListParams(new URLSearchParams());

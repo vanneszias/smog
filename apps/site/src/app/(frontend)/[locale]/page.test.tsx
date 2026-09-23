@@ -152,6 +152,25 @@ describe("the locale home page", () => {
     expect(hrefOf('a[href="/nl/sponsor"]')).toBe("/nl/sponsor");
   });
 
+  it("still renders, without the categories, when they cannot be read", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {
+      /* expected: the page logs the failure */
+    });
+    find.mockRejectedValue(new Error("database is locked"));
+
+    await render("nl");
+
+    expect(container.querySelector("h1")).not.toBeNull();
+    expect(
+      container.querySelector('[data-testid="home-categories"]')
+    ).toBeNull();
+    expect(error).toHaveBeenCalledWith(
+      "[home] Failed to load the categories:",
+      expect.any(Error)
+    );
+    error.mockRestore();
+  });
+
   it.each([
     {
       appStore: "Download in de App Store",
