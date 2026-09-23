@@ -170,7 +170,10 @@ down.
 - **The Convex export works on a paused deployment.** The window exports
   after pausing; prove it on a paused non-production deployment (pausing
   production would take the old app down). The production deploy key comes
-  from the Convex dashboard; keep it in the password manager.
+  from the Convex dashboard; keep it in the password manager. Also confirm
+  the dashboard still shows table row counts while paused. If it does not,
+  take the window's row counts just before pausing, with the maintenance page
+  already up; the dry run refuses the same tables either way.
 - **The maintenance image is built the day before**, on the legacy host from
   `/opt/smog`: `docker compose -f maintenance/compose.yml build`. A build in
   the window is time with the site down. Its Caddy keeps certificates in its
@@ -190,11 +193,13 @@ down.
   printf 'Authorization: Bearer %s\n' "$JOBS_RUN_TOKEN" |
     curl --max-time 600 -H @- \
     https://smog-site-production.vanneszias.workers.dev/api/jobs/run
+  unset JOBS_RUN_TOKEN
   ```
 
   `printf` is a shell builtin and `-H @-` reads the header from standard
-  input, so the token is in neither shell history nor the process list. The token was stored in the password manager when it was set (checklist,
-  step 4). If it was not, set a new one that way now.
+  input, so the token is in neither shell history nor the process list. The
+  token was stored in the password manager when it was set (checklist, step
+  4). If it was not, set a new one that way now.
 - **Payments**: one full test-mode checkout on staging with a `test_` key,
   including the webhook moving the sponsorship to `pending_approval` (Mollie
   shows the payment `paid`). Production's `live_` key is set but not
@@ -207,15 +212,21 @@ down.
   the report**). Deleting a single search entry by hand is refused — check
   that on staging, deployed from the same commit: production has no entries
   yet.
-- **Device checks on an internal / TestFlight build** with
-  `EXPO_PUBLIC_API_URL` set to the production `workers.dev` address
-  (checklist §6) — the store build's final address does not reach the new
-  stack until the switch: the consent banner lays out correctly on a small
-  and a large phone and does not sit under a toast; sign-in survives an app
-  restart; after **deleting and reinstalling** the app no previous session is
-  silently reused from the keychain (iOS keeps keychain items across
-  reinstalls); and, if decision 3 keeps the existing identity, it installs
-  as an **upgrade over the store's 2.0.2** and starts cleanly.
+- **Device checks, in two builds.** (a) An internal build
+  (`eas build --profile preview`, run in `apps/mobile`) with the EAS
+  `preview` environment's `EXPO_PUBLIC_API_URL` set to
+  `https://smog-site-production.vanneszias.workers.dev` (checklist §6;
+  confirm in the build log which environment was loaded) — the store build's
+  final address does not reach the new stack until the switch. On it: the
+  consent banner lays out correctly on a small and a large phone and does not
+  sit under a toast; sign-in survives an app restart; after **deleting and
+  reinstalling** the app no previous session is silently reused from the
+  keychain (iOS keeps keychain items across reinstalls). (b) If decision 3
+  keeps the existing identity: the store candidate itself, through TestFlight
+  and the Play internal testing track, installs as an **upgrade over the
+  store's 2.0.2** and starts cleanly. It still reaches the legacy host, so
+  check only the install and the start. An internal APK cannot do this on
+  Android: its signing key differs from Play's.
 - **Lower the TTL of the `app` record** to 300 seconds at least a day before,
   so the switch and any un-switch propagate in minutes. This is the record's
   TTL; it does nothing for a nameserver change (decision 2).
@@ -237,7 +248,8 @@ being free.
 
 0. **Check out the release tag** that production was deployed from in
    section 2 — not the route branch. The importer runs from this checkout, so
-   it must match what is deployed. Then:
+   it must match what is deployed. Then `bun install --frozen-lockfile`, so
+   the importer and `payload migrate` run the tag's dependencies, and:
 
    ```bash
    CLOUDFLARE_ENV=production bun -F site deploy:database
@@ -279,10 +291,10 @@ being free.
 
    ```bash
    read -rs CONVEX_DEPLOY_KEY && export CONVEX_DEPLOY_KEY
-   npx convex export --prod --path /absolute/path/outside/any/repo/convex-export.zip
+   npx convex export --prod --path /absolute/path/to/convex-export.zip
    unset CONVEX_DEPLOY_KEY
-   unzip /absolute/path/outside/any/repo/convex-export.zip \
-     -d /absolute/path/outside/any/repo/convex-export
+   unzip /absolute/path/to/convex-export.zip \
+     -d /absolute/path/to/convex-export
    ```
 
    The CLI warns that it is ignoring `--prod` and using the deployment from
@@ -319,7 +331,8 @@ being free.
 7. **Go / no-go.** Decide with the person checking. This is the last point at
    which rollback costs nothing (section 4): after the next step the public
    can sign up, save and pay on the new stack.
-8. **Switch the address.** From the route branch (decision 2):
+8. **Switch the address.** Check out the route branch (decision 2) —
+   `git checkout <route-branch>` — then:
 
    ```bash
    CLOUDFLARE_ENV=production bun -F site deploy:app
@@ -370,11 +383,18 @@ bunx wrangler d1 create smog-production   # answer no to adding it to the config
 ```
 
 Put the new id in `env.production.d1_databases[0].database_id` in
-`apps/site/wrangler.jsonc`, in a reviewed commit, then run
-`CLOUDFLARE_ENV=production bun -F site deploy:database` and `deploy:app`
-(the Worker binds the database by id). Recreate the admin and editor
-accounts (section 2). This is allowed only while nothing but the import and
-the operators' checks has written to the database: before the switch.
+`apps/site/wrangler.jsonc`, in a reviewed commit on `main`; tag it as the new
+release and rebase the route branch onto it. Then:
+
+```bash
+CLOUDFLARE_ENV=production bun -F site deploy:database
+CLOUDFLARE_ENV=production bun -F site deploy:app
+```
+
+(the Worker binds the database by id). The create-first-user screen is open
+again: create the operator's admin account immediately, then the editors'
+(section 2). This is allowed only while nothing but the import and the
+operators' checks has written to the database: before the switch.
 
 **After the address switch: not free.** The public can sign up, save and
 pay, and all of it exists **only in Payload**: nothing in `apps/site` or
@@ -463,14 +483,12 @@ Always in this order, and never an older export:
 3. **Dry run** that export against the target and check the banner.
 4. **Apply** it.
 
-The counts will almost certainly differ from the 2026-09-22 rehearsal (27
-categories, 492 gestures, 4 skipped, 5 favourites dropped) if editors kept
-working on the old stack after it, and that drift is not a reason to stop.
-Note the tension with the gates below: in this repository's legacy code
-every admin edit also writes an `adminLogs` row, which makes the planner
-refuse. The 2026-09-22 export had none, so production either runs older
-legacy code or nobody edited; the day-before row counts (section 2) settle
-which before the window, not during it. The gates are the ones that do not depend on old numbers:
+The counts may differ from the 2026-09-22 rehearsal (27 categories, 492
+gestures, 4 skipped, 5 favourites dropped); a different count alone is not a
+reason to stop. But in this repository's legacy code every admin edit also
+writes an `adminLogs` row, which the planner refuses, so any editing since
+the rehearsal shows up in the day-before row counts (section 2), not as
+drift on the day. The gates are the ones that do not depend on old numbers:
 the planner's refusals (it will not plan an export with users,
 sponsorships, consents, admin logs, a `gesture_lists` table, duplicate
 `_id`s, malformed rows or a missing table), and re-reviewing the
