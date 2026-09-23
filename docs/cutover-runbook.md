@@ -191,15 +191,22 @@ Under "## Verification":
 plugin's reindex first deletes every search entry; the statement that
 follows binds one parameter per deleted id, exceeds D1's cap of 100, and
 the plugin swallows that error and skips the rebuild — leaving the search
-index empty. Re-save the individual gesture instead.
+index empty (observed against a local D1, not just inferred). Re-save the
+individual gesture instead. **Deploys that include this change refuse it:**
+the search collection's `delete` access is `denyAll` (`payload.config.ts`),
+and the Reindex handler refuses to start without it, so the button answers
+with an error for every account. The same rule refuses deleting a single
+search entry by hand; the entry for a deleted gesture is still removed
+automatically.
 
 The "delete and rerun" remedy for a gesture with no search entry rests on
 that entry being proof nobody has saved it since the import. If the search
-index was ever emptied — a Reindex, or search entries deleted in the admin
-— that proof is gone. This cannot happen on production before cutover
-(nothing is there yet), but on **staging**, before deleting a gesture
-flagged this way on a rerun, check with the editors that nobody has
-changed it.
+index was ever emptied — a Reindex, or search entries deleted in the admin,
+both possible only on a deploy from before that change — that proof is
+gone. This cannot happen on production before cutover (nothing is there
+yet), but on a **staging** database that ran an older deploy, before
+deleting a gesture flagged this way on a rerun, check with the editors that
+nobody has changed it.
 
 **A rerun is always safe.** The importer looks every document up by
 `legacyId` first and only creates what is missing; it never updates or

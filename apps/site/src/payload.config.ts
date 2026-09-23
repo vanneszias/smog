@@ -12,7 +12,7 @@ import { r2Storage } from "@payloadcms/storage-r2";
 import type { PayloadLogger } from "payload";
 import { buildConfig } from "payload";
 import type { GetPlatformProxyOptions } from "wrangler";
-import { isAdmin, publicReadActive } from "./access";
+import { denyAll, isAdmin, publicReadActive } from "./access";
 import { AdminLogs } from "./collections/AdminLogs";
 import { Categories } from "./collections/Categories";
 import { Claims } from "./collections/Claims";
@@ -385,11 +385,21 @@ export default buildConfig({
      * unaffected: they go through the local API, where `overrideAccess`
      * defaults to `true`.
      *
-     * `create`, `update` and `delete` are `isAdmin` rather than `denyAll`
-     * because the admin panel's Reindex button checks exactly those three
-     * permissions before running (`generateReindexHandler`, 3.89.0) — and
-     * checks `create` and `read` only when they are overridden here, which
-     * they are. `denyAll` would make reindexing impossible for everybody.
+     * `delete` is `denyAll`, **and that is what closes the Reindex button.**
+     * Reindex deletes every entry first, and on D1 the statement that follows
+     * binds one parameter per deleted id and exceeds the cap of 100; the
+     * plugin swallows the error, skips the rebuild, and leaves the index
+     * empty — observed, not inferred, when `search/search.int.test.ts` first
+     * ran the handler against the local D1. The handler refuses unless the
+     * caller may `delete` and `update` here (`generateReindexHandler`,
+     * 3.89.0), so nobody can start it. The same rule stops an admin deleting
+     * one entry by hand, which would hide a gesture from search and break the
+     * catalogue import's premise that a gesture with no entry was never saved
+     * by an editor. The plugin's own deletes, when a gesture is deleted or
+     * de-duplicated, go through the Local API and are unaffected. To repair
+     * an entry, re-save its gesture.
+     *
+     * `create` and `update` stay `isAdmin`.
      */
     searchPlugin({
       collections: ["gestures"],
@@ -400,7 +410,7 @@ export default buildConfig({
           read: publicReadActive,
           create: isAdmin,
           update: isAdmin,
-          delete: isAdmin,
+          delete: denyAll,
         },
         fields: ({ defaultFields }) => [
           ...defaultFields,

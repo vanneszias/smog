@@ -341,7 +341,10 @@ describe("the scheduled jobs", () => {
       data: {
         stats: {
           ...current,
-          scheduledRuns: { ...scheduledRuns, queues: { ...queues, default: {} } },
+          scheduledRuns: {
+            ...scheduledRuns,
+            queues: { ...queues, default: {} },
+          },
         },
       },
       overrideAccess: true,

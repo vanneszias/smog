@@ -18,6 +18,7 @@ import config from "../payload.config";
  */
 const run = crypto.randomUUID().slice(0, 8);
 const unique = (label: string) => `${label}-${run}`;
+const ADMIN = { collection: "users", id: 1, role: "admin" } as const;
 
 describe("search index sync", () => {
   let payload: Awaited<ReturnType<typeof getPayload>>;
@@ -258,6 +259,68 @@ describe("search index sync", () => {
         where: { title: { equals: name } },
       });
       expect(asAdmin.docs).toHaveLength(1);
+    });
+
+    it("refuses to let even an admin delete an index entry by hand", async () => {
+      // An index entry deleted by hand is a gesture missing from search until
+      // somebody re-saves it — and it breaks the catalogue import's rule that
+      // a gesture with no entry has never been saved by an editor
+      // (`scripts/migrate-convex/verify.ts`). The sync keeps its own delete:
+      // see the next test.
+      const name = unique("Handmatig");
+      await createGesture(name);
+      const [entry] = await searchFor(name);
+
+      await expect(
+        payload.delete({
+          collection: "search",
+          id: entry?.id as number,
+          overrideAccess: false,
+          user: ADMIN,
+        })
+      ).rejects.toThrow();
+      expect(await searchFor(name)).toHaveLength(1);
+    });
+
+    it("still removes the entry when an admin deletes the gesture", async () => {
+      // The plugin's own delete runs through the Local API from inside the
+      // gesture's hook, where `overrideAccess` defaults to `true` — so
+      // closing the door above must not strand an entry for a deleted
+      // gesture. Driven as an admin, the way the admin panel would.
+      const name = unique("Weg");
+      const id = await createGesture(name);
+
+      await payload.delete({
+        collection: "gestures",
+        id,
+        overrideAccess: false,
+        user: ADMIN,
+      });
+
+      expect(await searchFor(name)).toHaveLength(0);
+    });
+
+    it("refuses the Reindex endpoint, even to an admin", async () => {
+      // Reindex deletes every entry first; on D1 the statement after that
+      // binds one parameter per deleted id and exceeds the cap of 100, the
+      // plugin swallows the error, skips the rebuild, and the index is left
+      // empty. The handler checks `delete` and `update` on this collection
+      // before doing anything (`generateReindexHandler`), so `delete: denyAll`
+      // is what refuses it.
+      const endpoint = (payload.collections.search.config.endpoints || []).find(
+        (candidate) => candidate.path === "/reindex"
+      );
+      expect(endpoint).toBeDefined();
+
+      const response = await endpoint?.handler({
+        json: async () => ({ collections: ["gestures"] }),
+        payload,
+        t: ((key: string) => key) as never,
+        user: ADMIN,
+      } as never);
+
+      expect(response?.status).not.toBe(200);
+      expect(response?.status).toBeGreaterThanOrEqual(400);
     });
 
     it("refuses an anonymous write to the index", async () => {
