@@ -21,9 +21,10 @@ anything else Stage 10 finds — is not written yet.
   targets and expects a schema already migrated by `payload migrate`, not
   one it pushes itself — see the local-rehearsal note below for what
   happens if this is skipped.
-- **The export lives on local disk, outside this repository.** The CLI
-  refuses an export path inside the git work tree.
-- **The report path is also outside this repository**, and is not a
+- **The export lives on local disk, outside this repository** — and
+  outside any other git repository too. The CLI refuses an export path
+  inside this work tree or inside anything git recognises as a repository.
+- **The report path is also outside every repository**, and is not a
   symlink. The report will contain public catalogue names — never user
   data — but still does not belong in git history.
 - **Production only: a maintenance window, with writes to the old stack
@@ -31,6 +32,31 @@ anything else Stage 10 finds — is not written yet.
   nothing; a rerun is idempotent), but the maintenance flag is a statement
   the operator makes before touching the production target at all, not
   just a write guard.
+- **Production only: the target is empty.** Production has no catalogue
+  before a big-bang cutover, so on `--target=production --apply` the CLI
+  counts the categories and gestures already there without a legacy id
+  (anything not written by this import) and refuses to write if that count
+  is not zero.
+
+### Order of operations at cutover
+
+Always in this order, and never an older export:
+
+1. **Freeze writes on the old stack.** (How is Stage 10's to write; the
+   point here is only that it comes first.)
+2. **Take a fresh Convex export**, after the freeze, so nothing an editor
+   did on the old stack is missing from it.
+3. **Dry run** that export against the target and check the banner.
+4. **Apply** it.
+
+The counts will almost certainly differ from the 2026-09-22 rehearsal (27
+categories, 492 gestures, 4 skipped, 5 favourites dropped): editors kept
+working on the old stack after it. That drift is expected and is not a
+reason to stop. The gates are the ones that do not depend on old numbers:
+the planner's refusals (it will not plan an export with users,
+sponsorships, consents, admin logs, a `gesture_lists` table, duplicate
+`_id`s or malformed rows), and re-reviewing the skipped-gestures list the
+dry run's `skipped` count stands for, which the report names in full.
 
 Credentials (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
 `CLOUDFLARE_ENV`) are set up exactly as in
@@ -51,22 +77,36 @@ CLOUDFLARE_ENV=staging bun -F site migrate:convex \
   --target=staging
 ```
 
-The banner (printed before anything connects) must read:
+The banner is printed before anything connects. This is its exact shape
+(the numbers are the fresh export's own):
 
 ```
 Target:      staging
-Database:    smog-staging
+Database:    smog-staging (remote)
 Mode:        dry run
+Export:      /absolute/path/to/convex-export
+Report:      /absolute/path/to/staging-import-report.md
 Planned:
-  categories  27
-  gestures    492
+  categories  <n>
+  gestures    <n>
+  skipped     <n> (need editorial action)
+  favourites  <n> dropped
+Dry run: nothing was written. Rerun with --apply to import.
 ```
 
-— plus 4 gestures skipped (needing editorial action) and 5 favourites
-dropped, both shown further down in the same summary. If any of those
-numbers differ from what the plan expects, stop and find out why before
-adding `--apply` — a different export needs a new plan, not a silent
-partial import.
+Check the target, the database (`(remote)`, and the right name) and the
+paths. Do not compare the counts with the rehearsal's 27/492 — see
+"Order of operations at cutover" above for why they drift and what the
+real gates are. If the planner refused the export, it says why and
+nothing ran; fix the export, not the importer.
+
+On `--apply` the banner reads `Mode:        APPLY — this run writes`,
+and after connecting the CLI adds two lines before it writes anything:
+
+```
+Already in the target: <n> of the categories, <n> of the gestures.
+Already in the target without a legacy id: <n> categories, <n> gestures.
+```
 
 Once the dry run's banner looks right, apply it:
 
@@ -95,8 +135,9 @@ CLOUDFLARE_ENV=production bun -F site migrate:convex \
   --target=production --i-have-a-maintenance-window
 ```
 
-Check the dry-run banner (target, database `smog-production`, planned
-counts) exactly as for staging, then apply:
+Check the dry-run banner (target, database `smog-production (remote)`,
+paths) exactly as for staging, then apply. The apply refuses to write if
+the second "Already in the target" line is not zero on production:
 
 ```bash
 CLOUDFLARE_ENV=production bun -F site migrate:convex \
@@ -112,26 +153,44 @@ Exit code is 0 when the run passed and non-zero when anything failed —
 a failed category or gesture create, a gesture skipped because its
 category failed, or verification not passing.
 
+A category an earlier run left without its Dutch name (its create stopped
+part-way) is listed under "Failed" on every rerun, with its document id
+in the error, and every gesture that needs it is skipped rather than
+linked to it. Delete that category by its id and rerun; the rerun creates
+it and its gestures whole.
+
 Under "## Verification":
 
 - **"Incomplete — delete and rerun"**: a document in a state no legal save
-  can produce — a create that stopped part-way. Each row carries a Remedy:
+  can produce — a create that stopped part-way, in this run or an earlier
+  one. A gesture with no search entry at all has never been saved by an
+  editor (the search plugin writes one on every save), so it is also
+  compared with the export on every field the import writes, and any
+  difference lands here. Each row carries the document's id and a Remedy:
   - **delete and rerun** — the importer never updates a document, so
-    delete it in the admin (or by id) and rerun the same command; the
-    rerun creates it whole.
-  - **re-save or reindex the gesture** — the gesture existed before this
-    run and only its search entry is wrong; saving it in the admin (or the
-    search collection's Reindex) rebuilds that one entry and keeps any
-    editor's work. Do not delete these.
+    delete it in the admin by the id in the row and rerun the same
+    command; the rerun creates it whole.
+  - **re-save the gesture** — the gesture existed before this run and only
+    its search entry is wrong (and, where it had none, every field still
+    matches the export); open it in the admin and save it, which rebuilds
+    that one entry and keeps any editor's work. Do not delete these.
 - **"Mismatches"**: a planned document that is missing entirely, or one
-  this run created whose name, categories, concepts or active flag differ
-  from the plan, or a count that disagrees. These fail the run and need
-  investigation — they should not occur on a clean target.
+  this run created whose name, categories, concepts, playback id, info,
+  active flag or created date differ from the plan, or a count that
+  disagrees. These fail the run and need investigation — they should not
+  occur on a clean target.
 - **"Differs from the export"**: the same comparison, but on documents that
   already existed before this run started. This does **not** fail the run.
   It belongs to the editors now — most likely someone changed it in the
   admin — the report just surfaces it so an operator can eyeball anything
-  unfamiliar.
+  unfamiliar. **Except during the production cutover:** nobody edits then,
+  so any "Differs" row on a production rerun is the import's own fault.
+  Treat it as a failure: stop and investigate before going further.
+
+**Never use the search collection's Reindex button on D1.** The search
+plugin's reindex deletes every search entry in one unbounded statement,
+which exceeds D1's cap of 100 bound parameters and leaves the search index
+empty. Re-save the individual gesture instead.
 
 **A rerun is always safe.** The importer looks every document up by
 `legacyId` first and only creates what is missing; it never updates or
@@ -144,29 +203,36 @@ way to converge — not something to avoid.
 - **Incomplete, "delete and rerun"**: delete that one document (by id, in
   the admin), then rerun the same `--apply` command. Do not delete
   anything else.
-- **Incomplete, "re-save or reindex the gesture"**: open the gesture in the
-  admin and save it (or use the search collection's Reindex action). Do not
-  delete it — it existed before this run.
+- **Incomplete, "re-save the gesture"**: open the gesture in the admin
+  and save it. Do not delete it — it existed before this run and its
+  fields match the export. Do not use the search collection's Reindex
+  button (see above).
 - **Mismatches**: stop and investigate before rerunning blind. A count
   disagreement or a missing planned document on an otherwise-clean run
   usually means the target was not what the banner said, or something
   else wrote to it concurrently.
-- **Never delete a document that pre-existed this run** unless the report
-  explicitly says to (it will not — pre-existing documents only ever show
-  up under "Differs from the export", never under "Incomplete"). If in
-  doubt, check whether the legacy id in question appears anywhere in the
-  "Differs from the export" table first.
+- **Follow the Remedy column, including for documents from an earlier
+  run.** A document a previous run left half-written is pre-existing on
+  the rerun, and verification still reports it under "Incomplete" with
+  "delete and rerun" — delete it by its id and rerun, exactly as for one
+  this run created. The only pre-existing documents not to delete are the
+  ones whose remedy is "re-save the gesture", and anything listed only
+  under "Differs from the export".
+- **"Differs from the export" on a production rerun**: nobody edits during
+  the cutover, so the difference is the import's own. Stop and
+  investigate; do not carry on as if it were an editor's change.
 
 ### After the import: the editorial task
 
 The report's **"## Needs editorial action"** section lists, by legacy id
 and name, every gesture the importer could not bring in because it fails
-the new model's required fields — expected to be 4 rows (2 with no
-category, 2 with no video/`playbackId`). Inventing a placeholder category
-or video was rejected when this was planned; instead, after cutover, an
-editor opens each one in the admin and adds what is missing (a category, or
-attaches a video) by hand. This is a known, named post-cutover task, not a
-bug in the import.
+the new model's required fields — 4 rows in the 2026-09-22 rehearsal (2
+with no category, 2 with no video/`playbackId`); the fresh export's list
+may differ, so review it again rather than expecting those four.
+Inventing a placeholder category or video was rejected when this was
+planned; instead, after cutover, an editor opens each one in the admin and
+adds what is missing (a category, or attaches a video) by hand. This is a
+known, named post-cutover task, not a bug in the import.
 
 ### Local rehearsal note: local D1 must start empty
 
@@ -182,12 +248,18 @@ for rehearsing locally.
 To rehearse locally without disturbing an existing local database, move the
 local D1 state aside, run, and restore it afterwards:
 
+`--target=local` still needs `CLOUDFLARE_ENV=staging` — the only binding
+set emulated on local disk — and `NODE_ENV` unset (or `development` /
+`test`); the CLI refuses anything else.
+
 ```bash
 cd apps/site
 mv .wrangler .wrangler.rehearsal-backup   # only if .wrangler already exists
-bun -F site migrate:convex --export /absolute/path/to/convex-export \
+CLOUDFLARE_ENV=staging bun run migrate:convex \
+  --export /absolute/path/to/convex-export \
   --report /absolute/path/to/local-import-report.md --target=local
-bun -F site migrate:convex --export /absolute/path/to/convex-export \
+CLOUDFLARE_ENV=staging bun run migrate:convex \
+  --export /absolute/path/to/convex-export \
   --report /absolute/path/to/local-import-report.md --target=local --apply
 # ... inspect, rerun, whatever the rehearsal needs ...
 rm -rf .wrangler
