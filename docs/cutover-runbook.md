@@ -666,7 +666,7 @@ follows binds one parameter per deleted id, exceeds D1's cap of 100, and
 the plugin swallows that error and skips the rebuild — leaving the search
 index empty (observed against a local D1, not just inferred). Re-save the
 individual gesture instead. **The site refuses it:** the search
-collection's `delete` access is `denyAll` (`payload.config.ts`),
+collection's `delete` access is `denyAll` (`apps/site/src/payload.config.ts`),
 and the Reindex handler refuses to start without it, so the button answers
 with an error for every account. The same rule refuses deleting a single
 search entry by hand; the entry for a deleted gesture is still removed
