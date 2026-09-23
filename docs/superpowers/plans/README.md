@@ -20,6 +20,8 @@ its own plan document, per `superpowers:writing-plans`.
 | 8.6 | Mobile consent and analytics | [`2026-09-22-stage-8-6-mobile-consent.md`](./2026-09-22-stage-8-6-mobile-consent.md) | 1, 4, 8, 8.5 | **landed** — all nine exit criteria met after the final review's fixes (criteria 1, 4 and 6 were not, as first recorded); the banner layout still needs a device |
 | 9 | Data migration | [`2026-09-22-stage-9-data-migration.md`](./2026-09-22-stage-9-data-migration.md) | 1, 4, 5, 8.5 | **landed** — the importer is built and rehearsed locally on the real production export (idempotent, verified); staging and production runs are pending the Cloudflare token rotation |
 | 10 | Cutover | **runbook written** (`docs/cutover-runbook.md`); the window waits on its section 1 decisions | all | — |
+| — | Stranded jobs and outbound timeouts | [`2026-09-23-job-reaper.md`](./2026-09-23-job-reaper.md) | 7 | **landed** — a killed queue run no longer stops a schedule for good; Mollie, Mux and OpenPanel calls time out |
+| — | Remotion Lambda render transport | [`2026-09-23-render-lambda.md`](./2026-09-23-render-lambda.md) | 1, 6 | **landed, not yet deployed** — `apps/render` plus a signed start from the Mollie webhook after payment; the first real render is runbook decision 7 |
 
 Alongside the numbered sequence, [`2026-09-22-cron-wiring.md`](./2026-09-22-cron-wiring.md)
 (wires the hourly job-queue cron into the deployed Worker) has also landed —
