@@ -15,8 +15,7 @@ import type { Sponsorship } from "@/payload-types";
  * webhook moves a sponsorship from `pending_payment` to `pending_approval`
  * (`endpoints/mollie.ts`), which is the moment the sale is real (user
  * decision, 2026-09-23). The composite therefore exists only for paid
- * sponsorships, and an administrator reviews it in the approval queue exactly
- * as before.
+ * sponsorships, and an administrator reviews it in the approval queue.
  *
  * ## Everything comes from the row
  *

@@ -32,7 +32,7 @@ test.describe("kitchen sink", () => {
   });
 
   /*
-   * Deferred question 1: real overflow.
+   * Real overflow.
    *
    * `GestureCard.test.tsx` can only assert that `truncate`, `min-w-0` and
    * `overflow-hidden` are on the right elements — jsdom reports every width
@@ -93,7 +93,7 @@ test.describe("kitchen sink", () => {
   });
 
   /*
-   * Deferred question 2: `<mux-player>` outside jsdom.
+   * `<mux-player>` outside jsdom.
    *
    * `VideoPlayer.test.tsx` runs against a `vi.mock`, because upgrading the
    * custom element under jsdom throws inside the reaction queue. This asserts

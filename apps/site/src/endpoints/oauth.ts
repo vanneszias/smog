@@ -66,12 +66,12 @@ const GOOGLE = "google";
 /**
  * Where the callback sends a `client=mobile` flow instead of a page.
  *
- * `apps/mobile`'s own registered scheme, not the illustrative `smog://` a
- * sketch of this flow would use — the SMOG app currently in the stores claims
- * `smog://` for an unrelated flow with its own `auth-callback` route, and
- * this literal has to match `apps/mobile/src/lib/google.ts`'s `REDIRECT_URI`
- * exactly or `WebBrowser.openAuthSessionAsync` never sees the callback as
- * the flow's own redirect and just keeps waiting for it.
+ * `apps/mobile`'s own registered scheme. The app's scheme is `smogmobile`, not
+ * `smog`, so no older install's links can open it: older installs of the SMOG
+ * app claim `smog://` for their own `auth-callback` route. This literal has to
+ * match `apps/mobile/src/lib/google.ts`'s `REDIRECT_URI` exactly or
+ * `WebBrowser.openAuthSessionAsync` never sees the callback as the flow's own
+ * redirect and just keeps waiting for it.
  */
 const MOBILE_REDIRECT_URI = "smogmobile://auth-callback";
 

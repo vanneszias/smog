@@ -185,9 +185,9 @@ describe("publishing a composed video", () => {
 
   it("approves a sponsorship that has no composed video at all", async () => {
     // A render that failed, or one that never ran because Remotion Lambda is
-    // not configured — which is every environment today. The approval must
-    // still work: the gesture page falls back to the original video and draws
-    // the overlay in HTML.
+    // not configured in that environment. The approval must still work: the
+    // gesture page falls back to the original video and draws the overlay in
+    // HTML.
     const id = await seed("no-composite");
 
     const after = await update(id, { status: "active" });

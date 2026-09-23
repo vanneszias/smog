@@ -119,10 +119,11 @@ export const invalidateComposedVideo: CollectionBeforeChangeHook<
  * for a row imported with a composite already in place.
  *
  * A sponsorship with no composite is approved unchanged rather than refused. A
- * render can fail, and in every environment today none is even submitted — the
- * gesture page then falls back to the original video with the overlay drawn in
- * HTML, which is a working page rather than an approval an administrator cannot
- * complete.
+ * render can fail, and none is submitted at all where Remotion Lambda is not
+ * configured (renders are asked for once a payment is paid,
+ * `lib/paidRenders.ts`) — the gesture page then falls back to the original
+ * video with the overlay drawn in HTML, which is a working page rather than an
+ * approval an administrator cannot complete.
  */
 export const publishComposedVideo: CollectionBeforeChangeHook<Sponsorship> = ({
   data,

@@ -18,12 +18,10 @@ import { readBody } from "./auth";
  * `smog://auth-callback#token=<jwt>` — puts a two-hour session credential into
  * a URL: the system browser's history, the OS log of the open-URL intent, and,
  * on Android, any app that has registered the same custom scheme all get to
- * read it. (That last one is not hypothetical: the SMOG app currently in the
- * stores already claims `smog://` for an unrelated sign-in flow with its own
- * `auth-callback` route, so a real second claimant to the scheme exists — which
- * is exactly why `apps/mobile`'s own `REDIRECT_URI` is `smogmobile://…`, its
- * own registered scheme, and not the illustrative `smog://` a sketch of this
- * flow would otherwise use.)
+ * read it. (That last one is not hypothetical: older installs of the SMOG app
+ * claim `smog://` for their own `auth-callback` route. That is why the app's
+ * scheme is `smogmobile`, not `smog` — `apps/mobile`'s `REDIRECT_URI` is
+ * `smogmobile://…` — so no older install's links can open it.)
  *
  * So the callback hands back a **single-use exchange code with a
  * sixty-second life** instead, and this endpoint is the other half: it

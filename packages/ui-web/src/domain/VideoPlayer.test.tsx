@@ -15,8 +15,8 @@ import { VideoPlayer } from "./VideoPlayer";
  *
  * So these tests pin our wrapper — which props reach the player, and the
  * skeleton, ready and error states this component owns — and they pin nothing
- * at all about Mux. That the real player works is checked on the kitchen-sink
- * route, in a real browser.
+ * at all about Mux. That the real player upgrades and lays out is checked on
+ * the kitchen-sink route, in a real browser.
  */
 interface StubProps {
   playbackId?: string;
