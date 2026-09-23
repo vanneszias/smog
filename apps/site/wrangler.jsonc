@@ -80,7 +80,15 @@
       // doc comment says why it may not be defaulted or guessed: renewal and
       // confirmation links in queued email are built from this origin
       // (`src/jobs/index.ts`, `src/jobs/sendEmail.ts`).
+      //
+      // EMAIL_FROM_*: the sender for every transactional message. On
+      // `zias.be` because Email Service only sends from a domain in this
+      // Cloudflare account and `smog.vlaanderen` cannot be moved into it
+      // (`payload.config.ts`, the `email` note). Staging says so in the name,
+      // so a message from it is never mistaken for production's.
       "vars": {
+        "EMAIL_FROM_ADDRESS": "no-reply@zias.be",
+        "EMAIL_FROM_NAME": "SMOG & Co (staging)",
         "OPENPANEL_API_URL": "https://analytics.zias.be/api",
         "SITE_ORIGIN": "https://smog-site-staging.vanneszias.workers.dev",
       },
@@ -93,7 +101,7 @@
       // all of it — and `destination_address` would additionally redirect a
       // message whose `to` went missing. Unrestricted, the binding may send
       // to any verified destination address today and to any recipient once
-      // the sending domain is onboarded (Task 7, blocked on that DNS work).
+      // `zias.be` is onboarded as the sending domain.
       //
       // Repeated per environment rather than declared at the top level:
       // wrangler's own config schema says `send_email` "is not automatically
@@ -141,7 +149,10 @@
       // *.workers.dev origin, and must change in the same commit that adds a
       // custom domain's route to this environment — a stale origin here is a
       // renewal link in a sponsor's inbox pointing at a host nobody visits.
+      // EMAIL_FROM_*: see the note in `staging` above.
       "vars": {
+        "EMAIL_FROM_ADDRESS": "no-reply@zias.be",
+        "EMAIL_FROM_NAME": "SMOG & Co",
         "OPENPANEL_API_URL": "https://analytics.zias.be/api",
         "SITE_ORIGIN": "https://smog-site-production.vanneszias.workers.dev",
       },

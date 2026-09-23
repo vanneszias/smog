@@ -67,8 +67,8 @@ no bindings by design. Verify afterwards with
 | Name | Kind | Envs | Command | Breaks without it |
 |---|---|---|---|---|
 | `OPENPANEL_API_URL` | var — **already in `wrangler.jsonc`** (`https://analytics.zias.be/api`, both envs) | both | Nothing to do; deployed from the file. | Falls back to the same URL (`DEFAULT_API_URL` in `endpoints/analytics.ts`). One OpenPanel instance serves both envs; the per-env client id/secret separate the projects. |
-| `EMAIL_FROM_ADDRESS` | var — not in `wrangler.jsonc`; **no documented way to set it** | both, once the sending domain is onboarded | `bunx wrangler secret put EMAIL_FROM_ADDRESS --env=<env>` (or add to `env.<env>.vars`) | Defaults to `no-reply@smog.app`. If that is not the onboarded Email Service sending domain, every send fails with `E_SENDER_NOT_VERIFIED` / `E_SENDER_DOMAIN_NOT_AVAILABLE`. Must be an address on the domain you onboard. |
-| `EMAIL_FROM_NAME` | var — not in `wrangler.jsonc`; no documented way to set it | optional | `bunx wrangler secret put EMAIL_FROM_NAME --env=<env>` | Defaults to `Smog`. Cosmetic. |
+| `EMAIL_FROM_ADDRESS` | var — **already in `wrangler.jsonc`**, per environment | both | Nothing to do; deployed from the file: `no-reply@zias.be`. | Email Service only sends from a domain in this Cloudflare account, and `smog.vlaanderen` cannot be moved into it, so the sender is on `zias.be` (decided 2026-09-23). Until `zias.be` is onboarded as a sending domain every send fails with `E_SENDER_NOT_VERIFIED` / `E_SENDER_DOMAIN_NOT_AVAILABLE`. |
+| `EMAIL_FROM_NAME` | var — **already in `wrangler.jsonc`**, per environment | both | Nothing to do: `SMOG & Co` on production, `SMOG & Co (staging)` on staging. | Cosmetic. |
 | `PAYLOAD_LOG_LEVEL` | var — not in `wrangler.jsonc`; undocumented | optional | `bunx wrangler secret put PAYLOAD_LOG_LEVEL --env=<env>` | Defaults to `info`. |
 | `REMOTION_FUNCTION_NAME` | var (plan lists it as a Worker secret) | both, once a Lambda is deployed | `bunx wrangler secret put REMOTION_FUNCTION_NAME --env=<env>` | Rendering off: checkout logs "No render was submitted" and completes normally. All three `REMOTION_*` must be set to count as configured. **Even when set, nothing is submitted** — the Lambda transport is a stub (Stage 6 Task 6); the code only builds the request and logs a warning. |
 | `REMOTION_REGION` | var | both, with the above | `bunx wrangler secret put REMOTION_REGION --env=<env>` | Same as `REMOTION_FUNCTION_NAME`. |
@@ -228,7 +228,6 @@ steps 4–9 with `production`.
    bunx wrangler secret put GOOGLE_CLIENT_SECRET --env=staging      # if offering Google sign-in
    bunx wrangler secret put MUX_TOKEN_ID --env=staging
    bunx wrangler secret put MUX_TOKEN_SECRET --env=staging
-   bunx wrangler secret put EMAIL_FROM_ADDRESS --env=staging        # once the sending domain is known
    # When rendering goes live (Stage 6 Task 6), not before:
    #   MUX_SIGNING_KEY_ID, MUX_SIGNING_KEY_PRIVATE, MUX_SOURCE_SERVICE_TOKEN,
    #   RENDER_CALLBACK_SECRET, REMOTION_FUNCTION_NAME, REMOTION_REGION, REMOTION_SERVE_URL
@@ -320,10 +319,13 @@ steps 4–9 with `production`.
   staging and production projects (one self-hosted instance serves both;
   the client id/secret pair is what separates them) before setting
   `OPENPANEL_CLIENT_*`.
-- **Email Service sending-domain onboarding:** DNS records for the sending
-  domain must be published and verified in Cloudflare; until then no email
-  can be sent from either environment, and `EMAIL_FROM_ADDRESS` must match
-  that domain.
+- **Email Service sending-domain onboarding for `zias.be`:** in the
+  Cloudflare dashboard, onboard `zias.be` to Email Service (Email → Email
+  Sending) and let it add its SPF, DKIM and DMARC records to the zone; until
+  they verify, no email can be sent from either environment. `zias.be` is in
+  this account, so this needs nobody outside it. If `zias.be` already has
+  SPF or DMARC records for another mail sender, merge them rather than
+  adding a second record of either kind.
 - **Code work still open before cutover:** the cron is wired (`worker.ts`'s
   `scheduled()`, `wrangler.jsonc`'s hourly `triggers.crons`) and drains the
   job queue every hour once `JOBS_RUN_TOKEN` and `SITE_ORIGIN` are set (see

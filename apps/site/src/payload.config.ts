@@ -333,17 +333,18 @@ export default buildConfig({
    * be imported rather than a request that cannot send. `src/email/adapter.ts`
    * calls the thunk inside `sendEmail` and fails there.
    *
-   * The sender is the shipped product's, transcribed from
-   * `apps/server/src/services/email.ts` (`SMTP_FROM`, defaulting to
-   * `Smog <no-reply@smog.app>`) rather than chosen here, and overridable for
-   * whichever domain Task 7 onboards to Email Service. Until that domain is
-   * verified every send answers `E_SENDER_NOT_VERIFIED`, which is the whole
-   * of what Stage 7 is blocked on.
+   * The sender is on `zias.be`, decided 2026-09-23: Email Service only sends
+   * from a domain in this Cloudflare account, and `smog.vlaanderen` cannot be
+   * moved there (its DNS owner can add records, not transfer the zone), so
+   * the product's own domain is not available as a sender. `zias.be` is the
+   * account's zone. Each environment sets the address in `wrangler.jsonc`'s
+   * `vars`; the default here only covers a local run. Until `zias.be` is
+   * onboarded as a sending domain every send answers `E_SENDER_NOT_VERIFIED`.
    */
   email: cloudflareEmailAdapter({
     binding: () => cloudflare.env.EMAIL,
-    defaultFromAddress: process.env.EMAIL_FROM_ADDRESS ?? "no-reply@smog.app",
-    defaultFromName: process.env.EMAIL_FROM_NAME ?? "Smog",
+    defaultFromAddress: process.env.EMAIL_FROM_ADDRESS ?? "no-reply@zias.be",
+    defaultFromName: process.env.EMAIL_FROM_NAME ?? "SMOG & Co",
   }),
   /**
    * The queue, and the four scheduled jobs it will drive.

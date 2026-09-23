@@ -107,9 +107,11 @@ answer next to each item when it is made.
    install on `workers.dev` until another store release.) Either way, allow
    for store review time: the build must be approved and held for release
    before the window, not submitted during it.
-4. **Email can actually send.** The Email Service sending domain is onboarded
-   and verified, and `EMAIL_FROM_ADDRESS` matches it (checklist, "Launch
-   blockers that are not variables"). Without it none of the site's three
+4. **Email can actually send — sender decided 2026-09-23:
+   `no-reply@zias.be`** (`wrangler.jsonc` vars), because Email Service only
+   sends from a domain in this Cloudflare account and `smog.vlaanderen` cannot
+   be moved into it. Left: onboard `zias.be` to Email Service and let its
+   records verify (checklist, "Launch blockers that are not variables"). Without it none of the site's three
    messages — the email-change confirmation, the sponsor re-edit link, the
    renewal reminder — leaves either environment.
 5. **Analytics** — OpenPanel projects exist for production, or it is accepted
