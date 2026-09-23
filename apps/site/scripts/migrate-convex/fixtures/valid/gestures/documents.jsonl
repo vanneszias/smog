@@ -1,0 +1,6 @@
+{"_id":"ges_ok_1","_creationTime":1700000150000,"name":"  Testgebaar Een  ","info":"Info over gebaar een","concept":["hond","kat","hond"],"categoryIds":["cat_test_1"],"playbackId":"pb_ok_1","lastUpdated":1700000200000,"isActive":true}
+{"_id":"ges_no_category","_creationTime":1700000160000,"name":"Testgebaar Zonder Categorie","info":"","concept":[],"categoryIds":[],"playbackId":"pb_no_cat","lastUpdated":1700000200000,"isActive":true}
+{"_id":"ges_no_playback_empty","_creationTime":1700000170000,"name":"Testgebaar Zonder Playback","info":"","concept":[],"categoryIds":["cat_test_1"],"playbackId":"","lastUpdated":1700000200000,"isActive":true}
+{"_id":"ges_no_playback_whitespace","_creationTime":1700000180000,"name":"Testgebaar Playback Spatie","info":"","concept":[],"categoryIds":["cat_test_2"],"playbackId":"   ","lastUpdated":1700000200000,"isActive":true}
+{"_id":"ges_unknown_category","_creationTime":1700000190000,"name":"Testgebaar Onbekende Categorie","info":"","concept":[],"categoryIds":["cat_missing"],"playbackId":"pb_unknown","lastUpdated":1700000200000,"isActive":true}
+{"_id":"ges_inactive","_creationTime":1700000195000,"name":"Testgebaar Inactief","info":"Inactief testgebaar","concept":["vogel"],"categoryIds":["cat_test_2"],"playbackId":"pb_inactive","lastUpdated":1700000200000,"isActive":false}
