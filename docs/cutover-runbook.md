@@ -76,30 +76,27 @@ answer next to each item when it is made.
      Cloudflare dashboard, recreate the legacy `app` record exactly as it was
      (write down its type, value and proxy status before the window), and
      revert the route commit so no later deploy adds it back.
-3. **How the mobile app reaches existing users.** `apps/mobile` is currently
-   a *different app* from the one in the stores: bundle id and Android package
-   `be.zias.smog.next` versus `be.zias.smog`, slug `smog-mobile` versus
-   `smog`, and no EAS project, owner or update URL (`apps/mobile/app.json`
-   versus `apps/native/app.json`). Nothing forces an update in either app.
-   Options:
-   - **(Recommended) Ship `apps/mobile` under the existing identity**, so
-     existing installs update in place. In `apps/mobile/app.json`: `slug`
-     `"smog"`, `owner` `"smog-and-co"`, `extra.eas.projectId` and
-     `updates.url` as in `apps/native/app.json`, `ios.bundleIdentifier` and
-     `android.package` `be.zias.smog`, `ios.appleTeamId`, a `version` above
-     `2.0.2`, and an explicit `ios.buildNumber` of at least 51 and
-     `android.versionCode` of at least 79. Take the real current numbers from
-     App Store Connect and the Play Console, not from `apps/native/app.json`:
-     production builds auto-increment them. Keep the scheme `smogmobile`;
-     `apps/mobile/src/lib/google.ts:19` and
-     `apps/site/src/endpoints/oauth.ts:76` must stay identical. Then a
-     rebuild and store review.
-   - Ship it as a new listing, and publish an EAS Update to the old app
-     (`apps/native/app.json` → `updates.url`) telling users where the new app
-     is, **before** the window. Its `runtimeVersion` policy is `fingerprint`,
-     so the update reaches 2.0.2 installs only if it is published from the
-     exact tree that built 2.0.2. Find that commit first: the repository's
-     tags stop at `v2.0.1`.
+3. **How the mobile app reaches existing users — decided 2026-09-23:
+   `apps/mobile` takes over the existing store identity**, so existing
+   installs update in place. Done in `apps/mobile/app.json`: name
+   `SMOG & Co`, slug `smog`, owner `smog-and-co`, the existing EAS project id
+   and update URL, bundle id and Android package `be.zias.smog`, Apple team
+   `96XKP6MU2A`, version `3.0.0`, iOS build `51`, Android versionCode `79`.
+   What is left for the operator:
+   - **Check the real current numbers** in App Store Connect and the Play
+     Console before the first store build; if either store already has a
+     higher build or versionCode than 51 / 79, raise them in `app.json`
+     (production builds then auto-increment from there).
+   - **`apps/native` must never be built, submitted or published to again**
+     (no `eas build`, `eas submit` or `eas update` from it): it now shares the
+     identity and EAS project with `apps/mobile`, and an update published from
+     it would reach the new app's installs only if fingerprints matched — do
+     not find out.
+   - The scheme stays `smogmobile`; `apps/mobile/src/lib/google.ts:19` and
+     `apps/site/src/endpoints/oauth.ts:76` must stay identical. The old app's
+     `smog://` links and its `app.smog.vlaanderen` universal links are not
+     carried over (the new app declares no associated domains), so shared
+     links open in the browser, on the new site.
 
    **The store build carries the final production address** in
    `EXPO_PUBLIC_API_URL` (checklist §6), because installs keep it for years.
@@ -221,8 +218,8 @@ down.
   consent banner lays out correctly on a small and a large phone and does not
   sit under a toast; sign-in survives an app restart; after **deleting and
   reinstalling** the app no previous session is silently reused from the
-  keychain (iOS keeps keychain items across reinstalls). (b) If decision 3
-  keeps the existing identity: the store candidate itself, through TestFlight
+  keychain (iOS keeps keychain items across reinstalls). (b) Because decision 3
+  took over the existing identity: the store candidate itself, through TestFlight
   and the Play internal testing track, installs as an **upgrade over the
   store's 2.0.2** and starts cleanly. It still reaches the legacy host, so
   check only the install and the start. An internal APK cannot do this on
@@ -434,8 +431,6 @@ page. Decide it before the window.
   - revoke the legacy secrets: WorkOS, SMTP and IMAP, the Convex deploy key,
     `INTERNAL_API_KEY`, `REMOTION_API_KEY`, and the Mux tokens only if the
     new stack does not share them; delete the WorkOS users and application.
-- **Retire the old app's store listing** if the mobile app shipped as a new
-  listing (decision 3), after its users have had time to move.
 - **Then delete the legacy code** from the repository (`apps/server`,
   `apps/web`, `apps/native`, `packages/convex` and the packages only they
   use), in its own reviewed change — the spec's last step for Stage 10.
