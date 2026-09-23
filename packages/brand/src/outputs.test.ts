@@ -4,6 +4,7 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tokens } from "@smog/styles";
 import { describe, expect, it } from "vitest";
+import { recolour } from "./recolour";
 import {
   PNG_COLOUR_TYPE,
   readIco,
@@ -154,6 +155,44 @@ describe("SVG outputs", () => {
     for (const colour of colours) {
       expect(source).toContain(colour);
     }
+  });
+});
+
+/**
+ * The vector outputs are the artwork itself, copied or recoloured, so each is
+ * compared with what the generator would write from today's artwork. Every
+ * other check here would still pass after an edit to `art/` that nobody
+ * regenerated, and the site would ship the old logo.
+ */
+describe("SVG outputs match the artwork", () => {
+  const art = (name: string): string =>
+    readFileSync(join(ART_DIR, name), "utf8");
+
+  it.each([
+    ["logo.svg", "apps/site/public/brand/logo.svg"],
+    ["hand-1.svg", "apps/site/public/brand/hand-1.svg"],
+    ["hand-2.svg", "apps/site/public/brand/hand-2.svg"],
+    ["hand-3.svg", "apps/site/public/brand/hand-3.svg"],
+  ])("%s is copied byte for byte to %s", (source, output) => {
+    expect(
+      readFileSync(join(REPO_ROOT, output)).equals(
+        readFileSync(join(ART_DIR, source))
+      )
+    ).toBe(true);
+  });
+
+  it.each([
+    ["logo.svg", GREEN, "apps/site/public/brand/logo-green.svg"],
+    ["logo.svg", WHITE, "apps/site/public/brand/logo-white.svg"],
+    [
+      "logo-stacked.svg",
+      WHITE,
+      "apps/site/public/brand/logo-stacked-white.svg",
+    ],
+  ])("%s in %s is %s", (source, colour, output) => {
+    expect(readFileSync(join(REPO_ROOT, output), "utf8")).toBe(
+      recolour(art(source), colour)
+    );
   });
 });
 

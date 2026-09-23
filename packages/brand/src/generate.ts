@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { tokens } from "@smog/styles";
 import sharp from "sharp";
 import { encodeIco } from "./ico";
+import { recolour } from "./recolour";
 
 const GREEN = tokens.color.brand.primary;
 const WHITE = tokens.color.white;
@@ -77,10 +78,6 @@ function readArtwork(name: string): { source: string; artwork: Artwork } {
       body: source.slice(open[0].length, close).trim(),
     },
   };
-}
-
-function recolour(svg: string, colour: string): string {
-  return svg.replaceAll("currentColor", colour);
 }
 
 interface Background {
