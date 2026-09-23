@@ -116,10 +116,10 @@ const brandScale = {
  * `border`, not a `borderSubtle`. The strength order between the three is also
  * asserted, so the decorative one cannot quietly take the functional one's job.
  *
- * The light theme tints the *page* rather than greying the *cards*. Stage 2
- * measured light `background` and `surfaceRaised` at the same `#ffffff`, with
- * a 1.32:1 border the only thing telling a card from the page behind it — so
- * a card with no border had no edge at all. Two directions fix that; this one
+ * The light theme tints the *page* rather than greying the *cards*. An
+ * earlier palette measured light `background` and `surfaceRaised` at the same
+ * `#ffffff`, with a 1.32:1 border the only thing telling a card from the page
+ * behind it — so a card with no border had no edge at all. Two directions fix that; this one
  * puts `background` a step down the neutral ramp and leaves both surfaces
  * white, because a white card on a faintly tinted page is the conventional
  * reading of depth and keeps the highest-contrast surface under the text.
@@ -247,8 +247,8 @@ const duration = {
 } as const;
 
 /**
- * Raw elevation, cross-platform. Stage 8 maps `level` onto Android elevation;
- * `shadow` below is the web rendering of the same numbers.
+ * Raw elevation, cross-platform. `level` is the Android elevation for the same
+ * shadow; `shadow` below is the web rendering of the same numbers.
  */
 const elevation = {
   sm: { offsetY: 1, blur: 2, opacity: 0.08, level: 2 },

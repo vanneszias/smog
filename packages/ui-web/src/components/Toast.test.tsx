@@ -10,7 +10,7 @@ const classesOf = (element: Element): string[] =>
 
 describe("Toast", () => {
   /*
-   * The behavioural contract from the plan. A toast appears without being
+   * The behavioural contract. A toast appears without being
    * asked for, so a live region is the only thing that tells a screen reader
    * user anything happened at all.
    */

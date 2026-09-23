@@ -6,7 +6,7 @@ const OPAQUE = 1;
 /**
  * Converts a `#RRGGBB` token into the string NativeWind actually renders.
  *
- * Measured in Task 1: Tailwind v3 routes every colour utility through a
+ * Measured, not assumed: Tailwind v3 routes every colour utility through a
  * `--tw-bg-opacity` custom property (so an opacity modifier like `bg-primary/50`
  * has something to multiply), and NativeWind resolves that at runtime into an
  * `rgba(r, g, b, a)` string rather than preserving the hex — `toHaveStyle`

@@ -21,7 +21,7 @@ const gesture: GestureSummary = {
   playbackId: "pb-1",
 };
 
-/** The long name from the Stage 1 seed fixtures, which exists for this test. */
+/** The long name from the site's seed fixtures, which exists for this test. */
 const LONG_NAME = "Aangenaam kennis met je te maken";
 
 describe("GestureCard", () => {
@@ -61,16 +61,15 @@ describe("GestureCard", () => {
   });
 
   /*
-   * Review Focus item 5, and an honest note about what these four tests do
-   * and do not prove.
+   * An honest note about what these four tests do and do not prove.
    *
    * jsdom computes no layout: `offsetWidth` and `scrollWidth` are always 0, so
    * any assertion comparing them passes whether or not the component clips
    * anything. These tests therefore assert the *mechanism* — that the
    * truncation classes are present, and that they sit on the element that
    * actually holds the text — rather than a measured width. Real overflow
-   * behaviour is Task 8's kitchen-sink job, with this same long fixture in a
-   * narrow column.
+   * behaviour is checked on the kitchen-sink route, with this same long
+   * fixture in a narrow column.
    */
   it("clips a long name on the element that holds the text", () => {
     render(<GestureCard gesture={{ ...gesture, name: LONG_NAME }} />);

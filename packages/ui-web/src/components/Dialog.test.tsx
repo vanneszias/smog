@@ -65,9 +65,9 @@ describe("Dialog", () => {
   });
 
   /*
-   * Review Focus item 4. Closing is the half everyone tests; returning focus
-   * to the trigger is the half that makes the overlay usable by keyboard, and
-   * it is the half that silently disappears. A test that only asserted the
+   * Closing is the half everyone tests; returning focus to the trigger is the
+   * half that makes the overlay usable by keyboard, and it is the half that
+   * silently disappears. A test that only asserted the
    * content had gone would pass against a dialog that drops the user at the
    * top of the document.
    */

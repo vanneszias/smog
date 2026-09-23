@@ -28,7 +28,7 @@ describe("cn", () => {
    * The two below are the assertions that separate a real merge from a
    * concatenation that only looks like one. `toContain` on the joined string
    * passes for `clsx` alone, because both classes survive and the winner is
-   * left to CSS source order — exactly the failure Review Focus item 3 names.
+   * left to CSS source order — exactly the failure `cn` exists to prevent.
    */
 
   it("emits the losing utility nowhere in the result", () => {

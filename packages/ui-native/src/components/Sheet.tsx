@@ -12,18 +12,16 @@ import { Text } from "./Text";
  * gesture, a surface that rises to cover the screen and gives one way back.
  * `packages/ui-web` needs four components for that; this package needs one.
  *
- * Built on React Native's own `Modal` rather than `@gorhom/bottom-sheet`.
- * `apps/native` already depends on `@gorhom/bottom-sheet`, and both it and
- * `Modal` are testable here — `jest.setup.ts`'s worklets-then-reanimated
- * mock order makes the gesture-driven library render under Jest too, so
- * that was not the deciding factor. What decided it: the two consumers this
- * component actually has, a category filter (Task 10) and a list picker
- * (Task 11), need a surface that opens, is labelled, and closes — not a
- * drag handle. `Modal` gives that with zero new dependencies, where
- * `@gorhom/bottom-sheet` would add its own weight (it pulls in
- * `react-native-gesture-handler` on top of reanimated) for a swipe gesture
- * neither consumer asks for. The gesture-driven version stays a want,
- * documented for Task 7's bundle measurement rather than assumed here.
+ * Built on React Native's own `Modal` rather than `@gorhom/bottom-sheet`. Both
+ * are testable here — `jest.setup.ts`'s worklets-then-reanimated mock order
+ * makes the gesture-driven library render under Jest too, so that was not the
+ * deciding factor. What decided it: the two consumers this component actually
+ * has, a category filter and a list picker, need a surface that opens, is
+ * labelled, and closes — not a drag handle. `Modal` gives that with zero new
+ * dependencies, where `@gorhom/bottom-sheet` would add its own weight (it pulls
+ * in `react-native-gesture-handler` on top of reanimated) for a swipe gesture
+ * neither consumer asks for. The gesture-driven version stays a want, to be
+ * weighed against the app's bundle size rather than assumed here.
  *
  * No internal open state: `open` is read straight from the caller, same
  * contract as a controlled `Dialog` on web. Rendering `null` while closed,

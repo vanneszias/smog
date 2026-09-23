@@ -26,9 +26,9 @@ export function toCssVariables(tokens: Tokens, theme: ThemeName): string {
 /**
  * Drops the `xs`/`sm`/`md`/`lg`/`xl`/`xxl` aliases before anything reaches CSS.
  *
- * They exist in the token object for the native app, which still writes
- * `SPACING.md`, and they must stay there until Stage 8. They must **not**
- * become `--spacing-*` custom properties, because Tailwind v4 resolves a
+ * They exist in the token object for the native kit, whose generated
+ * Tailwind config carries them as spacing steps. They must **not** become
+ * `--spacing-*` custom properties, because Tailwind v4 resolves a
  * t-shirt-named width or height from the spacing namespace **before** the
  * container namespace. With `--spacing-lg` declared, `max-w-lg` compiles to
  * `max-width: var(--spacing-lg)` — 24px, not 32rem — and `max-w-sm` to 8px.

@@ -59,7 +59,7 @@ describe("Sheet", () => {
     expect(screen.getByRole("dialog", { name: "Filters" })).toBeDefined();
   });
 
-  /* Review Focus item 4, for the side-anchored variant. */
+  /* The same focus return as `Dialog`'s, for the side-anchored variant. */
   it("closes on Escape and returns focus to its trigger", async () => {
     const user = userEvent.setup();
     renderSheet();

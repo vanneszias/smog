@@ -99,13 +99,13 @@ describe("surface hierarchy", () => {
   // A card must be distinguishable from the page behind it without relying
   // on its border. 1.06:1 is not a boundary anyone can see; WCAG's 3:1 is
   // for meaningful boundaries and is too strong for a fill, so this asserts
-  // a modest but real step. Measured in a browser during Stage 2: light
-  // `background` and `surfaceRaised` were literally the same #ffffff.
+  // a modest but real step. Measured in a browser before this guard existed:
+  // light `background` and `surfaceRaised` were literally the same #ffffff.
   /**
    * The floor is deliberately below both themes' actual values rather than
-   * just under them. This guard exists to catch the regression Stage 2 shipped
-   * — light `background` and `surfaceRaised` were both `#ffffff` (1.00) and
-   * `surface` was 1.06 — not to pin an exact aesthetic.
+   * just under them. This guard exists to catch the regression it was written
+   * against — light `background` and `surfaceRaised` were both `#ffffff`
+   * (1.00) and `surface` was 1.06 — not to pin an exact aesthetic.
    *
    * At 1.12 the dark theme cleared by 0.007 (1.127), which is 0.6% of
    * headroom: any future nudge to `neutral[900]` or `[950]` would fail a test

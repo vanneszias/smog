@@ -14,8 +14,7 @@ const committed = () =>
 
 describe("theme.css", () => {
   /*
-   * Review Focus item 1: the stylesheet is a rendering of the tokens, not a
-   * second copy of them. If someone edits either side by hand, this fails.
+   * The stylesheet is a rendering of the tokens, not a second copy of them. If someone edits either side by hand, this fails.
    */
   it("matches what the generator produces from the tokens", () => {
     expect(committed()).toBe(renderThemeCss());

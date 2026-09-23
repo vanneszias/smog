@@ -12,8 +12,8 @@ import { spacingStepsIn } from "./spacingScale";
  * has no variable for it still emits the utility — as
  * `calc(var(--spacing) * 1.5)`.
  *
- * What that resolves to was measured for the first time in Stage 2 Task 8,
- * against the real stylesheet the kitchen-sink route compiles. Declaring
+ * What that resolves to was measured against the real stylesheet the
+ * kitchen-sink route compiles. Declaring
  * `--spacing-*` steps does **not** displace Tailwind's own default, so the
  * emitted CSS still carries `--spacing: .25rem` on `:root` and an off-scale
  * step silently resolves to 4px × n. This guard's original note said the

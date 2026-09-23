@@ -21,7 +21,7 @@ describe("Pagination", () => {
     expect(screen.queryByRole("navigation", { name: "Paginering" })).toBeNull();
   });
 
-  /* The behavioural contract from the plan, both ends of it. */
+  /* The behavioural contract, both ends of it. */
   it("disables previous on the first page", () => {
     render(<Pagination page={1} pageCount={3} />);
     expect(screen.getByRole("button", { name: "Vorige" })).toHaveProperty(
@@ -91,8 +91,8 @@ describe("Pagination", () => {
   });
 
   /*
-   * A disabled button that still fires is the bug the plan's contract is
-   * about: the page index runs off the end and the list comes back empty.
+   * A disabled button that still fires is the bug this contract is about: the
+   * page index runs off the end and the list comes back empty.
    */
   it("reports nothing from the disabled previous button", async () => {
     const user = userEvent.setup();

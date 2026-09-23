@@ -21,23 +21,17 @@ export const MAX_GESTURES_PER_SPONSORSHIP = 10;
 /**
  * Base price per gesture per year of sponsorship, in euro cents.
  * €50.00 = 5000 cents.
- *
- * Previously defined in `apps/web/src/lib/pricing.ts`.
  */
 export const PRICE_PER_YEAR_CENTS = 5000;
 
 /**
  * Additional price for including a logo overlay, in euro cents.
  * €10.00 = 1000 cents.
- *
- * Previously defined in `apps/web/src/lib/pricing.ts`.
  */
 export const LOGO_ADDON_CENTS = 1000;
 
 /**
  * Fixed sponsorship duration in years.
  * All sponsorships are currently for exactly 1 year.
- *
- * Previously defined in `apps/web/src/lib/pricing.ts`.
  */
 export const FIXED_DURATION_YEARS = 1;

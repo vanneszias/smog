@@ -7,14 +7,14 @@ import { Text, View } from "react-native";
  * that element as a real style object, under this test runner.
  *
  * If it fails, `packages/ui-native` becomes a `StyleSheet.create` factory
- * over the same `tokens` and nothing else about Stage 8 changes.
+ * over the same `tokens` and nothing else about the app changes.
  *
  * The expected value is `rgba(0, 128, 95, 1)`, not the `#00805F` hex
  * literal `tailwind.config.js` declares. Tailwind v3 compiles every color
  * utility through a `--tw-bg-opacity` custom property (so `bg-primary/50`
  * can work later), and NativeWind's compiler resolves that at runtime into
  * an rgba() string rather than preserving the hex. The color is still
- * #00805F; only its serialized form changes. See task-1-report.md.
+ * #00805F; only its serialized form changes.
  */
 describe("the NativeWind transform", () => {
   it("turns a className into a style", () => {

@@ -13,7 +13,7 @@ describe("Skeleton", () => {
   });
 
   /*
-   * The behavioural contract from the plan. A pulsing rectangle has nothing
+   * The behavioural contract. A pulsing rectangle has nothing
    * to announce, and a list of twelve of them turns into twelve blank groups
    * in a screen reader.
    */

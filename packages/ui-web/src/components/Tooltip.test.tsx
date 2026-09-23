@@ -43,7 +43,7 @@ describe("Tooltip", () => {
   });
 
   /*
-   * The behavioural contract from the plan. A tooltip reachable only by hover
+   * The behavioural contract. A tooltip reachable only by hover
    * does not exist for a keyboard user, and hover is the only interaction
    * most tooltip tests exercise.
    */

@@ -19,7 +19,7 @@ describe("Badge", () => {
     expect(classes).not.toContain("bg-primary");
   });
 
-  /* The behavioural contract from the plan: a badge reflects its variant. */
+  /* A badge reflects its variant. */
   it("applies the requested variant instead of the default", () => {
     render(<Badge variant="danger">Verlopen</Badge>);
     const classes = classesOf(screen.getByText("Verlopen"));

@@ -50,7 +50,7 @@ describe("Table", () => {
   });
 
   /*
-   * The behavioural contract from the plan: a caption is what names a table
+   * The behavioural contract: a caption is what names a table
    * for a screen reader. Asserted through the accessible name rather than by
    * finding the element, because an element that is present but not
    * associated is the failure this is guarding against.

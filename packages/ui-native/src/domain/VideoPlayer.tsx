@@ -17,9 +17,9 @@ export type VideoPlayerProps = Omit<ViewProps, "children"> & {
 };
 
 /**
- * The public Mux HLS URL — Stage 6 set `playback_policy: ["public"]`
- * (`apps/site/src/lib/mux.ts:190`), so there is no signed URL to mint and no
- * token to fetch. If that policy ever changes, this is one of the two places
+ * The public Mux HLS URL — gesture videos are created with
+ * `playback_policy: ["public"]` (`apps/site/src/lib/mux.ts`), so there is no
+ * signed URL to mint and no token to fetch. If that policy ever changes, this is one of the two places
  * that breaks; the other is `packages/ui-web/src/domain/VideoPlayer.tsx`,
  * which asks `@mux/mux-player-react` for the same thing.
  */

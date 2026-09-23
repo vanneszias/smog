@@ -8,9 +8,9 @@ const classesOf = (element: Element) =>
 
 describe("Banner", () => {
   /*
-   * Review Focus 5, first half. A landmark with no name is a landmark a
-   * screen-reader user cannot tell from any other, so `label` is required and
-   * this asserts it actually lands on the element.
+   * A landmark with no name is a landmark a screen-reader user cannot tell
+   * from any other, so `label` is required and this asserts it actually lands
+   * on the element.
    */
   it("is a region with an accessible name", () => {
     render(<Banner label="Cookiemelding">Inhoud</Banner>);
@@ -20,8 +20,7 @@ describe("Banner", () => {
   });
 
   /*
-   * Review Focus 5, second half, and the reason this component exists rather
-   * than a `Sheet side="bottom"`. A consent prompt that steals focus on mount
+   * The reason this component exists rather than a `Sheet side="bottom"`. A consent prompt that steals focus on mount
    * interrupts whatever the visitor was doing; one that traps focus is a wall.
    * Both are asserted as ABSENCES, which is why the control render below is
    * needed — `document.activeElement` being `body` proves nothing unless

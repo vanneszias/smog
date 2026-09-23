@@ -3,9 +3,6 @@ import { Text as RNText, type TextProps as RNTextProps } from "react-native";
 import { cn } from "../lib/cn";
 
 /**
- * The real implementation, replacing the Task 3 stub that only existed so
- * `Button` had something to render its label with.
- *
  * `variant` carries colour and weight; `size` carries scale. The two are
  * independent dimensions, same as `Button`'s `variant` and `size` — a
  * "muted" heading and a "body" heading both exist.

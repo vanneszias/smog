@@ -36,7 +36,7 @@ export const DialogClose = DialogPrimitiveClose;
  * `bg-black/60` rather than a token: a scrim is not a surface, and it has to
  * darken the page in *both* themes, so neither `foreground` (white in dark)
  * nor `background` (white in light) works. The design system has no semantic
- * role for it; see the task report.
+ * role for it.
  */
 export const dialogOverlayVariants = cva("fixed inset-0 z-50 bg-black/60");
 

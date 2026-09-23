@@ -116,7 +116,6 @@ describe("Avatar", () => {
     expect(screen.queryByRole("img")).toBeNull();
   });
 
-  /* The behavioural contract from the plan. */
   it("keeps the initials when the image fails", () => {
     renderAvatar();
 

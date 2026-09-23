@@ -51,8 +51,8 @@ export type FieldProps = Omit<HTMLAttributes<HTMLDivElement>, "children"> & {
  *    `aria-describedby`;
  * 3. `aria-invalid` is set while, and only while, there is an error.
  *
- * **Both messages are kept.** The plan called for the error to replace the
- * help text; it does not. A hint like "minimaal acht tekens" is most needed at
+ * **Both messages are kept.** The usual pattern has the error replace the
+ * help text; this does not. A hint like "minimaal acht tekens" is most needed at
  * the moment the value is wrong, and dropping it there is the same bug as an
  * `aria-describedby` that overwrites instead of appending — which is why
  * `Field.test.tsx` walks the ids and reads the text back rather than comparing
