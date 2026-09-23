@@ -139,6 +139,7 @@ describe("buildReport", () => {
             legacyId: "ges_rep_2",
             name: "Blauw | donker",
             check: "no categories",
+            remedy: "delete and rerun",
           },
         ],
       })
@@ -157,6 +158,14 @@ describe("buildReport", () => {
           legacyId: "ges_rep_1",
           name: "Rood",
           check: "search entries: 0 (expected 1)",
+          remedy: "re-save or reindex the gesture",
+        },
+        {
+          collection: "gestures",
+          legacyId: "ges_rep_2",
+          name: "Blauw",
+          check: "no categories",
+          remedy: "delete and rerun",
         },
       ],
     };
@@ -165,7 +174,10 @@ describe("buildReport", () => {
     expect(report).toMatch(/## Verification\s+\*\*Failed\.\*\*/);
     const section = report.split("### Incomplete — delete and rerun")[1] ?? "";
     expect(section).toMatch(
-      /\| gestures \| `ges_rep_1` \| Rood \| search entries: 0 \(expected 1\) \|/
+      /\| gestures \| `ges_rep_1` \| Rood \| search entries: 0 \(expected 1\) \| re-save or reindex the gesture \|/
+    );
+    expect(section).toMatch(
+      /\| gestures \| `ges_rep_2` \| Blauw \| no categories \| delete and rerun \|/
     );
     expect(runFailed(clean, failing)).toBe(true);
   });
@@ -191,8 +203,27 @@ describe("buildReport", () => {
     expect(runFailed(clean, edited)).toBe(false);
   });
 
-  it("shows the user-consents count before and after", () => {
-    expect(buildReport(input())).toMatch(/user-consents.*7.*7/);
+  it("shows the user-consents count before and after, as information only", () => {
+    expect(buildReport(input())).toMatch(
+      /user-consents.*information only.*7.*7/
+    );
+  });
+
+  it("still reports the import when verification did not complete, and fails", () => {
+    const report = buildReport({
+      ...input(),
+      verification: undefined,
+      verificationError: 'Failed query: select from "search"\nparams: 1',
+    });
+
+    expect(report).toMatch(/Outcome:\*\* FAILED/);
+    expect(report).toMatch(/\| gestures \| 2 \| 2 \| 0 \| 0 \|/);
+    expect(report).toMatch(/## Verification\s+\*\*Did not complete\.\*\*/);
+    expect(report).toContain(
+      'verification did not complete: Failed query: select from "search" params: 1'
+    );
+    expect(report).not.toContain("### Counts");
+    expect(runFailed(clean, undefined)).toBe(true);
   });
 });
 

@@ -27,11 +27,12 @@
  * would connect before any guard ran (the seed script's rule, too).
  */
 
-import { readFile, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Payload } from "payload";
-import { applyPlan } from "./apply";
+import { applyPlan, forbidConsentWrites } from "./apply";
 import {
   assertOutsideWorkTree,
   assertTargetAllowed,
@@ -42,12 +43,17 @@ import {
 } from "./guard";
 import { buildPlan, readExport } from "./plan";
 import { buildReport, runFailed } from "./report";
-import { snapshotBeforeRun, verify } from "./verify";
+import { snapshotBeforeRun, type VerifyResult, verify } from "./verify";
 
 const SITE_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../.."
 );
+/**
+ * The one `wrangler.jsonc` both the printed database name and the remote
+ * binding come from, whatever the working directory.
+ */
+const WRANGLER_CONFIG = path.join(SITE_ROOT, "wrangler.jsonc");
 
 /** Where `@opennextjs/cloudflare` looks for an installed Cloudflare context. */
 const CLOUDFLARE_CONTEXT = Symbol.for("__cloudflare-context__");
@@ -59,10 +65,16 @@ interface PlatformProxyLike {
 }
 
 interface LoadDeps {
-  env: Record<string, string | undefined>;
+  /**
+   * Where `NODE_ENV` is written. `payload.config.ts` reads the real
+   * `process.env`, so that is the default and the only value the CLI uses;
+   * tests pass their own object so the runner's environment is untouched.
+   */
+  env?: Record<string, string | undefined>;
   getPlatformProxy: (options: {
     environment: string;
     remoteBindings: true;
+    configPath: string;
   }) => Promise<PlatformProxyLike>;
   loadConfiguredPayload: () => Promise<Payload>;
 }
@@ -94,24 +106,75 @@ const wranglerPlatformProxy: LoadDeps["getPlatformProxy"] = async (options) => {
  * `NODE_ENV=production` and installs a platform proxy for exactly the
  * target's environment with remote bindings on, and only then imports the
  * config.
+ *
+ * That path depends on how `payload.config.ts` and `@opennextjs/cloudflare`
+ * behave today, so it is checked, not trusted: the D1 binding Payload's
+ * adapter ended up holding (`payload.db.binding`, which
+ * `@payloadcms/db-d1-sqlite` keeps from its `binding` option) must be the
+ * very object the remote proxy handed out. Anything else — a config that
+ * resolved its own bindings, a local emulation — fails closed here, before
+ * a single read or write.
+ *
+ * `local` is not checked the same way: a remote and a local D1 binding are
+ * not cheaply told apart from the object, and the guard has already made
+ * `NODE_ENV` non-production, which is what keeps the config's own
+ * `getPlatformProxy` call local.
  */
 export async function loadPayloadFor(
   target: Target,
   deps: LoadDeps
 ): Promise<Payload> {
-  if (target !== "local") {
-    deps.env.NODE_ENV = "production";
-    const proxy = await deps.getPlatformProxy({
-      environment: target,
-      remoteBindings: true,
-    });
-    (globalThis as Record<symbol, unknown>)[CLOUDFLARE_CONTEXT] = {
-      env: proxy.env,
-      cf: proxy.cf,
-      ctx: proxy.ctx,
-    };
+  if (target === "local") {
+    return await deps.loadConfiguredPayload();
   }
-  return await deps.loadConfiguredPayload();
+
+  const env = deps.env ?? process.env;
+  env.NODE_ENV = "production";
+  const proxy = await deps.getPlatformProxy({
+    environment: target,
+    remoteBindings: true,
+    configPath: WRANGLER_CONFIG,
+  });
+  (globalThis as Record<symbol, unknown>)[CLOUDFLARE_CONTEXT] = {
+    env: proxy.env,
+    cf: proxy.cf,
+    ctx: proxy.ctx,
+  };
+
+  const payload = await deps.loadConfiguredPayload();
+  const remoteD1 = (proxy.env as { D1?: unknown } | undefined)?.D1;
+  const inUse = (payload.db as { binding?: unknown }).binding;
+  if (remoteD1 === undefined || inUse !== remoteD1) {
+    throw new Error(
+      `[migrate-convex] Refusing: the D1 binding Payload loaded is not the remote D1 binding for ${target} from ${WRANGLER_CONFIG}. Nothing was read or written.`
+    );
+  }
+  return payload;
+}
+
+/**
+ * Writes the report without following a symlink: the guard refused one at
+ * the path already, and `O_NOFOLLOW` makes a link swapped in since then
+ * fail the write instead of redirecting it into the repository.
+ */
+async function writeReport(
+  reportPath: string,
+  markdown: string
+): Promise<void> {
+  const handle = await open(
+    reportPath,
+    // biome-ignore lint/suspicious/noBitwiseOperators: open(2) flags are a bit set.
+    constants.O_WRONLY |
+      constants.O_CREAT |
+      constants.O_TRUNC |
+      constants.O_NOFOLLOW,
+    0o600
+  );
+  try {
+    await handle.writeFile(markdown);
+  } finally {
+    await handle.close();
+  }
 }
 
 interface RunCliOptions {
@@ -130,7 +193,6 @@ export async function runCli(options: RunCliOptions): Promise<number> {
     options.loadPayload ??
     ((target: Target) =>
       loadPayloadFor(target, {
-        env,
         getPlatformProxy: wranglerPlatformProxy,
         loadConfiguredPayload,
       }));
@@ -143,7 +205,7 @@ export async function runCli(options: RunCliOptions): Promise<number> {
     assertTargetAllowed(cli, env);
     const database = databaseNameFor(
       cli.target,
-      await readFile(path.join(SITE_ROOT, "wrangler.jsonc"), "utf8")
+      await readFile(WRANGLER_CONFIG, "utf8")
     );
 
     const plan = buildPlan(await readExport(cli.exportDir));
@@ -166,31 +228,61 @@ export async function runCli(options: RunCliOptions): Promise<number> {
 
     const startedAt = new Date();
     const payload = await loadPayload(cli.target);
-    const before = await snapshotBeforeRun(payload, plan);
-    log(
-      `Already in the target: ${before.preexisting.categories.size} of the categories, ${before.preexisting.gestures.size} of the gestures.`
-    );
+    const release = forbidConsentWrites(payload);
+    try {
+      const before = await snapshotBeforeRun(payload, plan);
+      log(
+        `Already in the target: ${before.preexisting.categories.size} of the categories, ${before.preexisting.gestures.size} of the gestures.`
+      );
 
-    const result = await applyPlan(payload, plan, { log });
-    const verification = await verify(payload, plan, before);
-    await writeFile(
-      cli.reportPath,
-      buildReport({
+      const result = await applyPlan(payload, plan, { log });
+      const report = {
         target: cli.target,
         database,
         startedAt,
         plan,
         result,
-        verification,
-      })
-    );
+      };
 
-    const failed = runFailed(result, verification);
-    log(
-      `Verification ${verification.ok ? "passed" : "FAILED"}: ${verification.incomplete.length} incomplete, ${verification.mismatches.length} mismatches.`
-    );
-    log(`Report: ${cli.reportPath}`);
-    return failed ? 1 : 0;
+      let verification: VerifyResult;
+      try {
+        verification = await verify(payload, plan, before);
+      } catch (verifyError) {
+        // The import wrote; its record must survive a failed verification.
+        const message =
+          verifyError instanceof Error
+            ? verifyError.message
+            : String(verifyError);
+        console.error(
+          "[migrate-convex] Failed to verify the import:",
+          verifyError
+        );
+        await writeReport(
+          cli.reportPath,
+          buildReport({
+            ...report,
+            verification: undefined,
+            verificationError: message,
+          })
+        );
+        error(
+          `[migrate-convex] Verification did not complete: ${message}. The import's counts are in ${cli.reportPath}.`
+        );
+        return 1;
+      }
+
+      await writeReport(
+        cli.reportPath,
+        buildReport({ ...report, verification })
+      );
+      log(
+        `Verification ${verification.ok ? "passed" : "FAILED"}: ${verification.incomplete.length} incomplete, ${verification.mismatches.length} mismatches.`
+      );
+      log(`Report: ${cli.reportPath}`);
+      return runFailed(result, verification) ? 1 : 0;
+    } finally {
+      release();
+    }
   } catch (caught) {
     const message = caught instanceof Error ? caught.message : String(caught);
     if (message.startsWith("[migrate-convex]")) {

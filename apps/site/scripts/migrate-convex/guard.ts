@@ -7,9 +7,18 @@
  *
  * The export is real production data, and the report names catalogue rows
  * from it. Either one inside the git work tree is one `git add -A` away
- * from being committed, so both are refused there — resolved through
- * symlinks first, because a link in `/tmp` pointing into the checkout is
- * the same file in the same place.
+ * from being committed, so both are refused there. Both are resolved
+ * through symlinks before the comparison, because a link in `/tmp`
+ * pointing into the checkout is the same file in the same place:
+ *
+ * - the export directory with `realpath`;
+ * - the report, which may not exist yet, by `lstat` first. A report path
+ *   that is itself a symlink is refused outright, dangling or not, since
+ *   the write would follow it wherever it points (and a dangling link's
+ *   target cannot be `realpath`ed). An existing file is `realpath`ed
+ *   itself; a new one through its directory's `realpath`. The CLI then
+ *   opens the report with `O_NOFOLLOW`, so a link swapped in after this
+ *   check fails the write instead of following it.
  *
  * ## The target is named twice, and both names must agree
  *
@@ -31,7 +40,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { realpathSync, statSync } from "node:fs";
+import { lstatSync, realpathSync, type Stats, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -146,6 +155,15 @@ function resolveReal(candidate: string, label: "export" | "report"): string {
     }
     return real;
   }
+  const existing = lstatIfExists(candidate);
+  if (existing?.isSymbolicLink()) {
+    refuse(
+      `the report ${candidate} is a symbolic link. Writing it would follow the link wherever it points; pass the real path of a file outside the repository.`
+    );
+  }
+  if (existing) {
+    return realpathSync(candidate);
+  }
   const directory = path.dirname(candidate);
   let realDirectory: string;
   try {
@@ -154,6 +172,17 @@ function resolveReal(candidate: string, label: "export" | "report"): string {
     refuse(`the report's directory ${directory} does not exist.`);
   }
   return path.join(realDirectory, path.basename(candidate));
+}
+
+function lstatIfExists(candidate: string): Stats | undefined {
+  try {
+    return lstatSync(candidate);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
 }
 
 export function assertOutsideWorkTree(

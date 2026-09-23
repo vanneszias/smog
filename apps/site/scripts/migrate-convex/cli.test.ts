@@ -8,6 +8,7 @@ import {
   readFile,
   rm,
   symlink,
+  writeFile,
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -173,6 +174,53 @@ describe("assertOutsideWorkTree", () => {
     ).toThrow(
       /\[migrate-convex\] Refusing: the report .* inside the git work tree/
     );
+  });
+
+  /*
+   * The report is written with `writeFile`, which follows a symlink. So a
+   * link outside the tree pointing at a file inside it would put the
+   * report in the repository while the path looked fine.
+   */
+  it("refuses an existing report symlink that points into the work tree", async () => {
+    const target = path.join(root, "nested", "existing-report.md");
+    await writeFile(target, "old report\n");
+    const link = path.join(outside, "report-link.md");
+    await symlink(target, link);
+
+    expect(() => assertOutsideWorkTree(link, "report", root)).toThrow(
+      /\[migrate-convex\] Refusing: the report .* is a symbolic link/
+    );
+  });
+
+  it("refuses a dangling report symlink that points into the work tree", async () => {
+    const link = path.join(outside, "dangling-report-link.md");
+    await symlink(path.join(root, "nested", "not-yet-written.md"), link);
+
+    expect(() => assertOutsideWorkTree(link, "report", root)).toThrow(
+      /is a symbolic link/
+    );
+  });
+
+  it("refuses an existing report file reached through a symlinked directory into the tree", async () => {
+    await writeFile(path.join(root, "nested", "export", "report.md"), "x\n");
+
+    expect(() =>
+      assertOutsideWorkTree(
+        path.join(outside, "link-into-root", "report.md"),
+        "report",
+        root
+      )
+    ).toThrow(/inside the git work tree/);
+  });
+
+  it("accepts a new plain report file outside the work tree", () => {
+    expect(() =>
+      assertOutsideWorkTree(
+        path.join(outside, "fresh-report.md"),
+        "report",
+        root
+      )
+    ).not.toThrow();
   });
 
   it("refuses a report whose directory does not exist", () => {
@@ -505,8 +553,31 @@ describe("runCli refusals", () => {
  * the config a remote platform proxy, before the config is imported.
  */
 describe("loadPayloadFor", () => {
-  const fakePayload = {} as Payload;
   const contextKey = Symbol.for("__cloudflare-context__");
+  const WRANGLER_CONFIG = path.join(SITE_ROOT, "wrangler.jsonc");
+
+  /** A stand-in Payload that records every call made on it. */
+  const recordingPayload = (binding: unknown, calls: string[]): Payload =>
+    new Proxy(
+      { db: { binding } },
+      {
+        get(target, property) {
+          if (property in target) {
+            return Reflect.get(target, property);
+          }
+          // Not a thenable: `Promise.resolve` must hand it over as is.
+          if (property === "then") {
+            return;
+          }
+          return (...args: unknown[]) => {
+            calls.push(String(property));
+            return Promise.reject(
+              new Error(`unexpected ${String(property)}(${args.length})`)
+            );
+          };
+        },
+      }
+    ) as unknown as Payload;
 
   afterAll(() => {
     delete (globalThis as Record<symbol, unknown>)[contextKey];
@@ -519,7 +590,9 @@ describe("loadPayloadFor", () => {
       };
       const proxyCalls: unknown[] = [];
       let seenAtLoad: { nodeEnv?: string; context?: unknown } = {};
-      const proxy = { env: { D1: target }, cf: {}, ctx: {} };
+      const remoteD1 = { remote: target };
+      const proxy = { env: { D1: remoteD1 }, cf: {}, ctx: {} };
+      const fakePayload = recordingPayload(remoteD1, []);
 
       const payload = await loadPayloadFor(target, {
         env,
@@ -538,11 +611,69 @@ describe("loadPayloadFor", () => {
 
       expect(payload).toBe(fakePayload);
       expect(proxyCalls).toEqual([
-        { environment: target, remoteBindings: true },
+        {
+          environment: target,
+          remoteBindings: true,
+          configPath: WRANGLER_CONFIG,
+        },
       ]);
       expect(seenAtLoad.nodeEnv).toBe("production");
-      expect(seenAtLoad.context).toMatchObject({ env: { D1: target } });
+      expect(seenAtLoad.context).toMatchObject({ env: { D1: remoteD1 } });
     }
+  });
+
+  it("refuses a Payload whose D1 binding is not the remote proxy's", async () => {
+    await expect(
+      loadPayloadFor("staging", {
+        env: { CLOUDFLARE_ENV: "staging" },
+        getPlatformProxy: () =>
+          Promise.resolve({ env: { D1: { remote: true } }, cf: {}, ctx: {} }),
+        loadConfiguredPayload: () =>
+          Promise.resolve(recordingPayload({ local: true }, [])),
+      })
+    ).rejects.toThrow(
+      /\[migrate-convex\] Refusing: .*not the remote D1 binding for staging/
+    );
+  });
+
+  it("refuses when the remote proxy has no D1 binding at all, even if Payload's is also missing", async () => {
+    await expect(
+      loadPayloadFor("production", {
+        env: { CLOUDFLARE_ENV: "production" },
+        getPlatformProxy: () => Promise.resolve({ env: {}, cf: {}, ctx: {} }),
+        loadConfiguredPayload: () =>
+          Promise.resolve(recordingPayload(undefined, [])),
+      })
+    ).rejects.toThrow(/not the remote D1 binding for production/);
+  });
+
+  /*
+   * `payload.config.ts` reads `process.env.NODE_ENV`, so the default must
+   * write there, not into a copy. The fake config load keeps the real one
+   * from being evaluated under it; NODE_ENV is restored after.
+   */
+  it("writes NODE_ENV=production to the real process.env by default", async () => {
+    const saved = process.env.NODE_ENV;
+    const remoteD1 = {};
+    let seen: string | undefined;
+    try {
+      await loadPayloadFor("staging", {
+        getPlatformProxy: () =>
+          Promise.resolve({ env: { D1: remoteD1 }, cf: {}, ctx: {} }),
+        loadConfiguredPayload: () => {
+          seen = process.env.NODE_ENV;
+          return Promise.resolve(recordingPayload(remoteD1, []));
+        },
+      });
+    } finally {
+      const env = process.env as Record<string, string | undefined>;
+      if (saved === undefined) {
+        Reflect.deleteProperty(env, "NODE_ENV");
+      } else {
+        env.NODE_ENV = saved;
+      }
+    }
+    expect(seen).toBe("production");
   });
 
   it("leaves local on the config's own local bindings and never asks for a remote proxy", async () => {
@@ -557,10 +688,42 @@ describe("loadPayloadFor", () => {
         proxyCalls += 1;
         return Promise.reject(new Error("no remote for local"));
       },
-      loadConfiguredPayload: () => Promise.resolve(fakePayload),
+      loadConfiguredPayload: () =>
+        Promise.resolve(recordingPayload(undefined, [])),
     });
 
     expect(proxyCalls).toBe(0);
     expect(env.NODE_ENV).toBeUndefined();
+  });
+
+  it("makes the CLI refuse before any read or write when the binding is wrong", async () => {
+    const calls: string[] = [];
+    const lines: string[] = [];
+    const code = await runCli({
+      argv: [
+        "--export",
+        outsideExport,
+        "--report",
+        outsideReport,
+        "--target=staging",
+        "--apply",
+      ],
+      env: { CLOUDFLARE_ENV: "staging" },
+      log: (line) => lines.push(line),
+      error: (line) => lines.push(line),
+      loadPayload: (target) =>
+        loadPayloadFor(target, {
+          env: { CLOUDFLARE_ENV: "staging" },
+          getPlatformProxy: () =>
+            Promise.resolve({ env: { D1: { remote: true } }, cf: {}, ctx: {} }),
+          loadConfiguredPayload: () =>
+            Promise.resolve(recordingPayload({ local: true }, calls)),
+        }),
+    });
+
+    expect(code).not.toBe(0);
+    expect(calls).toEqual([]);
+    expect(lines.join("\n")).toMatch(/not the remote D1 binding for staging/);
+    expect(existsSync(outsideReport)).toBe(false);
   });
 });

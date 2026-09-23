@@ -33,8 +33,20 @@
  * - **Mismatch** (fails) — a planned document that is absent; a document
  *   created by this run whose name, categories, concepts or active flag
  *   differ from the plan (nobody else has had the chance to change it, so
- *   the difference is the import's own); a count that disagrees; a
- *   `user-consents` count the run changed.
+ *   the difference is the import's own); a count that disagrees.
+ *
+ * Each incomplete entry carries a remedy. The default is "delete and
+ * rerun": the importer never updates, so only a fresh create makes the
+ * document whole. The exception is a gesture that existed before this run
+ * and whose *only* fault is its search-entry count: the document itself is
+ * whole and may carry an editor's work, and a save (or the search
+ * collection's Reindex) rebuilds its one entry — the plugin's afterChange
+ * updates the first entry and deletes any duplicates.
+ *
+ * The `user-consents` count before and after is reported as information.
+ * It is not a check: the CLI refuses consent writes for the whole run
+ * (`forbidConsentWrites` in `./apply`), and on a live database other
+ * writers could move the count without the import having done anything.
  * - **Differs from the export** (reported, does not fail) — the same
  *   comparisons on a document that *existed before this run*. It belongs
  *   to the editors now; the report shows the difference so an operator can
@@ -76,9 +88,10 @@ export interface VerifyResult {
     legacyId: string;
     name: string;
     check: string;
+    remedy: Remedy;
   }>;
   mismatches: Array<{
-    subject: ImportedCollection | "counts" | "user-consents";
+    subject: ImportedCollection | "counts";
     legacyId?: string;
     name?: string;
     problem: string;
@@ -102,6 +115,10 @@ export interface VerifyResult {
     userConsents: { before: number; after: number };
   };
 }
+
+type Remedy = "delete and rerun" | "re-save or reindex the gesture";
+
+const SEARCH_CHECK_PREFIX = "search entries:";
 
 interface CategoryRow {
   id: number;
@@ -365,6 +382,7 @@ function checkCategories(
         collection: "categories",
         ...entry,
         check: "empty nl name",
+        remedy: "delete and rerun",
       });
       continue;
     }
@@ -393,7 +411,7 @@ function incompleteChecks(row: GestureRow, searchEntries: number): string[] {
     checks.push("no categories");
   }
   if (searchEntries !== 1) {
-    checks.push(`search entries: ${searchEntries} (expected 1)`);
+    checks.push(`${SEARCH_CHECK_PREFIX} ${searchEntries} (expected 1)`);
   }
   return checks;
 }
@@ -455,8 +473,20 @@ function checkGestures(
     if (checks.length > 0) {
       // Listed once, as incomplete: comparing a half-written document
       // with the plan would only repeat what is missing.
+      const searchOnly = checks.every((check) =>
+        check.startsWith(SEARCH_CHECK_PREFIX)
+      );
+      const remedy: Remedy =
+        searchOnly && findings.existedBefore("gestures", planned.legacyId)
+          ? "re-save or reindex the gesture"
+          : "delete and rerun";
       for (const check of checks) {
-        findings.incomplete.push({ collection: "gestures", ...entry, check });
+        findings.incomplete.push({
+          collection: "gestures",
+          ...entry,
+          check,
+          remedy,
+        });
       }
       continue;
     }
@@ -579,13 +609,8 @@ export async function verify(
   );
   countMismatches(counts, findings);
 
+  // Information only; see the module doc.
   const userConsentsAfter = await countUserConsents(payload);
-  if (userConsentsAfter !== before.userConsents) {
-    findings.mismatches.push({
-      subject: "user-consents",
-      problem: `count changed during the run: ${before.userConsents} before, ${userConsentsAfter} after (the import never writes consent)`,
-    });
-  }
 
   return {
     ok: findings.incomplete.length === 0 && findings.mismatches.length === 0,

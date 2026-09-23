@@ -22,7 +22,9 @@ interface ReportInput {
   startedAt: Date;
   plan: ImportPlan;
   result: ApplyResult;
-  verification: VerifyResult;
+  /** Undefined when verification threw; the report then says so. */
+  verification: VerifyResult | undefined;
+  verificationError?: string;
 }
 
 const MAX_ERROR_LENGTH = 1000;
@@ -64,13 +66,13 @@ export function reportableError(message: string): string {
 /** True when the run must exit non-zero. Editorial skips alone do not. */
 export function runFailed(
   result: ApplyResult,
-  verification: VerifyResult
+  verification: VerifyResult | undefined
 ): boolean {
   return (
     result.categories.failed.length > 0 ||
     result.gestures.failed.length > 0 ||
     result.gestures.skippedForFailedCategory.length > 0 ||
-    !verification.ok
+    verification?.ok !== true
   );
 }
 
@@ -208,6 +210,24 @@ export function buildReport(input: ReportInput): string {
   );
 
   out.push("## Verification", "");
+  if (verification === undefined) {
+    out.push(
+      "**Did not complete.**",
+      "",
+      `verification did not complete: ${reportableError(input.verificationError ?? "unknown error")}`,
+      "",
+      "The import above did write. Rerun the same command: it creates nothing that exists, and verifies everything again.",
+      ""
+    );
+  } else {
+    out.push(...verificationSection(verification));
+  }
+
+  return out.join("\n");
+}
+
+function verificationSection(verification: VerifyResult): string[] {
+  const out: string[] = [];
   out.push(verification.ok ? "**Passed.**" : "**Failed.**", "");
 
   out.push("### Incomplete — delete and rerun", "");
@@ -215,17 +235,18 @@ export function buildReport(input: ReportInput): string {
     out.push("None.", "");
   } else {
     out.push(
-      "Each of these is in a state no legal save produces — a create that stopped part-way. The importer never updates a document, so delete it in the admin (or by id) and rerun; the rerun creates it whole.",
+      "Each of these is in a state no legal save produces — a create that stopped part-way. The Remedy column says what to do. **delete and rerun**: the importer never updates a document, so delete it in the admin (or by id) and rerun; the rerun creates it whole. **re-save or reindex the gesture**: the gesture existed before this run and only its search entry is wrong; saving it in the admin (or the search collection's Reindex) rebuilds that entry and keeps any editor's work.",
       ""
     );
     out.push(
       table(
-        ["Collection", "Legacy id", "Name", "Check failed"],
+        ["Collection", "Legacy id", "Name", "Check failed", "Remedy"],
         verification.incomplete.map((entry) => [
           entry.collection,
           code(entry.legacyId),
           entry.name,
           entry.check,
+          entry.remedy,
         ])
       ),
       ""
@@ -295,7 +316,7 @@ export function buildReport(input: ReportInput): string {
         ],
         ["active gestures", activeGestures.expected, activeGestures.actual],
         [
-          "user-consents (before → after)",
+          "user-consents, information only (before → after)",
           userConsents.before,
           userConsents.after,
         ],
@@ -307,11 +328,12 @@ export function buildReport(input: ReportInput): string {
   out.push("### How verification decides", "");
   out.push(
     "- **Incomplete** (fails): an empty Dutch name, a gesture with no categories, or a gesture without exactly one search entry. Validation forbids the first two and the search plugin re-syncs on every save, so no editor can cause them; every way a create can stop part-way ends in one of them.",
-    "- **Mismatch** (fails): a planned document missing; a document this run created that differs from the plan (name, categories, concepts, active); a count that disagrees; a user-consents count that changed.",
+    "- **Mismatch** (fails): a planned document missing; a document this run created that differs from the plan (name, categories, concepts, active); a count that disagrees.",
     "- **Differs from the export** (does not fail): the same comparisons on a document that existed before this run, which an editor may legitimately have changed.",
     "- Expected counts use the plan for documents this run created and the document as found for ones that already existed.",
+    "- **user-consents** is information only: consent writes are refused for the whole run, so the import cannot have changed it; other writers on a live database can.",
     ""
   );
 
-  return out.join("\n");
+  return out;
 }

@@ -45,7 +45,8 @@
  * one `search` entry per create without looking for an existing one. The
  * index therefore stays one-entry-per-gesture only because a rerun never
  * re-creates a gesture — the same property that keeps the gestures unique.
- * Nothing here reads or writes `user-consents`.
+ * Nothing here reads or writes `user-consents`, and the CLI holds
+ * {@link forbidConsentWrites} over the whole run so nothing it calls can.
  */
 
 import type { Payload } from "payload";
@@ -263,4 +264,40 @@ export async function applyPlan(
   }
 
   return result;
+}
+
+const CONSENT_REFUSAL =
+  "[migrate-convex] the importer must not write consent records";
+
+/**
+ * Makes every consent create, update and delete throw until the returned
+ * function is called. No consent is imported, ever (spec), and nothing the
+ * importer calls should write one; this turns "should" into a refusal, on
+ * the Payload instance the run uses, rather than a count compared after
+ * the fact. The hooks run inside Payload's own operations (`beforeChange`
+ * for create and update, `beforeDelete` for delete), so nothing that goes
+ * through the local API gets past them.
+ *
+ * Always release it: the instance is cached per process, and in the test
+ * runner shared by every file a worker runs.
+ */
+export function forbidConsentWrites(payload: Payload): () => void {
+  const hooks = payload.collections["user-consents"].config.hooks;
+  const refuseChange = (): never => {
+    throw new Error(CONSENT_REFUSAL);
+  };
+  const refuseDelete = (): never => {
+    throw new Error(CONSENT_REFUSAL);
+  };
+  hooks.beforeChange = [...(hooks.beforeChange ?? []), refuseChange];
+  hooks.beforeDelete = [...(hooks.beforeDelete ?? []), refuseDelete];
+
+  return () => {
+    hooks.beforeChange = (hooks.beforeChange ?? []).filter(
+      (hook) => hook !== refuseChange
+    );
+    hooks.beforeDelete = (hooks.beforeDelete ?? []).filter(
+      (hook) => hook !== refuseDelete
+    );
+  };
 }

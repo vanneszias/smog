@@ -14,7 +14,7 @@ import { sql } from "@payloadcms/db-d1-sqlite";
 import { getPayload, type Payload } from "payload";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import config from "../../src/payload.config";
-import { applyPlan } from "./apply";
+import { applyPlan, forbidConsentWrites } from "./apply";
 import { runCli } from "./index";
 import type { ImportPlan } from "./plan";
 import { snapshotBeforeRun, type VerifyResult, verify } from "./verify";
@@ -183,17 +183,130 @@ describe("verify, against a real database", () => {
       );
     });
 
-    it("reports a changed user-consents count as a mismatch", async () => {
+    /*
+     * Consent writes are refused while the importer runs (see
+     * `forbidConsentWrites`), so the count is information for the report,
+     * not a check that can fail.
+     */
+    it("reports a changed user-consents count as information, not a failure", async () => {
       const before = await snapshotBeforeRun(payload, importPlan);
       const shifted = await verify(payload, importPlan, {
         ...before,
         userConsents: before.userConsents + 1,
       });
 
-      expect(shifted.ok).toBe(false);
-      expect(shifted.mismatches).toEqual([
-        expect.objectContaining({ subject: "user-consents" }),
-      ]);
+      expect(shifted.ok).toBe(true);
+      expect(shifted.mismatches).toEqual([]);
+      expect(shifted.counts.userConsents).toEqual({
+        before: before.userConsents + 1,
+        after: before.userConsents,
+      });
+    });
+  });
+
+  describe("consent writes while the importer runs", () => {
+    const home = category("toestemming-thuis");
+    const importPlan = plan([home], [gesture("toestemming-gebaar", [home])]);
+
+    let consentId: number;
+    let createError: unknown;
+    let updateError: unknown;
+    let deleteError: unknown;
+    let applied: Awaited<ReturnType<typeof applyPlan>>;
+    let createdAfterRelease: number | undefined;
+
+    beforeAll(async () => {
+      const consent = await payload.create({
+        collection: "user-consents",
+        overrideAccess: true,
+        data: { analyticsConsent: false, consentVersion: `t4-${RUN}` },
+      });
+      consentId = consent.id;
+
+      const release = forbidConsentWrites(payload);
+      try {
+        createError = await payload
+          .create({
+            collection: "user-consents",
+            overrideAccess: true,
+            data: { analyticsConsent: true, consentVersion: `t4-${RUN}` },
+          })
+          .then(
+            () => undefined,
+            (error: unknown) => error
+          );
+        updateError = await payload
+          .update({
+            collection: "user-consents",
+            id: consentId,
+            overrideAccess: true,
+            data: { analyticsConsent: true },
+          })
+          .then(
+            () => undefined,
+            (error: unknown) => error
+          );
+        deleteError = await payload
+          .delete({
+            collection: "user-consents",
+            id: consentId,
+            overrideAccess: true,
+          })
+          .then(
+            () => undefined,
+            (error: unknown) => error
+          );
+        applied = await applyPlan(payload, importPlan, { log: silent });
+      } finally {
+        release();
+      }
+
+      const after = await payload.create({
+        collection: "user-consents",
+        overrideAccess: true,
+        data: { analyticsConsent: false, consentVersion: `t4-${RUN}` },
+      });
+      createdAfterRelease = after.id;
+    });
+
+    afterAll(async () => {
+      await payload.delete({
+        collection: "user-consents",
+        overrideAccess: true,
+        where: { consentVersion: { equals: `t4-${RUN}` } },
+      });
+    });
+
+    it("refuses a consent create, update and delete", () => {
+      for (const error of [createError, updateError, deleteError]) {
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toMatch(
+          /\[migrate-convex\] the importer must not write consent records/
+        );
+      }
+    });
+
+    it("leaves the consent record as it was", async () => {
+      const doc = await payload.findByID({
+        collection: "user-consents",
+        id: consentId,
+        overrideAccess: true,
+      });
+      expect(doc.analyticsConsent).toBe(false);
+    });
+
+    it("does not get in the way of the import itself", () => {
+      expect(applied.categories).toEqual({
+        created: 1,
+        existing: 0,
+        failed: [],
+      });
+      expect(applied.gestures.created).toBe(1);
+      expect(applied.gestures.failed).toEqual([]);
+    });
+
+    it("is lifted again when released", () => {
+      expect(createdAfterRelease).toBeTypeOf("number");
     });
   });
 
@@ -304,6 +417,24 @@ describe("verify, against a real database", () => {
       ]);
     });
 
+    /*
+     * A pre-existing gesture whose only fault is its search entry is
+     * otherwise whole, and an editor may have worked on it since: saving it
+     * (or reindexing) rebuilds the entry without losing that work.
+     */
+    it("says to re-save a pre-existing gesture whose only fault is its search entry", () => {
+      const remedies = (legacyId: string): string[] =>
+        rerun.incomplete
+          .filter((entry) => entry.legacyId === legacyId)
+          .map((entry) => entry.remedy);
+
+      expect(remedies(noSearch.legacyId)).toEqual([
+        "re-save or reindex the gesture",
+      ]);
+      expect(remedies(noLinks.legacyId)).toEqual(["delete and rerun"]);
+      expect(remedies(noName.legacyId)).toEqual(["delete and rerun"]);
+    });
+
     it("names each incomplete gesture with its plan name, for the report", () => {
       expect(
         rerun.incomplete.find((entry) => entry.legacyId === noName.legacyId)
@@ -391,6 +522,38 @@ describe("verify, against a real database", () => {
     });
   });
 
+  describe("a gesture this run created without its search entry", () => {
+    const home = category("nieuw-zoek-thuis");
+    const fresh = gesture("nieuw-zonder-zoek", [home]);
+    const importPlan = plan([home], [fresh]);
+
+    let result: VerifyResult;
+
+    beforeAll(async () => {
+      const before = await snapshotBeforeRun(payload, importPlan);
+      await applyPlan(payload, importPlan, { log: silent });
+      await payload.delete({
+        collection: "search",
+        overrideAccess: true,
+        where: {
+          "doc.relationTo": { equals: "gestures" },
+          "doc.value": { equals: await idOf("gestures", fresh.legacyId) },
+        },
+      });
+      result = await verify(payload, importPlan, before);
+    });
+
+    it("is incomplete with delete and rerun, since the create itself stopped short", () => {
+      expect(result.incomplete).toEqual([
+        expect.objectContaining({
+          legacyId: fresh.legacyId,
+          check: "search entries: 0 (expected 1)",
+          remedy: "delete and rerun",
+        }),
+      ]);
+    });
+  });
+
   describe("the CLI, end to end on the synthetic fixture", () => {
     let scratch: string;
     let exportDir: string;
@@ -406,14 +569,17 @@ describe("verify, against a real database", () => {
      * run's rows in the persisted local D1, so this copies it outside the
      * work tree (where the CLI accepts it) and suffixes every id with RUN.
      */
-    const copyFixtureWithRunIds = async (): Promise<void> => {
-      await cp(path.join(FIXTURES, "valid"), exportDir, { recursive: true });
+    const copyFixtureWithRunIds = async (
+      destination: string,
+      tag: string
+    ): Promise<void> => {
+      await cp(path.join(FIXTURES, "valid"), destination, { recursive: true });
       for (const table of ["categories", "gestures"]) {
-        const file = path.join(exportDir, table, "documents.jsonl");
+        const file = path.join(destination, table, "documents.jsonl");
         const text = await readFile(file, "utf8");
         await writeFile(
           file,
-          text.replace(/"(cat|ges)_([a-z0-9_]+)"/g, `"$1_$2_t4${RUN}"`)
+          text.replace(/"(cat|ges)_([a-z0-9_]+)"/g, `"$1_$2_${tag}${RUN}"`)
         );
       }
     };
@@ -422,7 +588,7 @@ describe("verify, against a real database", () => {
       scratch = await mkdtemp(path.join(os.tmpdir(), "migrate-convex-e2e-"));
       exportDir = path.join(scratch, "export");
       reportPath = path.join(scratch, "report.md");
-      await copyFixtureWithRunIds();
+      await copyFixtureWithRunIds(exportDir, "t4");
 
       const argv = [
         "--export",
@@ -473,6 +639,129 @@ describe("verify, against a real database", () => {
       expect(rerunCode).toBe(0);
       expect(rerunReport).toMatch(/\| gestures \| 2 \| 0 \| 2 \| 0 \|/);
       expect(rerunReport).toMatch(/## Verification\s+\*\*Passed\.\*\*/);
+    });
+
+    /*
+     * `verify` failing after `applyPlan` wrote must still leave a record of
+     * what was written. The fault: the search reads `verify` makes (and
+     * `applyPlan` never does) throw.
+     */
+    it("still writes a report, marked incomplete, when verification throws after the import", async () => {
+      const brokenExport = path.join(scratch, "export-broken-verify");
+      const brokenReport = path.join(scratch, "report-broken-verify.md");
+      await copyFixtureWithRunIds(brokenExport, "t4v");
+      const real = await getPayload({ config });
+      const failingVerify = new Proxy(real, {
+        get(target, property) {
+          if (property === "find") {
+            return (args: Parameters<Payload["find"]>[0]) =>
+              args.collection === "search"
+                ? Promise.reject(new Error("injected: search read failed"))
+                : target.find(args);
+          }
+          const value = Reflect.get(target, property, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+
+      const brokenCode = await runCli({
+        argv: [
+          "--export",
+          brokenExport,
+          "--report",
+          brokenReport,
+          "--target=local",
+          "--apply",
+        ],
+        env: { CLOUDFLARE_ENV: "staging", NODE_ENV: "test" },
+        log: (line) => lines.push(line),
+        error: (line) => lines.push(line),
+        loadPayload: () => Promise.resolve(failingVerify),
+      });
+      const partial = await readFile(brokenReport, "utf8");
+
+      expect(brokenCode).not.toBe(0);
+      expect(partial).toMatch(/\| gestures \| 2 \| 2 \| 0 \| 0 \|/);
+      expect(partial).toMatch(
+        /verification did not complete: injected: search read failed/
+      );
+      expect(partial).toMatch(/Outcome:\*\* FAILED/);
+    });
+
+    /*
+     * The CLI holds the consent refusal over the whole run: a consent write
+     * attempted from inside the import (here, by the injected `create`,
+     * standing in for some future hook) is refused, and the refusal is
+     * lifted once the run ends.
+     */
+    it("refuses a consent write attempted during a CLI run, and lifts the refusal after", async () => {
+      const consentExport = path.join(scratch, "export-consent");
+      const consentReport = path.join(scratch, "report-consent.md");
+      await copyFixtureWithRunIds(consentExport, "t4c");
+      const real = await getPayload({ config });
+      const consentData = {
+        analyticsConsent: true,
+        consentVersion: `t4c-${RUN}`,
+      };
+      let duringRun: unknown = "not attempted";
+      const sneaky = new Proxy(real, {
+        get(target, property) {
+          if (property === "create") {
+            return async (args: Parameters<Payload["create"]>[0]) => {
+              if (duringRun === "not attempted") {
+                duringRun = await target
+                  .create({
+                    collection: "user-consents",
+                    overrideAccess: true,
+                    data: consentData,
+                  })
+                  .then(
+                    () => "written",
+                    (caught: unknown) => caught
+                  );
+              }
+              return target.create(args);
+            };
+          }
+          const value = Reflect.get(target, property, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+
+      try {
+        const consentCode = await runCli({
+          argv: [
+            "--export",
+            consentExport,
+            "--report",
+            consentReport,
+            "--target=local",
+            "--apply",
+          ],
+          env: { CLOUDFLARE_ENV: "staging", NODE_ENV: "test" },
+          log: (line) => lines.push(line),
+          error: (line) => lines.push(line),
+          loadPayload: () => Promise.resolve(sneaky),
+        });
+
+        expect(consentCode).toBe(0);
+        expect(duringRun).toBeInstanceOf(Error);
+        expect((duringRun as Error).message).toMatch(
+          /the importer must not write consent records/
+        );
+        const afterRun = await real.create({
+          collection: "user-consents",
+          overrideAccess: true,
+          data: consentData,
+        });
+        expect(afterRun.id).toBeTypeOf("number");
+      } finally {
+        await real.delete({
+          collection: "user-consents",
+          overrideAccess: true,
+          where: { consentVersion: { equals: `t4c-${RUN}` } },
+        });
+      }
     });
 
     it("leaves nothing of the export or report inside the work tree", async () => {
