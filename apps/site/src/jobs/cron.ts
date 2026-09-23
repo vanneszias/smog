@@ -8,7 +8,8 @@
  * `worker.ts`'s own import (of OpenNext's build output) only resolves after
  * `opennextjs-cloudflare build` has run, so unlike this file it cannot be
  * unit tested against a tree with no build; proving the *deployed* Worker
- * really ticks is Task 2's job, in `docs/superpowers/plans/2026-09-22-cron-wiring.md`.
+ * really ticks happens against a real build and a real deploy (see
+ * `docs/deployment-checklist.md`), not a unit test in this file.
  *
  * ## What a Cron Trigger invokes, and why that rules out a "crons" entry alone
  *
@@ -82,13 +83,19 @@ function required(value: string | undefined, name: string): string {
  * One tick: the request a Cron Trigger's `scheduled()` handler makes, handed
  * to the Worker that answers it.
  *
- * The response is returned rather than inspected, because there is nothing to
- * inspect. `endpoints/jobs.ts` answers every caller the same bytes on purpose —
- * a missing token, a wrong token, an empty queue, a run that did work and a run
- * that threw all produce `200 {"status":"ok"}`, so that the endpoint cannot be
- * used as an oracle for its own secret. What happened goes to the log, where
- * only an operator reads it. A caller that branched on this response would be
- * branching on a constant.
+ * The response is returned to `onScheduled` rather than inspected here,
+ * because on every outcome the *handler* itself produces there is nothing to
+ * inspect: `endpoints/jobs.ts` answers every caller the same bytes on
+ * purpose — a missing token, a wrong token, an empty queue, a run that did
+ * work and a run that threw all produce `200 {"status":"ok"}`, so that the
+ * endpoint cannot be used as an oracle for its own secret. What happened
+ * goes to the log, where only an operator reads it. For those outcomes a
+ * caller branching on this response would be branching on a constant.
+ *
+ * `onScheduled` still inspects the status, because a non-2xx here is not one
+ * of those handler-level outcomes — it is something *beneath* the handler
+ * answering instead (a framework crash, an edge failure), which is not a
+ * constant and is exactly what Cron Trigger Past Events needs to see.
  *
  * The `host` header is not decoration, and dropping it does not fail loudly —
  * it fails as a wrong link in a sponsor's inbox. `dispatch` is `fetch` from
@@ -130,16 +137,26 @@ export async function runScheduledTick(
  * is cut off. Handing the promise to `waitUntil` keeps the tick — and the
  * queue drain it triggers — alive after this function has returned.
  *
- * The response is inspected here, once, for the one thing `runScheduledTick`
- * deliberately does not tell its caller: whether the run was answered at all.
- * A non-2xx (the endpoint is otherwise silent about outcomes, per its own
- * doc comment) is logged with its status so a failing tick is visible in the
- * Worker log instead of looking identical to a healthy one forever.
+ * Both branches log, then rethrow. Cloudflare's own Cron Trigger docs say
+ * "The first ctx.waitUntil to fail will be observed and recorded as the
+ * status in the Cron Trigger Past Events table" — so a `waitUntil` promise
+ * that swallows its rejection (what this function used to do) makes every
+ * tick show as a success in that table, forever, whether or not anything
+ * actually ran. Rethrowing is what lets a bad tick be recorded as failed
+ * there, rather than only visible to someone running a live `wrangler tail`
+ * at the right minute.
  *
- * Both branches only log. A scheduled invocation has no caller to reject to,
- * and Cloudflare docs are explicit that scheduled handlers should not throw:
- * doing so from inside `waitUntil` would surface as an uncaught rejection
- * with no one to catch it, not a retry.
+ * The response is inspected here, once, for the one thing `runScheduledTick`
+ * deliberately does not tell its caller: whether the run was answered at
+ * all. A non-2xx is logged with its status and then thrown as a new
+ * `Error`. `endpoints/jobs.ts` answers `200 {"status":"ok"}` for every
+ * handler-level outcome on purpose — including a refused token (see
+ * `runScheduledTick`'s doc comment) — so this branch does not fire for
+ * those; the endpoint's own 200-for-everything design means Past Events
+ * catches framework-level failures (a crash below the handler, an edge
+ * error), not handler-level refusals, which stay visible only in the log
+ * line. A thrown `dispatch` error is logged with the same `[cron]` prefix
+ * and rethrown unchanged.
  */
 export function onScheduled(
   environment: CronEnvironment,
@@ -151,10 +168,14 @@ export function onScheduled(
       (response) => {
         if (!response.ok) {
           console.error(`[cron] Scheduled job run answered ${response.status}`);
+          throw new Error(
+            `[cron] Scheduled job run answered ${response.status}`
+          );
         }
       },
       (error: unknown) => {
         console.error("[cron] Scheduled job run failed:", error);
+        throw error;
       }
     )
   );

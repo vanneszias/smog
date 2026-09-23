@@ -16,6 +16,13 @@
   "name": "smog-site",
   "compatibility_date": "2025-08-15",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Without this, `[cron]`/`[jobs]` console lines only exist for whoever has
+  // a `wrangler tail` open at the moment they're printed; with it, they also
+  // land in Workers Logs, so a failed tick is still readable after the fact.
+  // Confirmed inheritable (wrangler normalizes it with `inheritable()`, not
+  // `notInheritable()`, in `wrangler-dist/cli.js`), so one entry here covers
+  // both named environments below.
+  "observability": { "enabled": true },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS",

@@ -11,7 +11,9 @@ import { onScheduled, runScheduledTick } from "@/jobs/cron";
  * build the way this file is. `jobs/cron.ts` says more. What's asserted here
  * is the request — the path it is aimed at, the headers it carries, and what
  * happens when the two things it needs are missing — and, below, that
- * `onScheduled` holds the tick open and logs rather than throws.
+ * `onScheduled` holds the tick open, logs what happened, and rethrows so the
+ * held promise rejects — the failure a Cron Trigger's Past Events table
+ * records.
  */
 describe("the scheduled tick", () => {
   const environment = {
@@ -152,7 +154,7 @@ describe("onScheduled", () => {
     expect(request.headers.get("authorization")).toBe("Bearer cron-test-token");
   });
 
-  it("logs a refused tick with its status instead of passing it off as a run (Review Focus 1)", async () => {
+  it("logs a refused tick with its status, then rejects, so Cron Trigger Past Events records the failure (Review Focus 1)", async () => {
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -161,13 +163,13 @@ describe("onScheduled", () => {
     onScheduled(environment, context, () =>
       Promise.resolve(new Response(null, { status: 401 }))
     );
-    await held[0];
 
+    await expect(held[0]).rejects.toThrow(/401/);
     expect(error).toHaveBeenCalledWith(expect.stringContaining("401"));
     error.mockRestore();
   });
 
-  it("logs a missing variable and does not reject (Review Focus 2)", async () => {
+  it("logs a missing variable, then rejects (Review Focus 2)", async () => {
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -176,7 +178,7 @@ describe("onScheduled", () => {
 
     onScheduled({ JOBS_RUN_TOKEN: "t" }, context, dispatch);
 
-    await expect(held[0]).resolves.toBeUndefined();
+    await expect(held[0]).rejects.toThrow(/SITE_ORIGIN/);
     expect(dispatch).not.toHaveBeenCalled();
     expect(error).toHaveBeenCalledWith(
       "[cron] Scheduled job run failed:",
@@ -187,7 +189,7 @@ describe("onScheduled", () => {
     error.mockRestore();
   });
 
-  it("logs a dispatch that throws and does not reject", async () => {
+  it("logs a dispatch that throws, then rejects", async () => {
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -195,7 +197,7 @@ describe("onScheduled", () => {
 
     onScheduled(environment, context, () => Promise.reject(new Error("boom")));
 
-    await expect(held[0]).resolves.toBeUndefined();
+    await expect(held[0]).rejects.toThrow("boom");
     expect(error).toHaveBeenCalledWith(
       "[cron] Scheduled job run failed:",
       expect.any(Error)
