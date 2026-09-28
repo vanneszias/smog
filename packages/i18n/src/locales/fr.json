@@ -848,7 +848,12 @@
       "currentlySponsored": "Actuellement parrainé",
       "sponsoredBy": "Ce geste est parrainé par {{sponsorName}}.",
       "sponsored": "Ce geste est actuellement parrainé.",
-      "availableFrom": "Il sera à nouveau disponible pour parrainage à partir du {{date}}."
+      "availableFrom": "Il sera à nouveau disponible pour parrainage à partir du {{date}}.",
+      "qrCode": "Code QR",
+      "qrCodeDescription": "Scannez pour ouvrir ce geste dans l'app SMOG.",
+      "copyLink": "Copier le lien",
+      "linkCopied": "Lien copié",
+      "downloadQrCode": "Télécharger"
     },
     "gestureFilters": {
       "searchPlaceholder": "Rechercher des gestes...",

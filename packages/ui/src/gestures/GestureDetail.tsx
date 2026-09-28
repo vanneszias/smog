@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Check,
   ListPlus,
+  QrCode,
   Smartphone,
   Sparkles,
   X,
@@ -40,6 +41,7 @@ interface GestureDetailProps {
   onBack?: () => void;
   showOpenInApp?: boolean;
   onOpenInApp?: () => void;
+  onShowQrCode?: () => void;
 }
 
 function SponsorshipCTA({
@@ -91,6 +93,7 @@ export function GestureDetail({
   onBack,
   showOpenInApp = false,
   onOpenInApp,
+  onShowQrCode,
 }: GestureDetailProps) {
   const { i18n, t } = useTranslation();
   const [showDisclaimer, setShowDisclaimer] = useState(false);
@@ -211,6 +214,19 @@ export function GestureDetail({
           >
             {gesture.name}
           </h1>
+
+          {/* QR code button */}
+          {onShowQrCode && (
+            <button
+              aria-label={t("ui.gestureDetail.qrCode", "QR code")}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-background transition-all hover:scale-105 hover:bg-card"
+              onClick={onShowQrCode}
+              title={t("ui.gestureDetail.qrCode", "QR code")}
+              type="button"
+            >
+              <QrCode className="h-5 w-5 stroke-primary" />
+            </button>
+          )}
 
           {/* Save-to-list button */}
           {onToggleSaved && (

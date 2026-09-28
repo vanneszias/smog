@@ -38,8 +38,12 @@ export const persistOptions = {
   maxAge: MAX_AGE,
   buster: CACHE_VERSION,
   // Only persist the gesture catalog query, not auth or user list state.
+  // Only successful queries: pending ones get dehydrated with a promise that
+  // JSON can't serialize, which breaks hydration ("promise.then is not a function").
   dehydrateOptions: {
     shouldDehydrateQuery: (query: Query) =>
-      query.queryKey[0] === "gestures" && query.queryKey[1] === "list",
+      query.state.status === "success" &&
+      query.queryKey[0] === "gestures" &&
+      query.queryKey[1] === "list",
   },
 };

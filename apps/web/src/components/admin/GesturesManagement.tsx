@@ -6,12 +6,14 @@ import {
   Filter,
   Pencil,
   Play,
+  QrCode,
   Search,
   Sparkles,
   Tag,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { GestureQrDialog } from "@/components/GestureQrDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -132,6 +134,7 @@ function GestureDetailPanel({
   onEdit: (gesture: Gesture) => void;
 }) {
   const validCategories = gestureWithCategories.categories.filter(Boolean);
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
 
   return (
     <div className="sticky top-24 space-y-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
@@ -229,10 +232,27 @@ function GestureDetailPanel({
       </div>
 
       {/* Actions */}
-      <Button className="w-full gap-2" onClick={() => onEdit(gesture)}>
-        <Pencil className="h-4 w-4" />
-        Edit Gesture
-      </Button>
+      <div className="space-y-2">
+        <Button className="w-full gap-2" onClick={() => onEdit(gesture)}>
+          <Pencil className="h-4 w-4" />
+          Edit Gesture
+        </Button>
+        <Button
+          className="w-full gap-2"
+          onClick={() => setIsQrDialogOpen(true)}
+          variant="outline"
+        >
+          <QrCode className="h-4 w-4" />
+          QR Code
+        </Button>
+      </div>
+
+      <GestureQrDialog
+        gestureId={gesture._id}
+        gestureName={gesture.name}
+        onOpenChange={setIsQrDialogOpen}
+        open={isQrDialogOpen}
+      />
     </div>
   );
 }
