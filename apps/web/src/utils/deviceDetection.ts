@@ -1,3 +1,13 @@
+export const APP_BASE_URL = "https://app.smog.vlaanderen";
+
+/**
+ * Public URL for a gesture. Opens the app via Universal Links / App Links
+ * when installed, otherwise falls back to the web app.
+ */
+export function getGestureUrl(gestureId: string): string {
+  return `${APP_BASE_URL}/gestures/${gestureId}`;
+}
+
 /**
  * Detects if the user is on a mobile device
  */
@@ -35,7 +45,7 @@ export function openInApp(path: string): void {
   // This will trigger Universal Links (iOS) or App Links (Android)
   setTimeout(() => {
     // If we're still on the page, try the https URL
-    const httpsUrl = `https://app.smog.vlaanderen${path}`;
+    const httpsUrl = `${APP_BASE_URL}${path}`;
     window.location.href = httpsUrl;
   }, 500);
 }

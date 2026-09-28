@@ -8,6 +8,7 @@ import {
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { GestureQrDialog } from "@/components/GestureQrDialog";
 import { useGestures } from "@/hooks/useGestures";
 import { useLists } from "@/lib/lists-context";
 import { trackAnalyticsEvent } from "@/lib/openpanel";
@@ -22,6 +23,7 @@ function GesturesComponent() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { isGestureSaved, openSaveGestureDialog, savedGestureIds } = useLists();
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
 
   // Detect mobile immediately (not in useEffect) to avoid hydration issues
   const [showOpenInApp, setShowOpenInApp] = useState(() => {
@@ -149,6 +151,7 @@ function GesturesComponent() {
               isSaved={isGestureSaved(selectedGesture._id)}
               onBack={handleDeselectGesture}
               onOpenInApp={handleOpenInApp}
+              onShowQrCode={() => setIsQrDialogOpen(true)}
               onToggleSaved={() =>
                 openSaveGestureDialog({
                   categories: selectedGesture.categories
@@ -181,6 +184,14 @@ function GesturesComponent() {
           )}
         </div>
       </div>
+      {selectedGesture && (
+        <GestureQrDialog
+          gestureId={selectedGesture._id}
+          gestureName={selectedGesture.name}
+          onOpenChange={setIsQrDialogOpen}
+          open={isQrDialogOpen}
+        />
+      )}
     </div>
   );
 }

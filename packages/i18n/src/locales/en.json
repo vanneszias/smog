@@ -979,7 +979,12 @@
       "currentlySponsored": "Currently Sponsored",
       "sponsoredBy": "This gesture is sponsored by {{sponsorName}}.",
       "sponsored": "This gesture is currently sponsored.",
-      "availableFrom": "It will be available for sponsorship again from {{date}}."
+      "availableFrom": "It will be available for sponsorship again from {{date}}.",
+      "qrCode": "QR code",
+      "qrCodeDescription": "Scan to open this gesture in the SMOG app.",
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied",
+      "downloadQrCode": "Download"
     },
     "gestureFilters": {
       "searchPlaceholder": "Search gestures...",

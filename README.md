@@ -1,5 +1,7 @@
 # SMOG
 
+[![CI](https://github.com/vanneszias/smog/actions/workflows/ci.yml/badge.svg)](https://github.com/vanneszias/smog/actions/workflows/ci.yml)
+
 Sign-language learning platform with native, web, API, video composition,
 payments, and administration.
 
