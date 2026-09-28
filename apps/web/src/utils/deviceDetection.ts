@@ -1,4 +1,4 @@
-export const APP_BASE_URL = "https://app.smog.vlaanderen";
+const APP_BASE_URL = "https://app.smog.vlaanderen";
 
 /**
  * Public URL for a gesture. Opens the app via Universal Links / App Links
