@@ -1,7 +1,12 @@
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
 import * as NavigationBar from "expo-navigation-bar";
-import { Stack, usePathname, useRouter } from "expo-router";
+import {
+  Stack,
+  usePathname,
+  useRootNavigationState,
+  useRouter,
+} from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Image, Platform, StyleSheet, Text, View } from "react-native";
@@ -192,6 +197,8 @@ function RootLayoutNav() {
   } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname();
+  const navigationState = useRootNavigationState();
   const [hasNavigated, setHasNavigated] = useState(false);
   const prevAuthMode = useRef(authMode);
 
@@ -206,12 +213,16 @@ function RootLayoutNav() {
     prevAuthMode.current = authMode;
   }
 
-  // Force navigation when auth state changes - but only for initial load
+  // Let Expo Router keep the initial deep link after session restoration.
   useEffect(() => {
-    if (!(isLoading || isHandlingOAuthCallback || hasNavigated)) {
+    if (
+      navigationState?.key &&
+      !(isLoading || isHandlingOAuthCallback || hasNavigated)
+    ) {
       if (isAuthenticated || isGuest) {
-        logger.log("User is authenticated/guest - initial navigation to tabs");
-        router.replace("/(tabs)");
+        if (pathname === "/welcome") {
+          router.replace("/(tabs)");
+        }
         setHasNavigated(true);
       } else {
         logger.log("User is not authenticated - initial navigation to auth");
@@ -225,6 +236,8 @@ function RootLayoutNav() {
     isAuthenticated,
     isGuest,
     router,
+    pathname,
+    navigationState?.key,
     hasNavigated,
   ]);
 
