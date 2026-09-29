@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** Cloudflare environments that may be deployed. `dev` is local-only. */
@@ -42,6 +43,49 @@ export function checkDeployTarget(
   return cloudflareEnv;
 }
 
+/**
+ * A string only the `/dev/ui` gallery emits (its theme columns,
+ * `src/dev/ui-gallery.tsx`). Production builds compile the gallery out
+ * (`__SMOG_DEV_TOOLS__`, vite.config.ts); staging keeps it.
+ */
+export const DEV_TOOLS_MARKER = "data-theme-column";
+
+export interface BuiltFile {
+  content: string;
+  path: string;
+}
+
+/** Production must not ship the gallery; staging must still have it. */
+export function checkDevTools(
+  env: DeployableEnvironment,
+  files: readonly BuiltFile[]
+): void {
+  const found = files
+    .filter((file) => file.content.includes(DEV_TOOLS_MARKER))
+    .map((file) => file.path);
+  if (env === "production" && found.length > 0) {
+    throw new Error(
+      `[deploy-guard] the production build contains the /dev/ui gallery: ${found.join(", ")}. Build with CLOUDFLARE_ENV=production so __SMOG_DEV_TOOLS__ is false.`
+    );
+  }
+  if (env === "staging" && found.length === 0) {
+    throw new Error(
+      "[deploy-guard] the staging build has no /dev/ui gallery (dev and staging keep /dev/*)."
+    );
+  }
+}
+
+const DIST_DIR = fileURLToPath(new URL("../dist", import.meta.url));
+
+function readBuiltFiles(dir: string): BuiltFile[] {
+  return readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".js"))
+    .map((entry) => {
+      const path = join(entry.parentPath, entry.name);
+      return { content: readFileSync(path, "utf8"), path };
+    });
+}
+
 function readBuiltConfig(path: string): unknown {
   try {
     return JSON.parse(readFileSync(path, "utf8"));
@@ -57,6 +101,7 @@ if (import.meta.main) {
       process.env.CLOUDFLARE_ENV,
       readBuiltConfig(BUILT_CONFIG_PATH)
     );
+    checkDevTools(env, readBuiltFiles(DIST_DIR));
     console.log(`deploy-guard: ok (${env})`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

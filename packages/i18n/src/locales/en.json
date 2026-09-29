@@ -47,11 +47,15 @@
     "nextPage": "Next page",
     "goToPage": "Go to page {{page}}",
     "currentPage": "Page {{page}}, current page",
+    "morePages": "More pages",
+    "steps": "Steps",
+    "stepCompleted": "completed",
     "sortAscending": "Sort ascending",
     "sortDescending": "Sort descending",
     "sortedAscending": "Sorted ascending",
     "sortedDescending": "Sorted descending",
     "notifications": "Notifications",
+    "notification": "Notification",
     "playVideo": "Play video",
     "pauseVideo": "Pause video",
     "dragHandle": "Drag to reorder",
@@ -317,6 +321,26 @@
     "noLogs": "There are no logs yet.",
     "environment": "Environment",
     "version": "Version",
-    "resetLocalData": "Clear local data"
+    "resetLocalData": "Clear local data",
+    "gallery": {
+      "intro": "Every component in every variant and size, light and dark side by side.",
+      "sampleTitle": "Greetings",
+      "sampleText": "Learn the signs you use every day.",
+      "rowGreetings": "Greetings",
+      "rowFood": "Food and drink",
+      "rowFeelings": "Feelings",
+      "columnName": "Name",
+      "columnStatus": "Status",
+      "columnCount": "Gestures",
+      "statusActive": "Active",
+      "statusDraft": "Draft",
+      "stepChoose": "Choose gestures",
+      "stepDetails": "Your details",
+      "stepPay": "Preview and pay",
+      "progressLabel": "Uploading video",
+      "showToast": "Show notification",
+      "openDialog": "Open dialog",
+      "openSheet": "Open panel"
+    }
   }
 }

@@ -26,7 +26,7 @@
     ]
   },
   "javascript": {
-    "globals": ["__DEV__"]
+    "globals": ["__DEV__", "__SMOG_DEV_TOOLS__"]
   },
   "overrides": [
     {

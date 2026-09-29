@@ -33,6 +33,7 @@ apps/mobile/android/
 # Playwright
 test-results/
 playwright-report/
+apps/site/e2e/__screenshots__/
 
 # env
 .env

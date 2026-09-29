@@ -47,11 +47,15 @@
     "nextPage": "Volgende pagina",
     "goToPage": "Naar pagina {{page}}",
     "currentPage": "Pagina {{page}}, huidige pagina",
+    "morePages": "Meer pagina's",
+    "steps": "Stappen",
+    "stepCompleted": "voltooid",
     "sortAscending": "Oplopend sorteren",
     "sortDescending": "Aflopend sorteren",
     "sortedAscending": "Oplopend gesorteerd",
     "sortedDescending": "Aflopend gesorteerd",
     "notifications": "Meldingen",
+    "notification": "Melding",
     "playVideo": "Video afspelen",
     "pauseVideo": "Video pauzeren",
     "dragHandle": "Slepen om de volgorde te wijzigen",
@@ -317,6 +321,26 @@
     "noLogs": "Er zijn nog geen logs.",
     "environment": "Omgeving",
     "version": "Versie",
-    "resetLocalData": "Lokale gegevens wissen"
+    "resetLocalData": "Lokale gegevens wissen",
+    "gallery": {
+      "intro": "Elke component in elke variant en maat, licht en donker naast elkaar.",
+      "sampleTitle": "Begroetingen",
+      "sampleText": "Leer de gebaren die je elke dag gebruikt.",
+      "rowGreetings": "Begroetingen",
+      "rowFood": "Eten en drinken",
+      "rowFeelings": "Gevoelens",
+      "columnName": "Naam",
+      "columnStatus": "Status",
+      "columnCount": "Gebaren",
+      "statusActive": "Actief",
+      "statusDraft": "Concept",
+      "stepChoose": "Gebaren kiezen",
+      "stepDetails": "Je gegevens",
+      "stepPay": "Bekijken en betalen",
+      "progressLabel": "Video uploaden",
+      "showToast": "Melding tonen",
+      "openDialog": "Dialoog openen",
+      "openSheet": "Paneel openen"
+    }
   }
 }

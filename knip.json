@@ -12,6 +12,10 @@
     "packages/styles": {
       "project": ["src/**/*.ts", "scripts/**/*.ts", "generated/*.{css,cjs}"]
     },
+    "packages/ui-web": {
+      "project": ["src/**/*.{ts,tsx,css}"],
+      "ignoreDependencies": ["tailwindcss"]
+    },
     "packages/db": {
       "entry": ["test/**/*.test.ts", "scripts/*.ts"],
       "project": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"],
@@ -44,9 +48,15 @@
       "entry": [
         "src/routes/**/*.{ts,tsx}",
         "test/**/*.test.ts",
-        "scripts/*.ts"
+        "scripts/*.ts",
+        "e2e/**/*.spec.ts"
       ],
-      "project": ["src/**/*.{ts,tsx,css}", "test/**/*.ts", "scripts/**/*.ts"],
+      "project": [
+        "src/**/*.{ts,tsx,css}",
+        "test/**/*.ts",
+        "scripts/**/*.ts",
+        "e2e/**/*.ts"
+      ],
       "ignoreDependencies": ["cloudflare"]
     },
     "apps/mobile": {

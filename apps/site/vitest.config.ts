@@ -8,6 +8,8 @@ const MIGRATIONS_DIR = fileURLToPath(
 );
 
 export default defineConfig(async () => ({
+  // Tests run the `dev` environment, which has the /dev pages.
+  define: { __SMOG_DEV_TOOLS__: "true" },
   plugins: [
     cloudflareTest({
       miniflare: {
