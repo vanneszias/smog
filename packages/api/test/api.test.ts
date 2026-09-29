@@ -1,11 +1,15 @@
 import type { ContractRouterClient } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
+import {
+  favoritesContract,
+  gestureLookupContract,
+} from "@smog/favorites/contract";
 import { gesturesContract } from "@smog/gestures/contract";
 import { implementRpc, requireTurnstile } from "@smog/rpc";
 import { baseContract, type RpcClientContext } from "@smog/rpc/contract";
 import { makeRpcContext, makeSession } from "@smog/rpc/testing";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { z } from "zod";
 import { createApiClient, createApiQueryUtils } from "../src/client";
 import { appRouter } from "../src/index";
@@ -140,6 +144,39 @@ describe("createApiClient", () => {
       client.gestures.search({ q: "x".repeat(101) })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(seen.at(-1)?.url).toBe("https://smog.test/api/rpc/gestures/search");
+  });
+
+  it("mounts the favorites slice under `favorites`, signed-in only", async () => {
+    expect(Object.keys(appRouter.favorites).sort()).toEqual(
+      Object.keys(favoritesContract).sort()
+    );
+    const client = createApiClient({
+      baseUrl: "https://smog.test",
+      fetch: serve,
+    });
+
+    await expect(client.favorites.ids()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+      defined: true,
+    });
+    expect(seen.at(-1)?.url).toBe("https://smog.test/api/rpc/favorites/ids");
+  });
+
+  it("keeps the favorites mirror of gestures.byIds equal to it", () => {
+    // The favorites hooks call `gestures.byIds` through a mirror (a feature
+    // imports another's ./schema only). The client types must fit...
+    expectTypeOf<
+      ContractRouterClient<{ byIds: typeof gesturesContract.byIds }>
+    >().toExtend<ContractRouterClient<typeof gestureLookupContract>>();
+    // ...and so must the schemas the server validates with.
+    const mirror = gestureLookupContract.byIds["~orpc"];
+    const real = gesturesContract.byIds["~orpc"];
+    expect(z.toJSONSchema(mirror.inputSchema as z.ZodType)).toEqual(
+      z.toJSONSchema(real.inputSchema as z.ZodType)
+    );
+    expect(z.toJSONSchema(mirror.outputSchema as z.ZodType)).toEqual(
+      z.toJSONSchema(real.outputSchema as z.ZodType)
+    );
   });
 
   it("builds TanStack Query options with a stable key", () => {
