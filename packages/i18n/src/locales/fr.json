@@ -60,6 +60,7 @@
     "pauseVideo": "Mettre la vidéo en pause",
     "dragHandle": "Faire glisser pour réordonner",
     "otpDigit": "Chiffre {{index}} sur {{length}}",
+    "userMenu": "Menu du compte",
     "favorite": "Favori",
     "gestureVideo": "Vidéo du geste"
   },
@@ -78,7 +79,9 @@
     "privacy": "Confidentialité",
     "terms": "Conditions",
     "signIn": "Se connecter",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "gestures": "Signes",
+    "legal": "Mentions légales"
   },
   "theme": {
     "label": "Thème",
@@ -92,7 +95,8 @@
     "toggle": "Changer de langue",
     "nl": "Nederlands",
     "en": "English",
-    "fr": "Français"
+    "fr": "Français",
+    "device": "Langue de l'appareil"
   },
   "auth": {
     "title": "Se connecter ou s'inscrire",
@@ -228,7 +232,10 @@
       "skipped_other": "{{count}} gestes ne sont plus disponibles et ont été ignorés.",
       "overLimit": "Tout n'a pas pu être ajouté à votre compte : il contient jusqu'à {{maxLists}} listes de {{maxItems}} gestes chacune.",
       "untitledList": "Liste sans nom"
-    }
+    },
+    "noAccount": "Pas encore de compte ?",
+    "haveAccount": "Vous avez déjà un compte ?",
+    "signUpLink": "Créez-en un"
   },
   "states": {
     "loading": "Chargement…",
@@ -423,6 +430,26 @@
       "gestureSad": "Triste",
       "listSchool": "À l'école",
       "listHome": "À la maison"
-    }
+    },
+    "unlockHint_one": "Encore {{count}} appui pour ouvrir les outils de développement.",
+    "unlockHint_many": "Encore {{count}} appuis pour ouvrir les outils de développement.",
+    "unlockHint_other": "Encore {{count}} appuis pour ouvrir les outils de développement.",
+    "unlocked": "Les outils de développement sont activés."
+  },
+  "home": {
+    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient."
+  },
+  "footer": {
+    "madeBy": "Fait avec ♡ par zias.be"
+  },
+  "account": {
+    "title": "Votre compte",
+    "signedInAs": "Connecté en tant que {{email}}",
+    "comingSoon": "Bientôt, vous gérerez aussi ici vos méthodes de connexion, votre confidentialité et vos préférences."
+  },
+  "settings": {
+    "title": "Paramètres",
+    "preferences": "Préférences",
+    "about": "À propos de l'app"
   }
 }

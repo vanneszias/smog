@@ -9,6 +9,7 @@ import {
   selectList,
 } from "@smog/local-store";
 import { useLocalStore, useLocalStoreInstance } from "@smog/local-store/react";
+import { usePurgeOtherUsers, userScopedKey } from "@smog/rpc/react";
 import {
   keepPreviousData,
   useMutation,
@@ -32,12 +33,7 @@ import {
   toLocalItems,
   toLocalSummary,
 } from "./local";
-import {
-  forUser,
-  LISTS_STALE_TIME,
-  useListsClient,
-  useListsRpc,
-} from "./slice";
+import { LISTS_STALE_TIME, useListsClient, useListsRpc } from "./slice";
 import { type ListsStatus, queryStatus } from "./use-lists";
 
 const updateInputSchema = z.object({
@@ -94,6 +90,7 @@ function withoutItem(detail: ListDetail, gestureId: string): ListDetail {
 export function useList(id: string): UseListResult {
   const local = isLocalListId(id);
   const auth = useAuthState();
+  usePurgeOtherUsers();
   const signedIn = auth.status === "signedIn";
   const rpc = useListsRpc();
   const client = useListsClient();
@@ -120,7 +117,7 @@ export function useList(id: string): UseListResult {
 
   const userId = auth.user?.id;
   const detailKey = useMemo(
-    () => forUser(rpc.get.queryKey({ input: { id } }), userId),
+    () => userScopedKey(rpc.get.queryKey({ input: { id } }), userId),
     [id, rpc, userId]
   );
   const remote = useQuery({

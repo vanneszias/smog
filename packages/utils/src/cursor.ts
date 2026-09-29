@@ -37,3 +37,28 @@ export function decodeCursor(cursor: string): (string | number)[] | null {
     return null;
   }
 }
+
+/** A `cursor` the list did not issue: callers answer with `VALIDATION`. */
+export class InvalidCursorError extends Error {
+  constructor() {
+    super("[utils] Invalid page cursor");
+    this.name = "InvalidCursorError";
+  }
+}
+
+/**
+ * Decodes a cursor and checks its shape with `parse` (`null` for a wrong
+ * one); throws `InvalidCursorError` for anything `encodeCursor` did not
+ * produce from that shape.
+ */
+export function decodeCursorAs<T>(
+  cursor: string,
+  parse: (key: (string | number)[]) => T | null
+): T {
+  const key = decodeCursor(cursor);
+  const position = key ? parse(key) : null;
+  if (position === null) {
+    throw new InvalidCursorError();
+  }
+  return position;
+}

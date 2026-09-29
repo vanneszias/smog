@@ -1,4 +1,5 @@
 import { useAuthState } from "@smog/auth/react";
+import { usePurgeOtherUsers, userScopedKey } from "@smog/rpc/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import {
@@ -7,7 +8,7 @@ import {
   type ShareLinks,
   type ShareRole,
 } from "../schema";
-import { forUser, LISTS_STALE_TIME, useListsRpc } from "./slice";
+import { LISTS_STALE_TIME, useListsRpc } from "./slice";
 import { type ListsStatus, queryStatus } from "./use-lists";
 
 /** Sharing needs an account (spec §11): guests and guest lists get this. */
@@ -37,6 +38,7 @@ export type UseShareLinksResult = ShareLinksRequireAccount | ShareLinksState;
 /** The owner's view and edit links for a list. */
 export function useShareLinks(id: string): UseShareLinksResult {
   const auth = useAuthState();
+  usePurgeOtherUsers();
   const available = auth.status === "signedIn" && !isLocalListId(id);
   const rpc = useListsRpc();
   const queryClient = useQueryClient();
@@ -47,7 +49,7 @@ export function useShareLinks(id: string): UseShareLinksResult {
   const links = useQuery({
     ...options,
     enabled: available,
-    queryKey: forUser(options.queryKey, auth.user?.id),
+    queryKey: userScopedKey(options.queryKey, auth.user?.id),
   });
   const { mutateAsync: createRemote } = useMutation(
     rpc.share.create.mutationOptions()

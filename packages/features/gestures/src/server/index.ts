@@ -10,7 +10,6 @@ export {
   findGestureBySlug,
   findGesturesByIds,
   findRelatedGestures,
-  InvalidCursorError,
   listCategories,
   listGestures,
   listSitemap,

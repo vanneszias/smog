@@ -512,6 +512,26 @@ describe("accounts: the API", () => {
     ]);
   });
 
+  test("sign-out drops the previous user's cached lists", async () => {
+    const { auth, queryClient, server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Van Anna", [HOND]));
+    const { rerender, result } = renderHook(() => useLists(), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    const userQueries = () =>
+      queryClient
+        .getQueryCache()
+        .getAll()
+        .filter((query) => JSON.stringify(query.queryKey).includes("user-1"));
+    expect(userQueries().length).toBeGreaterThan(0);
+
+    auth.current = SIGNED_OUT;
+    await act(async () => {
+      rerender();
+      await Promise.resolve();
+    });
+    expect(userQueries()).toEqual([]);
+  });
+
   test("another account signing in never sees the previous one's cached lists", async () => {
     const { auth, server, wrapper } = setup(SIGNED_IN);
     server.lists.set("srv-1", detail("srv-1", "Van Anna", []));

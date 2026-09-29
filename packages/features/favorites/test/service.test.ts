@@ -2,13 +2,12 @@ import { env } from "cloudflare:workers";
 import { favorite, gesture, type User } from "@smog/db";
 import { createDb, type Db } from "@smog/db/client";
 import { makeGesture, makeUser } from "@smog/db/testing";
-import { encodeCursor } from "@smog/utils";
+import { encodeCursor, InvalidCursorError } from "@smog/utils";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   addFavorite,
   GestureNotFoundError,
-  InvalidCursorError,
   listFavoriteIds,
   listFavorites,
   removeFavorite,

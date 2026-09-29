@@ -1,7 +1,8 @@
-import { createI18n, DEFAULT_LOCALE, isLocale, type Locale } from "@smog/i18n";
+import { createI18n, isLocale, type Locale } from "@smog/i18n";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { lazy, type ReactNode, Suspense } from "react";
-import { getDevToolsEnabled } from "../../server/dev-tools.functions";
+import { pageMeta } from "@/lib/head";
+import { getDevUiEnabled } from "@/server/dev-tools.functions";
 
 /**
  * `__SMOG_DEV_TOOLS__` is `false` in production builds (vite.config.ts), so
@@ -24,21 +25,24 @@ export interface DevUiSearch {
 export const Route = createFileRoute("/dev/ui")({
   // dev and staging only; production answers 404 (spec §9).
   beforeLoad: async () => {
-    if (!(UiGallery && (await getDevToolsEnabled()))) {
+    if (!(UiGallery && (await getDevUiEnabled()))) {
       throw notFound();
     }
   },
   component: DevUi,
-  head: ({ match }) => ({
-    meta: [
-      {
-        title: createI18n(match.search.lang ?? DEFAULT_LOCALE).t(
-          "devTools.componentGallery"
-        ),
-      },
-      { content: "noindex", name: "robots" },
-    ],
-  }),
+  head: ({ match, matches }) =>
+    match.search.lang
+      ? {
+          meta: [
+            {
+              title: createI18n(match.search.lang).t(
+                "devTools.componentGallery"
+              ),
+            },
+            { content: "noindex", name: "robots" },
+          ],
+        }
+      : pageMeta(matches, "devTools.componentGallery"),
   validateSearch: (search: Record<string, unknown>): DevUiSearch =>
     isLocale(search.lang) ? { lang: search.lang } : {},
 });
@@ -50,7 +54,7 @@ function DevUi(): ReactNode {
   }
   return (
     <Suspense fallback={null}>
-      <UiGallery locale={lang ?? DEFAULT_LOCALE} />
+      <UiGallery lang={lang} />
     </Suspense>
   );
 }

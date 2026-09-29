@@ -179,6 +179,11 @@ const CASES: Record<string, ReactElement> = {
   Text: <kit.Text testID={ID}>Text</kit.Text>,
   Textarea: <kit.Textarea testID={ID} />,
   VideoPlayer: <kit.VideoPlayer playbackId="pb" testID={ID} />,
+  TextLink: (
+    <kit.TextLink onPress={noop} testID={ID}>
+      Link
+    </kit.TextLink>
+  ),
 };
 
 describe("the kit contract", () => {

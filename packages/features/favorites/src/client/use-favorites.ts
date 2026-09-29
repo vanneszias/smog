@@ -1,4 +1,4 @@
-import { type AuthState, useAuthState } from "@smog/auth/react";
+import { useAuthState } from "@smog/auth/react";
 import type { GesturesContract } from "@smog/gestures/contract";
 import type { GestureSummary } from "@smog/gestures/schema";
 import {
@@ -7,11 +7,15 @@ import {
   toggleFavorite,
 } from "@smog/local-store";
 import { useLocalStore, useLocalStoreInstance } from "@smog/local-store/react";
-import { useRpcClient, useRpcQuery } from "@smog/rpc/react";
+import {
+  usePurgeOtherUsers,
+  useRpcClient,
+  useRpcQuery,
+  userScopedKey,
+} from "@smog/rpc/react";
 import {
   keepPreviousData,
   type Mutation,
-  type QueryKey,
   type QueryStatus,
   useInfiniteQuery,
   useMutation,
@@ -154,37 +158,22 @@ function withFlips(ids: readonly string[], flips: readonly Flip[]): string[] {
   );
 }
 
-/** Favorites queries whose key carries a user id other than `userId`. */
-function isOtherUsers(queryKey: QueryKey, userId: string | undefined): boolean {
-  const scope = queryKey[2] as { userId?: unknown } | undefined;
-  return scope?.userId !== undefined && scope.userId !== userId;
-}
-
+/** The signed-in path; `userId` is `undefined` unless signed in. */
 function useAccountFavorites(
-  auth: { status: AuthState["status"]; userId: string | undefined },
+  userId: string | undefined,
   withItems: boolean
 ): Favorites {
-  const { userId } = auth;
   const enabled = userId !== undefined;
   const client = useRpcClient<FavoritesSlice>();
   const rpc = useRpcQuery<FavoritesSlice>().favorites;
   const queryClient = useQueryClient();
-  // Keyed by user, so another account never sees this one's cache.
+  // Keyed by user, so another account never sees this one's cache; after a
+  // sign-out or an account switch the other users' cache is dropped.
   const idsKey = useMemo(
-    () => [...rpc.ids.key({ type: "query" }), { userId }] as const,
+    () => userScopedKey(rpc.ids.key({ type: "query" }), userId),
     [rpc, userId]
   );
-
-  // After a sign-out or an account switch, drop the other users' cache.
-  useEffect(() => {
-    if (auth.status === "loading") {
-      return;
-    }
-    queryClient.removeQueries({
-      predicate: (query) => isOtherUsers(query.queryKey, userId),
-      queryKey: rpc.key(),
-    });
-  }, [auth.status, queryClient, rpc, userId]);
+  usePurgeOtherUsers();
 
   const ids = useQuery({
     enabled,
@@ -199,7 +188,7 @@ function useAccountFavorites(
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam, signal }) =>
       client.favorites.list({ cursor: pageParam }, { signal }),
-    queryKey: [...rpc.list.key({ type: "infinite" }), { userId }],
+    queryKey: userScopedKey(rpc.list.key({ type: "infinite" }), userId),
     staleTime: FAVORITES_STALE_TIME,
   });
 
@@ -382,7 +371,7 @@ export function useFavorites({
   const auth = useAuthState();
   const signedIn = auth.status === "signedIn";
   const account = useAccountFavorites(
-    { status: auth.status, userId: signedIn ? auth.user?.id : undefined },
+    signedIn ? auth.user?.id : undefined,
     items
   );
   const guest = useGuestFavorites(auth.status === "signedOut", items);

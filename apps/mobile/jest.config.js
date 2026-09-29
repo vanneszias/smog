@@ -11,10 +11,10 @@ module.exports = {
   transform: {
     "\\.mjs$": "babel-jest",
   },
-  // RN, Expo, NativeWind, oRPC and the kit's libraries ship untranspiled
-  // code. `.bun/` also covers Bun's isolated linker layout, should the repo
-  // ever leave the hoisted linker.
+  // RN, Expo (and expo-router's standard-navigation), NativeWind, oRPC and
+  // the kit's libraries ship untranspiled code. `.bun/` also covers Bun's
+  // isolated linker layout, should the repo ever leave the hoisted linker.
   transformIgnorePatterns: [
-    "/node_modules/(?!(\\.bun/|react-native|@react-native|@react-native-community|expo|@expo|react-navigation|@react-navigation|nativewind|react-native-css-interop|@orpc|@gorhom|lucide-react-native))",
+    "/node_modules/(?!(\\.bun/|react-native|@react-native|@react-native-community|expo|@expo|react-navigation|@react-navigation|nativewind|react-native-css-interop|@orpc|@gorhom|lucide-react-native|standard-navigation))",
   ],
 };

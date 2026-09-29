@@ -38,7 +38,7 @@ export interface LimitedContext {
 /**
  * A handler interceptor (`interceptors`) that limits every request of a
  * transport per IP, keyed by `<scope>:<ip>`, before any procedure runs:
- * `new RPCHandler(appRouter, { interceptors: [limitRequests("RL_API", "rpc")] })`.
+ * `new RPCHandler(appRouter, { interceptors: [limitRequests("RL_API", "api")] })`.
  */
 export function limitRequests(binding: RateLimitBinding, scope: string) {
   return async <T>(options: {

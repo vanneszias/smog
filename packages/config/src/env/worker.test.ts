@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { parseWorkerEnv, parseWorkerVars, workerSecretsSchema } from "./worker";
+import {
+  parseWorkerEnv,
+  parseWorkerVars,
+  publicAuthConfig,
+  workerSecretsSchema,
+} from "./worker";
 
 describe("parseWorkerVars", () => {
   test("applies defaults for optional vars", () => {
@@ -98,5 +103,44 @@ describe("parseWorkerEnv", () => {
       TURNSTILE_SECRET_KEY: "t",
     });
     expect(production.TURNSTILE_SECRET_KEY).toBe("t");
+  });
+});
+
+describe("publicAuthConfig", () => {
+  const base = {
+    BETTER_AUTH_SECRET: "x".repeat(32),
+    EMAIL_FROM: "SMOG <no-reply@example.com>",
+    EMAIL_REPLY_TO: "info@smog.vlaanderen",
+    ENVIRONMENT: "dev",
+    SITE_URL: "https://smog.test",
+  };
+
+  test("hides providers without a client id and secret", () => {
+    expect(publicAuthConfig(parseWorkerEnv(base))).toEqual({
+      apple: false,
+      google: false,
+      turnstileSiteKey: null,
+    });
+  });
+
+  test("shows configured providers and the public Turnstile site key", () => {
+    const env = parseWorkerEnv({
+      ...base,
+      APPLE_CLIENT_ID: "apple",
+      APPLE_CLIENT_SECRET: "apple-secret",
+      GOOGLE_CLIENT_ID: "google",
+      TURNSTILE_SITE_KEY: "site-key",
+    });
+    expect(publicAuthConfig(env)).toEqual({
+      apple: true,
+      google: false,
+      turnstileSiteKey: "site-key",
+    });
+  });
+
+  test("treats an empty site key as unset", () => {
+    expect(
+      parseWorkerVars({ ...base, TURNSTILE_SITE_KEY: "" }).TURNSTILE_SITE_KEY
+    ).toBeUndefined();
   });
 });

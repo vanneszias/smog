@@ -1,5 +1,6 @@
 import { exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
+import { devUiEnabled } from "../src/server/dev-tools";
 
 const ORIGIN = "http://localhost:5173";
 // The first /dev/ui request also transforms the kit and the gallery (lazy,
@@ -24,5 +25,13 @@ describe("/dev/ui", () => {
     const response = await exports.default.fetch(`${ORIGIN}/dev/ui?lang=en`);
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("Component gallery");
+  });
+});
+
+describe("devUiEnabled", () => {
+  it("is on in dev and staging, off in production (spec §9)", () => {
+    expect(devUiEnabled("dev")).toBe(true);
+    expect(devUiEnabled("staging")).toBe(true);
+    expect(devUiEnabled("production")).toBe(false);
   });
 });

@@ -54,9 +54,8 @@ import {
   TabsTrigger,
   Text,
   Textarea,
-  ToastProvider,
+  TextLink,
   Tooltip,
-  TooltipProvider,
   useToast,
 } from "@smog/ui-web";
 import {
@@ -102,43 +101,42 @@ const BADGES = [
   "danger",
 ] as const;
 
-export function UiGallery({ locale }: { locale: Locale }): ReactNode {
-  const i18n = useMemo(() => createI18n(locale), [locale]);
-  return (
-    <I18nextProvider i18n={i18n}>
-      <TooltipProvider>
-        <ToastProvider>
-          <GalleryPage locale={locale} />
-        </ToastProvider>
-      </TooltipProvider>
+/**
+ * The gallery uses the app's providers (root layout); `lang` (`?lang=`)
+ * overrides the page language for this subtree only.
+ */
+export function UiGallery({ lang }: { lang?: Locale | undefined }): ReactNode {
+  const override = useMemo(() => (lang ? createI18n(lang) : null), [lang]);
+  return override ? (
+    <I18nextProvider i18n={override}>
+      <GalleryPage />
     </I18nextProvider>
+  ) : (
+    <GalleryPage />
   );
 }
 
-function GalleryPage({ locale }: { locale: Locale }): ReactNode {
-  const { t } = useTranslation();
+function GalleryPage(): ReactNode {
+  const { i18n, t } = useTranslation();
   return (
-    <main className="mx-auto flex w-full flex-col gap-6 px-4 py-8 md:px-6 lg:px-8">
+    <div
+      className="mx-auto flex w-full flex-col gap-6 px-4 py-8 md:px-6 lg:px-8"
+      lang={i18n.language}
+    >
       <header className="flex flex-col gap-3">
         <Logo size="md" />
         <Heading level={1}>{t("devTools.componentGallery")}</Heading>
         <Text tone="muted">{t("devTools.gallery.intro")}</Text>
       </header>
       <div className="grid items-start gap-6 xl:grid-cols-2">
-        <ThemeColumn locale={locale} theme="light" />
-        <ThemeColumn locale={locale} theme="dark" />
+        <ThemeColumn theme="light" />
+        <ThemeColumn theme="dark" />
       </div>
-    </main>
+    </div>
   );
 }
 
-function ThemeColumn({
-  locale,
-  theme,
-}: {
-  locale: Locale;
-  theme: "light" | "dark";
-}): ReactNode {
+function ThemeColumn({ theme }: { theme: "light" | "dark" }): ReactNode {
   const { t } = useTranslation();
   // Overlays of the dark column portal into it, so they keep its variables.
   const [portal, setPortal] = useState<HTMLDivElement | null>(null);
@@ -148,7 +146,6 @@ function ThemeColumn({
         aria-labelledby={`theme-${theme}`}
         className="flex min-w-0 flex-col gap-10 rounded-xl border border-border-subtle bg-background p-4 text-foreground sm:p-6"
         data-theme-column={theme}
-        lang={locale}
       >
         <Heading id={`theme-${theme}`} level={2}>
           {t(`theme.${theme}`)}
@@ -264,7 +261,7 @@ function ButtonsSection(): ReactNode {
 function TypographySection(): ReactNode {
   const { t } = useTranslation();
   return (
-    <Section name="Heading / Text">
+    <Section name="Heading / Text / TextLink">
       <div className="flex flex-col gap-2">
         <Heading level={4} size="display">
           {t("common.appName")}
@@ -291,6 +288,13 @@ function TypographySection(): ReactNode {
           <Text key={tone} tone={tone} weight="semibold">
             {t("devTools.gallery.sampleTitle")}
           </Text>
+        ))}
+      </Row>
+      <Row>
+        {(["primary", "default", "muted"] as const).map((tone) => (
+          <TextLink href="/privacy" key={tone} tone={tone}>
+            {t("nav.privacy")}
+          </TextLink>
         ))}
       </Row>
     </Section>

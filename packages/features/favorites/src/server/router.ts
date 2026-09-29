@@ -1,10 +1,10 @@
 import { implementRpc, requireUser } from "@smog/rpc";
+import { InvalidCursorError } from "@smog/utils";
 import { favoritesContract } from "../contract";
 import {
   addFavorite,
   type FindGestureSummaries,
   GestureNotFoundError,
-  InvalidCursorError,
   listFavoriteIds,
   listFavorites,
   removeFavorite,

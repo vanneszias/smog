@@ -5,6 +5,12 @@ export const RENDER_MODES = ["container", "local", "fake"] as const;
 
 export type Environment = (typeof ENVIRONMENTS)[number];
 
+/** An optional value: unset and empty (`KEY=` in `.dev.vars`) both mean "off". */
+const optionalValue = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().min(1).optional()
+);
+
 /** Plain `vars` of the site Worker (`wrangler.jsonc` `env.*.vars`). */
 export const workerVarsSchema = z.object({
   EMAIL_FROM: z.string().min(1),
@@ -13,28 +19,24 @@ export const workerVarsSchema = z.object({
   OPENPANEL_API_URL: z.url().default("https://analytics.zias.be/api"),
   RENDER_MODE: z.enum(RENDER_MODES).default("container"),
   SITE_URL: z.url(),
+  /** The public Turnstile widget key; the widget is hidden without it. */
+  TURNSTILE_SITE_KEY: optionalValue,
 });
 
 export type WorkerVars = z.infer<typeof workerVarsSchema>;
-
-/** An optional secret: unset and empty (`KEY=` in `.dev.vars`) both mean "off". */
-const optionalSecret = z.preprocess(
-  (value) => (value === "" ? undefined : value),
-  z.string().min(1).optional()
-);
 
 /**
  * Secrets of the site Worker (`.dev.vars` locally, `wrangler secret put`
  * in staging/production). Later phases add Mollie, Mux and OpenPanel.
  */
 export const workerSecretsSchema = z.object({
-  APPLE_APP_BUNDLE_IDENTIFIER: optionalSecret,
-  APPLE_CLIENT_ID: optionalSecret,
-  APPLE_CLIENT_SECRET: optionalSecret,
+  APPLE_APP_BUNDLE_IDENTIFIER: optionalValue,
+  APPLE_CLIENT_ID: optionalValue,
+  APPLE_CLIENT_SECRET: optionalValue,
   BETTER_AUTH_SECRET: z.string().min(32),
-  GOOGLE_CLIENT_ID: optionalSecret,
-  GOOGLE_CLIENT_SECRET: optionalSecret,
-  TURNSTILE_SECRET_KEY: optionalSecret,
+  GOOGLE_CLIENT_ID: optionalValue,
+  GOOGLE_CLIENT_SECRET: optionalValue,
+  TURNSTILE_SECRET_KEY: optionalValue,
 });
 
 export type WorkerSecrets = z.infer<typeof workerSecretsSchema>;
@@ -78,4 +80,24 @@ export function parseWorkerVars(env: object): WorkerVars {
     );
   }
   return result.data;
+}
+
+/** What the sign-in screens may know about the server's auth setup. */
+export interface PublicAuthConfig {
+  apple: boolean;
+  google: boolean;
+  /** Shown as a Turnstile widget on the guarded auth calls when set. */
+  turnstileSiteKey: string | null;
+}
+
+/**
+ * The public part of the auth config: a social provider shows only when
+ * both its client id and secret are set (spec: optional in dev).
+ */
+export function publicAuthConfig(env: WorkerEnv): PublicAuthConfig {
+  return {
+    apple: Boolean(env.APPLE_CLIENT_ID && env.APPLE_CLIENT_SECRET),
+    google: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+    turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
+  };
 }

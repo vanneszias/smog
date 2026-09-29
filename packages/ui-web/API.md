@@ -32,6 +32,7 @@ Native mapping: `onClick` → `onPress`, `className` → NativeWind `className`,
 |---|---|---|---|
 | `Text` | `size`, `tone`, `weight`, `as` (`p` · `span` · `div` · `label` · `strong` · `small`) | size `body` · `body-sm` · `caption`; tone `default` · `muted` · `primary` · `success` · `warning` · `danger` (the `*-strong` text roles); weight `regular` · `medium` · `semibold` | |
 | `Heading` | `level` (1–6, the outline level), `size`, `tone` | size `display` · `title-1` · `title-2` · `title-3` (defaults from `level`: 1 → title-1, 2 → title-2, 3+ → title-3) | |
+| `TextLink` | `tone`, `asChild` (web: style a router `Link`), `href` and the other `<a>` props | tone `primary` (default) · `default` · `muted` | A link in or next to text: underline on hover, the focus ring, a 44 px hit area around the text. Native: a pressable `Text` with `accessibilityRole="link"` and `onPress`. |
 | `Logo` | `variant`, `tone`, `size`, `decorative` | variant `horizontal` · `stacked`; tone `primary` · `foreground` · `current` | `sm` · `md` · `lg` (height 24 / 32 / 48). `role="img"` named `a11y.logo` unless `decorative`. |
 
 ## Forms

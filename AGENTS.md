@@ -53,6 +53,8 @@ bun -F @smog/mobile export   # expo export for iOS + Android into dist/
 bun -F @smog/mobile doctor   # expo-doctor (needs network, see SMOG_OFFLINE above)
 ```
 
+Local runs need the `EXPO_PUBLIC_*` env: copy `apps/mobile/.env.example` to `apps/mobile/.env` (the app points at the local site on port 5173; use your LAN address on a device).
+
 ### Packages
 ```bash
 bun -F @smog/<name> test     # bun test (pure packages) or Vitest (D1/R2/KV/Queues)
