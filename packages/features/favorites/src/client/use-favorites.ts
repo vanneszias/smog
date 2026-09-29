@@ -1,4 +1,5 @@
-import { useAuthState } from "@smog/auth/react";
+import { type AuthState, useAuthState } from "@smog/auth/react";
+import type { GesturesContract } from "@smog/gestures/contract";
 import type { GestureSummary } from "@smog/gestures/schema";
 import {
   type GuestData,
@@ -9,27 +10,30 @@ import { useLocalStore, useLocalStoreInstance } from "@smog/local-store/react";
 import { useRpcClient, useRpcQuery } from "@smog/rpc/react";
 import {
   keepPreviousData,
+  type Mutation,
+  type QueryKey,
   type QueryStatus,
   useInfiniteQuery,
   useMutation,
+  useMutationState,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { FavoritesContract, GestureLookupContract } from "../contract";
+import type { FavoritesContract } from "../contract";
 import type { FavoritesPage } from "../schema";
 
 /** The contract slice these hooks know, keyed as `appContract` mounts it. */
 interface FavoritesSlice {
   favorites: FavoritesContract;
-  gestures: GestureLookupContract;
+  gestures: GesturesContract;
 }
 
 /** Favorites change only through this user, and every write refetches. */
 export const FAVORITES_STALE_TIME = 60_000;
 /** `gestures.byIds` takes at most 100 ids: a guest's items, a page at a time. */
 const GUEST_PAGE_SIZE = 100;
-/** The one mutation of the signed-in path, to know when the last settles. */
+/** The flips of the signed-in path (the overlay, and when the last settles). */
 const SET_FAVORITE_KEY = ["favorites", "setFavorite"] as const;
 
 export type FavoritesStatus = "loading" | "ready" | "error";
@@ -60,8 +64,9 @@ export interface Favorites {
    */
   status: FavoritesStatus;
   /**
-   * Flips the favorite at once. Signed in, the API call follows, and the
-   * flip is rolled back (and the promise rejects) if it fails.
+   * Flips the favorite at once. Signed in, the API call follows (flips are
+   * sent one after another, in tap order), and the flip is rolled back
+   * (and the promise rejects) if it fails.
    */
   toggle: (gestureId: string) => Promise<void>;
 }
@@ -106,10 +111,60 @@ function stillFavorite(
   return ids ? items.filter((item) => ids.has(item.id)) : items;
 }
 
+/** A flip sent to the API: the state the user asked for. */
+interface Flip {
+  favorite: boolean;
+  gestureId: string;
+  userId: string;
+}
+
+/**
+ * The user's flips still in flight, oldest first. `Mutation.state` is set
+ * synchronously when `mutate` is called, so a second tap in the same tick
+ * already sees the first.
+ */
+function pendingFlips(
+  mutations: readonly PendingFlip[],
+  userId: string
+): Flip[] {
+  return [...mutations]
+    .sort((a, b) => a.order - b.order)
+    .flatMap(({ flip }) => (flip && flip.userId === userId ? [flip] : []));
+}
+
+/** A pending flip mutation as `pendingFlips` reads it. */
+interface PendingFlip {
+  flip: Flip | undefined;
+  /** `mutationId`: increasing in call order. */
+  order: number;
+}
+
+function toPendingFlip(mutation: Mutation): PendingFlip {
+  return {
+    flip: mutation.state.variables as Flip | undefined,
+    order: mutation.mutationId,
+  };
+}
+
+/** The server ids with the pending flips applied in order (the last tap wins). */
+function withFlips(ids: readonly string[], flips: readonly Flip[]): string[] {
+  return flips.reduce(
+    (current, flip) => withFavorite(current, flip.gestureId, flip.favorite),
+    [...ids]
+  );
+}
+
+/** Favorites queries whose key carries a user id other than `userId`. */
+function isOtherUsers(queryKey: QueryKey, userId: string | undefined): boolean {
+  const scope = queryKey[2] as { userId?: unknown } | undefined;
+  return scope?.userId !== undefined && scope.userId !== userId;
+}
+
 function useAccountFavorites(
-  userId: string | undefined,
+  auth: { status: AuthState["status"]; userId: string | undefined },
   withItems: boolean
 ): Favorites {
+  const { userId } = auth;
   const enabled = userId !== undefined;
   const client = useRpcClient<FavoritesSlice>();
   const rpc = useRpcQuery<FavoritesSlice>().favorites;
@@ -119,6 +174,17 @@ function useAccountFavorites(
     () => [...rpc.ids.key({ type: "query" }), { userId }] as const,
     [rpc, userId]
   );
+
+  // After a sign-out or an account switch, drop the other users' cache.
+  useEffect(() => {
+    if (auth.status === "loading") {
+      return;
+    }
+    queryClient.removeQueries({
+      predicate: (query) => isOtherUsers(query.queryKey, userId),
+      queryKey: rpc.key(),
+    });
+  }, [auth.status, queryClient, rpc, userId]);
 
   const ids = useQuery({
     enabled,
@@ -137,33 +203,20 @@ function useAccountFavorites(
     staleTime: FAVORITES_STALE_TIME,
   });
 
-  const mutation = useMutation({
-    mutationFn: ({
-      favorite,
-      gestureId,
-    }: {
-      favorite: boolean;
-      gestureId: string;
-    }) =>
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ favorite, gestureId }: Flip) =>
       favorite
         ? client.favorites.add({ gestureId })
         : client.favorites.remove({ gestureId }),
     mutationKey: SET_FAVORITE_KEY,
-    onError: (_error, { favorite, gestureId }) => {
-      // Undo this flip only, so other in-flight flips keep theirs.
-      queryClient.setQueryData<string[]>(idsKey, (current) =>
-        current ? withFavorite(current, gestureId, !favorite) : current
-      );
-    },
-    onMutate: async ({ favorite, gestureId }) => {
-      await queryClient.cancelQueries({ queryKey: idsKey });
-      queryClient.setQueryData<string[]>(idsKey, (current = []) =>
-        withFavorite(current, gestureId, favorite)
-      );
+    // The optimistic state is the pending flips laid over the server ids
+    // (`withFlips`), so a failed flip rolls back by leaving the pending
+    // set, and a refetch in flight cannot overwrite a newer tap.
+    onError: (error) => {
+      console.error("[favorites] Failed to change a favorite:", error);
     },
     onSettled: async () => {
-      // Refetch once the last flip settles, so a refetch cannot undo a
-      // flip still in flight.
+      // Refetch once the last flip settles (this one still counts).
       if (queryClient.isMutating({ mutationKey: SET_FAVORITE_KEY }) === 1) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: rpc.ids.key() }),
@@ -171,21 +224,50 @@ function useAccountFavorites(
         ]);
       }
     },
+    // The confirmed flip goes into the cache, so nothing flickers between
+    // settling and the refetch.
+    onSuccess: (_data, { favorite, gestureId }) => {
+      queryClient.setQueryData<string[]>(idsKey, (current) =>
+        current ? withFavorite(current, gestureId, favorite) : current
+      );
+    },
+    // One queue for every flip: the server applies them in tap order.
+    scope: { id: "favorites" },
   });
-  const { mutateAsync } = mutation;
 
-  const idSet = useMemo(
-    () => (ids.data ? new Set(ids.data) : undefined),
-    [ids.data]
-  );
+  const pending = useMutationState({
+    filters: { mutationKey: SET_FAVORITE_KEY, status: "pending" },
+    select: toPendingFlip,
+  });
+  const idSet = useMemo(() => {
+    if (!(ids.data && userId)) {
+      return;
+    }
+    return new Set(withFlips(ids.data, pendingFlips(pending, userId)));
+  }, [ids.data, pending, userId]);
+
   const toggle = useCallback(
     async (gestureId: string) => {
-      const current = queryClient.getQueryData<string[]>(idsKey) ?? [];
+      if (!userId) {
+        return;
+      }
+      // Read the cache and the flips now, not the last render: a second
+      // tap in the same tick must see the first.
+      const current = withFlips(
+        queryClient.getQueryData<string[]>(idsKey) ?? [],
+        pendingFlips(
+          queryClient
+            .getMutationCache()
+            .findAll({ mutationKey: SET_FAVORITE_KEY, status: "pending" })
+            .map(toPendingFlip),
+          userId
+        )
+      );
       const favorite = !current.includes(gestureId);
       // analytics: gesture_collection_changed {action: favorite ? "added" : "removed", collection: "favorites", gesture_id}
-      await mutateAsync({ favorite, gestureId });
+      await mutateAsync({ favorite, gestureId, userId });
     },
-    [idsKey, mutateAsync, queryClient]
+    [idsKey, mutateAsync, queryClient, userId]
   );
   const { fetchNextPage } = list;
   const loadMoreItems = useCallback(async () => {
@@ -289,8 +371,10 @@ function useGuestFavorites(enabled: boolean, withItems: boolean): Favorites {
  * The user's favorites, from the API when signed in and from the local
  * store for guests (spec §11), behind one shape: screens never branch on
  * it. While the session loads, it is `loading` and reads neither source.
- * Signed in, `toggle` flips the ids optimistically, rolls back on error
- * and refetches `favorites.ids` and `favorites.list` once settled.
+ * Signed in, `toggle` flips the ids optimistically (pending flips laid
+ * over the server ids), rolls back on error, refetches `favorites.ids` and
+ * `favorites.list` once the last flip settles, and drops other users'
+ * favorites cache after a sign-out or an account switch.
  */
 export function useFavorites({
   items = true,
@@ -298,7 +382,7 @@ export function useFavorites({
   const auth = useAuthState();
   const signedIn = auth.status === "signedIn";
   const account = useAccountFavorites(
-    signedIn ? auth.user?.id : undefined,
+    { status: auth.status, userId: signedIn ? auth.user?.id : undefined },
     items
   );
   const guest = useGuestFavorites(auth.status === "signedOut", items);

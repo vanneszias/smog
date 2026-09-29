@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { createRouterClient, implement } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
+import { gesturesContract } from "@smog/gestures/contract";
 import type { GestureSummary } from "@smog/gestures/schema";
 import {
   createLocalStore,
@@ -14,7 +15,7 @@ import { RpcProvider } from "@smog/rpc/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { favoritesContract, gestureLookupContract } from "../contract";
+import { favoritesContract } from "../contract";
 import { type UseFavoritesOptions, useFavorites } from "./index";
 
 function summary(name: string): GestureSummary {
@@ -56,10 +57,10 @@ interface Server {
   hold?: Promise<void>;
 }
 
-/** The favorites and gestures.byIds contracts in memory, as a real oRPC client. */
+/** The favorites contract and gestures.byIds in memory, as a real oRPC client. */
 function fakeApi(server: Server) {
   const fav = implement(favoritesContract);
-  const gestures = implement(gestureLookupContract);
+  const gestures = implement({ byIds: gesturesContract.byIds });
   async function write(gestureId: string, favorite: boolean) {
     await server.hold;
     if (server.fail) {
@@ -135,12 +136,13 @@ function session(mode: AuthMode): SessionHookResult {
   };
 }
 
-/** Stable session hooks (a hook must not change between renders). */
-const SESSION_HOOKS: Record<AuthMode, () => SessionHookResult> = {
-  loading: () => session("loading"),
-  signedIn: () => session("signedIn"),
-  signedOut: () => session("signedOut"),
-};
+/** The session the fake hook returns; `setup` and `signOut` set it. */
+let authMode: AuthMode = "signedOut";
+
+/** One stable session hook (a hook must not change between renders). */
+function useFakeSession(): SessionHookResult {
+  return session(authMode);
+}
 
 function setup(mode: AuthMode, favorites: string[] = []) {
   const server: Server = { byIds: [], calls: [], favorites };
@@ -149,13 +151,13 @@ function setup(mode: AuthMode, favorites: string[] = []) {
   });
   const store: LocalStore = createLocalStore(createMemoryAdapter());
   const api = fakeApi(server);
-  const useSession = SESSION_HOOKS[mode];
+  authMode = mode;
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <RpcProvider client={api.client} queryUtils={api.queryUtils}>
           <LocalStoreProvider store={store}>
-            <AuthStateProvider useSession={useSession}>
+            <AuthStateProvider useSession={useFakeSession}>
               {children}
             </AuthStateProvider>
           </LocalStoreProvider>
@@ -362,6 +364,64 @@ describe("useFavorites when signed in", () => {
     });
     await waitFor(() => expect(result.current.hasMoreItems).toBe(false));
     expect(server.calls).toEqual(["ids", "list:", "list:50"]);
+  });
+
+  test("two taps in one tick: add then remove, sent in order", async () => {
+    const { server, render } = setup("signedIn", [AAP.id]);
+    const { result } = await render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    const held = gate();
+    server.hold = held.promise;
+    let first: Promise<void> = Promise.resolve();
+    let second: Promise<void> = Promise.resolve();
+    await act(async () => {
+      first = result.current.toggle(HOND.id);
+      second = result.current.toggle(HOND.id);
+      await tick();
+    });
+    // The second tap saw the first: net state is "not a favorite".
+    expect(result.current.isFavorite(HOND.id)).toBe(false);
+    // Flips are queued: the remove waits for the add.
+    expect(server.calls.filter((call) => call.includes(HOND.id))).toEqual([
+      `add:${HOND.id}`,
+    ]);
+
+    await act(async () => {
+      held.open();
+      await Promise.all([first, second]);
+      await tick();
+    });
+    expect(server.calls.filter((call) => call.includes(HOND.id))).toEqual([
+      `add:${HOND.id}`,
+      `remove:${HOND.id}`,
+    ]);
+    expect(server.favorites).toEqual([AAP.id]);
+    expect(result.current.isFavorite(HOND.id)).toBe(false);
+    expect(result.current.isFavorite(AAP.id)).toBe(true);
+  });
+
+  test("drops the user's favorites cache on sign-out", async () => {
+    const { queryClient, render, server, store } = setup("signedIn", [AAP.id]);
+    const { rerender, result } = await render();
+    await waitFor(() => expect(result.current.items).toHaveLength(1));
+    const userQueries = () =>
+      queryClient
+        .getQueryCache()
+        .getAll()
+        .filter((query) => JSON.stringify(query.queryKey).includes("user-1"));
+    expect(userQueries().length).toBeGreaterThan(0);
+
+    authMode = "signedOut";
+    await act(async () => {
+      rerender();
+      await tick();
+    });
+    expect(userQueries()).toEqual([]);
+    // Now a guest: the (empty) local store, not the old account data.
+    expect(result.current.isFavorite(AAP.id)).toBe(false);
+    expect(store.getSnapshot().favorites).toEqual([]);
+    expect(server.calls.filter((call) => call === "ids")).toHaveLength(1);
   });
 
   test("skips the list when items are not asked for", async () => {

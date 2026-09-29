@@ -14,6 +14,7 @@ import {
   removeFavorite,
   toggleFavorite,
 } from "../src/server";
+import { favoritesOf } from "../src/server/service";
 import { findSummaries, resetTables } from "./helpers";
 
 let db: Db;
@@ -59,7 +60,7 @@ describe("addFavorite / removeFavorite", () => {
     expect(await listFavoriteIds(db, alice.id)).toEqual([]);
   });
 
-  it("rejects unknown and unpublished gestures without writing", async () => {
+  it("adds only published gestures, without writing otherwise", async () => {
     const hidden = await makeGesture(db, { publishedAt: null });
 
     await expect(addFavorite(db, alice.id, "nope")).rejects.toBeInstanceOf(
@@ -69,11 +70,32 @@ describe("addFavorite / removeFavorite", () => {
       GestureNotFoundError
     );
     await expect(
-      removeFavorite(db, alice.id, hidden.id)
-    ).rejects.toBeInstanceOf(GestureNotFoundError);
-    await expect(
       toggleFavorite(db, alice.id, hidden.id)
     ).rejects.toBeInstanceOf(GestureNotFoundError);
+    expect(await db.select().from(favorite)).toEqual([]);
+  });
+
+  it("removes whatever the gesture's state, and always succeeds", async () => {
+    const [a, b] = await gestures(2);
+    await addFavorite(db, alice.id, a?.id ?? "");
+    await addFavorite(db, alice.id, b?.id ?? "");
+    await db
+      .update(gesture)
+      .set({ publishedAt: null })
+      .where(eq(gesture.id, a?.id ?? ""));
+
+    // An unpublished favorite (a stale heart) can still be cleared.
+    await removeFavorite(db, alice.id, a?.id ?? "");
+    await removeFavorite(db, alice.id, "nope");
+    expect(
+      (await db.select().from(favorite)).map((row) => row.gestureId)
+    ).toEqual([b?.id]);
+    // Toggling a hidden favorite removes it too.
+    await db
+      .update(gesture)
+      .set({ publishedAt: null })
+      .where(eq(gesture.id, b?.id ?? ""));
+    expect(await toggleFavorite(db, alice.id, b?.id ?? "")).toBe(false);
     expect(await db.select().from(favorite)).toEqual([]);
   });
 
@@ -161,6 +183,29 @@ describe("listFavorites", () => {
     expect(pages).toBe(3);
     expect(seen).toEqual(["g4", "g2", "g1", "g3", "g0"]);
     expect(await listFavoriteIds(db, alice.id)).toEqual(seen);
+  });
+
+  it("seeks favorite_user_created_idx without a sort", async () => {
+    const { params, sql: text } = favoritesOf(db, alice.id, {
+      createdAt: at(5),
+      gestureId: "g",
+    })
+      .limit(51)
+      .toSQL();
+    const plan = await env.DB.prepare(`EXPLAIN QUERY PLAN ${text}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    const details = plan.results.map((row) => row.detail);
+    expect(
+      details.some((detail) =>
+        detail.startsWith(
+          "SEARCH favorite USING COVERING INDEX favorite_user_created_idx"
+        )
+      )
+    ).toBe(true);
+    expect(details.some((detail) => detail.includes("TEMP B-TREE"))).toBe(
+      false
+    );
   });
 
   it("rejects a cursor it did not issue", async () => {

@@ -80,10 +80,16 @@ describe("favoritesRouter", () => {
     expect(await call(router.ids, undefined, { context })).toEqual([]);
   });
 
-  it("answers NOT_FOUND for an unknown or unpublished gesture", async () => {
+  it("remove always succeeds, even for an unknown gesture", async () => {
+    expect(
+      await call(router.remove, { gestureId: "nope" }, { context: signedIn() })
+    ).toEqual({ favorite: false });
+  });
+
+  it("answers NOT_FOUND to adding an unknown or unpublished gesture", async () => {
     const hidden = await makeGesture(db, { publishedAt: null });
     for (const gestureId of ["nope", hidden.id]) {
-      for (const procedure of [router.add, router.remove, router.toggle]) {
+      for (const procedure of [router.add, router.toggle]) {
         // biome-ignore lint/performance/noAwaitInLoops: one assertion per case.
         await expect(
           call(procedure, { gestureId }, { context: signedIn() })

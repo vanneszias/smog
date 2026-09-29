@@ -1,25 +1,15 @@
 /**
  * Favorites of signed-in users (the `favorite` table, spec §5.2). Only
- * published gestures count: writes need one (`GestureNotFoundError`), and
- * reads skip favorites whose gesture is unpublished (the row stays, so
- * republishing brings it back). Reads are bounded and served by the
- * `(user_id, gesture_id)` primary key.
+ * published gestures count: adding needs one (`GestureNotFoundError`),
+ * removing always succeeds, and reads skip favorites whose gesture is
+ * unpublished (the row stays, so republishing brings it back). Reads are
+ * bounded and served by `favorite_user_created_idx`.
  */
 import { favorite, gesture } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import type { GestureSummary } from "@smog/gestures/schema";
 import { decodeCursor, encodeCursor } from "@smog/utils";
-import {
-  and,
-  desc,
-  eq,
-  inArray,
-  isNotNull,
-  lt,
-  lte,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, desc, eq, isNotNull, lt, lte, or, sql } from "drizzle-orm";
 import { FAVORITE_IDS_MAX, type FavoritesPage } from "../schema";
 
 /**
@@ -89,8 +79,11 @@ function after(position: Position) {
 
 const newestFirst = [desc(favorite.createdAt), desc(favorite.gestureId)];
 
-/** The user's favorites whose gesture is published (join + filter). */
-function favoritesOf(db: Db, userId: string, position?: Position) {
+/**
+ * The user's favorites whose gesture is published (join + filter), newest
+ * first; `favorite_user_created_idx` serves it.
+ */
+export function favoritesOf(db: Db, userId: string, position?: Position) {
   return db
     .select({ createdAt: favorite.createdAt, gestureId: favorite.gestureId })
     .from(favorite)
@@ -199,59 +192,57 @@ export async function addFavorite(
   }
 }
 
+/** Deletes the favorite row; whether there was one. */
+async function deleteFavorite(
+  db: Db,
+  userId: string,
+  gestureId: string
+): Promise<boolean> {
+  const deleted = await db
+    .delete(favorite)
+    .where(and(eq(favorite.userId, userId), eq(favorite.gestureId, gestureId)))
+    .returning({ gestureId: favorite.gestureId });
+  return deleted.length > 0;
+}
+
 /**
- * Removes the favorite of a published gesture (a no-op when it is not
- * one). One D1 batch: the check and the guarded delete.
+ * Removes the favorite, whatever the gesture's state (unknown, unpublished
+ * or published): idempotent, and it always succeeds, so a stale heart can
+ * always be cleared.
  */
 export async function removeFavorite(
   db: Db,
   userId: string,
   gestureId: string
 ): Promise<void> {
-  let found: { id: string }[];
   try {
-    [found] = await db.batch([
-      publishedGesture(db, gestureId),
-      db
-        .delete(favorite)
-        .where(
-          and(
-            eq(favorite.userId, userId),
-            eq(favorite.gestureId, gestureId),
-            inArray(favorite.gestureId, publishedGesture(db, gestureId))
-          )
-        ),
-    ]);
+    await deleteFavorite(db, userId, gestureId);
   } catch (error) {
     console.error("[favorites] Failed to remove a favorite:", error);
     throw error;
   }
-  if (found.length === 0) {
-    throw new GestureNotFoundError();
-  }
 }
 
-/** Adds the favorite when missing, removes it when present; the new state. */
+/**
+ * Removes the favorite when present, else adds it (`GestureNotFoundError`
+ * for an unknown or unpublished gesture); the new state. Not atomic: two
+ * concurrent toggles of one favorite can both add. The hooks send `add` /
+ * `remove` instead, which are idempotent.
+ */
 export async function toggleFavorite(
   db: Db,
   userId: string,
   gestureId: string,
   now: Date = new Date()
 ): Promise<boolean> {
-  let existing: unknown[];
+  let removed: boolean;
   try {
-    existing = await db
-      .select({ gestureId: favorite.gestureId })
-      .from(favorite)
-      .where(
-        and(eq(favorite.userId, userId), eq(favorite.gestureId, gestureId))
-      );
+    removed = await deleteFavorite(db, userId, gestureId);
   } catch (error) {
     console.error("[favorites] Failed to toggle a favorite:", error);
     throw error;
   }
-  if (existing.length > 0) {
-    await removeFavorite(db, userId, gestureId);
+  if (removed) {
     return false;
   }
   await addFavorite(db, userId, gestureId, now);
