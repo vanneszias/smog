@@ -1,0 +1,24 @@
+{
+  "extends": ["expo/tsconfig.base", "@smog/config/tsconfig/react-native.json"],
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "emitDeclarationOnly": false,
+    "declaration": false,
+    "declarationMap": false,
+    "jsx": "react-jsx",
+    "jsxImportSource": "nativewind",
+    "types": ["expo/types"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "app",
+    "src",
+    "app.config.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts"
+  ]
+}

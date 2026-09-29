@@ -1,0 +1,38 @@
+{
+  "cli": {
+    "version": ">= 24.8.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "dev"
+      }
+    },
+    "staging": {
+      "distribution": "internal",
+      "channel": "staging",
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "staging",
+        "EXPO_PUBLIC_API_URL": "https://smog-site-staging.workers.dev",
+        "EXPO_PUBLIC_SITE_HOST": "smog-site-staging.workers.dev"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "autoIncrement": true,
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "production",
+        "EXPO_PUBLIC_API_URL": "https://smog-site-production.workers.dev",
+        "EXPO_PUBLIC_SITE_HOST": "smog-site-production.workers.dev"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

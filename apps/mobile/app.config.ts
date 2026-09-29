@@ -1,0 +1,89 @@
+import type { ConfigContext, ExpoConfig } from "expo/config";
+
+const EAS_PROJECT_ID = "9fa68b63-dfa5-498a-9196-5eba93ecac29";
+const BRAND_GREEN = "#00805F";
+/** Placeholder until the site gets its real host (see spec §14). */
+const DEFAULT_SITE_HOST = "smog-site-staging.workers.dev";
+/** Site paths the app opens itself instead of the browser. */
+const APP_LINK_PATH_PREFIXES = ["/gestures/", "/lists/"] as const;
+
+export default function createConfig({ config }: ConfigContext): ExpoConfig {
+  const host = process.env.EXPO_PUBLIC_SITE_HOST || DEFAULT_SITE_HOST;
+
+  return {
+    ...config,
+    android: {
+      adaptiveIcon: {
+        backgroundColor: BRAND_GREEN,
+        foregroundImage: "./assets/android-icon-foreground.png",
+        monochromeImage: "./assets/android-icon-monochrome.png",
+      },
+      intentFilters: [
+        {
+          action: "VIEW",
+          category: ["BROWSABLE", "DEFAULT"],
+          data: [{ scheme: "smog" }],
+        },
+        {
+          action: "VIEW",
+          autoVerify: true,
+          category: ["BROWSABLE", "DEFAULT"],
+          data: APP_LINK_PATH_PREFIXES.map((pathPrefix) => ({
+            host,
+            pathPrefix,
+            scheme: "https",
+          })),
+        },
+      ],
+      package: "be.zias.smog",
+      versionCode: 81,
+    },
+    experiments: {
+      typedRoutes: true,
+    },
+    extra: {
+      eas: { projectId: EAS_PROJECT_ID },
+    },
+    icon: "./assets/icon.png",
+    ios: {
+      appleTeamId: "96XKP6MU2A",
+      associatedDomains: [`applinks:${host}`],
+      buildNumber: "52",
+      bundleIdentifier: "be.zias.smog",
+      icon: "./assets/smog.icon",
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
+      },
+      supportsTablet: true,
+    },
+    name: "SMOG & Co",
+    orientation: "portrait",
+    owner: "smog-and-co",
+    plugins: [
+      "expo-router",
+      "expo-localization",
+      "expo-font",
+      "expo-secure-store",
+      "expo-video",
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          backgroundColor: BRAND_GREEN,
+          image: "./assets/splash-icon.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+        },
+      ],
+      "./plugins/with-screen-capture-permissions.js",
+    ],
+    runtimeVersion: { policy: "fingerprint" },
+    scheme: "smog",
+    slug: "smog",
+    updates: {
+      url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
+    },
+    userInterfaceStyle: "automatic",
+    version: "3.0.0",
+  };
+}

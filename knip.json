@@ -17,6 +17,15 @@
       ],
       "project": ["src/**/*.{ts,tsx,css}", "test/**/*.ts", "scripts/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
+    },
+    "apps/mobile": {
+      "entry": ["app/**/*.{ts,tsx}", "plugins/*.js", "src/**/*.test.{ts,tsx}"],
+      "project": [
+        "app/**/*.{ts,tsx}",
+        "src/**/*.{ts,tsx}",
+        "plugins/**/*.js",
+        "*.{js,ts,css}"
+      ]
     }
   }
 }
