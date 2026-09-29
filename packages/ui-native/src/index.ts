@@ -141,9 +141,9 @@ export {
   type SearchResultsState,
 } from "./domain/search-results";
 export {
+  type ShareAccess,
   ShareLink,
   type ShareLinkProps,
-  type ShareRole,
 } from "./domain/share-link";
 export type { CategoryRef, GestureCardData } from "./domain/types";
 export {

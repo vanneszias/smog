@@ -19,7 +19,10 @@ export interface VideoPlayerProps extends Omit<ViewProps, "children"> {
    */
   isFocused?: boolean;
   loop?: boolean;
-  /** At the end of each playthrough (every loop). */
+  /**
+   * On expo-video's `playToEnd`. Whether it fires on every loop is up to the
+   * platform player (not verified on a device); `onNearEnd` fires every loop.
+   */
   onEnded?: () => void;
   /** Once per playthrough, when 5 s or less are left (the CourseBanner cue). */
   onNearEnd?: () => void;

@@ -11,7 +11,7 @@ const URL = "https://smog.example/lists/shared/abc";
 describe("ShareLink", () => {
   test("a view link: heading, description and the read-only url", () => {
     renderKit(
-      <ShareLink onCopy={noop} onRevoke={noop} role="view" url={URL} />
+      <ShareLink access="view" onCopy={noop} onRevoke={noop} url={URL} />
     );
     expect(screen.getByRole("heading", { name: "View link" })).toBeDefined();
     expect(
@@ -26,7 +26,7 @@ describe("ShareLink", () => {
 
   test("an edit link says sign-in is needed", () => {
     renderKit(
-      <ShareLink onCopy={noop} onRevoke={noop} role="edit" url={URL} />
+      <ShareLink access="edit" onCopy={noop} onRevoke={noop} url={URL} />
     );
     expect(screen.getByRole("heading", { name: "Edit link" })).toBeDefined();
     expect(
@@ -39,17 +39,22 @@ describe("ShareLink", () => {
   test("copy calls onCopy and confirms with Copied", async () => {
     const onCopy = mock();
     renderKit(
-      <ShareLink onCopy={onCopy} onRevoke={noop} role="view" url={URL} />
+      <ShareLink access="view" onCopy={onCopy} onRevoke={noop} url={URL} />
     );
     await userEvent.click(screen.getByRole("button", { name: "Copy link" }));
     expect(onCopy).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "Copied" })).toBeDefined();
+    // A status beside the button announces it (a live region on the
+    // button itself is not read reliably).
+    const status = screen.getByRole("status");
+    expect(status.textContent).toBe("Copied");
+    expect(status.closest("button")).toBeNull();
   });
 
   test("revoke asks first, then calls onRevoke", async () => {
     const onRevoke = mock();
     renderKit(
-      <ShareLink onCopy={noop} onRevoke={onRevoke} role="view" url={URL} />
+      <ShareLink access="view" onCopy={noop} onRevoke={onRevoke} url={URL} />
     );
     await userEvent.click(screen.getByRole("button", { name: "Revoke link" }));
     expect(onRevoke).not.toHaveBeenCalled();

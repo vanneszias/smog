@@ -5,6 +5,7 @@ import {
   type FormEvent,
   type ReactNode,
   useCallback,
+  useRef,
   useState,
 } from "react";
 import { Button } from "../components/button";
@@ -107,6 +108,7 @@ function CreateListForm({
 }): ReactNode {
   const { t } = useTranslation();
   const [name, setName] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const trimmed = name.trim();
   const change = useCallback((event: ChangeEvent<HTMLInputElement>): void => {
     setName(event.target.value);
@@ -117,6 +119,8 @@ function CreateListForm({
       if (trimmed) {
         onCreate(trimmed);
         setName("");
+        // The Create button is disabled again; keep focus in the form.
+        inputRef.current?.focus();
       }
     },
     [onCreate, trimmed]
@@ -132,6 +136,7 @@ function CreateListForm({
           maxLength={maxLength}
           onChange={change}
           placeholder={t("lists.newListPlaceholder")}
+          ref={inputRef}
           value={name}
         />
       </Field>

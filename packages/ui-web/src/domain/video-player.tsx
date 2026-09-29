@@ -1,14 +1,16 @@
 import type { MuxCSSProperties } from "@mux/mux-player-react";
-import MuxPlayer from "@mux/mux-player-react/lazy";
 import { useTranslation } from "@smog/i18n/react";
 import { createNearEndTracker, muxThumbnailUrl } from "@smog/utils";
 import {
   type ComponentProps,
+  lazy,
   type ReactNode,
+  Suspense,
   useCallback,
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { cn } from "../lib/cn";
 
@@ -21,13 +23,39 @@ export interface VideoPlayerProps
   /** Starts playing on its own, muted (browsers block sound on autoplay). */
   autoPlay?: boolean;
   loop?: boolean;
-  /** At the end of each playthrough (every loop). */
+  /**
+   * When playback reaches the end. Web: never while `loop` is on (a looping
+   * media element does not fire `ended`); `onNearEnd` still fires every loop.
+   */
   onEnded?: () => void;
   /** Once per playthrough, when 5 s or less are left (the CourseBanner cue). */
   onNearEnd?: () => void;
   playbackId: string;
   /** Names the player (the gesture's name; `a11y.gestureVideo` by default). */
   title?: string;
+}
+
+/**
+ * Mux Player is client-only: Vite replaces `import.meta.env.SSR` per
+ * environment, so the server (Worker) build drops this import and emits no
+ * player chunk (`apps/site/scripts/deploy-guard.ts` checks `dist/server`).
+ * The server and the first client render show the poster instead.
+ */
+const MuxPlayer = import.meta.env.SSR
+  ? null
+  : lazy(() => import("@mux/mux-player-react"));
+
+const POSTER_WIDTH = 720;
+
+const noopSubscribe = (): (() => void) => () => undefined;
+
+/** `false` on the server and during hydration, `true` after. */
+function useMounted(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false
+  );
 }
 
 const ASPECT = { "3:4": "aspect-3/4", "16:9": "aspect-video" } as const;
@@ -47,9 +75,9 @@ interface TimeEventTarget {
 }
 
 /**
- * The gesture video: Mux Player, loaded lazily (`@mux/mux-player-react/lazy`
- * keeps the player out of the initial bundle and shows the poster until the
- * frame scrolls into view). Mux Data tracking and its cookies are off.
+ * The gesture video: Mux Player, loaded on the client only as its own
+ * chunk, with the Mux poster until it is ready. Mux Data tracking and its
+ * cookies are off.
  */
 export function VideoPlayer({
   aspect = "3:4",
@@ -63,6 +91,7 @@ export function VideoPlayer({
   ...props
 }: VideoPlayerProps): ReactNode {
   const { t } = useTranslation();
+  const mounted = useMounted();
   const [tracker] = useState(createNearEndTracker);
   const onNearEndRef = useRef(onNearEnd);
   const onEndedRef = useRef(onEnded);
@@ -92,6 +121,19 @@ export function VideoPlayer({
   }, [tracker]);
 
   const name = title ?? t("a11y.gestureVideo");
+  const posterUrl = muxThumbnailUrl(playbackId, { width: POSTER_WIDTH });
+  const poster = (
+    <img
+      alt=""
+      className="size-full object-contain"
+      data-slot="video-poster"
+      height={Math.round(
+        aspect === "3:4" ? (POSTER_WIDTH * 4) / 3 : (POSTER_WIDTH * 9) / 16
+      )}
+      src={posterUrl}
+      width={POSTER_WIDTH}
+    />
+  );
   return (
     <section
       aria-label={name}
@@ -102,20 +144,26 @@ export function VideoPlayer({
       )}
       {...props}
     >
-      <MuxPlayer
-        autoPlay={autoPlay ? "muted" : false}
-        disableCookies
-        disableTracking
-        loop={loop}
-        muted={autoPlay}
-        onEnded={handleEnded}
-        onTimeUpdate={handleTimeUpdate}
-        placeholder={muxThumbnailUrl(playbackId, { width: 720 })}
-        playbackId={playbackId}
-        playsInline
-        streamType="on-demand"
-        style={PLAYER_STYLE}
-      />
+      {mounted && MuxPlayer ? (
+        <Suspense fallback={poster}>
+          <MuxPlayer
+            autoPlay={autoPlay ? "muted" : false}
+            disableCookies
+            disableTracking
+            loop={loop}
+            muted={autoPlay}
+            onEnded={handleEnded}
+            onTimeUpdate={handleTimeUpdate}
+            playbackId={playbackId}
+            playsInline
+            poster={posterUrl}
+            streamType="on-demand"
+            style={PLAYER_STYLE}
+          />
+        </Suspense>
+      ) : (
+        poster
+      )}
     </section>
   );
 }

@@ -44,6 +44,7 @@ describe("ListPicker", () => {
     await userEvent.click(create);
     expect(onCreate).toHaveBeenCalledWith("Class 3");
     expect((input as HTMLInputElement).value).toBe("");
+    expect(document.activeElement).toBe(input);
     await userEvent.type(input, "Songs{Enter}");
     expect(onCreate).toHaveBeenLastCalledWith("Songs");
   });

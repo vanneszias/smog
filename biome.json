@@ -28,16 +28,6 @@
   "javascript": {
     "globals": ["__DEV__", "__SMOG_DEV_TOOLS__"]
   },
-  "linter": {
-    "rules": {
-      "a11y": {
-        "useValidAriaRole": {
-          "level": "error",
-          "options": { "ignoreNonDom": true }
-        }
-      }
-    }
-  },
   "overrides": [
     {
       "includes": ["scripts/**", "**/*.test.ts", "**/*.test.tsx"],

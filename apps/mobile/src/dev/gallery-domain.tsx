@@ -282,15 +282,15 @@ function ListsSection(): ReactElement {
       </Section>
       <Section name="ShareLink">
         <ShareLink
+          access="view"
           onCopy={noop}
           onRevoke={noop}
-          role="view"
           url={SAMPLE_SHARE_URL}
         />
         <ShareLink
+          access="edit"
           onCopy={noop}
           onRevoke={noop}
-          role="edit"
           url={`${SAMPLE_SHARE_URL}-edit`}
         />
       </Section>

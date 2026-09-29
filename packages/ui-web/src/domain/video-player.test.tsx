@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { createI18n } from "@smog/i18n";
+import { I18nextProvider } from "@smog/i18n/react";
 import { act, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { classesOf, renderKit } from "../test/render";
@@ -13,7 +15,7 @@ interface MuxProps {
   [key: string]: unknown;
 }
 let last: MuxProps = {};
-mock.module("@mux/mux-player-react/lazy", () => ({
+mock.module("@mux/mux-player-react", () => ({
   default: (props: MuxProps): ReactNode => {
     last = props;
     return <div data-testid="mux" />;
@@ -21,6 +23,7 @@ mock.module("@mux/mux-player-react/lazy", () => ({
 }));
 
 const { VideoPlayer } = await import("./video-player");
+const { renderToString } = await import("react-dom/server");
 
 function tick(currentTime: number, duration = 20): void {
   act(() => {
@@ -33,8 +36,9 @@ describe("VideoPlayer", () => {
     last = {};
   });
 
-  test("hands mux-player the playback id, a muted autoplay and the loop", () => {
+  test("hands mux-player the playback id, a muted autoplay and the loop", async () => {
     renderKit(<VideoPlayer autoPlay loop playbackId="pb-1" title="Hello" />);
+    await screen.findByTestId("mux");
     expect(screen.getByTestId("mux")).toBeDefined();
     expect(last.playbackId).toBe("pb-1");
     expect(last.autoPlay).toBe("muted");
@@ -49,24 +53,27 @@ describe("VideoPlayer", () => {
     expect(last.disableCookies).toBe(true);
   });
 
-  test("defaults: no autoplay, no loop, a 3:4 frame named by a11y.gestureVideo", () => {
+  test("defaults: no autoplay, no loop, a 3:4 frame named by a11y.gestureVideo", async () => {
     renderKit(<VideoPlayer playbackId="pb-1" />);
+    await screen.findByTestId("mux");
     expect(last.autoPlay).toBe(false);
     expect(last.loop).toBe(false);
     const frame = screen.getByRole("region", { name: "Gesture video" });
     expect(classesOf(frame)).toContain("aspect-3/4");
   });
 
-  test("16:9", () => {
+  test("16:9", async () => {
     renderKit(<VideoPlayer aspect="16:9" playbackId="pb-1" title="Hello" />);
+    await screen.findByTestId("mux");
     expect(classesOf(screen.getByRole("region", { name: "Hello" }))).toContain(
       "aspect-video"
     );
   });
 
-  test("onNearEnd fires once per loop at 5 s or less left", () => {
+  test("onNearEnd fires once per loop at 5 s or less left", async () => {
     const onNearEnd = mock();
     renderKit(<VideoPlayer loop onNearEnd={onNearEnd} playbackId="pb-1" />);
+    await screen.findByTestId("mux");
     tick(10);
     expect(onNearEnd).not.toHaveBeenCalled();
     tick(15);
@@ -78,12 +85,13 @@ describe("VideoPlayer", () => {
     expect(onNearEnd).toHaveBeenCalledTimes(2);
   });
 
-  test("onEnded is forwarded, and re-arms onNearEnd", () => {
+  test("onEnded is forwarded, and re-arms onNearEnd", async () => {
     const onEnded = mock();
     const onNearEnd = mock();
     renderKit(
       <VideoPlayer onEnded={onEnded} onNearEnd={onNearEnd} playbackId="pb-1" />
     );
+    await screen.findByTestId("mux");
     tick(19);
     act(() => {
       last.onEnded?.({});
@@ -91,5 +99,17 @@ describe("VideoPlayer", () => {
     expect(onEnded).toHaveBeenCalledTimes(1);
     tick(19);
     expect(onNearEnd).toHaveBeenCalledTimes(2);
+  });
+
+  test("the server render is the poster, without the player", () => {
+    const html = renderToString(
+      <I18nextProvider i18n={createI18n("en")}>
+        <VideoPlayer playbackId="pb-1" />
+      </I18nextProvider>
+    );
+    expect(html).toContain('data-slot="video-poster"');
+    expect(html).toContain("https://image.mux.com/pb-1/thumbnail.webp");
+    expect(html).not.toContain("data-testid");
+    expect(last).toEqual({});
   });
 });

@@ -36,7 +36,6 @@ const SIZE = {
   sm: tokens.spacing["8"],
 } as const;
 const ICON = { lg: ICON_SIZE.lg, md: ICON_SIZE.md, sm: ICON_SIZE.sm } as const;
-const POP_SCALE = 1.25;
 
 export interface FavoriteButtonProps
   extends Omit<PressableProps, "children" | "style" | "onPress"> {
@@ -74,7 +73,7 @@ export function FavoriteButton({
     if (!(active || reducedMotion)) {
       const half = tokens.motion.duration.slow / 2;
       scale.value = withSequence(
-        withTiming(POP_SCALE, { duration: half }),
+        withTiming(tokens.motion.popScale, { duration: half }),
         withTiming(1, { duration: half })
       );
     }

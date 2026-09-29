@@ -42,7 +42,8 @@ export interface NearEndTracker {
 /**
  * The `onNearEnd` rule both VideoPlayers share: it fires once per playthrough
  * when `threshold` seconds or less are left, and re-arms when the time jumps
- * back (the next loop, or a seek back).
+ * back (the next loop, or a seek back). A video of `threshold` seconds or
+ * less fires on its first update (as the old `≤ 5 s left` rule did).
  */
 export function createNearEndTracker(
   threshold: number = NEAR_END_SECONDS

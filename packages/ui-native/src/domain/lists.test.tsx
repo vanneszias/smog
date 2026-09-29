@@ -1,5 +1,6 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import { fireEvent, screen } from "@testing-library/react-native";
+import { AccessibilityInfo } from "react-native";
 import { Button } from "../components/button";
 import { renderKit, t } from "../test/render";
 import { ListPicker } from "./list-picker";
@@ -65,7 +66,7 @@ describe("ListPicker", () => {
 describe("ShareLink", () => {
   it("a view link: heading, description and the url", async () => {
     await renderKit(
-      <ShareLink onCopy={noop} onRevoke={noop} role="view" url={URL} />
+      <ShareLink access="view" onCopy={noop} onRevoke={noop} url={URL} />
     );
     expect(
       screen.getByRole("header", { name: t("lists.share.viewTitle") })
@@ -80,7 +81,7 @@ describe("ShareLink", () => {
 
   it("an edit link says sign-in is needed", async () => {
     await renderKit(
-      <ShareLink onCopy={noop} onRevoke={noop} role="edit" url={URL} />
+      <ShareLink access="edit" onCopy={noop} onRevoke={noop} url={URL} />
     );
     expect(
       screen.getByRole("header", { name: t("lists.share.editTitle") })
@@ -90,15 +91,17 @@ describe("ShareLink", () => {
     ).toBeOnTheScreen();
   });
 
-  it("copy calls onCopy and says Copied", async () => {
+  it("copy calls onCopy, says Copied and announces it", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
     const onCopy = jest.fn();
     await renderKit(
-      <ShareLink onCopy={onCopy} onRevoke={noop} role="view" url={URL} />
+      <ShareLink access="view" onCopy={onCopy} onRevoke={noop} url={URL} />
     );
     await fireEvent.press(
       screen.getByRole("button", { name: t("lists.share.copyLink") })
     );
     expect(onCopy).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith(t("kit.copied"));
     expect(
       screen.getByRole("button", { name: t("kit.copied") })
     ).toBeOnTheScreen();
@@ -107,7 +110,7 @@ describe("ShareLink", () => {
   it("revoke asks first", async () => {
     const onRevoke = jest.fn();
     await renderKit(
-      <ShareLink onCopy={noop} onRevoke={onRevoke} role="view" url={URL} />
+      <ShareLink access="view" onCopy={noop} onRevoke={onRevoke} url={URL} />
     );
     await fireEvent.press(
       screen.getByRole("button", { name: t("lists.share.revoke") })

@@ -325,15 +325,15 @@ function ListsSection(): ReactNode {
       <Section name="ShareLink">
         <div className="grid gap-4 lg:grid-cols-2">
           <ShareLink
+            access="view"
             onCopy={noop}
             onRevoke={noop}
-            role="view"
             url={SAMPLE_SHARE_URL}
           />
           <ShareLink
+            access="edit"
             onCopy={noop}
             onRevoke={noop}
-            role="edit"
             url={`${SAMPLE_SHARE_URL}-edit`}
           />
         </div>

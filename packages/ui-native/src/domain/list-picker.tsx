@@ -4,9 +4,10 @@ import {
   type ReactElement,
   type ReactNode,
   useCallback,
+  useRef,
   useState,
 } from "react";
-import { View } from "react-native";
+import { type TextInput, View } from "react-native";
 import { Button } from "../components/button";
 import { Checkbox } from "../components/checkbox";
 import { Field } from "../components/field";
@@ -108,11 +109,13 @@ function CreateListForm({
 }): ReactElement {
   const { t } = useTranslation();
   const [name, setName] = useState("");
+  const inputRef = useRef<TextInput>(null);
   const trimmed = name.trim();
   const submit = useCallback((): void => {
     if (trimmed) {
       onCreate(trimmed);
       setName("");
+      inputRef.current?.focus();
     }
   }, [onCreate, trimmed]);
   return (
@@ -124,6 +127,7 @@ function CreateListForm({
           onChangeText={setName}
           onSubmitEditing={submit}
           placeholder={t("lists.newListPlaceholder")}
+          ref={inputRef}
           returnKeyType="done"
           value={name}
         />

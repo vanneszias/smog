@@ -90,7 +90,7 @@
   }
   @keyframes favorite-pop {
     50% {
-      scale: 1.25;
+      scale: var(--motion-pop-scale);
     }
   }
   @keyframes progress {

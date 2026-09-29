@@ -17,18 +17,21 @@ import { cn } from "../lib/cn";
 /** How long the copy button says "Copied". */
 const COPIED_MS = 2000;
 
-export type ShareRole = "view" | "edit";
+export type ShareAccess = "view" | "edit";
 
 export interface ShareLinkProps
-  extends Omit<ComponentProps<"section">, "children" | "role"> {
-  /** The caller copies `url` (clipboard) and may show a toast. */
+  extends Omit<ComponentProps<"section">, "children"> {
+  /** `view` links show the list; `edit` links also let signed-in people edit it. */
+  access: ShareAccess;
+  /**
+   * The caller copies `url` (clipboard) and must surface a failure itself
+   * (a toast); the button confirms "Copied" either way.
+   */
   onCopy: () => void;
   /** Called after the user confirms; the link stops working at once. */
   onRevoke: () => void;
   /** Busy state of the revoke confirmation. */
   revoking?: boolean;
-  /** `view` links show the list; `edit` links also let signed-in people edit it. */
-  role: ShareRole;
   url: string;
 }
 
@@ -38,7 +41,7 @@ export function ShareLink({
   onCopy,
   onRevoke,
   revoking = false,
-  role,
+  access,
   url,
   ...props
 }: ShareLinkProps): ReactNode {
@@ -71,12 +74,14 @@ export function ShareLink({
       <div className="flex flex-col gap-1">
         <h3 className="font-semibold text-title-3" id={headingId}>
           {t(
-            role === "edit" ? "lists.share.editTitle" : "lists.share.viewTitle"
+            access === "edit"
+              ? "lists.share.editTitle"
+              : "lists.share.viewTitle"
           )}
         </h3>
         <p className="text-body-sm text-foreground-muted">
           {t(
-            role === "edit"
+            access === "edit"
               ? "lists.share.editDescription"
               : "lists.share.viewDescription"
           )}
@@ -90,13 +95,16 @@ export function ShareLink({
       />
       <div className="flex flex-wrap gap-2">
         <Button
-          aria-live="polite"
           icon={copied ? <Check /> : <Copy />}
           onClick={copy}
           variant="secondary"
         >
           {copied ? t("kit.copied") : t("lists.share.copyLink")}
         </Button>
+        {/* Announced when it fills; a live region on the button is not read reliably. */}
+        <span className="sr-only" role="status">
+          {copied ? t("kit.copied") : ""}
+        </span>
         <AlertDialog
           confirmLabel={t("lists.share.revokeConfirm")}
           description={t("lists.share.revokeDescription")}

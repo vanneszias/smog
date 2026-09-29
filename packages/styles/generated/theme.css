@@ -86,6 +86,7 @@
   --duration-fast: 120ms;
   --duration-normal: 200ms;
   --duration-slow: 320ms;
+  --motion-pop-scale: 1.25;
   --default-transition-duration: var(--duration-normal);
   --default-transition-timing-function: var(--ease-standard);
 

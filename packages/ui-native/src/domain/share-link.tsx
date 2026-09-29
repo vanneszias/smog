@@ -3,7 +3,7 @@ import Check from "lucide-react-native/icons/check";
 import Copy from "lucide-react-native/icons/copy";
 import Link2Off from "lucide-react-native/icons/link-2-off";
 import { type ReactElement, useCallback, useEffect, useState } from "react";
-import { View, type ViewProps } from "react-native";
+import { AccessibilityInfo, View, type ViewProps } from "react-native";
 import { AlertDialog } from "../components/alert-dialog";
 import { Button } from "../components/button";
 import { Input } from "../components/input";
@@ -13,18 +13,21 @@ import { cn } from "../lib/cn";
 /** How long the copy button says "Copied". */
 const COPIED_MS = 2000;
 
-export type ShareRole = "view" | "edit";
+export type ShareAccess = "view" | "edit";
 
-export interface ShareLinkProps extends Omit<ViewProps, "children" | "role"> {
+export interface ShareLinkProps extends Omit<ViewProps, "children"> {
+  /** `view` links show the list; `edit` links also let signed-in people edit it. */
+  access: ShareAccess;
   className?: string;
-  /** The caller copies `url` (expo-clipboard) and may show a toast. */
+  /**
+   * The caller copies `url` (expo-clipboard) and must surface a failure
+   * itself (a toast); the button confirms "Copied" either way.
+   */
   onCopy: () => void;
   /** Called after the user confirms; the link stops working at once. */
   onRevoke: () => void;
   /** Busy state of the revoke confirmation. */
   revoking?: boolean;
-  /** `view` links show the list; `edit` links also let signed-in people edit it. */
-  role: ShareRole;
   url: string;
 }
 
@@ -34,7 +37,7 @@ export function ShareLink({
   onCopy,
   onRevoke,
   revoking = false,
-  role,
+  access,
   url,
   ...props
 }: ShareLinkProps): ReactElement {
@@ -50,7 +53,8 @@ export function ShareLink({
   const copy = useCallback((): void => {
     onCopy();
     setCopied(true);
-  }, [onCopy]);
+    AccessibilityInfo.announceForAccessibility(t("kit.copied"));
+  }, [onCopy, t]);
   return (
     <View
       className={cn(
@@ -62,12 +66,14 @@ export function ShareLink({
       <View className="flex-col gap-1">
         <Heading size="title-3">
           {t(
-            role === "edit" ? "lists.share.editTitle" : "lists.share.viewTitle"
+            access === "edit"
+              ? "lists.share.editTitle"
+              : "lists.share.viewTitle"
           )}
         </Heading>
         <Text size="body-sm" tone="muted">
           {t(
-            role === "edit"
+            access === "edit"
               ? "lists.share.editDescription"
               : "lists.share.viewDescription"
           )}

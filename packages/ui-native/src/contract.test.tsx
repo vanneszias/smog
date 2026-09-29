@@ -142,9 +142,9 @@ const CASES: Record<string, ReactElement> = {
   Select: <kit.Select options={OPTIONS} testID={ID} />,
   ShareLink: (
     <kit.ShareLink
+      access="view"
       onCopy={noop}
       onRevoke={noop}
-      role="view"
       testID={ID}
       url="https://example.org/s"
     />
@@ -178,12 +178,12 @@ const CASES: Record<string, ReactElement> = {
   ),
   Text: <kit.Text testID={ID}>Text</kit.Text>,
   Textarea: <kit.Textarea testID={ID} />,
-  VideoPlayer: <kit.VideoPlayer playbackId="pb" testID={ID} />,
   TextLink: (
     <kit.TextLink onPress={noop} testID={ID}>
       Link
     </kit.TextLink>
   ),
+  VideoPlayer: <kit.VideoPlayer playbackId="pb" testID={ID} />,
 };
 
 describe("the kit contract", () => {
