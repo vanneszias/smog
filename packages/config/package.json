@@ -1,0 +1,24 @@
+{
+  "name": "@smog/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig/*.json": "./tsconfig/*.json",
+    "./boundaries": "./src/boundaries.ts",
+    "./constants": "./src/constants.ts",
+    "./env/worker": "./src/env/worker.ts",
+    "./env/mobile": "./src/env/mobile.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -b",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

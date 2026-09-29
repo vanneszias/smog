@@ -1,0 +1,7 @@
+{
+  "name": "@smog/lists",
+  "private": true,
+  "dependencies": {
+    "@smog/gestures": "workspace:*"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["bun"]
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["__fixtures__"]
+}

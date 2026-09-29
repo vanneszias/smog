@@ -22,5 +22,13 @@
   },
   "javascript": {
     "globals": ["__DEV__"]
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["scripts/**", "**/*.test.ts", "**/*.test.tsx"],
+      "javascript": {
+        "globals": ["Bun"]
+      }
+    }
+  ]
 }

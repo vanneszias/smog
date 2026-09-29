@@ -19,6 +19,12 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "//#test:scripts": {
+      "cache": false
+    },
+    "//#check-types:scripts": {
+      "cache": false
     }
   }
 }
