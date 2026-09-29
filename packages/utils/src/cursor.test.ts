@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { decodeCursor, encodeCursor } from "./cursor";
+import {
+  decodeCursor,
+  decodeCursorAs,
+  encodeCursor,
+  InvalidCursorError,
+} from "./cursor";
 
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
 
@@ -21,5 +26,31 @@ describe("keyset cursors", () => {
     ]) {
       expect(decodeCursor(cursor)).toBeNull();
     }
+  });
+});
+
+describe("decodeCursorAs", () => {
+  const asPair = ([name, id, ...rest]: (string | number)[]) =>
+    typeof name === "string" && typeof id === "string" && rest.length === 0
+      ? { id, name }
+      : null;
+
+  test("returns the parsed position of a valid cursor", () => {
+    expect(decodeCursorAs(encodeCursor(["b", "id-2"]), asPair)).toEqual({
+      id: "id-2",
+      name: "b",
+    });
+  });
+
+  test("throws InvalidCursorError for a foreign string or a wrong shape", () => {
+    expect(() => decodeCursorAs("not a cursor", asPair)).toThrow(
+      InvalidCursorError
+    );
+    expect(() => decodeCursorAs(encodeCursor([1, "id"]), asPair)).toThrow(
+      InvalidCursorError
+    );
+    expect(() => decodeCursorAs(encodeCursor(["a", "b", "c"]), asPair)).toThrow(
+      InvalidCursorError
+    );
   });
 });

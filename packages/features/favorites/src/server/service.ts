@@ -8,7 +8,7 @@
 import { favorite, gesture } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import type { GestureSummary } from "@smog/gestures/schema";
-import { decodeCursor, encodeCursor } from "@smog/utils";
+import { decodeCursorAs, encodeCursor } from "@smog/utils";
 import { and, desc, eq, isNotNull, lt, lte, or, sql } from "drizzle-orm";
 import { FAVORITE_IDS_MAX, type FavoritesPage } from "../schema";
 
@@ -35,32 +35,23 @@ export class GestureNotFoundError extends Error {
   }
 }
 
-/** A `cursor` that `list` did not issue. */
-export class InvalidCursorError extends Error {
-  constructor() {
-    super("[favorites] Invalid list cursor");
-    this.name = "InvalidCursorError";
-  }
-}
-
 /** The last favorite of a page: the keyset position the next one starts after. */
 interface Position {
   createdAt: Date;
   gestureId: string;
 }
 
+/** `InvalidCursorError` (`@smog/utils`) for a cursor `list` did not issue. */
 function parseCursor(cursor: string): Position {
-  const key = decodeCursor(cursor);
-  const [createdAt, gestureId] = key ?? [];
-  if (
-    key?.length !== 2 ||
-    typeof createdAt !== "number" ||
-    !Number.isSafeInteger(createdAt) ||
-    typeof gestureId !== "string"
-  ) {
-    throw new InvalidCursorError();
-  }
-  return { createdAt: new Date(createdAt), gestureId };
+  return decodeCursorAs(cursor, (key) => {
+    const [createdAt, gestureId] = key;
+    return key.length === 2 &&
+      typeof createdAt === "number" &&
+      Number.isSafeInteger(createdAt) &&
+      typeof gestureId === "string"
+      ? { createdAt: new Date(createdAt), gestureId }
+      : null;
+  });
 }
 
 /**

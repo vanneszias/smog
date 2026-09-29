@@ -12,7 +12,7 @@ import {
   sponsorship,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
-import { decodeCursor, encodeCursor } from "@smog/utils";
+import { decodeCursorAs, encodeCursor } from "@smog/utils";
 import { and, eq, isNotNull, type SQL, sql } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import type {
@@ -29,14 +29,6 @@ const CATEGORY_LIMIT = 100;
 const SITEMAP_LIMIT = 50_000;
 /** Sponsorships whose video and credit are shown (spec §5.4). */
 const RUNNING_STATUSES = sql.raw("'live', 'expiring'");
-
-/** A `cursor` that `list` did not issue. */
-export class InvalidCursorError extends Error {
-  constructor() {
-    super("[gestures] Invalid list cursor");
-    this.name = "InvalidCursorError";
-  }
-}
 
 /**
  * `alias."column"`. Drizzle renders columns unqualified in single-table
@@ -141,17 +133,16 @@ interface ListPosition {
   sortName: string;
 }
 
+/** `InvalidCursorError` (`@smog/utils`) for a cursor `list` did not issue. */
 function parseListCursor(cursor: string): ListPosition {
-  const key = decodeCursor(cursor);
-  const [sortName, id] = key ?? [];
-  if (
-    key?.length !== 2 ||
-    typeof sortName !== "string" ||
-    typeof id !== "string"
-  ) {
-    throw new InvalidCursorError();
-  }
-  return { id, sortName };
+  return decodeCursorAs(cursor, (key) => {
+    const [sortName, id] = key;
+    return key.length === 2 &&
+      typeof sortName === "string" &&
+      typeof id === "string"
+      ? { id, sortName }
+      : null;
+  });
 }
 
 /**

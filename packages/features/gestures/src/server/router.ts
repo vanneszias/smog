@@ -1,10 +1,10 @@
 import { implementRpc } from "@smog/rpc";
+import { InvalidCursorError } from "@smog/utils";
 import { gesturesContract } from "../contract";
 import {
   findGestureBySlug,
   findGesturesByIds,
   findRelatedGestures,
-  InvalidCursorError,
   listCategories,
   listGestures,
   listSitemap,
