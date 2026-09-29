@@ -18,6 +18,7 @@
     "@orpc/tanstack-query": "catalog:",
     "@smog/config": "workspace:*",
     "@smog/gestures": "workspace:*",
+    "@smog/lists": "workspace:*",
     "@smog/rpc": "workspace:*",
     "zod": "catalog:"
   },

@@ -243,6 +243,9 @@
       "action": "Go to the home page"
     }
   },
+  "lists": {
+    "ownerFallback": "a SMOG user"
+  },
   "kit": {
     "close": "Close",
     "clear": "Clear",
