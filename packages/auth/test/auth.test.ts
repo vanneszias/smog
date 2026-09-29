@@ -136,9 +136,19 @@ describe("email + password", () => {
 
     // The hash alone (workerd resolves Better Auth's scrypt to node:crypto).
     const context = await ctx.auth.$context;
-    const hashStarted = performance.now();
-    const hash = await context.password.hash(PASSWORD);
-    const hashElapsed = performance.now() - hashStarted;
+    // Wall-clock time also counts CPU contention from other processes, so
+    // judge the fastest of a few runs: a slow algorithm is slow every time,
+    // a busy machine only some of the time.
+    const timeHash = async (): Promise<{ elapsed: number; hash: string }> => {
+      const hashStarted = performance.now();
+      const value = await context.password.hash(PASSWORD);
+      return { elapsed: performance.now() - hashStarted, hash: value };
+    };
+    const first = await timeHash();
+    const second = await timeHash();
+    const third = await timeHash();
+    const { hash } = third;
+    const hashElapsed = Math.min(first.elapsed, second.elapsed, third.elapsed);
     console.log(`[auth.test] scrypt hash took ${hashElapsed.toFixed(0)} ms`);
     expect(await context.password.verify({ hash, password: PASSWORD })).toBe(
       true
