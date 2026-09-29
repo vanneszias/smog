@@ -33,4 +33,19 @@ describe("react binding", () => {
   test("throws without a provider", () => {
     expect(() => renderToString(<Count />)).toThrow();
   });
+
+  test("a selector returning a fresh array does not loop", () => {
+    const store = createLocalStore(createMemoryAdapter());
+    function Ids() {
+      const ids = useLocalStore((d) => [...d.favorites]);
+      return <span>{ids.length}</span>;
+    }
+    expect(
+      renderToString(
+        <LocalStoreProvider store={store}>
+          <Ids />
+        </LocalStoreProvider>
+      )
+    ).toContain("<span>0</span>");
+  });
 });

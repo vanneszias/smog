@@ -145,4 +145,87 @@ describe("createLocalStore", () => {
     await store.ready;
     expect(store.getSnapshot()).toBe(store.getSnapshot());
   });
+
+  test("two stores on one adapter keep interleaved updates", async () => {
+    const adapter = createMemoryAdapter();
+    const a = createLocalStore(adapter);
+    const b = createLocalStore(adapter);
+    await Promise.all([a.ready, b.ready]);
+    await a.update((d) => ({ ...d, favorites: ["fav"] }));
+    await b.update((d) => ({
+      ...d,
+      lists: [
+        { createdAt: 1, gestureIds: [], id: "loc_1", name: "L", updatedAt: 1 },
+      ],
+    }));
+    await a.update((d) => ({ ...d, recentSearches: ["hond"] }));
+    const persisted = JSON.parse((await adapter.getItem(KEY)) ?? "{}");
+    expect(persisted.favorites).toEqual(["fav"]);
+    expect(persisted.lists).toHaveLength(1);
+    expect(persisted.recentSearches).toEqual(["hond"]);
+    expect(b.getSnapshot().favorites).toEqual(["fav"]);
+  });
+
+  test("an adapter change notification re-hydrates and notifies", async () => {
+    const inner = createMemoryAdapter();
+    let fire: () => void = () => undefined;
+    const adapter: StorageAdapter = {
+      ...inner,
+      subscribe: (_key, onChange) => {
+        fire = onChange;
+        return () => undefined;
+      },
+    };
+    const store = createLocalStore(adapter);
+    await store.ready;
+    let calls = 0;
+    store.subscribe(() => {
+      calls += 1;
+    });
+    await inner.setItem(KEY, stored({ favorites: ["other-tab"] }));
+    fire();
+    await store.update((d) => d);
+    expect(store.getSnapshot().favorites).toEqual(["other-tab"]);
+    expect(calls).toBe(1);
+  });
+
+  test("newer stored versions stay untouched and read-only", async () => {
+    const error = spyOn(console, "error").mockImplementation(() => undefined);
+    const raw = JSON.stringify({ favorites: ["future"], version: 2 });
+    const adapter = createMemoryAdapter({ [KEY]: raw });
+    const store = createLocalStore(adapter);
+    await store.ready;
+    expect(store.getSnapshot()).toEqual(defaultGuestData());
+    await store.update((d) => ({ ...d, favorites: ["x"] }));
+    expect(store.getSnapshot().favorites).toEqual(["x"]);
+    expect(await adapter.getItem(KEY)).toBe(raw);
+    expect(await adapter.getItem(`${KEY}:backup`)).toBeNull();
+    expect(
+      error.mock.calls.some((c) => String(c[0]).startsWith("[localStore]"))
+    ).toBe(true);
+    error.mockRestore();
+  });
+
+  test("salvages valid parts, backs up the raw data before overwriting", async () => {
+    const error = spyOn(console, "error").mockImplementation(() => undefined);
+    const raw = JSON.stringify({
+      ...defaultGuestData(),
+      favorites: ["keep"],
+      preferences: { locale: "de", theme: "dark" },
+    });
+    const adapter = createMemoryAdapter({ [KEY]: raw });
+    const store = createLocalStore(adapter);
+    await store.ready;
+    expect(store.getSnapshot().favorites).toEqual(["keep"]);
+    expect(store.getSnapshot().preferences).toEqual(
+      defaultGuestData().preferences
+    );
+    expect(await adapter.getItem(`${KEY}:backup`)).toBeNull();
+    await store.update((d) => ({ ...d, recentSearches: ["a"] }));
+    expect(await adapter.getItem(`${KEY}:backup`)).toBe(raw);
+    expect(JSON.parse((await adapter.getItem(KEY)) ?? "{}").favorites).toEqual([
+      "keep",
+    ]);
+    error.mockRestore();
+  });
 });

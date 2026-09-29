@@ -41,6 +41,9 @@ export function createWebAdapter(
     return await onMemory();
   };
 
+  const canListen =
+    storage !== undefined && typeof globalThis.addEventListener === "function";
+
   return {
     getItem: (key) =>
       run(
@@ -57,6 +60,21 @@ export function createWebAdapter(
         (s) => s.setItem(key, value),
         () => memory.setItem(key, value)
       ),
+    subscribe: canListen
+      ? (key, onChange) => {
+          const handler = (event: Event): void => {
+            const { key: changed, storageArea } = event as StorageEvent;
+            if (
+              (changed === null || changed === key) &&
+              (storageArea === null || storageArea === storage)
+            ) {
+              onChange();
+            }
+          };
+          globalThis.addEventListener("storage", handler);
+          return () => globalThis.removeEventListener("storage", handler);
+        }
+      : undefined,
   };
 }
 
