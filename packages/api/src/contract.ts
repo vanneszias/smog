@@ -17,6 +17,14 @@ export const whoamiUserSchema = z.object({
 
 /** Liveness and the current session, before any feature exists. */
 export const systemContract = {
+  /** Which sign-in methods and captcha the app shows (no secrets). */
+  authConfig: baseContract.output(
+    z.object({
+      apple: z.boolean(),
+      google: z.boolean(),
+      turnstileSiteKey: z.string().nullable(),
+    })
+  ),
   health: baseContract.output(
     z.object({ environment: z.enum(ENVIRONMENTS), ok: z.literal(true) })
   ),

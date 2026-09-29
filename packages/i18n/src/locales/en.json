@@ -59,7 +59,8 @@
     "playVideo": "Play video",
     "pauseVideo": "Pause video",
     "dragHandle": "Drag to reorder",
-    "otpDigit": "Digit {{index}} of {{length}}"
+    "otpDigit": "Digit {{index}} of {{length}}",
+    "userMenu": "Account menu"
   },
   "nav": {
     "home": "Home",
@@ -76,7 +77,9 @@
     "privacy": "Privacy",
     "terms": "Terms",
     "signIn": "Sign in",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "gestures": "Gestures",
+    "legal": "Legal"
   },
   "theme": {
     "label": "Theme",
@@ -90,7 +93,8 @@
     "toggle": "Change language",
     "nl": "Nederlands",
     "en": "English",
-    "fr": "Français"
+    "fr": "Français",
+    "device": "Device language"
   },
   "auth": {
     "title": "Sign in or sign up",
@@ -223,7 +227,10 @@
       "skipped_other": "{{count}} gestures are no longer available and were skipped.",
       "overLimit": "Not everything fit in your account: it holds up to {{maxLists}} lists of {{maxItems}} gestures each.",
       "untitledList": "Untitled list"
-    }
+    },
+    "noAccount": "No account yet?",
+    "haveAccount": "Already have an account?",
+    "signUpLink": "Create one"
   },
   "states": {
     "loading": "Loading…",
@@ -348,6 +355,25 @@
       "showToast": "Show notification",
       "openDialog": "Open dialog",
       "openSheet": "Open panel"
-    }
+    },
+    "unlockHint_one": "Tap {{count}} more time to open the developer tools.",
+    "unlockHint_other": "Tap {{count}} more times to open the developer tools.",
+    "unlocked": "Developer tools are on."
+  },
+  "home": {
+    "tagline": "Learn Flemish Sign Language gestures, whenever it suits you."
+  },
+  "footer": {
+    "madeBy": "Made with ♡ by zias.be"
+  },
+  "account": {
+    "title": "Your account",
+    "signedInAs": "Signed in as {{email}}",
+    "comingSoon": "Soon you will also manage your sign-in methods, privacy and preferences here."
+  },
+  "settings": {
+    "title": "Settings",
+    "preferences": "Preferences",
+    "about": "About the app"
   }
 }

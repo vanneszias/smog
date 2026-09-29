@@ -3,6 +3,7 @@ import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vitest/config";
 
+const SRC = fileURLToPath(new URL("./src", import.meta.url));
 const MIGRATIONS_DIR = fileURLToPath(
   new URL("../../packages/db/migrations", import.meta.url)
 );
@@ -28,12 +29,14 @@ export default defineConfig(async () => ({
     }),
     tanstackStart(),
   ],
+  resolve: { alias: { "@": SRC } },
   test: {
+    // test/warm-up.ts pays the first (slow) transform of the server entry
+    // under `hookTimeout`, so a hung test still fails after 60 s.
+    hookTimeout: 180_000,
     // `scripts/` runs on Bun (`bun test scripts`), not in workerd.
     include: ["test/**/*.test.ts"],
-    setupFiles: ["@smog/db/testing/apply-migrations"],
-    // The first request in a file transforms the whole server entry
-    // (Start, Better Auth, React Email) on demand, which takes ~15 s.
+    setupFiles: ["@smog/db/testing/apply-migrations", "./test/warm-up.ts"],
     testTimeout: 60_000,
   },
 }));

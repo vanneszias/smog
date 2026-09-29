@@ -28,6 +28,8 @@ export default defineConfig({
   timeout: 60_000,
   use: {
     baseURL: `http://localhost:${PORT}`,
+    // Accept-Language picks the page language (no cookie yet): Dutch, the default.
+    locale: "nl-BE",
     trace: "retain-on-failure",
   },
   webServer: {

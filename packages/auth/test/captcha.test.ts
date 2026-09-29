@@ -78,6 +78,20 @@ describe("captcha endpoints (I2)", () => {
     }
   });
 
+  it("also refuses the Expo app without a token (known gap, DECISIONS)", async () => {
+    const guarded = setup({ TURNSTILE_SECRET_KEY: "turnstile-secret" });
+
+    const response = await guarded.call("/email-otp/send-verification-otp", {
+      body: { email: uniqueEmail(), type: "sign-in" },
+      // What the Expo client sends; any client can send it, so it cannot
+      // be an exemption.
+      headers: { "expo-origin": "smog://", origin: "smog://" },
+    });
+
+    expect(response.status).toBe(400);
+    expect(guarded.email.sent).toHaveLength(0);
+  });
+
   it.each([
     "/email-otp/request-password-reset",
     "/forget-password/email-otp",

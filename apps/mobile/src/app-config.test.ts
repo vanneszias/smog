@@ -103,4 +103,10 @@ describe("app.config", () => {
       "./plugins/with-screen-capture-permissions.js"
     );
   });
+
+  it("enables Sign in with Apple on iOS", () => {
+    const config = load();
+    expect(config.plugins).toContain("expo-apple-authentication");
+    expect(config.ios?.usesAppleSignIn).toBe(true);
+  });
 });

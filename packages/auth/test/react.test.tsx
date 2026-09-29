@@ -29,6 +29,14 @@ describe("toAuthState", () => {
     ).toEqual({ status: "signedIn", user });
   });
 
+  it("names a user without a name by their email (code and link sign-ups)", () => {
+    const state = toAuthState({
+      data: { user: { ...user, name: " " } },
+      isPending: false,
+    });
+    expect(state.user?.name).toBe("ada@smog.test");
+  });
+
   it("treats a missing or unknown role as 'user'", () => {
     const state = toAuthState({
       data: { user: { ...user, role: "admin,user" } },

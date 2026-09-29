@@ -59,7 +59,8 @@
     "playVideo": "Video afspelen",
     "pauseVideo": "Video pauzeren",
     "dragHandle": "Slepen om de volgorde te wijzigen",
-    "otpDigit": "Cijfer {{index}} van {{length}}"
+    "otpDigit": "Cijfer {{index}} van {{length}}",
+    "userMenu": "Accountmenu"
   },
   "nav": {
     "home": "Home",
@@ -76,7 +77,9 @@
     "privacy": "Privacy",
     "terms": "Voorwaarden",
     "signIn": "Aanmelden",
-    "signOut": "Afmelden"
+    "signOut": "Afmelden",
+    "gestures": "Gebaren",
+    "legal": "Juridisch"
   },
   "theme": {
     "label": "Thema",
@@ -90,7 +93,8 @@
     "toggle": "Taal wijzigen",
     "nl": "Nederlands",
     "en": "English",
-    "fr": "Français"
+    "fr": "Français",
+    "device": "Taal van het toestel"
   },
   "auth": {
     "title": "Aanmelden of registreren",
@@ -223,7 +227,10 @@
       "skipped_other": "{{count}} gebaren zijn niet meer beschikbaar en zijn overgeslagen.",
       "overLimit": "Niet alles paste in je account: je bewaart er tot {{maxLists}} lijsten van elk {{maxItems}} gebaren.",
       "untitledList": "Naamloze lijst"
-    }
+    },
+    "noAccount": "Nog geen account?",
+    "haveAccount": "Heb je al een account?",
+    "signUpLink": "Maak er een aan"
   },
   "states": {
     "loading": "Bezig met laden…",
@@ -348,6 +355,25 @@
       "showToast": "Melding tonen",
       "openDialog": "Dialoog openen",
       "openSheet": "Paneel openen"
-    }
+    },
+    "unlockHint_one": "Nog {{count}} keer tikken om de ontwikkelaarstools te openen.",
+    "unlockHint_other": "Nog {{count}} keer tikken om de ontwikkelaarstools te openen.",
+    "unlocked": "De ontwikkelaarstools staan aan."
+  },
+  "home": {
+    "tagline": "Leer gebaren in Vlaamse Gebarentaal, wanneer het jou past."
+  },
+  "footer": {
+    "madeBy": "Gemaakt met ♡ door zias.be"
+  },
+  "account": {
+    "title": "Je account",
+    "signedInAs": "Aangemeld als {{email}}",
+    "comingSoon": "Binnenkort beheer je hier ook je aanmeldmethodes, privacy en voorkeuren."
+  },
+  "settings": {
+    "title": "Instellingen",
+    "preferences": "Voorkeuren",
+    "about": "Over de app"
   }
 }

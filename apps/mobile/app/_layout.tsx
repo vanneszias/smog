@@ -1,24 +1,27 @@
 import "../global.css";
 
-import { setupNative } from "@smog/i18n/native";
-import { I18nextProvider } from "@smog/i18n/react";
 import { KitProvider, ToastProvider } from "@smog/ui-native";
 import { Stack } from "expo-router";
-import { type ReactElement, useState } from "react";
+import type { ReactElement } from "react";
+import { GuestImportSheet } from "@/guest-import-sheet";
+import { AppProviders } from "@/providers";
 import { ThemeRoot } from "@/theme-root";
 
 export default function RootLayout(): ReactElement {
-  // The stored language preference joins in Task 9 (local-store).
-  const [i18n] = useState(() => setupNative());
   return (
-    <ThemeRoot>
-      <I18nextProvider i18n={i18n}>
+    <AppProviders>
+      <ThemeRoot>
         <KitProvider>
           <ToastProvider>
-            <Stack screenOptions={{ headerShown: false }} />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" options={{ presentation: "modal" }} />
+              <Stack.Screen name="settings" />
+            </Stack>
+            <GuestImportSheet />
           </ToastProvider>
         </KitProvider>
-      </I18nextProvider>
-    </ThemeRoot>
+      </ThemeRoot>
+    </AppProviders>
   );
 }

@@ -51,6 +51,7 @@ import {
   TabsTrigger,
   Text,
   Textarea,
+  TextLink,
   useColor,
   useToast,
 } from "@smog/ui-native";
@@ -269,6 +270,13 @@ function TypographySection(): ReactElement {
           <Text key={tone} tone={tone} weight="semibold">
             {t("devTools.gallery.sampleTitle")}
           </Text>
+        ))}
+      </Row>
+      <Row>
+        {(["primary", "default", "muted"] as const).map((tone) => (
+          <TextLink key={tone} onPress={noop} tone={tone}>
+            {t("nav.privacy")}
+          </TextLink>
         ))}
       </Row>
     </Section>
