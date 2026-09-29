@@ -1,0 +1,21 @@
+{
+  "name": "@smog/brand",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./svg": "./src/svg.gen.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -b",
+    "generate": "bun scripts/generate.ts",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@smog/config": "workspace:*",
+    "@smog/styles": "workspace:*",
+    "@types/bun": "catalog:",
+    "sharp": "0.35.5",
+    "typescript": "catalog:"
+  }
+}

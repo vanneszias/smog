@@ -13,6 +13,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@smog/styles": "workspace:*",
     "expo": "~57.0.26",
     "expo-constants": "~57.0.20",
     "expo-font": "~57.0.4",
@@ -25,7 +26,7 @@
     "expo-updates": "~57.0.24",
     "expo-video": "~57.0.5",
     "expo-web-browser": "~57.0.3",
-    "nativewind": "4.2.7",
+    "nativewind": "catalog:",
     "react": "catalog:",
     "react-native": "0.86.3",
     "react-native-reanimated": "4.5.1",
@@ -41,6 +42,7 @@
     "expo-doctor": "1.20.4",
     "jest": "~29.7.0",
     "jest-expo": "~57.0.5",
+    "react-test-renderer": "19.2.3",
     "tailwindcss": "3.4.19",
     "typescript": "catalog:"
   },

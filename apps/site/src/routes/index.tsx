@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
 function Home(): ReactNode {
   return (
     <main className="flex min-h-screen items-center justify-center">
-      <h1 className="font-bold text-4xl">SMOG &amp; Co</h1>
+      <h1 className="font-semibold text-display text-primary">SMOG &amp; Co</h1>
     </main>
   );
 }

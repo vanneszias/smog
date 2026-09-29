@@ -1,7 +1,8 @@
+import { tokens } from "@smog/styles/tokens";
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 const EAS_PROJECT_ID = "9fa68b63-dfa5-498a-9196-5eba93ecac29";
-const BRAND_GREEN = "#00805F";
+const BRAND_GREEN = tokens.color.brand.green;
 /** Placeholder until the site gets its real host (see spec §14). */
 const DEFAULT_SITE_HOST = "smog-site-staging.workers.dev";
 /** Site paths the app opens itself instead of the browser. */
