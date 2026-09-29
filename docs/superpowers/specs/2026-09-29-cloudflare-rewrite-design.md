@@ -87,7 +87,7 @@ Package names: `@smog/<dir>` (`@smog/gestures`, not `@smog/features-gestures`).
 
 ```text
 apps/site    → api, auth, rpc, db, jobs, render, analytics, email, payments, video, features/*, local-store, i18n, styles, brand, ui-web, config, utils
-apps/mobile  → api (client only), auth (./expo), rpc (./react), features/* (./client, ./schema), local-store, analytics (./native), i18n, styles, brand, ui-native, config, utils
+apps/mobile  → api (client only), auth (./expo, ./react), rpc (./react), features/* (./client, ./schema), local-store, analytics (./native), i18n, styles, brand, ui-native, config, utils
 api          → rpc, features/*, config
 features/*   → rpc, db, auth, local-store, payments, video, email, jobs, render (./contract only), analytics (./server), i18n, config, utils
                (a feature may import another feature's ./schema and ./contract (both client-safe); never its ./server or ./client)
@@ -239,7 +239,7 @@ live | expiring ──force expire (admin)──▶ expired
 
 ## 6. Auth (`@smog/auth`)
 
-- Better Auth with the Drizzle adapter on D1 (`provider: "sqlite"`), `basePath: "/api/auth"`, and secondary storage in KV for rate-limit counters and verification caches.
+- Better Auth with the Drizzle adapter on D1 (`provider: "sqlite"`), `basePath: "/api/auth"`. No secondary storage: verifications live in D1 and Better Auth uses its per-isolate memory rate limiter, in front of the `RL_AUTH` binding on the route (DECISIONS, Auth).
 - Methods:
   - email + password: `requireEmailVerification: true`, reset via email.
   - `emailOTP` plugin: sign-in and verification codes.
@@ -267,6 +267,7 @@ live | expiring ──force expire (admin)──▶ expired
   - Per-request context: `{ env, db, auth, session, user, request, ctx(waitUntil), ip, locale }`.
   - `db` is Drizzle over the `DB` D1 binding; `env` is the validated `WorkerEnv` from `@smog/config/env/worker`.
 - **Middleware** (`@smog/rpc`):
+  - `checkOrigin` runs first on both transports (CSRF defence in depth on top of the SameSite=Lax cookie): a non-GET/HEAD request whose `Sec-Fetch-Site` is present and not `same-origin`/`none`, or whose `Origin` is present and not the `SITE_URL` origin (any `http://localhost` port in dev), is `FORBIDDEN`. Requests with neither header (native app, curl) pass. Other cookie-authenticated POST endpoints (`/api/analytics`) apply the same `isForeignRequest` check.
   - `withAuth`: session optional → typed user.
   - `requireUser` returns `UNAUTHORIZED`; `requireAdmin` returns `FORBIDDEN`.
   - `rateLimit(bucket)` uses the Workers Rate Limiting bindings: `RL_API` (300/60 s per IP), `RL_SPONSOR` (5/60 s per IP), `RL_AUTH` (5/60 s per IP, POST only; get-session and sign-out exempt), `RL_ANALYTICS` (120/60 s per IP). The Workers binding supports only 10 s and 60 s periods, so the old 20/3600 s and 30/900 s windows became 5/60 s, backed by Turnstile (see DECISIONS). Dev uses high limits.
@@ -339,7 +340,7 @@ Local dev: the Container needs Docker. When Docker is missing, `RENDER_MODE=loca
 
 - `EmailSender` interface (`send({ to, from, replyTo?, subject, html, text })`) with two implementations:
   - `CloudflareEmailSender`, using the `send_email` binding `EMAIL` (Cloudflare Email Service, beta, Workers Paid).
-  - `DevEmailSender`, which logs and stores the last 50 messages in KV, viewable at `/dev/mail` in dev and staging.
+  - `DevEmailSender`, which logs and stores the last 50 messages in KV, viewable at `/dev/mail` in dev only (the mailbox holds sign-in links; staging sends real email).
 - Templates (React Email, rendered with `@react-email/render` in the Worker), localized nl/en/fr from `@smog/i18n` with nl as the default:
   - `welcome`, `sponsorship_received`, `payment_confirmed`, `sponsorship_live`, `renewal_reminder`, `admin_new_sponsorship` (sent **after payment**, not at creation), `admin_render_failed`, `admin_refund_needed`.
   - Auth emails: `auth_verify_email`, `auth_otp`, `auth_magic_link`, `auth_reset_password`.
@@ -383,7 +384,7 @@ Local dev: the Container needs Docker. When Docker is missing, `RENDER_MODE=loca
 /admin                     dashboard
 /admin/gestures, /admin/gestures/new, /admin/gestures/$id, /admin/categories,
 /admin/sponsorships, /admin/sponsorships/$id, /admin/users, /admin/audit, /admin/emails, /admin/settings (maintenance)
-/dev/ui                    component preview (dev + staging only), /dev/mail (dev + staging only)
+/dev/ui                    component preview (dev + staging only), /dev/mail (dev only)
 /.well-known/apple-app-site-association, /.well-known/assetlinks.json (static assets, application/json)
 ```
 
@@ -438,7 +439,7 @@ Local dev: the Container needs Docker. When Docker is missing, `RENDER_MODE=loca
   - New: `sign_in_completed { method }`, `guest_data_imported { favorites, lists }`, `sponsorship_checkout_started { gesture_count, has_logo }`.
   - No free text, no search terms.
 - Consent gate: nothing is initialised or sent until consent is `true`. Withdrawing consent clears the identity.
-- Web: `@smog/analytics/web` posts to the same-origin `/api/analytics` relay. The relay validates the event against the taxonomy, rate-limits it (120/min), and forwards it to OpenPanel with server-only credentials. It never fails a product action.
+- Web: `@smog/analytics/web` posts to the same-origin `/api/analytics` relay. The relay rejects foreign origins (`isForeignRequest`, as `/api/rpc`), validates the event against the taxonomy, rate-limits it (120/min), and forwards it to OpenPanel with server-only credentials. It never fails a product action.
 - Mobile: `@smog/analytics/native` uses `@openpanel/react-native` with a write-only client (the least-privileged setting).
 - Identity:
   - Signed-in users are identified by user id only; email and name are no longer sent (data minimisation).

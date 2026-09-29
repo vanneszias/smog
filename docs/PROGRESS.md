@@ -20,8 +20,9 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 ## Log
 
 - 2026-09-29: Phase 0 done. Orphan `develop` branch created. Analysis reports, inventory, spec, DECISIONS and the phase 1 plan committed.
-- 2026-09-29: Phase 2 tasks 1–8 merged (db, auth, email core, rpc/api, local-store, styles/brand, i18n, ui-web + /dev/ui, ui-native + gallery). Phase 3 task 1 (gestures) merged.
 - 2026-09-29: Phase 1 done. Root tooling, `@smog/config` + boundaries, `apps/site` (TanStack Start on Workers, guarded deploy), `apps/mobile` (Expo SDK 57, NativeWind 4), release gate (`bun run release:check` green with `SMOG_OFFLINE=1` here), `ci.yml` and `deploy.yml`.
+- 2026-09-29: Phase 2 tasks 1–8 merged (db, auth, email core, rpc/api, local-store, styles/brand, i18n, ui-web + /dev/ui, ui-native + gallery). Phase 3 task 1 (gestures) merged.
+- 2026-09-29: Phase 2 review fix wave: CSRF origin check on `/api/rpc` + `/api/openapi`, `/dev/ui` back in staging, shared test preload / cursor error / user-scoped query keys, `admin:grant`, fr typography test, stale docs.
 
 ## Next
 
@@ -29,17 +30,17 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - Phase 3: tasks 1–4 are merged (gestures, favorites, lists, guest import).
   - Task 5 (domain components, both kits) is in progress in a worktree.
   - Tasks 6 (site learning pages) and 7 (mobile learning screens and offline cache) are next.
-- Carry into the phase 4 plan: a native Turnstile widget (WebView), so mobile email sign-in works with captcha on; magic link on mobile via a universal link; a CSP with a hash for the theme pre-paint script.
+- Carry into the phase 4 plan: a native Turnstile widget (WebView), so mobile email sign-in works with captcha on; magic link on mobile via a universal link; a CSP with a hash for the theme pre-paint script; the `/api/analytics` relay must reject foreign origins with `isForeignRequest` from `@smog/rpc` (spec §7, §12), like `/api/rpc`.
 - Carry into the phase 5 plan: admin gesture and category writes must set `sort_name`, reindex FTS and call `bumpCatalogVersion`; gesture name ≤ 120.
-- Carry into phase 8: required secrets checked before deploy.
+- Carry into phase 3 tasks 6–7: prefetch in SSR loaders with `createRouterClient(appRouter, { context })`, not an HTTP subrequest to `SITE_URL` (phase 2 review M5).
+- Carry into phase 8: required secrets and vars checked before deploy, including production `TURNSTILE_SITE_KEY` (var) and `TURNSTILE_SECRET_KEY` (secret); `SITE_URL` per env must be the origin browsers use (the rpc origin check and Better Auth compare against it).
 
 ## Known gaps
 
 - Bun is pinned at 1.3.11 (`packageManager`); upgrade when possible (see DECISIONS).
 - `SMOG_OFFLINE=1 bun run release:check` (local, no network) degrades three expo-doctor checks; CI runs them online and is the authority.
-- The deploy workflow has never deployed: it needs the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets per GitHub environment (`staging`, `production`), real KV ids and the workers.dev `SITE_URL`s. D1 migrations start in phase 2 (`packages/db/migrations`).
+- The deploy workflow has never deployed: it needs the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets per GitHub environment (`staging`, `production`), real KV ids and the workers.dev `SITE_URL`s. D1 migrations exist (`packages/db/migrations`, append-only).
 - `bun run audit` ignores three moderate advisories (DECISIONS).
 - The Playwright `e2e` CI job is a placeholder (off unless `vars.E2E_ENABLED == 'true'`), and the spec's root `test:e2e` script does not exist yet; both come in phase 9.
 - `bun -F @smog/site deploy` bypasses turbo. Once workspace packages need a build step, run `turbo run build --filter=@smog/site^...` first (or make deploy a turbo task depending on `^build`).
 - knip prints an Expo warning about a missing `userInterfaceStyle` although `app.config.ts` sets it (knip's Expo plugin loads the config its own way); cosmetic.
-- `/api/auth/*` has only Better Auth's per-isolate memory limiter until Task 3 wraps the route with `RL_AUTH` (DECISIONS, Auth).

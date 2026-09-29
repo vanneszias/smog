@@ -20,6 +20,10 @@ APPLE_APP_BUNDLE_IDENTIFIER=be.zias.smog
 # requests need a Turnstile token (`x-captcha-response`), and rpc mutations
 # behind `requireTurnstile` need one in `x-turnstile-token`.
 TURNSTILE_SECRET_KEY=
+# Its public pair, TURNSTILE_SITE_KEY, is a var in `wrangler.jsonc`
+# (`env.<env>.vars`), not a secret. Production needs both before launch:
+# without the site key the web shows no widget and the guarded auth calls
+# fail. Staging uses Cloudflare's always-pass test keys.
 
 # Dev sign-in: the seeded admin `admin@smog.test` has the DEV-ONLY password
 # `smog-dev-admin` (packages/db/seed/dev.sql). Emails (verification links,
