@@ -1,0 +1,48 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+.output/
+.tanstack/
+*.tsbuildinfo
+
+# tooling caches
+.turbo/
+.cache/
+coverage/
+
+# Cloudflare
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Expo
+.expo/
+.expo-shared/
+apps/mobile/ios/
+apps/mobile/android/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Playwright
+test-results/
+playwright-report/
+
+# env
+.env
+.env.*
+!.env.example
+
+# editors and OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.log

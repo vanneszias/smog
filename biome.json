@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["ultracite/biome/core", "ultracite/biome/react"],
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "!!**/dist",
+      "!!**/.wrangler",
+      "!!**/.expo",
+      "!!**/.output",
+      "!!**/.tanstack",
+      "!!**/routeTree.gen.ts",
+      "!!**/worker-configuration.d.ts",
+      "!!**/*.gen.*",
+      "!!.agents",
+      "!!docs/superpowers/analysis"
+    ]
+  },
+  "javascript": {
+    "globals": ["__DEV__"]
+  }
+}
