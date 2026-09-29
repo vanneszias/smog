@@ -127,6 +127,30 @@ Rules:
 - Errors: typed oRPC errors, and log with a service prefix: `[serviceName] Failed to …`.
 - Keep the existing code style in `AGENTS.md` (imports order, `@/` alias, `@smog/*` workspace imports, naming, `import type`, explicit param/return types) and rewrite `AGENTS.md` for the new structure.
 
+### 3.1 Clean data model (redesign, don't port)
+
+The current Convex data model is messy. **Do not copy it table for table.** Design a clean, normalised relational schema for D1 from what the product needs, and document it in `docs/DATA_MODEL.md` with an ER diagram. Things I already know are wrong in the old schema (`origin/master:packages/convex/convex/schema.ts`), plus anything else you find:
+- `users` mixes real accounts with guests (`guestId`, optional `email`, `workosId`). The new `user` table is Better Auth's, holding **only real accounts**. Add app-specific fields through Better Auth's `additionalFields` or a 1:1 `profile` table, not a parallel users table.
+- Favorites live both in `user_favorites` and in a "default favorites" list (`gesture_lists.isDefaultFavorites`). Pick **one** model.
+- `gestures.categoryIds` is an array. Use a `gesture_category` join table.
+- `gestures.concept` is an untyped string array. Model it properly.
+- `sponsorships` is a god-table: contact, invoice, payment, overlay, media, review, re-edit and renewal fields together, with `status` as a free string. Split it into clear entities (e.g. sponsorship, sponsor contact/invoice details, payment, render job/media, review events). Make the status a typed enum with an explicit state machine, enforced in `@smog/sponsorships`.
+- Share tokens and editing permissions sit loosely on `gesture_lists`. Model them explicitly, e.g. a `list_share` table with a role (view/edit), creation date and revocation.
+- `user_consents` should be an append-only consent log with versions. Store IP and user agent only if the privacy doc requires it.
+- `adminLogs.metadata` is `any`. Use a typed audit log with a JSON column validated by Zod per action.
+- `isActive` flags and `lastUpdated`/`createdAt`/`updatedAt` are inconsistent across tables. Use consistent timestamps, soft-delete/publish flags, foreign keys with sensible `ON DELETE` rules, unique constraints and indexes on every column you query by.
+- Files (sponsor logos) go in R2, with keys stored in the database.
+
+The migration script (§6) maps the old shapes onto this new model.
+
+### 3.2 Guests are local only
+
+Guests never get a database row.
+- A guest's favorites, lists, recent searches, preferences and consent choice live **on the device only**: `localStorage` / IndexedDB on the site, and AsyncStorage (or SQLite if you add an offline cache) on mobile.
+- Build one shared local-store abstraction with platform adapters. The feature `client` hooks read and write local storage when signed out and use the API when signed in, so screens never branch on it.
+- **On sign-in or sign-up, offer to import the local data into the account** (merge, dedupe, then clear the local copy). This is a single shared function used by both apps.
+- Sharing a list requires an account. Viewing a shared list does not.
+
 ---
 
 ## 4. Scope: parity plus improvements
@@ -134,7 +158,7 @@ Rules:
 Rebuild **every** feature of the current app (use the inventory from §1.2 as the checklist). At minimum:
 
 - **Learning:** gesture library, categories, gesture detail with Mux playback, search with recent searches, deep links (`smog://` and https app links), and legacy-URL redirects from the old site.
-- **User:** favorites; lists with drag reorder and share links (`/lists/:shareToken`); account, consents, data export and deletion; guest identity merged on sign-in; theme (system/light/dark); language (en/fr/nl).
+- **User:** favorites; lists with drag reorder and share links (`/lists/:shareToken`); account, consents, data export and deletion; guest mode kept on the device only (see §3.2); theme (system/light/dark); language (en/fr/nl).
 - **Sponsorship:**
   - sponsor wizard with overlay configuration and a Remotion preview
   - Mollie payment, success page, re-edit
@@ -148,6 +172,28 @@ Keep the mobile app identity so it updates in place: bundle id / package `be.zia
 Improvements are welcome where they're obvious wins. Examples: an offline cache for gestures and favorites on mobile, SSR/SEO for gesture pages, optimistic updates, and accessibility. Each one must be listed in `docs/DECISIONS.md`, and none may change the business rules (pricing, lifecycle, consent) without a note.
 
 The old Convex realtime subscriptions go away. Use TanStack Query caching, invalidation after mutations, and refetch-on-focus. Durable Objects are only worth it if a feature truly needs push, and then only with a DECISIONS entry.
+
+### 4.1 UI/UX redesign
+
+The current UI/UX is not good enough. **Do not port the old screens pixel for pixel.** Redesign both apps so they share one visual language and feel clean, calm and consistent. Keep the SMOG & Co brand from `packages/brand`.
+- Start with a short design brief in the spec, covering:
+  - principles, the type scale, spacing scale, colour roles (light and dark), radius, elevation and motion
+  - the component inventory
+  - the key screen flows for learning, lists, account, sponsor wizard and admin
+- Put every design token in `@smog/styles`. `ui-web` and `ui-native` are built only from those tokens and expose matching component APIs (same names, props and variants where the platform allows: Button, Input, Card, ListItem, Sheet/Dialog, Tabs, Toast, EmptyState, Skeleton, Avatar, Badge, VideoPlayer, SearchField, and so on). Screens compose kit components. No one-off styling in apps.
+- Pay attention to:
+  - consistent empty, loading, error and offline states
+  - skeletons instead of spinners
+  - clear hierarchy and generous spacing
+  - accessible contrast, focus states and screen-reader labels
+  - tap targets of at least 44pt
+  - reduced-motion support
+  - responsive web from 360px to desktop
+- Use native platform conventions on mobile: tabs, sheets, haptics and safe areas.
+- The admin panel gets the same kit and a dense, table-first layout.
+- Build a component preview route on the site (e.g. `/dev/ui`, local and staging only) that shows every web component in every variant and theme.
+- Before calling each UI phase done, take Playwright screenshots of the key pages in light and dark mode at mobile and desktop widths. Review them critically and fix whatever looks inconsistent.
+- Record notable UX changes in `docs/DECISIONS.md`.
 
 ---
 
@@ -173,6 +219,7 @@ Write `scripts/migrate-from-convex/` (Bun script, idempotent, with dry-run mode 
 - **Input:** a Convex snapshot export (`npx convex export` ZIP / JSONL per table). The old tables are adminLogs, categories, gesture_list_items, gesture_lists, gestures, sponsorships, user_consents, user_favorites and users.
 - Transform the data to the new Drizzle schema, keeping stable IDs or an ID-mapping table. Mux asset/playback IDs carry over unchanged.
 - **Output:** SQL batches applied with `wrangler d1 execute --env <env> --file` (or the D1 HTTP API).
+- **Guests:** skip every guest user (a `guestId` without email/WorkOS ID) and all their favorites, lists, consents and other rows. Put the counts in the report.
 - **Users:** create Better Auth `user` rows from the old WorkOS users (same email, `emailVerified: true`, preserve role/admin flags and created dates) **without a password credential**.
   - After cutover, users either set a password through the "forgot password" flow or sign in with an email OTP, magic link, Google or Apple (linked by email). That is acceptable.
   - Add an optional one-time "we moved, set your password" email job.
@@ -201,6 +248,8 @@ These are out:
 - Docker/Caddy hosting for the site
 - AWS / Remotion Lambda
 - A third app
+- Guest rows in the database
+- A one-to-one port of the old Convex schema or the old UI
 
 I also don't want:
 - copy-pasted code between site and mobile
@@ -216,7 +265,7 @@ Each phase ends with `release:check` green, `docs/PROGRESS.md` updated, and `dev
 
 0. Analysis → feature inventory → design spec → plans.
 1. Monorepo skeleton: Bun workspaces and catalogs, Turbo, Biome/ultracite, knip, config package, CI workflow, and empty site (Start on Workers) and mobile (Expo) apps that build.
-2. Foundations: `db` (Drizzle + D1 + migrations + seed), `auth` (Better Auth, all methods, web + Expo clients), `api` (oRPC base + client), `styles`/`brand`/`i18n`, `ui-web`/`ui-native` primitives.
+2. Foundations: `db` (clean schema per §3.1 + D1 + migrations + seed), `auth` (Better Auth, all methods, web + Expo clients), `api` (oRPC base + client), local guest store + import-on-sign-in (§3.2), `styles`/`brand`/`i18n`, design brief + `ui-web`/`ui-native` kits + `/dev/ui` preview (§4.1).
 3. Learning features: gestures, categories, search (FTS5), favorites, lists, and share links on site and mobile.
 4. Account, consent, analytics (OpenPanel), legal pages, deep links, legacy redirects, and maintenance mode.
 5. Admin panel.
