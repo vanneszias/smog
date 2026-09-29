@@ -1,18 +1,16 @@
 import type { ContractRouterClient } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
+import { favoritesContract } from "@smog/favorites/contract";
 import { gesturesContract } from "@smog/gestures/contract";
-import {
-  type GesturesByIdsContract,
-  listsContract,
-} from "@smog/lists/contract";
+import { listsContract } from "@smog/lists/contract";
 import { implementRpc, requireTurnstile } from "@smog/rpc";
 import { baseContract, type RpcClientContext } from "@smog/rpc/contract";
 import { makeRpcContext, makeSession } from "@smog/rpc/testing";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createApiClient, createApiQueryUtils } from "../src/client";
-import { appContract, appRouter } from "../src/index";
+import { appRouter } from "../src/index";
 
 describe("appRouter.system", () => {
   it("health returns ok with the environment", async () => {
@@ -146,6 +144,22 @@ describe("createApiClient", () => {
     expect(seen.at(-1)?.url).toBe("https://smog.test/api/rpc/gestures/search");
   });
 
+  it("mounts the favorites slice under `favorites`, signed-in only", async () => {
+    expect(Object.keys(appRouter.favorites).sort()).toEqual(
+      Object.keys(favoritesContract).sort()
+    );
+    const client = createApiClient({
+      baseUrl: "https://smog.test",
+      fetch: serve,
+    });
+
+    await expect(client.favorites.ids()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+      defined: true,
+    });
+    expect(seen.at(-1)?.url).toBe("https://smog.test/api/rpc/favorites/ids");
+  });
+
   it("mounts the lists slice under `lists`, owner procedures behind a session", async () => {
     expect(Object.keys(appRouter.lists).sort()).toEqual(
       Object.keys(listsContract).sort()
@@ -173,12 +187,6 @@ describe("createApiClient", () => {
       client.lists.create({ name: "x".repeat(81) })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(seen.at(-1)?.url).toBe("https://smog.test/api/rpc/lists/create");
-  });
-
-  it("serves the `gestures.byIds` shape the lists hooks declare", () => {
-    // Type-level: the lists client narrows the app client to this shape.
-    const byIds: GesturesByIdsContract = appContract.gestures.byIds;
-    expect(byIds).toBe(appContract.gestures.byIds);
   });
 
   it("builds TanStack Query options with a stable key", () => {

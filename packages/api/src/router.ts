@@ -1,3 +1,4 @@
+import { createFavoritesRouter } from "@smog/favorites/server";
 import { findGesturesByIds, gesturesRouter } from "@smog/gestures/server";
 import { createListsRouter } from "@smog/lists/server";
 import { implementRpc } from "@smog/rpc";
@@ -29,10 +30,11 @@ const system = os.system.router({
 
 /** The app router: implements `appContract` (feature routers join here). */
 export const appRouter = os.router({
+  // Favorites and lists resolve summaries with the gestures query (a
+  // feature never imports another feature's server; the api wires them).
+  favorites: createFavoritesRouter({ findSummaries: findGesturesByIds }),
   gestures: gesturesRouter,
-  // Lists hydrate their items with the gestures service (features never
-  // import each other's server).
-  lists: createListsRouter({ gestureSummaries: findGesturesByIds }),
+  lists: createListsRouter({ findSummaries: findGesturesByIds }),
   system,
 });
 
