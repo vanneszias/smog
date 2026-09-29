@@ -519,7 +519,11 @@ Weights: regular 400, medium 500, semibold 600. Maximum reading line length is 7
 | `success` | `#1F8A4C` | `#4CC27E` |
 | `warning` | `#B7791F` | `#E9B24A` |
 | `danger` | `#C62828` | `#F16B6B` |
-| `focus-ring` | `#EE971C` | `#F5AB45` |
+| `focus-ring` | `#C3780F` (amended: `#EE971C` measured 2.19:1) | `#F5AB45` |
+| `accent-foreground` | text on accent fills | |
+| `success-subtle` / `success-foreground` | subtle fill + AA text on it (same pattern for `warning-*`, `danger-*`, and primary text on `primary-subtle`) | |
+
+Exact values for the added roles live in `@smog/styles/tokens`; every text pairing is covered by the contrast test.
 
 All text and background pairs must pass WCAG AA (4.5:1 for body text, 3:1 for large text and UI), checked by a unit test in `@smog/styles`.
 
