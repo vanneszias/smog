@@ -12,8 +12,8 @@
     "./react": "./src/react.tsx"
   },
   "scripts": {
-    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",
-    "test": "vitest run"
+    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json",
+    "test": "vitest run && bun test guard"
   },
   "dependencies": {
     "@better-auth/expo": "1.7.6",
@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "catalog:",
+    "@types/bun": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "19.2.7",
     "expo-secure-store": "~57.0.4",

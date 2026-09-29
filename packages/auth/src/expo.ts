@@ -13,7 +13,7 @@ import {
   setItemAsync,
 } from "expo-secure-store";
 import { COOKIE_PREFIX } from "./cookie";
-import type { Auth } from "./server";
+import { USER_ADDITIONAL_FIELDS } from "./fields";
 
 export interface ExpoAuthClientOptions {
   /** The site origin (`EXPO_PUBLIC_API_URL`). */
@@ -44,7 +44,7 @@ export function createExpoAuthClient({
         storage: { getItem, getItemAsync, setItem, setItemAsync },
         storagePrefix,
       }),
-      inferAdditionalFields<Auth>(),
+      inferAdditionalFields({ user: USER_ADDITIONAL_FIELDS }),
       emailOTPClient(),
       magicLinkClient(),
       adminClient(),

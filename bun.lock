@@ -98,6 +98,7 @@
       },
       "devDependencies": {
         "@cloudflare/vitest-plugin": "catalog:",
+        "@types/bun": "catalog:",
         "@types/react": "catalog:",
         "@types/react-dom": "19.2.7",
         "expo-secure-store": "~57.0.4",

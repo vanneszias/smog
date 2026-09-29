@@ -1,6 +1,5 @@
 import { expo } from "@better-auth/expo";
 import { passkey } from "@better-auth/passkey";
-import { LOCALES } from "@smog/config/constants";
 import {
   account,
   passkey as passkeyTable,
@@ -21,9 +20,9 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, captcha, emailOTP, magicLink } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
 import { COOKIE_PREFIX } from "./cookie";
 import type { AuthEnv } from "./env";
+import { USER_ADDITIONAL_FIELDS } from "./fields";
 
 export type { AuthEnv } from "./env";
 
@@ -250,15 +249,7 @@ export function createAuth(options: CreateAuthOptions) {
     socialProviders: socialProviders(env),
     trustedOrigins: trustedOrigins(env),
     user: {
-      additionalFields: {
-        legacyId: { input: false, required: false, type: "string" },
-        locale: {
-          input: true,
-          required: false,
-          type: "string",
-          validator: { input: z.enum(LOCALES).nullish() },
-        },
-      },
+      additionalFields: USER_ADDITIONAL_FIELDS,
     },
   });
 }

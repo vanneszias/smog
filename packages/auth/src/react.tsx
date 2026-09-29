@@ -5,7 +5,7 @@ import {
   useMemo,
   useRef,
 } from "react";
-import type { Role } from "./session";
+import type { Role } from "./fields";
 
 export interface AuthUser {
   email: string;
