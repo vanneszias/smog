@@ -90,7 +90,7 @@ apps/site    → api, auth, rpc, db, jobs, render, analytics, email, payments, v
 apps/mobile  → api (client only), auth (./expo), rpc (./react), features/* (./client, ./schema), local-store, analytics (./native), i18n, styles, brand, ui-native, config, utils
 api          → rpc, features/*, config
 features/*   → rpc, db, auth, local-store, payments, video, email, jobs, render (./contract only), analytics (./server), i18n, config, utils
-               (a feature may import another feature's ./schema only; never its ./server)
+               (a feature may import another feature's ./schema and ./contract (both client-safe); never its ./server or ./client)
 jobs         → db, email, payments, video, render (./contract), config, utils
 payments     → config, utils
 video        → config, utils
