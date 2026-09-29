@@ -22,6 +22,7 @@ export { ERRORS, type RpcErrorCode } from "./errors";
 export { loadSession, rpcHandlerOptions } from "./handler";
 export { requireAdmin, requireUser } from "./middleware/auth";
 export { logErrors } from "./middleware/log";
+export { checkOrigin, isForeignRequest } from "./middleware/origin";
 export {
   checkRateLimit,
   limitRequests,

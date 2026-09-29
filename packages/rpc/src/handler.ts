@@ -1,6 +1,7 @@
 import type { StandardHandlerOptions } from "@orpc/server/standard";
 import { getSession } from "@smog/auth";
 import type { RpcContext } from "./context";
+import { checkOrigin } from "./middleware/origin";
 import { limitRequests } from "./middleware/rate-limit";
 import { mapValidationErrors } from "./validation";
 
@@ -20,8 +21,9 @@ export const loadSession: HandlerInterceptor = async (options) => {
 
 /**
  * The options both transports use (`new RPCHandler(appRouter, rpcHandlerOptions)`,
- * the same for `OpenAPIHandler`): `RL_API` per IP first, then the session,
- * and typed `VALIDATION` errors. The context passed to `handle()` carries
+ * the same for `OpenAPIHandler`): the origin check first (a foreign POST is
+ * `FORBIDDEN`), then `RL_API` per IP, then the session, and typed
+ * `VALIDATION` errors. The context passed to `handle()` carries
  * `session: null`; `loadSession` fills it.
  */
 export const rpcHandlerOptions: Pick<
@@ -29,5 +31,5 @@ export const rpcHandlerOptions: Pick<
   "clientInterceptors" | "interceptors"
 > = {
   clientInterceptors: [mapValidationErrors],
-  interceptors: [limitRequests("RL_API", "api"), loadSession],
+  interceptors: [checkOrigin, limitRequests("RL_API", "api"), loadSession],
 };
