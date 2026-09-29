@@ -40,6 +40,8 @@ bun -F @smog/site check-types
 bun -F @smog/site cf-typegen # Generate worker-configuration.d.ts (gitignored; check-types does it too)
 ```
 
+Local auth (dev only): copy `apps/site/.dev.vars.example` to `.dev.vars` (it has a dev `BETTER_AUTH_SECRET`), then `bun -F @smog/db migrate:dev && bun -F @smog/db seed:dev`. The seeded admin is `admin@smog.test` with the **dev-only** password `smog-dev-admin`. Emails are not sent in dev: read them at `http://localhost:5173/dev/mail` (or `/dev/mail.json`). After a migration is regenerated, reset the local D1 with `rm -rf apps/site/.wrangler/state/v3/d1` first.
+
 ### Mobile (Expo + Expo Router + NativeWind)
 ```bash
 bun -F @smog/mobile dev      # Start Expo dev server

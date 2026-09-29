@@ -312,6 +312,7 @@
     "open": "Ouvrir les outils de développement",
     "componentGallery": "Galerie de composants",
     "mail": "E-mails envoyés",
+    "noMail": "Aucun e-mail n’a encore été envoyé.",
     "logs": "Journaux",
     "clearLogs": "Effacer les journaux",
     "exportLogs": "Exporter les journaux",

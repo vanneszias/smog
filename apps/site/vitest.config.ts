@@ -1,10 +1,22 @@
-import { cloudflareTest } from "@cloudflare/vitest-plugin";
+import { fileURLToPath } from "node:url";
+import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vitest/config";
 
-export default defineConfig({
+const MIGRATIONS_DIR = fileURLToPath(
+  new URL("../../packages/db/migrations", import.meta.url)
+);
+
+export default defineConfig(async () => ({
   plugins: [
     cloudflareTest({
+      miniflare: {
+        bindings: {
+          // `.dev.vars` is not read in tests.
+          BETTER_AUTH_SECRET: "site-test-secret-at-least-32-characters",
+          TEST_MIGRATIONS: await readD1Migrations(MIGRATIONS_DIR),
+        },
+      },
       wrangler: { configPath: "./wrangler.jsonc", environment: "dev" },
     }),
     tanstackStart(),
@@ -12,5 +24,9 @@ export default defineConfig({
   test: {
     // `scripts/` runs on Bun (`bun test scripts`), not in workerd.
     include: ["test/**/*.test.ts"],
+    setupFiles: ["@smog/db/testing/apply-migrations"],
+    // The first request in a file transforms the whole server entry
+    // (Start, Better Auth, React Email) on demand, which takes ~15 s.
+    testTimeout: 60_000,
   },
-});
+}));

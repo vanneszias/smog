@@ -14,6 +14,8 @@
   // Secrets for `env.dev` go in `.dev.vars` (see `.dev.vars.example`).
   // SITE_URL for staging/production is a placeholder until the workers.dev
   // subdomain (or a custom domain) is known. KV and D1 ids are placeholders too.
+  // Secrets (BETTER_AUTH_SECRET, optional OAuth/Turnstile keys) are set with
+  // `wrangler secret put --env <env>`; see `.dev.vars.example`.
   // D1 migrations live in packages/db/migrations (drizzle-kit + hand-written
   // FTS5); `bun -F @smog/db migrate:dev` applies them to the local dev D1.
   "env": {
@@ -53,7 +55,10 @@
           "database_id": "00000000-0000-4000-8000-000000000000",
           "migrations_dir": "../../packages/db/migrations"
         }
-      ]
+      ],
+      // Cloudflare Email Service (auth and transactional email). `dev` has
+      // no binding: it uses the KV dev mailbox (/dev/mail).
+      "send_email": [{ "name": "EMAIL" }]
     },
     "production": {
       "vars": {
@@ -72,7 +77,10 @@
           "database_id": "00000000-0000-4000-8000-000000000000",
           "migrations_dir": "../../packages/db/migrations"
         }
-      ]
+      ],
+      // Cloudflare Email Service (auth and transactional email). `dev` has
+      // no binding: it uses the KV dev mailbox (/dev/mail).
+      "send_email": [{ "name": "EMAIL" }]
     }
   }
 }

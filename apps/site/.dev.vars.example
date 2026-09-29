@@ -2,10 +2,28 @@
 # Copy to `.dev.vars` (or `.dev.vars.dev`, which takes precedence for --env dev)
 # and fill in. Plain vars (SITE_URL, ENVIRONMENT, EMAIL_FROM, EMAIL_REPLY_TO)
 # live in `wrangler.jsonc` under `env.dev.vars`; only secrets belong here.
-# Staging and production secrets are set with `wrangler secret put --env <env>`.
+# Staging and production secrets are set with `wrangler secret put --env <env>`
+# (the schema is `workerSecretsSchema` in `@smog/config/env/worker`).
+
+# Required. At least 32 characters; `openssl rand -base64 32` makes one.
+BETTER_AUTH_SECRET=dev-only-secret-change-me-0123456789abcdef
+
+# Optional. Leave empty to hide the provider (dev works without them).
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+APPLE_CLIENT_ID=
+APPLE_CLIENT_SECRET=
+APPLE_APP_BUNDLE_IDENTIFIER=be.zias.smog
+
+# Optional. When set, sign-up, sign-in, password reset, email code and magic
+# link requests need a Turnstile token (`x-captcha-response` header).
+TURNSTILE_SECRET_KEY=
+
+# Dev sign-in: the seeded admin `admin@smog.test` has the DEV-ONLY password
+# `smog-dev-admin` (packages/db/seed/dev.sql). Emails (verification links,
+# codes, magic links) are not sent in dev: read them at /dev/mail.
 #
-# No secrets are needed yet. Later phases add, for example:
-# BETTER_AUTH_SECRET=
+# Later phases add, for example:
 # MOLLIE_API_KEY=
 # MUX_TOKEN_ID=
 # MUX_TOKEN_SECRET=

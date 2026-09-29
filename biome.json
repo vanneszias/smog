@@ -58,6 +58,16 @@
       }
     },
     {
+      "includes": ["apps/site/src/routes/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useFilenamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/db/src/schema/**"],
       "assist": {
         "actions": {

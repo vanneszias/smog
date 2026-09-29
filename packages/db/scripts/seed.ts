@@ -11,12 +11,20 @@
  * One statement per line: wrangler splits the file itself, and the Vitest
  * seed test splits it by line.
  */
+import { scryptSync } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { slugify } from "@smog/utils";
 
 /** A public sample Mux playback id for every seeded gesture. */
 export const SEED_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
 export const SEED_ADMIN_EMAIL = "admin@smog.test";
+/**
+ * DEV ONLY: the seeded admin's password (documented in AGENTS.md and
+ * apps/site/.dev.vars.example). The seed never runs outside local D1.
+ */
+export const SEED_ADMIN_PASSWORD = "smog-dev-admin";
+/** A fixed salt keeps the seed file deterministic (dev only). */
+const SEED_ADMIN_SALT = "5eed5a175eed5a175eed5a175eed5a17";
 /** 2026-01-01T00:00:00.000Z */
 const SEED_TIME = Date.UTC(2026, 0, 1);
 
@@ -118,6 +126,23 @@ const CATEGORIES: SeedCategory[] = [
 /** A fixed UUID-shaped id: `5eed000<kind>-0000-4000-8000-<n>`. */
 function seedId(kind: number, n: number): string {
   return `5eed000${kind}-0000-4000-8000-${String(n).padStart(12, "0")}`;
+}
+
+/**
+ * Better Auth's password hash format (`@better-auth/utils/password`):
+ * `<salt>:<key>` in hex, scrypt N=16384 r=16 p=1, 64-byte key, NFKC input,
+ * with the hex salt string itself as the salt.
+ */
+function hashPassword(password: string, salt: string): string {
+  const N = 16_384;
+  const r = 16;
+  const key = scryptSync(password.normalize("NFKC"), salt, 64, {
+    maxmem: 128 * N * r * 2,
+    N,
+    p: 1,
+    r,
+  });
+  return `${salt}:${key.toString("hex")}`;
 }
 
 function literal(value: string | number | null): string {
@@ -230,6 +255,14 @@ export function buildSeedSql(): string {
       ["email"],
       ["id", "created_at"]
     )
+  );
+  // The admin's email + password credential (the user id may be an existing
+  // account's, see above). It replaces any other credential of that user.
+  const adminId = `(SELECT id FROM user WHERE email = ${literal(SEED_ADMIN_EMAIL)})`;
+  const accountId = seedId(4, 1);
+  lines.push(
+    `DELETE FROM account WHERE provider_id = 'credential' AND user_id = ${adminId} AND id <> ${literal(accountId)};`,
+    `INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at) SELECT ${literal(accountId)}, id, 'credential', id, ${literal(hashPassword(SEED_ADMIN_PASSWORD, SEED_ADMIN_SALT))}, ${SEED_TIME}, ${SEED_TIME} FROM user WHERE email = ${literal(SEED_ADMIN_EMAIL)} ON CONFLICT (id) DO UPDATE SET account_id = excluded.account_id, user_id = excluded.user_id, password = excluded.password, updated_at = excluded.updated_at;`
   );
   return `${lines.join("\n")}\n`;
 }

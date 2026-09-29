@@ -310,6 +310,7 @@
     "open": "Open developer tools",
     "componentGallery": "Component gallery",
     "mail": "Sent emails",
+    "noMail": "No emails have been sent yet.",
     "logs": "Logs",
     "clearLogs": "Clear logs",
     "exportLogs": "Export logs",

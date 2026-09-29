@@ -310,6 +310,7 @@
     "open": "Ontwikkelaarstools openen",
     "componentGallery": "Componentengalerij",
     "mail": "Verstuurde e-mails",
+    "noMail": "Er zijn nog geen e-mails verstuurd.",
     "logs": "Logboek",
     "clearLogs": "Logboek wissen",
     "exportLogs": "Logboek exporteren",

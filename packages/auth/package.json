@@ -1,0 +1,49 @@
+{
+  "name": "@smog/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts",
+    "./env": "./src/env.ts",
+    "./web": "./src/web.ts",
+    "./expo": "./src/expo.ts",
+    "./react": "./src/react.tsx"
+  },
+  "scripts": {
+    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@better-auth/expo": "1.7.6",
+    "@better-auth/passkey": "1.7.6",
+    "@smog/config": "workspace:*",
+    "@smog/db": "workspace:*",
+    "@smog/email": "workspace:*",
+    "@smog/utils": "workspace:*",
+    "better-auth": "1.7.6",
+    "drizzle-orm": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "19.2.7",
+    "expo-secure-store": "~57.0.4",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  },
+  "peerDependencies": {
+    "expo-secure-store": "~57.0.4",
+    "react": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "expo-secure-store": {
+      "optional": true
+    }
+  }
+}

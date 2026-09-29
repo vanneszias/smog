@@ -14,6 +14,16 @@
       "project": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },
+    "packages/email": {
+      "entry": ["test/**/*.test.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["cloudflare"]
+    },
+    "packages/auth": {
+      "entry": ["test/**/*.test.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["cloudflare"]
+    },
     "apps/site": {
       "entry": [
         "src/routes/**/*.{ts,tsx}",
