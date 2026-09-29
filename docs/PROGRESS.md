@@ -20,11 +20,18 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 ## Log
 
 - 2026-09-29: Phase 0 done. Orphan `develop` branch created. Analysis reports, inventory, spec, DECISIONS and the phase 1 plan committed.
+- 2026-09-29: Phase 2 tasks 1–8 merged (db, auth, email core, rpc/api, local-store, styles/brand, i18n, ui-web + /dev/ui, ui-native + gallery). Phase 3 task 1 (gestures) merged.
 - 2026-09-29: Phase 1 done. Root tooling, `@smog/config` + boundaries, `apps/site` (TanStack Start on Workers, guarded deploy), `apps/mobile` (Expo SDK 57, NativeWind 4), release gate (`bun run release:check` green with `SMOG_OFFLINE=1` here), `ci.yml` and `deploy.yml`.
 
 ## Next
 
-Execute `docs/superpowers/plans/2026-09-29-phase-2-foundations.md`, Task 1.
+Phase 2: tasks 1–8 are merged into `develop`. Task 9 (app shells) is not started yet.
+Phase 3 (`docs/superpowers/plans/2026-09-29-phase-3-learning.md`):
+- Task 1 (gestures) is merged.
+- Task 2 (favorites) is done on branch `worktree-agent-a11f9e60d822d048f` (d48e2dc) and awaits its re-review before merge. It adds migration 0003.
+- Task 3 (lists) is on branch `worktree-agent-a5e818c259e273c1d` (5bad68f plus a develop merge). Fix round 1 is pending; see the review notes in the session ledger (guest reorder with hidden ids, limits inside the write, import `@smog/gestures/contract`).
+- Tasks 4–7 are next.
+Then run the phase 2 and phase 3 reviews.
 
 ## Known gaps
 
