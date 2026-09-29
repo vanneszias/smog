@@ -54,6 +54,7 @@ import {
   TabsTrigger,
   Text,
   Textarea,
+  TextLink,
   Tooltip,
   useToast,
 } from "@smog/ui-web";
@@ -258,7 +259,7 @@ function ButtonsSection(): ReactNode {
 function TypographySection(): ReactNode {
   const { t } = useTranslation();
   return (
-    <Section name="Heading / Text">
+    <Section name="Heading / Text / TextLink">
       <div className="flex flex-col gap-2">
         <Heading level={4} size="display">
           {t("common.appName")}
@@ -285,6 +286,13 @@ function TypographySection(): ReactNode {
           <Text key={tone} tone={tone} weight="semibold">
             {t("devTools.gallery.sampleTitle")}
           </Text>
+        ))}
+      </Row>
+      <Row>
+        {(["primary", "default", "muted"] as const).map((tone) => (
+          <TextLink href="/privacy" key={tone} tone={tone}>
+            {t("nav.privacy")}
+          </TextLink>
         ))}
       </Row>
     </Section>

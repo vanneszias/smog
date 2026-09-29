@@ -73,9 +73,12 @@ function Account(): ReactNode {
           <CardContent className="min-w-0 flex-row items-center gap-4">
             <Avatar name={user.name} size="lg" src={user.image ?? undefined} />
             <div className="flex min-w-0 flex-1 flex-col">
-              <Text className="truncate" weight="semibold">
-                {user.name}
-              </Text>
+              {/* A nameless user's name is their email: say it once. */}
+              {user.name === user.email ? null : (
+                <Text className="truncate" weight="semibold">
+                  {user.name}
+                </Text>
+              )}
               <Text className="truncate" size="body-sm" tone="muted">
                 {t("account.signedInAs", { email: user.email })}
               </Text>

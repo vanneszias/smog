@@ -31,12 +31,12 @@ export default defineConfig(async () => ({
   ],
   resolve: { alias: { "@": SRC } },
   test: {
+    // test/warm-up.ts pays the first (slow) transform of the server entry
+    // under `hookTimeout`, so a hung test still fails after 60 s.
+    hookTimeout: 180_000,
     // `scripts/` runs on Bun (`bun test scripts`), not in workerd.
     include: ["test/**/*.test.ts"],
-    setupFiles: ["@smog/db/testing/apply-migrations"],
-    // The first request in a file transforms the whole server entry
-    // (Start, Better Auth, React Email, the app shell and the kit) on
-    // demand: ~25 s alone, over 60 s while turbo runs every package's tests.
-    testTimeout: 180_000,
+    setupFiles: ["@smog/db/testing/apply-migrations", "./test/warm-up.ts"],
+    testTimeout: 60_000,
   },
 }));

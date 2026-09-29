@@ -1,9 +1,11 @@
 import type { AppContract } from "@smog/api/client";
 import {
+  type AuthErrorField,
   type AuthErrorKey,
   type AuthFlow,
   type AuthMethod,
   type AuthMode,
+  authErrorField,
   createFlowActions,
   OTP_LENGTH,
   PASSWORD_MAX_LENGTH,
@@ -13,7 +15,15 @@ import {
 } from "@smog/auth/react";
 import { useTranslation } from "@smog/i18n/react";
 import { useRpcQuery } from "@smog/rpc/react";
-import { Button, Field, Heading, Input, Text, useToast } from "@smog/ui-native";
+import {
+  Button,
+  Field,
+  Heading,
+  Input,
+  Text,
+  TextLink,
+  useToast,
+} from "@smog/ui-native";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import Apple from "lucide-react-native/icons/apple";
@@ -55,8 +65,27 @@ function useErrorMessage(error: AuthErrorKey | null): string | undefined {
   });
 }
 
-function ErrorText({ error }: { error: AuthErrorKey | null }): ReactNode {
+/** The error's message when it belongs to `field` (for `Field error`). */
+function useFieldError(
+  error: AuthErrorKey | null,
+  field: AuthErrorField
+): string | undefined {
   const message = useErrorMessage(error);
+  return authErrorField(error) === field ? message : undefined;
+}
+
+/** A polite status line ("we sent a new code"). */
+function Notice({ children }: { children: ReactNode }): ReactElement {
+  return (
+    <Text accessibilityLiveRegion="polite" size="body-sm" tone="success">
+      {children}
+    </Text>
+  );
+}
+
+/** A step-level error (not about one input), announced as an alert. */
+function ErrorText({ error }: { error: AuthErrorKey | null }): ReactNode {
+  const message = useErrorMessage(authErrorField(error) ? null : error);
   return message ? (
     <Text accessibilityRole="alert" size="body-sm" tone="danger">
       {message}
@@ -67,7 +96,7 @@ function ErrorText({ error }: { error: AuthErrorKey | null }): ReactNode {
 function EmailStep({ flow }: { flow: AuthFlow }): ReactElement {
   const { t } = useTranslation();
   const [email, setEmail] = useState(flow.state.email);
-  const error = useErrorMessage(flow.state.error);
+  const error = useFieldError(flow.state.error, "email");
   const { submitEmail } = flow;
   const submit = useCallback(() => {
     submitEmail(email);
@@ -88,6 +117,7 @@ function EmailStep({ flow }: { flow: AuthFlow }): ReactElement {
           value={email}
         />
       </Field>
+      <ErrorText error={flow.state.error} />
       <Button loading={flow.state.pending === "email"} onPress={submit}>
         {flow.state.mode === "forgotPassword"
           ? t("auth.forgotPassword.submit")
@@ -171,6 +201,9 @@ function PasswordStep({ flow }: { flow: AuthFlow }): ReactElement {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const nameError = useFieldError(flow.state.error, "name");
+  const passwordError = useFieldError(flow.state.error, "password");
+  const confirmError = useFieldError(flow.state.error, "confirm");
   const { submitPassword } = flow;
   const submit = useCallback(() => {
     submitPassword({ confirm, name, password });
@@ -179,7 +212,7 @@ function PasswordStep({ flow }: { flow: AuthFlow }): ReactElement {
   return (
     <View className="gap-4">
       {signUp ? (
-        <Field label={t("auth.name.label")}>
+        <Field error={nameError} label={t("auth.name.label")}>
           <Input
             autoComplete="name"
             onChangeText={setName}
@@ -190,6 +223,7 @@ function PasswordStep({ flow }: { flow: AuthFlow }): ReactElement {
         </Field>
       ) : null}
       <Field
+        error={passwordError}
         hint={
           signUp
             ? t("auth.password.ruleMinLength", { min: PASSWORD_MIN_LENGTH })
@@ -207,7 +241,7 @@ function PasswordStep({ flow }: { flow: AuthFlow }): ReactElement {
         />
       </Field>
       {signUp ? (
-        <Field label={t("auth.password.confirmLabel")}>
+        <Field error={confirmError} label={t("auth.password.confirmLabel")}>
           <Input
             autoComplete="new-password"
             onChangeText={setConfirm}
@@ -218,14 +252,9 @@ function PasswordStep({ flow }: { flow: AuthFlow }): ReactElement {
           />
         </Field>
       ) : (
-        <Button
-          className="self-start"
-          onPress={forgot}
-          size="sm"
-          variant="ghost"
-        >
+        <TextLink className="self-start text-body-sm" onPress={forgot}>
           {t("auth.password.forgot")}
-        </Button>
+        </TextLink>
       )}
       <ErrorText error={flow.state.error} />
       <Button loading={flow.state.pending === "password"} onPress={submit}>
@@ -239,19 +268,21 @@ function PasswordStep({ flow }: { flow: AuthFlow }): ReactElement {
 function CodeStep({ flow }: { flow: AuthFlow }): ReactElement {
   const { t } = useTranslation();
   const [code, setCode] = useState("");
+  const codeError = useFieldError(flow.state.error, "code");
   const { submitCode } = flow;
   const submit = useCallback(() => {
     submitCode(code);
   }, [code, submitCode]);
   return (
     <View className="gap-4">
-      <Text>
-        {t("auth.otp.description", {
+      <Field
+        error={codeError}
+        hint={t("auth.otp.description", {
           email: flow.state.email,
           length: OTP_LENGTH,
         })}
-      </Text>
-      <Field label={t("auth.otp.label")}>
+        label={t("auth.otp.label")}
+      >
         <Input
           autoComplete="one-time-code"
           keyboardType="number-pad"
@@ -265,9 +296,7 @@ function CodeStep({ flow }: { flow: AuthFlow }): ReactElement {
       </Field>
       <ErrorText error={flow.state.error} />
       {flow.state.notice === "codeResent" ? (
-        <Text size="body-sm" tone="success">
-          {t("auth.otp.resent")}
-        </Text>
+        <Notice>{t("auth.otp.resent")}</Notice>
       ) : null}
       <Button loading={flow.state.pending === "emailCode"} onPress={submit}>
         {t("auth.otp.submit")}
@@ -301,11 +330,7 @@ function InboxStep({ flow }: { flow: AuthFlow }): ReactElement {
         {t("auth.checkInbox.spamHint")}
       </Text>
       <ErrorText error={flow.state.error} />
-      {notice ? (
-        <Text size="body-sm" tone="success">
-          {t("auth.verifyEmail.resent")}
-        </Text>
-      ) : null}
+      {notice ? <Notice>{t("auth.verifyEmail.resent")}</Notice> : null}
       {reset ? (
         <Button onPress={toSignIn} variant="secondary">
           {t("auth.forgotPassword.backToSignIn")}
@@ -489,13 +514,13 @@ export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
         )}
         <StepBody flow={flow} methods={methods} />
         {flow.state.step === "email" && mode !== "forgotPassword" ? (
-          <View className="items-center gap-1">
+          <View className="items-center">
             <Text size="body-sm" tone="muted">
               {mode === "signIn" ? t("auth.noAccount") : t("auth.haveAccount")}
             </Text>
-            <Button onPress={switchMode} size="sm" variant="ghost">
+            <TextLink onPress={switchMode}>
               {mode === "signIn" ? t("auth.signUpLink") : t("nav.signIn")}
-            </Button>
+            </TextLink>
           </View>
         ) : null}
         {mode === "forgotPassword" ? null : (

@@ -1,8 +1,8 @@
 import { useAuthState } from "@smog/auth/react";
 import { useTranslation } from "@smog/i18n/react";
 import { Button, Text } from "@smog/ui-web";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { type ReactNode, useCallback } from "react";
 import { AuthCard } from "@/components/auth/auth-card";
 import { pageMeta } from "@/lib/head";
 import { validateAuthSearch } from "@/lib/redirect";
@@ -21,6 +21,11 @@ function VerifyEmail(): ReactNode {
   const { t } = useTranslation();
   const { error, redirect } = Route.useSearch();
   const auth = useAuthState();
+  const router = useRouter();
+  // The router navigates same-site only (a second layer to safeRedirect).
+  const continueOn = useCallback(() => {
+    router.navigate({ href: redirect ?? "/" });
+  }, [redirect, router]);
 
   if (error) {
     return (
@@ -40,9 +45,7 @@ function VerifyEmail(): ReactNode {
     <AuthCard title={t("auth.verifyEmail.title")}>
       <Text role="status">{t("auth.verifyEmail.success")}</Text>
       {auth.status === "signedIn" ? (
-        <Button asChild>
-          <a href={redirect ?? "/"}>{t("common.continue")}</a>
-        </Button>
+        <Button onClick={continueOn}>{t("common.continue")}</Button>
       ) : (
         <Button asChild>
           <Link search={redirect ? { redirect } : {}} to="/sign-in">

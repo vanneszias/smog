@@ -6,6 +6,7 @@ import {
   SheetContent,
   SheetTrigger,
   Text,
+  TextLink,
 } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { Menu as MenuIcon, Search } from "lucide-react";
@@ -53,12 +54,11 @@ export function Header(): ReactNode {
             </div>
           </SheetContent>
         </Sheet>
-        <Link
-          className="inline-flex min-h-touch items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          to="/"
-        >
-          <Logo size="sm" tone="primary" />
-        </Link>
+        <TextLink asChild className="inline-flex items-center">
+          <Link to="/">
+            <Logo size="sm" tone="primary" />
+          </Link>
+        </TextLink>
         <MainNav className="ml-4 hidden md:block" />
         <div className="ml-auto flex items-center gap-1">
           <IconButton

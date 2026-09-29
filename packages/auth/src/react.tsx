@@ -20,6 +20,7 @@ export {
   type FlowAuthClient,
 } from "./flow-actions";
 export {
+  type AuthErrorField,
   type AuthErrorKey,
   type AuthFlow,
   type AuthFlowActions,
@@ -29,6 +30,7 @@ export {
   type AuthNotice,
   type AuthResult,
   type AuthStep,
+  authErrorField,
   authErrorKey,
   newPasswordError,
   type SocialProvider,

@@ -1,8 +1,10 @@
 import {
+  type AuthErrorField,
   type AuthErrorKey,
   type AuthFlow,
   type AuthMethod,
   type AuthMode,
+  authErrorField,
   createFlowActions,
   OTP_LENGTH,
   PASSWORD_MAX_LENGTH,
@@ -11,7 +13,15 @@ import {
   useAuthState,
 } from "@smog/auth/react";
 import { useTranslation } from "@smog/i18n/react";
-import { Button, Field, IconButton, Input, Text, useToast } from "@smog/ui-web";
+import {
+  Button,
+  Field,
+  IconButton,
+  Input,
+  Text,
+  TextLink,
+  useToast,
+} from "@smog/ui-web";
 import { getRouteApi, Link, useRouter } from "@tanstack/react-router";
 import {
   Apple,
@@ -34,6 +44,7 @@ import {
 } from "react";
 import { useAuthClient } from "@/lib/auth-client";
 import { usePasskeySupport } from "@/lib/passkeys";
+import { withRedirect } from "@/lib/redirect";
 import { AuthCard } from "./auth-card";
 import { Turnstile } from "./turnstile";
 
@@ -82,8 +93,18 @@ function useErrorMessage(error: AuthErrorKey | null): string | undefined {
   });
 }
 
-function ErrorText({ error }: { error: AuthErrorKey | null }): ReactNode {
+/** The error's message when it belongs to `field` (for `Field error`). */
+function useFieldError(
+  error: AuthErrorKey | null,
+  field: AuthErrorField
+): string | undefined {
   const message = useErrorMessage(error);
+  return authErrorField(error) === field ? message : undefined;
+}
+
+/** A step-level error (not about one input), announced as an alert. */
+function ErrorText({ error }: { error: AuthErrorKey | null }): ReactNode {
+  const message = useErrorMessage(authErrorField(error) ? null : error);
   return message ? (
     <Text role="alert" size="body-sm" tone="danger">
       {message}
@@ -129,7 +150,7 @@ function BackButton({ flow }: { flow: AuthFlow }): ReactNode {
 function EmailStep({ flow }: { flow: AuthFlow }): ReactNode {
   const { t } = useTranslation();
   const { state } = flow;
-  const error = useErrorMessage(state.error);
+  const error = useFieldError(state.error, "email");
   const { submitEmail } = flow;
   const onSubmit = useSubmit(
     useCallback(
@@ -141,7 +162,7 @@ function EmailStep({ flow }: { flow: AuthFlow }): ReactNode {
     <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
       <Field error={error} label={t("auth.email.label")}>
         <Input
-          autoComplete="email webauthn"
+          autoComplete="email"
           defaultValue={state.email}
           inputMode="email"
           name="email"
@@ -149,6 +170,7 @@ function EmailStep({ flow }: { flow: AuthFlow }): ReactNode {
           type="email"
         />
       </Field>
+      <ErrorText error={state.error} />
       <Button loading={state.pending === "email"} type="submit">
         {state.mode === "forgotPassword"
           ? t("auth.forgotPassword.submit")
@@ -219,9 +241,18 @@ function MethodStep({
   );
 }
 
-function PasswordStep({ flow }: { flow: AuthFlow }): ReactNode {
+function PasswordStep({
+  flow,
+  redirect,
+}: {
+  flow: AuthFlow;
+  redirect: string;
+}): ReactNode {
   const { t } = useTranslation();
   const { state } = flow;
+  const nameError = useFieldError(state.error, "name");
+  const passwordError = useFieldError(state.error, "password");
+  const confirmError = useFieldError(state.error, "confirm");
   const signUp = state.mode === "signUp";
   const { submitPassword } = flow;
   const onSubmit = useSubmit(
@@ -238,7 +269,7 @@ function PasswordStep({ flow }: { flow: AuthFlow }): ReactNode {
   return (
     <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
       {signUp ? (
-        <Field label={t("auth.name.label")}>
+        <Field error={nameError} label={t("auth.name.label")}>
           <Input
             autoComplete="name"
             name="name"
@@ -247,6 +278,7 @@ function PasswordStep({ flow }: { flow: AuthFlow }): ReactNode {
         </Field>
       ) : null}
       <Field
+        error={passwordError}
         hint={
           signUp
             ? t("auth.password.ruleMinLength", { min: PASSWORD_MIN_LENGTH })
@@ -260,17 +292,18 @@ function PasswordStep({ flow }: { flow: AuthFlow }): ReactNode {
         />
       </Field>
       {signUp ? (
-        <Field label={t("auth.password.confirmLabel")}>
+        <Field error={confirmError} label={t("auth.password.confirmLabel")}>
           <PasswordInput autoComplete="new-password" name="confirm" />
         </Field>
       ) : (
-        <Link
-          className="self-start rounded-sm text-body-sm text-primary-strong underline-offset-4 hover:underline"
-          search={{}}
-          to="/forgot-password"
-        >
-          {t("auth.password.forgot")}
-        </Link>
+        <TextLink asChild className="self-start text-body-sm">
+          <Link
+            search={redirect === "/" ? {} : { redirect }}
+            to="/forgot-password"
+          >
+            {t("auth.password.forgot")}
+          </Link>
+        </TextLink>
       )}
       <ErrorText error={state.error} />
       <Button loading={state.pending === "password"} type="submit">
@@ -284,6 +317,7 @@ function PasswordStep({ flow }: { flow: AuthFlow }): ReactNode {
 function CodeStep({ flow }: { flow: AuthFlow }): ReactNode {
   const { t } = useTranslation();
   const { state, submitCode } = flow;
+  const codeError = useFieldError(state.error, "code");
   const onSubmit = useSubmit(
     useCallback(
       (values: FormValues) => submitCode(values("code")),
@@ -292,16 +326,21 @@ function CodeStep({ flow }: { flow: AuthFlow }): ReactNode {
   );
   return (
     <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
-      <Text>
-        {t("auth.otp.description", { email: state.email, length: OTP_LENGTH })}
-      </Text>
-      <Field label={t("auth.otp.label")}>
+      <Field
+        error={codeError}
+        hint={t("auth.otp.description", {
+          email: state.email,
+          length: OTP_LENGTH,
+        })}
+        label={t("auth.otp.label")}
+      >
         <Input
           autoComplete="one-time-code"
           className="tracking-widest"
           inputMode="numeric"
           maxLength={OTP_LENGTH + 2}
           name="code"
+          pattern="[0-9 ]*"
           size="lg"
         />
       </Field>
@@ -385,9 +424,11 @@ function InboxStep({ flow }: { flow: AuthFlow }): ReactNode {
 function StepBody({
   flow,
   methods,
+  redirect,
 }: {
   flow: AuthFlow;
   methods: AuthMethod[];
+  redirect: string;
 }): ReactNode {
   switch (flow.state.step) {
     case "email":
@@ -395,7 +436,7 @@ function StepBody({
     case "method":
       return <MethodStep flow={flow} methods={methods} />;
     case "password":
-      return <PasswordStep flow={flow} />;
+      return <PasswordStep flow={flow} redirect={redirect} />;
     case "code":
       return <CodeStep flow={flow} />;
     case "done":
@@ -459,17 +500,14 @@ export function AuthForm({ error, mode, redirect }: AuthFormProps): ReactNode {
       createFlowActions(client, {
         callbackURL: redirect,
         captchaToken: () => token.current,
-        errorCallbackURL: "/magic-link",
+        errorCallbackURL: withRedirect("/magic-link", redirect),
         // Each token is single-use: the widget fetches a fresh one.
         onCaptchaUsed: () => setCaptchaKey((key) => key + 1),
         passkey: () => client.signIn.passkey(),
         resetPasswordURL: "/reset-password",
-        socialErrorCallbackURL: "/sign-in",
+        socialErrorCallbackURL: withRedirect("/sign-in", redirect),
         socialFlow: { kind: "redirect" },
-        verifyEmailURL:
-          redirect === "/"
-            ? "/verify-email"
-            : `/verify-email?redirect=${encodeURIComponent(redirect)}`,
+        verifyEmailURL: withRedirect("/verify-email", redirect),
       }),
     [client, redirect]
   );
@@ -541,7 +579,7 @@ export function AuthForm({ error, mode, redirect }: AuthFormProps): ReactNode {
           )}
         </div>
       )}
-      <StepBody flow={flow} methods={methods} />
+      <StepBody flow={flow} methods={methods} redirect={redirect} />
       {config.turnstileSiteKey && flow.state.step !== "done" ? (
         <Turnstile
           onToken={onToken}
@@ -552,13 +590,14 @@ export function AuthForm({ error, mode, redirect }: AuthFormProps): ReactNode {
       {showSwitch ? (
         <Text className="text-center" size="body-sm" tone="muted">
           {mode === "signIn" ? t("auth.noAccount") : t("auth.haveAccount")}{" "}
-          <Link
-            className="rounded-sm font-medium text-primary-strong underline-offset-4 hover:underline"
-            search={redirect === "/" ? {} : { redirect }}
-            to={mode === "signIn" ? "/sign-up" : "/sign-in"}
-          >
-            {mode === "signIn" ? t("auth.signUpLink") : t("nav.signIn")}
-          </Link>
+          <TextLink asChild>
+            <Link
+              search={redirect === "/" ? {} : { redirect }}
+              to={mode === "signIn" ? "/sign-up" : "/sign-in"}
+            >
+              {mode === "signIn" ? t("auth.signUpLink") : t("nav.signIn")}
+            </Link>
+          </TextLink>
         </Text>
       ) : null}
       {mode === "forgotPassword" ? null : (

@@ -4,6 +4,7 @@ import {
   type AuthFlowEvent,
   type AuthFlowState,
   type AuthResult,
+  authErrorField,
   authErrorKey,
   authFlowCommands,
   authFlowReducer,
@@ -131,6 +132,19 @@ describe("authErrorKey", () => {
       "generic"
     );
     expect(authErrorKey(undefined)).toBe("generic");
+  });
+});
+
+describe("authErrorField", () => {
+  test("names the input an error belongs to, or none for step errors", () => {
+    expect(authErrorField("emailInvalid")).toBe("email");
+    expect(authErrorField("nameRequired")).toBe("name");
+    expect(authErrorField("passwordTooShort")).toBe("password");
+    expect(authErrorField("invalidCredentials")).toBe("password");
+    expect(authErrorField("passwordMismatch")).toBe("confirm");
+    expect(authErrorField("codeInvalid")).toBe("code");
+    expect(authErrorField("rateLimited")).toBeNull();
+    expect(authErrorField(null)).toBeNull();
   });
 });
 

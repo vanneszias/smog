@@ -208,6 +208,32 @@ export function authErrorKey(
   return (error?.code && ERROR_CODES[error.code]) || "generic";
 }
 
+/** The input an error is about; the rest are step-level messages. */
+export type AuthErrorField = "email" | "name" | "password" | "confirm" | "code";
+
+const ERROR_FIELDS: Partial<Record<AuthErrorKey, AuthErrorField>> = {
+  codeInvalid: "code",
+  codeRequired: "code",
+  emailInvalid: "email",
+  emailRequired: "email",
+  invalidCredentials: "password",
+  nameRequired: "name",
+  passwordMismatch: "confirm",
+  passwordRequired: "password",
+  passwordTooLong: "password",
+  passwordTooShort: "password",
+};
+
+/**
+ * Which input shows `error` (so it is wired with `aria-invalid` and
+ * `aria-describedby`), or `null` for a message about the whole step.
+ */
+export function authErrorField(
+  error: AuthErrorKey | null
+): AuthErrorField | null {
+  return error ? (ERROR_FIELDS[error] ?? null) : null;
+}
+
 /** Turns a Better Auth `{ error }` response into an `AuthResult`. */
 export function toAuthResult(response: {
   error?: AuthClientError | null;

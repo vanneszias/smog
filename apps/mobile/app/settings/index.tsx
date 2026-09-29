@@ -94,7 +94,7 @@ export default function SettingsScreen(): ReactElement {
           <Select
             onValueChange={changeLocale}
             options={[
-              { label: t("theme.system"), value: DEVICE },
+              { label: t("language.device"), value: DEVICE },
               ...LOCALES.map((locale) => ({
                 label: t(`language.${locale}`),
                 value: locale,

@@ -33,6 +33,7 @@ import {
 import { type ReactNode, useMemo, useState } from "react";
 import { Footer } from "@/components/app-shell/footer";
 import { Header } from "@/components/app-shell/header";
+import { GuestImportSheet } from "@/components/guest-import-sheet";
 import { AuthClientProvider } from "@/lib/auth-client";
 import { LocaleProvider } from "@/lib/locale";
 import { SYSTEM_THEME_SCRIPT, type Theme } from "@/lib/preferences";
@@ -240,6 +241,7 @@ function Layout({ children }: { children: ReactNode }): ReactNode {
         {children}
       </main>
       <Footer />
+      <GuestImportSheet />
     </div>
   );
 }

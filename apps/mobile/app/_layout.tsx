@@ -3,6 +3,7 @@ import "../global.css";
 import { KitProvider, ToastProvider } from "@smog/ui-native";
 import { Stack } from "expo-router";
 import type { ReactElement } from "react";
+import { GuestImportSheet } from "@/guest-import-sheet";
 import { AppProviders } from "@/providers";
 import { ThemeRoot } from "@/theme-root";
 
@@ -17,6 +18,7 @@ export default function RootLayout(): ReactElement {
               <Stack.Screen name="(auth)" options={{ presentation: "modal" }} />
               <Stack.Screen name="settings" />
             </Stack>
+            <GuestImportSheet />
           </ToastProvider>
         </KitProvider>
       </ThemeRoot>

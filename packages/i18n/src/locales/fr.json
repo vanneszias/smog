@@ -93,7 +93,8 @@
     "toggle": "Changer de langue",
     "nl": "Nederlands",
     "en": "English",
-    "fr": "Français"
+    "fr": "Français",
+    "device": "Langue de l'appareil"
   },
   "auth": {
     "title": "Se connecter ou s'inscrire",

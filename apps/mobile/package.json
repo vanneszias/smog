@@ -14,10 +14,12 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "catalog:",
+    "@smog/account": "workspace:*",
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
     "@smog/config": "workspace:*",
     "@smog/i18n": "workspace:*",
+    "@smog/lists": "workspace:*",
     "@smog/local-store": "workspace:*",
     "@smog/rpc": "workspace:*",
     "@smog/styles": "workspace:*",

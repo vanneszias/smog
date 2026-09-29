@@ -93,7 +93,8 @@
     "toggle": "Change language",
     "nl": "Nederlands",
     "en": "English",
-    "fr": "Français"
+    "fr": "Français",
+    "device": "Device language"
   },
   "auth": {
     "title": "Sign in or sign up",

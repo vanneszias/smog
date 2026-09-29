@@ -1,6 +1,6 @@
 import { CONTACT_EMAIL } from "@smog/config/constants";
 import { useTranslation } from "@smog/i18n/react";
-import { Button, Logo, Text } from "@smog/ui-web";
+import { Button, Logo, Text, TextLink } from "@smog/ui-web";
 import type { ReactNode } from "react";
 
 const AUTHOR_URL = "https://zias.be";
@@ -32,12 +32,9 @@ export function Footer(): ReactNode {
           </ul>
         </nav>
         <Text size="body-sm" tone="muted">
-          <a
-            className="inline-flex min-h-touch items-center rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            href={AUTHOR_URL}
-          >
+          <TextLink href={AUTHOR_URL} tone="muted">
             {t("footer.madeBy")}
-          </a>
+          </TextLink>
         </Text>
       </div>
     </footer>

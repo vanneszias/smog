@@ -97,6 +97,7 @@ export {
   Text,
   type TextProps,
 } from "./components/text";
+export { TextLink, type TextLinkProps } from "./components/text-link";
 export { Textarea, type TextareaProps } from "./components/textarea";
 export {
   type ToastOptions,

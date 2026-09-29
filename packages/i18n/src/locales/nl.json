@@ -93,7 +93,8 @@
     "toggle": "Taal wijzigen",
     "nl": "Nederlands",
     "en": "English",
-    "fr": "Français"
+    "fr": "Français",
+    "device": "Taal van het toestel"
   },
   "auth": {
     "title": "Aanmelden of registreren",
