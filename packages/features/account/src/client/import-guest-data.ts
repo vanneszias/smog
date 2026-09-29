@@ -20,14 +20,19 @@ import {
   type ImportResult,
 } from "../schema";
 
-/** The contract slice the import knows, keyed as `appContract` mounts it. */
+/** The account contract, keyed as `appContract` mounts it (the hooks' slice). */
 export interface AccountSlice {
   account: AccountContract;
 }
 
+/** The one procedure the import calls. */
+interface ImportSlice {
+  account: Pick<AccountContract, "importGuestData">;
+}
+
 export interface ImportGuestDataOptions {
   /** The app's API client (`@smog/api/client`), or any client with `account`. */
-  client: RpcClient<AccountSlice>;
+  client: RpcClient<ImportSlice>;
   store: LocalStore;
   /**
    * The name a list gets when its device name is empty (localised by the

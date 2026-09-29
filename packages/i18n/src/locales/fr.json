@@ -445,7 +445,12 @@
   "account": {
     "title": "Votre compte",
     "signedInAs": "Connecté en tant que {{email}}",
-    "comingSoon": "Bientôt, vous gérerez aussi ici vos méthodes de connexion, votre confidentialité et vos préférences."
+    "comingSoon": "Bientôt, vous gérerez aussi ici vos méthodes de connexion, votre confidentialité et vos préférences.",
+    "errors": {
+      "sessionNotFresh": "Reconnectez-vous ou saisissez votre mot de passe pour supprimer votre compte.",
+      "invalidPassword": "Ce mot de passe n'est pas correct.",
+      "deleteFailed": "La suppression de votre compte a échoué. Veuillez réessayer."
+    }
   },
   "settings": {
     "title": "Paramètres",

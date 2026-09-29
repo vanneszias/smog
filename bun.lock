@@ -235,6 +235,7 @@
       "name": "@smog/account",
       "version": "0.0.0",
       "dependencies": {
+        "@orpc/client": "catalog:",
         "@smog/auth": "workspace:*",
         "@smog/config": "workspace:*",
         "@smog/db": "workspace:*",
@@ -251,6 +252,7 @@
         "@cloudflare/vitest-plugin": "catalog:",
         "@orpc/server": "catalog:",
         "@orpc/tanstack-query": "catalog:",
+        "@smog/email": "workspace:*",
         "@tanstack/react-query": "catalog:",
         "@testing-library/dom": "10.4.2",
         "@testing-library/react": "16.3.3",

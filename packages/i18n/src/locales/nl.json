@@ -440,7 +440,12 @@
   "account": {
     "title": "Je account",
     "signedInAs": "Aangemeld als {{email}}",
-    "comingSoon": "Binnenkort beheer je hier ook je aanmeldmethodes, privacy en voorkeuren."
+    "comingSoon": "Binnenkort beheer je hier ook je aanmeldmethodes, privacy en voorkeuren.",
+    "errors": {
+      "sessionNotFresh": "Meld je opnieuw aan of vul je wachtwoord in om je account te verwijderen.",
+      "invalidPassword": "Dat wachtwoord klopt niet.",
+      "deleteFailed": "Je account verwijderen is niet gelukt. Probeer het opnieuw."
+    }
   },
   "settings": {
     "title": "Instellingen",

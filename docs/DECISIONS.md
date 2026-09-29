@@ -251,6 +251,27 @@ Each entry: date · decision · alternatives · why. Newest entries go at the bo
     - The status resets when the user changes.
   - `@smog/local-store` data is now version 2: `preferences.importDismissedFor` (`dismissImportFor(userId)` keeps the newest 20), added by migration `MIGRATIONS[1]`. The storage key stays `smog:guest:v1`, so no data moves.
   - i18n adds `auth.import.skipped` (plural), `auth.import.overLimit` and `auth.import.untitledList`.
+- **2026-09-29 · Account deletion is Better Auth `deleteUser`, fresh session or password (phase 4).**
+  - `createAuth` enables `user.deleteUser` without `sendDeleteAccountVerification`. Typing `DELETE` is the confirmation, and the proof is a fresh session or the password.
+  - `session.freshAge` is pinned at one day. That is Better Auth's default, and it also gates listing sessions, unlinking a provider and adding a passkey, so a shorter window would force a re-sign-in on those too.
+  - `account.delete({ confirm: "DELETE", password? })` calls `auth.api.deleteUser` with the request headers, so Better Auth reads the session again. Better Auth's refusals map to two errors this procedure adds to the shared map: `SESSION_NOT_FRESH` (403) and `INVALID_PASSWORD` (400, also when the account has no password). The procedure is limited by `RL_AUTH` per IP, because it checks a password and Better Auth's limiter does not see `auth.api` calls.
+  - Nothing runs before or after the delete. Better Auth deletes the sessions, the accounts and the user, and the foreign keys cascade the rest. Tests cover passkeys, favorites, lists, items, shares and consents; `audit_log.actor_id` and `list_item.added_by` become NULL. Sponsor rows have no user reference, so they stay.
+  - The client (`useDeleteAccount({ signOut })`) then signs out (a failure is only logged), resets the whole local store, clears the query cache and refetches the session.
+  - Alternatives: an email confirmation link (Better Auth's `sendDeleteAccountVerification`), or a shorter `freshAge`.
+- **2026-09-29 · Consent state and the hook.**
+  - `account.consent.get` returns the newest analytics row. Rows in the same millisecond are ordered by rowid. `policyVersion` is the version that row refers to (`null` while undecided).
+  - A decision made under an older policy still counts. Whether a policy bump asks again is decided with the consent UI (Task 3), not here.
+  - `consent.set` takes `source: web|mobile` (default `web`). The hook sends `mobile` when `navigator.product === "ReactNative"`.
+  - `useConsent()` returns `{ status, analytics, set }`. For a guest it uses the local store. Signed in, the server log is the source and a decided server state is mirrored to the local store. While the account has no decision, the device's choice is left alone (the guest import carries it) and `analytics` is `null`.
+  - `analytics` is `null` while `loading` or on `error`, so a gate built on it never sends too early.
+  - A failed `set` rejects and changes nothing on the device.
+- **2026-09-29 · The export format (version 2).**
+  - Dates are ISO 8601 strings, because the file is for people. The API elsewhere uses epoch milliseconds.
+  - Sign-in methods are Better Auth provider ids with their link dates, plus passkey names and dates. The export never holds a token, a password hash, a public key or a credential id.
+  - Share links are the active ones only, with their URLs. The URLs come from `@smog/lists/server` `shareUrl`, which `@smog/api` injects like the import's builders.
+  - Sponsorships are grouped per checkout (sponsor contact, invoice request, and each sponsorship's gesture, display name, `hasLogo`, status and dates). There are no payment ids, amounts or logo keys. They are matched by `lower(sponsor.email) = lower(user.email)` only when the email is verified. The comparison is case-insensitive because sponsors type their address, so `sponsor_email_idx` goes unused (a small table).
+  - The invoice rows come from their own query: D1 batch results are keyed by column name, so a join with the sponsor's `name` and `email` would mix them up.
+- **2026-09-29 · `updateProfile` writes `user.name` and `user.locale` with Drizzle.** It does not go through `auth.api.updateUser`, because Better Auth keeps no session cache here, so the next session read sees the change, and the Zod contract already validates both fields (name trimmed 1..80, locale `nl|en|fr|null`). The hook refetches the session after a save.
 
 ## Rule changes recorded from the feature inventory (2026-09-29)
 
