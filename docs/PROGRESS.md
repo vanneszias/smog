@@ -25,13 +25,13 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 
 ## Next
 
-Phase 2: tasks 1–8 are merged into `develop`. Task 9 (app shells) is not started yet.
-Phase 3 (`docs/superpowers/plans/2026-09-29-phase-3-learning.md`):
-- Task 1 (gestures) is merged.
-- Task 2 (favorites) is done on branch `worktree-agent-a11f9e60d822d048f` (d48e2dc) and awaits its re-review before merge. It adds migration 0003.
-- Task 3 (lists) is on branch `worktree-agent-a5e818c259e273c1d` (5bad68f plus a develop merge). Fix round 1 is pending; see the review notes in the session ledger (guest reorder with hidden ids, limits inside the write, import `@smog/gestures/contract`).
-- Tasks 4–7 are next.
-Then run the phase 2 and phase 3 reviews.
+- Phase 2: all 9 tasks are merged (ad229f7). The phase-level integration review is in progress.
+- Phase 3: tasks 1–4 are merged (gestures, favorites, lists, guest import).
+  - Task 5 (domain components, both kits) is in progress in a worktree.
+  - Tasks 6 (site learning pages) and 7 (mobile learning screens and offline cache) are next.
+- Carry into the phase 4 plan: a native Turnstile widget (WebView), so mobile email sign-in works with captcha on; magic link on mobile via a universal link; a CSP with a hash for the theme pre-paint script.
+- Carry into the phase 5 plan: admin gesture and category writes must set `sort_name`, reindex FTS and call `bumpCatalogVersion`; gesture name ≤ 120.
+- Carry into phase 8: required secrets checked before deploy.
 
 ## Known gaps
 
