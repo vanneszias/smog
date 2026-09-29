@@ -19,12 +19,12 @@ import type { SponsorshipStatus, SponsorshipWithGesture } from "./sponsorships";
  * A base column definition for a data table (without React-specific render fn).
  */
 export interface DataTableColumnBase<TData> {
-  /** Property key from the row data type */
-  key: keyof TData;
+  filterable?: boolean;
   /** Column header label */
   header: string;
+  /** Property key from the row data type */
+  key: keyof TData;
   sortable?: boolean;
-  filterable?: boolean;
 }
 
 /**
@@ -32,11 +32,11 @@ export interface DataTableColumnBase<TData> {
  */
 export interface DataTableBaseProps<TData> {
   data: TData[];
-  onRowClick?: (row: TData) => void;
-  onEdit?: (row: TData) => void;
-  onDelete?: (row: TData) => void;
-  isLoading?: boolean;
   error?: Error | null;
+  isLoading?: boolean;
+  onDelete?: (row: TData) => void;
+  onEdit?: (row: TData) => void;
+  onRowClick?: (row: TData) => void;
 }
 
 // ===== FILTER TYPES =====
@@ -56,8 +56,8 @@ export interface AdminFilter {
  * Extends the base Gesture with admin-only fields.
  */
 export interface AdminGestureRow extends Gesture {
-  isActive: boolean;
   categoryIds: string[];
+  isActive: boolean;
 }
 
 // ===== ADMIN-SPECIFIC SPONSORSHIP ROW =====

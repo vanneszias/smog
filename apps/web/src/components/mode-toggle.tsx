@@ -1,4 +1,5 @@
 import { Moon, Sun } from "lucide-react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,18 @@ export function ModeToggle() {
   const { t } = useTranslation();
   const { setTheme } = useTheme();
 
+  const handleSetLight = useCallback((): void => {
+    setTheme("light");
+  }, [setTheme]);
+
+  const handleSetDark = useCallback((): void => {
+    setTheme("dark");
+  }, [setTheme]);
+
+  const handleSetSystem = useCallback((): void => {
+    setTheme("system");
+  }, [setTheme]);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -23,13 +36,13 @@ export function ModeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={handleSetLight}>
           {t("web.theme.light")}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={handleSetDark}>
           {t("web.theme.dark")}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={handleSetSystem}>
           {t("web.theme.system")}
         </DropdownMenuItem>
       </DropdownMenuContent>

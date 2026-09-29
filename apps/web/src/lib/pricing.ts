@@ -33,13 +33,13 @@ export function calculateSimplifiedPrice(
   const logoTotal = includeLogo ? LOGO_ADDON_CENTS * gestureCount : 0;
 
   return {
+    durationYears: FIXED_DURATION_YEARS,
     gestureCount,
     includeLogo,
-    pricePerGestureCents: pricePerGesture,
     logoAddonCents: logoTotal,
+    pricePerGestureCents: pricePerGesture,
     subtotalCents: subtotal,
     totalCents: subtotal + logoTotal,
-    durationYears: FIXED_DURATION_YEARS,
   };
 }
 
@@ -59,7 +59,7 @@ export function formatPrice(cents: number, language = "nl"): string {
     }[language.split("-")[0]] ?? "nl-BE";
 
   return new Intl.NumberFormat(locale, {
-    style: "currency",
     currency: "EUR",
+    style: "currency",
   }).format(euros);
 }

@@ -45,8 +45,8 @@ const InfoSection: React.FC<InfoSectionProps> = ({ info }) => {
             styles.infoTitle,
             {
               color: theme.warning,
-              marginBottom: SPACING.sm,
               fontSize: FONT_SIZE.md,
+              marginBottom: SPACING.sm,
             },
           ]}
         >
@@ -59,25 +59,25 @@ const InfoSection: React.FC<InfoSectionProps> = ({ info }) => {
 };
 
 const styles = StyleSheet.create({
+  headerRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    marginBottom: SPACING.sm,
+  },
   infoContainer: {
+    borderLeftWidth: 4,
+    borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.lg,
     padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderLeftWidth: 4,
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: SPACING.sm,
+  infoText: {
+    fontSize: FONT_SIZE.md,
+    lineHeight: FONT_SIZE.md * 1.4,
   },
   infoTitle: {
     fontSize: FONT_SIZE.lg,
     fontWeight: FONT_WEIGHT.bold,
     marginLeft: SPACING.sm,
-  },
-  infoText: {
-    fontSize: FONT_SIZE.md,
-    lineHeight: FONT_SIZE.md * 1.4,
   },
 });
 

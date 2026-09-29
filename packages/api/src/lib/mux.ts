@@ -1,7 +1,6 @@
 import Mux from "@mux/mux-node";
 
-const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID;
-const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET;
+const { MUX_TOKEN_ID, MUX_TOKEN_SECRET } = process.env;
 
 if (!(MUX_TOKEN_ID && MUX_TOKEN_SECRET)) {
   throw new Error(
@@ -19,12 +18,12 @@ const mux = new Mux({
 // =============================================================================
 
 export interface MuxAssetListItem {
+  aspectRatio?: string;
+  createdAt: string;
+  duration?: number;
   id: string;
   playbackId: string;
   status: "preparing" | "ready" | "errored";
-  duration?: number;
-  aspectRatio?: string;
-  createdAt: string;
 }
 
 export interface ListMuxAssetsResult {
@@ -38,17 +37,17 @@ export interface DirectUploadResult {
 }
 
 export interface UploadStatus {
-  id: string;
-  status: "waiting" | "asset_created" | "errored" | "cancelled" | "timed_out";
   assetId?: string;
-  playbackId?: string;
   error?: string;
+  id: string;
+  playbackId?: string;
+  status: "waiting" | "asset_created" | "errored" | "cancelled" | "timed_out";
 }
 
 export interface MuxAssetStatus {
   id: string;
-  status: "preparing" | "ready" | "errored";
   playbackId?: string;
+  status: "preparing" | "ready" | "errored";
 }
 
 // =============================================================================
@@ -75,13 +74,13 @@ export async function listMuxAssets(options?: {
       .slice(0, limit)
       .filter((asset) => asset.playback_ids?.some((p) => p.policy === "public"))
       .map((asset) => ({
+        aspectRatio: asset.aspect_ratio,
+        createdAt: asset.created_at,
+        duration: asset.duration,
         id: asset.id,
         playbackId: asset.playback_ids?.find((p) => p.policy === "public")
           ?.id as string,
         status: asset.status as "preparing" | "ready" | "errored",
-        duration: asset.duration,
-        aspectRatio: asset.aspect_ratio,
-        createdAt: asset.created_at,
       }));
 
     return {
@@ -105,8 +104,8 @@ export async function createMuxDirectUpload(): Promise<DirectUploadResult> {
     const upload = await mux.video.uploads.create({
       cors_origin: "*",
       new_asset_settings: {
-        playback_policy: ["public"],
         master_access: "temporary",
+        playback_policy: ["public"],
         test: process.env.NODE_ENV === "development",
       },
     });
@@ -172,8 +171,8 @@ export async function getAssetStatus(assetId: string): Promise<MuxAssetStatus> {
     const asset = await mux.video.assets.retrieve(assetId);
     return {
       id: asset.id,
-      status: asset.status as "preparing" | "ready" | "errored",
       playbackId: asset.playback_ids?.[0]?.id,
+      status: asset.status as "preparing" | "ready" | "errored",
     };
   } catch (error) {
     console.error("[mux] Get asset status error:", error);

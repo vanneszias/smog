@@ -27,8 +27,8 @@ const isDevelopment =
   (process as { env?: { NODE_ENV?: string } }).env?.NODE_ENV !== "production";
 
 const DEFAULT_CONFIG: LoggerConfig = {
-  minLevel: isDevelopment ? LogLevel.DEBUG : LogLevel.INFO,
   includeTimestamp: false,
+  minLevel: isDevelopment ? LogLevel.DEBUG : LogLevel.INFO,
 };
 
 const SEVERITY_NUMBER: Record<LogLevel, SeverityNumber> = {
@@ -61,13 +61,13 @@ export interface Logger {
    * Low-level debugging information.
    * Suppressed in production builds.
    */
-  debug(message: string, context?: unknown): void;
-  /** Informational messages about normal operation. */
-  info(message: string, context?: unknown): void;
-  /** Warnings about potentially problematic situations. */
-  warn(message: string, context?: unknown): void;
+  debug: (message: string, context?: unknown) => void;
   /** Errors that caused an operation to fail. */
-  error(message: string, context?: unknown): void;
+  error: (message: string, context?: unknown) => void;
+  /** Informational messages about normal operation. */
+  info: (message: string, context?: unknown) => void;
+  /** Warnings about potentially problematic situations. */
+  warn: (message: string, context?: unknown) => void;
 }
 
 /**
@@ -95,11 +95,11 @@ export function createLogger(
     const now = Date.now();
 
     const entry: LogEntry = {
-      timestamp: resolvedConfig.includeTimestamp ? now : 0,
-      level,
-      module,
-      message,
       context,
+      level,
+      message,
+      module,
+      timestamp: resolvedConfig.includeTimestamp ? now : 0,
     };
 
     const formatted = formatMessage(entry);
@@ -108,24 +108,24 @@ export function createLogger(
     switch (level) {
       case LogLevel.DEBUG:
       case LogLevel.INFO:
-        if (context !== undefined) {
-          console.log(formatted, context);
-        } else {
+        if (context === undefined) {
           console.log(formatted);
+        } else {
+          console.log(formatted, context);
         }
         break;
       case LogLevel.WARN:
-        if (context !== undefined) {
-          console.warn(formatted, context);
-        } else {
+        if (context === undefined) {
           console.warn(formatted);
+        } else {
+          console.warn(formatted, context);
         }
         break;
       case LogLevel.ERROR:
-        if (context !== undefined) {
-          console.error(formatted, context);
-        } else {
+        if (context === undefined) {
           console.error(formatted);
+        } else {
+          console.error(formatted, context);
         }
         break;
     }
@@ -141,19 +141,19 @@ export function createLogger(
     }
 
     logs.getLogger(module).emit({
+      attributes,
+      body: message,
       severityNumber: SEVERITY_NUMBER[level],
       severityText: SEVERITY_TEXT[level],
-      body: message,
-      attributes,
       timestamp: now,
     });
   }
 
   return {
     debug: (message, context) => log(LogLevel.DEBUG, message, context),
+    error: (message, context) => log(LogLevel.ERROR, message, context),
     info: (message, context) => log(LogLevel.INFO, message, context),
     warn: (message, context) => log(LogLevel.WARN, message, context),
-    error: (message, context) => log(LogLevel.ERROR, message, context),
   };
 }
 

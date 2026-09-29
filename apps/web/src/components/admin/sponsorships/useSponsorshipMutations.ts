@@ -10,10 +10,10 @@ import { toast } from "sonner";
 import { client, orpc } from "@/utils/orpc";
 
 interface UseSponsorshipMutationsOptions {
-  statusFilter: string;
+  onCancelSuccess: () => void;
   onExpireSuccess: () => void;
   onMarkPaidSuccess: () => void;
-  onCancelSuccess: () => void;
+  statusFilter: string;
 }
 
 /**
@@ -38,19 +38,22 @@ export function useSponsorshipMutations({
   const forceExpire = useMutation({
     mutationFn: (sponsorshipId: string) =>
       client.admin.sponsorships.forceExpire({ sponsorshipId }),
+    onError: (error) => {
+      toast.error(`Failed to expire sponsorship: ${error.message}`);
+    },
     onSuccess: () => {
       toast.success("Sponsorship expired successfully");
       invalidateSponsorships();
       onExpireSuccess();
-    },
-    onError: (error) => {
-      toast.error(`Failed to expire sponsorship: ${error.message}`);
     },
   });
 
   const generateReEditLink = useMutation({
     mutationFn: (sponsorshipId: string) =>
       client.admin.sponsorships.generateReEditLink({ sponsorshipId }),
+    onError: (error) => {
+      toast.error(`Failed to generate re-edit link: ${error.message}`);
+    },
     onSuccess: (data) => {
       navigator.clipboard.writeText(data.url).catch(() => {
         toast.info("Re-edit link generated", { description: data.url });
@@ -60,14 +63,14 @@ export function useSponsorshipMutations({
       });
       invalidateSponsorships();
     },
-    onError: (error) => {
-      toast.error(`Failed to generate re-edit link: ${error.message}`);
-    },
   });
 
   const markPaidManually = useMutation({
     mutationFn: (sponsorshipId: string) =>
       client.admin.sponsorships.markPaidManually({ sponsorshipId }),
+    onError: (error) => {
+      toast.error(`Failed to mark as paid: ${error.message}`);
+    },
     onSuccess: () => {
       toast.success("Sponsorship marked as paid — now pending approval");
       invalidateSponsorships();
@@ -77,21 +80,18 @@ export function useSponsorshipMutations({
       });
       onMarkPaidSuccess();
     },
-    onError: (error) => {
-      toast.error(`Failed to mark as paid: ${error.message}`);
-    },
   });
 
   const cancelPendingPayment = useMutation({
     mutationFn: (sponsorshipId: string) =>
       client.admin.sponsorships.cancelPendingPayment({ sponsorshipId }),
+    onError: (error) => {
+      toast.error(`Failed to cancel sponsorship: ${error.message}`);
+    },
     onSuccess: () => {
       toast.success("Sponsorship cancelled — gesture is now available again");
       invalidateSponsorships();
       onCancelSuccess();
-    },
-    onError: (error) => {
-      toast.error(`Failed to cancel sponsorship: ${error.message}`);
     },
   });
 
@@ -108,6 +108,9 @@ export function useSponsorshipMutations({
           | "pending_resubmission"
           | "rejected",
       }),
+    onError: (error: Error) => {
+      toast.error(`Failed to export CSV: ${error.message}`);
+    },
     onSuccess: (data: { csv: string }) => {
       const blob = new Blob([data.csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -118,16 +121,13 @@ export function useSponsorshipMutations({
       URL.revokeObjectURL(url);
       toast.success("CSV exported successfully");
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to export CSV: ${error.message}`);
-    },
   });
 
   return {
+    cancelPendingPayment,
+    exportCsv,
     forceExpire,
     generateReEditLink,
     markPaidManually,
-    cancelPendingPayment,
-    exportCsv,
   };
 }

@@ -47,8 +47,8 @@ const ConceptSection: React.FC<ConceptSectionProps> = ({ concepts }) => {
             styles.infoTitle,
             {
               color: theme.primary,
-              marginBottom: SPACING.sm,
               fontSize: FONT_SIZE.md,
+              marginBottom: SPACING.sm,
             },
           ]}
         >
@@ -63,29 +63,29 @@ const ConceptSection: React.FC<ConceptSectionProps> = ({ concepts }) => {
 };
 
 const styles = StyleSheet.create({
-  infoContainer: {
-    marginBottom: SPACING.lg,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderLeftWidth: 4,
-  },
   conceptContainer: {
     ...SHADOWS.small,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: SPACING.sm,
-  },
-  infoTitle: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.bold,
-    marginLeft: SPACING.sm,
   },
   conceptText: {
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.regular,
     lineHeight: FONT_SIZE.sm * 1.4,
+  },
+  headerRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    marginBottom: SPACING.sm,
+  },
+  infoContainer: {
+    borderLeftWidth: 4,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.lg,
+    padding: SPACING.md,
+  },
+  infoTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.bold,
+    marginLeft: SPACING.sm,
   },
 });
 

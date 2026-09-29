@@ -8,6 +8,17 @@ interface AnalyticsConsentPromptProps {
   visible: boolean;
 }
 
+const openPrivacyPolicy = (): Promise<unknown> =>
+  Linking.openURL("https://app.smog.vlaanderen/privacy");
+
+const handleAllow = async (): Promise<void> => {
+  await setAnalyticsConsent(true);
+};
+
+const handleRequiredOnly = async (): Promise<void> => {
+  await setAnalyticsConsent(false);
+};
+
 export function AnalyticsConsentPrompt({
   visible,
 }: AnalyticsConsentPromptProps) {
@@ -30,25 +41,19 @@ export function AnalyticsConsentPrompt({
             {t("settings.analyticsPromptDescription")}
           </Text>
           <Text
-            onPress={() =>
-              Linking.openURL("https://app.smog.vlaanderen/privacy")
-            }
+            onPress={openPrivacyPolicy}
             style={[styles.link, { color: theme.primary }]}
           >
             {t("settings.privacyPolicy")}
           </Text>
           <View style={styles.actions}>
             <BaseButton
-              onPress={async () => {
-                await setAnalyticsConsent(true);
-              }}
+              onPress={handleAllow}
               size="large"
               title={t("settings.analyticsAllow")}
             />
             <BaseButton
-              onPress={async () => {
-                await setAnalyticsConsent(false);
-              }}
+              onPress={handleRequiredOnly}
               size="large"
               title={t("settings.analyticsRequiredOnly")}
               variant="outline"
@@ -61,23 +66,21 @@ export function AnalyticsConsentPrompt({
 }
 
 const styles = StyleSheet.create({
+  actions: {
+    gap: 12,
+  },
   backdrop: {
-    flex: 1,
     alignItems: "center",
-    justifyContent: "center",
     backgroundColor: "rgba(0, 0, 0, 0.55)",
+    flex: 1,
+    justifyContent: "center",
     padding: 24,
   },
   card: {
-    width: "100%",
-    maxWidth: 480,
     borderRadius: 16,
+    maxWidth: 480,
     padding: 24,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 12,
+    width: "100%",
   },
   description: {
     fontSize: 16,
@@ -90,7 +93,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textDecorationLine: "underline",
   },
-  actions: {
-    gap: 12,
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 12,
   },
 });

@@ -1,13 +1,14 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { MenuView } from "@react-native-menu/menu";
+import { MenuView, type NativeActionEvent } from "@react-native-menu/menu";
 import { ICON_SIZE } from "@smog/styles";
+import { useCallback } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 
 interface MenuAction {
   id: string;
-  title: string;
   image?: string;
+  title: string;
 }
 
 interface HeaderMenuButtonProps {
@@ -25,16 +26,23 @@ const HeaderMenuButton = ({
 }: HeaderMenuButtonProps) => {
   const { theme } = useTheme();
 
+  const handlePressAction = useCallback(
+    ({ nativeEvent }: NativeActionEvent): void => {
+      onPressAction(nativeEvent.event);
+    },
+    [onPressAction]
+  );
+
   const menuActions = actions.map((action) => ({
     id: action.id,
-    title: action.title,
     image: action.image,
+    title: action.title,
   }));
 
   return (
     <MenuView
       actions={menuActions}
-      onPressAction={({ nativeEvent }) => onPressAction(nativeEvent.event)}
+      onPressAction={handlePressAction}
       shouldOpenOnLongPress={false}
     >
       <View style={[styles.button, { backgroundColor: theme.card }]}>
@@ -52,11 +60,11 @@ const HeaderMenuButton = ({
 
 const styles = StyleSheet.create({
   button: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
     alignItems: "center",
+    borderRadius: 18,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
   },
 });
 

@@ -5,9 +5,9 @@ import { useTranslation } from "@/context/TranslationContext";
 import logger from "@/utils/logger";
 
 interface UseScreenshotDetectionOptions {
+  enabled?: boolean;
   gestureId: string | null;
   gestureName: string | null;
-  enabled?: boolean;
 }
 
 export const useScreenshotDetection = ({
@@ -31,11 +31,10 @@ export const useScreenshotDetection = ({
         t("screenshot.sharePrompt.message", { name: gestureName }),
         [
           {
-            text: t("screenshot.sharePrompt.cancel"),
             style: "cancel",
+            text: t("screenshot.sharePrompt.cancel"),
           },
           {
-            text: t("screenshot.sharePrompt.share"),
             onPress: async () => {
               try {
                 await Share.share({
@@ -45,15 +44,16 @@ export const useScreenshotDetection = ({
                       : t("screenshot.sharePrompt.shareMessage", {
                           name: gestureName,
                         }),
-                  url: Platform.OS === "ios" ? gestureUrl : undefined,
                   title: t("screenshot.sharePrompt.shareTitle", {
                     name: gestureName,
                   }),
+                  url: Platform.OS === "ios" ? gestureUrl : undefined,
                 });
               } catch (error) {
                 logger.error("Error sharing:", error);
               }
             },
+            text: t("screenshot.sharePrompt.share"),
           },
         ],
         { cancelable: true }

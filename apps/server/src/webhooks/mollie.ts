@@ -13,7 +13,7 @@ const convex = new ConvexHttpClient(process.env.CONVEX_URL!);
  * Handle Mollie payment webhook
  * This is called by Mollie when a payment status changes
  */
-export async function handleMollieWebhook(c: Context) {
+export async function handleMollieWebhook(c: Context): Promise<Response> {
   try {
     console.log("[Mollie Webhook] Received webhook");
 
@@ -116,8 +116,8 @@ export async function handleMollieWebhook(c: Context) {
       await Promise.all(
         sponsorshipIds.map((id) =>
           processSuccessfulPayment({
-            sponsorshipId: id,
             molliePaymentId: paymentId,
+            sponsorshipId: id,
           }).then(() => enqueuePaymentEmails(id))
         )
       );
@@ -125,7 +125,7 @@ export async function handleMollieWebhook(c: Context) {
       console.log(
         `[Mollie Webhook] Bulk payment processed successfully for ${sponsorshipIds.length} sponsorships`
       );
-      return c.json({ status: "success", count: sponsorshipIds.length }, 200);
+      return c.json({ count: sponsorshipIds.length, status: "success" }, 200);
     }
 
     if (!sponsorshipId) {
@@ -138,8 +138,8 @@ export async function handleMollieWebhook(c: Context) {
     // Process the successful payment
     // This will mark the sponsorship as "pending_payment" awaiting admin approval
     await processSuccessfulPayment({
-      sponsorshipId,
       molliePaymentId: paymentId,
+      sponsorshipId,
     });
 
     // Enqueue payment confirmation emails (fire-and-forget to not delay webhook response)
@@ -188,20 +188,20 @@ async function enqueuePaymentEmails(sponsorshipId: string): Promise<void> {
   await Promise.all([
     enqueueEmail(
       {
-        type: "sponsorship_submitted",
-        to,
-        sponsorName,
         gestureName,
+        sponsorName,
+        to,
+        type: "sponsorship_submitted",
       },
       `sponsorship_submitted:${sponsorshipId}`
     ),
     enqueueEmail(
       {
-        type: "payment_confirmed",
-        to,
-        sponsorName,
         gestureName,
         paymentAmount: sponsorship.paymentAmount,
+        sponsorName,
+        to,
+        type: "payment_confirmed",
       },
       `payment_confirmed:${sponsorshipId}`
     ),

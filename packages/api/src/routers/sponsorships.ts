@@ -9,21 +9,21 @@ import { triggerEmail } from "../lib/emailTrigger";
 
 // Fixed sponsor overlay configuration
 const SPONSOR_OVERLAY_CONFIG = {
+  animation: {
+    fadeInDuration: 1,
+    startTime: 5,
+  },
   image: {
+    height: 22, // increased from 15 to 22
+    width: 22, // increased from 15 to 22 (47% larger)
     x: 50, // centered
     y: 76, // moved up from 78 for better balance
-    width: 22, // increased from 15 to 22 (47% larger)
-    height: 22, // increased from 15 to 22
   },
   text: {
+    color: "#00805f",
+    fontSize: 3.8, // slightly reduced from 4 to fit two lines
     x: 50,
     y: 87, // adjusted for two-line layout
-    fontSize: 3.8, // slightly reduced from 4 to fit two lines
-    color: "#00805f",
-  },
-  animation: {
-    startTime: 5,
-    fadeInDuration: 1,
   },
 } as const;
 
@@ -59,6 +59,7 @@ function getRemotionHeaders() {
 async function pollCompositionJob(jobId: string): Promise<string> {
   const maxAttempts = 120;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // biome-ignore lint/performance/noAwaitInLoops: polling loop must wait between sequential status checks
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const statusResponse = await fetch(
       `${REMOTION_URL}/api/compose/status/${jobId}`,
@@ -104,14 +105,14 @@ async function composeVideo({
   overlayText: string;
 }): Promise<string> {
   const response = await fetch(`${REMOTION_URL}/api/compose`, {
-    method: "POST",
-    headers: getRemotionHeaders(),
     body: JSON.stringify({
-      playbackId,
+      overlayConfig: SPONSOR_OVERLAY_CONFIG,
       overlayImageUrl: logoImage || "",
       overlayText,
-      overlayConfig: SPONSOR_OVERLAY_CONFIG,
+      playbackId,
     }),
+    headers: getRemotionHeaders(),
+    method: "POST",
   });
 
   if (!response.ok) {
@@ -130,24 +131,231 @@ async function composeVideo({
 
 export const sponsorshipsRouter = {
   /**
-   * List all gestures with their sponsorship status
+   * Create Mollie payment for multiple sponsorships
    */
-  listGesturesWithSponsorship: publicProcedure.handler(async () => {
-    try {
-      const gestures = await convex.query(
-        api.sponsorships.listGesturesWithSponsorship
+  createBulkPayment: publicProcedure
+    .input(
+      z
+        .object({
+          amount: z.number().int().positive(),
+          sponsorshipIds: z
+            .array(z.string().min(1))
+            .min(1)
+            .max(MAX_SPONSORSHIPS_PER_PAYMENT),
+        })
+        .refine(
+          (value) =>
+            new Set(value.sponsorshipIds).size === value.sponsorshipIds.length,
+          "Duplicate sponsorships are not allowed"
+        )
+    )
+    .handler(async ({ input }) => {
+      console.log(
+        `[SponsorshipsRouter] Creating bulk payment for ${input.sponsorshipIds.length} sponsorships`
       );
-      return gestures;
-    } catch (error) {
-      console.error(
-        "[SponsorshipsRouter] List gestures with sponsorship error:",
-        error
+
+      // Verify all sponsorships exist and are in pending_payment state
+      const sponsorships = await Promise.all(
+        input.sponsorshipIds.map((id) =>
+          convex.query(
+            api.sponsorships.getById,
+            withServiceAuth({
+              id: id as Id<"sponsorships">,
+            })
+          )
+        )
       );
-      throw new Error(
-        `Failed to list gestures with sponsorship: ${error instanceof Error ? error.message : "Unknown error"}`
+
+      const invalidSponsorships = sponsorships.filter(
+        (s) => s?.status !== "pending_payment" || Boolean(s.molliePaymentId)
       );
-    }
-  }),
+      if (invalidSponsorships.length > 0) {
+        throw new Error(
+          "Some sponsorships are unavailable or already have a payment"
+        );
+      }
+      const expectedAmount = sponsorships.reduce(
+        (total, sponsorship) => total + (sponsorship?.paymentAmount ?? 0),
+        0
+      );
+      if (input.amount !== expectedAmount) {
+        throw new Error("Payment amount does not match sponsorship pricing");
+      }
+
+      const baseUrl = process.env.CORS_ORIGIN || "http://localhost:3001";
+      const isLocalDev = baseUrl.includes("localhost");
+
+      // Create Mollie payment with all sponsorship IDs in metadata
+      const payment = await mollieClient.payments.create({
+        amount: {
+          currency: "EUR",
+          value: (expectedAmount / 100).toFixed(2),
+        },
+        description: `Sponsorship for ${input.sponsorshipIds.length} gesture(s)`,
+        redirectUrl: `${baseUrl}/sponsors/success?paymentId={id}`,
+        ...(isLocalDev ? {} : { webhookUrl: `${baseUrl}/webhooks/mollie` }),
+        metadata: {
+          isBulkPayment: "true",
+          sponsorshipIds: JSON.stringify(input.sponsorshipIds),
+        },
+      });
+      const checkoutUrl = payment._links.checkout?.href;
+      if (!checkoutUrl) {
+        throw new Error("Payment provider did not return a checkout URL");
+      }
+
+      // Update all sponsorships with the payment ID
+      await Promise.all(
+        input.sponsorshipIds.map((id) =>
+          convex.mutation(
+            api.sponsorships.updatePaymentId,
+            withServiceAuth({
+              molliePaymentId: payment.id,
+              sponsorshipId: id as Id<"sponsorships">,
+            })
+          )
+        )
+      );
+
+      console.log(
+        `[SponsorshipsRouter] Bulk payment created: ${payment.id} for ${input.sponsorshipIds.length} sponsorships`
+      );
+
+      return {
+        checkoutUrl,
+        paymentId: payment.id,
+      };
+    }),
+
+  /**
+   * Create bulk sponsorships (simplified flow)
+   * Creates sponsorships with contact info collected upfront, before payment
+   */
+  createBulkSponsorshipsSimplified: publicProcedure
+    .input(
+      z
+        .object({
+          contactCompany: z.string().trim().max(120).optional(),
+          contactFullName: z.string().trim().min(1).max(120),
+          durationYears: z.literal(1),
+          gestureIds: z
+            .array(z.string().min(1))
+            .min(1)
+            .max(MAX_SPONSORSHIPS_PER_PAYMENT),
+          includeLogo: z.boolean(),
+          invoiceEmail: z.string().trim().email().max(254).optional(),
+          invoiceName: z.string().trim().max(160).optional(),
+          // Invoice fields
+          invoiceRequested: z.boolean().optional(),
+          invoiceVatNumber: z.string().trim().max(32).optional(),
+          logoImage: logoDataUrlSchema.optional(),
+          overlayText: z.string().trim().min(1).max(100),
+          // One pre-composed preview playback ID per gesture, parallel to gestureIds.
+          previewVideoPlaybackIds: z
+            .array(z.string().min(1))
+            .max(MAX_SPONSORSHIPS_PER_PAYMENT),
+          sponsorEmail: z.string().trim().email().max(254),
+          sponsorName: z.string().trim().min(1).max(40),
+        })
+        .refine(
+          (value) => new Set(value.gestureIds).size === value.gestureIds.length,
+          "Each gesture can only be sponsored once per payment"
+        )
+        .refine(
+          (value) =>
+            value.gestureIds.length === value.previewVideoPlaybackIds.length,
+          "Each gesture requires exactly one preview video"
+        )
+    )
+    .handler(async ({ input }) => {
+      try {
+        console.log(
+          "[SponsorshipsRouter] Creating simplified bulk sponsorships..."
+        );
+
+        // Note: logoImage is not passed to the mutation - it's already baked
+        // into the preview videos and storing large base64 data would exceed limits
+        const sponsorshipIds = await convex.mutation(
+          api.sponsorships.createBulkSimplified,
+          withServiceAuth({
+            contactCompany: input.contactCompany,
+            contactFullName: input.contactFullName,
+            durationYears: input.durationYears,
+            gestureIds: input.gestureIds as Id<"gestures">[],
+            includeLogo: input.includeLogo,
+            invoiceEmail: input.invoiceEmail,
+            invoiceName: input.invoiceName,
+            invoiceRequested: input.invoiceRequested,
+            invoiceVatNumber: input.invoiceVatNumber,
+            overlayText: input.overlayText,
+            previewVideoPlaybackIds: input.previewVideoPlaybackIds,
+            sponsorEmail: input.sponsorEmail,
+            sponsorName: input.sponsorName,
+          })
+        );
+
+        console.log(
+          `[SponsorshipsRouter] Created ${sponsorshipIds.length} sponsorships`
+        );
+
+        // Notify all admins about the new sponsorship (fire-and-forget)
+        Promise.all([
+          Promise.all(
+            input.gestureIds.map((id) =>
+              convex
+                .query(api.gestures.getById, { id: id as Id<"gestures"> })
+                .then((g) => g?.name ?? id)
+                .catch(() => id)
+            )
+          ),
+          convex.query(api.users.listAdmins, withServiceAuth({})),
+        ])
+          .then(([gestureNames, admins]) => {
+            const adminEmails = admins
+              .map((a) => a.email)
+              .filter((e): e is string => Boolean(e));
+
+            return Promise.all(
+              adminEmails.map((email) =>
+                triggerEmail({
+                  contactCompany: input.contactCompany,
+                  contactFullName: input.contactFullName,
+                  durationYears: input.durationYears,
+                  gestureNames,
+                  invoiceEmail: input.invoiceEmail,
+                  invoiceName: input.invoiceName,
+                  invoiceRequested: input.invoiceRequested,
+                  invoiceVatNumber: input.invoiceVatNumber,
+                  sponsorEmail: input.sponsorEmail,
+                  sponsorName: input.sponsorName,
+                  to: email,
+                  type: "admin_new_sponsorship",
+                })
+              )
+            );
+          })
+          .catch((err) => {
+            console.error(
+              "[SponsorshipsRouter] Failed to notify admins of new sponsorship:",
+              err
+            );
+          });
+
+        return {
+          sponsorshipIds,
+          success: true,
+        };
+      } catch (error) {
+        console.error(
+          "[SponsorshipsRouter] Create bulk sponsorships error:",
+          error
+        );
+        throw new Error(
+          `Failed to create bulk sponsorships: ${error instanceof Error ? error.message : "Unknown error"}`,
+          { cause: error }
+        );
+      }
+    }),
 
   /**
    * Generate preview video for a single gesture
@@ -157,9 +365,9 @@ export const sponsorshipsRouter = {
     .input(
       z.object({
         gestureId: z.string().min(1),
-        sponsorName: z.string().trim().min(1).max(40),
         logoImage: logoDataUrlSchema.optional(),
         overlayText: z.string().trim().min(1).max(100),
+        sponsorName: z.string().trim().min(1).max(40),
       })
     )
     .handler(async ({ input }) => {
@@ -183,14 +391,14 @@ export const sponsorshipsRouter = {
 
         // Call Remotion service to compose video
         const response = await fetch(`${REMOTION_URL}/api/compose`, {
-          method: "POST",
-          headers: getRemotionHeaders(),
           body: JSON.stringify({
-            playbackId: gesture.playbackId,
+            overlayConfig,
             overlayImageUrl: input.logoImage || "",
             overlayText: input.overlayText,
-            overlayConfig,
+            playbackId: gesture.playbackId,
           }),
+          headers: getRemotionHeaders(),
+          method: "POST",
         });
 
         if (!response.ok) {
@@ -224,236 +432,34 @@ export const sponsorshipsRouter = {
       } catch (error) {
         console.error("[SponsorshipsRouter] Generate preview error:", error);
         throw new Error(
-          `Failed to generate preview: ${error instanceof Error ? error.message : "Unknown error"}`
+          `Failed to generate preview: ${error instanceof Error ? error.message : "Unknown error"}`,
+          { cause: error }
         );
       }
     }),
 
   /**
-   * Create bulk sponsorships (simplified flow)
-   * Creates sponsorships with contact info collected upfront, before payment
+   * Get sponsorship data by re-edit token (for pre-filling the wizard)
+   * Token is the authentication — no user login required
    */
-  createBulkSponsorshipsSimplified: publicProcedure
-    .input(
-      z
-        .object({
-          gestureIds: z
-            .array(z.string().min(1))
-            .min(1)
-            .max(MAX_SPONSORSHIPS_PER_PAYMENT),
-          sponsorName: z.string().trim().min(1).max(40),
-          sponsorEmail: z.string().trim().email().max(254),
-          contactFullName: z.string().trim().min(1).max(120),
-          contactCompany: z.string().trim().max(120).optional(),
-          overlayText: z.string().trim().min(1).max(100),
-          logoImage: logoDataUrlSchema.optional(),
-          includeLogo: z.boolean(),
-          durationYears: z.literal(1),
-          // One pre-composed preview playback ID per gesture, parallel to gestureIds.
-          previewVideoPlaybackIds: z
-            .array(z.string().min(1))
-            .max(MAX_SPONSORSHIPS_PER_PAYMENT),
-          // Invoice fields
-          invoiceRequested: z.boolean().optional(),
-          invoiceName: z.string().trim().max(160).optional(),
-          invoiceVatNumber: z.string().trim().max(32).optional(),
-          invoiceEmail: z.string().trim().email().max(254).optional(),
-        })
-        .refine(
-          (value) => new Set(value.gestureIds).size === value.gestureIds.length,
-          "Each gesture can only be sponsored once per payment"
-        )
-        .refine(
-          (value) =>
-            value.gestureIds.length === value.previewVideoPlaybackIds.length,
-          "Each gesture requires exactly one preview video"
-        )
-    )
+  getByReEditToken: publicProcedure
+    .input(z.object({ token: z.string() }))
     .handler(async ({ input }) => {
       try {
-        console.log(
-          "[SponsorshipsRouter] Creating simplified bulk sponsorships..."
-        );
-
-        // Note: logoImage is not passed to the mutation - it's already baked
-        // into the preview videos and storing large base64 data would exceed limits
-        const sponsorshipIds = await convex.mutation(
-          api.sponsorships.createBulkSimplified,
-          withServiceAuth({
-            gestureIds: input.gestureIds as Id<"gestures">[],
-            sponsorName: input.sponsorName,
-            sponsorEmail: input.sponsorEmail,
-            contactFullName: input.contactFullName,
-            contactCompany: input.contactCompany,
-            overlayText: input.overlayText,
-            includeLogo: input.includeLogo,
-            durationYears: input.durationYears,
-            previewVideoPlaybackIds: input.previewVideoPlaybackIds,
-            invoiceRequested: input.invoiceRequested,
-            invoiceName: input.invoiceName,
-            invoiceVatNumber: input.invoiceVatNumber,
-            invoiceEmail: input.invoiceEmail,
-          })
-        );
-
-        console.log(
-          `[SponsorshipsRouter] Created ${sponsorshipIds.length} sponsorships`
-        );
-
-        // Notify all admins about the new sponsorship (fire-and-forget)
-        Promise.all([
-          Promise.all(
-            input.gestureIds.map((id) =>
-              convex
-                .query(api.gestures.getById, { id: id as Id<"gestures"> })
-                .then((g) => g?.name ?? id)
-                .catch(() => id)
-            )
-          ),
-          convex.query(api.users.listAdmins, withServiceAuth({})),
-        ])
-          .then(([gestureNames, admins]) => {
-            const adminEmails = admins
-              .map((a) => a.email)
-              .filter((e): e is string => Boolean(e));
-
-            return Promise.all(
-              adminEmails.map((email) =>
-                triggerEmail({
-                  type: "admin_new_sponsorship",
-                  to: email,
-                  sponsorName: input.sponsorName,
-                  sponsorEmail: input.sponsorEmail,
-                  gestureNames,
-                  contactFullName: input.contactFullName,
-                  contactCompany: input.contactCompany,
-                  invoiceRequested: input.invoiceRequested,
-                  invoiceName: input.invoiceName,
-                  invoiceVatNumber: input.invoiceVatNumber,
-                  invoiceEmail: input.invoiceEmail,
-                  durationYears: input.durationYears,
-                })
-              )
-            );
-          })
-          .catch((err) => {
-            console.error(
-              "[SponsorshipsRouter] Failed to notify admins of new sponsorship:",
-              err
-            );
-          });
-
-        return {
-          success: true,
-          sponsorshipIds,
-        };
+        const result = await convex.query(api.sponsorships.getByReEditToken, {
+          token: input.token,
+        });
+        return result;
       } catch (error) {
         console.error(
-          "[SponsorshipsRouter] Create bulk sponsorships error:",
+          "[SponsorshipsRouter] Get by re-edit token error:",
           error
         );
         throw new Error(
-          `Failed to create bulk sponsorships: ${error instanceof Error ? error.message : "Unknown error"}`
+          `Failed to validate re-edit token: ${error instanceof Error ? error.message : "Unknown error"}`,
+          { cause: error }
         );
       }
-    }),
-
-  /**
-   * Create Mollie payment for multiple sponsorships
-   */
-  createBulkPayment: publicProcedure
-    .input(
-      z
-        .object({
-          sponsorshipIds: z
-            .array(z.string().min(1))
-            .min(1)
-            .max(MAX_SPONSORSHIPS_PER_PAYMENT),
-          amount: z.number().int().positive(),
-        })
-        .refine(
-          (value) =>
-            new Set(value.sponsorshipIds).size === value.sponsorshipIds.length,
-          "Duplicate sponsorships are not allowed"
-        )
-    )
-    .handler(async ({ input }) => {
-      console.log(
-        `[SponsorshipsRouter] Creating bulk payment for ${input.sponsorshipIds.length} sponsorships`
-      );
-
-      // Verify all sponsorships exist and are in pending_payment state
-      const sponsorships = await Promise.all(
-        input.sponsorshipIds.map((id) =>
-          convex.query(
-            api.sponsorships.getById,
-            withServiceAuth({
-              id: id as Id<"sponsorships">,
-            })
-          )
-        )
-      );
-
-      const invalidSponsorships = sponsorships.filter(
-        (s) =>
-          !s || s.status !== "pending_payment" || Boolean(s.molliePaymentId)
-      );
-      if (invalidSponsorships.length > 0) {
-        throw new Error(
-          "Some sponsorships are unavailable or already have a payment"
-        );
-      }
-      const expectedAmount = sponsorships.reduce(
-        (total, sponsorship) => total + (sponsorship?.paymentAmount ?? 0),
-        0
-      );
-      if (input.amount !== expectedAmount) {
-        throw new Error("Payment amount does not match sponsorship pricing");
-      }
-
-      const baseUrl = process.env.CORS_ORIGIN || "http://localhost:3001";
-      const isLocalDev = baseUrl.includes("localhost");
-
-      // Create Mollie payment with all sponsorship IDs in metadata
-      const payment = await mollieClient.payments.create({
-        amount: {
-          currency: "EUR",
-          value: (expectedAmount / 100).toFixed(2),
-        },
-        description: `Sponsorship for ${input.sponsorshipIds.length} gesture(s)`,
-        redirectUrl: `${baseUrl}/sponsors/success?paymentId={id}`,
-        ...(isLocalDev ? {} : { webhookUrl: `${baseUrl}/webhooks/mollie` }),
-        metadata: {
-          sponsorshipIds: JSON.stringify(input.sponsorshipIds),
-          isBulkPayment: "true",
-        },
-      });
-      const checkoutUrl = payment._links.checkout?.href;
-      if (!checkoutUrl) {
-        throw new Error("Payment provider did not return a checkout URL");
-      }
-
-      // Update all sponsorships with the payment ID
-      await Promise.all(
-        input.sponsorshipIds.map((id) =>
-          convex.mutation(
-            api.sponsorships.updatePaymentId,
-            withServiceAuth({
-              sponsorshipId: id as Id<"sponsorships">,
-              molliePaymentId: payment.id,
-            })
-          )
-        )
-      );
-
-      console.log(
-        `[SponsorshipsRouter] Bulk payment created: ${payment.id} for ${input.sponsorshipIds.length} sponsorships`
-      );
-
-      return {
-        paymentId: payment.id,
-        checkoutUrl,
-      };
     }),
 
   /**
@@ -481,33 +487,31 @@ export const sponsorshipsRouter = {
           error
         );
         throw new Error(
-          `Failed to get sponsorships: ${error instanceof Error ? error.message : "Unknown error"}`
+          `Failed to get sponsorships: ${error instanceof Error ? error.message : "Unknown error"}`,
+          { cause: error }
         );
       }
     }),
-
   /**
-   * Get sponsorship data by re-edit token (for pre-filling the wizard)
-   * Token is the authentication — no user login required
+   * List all gestures with their sponsorship status
    */
-  getByReEditToken: publicProcedure
-    .input(z.object({ token: z.string() }))
-    .handler(async ({ input }) => {
-      try {
-        const result = await convex.query(api.sponsorships.getByReEditToken, {
-          token: input.token,
-        });
-        return result;
-      } catch (error) {
-        console.error(
-          "[SponsorshipsRouter] Get by re-edit token error:",
-          error
-        );
-        throw new Error(
-          `Failed to validate re-edit token: ${error instanceof Error ? error.message : "Unknown error"}`
-        );
-      }
-    }),
+  listGesturesWithSponsorship: publicProcedure.handler(async () => {
+    try {
+      const gestures = await convex.query(
+        api.sponsorships.listGesturesWithSponsorship
+      );
+      return gestures;
+    } catch (error) {
+      console.error(
+        "[SponsorshipsRouter] List gestures with sponsorship error:",
+        error
+      );
+      throw new Error(
+        `Failed to list gestures with sponsorship: ${error instanceof Error ? error.message : "Unknown error"}`,
+        { cause: error }
+      );
+    }
+  }),
 
   /**
    * Resubmit a sponsorship video using a re-edit token (no payment required)
@@ -516,11 +520,11 @@ export const sponsorshipsRouter = {
   reSubmitSponsorship: publicProcedure
     .input(
       z.object({
-        token: z.string().uuid(),
         gestureId: z.string().min(1),
         logoImage: logoDataUrlSchema.optional(),
         overlayText: z.string().trim().min(1).max(100),
         sponsorName: z.string().trim().min(1).max(40).optional(),
+        token: z.string().uuid(),
       })
     )
     .handler(async ({ input }) => {
@@ -544,9 +548,9 @@ export const sponsorshipsRouter = {
 
         // Compose new video via Remotion using the original gesture video as base
         const composedPlaybackId = await composeVideo({
-          playbackId: sponsorship.originalVideoPlaybackId,
           logoImage: input.logoImage,
           overlayText: input.overlayText,
+          playbackId: sponsorship.originalVideoPlaybackId,
         });
 
         console.log(
@@ -558,22 +562,23 @@ export const sponsorshipsRouter = {
         await convex.mutation(
           api.sponsorships.reSubmitSponsorshipVideo,
           withServiceAuth({
-            token: input.token,
+            overlayText: input.overlayText,
             previewVideoPlaybackId: composedPlaybackId,
             sponsoredVideoPlaybackId: composedPlaybackId,
-            overlayText: input.overlayText,
             sponsorName: input.sponsorName,
+            token: input.token,
           })
         );
 
-        return { success: true, playbackId: composedPlaybackId };
+        return { playbackId: composedPlaybackId, success: true };
       } catch (error) {
         console.error(
           "[SponsorshipsRouter] Re-submit sponsorship error:",
           error
         );
         throw new Error(
-          `Failed to resubmit sponsorship: ${error instanceof Error ? error.message : "Unknown error"}`
+          `Failed to resubmit sponsorship: ${error instanceof Error ? error.message : "Unknown error"}`,
+          { cause: error }
         );
       }
     }),

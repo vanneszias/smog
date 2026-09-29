@@ -39,56 +39,56 @@ connection.on("error", (err) => {
 // =============================================================================
 
 interface WelcomeEmailJob {
-  type: "welcome";
-  to: string;
   name?: string;
+  to: string;
+  type: "welcome";
 }
 
 interface SponsorshipSubmittedEmailJob {
-  type: "sponsorship_submitted";
-  to: string;
-  sponsorName: string;
   gestureName: string;
+  sponsorName: string;
+  to: string;
+  type: "sponsorship_submitted";
 }
 
 interface PaymentConfirmedEmailJob {
-  type: "payment_confirmed";
-  to: string;
-  sponsorName: string;
   gestureName: string;
   paymentAmount: number;
+  sponsorName: string;
+  to: string;
+  type: "payment_confirmed";
 }
 
 interface SponsorshipLiveEmailJob {
-  type: "sponsorship_live";
-  to: string;
-  sponsorName: string;
-  gestureName: string;
-  startDate: number;
   endDate: number;
+  gestureName: string;
+  sponsorName: string;
+  startDate: number;
+  to: string;
+  type: "sponsorship_live";
 }
 
 interface RenewalReminderEmailJob {
-  type: "renewal_reminder";
-  to: string;
-  sponsorName: string;
-  gestureName: string;
   endDate: number;
+  gestureName: string;
+  sponsorName: string;
+  to: string;
+  type: "renewal_reminder";
 }
 
 interface AdminNewSponsorshipEmailJob {
-  type: "admin_new_sponsorship";
-  to: string;
-  sponsorName: string;
-  sponsorEmail: string;
-  gestureNames: string[];
-  contactFullName: string;
   contactCompany?: string;
-  invoiceRequested?: boolean;
-  invoiceName?: string;
-  invoiceVatNumber?: string;
-  invoiceEmail?: string;
+  contactFullName: string;
   durationYears?: number;
+  gestureNames: string[];
+  invoiceEmail?: string;
+  invoiceName?: string;
+  invoiceRequested?: boolean;
+  invoiceVatNumber?: string;
+  sponsorEmail: string;
+  sponsorName: string;
+  to: string;
+  type: "admin_new_sponsorship";
 }
 
 export type EmailJob =
@@ -122,9 +122,9 @@ export async function enqueueEmail(
 ): Promise<void> {
   try {
     await emailQueue.add(job.type, job, {
-      jobId,
       attempts: 3,
-      backoff: { type: "exponential", delay: 5000 },
+      backoff: { delay: 5000, type: "exponential" },
+      jobId,
       removeOnComplete: { count: 100 },
       removeOnFail: { count: 50 },
     });
@@ -153,8 +153,8 @@ async function processEmailJob(job: EmailJob): Promise<void> {
       subject = "We hebben je sponsoring ontvangen";
       html = await render(
         SponsorshipSubmittedEmail({
-          sponsorName: job.sponsorName,
           gestureName: job.gestureName,
+          sponsorName: job.sponsorName,
         })
       );
       break;
@@ -163,9 +163,9 @@ async function processEmailJob(job: EmailJob): Promise<void> {
       subject = "Betaling bevestigd — bedankt!";
       html = await render(
         PaymentConfirmedEmail({
-          sponsorName: job.sponsorName,
           gestureName: job.gestureName,
           paymentAmount: job.paymentAmount,
+          sponsorName: job.sponsorName,
         })
       );
       break;
@@ -174,10 +174,10 @@ async function processEmailJob(job: EmailJob): Promise<void> {
       subject = "Je sponsoring is nu live!";
       html = await render(
         SponsorshipLiveEmail({
-          sponsorName: job.sponsorName,
-          gestureName: job.gestureName,
-          startDate: job.startDate,
           endDate: job.endDate,
+          gestureName: job.gestureName,
+          sponsorName: job.sponsorName,
+          startDate: job.startDate,
         })
       );
       break;
@@ -186,9 +186,9 @@ async function processEmailJob(job: EmailJob): Promise<void> {
       subject = "Je SMOG-sponsoring verloopt binnenkort";
       html = await render(
         RenewalReminderEmail({
-          sponsorName: job.sponsorName,
-          gestureName: job.gestureName,
           endDate: job.endDate,
+          gestureName: job.gestureName,
+          sponsorName: job.sponsorName,
         })
       );
       break;
@@ -197,16 +197,16 @@ async function processEmailJob(job: EmailJob): Promise<void> {
       subject = `Nieuwe sponsoring van ${job.sponsorName}`;
       html = await render(
         AdminNewSponsorshipEmail({
-          sponsorName: job.sponsorName,
-          sponsorEmail: job.sponsorEmail,
-          gestureNames: job.gestureNames,
-          contactFullName: job.contactFullName,
           contactCompany: job.contactCompany,
-          invoiceRequested: job.invoiceRequested,
-          invoiceName: job.invoiceName,
-          invoiceVatNumber: job.invoiceVatNumber,
-          invoiceEmail: job.invoiceEmail,
+          contactFullName: job.contactFullName,
           durationYears: job.durationYears,
+          gestureNames: job.gestureNames,
+          invoiceEmail: job.invoiceEmail,
+          invoiceName: job.invoiceName,
+          invoiceRequested: job.invoiceRequested,
+          invoiceVatNumber: job.invoiceVatNumber,
+          sponsorEmail: job.sponsorEmail,
+          sponsorName: job.sponsorName,
         })
       );
       break;
@@ -219,7 +219,7 @@ async function processEmailJob(job: EmailJob): Promise<void> {
     }
   }
 
-  await sendEmail({ to: job.to, subject, html });
+  await sendEmail({ html, subject, to: job.to });
 }
 
 export function startEmailWorker(): void {

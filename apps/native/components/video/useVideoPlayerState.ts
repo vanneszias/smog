@@ -19,10 +19,10 @@ import { useVideoPlayer } from "expo-video";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseVideoPlayerStateOptions {
-  playbackId: string;
   autoPlay: boolean;
   onComplete?: () => void;
   onPlayToEnd?: () => void;
+  playbackId: string;
 }
 
 /**
@@ -180,5 +180,5 @@ export function useVideoPlayerState({
     }
   }, [isPlaying, player]);
 
-  return { player, isLoading, isPlaying, togglePlayPause };
+  return { isLoading, isPlaying, player, togglePlayPause };
 }

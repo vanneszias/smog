@@ -9,20 +9,20 @@ import {
 } from "react";
 
 interface RecentSearchesContextType {
-  recentSearches: string[];
   addRecentSearch: (query: string) => void;
   clearRecentSearches: () => void;
+  recentSearches: string[];
   // Removed setOnSelect and onSelect for prop-based handler pattern
 }
 
 const RecentSearchesContext = createContext<RecentSearchesContextType>({
-  recentSearches: [],
   addRecentSearch: () => {
     /* noop */
   },
   clearRecentSearches: () => {
     /* noop */
   },
+  recentSearches: [],
   // Removed setOnSelect and onSelect for prop-based handler pattern
 });
 
@@ -78,9 +78,9 @@ const RecentSearchesProvider: React.FC<RecentSearchesProviderProps> = ({
   return (
     <RecentSearchesContext.Provider
       value={{
-        recentSearches,
         addRecentSearch,
         clearRecentSearches,
+        recentSearches,
         // Removed setOnSelect and onSelect for prop-based handler pattern
       }}
     >

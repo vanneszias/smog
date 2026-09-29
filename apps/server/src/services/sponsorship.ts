@@ -18,9 +18,9 @@ function getRemotionHeaders() {
 }
 
 export interface ProcessPaymentOptions {
-  sponsorshipId: string;
   molliePaymentId: string;
   newPlaybackId?: string; // New Mux playback ID from external worker
+  sponsorshipId: string;
 }
 
 /**
@@ -54,22 +54,22 @@ async function triggerVideoComposition(sponsorship: {
   console.log(
     `[Sponsorship] Triggering video composition for ${sponsorship._id}:`,
     {
-      playbackId: sponsorship.originalVideoPlaybackId,
       hasLogo: !!overlayImageUrl,
       overlayText: sponsorship.overlayText,
+      playbackId: sponsorship.originalVideoPlaybackId,
     }
   );
 
   // Call Remotion service to compose video
   const response = await fetch(`${remotionUrl}/api/compose`, {
-    method: "POST",
-    headers: getRemotionHeaders(),
     body: JSON.stringify({
-      playbackId: sponsorship.originalVideoPlaybackId,
+      overlayConfig,
       overlayImageUrl: overlayImageUrl || "", // Empty string if no logo
       overlayText: sponsorship.overlayText,
-      overlayConfig,
+      playbackId: sponsorship.originalVideoPlaybackId,
     }),
+    headers: getRemotionHeaders(),
+    method: "POST",
   });
 
   if (!response.ok) {
@@ -87,11 +87,12 @@ async function triggerVideoComposition(sponsorship: {
   console.log(`[Sponsorship] Video composition job queued: ${result.jobId}`);
 
   // Poll for job completion
-  const jobId = result.jobId;
+  const { jobId } = result;
   let attempts = 0;
   const maxAttempts = 60; // 5 minutes max (5s interval)
 
   while (attempts < maxAttempts) {
+    // biome-ignore lint/performance/noAwaitInLoops: polling loop must wait between sequential status checks
     await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
     attempts++;
 
@@ -217,8 +218,8 @@ export async function processSuccessfulPayment(
         await convex.mutation(
           api.sponsorships.updateVideoPlaybackId,
           withServiceAuth({
-            sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
             sponsoredVideoPlaybackId: sponsorship.previewVideoPlaybackId,
+            sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
           })
         );
 
@@ -238,8 +239,8 @@ export async function processSuccessfulPayment(
         await convex.mutation(
           api.sponsorships.updateVideoPlaybackId,
           withServiceAuth({
-            sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
             sponsoredVideoPlaybackId: newPlaybackId,
+            sponsorshipId: options.sponsorshipId as Id<"sponsorships">,
           })
         );
 

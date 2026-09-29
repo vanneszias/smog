@@ -76,26 +76,53 @@ function GesturesComponent() {
     }
   }, [selectedGestureId]);
 
-  const handleSelectGesture = (gestureId: string) => {
-    navigate({ to: "/gestures/$id", params: { id: gestureId } });
-  };
+  const handleSelectGesture = useCallback(
+    (gestureId: string): void => {
+      navigate({ params: { id: gestureId }, to: "/gestures/$id" });
+    },
+    [navigate]
+  );
 
-  const handleDeselectGesture = () => {
+  const handleDeselectGesture = useCallback((): void => {
     navigate({ to: "/gestures" });
-  };
+  }, [navigate]);
 
-  const handleToggleSaved = (gestureId: string) => {
-    const gesture = allGestures.find((g) => g._id === gestureId);
-    const categories: string[] = (gesture?.categories || [])
-      .filter((c): c is Exclude<typeof c, null | undefined> => Boolean(c))
-      .map((c) => (typeof c === "string" ? c : c.name));
+  const handleToggleSaved = useCallback(
+    (gestureId: string): void => {
+      const gesture = allGestures.find((g) => g._id === gestureId);
+      const categories: string[] = (gesture?.categories || [])
+        .filter((c): c is Exclude<typeof c, null | undefined> => Boolean(c))
+        .map((c) => (typeof c === "string" ? c : c.name));
+      openSaveGestureDialog({
+        categories,
+        gestureId,
+        gestureName: gesture?.name,
+        source: "gesture_list",
+      });
+    },
+    [allGestures, openSaveGestureDialog]
+  );
+
+  const handleShowQrCode = useCallback((): void => {
+    setIsQrDialogOpen(true);
+  }, []);
+
+  const handleToggleSelectedSaved = useCallback((): void => {
+    if (!selectedGesture) {
+      return;
+    }
     openSaveGestureDialog({
-      categories,
-      gestureId,
-      gestureName: gesture?.name,
-      source: "gesture_list",
+      categories: selectedGesture.categories
+        .filter(
+          (category): category is Exclude<typeof category, null | undefined> =>
+            Boolean(category)
+        )
+        .map((category) => category.name),
+      gestureId: selectedGesture._id,
+      gestureName: selectedGesture.name,
+      source: "gesture_detail",
     });
-  };
+  }, [openSaveGestureDialog, selectedGesture]);
 
   const handleOpenInApp = useCallback(() => {
     if (id) {
@@ -151,24 +178,8 @@ function GesturesComponent() {
               isSaved={isGestureSaved(selectedGesture._id)}
               onBack={handleDeselectGesture}
               onOpenInApp={handleOpenInApp}
-              onShowQrCode={() => setIsQrDialogOpen(true)}
-              onToggleSaved={() =>
-                openSaveGestureDialog({
-                  categories: selectedGesture.categories
-                    .filter(
-                      (
-                        category
-                      ): category is Exclude<
-                        typeof category,
-                        null | undefined
-                      > => Boolean(category)
-                    )
-                    .map((category) => category.name),
-                  gestureId: selectedGesture._id,
-                  gestureName: selectedGesture.name,
-                  source: "gesture_detail",
-                })
-              }
+              onShowQrCode={handleShowQrCode}
+              onToggleSaved={handleToggleSelectedSaved}
               showOpenInApp={showOpenInApp}
             />
           ) : id ? (

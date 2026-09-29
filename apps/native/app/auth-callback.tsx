@@ -35,10 +35,10 @@ export default function AuthCallback() {
   return (
     <View
       style={{
-        flex: 1,
-        justifyContent: "center",
         alignItems: "center",
         backgroundColor: "#007AFF",
+        flex: 1,
+        justifyContent: "center",
       }}
     >
       <Text style={{ color: "white", fontSize: 18 }}>

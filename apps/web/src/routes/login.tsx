@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import SignInForm from "@/components/sign-in-form";
 import SignUpForm from "@/components/sign-up-form";
 
@@ -10,9 +10,17 @@ export const Route = createFileRoute("/login")({
 function RouteComponent() {
   const [showSignIn, setShowSignIn] = useState(false);
 
+  const handleSwitchToSignUp = useCallback((): void => {
+    setShowSignIn(false);
+  }, []);
+
+  const handleSwitchToSignIn = useCallback((): void => {
+    setShowSignIn(true);
+  }, []);
+
   return showSignIn ? (
-    <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
+    <SignInForm onSwitchToSignUp={handleSwitchToSignUp} />
   ) : (
-    <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
+    <SignUpForm onSwitchToSignIn={handleSwitchToSignIn} />
   );
 }

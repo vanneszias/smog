@@ -14,11 +14,11 @@ import {
 } from "../lib/mux";
 
 interface AdminLogInput extends Record<string, unknown> {
-  userId: Id<"users">;
   action: string;
+  metadata?: unknown;
   targetId: string;
   targetType: string;
-  metadata?: unknown;
+  userId: Id<"users">;
 }
 
 function logAdminAction(input: AdminLogInput) {
@@ -26,293 +26,31 @@ function logAdminAction(input: AdminLogInput) {
 }
 
 export const adminRouter = {
-  // Mux video management
-  mux: {
-    listAssets: adminProcedure
-      .input(
-        z
-          .object({
-            limit: z.number().optional(),
-            page: z.number().optional(),
-          })
-          .optional()
-          .default({})
-      )
-      .handler(async ({ input }) => {
-        return listMuxAssets(input);
-      }),
-
-    createDirectUpload: adminProcedure.handler(async () => {
-      return createMuxDirectUpload();
-    }),
-
-    getUploadStatus: adminProcedure
-      .input(
-        z.object({
-          uploadId: z.string(),
-        })
-      )
-      .handler(async ({ input }) => {
-        return getMuxUploadStatus(input.uploadId);
-      }),
-
-    getAssetStatus: adminProcedure
-      .input(
-        z.object({
-          assetId: z.string(),
-        })
-      )
-      .handler(async ({ input }) => {
-        return getAssetStatus(input.assetId);
-      }),
-  },
-
-  // Verify user is admin
-  verifyAdmin: adminProcedure.handler(async ({ context }) => {
-    const user = await convexClient.query(
-      api.users.getUserByWorkOSId,
-      withServiceAuth({ workosId: context.workosId })
-    );
-    return user;
-  }),
-
-  // User management
-  users: {
-    list: adminProcedure
-      .input(
-        z.object({
-          limit: z.number().optional(),
-          cursor: z.string().optional(),
-        })
-      )
-      .handler(async ({ input }) => {
-        const result = await convexClient.query(
-          api.users.listAllUsers,
-          withServiceAuth(input)
-        );
-        return result;
-      }),
-
-    listAdmins: adminProcedure.handler(async () => {
-      const admins = await convexClient.query(
-        api.users.listAdmins,
-        withServiceAuth({})
-      );
-      return admins;
-    }),
-
-    updateRole: adminProcedure
-      .input(
-        z.object({
-          userId: z.string(),
-          role: z.enum(["user", "admin"]),
-        })
-      )
-      .handler(async ({ input }) => {
-        await convexClient.mutation(
-          api.users.updateUserRole,
-          withServiceAuth({
-            userId: input.userId as Id<"users">,
-            role: input.role,
-          })
-        );
-        return { success: true };
-      }),
-  },
-
-  // Gesture management
-  gestures: {
-    listAll: adminProcedure
-      .input(
-        z
-          .object({
-            limit: z.number().optional(),
-            includeInactive: z.boolean().optional(),
-          })
-          .optional()
-          .default({})
-      )
-      .handler(async ({ input }) => {
-        // Always use listAllForAdmin which returns ALL gestures (including hidden)
-        const gestures = await convexClient.query(
-          api.gestures.listAllForAdmin,
-          withServiceAuth({
-            limit: input.limit,
-          })
-        );
-        return gestures;
-      }),
-
-    update: adminProcedure
-      .input(
-        z.object({
-          gestureId: z.string(),
-          name: z.string().optional(),
-          categoryIds: z.array(z.string()).optional(),
-          playbackId: z.string().optional(),
-          concept: z.array(z.string()).optional(),
-          info: z.string().optional(),
-          isActive: z.boolean().optional(),
-        })
-      )
-      .handler(async ({ input, context }) => {
-        await convexClient.mutation(
-          api.gestures.updateGesture,
-          withServiceAuth({
-            gestureId: input.gestureId as Id<"gestures">,
-            name: input.name,
-            categoryIds: input.categoryIds as Id<"categories">[] | undefined,
-            playbackId: input.playbackId,
-            concept: input.concept,
-            info: input.info,
-            isActive: input.isActive,
-          })
-        );
-
-        // Log action
-        await logAdminAction({
-          userId: context.userId,
-          action: "update_gesture",
-          targetId: input.gestureId,
-          targetType: "gesture",
-          metadata: input,
-        });
-
-        return { success: true };
-      }),
-
-    bulkUpdate: adminProcedure
-      .input(
-        z.object({
-          gestureIds: z.array(z.string()),
-          updates: z.object({
-            isActive: z.boolean().optional(),
-            categoryIds: z.array(z.string()).optional(),
-          }),
-        })
-      )
-      .handler(async ({ input, context }) => {
-        const result = await convexClient.mutation(
-          api.gestures.bulkUpdate,
-          withServiceAuth({
-            gestureIds: input.gestureIds as Id<"gestures">[],
-            updates: {
-              isActive: input.updates.isActive,
-              categoryIds: input.updates.categoryIds as
-                | Id<"categories">[]
-                | undefined,
-            },
-          })
-        );
-
-        // Log action
-        await logAdminAction({
-          userId: context.userId,
-          action: "bulk_update_gestures",
-          targetId: input.gestureIds.join(","),
-          targetType: "gesture",
-          metadata: { count: result.updated, updates: input.updates },
-        });
-
-        return result;
-      }),
-
-    toggleActive: adminProcedure
-      .input(
-        z.object({
-          gestureId: z.string(),
-        })
-      )
-      .handler(async ({ input, context }) => {
-        const newStatus = await convexClient.mutation(
-          api.gestures.toggleActive,
-          withServiceAuth({
-            gestureId: input.gestureId as Id<"gestures">,
-          })
-        );
-
-        // Log action
-        await logAdminAction({
-          userId: context.userId,
-          action: "toggle_gesture_active",
-          targetId: input.gestureId,
-          targetType: "gesture",
-          metadata: { isActive: newStatus },
-        });
-
-        return { success: true, isActive: newStatus };
-      }),
-
-    create: adminProcedure
-      .input(
-        z.object({
-          name: z.string(),
-          categoryIds: z.array(z.string()),
-          playbackId: z.string(),
-          concept: z.array(z.string()),
-          info: z.string(),
-          isActive: z.boolean().optional(),
-        })
-      )
-      .handler(async ({ input, context }) => {
-        const gestureId = await convexClient.mutation(
-          api.gestures.create,
-          withServiceAuth({
-            name: input.name,
-            categoryIds: input.categoryIds as Id<"categories">[],
-            playbackId: input.playbackId,
-            concept: input.concept,
-            info: input.info,
-            isActive: input.isActive,
-          })
-        );
-
-        // Log action
-        await logAdminAction({
-          userId: context.userId,
-          action: "create_gesture",
-          targetId: gestureId,
-          targetType: "gesture",
-          metadata: input,
-        });
-
-        return { gestureId };
-      }),
-  },
-
   // Category management
   categories: {
-    listAll: adminProcedure.handler(async () => {
-      const categories = await convexClient.query(
-        api.categories.listAllForAdmin,
-        withServiceAuth({})
-      );
-      return categories;
-    }),
-
     create: adminProcedure
       .input(
         z.object({
-          name: z.string(),
           isActive: z.boolean().optional(),
+          name: z.string(),
         })
       )
       .handler(async ({ input, context }) => {
         const categoryId = await convexClient.mutation(
           api.categories.create,
           withServiceAuth({
-            name: input.name,
             isActive: input.isActive,
+            name: input.name,
           })
         );
 
         // Log action
         await logAdminAction({
-          userId: context.userId,
           action: "create_category",
+          metadata: input,
           targetId: categoryId,
           targetType: "category",
-          metadata: input,
+          userId: context.userId,
         });
 
         // Invalidate category cache since data has changed
@@ -323,43 +61,6 @@ export const adminRouter = {
         );
 
         return { categoryId };
-      }),
-
-    update: adminProcedure
-      .input(
-        z.object({
-          categoryId: z.string(),
-          name: z.string().optional(),
-          isActive: z.boolean().optional(),
-        })
-      )
-      .handler(async ({ input, context }) => {
-        await convexClient.mutation(
-          api.categories.update,
-          withServiceAuth({
-            categoryId: input.categoryId as Id<"categories">,
-            name: input.name,
-            isActive: input.isActive,
-          })
-        );
-
-        // Log action
-        await logAdminAction({
-          userId: context.userId,
-          action: "update_category",
-          targetId: input.categoryId,
-          targetType: "category",
-          metadata: input,
-        });
-
-        // Invalidate category cache since data has changed
-        categoriesCache.invalidate();
-        logCacheOperation(
-          "update_category",
-          `invalidated after updating ${input.categoryId}`
-        );
-
-        return { success: true };
       }),
 
     delete: adminProcedure
@@ -378,10 +79,10 @@ export const adminRouter = {
 
         // Log action
         await logAdminAction({
-          userId: context.userId,
           action: "delete_category",
           targetId: input.categoryId,
           targetType: "category",
+          userId: context.userId,
         });
 
         // Invalidate category cache since data has changed
@@ -393,16 +94,554 @@ export const adminRouter = {
 
         return { success: true };
       }),
+    listAll: adminProcedure.handler(async () => {
+      const categories = await convexClient.query(
+        api.categories.listAllForAdmin,
+        withServiceAuth({})
+      );
+      return categories;
+    }),
+
+    update: adminProcedure
+      .input(
+        z.object({
+          categoryId: z.string(),
+          isActive: z.boolean().optional(),
+          name: z.string().optional(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        await convexClient.mutation(
+          api.categories.update,
+          withServiceAuth({
+            categoryId: input.categoryId as Id<"categories">,
+            isActive: input.isActive,
+            name: input.name,
+          })
+        );
+
+        // Log action
+        await logAdminAction({
+          action: "update_category",
+          metadata: input,
+          targetId: input.categoryId,
+          targetType: "category",
+          userId: context.userId,
+        });
+
+        // Invalidate category cache since data has changed
+        categoriesCache.invalidate();
+        logCacheOperation(
+          "update_category",
+          `invalidated after updating ${input.categoryId}`
+        );
+
+        return { success: true };
+      }),
   },
 
-  // Sponsorship management
-  sponsorships: {
+  // Gesture management
+  gestures: {
+    bulkUpdate: adminProcedure
+      .input(
+        z.object({
+          gestureIds: z.array(z.string()),
+          updates: z.object({
+            categoryIds: z.array(z.string()).optional(),
+            isActive: z.boolean().optional(),
+          }),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        const result = await convexClient.mutation(
+          api.gestures.bulkUpdate,
+          withServiceAuth({
+            gestureIds: input.gestureIds as Id<"gestures">[],
+            updates: {
+              categoryIds: input.updates.categoryIds as
+                | Id<"categories">[]
+                | undefined,
+              isActive: input.updates.isActive,
+            },
+          })
+        );
+
+        // Log action
+        await logAdminAction({
+          action: "bulk_update_gestures",
+          metadata: { count: result.updated, updates: input.updates },
+          targetId: input.gestureIds.join(","),
+          targetType: "gesture",
+          userId: context.userId,
+        });
+
+        return result;
+      }),
+
+    create: adminProcedure
+      .input(
+        z.object({
+          categoryIds: z.array(z.string()),
+          concept: z.array(z.string()),
+          info: z.string(),
+          isActive: z.boolean().optional(),
+          name: z.string(),
+          playbackId: z.string(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        const gestureId = await convexClient.mutation(
+          api.gestures.create,
+          withServiceAuth({
+            categoryIds: input.categoryIds as Id<"categories">[],
+            concept: input.concept,
+            info: input.info,
+            isActive: input.isActive,
+            name: input.name,
+            playbackId: input.playbackId,
+          })
+        );
+
+        // Log action
+        await logAdminAction({
+          action: "create_gesture",
+          metadata: input,
+          targetId: gestureId,
+          targetType: "gesture",
+          userId: context.userId,
+        });
+
+        return { gestureId };
+      }),
     listAll: adminProcedure
       .input(
         z
           .object({
-            status: z.string().optional(),
+            includeInactive: z.boolean().optional(),
             limit: z.number().optional(),
+          })
+          .optional()
+          .default({})
+      )
+      .handler(async ({ input }) => {
+        // Always use listAllForAdmin which returns ALL gestures (including hidden)
+        const gestures = await convexClient.query(
+          api.gestures.listAllForAdmin,
+          withServiceAuth({
+            limit: input.limit,
+          })
+        );
+        return gestures;
+      }),
+
+    toggleActive: adminProcedure
+      .input(
+        z.object({
+          gestureId: z.string(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        const newStatus = await convexClient.mutation(
+          api.gestures.toggleActive,
+          withServiceAuth({
+            gestureId: input.gestureId as Id<"gestures">,
+          })
+        );
+
+        // Log action
+        await logAdminAction({
+          action: "toggle_gesture_active",
+          metadata: { isActive: newStatus },
+          targetId: input.gestureId,
+          targetType: "gesture",
+          userId: context.userId,
+        });
+
+        return { isActive: newStatus, success: true };
+      }),
+
+    update: adminProcedure
+      .input(
+        z.object({
+          categoryIds: z.array(z.string()).optional(),
+          concept: z.array(z.string()).optional(),
+          gestureId: z.string(),
+          info: z.string().optional(),
+          isActive: z.boolean().optional(),
+          name: z.string().optional(),
+          playbackId: z.string().optional(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        await convexClient.mutation(
+          api.gestures.updateGesture,
+          withServiceAuth({
+            categoryIds: input.categoryIds as Id<"categories">[] | undefined,
+            concept: input.concept,
+            gestureId: input.gestureId as Id<"gestures">,
+            info: input.info,
+            isActive: input.isActive,
+            name: input.name,
+            playbackId: input.playbackId,
+          })
+        );
+
+        // Log action
+        await logAdminAction({
+          action: "update_gesture",
+          metadata: input,
+          targetId: input.gestureId,
+          targetType: "gesture",
+          userId: context.userId,
+        });
+
+        return { success: true };
+      }),
+  },
+
+  // Admin logs
+  logs: {
+    getByAction: adminProcedure
+      .input(
+        z.object({
+          action: z.string(),
+          limit: z.number().optional(),
+        })
+      )
+      .handler(async ({ input }) => {
+        const logs = await convexClient.query(
+          api.adminLogs.getByAction,
+          withServiceAuth(input)
+        );
+        return logs;
+      }),
+
+    getByTarget: adminProcedure
+      .input(
+        z.object({
+          targetId: z.string(),
+          targetType: z.string(),
+        })
+      )
+      .handler(async ({ input }) => {
+        const logs = await convexClient.query(
+          api.adminLogs.getByTarget,
+          withServiceAuth(input)
+        );
+        return logs;
+      }),
+    getRecent: adminProcedure
+      .input(
+        z.object({
+          limit: z.number().optional(),
+        })
+      )
+      .handler(async ({ input }) => {
+        const logs = await convexClient.query(
+          api.adminLogs.getRecent,
+          withServiceAuth(input)
+        );
+        return logs;
+      }),
+  },
+  // Mux video management
+  mux: {
+    createDirectUpload: adminProcedure.handler(async () =>
+      createMuxDirectUpload()
+    ),
+
+    getAssetStatus: adminProcedure
+      .input(
+        z.object({
+          assetId: z.string(),
+        })
+      )
+      .handler(async ({ input }) => getAssetStatus(input.assetId)),
+
+    getUploadStatus: adminProcedure
+      .input(
+        z.object({
+          uploadId: z.string(),
+        })
+      )
+      .handler(async ({ input }) => getMuxUploadStatus(input.uploadId)),
+    listAssets: adminProcedure
+      .input(
+        z
+          .object({
+            limit: z.number().optional(),
+            page: z.number().optional(),
+          })
+          .optional()
+          .default({})
+      )
+      .handler(async ({ input }) => listMuxAssets(input)),
+  },
+
+  // Sponsorship management
+  sponsorships: {
+    approve: adminProcedure
+      .input(
+        z.object({
+          sponsorshipId: z.string(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        // Fetch sponsorship before approval to get email + gesture info for the notification
+        const sponsorship = await convexClient.query(
+          api.sponsorships.getById,
+          withServiceAuth({
+            id: input.sponsorshipId as Id<"sponsorships">,
+          })
+        );
+
+        await convexClient.mutation(
+          api.sponsorships.approve,
+          withServiceAuth({
+            adminUserId: context.userId,
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+          })
+        );
+
+        // Log action
+        await logAdminAction({
+          action: "approve_sponsorship",
+          targetId: input.sponsorshipId,
+          targetType: "sponsorship",
+          userId: context.userId,
+        });
+
+        // Trigger "sponsorship live" email (fire-and-forget)
+        if (sponsorship) {
+          const gestureName = await convexClient
+            .query(api.gestures.getById, { id: sponsorship.gestureId })
+            .then((g) => g?.name ?? "your gesture")
+            .catch(() => "your gesture");
+
+          triggerEmail({
+            endDate: sponsorship.endDate,
+            gestureName,
+            sponsorName: sponsorship.contactFullName || sponsorship.sponsorName,
+            startDate: Date.now(),
+            to: sponsorship.sponsorEmail,
+            type: "sponsorship_live",
+          }).catch((err: unknown) => {
+            console.error(
+              "[Admin] Failed to trigger sponsorship_live email:",
+              err
+            );
+          });
+        }
+
+        return { success: true };
+      }),
+
+    cancelPendingPayment: adminProcedure
+      .input(
+        z.object({
+          sponsorshipId: z.string(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        await convexClient.mutation(
+          api.sponsorships.cancelPendingPayment,
+          withServiceAuth({
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+          })
+        );
+
+        await logAdminAction({
+          action: "cancel_pending_payment",
+          targetId: input.sponsorshipId,
+          targetType: "sponsorship",
+          userId: context.userId,
+        });
+
+        return { success: true };
+      }),
+
+    exportToCsv: adminProcedure
+      .input(
+        z.object({
+          from: z.number().optional(),
+          status: z
+            .enum([
+              "all",
+              "active",
+              "expired",
+              "pending",
+              "pending_payment",
+              "pending_approval",
+              "pending_resubmission",
+              "rejected",
+              "cancelled",
+            ])
+            .default("all"),
+          to: z.number().optional(),
+        })
+      )
+      .handler(async ({ input }) => {
+        const sponsorships = await convexClient.query(
+          api.sponsorships.listAll,
+          withServiceAuth({
+            limit: 10_000,
+            status: input.status === "all" ? undefined : input.status,
+          })
+        );
+
+        // Apply date filters if provided
+        const filtered = sponsorships.filter((s) => {
+          if (input.from && s.createdAt < input.from) {
+            return false;
+          }
+          if (input.to && s.createdAt > input.to) {
+            return false;
+          }
+          return true;
+        });
+
+        // Map to CSV format with all requested columns
+        // biome-ignore assist/source/useSortedKeys: key order defines CSV column order
+        const rows = filtered.map((s) => ({
+          ID: s._id,
+          Status: s.status,
+          "Sponsor name": s.sponsorName,
+          "Sponsor email": s.sponsorEmail,
+          "Contact name": s.contactFullName,
+          Company: s.contactCompany || "",
+          "Invoice name": s.invoiceName || "",
+          "VAT number": s.invoiceVatNumber || "",
+          "Invoice email": s.invoiceEmail || "",
+          "Invoice requested": s.invoiceRequested ? "Yes" : "No",
+          "Has logo": s.hasLogo ? "Yes" : "No",
+          "Payment amount (€)": (s.paymentAmount / 100).toFixed(2),
+          "Mollie payment ID": s.molliePaymentId || "",
+          "Start date": new Date(s.startDate).toISOString(),
+          "End date": new Date(s.endDate).toISOString(),
+          "Duration (years)": s.durationYears,
+          "Gesture ID": s.gestureId,
+          "Created at": new Date(s.createdAt).toISOString(),
+        }));
+
+        return { csv: buildCsvString(rows) };
+      }),
+
+    forceExpire: adminProcedure
+      .input(
+        z.object({
+          sponsorshipId: z.string(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        await convexClient.mutation(
+          api.sponsorships.forceExpire,
+          withServiceAuth({
+            adminUserId: context.userId,
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+          })
+        );
+
+        // Log action
+        await logAdminAction({
+          action: "force_expire_sponsorship",
+          targetId: input.sponsorshipId,
+          targetType: "sponsorship",
+          userId: context.userId,
+        });
+
+        return { success: true };
+      }),
+
+    generateReEditLink: adminProcedure
+      .input(
+        z.object({
+          sponsorshipId: z.string(),
+        })
+      )
+      .handler(async ({ input, context }) => {
+        const token = crypto.randomUUID();
+        const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+
+        await convexClient.mutation(
+          api.sponsorships.setReEditToken,
+          withServiceAuth({
+            expiresAt,
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+            token,
+          })
+        );
+
+        // Log action
+        await logAdminAction({
+          action: "generate_re_edit_link",
+          metadata: { expiresAt },
+          targetId: input.sponsorshipId,
+          targetType: "sponsorship",
+          userId: context.userId,
+        });
+
+        const baseUrl = process.env.CORS_ORIGIN || "http://localhost:3001";
+        return {
+          expiresAt,
+          url: `${baseUrl}/sponsors/re-edit?token=${token}`,
+        };
+      }),
+
+    getActiveByGesture: adminProcedure
+      .input(
+        z.object({
+          gestureId: z.string(),
+        })
+      )
+      .handler(async ({ input }) => {
+        const sponsorship = await convexClient.query(
+          api.sponsorships.getActiveByGestureForService,
+          withServiceAuth({
+            gestureId: input.gestureId as Id<"gestures">,
+          })
+        );
+        return sponsorship;
+      }),
+
+    getById: adminProcedure
+      .input(
+        z.object({
+          id: z.string(),
+        })
+      )
+      .handler(async ({ input }) => {
+        const sponsorship = await convexClient.query(
+          api.sponsorships.getById,
+          withServiceAuth({ id: input.id as Id<"sponsorships"> })
+        );
+        return sponsorship;
+      }),
+
+    getReEditLink: adminProcedure
+      .input(z.object({ sponsorshipId: z.string() }))
+      .handler(async ({ input }) => {
+        const result = await convexClient.query(
+          api.sponsorships.getReEditLinkForAdmin,
+          withServiceAuth({
+            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
+          })
+        );
+        if (!result) {
+          return null;
+        }
+        const baseUrl = process.env.CORS_ORIGIN || "http://localhost:3001";
+        return {
+          expired: result.expired,
+          expiresAt: result.expiresAt,
+          url: `${baseUrl}/sponsors/re-edit?token=${result.token}`,
+        };
+      }),
+    listAll: adminProcedure
+      .input(
+        z
+          .object({
+            limit: z.number().optional(),
+            status: z.string().optional(),
           })
           .optional()
           .default({})
@@ -423,58 +662,27 @@ export const adminRouter = {
       return sponsorships;
     }),
 
-    approve: adminProcedure
+    markPaidManually: adminProcedure
       .input(
         z.object({
           sponsorshipId: z.string(),
         })
       )
       .handler(async ({ input, context }) => {
-        // Fetch sponsorship before approval to get email + gesture info for the notification
-        const sponsorship = await convexClient.query(
-          api.sponsorships.getById,
-          withServiceAuth({
-            id: input.sponsorshipId as Id<"sponsorships">,
-          })
-        );
-
         await convexClient.mutation(
-          api.sponsorships.approve,
+          api.sponsorships.markAsAwaitingApproval,
           withServiceAuth({
             sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-            adminUserId: context.userId,
           })
         );
 
         // Log action
         await logAdminAction({
-          userId: context.userId,
-          action: "approve_sponsorship",
+          action: "mark_paid_manually",
           targetId: input.sponsorshipId,
           targetType: "sponsorship",
+          userId: context.userId,
         });
-
-        // Trigger "sponsorship live" email (fire-and-forget)
-        if (sponsorship) {
-          const gestureName = await convexClient
-            .query(api.gestures.getById, { id: sponsorship.gestureId })
-            .then((g) => g?.name ?? "your gesture")
-            .catch(() => "your gesture");
-
-          triggerEmail({
-            type: "sponsorship_live",
-            to: sponsorship.sponsorEmail,
-            sponsorName: sponsorship.contactFullName || sponsorship.sponsorName,
-            gestureName,
-            startDate: Date.now(),
-            endDate: sponsorship.endDate,
-          }).catch((err: unknown) => {
-            console.error(
-              "[Admin] Failed to trigger sponsorship_live email:",
-              err
-            );
-          });
-        }
 
         return { success: true };
       }),
@@ -482,86 +690,30 @@ export const adminRouter = {
     reject: adminProcedure
       .input(
         z.object({
-          sponsorshipId: z.string(),
           reason: z.string(),
+          sponsorshipId: z.string(),
         })
       )
       .handler(async ({ input, context }) => {
         await convexClient.mutation(
           api.sponsorships.reject,
           withServiceAuth({
-            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
             adminUserId: context.userId,
             reason: input.reason,
-          })
-        );
-
-        // Log action
-        await logAdminAction({
-          userId: context.userId,
-          action: "reject_sponsorship",
-          targetId: input.sponsorshipId,
-          targetType: "sponsorship",
-          metadata: { reason: input.reason },
-        });
-
-        return { success: true };
-      }),
-
-    forceExpire: adminProcedure
-      .input(
-        z.object({
-          sponsorshipId: z.string(),
-        })
-      )
-      .handler(async ({ input, context }) => {
-        await convexClient.mutation(
-          api.sponsorships.forceExpire,
-          withServiceAuth({
             sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-            adminUserId: context.userId,
           })
         );
 
         // Log action
         await logAdminAction({
-          userId: context.userId,
-          action: "force_expire_sponsorship",
+          action: "reject_sponsorship",
+          metadata: { reason: input.reason },
           targetId: input.sponsorshipId,
           targetType: "sponsorship",
+          userId: context.userId,
         });
 
         return { success: true };
-      }),
-
-    getById: adminProcedure
-      .input(
-        z.object({
-          id: z.string(),
-        })
-      )
-      .handler(async ({ input }) => {
-        const sponsorship = await convexClient.query(
-          api.sponsorships.getById,
-          withServiceAuth({ id: input.id as Id<"sponsorships"> })
-        );
-        return sponsorship;
-      }),
-
-    getActiveByGesture: adminProcedure
-      .input(
-        z.object({
-          gestureId: z.string(),
-        })
-      )
-      .handler(async ({ input }) => {
-        const sponsorship = await convexClient.query(
-          api.sponsorships.getActiveByGestureForService,
-          withServiceAuth({
-            gestureId: input.gestureId as Id<"gestures">,
-          })
-        );
-        return sponsorship;
       }),
 
     restoreOriginalVideo: adminProcedure
@@ -587,237 +739,74 @@ export const adminRouter = {
         await convexClient.mutation(
           api.sponsorships.forceExpire,
           withServiceAuth({
-            sponsorshipId: sponsorship._id,
             adminUserId: context.userId,
+            sponsorshipId: sponsorship._id,
           })
         );
 
         // Log action
         await logAdminAction({
-          userId: context.userId,
           action: "restore_original_video",
+          metadata: { sponsorshipId: sponsorship._id },
           targetId: input.gestureId,
           targetType: "gesture",
-          metadata: { sponsorshipId: sponsorship._id },
+          userId: context.userId,
         });
 
         return { success: true };
       }),
+  },
 
-    generateReEditLink: adminProcedure
+  // User management
+  users: {
+    list: adminProcedure
       .input(
         z.object({
-          sponsorshipId: z.string(),
+          cursor: z.string().optional(),
+          limit: z.number().optional(),
         })
       )
-      .handler(async ({ input, context }) => {
-        const token = crypto.randomUUID();
-        const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
-
-        await convexClient.mutation(
-          api.sponsorships.setReEditToken,
-          withServiceAuth({
-            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-            token,
-            expiresAt,
-          })
-        );
-
-        // Log action
-        await logAdminAction({
-          userId: context.userId,
-          action: "generate_re_edit_link",
-          targetId: input.sponsorshipId,
-          targetType: "sponsorship",
-          metadata: { expiresAt },
-        });
-
-        const baseUrl = process.env.CORS_ORIGIN || "http://localhost:3001";
-        return {
-          url: `${baseUrl}/sponsors/re-edit?token=${token}`,
-          expiresAt,
-        };
-      }),
-
-    cancelPendingPayment: adminProcedure
-      .input(
-        z.object({
-          sponsorshipId: z.string(),
-        })
-      )
-      .handler(async ({ input, context }) => {
-        await convexClient.mutation(
-          api.sponsorships.cancelPendingPayment,
-          withServiceAuth({
-            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-          })
-        );
-
-        await logAdminAction({
-          userId: context.userId,
-          action: "cancel_pending_payment",
-          targetId: input.sponsorshipId,
-          targetType: "sponsorship",
-        });
-
-        return { success: true };
-      }),
-
-    markPaidManually: adminProcedure
-      .input(
-        z.object({
-          sponsorshipId: z.string(),
-        })
-      )
-      .handler(async ({ input, context }) => {
-        await convexClient.mutation(
-          api.sponsorships.markAsAwaitingApproval,
-          withServiceAuth({
-            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-          })
-        );
-
-        // Log action
-        await logAdminAction({
-          userId: context.userId,
-          action: "mark_paid_manually",
-          targetId: input.sponsorshipId,
-          targetType: "sponsorship",
-        });
-
-        return { success: true };
-      }),
-
-    getReEditLink: adminProcedure
-      .input(z.object({ sponsorshipId: z.string() }))
       .handler(async ({ input }) => {
         const result = await convexClient.query(
-          api.sponsorships.getReEditLinkForAdmin,
-          withServiceAuth({
-            sponsorshipId: input.sponsorshipId as Id<"sponsorships">,
-          })
+          api.users.listAllUsers,
+          withServiceAuth(input)
         );
-        if (!result) {
-          return null;
-        }
-        const baseUrl = process.env.CORS_ORIGIN || "http://localhost:3001";
-        return {
-          url: `${baseUrl}/sponsors/re-edit?token=${result.token}`,
-          expiresAt: result.expiresAt,
-          expired: result.expired,
-        };
+        return result;
       }),
 
-    exportToCsv: adminProcedure
+    listAdmins: adminProcedure.handler(async () => {
+      const admins = await convexClient.query(
+        api.users.listAdmins,
+        withServiceAuth({})
+      );
+      return admins;
+    }),
+
+    updateRole: adminProcedure
       .input(
         z.object({
-          status: z
-            .enum([
-              "all",
-              "active",
-              "expired",
-              "pending",
-              "pending_payment",
-              "pending_approval",
-              "pending_resubmission",
-              "rejected",
-              "cancelled",
-            ])
-            .default("all"),
-          from: z.number().optional(),
-          to: z.number().optional(),
+          role: z.enum(["user", "admin"]),
+          userId: z.string(),
         })
       )
       .handler(async ({ input }) => {
-        const sponsorships = await convexClient.query(
-          api.sponsorships.listAll,
+        await convexClient.mutation(
+          api.users.updateUserRole,
           withServiceAuth({
-            status: input.status === "all" ? undefined : input.status,
-            limit: 10_000,
+            role: input.role,
+            userId: input.userId as Id<"users">,
           })
         );
-
-        // Apply date filters if provided
-        const filtered = sponsorships.filter((s) => {
-          if (input.from && s.createdAt < input.from) {
-            return false;
-          }
-          if (input.to && s.createdAt > input.to) {
-            return false;
-          }
-          return true;
-        });
-
-        // Map to CSV format with all requested columns
-        const rows = filtered.map((s) => ({
-          ID: s._id,
-          Status: s.status,
-          "Sponsor name": s.sponsorName,
-          "Sponsor email": s.sponsorEmail,
-          "Contact name": s.contactFullName,
-          Company: s.contactCompany || "",
-          "Invoice name": s.invoiceName || "",
-          "VAT number": s.invoiceVatNumber || "",
-          "Invoice email": s.invoiceEmail || "",
-          "Invoice requested": s.invoiceRequested ? "Yes" : "No",
-          "Has logo": s.hasLogo ? "Yes" : "No",
-          "Payment amount (€)": (s.paymentAmount / 100).toFixed(2),
-          "Mollie payment ID": s.molliePaymentId || "",
-          "Start date": new Date(s.startDate).toISOString(),
-          "End date": new Date(s.endDate).toISOString(),
-          "Duration (years)": s.durationYears,
-          "Gesture ID": s.gestureId,
-          "Created at": new Date(s.createdAt).toISOString(),
-        }));
-
-        return { csv: buildCsvString(rows) };
+        return { success: true };
       }),
   },
 
-  // Admin logs
-  logs: {
-    getRecent: adminProcedure
-      .input(
-        z.object({
-          limit: z.number().optional(),
-        })
-      )
-      .handler(async ({ input }) => {
-        const logs = await convexClient.query(
-          api.adminLogs.getRecent,
-          withServiceAuth(input)
-        );
-        return logs;
-      }),
-
-    getByAction: adminProcedure
-      .input(
-        z.object({
-          action: z.string(),
-          limit: z.number().optional(),
-        })
-      )
-      .handler(async ({ input }) => {
-        const logs = await convexClient.query(
-          api.adminLogs.getByAction,
-          withServiceAuth(input)
-        );
-        return logs;
-      }),
-
-    getByTarget: adminProcedure
-      .input(
-        z.object({
-          targetType: z.string(),
-          targetId: z.string(),
-        })
-      )
-      .handler(async ({ input }) => {
-        const logs = await convexClient.query(
-          api.adminLogs.getByTarget,
-          withServiceAuth(input)
-        );
-        return logs;
-      }),
-  },
+  // Verify user is admin
+  verifyAdmin: adminProcedure.handler(async ({ context }) => {
+    const user = await convexClient.query(
+      api.users.getUserByWorkOSId,
+      withServiceAuth({ workosId: context.workosId })
+    );
+    return user;
+  }),
 };

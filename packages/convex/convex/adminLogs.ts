@@ -5,46 +5,34 @@ import { requireServiceAuth } from "./lib/serviceAuth";
 // Log an admin action
 export const logAction = mutation({
   args: {
-    userId: v.id("users"),
     action: v.string(),
-    targetId: v.string(),
-    targetType: v.string(),
     metadata: v.optional(v.any()),
     serviceToken: v.string(),
+    targetId: v.string(),
+    targetType: v.string(),
+    userId: v.id("users"),
   },
-  returns: v.id("adminLogs"),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "adminLogs.logAction");
     return await ctx.db.insert("adminLogs", {
-      userId: args.userId,
       action: args.action,
+      createdAt: Date.now(),
+      metadata: args.metadata,
       targetId: args.targetId,
       targetType: args.targetType,
-      metadata: args.metadata,
-      createdAt: Date.now(),
+      userId: args.userId,
     });
   },
+  returns: v.id("adminLogs"),
 });
 
 // Get logs for a specific user
 export const getByUser = query({
   args: {
-    userId: v.id("users"),
     limit: v.optional(v.number()),
     serviceToken: v.string(),
+    userId: v.id("users"),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("adminLogs"),
-      _creationTime: v.number(),
-      userId: v.id("users"),
-      action: v.string(),
-      targetId: v.string(),
-      targetType: v.string(),
-      metadata: v.optional(v.any()),
-      createdAt: v.number(),
-    })
-  ),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "adminLogs.getByUser");
     const limit = args.limit || 100;
@@ -54,6 +42,18 @@ export const getByUser = query({
       .order("desc")
       .take(limit);
   },
+  returns: v.array(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("adminLogs"),
+      action: v.string(),
+      createdAt: v.number(),
+      metadata: v.optional(v.any()),
+      targetId: v.string(),
+      targetType: v.string(),
+      userId: v.id("users"),
+    })
+  ),
 });
 
 // Get recent logs across all users
@@ -62,18 +62,6 @@ export const getRecent = query({
     limit: v.optional(v.number()),
     serviceToken: v.string(),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("adminLogs"),
-      _creationTime: v.number(),
-      userId: v.id("users"),
-      action: v.string(),
-      targetId: v.string(),
-      targetType: v.string(),
-      metadata: v.optional(v.any()),
-      createdAt: v.number(),
-    })
-  ),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "adminLogs.getRecent");
     const limit = args.limit || 100;
@@ -83,27 +71,27 @@ export const getRecent = query({
       .order("desc")
       .take(limit);
   },
+  returns: v.array(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("adminLogs"),
+      action: v.string(),
+      createdAt: v.number(),
+      metadata: v.optional(v.any()),
+      targetId: v.string(),
+      targetType: v.string(),
+      userId: v.id("users"),
+    })
+  ),
 });
 
 // Get logs for a specific target
 export const getByTarget = query({
   args: {
-    targetType: v.string(),
-    targetId: v.string(),
     serviceToken: v.string(),
+    targetId: v.string(),
+    targetType: v.string(),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("adminLogs"),
-      _creationTime: v.number(),
-      userId: v.id("users"),
-      action: v.string(),
-      targetId: v.string(),
-      targetType: v.string(),
-      metadata: v.optional(v.any()),
-      createdAt: v.number(),
-    })
-  ),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "adminLogs.getByTarget");
     return await ctx.db
@@ -114,6 +102,18 @@ export const getByTarget = query({
       .order("desc")
       .collect();
   },
+  returns: v.array(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("adminLogs"),
+      action: v.string(),
+      createdAt: v.number(),
+      metadata: v.optional(v.any()),
+      targetId: v.string(),
+      targetType: v.string(),
+      userId: v.id("users"),
+    })
+  ),
 });
 
 // Get logs by action type
@@ -123,18 +123,6 @@ export const getByAction = query({
     limit: v.optional(v.number()),
     serviceToken: v.string(),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("adminLogs"),
-      _creationTime: v.number(),
-      userId: v.id("users"),
-      action: v.string(),
-      targetId: v.string(),
-      targetType: v.string(),
-      metadata: v.optional(v.any()),
-      createdAt: v.number(),
-    })
-  ),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "adminLogs.getByAction");
     const limit = args.limit || 100;
@@ -144,4 +132,16 @@ export const getByAction = query({
       .order("desc")
       .take(limit);
   },
+  returns: v.array(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("adminLogs"),
+      action: v.string(),
+      createdAt: v.number(),
+      metadata: v.optional(v.any()),
+      targetId: v.string(),
+      targetType: v.string(),
+      userId: v.id("users"),
+    })
+  ),
 });

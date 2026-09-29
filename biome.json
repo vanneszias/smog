@@ -20,10 +20,15 @@
       "!**/wrangler.jsonc",
       "!**/.source",
       "!**/_generated",
-      "!**/.agents"
+      "!**/.agents",
+      "!**/*.svg"
     ]
   },
-  "extends": ["ultracite/core", "ultracite/react"],
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/react",
+    "ultracite/biome/jest"
+  ],
   "javascript": {
     "globals": ["__DEV__", "Bun"]
   },
@@ -35,7 +40,8 @@
         "useTopLevelRegex": "off"
       },
       "complexity": {
-        "noForEach": "off"
+        "noForEach": "off",
+        "useMaxParams": "off"
       },
       "style": {
         "useFilenamingConvention": "off",
@@ -43,17 +49,26 @@
         "useDefaultSwitchClause": "off",
         "noNonNullAssertion": "off",
         "noExportedImports": "off",
-        "useConsistentMemberAccessibility": "off"
+        "useConsistentMemberAccessibility": "off",
+        "noIncrementDecrement": "off"
       },
       "suspicious": {
         "noAlert": "off",
-        "useAwait": "off"
-      },
-      "nursery": {
-        "noShadow": "off",
-        "useMaxParams": "off",
-        "noIncrementDecrement": "off"
+        "useAwait": "off",
+        "noShadow": "off"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["apps/native/metro.config.js"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noGlobalDirnameFilename": "off"
+          }
+        }
+      }
+    }
+  ]
 }

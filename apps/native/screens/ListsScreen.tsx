@@ -18,6 +18,69 @@ import { useLists } from "@/context/ListsContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
+const keyExtractor = (item: GestureListRecord): string => item._id;
+
+interface ListCardProps {
+  displayName: string;
+  list: GestureListRecord;
+  onOpen: (listId: string) => void;
+}
+
+function ListCard({ displayName, list, onOpen }: ListCardProps) {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+
+  const handlePress = useCallback(() => {
+    onOpen(String(list._id));
+  }, [onOpen, list._id]);
+
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      activeOpacity={0.72}
+      onPress={handlePress}
+      style={[
+        styles.listCard,
+        {
+          backgroundColor: theme.card,
+          borderColor: theme.border,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.listIcon,
+          {
+            backgroundColor: list.isDefaultFavorites
+              ? `${theme.liked}18`
+              : `${theme.primary}14`,
+          },
+        ]}
+      >
+        <Ionicons
+          color={list.isDefaultFavorites ? theme.liked : theme.primary}
+          name={list.isDefaultFavorites ? "heart" : "list"}
+          size={23}
+        />
+      </View>
+      <View style={styles.listCopy}>
+        <Text
+          numberOfLines={1}
+          style={[styles.listName, { color: theme.text }]}
+        >
+          {displayName}
+        </Text>
+        <Text style={[styles.listMeta, { color: theme.textLight }]}>
+          {list.visibility === "shared"
+            ? t("lists.shared")
+            : t("lists.private")}
+        </Text>
+      </View>
+      <Ionicons color={theme.textLight} name="chevron-forward" size={20} />
+    </TouchableOpacity>
+  );
+}
+
 export default function ListsScreen() {
   const router = useRouter();
   const { theme } = useTheme();
@@ -40,66 +103,52 @@ export default function ListsScreen() {
       if (listId) {
         setIsCreateOpen(false);
         router.push({
-          pathname: "/lists/[id]",
           params: { id: String(listId) },
+          pathname: "/lists/[id]",
         });
       }
     },
     [createList, router]
   );
 
+  const handleOpenList = useCallback(
+    (listId: string): void => {
+      router.push({
+        params: { id: listId },
+        pathname: "/lists/[id]",
+      });
+    },
+    [router]
+  );
+
+  const handleMenuAction = useCallback(
+    (action: string): void => {
+      if (action === "new") {
+        setIsCreateOpen(true);
+      } else {
+        router.push("/settings");
+      }
+    },
+    [router]
+  );
+
+  const handleOpenCreate = useCallback(() => {
+    setIsCreateOpen(true);
+  }, []);
+
+  const handleCloseCreate = useCallback(() => {
+    setIsCreateOpen(false);
+  }, []);
+
   const renderList = useCallback(
     ({ item }: { item: GestureListRecord }) => (
-      <TouchableOpacity
-        accessibilityRole="button"
-        activeOpacity={0.72}
-        onPress={() =>
-          router.push({
-            pathname: "/lists/[id]",
-            params: { id: String(item._id) },
-          })
-        }
-        style={[
-          styles.listCard,
-          {
-            backgroundColor: theme.card,
-            borderColor: theme.border,
-          },
-        ]}
-      >
-        <View
-          style={[
-            styles.listIcon,
-            {
-              backgroundColor: item.isDefaultFavorites
-                ? `${theme.liked}18`
-                : `${theme.primary}14`,
-            },
-          ]}
-        >
-          <Ionicons
-            color={item.isDefaultFavorites ? theme.liked : theme.primary}
-            name={item.isDefaultFavorites ? "heart" : "list"}
-            size={23}
-          />
-        </View>
-        <View style={styles.listCopy}>
-          <Text
-            numberOfLines={1}
-            style={[styles.listName, { color: theme.text }]}
-          >
-            {displayName(item)}
-          </Text>
-          <Text style={[styles.listMeta, { color: theme.textLight }]}>
-            {item.visibility === "shared"
-              ? t("lists.shared")
-              : t("lists.private")}
-          </Text>
-        </View>
-        <Ionicons color={theme.textLight} name="chevron-forward" size={20} />
-      </TouchableOpacity>
+      <ListCard
+        displayName={displayName(item)}
+        list={item}
+        onOpen={handleOpenList}
+      />
     ),
-    [displayName, router, t, theme]
+    [displayName, handleOpenList]
   );
 
   return (
@@ -124,28 +173,22 @@ export default function ListsScreen() {
               actions={[
                 {
                   id: "new",
-                  title: t("lists.newList"),
                   image: Platform.select({
-                    ios: "plus",
                     android: "ic_input_add",
+                    ios: "plus",
                   }),
+                  title: t("lists.newList"),
                 },
                 {
                   id: "settings",
-                  title: t("settings.title"),
                   image: Platform.select({
-                    ios: "gearshape",
                     android: "ic_menu_preferences",
+                    ios: "gearshape",
                   }),
+                  title: t("settings.title"),
                 },
               ]}
-              onPressAction={(action) => {
-                if (action === "new") {
-                  setIsCreateOpen(true);
-                } else {
-                  router.push("/settings");
-                }
-              }}
+              onPressAction={handleMenuAction}
             />
           ),
         }}
@@ -162,7 +205,7 @@ export default function ListsScreen() {
             Platform.OS === "ios" ? "automatic" : undefined
           }
           data={lists}
-          keyExtractor={(item) => item._id}
+          keyExtractor={keyExtractor}
           ListHeaderComponent={
             <View style={styles.intro}>
               <Text style={[styles.introTitle, { color: theme.text }]}>
@@ -172,7 +215,7 @@ export default function ListsScreen() {
                 {t("lists.overviewDescription")}
               </Text>
               <TouchableOpacity
-                onPress={() => setIsCreateOpen(true)}
+                onPress={handleOpenCreate}
                 style={[
                   styles.createButton,
                   { backgroundColor: theme.primary },
@@ -192,7 +235,7 @@ export default function ListsScreen() {
 
       <ListNameModal
         isSaving={isCreating}
-        onClose={() => setIsCreateOpen(false)}
+        onClose={handleCloseCreate}
         onSave={handleCreate}
         title={t("lists.newList")}
         visible={isCreateOpen}
@@ -202,30 +245,17 @@ export default function ListsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   center: {
     alignItems: "center",
     flex: 1,
     justifyContent: "center",
   },
+  container: {
+    flex: 1,
+  },
   content: {
     paddingBottom: 120,
     paddingHorizontal: SPACING.md,
-  },
-  intro: {
-    paddingBottom: SPACING.lg,
-    paddingTop: SPACING.sm,
-  },
-  introTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-  introText: {
-    fontSize: FONT_SIZE.sm,
-    lineHeight: 20,
-    marginTop: SPACING.xs,
   },
   createButton: {
     alignItems: "center",
@@ -242,6 +272,19 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.bold,
   },
+  intro: {
+    paddingBottom: SPACING.lg,
+    paddingTop: SPACING.sm,
+  },
+  introText: {
+    fontSize: FONT_SIZE.sm,
+    lineHeight: 20,
+    marginTop: SPACING.xs,
+  },
+  introTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+  },
   listCard: {
     alignItems: "center",
     borderRadius: BORDER_RADIUS.lg,
@@ -252,6 +295,9 @@ const styles = StyleSheet.create({
     minHeight: 78,
     padding: SPACING.md,
   },
+  listCopy: {
+    flex: 1,
+  },
   listIcon: {
     alignItems: "center",
     borderRadius: 23,
@@ -259,15 +305,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 46,
   },
-  listCopy: {
-    flex: 1,
+  listMeta: {
+    fontSize: FONT_SIZE.xs,
+    marginTop: 4,
   },
   listName: {
     fontSize: FONT_SIZE.lg,
     fontWeight: FONT_WEIGHT.semibold,
-  },
-  listMeta: {
-    fontSize: FONT_SIZE.xs,
-    marginTop: 4,
   },
 });

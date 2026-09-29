@@ -6,12 +6,12 @@ import Fuse from "fuse.js";
  */
 export interface SearchableGesture {
   _id?: string; // Web format
-  id?: string; // Native format
-  name: string;
-  concept: string[];
-  info: string;
   categories?: Array<{ _id: string; name: string } | undefined>; // Web format
   category?: string[]; // Native format
+  concept: string[];
+  id?: string; // Native format
+  info: string;
+  name: string;
 }
 
 /**
@@ -28,17 +28,22 @@ export type MatchField = "name" | "concept" | "category" | "info";
  * Result of scoring a single gesture against a search query
  */
 export interface ScoredGesture<T extends SearchableGesture> {
-  gesture: T;
-  score: number;
-  matchType: MatchType;
-  matchedField: MatchField;
   fuseScore?: number;
+  gesture: T;
+  matchedField: MatchField;
+  matchType: MatchType;
+  score: number;
 }
 
 /**
  * Configuration options for the search algorithm
  */
 export interface SearchRankingOptions {
+  /**
+   * Enable case-sensitive bonus scoring
+   * Default: true
+   */
+  caseSensitiveBonus?: boolean;
   /**
    * Threshold for fuzzy matching (0 = perfect match, 1 = match anything)
    * Default: 0.4 (balanced between precision and recall)
@@ -50,12 +55,6 @@ export interface SearchRankingOptions {
    * Default: 0 (include all matches)
    */
   minScore?: number;
-
-  /**
-   * Enable case-sensitive bonus scoring
-   * Default: true
-   */
-  caseSensitiveBonus?: boolean;
 }
 
 /**
@@ -63,10 +62,10 @@ export interface SearchRankingOptions {
  * Higher weight = more important for ranking
  */
 const FIELD_WEIGHTS = {
-  name: 100,
-  concept: 50,
   category: 30,
+  concept: 50,
   info: 10,
+  name: 100,
 } as const;
 
 /**
@@ -75,9 +74,9 @@ const FIELD_WEIGHTS = {
  */
 const MATCH_TYPE_MULTIPLIERS = {
   exact: 1000,
+  fuzzy: 150,
   startsWith: 500,
   wordBoundary: 250,
-  fuzzy: 150,
 } as const;
 
 /**
@@ -153,7 +152,7 @@ function calculateValueMatchScore(
     score *= 1.1;
   }
 
-  return { score, matchType };
+  return { matchType, score };
 }
 
 /**
@@ -225,9 +224,9 @@ function calculateExactMatchScore(
 
   return {
     gesture,
-    score: bestScore,
-    matchType: bestMatchType,
     matchedField: bestMatchedField,
+    matchType: bestMatchType,
+    score: bestScore,
   };
 }
 
@@ -241,7 +240,7 @@ function getBestMatchedField(
     return "info";
   }
 
-  const bestMatch = result.matches[0];
+  const [bestMatch] = result.matches;
   if (!bestMatch) {
     return "info";
   }
@@ -276,17 +275,17 @@ function processFuzzyMatches<T extends SearchableGesture>(
 
   // Configure Fuse.js for fuzzy search
   const fuse = new Fuse(normalizedGestures, {
+    ignoreLocation: true,
+    includeMatches: true,
+    includeScore: true,
     keys: [
       { name: "name", weight: FIELD_WEIGHTS.name / 100 },
       { name: "concept", weight: FIELD_WEIGHTS.concept / 100 },
       { name: "_normalizedCategories", weight: FIELD_WEIGHTS.category / 100 },
       { name: "info", weight: FIELD_WEIGHTS.info / 100 },
     ],
-    threshold: fuseThreshold,
-    includeScore: true,
-    includeMatches: true,
     minMatchCharLength: 2,
-    ignoreLocation: true,
+    threshold: fuseThreshold,
     useExtendedSearch: false,
   });
 
@@ -304,11 +303,11 @@ function processFuzzyMatches<T extends SearchableGesture>(
     const score = MATCH_TYPE_MULTIPLIERS.fuzzy * fieldWeight * fuseScore;
 
     scoredResults.push({
-      gesture: result.item as T,
-      score,
-      matchType: "fuzzy",
-      matchedField,
       fuseScore: result.score,
+      gesture: result.item as T,
+      matchedField,
+      matchType: "fuzzy",
+      score,
     });
   }
 
@@ -334,9 +333,9 @@ export function searchAndRankGestures<T extends SearchableGesture>(
 
   // Apply default options
   const opts: Required<SearchRankingOptions> = {
+    caseSensitiveBonus: options.caseSensitiveBonus ?? true,
     fuseThreshold: options.fuseThreshold ?? 0.4,
     minScore: options.minScore ?? 0,
-    caseSensitiveBonus: options.caseSensitiveBonus ?? true,
   };
 
   const trimmedQuery = query.trim();

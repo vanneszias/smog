@@ -12,33 +12,33 @@
 import { useCallback, useState } from "react";
 
 interface AdminFilters {
-  searchQuery: string;
-  statusFilter: string;
   dateFrom: string;
   dateTo: string;
+  searchQuery: string;
+  statusFilter: string;
 }
 
 export interface UseAdminFiltersReturn {
-  filters: AdminFilters;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  statusFilter: string;
-  setStatusFilter: (status: string) => void;
-  dateFrom: string;
-  setDateFrom: (date: string) => void;
-  dateTo: string;
-  setDateTo: (date: string) => void;
   /** Reset all filters to their default (empty) values. */
   clearFilters: () => void;
+  dateFrom: string;
+  dateTo: string;
+  filters: AdminFilters;
   /** Returns `true` if any filter is currently active. */
   hasActiveFilters: boolean;
+  searchQuery: string;
+  setDateFrom: (date: string) => void;
+  setDateTo: (date: string) => void;
+  setSearchQuery: (query: string) => void;
+  setStatusFilter: (status: string) => void;
+  statusFilter: string;
 }
 
 const DEFAULT_FILTERS: AdminFilters = {
-  searchQuery: "",
-  statusFilter: "",
   dateFrom: "",
   dateTo: "",
+  searchQuery: "",
+  statusFilter: "",
 };
 
 /**
@@ -77,16 +77,16 @@ export function useAdminFilters(): UseAdminFiltersReturn {
     filters.dateTo !== "";
 
   return {
-    filters,
-    searchQuery: filters.searchQuery,
-    setSearchQuery,
-    statusFilter: filters.statusFilter,
-    setStatusFilter,
-    dateFrom: filters.dateFrom,
-    setDateFrom,
-    dateTo: filters.dateTo,
-    setDateTo,
     clearFilters,
+    dateFrom: filters.dateFrom,
+    dateTo: filters.dateTo,
+    filters,
     hasActiveFilters,
+    searchQuery: filters.searchQuery,
+    setDateFrom,
+    setDateTo,
+    setSearchQuery,
+    setStatusFilter,
+    statusFilter: filters.statusFilter,
   };
 }

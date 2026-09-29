@@ -5,15 +5,15 @@ export function toPublicSharedList(
   canEdit: boolean
 ) {
   return {
-    _id: list._id,
     _creationTime: list._creationTime,
-    name: list.name,
-    description: list.description,
-    visibility: "shared" as const,
+    _id: list._id,
     allowSharedEditing: list.allowSharedEditing,
     canEdit: canEdit && list.allowSharedEditing,
-    isDefaultFavorites: list.isDefaultFavorites,
     createdAt: list.createdAt,
+    description: list.description,
+    isDefaultFavorites: list.isDefaultFavorites,
+    name: list.name,
     updatedAt: list.updatedAt,
+    visibility: "shared" as const,
   };
 }

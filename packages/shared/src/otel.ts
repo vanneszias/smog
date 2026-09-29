@@ -65,8 +65,8 @@ export function initOtel(): void {
   const exporter = new OTLPLogExporter();
 
   const provider = new LoggerProvider({
-    resource,
     processors: [new BatchLogRecordProcessor(exporter)],
+    resource,
   });
 
   logs.setGlobalLoggerProvider(provider);

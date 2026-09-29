@@ -57,19 +57,19 @@ export type {
 
 // Theme types (kept inline — UI-only, no external dependencies)
 export interface Theme {
+  background: string;
+  border: string;
+  card: string;
   primary: string;
   secondary: string;
-  background: string;
-  card: string;
+  statusBar: "light" | "dark";
   text: string;
   textLight: string;
-  border: string;
-  statusBar: "light" | "dark";
 }
 
 export interface ThemeContextType {
-  theme: Theme;
   setTheme: (theme: Theme) => void;
+  theme: Theme;
   toggleTheme: () => void;
 }
 

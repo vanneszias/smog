@@ -7,15 +7,53 @@ import {
   SPACING,
 } from "@smog/styles";
 import type React from "react";
+import { useCallback } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
 interface CategoryFiltersProps {
-  selectedCategories: string[];
-  onRemoveCategory: (category: string) => void;
   onClearCategories: () => void;
+  onRemoveCategory: (category: string) => void;
+  selectedCategories: string[];
 }
+
+interface CategoryFilterChipProps {
+  category: string;
+  onRemove: (category: string) => void;
+}
+
+const CategoryFilterChip = ({
+  category,
+  onRemove,
+}: CategoryFilterChipProps) => {
+  const { theme } = useTheme();
+  const { t } = useTranslation();
+
+  const handlePress = useCallback(() => {
+    onRemove(category);
+  }, [onRemove, category]);
+
+  return (
+    <TouchableOpacity
+      accessibilityLabel={t("search.removeCategory", { category })}
+      accessibilityRole="button"
+      activeOpacity={0.8}
+      onPress={handlePress}
+      style={[styles.chip, { backgroundColor: theme.primary }, SHADOWS.small]}
+    >
+      <Text style={[styles.chipText, { color: theme.background }]}>
+        {category}
+      </Text>
+      <Ionicons
+        color={theme.background}
+        name="close-circle"
+        size={15}
+        style={styles.closeIcon}
+      />
+    </TouchableOpacity>
+  );
+};
 
 const CategoryFilters: React.FC<CategoryFiltersProps> = ({
   selectedCategories,
@@ -36,28 +74,11 @@ const CategoryFilters: React.FC<CategoryFiltersProps> = ({
       showsHorizontalScrollIndicator={false}
     >
       {selectedCategories.map((category) => (
-        <TouchableOpacity
-          accessibilityLabel={t("search.removeCategory", { category })}
-          accessibilityRole="button"
-          activeOpacity={0.8}
+        <CategoryFilterChip
+          category={category}
           key={category}
-          onPress={() => onRemoveCategory(category)}
-          style={[
-            styles.chip,
-            { backgroundColor: theme.primary },
-            SHADOWS.small,
-          ]}
-        >
-          <Text style={[styles.chipText, { color: theme.background }]}>
-            {category}
-          </Text>
-          <Ionicons
-            color={theme.background}
-            name="close-circle"
-            size={15}
-            style={styles.closeIcon}
-          />
-        </TouchableOpacity>
+          onRemove={onRemoveCategory}
+        />
       ))}
 
       {selectedCategories.length > 1 && (
@@ -78,41 +99,41 @@ const CategoryFilters: React.FC<CategoryFiltersProps> = ({
 };
 
 const styles = StyleSheet.create({
-  content: {
-    gap: SPACING.xs,
-    paddingBottom: SPACING.xs,
-    paddingHorizontal: 2,
-  },
   chip: {
-    flexDirection: "row",
     alignItems: "center",
+    borderRadius: BORDER_RADIUS.round,
+    flexDirection: "row",
+    gap: SPACING.xs - 2,
     paddingHorizontal: SPACING.sm + 2,
     paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.round,
-    gap: SPACING.xs - 2,
   },
   chipText: {
+    fontFamily: "Onest-Medium",
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.medium,
-    fontFamily: "Onest-Medium",
+  },
+  clearChip: {
+    alignItems: "center",
+    borderRadius: BORDER_RADIUS.round,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: SPACING.xs - 2,
+    marginLeft: SPACING.xs,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: 6,
+  },
+  clearText: {
+    fontFamily: "Onest-Regular",
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.regular,
   },
   closeIcon: {
     opacity: 0.85,
   },
-  clearChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: SPACING.sm + 2,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.round,
-    borderWidth: 1,
-    gap: SPACING.xs - 2,
-    marginLeft: SPACING.xs,
-  },
-  clearText: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.regular,
-    fontFamily: "Onest-Regular",
+  content: {
+    gap: SPACING.xs,
+    paddingBottom: SPACING.xs,
+    paddingHorizontal: 2,
   },
 });
 

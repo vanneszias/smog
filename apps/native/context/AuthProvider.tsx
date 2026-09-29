@@ -105,9 +105,9 @@ async function refreshSession(): Promise<{
 
   try {
     const response = await fetch(`${serverUrl}/auth/token/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
     });
 
     if (response.ok) {
@@ -144,17 +144,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // OAuth setup
   const redirectUri = makeRedirectUri({
-    scheme: "smog",
     path: "auth-callback",
+    scheme: "smog",
   });
 
   const [request, response, promptAsync] = useAuthRequest(
     {
       clientId,
-      scopes: [],
+      extraParams: { provider: "authkit" },
       redirectUri,
       responseType: "code",
-      extraParams: { provider: "authkit" },
+      scopes: [],
     },
     discovery
   );
@@ -186,9 +186,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const exchangeResponse = await fetch(
           `${serverUrl}/auth/workos/callback`,
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ code, codeVerifier }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
           }
         );
 
@@ -204,7 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await storeRefreshToken(data.refreshToken);
         }
         if (data.accessToken) {
-          accessToken = data.accessToken;
+          ({ accessToken } = data);
         }
 
         // Store user
@@ -259,7 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return "unauthenticated";
       }
 
-      accessToken = result.accessToken;
+      ({ accessToken } = result);
       await storeRefreshToken(result.refreshToken);
       setUser(result.user);
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(result.user));
@@ -320,7 +320,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const result = await refreshSession();
         if (result) {
-          accessToken = result.accessToken;
+          ({ accessToken } = result);
           await storeRefreshToken(result.refreshToken);
           setUser(result.user);
           return accessToken;
@@ -379,17 +379,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     (): AuthContextType => ({
-      user,
-      isLoading,
-      isHandlingOAuthCallback,
-      isAuthenticated: authMode === "authenticated",
       authMode,
-      isGuest: authMode === "guest",
+      continueAsGuest,
+      getAccessToken,
       guestId,
+      isAuthenticated: authMode === "authenticated",
+      isGuest: authMode === "guest",
+      isHandlingOAuthCallback,
+      isLoading,
       signIn,
       signOut,
-      getAccessToken,
-      continueAsGuest,
+      user,
     }),
     [
       user,
@@ -436,9 +436,9 @@ export function useAuthForConvex() {
 
   return useMemo(
     () => ({
-      isLoading: isLoading || isHandlingOAuthCallback,
-      isAuthenticated: !!user,
       fetchAccessToken,
+      isAuthenticated: !!user,
+      isLoading: isLoading || isHandlingOAuthCallback,
     }),
     [isLoading, isHandlingOAuthCallback, user, fetchAccessToken]
   );

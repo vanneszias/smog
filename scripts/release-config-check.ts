@@ -108,9 +108,14 @@ for (const fingerprint of androidTarget.sha256_cert_fingerprints) {
 }
 
 assert(webManifest.icons.length > 0, "Web manifest must contain icons");
-for (const { src } of webManifest.icons) {
-  const iconPath = `apps/web/public/${src.replace(/^\//u, "")}`;
-  assert(await Bun.file(iconPath).exists(), `Missing web manifest icon ${src}`);
+const iconChecks = await Promise.all(
+  webManifest.icons.map(async ({ src }) => {
+    const iconPath = `apps/web/public/${src.replace(/^\//u, "")}`;
+    return { exists: await Bun.file(iconPath).exists(), src };
+  })
+);
+for (const { exists, src } of iconChecks) {
+  assert(exists, `Missing web manifest icon ${src}`);
 }
 
 const indexHtml = await Bun.file("apps/web/index.html").text();
@@ -123,8 +128,14 @@ assert(
   "Web index must link to manifest.webmanifest"
 );
 
-for (const composePath of ["compose.yml", "maintenance/compose.yml"]) {
-  const parsed = Bun.YAML.parse(await Bun.file(composePath).text());
+const composeFiles = await Promise.all(
+  ["compose.yml", "maintenance/compose.yml"].map(async (composePath) => ({
+    composePath,
+    text: await Bun.file(composePath).text(),
+  }))
+);
+for (const { composePath, text } of composeFiles) {
+  const parsed = Bun.YAML.parse(text);
   assert(parsed && typeof parsed === "object", `${composePath} is invalid`);
 }
 
@@ -145,12 +156,17 @@ assert(
 );
 
 const bunVersion = packageJson.packageManager.replace(/^bun@/u, "");
-for (const dockerfile of [
-  "apps/remotion/Dockerfile",
-  "apps/server/Dockerfile",
-  "apps/web/Dockerfile",
-]) {
-  const contents = await Bun.file(dockerfile).text();
+const dockerfiles = await Promise.all(
+  [
+    "apps/remotion/Dockerfile",
+    "apps/server/Dockerfile",
+    "apps/web/Dockerfile",
+  ].map(async (dockerfile) => ({
+    contents: await Bun.file(dockerfile).text(),
+    dockerfile,
+  }))
+);
+for (const { contents, dockerfile } of dockerfiles) {
   assert(
     contents.includes(`oven/bun:${bunVersion}`),
     `${dockerfile} must use Bun ${bunVersion}`

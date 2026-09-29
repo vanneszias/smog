@@ -8,7 +8,7 @@ import {
   Tag,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { AdminTable } from "./AdminTable";
 import { CategoriesManagement } from "./CategoriesManagement";
 import { EmailPreview } from "./EmailPreview";
@@ -32,47 +32,49 @@ type TabValue =
   | "table"
   | "emails";
 
-const navigation: Array<{
+interface NavItem {
+  description: string;
+  icon: React.ElementType;
   id: TabValue;
   label: string;
-  icon: React.ElementType;
-  description: string;
-}> = [
+}
+
+const navigation: NavItem[] = [
   {
+    description: "Sponsorships awaiting approval",
+    icon: Clock,
     id: "pending",
     label: "Pending Review",
-    icon: Clock,
-    description: "Sponsorships awaiting approval",
   },
   {
+    description: "All sponsorship records",
+    icon: Users,
     id: "sponsorships",
     label: "Sponsorships",
-    icon: Users,
-    description: "All sponsorship records",
   },
   {
+    description: "Gesture library management",
+    icon: Hand,
     id: "gestures",
     label: "Gestures",
-    icon: Hand,
-    description: "Gesture library management",
   },
   {
+    description: "Fast Excel-like editing",
+    icon: Table2,
     id: "table",
     label: "Table Editor",
-    icon: Table2,
-    description: "Fast Excel-like editing",
   },
   {
+    description: "Manage gesture categories",
+    icon: Tag,
     id: "categories",
     label: "Categories",
-    icon: Tag,
-    description: "Manage gesture categories",
   },
   {
+    description: "Bekijk e-mailsjablonen",
+    icon: Mail,
     id: "emails",
     label: "E-mails",
-    icon: Mail,
-    description: "Bekijk e-mailsjablonen",
   },
 ];
 
@@ -90,44 +92,14 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
           <div className="mb-3 px-3 font-medium text-[11px] text-[var(--admin-text-muted)] uppercase tracking-wider">
             Management
           </div>
-          {navigation.map((item) => {
-            const isActive = activeTab === item.id;
-            const Icon = item.icon;
-
-            return (
-              <button
-                className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all duration-200 ${
-                  isActive
-                    ? "bg-[var(--admin-accent)]/10 text-[var(--admin-accent)]"
-                    : "text-[var(--admin-text-secondary)] hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)]"
-                }`}
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                type="button"
-              >
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-[var(--admin-accent)] text-white"
-                      : "bg-[var(--admin-icon-bg)] text-[var(--admin-text-muted)] group-hover:bg-[var(--admin-accent)]/20 group-hover:text-[var(--admin-accent)]"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium text-sm">{item.label}</div>
-                  <div
-                    className={`text-xs ${isActive ? "text-[var(--admin-accent)]/70" : "text-[var(--admin-text-muted)]"}`}
-                  >
-                    {item.description}
-                  </div>
-                </div>
-                {isActive && (
-                  <div className="h-2 w-2 rounded-full bg-[var(--admin-accent)]" />
-                )}
-              </button>
-            );
-          })}
+          {navigation.map((item) => (
+            <NavButton
+              isActive={activeTab === item.id}
+              item={item}
+              key={item.id}
+              onSelect={setActiveTab}
+            />
+          ))}
         </nav>
 
         {/* User Section */}
@@ -262,5 +234,52 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         `}
       </style>
     </div>
+  );
+}
+
+interface NavButtonProps {
+  isActive: boolean;
+  item: NavItem;
+  onSelect: (id: TabValue) => void;
+}
+
+function NavButton({ isActive, item, onSelect }: NavButtonProps) {
+  const Icon = item.icon;
+
+  const handleClick = useCallback((): void => {
+    onSelect(item.id);
+  }, [item.id, onSelect]);
+
+  return (
+    <button
+      className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all duration-200 ${
+        isActive
+          ? "bg-[var(--admin-accent)]/10 text-[var(--admin-accent)]"
+          : "text-[var(--admin-text-secondary)] hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)]"
+      }`}
+      onClick={handleClick}
+      type="button"
+    >
+      <div
+        className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+          isActive
+            ? "bg-[var(--admin-accent)] text-white"
+            : "bg-[var(--admin-icon-bg)] text-[var(--admin-text-muted)] group-hover:bg-[var(--admin-accent)]/20 group-hover:text-[var(--admin-accent)]"
+        }`}
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="flex-1">
+        <div className="font-medium text-sm">{item.label}</div>
+        <div
+          className={`text-xs ${isActive ? "text-[var(--admin-accent)]/70" : "text-[var(--admin-text-muted)]"}`}
+        >
+          {item.description}
+        </div>
+      </div>
+      {isActive ? (
+        <div className="h-2 w-2 rounded-full bg-[var(--admin-accent)]" />
+      ) : null}
+    </button>
   );
 }

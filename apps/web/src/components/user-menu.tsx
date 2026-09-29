@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth";
 import { Skeleton } from "./ui/skeleton";
@@ -45,6 +45,20 @@ export default function UserMenu() {
     };
   }, [isOpen]);
 
+  const handleToggleMenu = useCallback((): void => {
+    setIsOpen(!isOpen);
+  }, [isOpen]);
+
+  const handleCloseMenu = useCallback((): void => {
+    setIsOpen(false);
+  }, []);
+
+  const handleSignOut = useCallback((): void => {
+    signOut();
+    setIsOpen(false);
+    navigate({ to: "/" });
+  }, [navigate, signOut]);
+
   if (isLoading) {
     return <Skeleton className="h-5 w-20" />;
   }
@@ -65,7 +79,7 @@ export default function UserMenu() {
     <div className="relative" ref={menuRef}>
       <button
         className="cursor-pointer text-primary hover:underline"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleMenu}
         type="button"
       >
         {displayName}
@@ -76,18 +90,14 @@ export default function UserMenu() {
           <div className="flex flex-col p-2">
             <Link
               className="flex items-center gap-2 rounded-md px-3 py-2.5 text-left text-base text-foreground transition-colors hover:bg-secondary"
-              onClick={() => setIsOpen(false)}
+              onClick={handleCloseMenu}
               to="/account"
             >
               {t("web.userMenu.accountSettings")}
             </Link>
             <button
               className="flex cursor-pointer items-center rounded-md px-3 py-2.5 text-left text-base text-destructive transition-colors hover:bg-secondary"
-              onClick={() => {
-                signOut();
-                setIsOpen(false);
-                navigate({ to: "/" });
-              }}
+              onClick={handleSignOut}
               type="button"
             >
               {t("web.userMenu.signOut")}

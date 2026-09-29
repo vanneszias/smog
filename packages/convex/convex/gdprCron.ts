@@ -21,23 +21,20 @@ export const cleanupInactiveGuests = internalMutation({
 
     for (const guest of inactiveGuests) {
       // Delete favorites
+      // biome-ignore lint/performance/noAwaitInLoops: clean up one guest account at a time to keep the transaction's work bounded and ordered
       const favorites = await ctx.db
         .query("user_favorites")
         .withIndex("by_user", (q) => q.eq("userId", guest._id))
         .collect();
 
-      for (const fav of favorites) {
-        await ctx.db.delete(fav._id);
-      }
+      await Promise.all(favorites.map((fav) => ctx.db.delete(fav._id)));
 
       const consents = await ctx.db
         .query("user_consents")
         .withIndex("by_user", (q) => q.eq("userId", guest._id))
         .collect();
 
-      for (const consent of consents) {
-        await ctx.db.delete(consent._id);
-      }
+      await Promise.all(consents.map((consent) => ctx.db.delete(consent._id)));
 
       // Delete owned lists and their items
       const lists = await ctx.db
@@ -46,14 +43,13 @@ export const cleanupInactiveGuests = internalMutation({
         .collect();
 
       for (const list of lists) {
+        // biome-ignore lint/performance/noAwaitInLoops: delete each list's items before the list itself, one list at a time
         const items = await ctx.db
           .query("gesture_list_items")
           .withIndex("by_list", (q) => q.eq("listId", list._id))
           .collect();
 
-        for (const item of items) {
-          await ctx.db.delete(item._id);
-        }
+        await Promise.all(items.map((item) => ctx.db.delete(item._id)));
 
         await ctx.db.delete(list._id);
       }
@@ -79,9 +75,7 @@ export const cleanupOldAdminLogs = internalMutation({
       .withIndex("by_created_at", (q) => q.lt("createdAt", threeYearsAgo))
       .collect();
 
-    for (const log of oldLogs) {
-      await ctx.db.delete(log._id);
-    }
+    await Promise.all(oldLogs.map((log) => ctx.db.delete(log._id)));
 
     console.log(`Cleaned up ${oldLogs.length} old admin logs`);
     return { deletedCount: oldLogs.length };

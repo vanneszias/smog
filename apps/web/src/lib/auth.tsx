@@ -56,7 +56,7 @@ interface OAuthCallbackParams {
 }
 
 function storeSession(session: SessionResult): WorkOSUser {
-  accessToken = session.accessToken;
+  ({ accessToken } = session);
   tokenExpiry = getTokenExpiry(session.accessToken);
   return session.user;
 }
@@ -87,10 +87,10 @@ function validateOAuthState(returnedState: string | null): void {
 
 async function exchangeOAuthCode(code: string): Promise<SessionResult | null> {
   const response = await fetch(`${serverUrl}/auth/workos/callback`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify({ code }),
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
   });
 
   if (!response.ok) {
@@ -113,8 +113,8 @@ async function exchangeOAuthCode(code: string): Promise<SessionResult | null> {
 async function refreshSession(): Promise<SessionResult | null> {
   try {
     const response = await fetch(`${serverUrl}/auth/token/refresh`, {
-      method: "POST",
       credentials: "include",
+      method: "POST",
     });
 
     if (response.ok) {
@@ -216,8 +216,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     try {
       await fetch(`${serverUrl}/auth/token/clear`, {
-        method: "POST",
         credentials: "include",
+        method: "POST",
       });
     } catch (error) {
       logger.error("[Auth] Sign out failed:", error);
@@ -230,20 +230,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo((): WebAuthContextType => {
     const authIsLoading = isLoading || isHandlingCallback;
     return {
-      user,
-      isLoading: authIsLoading,
-      isHandlingOAuthCallback: isHandlingCallback,
-      isAuthenticated: !!user,
       authMode: authIsLoading
         ? "loading"
         : user
           ? "authenticated"
           : "unauthenticated",
-      isGuest: false,
+      getAccessToken,
       guestId: null,
+      isAuthenticated: !!user,
+      isGuest: false,
+      isHandlingOAuthCallback: isHandlingCallback,
+      isLoading: authIsLoading,
       signIn,
       signOut,
-      getAccessToken,
+      user,
     };
   }, [user, isLoading, isHandlingCallback, signIn, signOut, getAccessToken]);
 
@@ -286,9 +286,9 @@ export function useAuthForConvex() {
 
   return useMemo(
     () => ({
-      isLoading,
-      isAuthenticated: !!user,
       fetchAccessToken,
+      isAuthenticated: !!user,
+      isLoading,
     }),
     [isLoading, user, fetchAccessToken]
   );

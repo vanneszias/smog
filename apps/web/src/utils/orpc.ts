@@ -30,8 +30,8 @@ async function getAccessTokenFromProvider(): Promise<string | null> {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes - how long before refetch in background
       gcTime: 24 * 60 * 60 * 1000, // 24 hours - match localStorage persist duration
+      staleTime: 5 * 60 * 1000, // 5 minutes - how long before refetch in background
     },
   },
   queryCache: new QueryCache({
@@ -49,7 +49,6 @@ export const queryClient = new QueryClient({
 });
 
 export const link = new RPCLink({
-  url: `${import.meta.env.VITE_SERVER_URL}/rpc`,
   async fetch(_url, options) {
     const token = await getAccessTokenFromProvider();
     const headers = new Headers(
@@ -66,6 +65,7 @@ export const link = new RPCLink({
       headers,
     });
   },
+  url: `${import.meta.env.VITE_SERVER_URL}/rpc`,
 });
 
 export const client: AppRouterClient = createORPCClient(link);

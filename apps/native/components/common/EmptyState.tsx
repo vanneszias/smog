@@ -21,14 +21,14 @@ const EmptyState: React.FC<EmptyStateProps> = ({ message, recentSearches }) => {
 
 const styles = StyleSheet.create({
   container: {
+    alignItems: "center",
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
   },
   message: {
     fontSize: FONT_SIZE.md,
-    textAlign: "center",
     marginBottom: SPACING.lg,
+    textAlign: "center",
   },
 });
 

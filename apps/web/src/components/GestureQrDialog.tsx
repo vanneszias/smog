@@ -1,6 +1,6 @@
 import { Copy, Download } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,8 @@ const QR_SIZE = 1024;
 interface GestureQrDialogProps {
   gestureId: string;
   gestureName: string;
-  open: boolean;
   onOpenChange: (open: boolean) => void;
+  open: boolean;
 }
 
 function toFileName(name: string): string {
@@ -43,7 +43,7 @@ export function GestureQrDialog({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const url = getGestureUrl(gestureId);
 
-  const handleCopy = () => {
+  const handleCopy = useCallback((): void => {
     navigator.clipboard
       .writeText(url)
       .then(() => toast.success(t("ui.gestureDetail.linkCopied")))
@@ -51,9 +51,9 @@ export function GestureQrDialog({
         console.error("[GestureQrDialog] Failed to copy link:", error);
         toast.error(url);
       });
-  };
+  }, [t, url]);
 
-  const handleDownload = () => {
+  const handleDownload = useCallback((): void => {
     const canvas = canvasRef.current;
     if (!canvas) {
       return;
@@ -62,7 +62,7 @@ export function GestureQrDialog({
     link.href = canvas.toDataURL("image/png");
     link.download = toFileName(gestureName);
     link.click();
-  };
+  }, [gestureName]);
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
@@ -79,7 +79,7 @@ export function GestureQrDialog({
             marginSize={2}
             ref={canvasRef}
             size={QR_SIZE}
-            style={{ width: 256, height: 256 }}
+            style={{ height: 256, width: 256 }}
             title={url}
             value={url}
           />

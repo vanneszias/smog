@@ -10,17 +10,17 @@ import { EmailLayout } from "./EmailLayout";
 import * as S from "./styles";
 
 interface AdminNewSponsorshipEmailProps {
-  sponsorName: string;
-  sponsorEmail: string;
-  gestureNames: string[];
   adminPanelUrl?: string;
-  contactFullName: string;
   contactCompany?: string;
-  invoiceRequested?: boolean;
-  invoiceName?: string;
-  invoiceVatNumber?: string;
-  invoiceEmail?: string;
+  contactFullName: string;
   durationYears?: number;
+  gestureNames: string[];
+  invoiceEmail?: string;
+  invoiceName?: string;
+  invoiceRequested?: boolean;
+  invoiceVatNumber?: string;
+  sponsorEmail: string;
+  sponsorName: string;
 }
 
 export function AdminNewSponsorshipEmail({
@@ -92,23 +92,23 @@ export function AdminNewSponsorshipEmail({
         <Text style={S.textSmall}>
           <strong>Factuur gevraagd:</strong> {invoiceRequested ? "Ja" : "Nee"}
         </Text>
-        {invoiceRequested && (
+        {invoiceRequested ? (
           <>
-            {invoiceName && (
+            {invoiceName ? (
               <Text style={S.textSmall}>
                 <strong>Factuurnaam:</strong> {invoiceName}
               </Text>
-            )}
-            {invoiceVatNumber && (
+            ) : null}
+            {invoiceVatNumber ? (
               <Text style={S.textSmall}>
                 <strong>BTW-nummer:</strong> {invoiceVatNumber}
               </Text>
-            )}
+            ) : null}
             <Text style={{ ...S.textSmall, margin: "0" }}>
               <strong>Factuur e-mail:</strong> {invoiceEmail ?? sponsorEmail}
             </Text>
           </>
-        )}
+        ) : null}
       </Section>
 
       <Section style={S.buttonSection}>

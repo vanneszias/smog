@@ -12,11 +12,11 @@ const PLAY_STORE_URL =
 const STORAGE_KEY = "app-store-banner-dismissed";
 
 interface ConfettiPiece {
-  id: number;
-  left: string;
+  color: string;
   delay: string;
   duration: string;
-  color: string;
+  id: number;
+  left: string;
 }
 
 export function AppStoreBanner() {
@@ -37,11 +37,11 @@ export function AppStoreBanner() {
 
     for (let i = 0; i < 30; i++) {
       pieces.push({
-        id: i,
-        left: `${Math.random() * 100}%`,
+        color: colors[Math.floor(Math.random() * colors.length)],
         delay: `${Math.random() * 0.5}s`,
         duration: `${1 + Math.random() * 2}s`,
-        color: colors[Math.floor(Math.random() * colors.length)],
+        id: i,
+        left: `${Math.random() * 100}%`,
       });
     }
     setConfetti(pieces);
@@ -67,10 +67,10 @@ export function AppStoreBanner() {
     }
   }, [analyticsConsent, generateConfetti]);
 
-  const handleDismiss = () => {
+  const handleDismiss = useCallback((): void => {
     localStorage.setItem(STORAGE_KEY, "true");
     setIsDismissed(true);
-  };
+  }, []);
 
   if (isDismissed || !isVisible) {
     return null;

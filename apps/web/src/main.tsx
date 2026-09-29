@@ -48,11 +48,11 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
  * - Access tokens stored in memory only (cleared on page close)
  */
 const router = createRouter({
-  routeTree,
-  defaultPreload: "intent",
-  defaultPendingComponent: () => <Loader />,
   context: { orpc, queryClient },
+  defaultPendingComponent: () => <Loader />,
+  defaultPreload: "intent",
   notFoundMode: "fuzzy",
+  routeTree,
   Wrap({ children }: { children: React.ReactNode }) {
     return (
       <AuthProvider>

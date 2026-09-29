@@ -23,21 +23,6 @@ async function requireCurrentUserId(
 }
 
 export const favoritesRouter = {
-  // Get user's favorite gesture IDs
-  getUserFavorites: protectedProcedure
-    .input(z.object({ convexUserId: z.string() }))
-    .handler(async ({ input, context }) => {
-      const userId = await requireCurrentUserId(
-        context.workosId,
-        input.convexUserId
-      );
-      const favoriteIds = await convexClient.query(
-        api.favorites.getUserFavorites,
-        withServiceAuth({ userId })
-      );
-      return favoriteIds;
-    }),
-
   // Get user's favorite gestures with full data
   getUserFavoriteGestures: protectedProcedure
     .input(z.object({ convexUserId: z.string() }))
@@ -74,28 +59,19 @@ export const favoritesRouter = {
           .filter(Boolean),
       }));
     }),
-
-  // Toggle favorite
-  toggleFavorite: protectedProcedure
-    .input(
-      z.object({
-        convexUserId: z.string(),
-        gestureId: z.string(),
-      })
-    )
+  // Get user's favorite gesture IDs
+  getUserFavorites: protectedProcedure
+    .input(z.object({ convexUserId: z.string() }))
     .handler(async ({ input, context }) => {
       const userId = await requireCurrentUserId(
         context.workosId,
         input.convexUserId
       );
-      const result = await convexClient.mutation(
-        api.favorites.toggleUserFavorite,
-        withServiceAuth({
-          userId,
-          gestureId: input.gestureId as Id<"gestures">,
-        })
+      const favoriteIds = await convexClient.query(
+        api.favorites.getUserFavorites,
+        withServiceAuth({ userId })
       );
-      return result; // true if added, false if removed
+      return favoriteIds;
     }),
 
   // Check if gesture is favorited
@@ -114,10 +90,33 @@ export const favoritesRouter = {
       const isFavorited = await convexClient.query(
         api.favorites.isFavorite,
         withServiceAuth({
-          userId,
           gestureId: input.gestureId as Id<"gestures">,
+          userId,
         })
       );
       return isFavorited;
+    }),
+
+  // Toggle favorite
+  toggleFavorite: protectedProcedure
+    .input(
+      z.object({
+        convexUserId: z.string(),
+        gestureId: z.string(),
+      })
+    )
+    .handler(async ({ input, context }) => {
+      const userId = await requireCurrentUserId(
+        context.workosId,
+        input.convexUserId
+      );
+      const result = await convexClient.mutation(
+        api.favorites.toggleUserFavorite,
+        withServiceAuth({
+          gestureId: input.gestureId as Id<"gestures">,
+          userId,
+        })
+      );
+      return result; // true if added, false if removed
     }),
 };

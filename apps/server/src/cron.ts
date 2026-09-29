@@ -39,6 +39,7 @@ export function startExpirationCronJob() {
           );
 
           // Expire the sponsorship (this also restores the original video)
+          // biome-ignore lint/performance/noAwaitInLoops: process expirations one at a time to avoid bursts against Convex and Mux; errors are isolated per sponsorship
           await convex.mutation(
             api.sponsorships.expire,
             withServiceAuth({ sponsorshipId: sponsorship._id })
@@ -97,6 +98,7 @@ export function startRenewalReminderCronJob() {
       for (const sponsorship of expiringSoon) {
         try {
           // Look up the gesture name for the email
+          // biome-ignore lint/performance/noAwaitInLoops: enqueue email then mark reminder sent per sponsorship, sequentially to avoid bursts against Convex and Redis
           const gesture = await convex.query(api.gestures.getById, {
             id: sponsorship.gestureId as Id<"gestures">,
           });
@@ -105,12 +107,12 @@ export function startRenewalReminderCronJob() {
           // Enqueue renewal reminder email
           await enqueueEmail(
             {
-              type: "renewal_reminder",
-              to: sponsorship.sponsorEmail,
+              endDate: sponsorship.endDate,
+              gestureName,
               sponsorName:
                 sponsorship.contactFullName || sponsorship.sponsorName,
-              gestureName,
-              endDate: sponsorship.endDate,
+              to: sponsorship.sponsorEmail,
+              type: "renewal_reminder",
             },
             `renewal_reminder:${sponsorship._id}`
           );
@@ -167,6 +169,7 @@ export function startStalePendingPaymentCleanupJob() {
 
       for (const sponsorship of stale) {
         try {
+          // biome-ignore lint/performance/noAwaitInLoops: cancel stale sponsorships one at a time to avoid bursts against Convex; errors are isolated per sponsorship
           await convex.mutation(
             api.sponsorships.cancelPendingPayment,
             withServiceAuth({ sponsorshipId: sponsorship._id })

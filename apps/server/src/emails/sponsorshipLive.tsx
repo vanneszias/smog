@@ -12,10 +12,10 @@ import { EmailLayout } from "./EmailLayout";
 import * as S from "./styles";
 
 interface SponsorshipLiveEmailProps {
-  sponsorName: string;
-  gestureName: string;
-  startDate: number;
   endDate: number;
+  gestureName: string;
+  sponsorName: string;
+  startDate: number;
 }
 
 export function SponsorshipLiveEmail({

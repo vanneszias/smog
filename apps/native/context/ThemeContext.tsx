@@ -5,17 +5,17 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useColorScheme } from "react-native";
 
 interface ThemeContextType {
+  setThemeMode: (mode: ThemeMode) => void;
   theme: ThemeColors;
   themeMode: ThemeMode;
-  setThemeMode: (mode: ThemeMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: themes.light,
-  themeMode: "system",
   setThemeMode: () => {
     /* noop */
   },
+  theme: themes.light,
+  themeMode: "system",
 });
 
 export const useTheme = () => useContext(ThemeContext);
@@ -52,7 +52,7 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       : themes[themeMode as "light" | "dark"];
 
   return (
-    <ThemeContext.Provider value={{ theme, themeMode, setThemeMode }}>
+    <ThemeContext.Provider value={{ setThemeMode, theme, themeMode }}>
       {children}
     </ThemeContext.Provider>
   );

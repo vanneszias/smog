@@ -8,17 +8,17 @@ import logger, {
 } from "@/utils/logger";
 
 interface LogContextType {
-  logs: LogRecord[];
   clearLogs: () => void;
   exportLogs: () => string;
+  logs: LogRecord[];
 }
 
 export const LogContext = createContext<LogContextType>({
-  logs: [],
   clearLogs: () => {
     /* noop */
   },
   exportLogs: () => "",
+  logs: [],
 });
 
 const MAX_LOGS = 2000;
@@ -57,7 +57,7 @@ export const LogProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   return (
-    <LogContext.Provider value={{ logs, clearLogs, exportLogs }}>
+    <LogContext.Provider value={{ clearLogs, exportLogs, logs }}>
       {children}
     </LogContext.Provider>
   );

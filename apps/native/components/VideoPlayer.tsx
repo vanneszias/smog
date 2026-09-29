@@ -34,14 +34,14 @@ import { useVideoPlayerState } from "./video/useVideoPlayerState";
 const useGlass = isLiquidGlassAvailable();
 
 interface VideoPlayerProps {
-  /** MUX playback ID for the gesture video. */
-  playbackId: string;
   /** Whether to start playing immediately. Defaults to `true`. */
   autoPlay?: boolean;
   /** Called when the video reaches the last 5 seconds (triggers once per loop). */
   onComplete?: () => void;
   /** Called when the video plays to its end. */
   onPlayToEnd?: () => void;
+  /** MUX playback ID for the gesture video. */
+  playbackId: string;
 }
 
 /**
@@ -57,10 +57,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const { t } = useTranslation();
   const { player, isLoading, isPlaying, togglePlayPause } = useVideoPlayerState(
     {
-      playbackId,
       autoPlay,
       onComplete,
       onPlayToEnd,
+      playbackId,
     }
   );
 
@@ -74,11 +74,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         style={styles.video}
       />
 
-      {isLoading && (
+      {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={theme.primary} size="large" />
         </View>
-      )}
+      ) : null}
 
       <TouchableOpacity
         accessibilityLabel={t(isPlaying ? "common.pause" : "common.play")}
@@ -107,32 +107,32 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    width: "100%",
     aspectRatio: 3 / 4,
     backgroundColor: "#000",
     borderRadius: BORDER_RADIUS.md,
     overflow: "hidden",
     position: "relative",
+    width: "100%",
   },
-  video: {
-    ...StyleSheet.absoluteFillObject,
+  controlButton: {
+    alignItems: "center",
+    borderRadius: 20,
+    bottom: SPACING.md,
+    height: 40,
+    justifyContent: "center",
+    overflow: "hidden",
+    position: "absolute",
+    right: SPACING.md,
+    width: 40,
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.3)",
-  },
-  controlButton: {
-    position: "absolute",
-    bottom: SPACING.md,
-    right: SPACING.md,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
+  },
+  video: {
+    ...StyleSheet.absoluteFillObject,
   },
 });
 

@@ -117,56 +117,11 @@ export default function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 40,
-  },
-  contentSmall: {
-    paddingTop: 20,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-  },
-  logoContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  logo: {
-    width: 220,
-    height: 150,
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 18,
-    textAlign: "center",
-    opacity: 0.9,
-    marginTop: 20,
-    lineHeight: 24,
-    paddingHorizontal: 10,
-  },
-  subtitleSmall: {
-    fontSize: 16,
-    marginTop: 16,
-    lineHeight: 22,
-  },
   buttonContainer: {
-    width: "100%",
     flexDirection: "row",
     gap: 16,
     minHeight: 56,
+    width: "100%",
   },
   buttonContainerSmall: {
     gap: 12,
@@ -175,42 +130,87 @@ const styles = StyleSheet.create({
   buttonContainerStacked: {
     flexDirection: "column",
   },
-  primaryButton: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 56,
+  buttonSmall: {
+    minHeight: 48,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
   },
-  primaryButtonText: {
-    fontSize: 18,
-    fontWeight: "600",
-    textAlign: "center",
+  buttonTextSmall: {
+    fontSize: 15,
+  },
+  container: {
+    flex: 1,
+  },
+  content: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "space-between",
+    paddingBottom: 40,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+  },
+  contentSmall: {
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   guestButton: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
     alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.3)",
     borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: "center",
     minHeight: 56,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   guestButtonText: {
     fontSize: 16,
     opacity: 0.9,
     textAlign: "center",
   },
-  buttonSmall: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    minHeight: 48,
+  logo: {
+    height: 150,
+    marginBottom: 24,
+    width: 220,
   },
-  buttonTextSmall: {
-    fontSize: 15,
+  logoContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+  },
+  primaryButton: {
+    alignItems: "center",
+    borderRadius: 12,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 56,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  primaryButtonText: {
+    fontSize: 18,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 18,
+    lineHeight: 24,
+    marginTop: 20,
+    opacity: 0.9,
+    paddingHorizontal: 10,
+    textAlign: "center",
+  },
+  subtitleSmall: {
+    fontSize: 16,
+    lineHeight: 22,
+    marginTop: 16,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textAlign: "center",
   },
 });

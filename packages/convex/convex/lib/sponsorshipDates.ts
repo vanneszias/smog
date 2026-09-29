@@ -43,7 +43,7 @@ export function activateDates(durationYears: number): {
   endDate: number;
 } {
   const startDate = Date.now();
-  return { startDate, endDate: startDate + durationYears * MS_PER_YEAR };
+  return { endDate: startDate + durationYears * MS_PER_YEAR, startDate };
 }
 
 /**

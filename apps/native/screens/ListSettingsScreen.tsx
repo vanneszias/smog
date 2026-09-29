@@ -4,7 +4,7 @@ import type { Id } from "@smog/convex/dataModel";
 import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SPACING } from "@smog/styles";
 import { useMutation } from "convex/react";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Share,
@@ -51,6 +51,14 @@ export default function ListSettingsScreen() {
     ? t("lists.favorites")
     : (list?.name ?? t("tabs.lists"));
 
+  const handleOpenRename = useCallback(() => {
+    setIsRenameOpen(true);
+  }, []);
+
+  const handleCloseRename = useCallback(() => {
+    setIsRenameOpen(false);
+  }, []);
+
   const handleRename = async (name: string) => {
     if (!(userId && list && !list.isDefaultFavorites)) {
       return;
@@ -58,7 +66,7 @@ export default function ListSettingsScreen() {
 
     setIsSavingName(true);
     try {
-      await renameList({ userId, listId: list._id, name: name.trim() });
+      await renameList({ listId: list._id, name: name.trim(), userId });
       triggerHaptic("success");
       showToast(t("lists.listRenamed"));
       setIsRenameOpen(false);
@@ -79,10 +87,10 @@ export default function ListSettingsScreen() {
     setIsUpdatingSharing(true);
     try {
       const updated = await updateListSharing({
-        userId,
-        listId: list._id,
-        visibility: shared ? "shared" : "private",
         allowSharedEditing: false,
+        listId: list._id,
+        userId,
+        visibility: shared ? "shared" : "private",
       });
       triggerHaptic("success");
       showToast(shared ? t("lists.listIsShared") : t("lists.listIsPrivate"));
@@ -95,6 +103,10 @@ export default function ListSettingsScreen() {
     } finally {
       setIsUpdatingSharing(false);
     }
+  };
+
+  const handleSharedChange = (value: boolean): void => {
+    setShared(value);
   };
 
   const shareList = async () => {
@@ -125,16 +137,14 @@ export default function ListSettingsScreen() {
     }
 
     Alert.alert(t("lists.deleteTitle"), t("lists.deleteMessage"), [
-      { text: t("common.cancel"), style: "cancel" },
+      { style: "cancel", text: t("common.cancel") },
       {
-        text: t("common.delete"),
-        style: "destructive",
         onPress: async () => {
           const deletedListId = list._id;
           router.dismissTo("/lists");
 
           try {
-            await deleteList({ userId, listId: deletedListId });
+            await deleteList({ listId: deletedListId, userId });
             triggerHaptic("success");
             showToast(t("lists.listDeleted"));
           } catch (error) {
@@ -143,6 +153,8 @@ export default function ListSettingsScreen() {
             showToast(t("lists.deleteFailed"));
           }
         },
+        style: "destructive",
+        text: t("common.delete"),
       },
     ]);
   };
@@ -151,8 +163,8 @@ export default function ListSettingsScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
         options={{
-          title: t("lists.listSettings"),
           headerBackButtonDisplayMode: "minimal",
+          title: t("lists.listSettings"),
         }}
       />
 
@@ -175,7 +187,7 @@ export default function ListSettingsScreen() {
       <View style={[styles.section, { backgroundColor: theme.card }]}>
         <TouchableOpacity
           disabled={Boolean(list?.isDefaultFavorites)}
-          onPress={() => setIsRenameOpen(true)}
+          onPress={handleOpenRename}
           style={styles.row}
         >
           <Ionicons color={theme.primary} name="pencil-outline" size={22} />
@@ -207,9 +219,7 @@ export default function ListSettingsScreen() {
           <Switch
             accessibilityLabel={t("lists.shared")}
             disabled={isUpdatingSharing}
-            onValueChange={(value) => {
-              setShared(value);
-            }}
+            onValueChange={handleSharedChange}
             trackColor={{ false: theme.border, true: theme.primary }}
             value={list?.visibility === "shared"}
           />
@@ -244,7 +254,7 @@ export default function ListSettingsScreen() {
       <ListNameModal
         initialName={list?.name}
         isSaving={isSavingName}
-        onClose={() => setIsRenameOpen(false)}
+        onClose={handleCloseRename}
         onSave={handleRename}
         title={t("lists.rename")}
         visible={isRenameOpen}
@@ -257,6 +267,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: SPACING.md,
+  },
+  deleteButton: {
+    alignItems: "center",
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: SPACING.sm,
+    justifyContent: "center",
+    marginTop: SPACING.lg,
+    minHeight: 54,
+  },
+  deleteText: {
+    color: "#c43d3d",
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
   },
   hero: {
     alignItems: "center",
@@ -279,10 +304,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xl,
     fontWeight: FONT_WEIGHT.bold,
   },
-  section: {
-    borderRadius: BORDER_RADIUS.lg,
-    overflow: "hidden",
-  },
   row: {
     alignItems: "center",
     flexDirection: "row",
@@ -294,32 +315,21 @@ const styles = StyleSheet.create({
   rowCopy: {
     flex: 1,
   },
-  rowTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
   rowDescription: {
     fontSize: FONT_SIZE.xs,
     lineHeight: 17,
     marginTop: 3,
   },
+  rowTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  section: {
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: "hidden",
+  },
   separator: {
     height: StyleSheet.hairlineWidth,
     marginLeft: 58,
-  },
-  deleteButton: {
-    alignItems: "center",
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    gap: SPACING.sm,
-    justifyContent: "center",
-    marginTop: SPACING.lg,
-    minHeight: 54,
-  },
-  deleteText: {
-    color: "#c43d3d",
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
   },
 });

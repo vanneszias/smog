@@ -1,5 +1,6 @@
 import { availableLocales } from "@smog/i18n";
 import { Languages } from "lucide-react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 import {
@@ -9,8 +10,29 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 
-export function LanguageToggle() {
+interface LanguageMenuItemProps {
+  locale: (typeof availableLocales)[number];
+}
+
+function LanguageMenuItem({ locale }: LanguageMenuItemProps) {
   const { i18n, t } = useTranslation();
+
+  const handleSelect = useCallback((): void => {
+    i18n.changeLanguage(locale).catch((error: unknown) => {
+      console.error("[languageToggle] Failed to change language:", error);
+    });
+  }, [i18n, locale]);
+
+  return (
+    <DropdownMenuItem onSelect={handleSelect}>
+      {t(`languages.${locale}`)}
+      {i18n.language === locale && " ✓"}
+    </DropdownMenuItem>
+  );
+}
+
+export function LanguageToggle() {
+  const { t } = useTranslation();
 
   return (
     <DropdownMenu>
@@ -22,20 +44,7 @@ export function LanguageToggle() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {availableLocales.map((locale) => (
-          <DropdownMenuItem
-            key={locale}
-            onSelect={() => {
-              i18n.changeLanguage(locale).catch((error: unknown) => {
-                console.error(
-                  "[languageToggle] Failed to change language:",
-                  error
-                );
-              });
-            }}
-          >
-            {t(`languages.${locale}`)}
-            {i18n.language === locale && " ✓"}
-          </DropdownMenuItem>
+          <LanguageMenuItem key={locale} locale={locale} />
         ))}
       </DropdownMenuContent>
     </DropdownMenu>

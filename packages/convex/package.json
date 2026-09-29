@@ -11,8 +11,8 @@
   },
   "scripts": {
     "codegen": "convex codegen",
-    "dev": "convex dev",
     "deploy": "convex deploy",
+    "dev": "convex dev",
     "test": "vitest run",
     "test:watch": "vitest"
   },

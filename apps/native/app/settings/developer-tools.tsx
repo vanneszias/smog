@@ -39,9 +39,9 @@ const DeveloperToolsScreen: React.FC = () => {
     try {
       const file = await exportLogsToFile();
       await Share.share({
-        url: file.uri,
-        title: "Smog App Logs",
         message: "Smog App Logs",
+        title: "Smog App Logs",
+        url: file.uri,
       });
       logger.debug(`[DevTools] Logs exported via share: ${file.uri}`);
     } catch (error) {
@@ -83,20 +83,20 @@ const DeveloperToolsScreen: React.FC = () => {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
         options={{
-          title: "Developer Tools",
           headerBackButtonDisplayMode: "minimal",
+          title: "Developer Tools",
           ...(Platform.OS === "ios"
             ? {
+                headerBlurEffect: "systemChromeMaterial",
                 headerLargeTitle: true,
                 headerLargeTitleStyle: { color: theme.text },
-                headerTransparent: true,
-                headerBlurEffect: "systemChromeMaterial",
                 headerShadowVisible: false,
                 headerTintColor: theme.primary,
                 headerTitleStyle: {
-                  fontWeight: "600",
                   color: theme.text,
+                  fontWeight: "600",
                 },
+                headerTransparent: true,
               }
             : {
                 headerStyle: { backgroundColor: theme.primary },
@@ -232,37 +232,21 @@ const DeveloperToolsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  actionLabel: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.xl,
-  },
-  sectionContainer: {
-    marginTop: SPACING.xl,
-    paddingHorizontal: SPACING.md,
-  },
-  sectionLabel: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: "700",
-    marginBottom: SPACING.lg,
+    fontSize: FONT_SIZE.md,
   },
   actionRow: {
-    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
     borderRadius: 8,
     borderWidth: 1,
-    minHeight: 44,
+    flexDirection: "row",
     marginBottom: SPACING.sm,
+    minHeight: 44,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
   },
-  rowIcon: {
-    marginRight: SPACING.sm,
-  },
-  actionLabel: {
-    fontSize: FONT_SIZE.md,
+  container: {
     flex: 1,
   },
   logCard: {
@@ -272,6 +256,22 @@ const styles = StyleSheet.create({
   },
   logScroll: {
     maxHeight: 300,
+  },
+  rowIcon: {
+    marginRight: SPACING.sm,
+  },
+  scrollContent: {
+    paddingBottom: SPACING.xl,
+    paddingHorizontal: SPACING.md,
+  },
+  sectionContainer: {
+    marginTop: SPACING.xl,
+    paddingHorizontal: SPACING.md,
+  },
+  sectionLabel: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: "700",
+    marginBottom: SPACING.lg,
   },
 });
 

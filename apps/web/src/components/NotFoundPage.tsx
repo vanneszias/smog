@@ -233,11 +233,14 @@ function Glitch404() {
     }, 50);
   }, [isGlitching]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      triggerGlitch();
-    }
-  };
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent): void => {
+      if (e.key === "Enter" || e.key === " ") {
+        triggerGlitch();
+      }
+    },
+    [triggerGlitch]
+  );
 
   return (
     <button
@@ -245,12 +248,12 @@ function Glitch404() {
       onClick={triggerGlitch}
       onKeyDown={handleKeyDown}
       style={{
-        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
         color: "transparent",
-        WebkitTextStroke: "2px #00ff88",
+        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
         textShadow: isGlitching
           ? "2px 0 #ff3b30, -2px 0 #00805f"
           : "4px 4px 0 rgba(0,128,95,0.3)",
+        WebkitTextStroke: "2px #00ff88",
       }}
       type="button"
     >
@@ -419,13 +422,13 @@ function Confetti({ isActive }: { isActive: boolean }) {
 
     for (let i = 0; i < 100; i++) {
       particles.push({
-        x: canvas.width / 2,
-        y: canvas.height / 2,
-        vx: (Math.random() - 0.5) * 20,
-        vy: (Math.random() - 0.5) * 20 - 10,
         color: colors[Math.floor(Math.random() * colors.length)],
         rotation: Math.random() * 360,
         rotationSpeed: (Math.random() - 0.5) * 10,
+        vx: (Math.random() - 0.5) * 20,
+        vy: (Math.random() - 0.5) * 20 - 10,
+        x: canvas.width / 2,
+        y: canvas.height / 2,
       });
     }
 
@@ -477,6 +480,10 @@ function Confetti({ isActive }: { isActive: boolean }) {
 }
 
 // Main Not Found Component
+function handleReload(): void {
+  window.location.reload();
+}
+
 export function NotFoundComponent() {
   const { t } = useTranslation();
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -544,7 +551,7 @@ export function NotFoundComponent() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleSelfDestruct = () => {
+  const handleSelfDestruct = useCallback((): void => {
     const newClicks = selfDestructClicks + 1;
     setSelfDestructClicks(newClicks);
 
@@ -553,7 +560,11 @@ export function NotFoundComponent() {
       setSelfDestructClicks(0);
       setTimeout(() => setShowSelfDestructMessage(false), 3000);
     }
-  };
+  }, [selfDestructClicks]);
+
+  const handleCloseTerminal = useCallback((): void => {
+    setShowTerminal(false);
+  }, []);
 
   return (
     <div className="relative flex-1 overflow-hidden bg-transparent">
@@ -561,7 +572,7 @@ export function NotFoundComponent() {
       <Confetti isActive={showConfetti} />
       <TerminalEasterEgg
         isVisible={showTerminal}
-        onClose={() => setShowTerminal(false)}
+        onClose={handleCloseTerminal}
         t={t}
       />
 
@@ -617,7 +628,7 @@ export function NotFoundComponent() {
 
           <Button
             className="gap-2 border-border text-foreground hover:bg-accent hover:text-accent-foreground"
-            onClick={() => window.location.reload()}
+            onClick={handleReload}
             size="lg"
             variant="outline"
           >
@@ -643,7 +654,7 @@ export function NotFoundComponent() {
         </div>
 
         {/* Self Destruct Message */}
-        {showSelfDestructMessage && (
+        {showSelfDestructMessage ? (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/90">
             <div className="p-8 text-center">
               <Sparkles className="mx-auto mb-4 h-16 w-16 animate-spin text-[#ee971c]" />
@@ -655,7 +666,7 @@ export function NotFoundComponent() {
               </p>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Footer with link to zias.be */}
         <div className="mt-16 text-center">

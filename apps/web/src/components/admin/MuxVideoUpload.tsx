@@ -12,8 +12,8 @@ type UploadState =
   | { status: "error"; message: string };
 
 interface MuxVideoUploadProps {
-  onUploadComplete: (playbackId: string) => void;
   onCancel?: () => void;
+  onUploadComplete: (playbackId: string) => void;
 }
 
 export function MuxVideoUpload({
@@ -42,13 +42,13 @@ export function MuxVideoUpload({
 
       if (assetStatus.status === "ready" && assetStatus.playbackId) {
         stopPolling();
-        setState({ status: "complete", playbackId: assetStatus.playbackId });
+        setState({ playbackId: assetStatus.playbackId, status: "complete" });
         onUploadComplete(assetStatus.playbackId);
         return true;
       }
       if (assetStatus.status === "errored") {
         stopPolling();
-        setState({ status: "error", message: "Video processing failed" });
+        setState({ message: "Video processing failed", status: "error" });
         return true;
       }
       return false; // Keep polling
@@ -69,21 +69,21 @@ export function MuxVideoUpload({
         if (status.status === "errored") {
           stopPolling();
           setState({
-            status: "error",
             message: status.error || "Upload failed",
+            status: "error",
           });
           return;
         }
 
         if (status.status === "cancelled" || status.status === "timed_out") {
           stopPolling();
-          setState({ status: "error", message: `Upload ${status.status}` });
+          setState({ message: `Upload ${status.status}`, status: "error" });
         }
       } catch (error) {
         stopPolling();
         setState({
-          status: "error",
           message: error instanceof Error ? error.message : "Polling failed",
+          status: "error",
         });
       }
     },
@@ -103,7 +103,7 @@ export function MuxVideoUpload({
   const uploadFile = useCallback(
     async (file: File) => {
       if (!file.type.startsWith("video/")) {
-        setState({ status: "error", message: "Please select a video file" });
+        setState({ message: "Please select a video file", status: "error" });
         return;
       }
 
@@ -112,7 +112,7 @@ export function MuxVideoUpload({
         const { uploadId, uploadUrl } =
           await createUploadMutation.mutateAsync();
 
-        setState({ status: "uploading", progress: 0 });
+        setState({ progress: 0, status: "uploading" });
 
         // Upload file directly to Mux via XHR for progress tracking
         await new Promise<void>((resolve, reject) => {
@@ -121,7 +121,7 @@ export function MuxVideoUpload({
           xhr.upload.addEventListener("progress", (event) => {
             if (event.lengthComputable) {
               const progress = Math.round((event.loaded / event.total) * 100);
-              setState({ status: "uploading", progress });
+              setState({ progress, status: "uploading" });
             }
           });
 
@@ -146,8 +146,8 @@ export function MuxVideoUpload({
         startPolling(uploadId);
       } catch (error) {
         setState({
-          status: "error",
           message: error instanceof Error ? error.message : "Upload failed",
+          status: "error",
         });
       }
     },
@@ -159,7 +159,7 @@ export function MuxVideoUpload({
       e.preventDefault();
       setIsDragging(false);
 
-      const file = e.dataTransfer.files[0];
+      const [file] = e.dataTransfer.files;
       if (file) {
         uploadFile(file);
       }
@@ -200,6 +200,10 @@ export function MuxVideoUpload({
       fileInputRef.current.value = "";
     }
   }, [stopPolling]);
+
+  const handleBrowseClick = useCallback((): void => {
+    fileInputRef.current?.click();
+  }, []);
 
   if (state.status === "complete") {
     return (
@@ -267,7 +271,7 @@ export function MuxVideoUpload({
             ? "border-primary bg-primary/5"
             : "border-muted-foreground/25 hover:border-primary/50"
         }`}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={handleBrowseClick}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
@@ -286,11 +290,11 @@ export function MuxVideoUpload({
           type="file"
         />
       </button>
-      {onCancel && (
+      {onCancel ? (
         <Button className="w-full" onClick={onCancel} variant="outline">
           Cancel
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }

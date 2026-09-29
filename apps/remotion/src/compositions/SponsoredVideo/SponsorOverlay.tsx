@@ -9,9 +9,9 @@ import type { OverlayConfig } from "../../types/schema";
 import { DEFAULT_OVERLAY_CONFIG } from "../../types/schema";
 
 interface SponsorOverlayProps {
+  config?: OverlayConfig;
   logoUrl?: string;
   sponsorName: string;
-  config?: OverlayConfig;
 }
 
 export const SponsorOverlay: React.FC<SponsorOverlayProps> = ({
@@ -28,10 +28,10 @@ export const SponsorOverlay: React.FC<SponsorOverlayProps> = ({
 
   // Calculate opacity with spring animation for smooth fade-in
   const animationProgress = spring({
-    frame: frame - startFrame,
-    fps,
     config: { damping: 200 }, // Smooth, no bounce
     durationInFrames: fadeInFrames,
+    fps,
+    frame: frame - startFrame,
   });
 
   // Don't render if we haven't reached the start frame
@@ -56,43 +56,43 @@ export const SponsorOverlay: React.FC<SponsorOverlayProps> = ({
   return (
     <div
       style={{
-        position: "absolute",
-        inset: 0,
+        alignItems: "center",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
+        inset: 0,
         justifyContent: "flex-end",
-        paddingBottom: height - textY - fontSize,
         opacity: animationProgress,
+        paddingBottom: height - textY - fontSize,
+        position: "absolute",
         transform: `translateY(${translateY}px)`,
       }}
     >
       {/* Sponsor Logo */}
-      {logoUrl && (
+      {logoUrl ? (
         <Img
           src={logoUrl}
           style={{
-            position: "absolute",
+            height: logoHeight,
             left: logoX - logoWidth / 2,
+            objectFit: "contain",
+            position: "absolute",
             top: logoY - logoHeight / 2,
             width: logoWidth,
-            height: logoHeight,
-            objectFit: "contain",
           }}
         />
-      )}
+      ) : null}
 
       {/* Sponsor Text Line 1: Introduction */}
       <div
         style={{
-          position: "absolute",
+          color: config.text.color,
+          fontFamily: "system-ui, sans-serif",
+          fontSize,
+          fontWeight: 600,
           left: "50%",
+          position: "absolute",
           top: textY,
           transform: "translateX(-50%)",
-          fontSize,
-          color: config.text.color,
-          fontWeight: 600,
-          fontFamily: "system-ui, sans-serif",
           whiteSpace: "nowrap",
         }}
       >
@@ -102,14 +102,14 @@ export const SponsorOverlay: React.FC<SponsorOverlayProps> = ({
       {/* Sponsor Text Line 2: Sponsor Name */}
       <div
         style={{
-          position: "absolute",
+          color: config.text.color,
+          fontFamily: "system-ui, sans-serif",
+          fontSize,
+          fontWeight: 600,
           left: "50%",
+          position: "absolute",
           top: textY + lineHeight + fontSize * 0.3,
           transform: "translateX(-50%)",
-          fontSize,
-          color: config.text.color,
-          fontWeight: 600,
-          fontFamily: "system-ui, sans-serif",
           whiteSpace: "nowrap",
         }}
       >

@@ -6,6 +6,14 @@ import {
 } from "@/lib/openpanel";
 import { Button } from "./ui/button";
 
+function handleAllowAnalytics(): void {
+  setAnalyticsConsent(true);
+}
+
+function handleDenyAnalytics(): void {
+  setAnalyticsConsent(false);
+}
+
 export function AnalyticsConsentControl() {
   const consent = useSyncExternalStore(
     subscribeAnalyticsConsent,
@@ -24,14 +32,10 @@ export function AnalyticsConsentControl() {
         </strong>
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button onClick={() => setAnalyticsConsent(true)} size="sm">
+        <Button onClick={handleAllowAnalytics} size="sm">
           Analytics toestaan
         </Button>
-        <Button
-          onClick={() => setAnalyticsConsent(false)}
-          size="sm"
-          variant="outline"
-        >
+        <Button onClick={handleDenyAnalytics} size="sm" variant="outline">
           Toestemming intrekken
         </Button>
       </div>

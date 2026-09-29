@@ -10,21 +10,21 @@ import type { OverlayConfig } from "./index";
  * Layout: Logo centered above text with fade-in animation
  */
 export const SPONSOR_OVERLAY_CONFIG: OverlayConfig = {
+  animation: {
+    fadeInDuration: 1,
+    startTime: 5, // Last 5 seconds
+  },
   image: {
+    height: 15,
+    width: 15, // Slightly smaller than default
     x: 50, // Center horizontally
     y: 78, // Logo above text (220px from bottom on 1080p)
-    width: 15, // Slightly smaller than default
-    height: 15,
   },
   text: {
+    color: "#00805f", // White text for better visibility
+    fontSize: 4, // Slightly smaller for two lines
     x: 50, // Center horizontally
     y: 85, // Below logo (160px from bottom on 1080p)
-    fontSize: 4, // Slightly smaller for two lines
-    color: "#00805f", // White text for better visibility
-  },
-  animation: {
-    startTime: 5, // Last 5 seconds
-    fadeInDuration: 1,
   },
 };
 

@@ -9,39 +9,39 @@
 /** Admin-facing sponsorship record shape. */
 export interface Sponsorship {
   _id: string;
+  contactCompany?: string;
+  contactFullName?: string;
+  createdAt: number;
+  durationYears: number;
+  endDate: number;
   gestureId: string;
   gestureName?: string;
-  sponsorName: string;
-  sponsorEmail: string;
+  hasLogo?: boolean;
+  invoiceEmail?: string;
+  invoiceName?: string;
+  invoiceRequested?: boolean;
+  invoiceVatNumber?: string;
+  molliePaymentId?: string;
+  originalVideoPlaybackId?: string;
   overlayImageStorageId?: string;
   overlayText: string;
-  sponsoredVideoPlaybackId?: string;
-  originalVideoPlaybackId?: string;
-  previewVideoPlaybackId?: string;
-  startDate: number;
-  endDate: number;
-  durationYears: number;
-  status: string;
-  molliePaymentId?: string;
   paymentAmount: number;
+  previewVideoPlaybackId?: string;
   rejectionReason?: string;
-  reviewedBy?: string;
   reviewedAt?: number;
-  createdAt: number;
+  reviewedBy?: string;
+  sponsorEmail: string;
+  sponsoredVideoPlaybackId?: string;
+  sponsorName: string;
+  startDate: number;
+  status: string;
   updatedAt: number;
-  invoiceRequested?: boolean;
-  invoiceName?: string;
-  invoiceVatNumber?: string;
-  invoiceEmail?: string;
-  contactFullName?: string;
-  contactCompany?: string;
-  hasLogo?: boolean;
 }
 
 /** Per-status display configuration for badges and cards. */
 export interface StatusDisplayConfig {
-  label: string;
-  color: string;
   bgColor: string;
+  color: string;
   icon: React.ElementType;
+  label: string;
 }

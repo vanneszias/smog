@@ -8,25 +8,25 @@ import { randomUUID } from "node:crypto";
 export type JobState = "waiting" | "active" | "completed" | "failed";
 
 export interface JobData {
-  playbackId: string;
+  overlayConfig?: unknown;
   overlayImageUrl?: string;
   overlayText: string;
-  overlayConfig?: unknown;
+  playbackId: string;
 }
 
 export interface JobResult {
-  success: boolean;
   composedVideoPlaybackId?: string;
   error?: string;
+  success: boolean;
 }
 
 export interface Job {
-  id: string;
+  createdAt: Date;
   data: JobData;
-  state: JobState;
+  id: string;
   progress: number;
   result?: JobResult;
-  createdAt: Date;
+  state: JobState;
   updatedAt: Date;
 }
 
@@ -54,11 +54,11 @@ setInterval(
 
 export function createJob(data: JobData): Job {
   const job: Job = {
-    id: randomUUID(),
-    data,
-    state: "waiting",
-    progress: 0,
     createdAt: new Date(),
+    data,
+    id: randomUUID(),
+    progress: 0,
+    state: "waiting",
     updatedAt: new Date(),
   };
   jobs.set(job.id, job);
@@ -118,5 +118,5 @@ export function getQueueStats() {
     }
   }
 
-  return { waiting, active, completed, failed };
+  return { active, completed, failed, waiting };
 }

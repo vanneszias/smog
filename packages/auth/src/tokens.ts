@@ -8,11 +8,11 @@
  * Parsed JWT payload structure from WorkOS tokens
  */
 export interface JWTPayload {
-  sub: string; // WorkOS user ID
+  aud?: string; // Audience
   exp: number; // Expiration timestamp (seconds)
   iat: number; // Issued at timestamp (seconds)
   iss: string; // Issuer
-  aud?: string; // Audience
+  sub: string; // WorkOS user ID
 }
 
 /**
@@ -26,7 +26,7 @@ export function parseJWT(token: string): JWTPayload | null {
       return null;
     }
 
-    const payload = parts[1];
+    const [, payload] = parts;
     if (!payload) {
       return null;
     }
@@ -85,6 +85,6 @@ export function generateGuestId(): string {
   }
   // Fallback for environments without crypto.randomUUID
   const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 15);
+  const random = Math.random().toString(36).slice(2, 15);
   return `guest_${timestamp}_${random}`;
 }

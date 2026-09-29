@@ -1,6 +1,6 @@
 import { SearchBar } from "@smog/ui";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { HeroTitle } from "./HeroTitle";
 
@@ -13,22 +13,25 @@ export function Hero({ onSearch }: HeroProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleSearchSubmit = (query: string) => {
-    if (query.trim()) {
-      if (onSearch) {
-        onSearch(query);
-      } else {
-        navigate({
-          to: "/gestures",
-          search: { q: query },
-        });
+  const handleSearchSubmit = useCallback(
+    (query: string): void => {
+      if (query.trim()) {
+        if (onSearch) {
+          onSearch(query);
+        } else {
+          navigate({
+            search: { q: query },
+            to: "/gestures",
+          });
+        }
       }
-    }
-  };
+    },
+    [navigate, onSearch]
+  );
 
-  const handleClear = () => {
+  const handleClear = useCallback((): void => {
     setSearchQuery("");
-  };
+  }, []);
 
   return (
     <section className="flex min-h-[60vh] flex-col justify-center py-8 md:min-h-[80vh] md:py-0">

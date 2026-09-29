@@ -34,6 +34,31 @@ type RNGlobal = typeof globalThis & {
   };
 };
 
+const showDevToolsAlert = (): void => {
+  if (typeof window === "undefined") {
+    const globalAlert = (globalThis as RNGlobal).Alert;
+    const hasAlert =
+      !!globalAlert?.alert && typeof globalAlert.alert === "function";
+    if (hasAlert) {
+      globalAlert?.alert?.("Tap 5 times to open Developer Tools");
+    }
+  } else {
+    window.alert("Tap 5 times to open Developer Tools");
+  }
+};
+
+const handleAnalyticsConsentChange = async (
+  enabled: boolean
+): Promise<void> => {
+  await setAnalyticsConsent(enabled);
+};
+
+const openPrivacyPolicy = (): Promise<unknown> =>
+  Linking.openURL("https://app.smog.vlaanderen/privacy");
+
+const openAttribution = (): Promise<unknown> =>
+  Linking.openURL("https://zias.be");
+
 const SettingsScreen = () => {
   const { theme, themeMode, setThemeMode } = useTheme();
   const { language, setLanguage, availableLanguages, t } = useTranslation();
@@ -96,11 +121,11 @@ const SettingsScreen = () => {
 
     showActionSheetWithOptions(
       {
-        options,
         cancelButtonIndex,
-        title: t("settings.language"),
         containerStyle: { backgroundColor: theme.card },
+        options,
         textStyle: { color: theme.text },
+        title: t("settings.language"),
         titleTextStyle: { color: theme.textLight },
       },
       (selectedIndex) => {
@@ -124,11 +149,11 @@ const SettingsScreen = () => {
 
     showActionSheetWithOptions(
       {
-        options,
         cancelButtonIndex,
-        title: t("settings.theme"),
         containerStyle: { backgroundColor: theme.card },
+        options,
         textStyle: { color: theme.text },
+        title: t("settings.theme"),
         titleTextStyle: { color: theme.textLight },
       },
       (selectedIndex) => {
@@ -145,26 +170,51 @@ const SettingsScreen = () => {
     );
   }, [themeOptions, showActionSheetWithOptions, setThemeMode, t, theme]);
 
+  const handleOpenAccount = useCallback(() => {
+    router.push("/settings/account");
+  }, [router]);
+
+  const handleDevToolsPress = useCallback(() => {
+    const now = Date.now();
+
+    if (devTapCount === 0 || !lastDevTap || now - lastDevTap >= 2000) {
+      setDevTapCount(1);
+      setLastDevTap(now);
+      showDevToolsAlert();
+      return;
+    }
+
+    if (devTapCount + 1 >= 5) {
+      setDevTapCount(0);
+      setLastDevTap(null);
+      router.push("/settings/developer-tools");
+      return;
+    }
+
+    setDevTapCount(devTapCount + 1);
+    setLastDevTap(now);
+  }, [devTapCount, lastDevTap, router]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
         options={{
-          title: t("settings.title"),
           headerBackButtonDisplayMode: "minimal",
+          title: t("settings.title"),
           ...(Platform.OS === "ios"
             ? {
+                headerBlurEffect: "systemChromeMaterial",
                 headerLargeTitle: true,
                 headerLargeTitleStyle: {
                   color: theme.text,
                 },
-                headerTransparent: true,
-                headerBlurEffect: "systemChromeMaterial",
                 headerShadowVisible: false,
                 headerTintColor: theme.primary,
                 headerTitleStyle: {
-                  fontWeight: "600",
                   color: theme.text,
+                  fontWeight: "600",
                 },
+                headerTransparent: true,
               }
             : {
                 headerStyle: {
@@ -191,7 +241,7 @@ const SettingsScreen = () => {
           </Text>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push("/settings/account")}
+            onPress={handleOpenAccount}
             style={[
               styles.settingRow,
               { backgroundColor: theme.card, borderColor: theme.border },
@@ -276,18 +326,12 @@ const SettingsScreen = () => {
             </View>
             <Switch
               accessibilityLabel={t("settings.analyticsTitle")}
-              onValueChange={async (enabled) => {
-                await setAnalyticsConsent(enabled);
-              }}
+              onValueChange={handleAnalyticsConsentChange}
               trackColor={{ true: theme.primary }}
               value={analyticsConsent === true}
             />
           </View>
-          <TouchableOpacity
-            onPress={() =>
-              Linking.openURL("https://app.smog.vlaanderen/privacy")
-            }
-          >
+          <TouchableOpacity onPress={openPrivacyPolicy}>
             <Text style={[styles.privacyLink, { color: theme.primary }]}>
               {t("settings.privacyPolicy")}
             </Text>
@@ -299,46 +343,7 @@ const SettingsScreen = () => {
           <View style={styles.devToolsContainer}>
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => {
-                const now = Date.now();
-
-                const showDevToolsAlert = () => {
-                  if (typeof window !== "undefined") {
-                    window.alert("Tap 5 times to open Developer Tools");
-                  } else {
-                    const globalAlert = (globalThis as RNGlobal).Alert;
-                    const hasAlert =
-                      !!globalAlert?.alert &&
-                      typeof globalAlert.alert === "function";
-                    if (hasAlert) {
-                      globalAlert?.alert?.(
-                        "Tap 5 times to open Developer Tools"
-                      );
-                    }
-                  }
-                };
-
-                if (
-                  devTapCount === 0 ||
-                  !lastDevTap ||
-                  now - lastDevTap >= 2000
-                ) {
-                  setDevTapCount(1);
-                  setLastDevTap(now);
-                  showDevToolsAlert();
-                  return;
-                }
-
-                if (devTapCount + 1 >= 5) {
-                  setDevTapCount(0);
-                  setLastDevTap(null);
-                  router.push("/settings/developer-tools");
-                  return;
-                }
-
-                setDevTapCount(devTapCount + 1);
-                setLastDevTap(now);
-              }}
+              onPress={handleDevToolsPress}
               style={[
                 styles.settingRow,
                 styles.devToolsButton,
@@ -364,10 +369,7 @@ const SettingsScreen = () => {
 
         {/* Attribution */}
         <View style={styles.attributionContainer}>
-          <TouchableOpacity
-            activeOpacity={0.6}
-            onPress={() => Linking.openURL("https://zias.be")}
-          >
+          <TouchableOpacity activeOpacity={0.6} onPress={openAttribution}>
             <Text style={[styles.attributionText, { color: theme.textLight }]}>
               Gemaakt met ♡ door zias.be
             </Text>
@@ -379,44 +381,29 @@ const SettingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.xl,
-  },
-  settingContainer: {
-    marginTop: SPACING.xl,
-    paddingHorizontal: SPACING.md,
-  },
-  settingLabel: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: "700",
-    marginBottom: SPACING.lg,
-  },
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    borderRadius: 8,
-    borderWidth: 1,
-    minHeight: 44,
-  },
-  settingValue: {
-    fontSize: FONT_SIZE.md,
-    flex: 1,
-  },
-  settingDescription: {
-    fontSize: FONT_SIZE.sm,
-    lineHeight: 20,
-    marginTop: 4,
-  },
   analyticsCopy: {
     flex: 1,
     paddingRight: SPACING.md,
+  },
+  attributionContainer: {
+    alignItems: "center",
+    marginTop: SPACING.xxl,
+    paddingHorizontal: SPACING.md,
+  },
+  attributionText: {
+    fontSize: FONT_SIZE.xs,
+    letterSpacing: 0.2,
+    textAlign: "center",
+  },
+  container: {
+    flex: 1,
+  },
+  devToolsButton: {
+    marginTop: SPACING.lg,
+  },
+  devToolsContainer: {
+    marginTop: SPACING.xxl,
+    paddingHorizontal: SPACING.md,
   },
   privacyLink: {
     fontSize: FONT_SIZE.sm,
@@ -424,22 +411,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     textDecorationLine: "underline",
   },
-  devToolsContainer: {
-    marginTop: SPACING.xxl,
+  scrollContent: {
+    paddingBottom: SPACING.xl,
     paddingHorizontal: SPACING.md,
   },
-  devToolsButton: {
-    marginTop: SPACING.lg,
+  settingContainer: {
+    marginTop: SPACING.xl,
+    paddingHorizontal: SPACING.md,
   },
-  attributionContainer: {
-    marginTop: SPACING.xxl,
+  settingDescription: {
+    fontSize: FONT_SIZE.sm,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  settingLabel: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: "700",
+    marginBottom: SPACING.lg,
+  },
+  settingRow: {
     alignItems: "center",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 44,
     paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
   },
-  attributionText: {
-    fontSize: FONT_SIZE.xs,
-    textAlign: "center",
-    letterSpacing: 0.2,
+  settingValue: {
+    flex: 1,
+    fontSize: FONT_SIZE.md,
   },
 });
 

@@ -9,7 +9,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const VIDEO_COMPLETE_COUNT = 7;
@@ -37,11 +37,11 @@ export type GestureDetailData = GestureCardData & {
 interface GestureDetailProps {
   gesture: GestureDetailData;
   isSaved?: boolean;
-  onToggleSaved?: (gestureId: string) => void;
   onBack?: () => void;
-  showOpenInApp?: boolean;
   onOpenInApp?: () => void;
   onShowQrCode?: () => void;
+  onToggleSaved?: (gestureId: string) => void;
+  showOpenInApp?: boolean;
 }
 
 function SponsorshipCTA({
@@ -97,7 +97,7 @@ export function GestureDetail({
 }: GestureDetailProps) {
   const { i18n, t } = useTranslation();
   const [showDisclaimer, setShowDisclaimer] = useState(false);
-  const disclaimerFiredRef = useRef(false);
+  const disclaimerFiredRef = useRef<boolean>(false);
 
   // Randomly select a message index (1-7) when component mounts
   const messageIndex = useMemo(
@@ -123,7 +123,7 @@ export function GestureDetail({
           index !== -1 &&
           (earliestMatch === null || index < earliestMatch.index)
         ) {
-          earliestMatch = { phrase, index };
+          earliestMatch = { index, phrase };
         }
       }
 
@@ -165,23 +165,46 @@ export function GestureDetail({
     return parts;
   };
 
-  const handleSaveClick = () => {
+  const handleSaveClick = useCallback((): void => {
     if (onToggleSaved) {
       onToggleSaved(gesture._id);
     }
-  };
+  }, [onToggleSaved, gesture._id]);
 
-  const handleBackClick = () => {
+  const handleBackClick = useCallback((): void => {
     if (onBack) {
       onBack();
     }
-  };
+  }, [onBack]);
 
-  const handleOpenInAppClick = () => {
+  const handleOpenInAppClick = useCallback((): void => {
     if (onOpenInApp) {
       onOpenInApp();
     }
-  };
+  }, [onOpenInApp]);
+
+  const handleVideoEnded = useCallback((): void => {
+    // Reset the ref so the disclaimer fires again next play-through
+    disclaimerFiredRef.current = false;
+  }, []);
+
+  const handleVideoTimeUpdate = useCallback((e: CustomEvent): void => {
+    const el = e.currentTarget as HTMLVideoElement;
+    const timeLeft = el.duration - el.currentTime;
+    if (
+      !disclaimerFiredRef.current &&
+      Number.isFinite(timeLeft) &&
+      timeLeft <= 5 &&
+      timeLeft > 0
+    ) {
+      disclaimerFiredRef.current = true;
+      setShowDisclaimer(true);
+    }
+  }, []);
+
+  const handleDismissDisclaimer = useCallback((): void => {
+    setShowDisclaimer(false);
+  }, []);
   const isAvailableForSponsorship =
     !gesture.sponsorship ||
     gesture.sponsorship.status === "available" ||
@@ -193,7 +216,7 @@ export function GestureDetail({
       <div className="sticky top-0 z-10 shrink-0 border-border border-b bg-background/95 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-6 md:py-4">
           {/* Back button (mobile/tablet only) */}
-          {onBack && (
+          {onBack ? (
             <button
               className="flex items-center gap-2 font-medium text-primary transition-colors hover:text-primary/80 lg:hidden"
               onClick={handleBackClick}
@@ -204,7 +227,7 @@ export function GestureDetail({
                 {t("ui.gestureDetail.backToGestures")}
               </span>
             </button>
-          )}
+          ) : null}
 
           {/* Gesture name (truncated on small screens) */}
           <h1
@@ -216,7 +239,7 @@ export function GestureDetail({
           </h1>
 
           {/* QR code button */}
-          {onShowQrCode && (
+          {onShowQrCode ? (
             <button
               aria-label={t("ui.gestureDetail.qrCode", "QR code")}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-background transition-all hover:scale-105 hover:bg-card"
@@ -226,10 +249,10 @@ export function GestureDetail({
             >
               <QrCode className="h-5 w-5 stroke-primary" />
             </button>
-          )}
+          ) : null}
 
           {/* Save-to-list button */}
-          {onToggleSaved && (
+          {onToggleSaved ? (
             <button
               aria-label={
                 isSaved
@@ -257,7 +280,7 @@ export function GestureDetail({
                   : t("ui.gestureDetail.addToList", "Add to list")}
               </span>
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -326,30 +349,15 @@ export function GestureDetail({
                 <MuxPlayer
                   accentColor="var(--primary)"
                   key={gesture._id}
-                  onEnded={() => {
-                    // Reset the ref so the disclaimer fires again next play-through
-                    disclaimerFiredRef.current = false;
-                  }}
-                  onTimeUpdate={(e) => {
-                    const el = e.currentTarget as HTMLVideoElement;
-                    const timeLeft = el.duration - el.currentTime;
-                    if (
-                      !disclaimerFiredRef.current &&
-                      Number.isFinite(timeLeft) &&
-                      timeLeft <= 5 &&
-                      timeLeft > 0
-                    ) {
-                      disclaimerFiredRef.current = true;
-                      setShowDisclaimer(true);
-                    }
-                  }}
+                  onEnded={handleVideoEnded}
+                  onTimeUpdate={handleVideoTimeUpdate}
                   playbackId={gesture.playbackId}
                   streamType="on-demand"
                   style={{
-                    width: "100%",
-                    height: "100%",
                     aspectRatio: "3/4",
+                    height: "100%",
                     objectFit: "contain",
+                    width: "100%",
                   }}
                 />
               </Suspense>
@@ -357,12 +365,12 @@ export function GestureDetail({
           </div>
 
           {/* Disclaimer Banner */}
-          {showDisclaimer && (
+          {showDisclaimer ? (
             <div
               className="fade-in slide-in-from-top-2 mb-6 animate-in rounded-xl border duration-300"
               style={{
-                borderColor: "rgba(240, 200, 20, 0.35)",
                 backgroundColor: "rgba(240, 200, 20, 0.07)",
+                borderColor: "rgba(240, 200, 20, 0.35)",
               }}
             >
               <div className="flex items-start gap-3 p-4">
@@ -370,9 +378,9 @@ export function GestureDetail({
                 <div
                   className="mt-0.5 shrink-0 self-stretch rounded-full"
                   style={{
-                    width: 3,
                     backgroundColor: "#F0C814",
                     minHeight: 20,
+                    width: 3,
                   }}
                 />
 
@@ -405,14 +413,14 @@ export function GestureDetail({
                 <button
                   aria-label={t("gesture.disclaimer.dismiss")}
                   className="shrink-0 rounded-lg p-1 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
-                  onClick={() => setShowDisclaimer(false)}
+                  onClick={handleDismissDisclaimer}
                   type="button"
                 >
                   <X className="h-4 w-4 text-muted-foreground" />
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Description Section */}
           {gesture.info ? (

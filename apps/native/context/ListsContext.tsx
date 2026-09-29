@@ -19,15 +19,15 @@ import logger from "@/utils/logger";
 
 export interface GestureListRecord {
   _id: Id<"gesture_lists">;
-  name: string;
-  description?: string;
-  visibility: "private" | "shared";
-  viewShareToken?: string;
-  editShareToken?: string;
   allowSharedEditing: boolean;
-  isDefaultFavorites: boolean;
   createdAt: number;
+  description?: string;
+  editShareToken?: string;
+  isDefaultFavorites: boolean;
+  name: string;
   updatedAt: number;
+  viewShareToken?: string;
+  visibility: "private" | "shared";
 }
 
 export interface ListPickerRequest {
@@ -37,10 +37,10 @@ export interface ListPickerRequest {
 }
 
 interface ListsContextValue {
+  closeListPicker: () => void;
   containingListIds: Set<string>;
   createList: (name: string) => Promise<Id<"gesture_lists"> | null>;
   createListAndAddGesture: (name: string) => Promise<void>;
-  closeListPicker: () => void;
   isGestureSaved: (gestureId: string) => boolean;
   isPickerBusy: boolean;
   isPickerLoading: boolean;
@@ -86,8 +86,8 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
     api.lists.getGestureListIds,
     userId && pendingGesture
       ? {
-          userId,
           gestureId: pendingGesture.gestureId as Id<"gestures">,
+          userId,
         }
       : "skip"
   );
@@ -147,10 +147,10 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const listId = await createListMutation({
-          userId,
-          name: normalizedName,
-          visibility: "private",
           allowSharedEditing: false,
+          name: normalizedName,
+          userId,
+          visibility: "private",
         });
         triggerHaptic("success");
         showToast(t("lists.listCreated", { name: normalizedName }));
@@ -179,15 +179,15 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
       try {
         if (isContained) {
           await removeGestureFromList({
-            userId,
-            listId: list._id,
             gestureId: pendingGesture.gestureId as Id<"gestures">,
+            listId: list._id,
+            userId,
           });
         } else {
           await addGestureToList({
-            userId,
-            listId: list._id,
             gestureId: pendingGesture.gestureId as Id<"gestures">,
+            listId: list._id,
+            userId,
           });
         }
         trackAnalyticsEvent("gesture_collection_changed", {
@@ -235,15 +235,15 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
       setIsPickerBusy(true);
       try {
         const listId = await createListMutation({
-          userId,
-          name: normalizedName,
-          visibility: "private",
           allowSharedEditing: false,
+          name: normalizedName,
+          userId,
+          visibility: "private",
         });
         await addGestureToList({
-          userId,
-          listId,
           gestureId: pendingGesture.gestureId as Id<"gestures">,
+          listId,
+          userId,
         });
         trackAnalyticsEvent("gesture_collection_changed", {
           action: "added",
@@ -276,10 +276,10 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
+      closeListPicker,
       containingListIds,
       createList,
       createListAndAddGesture,
-      closeListPicker,
       isGestureSaved,
       isPickerBusy,
       isPickerLoading,

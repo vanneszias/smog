@@ -17,46 +17,35 @@ import { validateDetails } from "../utils/-validation";
 type WizardStep = "select" | "details" | "preview";
 
 export interface SponsorshipFormState {
-  // Wizard navigation
-  currentStep: WizardStep;
-  setCurrentStep: (step: WizardStep) => void;
-
-  // Gesture selection
-  selectedGestureIds: string[];
-  setSelectedGestureIds: React.Dispatch<React.SetStateAction<string[]>>;
-  handleToggleSelection: (gestureId: string) => void;
-
-  // Sponsor info
-  sponsorName: string;
-  setSponsorName: (v: string) => void;
-  includeLogo: boolean;
-  setIncludeLogo: (v: boolean) => void;
-  logoFile: File | null;
-  setLogoFile: (v: File | null) => void;
-  logoPreview: string | null;
-  setLogoPreview: (v: string | null) => void;
+  contactCompany: string;
+  contactEmail: string;
 
   // Contact info
   contactFullName: string;
-  setContactFullName: (v: string) => void;
-  contactEmail: string;
-  setContactEmail: (v: string) => void;
-  contactCompany: string;
-  setContactCompany: (v: string) => void;
-
-  // Invoice
-  invoiceRequested: boolean;
-  setInvoiceRequested: (v: boolean) => void;
-  invoiceName: string;
-  setInvoiceName: (v: string) => void;
-  invoiceVatNumber: string;
-  setInvoiceVatNumber: (v: string) => void;
-  invoiceEmail: string;
-  setInvoiceEmail: (v: string) => void;
+  // Wizard navigation
+  currentStep: WizardStep;
 
   // Validation
   errors: SponsorDetailsErrors;
-  setErrors: React.Dispatch<React.SetStateAction<SponsorDetailsErrors>>;
+  handleToggleSelection: (gestureId: string) => void;
+  includeLogo: boolean;
+  invoiceEmail: string;
+  invoiceName: string;
+
+  // Invoice
+  invoiceRequested: boolean;
+  invoiceVatNumber: string;
+  isGeneratingPreview: boolean;
+
+  // Payment state
+  isProcessing: boolean;
+  logoFile: File | null;
+  logoPreview: string | null;
+  paymentProgress: number;
+
+  // Preview state
+  previewPlaybackIds: string[];
+  previewProgress: number;
   /**
    * Run validation against the current form state.
    * @param t - i18n translate function.
@@ -64,19 +53,30 @@ export interface SponsorshipFormState {
    */
   runValidateDetails: (t: (key: string) => string) => boolean;
 
-  // Preview state
-  previewPlaybackIds: string[];
-  setPreviewPlaybackIds: (ids: string[]) => void;
-  isGeneratingPreview: boolean;
+  // Gesture selection
+  selectedGestureIds: string[];
+  setContactCompany: (v: string) => void;
+  setContactEmail: (v: string) => void;
+  setContactFullName: (v: string) => void;
+  setCurrentStep: (step: WizardStep) => void;
+  setErrors: React.Dispatch<React.SetStateAction<SponsorDetailsErrors>>;
+  setIncludeLogo: (v: boolean) => void;
+  setInvoiceEmail: (v: string) => void;
+  setInvoiceName: (v: string) => void;
+  setInvoiceRequested: (v: boolean) => void;
+  setInvoiceVatNumber: (v: string) => void;
   setIsGeneratingPreview: (v: boolean) => void;
-  previewProgress: number;
-  setPreviewProgress: (v: number) => void;
-
-  // Payment state
-  isProcessing: boolean;
   setIsProcessing: (v: boolean) => void;
-  paymentProgress: number;
+  setLogoFile: (v: File | null) => void;
+  setLogoPreview: (v: string | null) => void;
   setPaymentProgress: React.Dispatch<React.SetStateAction<number>>;
+  setPreviewPlaybackIds: (ids: string[]) => void;
+  setPreviewProgress: (v: number) => void;
+  setSelectedGestureIds: React.Dispatch<React.SetStateAction<string[]>>;
+  setSponsorName: (v: string) => void;
+
+  // Sponsor info
+  sponsorName: string;
 }
 
 /**
@@ -133,15 +133,15 @@ export function useSponsorshipForm(): SponsorshipFormState {
     (t: (key: string) => string): boolean => {
       const { isValid, errors: newErrors } = validateDetails(
         {
-          sponsorName,
-          includeLogo,
-          logoFile,
-          contactFullName,
           contactEmail,
-          invoiceRequested,
-          invoiceName,
-          invoiceVatNumber,
+          contactFullName,
+          includeLogo,
           invoiceEmail,
+          invoiceName,
+          invoiceRequested,
+          invoiceVatNumber,
+          logoFile,
+          sponsorName,
         },
         t
       );
@@ -162,45 +162,45 @@ export function useSponsorshipForm(): SponsorshipFormState {
   );
 
   return {
-    currentStep,
-    setCurrentStep,
-    selectedGestureIds,
-    setSelectedGestureIds,
-    handleToggleSelection,
-    sponsorName,
-    setSponsorName,
-    includeLogo,
-    setIncludeLogo,
-    logoFile,
-    setLogoFile,
-    logoPreview,
-    setLogoPreview,
-    contactFullName,
-    setContactFullName,
-    contactEmail,
-    setContactEmail,
     contactCompany,
-    setContactCompany,
-    invoiceRequested,
-    setInvoiceRequested,
-    invoiceName,
-    setInvoiceName,
-    invoiceVatNumber,
-    setInvoiceVatNumber,
-    invoiceEmail,
-    setInvoiceEmail,
+    contactEmail,
+    contactFullName,
+    currentStep,
     errors,
-    setErrors,
-    runValidateDetails,
-    previewPlaybackIds,
-    setPreviewPlaybackIds,
+    handleToggleSelection,
+    includeLogo,
+    invoiceEmail,
+    invoiceName,
+    invoiceRequested,
+    invoiceVatNumber,
     isGeneratingPreview,
-    setIsGeneratingPreview,
-    previewProgress,
-    setPreviewProgress,
     isProcessing,
-    setIsProcessing,
+    logoFile,
+    logoPreview,
     paymentProgress,
+    previewPlaybackIds,
+    previewProgress,
+    runValidateDetails,
+    selectedGestureIds,
+    setContactCompany,
+    setContactEmail,
+    setContactFullName,
+    setCurrentStep,
+    setErrors,
+    setIncludeLogo,
+    setInvoiceEmail,
+    setInvoiceName,
+    setInvoiceRequested,
+    setInvoiceVatNumber,
+    setIsGeneratingPreview,
+    setIsProcessing,
+    setLogoFile,
+    setLogoPreview,
     setPaymentProgress,
+    setPreviewPlaybackIds,
+    setPreviewProgress,
+    setSelectedGestureIds,
+    setSponsorName,
+    sponsorName,
   };
 }

@@ -6,7 +6,8 @@ import {
   ICON_SIZE,
   SPACING,
 } from "@smog/styles";
-import { useEffect, useState } from "react";
+import type React from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
   interpolate,
@@ -23,6 +24,36 @@ interface RecentSearchesProps {
   searchTerm?: string;
   visible?: boolean;
 }
+
+interface RecentSearchItemProps {
+  children: React.ReactNode;
+  onSelect: (query: string) => void;
+  query: string;
+}
+
+const RecentSearchItem = ({
+  children,
+  onSelect,
+  query,
+}: RecentSearchItemProps) => {
+  const { theme } = useTheme();
+
+  const handlePress = useCallback(() => {
+    onSelect(query);
+  }, [onSelect, query]);
+
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      activeOpacity={0.7}
+      onPress={handlePress}
+      style={styles.item}
+    >
+      <Ionicons color={theme.textLight} name="time" size={ICON_SIZE.sm} />
+      {children}
+    </TouchableOpacity>
+  );
+};
 
 const RecentSearches: React.FC<RecentSearchesProps> = ({
   onSelect,
@@ -139,19 +170,9 @@ const RecentSearches: React.FC<RecentSearchesProps> = ({
         <View style={styles.list}>
           {shown.map((query, i) => (
             <Animated.View key={query} style={itemAnimatedStyles[i]}>
-              <TouchableOpacity
-                accessibilityRole="button"
-                activeOpacity={0.7}
-                onPress={() => onSelect(query)}
-                style={styles.item}
-              >
-                <Ionicons
-                  color={theme.textLight}
-                  name="time"
-                  size={ICON_SIZE.sm}
-                />
+              <RecentSearchItem onSelect={onSelect} query={query}>
                 {renderHighlightedQuery(query)}
-              </TouchableOpacity>
+              </RecentSearchItem>
             </Animated.View>
           ))}
         </View>
@@ -161,44 +182,44 @@ const RecentSearches: React.FC<RecentSearchesProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginTop: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    width: "100%",
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SPACING.sm,
-  },
-  title: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
   clearButton: {
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.medium,
   },
-  list: {
-    gap: SPACING.xs,
+  container: {
+    borderRadius: BORDER_RADIUS.md,
+    elevation: 4,
+    marginTop: SPACING.lg,
+    padding: SPACING.md,
+    shadowOffset: { height: 6, width: 0 },
+    shadowRadius: 12,
+    width: "100%",
   },
-  item: {
-    flexDirection: "row",
+  header: {
     alignItems: "center",
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  query: {
-    marginLeft: SPACING.xs,
-    fontSize: FONT_SIZE.sm,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: SPACING.sm,
   },
   highlight: {
     fontWeight: FONT_WEIGHT.bold,
+  },
+  item: {
+    alignItems: "center",
+    borderRadius: BORDER_RADIUS.sm,
+    flexDirection: "row",
+    paddingVertical: SPACING.xs,
+  },
+  list: {
+    gap: SPACING.xs,
+  },
+  query: {
+    fontSize: FONT_SIZE.sm,
+    marginLeft: SPACING.xs,
+  },
+  title: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
   },
 });
 

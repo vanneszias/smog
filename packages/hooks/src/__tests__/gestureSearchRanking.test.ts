@@ -11,31 +11,31 @@ import { searchGestures } from "../gestureSearchRanking";
 const gestures: SearchableGesture[] = [
   {
     _id: "1",
-    name: "Hallo",
+    categories: [{ _id: "c1", name: "Greetings" }],
     concept: ["greeting", "hello"],
     info: "A basic greeting gesture",
-    categories: [{ _id: "c1", name: "Greetings" }],
+    name: "Hallo",
   },
   {
     _id: "2",
-    name: "Bedankt",
+    categories: [{ _id: "c2", name: "Polite" }],
     concept: ["thank you", "thanks", "gratitude"],
     info: "Express gratitude",
-    categories: [{ _id: "c2", name: "Polite" }],
+    name: "Bedankt",
   },
   {
     _id: "3",
-    name: "Help",
+    categories: [{ _id: "c3", name: "Emergency" }],
     concept: ["assistance", "aid"],
     info: "Ask for help or assistance",
-    categories: [{ _id: "c3", name: "Emergency" }],
+    name: "Help",
   },
   {
     _id: "4",
-    name: "Familie",
+    categories: [{ _id: "c4", name: "People" }],
     concept: ["family", "relatives"],
     info: "Referring to family members",
-    categories: [{ _id: "c4", name: "People" }],
+    name: "Familie",
   },
 ];
 

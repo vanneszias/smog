@@ -3,22 +3,27 @@
  */
 
 import { Calendar, Euro } from "lucide-react";
+import { useCallback } from "react";
 import { statusConfig } from "./statusConfig";
 import type { Sponsorship } from "./types";
 
 interface SponsorshipCardProps {
-  sponsorship: Sponsorship;
   isSelected: boolean;
-  onClick: () => void;
+  onSelect: (sponsorshipId: string) => void;
+  sponsorship: Sponsorship;
 }
 
 /** Thumbnail card for the sponsorship grid — shows video preview, status, and key info. */
 export function SponsorshipCard({
   sponsorship,
   isSelected,
-  onClick,
+  onSelect,
 }: SponsorshipCardProps) {
   const config = statusConfig[sponsorship.status] ?? statusConfig.pending;
+  const { _id: sponsorshipId } = sponsorship;
+  const handleClick = useCallback((): void => {
+    onSelect(sponsorshipId);
+  }, [onSelect, sponsorshipId]);
 
   return (
     <button
@@ -27,7 +32,7 @@ export function SponsorshipCard({
           ? "border-[var(--admin-accent)] bg-[var(--admin-accent)]/5 ring-2 ring-[var(--admin-accent)]/20"
           : "border-[var(--admin-border)] bg-[var(--admin-card)] hover:border-[var(--admin-accent)]/30 hover:shadow-md"
       }`}
-      onClick={onClick}
+      onClick={handleClick}
       type="button"
     >
       {/* Video Thumbnail */}
@@ -46,9 +51,9 @@ export function SponsorshipCard({
           <config.icon className="h-3 w-3" />
           {config.label}
         </div>
-        {isSelected && (
+        {isSelected ? (
           <div className="absolute top-2 right-2 h-3 w-3 rounded-full border-2 border-white bg-[var(--admin-accent)] shadow-md" />
-        )}
+        ) : null}
       </div>
 
       {/* Content */}

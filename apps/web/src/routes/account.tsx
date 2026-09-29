@@ -3,7 +3,7 @@ import { createLogger } from "@smog/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
 import { Download, Loader2, Settings, Trash2, User } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,10 @@ function UnauthenticatedState() {
   const { t } = useTranslation();
   const { signIn } = useAuth();
 
+  const handleSignIn = useCallback((): void => {
+    signIn();
+  }, [signIn]);
+
   return (
     <div className="container mx-auto flex min-h-full flex-col items-center justify-center px-4 py-12">
       <User className="mb-4 h-16 w-16 text-muted-foreground" />
@@ -68,7 +72,7 @@ function UnauthenticatedState() {
       <p className="mb-4 text-center text-muted-foreground">
         {t("web.account.unauthenticated.message")}
       </p>
-      <Button onClick={() => signIn()}>
+      <Button onClick={handleSignIn}>
         {t("web.account.unauthenticated.signInButton")}
       </Button>
     </div>
@@ -89,7 +93,7 @@ function AccountContent() {
   const deleteUserAccount = useMutation(api.gdpr.deleteUserAccount);
   const exportUserData = useQuery(api.gdpr.exportUserData);
 
-  const handleExportData = async () => {
+  const handleExportData = useCallback(async (): Promise<void> => {
     if (!exportUserData) {
       toast.error(t("web.account.toast.exportUnavailable"));
       return;
@@ -117,9 +121,9 @@ function AccountContent() {
     } finally {
       setIsExporting(false);
     }
-  };
+  }, [exportUserData, t]);
 
-  const handleDeleteAccount = async () => {
+  const handleDeleteAccount = useCallback(async (): Promise<void> => {
     setIsDeleting(true);
     try {
       await deleteUserAccount({ confirmDelete: true });
@@ -136,7 +140,15 @@ function AccountContent() {
       toast.error(t("web.account.toast.deleteFailed"));
       setIsDeleting(false);
     }
-  };
+  }, [deleteUserAccount, signOut, t]);
+
+  const handleOpenDeleteDialog = useCallback((): void => {
+    setShowDeleteDialog(true);
+  }, []);
+
+  const handleCloseDeleteDialog = useCallback((): void => {
+    setShowDeleteDialog(false);
+  }, []);
 
   return (
     <div className="container mx-auto max-w-4xl overflow-y-auto px-4 py-8">
@@ -240,10 +252,7 @@ function AccountContent() {
               {t("web.account.dangerZone.deleteAccount.description")}
             </p>
           </div>
-          <Button
-            onClick={() => setShowDeleteDialog(true)}
-            variant="destructive"
-          >
+          <Button onClick={handleOpenDeleteDialog} variant="destructive">
             <Trash2 className="mr-2 h-4 w-4" />
             {t("web.account.dangerZone.deleteAccount.button")}
           </Button>
@@ -265,7 +274,7 @@ function AccountContent() {
           <DialogFooter>
             <Button
               disabled={isDeleting}
-              onClick={() => setShowDeleteDialog(false)}
+              onClick={handleCloseDeleteDialog}
               variant="outline"
             >
               {t("web.account.deleteDialog.cancel")}

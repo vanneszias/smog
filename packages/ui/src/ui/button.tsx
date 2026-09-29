@@ -15,19 +15,19 @@ function Button({
 }: ButtonProps) {
   const variantClasses = {
     default: "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+    ghost:
+      "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
     outline:
       "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
     secondary:
       "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
-    ghost:
-      "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
   };
 
   const sizeClasses = {
     default: "h-9 px-4 py-2",
-    sm: "h-8 gap-1.5 rounded-md px-3",
-    lg: "h-10 rounded-md px-6",
     icon: "size-9",
+    lg: "h-10 rounded-md px-6",
+    sm: "h-8 gap-1.5 rounded-md px-3",
   };
 
   return (

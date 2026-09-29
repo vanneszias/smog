@@ -25,9 +25,9 @@ const calculateMetadata: CalculateMetadataFunction<
 
   return {
     durationInFrames: Math.ceil(durationInSeconds * VIDEO_FPS),
+    height: dimensions?.height ?? VIDEO_HEIGHT,
     // Optionally match the video dimensions, but we default to 9:16
     width: dimensions?.width ?? VIDEO_WIDTH,
-    height: dimensions?.height ?? VIDEO_HEIGHT,
   };
 };
 
@@ -37,10 +37,10 @@ export const RemotionRoot: React.FC = () => {
       calculateMetadata={calculateMetadata}
       component={SponsoredVideo}
       defaultProps={{
-        videoSrc: SAMPLE_VIDEO_URL,
-        sponsorName: "SMOG",
         logoUrl: undefined,
         overlayConfig: DEFAULT_OVERLAY_CONFIG,
+        sponsorName: "SMOG",
+        videoSrc: SAMPLE_VIDEO_URL,
       }} // Placeholder, overridden by calculateMetadata
       durationInFrames={300}
       fps={VIDEO_FPS}

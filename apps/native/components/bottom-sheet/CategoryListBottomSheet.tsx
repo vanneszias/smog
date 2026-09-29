@@ -12,12 +12,56 @@ import { useTheme } from "@/context/ThemeContext";
 import { typography } from "@/utils/typography";
 
 interface CategoryListBottomSheetProps {
-  visible: boolean;
-  onClose: () => void;
   categories: string[];
-  selectedCategories: string[];
   onCategoryChange: (categories: string[]) => void;
+  onClose: () => void;
+  selectedCategories: string[];
+  visible: boolean;
 }
+
+interface CategoryListItemProps {
+  category: string;
+  isSelected: boolean;
+  onToggle: (category: string) => void;
+}
+
+const keyExtractor = (item: string): string => item;
+
+const CategoryListItem = ({
+  category,
+  isSelected,
+  onToggle,
+}: CategoryListItemProps) => {
+  const { theme } = useTheme();
+
+  const handlePress = useCallback(() => {
+    onToggle(category);
+  }, [onToggle, category]);
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={handlePress}
+      style={[
+        styles.categoryItem,
+        {
+          backgroundColor: isSelected ? theme.primary : theme.card,
+          borderColor: theme.border,
+        },
+        SHADOWS.small,
+      ]}
+    >
+      <Text
+        style={[
+          typography.body,
+          { color: isSelected ? theme.background : theme.text },
+        ]}
+      >
+        {category}
+      </Text>
+    </TouchableOpacity>
+  );
+};
 
 /**
  * A specialized BottomSheet that renders a scrollable list of categories.
@@ -58,33 +102,14 @@ const CategoryListBottomSheet: React.FC<CategoryListBottomSheetProps> = ({
 
   // Define the render function for each category item in the list
   const renderItem = useCallback(
-    ({ item: category }: { item: string }) => {
-      const isSelected = selectedCategories.includes(category);
-      return (
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => handleToggleCategory(category)}
-          style={[
-            styles.categoryItem,
-            {
-              backgroundColor: isSelected ? theme.primary : theme.card,
-              borderColor: theme.border,
-            },
-            SHADOWS.small,
-          ]}
-        >
-          <Text
-            style={[
-              typography.body,
-              { color: isSelected ? theme.background : theme.text },
-            ]}
-          >
-            {category}
-          </Text>
-        </TouchableOpacity>
-      );
-    },
-    [selectedCategories, theme, handleToggleCategory]
+    ({ item: category }: { item: string }) => (
+      <CategoryListItem
+        category={category}
+        isSelected={selectedCategories.includes(category)}
+        onToggle={handleToggleCategory}
+      />
+    ),
+    [selectedCategories, handleToggleCategory]
   );
 
   // Define the backdrop component for tap-to-dismiss functionality
@@ -116,7 +141,7 @@ const CategoryListBottomSheet: React.FC<CategoryListBottomSheetProps> = ({
       <BottomSheetFlatList
         contentContainerStyle={styles.listContentContainer}
         data={categories}
-        keyExtractor={(item: string) => item}
+        keyExtractor={keyExtractor}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
       />
@@ -125,16 +150,16 @@ const CategoryListBottomSheet: React.FC<CategoryListBottomSheetProps> = ({
 };
 
 const styles = StyleSheet.create({
-  listContentContainer: {
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-    paddingBottom: SPACING.lg, // Extra padding at the bottom for safe area
-  },
   categoryItem: {
     borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    marginVertical: SPACING.xs,
     borderWidth: 1,
+    marginVertical: SPACING.xs,
+    padding: SPACING.md,
+  },
+  listContentContainer: {
+    paddingBottom: SPACING.lg, // Extra padding at the bottom for safe area
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
   },
 });
 

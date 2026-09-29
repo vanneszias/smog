@@ -3,9 +3,9 @@
  * fields intentionally stay server-side.
  */
 export interface SponsorshipWithGesture {
-  gestureName?: string;
-  sponsorName: string;
   durationYears: number;
-  status: string;
+  gestureName?: string;
   paymentAmount: number;
+  sponsorName: string;
+  status: string;
 }

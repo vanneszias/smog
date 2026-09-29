@@ -16,14 +16,14 @@ import { ensureDefaultFavoritesList } from "./lists";
 // =============================================================================
 
 const userReturnType = v.object({
-  _id: v.id("users"),
   _creationTime: v.number(),
-  workosId: v.optional(v.string()),
-  guestId: v.optional(v.string()),
-  email: v.optional(v.string()),
-  role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
+  _id: v.id("users"),
   createdAt: v.number(),
+  email: v.optional(v.string()),
+  guestId: v.optional(v.string()),
   lastActiveAt: v.number(),
+  role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
+  workosId: v.optional(v.string()),
 });
 
 const guestUserReturnType = v.object({
@@ -57,12 +57,12 @@ async function hasMatchingIdentity(
  * Get user by their Convex ID
  */
 export const getUserById = query({
-  args: { userId: v.id("users"), serviceToken: v.string() },
-  returns: v.union(userReturnType, v.null()),
+  args: { serviceToken: v.string(), userId: v.id("users") },
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "getUserById");
     return await ctx.db.get(args.userId);
   },
+  returns: v.union(userReturnType, v.null()),
 });
 
 /**
@@ -70,10 +70,9 @@ export const getUserById = query({
  */
 export const getUserByWorkOSId = query({
   args: {
-    workosId: v.string(),
     serviceToken: v.optional(v.string()),
+    workosId: v.string(),
   },
-  returns: v.union(userReturnType, v.null()),
   handler: async (ctx, args) => {
     if (
       !(
@@ -88,6 +87,7 @@ export const getUserByWorkOSId = query({
       .withIndex("by_workos_id", (q) => q.eq("workosId", args.workosId))
       .unique();
   },
+  returns: v.union(userReturnType, v.null()),
 });
 
 /**
@@ -95,7 +95,6 @@ export const getUserByWorkOSId = query({
  */
 export const getUserByGuestId = query({
   args: { guestId: v.string() },
-  returns: v.union(guestUserReturnType, v.null()),
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
@@ -103,6 +102,7 @@ export const getUserByGuestId = query({
       .unique();
     return user ? { _id: user._id, guestId: user.guestId } : null;
   },
+  returns: v.union(guestUserReturnType, v.null()),
 });
 
 // =============================================================================
@@ -114,12 +114,11 @@ export const getUserByGuestId = query({
  */
 export const createUser = mutation({
   args: {
-    workosId: v.optional(v.string()),
-    guestId: v.optional(v.string()),
     email: v.optional(v.string()),
+    guestId: v.optional(v.string()),
     serviceToken: v.optional(v.string()),
+    workosId: v.optional(v.string()),
   },
-  returns: v.id("users"),
   handler: async (ctx, args) => {
     if (Boolean(args.workosId) === Boolean(args.guestId)) {
       throw new Error("Provide exactly one user identity");
@@ -147,15 +146,16 @@ export const createUser = mutation({
 
     const now = Date.now();
     const userId = await ctx.db.insert("users", {
-      workosId: args.workosId,
-      guestId: args.guestId,
-      email: args.email,
       createdAt: now,
+      email: args.email,
+      guestId: args.guestId,
       lastActiveAt: now,
+      workosId: args.workosId,
     });
     await ensureDefaultFavoritesList(ctx, userId);
     return userId;
   },
+  returns: v.id("users"),
 });
 
 /**
@@ -164,11 +164,10 @@ export const createUser = mutation({
  */
 export const migrateGuestToUser = mutation({
   args: {
+    email: v.optional(v.string()),
     guestId: v.string(),
     workosId: v.string(),
-    email: v.optional(v.string()),
   },
-  returns: v.id("users"),
   handler: async (ctx, args) => {
     await requireMatchingIdentity(ctx, args.workosId);
 
@@ -193,28 +192,29 @@ export const migrateGuestToUser = mutation({
 
     // No guest found - create new user with both IDs
     const userId = await ctx.db.insert("users", {
-      workosId: args.workosId,
-      guestId: args.guestId,
-      email: args.email,
       createdAt: now,
+      email: args.email,
+      guestId: args.guestId,
       lastActiveAt: now,
+      workosId: args.workosId,
     });
     await ensureDefaultFavoritesList(ctx, userId);
     return userId;
   },
+  returns: v.id("users"),
 });
 
 /**
  * Update user's last active timestamp
  */
 export const updateLastActive = mutation({
-  args: { userId: v.id("users"), serviceToken: v.string() },
-  returns: v.null(),
+  args: { serviceToken: v.string(), userId: v.id("users") },
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "updateLastActive");
     await ctx.db.patch(args.userId, { lastActiveAt: Date.now() });
     return null;
   },
+  returns: v.null(),
 });
 
 /**
@@ -222,16 +222,16 @@ export const updateLastActive = mutation({
  */
 export const updateUserRole = mutation({
   args: {
-    userId: v.id("users"),
     role: v.union(v.literal("user"), v.literal("admin")),
     serviceToken: v.string(),
+    userId: v.id("users"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "updateUserRole");
     await ctx.db.patch(args.userId, { role: args.role });
     return null;
   },
+  returns: v.null(),
 });
 
 // =============================================================================
@@ -243,15 +243,10 @@ export const updateUserRole = mutation({
  */
 export const listAllUsers = query({
   args: {
-    limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
+    limit: v.optional(v.number()),
     serviceToken: v.string(),
   },
-  returns: v.object({
-    users: v.array(userReturnType),
-    hasMore: v.boolean(),
-    nextCursor: v.optional(v.string()),
-  }),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "listAllUsers");
     const limit = Math.min(Math.max(args.limit || 50, 1), 500);
@@ -264,11 +259,16 @@ export const listAllUsers = query({
     const results = hasMore ? users.slice(0, limit) : users;
 
     return {
-      users: results,
       hasMore,
       nextCursor: hasMore ? results.at(-1)?._id : undefined,
+      users: results,
     };
   },
+  returns: v.object({
+    hasMore: v.boolean(),
+    nextCursor: v.optional(v.string()),
+    users: v.array(userReturnType),
+  }),
 });
 
 /**
@@ -276,7 +276,6 @@ export const listAllUsers = query({
  */
 export const listAdmins = query({
   args: { serviceToken: v.string() },
-  returns: v.array(userReturnType),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "listAdmins");
     return await ctx.db
@@ -284,4 +283,5 @@ export const listAdmins = query({
       .withIndex("by_role", (q) => q.eq("role", "admin"))
       .collect();
   },
+  returns: v.array(userReturnType),
 });

@@ -9,19 +9,20 @@
  *   gesture={gesture}
  *   isSelected={selectedIds.includes(gesture._id)}
  *   isDisabled={gesture.status !== "available"}
- *   onToggle={() => handleToggle(gesture._id)}
+ *   onToggle={handleToggle}
  * />
  */
 
 import type { GestureWithSponsorshipStatus } from "@smog/ui";
 import { Check, Heart } from "lucide-react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 interface SponsorGestureCardProps {
   gesture: GestureWithSponsorshipStatus;
-  isSelected: boolean;
-  onToggle: () => void;
   isDisabled: boolean;
+  isSelected: boolean;
+  onToggle: (id: string) => void;
 }
 
 /**
@@ -36,7 +37,7 @@ interface SponsorGestureCardProps {
  * - `gesture` — The gesture data including status and categories
  * - `isSelected` — Whether this gesture is currently selected
  * - `isDisabled` — Whether selection is prevented (sponsored / pending)
- * - `onToggle` — Called when the card is clicked
+ * - `onToggle` — Called with the gesture id when an enabled card is clicked
  */
 export function SponsorGestureCard({
   gesture,
@@ -45,6 +46,12 @@ export function SponsorGestureCard({
   isDisabled,
 }: SponsorGestureCardProps) {
   const { t } = useTranslation();
+  const handleClick = useCallback((): void => {
+    if (!isDisabled) {
+      onToggle(gesture._id);
+    }
+  }, [isDisabled, onToggle, gesture._id]);
+
   return (
     <button
       className={`group relative w-full overflow-hidden rounded-xl border bg-card p-4 text-left transition-all ${
@@ -55,7 +62,7 @@ export function SponsorGestureCard({
             : "border-border hover:border-primary/50 hover:shadow-md"
       }`}
       disabled={isDisabled}
-      onClick={onToggle}
+      onClick={handleClick}
       type="button"
     >
       {/* Status badge — top left */}
@@ -89,12 +96,12 @@ export function SponsorGestureCard({
               : "border-muted-foreground/30 bg-background group-hover:border-primary/50"
           }`}
         >
-          {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+          {isSelected ? <Check className="h-3.5 w-3.5 text-white" /> : null}
         </div>
       )}
 
       {/* Content */}
-      <div className={gesture.status !== "available" ? "mt-8" : "mt-0"}>
+      <div className={gesture.status === "available" ? "mt-0" : "mt-8"}>
         <h3 className="pr-8 font-semibold text-base leading-tight">
           {gesture.name}
         </h3>
@@ -127,9 +134,9 @@ export function SponsorGestureCard({
       </div>
 
       {/* Selection highlight overlay */}
-      {isSelected && (
+      {isSelected ? (
         <div className="pointer-events-none absolute inset-0 rounded-xl bg-primary/5" />
-      )}
+      ) : null}
     </button>
   );
 }

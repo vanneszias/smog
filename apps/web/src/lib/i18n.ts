@@ -13,7 +13,7 @@ const getInitialLanguage = () => {
     return stored;
   }
 
-  const browserLang = navigator.language.split("-")[0];
+  const [browserLang] = navigator.language.split("-");
   if (translations.availableLocales.includes(browserLang as AvailableLocale)) {
     return browserLang;
   }
@@ -22,15 +22,15 @@ const getInitialLanguage = () => {
 };
 
 i18n.use(initReactI18next).init({
+  fallbackLng: "nl",
+  interpolation: {
+    escapeValue: false,
+  },
+  lng: getInitialLanguage(),
   resources: {
     en: { translation: translations.en },
     fr: { translation: translations.fr },
     nl: { translation: translations.nl },
-  },
-  lng: getInitialLanguage(),
-  fallbackLng: "nl",
-  interpolation: {
-    escapeValue: false,
   },
 });
 

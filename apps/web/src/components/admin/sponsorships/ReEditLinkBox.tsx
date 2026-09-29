@@ -5,7 +5,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Copy, Link, RefreshCcw } from "lucide-react";
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { client } from "@/utils/orpc";
@@ -18,10 +18,22 @@ interface ReEditLinkBoxProps {
 export function ReEditLinkBox({ sponsorshipId }: ReEditLinkBoxProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { data: linkData, isLoading } = useQuery({
-    queryKey: ["admin", "sponsorships", "reEditLink", sponsorshipId],
     queryFn: () => client.admin.sponsorships.getReEditLink({ sponsorshipId }),
+    queryKey: ["admin", "sponsorships", "reEditLink", sponsorshipId],
     staleTime: 0,
   });
+  const linkUrl = linkData?.url;
+
+  const handleCopy = useCallback((): void => {
+    if (!linkUrl) {
+      return;
+    }
+    navigator.clipboard.writeText(linkUrl).catch(() => {
+      inputRef.current?.select();
+      document.execCommand("copy");
+    });
+    toast.success("Re-edit link copied!");
+  }, [linkUrl]);
 
   if (isLoading) {
     return (
@@ -46,14 +58,6 @@ export function ReEditLinkBox({ sponsorshipId }: ReEditLinkBoxProps) {
     0,
     Math.ceil((linkData.expiresAt - Date.now()) / (1000 * 60 * 60 * 24))
   );
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(linkData.url).catch(() => {
-      inputRef.current?.select();
-      document.execCommand("copy");
-    });
-    toast.success("Re-edit link copied!");
-  };
 
   return (
     <div className="space-y-1.5">

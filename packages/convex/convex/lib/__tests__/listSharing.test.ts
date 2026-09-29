@@ -6,18 +6,18 @@ function makeList(
   overrides: Partial<Doc<"gesture_lists">> = {}
 ): Doc<"gesture_lists"> {
   return {
-    _id: "list_123" as Id<"gesture_lists">,
     _creationTime: 1000,
-    ownerId: "user_123" as Id<"users">,
-    name: "Therapy signs",
-    description: "Useful at home",
-    visibility: "shared",
-    viewShareToken: "view_secret",
-    editShareToken: "edit_secret",
+    _id: "list_123" as Id<"gesture_lists">,
     allowSharedEditing: true,
-    isDefaultFavorites: false,
     createdAt: 1000,
+    description: "Useful at home",
+    editShareToken: "edit_secret",
+    isDefaultFavorites: false,
+    name: "Therapy signs",
+    ownerId: "user_123" as Id<"users">,
     updatedAt: 2000,
+    viewShareToken: "view_secret",
+    visibility: "shared",
     ...overrides,
   };
 }

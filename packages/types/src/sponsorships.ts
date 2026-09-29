@@ -32,32 +32,32 @@ export type SponsorshipStatus =
  * A fully-resolved sponsorship record as stored in Convex.
  */
 export interface Sponsorship {
-  id: string;
-  gestureId: string;
-  sponsorName: string;
-  sponsorEmail: string;
-  overlayImageStorageId?: string;
-  overlayText: string;
-  sponsoredVideoPlaybackId?: string;
-  originalVideoPlaybackId: string;
-  sponsoredVideoStorageId?: string;
-  previewVideoPlaybackId?: string;
-  /** Unix timestamp (ms) when sponsorship becomes active */
-  startDate: number;
-  /** Unix timestamp (ms) when sponsorship expires */
-  endDate: number;
-  /** Always 1 in the simplified flow */
-  durationYears: number;
-  /** Whether the sponsor paid for the logo overlay add-on */
-  hasLogo?: boolean;
-  /** Full name of the contact person who placed the order */
-  contactFullName: string;
   /** Company name (optional) */
   contactCompany?: string;
-  status: SponsorshipStatus;
-  molliePaymentId?: string;
-  paymentAmount: number;
+  /** Full name of the contact person who placed the order */
+  contactFullName: string;
   createdAt: number;
+  /** Always 1 in the simplified flow */
+  durationYears: number;
+  /** Unix timestamp (ms) when sponsorship expires */
+  endDate: number;
+  gestureId: string;
+  /** Whether the sponsor paid for the logo overlay add-on */
+  hasLogo?: boolean;
+  id: string;
+  molliePaymentId?: string;
+  originalVideoPlaybackId: string;
+  overlayImageStorageId?: string;
+  overlayText: string;
+  paymentAmount: number;
+  previewVideoPlaybackId?: string;
+  sponsorEmail: string;
+  sponsoredVideoPlaybackId?: string;
+  sponsoredVideoStorageId?: string;
+  sponsorName: string;
+  /** Unix timestamp (ms) when sponsorship becomes active */
+  startDate: number;
+  status: SponsorshipStatus;
   updatedAt: number;
 }
 
@@ -66,9 +66,9 @@ export interface Sponsorship {
  * Returned by API endpoints such as `getSponsorshipsByPaymentId`.
  */
 export interface SponsorshipWithGesture extends Omit<Sponsorship, "id"> {
+  _creationTime: number;
   /** Convex document ID */
   _id: string;
-  _creationTime: number;
   gestureName?: string;
   rejectionReason?: string;
 }
@@ -79,15 +79,15 @@ export interface SponsorshipWithGesture extends Omit<Sponsorship, "id"> {
  * Input shape for creating a new sponsorship through the wizard.
  */
 export interface CreateSponsorshipInput {
-  gestureId: string;
-  sponsorName: string;
-  sponsorEmail: string;
-  contactFullName: string;
   contactCompany?: string;
+  contactFullName: string;
+  durationYears: number;
+  gestureId: string;
+  includeLogo: boolean;
   overlayImageFile?: File;
   overlayText: string;
-  durationYears: number;
-  includeLogo: boolean;
+  sponsorEmail: string;
+  sponsorName: string;
 }
 
 // ===== PRICING TYPES =====
@@ -96,13 +96,13 @@ export interface CreateSponsorshipInput {
  * Computed pricing breakdown for a sponsorship order.
  */
 export interface SponsorshipPricing {
+  durationYears: number;
   gestureCount: number;
   includeLogo: boolean;
-  pricePerGestureCents: number;
   logoAddonCents: number;
+  pricePerGestureCents: number;
   subtotalCents: number;
   totalCents: number;
-  durationYears: number;
 }
 
 // ===== OVERLAY TYPES =====
@@ -112,6 +112,13 @@ export interface SponsorshipPricing {
  * All coordinates are relative percentages of the video dimensions (0–100).
  */
 export interface OverlayConfig {
+  /** Fade-in animation properties */
+  animation: {
+    /** Seconds from the end of the video at which to show the overlay */
+    startTime: number;
+    /** Duration of the fade-in in seconds */
+    fadeInDuration: number;
+  };
   /** Image overlay properties */
   image: {
     /** X position as % of video width (0–100) */
@@ -134,13 +141,6 @@ export interface OverlayConfig {
     /** Hex color string, e.g. "#000000" */
     color: string;
   };
-  /** Fade-in animation properties */
-  animation: {
-    /** Seconds from the end of the video at which to show the overlay */
-    startTime: number;
-    /** Duration of the fade-in in seconds */
-    fadeInDuration: number;
-  };
 }
 
 /**
@@ -148,20 +148,20 @@ export interface OverlayConfig {
  * Centered logo with two-line text layout.
  */
 export const DEFAULT_OVERLAY_CONFIG: OverlayConfig = {
+  animation: {
+    fadeInDuration: 1,
+    startTime: 5,
+  },
   image: {
+    height: 22,
+    width: 22,
     x: 50,
     y: 76,
-    width: 22,
-    height: 22,
   },
   text: {
+    color: "#00805f",
+    fontSize: 3.8,
     x: 50,
     y: 87,
-    fontSize: 3.8,
-    color: "#00805f",
-  },
-  animation: {
-    startTime: 5,
-    fadeInDuration: 1,
   },
 };

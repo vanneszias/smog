@@ -4,50 +4,42 @@ import { requireServiceAuth } from "./lib/serviceAuth";
 
 export const list = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("categories"),
-      _creationTime: v.number(),
-      name: v.string(),
-      isActive: v.boolean(),
-    })
-  ),
   handler: async (ctx) =>
     await ctx.db
       .query("categories")
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .collect(),
+  returns: v.array(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("categories"),
+      isActive: v.boolean(),
+      name: v.string(),
+    })
+  ),
 });
 
 export const getByName = query({
   args: { name: v.string() },
-  returns: v.union(
-    v.object({
-      _id: v.id("categories"),
-      _creationTime: v.number(),
-      name: v.string(),
-      isActive: v.boolean(),
-    }),
-    v.null()
-  ),
   handler: async (ctx, args) =>
     await ctx.db
       .query("categories")
       .withIndex("by_name", (q) => q.eq("name", args.name))
       .filter((q) => q.eq(q.field("isActive"), true))
       .unique(),
+  returns: v.union(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("categories"),
+      isActive: v.boolean(),
+      name: v.string(),
+    }),
+    v.null()
+  ),
 });
 
 export const getByIds = query({
   args: { ids: v.array(v.id("categories")) },
-  returns: v.array(
-    v.object({
-      _id: v.id("categories"),
-      _creationTime: v.number(),
-      name: v.string(),
-      isActive: v.boolean(),
-    })
-  ),
   handler: async (ctx, args) => {
     if (args.ids.length > 200) {
       throw new Error("Too many category IDs");
@@ -57,6 +49,14 @@ export const getByIds = query({
       .filter((category) => category?.isActive)
       .map((category) => category!);
   },
+  returns: v.array(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("categories"),
+      isActive: v.boolean(),
+      name: v.string(),
+    })
+  ),
 });
 
 // Admin queries and mutations
@@ -65,30 +65,29 @@ export const getByIds = query({
 // Note: Admin authentication is handled at the oRPC layer (adminProcedure)
 export const listAllForAdmin = query({
   args: { serviceToken: v.string() },
-  returns: v.array(
-    v.object({
-      _id: v.id("categories"),
-      _creationTime: v.number(),
-      name: v.string(),
-      isActive: v.boolean(),
-    })
-  ),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "categories.listAllForAdmin");
     // Return ALL categories (both active and inactive) for admin
     return await ctx.db.query("categories").withIndex("by_name").collect();
   },
+  returns: v.array(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("categories"),
+      isActive: v.boolean(),
+      name: v.string(),
+    })
+  ),
 });
 
 // Create new category
 // Note: Admin authentication is handled at the oRPC layer (adminProcedure)
 export const create = mutation({
   args: {
-    name: v.string(),
     isActive: v.optional(v.boolean()),
+    name: v.string(),
     serviceToken: v.string(),
   },
-  returns: v.id("categories"),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "categories.create");
     // Check if category with same name already exists
@@ -102,10 +101,11 @@ export const create = mutation({
     }
 
     return await ctx.db.insert("categories", {
-      name: args.name,
       isActive: args.isActive ?? true,
+      name: args.name,
     });
   },
+  returns: v.id("categories"),
 });
 
 // Update category
@@ -113,11 +113,10 @@ export const create = mutation({
 export const update = mutation({
   args: {
     categoryId: v.id("categories"),
-    name: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
+    name: v.optional(v.string()),
     serviceToken: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "categories.update");
     const { categoryId, serviceToken: _serviceToken, ...updates } = args;
@@ -141,6 +140,7 @@ export const update = mutation({
     await ctx.db.patch(categoryId, updates);
     return null;
   },
+  returns: v.null(),
 });
 
 // Delete category (soft delete by setting isActive to false)
@@ -150,7 +150,6 @@ export const deleteCategory = mutation({
     categoryId: v.id("categories"),
     serviceToken: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "categories.deleteCategory");
     await ctx.db.patch(args.categoryId, {
@@ -158,4 +157,5 @@ export const deleteCategory = mutation({
     });
     return null;
   },
+  returns: v.null(),
 });

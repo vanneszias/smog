@@ -8,7 +8,7 @@ export function buildCsvString(rows: Record<string, unknown>[]): string {
     return "";
   }
 
-  const firstRow = rows[0];
+  const [firstRow] = rows;
   if (!firstRow) {
     return "";
   }

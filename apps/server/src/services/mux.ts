@@ -1,8 +1,8 @@
 import Mux from "@mux/mux-node";
 
 export interface MasterAccessUrl {
-  url: string;
   expiresAt: Date;
+  url: string;
 }
 
 let muxClient: Mux | null = null;
@@ -27,6 +27,7 @@ async function getAssetIdFromPlaybackId(playbackId: string) {
   const limit = 100;
 
   for (let page = 1; page <= 10; page++) {
+    // biome-ignore lint/performance/noAwaitInLoops: paginate Mux assets sequentially and stop at the first match to limit API calls
     const assets = await mux.video.assets.list({ limit, page });
     const asset = assets.data.find((item) =>
       item.playback_ids?.some((playback) => playback.id === playbackId)
@@ -72,11 +73,12 @@ export async function getMasterDownloadUrl(
 
   const maxAttempts = 30;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // biome-ignore lint/performance/noAwaitInLoops: polling Mux until master access is ready requires sequential checks
     const asset = await mux.video.assets.retrieve(assetId);
     if (asset.master?.status === "ready" && asset.master.url) {
       return {
-        url: asset.master.url,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        url: asset.master.url,
       };
     }
     if (asset.master?.status === "errored") {

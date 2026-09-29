@@ -1,42 +1,59 @@
 import { Check, Plus } from "lucide-react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { GestureCardData } from "./types";
 
 interface GestureListProps {
+  error?: Error | null;
   gestures: GestureCardData[];
   isLoading?: boolean;
-  error?: Error | null;
-  selectedGestureId?: string | null;
   onSelectGesture: (gestureId: string) => void;
+  onSort?: (column: "name" | "category") => void;
+  onToggleSaved?: (gestureId: string) => void;
+  savedGestureIds?: string[];
+  selectedGestureId?: string | null;
   sortColumn?: "name" | "category";
   sortDirection?: "asc" | "desc";
-  onSort?: (column: "name" | "category") => void;
-  savedGestureIds?: string[];
-  onToggleSaved?: (gestureId: string) => void;
 }
 
 function GestureRow({
   gesture,
   isSaved,
   isSelected,
-  onClick,
+  onSelect,
   onToggleSaved,
 }: {
   gesture: GestureCardData;
   isSelected: boolean;
-  onClick: () => void;
+  onSelect: (gestureId: string) => void;
   isSaved?: boolean;
   onToggleSaved?: (gestureId: string) => void;
 }) {
   const { t } = useTranslation();
 
-  const handleSaveClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onToggleSaved) {
-      onToggleSaved(gesture._id);
-    }
-  };
+  const handleClick = useCallback((): void => {
+    onSelect(gesture._id);
+  }, [onSelect, gesture._id]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>): void => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleClick();
+      }
+    },
+    [handleClick]
+  );
+
+  const handleSaveClick = useCallback(
+    (e: React.MouseEvent): void => {
+      e.stopPropagation();
+      if (onToggleSaved) {
+        onToggleSaved(gesture._id);
+      }
+    },
+    [onToggleSaved, gesture._id]
+  );
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: cannot use <button> here — contains a nested <button> for the favorite toggle
@@ -46,13 +63,8 @@ function GestureRow({
           ? "border-l-4 border-l-primary bg-primary/5"
           : "border-l-4 border-l-transparent"
       }`}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
     >
@@ -102,7 +114,7 @@ function GestureRow({
       </div>
 
       {/* Save-to-list button */}
-      {onToggleSaved && (
+      {onToggleSaved ? (
         <button
           aria-label={
             isSaved
@@ -123,7 +135,7 @@ function GestureRow({
             <Plus className="h-6 w-6" />
           )}
         </button>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -189,9 +201,7 @@ export function GestureList({
             isSaved={savedGestureIdSet.has(gesture._id)}
             isSelected={selectedGestureId === gesture._id}
             key={gesture._id}
-            onClick={() => {
-              onSelectGesture(gesture._id);
-            }}
+            onSelect={onSelectGesture}
             onToggleSaved={onToggleSaved}
           />
         ))}

@@ -16,24 +16,23 @@ import type { Gesture } from "@/types";
 type ListItem = Gesture | { __isHeader: true };
 
 interface SearchResultsProps {
-  isLoading?: boolean;
-  results: Gesture[];
+  hasMore?: boolean;
   initialQuery?: string;
-  onGesturePress: (gesture: Gesture) => void;
+  isLoading?: boolean;
+  isRefreshing?: boolean;
   isSaved: (gestureId: string) => boolean;
+  ListHeaderComponent?: React.ReactElement | null;
+  onGesturePress: (gesture: Gesture) => void;
+  onLoadMore?: () => void;
   onOpenListPicker: (gesture: Gesture) => void;
   onRefresh?: () => void;
-  onLoadMore?: () => void;
-  hasMore?: boolean;
-  isRefreshing?: boolean;
-  style?: StyleProp<ViewStyle>;
   onScroll?: (scrollY: number) => void;
-  ListHeaderComponent?: React.ReactElement | null;
+  results: Gesture[];
+  style?: StyleProp<ViewStyle>;
 }
 
-const isHeaderItem = (item: ListItem): item is { __isHeader: true } => {
-  return "__isHeader" in item;
-};
+const isHeaderItem = (item: ListItem): item is { __isHeader: true } =>
+  "__isHeader" in item;
 
 const SearchResults: React.FC<SearchResultsProps> = ({
   results,

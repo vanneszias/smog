@@ -19,16 +19,16 @@ import { useNativeInteractions } from "@/hooks/useNativeInteractions";
 
 interface CircularButtonProps {
   accessibilityLabel: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  onPress: () => void;
-  size?: "small" | "medium" | "large";
   backgroundColor?: string;
-  iconColor?: string;
-  style?: ViewStyle;
-  disabled?: boolean;
-  hapticFeedback?: boolean;
   /** When > 0, renders a small count badge in the top-right corner */
   badgeCount?: number;
+  disabled?: boolean;
+  hapticFeedback?: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor?: string;
+  onPress: () => void;
+  size?: "small" | "medium" | "large";
+  style?: ViewStyle;
 }
 
 const CircularButton: React.FC<CircularButtonProps> = ({
@@ -49,11 +49,11 @@ const CircularButton: React.FC<CircularButtonProps> = ({
   const getSizeStyles = () => {
     switch (size) {
       case "small":
-        return { width: 32, height: 32, borderRadius: 16 };
+        return { borderRadius: 16, height: 32, width: 32 };
       case "large":
-        return { width: 56, height: 56, borderRadius: 28 };
+        return { borderRadius: 28, height: 56, width: 56 };
       default:
-        return { width: 44, height: 44, borderRadius: 22 };
+        return { borderRadius: 22, height: 44, width: 44 };
     }
   };
 
@@ -117,8 +117,27 @@ const CircularButton: React.FC<CircularButtonProps> = ({
 };
 
 const styles = StyleSheet.create({
-  wrapper: {
-    position: "relative",
+  badge: {
+    alignItems: "center",
+    borderColor: "#ffffff",
+    borderRadius: 9,
+    // white border to separate badge from button
+    borderWidth: 1.5,
+    height: 18,
+    justifyContent: "center",
+    minWidth: 18,
+    paddingHorizontal: 3,
+    position: "absolute",
+    right: -4,
+    top: -4,
+  },
+  badgeText: {
+    color: "#ffffff",
+    fontFamily: "Onest-Bold",
+    fontSize: FONT_SIZE.xs - 1,
+    fontWeight: FONT_WEIGHT.bold,
+    includeFontPadding: false,
+    lineHeight: 13,
   },
   button: {
     alignItems: "center",
@@ -127,27 +146,8 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.6,
   },
-  badge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-    // white border to separate badge from button
-    borderWidth: 1.5,
-    borderColor: "#ffffff",
-  },
-  badgeText: {
-    fontSize: FONT_SIZE.xs - 1,
-    fontWeight: FONT_WEIGHT.bold,
-    fontFamily: "Onest-Bold",
-    color: "#ffffff",
-    lineHeight: 13,
-    includeFontPadding: false,
+  wrapper: {
+    position: "relative",
   },
 });
 

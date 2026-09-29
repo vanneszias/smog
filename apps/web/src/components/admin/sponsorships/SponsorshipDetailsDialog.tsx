@@ -18,8 +18,8 @@ import { StatusBadge } from "./StatusBadge";
 import type { Sponsorship } from "./types";
 
 interface SponsorshipDetailsDialogProps {
-  sponsorship: Sponsorship | null;
   onClose: () => void;
+  sponsorship: Sponsorship | null;
 }
 
 /**
@@ -50,12 +50,12 @@ export function SponsorshipDetailsDialog({
           <div className="grid grid-cols-2 gap-4">
             {[
               {
-                label: "Original Video",
                 id: sponsorship.originalVideoPlaybackId,
+                label: "Original Video",
               },
               {
-                label: "Sponsored Video",
                 id: sponsorship.sponsoredVideoPlaybackId,
+                label: "Sponsored Video",
               },
             ].map(({ label, id }) => (
               <div className="space-y-2" key={label}>
@@ -70,7 +70,7 @@ export function SponsorshipDetailsDialog({
                         muted
                         playbackId={id}
                         streamType="on-demand"
-                        style={{ width: "100%", aspectRatio: "16/9" }}
+                        style={{ aspectRatio: "16/9", width: "100%" }}
                       />
                     </div>
                     <code className="block truncate rounded-lg bg-[var(--admin-bg)] px-3 py-2 font-mono text-[var(--admin-text-muted)] text-xs">
@@ -133,7 +133,7 @@ export function SponsorshipDetailsDialog({
                   </p>
                 </div>
               </div>
-              {sponsorship.molliePaymentId && (
+              {sponsorship.molliePaymentId ? (
                 <div>
                   <p className="mb-1 font-medium text-[var(--admin-text-muted)] text-xs uppercase tracking-wide">
                     Payment ID
@@ -142,7 +142,7 @@ export function SponsorshipDetailsDialog({
                     {sponsorship.molliePaymentId}
                   </code>
                 </div>
-              )}
+              ) : null}
               {sponsorship.status === "active" && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -163,7 +163,7 @@ export function SponsorshipDetailsDialog({
                   </div>
                 </div>
               )}
-              {sponsorship.rejectionReason && (
+              {sponsorship.rejectionReason ? (
                 <div className="rounded-lg bg-red-50 p-3 dark:bg-red-950/30">
                   <p className="mb-1 font-medium text-red-600 text-xs dark:text-red-400">
                     Rejection Reason
@@ -172,7 +172,7 @@ export function SponsorshipDetailsDialog({
                     {sponsorship.rejectionReason}
                   </p>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 

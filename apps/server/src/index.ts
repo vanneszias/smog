@@ -183,9 +183,9 @@ async function forwardToOpenPanel(
 
   try {
     const response = await fetch(`${openPanelApiUrl}/track`, {
-      method: "POST",
-      headers,
       body: JSON.stringify(body),
+      headers,
+      method: "POST",
     });
 
     if (!(response.status === 200 || response.status === 202)) {
@@ -211,16 +211,16 @@ app.use(logger());
 app.use(
   "/*",
   cors({
-    origin: process.env.CORS_ORIGIN || "",
-    allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "OPTIONS"],
     credentials: true,
+    origin: process.env.CORS_ORIGIN || "",
   })
 );
 
 app.use(
   "/auth/*",
-  rateLimit({ namespace: "auth", limit: 30, windowSeconds: 15 * 60 })
+  rateLimit({ limit: 30, namespace: "auth", windowSeconds: 15 * 60 })
 );
 app.use("/auth/*", async (c, next) => {
   c.header("Cache-Control", "no-store");
@@ -229,7 +229,7 @@ app.use("/auth/*", async (c, next) => {
 });
 app.use(
   "/analytics/track",
-  rateLimit({ namespace: "analytics", limit: 120, windowSeconds: 60 })
+  rateLimit({ limit: 120, namespace: "analytics", windowSeconds: 60 })
 );
 app.use("/rpc/*", async (c, next) => {
   const isRenderOrPaymentRequest = [
@@ -240,8 +240,8 @@ app.use("/rpc/*", async (c, next) => {
   ].some((operation) => c.req.path.includes(operation));
 
   return await rateLimit({
-    namespace: isRenderOrPaymentRequest ? "sponsorship" : "rpc",
     limit: isRenderOrPaymentRequest ? 20 : 300,
+    namespace: isRenderOrPaymentRequest ? "sponsorship" : "rpc",
     windowSeconds: isRenderOrPaymentRequest ? 60 * 60 : 60,
   })(c, next);
 });
@@ -293,10 +293,10 @@ app.post("/auth/workos/callback", async (c) => {
     if (!isNativeClient) {
       setCookie(c, REFRESH_TOKEN_COOKIE, result.refreshToken, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: "Lax",
-        path: "/",
         maxAge: 60 * 60 * 24 * 30, // 30 days
+        path: "/",
+        sameSite: "Lax",
+        secure: isProduction,
       });
     }
 
@@ -304,15 +304,15 @@ app.post("/auth/workos/callback", async (c) => {
     // We intentionally don't await this — it must not delay the auth response
     convex
       .query(api.users.getUserByWorkOSId, {
-        workosId: result.user.id,
         serviceToken: internalApiKey,
+        workosId: result.user.id,
       })
       .then(async (existingUser) => {
         if (!existingUser) {
           await enqueueEmail({
-            type: "welcome",
-            to: result.user.email,
             name: result.user.firstName ?? undefined,
+            to: result.user.email,
+            type: "welcome",
           });
         }
       })
@@ -324,8 +324,8 @@ app.post("/auth/workos/callback", async (c) => {
     // Return tokens and user info
     // Web clients use cookies, native clients use the returned tokens
     return c.json({
-      success: true,
       accessToken: result.accessToken,
+      success: true,
       ...(isNativeClient && { refreshToken: result.refreshToken }),
       user: result.user,
     });
@@ -351,12 +351,14 @@ app.post("/auth/token/refresh", async (c) => {
       // Try to get from request body (for native apps)
       try {
         const body = await c.req.json();
-        if (
-          isRecord(body) &&
-          typeof body.refreshToken === "string" &&
-          body.refreshToken.length <= 8192
-        ) {
-          refreshToken = body.refreshToken;
+        if (isRecord(body)) {
+          const { refreshToken: bodyRefreshToken } = body;
+          if (
+            typeof bodyRefreshToken === "string" &&
+            bodyRefreshToken.length <= 8192
+          ) {
+            refreshToken = bodyRefreshToken;
+          }
         }
       } catch {
         // No body or invalid JSON
@@ -382,10 +384,10 @@ app.post("/auth/token/refresh", async (c) => {
     if (isWebSession) {
       setCookie(c, REFRESH_TOKEN_COOKIE, result.refreshToken, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: "Lax",
-        path: "/",
         maxAge: 60 * 60 * 24 * 30, // 30 days
+        path: "/",
+        sameSite: "Lax",
+        secure: isProduction,
       });
     }
 
@@ -429,7 +431,7 @@ app.post("/analytics/track", async (c) => {
         return c.json({ error: "Unknown analytics event" }, 400);
       }
       await forwardToOpenPanel(
-        { type: body.type, payload: body.payload },
+        { payload: body.payload, type: body.type },
         c.req.raw.headers
       );
       return c.json({ success: true }, 202);
@@ -440,7 +442,7 @@ app.post("/analytics/track", async (c) => {
         return c.json({ error: "Invalid analytics profile" }, 400);
       }
       await forwardToOpenPanel(
-        { type: body.type, payload: body.payload },
+        { payload: body.payload, type: body.type },
         c.req.raw.headers
       );
       return c.json({ success: true }, 202);
@@ -481,8 +483,8 @@ app.post("/api/video/master-access", async (c) => {
     const masterAccess = await getMasterDownloadUrl(playbackId);
 
     return c.json({
-      url: masterAccess.url,
       expiresAt: masterAccess.expiresAt.toISOString(),
+      url: masterAccess.url,
     });
   } catch (error) {
     console.error("[Master Access] Error:", error);
@@ -546,31 +548,32 @@ app.post("/api/email/trigger", async (c) => {
  * GET /api/email/preview/:template
  */
 
+// biome-ignore assist/source/useSortedKeys: key order defines the template list shown in preview error messages
 const EMAIL_PREVIEW_SAMPLES = {
   welcome: () => WelcomeEmail({ name: "Jan Janssen" }),
   sponsorship_submitted: () =>
     SponsorshipSubmittedEmail({
-      sponsorName: "Acme BV",
       gestureName: "Hond",
+      sponsorName: "Acme BV",
     }),
   payment_confirmed: () =>
     PaymentConfirmedEmail({
-      sponsorName: "Acme BV",
       gestureName: "Hond",
       paymentAmount: 5000, // €50.00 in cents
+      sponsorName: "Acme BV",
     }),
   sponsorship_live: () =>
     SponsorshipLiveEmail({
-      sponsorName: "Acme BV",
-      gestureName: "Hond",
-      startDate: Date.now(),
       endDate: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      gestureName: "Hond",
+      sponsorName: "Acme BV",
+      startDate: Date.now(),
     }),
   renewal_reminder: () =>
     RenewalReminderEmail({
-      sponsorName: "Acme BV",
-      gestureName: "Hond",
       endDate: Date.now() + 30 * 24 * 60 * 60 * 1000,
+      gestureName: "Hond",
+      sponsorName: "Acme BV",
     }),
 } as const;
 
@@ -583,8 +586,8 @@ async function isAdminRequest(c: HonoContext): Promise<boolean> {
   }
 
   const user = await convex.query(api.users.getUserByWorkOSId, {
-    workosId: context.workosId,
     serviceToken: internalApiKey,
+    workosId: context.workosId,
   });
 
   return user?.role === "admin";
@@ -616,14 +619,14 @@ app.get("/api/email/preview/:template", async (c) => {
 // ==============================================
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
-  plugins: [
-    new OpenAPIReferencePlugin({
-      schemaConverters: [new ZodToJsonSchemaConverter()],
-    }),
-  ],
   interceptors: [
     onError((error) => {
       console.error(error);
+    }),
+  ],
+  plugins: [
+    new OpenAPIReferencePlugin({
+      schemaConverters: [new ZodToJsonSchemaConverter()],
     }),
   ],
 });
@@ -640,8 +643,8 @@ app.use("/*", async (c, next) => {
   const context = await createContext({ context: c });
 
   const rpcResult = await rpcHandler.handle(c.req.raw, {
-    prefix: "/rpc",
     context,
+    prefix: "/rpc",
   });
 
   if (rpcResult.matched) {
@@ -649,8 +652,8 @@ app.use("/*", async (c, next) => {
   }
 
   const apiResult = await apiHandler.handle(c.req.raw, {
-    prefix: "/api-reference",
     context,
+    prefix: "/api-reference",
   });
 
   if (apiResult.matched) {

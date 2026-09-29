@@ -33,8 +33,14 @@ const getDeviceLanguage = (): Language => {
 
 // Custom language detector that uses AsyncStorage and device locale
 const languageDetector = {
-  type: "languageDetector" as const,
   async: true,
+  cacheUserLanguage: async (lng: string) => {
+    try {
+      await AsyncStorage.setItem("userLanguage", lng);
+    } catch (error) {
+      logger.error("Error saving language:", error);
+    }
+  },
   detect: async (callback: (lng: string) => void) => {
     try {
       // First, try to get saved language from AsyncStorage
@@ -58,13 +64,7 @@ const languageDetector = {
   init: () => {
     /* noop */
   },
-  cacheUserLanguage: async (lng: string) => {
-    try {
-      await AsyncStorage.setItem("userLanguage", lng);
-    } catch (error) {
-      logger.error("Error saving language:", error);
-    }
-  },
+  type: "languageDetector" as const,
 };
 
 // Initialize i18next
@@ -72,13 +72,8 @@ i18n
   .use(languageDetector)
   .use(initReactI18next)
   .init({
-    resources: {
-      en: { translation: en },
-      fr: { translation: fr },
-      nl: { translation: nl },
-    },
-    fallbackLng: DEFAULT_LANGUAGE,
     debug: __DEV__,
+    fallbackLng: DEFAULT_LANGUAGE,
 
     // Interpolation options
     interpolation: {
@@ -87,12 +82,17 @@ i18n
       suffix: "}}",
     },
 
+    // Key separator for nested translations
+    keySeparator: ".",
+    nsSeparator: false,
+
     // React options
     react: {
       useSuspense: false,
     },
-
-    // Key separator for nested translations
-    keySeparator: ".",
-    nsSeparator: false,
+    resources: {
+      en: { translation: en },
+      fr: { translation: fr },
+      nl: { translation: nl },
+    },
   });

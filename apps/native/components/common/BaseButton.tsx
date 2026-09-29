@@ -12,15 +12,15 @@ import { useTheme } from "@/context/ThemeContext";
 import { useNativeInteractions } from "@/hooks/useNativeInteractions";
 
 interface BaseButtonProps {
-  title: string;
-  onPress: () => void;
   disabled?: boolean;
+  hapticFeedback?: boolean;
   loading?: boolean;
-  variant?: "primary" | "secondary" | "outline";
+  onPress: () => void;
   size?: "small" | "medium" | "large";
   style?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle;
-  hapticFeedback?: boolean;
+  title: string;
+  variant?: "primary" | "secondary" | "outline";
 }
 
 const BaseButton: React.FC<BaseButtonProps> = ({
@@ -55,8 +55,8 @@ const BaseButton: React.FC<BaseButtonProps> = ({
           ...baseStyle,
           {
             backgroundColor: "transparent",
-            borderWidth: 1,
             borderColor: theme.primary,
+            borderWidth: 1,
           },
           style,
         ];
@@ -87,7 +87,7 @@ const BaseButton: React.FC<BaseButtonProps> = ({
     <TouchableOpacity
       accessibilityLabel={title}
       accessibilityRole="button"
-      accessibilityState={{ disabled: disabled || loading, busy: loading }}
+      accessibilityState={{ busy: loading, disabled: disabled || loading }}
       activeOpacity={0.8}
       disabled={disabled || loading}
       onPress={handlePress}
@@ -108,36 +108,36 @@ const BaseButton: React.FC<BaseButtonProps> = ({
 const styles = StyleSheet.create({
   button: {
     alignItems: "center",
-    justifyContent: "center",
     flexDirection: "row",
-  },
-  small: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    minHeight: 32,
-  },
-  medium: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    minHeight: 44,
+    justifyContent: "center",
   },
   large: {
+    minHeight: 52,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
-    minHeight: 52,
   },
-  text: {
-    fontWeight: "600",
-    textAlign: "center",
+  largeText: {
+    fontSize: FONT_SIZE.lg,
   },
-  smallText: {
-    fontSize: FONT_SIZE.sm,
+  medium: {
+    minHeight: 44,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
   },
   mediumText: {
     fontSize: FONT_SIZE.md,
   },
-  largeText: {
-    fontSize: FONT_SIZE.lg,
+  small: {
+    minHeight: 32,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  smallText: {
+    fontSize: FONT_SIZE.sm,
+  },
+  text: {
+    fontWeight: "600",
+    textAlign: "center",
   },
 });
 

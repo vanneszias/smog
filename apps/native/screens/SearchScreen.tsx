@@ -61,9 +61,9 @@ const SearchScreen = () => {
   const { results, isLoading, search, clearSearch, hasMore, loadMore } =
     useOptimizedSearch({
       debounceMs: 300,
-      minSearchLength: 0,
       displayPageSize: 20,
       enableCache: true,
+      minSearchLength: 0,
     });
 
   // React to category params arriving from navigation (e.g. tapping a category
@@ -121,6 +121,10 @@ const SearchScreen = () => {
     },
     [addRecentSearch, results.length, selectedCategories.length]
   );
+
+  const handleSearchButtonPress = useCallback(() => {
+    handleSearchSubmit(searchTerm);
+  }, [handleSearchSubmit, searchTerm]);
 
   const handleClear = useCallback(() => {
     setSearchTerm("");
@@ -189,20 +193,6 @@ const SearchScreen = () => {
           ...(isIOS
             ? {
                 headerLargeTitle: false,
-                headerStyle: {
-                  backgroundColor: theme.background,
-                },
-                headerShadowVisible: false,
-                headerSearchBarOptions: {
-                  placeholder: t("search.placeholder"),
-                  autoCapitalize: "none",
-                  hideWhenScrolling: false,
-                  onChangeText: (e) => handleSearchChange(e.nativeEvent.text),
-                  onCancelButtonPress: handleClear,
-                  onSearchButtonPress: (e) =>
-                    handleSearchSubmit(e.nativeEvent.text),
-                  tintColor: theme.primary,
-                },
                 headerRight: () => (
                   <CircularButton
                     accessibilityLabel={t("search.filterButton")}
@@ -212,6 +202,20 @@ const SearchScreen = () => {
                     size="small"
                   />
                 ),
+                headerSearchBarOptions: {
+                  autoCapitalize: "none",
+                  hideWhenScrolling: false,
+                  onCancelButtonPress: handleClear,
+                  onChangeText: (e) => handleSearchChange(e.nativeEvent.text),
+                  onSearchButtonPress: (e) =>
+                    handleSearchSubmit(e.nativeEvent.text),
+                  placeholder: t("search.placeholder"),
+                  tintColor: theme.primary,
+                },
+                headerShadowVisible: false,
+                headerStyle: {
+                  backgroundColor: theme.background,
+                },
               }
             : {
                 headerShown: false,
@@ -245,7 +249,7 @@ const SearchScreen = () => {
             <CircularButton
               accessibilityLabel={t("search.button")}
               icon="search"
-              onPress={() => handleSearchSubmit(searchTerm)}
+              onPress={handleSearchButtonPress}
               size="large"
             />
           </View>
@@ -305,19 +309,19 @@ const SearchScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   androidHeader: {
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.sm,
   },
+  androidSearchBarWrapper: {
+    flex: 1,
+  },
   androidSearchRow: {
-    flexDirection: "row",
     alignItems: "center",
     columnGap: SPACING.sm,
+    flexDirection: "row",
   },
-  androidSearchBarWrapper: {
+  container: {
     flex: 1,
   },
   contentContainer: {

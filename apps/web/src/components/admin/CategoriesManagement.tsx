@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, Pencil, Plus, Tag, Trash2 } from "lucide-react";
-import { useState } from "react";
+import type { ChangeEvent } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,10 +19,10 @@ import { Switch } from "@/components/ui/switch";
 import { client, orpc } from "@/utils/orpc";
 
 interface Category {
-  _id: string;
-  name: string;
-  isActive: boolean;
   _creationTime: number;
+  _id: string;
+  isActive: boolean;
+  name: string;
 }
 
 export function CategoriesManagement() {
@@ -30,12 +31,12 @@ export function CategoriesManagement() {
   const [editDialog, setEditDialog] = useState<Category | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<Category | null>(null);
   const [createForm, setCreateForm] = useState({
-    name: "",
     isActive: true,
+    name: "",
   });
   const [editForm, setEditForm] = useState({
-    name: "",
     isActive: true,
+    name: "",
   });
 
   const { data: categories, isLoading } = useQuery(
@@ -45,19 +46,19 @@ export function CategoriesManagement() {
   const createMutation = useMutation({
     mutationFn: (data: { name: string; isActive: boolean }) =>
       client.admin.categories.create(data),
+    onError: (error) => {
+      toast.error(`Failed to create category: ${error.message}`);
+    },
     onSuccess: () => {
       toast.success("Category created successfully");
       setCreateDialogOpen(false);
-      setCreateForm({ name: "", isActive: true });
+      setCreateForm({ isActive: true, name: "" });
       queryClient.invalidateQueries({
         queryKey: orpc.admin.categories.listAll.queryOptions().queryKey,
       });
       queryClient.invalidateQueries({
         queryKey: orpc.categories.list.queryOptions().queryKey,
       });
-    },
-    onError: (error) => {
-      toast.error(`Failed to create category: ${error.message}`);
     },
   });
 
@@ -67,6 +68,9 @@ export function CategoriesManagement() {
       name?: string;
       isActive?: boolean;
     }) => client.admin.categories.update(data),
+    onError: (error) => {
+      toast.error(`Failed to update category: ${error.message}`);
+    },
     onSuccess: () => {
       toast.success("Category updated successfully");
       setEditDialog(null);
@@ -77,14 +81,14 @@ export function CategoriesManagement() {
         queryKey: orpc.categories.list.queryOptions().queryKey,
       });
     },
-    onError: (error) => {
-      toast.error(`Failed to update category: ${error.message}`);
-    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (categoryId: string) =>
       client.admin.categories.delete({ categoryId }),
+    onError: (error) => {
+      toast.error(`Failed to delete category: ${error.message}`);
+    },
     onSuccess: () => {
       toast.success("Category deleted successfully");
       setDeleteDialog(null);
@@ -95,28 +99,97 @@ export function CategoriesManagement() {
         queryKey: orpc.categories.list.queryOptions().queryKey,
       });
     },
-    onError: (error) => {
-      toast.error(`Failed to delete category: ${error.message}`);
-    },
   });
 
-  const handleEdit = (category: Category) => {
+  const handleEdit = useCallback((category: Category): void => {
     setEditDialog(category);
     setEditForm({
-      name: category.name,
       isActive: category.isActive,
+      name: category.name,
     });
-  };
+  }, []);
 
-  const handleCreateSubmit = () => {
+  const handleOpenCreate = useCallback((): void => {
+    setCreateDialogOpen(true);
+  }, []);
+
+  const handleCloseCreate = useCallback((): void => {
+    setCreateDialogOpen(false);
+  }, []);
+
+  const handleCreateOpenChange = useCallback((open: boolean): void => {
+    setCreateDialogOpen(open);
+    if (!open) {
+      setCreateForm({ isActive: true, name: "" });
+    }
+  }, []);
+
+  const handleCreateNameChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      setCreateForm({ ...createForm, name: e.target.value });
+    },
+    [createForm]
+  );
+
+  const handleCreateActiveChange = useCallback(
+    (checked: boolean): void => {
+      setCreateForm({ ...createForm, isActive: checked });
+    },
+    [createForm]
+  );
+
+  const handleEditOpenChange = useCallback((open: boolean): void => {
+    if (!open) {
+      setEditDialog(null);
+    }
+  }, []);
+
+  const handleCloseEdit = useCallback((): void => {
+    setEditDialog(null);
+  }, []);
+
+  const handleEditNameChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      setEditForm({ ...editForm, name: e.target.value });
+    },
+    [editForm]
+  );
+
+  const handleEditActiveChange = useCallback(
+    (checked: boolean): void => {
+      setEditForm({ ...editForm, isActive: checked });
+    },
+    [editForm]
+  );
+
+  const handleDeleteOpenChange = useCallback((open: boolean): void => {
+    if (!open) {
+      setDeleteDialog(null);
+    }
+  }, []);
+
+  const handleCloseDelete = useCallback((): void => {
+    setDeleteDialog(null);
+  }, []);
+
+  const { mutate: deleteCategory } = deleteMutation;
+  const handleConfirmDelete = useCallback((): void => {
+    if (deleteDialog) {
+      deleteCategory(deleteDialog._id);
+    }
+  }, [deleteDialog, deleteCategory]);
+
+  const { mutate: createCategory } = createMutation;
+  const handleCreateSubmit = useCallback((): void => {
     if (!createForm.name.trim()) {
       toast.error("Please enter a category name");
       return;
     }
-    createMutation.mutate(createForm);
-  };
+    createCategory(createForm);
+  }, [createForm, createCategory]);
 
-  const handleEditSubmit = () => {
+  const { mutate: updateCategory } = updateMutation;
+  const handleEditSubmit = useCallback((): void => {
     if (!editDialog) {
       return;
     }
@@ -124,12 +197,12 @@ export function CategoriesManagement() {
       toast.error("Please enter a category name");
       return;
     }
-    updateMutation.mutate({
+    updateCategory({
       categoryId: editDialog._id,
-      name: editForm.name,
       isActive: editForm.isActive,
+      name: editForm.name,
     });
-  };
+  }, [editDialog, editForm, updateCategory]);
 
   const activeCategories = categories?.filter((c) => c.isActive) || [];
   const inactiveCategories = categories?.filter((c) => !c.isActive) || [];
@@ -178,7 +251,7 @@ export function CategoriesManagement() {
           </div>
         </div>
 
-        <Button onClick={() => setCreateDialogOpen(true)}>
+        <Button onClick={handleOpenCreate}>
           <Plus className="mr-2 h-4 w-4" />
           Create Category
         </Button>
@@ -208,22 +281,11 @@ export function CategoriesManagement() {
                   </Badge>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  onClick={() => handleEdit(category)}
-                  size="sm"
-                  variant="ghost"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  onClick={() => setDeleteDialog(category)}
-                  size="sm"
-                  variant="ghost"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              <CategoryActions
+                category={category}
+                onDelete={setDeleteDialog}
+                onEdit={handleEdit}
+              />
             </div>
           ))}
         </div>
@@ -261,15 +323,7 @@ export function CategoriesManagement() {
                     </Badge>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    onClick={() => handleEdit(category)}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
+                <CategoryActions category={category} onEdit={handleEdit} />
               </div>
             ))}
           </div>
@@ -277,15 +331,7 @@ export function CategoriesManagement() {
       )}
 
       {/* Create Dialog */}
-      <Dialog
-        onOpenChange={(open) => {
-          setCreateDialogOpen(open);
-          if (!open) {
-            setCreateForm({ name: "", isActive: true });
-          }
-        }}
-        open={createDialogOpen}
-      >
+      <Dialog onOpenChange={handleCreateOpenChange} open={createDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -301,9 +347,7 @@ export function CategoriesManagement() {
               <Label htmlFor="create-name">Name</Label>
               <Input
                 id="create-name"
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, name: e.target.value })
-                }
+                onChange={handleCreateNameChange}
                 placeholder="e.g., Greetings, Animals, Colors"
                 value={createForm.name}
               />
@@ -312,18 +356,13 @@ export function CategoriesManagement() {
               <Switch
                 checked={createForm.isActive}
                 id="create-active"
-                onCheckedChange={(checked) =>
-                  setCreateForm({ ...createForm, isActive: checked })
-                }
+                onCheckedChange={handleCreateActiveChange}
               />
               <Label htmlFor="create-active">Active (visible to users)</Label>
             </div>
           </div>
           <DialogFooter>
-            <Button
-              onClick={() => setCreateDialogOpen(false)}
-              variant="outline"
-            >
+            <Button onClick={handleCloseCreate} variant="outline">
               Cancel
             </Button>
             <Button
@@ -337,14 +376,7 @@ export function CategoriesManagement() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditDialog(null);
-          }
-        }}
-        open={!!editDialog}
-      >
+      <Dialog onOpenChange={handleEditOpenChange} open={!!editDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -357,9 +389,7 @@ export function CategoriesManagement() {
               <Label htmlFor="edit-name">Name</Label>
               <Input
                 id="edit-name"
-                onChange={(e) =>
-                  setEditForm({ ...editForm, name: e.target.value })
-                }
+                onChange={handleEditNameChange}
                 placeholder="Category name"
                 value={editForm.name}
               />
@@ -368,15 +398,13 @@ export function CategoriesManagement() {
               <Switch
                 checked={editForm.isActive}
                 id="edit-active"
-                onCheckedChange={(checked) =>
-                  setEditForm({ ...editForm, isActive: checked })
-                }
+                onCheckedChange={handleEditActiveChange}
               />
               <Label htmlFor="edit-active">Active (visible to users)</Label>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => setEditDialog(null)} variant="outline">
+            <Button onClick={handleCloseEdit} variant="outline">
               Cancel
             </Button>
             <Button
@@ -390,14 +418,7 @@ export function CategoriesManagement() {
       </Dialog>
 
       {/* Delete Dialog */}
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteDialog(null);
-          }
-        }}
-        open={!!deleteDialog}
-      >
+      <Dialog onOpenChange={handleDeleteOpenChange} open={!!deleteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -410,14 +431,12 @@ export function CategoriesManagement() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={() => setDeleteDialog(null)} variant="outline">
+            <Button onClick={handleCloseDelete} variant="outline">
               Cancel
             </Button>
             <Button
               disabled={deleteMutation.isPending}
-              onClick={() =>
-                deleteDialog && deleteMutation.mutate(deleteDialog._id)
-              }
+              onClick={handleConfirmDelete}
               variant="destructive"
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete Category"}
@@ -425,6 +444,36 @@ export function CategoriesManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+interface CategoryActionsProps {
+  category: Category;
+  onDelete?: (category: Category) => void;
+  onEdit: (category: Category) => void;
+}
+
+/** Edit (and optionally delete) buttons for a category card. */
+function CategoryActions({ category, onDelete, onEdit }: CategoryActionsProps) {
+  const handleEdit = useCallback((): void => {
+    onEdit(category);
+  }, [category, onEdit]);
+
+  const handleDelete = useCallback((): void => {
+    onDelete?.(category);
+  }, [category, onDelete]);
+
+  return (
+    <div className="flex items-center gap-1">
+      <Button onClick={handleEdit} size="sm" variant="ghost">
+        <Pencil className="h-4 w-4" />
+      </Button>
+      {onDelete ? (
+        <Button onClick={handleDelete} size="sm" variant="ghost">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      ) : null}
     </div>
   );
 }

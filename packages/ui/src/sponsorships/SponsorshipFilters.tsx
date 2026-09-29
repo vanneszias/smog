@@ -1,16 +1,16 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import CategoryFilter from "../common/CategoryFilter";
 import SearchBar from "../common/SearchBar";
 
 interface SponsorshipFiltersProps {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   allCategories: string[];
-  selectedCategories: string[];
   onCategoryToggle: (category: string) => void;
   onClearFilters?: () => void;
+  onSearchChange: (query: string) => void;
+  searchQuery: string;
+  selectedCategories: string[];
 }
 
 export function SponsorshipFilters({
@@ -25,6 +25,10 @@ export function SponsorshipFilters({
   const [isExpanded, setIsExpanded] = useState(true);
   const activeFilterCount = selectedCategories.length;
 
+  const handleToggleExpanded = useCallback((): void => {
+    setIsExpanded(!isExpanded);
+  }, [isExpanded]);
+
   return (
     <div className="shrink-0 border-border border-b bg-background px-6 py-4">
       <div className="mb-3 flex items-center gap-2">
@@ -36,7 +40,7 @@ export function SponsorshipFilters({
         />
         <button
           className="flex items-center gap-1.5 rounded-md px-3 py-2 font-medium text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={handleToggleExpanded}
           type="button"
         >
           {t("ui.gestureFilters.filters")}
@@ -53,13 +57,13 @@ export function SponsorshipFilters({
         </button>
       </div>
 
-      {isExpanded && (
+      {isExpanded ? (
         <CategoryFilter
           categories={allCategories}
           onCategoryToggle={onCategoryToggle}
           selectedCategories={selectedCategories}
         />
-      )}
+      ) : null}
 
       {selectedCategories.length > 0 && onClearFilters ? (
         <div className="mt-4">

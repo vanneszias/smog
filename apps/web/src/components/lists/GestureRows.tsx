@@ -18,6 +18,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { GestureCardData } from "@smog/ui";
 import { GripVertical } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
+import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { GestureRowAction } from "./types";
@@ -27,14 +28,18 @@ function GestureRow({
   className,
   dragHandle,
   gesture,
-  onSelect,
+  onSelectGesture,
 }: {
   actions: GestureRowAction[];
   className?: string;
   dragHandle?: ReactNode;
   gesture: GestureCardData;
-  onSelect: () => void;
+  onSelectGesture: (gestureId: string) => void;
 }) {
+  const handleSelect = useCallback(() => {
+    onSelectGesture(gesture._id);
+  }, [gesture._id, onSelectGesture]);
+
   return (
     <div
       className={cn(
@@ -46,7 +51,11 @@ function GestureRow({
       )}
     >
       {dragHandle}
-      <button className="min-w-0 text-left" onClick={onSelect} type="button">
+      <button
+        className="min-w-0 text-left"
+        onClick={handleSelect}
+        type="button"
+      >
         <p className="truncate font-semibold text-base leading-tight">
           {gesture.name}
         </p>
@@ -92,12 +101,12 @@ function SortableGestureRow({
   actions,
   dragHandleLabel,
   gesture,
-  onSelect,
+  onSelectGesture,
 }: {
   actions: GestureRowAction[];
   dragHandleLabel: string;
   gesture: GestureCardData;
-  onSelect: () => void;
+  onSelectGesture: (gestureId: string) => void;
 }) {
   const {
     attributes,
@@ -131,7 +140,7 @@ function SortableGestureRow({
           </button>
         }
         gesture={gesture}
-        onSelect={onSelect}
+        onSelectGesture={onSelectGesture}
       />
     </div>
   );
@@ -162,19 +171,24 @@ export function GestureRows({
     })
   );
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!(over && active.id !== over.id && onReorder)) {
-      return;
-    }
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!(over && active.id !== over.id && onReorder)) {
+        return;
+      }
 
-    const oldIndex = gestures.findIndex((gesture) => gesture._id === active.id);
-    const newIndex = gestures.findIndex((gesture) => gesture._id === over.id);
-    if (oldIndex < 0 || newIndex < 0) {
-      return;
-    }
-    onReorder(arrayMove(gestures, oldIndex, newIndex));
-  };
+      const oldIndex = gestures.findIndex(
+        (gesture) => gesture._id === active.id
+      );
+      const newIndex = gestures.findIndex((gesture) => gesture._id === over.id);
+      if (oldIndex < 0 || newIndex < 0) {
+        return;
+      }
+      onReorder(arrayMove(gestures, oldIndex, newIndex));
+    },
+    [gestures, onReorder]
+  );
 
   if (onReorder) {
     return (
@@ -194,7 +208,7 @@ export function GestureRows({
                 dragHandleLabel={dragHandleLabel}
                 gesture={gesture}
                 key={gesture._id}
-                onSelect={() => onSelectGesture(gesture._id)}
+                onSelectGesture={onSelectGesture}
               />
             ))}
           </div>
@@ -210,7 +224,7 @@ export function GestureRows({
           actions={actionsForGesture(gesture, index)}
           gesture={gesture}
           key={gesture._id}
-          onSelect={() => onSelectGesture(gesture._id)}
+          onSelectGesture={onSelectGesture}
         />
       ))}
     </div>

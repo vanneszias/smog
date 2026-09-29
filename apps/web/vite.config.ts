@@ -5,20 +5,6 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [
-    tailwindcss(),
-    tanstackRouter({ autoCodeSplitting: true }),
-    react(),
-  ],
-  envDir: path.resolve(__dirname, "../.."),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  define: {
-    global: "globalThis",
-  },
   build: {
     chunkSizeWarningLimit: 800,
     rollupOptions: {
@@ -55,6 +41,20 @@ export default defineConfig({
           }
         },
       },
+    },
+  },
+  define: {
+    global: "globalThis",
+  },
+  envDir: path.resolve(import.meta.dirname, "../.."),
+  plugins: [
+    tailwindcss(),
+    tanstackRouter({ autoCodeSplitting: true }),
+    react(),
+  ],
+  resolve: {
+    alias: {
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
 });

@@ -11,9 +11,9 @@ import { EmailLayout } from "./EmailLayout";
 import * as S from "./styles";
 
 interface PaymentConfirmedEmailProps {
-  sponsorName: string;
   gestureName: string;
   paymentAmount: number;
+  sponsorName: string;
 }
 
 export function PaymentConfirmedEmail({
@@ -22,8 +22,8 @@ export function PaymentConfirmedEmail({
   paymentAmount,
 }: PaymentConfirmedEmailProps) {
   const formattedAmount = new Intl.NumberFormat("nl-BE", {
-    style: "currency",
     currency: "EUR",
+    style: "currency",
   }).format(paymentAmount / 100); // paymentAmount is in cents
 
   const webUrl = process.env.CORS_ORIGIN ?? "https://app.smog.vlaanderen";

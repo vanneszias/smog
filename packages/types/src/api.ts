@@ -39,11 +39,11 @@ export type ApiErrorCode =
  */
 export interface ApiError {
   code: ApiErrorCode;
+  /** Extra diagnostic context (dev only, never sent to production clients) */
+  details?: Record<string, unknown>;
   message: string;
   /** Whether the client can recover without user intervention */
   recoverable: boolean;
-  /** Extra diagnostic context (dev only, never sent to production clients) */
-  details?: Record<string, unknown>;
 }
 
 // ===== PAGINATION TYPES =====
@@ -53,10 +53,10 @@ export interface ApiError {
  */
 export interface PaginatedResponse<T> {
   data: T[];
-  total: number;
+  hasMore: boolean;
   page: number;
   pageSize: number;
-  hasMore: boolean;
+  total: number;
 }
 
 /**
@@ -73,10 +73,10 @@ export interface PaginationParams {
  * Result of a Convex ↔ local sync operation.
  */
 export interface SyncResult {
+  errors: string[];
   success: boolean;
   /** Number of records synced */
   synced: number;
-  errors: string[];
   timestamp: Date;
 }
 
@@ -85,7 +85,7 @@ export interface SyncResult {
  */
 export interface SyncStatus {
   isSyncing: boolean;
-  lastSync: Date | null;
   lastAttempt: Date | null;
+  lastSync: Date | null;
   nextSync: Date | null;
 }

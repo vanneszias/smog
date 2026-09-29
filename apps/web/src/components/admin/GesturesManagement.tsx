@@ -11,7 +11,8 @@ import {
   Sparkles,
   Tag,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { GestureQrDialog } from "@/components/GestureQrDialog";
 import { Badge } from "@/components/ui/badge";
@@ -32,12 +33,12 @@ import { CreateGestureDialog } from "./CreateGestureDialog";
 
 interface Gesture {
   _id: string;
-  name: string;
-  info: string;
-  playbackId: string;
-  concept: string[];
-  isActive: boolean;
   categoryIds: string[];
+  concept: string[];
+  info: string;
+  isActive: boolean;
+  name: string;
+  playbackId: string;
 }
 
 interface GestureWithCategories extends Gesture {
@@ -47,12 +48,15 @@ interface GestureWithCategories extends Gesture {
 function GestureCard({
   gesture,
   isSelected,
-  onClick,
+  onSelect,
 }: {
   gesture: GestureWithCategories;
   isSelected: boolean;
-  onClick: () => void;
+  onSelect: (gestureId: string) => void;
 }) {
+  const handleClick = useCallback((): void => {
+    onSelect(gesture._id);
+  }, [gesture._id, onSelect]);
   const isInactive = !gesture.isActive;
   const validCategories = gesture.categories.filter(Boolean);
 
@@ -63,7 +67,7 @@ function GestureCard({
           ? "border-[var(--admin-accent)] bg-[var(--admin-accent)]/5 ring-2 ring-[var(--admin-accent)]/20"
           : "border-[var(--admin-border)] bg-[var(--admin-card)] hover:border-[var(--admin-accent)]/30 hover:shadow-md"
       } ${isInactive ? "opacity-70" : ""}`}
-      onClick={onClick}
+      onClick={handleClick}
       type="button"
     >
       {/* Video Thumbnail */}
@@ -90,9 +94,9 @@ function GestureCard({
           </div>
         )}
         {/* Selection indicator */}
-        {isSelected && (
+        {isSelected ? (
           <div className="absolute top-2 right-2 h-3 w-3 rounded-full border-2 border-white bg-[var(--admin-accent)] shadow-md" />
-        )}
+        ) : null}
       </div>
 
       {/* Content */}
@@ -124,6 +128,55 @@ function GestureCard({
   );
 }
 
+function ConceptBadge({
+  concept,
+  onRemove,
+}: {
+  concept: string;
+  onRemove: (concept: string) => void;
+}) {
+  const handleClick = useCallback((): void => {
+    onRemove(concept);
+  }, [concept, onRemove]);
+
+  return (
+    <Badge
+      className="cursor-pointer pr-1"
+      onClick={handleClick}
+      variant="secondary"
+    >
+      {concept}
+      <span className="ml-1 text-xs">×</span>
+    </Badge>
+  );
+}
+
+function CategoryBadge({
+  categoryId,
+  isSelected,
+  name,
+  onToggle,
+}: {
+  categoryId: string;
+  isSelected: boolean | undefined;
+  name: string;
+  onToggle: (categoryId: string) => void;
+}) {
+  const handleClick = useCallback((): void => {
+    onToggle(categoryId);
+  }, [categoryId, onToggle]);
+
+  return (
+    <Badge
+      className="cursor-pointer"
+      onClick={handleClick}
+      variant={isSelected ? "default" : "outline"}
+    >
+      {name}
+    </Badge>
+  );
+}
+
 function GestureDetailPanel({
   gesture,
   gestureWithCategories,
@@ -136,6 +189,14 @@ function GestureDetailPanel({
   const validCategories = gestureWithCategories.categories.filter(Boolean);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
 
+  const handleEditClick = useCallback((): void => {
+    onEdit(gesture);
+  }, [gesture, onEdit]);
+
+  const handleOpenQrDialog = useCallback((): void => {
+    setIsQrDialogOpen(true);
+  }, []);
+
   return (
     <div className="sticky top-24 space-y-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
       {/* Video Preview */}
@@ -145,7 +206,7 @@ function GestureDetailPanel({
           muted
           playbackId={gesture.playbackId}
           streamType="on-demand"
-          style={{ width: "100%", aspectRatio: "16/9" }}
+          style={{ aspectRatio: "16/9", width: "100%" }}
         />
       </div>
 
@@ -209,7 +270,7 @@ function GestureDetailPanel({
         )}
 
         {/* Description */}
-        {gesture.info && (
+        {gesture.info ? (
           <div>
             <p className="mb-1 font-medium text-[var(--admin-text-muted)] text-xs uppercase tracking-wide">
               Description
@@ -218,7 +279,7 @@ function GestureDetailPanel({
               {gesture.info}
             </p>
           </div>
-        )}
+        ) : null}
 
         {/* Playback ID */}
         <div>
@@ -233,13 +294,13 @@ function GestureDetailPanel({
 
       {/* Actions */}
       <div className="space-y-2">
-        <Button className="w-full gap-2" onClick={() => onEdit(gesture)}>
+        <Button className="w-full gap-2" onClick={handleEditClick}>
           <Pencil className="h-4 w-4" />
           Edit Gesture
         </Button>
         <Button
           className="w-full gap-2"
-          onClick={() => setIsQrDialogOpen(true)}
+          onClick={handleOpenQrDialog}
           variant="outline"
         >
           <QrCode className="h-4 w-4" />
@@ -283,6 +344,9 @@ export function GesturesManagement() {
   const updateMutation = useMutation({
     mutationFn: (data: Partial<Gesture> & { gestureId: string }) =>
       client.admin.gestures.update(data),
+    onError: (error) => {
+      toast.error(`Failed to update: ${error.message}`);
+    },
     onSuccess: () => {
       toast.success("Gesture updated successfully");
       setEditDialog(null);
@@ -295,25 +359,22 @@ export function GesturesManagement() {
         }).queryKey,
       });
     },
-    onError: (error) => {
-      toast.error(`Failed to update: ${error.message}`);
-    },
   });
 
-  const handleEdit = (gesture: Gesture) => {
+  const handleEdit = useCallback((gesture: Gesture): void => {
     setEditDialog(gesture);
     setEditForm({
-      name: gesture.name,
-      info: gesture.info,
-      playbackId: gesture.playbackId,
-      concept: gesture.concept,
-      isActive: gesture.isActive,
       categoryIds: gesture.categoryIds,
+      concept: gesture.concept,
+      info: gesture.info,
+      isActive: gesture.isActive,
+      name: gesture.name,
+      playbackId: gesture.playbackId,
     });
     setConceptInput("");
-  };
+  }, []);
 
-  const handleAddConcept = () => {
+  const handleAddConcept = useCallback((): void => {
     const trimmed = conceptInput.trim();
     if (trimmed && !editForm.concept?.includes(trimmed)) {
       setEditForm((prev) => ({
@@ -322,25 +383,25 @@ export function GesturesManagement() {
       }));
       setConceptInput("");
     }
-  };
+  }, [conceptInput, editForm.concept]);
 
-  const handleRemoveConcept = (concept: string) => {
+  const handleRemoveConcept = useCallback((concept: string): void => {
     setEditForm((prev) => ({
       ...prev,
       concept: (prev.concept || []).filter((c) => c !== concept),
     }));
-  };
+  }, []);
 
-  const handleToggleCategory = (categoryId: string) => {
+  const handleToggleCategory = useCallback((categoryId: string): void => {
     setEditForm((prev) => ({
       ...prev,
       categoryIds: prev.categoryIds?.includes(categoryId)
         ? prev.categoryIds.filter((id) => id !== categoryId)
         : [...(prev.categoryIds || []), categoryId],
     }));
-  };
+  }, []);
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = useCallback((): void => {
     if (!editDialog) {
       return;
     }
@@ -348,27 +409,87 @@ export function GesturesManagement() {
       gestureId: editDialog._id,
       ...editForm,
     });
-  };
+  }, [editDialog, editForm, updateMutation]);
+
+  const handleSearchChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      setSearchQuery(e.target.value);
+    },
+    []
+  );
+
+  const handleToggleInactiveOnly = useCallback((): void => {
+    setShowInactiveOnly(!showInactiveOnly);
+  }, [showInactiveOnly]);
+
+  const handleCloseEditDialog = useCallback((): void => {
+    setEditDialog(null);
+  }, []);
+
+  const handleNameChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      setEditForm({ ...editForm, name: e.target.value });
+    },
+    [editForm]
+  );
+
+  const handlePlaybackIdChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      setEditForm({ ...editForm, playbackId: e.target.value });
+    },
+    [editForm]
+  );
+
+  const handleInfoChange = useCallback(
+    (e: ChangeEvent<HTMLTextAreaElement>): void => {
+      setEditForm({ ...editForm, info: e.target.value });
+    },
+    [editForm]
+  );
+
+  const handleConceptInputChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      setConceptInput(e.target.value);
+    },
+    []
+  );
+
+  const handleConceptKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>): void => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleAddConcept();
+      }
+    },
+    [handleAddConcept]
+  );
+
+  const handleActiveChange = useCallback(
+    (checked: boolean): void => {
+      setEditForm({ ...editForm, isActive: checked });
+    },
+    [editForm]
+  );
 
   // Transform gestures data
-  const gesturesWithCategories: GestureWithCategories[] = useMemo(() => {
-    return (
+  const gesturesWithCategories: GestureWithCategories[] = useMemo(
+    () =>
       gestures?.map((gesture) => ({
         ...gesture,
         categories: gesture.categoryIds.map((catId) => {
           const cat = categories?.find((c) => c._id === catId);
           return cat ? { _id: cat._id, name: cat.name } : undefined;
         }),
-      })) || []
-    );
-  }, [gestures, categories]);
+      })) || [],
+    [gestures, categories]
+  );
 
   // Count stats
   const stats = useMemo(() => {
     const total = gesturesWithCategories.length;
     const active = gesturesWithCategories.filter((g) => g.isActive).length;
     const inactive = total - active;
-    return { total, active, inactive };
+    return { active, inactive, total };
   }, [gesturesWithCategories]);
 
   // Filter
@@ -452,14 +573,14 @@ export function GesturesManagement() {
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--admin-text-muted)]" />
           <Input
             className="h-11 bg-[var(--admin-bg)] pl-10"
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Search gestures by name, description, or concept..."
             value={searchQuery}
           />
         </div>
         <Button
           className={`h-11 gap-2 ${showInactiveOnly ? "bg-[var(--admin-accent)] text-white hover:bg-[var(--admin-accent-dark)]" : ""}`}
-          onClick={() => setShowInactiveOnly(!showInactiveOnly)}
+          onClick={handleToggleInactiveOnly}
           variant={showInactiveOnly ? "default" : "outline"}
         >
           <Filter className="h-4 w-4" />
@@ -498,7 +619,7 @@ export function GesturesManagement() {
                   gesture={gesture}
                   isSelected={selectedGestureId === gesture._id}
                   key={gesture._id}
-                  onClick={() => setSelectedGestureId(gesture._id)}
+                  onSelect={setSelectedGestureId}
                 />
               ))}
             </div>
@@ -528,7 +649,7 @@ export function GesturesManagement() {
       </div>
 
       {/* Edit Dialog */}
-      <Dialog onOpenChange={() => setEditDialog(null)} open={!!editDialog}>
+      <Dialog onOpenChange={handleCloseEditDialog} open={!!editDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -541,9 +662,7 @@ export function GesturesManagement() {
               <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
-                onChange={(e) =>
-                  setEditForm({ ...editForm, name: e.target.value })
-                }
+                onChange={handleNameChange}
                 placeholder="Gesture name"
                 value={editForm.name || ""}
               />
@@ -553,9 +672,7 @@ export function GesturesManagement() {
               <Input
                 className="font-mono text-sm"
                 id="playbackId"
-                onChange={(e) =>
-                  setEditForm({ ...editForm, playbackId: e.target.value })
-                }
+                onChange={handlePlaybackIdChange}
                 placeholder="Mux playback ID"
                 value={editForm.playbackId || ""}
               />
@@ -564,9 +681,7 @@ export function GesturesManagement() {
               <Label htmlFor="info">Description</Label>
               <Textarea
                 id="info"
-                onChange={(e) =>
-                  setEditForm({ ...editForm, info: e.target.value })
-                }
+                onChange={handleInfoChange}
                 placeholder="Describe this gesture..."
                 rows={4}
                 value={editForm.info || ""}
@@ -576,13 +691,8 @@ export function GesturesManagement() {
               <Label>Concepts / Keywords</Label>
               <div className="flex gap-2">
                 <Input
-                  onChange={(e) => setConceptInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddConcept();
-                    }
-                  }}
+                  onChange={handleConceptInputChange}
+                  onKeyDown={handleConceptKeyDown}
                   placeholder="Add a concept and press Enter"
                   value={conceptInput}
                 />
@@ -597,15 +707,11 @@ export function GesturesManagement() {
               {(editForm.concept?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {editForm.concept?.map((concept) => (
-                    <Badge
-                      className="cursor-pointer pr-1"
+                    <ConceptBadge
+                      concept={concept}
                       key={concept}
-                      onClick={() => handleRemoveConcept(concept)}
-                      variant="secondary"
-                    >
-                      {concept}
-                      <span className="ml-1 text-xs">×</span>
-                    </Badge>
+                      onRemove={handleRemoveConcept}
+                    />
                   ))}
                 </div>
               )}
@@ -613,21 +719,15 @@ export function GesturesManagement() {
             <div className="space-y-2">
               <Label>Categories</Label>
               <div className="flex flex-wrap gap-2">
-                {categories?.map((category) => {
-                  const isSelected = editForm.categoryIds?.includes(
-                    category._id
-                  );
-                  return (
-                    <Badge
-                      className="cursor-pointer"
-                      key={category._id}
-                      onClick={() => handleToggleCategory(category._id)}
-                      variant={isSelected ? "default" : "outline"}
-                    >
-                      {category.name}
-                    </Badge>
-                  );
-                })}
+                {categories?.map((category) => (
+                  <CategoryBadge
+                    categoryId={category._id}
+                    isSelected={editForm.categoryIds?.includes(category._id)}
+                    key={category._id}
+                    name={category.name}
+                    onToggle={handleToggleCategory}
+                  />
+                ))}
               </div>
               {(editForm.categoryIds?.length ?? 0) === 0 && (
                 <p className="text-[var(--admin-text-muted)] text-sm">
@@ -649,14 +749,12 @@ export function GesturesManagement() {
               <Switch
                 checked={editForm.isActive}
                 id="active"
-                onCheckedChange={(checked) =>
-                  setEditForm({ ...editForm, isActive: checked })
-                }
+                onCheckedChange={handleActiveChange}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => setEditDialog(null)} variant="outline">
+            <Button onClick={handleCloseEditDialog} variant="outline">
               Cancel
             </Button>
             <Button

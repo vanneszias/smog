@@ -1,6 +1,7 @@
 {
   "name": "@smog/api",
   "version": "2.1.0",
+  "type": "module",
   "exports": {
     ".": {
       "default": "./src/index.ts"
@@ -9,14 +10,7 @@
       "default": "./src/*.ts"
     }
   },
-  "type": "module",
   "scripts": {},
-  "devDependencies": {
-    "@smog/config": "workspace:*"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3"
-  },
   "dependencies": {
     "@mux/mux-node": "^14.1.1",
     "@orpc/server": "catalog:",
@@ -26,5 +20,11 @@
     "hono": "catalog:",
     "jose": "^6.1.3",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@smog/config": "workspace:*"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
   }
 }

@@ -10,16 +10,16 @@
  * A single sign-language gesture with its video playback information.
  */
 export interface Gesture {
-  id: string;
-  name: string;
   /** Array of category names this gesture belongs to */
   category: string[];
-  /** Mux playback ID for the gesture video */
-  playbackId: string;
   /** Related concepts / synonyms for the gesture */
   concept: string[];
+  id: string;
   /** Additional descriptive information */
   info: string;
+  name: string;
+  /** Mux playback ID for the gesture video */
+  playbackId: string;
 }
 
 /**
@@ -46,11 +46,11 @@ export interface GestureWithSponsorshipStatus extends Gesture {
  * A gesture category.
  */
 export interface Category {
+  /** Number of gestures in this category */
+  count?: number;
   id: string;
   name: string;
   slug: string;
-  /** Number of gestures in this category */
-  count?: number;
 }
 
 // ===== SEARCH TYPES =====

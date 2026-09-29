@@ -40,15 +40,15 @@ export function validateEmail(email: string): boolean {
 
 /** Shape of the sponsor details form data used by `validateDetails`. */
 export interface SponsorDetailsFormData {
-  sponsorName: string;
-  includeLogo: boolean;
-  logoFile: File | null;
-  contactFullName: string;
   contactEmail: string;
-  invoiceRequested: boolean;
-  invoiceName: string;
-  invoiceVatNumber: string;
+  contactFullName: string;
+  includeLogo: boolean;
   invoiceEmail: string;
+  invoiceName: string;
+  invoiceRequested: boolean;
+  invoiceVatNumber: string;
+  logoFile: File | null;
+  sponsorName: string;
 }
 
 /** Field-level error map for the sponsor details form. Includes 'logo' for the file upload field. */
@@ -131,8 +131,8 @@ export function validateDetails(
   }
 
   return {
+    errors: errors as SponsorDetailsErrors,
     isValid:
       Object.keys(errors).filter((k) => errors[k] !== undefined).length === 0,
-    errors: errors as SponsorDetailsErrors,
   };
 }

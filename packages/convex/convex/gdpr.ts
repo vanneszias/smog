@@ -44,9 +44,9 @@ export const exportUserData = query({
       favorites.map(async (fav) => {
         const gesture = await ctx.db.get(fav.gestureId);
         return {
+          addedAt: new Date(fav.createdAt).toISOString(),
           gestureId: fav.gestureId,
           gestureName: gesture?.name ?? "Unknown",
-          addedAt: new Date(fav.createdAt).toISOString(),
         };
       })
     );
@@ -72,24 +72,24 @@ export const exportUserData = query({
           items.map(async (item) => {
             const gesture = await ctx.db.get(item.gestureId);
             return {
+              addedAt: new Date(item.createdAt).toISOString(),
               gestureId: item.gestureId,
               gestureName: gesture?.name ?? "Unknown",
               position: item.position,
-              addedAt: new Date(item.createdAt).toISOString(),
             };
           })
         );
 
         return {
+          allowSharedEditing: list.allowSharedEditing,
+          createdAt: new Date(list.createdAt).toISOString(),
+          description: list.description ?? null,
+          gestures,
+          isDefaultFavorites: list.isDefaultFavorites,
           listId: list._id,
           name: list.name,
-          description: list.description ?? null,
-          visibility: list.visibility,
-          allowSharedEditing: list.allowSharedEditing,
-          isDefaultFavorites: list.isDefaultFavorites,
-          createdAt: new Date(list.createdAt).toISOString(),
           updatedAt: new Date(list.updatedAt).toISOString(),
-          gestures,
+          visibility: list.visibility,
         };
       })
     );
@@ -112,29 +112,19 @@ export const exportUserData = query({
         : [];
 
     return {
-      exportDate: new Date().toISOString(),
-      exportVersion: "1.0",
-      userData: {
-        userId: user._id,
-        workosId: user.workosId ?? null,
-        guestId: user.guestId ?? null,
-        role: user.role ?? "user",
-        accountCreated: new Date(user.createdAt).toISOString(),
-        lastActive: new Date(user.lastActiveAt).toISOString(),
-      },
-      favorites: favoritesWithDetails,
-      consents: consents.map((consent) => ({
-        analyticsConsent: consent.analyticsConsent,
-        marketingConsent: consent.marketingConsent ?? false,
-        consentVersion: consent.consentVersion,
-        consentDate: new Date(consent.consentDate).toISOString(),
-      })),
-      lists: listsWithDetails,
       adminActivity: {
         logsCount: adminLogs.length,
         sponsorshipsReviewed: sponsorshipsReviewed.length,
       },
+      consents: consents.map((consent) => ({
+        analyticsConsent: consent.analyticsConsent,
+        consentDate: new Date(consent.consentDate).toISOString(),
+        consentVersion: consent.consentVersion,
+        marketingConsent: consent.marketingConsent ?? false,
+      })),
       dataProcessing: {
+        dataRetention:
+          "Account, favorites, and lists are retained until account deletion; legally required transaction records follow separate retention rules.",
         purposes: [
           "Account management",
           "Gesture list and favorites synchronization",
@@ -146,8 +136,18 @@ export const exportUserData = query({
           "Mux (video delivery)",
           "OpenPanel (optional analytics after consent)",
         ],
-        dataRetention:
-          "Account, favorites, and lists are retained until account deletion; legally required transaction records follow separate retention rules.",
+      },
+      exportDate: new Date().toISOString(),
+      exportVersion: "1.0",
+      favorites: favoritesWithDetails,
+      lists: listsWithDetails,
+      userData: {
+        accountCreated: new Date(user.createdAt).toISOString(),
+        guestId: user.guestId ?? null,
+        lastActive: new Date(user.lastActiveAt).toISOString(),
+        role: user.role ?? "user",
+        userId: user._id,
+        workosId: user.workosId ?? null,
       },
     };
   },
@@ -188,18 +188,14 @@ export const deleteUserAccount = mutation({
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
-    for (const fav of favorites) {
-      await ctx.db.delete(fav._id);
-    }
+    await Promise.all(favorites.map((fav) => ctx.db.delete(fav._id)));
 
     const consents = await ctx.db
       .query("user_consents")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
-    for (const consent of consents) {
-      await ctx.db.delete(consent._id);
-    }
+    await Promise.all(consents.map((consent) => ctx.db.delete(consent._id)));
 
     // Delete owned lists and their items
     const lists = await ctx.db
@@ -208,14 +204,13 @@ export const deleteUserAccount = mutation({
       .collect();
 
     for (const list of lists) {
+      // biome-ignore lint/performance/noAwaitInLoops: delete each list's items before the list itself, one list at a time
       const items = await ctx.db
         .query("gesture_list_items")
         .withIndex("by_list", (q) => q.eq("listId", list._id))
         .collect();
 
-      for (const item of items) {
-        await ctx.db.delete(item._id);
-      }
+      await Promise.all(items.map((item) => ctx.db.delete(item._id)));
 
       await ctx.db.delete(list._id);
     }
@@ -226,17 +221,19 @@ export const deleteUserAccount = mutation({
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
-    for (const log of adminLogsAsUser) {
-      // For audit trail, we keep the log but mark as deleted user
-      // This is GDPR compliant as it's necessary for legal purposes
-      await ctx.db.patch(log._id, {
-        metadata: {
-          ...log.metadata,
-          userDeleted: true,
-          deletionDate: Date.now(),
-        },
-      });
-    }
+    // For audit trail, we keep the log but mark as deleted user
+    // This is GDPR compliant as it's necessary for legal purposes
+    await Promise.all(
+      adminLogsAsUser.map((log) =>
+        ctx.db.patch(log._id, {
+          metadata: {
+            ...log.metadata,
+            deletionDate: Date.now(),
+            userDeleted: true,
+          },
+        })
+      )
+    );
 
     // Update sponsorships reviewed by user (if admin)
     if (user.role === "admin") {
@@ -245,21 +242,23 @@ export const deleteUserAccount = mutation({
         .filter((q) => q.eq(q.field("reviewedBy"), user._id))
         .collect();
 
-      for (const sponsorship of sponsorships) {
-        await ctx.db.patch(sponsorship._id, {
-          reviewedBy: undefined,
-        });
-      }
+      await Promise.all(
+        sponsorships.map((sponsorship) =>
+          ctx.db.patch(sponsorship._id, {
+            reviewedBy: undefined,
+          })
+        )
+      );
     }
 
     // Delete the user account
     await ctx.db.delete(user._id);
 
     return {
-      success: true,
       deletedAt: new Date().toISOString(),
       message:
         "Account, favorites, and owned lists deleted. Legally required transaction records may be retained separately.",
+      success: true,
     };
   },
 });
@@ -268,8 +267,8 @@ export const deleteUserAccount = mutation({
 export const recordConsent = mutation({
   args: {
     analyticsConsent: v.boolean(),
-    marketingConsent: v.optional(v.boolean()),
     ipAddress: v.optional(v.string()),
+    marketingConsent: v.optional(v.boolean()),
     userAgent: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -290,13 +289,13 @@ export const recordConsent = mutation({
     }
 
     await ctx.db.insert("user_consents", {
-      userId: user._id,
       analyticsConsent: args.analyticsConsent,
-      marketingConsent: args.marketingConsent ?? false,
-      consentVersion: "1.0",
       consentDate: Date.now(),
+      consentVersion: "1.0",
       ipAddress: args.ipAddress,
+      marketingConsent: args.marketingConsent ?? false,
       userAgent: args.userAgent,
+      userId: user._id,
     });
 
     return { success: true };
@@ -305,8 +304,8 @@ export const recordConsent = mutation({
 
 export const recordGuestConsent = mutation({
   args: {
-    guestId: v.string(),
     analyticsConsent: v.boolean(),
+    guestId: v.string(),
     marketingConsent: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -317,8 +316,8 @@ export const recordGuestConsent = mutation({
 
     if (!user) {
       const userId = await ctx.db.insert("users", {
-        guestId: args.guestId,
         createdAt: Date.now(),
+        guestId: args.guestId,
         lastActiveAt: Date.now(),
       });
       user = await ctx.db.get(userId);
@@ -328,11 +327,11 @@ export const recordGuestConsent = mutation({
     }
 
     await ctx.db.insert("user_consents", {
-      userId: user._id,
       analyticsConsent: args.analyticsConsent,
-      marketingConsent: args.marketingConsent ?? false,
-      consentVersion: "1.0",
       consentDate: Date.now(),
+      consentVersion: "1.0",
+      marketingConsent: args.marketingConsent ?? false,
+      userId: user._id,
     });
 
     return { success: true };
@@ -362,11 +361,11 @@ export const updateConsent = mutation({
     }
 
     await ctx.db.insert("user_consents", {
-      userId: user._id,
       analyticsConsent: args.analyticsConsent,
-      marketingConsent: args.marketingConsent ?? false,
-      consentVersion: "1.0",
       consentDate: Date.now(),
+      consentVersion: "1.0",
+      marketingConsent: args.marketingConsent ?? false,
+      userId: user._id,
     });
 
     return { success: true };
@@ -396,21 +395,21 @@ export const getConsentStatus = query({
       .order("desc")
       .take(1);
 
-    const latestConsent = consents[0];
+    const [latestConsent] = consents;
 
     if (!latestConsent) {
       return {
-        hasConsent: false,
         analyticsConsent: false,
+        hasConsent: false,
         marketingConsent: false,
       };
     }
 
     return {
-      hasConsent: true,
       analyticsConsent: latestConsent.analyticsConsent,
-      marketingConsent: latestConsent.marketingConsent ?? false,
       consentDate: new Date(latestConsent.consentDate).toISOString(),
+      hasConsent: true,
+      marketingConsent: latestConsent.marketingConsent ?? false,
     };
   },
 });
@@ -427,8 +426,8 @@ export const getGuestConsentStatus = query({
 
     if (!user) {
       return {
-        hasConsent: false,
         analyticsConsent: false,
+        hasConsent: false,
         marketingConsent: false,
       };
     }
@@ -439,21 +438,21 @@ export const getGuestConsentStatus = query({
       .order("desc")
       .take(1);
 
-    const latestConsent = consents[0];
+    const [latestConsent] = consents;
 
     if (!latestConsent) {
       return {
-        hasConsent: false,
         analyticsConsent: false,
+        hasConsent: false,
         marketingConsent: false,
       };
     }
 
     return {
-      hasConsent: true,
       analyticsConsent: latestConsent.analyticsConsent,
-      marketingConsent: latestConsent.marketingConsent ?? false,
       consentDate: new Date(latestConsent.consentDate).toISOString(),
+      hasConsent: true,
+      marketingConsent: latestConsent.marketingConsent ?? false,
     };
   },
 });

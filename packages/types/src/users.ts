@@ -8,12 +8,12 @@
  * A SMOG application user.
  */
 export interface User {
-  id: string;
   email: string;
+  emailVerified?: boolean;
   firstName?: string;
+  id: string;
   lastName?: string;
   username?: string;
-  emailVerified?: boolean;
 }
 
 // ===== AUTH TYPES =====
@@ -27,16 +27,16 @@ export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
  * Shape of the authentication context exposed by `AuthProvider`.
  */
 export interface AuthContextType {
-  user: User | null;
-  status: AuthStatus;
+  isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
   signUp: (
     email: string,
     password: string,
     metadata?: Record<string, unknown>
   ) => Promise<void>;
-  signOut: () => Promise<void>;
-  isLoading: boolean;
+  status: AuthStatus;
+  user: User | null;
 }
 
 // ===== FAVORITES TYPES =====

@@ -5,13 +5,13 @@ interface SearchParams {
 }
 
 export const Route = createFileRoute("/sponsor/")({
+  beforeLoad: ({ search }) => {
+    throw redirect({
+      search,
+      to: "/sponsors/",
+    });
+  },
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
     gestureId: (search.gestureId as string) || undefined,
   }),
-  beforeLoad: ({ search }) => {
-    throw redirect({
-      to: "/sponsors/",
-      search,
-    });
-  },
 });

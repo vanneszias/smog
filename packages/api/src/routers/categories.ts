@@ -6,24 +6,6 @@ import { categoriesCache, logCacheOperation } from "../lib/categoriesCache";
 import { convexClient } from "../lib/convex";
 
 export const categoriesRouter = {
-  list: publicProcedure.handler(async () => {
-    // Check cache first
-    const cached = categoriesCache.getAllActive();
-    if (cached) {
-      logCacheOperation("list", "cache hit");
-      return cached;
-    }
-
-    // Cache miss - fetch from Convex
-    logCacheOperation("list", "cache miss, fetching from Convex");
-    const categories = await convexClient.query(api.categories.list);
-
-    // Store in cache for future requests
-    categoriesCache.setAllActive(categories);
-
-    return categories;
-  }),
-
   getByIds: publicProcedure
     .input(
       z.object({
@@ -57,4 +39,21 @@ export const categoriesRouter = {
 
       return categories;
     }),
+  list: publicProcedure.handler(async () => {
+    // Check cache first
+    const cached = categoriesCache.getAllActive();
+    if (cached) {
+      logCacheOperation("list", "cache hit");
+      return cached;
+    }
+
+    // Cache miss - fetch from Convex
+    logCacheOperation("list", "cache miss, fetching from Convex");
+    const categories = await convexClient.query(api.categories.list);
+
+    // Store in cache for future requests
+    categoriesCache.setAllActive(categories);
+
+    return categories;
+  }),
 };

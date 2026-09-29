@@ -12,7 +12,7 @@ import {
   Send,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -27,17 +27,17 @@ interface SearchParams {
 
 interface ReEditSponsorship {
   _id: string;
+  contactCompany?: string;
+  contactFullName: string;
   gestureId: string;
   gestureName?: string;
-  sponsorName: string;
-  sponsorEmail: string;
-  contactFullName: string;
-  contactCompany?: string;
-  overlayText: string;
   hasLogo?: boolean;
   originalVideoPlaybackId: string;
-  status: string;
+  overlayText: string;
   reEditTokenExpiresAt?: number;
+  sponsorEmail: string;
+  sponsorName: string;
+  status: string;
 }
 
 type TokenResult =
@@ -46,10 +46,10 @@ type TokenResult =
   | null;
 
 export const Route = createFileRoute("/sponsors/re-edit")({
+  component: ReEditComponent,
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
     token: (search.token as string) || "",
   }),
-  component: ReEditComponent,
 });
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Multi-step wizard requires complex state management
@@ -62,10 +62,10 @@ function ReEditComponent() {
     isLoading,
     error,
   } = useQuery<TokenResult>({
-    queryKey: ["re-edit-token", token],
+    enabled: !!token,
     queryFn: () =>
       client.sponsorships.getByReEditToken({ token }) as Promise<TokenResult>,
-    enabled: !!token,
+    queryKey: ["re-edit-token", token],
     retry: false,
   });
 
@@ -88,11 +88,11 @@ function ReEditComponent() {
     }
   }, [tokenResult]);
 
-  const resetPreview = () => {
+  const resetPreview = useCallback((): void => {
     setPreviewPlaybackId(null);
-  };
+  }, []);
 
-  const readLogoBase64 = (): Promise<string | undefined> => {
+  const readLogoBase64 = useCallback((): Promise<string | undefined> => {
     if (!logoFile) {
       return Promise.resolve(undefined);
     }
@@ -102,36 +102,55 @@ function ReEditComponent() {
       reader.onerror = reject;
       reader.readAsDataURL(logoFile);
     });
-  };
+  }, [logoFile]);
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setLogoError(t("web.sponsors.reEdit.errors.logoTooLarge"));
-      return;
-    }
-    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      setLogoError(t("web.sponsors.reEdit.errors.logoInvalidFormat"));
-      return;
-    }
-    setLogoFile(file);
-    setLogoError(null);
-    resetPreview();
-    const reader = new FileReader();
-    reader.onload = () => setLogoPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
+  const handleSponsorNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setSponsorName(e.target.value);
+      resetPreview();
+    },
+    [resetPreview]
+  );
 
-  const handleRemoveLogo = () => {
+  const handleOverlayTextChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setOverlayText(e.target.value);
+      resetPreview();
+    },
+    [resetPreview]
+  );
+
+  const handleLogoUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const file = e.target.files?.[0];
+      if (!file) {
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        setLogoError(t("web.sponsors.reEdit.errors.logoTooLarge"));
+        return;
+      }
+      if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+        setLogoError(t("web.sponsors.reEdit.errors.logoInvalidFormat"));
+        return;
+      }
+      setLogoFile(file);
+      setLogoError(null);
+      resetPreview();
+      const reader = new FileReader();
+      reader.onload = () => setLogoPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    },
+    [t, resetPreview]
+  );
+
+  const handleRemoveLogo = useCallback((): void => {
     setLogoFile(null);
     setLogoPreview(null);
     resetPreview();
-  };
+  }, [resetPreview]);
 
-  const handleGeneratePreview = async () => {
+  const handleGeneratePreview = useCallback(async (): Promise<void> => {
     if (!tokenResult || tokenResult.expired || !tokenResult.sponsorship) {
       return;
     }
@@ -149,9 +168,9 @@ function ReEditComponent() {
       const logoBase64 = await readLogoBase64();
       const result = await client.sponsorships.generatePreview({
         gestureId: tokenResult.sponsorship.gestureId,
-        sponsorName: sponsorName.trim(),
         logoImage: logoBase64,
         overlayText: overlayText.trim(),
+        sponsorName: sponsorName.trim(),
       });
       setPreviewPlaybackId(result.playbackId);
     } catch (err) {
@@ -160,9 +179,9 @@ function ReEditComponent() {
     } finally {
       setIsGeneratingPreview(false);
     }
-  };
+  }, [tokenResult, sponsorName, overlayText, t, readLogoBase64]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async (): Promise<void> => {
     if (!tokenResult || tokenResult.expired || !tokenResult.sponsorship) {
       return;
     }
@@ -178,11 +197,11 @@ function ReEditComponent() {
     try {
       const logoBase64 = await readLogoBase64();
       await client.sponsorships.reSubmitSponsorship({
-        token,
         gestureId: tokenResult.sponsorship.gestureId,
         logoImage: logoBase64,
         overlayText: overlayText.trim(),
         sponsorName: sponsorName.trim(),
+        token,
       });
       setSubmitted(true);
     } catch (err) {
@@ -191,7 +210,15 @@ function ReEditComponent() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [
+    tokenResult,
+    previewPlaybackId,
+    sponsorName,
+    overlayText,
+    t,
+    readLogoBase64,
+    token,
+  ]);
 
   // ── Guard screens ──────────────────────────────────────────────────────────
 
@@ -281,14 +308,14 @@ function ReEditComponent() {
           <h1 className="font-bold text-3xl tracking-tight">
             {t("web.sponsors.reEdit.title")}
           </h1>
-          {sponsorship.gestureName && (
+          {sponsorship.gestureName ? (
             <p className="mt-1 text-muted-foreground">
               {t("web.sponsors.reEdit.gesture")}:{" "}
               <span className="font-medium text-foreground">
                 {sponsorship.gestureName}
               </span>
             </p>
-          )}
+          ) : null}
           {daysLeft !== null && (
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-amber-600 text-sm dark:text-amber-400">
               <Clock className="h-3.5 w-3.5" />
@@ -312,7 +339,7 @@ function ReEditComponent() {
             muted
             playbackId={sponsorship.originalVideoPlaybackId}
             streamType="on-demand"
-            style={{ width: "100%", aspectRatio: "16/9" }}
+            style={{ aspectRatio: "16/9", width: "100%" }}
           />
         </div>
 
@@ -350,10 +377,7 @@ function ReEditComponent() {
                 className="h-11 rounded-xl"
                 id="field-sponsor-name"
                 maxLength={40}
-                onChange={(e) => {
-                  setSponsorName(e.target.value);
-                  resetPreview();
-                }}
+                onChange={handleSponsorNameChange}
                 placeholder={t("web.sponsors.reEdit.brandPlaceholder")}
                 value={sponsorName}
               />
@@ -375,10 +399,7 @@ function ReEditComponent() {
                 className="h-11 rounded-xl"
                 id="field-overlay-text"
                 maxLength={100}
-                onChange={(e) => {
-                  setOverlayText(e.target.value);
-                  resetPreview();
-                }}
+                onChange={handleOverlayTextChange}
                 placeholder={t("web.sponsors.reEdit.overlayPlaceholder")}
                 value={overlayText}
               />
@@ -390,7 +411,7 @@ function ReEditComponent() {
         </section>
 
         {/* Step 2 — Logo (conditional) */}
-        {hasLogo && (
+        {hasLogo ? (
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <h2 className="mb-5 flex items-center gap-2.5 font-bold text-lg">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 font-semibold text-primary text-sm">
@@ -450,11 +471,11 @@ function ReEditComponent() {
                 />
               </label>
             )}
-            {logoError && (
+            {logoError ? (
               <p className="mt-2 text-destructive text-xs">{logoError}</p>
-            )}
+            ) : null}
           </section>
-        )}
+        ) : null}
 
         {/* Step — Preview */}
         <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -487,12 +508,12 @@ function ReEditComponent() {
             </Button>
           </div>
 
-          {isGeneratingPreview && (
+          {isGeneratingPreview ? (
             <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-xl border border-primary/20 bg-primary/5 text-muted-foreground text-sm">
               <RefreshCw className="h-7 w-7 animate-spin text-primary" />
               {t("web.sponsors.reEdit.compositing")}
             </div>
-          )}
+          ) : null}
 
           {previewPlaybackId && !isGeneratingPreview && (
             <div className="space-y-3">
@@ -502,7 +523,7 @@ function ReEditComponent() {
                   muted
                   playbackId={previewPlaybackId}
                   streamType="on-demand"
-                  style={{ width: "100%", aspectRatio: "16/9" }}
+                  style={{ aspectRatio: "16/9", width: "100%" }}
                 />
               </div>
               <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-primary text-sm">

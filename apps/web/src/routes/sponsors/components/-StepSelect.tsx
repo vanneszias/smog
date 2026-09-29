@@ -7,7 +7,8 @@
 
 import type { GestureWithSponsorshipStatus } from "@smog/ui";
 import { Loader2, Search, X } from "lucide-react";
-import { useRef } from "react";
+import type { ChangeEvent } from "react";
+import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   formatPrice,
@@ -17,22 +18,48 @@ import {
 import { SelectionBar } from "./-SelectionBar";
 import { SponsorGestureCard } from "./-SponsorGestureCard";
 
+interface CategoryChipProps {
+  category: string;
+  isSelected: boolean;
+  onToggle: (category: string) => void;
+}
+
+function CategoryChip({ category, isSelected, onToggle }: CategoryChipProps) {
+  const handleClick = useCallback((): void => {
+    onToggle(category);
+  }, [onToggle, category]);
+
+  return (
+    <button
+      className={`rounded-lg px-3 py-1.5 font-medium text-sm transition-all ${
+        isSelected
+          ? "bg-primary text-white shadow-sm"
+          : "border border-border bg-background hover:border-primary/50"
+      }`}
+      onClick={handleClick}
+      type="button"
+    >
+      {category}
+    </button>
+  );
+}
+
 interface StepSelectProps {
-  filteredGestures: GestureWithSponsorshipStatus[];
-  selectedGestureIds: string[];
-  isLoading: boolean;
-  error: Error | null | undefined;
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-  selectedCategories: string[];
   categoryNames: string[];
+  error: Error | null | undefined;
+  filteredGestures: GestureWithSponsorshipStatus[];
   handleCategoryToggle: (cat: string) => void;
   handleClearFilters: () => void;
   handleToggleSelection: (id: string) => void;
-  showFilters: boolean;
-  setShowFilters: (v: boolean) => void;
-  totalCents: number;
+  isLoading: boolean;
   onContinue: () => void;
+  searchQuery: string;
+  selectedCategories: string[];
+  selectedGestureIds: string[];
+  setSearchQuery: (q: string) => void;
+  setShowFilters: (v: boolean) => void;
+  showFilters: boolean;
+  totalCents: number;
 }
 
 /**
@@ -63,6 +90,21 @@ export function StepSelect({
 }: StepSelectProps) {
   const { i18n, t } = useTranslation();
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSearchChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      setSearchQuery(e.target.value);
+    },
+    [setSearchQuery]
+  );
+
+  const handleClearSearch = useCallback((): void => {
+    setSearchQuery("");
+  }, [setSearchQuery]);
+
+  const handleToggleShowFilters = useCallback((): void => {
+    setShowFilters(!showFilters);
+  }, [setShowFilters, showFilters]);
 
   const availableCount = filteredGestures.filter(
     (g) => g.status === "available"
@@ -133,22 +175,22 @@ export function StepSelect({
             <input
               aria-label={t("search.inputLabel")}
               className="h-12 w-full rounded-xl border border-border bg-background pr-4 pl-12 text-base shadow-sm transition-all placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchChange}
               placeholder={t("web.sponsors.wizard.selection.searchPlaceholder")}
               ref={searchInputRef}
               type="text"
               value={searchQuery}
             />
-            {searchQuery && (
+            {searchQuery ? (
               <button
                 aria-label={t("search.clear")}
                 className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                onClick={() => setSearchQuery("")}
+                onClick={handleClearSearch}
                 type="button"
               >
                 <X className="h-4 w-4" />
               </button>
-            )}
+            ) : null}
           </div>
 
           {categoryNames.length > 0 && (
@@ -170,27 +212,18 @@ export function StepSelect({
               <div className="flex flex-wrap gap-2">
                 {categoryNames
                   .slice(0, showFilters ? undefined : 8)
-                  .map((category) => {
-                    const isSelected = selectedCategories.includes(category);
-                    return (
-                      <button
-                        className={`rounded-lg px-3 py-1.5 font-medium text-sm transition-all ${
-                          isSelected
-                            ? "bg-primary text-white shadow-sm"
-                            : "border border-border bg-background hover:border-primary/50"
-                        }`}
-                        key={category}
-                        onClick={() => handleCategoryToggle(category)}
-                        type="button"
-                      >
-                        {category}
-                      </button>
-                    );
-                  })}
+                  .map((category) => (
+                    <CategoryChip
+                      category={category}
+                      isSelected={selectedCategories.includes(category)}
+                      key={category}
+                      onToggle={handleCategoryToggle}
+                    />
+                  ))}
                 {categoryNames.length > 8 && (
                   <button
                     className="rounded-lg border border-border bg-background px-3 py-1.5 font-medium text-sm hover:border-primary/50"
-                    onClick={() => setShowFilters(!showFilters)}
+                    onClick={handleToggleShowFilters}
                     type="button"
                   >
                     {showFilters
@@ -262,11 +295,7 @@ export function StepSelect({
                     isDisabled={isDisabled}
                     isSelected={isSelected}
                     key={gesture._id}
-                    onToggle={() => {
-                      if (!isDisabled) {
-                        handleToggleSelection(gesture._id);
-                      }
-                    }}
+                    onToggle={handleToggleSelection}
                   />
                 );
               })}
@@ -278,9 +307,7 @@ export function StepSelect({
       <SelectionBar
         count={selectedGestureIds.length}
         onContinue={onContinue}
-        totalCents={
-          totalCents ?? selectedGestureIds.length * PRICE_PER_YEAR_CENTS
-        }
+        totalCents={totalCents}
       />
     </>
   );

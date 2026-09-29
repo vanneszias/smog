@@ -37,13 +37,13 @@ const GestureScreen: React.FC = () => {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   // Mirrors the web's disclaimerFiredRef: ensures the banner shows exactly
   // once per playthrough and resets when the video loops back.
-  const disclaimerFiredRef = useRef(false);
+  const disclaimerFiredRef = useRef<boolean>(false);
 
   // Enable screenshot detection for sharing gesture links
   useScreenshotDetection({
+    enabled: true,
     gestureId: gesture?.id || null,
     gestureName: gesture?.name || null,
-    enabled: true,
   });
 
   const gestureId = gesture?.id;
@@ -56,6 +56,11 @@ const GestureScreen: React.FC = () => {
       });
     }
   }, [gestureId]);
+
+  const handleDisclaimerDismiss = useCallback(() => {
+    disclaimerFiredRef.current = false;
+    setShowDisclaimer(false);
+  }, []);
 
   const handleVideoComplete = useCallback(() => {
     // Show disclaimer once per playthrough.
@@ -89,8 +94,8 @@ const GestureScreen: React.FC = () => {
     if (gesture) {
       router.dismiss();
       router.navigate({
-        pathname: "/(tabs)/search",
         params: { category },
+        pathname: "/(tabs)/search",
       });
     }
   };
@@ -111,8 +116,8 @@ const GestureScreen: React.FC = () => {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
         options={{
-          title: gesture.name,
           headerBackButtonDisplayMode: "minimal",
+          title: gesture.name,
           ...(Platform.OS === "ios"
             ? {
                 // iOS: translucent blur header (liquid glass on iOS 26+)
@@ -121,8 +126,8 @@ const GestureScreen: React.FC = () => {
                 // title styling and tint to work against a blur background.
                 headerTintColor: theme.primary,
                 headerTitleStyle: {
-                  fontWeight: "600" as const,
                   color: theme.text,
+                  fontWeight: "600" as const,
                 },
               }
             : {
@@ -166,10 +171,7 @@ const GestureScreen: React.FC = () => {
         </View>
 
         <DisclaimerBanner
-          onDismiss={() => {
-            disclaimerFiredRef.current = false;
-            setShowDisclaimer(false);
-          }}
+          onDismiss={handleDisclaimerDismiss}
           visible={showDisclaimer}
         />
 
@@ -192,21 +194,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  listButton: {
+    paddingHorizontal: SPACING.sm,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+  },
   scrollContainer: {
     padding: SPACING.md,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   videoContainer: {
-    marginBottom: SPACING.lg,
     borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.lg,
     overflow: "hidden",
-  },
-  listButton: {
-    paddingHorizontal: SPACING.sm,
   },
 });
 

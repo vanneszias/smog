@@ -32,9 +32,9 @@ jest.mock("../../components/lists/ListPickerBottomSheet", () => ({
   ListPickerBottomSheet: () => null,
 }));
 jest.mock("../../lib/openpanel", () => ({
+  getAnalyticsConsent: () => null,
   initializeOpenPanel: () => Promise.resolve(),
   subscribeAnalyticsConsent: () => () => undefined,
-  getAnalyticsConsent: () => null,
 }));
 jest.mock("../../utils/i18n", () => ({}));
 jest.mock("../../utils/logger", () => ({ log: jest.fn() }));
@@ -46,7 +46,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   useRouter.mockReturnValue({ replace });
   useRootNavigationState.mockReturnValue({ key: "root" });
-  useAuth.mockReturnValue({ isLoading: true, authMode: "loading" });
+  useAuth.mockReturnValue({ authMode: "loading", isLoading: true });
 });
 
 afterEach(async () => {
@@ -71,31 +71,34 @@ it.each([
   ["guest", "/lists/list-123"],
   ["authenticated", "/"],
   ["guest", "/auth-callback"],
-])("preserves %s cold-start destination %s after session restoration", async (authMode, pathname) => {
-  usePathname.mockReturnValue(pathname);
-  await renderLayout();
-  expect(replace).not.toHaveBeenCalled();
+])(
+  "preserves %s cold-start destination %s after session restoration",
+  async (authMode, pathname) => {
+    usePathname.mockReturnValue(pathname);
+    await renderLayout();
+    expect(replace).not.toHaveBeenCalled();
 
-  useAuth.mockReturnValue({
-    isLoading: false,
-    authMode,
-    isAuthenticated: authMode === "authenticated",
-    isGuest: authMode === "guest",
-  });
-  await renderLayout();
-  expect(replace).not.toHaveBeenCalled();
+    useAuth.mockReturnValue({
+      authMode,
+      isAuthenticated: authMode === "authenticated",
+      isGuest: authMode === "guest",
+      isLoading: false,
+    });
+    await renderLayout();
+    expect(replace).not.toHaveBeenCalled();
 
-  usePathname.mockReturnValue("/gestures/another-gesture");
-  await renderLayout();
-  expect(replace).not.toHaveBeenCalled();
-});
+    usePathname.mockReturnValue("/gestures/another-gesture");
+    await renderLayout();
+    expect(replace).not.toHaveBeenCalled();
+  }
+);
 
 it("waits for navigation readiness before redirecting a restored guest from welcome", async () => {
   usePathname.mockReturnValue("/welcome");
   useAuth.mockReturnValue({
-    isLoading: false,
-    isGuest: true,
     authMode: "guest",
+    isGuest: true,
+    isLoading: false,
   });
   useRootNavigationState.mockReturnValue(undefined);
   await renderLayout();
@@ -109,7 +112,7 @@ it("waits for navigation readiness before redirecting a restored guest from welc
 it("still sends users without a session to welcome", async () => {
   usePathname.mockReturnValue("/gestures/gesture-123");
   await renderLayout();
-  useAuth.mockReturnValue({ isLoading: false, authMode: "unauthenticated" });
+  useAuth.mockReturnValue({ authMode: "unauthenticated", isLoading: false });
   await renderLayout();
   expect(replace).toHaveBeenCalledWith("/welcome");
 });

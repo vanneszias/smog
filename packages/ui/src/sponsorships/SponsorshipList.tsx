@@ -1,24 +1,25 @@
 import { Check } from "lucide-react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 export interface GestureWithSponsorshipStatus {
   _id: string;
-  name: string;
-  playbackId: string;
-  info: string;
   categories: Array<{ _id: string; name: string }>;
   concept: string[];
-  status: "available" | "sponsored" | "pending";
-  sponsorName?: string;
   endDate?: number;
+  info: string;
+  name: string;
+  playbackId: string;
+  sponsorName?: string;
+  status: "available" | "sponsored" | "pending";
 }
 
 interface SponsorshipListProps {
+  error?: Error | null;
   gestures: GestureWithSponsorshipStatus[];
   isLoading?: boolean;
-  error?: Error | null;
-  selectedGestureIds: string[];
   onToggleSelection: (gestureId: string) => void;
+  selectedGestureIds: string[];
 }
 
 function SponsorshipRow({
@@ -29,10 +30,16 @@ function SponsorshipRow({
 }: {
   gesture: GestureWithSponsorshipStatus;
   isSelected: boolean;
-  onToggle: () => void;
+  onToggle: (gestureId: string) => void;
   isDisabled: boolean;
 }) {
   const { t } = useTranslation();
+
+  const handleClick = useCallback((): void => {
+    if (!isDisabled) {
+      onToggle(gesture._id);
+    }
+  }, [isDisabled, onToggle, gesture._id]);
 
   const getStatusBadge = () => {
     if (gesture.status === "sponsored") {
@@ -72,7 +79,7 @@ function SponsorshipRow({
           : "border-l-4 border-l-transparent"
       }`}
       disabled={isDisabled}
-      onClick={onToggle}
+      onClick={handleClick}
       type="button"
     >
       {/* Checkbox */}
@@ -84,7 +91,9 @@ function SponsorshipRow({
               : "border-muted-foreground bg-background"
           } ${isDisabled ? "" : "group-hover:border-primary"}`}
         >
-          {isSelected && <Check className="h-4 w-4 text-primary-foreground" />}
+          {isSelected ? (
+            <Check className="h-4 w-4 text-primary-foreground" />
+          ) : null}
         </div>
       </div>
 
@@ -209,11 +218,7 @@ export function SponsorshipList({
               isDisabled={isDisabled}
               isSelected={isSelected}
               key={gesture._id}
-              onToggle={() => {
-                if (!isDisabled) {
-                  onToggleSelection(gesture._id);
-                }
-              }}
+              onToggle={onToggleSelection}
             />
           );
         })}

@@ -101,18 +101,18 @@ function useHeaderOptions() {
   // Android: opaque Material-style colored headers
   const defaultScreenOptions = isIOS
     ? {
-        headerTransparent: true,
         headerBlurEffect: "systemChromeMaterial" as const,
         headerShadowVisible: false,
-        headerTintColor: theme.primary,
-        headerTitleStyle: {
-          fontWeight: "600" as const,
-          fontSize: 17,
-          color: theme.text,
-        },
         headerStyle: {
           backgroundColor: "transparent",
         },
+        headerTintColor: theme.primary,
+        headerTitleStyle: {
+          color: theme.text,
+          fontSize: 17,
+          fontWeight: "600" as const,
+        },
+        headerTransparent: true,
       }
     : {
         headerStyle: {
@@ -120,8 +120,8 @@ function useHeaderOptions() {
         },
         headerTintColor: theme.background,
         headerTitleStyle: {
-          fontWeight: "bold" as const,
           fontSize: 20,
+          fontWeight: "bold" as const,
         },
       };
 
@@ -151,24 +151,24 @@ function AuthenticatedLayout() {
           name="gestures/[id]"
           options={{
             ...defaultScreenOptions,
-            presentation: isIOS ? "card" : "modal",
             gestureEnabled: true,
+            presentation: isIOS ? "card" : "modal",
           }}
         />
         <Stack.Screen
           name="settings/index"
           options={{
             ...defaultScreenOptions,
-            presentation: isIOS ? "card" : "modal",
             gestureEnabled: true,
+            presentation: isIOS ? "card" : "modal",
           }}
         />
         <Stack.Screen
           name="settings/developer-tools"
           options={{
             ...defaultScreenOptions,
-            presentation: isIOS ? "card" : "modal",
             gestureEnabled: true,
+            presentation: isIOS ? "card" : "modal",
             title: "Developer Tools",
           }}
         />
@@ -176,8 +176,8 @@ function AuthenticatedLayout() {
           name="settings/account"
           options={{
             ...defaultScreenOptions,
-            presentation: isIOS ? "card" : "modal",
             gestureEnabled: true,
+            presentation: isIOS ? "card" : "modal",
           }}
         />
       </Stack>
@@ -302,19 +302,19 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: "#22805F",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  logo: {
-    width: 220,
-    height: 150,
-  },
   loading: {
-    marginTop: 20,
     color: "white",
     fontSize: 16,
+    marginTop: 20,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    backgroundColor: "#22805F",
+    flex: 1,
+    justifyContent: "center",
+  },
+  logo: {
+    height: 150,
+    width: 220,
   },
 });

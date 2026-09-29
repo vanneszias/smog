@@ -1,4 +1,5 @@
 import { createLogger } from "@smog/shared";
+import type { ChangeEvent, KeyboardEvent } from "react";
 import {
   createContext,
   useCallback,
@@ -45,8 +46,8 @@ interface SaveGestureRequest {
 }
 
 interface ListsContextType {
-  isLoading: boolean;
   isGestureSaved: (gestureId: string) => boolean;
+  isLoading: boolean;
   openSaveGestureDialog: (request: SaveGestureRequest) => Promise<void>;
   refetchSavedGestures: () => Promise<void>;
   savedGestureIds: string[];
@@ -324,8 +325,8 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
-      isLoading,
       isGestureSaved,
+      isLoading,
       openSaveGestureDialog,
       refetchSavedGestures: fetchSavedGestures,
       savedGestureIds,
@@ -339,20 +340,58 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
     ]
   );
 
+  const handlePickerOpenChange = useCallback((open: boolean) => {
+    setIsPickerOpen(open);
+    if (!open) {
+      setPendingGesture(null);
+      setGestureListIds([]);
+      setNewListName("");
+    }
+  }, []);
+
+  const handleSelectedListChange = useCallback((nextValue: string) => {
+    setSelectedListId(nextValue);
+  }, []);
+
+  const handleNewListNameChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setNewListName(event.target.value);
+    },
+    []
+  );
+
+  const handleNewListNameKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter") {
+        createListAndAddPendingGesture();
+      }
+    },
+    [createListAndAddPendingGesture]
+  );
+
+  const handleClosePicker = useCallback(() => {
+    setIsPickerOpen(false);
+  }, []);
+
+  const handleConfirmSelectedList = useCallback(() => {
+    if (selectedListId) {
+      if (selectedListHasGesture) {
+        removePendingGestureFromList(selectedListId);
+      } else {
+        addPendingGestureToList(selectedListId);
+      }
+    }
+  }, [
+    addPendingGestureToList,
+    removePendingGestureFromList,
+    selectedListHasGesture,
+    selectedListId,
+  ]);
+
   return (
     <ListsContext.Provider value={value}>
       {children}
-      <Dialog
-        onOpenChange={(open) => {
-          setIsPickerOpen(open);
-          if (!open) {
-            setPendingGesture(null);
-            setGestureListIds([]);
-            setNewListName("");
-          }
-        }}
-        open={isPickerOpen}
-      >
+      <Dialog onOpenChange={handlePickerOpenChange} open={isPickerOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>
@@ -373,7 +412,7 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
 
           <div className="grid gap-3">
             <Select
-              onValueChange={(value) => setSelectedListId(value)}
+              onValueChange={handleSelectedListChange}
               value={selectedListId ?? undefined}
             >
               <SelectTrigger className="w-full">
@@ -413,12 +452,8 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
 
           <div className="grid gap-2 border-border border-t pt-4 sm:grid-cols-[minmax(0,1fr)_auto]">
             <Input
-              onChange={(event) => setNewListName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  createListAndAddPendingGesture();
-                }
-              }}
+              onChange={handleNewListNameChange}
+              onKeyDown={handleNewListNameKeyDown}
               placeholder={t("web.lists.newListPlaceholder", "New list name")}
               value={newListName}
             />
@@ -435,7 +470,7 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
           <DialogFooter>
             <Button
               disabled={isAddingGesture}
-              onClick={() => setIsPickerOpen(false)}
+              onClick={handleClosePicker}
               type="button"
               variant="ghost"
             >
@@ -443,15 +478,7 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
             </Button>
             <Button
               disabled={isAddingGesture || !selectedListId}
-              onClick={() => {
-                if (selectedListId) {
-                  if (selectedListHasGesture) {
-                    removePendingGestureFromList(selectedListId);
-                  } else {
-                    addPendingGestureToList(selectedListId);
-                  }
-                }
-              }}
+              onClick={handleConfirmSelectedList}
               type="button"
               variant={selectedListHasGesture ? "destructive" : "default"}
             >

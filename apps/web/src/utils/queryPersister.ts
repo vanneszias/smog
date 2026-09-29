@@ -21,6 +21,9 @@ const persister: Persister = {
   persistClient: async (client: PersistedClient) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(client));
   },
+  removeClient: async () => {
+    localStorage.removeItem(STORAGE_KEY);
+  },
   restoreClient: async () => {
     const cached = localStorage.getItem(STORAGE_KEY);
     if (!cached) {
@@ -28,14 +31,9 @@ const persister: Persister = {
     }
     return JSON.parse(cached) as PersistedClient;
   },
-  removeClient: async () => {
-    localStorage.removeItem(STORAGE_KEY);
-  },
 };
 
 export const persistOptions = {
-  persister,
-  maxAge: MAX_AGE,
   buster: CACHE_VERSION,
   // Only persist the gesture catalog query, not auth or user list state.
   // Only successful queries: pending ones get dehydrated with a promise that
@@ -46,4 +44,6 @@ export const persistOptions = {
       query.queryKey[0] === "gestures" &&
       query.queryKey[1] === "list",
   },
+  maxAge: MAX_AGE,
+  persister,
 };

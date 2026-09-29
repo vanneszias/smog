@@ -9,6 +9,28 @@ type Gesture = Doc<"gestures">;
 type Category = Doc<"categories">;
 
 export const gesturesRouter = {
+  // Get gesture by ID
+  getById: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .handler(async ({ input }) => {
+      const gesture = await convexClient.query(api.gestures.getById, {
+        id: input.id as never,
+      });
+
+      if (!gesture) {
+        return null;
+      }
+
+      // Fetch categories for this gesture
+      const categories = await convexClient.query(api.categories.getByIds, {
+        ids: gesture.categoryIds,
+      });
+
+      return {
+        ...gesture,
+        categories,
+      };
+    }),
   // List all gestures with pagination
   list: publicProcedure
     .input(
@@ -19,8 +41,8 @@ export const gesturesRouter = {
     )
     .handler(async ({ input }) => {
       const paginationOpts = {
-        numItems: input.numItems,
         cursor: input.cursor ?? null,
+        numItems: input.numItems,
       };
 
       // Get gestures from Convex
@@ -57,32 +79,9 @@ export const gesturesRouter = {
       }));
 
       return {
+        continueCursor: result.continueCursor,
         gestures: enrichedGestures,
         isDone: result.isDone,
-        continueCursor: result.continueCursor,
-      };
-    }),
-
-  // Get gesture by ID
-  getById: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .handler(async ({ input }) => {
-      const gesture = await convexClient.query(api.gestures.getById, {
-        id: input.id as never,
-      });
-
-      if (!gesture) {
-        return null;
-      }
-
-      // Fetch categories for this gesture
-      const categories = await convexClient.query(api.categories.getByIds, {
-        ids: gesture.categoryIds,
-      });
-
-      return {
-        ...gesture,
-        categories,
       };
     }),
 
@@ -90,14 +89,14 @@ export const gesturesRouter = {
   search: publicProcedure
     .input(
       z.object({
-        searchText: z.string(),
         limit: z.number().min(1).max(100).optional(),
+        searchText: z.string(),
       })
     )
     .handler(async ({ input }) => {
       const gestures = await convexClient.query(api.gestures.search, {
-        searchText: input.searchText,
         limit: input.limit,
+        searchText: input.searchText,
       });
 
       // Get all unique category IDs

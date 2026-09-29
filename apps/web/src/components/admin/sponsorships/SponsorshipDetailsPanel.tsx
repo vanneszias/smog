@@ -23,16 +23,16 @@ import { StatusBadge } from "./StatusBadge";
 import type { Sponsorship } from "./types";
 
 interface SponsorshipDetailsPanelProps {
-  sponsorship: Sponsorship;
-  onViewDetails: () => void;
-  onForceExpire: () => void;
-  onGenerateReEditLink: () => void;
-  onMarkPaidManually: () => void;
-  onCancelPendingPayment: () => void;
+  isCancelling: boolean;
   isExpiring: boolean;
   isGeneratingReEditLink: boolean;
   isMarkingPaid: boolean;
-  isCancelling: boolean;
+  onCancelPendingPayment: () => void;
+  onForceExpire: () => void;
+  onGenerateReEditLink: () => void;
+  onMarkPaidManually: () => void;
+  onViewDetails: () => void;
+  sponsorship: Sponsorship;
 }
 
 function InvoiceBlock({ sponsorship }: { sponsorship: Sponsorship }) {
@@ -53,9 +53,9 @@ function InvoiceBlock({ sponsorship }: { sponsorship: Sponsorship }) {
         <FileText className="h-3.5 w-3.5" />
         {hasInvoice ? "Factuur gevraagd" : "Geen factuur"}
       </p>
-      {hasInvoice && (
+      {hasInvoice ? (
         <div className="space-y-1 text-sm">
-          {sponsorship.invoiceName && (
+          {sponsorship.invoiceName ? (
             <div className="flex items-start gap-2">
               <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
                 Naam
@@ -64,8 +64,8 @@ function InvoiceBlock({ sponsorship }: { sponsorship: Sponsorship }) {
                 {sponsorship.invoiceName}
               </span>
             </div>
-          )}
-          {sponsorship.invoiceVatNumber && (
+          ) : null}
+          {sponsorship.invoiceVatNumber ? (
             <div className="flex items-start gap-2">
               <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
                 Ond.nr.
@@ -74,7 +74,7 @@ function InvoiceBlock({ sponsorship }: { sponsorship: Sponsorship }) {
                 {sponsorship.invoiceVatNumber}
               </span>
             </div>
-          )}
+          ) : null}
           <div className="flex items-start gap-2">
             <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
               E-mail
@@ -84,7 +84,7 @@ function InvoiceBlock({ sponsorship }: { sponsorship: Sponsorship }) {
             </span>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -115,7 +115,7 @@ export function SponsorshipDetailsPanel({
             sponsorship.originalVideoPlaybackId
           }
           streamType="on-demand"
-          style={{ width: "100%", aspectRatio: "16/9" }}
+          style={{ aspectRatio: "16/9", width: "100%" }}
         />
       </div>
 
@@ -142,7 +142,7 @@ export function SponsorshipDetailsPanel({
               {sponsorship.sponsorEmail}
             </span>
           </div>
-          {sponsorship.contactFullName && (
+          {sponsorship.contactFullName ? (
             <div className="border-[var(--admin-border)] border-t pt-2 text-sm">
               <p className="mb-0.5 text-[var(--admin-text-muted)] text-xs">
                 Contactpersoon
@@ -154,7 +154,7 @@ export function SponsorshipDetailsPanel({
                   : ""}
               </p>
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="flex gap-2">
@@ -172,7 +172,7 @@ export function SponsorshipDetailsPanel({
             </p>
             <p className="font-semibold text-[var(--admin-text)]">
               {sponsorship.durationYears} year
-              {sponsorship.durationYears !== 1 ? "s" : ""}
+              {sponsorship.durationYears === 1 ? "" : "s"}
             </p>
           </div>
         </div>
@@ -186,9 +186,9 @@ export function SponsorshipDetailsPanel({
             </p>
             <p className="font-medium text-[var(--admin-text)]">
               {new Date(sponsorship.endDate).toLocaleDateString(undefined, {
-                year: "numeric",
-                month: "long",
                 day: "numeric",
+                month: "long",
+                year: "numeric",
               })}
             </p>
           </div>
@@ -198,7 +198,7 @@ export function SponsorshipDetailsPanel({
           <ReEditLinkBox sponsorshipId={sponsorship._id} />
         )}
 
-        {sponsorship.rejectionReason && (
+        {sponsorship.rejectionReason ? (
           <div className="rounded-lg bg-red-50 p-3 dark:bg-red-950/30">
             <div className="flex items-start gap-2">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
@@ -212,7 +212,7 @@ export function SponsorshipDetailsPanel({
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         <div className="space-y-1 text-[var(--admin-text-muted)] text-xs">
           <p>Created: {new Date(sponsorship.createdAt).toLocaleDateString()}</p>

@@ -3,11 +3,11 @@ import { Directory, File, Paths } from "expo-file-system";
 type LogLevel = "log" | "info" | "warn" | "error" | "debug";
 
 export interface LogRecord {
+  formatted: string;
   id: string;
   level: LogLevel;
   message: string;
   timestamp: string; // ISO string
-  formatted: string;
 }
 
 type LogSubscriber = (record: LogRecord) => void;
@@ -20,25 +20,25 @@ const IN_MEMORY_LOG_LIMIT = 5000;
 const recentLogs: LogRecord[] = [];
 const subscribers = new Set<LogSubscriber>();
 const textEncoder =
-  typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
+  typeof TextEncoder === "undefined" ? null : new TextEncoder();
 
 const originalConsole = {
-  log: console.log.bind(console),
-  info: console.info.bind(console),
-  warn: console.warn.bind(console),
-  error: console.error.bind(console),
   debug: console.debug.bind(console),
+  error: console.error.bind(console),
+  info: console.info.bind(console),
+  log: console.log.bind(console),
+  warn: console.warn.bind(console),
 };
 
 let consolePatched = false;
 let logCounter = 0;
 
 const levelToConsoleMethod: Record<LogLevel, keyof typeof originalConsole> = {
-  log: "log",
-  info: "info",
-  warn: "warn",
-  error: "error",
   debug: "debug",
+  error: "error",
+  info: "info",
+  log: "log",
+  warn: "warn",
 };
 
 const formatMessages = (messages: unknown[]): string =>
@@ -49,7 +49,7 @@ const formatMessages = (messages: unknown[]): string =>
       }
       try {
         return JSON.stringify(msg);
-      } catch (_error) {
+      } catch {
         return String(msg);
       }
     })
@@ -60,11 +60,11 @@ const createLogRecord = (level: LogLevel, messages: unknown[]): LogRecord => {
   const message = formatMessages(messages);
   const formatted = `${timestamp} [${level.toUpperCase()}] ${message}`;
   return {
+    formatted,
     id: `${timestamp}-${logCounter++}`,
     level,
     message,
     timestamp,
-    formatted,
   };
 };
 
@@ -85,7 +85,7 @@ const notifySubscribers = (record: LogRecord): void => {
 
 const ensureLogDirectory = (): boolean => {
   try {
-    LOG_DIR.create({ intermediates: true, idempotent: true });
+    LOG_DIR.create({ idempotent: true, intermediates: true });
     return true;
   } catch (error) {
     originalConsole.error("[logger] Failed to create log directory:", error);
@@ -185,20 +185,20 @@ const patchConsole = (): void => {
 patchConsole();
 
 const logger = {
-  log: (...messages: unknown[]): void => {
-    processLog("log", messages);
-  },
-  info: (...messages: unknown[]): void => {
-    processLog("info", messages);
-  },
-  warn: (...messages: unknown[]): void => {
-    processLog("warn", messages);
+  debug: (...messages: unknown[]): void => {
+    processLog("debug", messages);
   },
   error: (...messages: unknown[]): void => {
     processLog("error", messages);
   },
-  debug: (...messages: unknown[]): void => {
-    processLog("debug", messages);
+  info: (...messages: unknown[]): void => {
+    processLog("info", messages);
+  },
+  log: (...messages: unknown[]): void => {
+    processLog("log", messages);
+  },
+  warn: (...messages: unknown[]): void => {
+    processLog("warn", messages);
   },
 };
 
@@ -266,6 +266,7 @@ export const exportLogsToFile = async (): Promise<File> => {
 
       for (const file of sortedFiles) {
         writeStringToHandle(handle, `\n[Archived] ${file.name}\n`);
+        // biome-ignore lint/performance/noAwaitInLoops: archived logs must be appended to the export handle in sorted order
         const contents = await file.text();
         writeStringToHandle(handle, `${contents}\n`);
       }

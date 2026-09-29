@@ -25,11 +25,20 @@ describe("sponsorship pricing", () => {
   it.each([
     ["nl", "€ 50,00"],
     ["fr", "50,00 €"],
-    ["en", "€50.00"],
   ])("formats EUR prices for %s", (language, expected) => {
     expect(normalizeCurrencySpacing(formatPrice(5000, language))).toBe(
       expected
     );
+  });
+
+  // en-BE output differs between ICU builds (V8: "€50.00", JavaScriptCore:
+  // "€ 50,00"), so compare against the runtime's own en-BE formatting.
+  it("formats EUR prices for en using the en-BE locale", () => {
+    const expected = new Intl.NumberFormat("en-BE", {
+      currency: "EUR",
+      style: "currency",
+    }).format(50);
+    expect(formatPrice(5000, "en")).toBe(expected);
   });
 });
 
@@ -78,7 +87,7 @@ describe("readFileAsBase64", () => {
     const file = new File([content], "test.txt", { type: "text/plain" });
     const result = await readFileAsBase64(file);
     // Decode the base64 part
-    const base64 = result.split(",")[1];
+    const [, base64] = result.split(",");
     expect(atob(base64 ?? "")).toBe(content);
   });
 });

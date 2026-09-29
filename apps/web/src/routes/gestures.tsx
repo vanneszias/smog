@@ -5,7 +5,7 @@ import {
   useNavigate,
   useSearch,
 } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import EmptyState from "@/components/EmptyState";
 import { useGestures } from "@/hooks/useGestures";
@@ -13,15 +13,15 @@ import { useLists } from "@/lib/lists-context";
 import { trackAnalyticsEvent } from "@/lib/openpanel";
 
 interface GestureSearch {
-  q?: string;
   category?: string;
+  q?: string;
 }
 
 export const Route = createFileRoute("/gestures")({
   component: GesturesComponent,
   validateSearch: (search: Record<string, unknown>): GestureSearch => ({
-    q: (search.q as string) || "",
     category: (search.category as string) || "",
+    q: (search.q as string) || "",
   }),
 });
 
@@ -50,10 +50,10 @@ function GesturesComponent() {
     filteredGestures,
   } = useGestureFiltering({
     gestures: allGestures,
-    initialSearchQuery: searchParams.q || "",
     initialCategories: searchParams.category
       ? searchParams.category.split(",")
       : [],
+    initialSearchQuery: searchParams.q || "",
   });
 
   const handleCategoryToggle = baseHandleCategoryToggle;
@@ -61,14 +61,14 @@ function GesturesComponent() {
   // Sync URL with search query changes
   useEffect(() => {
     navigate({
-      to: "/gestures",
+      replace: true,
       search: {
         ...(searchQuery ? { q: searchQuery } : {}),
         ...(selectedCategories.length > 0
           ? { category: selectedCategories.join(",") }
           : {}),
       },
-      replace: true,
+      to: "/gestures",
     });
   }, [searchQuery, selectedCategories, navigate]);
 
@@ -95,25 +95,33 @@ function GesturesComponent() {
     selectedCategories.length,
   ]);
 
-  const handleSelectGesture = (gestureId: string) => {
-    setSelectedGestureId(gestureId);
-    navigate({ to: "/gestures/$id", params: { id: gestureId } });
-  };
+  const handleSelectGesture = useCallback(
+    (gestureId: string): void => {
+      setSelectedGestureId(gestureId);
+      navigate({ params: { id: gestureId }, to: "/gestures/$id" });
+    },
+    [navigate]
+  );
 
-  const handleToggleSaved = (gestureId: string) => {
-    const gesture = allGestures.find((g) => g._id === gestureId);
-    openSaveGestureDialog({
-      categories: (gesture?.categories ?? [])
-        .filter(
-          (category): category is Exclude<typeof category, null | undefined> =>
-            Boolean(category)
-        )
-        .map((category) => category.name),
-      gestureId,
-      gestureName: gesture?.name,
-      source: "gesture_list",
-    });
-  };
+  const handleToggleSaved = useCallback(
+    (gestureId: string): void => {
+      const gesture = allGestures.find((g) => g._id === gestureId);
+      openSaveGestureDialog({
+        categories: (gesture?.categories ?? [])
+          .filter(
+            (
+              category
+            ): category is Exclude<typeof category, null | undefined> =>
+              Boolean(category)
+          )
+          .map((category) => category.name),
+        gestureId,
+        gestureName: gesture?.name,
+        source: "gesture_list",
+      });
+    },
+    [allGestures, openSaveGestureDialog]
+  );
 
   return (
     <div className="flex h-full flex-col overflow-hidden">

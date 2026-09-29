@@ -1,8 +1,8 @@
 export interface GestureCardData {
   _id: string;
-  name: string;
-  playbackId: string;
+  categories: Array<{ _id: string; name: string } | undefined>;
   concept: string[];
   info: string;
-  categories: Array<{ _id: string; name: string } | undefined>;
+  name: string;
+  playbackId: string;
 }

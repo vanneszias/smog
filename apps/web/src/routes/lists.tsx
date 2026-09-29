@@ -11,6 +11,7 @@ import {
   Search,
   X,
 } from "lucide-react";
+import type { ChangeEvent, KeyboardEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -174,9 +175,10 @@ function ListsComponent() {
 
   useEffect(() => {
     const handleGestureAdded = (event: Event) => {
-      const detail = (
-        event as CustomEvent<{ gestureId: string; listId: string }>
-      ).detail;
+      const { detail } = event as CustomEvent<{
+        gestureId: string;
+        listId: string;
+      }>;
       if (!(detail && detail.listId === activeListId)) {
         return;
       }
@@ -194,9 +196,10 @@ function ListsComponent() {
 
     window.addEventListener(LIST_GESTURE_ADDED_EVENT, handleGestureAdded);
     const handleGestureRemoved = (event: Event) => {
-      const detail = (
-        event as CustomEvent<{ gestureId: string; listId: string }>
-      ).detail;
+      const { detail } = event as CustomEvent<{
+        gestureId: string;
+        listId: string;
+      }>;
       if (!(detail && detail.listId === activeListId)) {
         return;
       }
@@ -215,11 +218,14 @@ function ListsComponent() {
     };
   }, [activeListId, allGestures, loadActiveGestures]);
 
-  const handleSelectGesture = (gestureId: string) => {
-    navigate({ to: "/gestures/$id", params: { id: gestureId } });
-  };
+  const handleSelectGesture = useCallback(
+    (gestureId: string) => {
+      navigate({ params: { id: gestureId }, to: "/gestures/$id" });
+    },
+    [navigate]
+  );
 
-  const handleCreateList = async () => {
+  const handleCreateList = useCallback(async () => {
     const name = newListName.trim();
     if (!name) {
       return;
@@ -239,19 +245,19 @@ function ListsComponent() {
       logger.error("Failed to create list:", error);
       toast.error(t("web.lists.createFailed", "Could not create list"));
     }
-  };
+  }, [loadLists, newListName, t]);
 
-  const startRename = (list: ListRecord) => {
+  const startRename = useCallback((list: ListRecord) => {
     setEditingListId(list._id);
     setEditingName(list.name);
-  };
+  }, []);
 
-  const cancelRename = () => {
+  const cancelRename = useCallback(() => {
     setEditingListId(null);
     setEditingName("");
-  };
+  }, []);
 
-  const saveRename = async () => {
+  const saveRename = useCallback(async () => {
     const name = editingName.trim();
     if (!(editingListId && name)) {
       return;
@@ -266,34 +272,37 @@ function ListsComponent() {
       logger.error("Failed to rename list:", error);
       toast.error(t("web.lists.renameFailed", "Could not rename list"));
     }
-  };
+  }, [cancelRename, editingListId, editingName, loadLists, t]);
 
-  const updateSharing = async (updates: {
-    visibility?: "private" | "shared";
-    allowSharedEditing?: boolean;
-  }) => {
-    if (!activeList) {
-      return;
-    }
+  const updateSharing = useCallback(
+    async (updates: {
+      visibility?: "private" | "shared";
+      allowSharedEditing?: boolean;
+    }) => {
+      if (!activeList) {
+        return;
+      }
 
-    try {
-      const updated = await client.lists.updateSharing({
-        allowSharedEditing:
-          updates.allowSharedEditing ?? activeList.allowSharedEditing,
-        listId: activeList._id,
-        visibility: updates.visibility ?? activeList.visibility,
-      });
-      setLists((current) =>
-        current.map((list) => (list._id === updated._id ? updated : list))
-      );
-      toast.success(t("web.lists.sharingUpdated", "Sharing updated"));
-    } catch (error) {
-      logger.error("Failed to update sharing:", error);
-      toast.error(t("web.lists.sharingFailed", "Could not update sharing"));
-    }
-  };
+      try {
+        const updated = await client.lists.updateSharing({
+          allowSharedEditing:
+            updates.allowSharedEditing ?? activeList.allowSharedEditing,
+          listId: activeList._id,
+          visibility: updates.visibility ?? activeList.visibility,
+        });
+        setLists((current) =>
+          current.map((list) => (list._id === updated._id ? updated : list))
+        );
+        toast.success(t("web.lists.sharingUpdated", "Sharing updated"));
+      } catch (error) {
+        logger.error("Failed to update sharing:", error);
+        toast.error(t("web.lists.sharingFailed", "Could not update sharing"));
+      }
+    },
+    [activeList, t]
+  );
 
-  const copyShareLink = async () => {
+  const copyShareLink = useCallback(async () => {
     if (!shareUrl) {
       return;
     }
@@ -305,9 +314,9 @@ function ListsComponent() {
       logger.error("Failed to copy share link:", error);
       toast.error(t("web.lists.copyFailed", "Could not copy link"));
     }
-  };
+  }, [shareUrl, t]);
 
-  const regenerateShareTokens = async () => {
+  const regenerateShareTokens = useCallback(async () => {
     if (!activeList) {
       return;
     }
@@ -324,9 +333,9 @@ function ListsComponent() {
       logger.error("Failed to regenerate share tokens:", error);
       toast.error(t("web.lists.regenerateFailed", "Could not refresh link"));
     }
-  };
+  }, [activeList, t]);
 
-  const deleteActiveList = async () => {
+  const deleteActiveList = useCallback(async () => {
     if (!(activeList && !activeList.isDefaultFavorites)) {
       return;
     }
@@ -345,143 +354,208 @@ function ListsComponent() {
       logger.error("Failed to delete list:", error);
       toast.error(t("web.lists.deleteFailed", "Could not delete list"));
     }
-  };
+  }, [activeList, loadLists, t]);
 
-  const removeGesture = async (gestureId: string) => {
-    if (!activeList) {
-      return;
-    }
+  const removeGesture = useCallback(
+    async (gestureId: string) => {
+      if (!activeList) {
+        return;
+      }
 
-    try {
-      await client.lists.removeGestureFromList({
-        gestureId,
-        listId: activeList._id,
-      });
-      setActiveGestures((current) =>
-        current.filter((gesture) => gesture._id !== gestureId)
+      try {
+        await client.lists.removeGestureFromList({
+          gestureId,
+          listId: activeList._id,
+        });
+        setActiveGestures((current) =>
+          current.filter((gesture) => gesture._id !== gestureId)
+        );
+        await refetchSavedGestures();
+        toast.success(t("web.lists.gestureRemoved", "Gesture removed"));
+      } catch (error) {
+        logger.error("Failed to remove gesture from list:", error);
+        toast.error(t("web.lists.removeFailed", "Could not remove gesture"));
+      }
+    },
+    [activeList, refetchSavedGestures, t]
+  );
+
+  const addGesture = useCallback(
+    async (gesture: GestureCardData) => {
+      if (!activeList) {
+        return;
+      }
+
+      try {
+        await client.lists.addGestureToList({
+          gestureId: gesture._id,
+          listId: activeList._id,
+        });
+        setActiveGestures((current) =>
+          current.some((item) => item._id === gesture._id)
+            ? current
+            : [...current, gesture]
+        );
+        await refetchSavedGestures();
+        toast.success(t("web.lists.gestureAdded", "Gesture added"));
+      } catch (error) {
+        logger.error("Failed to add gesture to list:", error);
+        toast.error(t("web.lists.addFailed", "Could not add gesture"));
+      }
+    },
+    [activeList, refetchSavedGestures, t]
+  );
+
+  const reorderGestures = useCallback(
+    async (nextGestures: GestureCardData[]) => {
+      if (!activeList) {
+        return;
+      }
+      if (
+        nextGestures.every(
+          (gesture, index) => gesture._id === activeGestures[index]?._id
+        )
+      ) {
+        return;
+      }
+
+      const previousGestures = activeGestures;
+      setActiveGestures(nextGestures);
+
+      try {
+        await client.lists.reorderItems({
+          gestureIds: nextGestures.map((item) => item._id),
+          listId: activeList._id,
+        });
+      } catch (error) {
+        logger.error("Failed to reorder list:", error);
+        setActiveGestures(previousGestures);
+        toast.error(t("web.lists.reorderFailed", "Could not reorder list"));
+        await loadActiveGestures();
+      }
+    },
+    [activeGestures, activeList, loadActiveGestures, t]
+  );
+
+  const moveGesture = useCallback(
+    async (gestureId: string, direction: -1 | 1) => {
+      if (!activeList) {
+        return;
+      }
+      const currentIndex = activeGestures.findIndex(
+        (gesture) => gesture._id === gestureId
       );
-      await refetchSavedGestures();
-      toast.success(t("web.lists.gestureRemoved", "Gesture removed"));
-    } catch (error) {
-      logger.error("Failed to remove gesture from list:", error);
-      toast.error(t("web.lists.removeFailed", "Could not remove gesture"));
-    }
-  };
+      const nextIndex = currentIndex + direction;
+      if (
+        currentIndex < 0 ||
+        nextIndex < 0 ||
+        nextIndex >= activeGestures.length
+      ) {
+        return;
+      }
 
-  const addGesture = async (gesture: GestureCardData) => {
-    if (!activeList) {
-      return;
-    }
-
-    try {
-      await client.lists.addGestureToList({
-        gestureId: gesture._id,
-        listId: activeList._id,
-      });
-      setActiveGestures((current) =>
-        current.some((item) => item._id === gesture._id)
-          ? current
-          : [...current, gesture]
-      );
-      await refetchSavedGestures();
-      toast.success(t("web.lists.gestureAdded", "Gesture added"));
-    } catch (error) {
-      logger.error("Failed to add gesture to list:", error);
-      toast.error(t("web.lists.addFailed", "Could not add gesture"));
-    }
-  };
-
-  const reorderGestures = async (nextGestures: GestureCardData[]) => {
-    if (!activeList) {
-      return;
-    }
-    if (
-      nextGestures.every(
-        (gesture, index) => gesture._id === activeGestures[index]?._id
-      )
-    ) {
-      return;
-    }
-
-    const previousGestures = activeGestures;
-    setActiveGestures(nextGestures);
-
-    try {
-      await client.lists.reorderItems({
-        gestureIds: nextGestures.map((item) => item._id),
-        listId: activeList._id,
-      });
-    } catch (error) {
-      logger.error("Failed to reorder list:", error);
-      setActiveGestures(previousGestures);
-      toast.error(t("web.lists.reorderFailed", "Could not reorder list"));
-      await loadActiveGestures();
-    }
-  };
-
-  const moveGesture = async (gestureId: string, direction: -1 | 1) => {
-    if (!activeList) {
-      return;
-    }
-    const currentIndex = activeGestures.findIndex(
-      (gesture) => gesture._id === gestureId
-    );
-    const nextIndex = currentIndex + direction;
-    if (
-      currentIndex < 0 ||
-      nextIndex < 0 ||
-      nextIndex >= activeGestures.length
-    ) {
-      return;
-    }
-
-    const nextGestures = [...activeGestures];
-    const [gesture] = nextGestures.splice(currentIndex, 1);
-    if (!gesture) {
-      return;
-    }
-    nextGestures.splice(nextIndex, 0, gesture);
-    await reorderGestures(nextGestures);
-  };
-
-  const actionsForActiveGesture = (
-    gesture: GestureCardData,
-    index: number
-  ): GestureRowAction[] => [
-    {
-      disabled: index === 0,
-      icon: ArrowUp,
-      label: t("web.lists.moveUp", "Move up"),
-      onClick: () => moveGesture(gesture._id, -1),
+      const nextGestures = [...activeGestures];
+      const [gesture] = nextGestures.splice(currentIndex, 1);
+      if (!gesture) {
+        return;
+      }
+      nextGestures.splice(nextIndex, 0, gesture);
+      await reorderGestures(nextGestures);
     },
-    {
-      disabled: index === activeGestures.length - 1,
-      icon: ArrowDown,
-      label: t("web.lists.moveDown", "Move down"),
-      onClick: () => moveGesture(gesture._id, 1),
-    },
-    {
-      icon: X,
-      label: t("web.lists.removeGesture", "Remove gesture"),
-      onClick: () => removeGesture(gesture._id),
-    },
-    {
-      icon: Eye,
-      label: t("web.lists.viewGesture", "View gesture"),
-      onClick: () => handleSelectGesture(gesture._id),
-    },
-  ];
+    [activeGestures, activeList, reorderGestures]
+  );
 
-  const actionsForAddableGesture = (
-    gesture: GestureCardData
-  ): GestureRowAction[] => [
-    {
-      icon: Plus,
-      label: t("web.lists.add", "Add"),
-      onClick: () => addGesture(gesture),
-      variant: "outline",
+  const actionsForActiveGesture = useCallback(
+    (gesture: GestureCardData, index: number): GestureRowAction[] => [
+      {
+        disabled: index === 0,
+        icon: ArrowUp,
+        label: t("web.lists.moveUp", "Move up"),
+        onClick: () => moveGesture(gesture._id, -1),
+      },
+      {
+        disabled: index === activeGestures.length - 1,
+        icon: ArrowDown,
+        label: t("web.lists.moveDown", "Move down"),
+        onClick: () => moveGesture(gesture._id, 1),
+      },
+      {
+        icon: X,
+        label: t("web.lists.removeGesture", "Remove gesture"),
+        onClick: () => removeGesture(gesture._id),
+      },
+      {
+        icon: Eye,
+        label: t("web.lists.viewGesture", "View gesture"),
+        onClick: () => handleSelectGesture(gesture._id),
+      },
+    ],
+    [activeGestures.length, handleSelectGesture, moveGesture, removeGesture, t]
+  );
+
+  const actionsForAddableGesture = useCallback(
+    (gesture: GestureCardData): GestureRowAction[] => [
+      {
+        icon: Plus,
+        label: t("web.lists.add", "Add"),
+        onClick: () => addGesture(gesture),
+        variant: "outline",
+      },
+    ],
+    [addGesture, t]
+  );
+
+  const handleOpenCreateList = useCallback(() => {
+    setNewListName("");
+    setIsCreateListOpen(true);
+  }, []);
+
+  const handleSelectList = useCallback((listId: string) => {
+    setActiveListId(listId);
+    setIsAddingGestures(false);
+  }, []);
+
+  const handleToggleAdding = useCallback(() => {
+    setIsAddingGestures((current) => !current);
+  }, []);
+
+  const handleGestureSearchChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setGestureSearch(event.target.value);
     },
-  ];
+    []
+  );
+
+  const handleBrowseGestures = useCallback(() => {
+    navigate({ to: "/gestures" });
+  }, [navigate]);
+
+  const handleCreateDialogOpenChange = useCallback((open: boolean) => {
+    setIsCreateListOpen(open);
+    if (!open) {
+      setNewListName("");
+    }
+  }, []);
+
+  const handleNewListNameChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setNewListName(event.target.value);
+    },
+    []
+  );
+
+  const handleNewListNameKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter") {
+        handleCreateList();
+      }
+    },
+    [handleCreateList]
+  );
+
+  const handleCloseCreateList = useCallback(() => {
+    setIsCreateListOpen(false);
+  }, []);
 
   if (!isAuthenticated) {
     return (
@@ -514,10 +588,7 @@ function ListsComponent() {
             </p>
             <Button
               aria-label={t("web.lists.create", "Create")}
-              onClick={() => {
-                setNewListName("");
-                setIsCreateListOpen(true);
-              }}
+              onClick={handleOpenCreateList}
               size="icon"
               type="button"
               variant="ghost"
@@ -538,10 +609,7 @@ function ListsComponent() {
               onCancelRename={cancelRename}
               onEditingNameChange={setEditingName}
               onSaveRename={saveRename}
-              onSelectList={(listId) => {
-                setActiveListId(listId);
-                setIsAddingGestures(false);
-              }}
+              onSelectList={handleSelectList}
               onStartRename={startRename}
               selectedLabel={t("web.lists.selected", "Selected")}
             />
@@ -557,7 +625,7 @@ function ListsComponent() {
               onCopyShareLink={copyShareLink}
               onDeleteList={deleteActiveList}
               onRegenerateShareLink={regenerateShareTokens}
-              onToggleAdding={() => setIsAddingGestures((current) => !current)}
+              onToggleAdding={handleToggleAdding}
               onUpdateSharing={updateSharing}
             />
           ) : null}
@@ -571,9 +639,7 @@ function ListsComponent() {
                       <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         className="h-9 pl-9"
-                        onChange={(event) =>
-                          setGestureSearch(event.target.value)
-                        }
+                        onChange={handleGestureSearchChange}
                         placeholder={t(
                           "web.lists.searchToAdd",
                           "Search gestures to add"
@@ -612,7 +678,7 @@ function ListsComponent() {
                 <ListEmptyState
                   action={{
                     label: t("web.lists.browseGestures", "Browse gestures"),
-                    onClick: () => navigate({ to: "/gestures" }),
+                    onClick: handleBrowseGestures,
                   }}
                   description={t(
                     "web.lists.noGesturesDescription",
@@ -646,12 +712,7 @@ function ListsComponent() {
         </main>
       </div>
       <Dialog
-        onOpenChange={(open) => {
-          setIsCreateListOpen(open);
-          if (!open) {
-            setNewListName("");
-          }
-        }}
+        onOpenChange={handleCreateDialogOpenChange}
         open={isCreateListOpen}
       >
         <DialogContent>
@@ -668,18 +729,14 @@ function ListsComponent() {
           </DialogHeader>
           <Input
             autoFocus
-            onChange={(event) => setNewListName(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                handleCreateList();
-              }
-            }}
+            onChange={handleNewListNameChange}
+            onKeyDown={handleNewListNameKeyDown}
             placeholder={t("web.lists.newListPlaceholder", "New list name")}
             value={newListName}
           />
           <DialogFooter>
             <Button
-              onClick={() => setIsCreateListOpen(false)}
+              onClick={handleCloseCreateList}
               type="button"
               variant="ghost"
             >

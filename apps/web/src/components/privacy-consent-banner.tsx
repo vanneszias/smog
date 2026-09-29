@@ -8,6 +8,14 @@ import {
 } from "@/lib/openpanel";
 import { Button } from "./ui/button";
 
+function handleAllowAnalytics(): void {
+  setAnalyticsConsent(true);
+}
+
+function handleDenyAnalytics(): void {
+  setAnalyticsConsent(false);
+}
+
 export function PrivacyConsentBanner() {
   const { t } = useTranslation();
   const consent = useSyncExternalStore(
@@ -33,10 +41,10 @@ export function PrivacyConsentBanner() {
           </Link>
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setAnalyticsConsent(true)}>
+          <Button onClick={handleAllowAnalytics}>
             {t("settings.analyticsAllow")}
           </Button>
-          <Button onClick={() => setAnalyticsConsent(false)} variant="outline">
+          <Button onClick={handleDenyAnalytics} variant="outline">
             {t("settings.analyticsRequiredOnly")}
           </Button>
         </div>

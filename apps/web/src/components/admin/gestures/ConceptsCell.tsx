@@ -12,7 +12,8 @@
  */
 
 import { Check, X } from "lucide-react";
-import { useRef, useState } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,42 @@ import { Input } from "@/components/ui/input";
 interface ConceptsCellProps {
   concepts: string[];
   onChange: (concepts: string[]) => void;
+}
+
+interface ConceptTagProps {
+  concept: string;
+  onRemove: (concept: string) => void;
+}
+
+/** Removable concept tag shown in edit mode. */
+function ConceptTag({ concept, onRemove }: ConceptTagProps) {
+  const handleClick = useCallback((): void => {
+    onRemove(concept);
+  }, [concept, onRemove]);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLButtonElement>): void => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onRemove(concept);
+      }
+    },
+    [concept, onRemove]
+  );
+
+  return (
+    <button
+      className="inline-flex items-center gap-1 rounded-full border-transparent bg-secondary px-2 py-0.5 font-medium text-secondary-foreground text-xs transition-colors hover:bg-secondary/80"
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      type="button"
+    >
+      {concept}
+      <span aria-hidden="true" className="text-xs">
+        ×
+      </span>
+    </button>
+  );
 }
 
 /**
@@ -31,56 +68,77 @@ export function ConceptsCell({ concepts, onChange }: ConceptsCellProps) {
   const [newConcept, setNewConcept] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleAdd = () => {
+  const handleAdd = useCallback((): void => {
     const trimmed = newConcept.trim();
     if (trimmed && !concepts.includes(trimmed)) {
       onChange([...concepts, trimmed]);
       setNewConcept("");
     }
-  };
+  }, [newConcept, concepts, onChange]);
 
-  const handleRemove = (concept: string) => {
-    onChange(concepts.filter((c) => c !== concept));
-  };
+  const handleRemove = useCallback(
+    (concept: string): void => {
+      onChange(concepts.filter((c) => c !== concept));
+    },
+    [concepts, onChange]
+  );
+
+  const handleNewConceptChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      setNewConcept(e.target.value);
+    },
+    []
+  );
+
+  const handleInputKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>): void => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleAdd();
+      }
+      if (e.key === "Escape") {
+        setIsEditing(false);
+      }
+    },
+    [handleAdd]
+  );
+
+  const stopEditing = useCallback((): void => {
+    setIsEditing(false);
+  }, []);
+
+  const startEditing = useCallback((): void => {
+    setIsEditing(true);
+  }, []);
+
+  const handleReadKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLButtonElement>): void => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setIsEditing(true);
+      }
+    },
+    []
+  );
 
   if (isEditing) {
     return (
       <div className="min-w-[200px] space-y-2">
         <div className="flex flex-wrap gap-1">
           {concepts.map((concept) => (
-            <button
-              className="inline-flex items-center gap-1 rounded-full border-transparent bg-secondary px-2 py-0.5 font-medium text-secondary-foreground text-xs transition-colors hover:bg-secondary/80"
+            <ConceptTag
+              concept={concept}
               key={concept}
-              onClick={() => handleRemove(concept)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleRemove(concept);
-                }
-              }}
-              type="button"
-            >
-              {concept}
-              <span aria-hidden="true" className="text-xs">
-                ×
-              </span>
-            </button>
+              onRemove={handleRemove}
+            />
           ))}
         </div>
         <div className="flex gap-1">
           <Input
             autoFocus
             className="h-7 text-xs"
-            onChange={(e) => setNewConcept(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleAdd();
-              }
-              if (e.key === "Escape") {
-                setIsEditing(false);
-              }
-            }}
+            onChange={handleNewConceptChange}
+            onKeyDown={handleInputKeyDown}
             placeholder="Add concept..."
             ref={inputRef}
             value={newConcept}
@@ -98,7 +156,7 @@ export function ConceptsCell({ concepts, onChange }: ConceptsCellProps) {
           </Button>
           <Button
             className="h-6 px-2 text-xs"
-            onClick={() => setIsEditing(false)}
+            onClick={stopEditing}
             size="sm"
             variant="ghost"
           >
@@ -113,13 +171,8 @@ export function ConceptsCell({ concepts, onChange }: ConceptsCellProps) {
   return (
     <button
       className="flex min-w-[120px] cursor-pointer flex-wrap gap-1 text-left hover:opacity-70"
-      onClick={() => setIsEditing(true)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          setIsEditing(true);
-        }
-      }}
+      onClick={startEditing}
+      onKeyDown={handleReadKeyDown}
       type="button"
     >
       {concepts.length === 0 ? (

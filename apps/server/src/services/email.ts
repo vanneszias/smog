@@ -9,7 +9,7 @@
 import { createRequire } from "node:module";
 import { createLogger } from "@smog/shared/logger";
 import { ImapFlow } from "imapflow";
-import type { Transporter } from "nodemailer";
+import type { SendMailOptions, Transporter } from "nodemailer";
 import nodemailer from "nodemailer";
 
 const logger = createLogger("emailService");
@@ -17,7 +17,7 @@ const logger = createLogger("emailService");
 // MailComposer is a CJS internal of nodemailer — use createRequire to reach it
 const _require = createRequire(import.meta.url);
 // biome-ignore lint/suspicious/noExplicitAny: CJS interop
-const MailComposer: new (options: nodemailer.SendMailOptions) => any = _require(
+const MailComposer: new (options: SendMailOptions) => any = _require(
   "nodemailer/lib/mail-composer"
 );
 
@@ -46,10 +46,10 @@ function getTransporter(): Transporter {
   }
 
   _transporter = nodemailer.createTransport({
+    auth: { pass, user },
     host,
     port,
     secure: port === 465,
-    auth: { user, pass },
   });
 
   return _transporter;
@@ -63,9 +63,7 @@ function getTransporter(): Transporter {
  * Build a raw RFC 822 buffer from the same mail options we pass to sendMail.
  * Uses nodemailer's internal MailComposer so the bytes match what was delivered.
  */
-async function buildRawMessage(
-  mailOptions: nodemailer.SendMailOptions
-): Promise<Buffer> {
+async function buildRawMessage(mailOptions: SendMailOptions): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     const composer = new MailComposer(mailOptions);
     const stream: NodeJS.ReadableStream = composer.compile().createReadStream();
@@ -99,11 +97,11 @@ async function appendToSentFolder(rawMessage: Buffer): Promise<void> {
   }
 
   const client = new ImapFlow({
+    auth: { pass, user },
     host,
+    logger: false,
     port,
     secure: port === 993,
-    auth: { user, pass },
-    logger: false,
     tls: {
       rejectUnauthorized: process.env.IMAP_TLS_REJECT_UNAUTHORIZED !== "false",
     },
@@ -138,10 +136,10 @@ async function appendToSentFolder(rawMessage: Buffer): Promise<void> {
 // =============================================================================
 
 export interface SendEmailOptions {
-  to: string;
-  subject: string;
   html: string;
+  subject: string;
   text?: string;
+  to: string;
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
@@ -149,13 +147,13 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
   const replyTo = process.env.SMTP_REPLY_TO ?? "info@smog.vlaanderen";
   const transporter = getTransporter();
 
-  const mailOptions: nodemailer.SendMailOptions = {
+  const mailOptions: SendMailOptions = {
     from,
-    replyTo,
-    to: options.to,
-    subject: options.subject,
     html: options.html,
+    replyTo,
+    subject: options.subject,
     text: options.text,
+    to: options.to,
   };
 
   try {

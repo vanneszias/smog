@@ -1,19 +1,19 @@
 import { Search, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
 interface SearchBarProps {
-  value: string;
-  onChange: (value: string) => void;
-  onSubmit?: (value: string) => void;
-  onClear?: () => void;
-  placeholder?: string;
   autoFocus?: boolean;
-  className?: string;
   buttonLabel?: string;
-  inputLabel?: string;
+  className?: string;
   clearLabel?: string;
+  inputLabel?: string;
+  onChange: (value: string) => void;
+  onClear?: () => void;
+  onSubmit?: (value: string) => void;
+  placeholder?: string;
+  value: string;
 }
 
 export default function SearchBar({
@@ -35,6 +35,13 @@ export default function SearchBar({
       inputRef.current.focus();
     }
   }, [autoFocus]);
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      onChange(e.target.value);
+    },
+    [onChange]
+  );
 
   const handleClear = () => {
     onChange("");
@@ -64,7 +71,7 @@ export default function SearchBar({
         <Input
           aria-label={inputLabel}
           className="h-12 pr-10 pl-10 text-base"
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           ref={inputRef}

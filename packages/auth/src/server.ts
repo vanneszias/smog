@@ -8,11 +8,10 @@
 import { getWorkOSConfig, WORKOS_ENDPOINTS } from "./config";
 import type { TokenResponse, WorkOSUser } from "./types";
 
-// Re-export config utilities for server use
-export { getWorkOSConfig };
-
 // Re-export payments (server-only)
 export { mollieClient } from "./lib/payments";
+// Re-export config utilities for server use
+export { getWorkOSConfig };
 
 /**
  * WorkOS API response types (internal)
@@ -37,13 +36,13 @@ interface WorkOSAuthResponse {
  */
 function transformUser(workosUser: WorkOSAuthResponse["user"]): WorkOSUser {
   return {
-    id: workosUser.id,
-    email: workosUser.email,
-    firstName: workosUser.first_name,
-    lastName: workosUser.last_name,
-    emailVerified: workosUser.email_verified,
-    profilePictureUrl: workosUser.profile_picture_url,
     createdAt: workosUser.created_at,
+    email: workosUser.email,
+    emailVerified: workosUser.email_verified,
+    firstName: workosUser.first_name,
+    id: workosUser.id,
+    lastName: workosUser.last_name,
+    profilePictureUrl: workosUser.profile_picture_url,
     updatedAt: workosUser.updated_at,
   };
 }
@@ -74,9 +73,9 @@ export async function exchangeCodeForTokens(
   }
 
   const response = await fetch(WORKOS_ENDPOINTS.authenticate, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
   });
 
   if (!response.ok) {
@@ -116,9 +115,9 @@ export async function refreshAccessToken(
   }
 
   const response = await fetch(WORKOS_ENDPOINTS.authenticate, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
   });
 
   if (!response.ok) {

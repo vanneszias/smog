@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import UserMenu from "@/components/user-menu";
 import Logo from "./Logo";
@@ -30,18 +30,26 @@ export default function Header() {
     };
   }, [sidebarOpen]);
 
+  const handleToggleSidebar = useCallback((): void => {
+    setSidebarOpen(!sidebarOpen);
+  }, [sidebarOpen]);
+
+  const handleCloseSidebar = useCallback((): void => {
+    setSidebarOpen(false);
+  }, []);
+
   // Top header navigation - only key actions
   const headerLinks = [
-    { to: "/lists", label: t("web.home.header.lists", "Lijsten") },
-    { to: "/sponsors", label: t("web.home.header.sponsor", "Sponsor") },
+    { label: t("web.home.header.lists", "Lijsten"), to: "/lists" },
+    { label: t("web.home.header.sponsor", "Sponsor"), to: "/sponsors" },
   ];
 
   // Sidebar navigation - all pages
   const sidebarLinks = [
-    { to: "/gestures", label: t("web.home.header.search", "Zoeken") },
-    { to: "/lists", label: t("web.home.header.lists", "Lijsten") },
-    { to: "/account", label: t("web.home.header.account", "Account") },
-    { to: "/sponsors", label: t("web.home.header.sponsor", "Sponsor") },
+    { label: t("web.home.header.search", "Zoeken"), to: "/gestures" },
+    { label: t("web.home.header.lists", "Lijsten"), to: "/lists" },
+    { label: t("web.home.header.account", "Account"), to: "/account" },
+    { label: t("web.home.header.sponsor", "Sponsor"), to: "/sponsors" },
   ];
 
   return (
@@ -93,7 +101,7 @@ export default function Header() {
                   ? "border-2 border-primary"
                   : "border-2 border-transparent"
               }`}
-              onClick={() => setSidebarOpen(!sidebarOpen)}
+              onClick={handleToggleSidebar}
               type="button"
             >
               <svg
@@ -142,7 +150,7 @@ export default function Header() {
             ? "pointer-events-auto opacity-100"
             : "pointer-events-none opacity-0"
         }`}
-        onClick={() => setSidebarOpen(false)}
+        onClick={handleCloseSidebar}
       />
 
       {/* Full Screen Sidebar - Slides from top on mobile, right on desktop */}
@@ -162,7 +170,7 @@ export default function Header() {
               <Link
                 className="text-center font-normal text-2xl text-primary hover:underline md:text-left md:text-4xl"
                 key={link.to}
-                onClick={() => setSidebarOpen(false)}
+                onClick={handleCloseSidebar}
                 style={{
                   animation: sidebarOpen
                     ? `slideIn 0.5s ease-out ${index * 0.1}s both`
@@ -175,7 +183,7 @@ export default function Header() {
             ))}
             <Link
               className="mt-4 inline-flex items-center justify-center self-center rounded-full bg-primary px-6 py-3 text-sm text-white uppercase transition-all hover:scale-105 hover:bg-primary/90 md:mt-8 md:self-start md:px-8 md:py-4 md:text-lg"
-              onClick={() => setSidebarOpen(false)}
+              onClick={handleCloseSidebar}
               style={{
                 animation: sidebarOpen
                   ? `slideIn 0.5s ease-out ${sidebarLinks.length * 0.1}s both`
@@ -205,7 +213,7 @@ export default function Header() {
           <div className="flex flex-wrap items-center justify-center gap-4 text-center text-muted-foreground text-sm md:justify-start">
             <Link
               className="hover:text-primary hover:underline"
-              onClick={() => setSidebarOpen(false)}
+              onClick={handleCloseSidebar}
               to="/terms"
             >
               {t("web.home.footer.terms", "Voorwaarden")}
@@ -213,7 +221,7 @@ export default function Header() {
             <span>•</span>
             <Link
               className="hover:text-primary hover:underline"
-              onClick={() => setSidebarOpen(false)}
+              onClick={handleCloseSidebar}
               to="/privacy"
             >
               {t("web.home.footer.privacy", "Privacy")}

@@ -98,22 +98,12 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
 export default AppProviders;
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
   container: {
-    flex: 1,
     alignItems: "center",
+    backgroundColor: "#22805F",
+    flex: 1,
     justifyContent: "center",
     padding: 24,
-    backgroundColor: "#22805F",
-  },
-  title: {
-    color: "white",
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 12,
-    textAlign: "center",
   },
   message: {
     color: "white",
@@ -121,6 +111,16 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     maxWidth: 320,
     opacity: 0.9,
+    textAlign: "center",
+  },
+  root: {
+    flex: 1,
+  },
+  title: {
+    color: "white",
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 12,
     textAlign: "center",
   },
 });

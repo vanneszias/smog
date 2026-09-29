@@ -10,9 +10,9 @@ import { EmailLayout } from "./EmailLayout";
 import * as S from "./styles";
 
 interface RenewalReminderEmailProps {
-  sponsorName: string;
-  gestureName: string;
   endDate: number;
+  gestureName: string;
+  sponsorName: string;
 }
 
 export function RenewalReminderEmail({

@@ -30,7 +30,7 @@ const requireAdmin = o.middleware(async ({ context, next }) => {
     ...withServiceAuth({ workosId: context.workosId }),
   });
 
-  if (!user || user.role !== "admin") {
+  if (user?.role !== "admin") {
     throw new ORPCError("FORBIDDEN", {
       message: "Admin access required",
     });
@@ -38,8 +38,8 @@ const requireAdmin = o.middleware(async ({ context, next }) => {
 
   return next({
     context: {
-      workosId: context.workosId,
       userId: user._id,
+      workosId: context.workosId,
     },
   });
 });

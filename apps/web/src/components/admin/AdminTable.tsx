@@ -37,7 +37,8 @@ import {
   Tag,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ import { CategoriesCell } from "./gestures/CategoriesCell";
 import { ChangesConfirmationDialog } from "./gestures/ChangesConfirmationDialog";
 import { ConceptsCell } from "./gestures/ConceptsCell";
 import { EditableCell } from "./gestures/EditableCell";
-import type { AdminGesture } from "./gestures/types";
+import type { AdminCategory, AdminGesture } from "./gestures/types";
 import { useGestureTableEditing } from "./gestures/useGestureTableEditing";
 import { useAdminFilters } from "./hooks/useAdminFilters";
 
@@ -84,14 +85,17 @@ export function AdminTable() {
     ) => {
       const results: { success: boolean }[] = [];
       for (const change of changes) {
-        results.push(
-          await client.admin.gestures.update({
-            gestureId: change.gestureId,
-            ...change.updates,
-          })
-        );
+        // biome-ignore lint/performance/noAwaitInLoops: sequential to avoid flooding the API with concurrent gesture updates
+        const result = await client.admin.gestures.update({
+          gestureId: change.gestureId,
+          ...change.updates,
+        });
+        results.push(result);
       }
       return results;
+    },
+    onError: (error) => {
+      toast.error(`Failed to save changes: ${error.message}`);
     },
     onSuccess: () => {
       toast.success("All changes saved successfully");
@@ -104,9 +108,6 @@ export function AdminTable() {
           },
         }).queryKey,
       });
-    },
-    onError: (error) => {
-      toast.error(`Failed to save changes: ${error.message}`);
     },
   });
 
@@ -139,12 +140,38 @@ export function AdminTable() {
 
   const stats = useMemo(() => {
     if (!gestures) {
-      return { total: 0, active: 0, inactive: 0 };
+      return { active: 0, inactive: 0, total: 0 };
     }
     const total = gestures.length;
     const active = gestures.filter((g) => g.isActive).length;
-    return { total, active, inactive: total - active };
+    return { active, inactive: total - active, total };
   }, [gestures]);
+
+  const { discardChanges, setShowConfirmation } = editing;
+
+  const handleDiscard = useCallback((): void => {
+    discardChanges();
+    toast.info("Changes discarded");
+  }, [discardChanges]);
+
+  const handleOpenConfirmation = useCallback((): void => {
+    setShowConfirmation(true);
+  }, [setShowConfirmation]);
+
+  const handleCloseConfirmation = useCallback((): void => {
+    setShowConfirmation(false);
+  }, [setShowConfirmation]);
+
+  const handleSearchChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>): void => {
+      setSearchQuery(e.target.value);
+    },
+    [setSearchQuery]
+  );
+
+  const handleToggleInactiveOnly = useCallback((): void => {
+    setLocalShowInactiveOnly(!localShowInactiveOnly);
+  }, [localShowInactiveOnly]);
 
   if (isLoading) {
     return (
@@ -191,14 +218,11 @@ export function AdminTable() {
         </div>
 
         <div className="flex items-center gap-2">
-          {editing.hasChanges && (
+          {editing.hasChanges ? (
             <>
               <Button
                 className="gap-2"
-                onClick={() => {
-                  editing.discardChanges();
-                  toast.info("Changes discarded");
-                }}
+                onClick={handleDiscard}
                 size="sm"
                 variant="outline"
               >
@@ -207,14 +231,14 @@ export function AdminTable() {
               </Button>
               <Button
                 className="gap-2"
-                onClick={() => editing.setShowConfirmation(true)}
+                onClick={handleOpenConfirmation}
                 size="sm"
               >
                 <Save className="h-4 w-4" />
                 Save Changes
               </Button>
             </>
-          )}
+          ) : null}
           <CreateGestureDialog />
         </div>
       </div>
@@ -225,14 +249,14 @@ export function AdminTable() {
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--admin-text-muted)]" />
           <Input
             className="h-10 bg-[var(--admin-bg)] pl-10"
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Search gestures by name, description, or concept..."
             value={searchQuery}
           />
         </div>
         <Button
           className={`h-10 gap-2 ${localShowInactiveOnly ? "bg-[var(--admin-accent)] text-white hover:bg-[var(--admin-accent-dark)]" : ""}`}
-          onClick={() => setLocalShowInactiveOnly(!localShowInactiveOnly)}
+          onClick={handleToggleInactiveOnly}
           size="sm"
           variant={localShowInactiveOnly ? "default" : "outline"}
         >
@@ -288,167 +312,22 @@ export function AdminTable() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredGestures.map((gesture) => {
-                  const display = editing.getGestureWithChanges(gesture);
-                  const isPending = !!editing.pendingChanges[gesture._id];
-
-                  return (
-                    <TableRow
-                      className={`group ${isPending ? "bg-[var(--admin-accent)]/5" : ""} ${display.isActive ? "" : "opacity-60"}`}
-                      key={gesture._id}
-                    >
-                      {/* Active toggle */}
-                      <TableCell>
-                        <Switch
-                          checked={display.isActive}
-                          className="scale-75"
-                          onCheckedChange={(checked) =>
-                            editing.updateField(
-                              gesture._id,
-                              "isActive",
-                              checked
-                            )
-                          }
-                        />
-                      </TableCell>
-
-                      {/* Name */}
-                      <TableCell className="font-medium">
-                        {editing.editingCell?.gestureId === gesture._id &&
-                        editing.editingCell.field === "name" ? (
-                          <EditableCell
-                            onBlur={() => editing.setEditingCell(null)}
-                            onChange={(v) =>
-                              editing.updateField(gesture._id, "name", v)
-                            }
-                            value={display.name}
-                          />
-                        ) : (
-                          <button
-                            className="text-left hover:text-[var(--admin-accent)]"
-                            onClick={() =>
-                              editing.setEditingCell({
-                                gestureId: gesture._id,
-                                field: "name",
-                              })
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                editing.setEditingCell({
-                                  gestureId: gesture._id,
-                                  field: "name",
-                                });
-                              }
-                            }}
-                            type="button"
-                          >
-                            {display.name}
-                          </button>
-                        )}
-                      </TableCell>
-
-                      {/* Categories */}
-                      <TableCell>
-                        <CategoriesCell
-                          categories={categories ?? []}
-                          categoryIds={display.categoryIds}
-                          onChange={(ids) =>
-                            editing.updateField(gesture._id, "categoryIds", ids)
-                          }
-                        />
-                      </TableCell>
-
-                      {/* Concepts */}
-                      <TableCell>
-                        <ConceptsCell
-                          concepts={display.concept}
-                          onChange={(c) =>
-                            editing.updateField(gesture._id, "concept", c)
-                          }
-                        />
-                      </TableCell>
-
-                      {/* Description */}
-                      <TableCell>
-                        {editing.editingCell?.gestureId === gesture._id &&
-                        editing.editingCell.field === "info" ? (
-                          <EditableCell
-                            multiline
-                            onBlur={() => editing.setEditingCell(null)}
-                            onChange={(v) =>
-                              editing.updateField(gesture._id, "info", v)
-                            }
-                            value={display.info}
-                          />
-                        ) : (
-                          <button
-                            className="line-clamp-2 max-w-[300px] text-left text-sm hover:text-[var(--admin-accent)]"
-                            onClick={() =>
-                              editing.setEditingCell({
-                                gestureId: gesture._id,
-                                field: "info",
-                              })
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                editing.setEditingCell({
-                                  gestureId: gesture._id,
-                                  field: "info",
-                                });
-                              }
-                            }}
-                            type="button"
-                          >
-                            {display.info || (
-                              <span className="text-[var(--admin-text-muted)] italic">
-                                Click to add description...
-                              </span>
-                            )}
-                          </button>
-                        )}
-                      </TableCell>
-
-                      {/* Playback ID */}
-                      <TableCell>
-                        {editing.editingCell?.gestureId === gesture._id &&
-                        editing.editingCell.field === "playbackId" ? (
-                          <EditableCell
-                            className="font-mono text-xs"
-                            onBlur={() => editing.setEditingCell(null)}
-                            onChange={(v) =>
-                              editing.updateField(gesture._id, "playbackId", v)
-                            }
-                            value={display.playbackId}
-                          />
-                        ) : (
-                          <button
-                            className="rounded bg-[var(--admin-bg)] px-2 py-1 font-mono text-xs hover:text-[var(--admin-accent)]"
-                            onClick={() =>
-                              editing.setEditingCell({
-                                gestureId: gesture._id,
-                                field: "playbackId",
-                              })
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                editing.setEditingCell({
-                                  gestureId: gesture._id,
-                                  field: "playbackId",
-                                });
-                              }
-                            }}
-                            type="button"
-                          >
-                            {display.playbackId.slice(0, 12)}...
-                          </button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                filteredGestures.map((gesture) => (
+                  <GestureRow
+                    categories={categories}
+                    display={editing.getGestureWithChanges(gesture)}
+                    editingField={
+                      editing.editingCell?.gestureId === gesture._id
+                        ? editing.editingCell.field
+                        : null
+                    }
+                    gestureId={gesture._id}
+                    isPending={!!editing.pendingChanges[gesture._id]}
+                    key={gesture._id}
+                    onEditingCellChange={editing.setEditingCell}
+                    onUpdateField={editing.updateField}
+                  />
+                ))
               )}
             </TableBody>
           </Table>
@@ -460,9 +339,223 @@ export function AdminTable() {
         changes={editing.getChangesForConfirmation()}
         isOpen={editing.showConfirmation}
         isSubmitting={bulkUpdateMutation.isPending}
-        onClose={() => editing.setShowConfirmation(false)}
+        onClose={handleCloseConfirmation}
         onConfirm={editing.handleSave}
       />
     </div>
+  );
+}
+
+type EditableField = "name" | "info" | "playbackId";
+
+type EditingCell = { gestureId: string; field: string } | null;
+
+const EMPTY_CATEGORIES: AdminCategory[] = [];
+
+interface GestureRowProps {
+  categories: AdminCategory[] | undefined;
+  display: AdminGesture;
+  editingField: string | null;
+  gestureId: string;
+  isPending: boolean;
+  onEditingCellChange: (cell: EditingCell) => void;
+  onUpdateField: (
+    gestureId: string,
+    field: keyof AdminGesture,
+    value: unknown
+  ) => void;
+}
+
+/** A single inline-editable gesture row. */
+function GestureRow({
+  categories,
+  display,
+  editingField,
+  gestureId,
+  isPending,
+  onEditingCellChange,
+  onUpdateField,
+}: GestureRowProps) {
+  const handleActiveChange = useCallback(
+    (checked: boolean): void => {
+      onUpdateField(gestureId, "isActive", checked);
+    },
+    [gestureId, onUpdateField]
+  );
+
+  const handleCategoriesChange = useCallback(
+    (ids: string[]): void => {
+      onUpdateField(gestureId, "categoryIds", ids);
+    },
+    [gestureId, onUpdateField]
+  );
+
+  const handleConceptsChange = useCallback(
+    (c: string[]): void => {
+      onUpdateField(gestureId, "concept", c);
+    },
+    [gestureId, onUpdateField]
+  );
+
+  return (
+    <TableRow
+      className={`group ${isPending ? "bg-[var(--admin-accent)]/5" : ""} ${display.isActive ? "" : "opacity-60"}`}
+    >
+      {/* Active toggle */}
+      <TableCell>
+        <Switch
+          checked={display.isActive}
+          className="scale-75"
+          onCheckedChange={handleActiveChange}
+        />
+      </TableCell>
+
+      {/* Name */}
+      <TableCell className="font-medium">
+        <GestureTextCell
+          buttonClassName="text-left hover:text-[var(--admin-accent)]"
+          field="name"
+          gestureId={gestureId}
+          isEditing={editingField === "name"}
+          onEditingCellChange={onEditingCellChange}
+          onUpdateField={onUpdateField}
+          value={display.name}
+        >
+          {display.name}
+        </GestureTextCell>
+      </TableCell>
+
+      {/* Categories */}
+      <TableCell>
+        <CategoriesCell
+          categories={categories ?? EMPTY_CATEGORIES}
+          categoryIds={display.categoryIds}
+          onChange={handleCategoriesChange}
+        />
+      </TableCell>
+
+      {/* Concepts */}
+      <TableCell>
+        <ConceptsCell
+          concepts={display.concept}
+          onChange={handleConceptsChange}
+        />
+      </TableCell>
+
+      {/* Description */}
+      <TableCell>
+        <GestureTextCell
+          buttonClassName="line-clamp-2 max-w-[300px] text-left text-sm hover:text-[var(--admin-accent)]"
+          field="info"
+          gestureId={gestureId}
+          isEditing={editingField === "info"}
+          multiline
+          onEditingCellChange={onEditingCellChange}
+          onUpdateField={onUpdateField}
+          value={display.info}
+        >
+          {display.info || (
+            <span className="text-[var(--admin-text-muted)] italic">
+              Click to add description...
+            </span>
+          )}
+        </GestureTextCell>
+      </TableCell>
+
+      {/* Playback ID */}
+      <TableCell>
+        <GestureTextCell
+          buttonClassName="rounded bg-[var(--admin-bg)] px-2 py-1 font-mono text-xs hover:text-[var(--admin-accent)]"
+          field="playbackId"
+          gestureId={gestureId}
+          inputClassName="font-mono text-xs"
+          isEditing={editingField === "playbackId"}
+          onEditingCellChange={onEditingCellChange}
+          onUpdateField={onUpdateField}
+          value={display.playbackId}
+        >
+          {display.playbackId.slice(0, 12)}...
+        </GestureTextCell>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+interface GestureTextCellProps {
+  buttonClassName: string;
+  children: ReactNode;
+  field: EditableField;
+  gestureId: string;
+  inputClassName?: string;
+  isEditing: boolean;
+  multiline?: boolean;
+  onEditingCellChange: (cell: EditingCell) => void;
+  onUpdateField: (
+    gestureId: string,
+    field: keyof AdminGesture,
+    value: unknown
+  ) => void;
+  value: string;
+}
+
+/** Click-to-edit text cell: a button in read mode, an `EditableCell` in edit mode. */
+function GestureTextCell({
+  buttonClassName,
+  children,
+  field,
+  gestureId,
+  inputClassName,
+  isEditing,
+  multiline,
+  onEditingCellChange,
+  onUpdateField,
+  value,
+}: GestureTextCellProps) {
+  const handleBlur = useCallback((): void => {
+    onEditingCellChange(null);
+  }, [onEditingCellChange]);
+
+  const handleChange = useCallback(
+    (v: string): void => {
+      onUpdateField(gestureId, field, v);
+    },
+    [gestureId, field, onUpdateField]
+  );
+
+  const handleClick = useCallback((): void => {
+    onEditingCellChange({ field, gestureId });
+  }, [field, gestureId, onEditingCellChange]);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLButtonElement>): void => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onEditingCellChange({ field, gestureId });
+      }
+    },
+    [field, gestureId, onEditingCellChange]
+  );
+
+  if (isEditing) {
+    return (
+      <EditableCell
+        className={inputClassName}
+        multiline={multiline}
+        onBlur={handleBlur}
+        onChange={handleChange}
+        value={value}
+      />
+    );
+  }
+
+  return (
+    <button
+      className={buttonClassName}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      type="button"
+    >
+      {children}
+    </button>
   );
 }

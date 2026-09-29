@@ -47,10 +47,10 @@ interface SearchParams {
 }
 
 export const Route = createFileRoute("/sponsors/")({
+  component: SponsorsComponent,
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
     gestureId: (search.gestureId as string) || undefined,
   }),
-  component: SponsorsComponent,
 });
 
 // ─── Page component ───────────────────────────────────────────────────────────
@@ -91,39 +91,40 @@ function SponsorsComponent() {
     }));
   }, [gesturesWithSponsorship, allCategories]);
 
-  const gesturesForList: GestureWithSponsorshipStatus[] = useMemo(() => {
-    return gesturesWithCategories.map((gesture) => {
-      let status: "available" | "sponsored" | "pending" = "available";
-      let sponsorName: string | undefined;
-      let endDate: number | undefined;
+  const gesturesForList: GestureWithSponsorshipStatus[] = useMemo(
+    () =>
+      gesturesWithCategories.map((gesture) => {
+        let status: "available" | "sponsored" | "pending" = "available";
+        let sponsorName: string | undefined;
+        let endDate: number | undefined;
 
-      if (gesture.sponsorship) {
-        if (gesture.sponsorship.status === "active") {
-          status = "sponsored";
-          sponsorName = gesture.sponsorship.sponsorName;
-          endDate = gesture.sponsorship.endDate;
-        } else if (
-          gesture.sponsorship.status === "pending" ||
-          gesture.sponsorship.status === "pending_payment" ||
-          gesture.sponsorship.status === "pending_approval"
-        ) {
-          status = "pending";
+        if (gesture.sponsorship) {
+          if (gesture.sponsorship.status === "active") {
+            status = "sponsored";
+            ({ sponsorName, endDate } = gesture.sponsorship);
+          } else if (
+            gesture.sponsorship.status === "pending" ||
+            gesture.sponsorship.status === "pending_payment" ||
+            gesture.sponsorship.status === "pending_approval"
+          ) {
+            status = "pending";
+          }
         }
-      }
 
-      return {
-        _id: gesture._id,
-        name: gesture.name,
-        playbackId: gesture.playbackId,
-        info: gesture.info,
-        categories: gesture.categories,
-        concept: gesture.concept,
-        status,
-        sponsorName,
-        endDate,
-      };
-    });
-  }, [gesturesWithCategories]);
+        return {
+          _id: gesture._id,
+          categories: gesture.categories,
+          concept: gesture.concept,
+          endDate,
+          info: gesture.info,
+          name: gesture.name,
+          playbackId: gesture.playbackId,
+          sponsorName,
+          status,
+        };
+      }),
+    [gesturesWithCategories]
+  );
 
   // ─── Filtering ─────────────────────────────────────────────────────────────
 
@@ -184,6 +185,11 @@ function SponsorsComponent() {
     }
   }, [setSearchQuery, selectedCategories, handleCategoryToggle]);
 
+  const { setCurrentStep } = form;
+  const handleContinueToDetails = useCallback(() => {
+    setCurrentStep("details");
+  }, [setCurrentStep]);
+
   const handleGeneratePreview = useGeneratePreview({ form, selectedGestures });
   const handleProceedToPayment = useCreateSponsorship({
     form,
@@ -222,7 +228,7 @@ function SponsorsComponent() {
           handleClearFilters={handleClearFilters}
           handleToggleSelection={form.handleToggleSelection}
           isLoading={isLoading}
-          onContinue={() => form.setCurrentStep("details")}
+          onContinue={handleContinueToDetails}
           searchQuery={searchQuery}
           selectedCategories={selectedCategories}
           selectedGestureIds={form.selectedGestureIds}

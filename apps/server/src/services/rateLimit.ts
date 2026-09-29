@@ -1,4 +1,4 @@
-import type { Context, Next } from "hono";
+import type { Context, MiddlewareHandler, Next } from "hono";
 import IORedis from "ioredis";
 
 const redis = new IORedis(process.env.REDIS_URL || "redis://localhost:6379/1", {
@@ -26,7 +26,7 @@ export function rateLimit({
   namespace: string;
   limit: number;
   windowSeconds: number;
-}) {
+}): MiddlewareHandler {
   return async (c: Context, next: Next) => {
     if (c.req.method === "OPTIONS") {
       await next();

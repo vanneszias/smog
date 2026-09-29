@@ -9,18 +9,18 @@ import { sponsorshipsRouter } from "./sponsorships";
 import { usersRouter } from "./users";
 
 export const appRouter = {
+  admin: adminRouter,
+  categories: categoriesRouter,
+  favorites: favoritesRouter,
+  gestures: gesturesRouter,
   healthCheck: publicProcedure.handler(() => "OK"),
+  lists: listsRouter,
   privateData: protectedProcedure.handler(({ context }) => ({
     message: "This is private",
     workosId: context.workosId,
   })),
-  gestures: gesturesRouter,
-  categories: categoriesRouter,
-  favorites: favoritesRouter,
-  lists: listsRouter,
-  users: usersRouter,
   sponsorships: sponsorshipsRouter,
-  admin: adminRouter,
+  users: usersRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;

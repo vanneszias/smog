@@ -69,24 +69,26 @@ export function useGestureTableEditing({
   );
 
   /** Build the change summary used by the confirmation dialog. */
-  const getChangesForConfirmation = useCallback((): GestureChange[] => {
-    return Object.entries(pendingChanges).map(([gestureId, changes]) => {
-      const original = gestures?.find((g) => g._id === gestureId);
-      const fieldChanges: Record<string, { old: unknown; new: unknown }> = {};
+  const getChangesForConfirmation = useCallback(
+    (): GestureChange[] =>
+      Object.entries(pendingChanges).map(([gestureId, changes]) => {
+        const original = gestures?.find((g) => g._id === gestureId);
+        const fieldChanges: Record<string, { old: unknown; new: unknown }> = {};
 
-      for (const [field, newValue] of Object.entries(changes)) {
-        const oldValue = original?.[field as keyof AdminGesture];
-        if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-          fieldChanges[field] = { old: oldValue, new: newValue };
+        for (const [field, newValue] of Object.entries(changes)) {
+          const oldValue = original?.[field as keyof AdminGesture];
+          if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+            fieldChanges[field] = { new: newValue, old: oldValue };
+          }
         }
-      }
 
-      return {
-        gesture: original!,
-        changes: fieldChanges,
-      };
-    });
-  }, [pendingChanges, gestures]);
+        return {
+          changes: fieldChanges,
+          gesture: original!,
+        };
+      }),
+    [pendingChanges, gestures]
+  );
 
   /** Flush pending changes to the API via `onSave`. */
   const handleSave = useCallback(() => {
@@ -111,18 +113,18 @@ export function useGestureTableEditing({
   }, []);
 
   return {
-    editingCell,
-    setEditingCell,
-    pendingChanges,
-    hasChanges: Object.keys(pendingChanges).length > 0,
-    pendingCount: Object.keys(pendingChanges).length,
-    updateField,
-    getGestureWithChanges,
-    getChangesForConfirmation,
-    handleSave,
-    discardChanges,
     clearAfterSave,
-    showConfirmation,
+    discardChanges,
+    editingCell,
+    getChangesForConfirmation,
+    getGestureWithChanges,
+    handleSave,
+    hasChanges: Object.keys(pendingChanges).length > 0,
+    pendingChanges,
+    pendingCount: Object.keys(pendingChanges).length,
+    setEditingCell,
     setShowConfirmation,
+    showConfirmation,
+    updateField,
   };
 }

@@ -3,8 +3,8 @@ import { EmailLayout } from "./EmailLayout";
 import * as S from "./styles";
 
 interface SponsorshipSubmittedEmailProps {
-  sponsorName: string;
   gestureName: string;
+  sponsorName: string;
 }
 
 export function SponsorshipSubmittedEmail({

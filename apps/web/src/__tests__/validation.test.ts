@@ -80,15 +80,15 @@ describe("validateEmail", () => {
 const t = (key: string) => key; // passthrough for tests
 
 const baseValidData = {
-  sponsorName: "ACME Corp",
-  includeLogo: false,
-  logoFile: null,
-  contactFullName: "Jan Jansen",
   contactEmail: "jan@example.com",
-  invoiceRequested: false,
-  invoiceName: "",
-  invoiceVatNumber: "",
+  contactFullName: "Jan Jansen",
+  includeLogo: false,
   invoiceEmail: "",
+  invoiceName: "",
+  invoiceRequested: false,
+  invoiceVatNumber: "",
+  logoFile: null,
+  sponsorName: "ACME Corp",
 };
 
 describe("validateDetails", () => {
@@ -158,10 +158,10 @@ describe("validateDetails", () => {
     const { isValid, errors } = validateDetails(
       {
         ...baseValidData,
-        invoiceRequested: true,
-        invoiceName: "",
-        invoiceVatNumber: "",
         invoiceEmail: "",
+        invoiceName: "",
+        invoiceRequested: true,
+        invoiceVatNumber: "",
       },
       t
     );
@@ -175,10 +175,10 @@ describe("validateDetails", () => {
     const { isValid } = validateDetails(
       {
         ...baseValidData,
-        invoiceRequested: true,
-        invoiceName: "ACME BV",
-        invoiceVatNumber: "0123456749",
         invoiceEmail: "factuur@acme.be",
+        invoiceName: "ACME BV",
+        invoiceRequested: true,
+        invoiceVatNumber: "0123456749",
       },
       t
     );
@@ -189,10 +189,10 @@ describe("validateDetails", () => {
     const { isValid } = validateDetails(
       {
         ...baseValidData,
-        invoiceRequested: false,
-        invoiceName: "",
-        invoiceVatNumber: "invalid",
         invoiceEmail: "invalid",
+        invoiceName: "",
+        invoiceRequested: false,
+        invoiceVatNumber: "invalid",
       },
       t
     );

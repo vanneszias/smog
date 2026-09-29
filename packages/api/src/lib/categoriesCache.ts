@@ -5,10 +5,10 @@
  */
 
 interface CachedCategory {
-  _id: string;
   _creationTime: number;
-  name: string;
+  _id: string;
   isActive: boolean;
+  name: string;
 }
 
 interface CacheEntry {
@@ -100,9 +100,9 @@ class CategoriesCache {
    */
   getStats(): { size: number; ttlMs: number; entries: string[] } {
     return {
+      entries: Array.from(this.cache.keys()),
       size: this.cache.size,
       ttlMs: this.ttlMs,
-      entries: Array.from(this.cache.keys()),
     };
   }
 

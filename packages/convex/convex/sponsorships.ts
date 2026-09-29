@@ -33,17 +33,16 @@ import {
 // Create a new sponsorship (called from web app after video composition)
 export const create = mutation({
   args: {
+    durationWeeks: v.number(),
     gestureId: v.id("gestures"),
-    sponsorName: v.string(),
-    sponsorEmail: v.string(),
     overlayImageStorageId: v.string(),
     overlayText: v.string(),
-    sponsoredVideoPlaybackId: v.string(), // Mux playback ID
-    durationWeeks: v.number(),
     paymentAmount: v.number(),
     serviceToken: v.string(),
+    sponsorEmail: v.string(),
+    sponsoredVideoPlaybackId: v.string(), // Mux playback ID
+    sponsorName: v.string(),
   },
-  returns: v.id("sponsorships"),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.create");
     // Get gesture to backup original playbackId
@@ -66,39 +65,39 @@ export const create = mutation({
     const durationYears = weeksToYears(args.durationWeeks);
 
     return await ctx.db.insert("sponsorships", {
-      gestureId: args.gestureId,
-      sponsorName: args.sponsorName,
-      sponsorEmail: args.sponsorEmail,
       contactFullName: args.sponsorName, // Legacy: use sponsor name as contact
+      createdAt: Date.now(),
+      durationYears,
+      endDate,
+      gestureId: args.gestureId,
+      originalVideoPlaybackId: gesture.playbackId,
       overlayImageStorageId: args.overlayImageStorageId,
       overlayText: args.overlayText,
-      sponsoredVideoPlaybackId: args.sponsoredVideoPlaybackId,
-      originalVideoPlaybackId: gesture.playbackId,
-      startDate: 0, // Set after payment
-      endDate,
-      durationYears,
-      status: "pending",
       paymentAmount: args.paymentAmount,
-      createdAt: Date.now(),
+      sponsorEmail: args.sponsorEmail,
+      sponsoredVideoPlaybackId: args.sponsoredVideoPlaybackId,
+      sponsorName: args.sponsorName,
+      startDate: 0, // Set after payment
+      status: "pending",
       updatedAt: Date.now(),
     });
   },
+  returns: v.id("sponsorships"),
 });
 
 // Create multiple sponsorships for multiple gestures (bulk sponsoring)
 export const createBulk = mutation({
   args: {
+    durationWeeks: v.number(),
     gestureIds: v.array(v.id("gestures")),
-    sponsorName: v.string(),
-    sponsorEmail: v.string(),
     overlayImageStorageId: v.string(),
     overlayText: v.string(),
-    sponsoredVideoPlaybackIds: v.array(v.string()), // Mux playback IDs, one per gesture
-    durationWeeks: v.number(),
     paymentAmountPerGesture: v.number(),
     serviceToken: v.string(),
+    sponsorEmail: v.string(),
+    sponsoredVideoPlaybackIds: v.array(v.string()), // Mux playback IDs, one per gesture
+    sponsorName: v.string(),
   },
-  returns: v.array(v.id("sponsorships")),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.createBulk");
     if (args.gestureIds.length !== args.sponsoredVideoPlaybackIds.length) {
@@ -125,6 +124,7 @@ export const createBulk = mutation({
 
       try {
         // Get gesture to backup original playbackId
+        // biome-ignore lint/performance/noAwaitInLoops: sequential so each conflict check sees sponsorships inserted by earlier iterations and results stay ordered
         const gesture = await ctx.db.get(gestureId);
         if (!gesture) {
           errors.push(`Gesture ${gestureId} not found`);
@@ -147,20 +147,20 @@ export const createBulk = mutation({
         const durationYears = weeksToYears(args.durationWeeks);
 
         const sponsorshipId = await ctx.db.insert("sponsorships", {
-          gestureId,
-          sponsorName: args.sponsorName,
-          sponsorEmail: args.sponsorEmail,
           contactFullName: args.sponsorName, // Legacy: use sponsor name as contact
+          createdAt: Date.now(),
+          durationYears,
+          endDate,
+          gestureId,
+          originalVideoPlaybackId: gesture.playbackId,
           overlayImageStorageId: args.overlayImageStorageId,
           overlayText: args.overlayText,
-          sponsoredVideoPlaybackId,
-          originalVideoPlaybackId: gesture.playbackId,
-          startDate: 0, // Set after payment
-          endDate,
-          durationYears,
-          status: "pending",
           paymentAmount: args.paymentAmountPerGesture,
-          createdAt: Date.now(),
+          sponsorEmail: args.sponsorEmail,
+          sponsoredVideoPlaybackId,
+          sponsorName: args.sponsorName,
+          startDate: 0, // Set after payment
+          status: "pending",
           updatedAt: Date.now(),
         });
 
@@ -180,31 +180,31 @@ export const createBulk = mutation({
 
     return sponsorshipIds;
   },
+  returns: v.array(v.id("sponsorships")),
 });
 
 // Create multiple sponsorships for simplified flow (no video composition before payment)
 export const createBulkSimplified = mutation({
   args: {
-    gestureIds: v.array(v.id("gestures")),
-    sponsorName: v.string(),
-    sponsorEmail: v.string(),
-    contactFullName: v.string(),
     contactCompany: v.optional(v.string()),
-    overlayText: v.string(),
-    includeLogo: v.boolean(),
+    contactFullName: v.string(),
     durationYears: v.number(), // Always 1
-    // One pre-composed preview playback ID per gesture, in the same order as gestureIds.
-    // Each entry is the Mux playback ID for that gesture's composed preview video.
-    previewVideoPlaybackIds: v.array(v.string()),
+    gestureIds: v.array(v.id("gestures")),
+    includeLogo: v.boolean(),
+    invoiceEmail: v.optional(v.string()),
+    invoiceName: v.optional(v.string()),
     // Note: logoImage is not stored - it's already baked into the preview videos
     // Invoice fields: collected when sponsor requests a factuur
     invoiceRequested: v.optional(v.boolean()),
-    invoiceName: v.optional(v.string()),
     invoiceVatNumber: v.optional(v.string()),
-    invoiceEmail: v.optional(v.string()),
+    overlayText: v.string(),
+    // One pre-composed preview playback ID per gesture, in the same order as gestureIds.
+    // Each entry is the Mux playback ID for that gesture's composed preview video.
+    previewVideoPlaybackIds: v.array(v.string()),
     serviceToken: v.string(),
+    sponsorEmail: v.string(),
+    sponsorName: v.string(),
   },
-  returns: v.array(v.id("sponsorships")),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.createBulkSimplified");
     if (
@@ -233,6 +233,7 @@ export const createBulkSimplified = mutation({
       const previewVideoPlaybackId = args.previewVideoPlaybackIds[i] ?? "";
       try {
         // Get gesture to backup original playbackId
+        // biome-ignore lint/performance/noAwaitInLoops: sequential so each conflict check sees sponsorships inserted by earlier iterations and results stay ordered
         const gesture = await ctx.db.get(gestureId);
         if (!gesture) {
           errors.push(`Gesture ${gestureId} not found`);
@@ -257,25 +258,25 @@ export const createBulkSimplified = mutation({
         // Note: We don't store the base64 logo image to avoid exceeding Convex's
         // document size limits. The logo is already baked into the preview video.
         const sponsorshipId = await ctx.db.insert("sponsorships", {
-          gestureId,
-          sponsorName: args.sponsorName,
-          sponsorEmail: args.sponsorEmail,
-          contactFullName: args.contactFullName,
           contactCompany: args.contactCompany,
-          overlayText: args.overlayText,
-          originalVideoPlaybackId: gesture.playbackId,
-          previewVideoPlaybackId,
-          hasLogo: args.includeLogo,
-          durationYears: args.durationYears,
-          startDate: 0, // Set after payment is confirmed
-          endDate,
-          status: "pending_payment", // Will be updated to pending_approval after payment
-          paymentAmount: paymentAmountPerGesture,
-          invoiceRequested: args.invoiceRequested,
-          invoiceName: args.invoiceName,
-          invoiceVatNumber: args.invoiceVatNumber,
-          invoiceEmail: args.invoiceEmail,
+          contactFullName: args.contactFullName,
           createdAt: Date.now(),
+          durationYears: args.durationYears,
+          endDate,
+          gestureId,
+          hasLogo: args.includeLogo,
+          invoiceEmail: args.invoiceEmail,
+          invoiceName: args.invoiceName,
+          invoiceRequested: args.invoiceRequested,
+          invoiceVatNumber: args.invoiceVatNumber,
+          originalVideoPlaybackId: gesture.playbackId,
+          overlayText: args.overlayText,
+          paymentAmount: paymentAmountPerGesture,
+          previewVideoPlaybackId,
+          sponsorEmail: args.sponsorEmail,
+          sponsorName: args.sponsorName,
+          startDate: 0, // Set after payment is confirmed
+          status: "pending_payment", // Will be updated to pending_approval after payment
           updatedAt: Date.now(),
         });
 
@@ -295,17 +296,17 @@ export const createBulkSimplified = mutation({
 
     return sponsorshipIds;
   },
+  returns: v.array(v.id("sponsorships")),
 });
 
 // Update sponsorship status and payment info
 export const updateAfterPayment = mutation({
   args: {
-    sponsorshipId: v.id("sponsorships"),
     molliePaymentId: v.string(),
-    sponsoredVideoPlaybackId: v.string(),
     serviceToken: v.string(),
+    sponsoredVideoPlaybackId: v.string(),
+    sponsorshipId: v.id("sponsorships"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.updateAfterPayment");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
@@ -318,20 +319,21 @@ export const updateAfterPayment = mutation({
       startDate + (sponsorship.durationYears || 1) * 365 * 24 * 60 * 60 * 1000;
 
     await ctx.db.patch(args.sponsorshipId, {
+      endDate,
       molliePaymentId: args.molliePaymentId,
       sponsoredVideoPlaybackId: args.sponsoredVideoPlaybackId,
-      status: "active",
       startDate,
-      endDate,
+      status: "active",
       updatedAt: Date.now(),
     });
 
     // Update gesture to use sponsored video
     await ctx.db.patch(sponsorship.gestureId, {
-      playbackId: args.sponsoredVideoPlaybackId,
       lastUpdated: Date.now(),
+      playbackId: args.sponsoredVideoPlaybackId,
     });
   },
+  returns: v.null(),
 });
 
 // Get sponsorship by payment ID (for webhook)
@@ -364,10 +366,10 @@ export const getAllByPaymentId = query({
       sponsorships.map(async (s) => {
         const gesture = await ctx.db.get(s.gestureId);
         return {
-          gestureName: gesture?.name,
-          sponsorName: s.sponsorName,
           durationYears: s.durationYears,
+          gestureName: gesture?.name,
           paymentAmount: s.paymentAmount,
+          sponsorName: s.sponsorName,
           status: s.status,
         };
       })
@@ -378,13 +380,12 @@ export const getAllByPaymentId = query({
 // Update contact info for sponsorships after payment
 export const updateContactInfo = mutation({
   args: {
-    molliePaymentId: v.string(),
-    fullName: v.string(),
-    email: v.string(),
     company: v.optional(v.string()),
+    email: v.string(),
+    fullName: v.string(),
+    molliePaymentId: v.string(),
     serviceToken: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.updateContactInfo");
     const sponsorships = await ctx.db
@@ -399,17 +400,20 @@ export const updateContactInfo = mutation({
     }
 
     // Update all sponsorships with contact info
-    for (const sponsorship of sponsorships) {
-      await ctx.db.patch(sponsorship._id, {
-        contactFullName: args.fullName,
-        sponsorEmail: args.email,
-        contactCompany: args.company,
-        updatedAt: Date.now(),
-      });
-    }
+    await Promise.all(
+      sponsorships.map((sponsorship) =>
+        ctx.db.patch(sponsorship._id, {
+          contactCompany: args.company,
+          contactFullName: args.fullName,
+          sponsorEmail: args.email,
+          updatedAt: Date.now(),
+        })
+      )
+    );
 
     return null;
   },
+  returns: v.null(),
 });
 
 // Get sponsorship by ID
@@ -433,9 +437,9 @@ export const getActiveByGesture = query({
       .first();
     return sponsorship
       ? {
-          status: sponsorship.status,
-          sponsorName: sponsorship.sponsorName,
           endDate: sponsorship.endDate,
+          sponsorName: sponsorship.sponsorName,
+          status: sponsorship.status,
         }
       : null;
   },
@@ -486,9 +490,9 @@ export const getActiveByGestures = query({
     for (const sponsorship of activeSponsorships) {
       if (sponsorship) {
         sponsorshipMap[sponsorship.gestureId] = {
-          status: sponsorship.status,
-          sponsorName: sponsorship.sponsorName,
           endDate: sponsorship.endDate,
+          sponsorName: sponsorship.sponsorName,
+          status: sponsorship.status,
         };
       }
     }
@@ -535,12 +539,12 @@ export const listGesturesWithSponsorship = query({
         ...gesture,
         sponsorship: sponsorship
           ? {
-              status: sponsorship.status,
+              endDate: sponsorship.endDate,
               sponsorName:
                 sponsorship.status === "active"
                   ? sponsorship.sponsorName
                   : undefined,
-              endDate: sponsorship.endDate,
+              status: sponsorship.status,
             }
           : null,
       };
@@ -566,10 +570,9 @@ export const getExpired = query({
 // Expire a sponsorship (restore original video)
 export const expire = mutation({
   args: {
-    sponsorshipId: v.id("sponsorships"),
     serviceToken: v.string(),
+    sponsorshipId: v.id("sponsorships"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.expire");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
@@ -579,8 +582,8 @@ export const expire = mutation({
 
     // Restore original video
     await ctx.db.patch(sponsorship.gestureId, {
-      playbackId: sponsorship.originalVideoPlaybackId,
       lastUpdated: Date.now(),
+      playbackId: sponsorship.originalVideoPlaybackId,
     });
 
     // Mark as expired
@@ -589,16 +592,16 @@ export const expire = mutation({
       updatedAt: Date.now(),
     });
   },
+  returns: v.null(),
 });
 
 // Update sponsorship payment ID (after creating Mollie payment)
 export const updatePaymentId = mutation({
   args: {
-    sponsorshipId: v.id("sponsorships"),
     molliePaymentId: v.string(),
     serviceToken: v.string(),
+    sponsorshipId: v.id("sponsorships"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.updatePaymentId");
     await ctx.db.patch(args.sponsorshipId, {
@@ -608,16 +611,16 @@ export const updatePaymentId = mutation({
     });
     return null;
   },
+  returns: v.null(),
 });
 
 // Update sponsorship with composed video playback ID (called by webhook after video composition)
 export const updateVideoPlaybackId = mutation({
   args: {
-    sponsorshipId: v.id("sponsorships"),
-    sponsoredVideoPlaybackId: v.string(),
     serviceToken: v.string(),
+    sponsoredVideoPlaybackId: v.string(),
+    sponsorshipId: v.id("sponsorships"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.updateVideoPlaybackId");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
@@ -631,15 +634,15 @@ export const updateVideoPlaybackId = mutation({
     });
     return null;
   },
+  returns: v.null(),
 });
 
 // Mark sponsorship as paid and awaiting approval (called by webhook after payment confirmation)
 export const markAsAwaitingApproval = mutation({
   args: {
-    sponsorshipId: v.id("sponsorships"),
     serviceToken: v.string(),
+    sponsorshipId: v.id("sponsorships"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(
       args.serviceToken,
@@ -664,14 +667,15 @@ export const markAsAwaitingApproval = mutation({
     });
     return null;
   },
+  returns: v.null(),
 });
 
 // Admin: List all sponsorships with filters
 export const listAll = query({
   args: {
-    status: v.optional(v.string()),
     limit: v.optional(v.number()),
     serviceToken: v.string(),
+    status: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.listAll");
@@ -729,11 +733,10 @@ export const listPendingApproval = query({
 // Admin: Approve sponsorship (activate it)
 export const approve = mutation({
   args: {
-    sponsorshipId: v.id("sponsorships"),
     adminUserId: v.id("users"),
     serviceToken: v.string(),
+    sponsorshipId: v.id("sponsorships"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.approve");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
@@ -757,33 +760,33 @@ export const approve = mutation({
 
     // Update sponsorship status
     await ctx.db.patch(args.sponsorshipId, {
-      status: "active",
-      startDate,
       endDate,
-      reviewedBy: args.adminUserId,
       reviewedAt: Date.now(),
+      reviewedBy: args.adminUserId,
+      startDate,
+      status: "active",
       updatedAt: Date.now(),
     });
 
     // Update gesture to use sponsored video
     await ctx.db.patch(sponsorship.gestureId, {
-      playbackId: sponsorship.sponsoredVideoPlaybackId,
       lastUpdated: Date.now(),
+      playbackId: sponsorship.sponsoredVideoPlaybackId,
     });
 
     return null;
   },
+  returns: v.null(),
 });
 
 // Admin: Reject sponsorship
 export const reject = mutation({
   args: {
-    sponsorshipId: v.id("sponsorships"),
     adminUserId: v.id("users"),
     reason: v.string(),
     serviceToken: v.string(),
+    sponsorshipId: v.id("sponsorships"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.reject");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
@@ -792,27 +795,27 @@ export const reject = mutation({
     }
 
     await ctx.db.patch(args.sponsorshipId, {
-      status: "rejected",
       rejectionReason: args.reason,
-      reviewedBy: args.adminUserId,
       reviewedAt: Date.now(),
+      reviewedBy: args.adminUserId,
+      status: "rejected",
       updatedAt: Date.now(),
     });
 
     return null;
   },
+  returns: v.null(),
 });
 
 // Admin: Set a re-edit token so the sponsor can resubmit video without paying
 // Status transitions: pending_approval → pending_resubmission
 export const setReEditToken = mutation({
   args: {
-    sponsorshipId: v.id("sponsorships"),
-    token: v.string(),
     expiresAt: v.number(),
     serviceToken: v.string(),
+    sponsorshipId: v.id("sponsorships"),
+    token: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.setReEditToken");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
@@ -832,14 +835,15 @@ export const setReEditToken = mutation({
     }
 
     await ctx.db.patch(args.sponsorshipId, {
-      status: "pending_resubmission",
       reEditToken: args.token,
       reEditTokenExpiresAt: args.expiresAt,
+      status: "pending_resubmission",
       updatedAt: Date.now(),
     });
 
     return null;
   },
+  returns: v.null(),
 });
 
 // Get a sponsorship by its re-edit token (public — token is the secret)
@@ -870,17 +874,17 @@ export const getByReEditToken = query({
       expired: false as const,
       sponsorship: {
         _id: sponsorship._id,
+        contactCompany: sponsorship.contactCompany,
+        contactFullName: sponsorship.contactFullName,
         gestureId: sponsorship.gestureId,
         gestureName: gesture?.name,
-        sponsorName: sponsorship.sponsorName,
-        sponsorEmail: sponsorship.sponsorEmail,
-        contactFullName: sponsorship.contactFullName,
-        contactCompany: sponsorship.contactCompany,
-        overlayText: sponsorship.overlayText,
         hasLogo: sponsorship.hasLogo,
         originalVideoPlaybackId: sponsorship.originalVideoPlaybackId,
-        status: sponsorship.status,
+        overlayText: sponsorship.overlayText,
         reEditTokenExpiresAt: sponsorship.reEditTokenExpiresAt,
+        sponsorEmail: sponsorship.sponsorEmail,
+        sponsorName: sponsorship.sponsorName,
+        status: sponsorship.status,
       },
     };
   },
@@ -890,15 +894,14 @@ export const getByReEditToken = query({
 // Status transitions: pending_resubmission → pending_approval
 export const reSubmitSponsorshipVideo = mutation({
   args: {
-    token: v.string(),
-    previewVideoPlaybackId: v.string(),
-    sponsoredVideoPlaybackId: v.string(),
     // Optional editable fields the sponsor may have changed
     overlayText: v.optional(v.string()),
-    sponsorName: v.optional(v.string()),
+    previewVideoPlaybackId: v.string(),
     serviceToken: v.string(),
+    sponsoredVideoPlaybackId: v.string(),
+    sponsorName: v.optional(v.string()),
+    token: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(
       args.serviceToken,
@@ -931,22 +934,23 @@ export const reSubmitSponsorshipVideo = mutation({
       sponsoredVideoPlaybackId: args.sponsoredVideoPlaybackId,
       ...(args.overlayText !== undefined && { overlayText: args.overlayText }),
       ...(args.sponsorName !== undefined && { sponsorName: args.sponsorName }),
-      status: "pending_approval",
       // Clear the token once used
       reEditToken: undefined,
       reEditTokenExpiresAt: undefined,
+      status: "pending_approval",
       updatedAt: Date.now(),
     });
 
     return null;
   },
+  returns: v.null(),
 });
 
 // Admin: Retrieve the current re-edit link token for a sponsorship (to copy it again)
 export const getReEditLinkForAdmin = query({
   args: {
-    sponsorshipId: v.id("sponsorships"),
     serviceToken: v.string(),
+    sponsorshipId: v.id("sponsorships"),
   },
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.getReEditLinkForAdmin");
@@ -955,9 +959,9 @@ export const getReEditLinkForAdmin = query({
       return null;
     }
     return {
-      token: sponsorship.reEditToken,
-      expiresAt: sponsorship.reEditTokenExpiresAt,
       expired: Date.now() > sponsorship.reEditTokenExpiresAt,
+      expiresAt: sponsorship.reEditTokenExpiresAt,
+      token: sponsorship.reEditToken,
     };
   },
 });
@@ -991,10 +995,9 @@ export const getExpiringSoon = query({
 // Mark that a renewal reminder email has been sent for a sponsorship
 export const markRenewalReminderSent = mutation({
   args: {
-    sponsorshipId: v.id("sponsorships"),
     serviceToken: v.string(),
+    sponsorshipId: v.id("sponsorships"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(
       args.serviceToken,
@@ -1006,6 +1009,7 @@ export const markRenewalReminderSent = mutation({
     });
     return null;
   },
+  returns: v.null(),
 });
 
 // Get stale pending_payment sponsorships (for scheduled cleanup job)
@@ -1029,10 +1033,9 @@ export const getStalePendingPayments = query({
 // Cancel a pending_payment sponsorship (no payment was received)
 export const cancelPendingPayment = mutation({
   args: {
-    sponsorshipId: v.id("sponsorships"),
     serviceToken: v.string(),
+    sponsorshipId: v.id("sponsorships"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.cancelPendingPayment");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
@@ -1053,16 +1056,16 @@ export const cancelPendingPayment = mutation({
 
     return null;
   },
+  returns: v.null(),
 });
 
 // Admin: Manually expire a sponsorship
 export const forceExpire = mutation({
   args: {
-    sponsorshipId: v.id("sponsorships"),
     adminUserId: v.id("users"),
     serviceToken: v.string(),
+    sponsorshipId: v.id("sponsorships"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "sponsorships.forceExpire");
     const sponsorship = await ctx.db.get(args.sponsorshipId);
@@ -1076,18 +1079,19 @@ export const forceExpire = mutation({
 
     // Restore original video
     await ctx.db.patch(sponsorship.gestureId, {
-      playbackId: sponsorship.originalVideoPlaybackId,
       lastUpdated: Date.now(),
+      playbackId: sponsorship.originalVideoPlaybackId,
     });
 
     // Mark as expired
     await ctx.db.patch(args.sponsorshipId, {
-      status: "expired",
-      reviewedBy: args.adminUserId,
       reviewedAt: Date.now(),
+      reviewedBy: args.adminUserId,
+      status: "expired",
       updatedAt: Date.now(),
     });
 
     return null;
   },
+  returns: v.null(),
 });

@@ -79,9 +79,9 @@ export function useGeneratePreview({
           selectedGestures.map((gesture) =>
             client.sponsorships.generatePreview({
               gestureId: gesture._id,
-              sponsorName: form.sponsorName,
               logoImage: logoBase64,
               overlayText: form.sponsorName,
+              sponsorName: form.sponsorName,
             })
           )
         );
@@ -144,33 +144,33 @@ export function useCreateSponsorship({
       form.setPaymentProgress(0.3);
       const result = await client.sponsorships.createBulkSponsorshipsSimplified(
         {
-          gestureIds: form.selectedGestureIds,
-          sponsorName: form.sponsorName,
-          sponsorEmail: form.contactEmail,
-          contactFullName: form.contactFullName,
           contactCompany: form.contactCompany || undefined,
-          overlayText: form.sponsorName,
-          logoImage: logoBase64,
-          includeLogo: form.includeLogo,
+          contactFullName: form.contactFullName,
           durationYears: 1,
-          previewVideoPlaybackIds: form.previewPlaybackIds,
-          invoiceRequested: form.invoiceRequested || undefined,
-          invoiceName: form.invoiceRequested
-            ? form.invoiceName || undefined
-            : undefined,
-          invoiceVatNumber: form.invoiceRequested
-            ? form.invoiceVatNumber || undefined
-            : undefined,
+          gestureIds: form.selectedGestureIds,
+          includeLogo: form.includeLogo,
           invoiceEmail: form.invoiceRequested
             ? form.invoiceEmail || undefined
             : undefined,
+          invoiceName: form.invoiceRequested
+            ? form.invoiceName || undefined
+            : undefined,
+          invoiceRequested: form.invoiceRequested || undefined,
+          invoiceVatNumber: form.invoiceRequested
+            ? form.invoiceVatNumber || undefined
+            : undefined,
+          logoImage: logoBase64,
+          overlayText: form.sponsorName,
+          previewVideoPlaybackIds: form.previewPlaybackIds,
+          sponsorEmail: form.contactEmail,
+          sponsorName: form.sponsorName,
         }
       );
 
       form.setPaymentProgress(0.7);
       const payment = await client.sponsorships.createBulkPayment({
-        sponsorshipIds: result.sponsorshipIds,
         amount: totalCents,
+        sponsorshipIds: result.sponsorshipIds,
       });
 
       form.setPaymentProgress(1);

@@ -1,26 +1,50 @@
 import { Upload, X } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { GestureWithSponsorshipStatus } from "./SponsorshipList";
 
 interface SponsorshipFormProps {
-  selectedGestures: GestureWithSponsorshipStatus[];
-  sponsorName: string;
-  onSponsorNameChange: (name: string) => void;
-  includeLogo: boolean;
-  onIncludeLogoChange: (include: boolean) => void;
-  logoFile: File | null;
-  onLogoFileChange: (file: File | null) => void;
-  onRemoveGesture: (gestureId: string) => void;
-  onProceedToPayment: () => void;
-  pricePerGesture: number;
-  logoAddon: number;
-  total: number;
-  isProcessing?: boolean;
   errors?: {
     sponsorName?: string;
     logo?: string;
   };
+  includeLogo: boolean;
+  isProcessing?: boolean;
+  logoAddon: number;
+  logoFile: File | null;
+  onIncludeLogoChange: (include: boolean) => void;
+  onLogoFileChange: (file: File | null) => void;
+  onProceedToPayment: () => void;
+  onRemoveGesture: (gestureId: string) => void;
+  onSponsorNameChange: (name: string) => void;
+  pricePerGesture: number;
+  selectedGestures: GestureWithSponsorshipStatus[];
+  sponsorName: string;
+  total: number;
+}
+
+interface SelectedGestureItemProps {
+  gesture: GestureWithSponsorshipStatus;
+  onRemove: (gestureId: string) => void;
+}
+
+function SelectedGestureItem({ gesture, onRemove }: SelectedGestureItemProps) {
+  const handleRemove = useCallback((): void => {
+    onRemove(gesture._id);
+  }, [onRemove, gesture._id]);
+
+  return (
+    <div className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2">
+      <span className="text-sm">{gesture.name}</span>
+      <button
+        className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+        onClick={handleRemove}
+        type="button"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
 }
 
 export function SponsorshipForm({
@@ -42,36 +66,52 @@ export function SponsorshipForm({
   const { t } = useTranslation();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Validate file size (max 2MB)
-      if (file.size > 2 * 1024 * 1024) {
-        return;
+  const handleLogoUpload = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>): void => {
+      const file = event.target.files?.[0];
+      if (file) {
+        // Validate file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+          return;
+        }
+
+        onLogoFileChange(file);
+
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setLogoPreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
       }
+    },
+    [onLogoFileChange]
+  );
 
-      onLogoFileChange(file);
-
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setLogoPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveLogo = () => {
+  const handleRemoveLogo = useCallback((): void => {
     onLogoFileChange(null);
     setLogoPreview(null);
-  };
+  }, [onLogoFileChange]);
 
-  const formatPrice = (cents: number) => {
-    return new Intl.NumberFormat("nl-NL", {
-      style: "currency",
+  const handleSponsorNameInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      onSponsorNameChange(e.target.value);
+    },
+    [onSponsorNameChange]
+  );
+
+  const handleIncludeLogoInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      onIncludeLogoChange(e.target.checked);
+    },
+    [onIncludeLogoChange]
+  );
+
+  const formatPrice = (cents: number) =>
+    new Intl.NumberFormat("nl-NL", {
       currency: "EUR",
+      style: "currency",
     }).format(cents / 100);
-  };
 
   const canProceed =
     selectedGestures.length > 0 &&
@@ -103,19 +143,11 @@ export function SponsorshipForm({
             </h3>
             <div className="space-y-2">
               {selectedGestures.map((gesture) => (
-                <div
-                  className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2"
+                <SelectedGestureItem
+                  gesture={gesture}
                   key={gesture._id}
-                >
-                  <span className="text-sm">{gesture.name}</span>
-                  <button
-                    className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    onClick={() => onRemoveGesture(gesture._id)}
-                    type="button"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
+                  onRemove={onRemoveGesture}
+                />
               ))}
             </div>
           </div>
@@ -143,7 +175,7 @@ export function SponsorshipForm({
             } bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary`}
             id="sponsor-name"
             maxLength={40}
-            onChange={(e) => onSponsorNameChange(e.target.value)}
+            onChange={handleSponsorNameInput}
             placeholder={t("web.sponsors.new.sponsorNamePlaceholder")}
             type="text"
             value={sponsorName}
@@ -151,9 +183,9 @@ export function SponsorshipForm({
           <p className="mt-1 text-muted-foreground text-xs">
             {sponsorName.length}/40 characters
           </p>
-          {errors.sponsorName && (
+          {errors.sponsorName ? (
             <p className="mt-1 text-red-500 text-xs">{errors.sponsorName}</p>
-          )}
+          ) : null}
           <p className="mt-2 text-muted-foreground text-xs">
             {t("web.sponsors.new.sponsorNameHelp", {
               name: sponsorName || "...",
@@ -167,7 +199,7 @@ export function SponsorshipForm({
             <input
               checked={includeLogo}
               className="mt-0.5"
-              onChange={(e) => onIncludeLogoChange(e.target.checked)}
+              onChange={handleIncludeLogoInput}
               type="checkbox"
             />
             <div>
@@ -182,7 +214,7 @@ export function SponsorshipForm({
         </div>
 
         {/* Logo upload */}
-        {includeLogo && (
+        {includeLogo ? (
           <div className="mb-6">
             {logoPreview ? (
               <div className="relative inline-block">
@@ -221,9 +253,9 @@ export function SponsorshipForm({
                 />
               </label>
             )}
-            {errors.logo && (
+            {errors.logo ? (
               <p className="mt-1 text-red-500 text-xs">{errors.logo}</p>
-            )}
+            ) : null}
 
             {/* Logo Guidelines */}
             <div className="mt-3 space-y-2 rounded-md border border-border bg-muted/30 p-3">
@@ -240,7 +272,7 @@ export function SponsorshipForm({
               </ul>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Duration */}
         <div className="mb-6">

@@ -34,7 +34,7 @@ export function GestureDetailSkeleton() {
       {/* Video Player Skeleton - Instagram-style with shimmer */}
       <div
         className="mb-8 overflow-hidden rounded-xl border border-border"
-        style={{ backgroundColor: "var(--card)", aspectRatio: "3/4" }}
+        style={{ aspectRatio: "3/4", backgroundColor: "var(--card)" }}
       >
         <ShimmerSkeleton
           className="h-full w-full"

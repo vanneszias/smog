@@ -23,7 +23,7 @@ import {
   Search,
   Users,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -71,8 +71,8 @@ export function SponsorshipsManagement() {
   const { data: sponsorships, isLoading } = useQuery({
     ...orpc.admin.sponsorships.listAll.queryOptions({
       input: {
-        status: statusFilter === "all" ? undefined : statusFilter,
         limit: 100,
+        status: statusFilter === "all" ? undefined : statusFilter,
       },
     }),
     refetchOnMount: true,
@@ -85,7 +85,9 @@ export function SponsorshipsManagement() {
     cancelPendingPayment,
     exportCsv,
   } = useSponsorshipMutations({
-    statusFilter,
+    onCancelSuccess: () => {
+      setSelectedSponsorshipId(null);
+    },
     onExpireSuccess: () => {
       setSelectedSponsorshipId(null);
       setDetailsDialog(null);
@@ -95,9 +97,7 @@ export function SponsorshipsManagement() {
       setSelectedSponsorshipId(null);
       setConfirmMarkPaidDialog(null);
     },
-    onCancelSuccess: () => {
-      setSelectedSponsorshipId(null);
-    },
+    statusFilter,
   });
 
   const filteredSponsorships = useMemo(() => {
@@ -118,20 +118,86 @@ export function SponsorshipsManagement() {
 
   const stats = useMemo(() => {
     if (!sponsorships) {
-      return { total: 0, active: 0, pending: 0 };
+      return { active: 0, pending: 0, total: 0 };
     }
     return {
-      total: sponsorships.length,
       active: sponsorships.filter((s) => s.status === "active").length,
       pending: sponsorships.filter(
         (s) => s.status === "pending_approval" || s.status === "pending_payment"
       ).length,
+      total: sponsorships.length,
     };
   }, [sponsorships]);
 
   const selectedSponsorship = sponsorships?.find(
     (s) => s._id === selectedSponsorshipId
   );
+  const selectedId = selectedSponsorship?._id;
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setSearchQuery(e.target.value);
+    },
+    []
+  );
+
+  const handleExportCsv = useCallback((): void => {
+    exportCsv.mutate();
+  }, [exportCsv]);
+
+  const handleCancelPendingPayment = useCallback((): void => {
+    if (selectedId) {
+      cancelPendingPayment.mutate(selectedId);
+    }
+  }, [cancelPendingPayment, selectedId]);
+
+  const handleOpenForceExpire = useCallback((): void => {
+    if (selectedId) {
+      setConfirmExpireDialog(selectedId);
+    }
+  }, [selectedId]);
+
+  const handleGenerateReEditLink = useCallback((): void => {
+    if (selectedId) {
+      generateReEditLink.mutate(selectedId);
+    }
+  }, [generateReEditLink, selectedId]);
+
+  const handleOpenMarkPaid = useCallback((): void => {
+    if (selectedId) {
+      setConfirmMarkPaidDialog(selectedId);
+    }
+  }, [selectedId]);
+
+  const handleViewDetails = useCallback((): void => {
+    if (selectedSponsorship) {
+      setDetailsDialog(selectedSponsorship);
+    }
+  }, [selectedSponsorship]);
+
+  const handleCloseDetails = useCallback((): void => {
+    setDetailsDialog(null);
+  }, []);
+
+  const handleCloseExpireDialog = useCallback((): void => {
+    setConfirmExpireDialog(null);
+  }, []);
+
+  const handleConfirmExpire = useCallback((): void => {
+    if (confirmExpireDialog) {
+      forceExpire.mutate(confirmExpireDialog);
+    }
+  }, [confirmExpireDialog, forceExpire]);
+
+  const handleCloseMarkPaidDialog = useCallback((): void => {
+    setConfirmMarkPaidDialog(null);
+  }, []);
+
+  const handleConfirmMarkPaid = useCallback((): void => {
+    if (confirmMarkPaidDialog) {
+      markPaidManually.mutate(confirmMarkPaidDialog);
+    }
+  }, [confirmMarkPaidDialog, markPaidManually]);
 
   if (isLoading) {
     return (
@@ -184,7 +250,7 @@ export function SponsorshipsManagement() {
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--admin-text-muted)]" />
           <Input
             className="h-11 bg-[var(--admin-bg)] pl-10"
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Search by gesture, sponsor name, or email..."
             value={searchQuery}
           />
@@ -212,7 +278,7 @@ export function SponsorshipsManagement() {
         <Button
           className="h-11"
           disabled={exportCsv.isPending}
-          onClick={() => exportCsv.mutate()}
+          onClick={handleExportCsv}
           variant="outline"
         >
           <Download className="mr-2 h-4 w-4" />
@@ -240,7 +306,7 @@ export function SponsorshipsManagement() {
                 <SponsorshipCard
                   isSelected={selectedSponsorshipId === sponsorship._id}
                   key={sponsorship._id}
-                  onClick={() => setSelectedSponsorshipId(sponsorship._id)}
+                  onSelect={setSelectedSponsorshipId}
                   sponsorship={sponsorship}
                 />
               ))}
@@ -256,19 +322,11 @@ export function SponsorshipsManagement() {
               isExpiring={forceExpire.isPending}
               isGeneratingReEditLink={generateReEditLink.isPending}
               isMarkingPaid={markPaidManually.isPending}
-              onCancelPendingPayment={() =>
-                cancelPendingPayment.mutate(selectedSponsorship._id)
-              }
-              onForceExpire={() =>
-                setConfirmExpireDialog(selectedSponsorship._id)
-              }
-              onGenerateReEditLink={() =>
-                generateReEditLink.mutate(selectedSponsorship._id)
-              }
-              onMarkPaidManually={() =>
-                setConfirmMarkPaidDialog(selectedSponsorship._id)
-              }
-              onViewDetails={() => setDetailsDialog(selectedSponsorship)}
+              onCancelPendingPayment={handleCancelPendingPayment}
+              onForceExpire={handleOpenForceExpire}
+              onGenerateReEditLink={handleGenerateReEditLink}
+              onMarkPaidManually={handleOpenMarkPaid}
+              onViewDetails={handleViewDetails}
               sponsorship={selectedSponsorship}
             />
           ) : (
@@ -287,12 +345,12 @@ export function SponsorshipsManagement() {
 
       {/* Modals */}
       <SponsorshipDetailsDialog
-        onClose={() => setDetailsDialog(null)}
+        onClose={handleCloseDetails}
         sponsorship={detailsDialog}
       />
 
       <Dialog
-        onOpenChange={() => setConfirmExpireDialog(null)}
+        onOpenChange={handleCloseExpireDialog}
         open={!!confirmExpireDialog}
       >
         <DialogContent>
@@ -308,19 +366,12 @@ export function SponsorshipsManagement() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              onClick={() => setConfirmExpireDialog(null)}
-              variant="outline"
-            >
+            <Button onClick={handleCloseExpireDialog} variant="outline">
               Cancel
             </Button>
             <Button
               disabled={forceExpire.isPending}
-              onClick={() => {
-                if (confirmExpireDialog) {
-                  forceExpire.mutate(confirmExpireDialog);
-                }
-              }}
+              onClick={handleConfirmExpire}
               variant="destructive"
             >
               {forceExpire.isPending
@@ -332,7 +383,7 @@ export function SponsorshipsManagement() {
       </Dialog>
 
       <Dialog
-        onOpenChange={() => setConfirmMarkPaidDialog(null)}
+        onOpenChange={handleCloseMarkPaidDialog}
         open={!!confirmMarkPaidDialog}
       >
         <DialogContent>
@@ -349,20 +400,13 @@ export function SponsorshipsManagement() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              onClick={() => setConfirmMarkPaidDialog(null)}
-              variant="outline"
-            >
+            <Button onClick={handleCloseMarkPaidDialog} variant="outline">
               Cancel
             </Button>
             <Button
               className="bg-blue-600 hover:bg-blue-700"
               disabled={markPaidManually.isPending}
-              onClick={() => {
-                if (confirmMarkPaidDialog) {
-                  markPaidManually.mutate(confirmMarkPaidDialog);
-                }
-              }}
+              onClick={handleConfirmMarkPaid}
             >
               {markPaidManually.isPending
                 ? "Marking as Paid..."

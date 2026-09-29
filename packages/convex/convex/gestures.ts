@@ -6,12 +6,12 @@ import { mutation, query } from "./_generated/server";
 import { requireServiceAuth } from "./lib/serviceAuth";
 
 const nativeGestureValidator = v.object({
-  id: v.id("gestures"),
-  name: v.string(),
   category: v.array(v.string()),
-  playbackId: v.string(),
   concept: v.array(v.string()),
+  id: v.id("gestures"),
   info: v.string(),
+  name: v.string(),
+  playbackId: v.string(),
 });
 
 async function getCategoryNames(
@@ -36,12 +36,12 @@ async function toNativeGesture(
   }
 ) {
   return {
-    id: gesture._id,
-    name: gesture.name,
     category: await getCategoryNames(ctx, gesture.categoryIds),
-    playbackId: gesture.playbackId,
     concept: gesture.concept,
+    id: gesture._id,
     info: gesture.info,
+    name: gesture.name,
+    playbackId: gesture.playbackId,
   };
 }
 
@@ -104,52 +104,39 @@ export const list = query({
   args: {
     paginationOpts: paginationOptsValidator,
   },
-  returns: v.any(), // Using v.any() for pagination result which includes extra fields
   handler: async (ctx, args) =>
     await ctx.db
       .query("gestures")
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .order("desc")
       .paginate(args.paginationOpts),
+  returns: v.any(), // Using v.any() for pagination result which includes extra fields
 });
 
 export const getById = query({
   args: { id: v.id("gestures") },
-  returns: v.union(
-    v.object({
-      _id: v.id("gestures"),
-      _creationTime: v.number(),
-      name: v.string(),
-      categoryIds: v.array(v.id("categories")),
-      playbackId: v.string(),
-      concept: v.array(v.string()),
-      info: v.string(),
-      isActive: v.boolean(),
-      lastUpdated: v.number(),
-    }),
-    v.null()
-  ),
   handler: async (ctx, args) => {
     const gesture = await ctx.db.get(args.id);
     return gesture?.isActive ? gesture : null;
   },
-});
-
-export const getByIds = query({
-  args: { ids: v.array(v.id("gestures")) },
-  returns: v.array(
+  returns: v.union(
     v.object({
-      _id: v.id("gestures"),
       _creationTime: v.number(),
-      name: v.string(),
+      _id: v.id("gestures"),
       categoryIds: v.array(v.id("categories")),
-      playbackId: v.string(),
       concept: v.array(v.string()),
       info: v.string(),
       isActive: v.boolean(),
       lastUpdated: v.number(),
-    })
+      name: v.string(),
+      playbackId: v.string(),
+    }),
+    v.null()
   ),
+});
+
+export const getByIds = query({
+  args: { ids: v.array(v.id("gestures")) },
   handler: async (ctx, args) => {
     if (args.ids.length > 200) {
       throw new Error("Too many gesture IDs");
@@ -160,13 +147,25 @@ export const getByIds = query({
       .filter((gesture) => gesture?.isActive)
       .map((gesture) => gesture!);
   },
+  returns: v.array(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("gestures"),
+      categoryIds: v.array(v.id("categories")),
+      concept: v.array(v.string()),
+      info: v.string(),
+      isActive: v.boolean(),
+      lastUpdated: v.number(),
+      name: v.string(),
+      playbackId: v.string(),
+    })
+  ),
 });
 
 export const listForNative = query({
   args: {
     limit: v.optional(v.number()),
   },
-  returns: v.array(nativeGestureValidator),
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 500);
     const gestures = await ctx.db
@@ -179,11 +178,11 @@ export const listForNative = query({
       gestures.map((gesture) => toNativeGesture(ctx, gesture))
     );
   },
+  returns: v.array(nativeGestureValidator),
 });
 
 export const getByIdForNative = query({
   args: { id: v.id("gestures") },
-  returns: v.union(nativeGestureValidator, v.null()),
   handler: async (ctx, args) => {
     const gesture = await ctx.db.get(args.id);
     if (!gesture?.isActive) {
@@ -192,11 +191,11 @@ export const getByIdForNative = query({
 
     return await toNativeGesture(ctx, gesture);
   },
+  returns: v.union(nativeGestureValidator, v.null()),
 });
 
 export const getByIdsForNative = query({
   args: { ids: v.array(v.id("gestures")) },
-  returns: v.array(nativeGestureValidator),
   handler: async (ctx, args) => {
     if (args.ids.length > 200) {
       throw new Error("Too many gesture IDs");
@@ -208,15 +207,15 @@ export const getByIdsForNative = query({
         .map((gesture) => toNativeGesture(ctx, gesture!))
     );
   },
+  returns: v.array(nativeGestureValidator),
 });
 
 export const searchForNative = query({
   args: {
-    searchText: v.string(),
     categories: v.optional(v.array(v.string())),
     limit: v.optional(v.number()),
+    searchText: v.string(),
   },
-  returns: v.array(nativeGestureValidator),
   handler: async (ctx, args) => {
     const queryText = normalizeSearchText(args.searchText);
     const selectedCategories = args.categories ?? [];
@@ -230,7 +229,7 @@ export const searchForNative = query({
     const results = await Promise.all(
       gestures.map(async (gesture) => {
         const categories = await getCategoryNames(ctx, gesture.categoryIds);
-        return { gesture, categories };
+        return { categories, gesture };
       })
     );
 
@@ -254,6 +253,7 @@ export const searchForNative = query({
         .map(({ gesture }) => toNativeGesture(ctx, gesture))
     );
   },
+  returns: v.array(nativeGestureValidator),
 });
 
 export const relatedForNative = query({
@@ -261,7 +261,6 @@ export const relatedForNative = query({
     gestureId: v.id("gestures"),
     limit: v.optional(v.number()),
   },
-  returns: v.array(nativeGestureValidator),
   handler: async (ctx, args) => {
     const gesture = await ctx.db.get(args.gestureId);
     if (!gesture?.isActive || gesture.categoryIds.length === 0) {
@@ -289,26 +288,14 @@ export const relatedForNative = query({
       related.map((candidate) => toNativeGesture(ctx, candidate))
     );
   },
+  returns: v.array(nativeGestureValidator),
 });
 
 export const search = query({
   args: {
-    searchText: v.string(),
     limit: v.optional(v.number()),
+    searchText: v.string(),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("gestures"),
-      _creationTime: v.number(),
-      name: v.string(),
-      categoryIds: v.array(v.id("categories")),
-      playbackId: v.string(),
-      concept: v.array(v.string()),
-      info: v.string(),
-      isActive: v.boolean(),
-      lastUpdated: v.number(),
-    })
-  ),
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit || 50, 1), 100);
 
@@ -319,11 +306,23 @@ export const search = query({
       )
       .take(limit);
   },
+  returns: v.array(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("gestures"),
+      categoryIds: v.array(v.id("categories")),
+      concept: v.array(v.string()),
+      info: v.string(),
+      isActive: v.boolean(),
+      lastUpdated: v.number(),
+      name: v.string(),
+      playbackId: v.string(),
+    })
+  ),
 });
 
 export const getLastUpdated = query({
   args: {},
-  returns: v.union(v.number(), v.null()),
   handler: async (ctx) => {
     const latestGesture = await ctx.db
       .query("gestures")
@@ -333,6 +332,7 @@ export const getLastUpdated = query({
 
     return latestGesture?.lastUpdated || null;
   },
+  returns: v.union(v.number(), v.null()),
 });
 
 // Admin queries and mutations
@@ -345,47 +345,34 @@ export const listAllForAdmin = query({
     limit: v.optional(v.number()),
     serviceToken: v.string(),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("gestures"),
-      _creationTime: v.number(),
-      name: v.string(),
-      categoryIds: v.array(v.id("categories")),
-      playbackId: v.string(),
-      concept: v.array(v.string()),
-      info: v.string(),
-      isActive: v.boolean(),
-      lastUpdated: v.number(),
-    })
-  ),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "gestures.listAllForAdmin");
     const limit = Math.min(Math.max(args.limit || 1000, 1), 2000);
     // Always return ALL gestures (both active and inactive) for admin
     return await ctx.db.query("gestures").order("desc").take(limit);
   },
+  returns: v.array(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("gestures"),
+      categoryIds: v.array(v.id("categories")),
+      concept: v.array(v.string()),
+      info: v.string(),
+      isActive: v.boolean(),
+      lastUpdated: v.number(),
+      name: v.string(),
+      playbackId: v.string(),
+    })
+  ),
 });
 
 // List gestures with optional inactive filter (legacy, kept for compatibility)
 export const listAll = query({
   args: {
-    limit: v.optional(v.number()),
     includeInactive: v.optional(v.boolean()),
+    limit: v.optional(v.number()),
     serviceToken: v.string(),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("gestures"),
-      _creationTime: v.number(),
-      name: v.string(),
-      categoryIds: v.array(v.id("categories")),
-      playbackId: v.string(),
-      concept: v.array(v.string()),
-      info: v.string(),
-      isActive: v.boolean(),
-      lastUpdated: v.number(),
-    })
-  ),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "gestures.listAll");
     const limit = Math.min(Math.max(args.limit || 1000, 1), 2000);
@@ -402,22 +389,34 @@ export const listAll = query({
       .order("desc")
       .take(limit);
   },
+  returns: v.array(
+    v.object({
+      _creationTime: v.number(),
+      _id: v.id("gestures"),
+      categoryIds: v.array(v.id("categories")),
+      concept: v.array(v.string()),
+      info: v.string(),
+      isActive: v.boolean(),
+      lastUpdated: v.number(),
+      name: v.string(),
+      playbackId: v.string(),
+    })
+  ),
 });
 
 // Update gesture fields
 // Note: Admin authentication is handled at the oRPC layer (adminProcedure)
 export const updateGesture = mutation({
   args: {
-    gestureId: v.id("gestures"),
-    name: v.optional(v.string()),
     categoryIds: v.optional(v.array(v.id("categories"))),
-    playbackId: v.optional(v.string()),
     concept: v.optional(v.array(v.string())),
+    gestureId: v.id("gestures"),
     info: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
+    name: v.optional(v.string()),
+    playbackId: v.optional(v.string()),
     serviceToken: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "gestures.updateGesture");
     const { gestureId, serviceToken: _serviceToken, ...updates } = args;
@@ -433,6 +432,7 @@ export const updateGesture = mutation({
 
     return null;
   },
+  returns: v.null(),
 });
 
 // Bulk update gestures
@@ -440,15 +440,12 @@ export const updateGesture = mutation({
 export const bulkUpdate = mutation({
   args: {
     gestureIds: v.array(v.id("gestures")),
-    updates: v.object({
-      isActive: v.optional(v.boolean()),
-      categoryIds: v.optional(v.array(v.id("categories"))),
-    }),
     serviceToken: v.string(),
+    updates: v.object({
+      categoryIds: v.optional(v.array(v.id("categories"))),
+      isActive: v.optional(v.boolean()),
+    }),
   },
-  returns: v.object({
-    updated: v.number(),
-  }),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "gestures.bulkUpdate");
     if (Object.keys(args.updates).length === 0) {
@@ -468,6 +465,9 @@ export const bulkUpdate = mutation({
 
     return { updated: args.gestureIds.length };
   },
+  returns: v.object({
+    updated: v.number(),
+  }),
 });
 
 // Toggle active status
@@ -477,7 +477,6 @@ export const toggleActive = mutation({
     gestureId: v.id("gestures"),
     serviceToken: v.string(),
   },
-  returns: v.boolean(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "gestures.toggleActive");
     const gesture = await ctx.db.get(args.gestureId);
@@ -494,6 +493,7 @@ export const toggleActive = mutation({
 
     return newStatus;
   },
+  returns: v.boolean(),
 });
 
 // Update playback ID
@@ -504,43 +504,43 @@ export const updatePlaybackId = mutation({
     playbackId: v.string(),
     serviceToken: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "gestures.updatePlaybackId");
     await ctx.db.patch(args.gestureId, {
-      playbackId: args.playbackId,
       lastUpdated: Date.now(),
+      playbackId: args.playbackId,
     });
 
     return null;
   },
+  returns: v.null(),
 });
 
 // Create new gesture
 // Note: Admin authentication is handled at the oRPC layer (adminProcedure)
 export const create = mutation({
   args: {
-    name: v.string(),
     categoryIds: v.array(v.id("categories")),
-    playbackId: v.string(),
     concept: v.array(v.string()),
     info: v.string(),
     isActive: v.optional(v.boolean()),
+    name: v.string(),
+    playbackId: v.string(),
     serviceToken: v.string(),
   },
-  returns: v.id("gestures"),
   handler: async (ctx, args) => {
     requireServiceAuth(args.serviceToken, "gestures.create");
     const now = Date.now();
 
     return await ctx.db.insert("gestures", {
-      name: args.name,
       categoryIds: args.categoryIds,
-      playbackId: args.playbackId,
       concept: args.concept,
       info: args.info,
       isActive: args.isActive ?? true,
       lastUpdated: now,
+      name: args.name,
+      playbackId: args.playbackId,
     });
   },
+  returns: v.id("gestures"),
 });

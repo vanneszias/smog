@@ -161,9 +161,9 @@ body {
     padding: 0;
     margin: -1px;
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border-width: 0;
+    clip: rect(0, 0, 0, 0);
   }
 
   .not-sr-only {
@@ -173,8 +173,8 @@ body {
     padding: 0;
     margin: 0;
     overflow: visible;
-    clip: auto;
     white-space: normal;
+    clip: auto;
   }
 
   /* Accessibility: Focus visible improvements */
@@ -232,19 +232,19 @@ body {
   }
 
   .dark ::-moz-selection {
-    background-color: #5a8e5c;
     color: #fff;
+    background-color: #5a8e5c;
   }
 
   .dark ::selection {
-    background-color: #5a8e5c;
     color: #fff;
+    background-color: #5a8e5c;
   }
 
   /* Scrollbar styling - Firefox */
   * {
-    scrollbar-width: thin;
     scrollbar-color: #97c699 #ebf4eb;
+    scrollbar-width: thin;
   }
 
   .dark * {
@@ -296,9 +296,9 @@ body {
 
 .confetti {
   position: absolute;
+  top: -10px;
   width: 8px;
   height: 8px;
-  top: -10px;
   animation-name: confetti-fall;
   animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   animation-fill-mode: both;

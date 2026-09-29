@@ -9,6 +9,7 @@ import {
 } from "@smog/styles";
 import { useRouter } from "expo-router";
 import type React from "react";
+import { useCallback } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -24,12 +25,46 @@ interface RelatedGesturesSectionProps {
   relatedGestures: Gesture[];
 }
 
+interface RelatedGestureBadgeProps {
+  gesture: Gesture;
+  onSelect: (gestureId: string) => void;
+}
+
+const RelatedGestureBadge = ({
+  gesture,
+  onSelect,
+}: RelatedGestureBadgeProps) => {
+  const { theme } = useTheme();
+
+  const handlePress = useCallback(() => {
+    onSelect(gesture.id);
+  }, [onSelect, gesture.id]);
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      style={[styles.relatedBadge, { backgroundColor: `${theme.primary}22` }]}
+    >
+      <Text style={[styles.relatedBadgeText, { color: theme.primary }]}>
+        {gesture.name}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
 const RelatedGesturesSection: React.FC<RelatedGesturesSectionProps> = ({
   relatedGestures,
 }) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
+
+  const handleSelectGesture = useCallback(
+    (gestureId: string): void => {
+      router.push(`/gestures/${gestureId}`);
+    },
+    [router]
+  );
 
   return (
     <View style={styles.outerContainer}>
@@ -55,8 +90,8 @@ const RelatedGesturesSection: React.FC<RelatedGesturesSectionProps> = ({
               styles.infoTitle,
               {
                 color: theme.primary,
-                marginBottom: SPACING.sm,
                 fontSize: FONT_SIZE.md,
+                marginBottom: SPACING.sm,
               },
             ]}
           >
@@ -75,20 +110,11 @@ const RelatedGesturesSection: React.FC<RelatedGesturesSectionProps> = ({
           >
             <View style={styles.badgeContainer}>
               {relatedGestures.map((gesture) => (
-                <TouchableOpacity
+                <RelatedGestureBadge
+                  gesture={gesture}
                   key={gesture.id}
-                  onPress={() => router.push(`/gestures/${gesture.id}`)}
-                  style={[
-                    styles.relatedBadge,
-                    { backgroundColor: `${theme.primary}22` },
-                  ]}
-                >
-                  <Text
-                    style={[styles.relatedBadgeText, { color: theme.primary }]}
-                  >
-                    {gesture.name}
-                  </Text>
-                </TouchableOpacity>
+                  onSelect={handleSelectGesture}
+                />
               ))}
             </View>
           </ScrollView>
@@ -99,54 +125,54 @@ const RelatedGesturesSection: React.FC<RelatedGesturesSectionProps> = ({
 };
 
 const styles = StyleSheet.create({
-  outerContainer: {
-    marginHorizontal: -SPACING.md,
-    marginBottom: SPACING.xl,
-  },
-  infoContainer: {
-    marginHorizontal: SPACING.md,
-    marginBottom: SPACING.xl,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderLeftWidth: 4,
-  },
-  relatedContainer: {
-    ...SHADOWS.small,
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.sm,
+  badgeContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.sm,
   },
   headerRow: {
-    flexDirection: "row",
     alignItems: "center",
+    flexDirection: "row",
     marginBottom: SPACING.sm,
+  },
+  infoContainer: {
+    borderLeftWidth: 4,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.xl,
+    marginHorizontal: SPACING.md,
+    padding: SPACING.md,
+  },
+  infoText: {
+    fontSize: FONT_SIZE.md,
+    lineHeight: FONT_SIZE.md * 1.4,
   },
   infoTitle: {
     fontSize: FONT_SIZE.lg,
     fontWeight: FONT_WEIGHT.bold,
     marginLeft: SPACING.sm,
   },
-  infoText: {
-    fontSize: FONT_SIZE.md,
-    lineHeight: FONT_SIZE.md * 1.4,
-  },
-  scrollContent: {
-    paddingHorizontal: 0,
-  },
-  badgeContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.sm,
+  outerContainer: {
+    marginBottom: SPACING.xl,
+    marginHorizontal: -SPACING.md,
   },
   relatedBadge: {
+    alignSelf: "flex-start",
     borderRadius: BORDER_RADIUS.md,
+    marginRight: SPACING.sm,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    marginRight: SPACING.sm,
-    alignSelf: "flex-start",
   },
   relatedBadgeText: {
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.medium,
+  },
+  relatedContainer: {
+    ...SHADOWS.small,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  scrollContent: {
+    paddingHorizontal: 0,
   },
 });
 

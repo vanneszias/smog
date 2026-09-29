@@ -1,5 +1,7 @@
-[install]
-# Expo native builds require a single installation of every native module.
-# A hoisted workspace layout prevents Bun from creating peer-specific copies
-# that Expo Doctor (and occasionally native autolinking) treats as duplicates.
-linker = "hoisted"
+# Config for running `bun test` directly from the repo root. CI uses
+# `bun run test` (Vitest + Jest via turbo); this keeps Bun's runner in line.
+[test]
+preload = ["./scripts/bun-test-setup.ts"]
+# dist/ holds compiled copies of package tests; apps/native tests need the
+# jest-expo preset and only run under Jest (`bun -F native test`).
+pathIgnorePatterns = ["**/dist/**", "apps/native/**", "**/node_modules/**"]

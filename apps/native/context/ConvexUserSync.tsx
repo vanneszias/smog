@@ -24,13 +24,13 @@ import { useAuth } from "./AuthProvider";
 const GUEST_ID_KEY = "@smog_guest_id";
 
 interface ConvexUserContextType {
-  userId: Id<"users"> | null;
   isLoading: boolean;
+  userId: Id<"users"> | null;
 }
 
 const ConvexUserContext = createContext<ConvexUserContextType>({
-  userId: null,
   isLoading: true,
+  userId: null,
 });
 
 /**
@@ -148,8 +148,8 @@ export function ConvexUserSync({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      userId,
       isLoading: isAuthLoading || isInitializing || !isConvexAuthReady,
+      userId,
     }),
     [userId, isAuthLoading, isInitializing, isConvexAuthReady]
   );

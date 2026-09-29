@@ -9,13 +9,13 @@
  * User information from WorkOS
  */
 export interface WorkOSUser {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  emailVerified?: boolean;
-  profilePictureUrl?: string;
   createdAt?: string;
+  email: string;
+  emailVerified?: boolean;
+  firstName?: string;
+  id: string;
+  lastName?: string;
+  profilePictureUrl?: string;
   updatedAt?: string;
 }
 
@@ -41,24 +41,24 @@ export interface TokenResponse {
  * Core authentication state shared across platforms
  */
 export interface AuthState {
-  user: WorkOSUser | null;
-  isLoading: boolean;
-  isHandlingOAuthCallback: boolean;
-  isAuthenticated: boolean;
   authMode: AuthMode;
-  isGuest: boolean;
   guestId: string | null;
+  isAuthenticated: boolean;
+  isGuest: boolean;
+  isHandlingOAuthCallback: boolean;
+  isLoading: boolean;
+  user: WorkOSUser | null;
 }
 
 /**
  * Authentication actions available to consumers
  */
 export interface AuthActions {
-  signIn: () => void;
-  signOut: () => Promise<void>;
-  getAccessToken: () => Promise<string | null>;
   // Guest mode (optional - only supported on native)
   continueAsGuest?: () => Promise<void>;
+  getAccessToken: () => Promise<string | null>;
+  signIn: () => void;
+  signOut: () => Promise<void>;
 }
 
 /**
@@ -70,7 +70,7 @@ export type AuthContextType = AuthState & AuthActions;
  * Convex auth hook interface - compatible with ConvexProviderWithAuth
  */
 export interface ConvexAuthState {
-  isLoading: boolean;
-  isAuthenticated: boolean;
   fetchAccessToken: () => Promise<string | null>;
+  isAuthenticated: boolean;
+  isLoading: boolean;
 }

@@ -3,17 +3,17 @@ import { type SearchableGesture, searchGestures } from "./gestureSearchRanking";
 
 export interface GestureCardData {
   _id: string;
-  name: string;
-  playbackId: string;
+  categories: Array<{ _id: string; name: string } | undefined>;
   concept: string[];
   info: string;
-  categories: Array<{ _id: string; name: string } | undefined>;
+  name: string;
+  playbackId: string;
 }
 
 export interface UseGestureFilteringOptions<T extends GestureCardData> {
   gestures: T[] | undefined;
-  initialSearchQuery?: string;
   initialCategories?: string[];
+  initialSearchQuery?: string;
 }
 
 export function useGestureFiltering<T extends GestureCardData>({
@@ -108,15 +108,15 @@ export function useGestureFiltering<T extends GestureCardData>({
   };
 
   return {
-    searchQuery,
-    setSearchQuery,
-    selectedCategories,
-    handleCategoryToggle,
+    allCategories,
     clearFilters,
+    filteredGestures,
+    handleCategoryToggle,
+    handleSort,
+    searchQuery,
+    selectedCategories,
+    setSearchQuery,
     sortColumn,
     sortDirection,
-    handleSort,
-    allCategories,
-    filteredGestures,
   };
 }

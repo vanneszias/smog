@@ -18,9 +18,9 @@ export const SponsoredVideo: React.FC<SponsoredVideoProps> = ({
       <Video
         src={videoSrc}
         style={{
-          width: "100%",
           height: "100%",
           objectFit: "cover",
+          width: "100%",
         }}
       />
 

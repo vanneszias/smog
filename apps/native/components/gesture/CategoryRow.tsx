@@ -6,6 +6,7 @@ import {
   SPACING,
 } from "@smog/styles";
 import type React from "react";
+import { useCallback } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -20,62 +21,77 @@ interface CategoryRowProps {
   onCategoryPress: (category: string) => void;
 }
 
-const CategoryRow: React.FC<CategoryRowProps> = ({
-  categories,
-  onCategoryPress,
-}) => {
+interface CategoryChipProps {
+  category: string;
+  onPress: (category: string) => void;
+}
+
+const CategoryChip = ({ category, onPress }: CategoryChipProps) => {
   const { theme } = useTheme();
 
+  const handlePress = useCallback(() => {
+    onPress(category);
+  }, [onPress, category]);
+
   return (
-    <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.categoryRow}>
-          {categories.map((category) => (
-            <View key={category} style={styles.categoryContainer}>
-              <TouchableOpacity
-                onPress={() => onCategoryPress(category)}
-                style={[styles.category, { backgroundColor: theme.primary }]}
-              >
-                <Text
-                  style={[styles.categoryText, { color: theme.background }]}
-                >
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+    <View style={styles.categoryContainer}>
+      <TouchableOpacity
+        onPress={handlePress}
+        style={[styles.category, { backgroundColor: theme.primary }]}
+      >
+        <Text style={[styles.categoryText, { color: theme.background }]}>
+          {category}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
+const CategoryRow: React.FC<CategoryRowProps> = ({
+  categories,
+  onCategoryPress,
+}) => (
+  <View style={styles.container}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <View style={styles.categoryRow}>
+        {categories.map((category) => (
+          <CategoryChip
+            category={category}
+            key={category}
+            onPress={onCategoryPress}
+          />
+        ))}
+      </View>
+    </ScrollView>
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: SPACING.lg,
-  },
-  categoryRow: {
-    flexDirection: "row",
+  category: {
     alignItems: "center",
+    alignSelf: "flex-start",
+    borderRadius: BORDER_RADIUS.round,
+    flexDirection: "row",
+    marginBottom: 0,
+    marginRight: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    ...SHADOWS.small,
   },
   categoryContainer: {
     flexDirection: "row",
   },
-  category: {
-    flexDirection: "row",
+  categoryRow: {
     alignItems: "center",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.round,
-    marginRight: SPACING.sm,
-    marginBottom: 0,
-    alignSelf: "flex-start",
-    ...SHADOWS.small,
+    flexDirection: "row",
   },
   categoryText: {
+    fontFamily: "Onest-Medium",
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.medium,
-    fontFamily: "Onest-Medium",
+  },
+  container: {
+    marginBottom: SPACING.lg,
   },
 });
 

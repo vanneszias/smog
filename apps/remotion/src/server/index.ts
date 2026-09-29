@@ -37,9 +37,9 @@ app.use(logger());
 app.use(
   "/*",
   cors({
-    origin: process.env.CORS_ORIGIN || "*",
-    allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    origin: process.env.CORS_ORIGIN || "*",
   })
 );
 
@@ -52,10 +52,10 @@ app.get("/", (c) => c.text("Remotion Video Composer - Ready"));
 
 app.get("/health", (c) =>
   c.json({
-    status: "healthy",
-    service: "remotion",
-    timestamp: new Date().toISOString(),
     renderer: "remotion",
+    service: "remotion",
+    status: "healthy",
+    timestamp: new Date().toISOString(),
   })
 );
 
@@ -86,10 +86,10 @@ app.post("/api/compose", async (c) => {
 
     // Create job
     const job = createJob({
-      playbackId,
+      overlayConfig,
       overlayImageUrl,
       overlayText,
-      overlayConfig,
+      playbackId,
     });
 
     console.log(
@@ -102,16 +102,16 @@ app.post("/api/compose", async (c) => {
     });
 
     return c.json({
-      success: true,
       jobId: job.id,
       message: "Video composition job started",
+      success: true,
     });
   } catch (error) {
     console.error("[Remotion] Compose error:", error);
     return c.json(
       {
-        error: "Failed to start video composition",
         details: error instanceof Error ? error.message : "Unknown error",
+        error: "Failed to start video composition",
       },
       500
     );
@@ -134,16 +134,16 @@ app.get("/api/compose/status/:jobId", async (c) => {
 
     return c.json({
       jobId: job.id,
-      state: job.state,
       progress: job.progress,
       result: job.result,
+      state: job.state,
     });
   } catch (error) {
     console.error("[Remotion] Status check error:", error);
     return c.json(
       {
-        error: "Failed to get job status",
         details: error instanceof Error ? error.message : "Unknown error",
+        error: "Failed to get job status",
       },
       500
     );
@@ -159,8 +159,8 @@ app.get("/api/queue/status", async (c) => {
     console.error("[Remotion] Queue status error:", error);
     return c.json(
       {
-        error: "Failed to get queue status",
         details: error instanceof Error ? error.message : "Unknown error",
+        error: "Failed to get queue status",
       },
       500
     );
@@ -172,6 +172,6 @@ const port = Number(process.env.PORT) || 3002;
 console.log(`[Remotion] Starting server on port ${port}...`);
 
 export default {
-  port,
   fetch: app.fetch,
+  port,
 };

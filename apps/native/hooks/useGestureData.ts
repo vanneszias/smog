@@ -58,9 +58,9 @@ export function useSearchGestures({
     api.gestures.searchForNative,
     shouldSearch
       ? {
-          searchText: deferredQuery,
           categories: deferredCategories,
           limit,
+          searchText: deferredQuery,
         }
       : "skip"
   ) as Gesture[] | undefined;
@@ -69,8 +69,8 @@ export function useSearchGestures({
     deferredQuery !== trimmedQuery || deferredCategories !== categories;
 
   return {
-    results: shouldSearch ? (results ?? []) : [],
     isLoading: shouldSearch && results === undefined,
     isSearching: shouldSearch && (results === undefined || isDeferred),
+    results: shouldSearch ? (results ?? []) : [],
   };
 }

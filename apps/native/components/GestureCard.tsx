@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { BORDER_RADIUS, ICON_SIZE, SHADOWS, SPACING } from "@smog/styles";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
@@ -9,9 +9,9 @@ import { typography } from "@/utils/typography";
 
 interface GestureCardProps {
   gesture: Gesture;
-  onPress: (gesture: Gesture) => void;
   isSaved?: boolean;
   onOpenListPicker?: (gesture: Gesture) => void;
+  onPress: (gesture: Gesture) => void;
 }
 
 const GestureCard = ({
@@ -23,6 +23,14 @@ const GestureCard = ({
   const { theme } = useTheme();
   const { t } = useTranslation();
 
+  const handlePress = useCallback(() => {
+    onPress(gesture);
+  }, [onPress, gesture]);
+
+  const handleOpenListPicker = useCallback(() => {
+    onOpenListPicker?.(gesture);
+  }, [onOpenListPicker, gesture]);
+
   return (
     <View style={styles.wrapper}>
       <TouchableOpacity
@@ -30,7 +38,7 @@ const GestureCard = ({
         accessibilityLabel={gesture.name}
         accessibilityRole="button"
         activeOpacity={0.8}
-        onPress={() => onPress(gesture)}
+        onPress={handlePress}
       >
         <View
           style={[
@@ -55,6 +63,7 @@ const GestureCard = ({
               <Text style={[typography.bodySmall, { color: theme.textLight }]}>
                 {gesture.category.join(", ")}
               </Text>
+              {/* biome-ignore lint/suspicious/noUnnecessaryConditions: gesture comes from an untyped Convex query cast; concept may be missing at runtime */}
               {gesture.concept?.length ? (
                 <Text style={[typography.caption, { color: theme.textLight }]}>
                   {gesture.concept.join(", ")}
@@ -75,8 +84,8 @@ const GestureCard = ({
               }
               accessibilityRole="button"
               activeOpacity={0.8}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              onPress={() => onOpenListPicker(gesture)}
+              hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
+              onPress={handleOpenListPicker}
               style={styles.listButton}
             >
               <Ionicons
@@ -93,32 +102,32 @@ const GestureCard = ({
 };
 
 const styles = StyleSheet.create({
-  wrapper: {
-    marginVertical: SPACING.xs,
-    position: "relative",
-  },
-  container: {
-    flexDirection: "row",
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    overflow: "hidden",
-  },
   cardContent: {
-    flexDirection: "row",
     alignItems: "flex-start",
     flex: 1,
+    flexDirection: "row",
+  },
+  container: {
+    alignItems: "center",
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    overflow: "hidden",
+    padding: SPACING.md,
+  },
+  listButton: {
+    marginLeft: SPACING.sm,
+    padding: SPACING.sm,
   },
   textContainer: {
     display: "flex",
     flexDirection: "column",
     gap: SPACING.xs,
   },
-  listButton: {
-    padding: SPACING.sm,
-    marginLeft: SPACING.sm,
+  wrapper: {
+    marginVertical: SPACING.xs,
+    position: "relative",
   },
 });
 

@@ -35,12 +35,12 @@ export async function getVideoSourceUrl(playbackId: string): Promise<string> {
     throw new Error("REMOTION_API_KEY must be set");
   }
   const response = await fetch(`${serverUrl}/api/video/master-access`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
     body: JSON.stringify({ playbackId }),
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    method: "POST",
   });
 
   if (!response.ok) {
@@ -68,12 +68,12 @@ export async function uploadToMux(
 
   // Create direct upload
   const upload = await client.video.uploads.create({
+    cors_origin: "*",
     new_asset_settings: {
-      playback_policy: ["public"],
       master_access: "temporary",
+      playback_policy: ["public"],
       test: process.env.NODE_ENV === "development",
     },
-    cors_origin: "*",
   });
 
   console.log(`[Mux] Direct upload created: ${upload.id}`);
@@ -90,12 +90,12 @@ export async function uploadToMux(
   );
 
   const uploadResponse = await fetch(upload.url, {
-    method: "PUT",
     body: videoBuffer,
     headers: {
-      "Content-Type": "video/mp4",
       "Content-Length": stats.size.toString(),
+      "Content-Type": "video/mp4",
     },
+    method: "PUT",
   });
 
   if (!uploadResponse.ok) {
@@ -127,6 +127,7 @@ async function waitForAssetCreation(
   let attempts = 0;
 
   while (attempts < maxAttempts) {
+    // biome-ignore lint/performance/noAwaitInLoops: polling Mux upload status requires sequential checks
     await new Promise((resolve) => setTimeout(resolve, 2000));
     const uploadStatus = await client.video.uploads.retrieve(uploadId);
 
@@ -153,6 +154,7 @@ async function waitForAssetReady(
   let attempts = 0;
 
   while (attempts < maxAttempts) {
+    // biome-ignore lint/performance/noAwaitInLoops: polling Mux asset status requires sequential checks
     const asset = await client.video.assets.retrieve(assetId);
 
     if (asset.status === "errored") {

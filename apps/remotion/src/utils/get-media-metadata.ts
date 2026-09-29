@@ -1,11 +1,11 @@
 import { ALL_FORMATS, Input, UrlSource } from "mediabunny";
 
 export interface MediaMetadata {
-  durationInSeconds: number;
   dimensions: {
     width: number;
     height: number;
   } | null;
+  durationInSeconds: number;
 }
 
 export const getMediaMetadata = async (src: string): Promise<MediaMetadata> => {
@@ -23,14 +23,14 @@ export const getMediaMetadata = async (src: string): Promise<MediaMetadata> => {
     const videoTrack = await input.getPrimaryVideoTrack();
     const dimensions = videoTrack
       ? {
-          width: videoTrack.displayWidth,
           height: videoTrack.displayHeight,
+          width: videoTrack.displayWidth,
         }
       : null;
 
     return {
-      durationInSeconds,
       dimensions,
+      durationInSeconds,
     };
   } finally {
     input.dispose();

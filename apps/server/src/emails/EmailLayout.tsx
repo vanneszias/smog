@@ -17,10 +17,10 @@ import type * as React from "react";
 import * as S from "./styles";
 
 interface EmailLayoutProps {
-  preview: React.ReactNode;
-  children: React.ReactNode;
   /** Base URL for logo/links — defaults to https://app.smog.vlaanderen */
   baseUrl?: string;
+  children: React.ReactNode;
+  preview: React.ReactNode;
 }
 
 export function EmailLayout({

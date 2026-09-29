@@ -8,6 +8,7 @@
 
 import { ArrowRight, Loader2, Upload, X } from "lucide-react";
 import type React from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,10 +19,39 @@ import {
 } from "@/lib/pricing";
 import type { SponsorshipFormState } from "../hooks/-useSponsorshipForm";
 
+interface SelectedGestureChipProps {
+  gesture: { _id: string; name: string };
+  onRemove: (gestureId: string) => void;
+}
+
+function SelectedGestureChip({ gesture, onRemove }: SelectedGestureChipProps) {
+  const { t } = useTranslation();
+
+  const handleRemove = useCallback((): void => {
+    onRemove(gesture._id);
+  }, [onRemove, gesture._id]);
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-primary text-sm">
+      {gesture.name}
+      <button
+        aria-label={t("web.sponsors.wizard.removeGestureLabel", {
+          name: gesture.name,
+        })}
+        className="rounded-full p-0.5 transition-colors hover:bg-primary/20"
+        onClick={handleRemove}
+        type="button"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </span>
+  );
+}
+
 interface StepDetailsProps {
   form: SponsorshipFormState;
-  selectedGestures: Array<{ _id: string; name: string }>;
   onGeneratePreview: () => Promise<void>;
+  selectedGestures: Array<{ _id: string; name: string }>;
 }
 
 /**
@@ -44,24 +74,141 @@ export function StepDetails({
 }: StepDetailsProps) {
   const { i18n, t } = useTranslation();
 
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      form.setErrors((prev) => ({
+  const {
+    contactEmail,
+    invoiceEmail,
+    setContactCompany,
+    setContactEmail,
+    setContactFullName,
+    setCurrentStep,
+    setErrors,
+    setIncludeLogo,
+    setInvoiceEmail,
+    setInvoiceName,
+    setInvoiceRequested,
+    setInvoiceVatNumber,
+    setLogoFile,
+    setLogoPreview,
+    setSponsorName,
+  } = form;
+
+  const handleLogoUpload = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>): void => {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        setErrors((prev) => ({
+          ...prev,
+          logo: t("web.sponsors.new.validation.logoTooLarge"),
+        }));
+        return;
+      }
+      setLogoFile(file);
+      setErrors((prev) => ({ ...prev, logo: undefined }));
+      const reader = new FileReader();
+      reader.onload = (e) => setLogoPreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+    },
+    [setErrors, setLogoFile, setLogoPreview, t]
+  );
+
+  const handleBackToSelection = useCallback((): void => {
+    setCurrentStep("select");
+  }, [setCurrentStep]);
+
+  const handleSponsorNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setSponsorName(e.target.value);
+      setErrors((prev) => ({ ...prev, sponsorName: undefined }));
+    },
+    [setSponsorName, setErrors]
+  );
+
+  const handleIncludeLogoChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setIncludeLogo(e.target.checked);
+    },
+    [setIncludeLogo]
+  );
+
+  const handleRemoveLogo = useCallback((): void => {
+    setLogoFile(null);
+    setLogoPreview(null);
+  }, [setLogoFile, setLogoPreview]);
+
+  const handleContactFullNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setContactFullName(e.target.value);
+      setErrors((prev) => ({
         ...prev,
-        logo: t("web.sponsors.new.validation.logoTooLarge"),
+        contactFullName: undefined,
       }));
-      return;
-    }
-    form.setLogoFile(file);
-    form.setErrors((prev) => ({ ...prev, logo: undefined }));
-    const reader = new FileReader();
-    reader.onload = (e) => form.setLogoPreview(e.target?.result as string);
-    reader.readAsDataURL(file);
-  };
+    },
+    [setContactFullName, setErrors]
+  );
+
+  const handleContactEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setContactEmail(e.target.value);
+      setErrors((prev) => ({
+        ...prev,
+        contactEmail: undefined,
+      }));
+    },
+    [setContactEmail, setErrors]
+  );
+
+  const handleContactCompanyChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setContactCompany(e.target.value);
+    },
+    [setContactCompany]
+  );
+
+  const handleInvoiceRequestedChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setInvoiceRequested(e.target.checked);
+      if (e.target.checked && !invoiceEmail) {
+        setInvoiceEmail(contactEmail);
+      }
+    },
+    [setInvoiceRequested, invoiceEmail, setInvoiceEmail, contactEmail]
+  );
+
+  const handleInvoiceNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setInvoiceName(e.target.value);
+      setErrors((prev) => ({
+        ...prev,
+        invoiceName: undefined,
+      }));
+    },
+    [setInvoiceName, setErrors]
+  );
+
+  const handleInvoiceVatNumberChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setInvoiceVatNumber(e.target.value);
+      setErrors((prev) => ({
+        ...prev,
+        invoiceVatNumber: undefined,
+      }));
+    },
+    [setInvoiceVatNumber, setErrors]
+  );
+
+  const handleInvoiceEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setInvoiceEmail(e.target.value);
+      setErrors((prev) => ({
+        ...prev,
+        invoiceEmail: undefined,
+      }));
+    },
+    [setInvoiceEmail, setErrors]
+  );
 
   return (
     <div className="relative z-10 flex flex-1 flex-col bg-muted/20 px-4 lg:px-12">
@@ -69,7 +216,7 @@ export function StepDetails({
       <header className="sticky top-0 z-10 shrink-0 border-border border-b bg-background px-4 py-6">
         <button
           className="mb-4 flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-          onClick={() => form.setCurrentStep("select")}
+          onClick={handleBackToSelection}
           type="button"
         >
           <ArrowRight className="h-4 w-4 rotate-180" />
@@ -111,22 +258,11 @@ export function StepDetails({
             </span>
             <div className="flex flex-wrap gap-2">
               {selectedGestures.map((gesture) => (
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-primary text-sm"
+                <SelectedGestureChip
+                  gesture={gesture}
                   key={gesture._id}
-                >
-                  {gesture.name}
-                  <button
-                    aria-label={t("web.sponsors.wizard.removeGestureLabel", {
-                      name: gesture.name,
-                    })}
-                    className="rounded-full p-0.5 transition-colors hover:bg-primary/20"
-                    onClick={() => form.handleToggleSelection(gesture._id)}
-                    type="button"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
+                  onRemove={form.handleToggleSelection}
+                />
               ))}
             </div>
           </div>
@@ -140,10 +276,7 @@ export function StepDetails({
               className={`h-14 rounded-xl text-base ${form.errors.sponsorName ? "border-destructive" : ""}`}
               id="sponsor-name"
               maxLength={35}
-              onChange={(e) => {
-                form.setSponsorName(e.target.value);
-                form.setErrors((prev) => ({ ...prev, sponsorName: undefined }));
-              }}
+              onChange={handleSponsorNameChange}
               placeholder={t("web.sponsors.wizard.sponsorNamePlaceholder")}
               value={form.sponsorName}
             />
@@ -151,11 +284,11 @@ export function StepDetails({
               <p className="text-muted-foreground text-xs">
                 {form.sponsorName.length}/35
               </p>
-              {form.errors.sponsorName && (
+              {form.errors.sponsorName ? (
                 <p className="text-destructive text-xs">
                   {form.errors.sponsorName}
                 </p>
-              )}
+              ) : null}
             </div>
             <p className="rounded-xl bg-secondary/20 p-3 text-sm">
               <span className="text-muted-foreground">
@@ -173,7 +306,7 @@ export function StepDetails({
               <input
                 checked={form.includeLogo}
                 className="mt-1 h-5 w-5 rounded accent-primary"
-                onChange={(e) => form.setIncludeLogo(e.target.checked)}
+                onChange={handleIncludeLogoChange}
                 type="checkbox"
               />
               <div className="flex-1">
@@ -191,7 +324,7 @@ export function StepDetails({
               </div>
             </label>
 
-            {form.includeLogo && (
+            {form.includeLogo ? (
               <div className="space-y-2">
                 {form.logoPreview ? (
                   <div className="relative inline-block">
@@ -205,10 +338,7 @@ export function StepDetails({
                     <button
                       aria-label={t("web.sponsors.wizard.removeLogo")}
                       className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-white shadow-lg"
-                      onClick={() => {
-                        form.setLogoFile(null);
-                        form.setLogoPreview(null);
-                      }}
+                      onClick={handleRemoveLogo}
                       type="button"
                     >
                       <X className="h-4 w-4" />
@@ -234,9 +364,9 @@ export function StepDetails({
                     />
                   </label>
                 )}
-                {form.errors.logo && (
+                {form.errors.logo ? (
                   <p className="text-destructive text-xs">{form.errors.logo}</p>
-                )}
+                ) : null}
                 <div className="mt-3 space-y-2 rounded-xl bg-secondary/20 p-3">
                   <p className="font-semibold text-sm">
                     {t("web.sponsors.new.logoGuidelines.title")}
@@ -253,7 +383,7 @@ export function StepDetails({
                   </ul>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Divider */}
@@ -276,21 +406,15 @@ export function StepDetails({
             <Input
               className={`h-14 rounded-xl text-base ${form.errors.contactFullName ? "border-destructive" : ""}`}
               id="contact-name"
-              onChange={(e) => {
-                form.setContactFullName(e.target.value);
-                form.setErrors((prev) => ({
-                  ...prev,
-                  contactFullName: undefined,
-                }));
-              }}
+              onChange={handleContactFullNameChange}
               placeholder={t("web.sponsors.wizard.fullNamePlaceholder")}
               value={form.contactFullName}
             />
-            {form.errors.contactFullName && (
+            {form.errors.contactFullName ? (
               <p className="text-destructive text-xs">
                 {form.errors.contactFullName}
               </p>
-            )}
+            ) : null}
           </div>
 
           {/* Contact: Email */}
@@ -301,22 +425,16 @@ export function StepDetails({
             <Input
               className={`h-14 rounded-xl text-base ${form.errors.contactEmail ? "border-destructive" : ""}`}
               id="contact-email"
-              onChange={(e) => {
-                form.setContactEmail(e.target.value);
-                form.setErrors((prev) => ({
-                  ...prev,
-                  contactEmail: undefined,
-                }));
-              }}
+              onChange={handleContactEmailChange}
               placeholder={t("web.sponsors.wizard.emailPlaceholder")}
               type="email"
               value={form.contactEmail}
             />
-            {form.errors.contactEmail && (
+            {form.errors.contactEmail ? (
               <p className="text-destructive text-xs">
                 {form.errors.contactEmail}
               </p>
-            )}
+            ) : null}
           </div>
 
           {/* Contact: Company (optional) */}
@@ -330,7 +448,7 @@ export function StepDetails({
             <Input
               className="h-14 rounded-xl text-base"
               id="contact-company"
-              onChange={(e) => form.setContactCompany(e.target.value)}
+              onChange={handleContactCompanyChange}
               placeholder={t("web.sponsors.wizard.companyPlaceholder")}
               value={form.contactCompany}
             />
@@ -342,12 +460,7 @@ export function StepDetails({
               <input
                 checked={form.invoiceRequested}
                 className="mt-1 h-5 w-5 rounded accent-primary"
-                onChange={(e) => {
-                  form.setInvoiceRequested(e.target.checked);
-                  if (e.target.checked && !form.invoiceEmail) {
-                    form.setInvoiceEmail(form.contactEmail);
-                  }
-                }}
+                onChange={handleInvoiceRequestedChange}
                 type="checkbox"
               />
               <div className="flex-1">
@@ -360,7 +473,7 @@ export function StepDetails({
               </div>
             </label>
 
-            {form.invoiceRequested && (
+            {form.invoiceRequested ? (
               <div className="space-y-4 rounded-xl border border-border bg-muted/30 p-4">
                 {/* Invoice: Name */}
                 <div className="space-y-2">
@@ -373,23 +486,17 @@ export function StepDetails({
                   <Input
                     className={`h-14 rounded-xl text-base ${form.errors.invoiceName ? "border-destructive" : ""}`}
                     id="invoice-name"
-                    onChange={(e) => {
-                      form.setInvoiceName(e.target.value);
-                      form.setErrors((prev) => ({
-                        ...prev,
-                        invoiceName: undefined,
-                      }));
-                    }}
+                    onChange={handleInvoiceNameChange}
                     placeholder={t(
                       "web.sponsors.wizard.invoiceNamePlaceholder"
                     )}
                     value={form.invoiceName}
                   />
-                  {form.errors.invoiceName && (
+                  {form.errors.invoiceName ? (
                     <p className="text-destructive text-xs">
                       {form.errors.invoiceName}
                     </p>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Invoice: VAT */}
@@ -403,21 +510,15 @@ export function StepDetails({
                   <Input
                     className={`h-14 rounded-xl text-base ${form.errors.invoiceVatNumber ? "border-destructive" : ""}`}
                     id="invoice-vat"
-                    onChange={(e) => {
-                      form.setInvoiceVatNumber(e.target.value);
-                      form.setErrors((prev) => ({
-                        ...prev,
-                        invoiceVatNumber: undefined,
-                      }));
-                    }}
+                    onChange={handleInvoiceVatNumberChange}
                     placeholder={t("web.sponsors.wizard.invoiceVatPlaceholder")}
                     value={form.invoiceVatNumber}
                   />
-                  {form.errors.invoiceVatNumber && (
+                  {form.errors.invoiceVatNumber ? (
                     <p className="text-destructive text-xs">
                       {form.errors.invoiceVatNumber}
                     </p>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Invoice: Email */}
@@ -431,27 +532,21 @@ export function StepDetails({
                   <Input
                     className={`h-14 rounded-xl text-base ${form.errors.invoiceEmail ? "border-destructive" : ""}`}
                     id="invoice-email"
-                    onChange={(e) => {
-                      form.setInvoiceEmail(e.target.value);
-                      form.setErrors((prev) => ({
-                        ...prev,
-                        invoiceEmail: undefined,
-                      }));
-                    }}
+                    onChange={handleInvoiceEmailChange}
                     placeholder={t(
                       "web.sponsors.wizard.invoiceEmailPlaceholder"
                     )}
                     type="email"
                     value={form.invoiceEmail}
                   />
-                  {form.errors.invoiceEmail && (
+                  {form.errors.invoiceEmail ? (
                     <p className="text-destructive text-xs">
                       {form.errors.invoiceEmail}
                     </p>
-                  )}
+                  ) : null}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Price summary */}
@@ -473,7 +568,7 @@ export function StepDetails({
                   )}
                 </span>
               </div>
-              {form.includeLogo && (
+              {form.includeLogo ? (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
                     {t("web.sponsors.wizard.logoAddon")}
@@ -485,7 +580,7 @@ export function StepDetails({
                     )}
                   </span>
                 </div>
-              )}
+              ) : null}
               <div className="flex justify-between border-primary/20 border-t pt-2 font-bold text-lg">
                 <span>{t("web.sponsors.wizard.total")}</span>
                 <span className="text-primary">
@@ -520,14 +615,14 @@ export function StepDetails({
                 : undefined
             }
           >
-            {form.isGeneratingPreview && (
+            {form.isGeneratingPreview ? (
               <div
                 className="pointer-events-none absolute inset-0 bg-white/20 transition-transform duration-300 ease-out"
                 style={{
                   transform: `translateX(${(form.previewProgress - 1) * 100}%)`,
                 }}
               />
-            )}
+            ) : null}
             <span className="relative z-10 flex items-center">
               {form.isGeneratingPreview ? (
                 <>

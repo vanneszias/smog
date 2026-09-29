@@ -5,9 +5,9 @@ const run = (cmd: string[], options?: { env?: Record<string, string> }) => {
       ...process.env,
       ...options?.env,
     },
+    stderr: "inherit",
     stdin: "inherit",
     stdout: "inherit",
-    stderr: "inherit",
   });
 
   if (proc.exitCode !== 0) {
@@ -18,9 +18,9 @@ const run = (cmd: string[], options?: { env?: Record<string, string> }) => {
 const hasNpm = (): boolean => {
   const proc = Bun.spawnSync(["which", "npm"], {
     cwd: process.cwd(),
+    stderr: "ignore",
     stdin: "ignore",
     stdout: "ignore",
-    stderr: "ignore",
   });
 
   return proc.exitCode === 0;

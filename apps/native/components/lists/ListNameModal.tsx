@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SPACING } from "@smog/styles";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -43,14 +43,20 @@ export function ListNameModal({
     }
   }, [initialName, visible]);
 
+  const handleRequestClose = useCallback(() => {
+    if (!isSaving) {
+      onClose();
+    }
+  }, [isSaving, onClose]);
+
+  const handleSave = useCallback(() => {
+    onSave(name);
+  }, [onSave, name]);
+
   return (
     <Modal
       animationType="fade"
-      onRequestClose={() => {
-        if (!isSaving) {
-          onClose();
-        }
-      }}
+      onRequestClose={handleRequestClose}
       transparent
       visible={visible}
     >
@@ -83,7 +89,7 @@ export function ListNameModal({
             editable={!isSaving}
             maxLength={80}
             onChangeText={setName}
-            onSubmitEditing={() => onSave(name)}
+            onSubmitEditing={handleSave}
             placeholder={t("lists.newListPlaceholder")}
             placeholderTextColor={theme.textLight}
             returnKeyType="done"
@@ -109,7 +115,7 @@ export function ListNameModal({
             </TouchableOpacity>
             <TouchableOpacity
               disabled={!name.trim() || isSaving}
-              onPress={() => onSave(name)}
+              onPress={handleSave}
               style={[
                 styles.saveButton,
                 { backgroundColor: theme.primary },
@@ -130,45 +136,18 @@ export function ListNameModal({
 }
 
 const styles = StyleSheet.create({
+  actions: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    justifyContent: "flex-end",
+    marginTop: SPACING.lg,
+  },
   backdrop: {
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.42)",
     flex: 1,
     justifyContent: "center",
     padding: SPACING.lg,
-  },
-  card: {
-    borderRadius: BORDER_RADIUS.xl,
-    borderWidth: StyleSheet.hairlineWidth,
-    maxWidth: 440,
-    padding: SPACING.lg,
-    width: "100%",
-  },
-  icon: {
-    alignItems: "center",
-    borderRadius: 24,
-    height: 48,
-    justifyContent: "center",
-    marginBottom: SPACING.md,
-    width: 48,
-  },
-  title: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.bold,
-    marginBottom: SPACING.md,
-  },
-  input: {
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    fontSize: FONT_SIZE.md,
-    height: 52,
-    paddingHorizontal: SPACING.md,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: SPACING.sm,
-    justifyContent: "flex-end",
-    marginTop: SPACING.lg,
   },
   cancelButton: {
     justifyContent: "center",
@@ -178,6 +157,31 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: FONT_SIZE.md,
     fontWeight: FONT_WEIGHT.semibold,
+  },
+  card: {
+    borderRadius: BORDER_RADIUS.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    maxWidth: 440,
+    padding: SPACING.lg,
+    width: "100%",
+  },
+  disabled: {
+    opacity: 0.42,
+  },
+  icon: {
+    alignItems: "center",
+    borderRadius: 24,
+    height: 48,
+    justifyContent: "center",
+    marginBottom: SPACING.md,
+    width: 48,
+  },
+  input: {
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    fontSize: FONT_SIZE.md,
+    height: 52,
+    paddingHorizontal: SPACING.md,
   },
   saveButton: {
     alignItems: "center",
@@ -192,7 +196,9 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.md,
     fontWeight: FONT_WEIGHT.bold,
   },
-  disabled: {
-    opacity: 0.42,
+  title: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: FONT_WEIGHT.bold,
+    marginBottom: SPACING.md,
   },
 });

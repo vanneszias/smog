@@ -77,19 +77,19 @@ export async function processComposition(
 
     // Prepare input props for Remotion composition
     const inputProps = {
-      videoSrc,
-      sponsorName: overlayText,
       logoUrl: overlayImageUrl || undefined,
       overlayConfig: overlayConfig as OverlayConfig | undefined,
+      sponsorName: overlayText,
+      videoSrc,
     };
 
     // Select the composition (this fetches video duration via calculateMetadata)
     updateJobProgress(jobId, 20);
     console.log("[Compose] Selecting composition and calculating metadata...");
     const composition = await selectComposition({
-      serveUrl,
       id: "SponsoredVideo",
       inputProps,
+      serveUrl,
     });
 
     console.log(
@@ -105,10 +105,8 @@ export async function processComposition(
     // Render the video
     console.log("[Compose] Rendering video...");
     await renderMedia({
-      composition,
-      serveUrl,
       codec: "h264",
-      outputLocation: outputPath,
+      composition,
       inputProps,
       onProgress: ({ progress }) => {
         // Map render progress (0-1) to job progress (30-80)
@@ -121,6 +119,8 @@ export async function processComposition(
           );
         }
       },
+      outputLocation: outputPath,
+      serveUrl,
     });
 
     console.log("[Compose] Render complete, uploading to Mux...");
@@ -138,14 +138,14 @@ export async function processComposition(
 
     console.log(`[Compose] Composition complete: ${composedPlaybackId}`);
     completeJob(jobId, {
-      success: true,
       composedVideoPlaybackId: composedPlaybackId,
+      success: true,
     });
   } catch (error) {
     console.error(`[Compose] Composition failed for job ${jobId}:`, error);
     completeJob(jobId, {
-      success: false,
       error: error instanceof Error ? error.message : "Unknown error",
+      success: false,
     });
   }
 }

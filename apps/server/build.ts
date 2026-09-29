@@ -9,19 +9,13 @@ import { rm } from "node:fs/promises";
 
 // Clean dist directory
 console.log("🧹 Cleaning dist directory...");
-await rm("./dist", { recursive: true, force: true });
+await rm("./dist", { force: true, recursive: true });
 
 // Build with Bun
 console.log("📦 Building with Bun...");
 
 const result = await Bun.build({
   entrypoints: ["./src/index.ts"],
-  outdir: "./dist",
-  target: "bun",
-  format: "esm",
-  splitting: false,
-  minify: false,
-  sourcemap: "external",
   external: [
     // Keep native dependencies external
     "nodemailer",
@@ -33,6 +27,12 @@ const result = await Bun.build({
     "react",
     "react-dom",
   ],
+  format: "esm",
+  minify: false,
+  outdir: "./dist",
+  sourcemap: "external",
+  splitting: false,
+  target: "bun",
 });
 
 if (!result.success) {

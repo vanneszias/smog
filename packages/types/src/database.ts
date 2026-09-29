@@ -12,35 +12,35 @@
  * Raw SQLite row shape for the `gestures` table.
  */
 export interface DatabaseGesture {
-  id: string;
-  name: string;
   /** JSON-encoded string array of category names */
   category: string;
-  playbackId: string;
   /** JSON-encoded string array of related concepts */
   concept: string;
-  info: string;
-  createdAt: string;
-  updatedAt: string;
-  lastSyncAt?: string;
   /** Convex document ID, used to correlate with the remote database */
   convexId?: string;
+  createdAt: string;
+  id: string;
+  info: string;
+  lastSyncAt?: string;
+  name: string;
+  playbackId: string;
+  updatedAt: string;
 }
 
 /**
  * Raw SQLite row shape for the `categories` table.
  */
 export interface DatabaseCategory {
-  id: string;
-  name: string;
-  description?: string;
-  /** Stored as INTEGER: 0 = inactive, 1 = active */
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  lastSyncAt?: string;
   /** Convex document ID */
   convexId?: string;
+  createdAt: string;
+  description?: string;
+  id: string;
+  /** Stored as INTEGER: 0 = inactive, 1 = active */
+  isActive: boolean;
+  lastSyncAt?: string;
+  name: string;
+  updatedAt: string;
 }
 
 /**
@@ -48,17 +48,17 @@ export interface DatabaseCategory {
  */
 export interface SyncMetadata {
   key: string;
-  value: string;
   updatedAt: string;
+  value: string;
 }
 
 /**
  * Result from `databaseService.getDatabaseStats()`.
  */
 export interface DatabaseStats {
+  databaseSize: string;
   gestureCount: number;
   lastSync: Date | null;
-  databaseSize: string;
 }
 
 /**
@@ -66,9 +66,9 @@ export interface DatabaseStats {
  */
 export interface TableColumnInfo {
   cid: number;
-  name: string;
-  type: string;
-  notnull: number;
   dflt_value: string | number | null;
+  name: string;
+  notnull: number;
   pk: number;
+  type: string;
 }

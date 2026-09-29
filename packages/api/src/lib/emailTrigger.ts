@@ -10,8 +10,8 @@
  */
 
 export interface EmailTriggerPayload {
-  type: string;
   to: string;
+  type: string;
   [key: string]: unknown;
 }
 
@@ -30,12 +30,12 @@ export async function triggerEmail(
       throw new Error("INTERNAL_API_KEY must be set");
     }
     const response = await fetch(`${serverUrl}/api/email/trigger`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
       body: JSON.stringify(payload),
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      method: "POST",
     });
 
     if (!response.ok) {

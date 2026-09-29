@@ -9,6 +9,7 @@
 import MuxPlayer from "@mux/mux-player-react/lazy";
 import { ArrowRight, Check, Heart, Loader2 } from "lucide-react";
 import type React from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/pricing";
@@ -16,9 +17,9 @@ import type { SponsorshipFormState } from "../hooks/-useSponsorshipForm";
 
 interface StepPreviewProps {
   form: SponsorshipFormState;
+  onProceedToPayment: () => Promise<void>;
   selectedGestures: Array<{ _id: string; name: string }>;
   totalCents: number;
-  onProceedToPayment: () => Promise<void>;
 }
 
 /**
@@ -36,6 +37,11 @@ export function StepPreview({
   onProceedToPayment,
 }: StepPreviewProps) {
   const { i18n, t } = useTranslation();
+  const { setCurrentStep } = form;
+
+  const handleBackToDetails = useCallback((): void => {
+    setCurrentStep("details");
+  }, [setCurrentStep]);
 
   return (
     <div className="relative z-10 flex flex-1 flex-col bg-muted/20 px-4 lg:px-12">
@@ -43,7 +49,7 @@ export function StepPreview({
       <header className="sticky top-0 z-10 shrink-0 border-border border-b bg-background px-4 py-6">
         <button
           className="mb-4 flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-          onClick={() => form.setCurrentStep("details")}
+          onClick={handleBackToDetails}
           type="button"
         >
           <ArrowRight className="h-4 w-4 rotate-180" />
@@ -91,7 +97,7 @@ export function StepPreview({
                     accentColor="#00805f"
                     playbackId={playbackId}
                     streamType="on-demand"
-                    style={{ width: "100%", aspectRatio: "810/1080" }}
+                    style={{ aspectRatio: "810/1080", width: "100%" }}
                   />
                 </div>
               </div>
@@ -184,14 +190,14 @@ export function StepPreview({
                 : undefined
             }
           >
-            {form.isProcessing && (
+            {form.isProcessing ? (
               <div
                 className="pointer-events-none absolute inset-0 bg-white/20 transition-transform duration-300 ease-out"
                 style={{
                   transform: `translateX(${(form.paymentProgress - 1) * 100}%)`,
                 }}
               />
-            )}
+            ) : null}
             <span className="relative z-10 flex items-center">
               {form.isProcessing ? (
                 <>

@@ -7,7 +7,6 @@ import { client } from "@/utils/orpc";
 const logger = createLogger("admin");
 
 export const Route = createFileRoute("/admin")({
-  component: RouteComponent,
   beforeLoad: async () => {
     // Verify admin access
     try {
@@ -19,6 +18,7 @@ export const Route = createFileRoute("/admin")({
       });
     }
   },
+  component: RouteComponent,
 });
 
 function RouteComponent() {

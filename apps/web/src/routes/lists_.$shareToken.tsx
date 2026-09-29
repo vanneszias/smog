@@ -2,6 +2,7 @@ import { createLogger } from "@smog/shared";
 import type { GestureCardData } from "@smog/ui";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Check, Eye, ListPlus, Lock, Plus, Search, X } from "lucide-react";
+import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -88,79 +89,103 @@ function SharedListComponent() {
     loadSharedList();
   }, [loadSharedList]);
 
-  const handleSelectGesture = (gestureId: string) => {
-    navigate({ to: "/gestures/$id", params: { id: gestureId } });
-  };
-
-  const removeGesture = async (gestureId: string) => {
-    if (!list?.canEdit) {
-      return;
-    }
-
-    try {
-      await client.lists.removeGestureFromEditableSharedList({
-        editShareToken: shareToken,
-        gestureId,
-      });
-      setGestures((current) =>
-        current.filter((gesture) => gesture._id !== gestureId)
-      );
-      toast.success(t("web.lists.gestureRemoved", "Gesture removed"));
-    } catch (error) {
-      logger.error("Failed to remove shared list gesture:", error);
-      toast.error(t("web.lists.removeFailed", "Could not remove gesture"));
-    }
-  };
-
-  const addGesture = async (gesture: GestureCardData) => {
-    if (!list?.canEdit) {
-      return;
-    }
-
-    try {
-      await client.lists.addGestureToEditableSharedList({
-        editShareToken: shareToken,
-        gestureId: gesture._id,
-      });
-      setGestures((current) =>
-        current.some((item) => item._id === gesture._id)
-          ? current
-          : [...current, gesture]
-      );
-      toast.success(t("web.lists.gestureAdded", "Gesture added"));
-    } catch (error) {
-      logger.error("Failed to add shared list gesture:", error);
-      toast.error(t("web.lists.addFailed", "Could not add gesture"));
-    }
-  };
-
-  const actionsForVisibleGesture = (gesture: GestureCardData) => {
-    const actions: GestureRowAction[] = [];
-    if (list?.canEdit && isAuthenticated) {
-      actions.push({
-        icon: X,
-        label: t("web.lists.removeGesture", "Remove gesture"),
-        onClick: () => removeGesture(gesture._id),
-      });
-    }
-    actions.push({
-      icon: Eye,
-      label: t("web.lists.viewGesture", "View gesture"),
-      onClick: () => handleSelectGesture(gesture._id),
-    });
-    return actions;
-  };
-
-  const actionsForAddableGesture = (
-    gesture: GestureCardData
-  ): GestureRowAction[] => [
-    {
-      icon: Plus,
-      label: t("web.lists.add", "Add"),
-      onClick: () => addGesture(gesture),
-      variant: "outline",
+  const handleSelectGesture = useCallback(
+    (gestureId: string) => {
+      navigate({ params: { id: gestureId }, to: "/gestures/$id" });
     },
-  ];
+    [navigate]
+  );
+
+  const removeGesture = useCallback(
+    async (gestureId: string) => {
+      if (!list?.canEdit) {
+        return;
+      }
+
+      try {
+        await client.lists.removeGestureFromEditableSharedList({
+          editShareToken: shareToken,
+          gestureId,
+        });
+        setGestures((current) =>
+          current.filter((gesture) => gesture._id !== gestureId)
+        );
+        toast.success(t("web.lists.gestureRemoved", "Gesture removed"));
+      } catch (error) {
+        logger.error("Failed to remove shared list gesture:", error);
+        toast.error(t("web.lists.removeFailed", "Could not remove gesture"));
+      }
+    },
+    [list, shareToken, t]
+  );
+
+  const addGesture = useCallback(
+    async (gesture: GestureCardData) => {
+      if (!list?.canEdit) {
+        return;
+      }
+
+      try {
+        await client.lists.addGestureToEditableSharedList({
+          editShareToken: shareToken,
+          gestureId: gesture._id,
+        });
+        setGestures((current) =>
+          current.some((item) => item._id === gesture._id)
+            ? current
+            : [...current, gesture]
+        );
+        toast.success(t("web.lists.gestureAdded", "Gesture added"));
+      } catch (error) {
+        logger.error("Failed to add shared list gesture:", error);
+        toast.error(t("web.lists.addFailed", "Could not add gesture"));
+      }
+    },
+    [list, shareToken, t]
+  );
+
+  const actionsForVisibleGesture = useCallback(
+    (gesture: GestureCardData) => {
+      const actions: GestureRowAction[] = [];
+      if (list?.canEdit && isAuthenticated) {
+        actions.push({
+          icon: X,
+          label: t("web.lists.removeGesture", "Remove gesture"),
+          onClick: () => removeGesture(gesture._id),
+        });
+      }
+      actions.push({
+        icon: Eye,
+        label: t("web.lists.viewGesture", "View gesture"),
+        onClick: () => handleSelectGesture(gesture._id),
+      });
+      return actions;
+    },
+    [handleSelectGesture, isAuthenticated, list, removeGesture, t]
+  );
+
+  const actionsForAddableGesture = useCallback(
+    (gesture: GestureCardData): GestureRowAction[] => [
+      {
+        icon: Plus,
+        label: t("web.lists.add", "Add"),
+        onClick: () => addGesture(gesture),
+        variant: "outline",
+      },
+    ],
+    [addGesture, t]
+  );
+
+  const handleToggleAdding = useCallback(() => {
+    setIsAddingGestures((current) => !current);
+  }, []);
+
+  const handleGestureSearchChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setGestureSearch(event.target.value);
+    },
+    []
+  );
 
   if (isLoading) {
     return <ListLoadingState />;
@@ -224,7 +249,7 @@ function SharedListComponent() {
       {list.canEdit && isAuthenticated ? (
         <div className="grid gap-3 border-border border-b bg-card px-4 py-3 lg:grid-cols-[auto_minmax(0,1fr)] lg:px-8">
           <Button
-            onClick={() => setIsAddingGestures((current) => !current)}
+            onClick={handleToggleAdding}
             type="button"
             variant={isAddingGestures ? "secondary" : "default"}
           >
@@ -242,7 +267,7 @@ function SharedListComponent() {
               <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="pl-9"
-                onChange={(event) => setGestureSearch(event.target.value)}
+                onChange={handleGestureSearchChange}
                 placeholder={t(
                   "web.lists.searchToAdd",
                   "Search gestures to add"

@@ -10,42 +10,42 @@ export type { OverlayConfig } from "@smog/types";
 
 // Zod schema matching @smog/types OverlayConfig
 const OverlayConfigSchema = z.object({
+  animation: z.object({
+    fadeInDuration: z.number().min(0).describe("Fade-in duration in seconds"),
+    startTime: z
+      .number()
+      .min(0)
+      .describe("Seconds from end of video to start overlay"),
+  }),
   image: z.object({
+    height: z.number().min(0).max(100).describe("Height as % of video height"),
+    width: z.number().min(0).max(100).describe("Width as % of video width"),
     x: z.number().min(0).max(100).describe("X position as % (0-100)"),
     y: z.number().min(0).max(100).describe("Y position as % (0-100)"),
-    width: z.number().min(0).max(100).describe("Width as % of video width"),
-    height: z.number().min(0).max(100).describe("Height as % of video height"),
   }),
   text: z.object({
-    x: z.number().min(0).max(100).describe("X position as %"),
-    y: z.number().min(0).max(100).describe("Y position as %"),
+    color: zColor().describe("Text color"),
     fontSize: z
       .number()
       .min(1)
       .max(20)
       .describe("Font size as % of video height"),
-    color: zColor().describe("Text color"),
-  }),
-  animation: z.object({
-    startTime: z
-      .number()
-      .min(0)
-      .describe("Seconds from end of video to start overlay"),
-    fadeInDuration: z.number().min(0).describe("Fade-in duration in seconds"),
+    x: z.number().min(0).max(100).describe("X position as %"),
+    y: z.number().min(0).max(100).describe("Y position as %"),
   }),
 });
 
 export const SponsoredVideoSchema = z.object({
-  videoSrc: z
-    .string()
-    .url()
-    .describe("URL of the source video (Mux playback URL)"),
   logoUrl: z.string().optional().describe("URL of the sponsor logo (optional)"),
+  overlayConfig: OverlayConfigSchema.optional(),
   sponsorName: z
     .string()
     .max(35, "Sponsor name must be 35 characters or less")
     .describe("Name of the sponsor"),
-  overlayConfig: OverlayConfigSchema.optional(),
+  videoSrc: z
+    .string()
+    .url()
+    .describe("URL of the source video (Mux playback URL)"),
 });
 
 export type SponsoredVideoProps = z.infer<typeof SponsoredVideoSchema>;

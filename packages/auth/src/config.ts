@@ -8,12 +8,12 @@
  * WorkOS API endpoints
  */
 export const WORKOS_ENDPOINTS = {
-  authorize: "https://api.workos.com/user_management/authorize",
   authenticate: "https://api.workos.com/user_management/authenticate",
-  jwks: (clientId: string) => `https://api.workos.com/sso/jwks/${clientId}`,
+  authorize: "https://api.workos.com/user_management/authorize",
+  issuerSSO: "https://api.workos.com/",
   issuerUserManagement: (clientId: string) =>
     `https://api.workos.com/user_management/${clientId}`,
-  issuerSSO: "https://api.workos.com/",
+  jwks: (clientId: string) => `https://api.workos.com/sso/jwks/${clientId}`,
 } as const;
 
 /**
@@ -49,7 +49,6 @@ export function getWorkOSConfig(
     if (typeof process !== "undefined" && process.env?.[key]) {
       return process.env[key];
     }
-    return;
   };
 
   return {
@@ -77,9 +76,9 @@ export function buildAuthorizationUrl(config: {
 }): string {
   const params = new URLSearchParams({
     client_id: config.clientId,
+    provider: "authkit",
     redirect_uri: config.redirectUri,
     response_type: "code",
-    provider: "authkit",
   });
 
   if (config.state) {

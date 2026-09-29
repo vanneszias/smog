@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback } from "react";
 import { Hero } from "@/components/home/Hero";
 
 export const Route = createFileRoute("/")({
@@ -8,12 +9,15 @@ export const Route = createFileRoute("/")({
 function HomeComponent() {
   const navigate = useNavigate();
 
-  const handleSearch = (query: string) => {
-    navigate({
-      to: "/gestures",
-      search: { q: query },
-    });
-  };
+  const handleSearch = useCallback(
+    (query: string): void => {
+      navigate({
+        search: { q: query },
+        to: "/gestures",
+      });
+    },
+    [navigate]
+  );
 
   return (
     <div>

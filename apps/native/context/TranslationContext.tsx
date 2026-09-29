@@ -7,11 +7,11 @@ import logger from "@/utils/logger";
 
 // Define context type
 interface TranslationContextType {
+  availableLanguages: typeof AVAILABLE_LANGUAGES;
+  isReady: boolean;
   language: Language;
   setLanguage: (language: Language) => Promise<void>;
   t: (key: string, params?: Record<string, string | number>) => string;
-  availableLanguages: typeof AVAILABLE_LANGUAGES;
-  isReady: boolean;
 }
 
 // Create context
@@ -42,11 +42,11 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Provide context value
   const contextValue = {
+    availableLanguages: AVAILABLE_LANGUAGES,
+    isReady: ready,
     language: (i18nInstance.language as Language) || "en",
     setLanguage,
     t: translate,
-    availableLanguages: AVAILABLE_LANGUAGES,
-    isReady: ready,
   };
 
   return (

@@ -22,20 +22,20 @@ import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "@/context/TranslationContext";
 
 interface SearchBarProps {
-  onSearch: (query: string) => void;
-  onSubmit?: (query: string) => void;
+  autoFocus?: boolean;
   containerStyle?: ViewStyle;
   inputStyle?: TextStyle;
   isLoading?: boolean;
-  placeholder?: string;
-  autoFocus?: boolean;
-  showClearButton?: boolean;
-  onClear?: () => void;
-  value?: string;
-  onFocus?: () => void;
   onBlur?: () => void;
-  showCancelButton?: boolean;
   onCancel?: () => void;
+  onClear?: () => void;
+  onFocus?: () => void;
+  onSearch: (query: string) => void;
+  onSubmit?: (query: string) => void;
+  placeholder?: string;
+  showCancelButton?: boolean;
+  showClearButton?: boolean;
+  value?: string;
 }
 
 // Make the entire SearchBar area clickable to focus the TextInput
@@ -58,7 +58,7 @@ const SearchBar = ({
 }: SearchBarProps & { ref?: React.Ref<TextInput> }) => {
   const { theme } = useTheme();
   const [internalQuery, setInternalQuery] = useState("");
-  const searchQuery = value !== undefined ? value : internalQuery;
+  const searchQuery = value === undefined ? internalQuery : value;
   const { t } = useTranslation();
 
   // Ref for focusing the TextInput when the container is pressed
@@ -206,41 +206,41 @@ const SearchBar = ({
 SearchBar.displayName = "SearchBar";
 
 const styles = StyleSheet.create({
-  wrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  searchContainer: {
-    flex: 1,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    height: SEARCHBAR_HEIGHT,
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: SPACING.md,
-  },
-  searchIcon: {
-    marginRight: SPACING.sm,
-  },
-  input: {
-    flex: 1,
-    fontSize: FONT_SIZE.md,
-    paddingVertical: 0,
-  },
-  loadingIndicator: {
-    marginLeft: SPACING.sm,
-  },
-  clearButton: {
-    marginLeft: SPACING.sm,
-    padding: SPACING.xs / 2,
-  },
   cancelButton: {
     marginLeft: SPACING.md,
     paddingVertical: SPACING.sm,
   },
   cancelText: {
     fontSize: FONT_SIZE.md,
+  },
+  clearButton: {
+    marginLeft: SPACING.sm,
+    padding: SPACING.xs / 2,
+  },
+  input: {
+    flex: 1,
+    fontSize: FONT_SIZE.md,
+    paddingVertical: 0,
+  },
+  inputContainer: {
+    alignItems: "center",
+    borderRadius: BORDER_RADIUS.md,
+    flexDirection: "row",
+    height: SEARCHBAR_HEIGHT,
+    paddingHorizontal: SPACING.md,
+  },
+  loadingIndicator: {
+    marginLeft: SPACING.sm,
+  },
+  searchContainer: {
+    flex: 1,
+  },
+  searchIcon: {
+    marginRight: SPACING.sm,
+  },
+  wrapper: {
+    alignItems: "center",
+    flexDirection: "row",
   },
 });
 

@@ -4,9 +4,9 @@ import LogoFlexibleSvg from "@/assets/images/logo-flexible.svg";
 import { useTheme } from "@/context/ThemeContext";
 
 interface LogoProps {
+  height?: number;
   variant?: "default" | "white" | "black" | "theme";
   width?: number;
-  height?: number;
 }
 
 const Logo = ({ variant = "default", width = 240, height = 80 }: LogoProps) => {
@@ -52,12 +52,12 @@ const Logo = ({ variant = "default", width = 240, height = 80 }: LogoProps) => {
 };
 
 const styles = StyleSheet.create({
+  logo: {
+    marginBottom: 24,
+  },
   logoContainer: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  logo: {
-    marginBottom: 24,
   },
 });
 

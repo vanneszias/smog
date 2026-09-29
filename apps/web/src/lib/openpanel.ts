@@ -67,7 +67,6 @@ export function setAnalyticsConsent(enabled: boolean): void {
 export function identifyAnalyticsUser(user: WorkOSUser): void {
   currentProfileId = user.id;
   sendAnalyticsPayload({
-    type: "identify",
     payload: {
       email: user.email,
       firstName: user.firstName,
@@ -75,6 +74,7 @@ export function identifyAnalyticsUser(user: WorkOSUser): void {
       profileId: user.id,
       properties: { auth_mode: "authenticated", platform: "web" },
     },
+    type: "identify",
   });
 }
 
@@ -84,7 +84,6 @@ export function clearAnalyticsIdentity(): void {
 
 export function trackScreenView(path: string): void {
   sendAnalyticsPayload({
-    type: "track",
     payload: {
       name: "screen_view",
       properties: {
@@ -94,6 +93,7 @@ export function trackScreenView(path: string): void {
       },
       ...(currentProfileId ? { profileId: currentProfileId } : {}),
     },
+    type: "track",
   });
 }
 
@@ -102,7 +102,6 @@ export function trackAnalyticsEvent<EventName extends AnalyticsEventName>(
   properties: AnalyticsEventMap[EventName]
 ): void {
   sendAnalyticsPayload({
-    type: "track",
     payload: {
       name: eventName,
       properties: {
@@ -111,5 +110,6 @@ export function trackAnalyticsEvent<EventName extends AnalyticsEventName>(
       },
       ...(currentProfileId ? { profileId: currentProfileId } : {}),
     },
+    type: "track",
   });
 }

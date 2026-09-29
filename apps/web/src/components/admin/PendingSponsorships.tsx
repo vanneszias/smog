@@ -14,7 +14,7 @@ import {
   User,
   XCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,31 +32,36 @@ import { client, orpc } from "@/utils/orpc";
 
 interface PendingSponsorship {
   _id: string;
-  gestureName?: string;
-  sponsorName: string;
-  sponsorEmail: string;
-  overlayText: string;
-  overlayImageStorageId?: string;
-  sponsoredVideoPlaybackId?: string;
-  originalVideoPlaybackId?: string;
-  paymentAmount: number;
-  durationYears: number;
   createdAt: number;
-  invoiceRequested?: boolean;
-  invoiceName?: string;
-  invoiceVatNumber?: string;
+  durationYears: number;
+  gestureName?: string;
   invoiceEmail?: string;
+  invoiceName?: string;
+  invoiceRequested?: boolean;
+  invoiceVatNumber?: string;
+  originalVideoPlaybackId?: string;
+  overlayImageStorageId?: string;
+  overlayText: string;
+  paymentAmount: number;
+  sponsorEmail: string;
+  sponsoredVideoPlaybackId?: string;
+  sponsorName: string;
 }
 
 function SponsorshipCard({
   sponsorship,
   isSelected,
-  onClick,
+  onSelect,
 }: {
   sponsorship: PendingSponsorship;
   isSelected: boolean;
-  onClick: () => void;
+  onSelect: (sponsorshipId: string) => void;
 }) {
+  const { _id: sponsorshipId } = sponsorship;
+  const handleClick = useCallback((): void => {
+    onSelect(sponsorshipId);
+  }, [onSelect, sponsorshipId]);
+
   return (
     <button
       className={`group relative w-full overflow-hidden rounded-xl border text-left transition-all duration-200 ${
@@ -64,7 +69,7 @@ function SponsorshipCard({
           ? "border-[var(--admin-accent)] bg-[var(--admin-accent)]/5 ring-2 ring-[var(--admin-accent)]/20"
           : "border-[var(--admin-border)] bg-[var(--admin-card)] hover:border-[var(--admin-accent)]/30 hover:shadow-md"
       }`}
-      onClick={onClick}
+      onClick={handleClick}
       type="button"
     >
       {/* Video Thumbnail */}
@@ -83,9 +88,9 @@ function SponsorshipCard({
           Pending
         </div>
         {/* Selection indicator */}
-        {isSelected && (
+        {isSelected ? (
           <div className="absolute top-2 right-2 h-3 w-3 rounded-full border-2 border-white bg-[var(--admin-accent)] shadow-md" />
-        )}
+        ) : null}
       </div>
 
       {/* Content */}
@@ -155,10 +160,10 @@ export function PendingSponsorships() {
   const approveMutation = useMutation({
     mutationFn: (sponsorshipId: string) =>
       client.admin.sponsorships.approve({ sponsorshipId }),
-    onSuccess: handleApproveSuccess,
     onError: (error) => {
       toast.error(`Failed to approve: ${error.message}`);
     },
+    onSuccess: handleApproveSuccess,
   });
 
   const handleReEditLinkSuccess = (data: { url: string }) => {
@@ -173,10 +178,10 @@ export function PendingSponsorships() {
   const generateReEditLinkMutation = useMutation({
     mutationFn: (sponsorshipId: string) =>
       client.admin.sponsorships.generateReEditLink({ sponsorshipId }),
-    onSuccess: handleReEditLinkSuccess,
     onError: (error) => {
       toast.error(`Failed to generate re-edit link: ${error.message}`);
     },
+    onSuccess: handleReEditLinkSuccess,
   });
 
   const rejectMutation = useMutation({
@@ -186,7 +191,10 @@ export function PendingSponsorships() {
     }: {
       sponsorshipId: string;
       reason: string;
-    }) => client.admin.sponsorships.reject({ sponsorshipId, reason }),
+    }) => client.admin.sponsorships.reject({ reason, sponsorshipId }),
+    onError: (error) => {
+      toast.error(`Failed to reject: ${error.message}`);
+    },
     onSuccess: () => {
       toast.success("Sponsorship rejected");
       setRejectDialog(null);
@@ -196,9 +204,6 @@ export function PendingSponsorships() {
         queryKey:
           orpc.admin.sponsorships.listPendingApproval.queryOptions().queryKey,
       });
-    },
-    onError: (error) => {
-      toast.error(`Failed to reject: ${error.message}`);
     },
   });
 
@@ -211,6 +216,52 @@ export function PendingSponsorships() {
   const selectedSponsorship = sponsorships?.find(
     (s) => s._id === selectedSponsorshipId
   );
+  const selectedId = selectedSponsorship?._id;
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      setSearchQuery(e.target.value);
+    },
+    []
+  );
+
+  const handleApprove = useCallback((): void => {
+    if (selectedId) {
+      approveMutation.mutate(selectedId);
+    }
+  }, [approveMutation, selectedId]);
+
+  const handleOpenRejectDialog = useCallback((): void => {
+    if (selectedId) {
+      setRejectDialog(selectedId);
+    }
+  }, [selectedId]);
+
+  const handleGenerateReEditLink = useCallback((): void => {
+    if (selectedId) {
+      generateReEditLinkMutation.mutate(selectedId);
+    }
+  }, [generateReEditLinkMutation, selectedId]);
+
+  const handleCloseRejectDialog = useCallback((): void => {
+    setRejectDialog(null);
+  }, []);
+
+  const handleRejectReasonChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+      setRejectReason(e.target.value);
+    },
+    []
+  );
+
+  const handleConfirmReject = useCallback((): void => {
+    if (rejectDialog) {
+      rejectMutation.mutate({
+        reason: rejectReason,
+        sponsorshipId: rejectDialog,
+      });
+    }
+  }, [rejectDialog, rejectMutation, rejectReason]);
 
   if (isLoading) {
     return (
@@ -265,7 +316,7 @@ export function PendingSponsorships() {
         <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--admin-text-muted)]" />
         <Input
           className="h-11 bg-[var(--admin-bg)] pl-10"
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={handleSearchChange}
           placeholder="Search by gesture, sponsor name, or email..."
           value={searchQuery}
         />
@@ -291,7 +342,7 @@ export function PendingSponsorships() {
                 <SponsorshipCard
                   isSelected={selectedSponsorshipId === sponsorship._id}
                   key={sponsorship._id}
-                  onClick={() => setSelectedSponsorshipId(sponsorship._id)}
+                  onSelect={setSelectedSponsorshipId}
                   sponsorship={sponsorship}
                 />
               ))}
@@ -304,17 +355,17 @@ export function PendingSponsorships() {
           {selectedSponsorship ? (
             <div className="sticky top-24 space-y-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
               {/* Video Preview */}
-              {selectedSponsorship.sponsoredVideoPlaybackId && (
+              {selectedSponsorship.sponsoredVideoPlaybackId ? (
                 <div className="overflow-hidden rounded-xl">
                   <MuxPlayer
                     loop
                     muted
                     playbackId={selectedSponsorship.sponsoredVideoPlaybackId}
                     streamType="on-demand"
-                    style={{ width: "100%", aspectRatio: "16/9" }}
+                    style={{ aspectRatio: "16/9", width: "100%" }}
                   />
                 </div>
-              )}
+              ) : null}
 
               {/* Details */}
               <div className="space-y-4">
@@ -345,14 +396,14 @@ export function PendingSponsorships() {
                 </div>
 
                 {/* Invoice Info */}
-                {selectedSponsorship.invoiceRequested && (
+                {selectedSponsorship.invoiceRequested ? (
                   <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
                     <p className="flex items-center gap-1.5 font-medium text-amber-600 text-xs uppercase tracking-wide">
                       <FileText className="h-3.5 w-3.5" />
                       Factuur gevraagd
                     </p>
                     <div className="space-y-1 text-sm">
-                      {selectedSponsorship.invoiceName && (
+                      {selectedSponsorship.invoiceName ? (
                         <div className="flex items-start gap-2">
                           <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
                             Naam
@@ -361,8 +412,8 @@ export function PendingSponsorships() {
                             {selectedSponsorship.invoiceName}
                           </span>
                         </div>
-                      )}
-                      {selectedSponsorship.invoiceVatNumber && (
+                      ) : null}
+                      {selectedSponsorship.invoiceVatNumber ? (
                         <div className="flex items-start gap-2">
                           <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
                             Ond.nr.
@@ -371,8 +422,8 @@ export function PendingSponsorships() {
                             {selectedSponsorship.invoiceVatNumber}
                           </span>
                         </div>
-                      )}
-                      {selectedSponsorship.invoiceEmail && (
+                      ) : null}
+                      {selectedSponsorship.invoiceEmail ? (
                         <div className="flex items-start gap-2">
                           <span className="w-20 shrink-0 text-[var(--admin-text-muted)] text-xs">
                             E-mail
@@ -381,10 +432,10 @@ export function PendingSponsorships() {
                             {selectedSponsorship.invoiceEmail}
                           </span>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 {/* Payment Info */}
                 <div className="flex gap-2">
@@ -402,7 +453,7 @@ export function PendingSponsorships() {
                     </p>
                     <p className="font-semibold text-[var(--admin-text)]">
                       {selectedSponsorship.durationYears} year
-                      {selectedSponsorship.durationYears !== 1 ? "s" : ""}
+                      {selectedSponsorship.durationYears === 1 ? "" : "s"}
                     </p>
                   </div>
                 </div>
@@ -418,7 +469,7 @@ export function PendingSponsorships() {
                 </div>
 
                 {/* Overlay Image */}
-                {selectedSponsorship.overlayImageStorageId && (
+                {selectedSponsorship.overlayImageStorageId ? (
                   <div>
                     <p className="mb-2 flex items-center gap-1.5 font-medium text-[var(--admin-text-muted)] text-xs uppercase tracking-wide">
                       <Image className="h-3 w-3" />
@@ -432,7 +483,7 @@ export function PendingSponsorships() {
                       width={64}
                     />
                   </div>
-                )}
+                ) : null}
 
                 {/* Playback IDs */}
                 <div className="space-y-2">
@@ -465,11 +516,11 @@ export function PendingSponsorships() {
                   {new Date(selectedSponsorship.createdAt).toLocaleDateString(
                     undefined,
                     {
-                      year: "numeric",
-                      month: "short",
                       day: "numeric",
                       hour: "2-digit",
                       minute: "2-digit",
+                      month: "short",
+                      year: "numeric",
                     }
                   )}
                 </p>
@@ -480,9 +531,7 @@ export function PendingSponsorships() {
                 <Button
                   className="w-full gap-2 bg-[var(--admin-success)] hover:bg-[var(--admin-success)]/90"
                   disabled={approveMutation.isPending}
-                  onClick={() =>
-                    approveMutation.mutate(selectedSponsorship._id)
-                  }
+                  onClick={handleApprove}
                 >
                   <CheckCircle className="h-4 w-4" />
                   {approveMutation.isPending ? "Approving..." : "Approve"}
@@ -490,7 +539,7 @@ export function PendingSponsorships() {
                 <Button
                   className="w-full gap-2"
                   disabled={rejectMutation.isPending}
-                  onClick={() => setRejectDialog(selectedSponsorship._id)}
+                  onClick={handleOpenRejectDialog}
                   variant="destructive"
                 >
                   <XCircle className="h-4 w-4" />
@@ -499,9 +548,7 @@ export function PendingSponsorships() {
                 <Button
                   className="w-full gap-2"
                   disabled={generateReEditLinkMutation.isPending}
-                  onClick={() =>
-                    generateReEditLinkMutation.mutate(selectedSponsorship._id)
-                  }
+                  onClick={handleGenerateReEditLink}
                   variant="outline"
                 >
                   <Link className="h-4 w-4" />
@@ -526,7 +573,7 @@ export function PendingSponsorships() {
       </div>
 
       {/* Reject Dialog */}
-      <Dialog onOpenChange={() => setRejectDialog(null)} open={!!rejectDialog}>
+      <Dialog onOpenChange={handleCloseRejectDialog} open={!!rejectDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -540,24 +587,17 @@ export function PendingSponsorships() {
           </DialogHeader>
           <Textarea
             className="min-h-[120px]"
-            onChange={(e) => setRejectReason(e.target.value)}
+            onChange={handleRejectReasonChange}
             placeholder="Enter rejection reason..."
             value={rejectReason}
           />
           <DialogFooter>
-            <Button onClick={() => setRejectDialog(null)} variant="outline">
+            <Button onClick={handleCloseRejectDialog} variant="outline">
               Cancel
             </Button>
             <Button
               disabled={!rejectReason.trim() || rejectMutation.isPending}
-              onClick={() => {
-                if (rejectDialog) {
-                  rejectMutation.mutate({
-                    sponsorshipId: rejectDialog,
-                    reason: rejectReason,
-                  });
-                }
-              }}
+              onClick={handleConfirmReject}
               variant="destructive"
             >
               {rejectMutation.isPending ? "Rejecting..." : "Reject Sponsorship"}

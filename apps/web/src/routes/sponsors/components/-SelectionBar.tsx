@@ -20,10 +20,10 @@ import { formatPrice } from "@/lib/pricing";
 interface SelectionBarProps {
   /** Number of currently selected gestures. */
   count: number;
-  /** Total price in euro cents (used for display only). */
-  totalCents: number;
   /** Called when the user clicks the "Continue" button. */
   onContinue: () => void;
+  /** Total price in euro cents (used for display only). */
+  totalCents: number;
 }
 
 /**

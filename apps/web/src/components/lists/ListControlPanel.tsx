@@ -1,4 +1,5 @@
 import { Check, Copy, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -29,6 +30,23 @@ export function ListControlPanel({
 }) {
   const { t } = useTranslation();
 
+  const handleShareCheckedChange = useCallback(
+    (checked: boolean) => {
+      onUpdateSharing({
+        allowSharedEditing: checked ? list.allowSharedEditing : false,
+        visibility: checked ? "shared" : "private",
+      });
+    },
+    [list.allowSharedEditing, onUpdateSharing]
+  );
+
+  const handleAllowEditingCheckedChange = useCallback(
+    (checked: boolean) => {
+      onUpdateSharing({ allowSharedEditing: checked });
+    },
+    [onUpdateSharing]
+  );
+
   return (
     <div className="shrink-0 border-border border-b bg-background px-4 py-3 lg:px-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -52,12 +70,7 @@ export function ListControlPanel({
             <span>{t("web.lists.shareList", "Share list")}</span>
             <Switch
               checked={list.visibility === "shared"}
-              onCheckedChange={(checked) =>
-                onUpdateSharing({
-                  visibility: checked ? "shared" : "private",
-                  allowSharedEditing: checked ? list.allowSharedEditing : false,
-                })
-              }
+              onCheckedChange={handleShareCheckedChange}
             />
           </div>
 
@@ -67,9 +80,7 @@ export function ListControlPanel({
                 <span>{t("web.lists.allowEditing", "Allow editing")}</span>
                 <Switch
                   checked={list.allowSharedEditing}
-                  onCheckedChange={(checked) =>
-                    onUpdateSharing({ allowSharedEditing: checked })
-                  }
+                  onCheckedChange={handleAllowEditingCheckedChange}
                 />
               </div>
               <Button onClick={onCopyShareLink} type="button" variant="outline">

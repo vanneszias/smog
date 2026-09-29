@@ -31,9 +31,11 @@ const LINK_PHRASES: Record<string, string[]> = {
 };
 
 interface DisclaimerBannerProps {
-  visible: boolean;
   onDismiss: () => void;
+  visible: boolean;
 }
+
+const openCourseUrl = (): Promise<unknown> => Linking.openURL(COURSE_URL);
 
 const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
   visible,
@@ -71,7 +73,7 @@ const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
           index !== -1 &&
           (earliestMatch === null || index < earliestMatch.index)
         ) {
-          earliestMatch = { phrase, index };
+          earliestMatch = { index, phrase };
         }
       }
 
@@ -92,7 +94,7 @@ const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
         parts.push(
           <Text
             key={keyIndex++}
-            onPress={() => Linking.openURL(COURSE_URL)}
+            onPress={openCourseUrl}
             style={[styles.link, { color: theme.primary }]}
           >
             {earliestMatch.phrase}
@@ -126,28 +128,28 @@ const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
       setIsMounted(true);
       Animated.parallel([
         Animated.timing(fadeAnim, {
-          toValue: 1,
           duration: ANIMATION_DURATION.normal,
+          toValue: 1,
           useNativeDriver: true,
         }),
         Animated.spring(translateYAnim, {
-          toValue: 0,
-          useNativeDriver: true,
           damping: 18,
           stiffness: 180,
+          toValue: 0,
+          useNativeDriver: true,
         }),
       ]).start();
     } else if (hasBeenVisible) {
       // Play exit animation then unmount
       Animated.parallel([
         Animated.timing(fadeAnim, {
-          toValue: 0,
           duration: ANIMATION_DURATION.fast,
+          toValue: 0,
           useNativeDriver: true,
         }),
         Animated.timing(translateYAnim, {
-          toValue: 16,
           duration: ANIMATION_DURATION.fast,
+          toValue: 16,
           useNativeDriver: true,
         }),
       ]).start(() => {
@@ -207,7 +209,7 @@ const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
           accessibilityLabel={t("gesture.disclaimer.dismiss")}
           accessibilityRole="button"
           activeOpacity={0.6}
-          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
           onPress={onDismiss}
           style={styles.dismissButton}
         >
@@ -219,62 +221,62 @@ const DisclaimerBanner: React.FC<DisclaimerBannerProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.xs,
+  accentBar: {
+    alignSelf: "stretch",
+    backgroundColor: colors.warning,
+    borderBottomLeftRadius: BORDER_RADIUS.md,
+    borderTopLeftRadius: BORDER_RADIUS.md,
+    marginRight: SPACING.sm,
+    width: 4,
   },
   banner: {
-    flexDirection: "row",
     alignItems: "flex-start",
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
+    flexDirection: "row",
     overflow: "hidden",
-    paddingVertical: SPACING.sm + 2,
     paddingRight: SPACING.sm,
+    paddingVertical: SPACING.sm + 2,
   },
-  accentBar: {
-    width: 4,
-    alignSelf: "stretch",
-    backgroundColor: colors.warning,
-    borderTopLeftRadius: BORDER_RADIUS.md,
-    borderBottomLeftRadius: BORDER_RADIUS.md,
-    marginRight: SPACING.sm,
+  container: {
+    marginBottom: SPACING.xs,
+    marginTop: SPACING.sm,
+  },
+  dismissButton: {
+    marginTop: -2,
+    opacity: 0.7,
+    padding: SPACING.xs,
+  },
+  emphasis: {
+    color: colors.text,
+    fontFamily: "Onest-SemiBold",
+    fontWeight: FONT_WEIGHT.semibold,
   },
   iconWrapper: {
-    marginTop: 1,
     marginRight: SPACING.xs + 2,
+    marginTop: 1,
+  },
+  link: {
+    fontFamily: "Onest-Medium",
+    fontWeight: FONT_WEIGHT.medium,
+    textDecorationLine: "underline",
+  },
+  messageNl: {
+    fontFamily: "Onest-Regular",
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.regular,
+    lineHeight: 19,
   },
   textWrapper: {
     flex: 1,
     paddingRight: SPACING.xs,
   },
   titleNl: {
+    fontFamily: "Onest-SemiBold",
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.semibold,
-    fontFamily: "Onest-SemiBold",
-    marginBottom: SPACING.xs,
     letterSpacing: 0.1,
-  },
-  messageNl: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: FONT_WEIGHT.regular,
-    fontFamily: "Onest-Regular",
-    lineHeight: 19,
-  },
-  emphasis: {
-    fontWeight: FONT_WEIGHT.semibold,
-    fontFamily: "Onest-SemiBold",
-    color: colors.text,
-  },
-  link: {
-    fontWeight: FONT_WEIGHT.medium,
-    fontFamily: "Onest-Medium",
-    textDecorationLine: "underline",
-  },
-  dismissButton: {
-    padding: SPACING.xs,
-    marginTop: -2,
-    opacity: 0.7,
+    marginBottom: SPACING.xs,
   },
 });
 

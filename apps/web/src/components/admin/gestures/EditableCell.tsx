@@ -12,15 +12,16 @@
  * />
  */
 
-import { useRef } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
+import { useCallback, useRef } from "react";
 
 interface EditableCellProps {
-  value: string;
-  onChange: (value: string) => void;
-  onBlur: () => void;
+  className?: string;
   /** Render a `<textarea>` instead of `<input>`. */
   multiline?: boolean;
-  className?: string;
+  onBlur: () => void;
+  onChange: (value: string) => void;
+  value: string;
 }
 
 const BASE_CLASSES =
@@ -39,22 +40,46 @@ export function EditableCell({
 }: EditableCellProps) {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+      onChange(e.target.value);
+    },
+    [onChange]
+  );
+
+  const handleTextareaKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLTextAreaElement>): void => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        onBlur();
+      }
+      if (e.key === "Escape") {
+        onBlur();
+      }
+    },
+    [onBlur]
+  );
+
+  const handleInputKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>): void => {
+      if (e.key === "Enter") {
+        onBlur();
+      }
+      if (e.key === "Escape") {
+        onBlur();
+      }
+    },
+    [onBlur]
+  );
+
   if (multiline) {
     return (
       <textarea
         autoFocus
         className={`${BASE_CLASSES} min-h-[60px] resize-none ${className}`}
         onBlur={onBlur}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            onBlur();
-          }
-          if (e.key === "Escape") {
-            onBlur();
-          }
-        }}
+        onChange={handleChange}
+        onKeyDown={handleTextareaKeyDown}
         ref={inputRef as React.RefObject<HTMLTextAreaElement>}
         value={value}
       />
@@ -66,15 +91,8 @@ export function EditableCell({
       autoFocus
       className={`${BASE_CLASSES} ${className}`}
       onBlur={onBlur}
-      onChange={(e) => onChange(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          onBlur();
-        }
-        if (e.key === "Escape") {
-          onBlur();
-        }
-      }}
+      onChange={handleChange}
+      onKeyDown={handleInputKeyDown}
       ref={inputRef as React.RefObject<HTMLInputElement>}
       type="text"
       value={value}

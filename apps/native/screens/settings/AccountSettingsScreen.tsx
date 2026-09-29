@@ -75,9 +75,8 @@ export default function AccountSettingsScreen() {
       t("account.logoutConfirmTitle"),
       t("account.logoutConfirmMessage"),
       [
-        { text: t("common.cancel"), style: "cancel" },
+        { style: "cancel", text: t("common.cancel") },
         {
-          text: t("account.logout"),
           onPress: async () => {
             try {
               setIsSigningOut(true);
@@ -90,6 +89,7 @@ export default function AccountSettingsScreen() {
               setIsSigningOut(false);
             }
           },
+          text: t("account.logout"),
         },
       ]
     );
@@ -101,10 +101,8 @@ export default function AccountSettingsScreen() {
       t("gdpr.account.deleteConfirmTitle"),
       t("gdpr.account.deleteConfirmMessage"),
       [
-        { text: t("common.cancel"), style: "cancel" },
+        { style: "cancel", text: t("common.cancel") },
         {
-          text: t("gdpr.account.deleteConfirmButton"),
-          style: "destructive",
           onPress: async () => {
             try {
               setIsDeleting(true);
@@ -129,22 +127,28 @@ export default function AccountSettingsScreen() {
               setIsDeleting(false);
             }
           },
+          style: "destructive",
+          text: t("gdpr.account.deleteConfirmButton"),
         },
       ]
     );
   }, [triggerHaptic, deleteAccount, signOut, router, t]);
 
+  const handleSignInPress = useCallback(() => {
+    router.replace("/welcome");
+  }, [router]);
+
   const nativeHeaderOptions =
     Platform.OS === "ios"
       ? {
-          headerTransparent: true,
           headerBlurEffect: "systemChromeMaterial" as const,
           headerShadowVisible: false,
           headerTintColor: theme.primary,
           headerTitleStyle: {
-            fontWeight: "600" as const,
             color: theme.text,
+            fontWeight: "600" as const,
           },
+          headerTransparent: true,
         }
       : {
           headerStyle: {
@@ -161,8 +165,8 @@ export default function AccountSettingsScreen() {
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <Stack.Screen
           options={{
-            title: t("account.title"),
             headerBackButtonDisplayMode: "minimal",
+            title: t("account.title"),
             ...nativeHeaderOptions,
           }}
         />
@@ -179,7 +183,7 @@ export default function AccountSettingsScreen() {
             {t("account.guestModeDescription")}
           </Text>
           <BaseButton
-            onPress={() => router.replace("/welcome")}
+            onPress={handleSignInPress}
             size="large"
             style={styles.signInButton}
             title={t("auth.welcome.signInSignUp")}
@@ -193,8 +197,8 @@ export default function AccountSettingsScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
         options={{
-          title: t("account.title"),
           headerBackButtonDisplayMode: "minimal",
+          title: t("account.title"),
           ...nativeHeaderOptions,
         }}
       />
@@ -321,33 +325,37 @@ export default function AccountSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  actionButton: {
+    marginBottom: SPACING.md,
+  },
   container: {
     flex: 1,
   },
-  scrollContent: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.xl,
+  deleteRow: {
+    borderColor: "#FEE2E2",
+    borderWidth: 1,
   },
   emptyContainer: {
+    alignItems: "center",
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
     paddingHorizontal: SPACING.xl,
+  },
+  emptyDescription: {
+    fontSize: FONT_SIZE.md,
+    lineHeight: 22,
+    marginBottom: SPACING.xl,
+    textAlign: "center",
   },
   emptyTitle: {
     fontSize: FONT_SIZE.xl,
     fontWeight: FONT_WEIGHT.bold,
-    marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
+    marginTop: SPACING.lg,
   },
-  emptyDescription: {
-    fontSize: FONT_SIZE.md,
-    textAlign: "center",
-    marginBottom: SPACING.xl,
-    lineHeight: 22,
-  },
-  signInButton: {
-    minWidth: 200,
+  scrollContent: {
+    padding: SPACING.md,
+    paddingBottom: SPACING.xl,
   },
   section: {
     marginTop: SPACING.xl,
@@ -358,37 +366,33 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     paddingHorizontal: SPACING.sm,
   },
-  settingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    borderRadius: 8,
-    borderWidth: 1,
-    minHeight: 60,
-  },
   settingContent: {
     flex: 1,
-  },
-  settingLabel: {
-    fontSize: FONT_SIZE.sm,
-    marginBottom: 2,
-  },
-  settingValue: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
   },
   settingDescription: {
     fontSize: FONT_SIZE.sm,
     lineHeight: 18,
     marginTop: 4,
   },
-  actionButton: {
-    marginBottom: SPACING.md,
+  settingLabel: {
+    fontSize: FONT_SIZE.sm,
+    marginBottom: 2,
   },
-  deleteRow: {
-    borderColor: "#FEE2E2",
+  settingRow: {
+    alignItems: "center",
+    borderRadius: 8,
     borderWidth: 1,
+    flexDirection: "row",
+    gap: SPACING.md,
+    minHeight: 60,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+  },
+  settingValue: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  signInButton: {
+    minWidth: 200,
   },
 });

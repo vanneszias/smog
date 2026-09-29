@@ -6,20 +6,20 @@ const MAX_SEARCH_RESULTS = 1000;
 
 interface UseOptimizedSearchOptions {
   debounceMs?: number;
-  minSearchLength?: number;
   displayPageSize?: number;
   enableCache?: boolean;
+  minSearchLength?: number;
 }
 
 interface UseOptimizedSearchReturn {
-  results: Gesture[];
+  clearSearch: () => void;
+  hasMore: boolean;
   isLoading: boolean;
   isSearching: boolean;
-  search: (query: string, categories?: string[]) => void;
-  clearSearch: () => void;
-  refresh: () => void;
-  hasMore: boolean;
   loadMore: () => void;
+  refresh: () => void;
+  results: Gesture[];
+  search: (query: string, categories?: string[]) => void;
   searchStats: {
     totalResults: number;
     filteredResults: number;
@@ -56,10 +56,10 @@ export const useOptimizedSearch = (
   }, [categories, debounceMs, displayPageSize, query]);
 
   const { results, isLoading, isSearching } = useSearchGestures({
-    query: debouncedQuery,
     categories: debouncedCategories,
     limit: MAX_SEARCH_RESULTS,
     minSearchLength,
+    query: debouncedQuery,
   });
 
   useEffect(() => {
@@ -97,19 +97,19 @@ export const useOptimizedSearch = (
   const displayedResults = results.slice(0, visibleCount);
 
   return {
-    results: displayedResults,
+    clearSearch,
+    hasMore: displayedResults.length < results.length,
     isLoading,
     isSearching,
-    search,
-    clearSearch,
-    refresh,
-    hasMore: displayedResults.length < results.length,
     loadMore,
+    refresh,
+    results: displayedResults,
+    search,
     searchStats: {
-      totalResults: results.length,
+      cacheHit: false,
       filteredResults: displayedResults.length,
       searchTime,
-      cacheHit: false,
+      totalResults: results.length,
     },
   };
 };

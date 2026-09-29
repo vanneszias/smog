@@ -36,9 +36,9 @@ const HomeScreen: React.FC = () => {
   // Hooks
   const searchHook = useOptimizedSearch({
     debounceMs: 300,
-    minSearchLength: 1,
     displayPageSize: 50,
     enableCache: true,
+    minSearchLength: 1,
   });
 
   const { addRecentSearch } = useRecentSearches();
@@ -145,6 +145,30 @@ const HomeScreen: React.FC = () => {
 
   const searchBarRef = useRef<TextInput>(null);
 
+  const handleMenuAction = useCallback(
+    (event: string): void => {
+      if (event === "settings") {
+        navigateToSettings();
+      }
+      if (event === "about") {
+        handleAboutPress();
+      }
+      if (event === "contact") {
+        handleContactPress();
+      }
+    },
+    [navigateToSettings, handleAboutPress, handleContactPress]
+  );
+
+  const handleRecentSearchPress = useCallback(
+    (query: string): void => {
+      handleRecentSearchSelect(query);
+      searchBarRef.current?.blur();
+      Keyboard.dismiss();
+    },
+    [handleRecentSearchSelect]
+  );
+
   return (
     <SafeAreaView
       edges={["top"]}
@@ -156,40 +180,30 @@ const HomeScreen: React.FC = () => {
           actions={[
             {
               id: "settings",
-              title: t("settings.title"),
               image: Platform.select({
-                ios: "gearshape",
                 android: "ic_menu_preferences",
+                ios: "gearshape",
               }),
+              title: t("settings.title"),
             },
             {
               id: "about",
-              title: t("about.title"),
               image: Platform.select({
-                ios: "info.circle",
                 android: "ic_menu_info_details",
+                ios: "info.circle",
               }),
+              title: t("about.title"),
             },
             {
               id: "contact",
-              title: t("contact.title"),
               image: Platform.select({
-                ios: "phone",
                 android: "ic_menu_call",
+                ios: "phone",
               }),
+              title: t("contact.title"),
             },
           ]}
-          onPressAction={(event) => {
-            if (event === "settings") {
-              navigateToSettings();
-            }
-            if (event === "about") {
-              handleAboutPress();
-            }
-            if (event === "contact") {
-              handleContactPress();
-            }
-          }}
+          onPressAction={handleMenuAction}
         />
       </View>
 
@@ -216,11 +230,7 @@ const HomeScreen: React.FC = () => {
         />
         {/* Show RecentSearches below SearchBar only when searchTerm is empty */}
         <RecentSearches
-          onSelect={(query) => {
-            handleRecentSearchSelect(query);
-            searchBarRef.current?.blur();
-            Keyboard.dismiss();
-          }}
+          onSelect={handleRecentSearchPress}
           searchTerm={searchTerm}
           visible={recentSearchesVisible}
         />
@@ -238,16 +248,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-  },
-  logoContainer: {
-    marginVertical: SPACING.lg,
-  },
   content: {
     flex: 1,
     paddingHorizontal: SPACING.lg,
@@ -255,6 +255,16 @@ const styles = StyleSheet.create({
   contentArea: {
     flex: 1,
     marginTop: SPACING.md,
+  },
+  header: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  logoContainer: {
+    marginVertical: SPACING.lg,
   },
   searchResults: {
     flex: 1,

@@ -27,11 +27,11 @@ import {
 import type { GestureChange } from "./types";
 
 interface ChangesConfirmationDialogProps {
+  changes: GestureChange[];
   isOpen: boolean;
+  isSubmitting: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  changes: GestureChange[];
-  isSubmitting: boolean;
 }
 
 /**
@@ -55,7 +55,7 @@ export function ChangesConfirmationDialog({
           </DialogTitle>
           <DialogDescription>
             Review all the changes before saving. {changes.length} gesture
-            {changes.length !== 1 ? "s" : ""} will be updated.
+            {changes.length === 1 ? "" : "s"} will be updated.
           </DialogDescription>
         </DialogHeader>
 

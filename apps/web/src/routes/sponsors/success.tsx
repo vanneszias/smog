@@ -5,23 +5,23 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SponsorshipWithGesture } from "@/types/sponsorship";
 import { client } from "@/utils/orpc";
 
 interface SuccessSearch {
+  paymentId?: string;
   sponsorshipId?: string;
   sponsorshipIds?: string;
-  paymentId?: string;
 }
 
 export const Route = createFileRoute("/sponsors/success")({
   component: SuccessComponent,
   validateSearch: (search: Record<string, unknown>): SuccessSearch => ({
+    paymentId: (search.paymentId as string) || undefined,
     sponsorshipId: (search.sponsorshipId as string) || undefined,
     sponsorshipIds: (search.sponsorshipIds as string) || undefined,
-    paymentId: (search.paymentId as string) || undefined,
   }),
 });
 
@@ -41,15 +41,12 @@ function SuccessComponent() {
     isError,
     refetch,
   } = useQuery<SponsorshipWithGesture[]>({
-    queryKey: ["sponsorships", paymentId],
-    queryFn: () => {
-      return client.sponsorships.getSponsorshipsByPaymentId({
-        paymentId: paymentId!,
-      });
-    },
     enabled: !!paymentId,
-    retry: 3,
-    retryDelay: 1000,
+    queryFn: () =>
+      client.sponsorships.getSponsorshipsByPaymentId({
+        paymentId: paymentId!,
+      }),
+    queryKey: ["sponsorships", paymentId],
     refetchInterval: (data) => {
       // If we have a paymentId but no sponsorships, poll every 2 seconds
       // This handles the race condition where webhook hasn't fired yet
@@ -65,7 +62,22 @@ function SuccessComponent() {
       return false;
     },
     refetchIntervalInBackground: true,
+    retry: 3,
+    retryDelay: 1000,
   });
+
+  const handleRetry = useCallback((): void => {
+    refetch();
+  }, [refetch]);
+
+  const handleCheckAgain = useCallback((): void => {
+    setPollingAttempts(0);
+    refetch();
+  }, [refetch]);
+
+  const handleBackHome = useCallback((): void => {
+    navigate({ to: "/" });
+  }, [navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -106,7 +118,7 @@ function SuccessComponent() {
         )}
 
         {/* Loading state */}
-        {paymentId && isLoading && (
+        {paymentId && isLoading ? (
           <output
             aria-live="polite"
             className="mt-4 rounded-lg bg-muted p-4 text-center"
@@ -116,10 +128,10 @@ function SuccessComponent() {
               {t("web.sponsors.success.loading")}
             </p>
           </output>
-        )}
+        ) : null}
 
         {/* Error state */}
-        {paymentId && isError && (
+        {paymentId && isError ? (
           <div className="mt-4 rounded-lg bg-red-50 p-4 text-left dark:bg-red-950">
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
@@ -132,7 +144,7 @@ function SuccessComponent() {
                 </p>
                 <button
                   className="mt-2 text-red-900 text-sm underline dark:text-red-100"
-                  onClick={() => refetch()}
+                  onClick={handleRetry}
                   type="button"
                 >
                   {t("web.sponsors.success.error.tryAgain")}
@@ -140,7 +152,7 @@ function SuccessComponent() {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Empty state (webhook hasn't fired yet) */}
         {paymentId &&
@@ -187,10 +199,7 @@ function SuccessComponent() {
                   </p>
                   <button
                     className="mt-2 text-orange-900 text-sm underline dark:text-orange-100"
-                    onClick={() => {
-                      setPollingAttempts(0);
-                      refetch();
-                    }}
+                    onClick={handleCheckAgain}
                     type="button"
                   >
                     {t("web.sponsors.success.timeout.checkAgain")}
@@ -265,7 +274,7 @@ function SuccessComponent() {
 
         <button
           className="w-full rounded-md bg-primary py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          onClick={() => navigate({ to: "/" })}
+          onClick={handleBackHome}
           type="button"
         >
           {t("web.sponsors.new.success.actions.backHome")}
