@@ -1,0 +1,13 @@
+{
+  // Test-only Worker config: gives the Vitest pool a local KV (`KV`, used by
+  // DevEmailSender) and a `send_email` binding (`EMAIL`), and is the source
+  // of `worker-configuration.d.ts` (`wrangler types`, check-types).
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "smog-email-test",
+  "compatibility_date": "2026-09-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "kv_namespaces": [
+    { "binding": "KV", "id": "00000000000000000000000000000000" }
+  ],
+  "send_email": [{ "name": "EMAIL" }]
+}

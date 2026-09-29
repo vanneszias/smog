@@ -3,7 +3,9 @@ import { z } from "zod";
 export const ENVIRONMENTS = ["dev", "staging", "production"] as const;
 export const RENDER_MODES = ["container", "local", "fake"] as const;
 
-/** Plain `vars` of the site Worker. Secrets are added in later phases. */
+export type Environment = (typeof ENVIRONMENTS)[number];
+
+/** Plain `vars` of the site Worker (`wrangler.jsonc` `env.*.vars`). */
 export const workerVarsSchema = z.object({
   EMAIL_FROM: z.string().min(1),
   EMAIL_REPLY_TO: z.email(),
@@ -14,6 +16,28 @@ export const workerVarsSchema = z.object({
 });
 
 export type WorkerVars = z.infer<typeof workerVarsSchema>;
+
+/** An optional secret: unset and empty (`KEY=` in `.dev.vars`) both mean "off". */
+const optionalSecret = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().min(1).optional()
+);
+
+/**
+ * Secrets of the site Worker (`.dev.vars` locally, `wrangler secret put`
+ * in staging/production). Later phases add Mollie, Mux and OpenPanel.
+ */
+export const workerSecretsSchema = z.object({
+  APPLE_APP_BUNDLE_IDENTIFIER: optionalSecret,
+  APPLE_CLIENT_ID: optionalSecret,
+  APPLE_CLIENT_SECRET: optionalSecret,
+  BETTER_AUTH_SECRET: z.string().min(32),
+  GOOGLE_CLIENT_ID: optionalSecret,
+  GOOGLE_CLIENT_SECRET: optionalSecret,
+  TURNSTILE_SECRET_KEY: optionalSecret,
+});
+
+export type WorkerSecrets = z.infer<typeof workerSecretsSchema>;
 
 export function parseWorkerVars(env: object): WorkerVars {
   const result = workerVarsSchema.safeParse(env);

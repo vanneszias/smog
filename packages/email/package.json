@@ -1,0 +1,27 @@
+{
+  "name": "@smog/email",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@smog/config": "workspace:*",
+    "@smog/i18n": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-email": "6.11.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "catalog:",
+    "@types/react": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}
