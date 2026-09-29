@@ -1,0 +1,321 @@
+{
+  "common": {
+    "and": "and",
+    "appName": "SMOG & Co",
+    "back": "Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "continue": "Continue",
+    "copy": "Copy",
+    "copied": "Copied",
+    "delete": "Delete",
+    "done": "Done",
+    "edit": "Edit",
+    "learnMore": "Learn more",
+    "next": "Next",
+    "no": "No",
+    "or": "or",
+    "previous": "Previous",
+    "save": "Save",
+    "saving": "Saving…",
+    "search": "Search",
+    "send": "Send",
+    "share": "Share",
+    "yes": "Yes"
+  },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "skipToNavigation": "Skip to navigation",
+    "mainNavigation": "Main navigation",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "moreActions": "More actions",
+    "close": "Close",
+    "dismiss": "Dismiss notification",
+    "loading": "Loading",
+    "logo": "SMOG & Co logo",
+    "clearSearch": "Clear search",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "remove": "Remove {{label}}",
+    "required": "required",
+    "optional": "optional",
+    "characterCount": "{{count}} of {{max}} characters used",
+    "pagination": "Pagination",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "goToPage": "Go to page {{page}}",
+    "currentPage": "Page {{page}}, current page",
+    "sortAscending": "Sort ascending",
+    "sortDescending": "Sort descending",
+    "sortedAscending": "Sorted ascending",
+    "sortedDescending": "Sorted descending",
+    "notifications": "Notifications",
+    "playVideo": "Play video",
+    "pauseVideo": "Pause video",
+    "dragHandle": "Drag to reorder",
+    "otpDigit": "Digit {{index}} of {{length}}"
+  },
+  "nav": {
+    "home": "Home",
+    "search": "Search",
+    "browse": "Browse",
+    "favorites": "Favorites",
+    "lists": "Lists",
+    "account": "Account",
+    "settings": "Settings",
+    "sponsor": "Sponsor",
+    "admin": "Admin",
+    "about": "About SMOG",
+    "contact": "Contact",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "signIn": "Sign in",
+    "signOut": "Sign out"
+  },
+  "theme": {
+    "label": "Theme",
+    "toggle": "Change theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "language": {
+    "label": "Language",
+    "toggle": "Change language",
+    "nl": "Nederlands",
+    "en": "English",
+    "fr": "Français"
+  },
+  "auth": {
+    "title": "Sign in or sign up",
+    "subtitle": "With an account, your favorites and lists are with you on every device.",
+    "signInTitle": "Welcome back",
+    "signUpTitle": "Create an account",
+    "signUpSubtitle": "There's no account for {{email}} yet. Create one in a few steps.",
+    "continueAsGuest": "Continue without an account",
+    "legal": "By continuing, you agree to our terms and privacy policy.",
+    "email": {
+      "label": "Email address",
+      "placeholder": "name@example.com",
+      "submit": "Continue",
+      "change": "Use a different email address"
+    },
+    "name": {
+      "label": "Name",
+      "placeholder": "Your first and last name"
+    },
+    "methods": {
+      "title": "How would you like to sign in?",
+      "password": "With my password",
+      "emailCode": "With a code by email",
+      "magicLink": "With a sign-in link by email",
+      "google": "Continue with Google",
+      "apple": "Continue with Apple",
+      "passkey": "Sign in with a passkey",
+      "more": "Choose another way"
+    },
+    "password": {
+      "label": "Password",
+      "placeholder": "Your password",
+      "newLabel": "New password",
+      "confirmLabel": "Repeat your password",
+      "forgot": "Forgot your password?",
+      "signIn": "Sign in",
+      "signUp": "Create account",
+      "rulesTitle": "Your password:",
+      "ruleMinLength": "has at least {{min}} characters",
+      "ruleMaxLength": "has at most {{max}} characters",
+      "ruleMatch": "matches in both fields"
+    },
+    "otp": {
+      "title": "Enter your code",
+      "description": "We sent a {{length}}-digit code to {{email}}.",
+      "label": "Code",
+      "submit": "Confirm",
+      "resend": "Send a new code",
+      "resendIn": "New code in {{seconds}} s",
+      "resent": "We sent you a new code."
+    },
+    "magicLink": {
+      "title": "Check your inbox",
+      "description": "We sent a sign-in link to {{email}}. Open it to sign in.",
+      "resend": "Send the link again",
+      "resent": "We sent you a new link."
+    },
+    "checkInbox": {
+      "openMail": "Open your mail app",
+      "spamHint": "Nothing yet? Check your spam folder too.",
+      "wrongEmail": "Wrong email address?"
+    },
+    "verifyEmail": {
+      "title": "Confirm your email address",
+      "description": "We sent a confirmation link to {{email}}. Click it to activate your account.",
+      "resend": "Send the confirmation email again",
+      "resent": "We sent the confirmation email again.",
+      "verifying": "Confirming…",
+      "success": "Your email address is confirmed.",
+      "invalid": "This link has expired or is no longer valid. Request a new one."
+    },
+    "forgotPassword": {
+      "title": "Forgot your password",
+      "description": "Enter your email address and we'll send you a link to choose a new password.",
+      "submit": "Send me a link",
+      "sent": "If there's an account for {{email}}, you'll receive an email shortly.",
+      "backToSignIn": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "Choose a new password",
+      "submit": "Save password",
+      "success": "Your password has been changed. You can sign in now.",
+      "invalid": "This link has expired or is no longer valid. Request a new one."
+    },
+    "passkey": {
+      "add": "Add a passkey",
+      "added": "Your passkey has been added.",
+      "unsupported": "Your device or browser doesn't support passkeys."
+    },
+    "captcha": {
+      "label": "Security check"
+    },
+    "signedIn": "You're signed in.",
+    "signingIn": "Signing you in…",
+    "signedOut": "You're signed out.",
+    "errors": {
+      "emailRequired": "Enter your email address.",
+      "emailInvalid": "Enter a valid email address.",
+      "nameRequired": "Enter your name.",
+      "passwordRequired": "Enter your password.",
+      "passwordTooShort": "Your password must have at least {{min}} characters.",
+      "passwordTooLong": "Your password can have at most {{max}} characters.",
+      "passwordMismatch": "The passwords don't match.",
+      "invalidCredentials": "That email address or password is incorrect.",
+      "emailNotVerified": "Your email address isn't confirmed yet. Check your inbox or request a new confirmation email.",
+      "userExists": "An account with this email address already exists. Sign in instead.",
+      "codeRequired": "Enter the code.",
+      "codeInvalid": "That code is incorrect or has expired.",
+      "linkInvalid": "This link has expired or is no longer valid.",
+      "rateLimited": "Too many attempts. Wait a moment and try again.",
+      "captchaFailed": "The security check failed. Please try again.",
+      "socialFailed": "Signing in with {{provider}} didn't work. Please try again.",
+      "passkeyFailed": "Signing in with your passkey didn't work.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "import": {
+      "title": "Bring your data along?",
+      "description": "You saved gestures on this device without an account. Add them to your account to have them everywhere.",
+      "prompt": "Import {{items}}?",
+      "favorites_one": "{{count}} favorite",
+      "favorites_other": "{{count}} favorites",
+      "lists_one": "{{count}} list",
+      "lists_other": "{{count}} lists",
+      "confirm": "Import",
+      "skip": "Not now",
+      "importing": "Importing…",
+      "success": "Your favorites and lists are now in your account.",
+      "failed": "The import didn't work. Your data stays on this device."
+    }
+  },
+  "states": {
+    "loading": "Loading…",
+    "retry": "Try again",
+    "empty": {
+      "title": "Nothing here yet",
+      "description": "As soon as there's something, you'll find it here."
+    },
+    "error": {
+      "title": "Something went wrong",
+      "description": "We couldn't load this. Please try again."
+    },
+    "offline": {
+      "title": "You're offline",
+      "description": "Some features only work again once you're connected.",
+      "backOnline": "You're back online."
+    },
+    "notFound": {
+      "title": "Page not found",
+      "description": "This page doesn't exist (anymore).",
+      "action": "Go to the home page"
+    }
+  },
+  "kit": {
+    "close": "Close",
+    "clear": "Clear",
+    "clearSearch": "Clear",
+    "searchPlaceholder": "Search…",
+    "selectPlaceholder": "Choose an option",
+    "noOptions": "No options",
+    "noResults": "No results",
+    "showPassword": "Show",
+    "hidePassword": "Hide",
+    "required": "Required",
+    "optional": "Optional",
+    "characterCount": "{{count}}/{{max}}",
+    "pageOf": "Page {{page}} of {{total}}",
+    "stepOf": "Step {{current}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next",
+    "loadMore": "Load more",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "email": {
+    "auth": {
+      "greeting": "Hello,",
+      "greetingName": "Hello {{name}},",
+      "signature": "The SMOG & Co team",
+      "linkFallback": "Button not working? Copy this link into your browser:",
+      "verifyEmail": {
+        "subject": "Confirm your email address",
+        "preheader": "One more click and your account is ready.",
+        "heading": "Confirm your email address",
+        "body": "Thanks for creating a SMOG & Co account. Click the button below to confirm your email address.",
+        "button": "Confirm email address",
+        "expiry": "The link is valid for {{minutes}} minutes.",
+        "footer": "Didn't create an account? You can ignore this email."
+      },
+      "otp": {
+        "subject": "{{code}} is your SMOG & Co code",
+        "preheader": "Your code is {{code}}.",
+        "heading": "Your code",
+        "body": "Enter this code to continue:",
+        "expiry": "The code is valid for {{minutes}} minutes. Don't share it with anyone.",
+        "footer": "Didn't ask for a code? You can ignore this email."
+      },
+      "magicLink": {
+        "subject": "Your SMOG & Co sign-in link",
+        "preheader": "Click the link to sign in.",
+        "heading": "Sign in to SMOG & Co",
+        "body": "Click the button below to sign in. No password needed.",
+        "button": "Sign in",
+        "expiry": "The link is valid for {{minutes}} minutes and works only once.",
+        "footer": "Didn't try to sign in? You can ignore this email."
+      },
+      "resetPassword": {
+        "subject": "Choose a new password",
+        "preheader": "Use this link to choose a new password.",
+        "heading": "Choose a new password",
+        "body": "We received a request to change the password of your account. Click the button below to choose a new password.",
+        "button": "Choose a new password",
+        "expiry": "The link is valid for {{minutes}} minutes.",
+        "footer": "Didn't ask for this? You can ignore this email. Your password stays the same."
+      }
+    }
+  },
+  "devTools": {
+    "title": "Developer tools",
+    "open": "Open developer tools",
+    "componentGallery": "Component gallery",
+    "mail": "Sent emails",
+    "logs": "Logs",
+    "clearLogs": "Clear logs",
+    "exportLogs": "Export logs",
+    "noLogs": "There are no logs yet.",
+    "environment": "Environment",
+    "version": "Version",
+    "resetLocalData": "Clear local data"
+  }
+}

@@ -103,7 +103,8 @@ local-store  → config, utils
 analytics    → config, utils
 ui-web       → styles, i18n, brand, utils
 ui-native    → styles, i18n, brand, utils
-i18n, styles, brand, utils → config (or nothing)
+brand        → styles, config                       (the icon generator reads brand colours from tokens)
+i18n, styles, utils → config (or nothing)
 ```
 
 Circularity note: feature services need jobs (to enqueue email) and jobs consumers need feature logic (for example, expiring sponsorships). The rule is that **jobs owns only message types, producers and scheduling**. The consumer and cron **handlers** that call feature services are wired in `apps/site/src/worker/*`, which may import both.

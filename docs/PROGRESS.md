@@ -35,5 +35,4 @@ Execute `docs/superpowers/plans/2026-09-29-phase-2-foundations.md`, Task 1.
 - The Playwright `e2e` CI job is a placeholder (off unless `vars.E2E_ENABLED == 'true'`), and the spec's root `test:e2e` script does not exist yet; both come in phase 9.
 - `bun -F @smog/site deploy` bypasses turbo. Once workspace packages need a build step, run `turbo run build --filter=@smog/site^...` first (or make deploy a turbo task depending on `^build`).
 - knip.json has no `packages/features/*` workspace (knip rejects an empty glob); add it with the first feature package (phase 3).
-- The boundaries check does not look at `optionalDependencies` or `vi.mock("@smog/…")` imports; add them in phase 2 Task 1, when packages get Vitest tests.
 - knip prints an Expo warning about a missing `userInterfaceStyle` although `app.config.ts` sets it (knip's Expo plugin loads the config its own way); cosmetic.

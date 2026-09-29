@@ -1,0 +1,321 @@
+{
+  "common": {
+    "and": "en",
+    "appName": "SMOG & Co",
+    "back": "Terug",
+    "cancel": "Annuleren",
+    "close": "Sluiten",
+    "confirm": "Bevestigen",
+    "continue": "Doorgaan",
+    "copy": "Kopiëren",
+    "copied": "Gekopieerd",
+    "delete": "Verwijderen",
+    "done": "Klaar",
+    "edit": "Bewerken",
+    "learnMore": "Meer weten",
+    "next": "Volgende",
+    "no": "Nee",
+    "or": "of",
+    "previous": "Vorige",
+    "save": "Opslaan",
+    "saving": "Bezig met opslaan…",
+    "search": "Zoeken",
+    "send": "Versturen",
+    "share": "Delen",
+    "yes": "Ja"
+  },
+  "a11y": {
+    "skipToContent": "Naar de inhoud",
+    "skipToNavigation": "Naar de navigatie",
+    "mainNavigation": "Hoofdnavigatie",
+    "openMenu": "Menu openen",
+    "closeMenu": "Menu sluiten",
+    "moreActions": "Meer acties",
+    "close": "Sluiten",
+    "dismiss": "Melding sluiten",
+    "loading": "Bezig met laden",
+    "logo": "Logo van SMOG & Co",
+    "clearSearch": "Zoekopdracht wissen",
+    "showPassword": "Wachtwoord tonen",
+    "hidePassword": "Wachtwoord verbergen",
+    "remove": "{{label}} verwijderen",
+    "required": "verplicht",
+    "optional": "optioneel",
+    "characterCount": "{{count}} van {{max}} tekens gebruikt",
+    "pagination": "Paginering",
+    "previousPage": "Vorige pagina",
+    "nextPage": "Volgende pagina",
+    "goToPage": "Naar pagina {{page}}",
+    "currentPage": "Pagina {{page}}, huidige pagina",
+    "sortAscending": "Oplopend sorteren",
+    "sortDescending": "Aflopend sorteren",
+    "sortedAscending": "Oplopend gesorteerd",
+    "sortedDescending": "Aflopend gesorteerd",
+    "notifications": "Meldingen",
+    "playVideo": "Video afspelen",
+    "pauseVideo": "Video pauzeren",
+    "dragHandle": "Slepen om de volgorde te wijzigen",
+    "otpDigit": "Cijfer {{index}} van {{length}}"
+  },
+  "nav": {
+    "home": "Home",
+    "search": "Zoeken",
+    "browse": "Verkennen",
+    "favorites": "Favorieten",
+    "lists": "Lijsten",
+    "account": "Account",
+    "settings": "Instellingen",
+    "sponsor": "Sponsor",
+    "admin": "Beheer",
+    "about": "Over SMOG",
+    "contact": "Contact",
+    "privacy": "Privacy",
+    "terms": "Voorwaarden",
+    "signIn": "Aanmelden",
+    "signOut": "Afmelden"
+  },
+  "theme": {
+    "label": "Thema",
+    "toggle": "Thema wijzigen",
+    "system": "Systeem",
+    "light": "Licht",
+    "dark": "Donker"
+  },
+  "language": {
+    "label": "Taal",
+    "toggle": "Taal wijzigen",
+    "nl": "Nederlands",
+    "en": "English",
+    "fr": "Français"
+  },
+  "auth": {
+    "title": "Aanmelden of registreren",
+    "subtitle": "Met een account bewaar je je favorieten en lijsten op al je toestellen.",
+    "signInTitle": "Welkom terug",
+    "signUpTitle": "Account aanmaken",
+    "signUpSubtitle": "Nog geen account voor {{email}}. Maak er in een paar stappen een aan.",
+    "continueAsGuest": "Doorgaan zonder account",
+    "legal": "Door verder te gaan, ga je akkoord met onze voorwaarden en ons privacybeleid.",
+    "email": {
+      "label": "E-mailadres",
+      "placeholder": "naam@voorbeeld.be",
+      "submit": "Doorgaan",
+      "change": "Ander e-mailadres gebruiken"
+    },
+    "name": {
+      "label": "Naam",
+      "placeholder": "Je voor- en achternaam"
+    },
+    "methods": {
+      "title": "Hoe wil je je aanmelden?",
+      "password": "Met mijn wachtwoord",
+      "emailCode": "Met een code via e-mail",
+      "magicLink": "Met een aanmeldlink via e-mail",
+      "google": "Doorgaan met Google",
+      "apple": "Doorgaan met Apple",
+      "passkey": "Aanmelden met een passkey",
+      "more": "Andere manier kiezen"
+    },
+    "password": {
+      "label": "Wachtwoord",
+      "placeholder": "Je wachtwoord",
+      "newLabel": "Nieuw wachtwoord",
+      "confirmLabel": "Herhaal je wachtwoord",
+      "forgot": "Wachtwoord vergeten?",
+      "signIn": "Aanmelden",
+      "signUp": "Account aanmaken",
+      "rulesTitle": "Je wachtwoord:",
+      "ruleMinLength": "telt minstens {{min}} tekens",
+      "ruleMaxLength": "telt hoogstens {{max}} tekens",
+      "ruleMatch": "is twee keer hetzelfde"
+    },
+    "otp": {
+      "title": "Vul je code in",
+      "description": "We stuurden een code van {{length}} cijfers naar {{email}}.",
+      "label": "Code",
+      "submit": "Bevestigen",
+      "resend": "Stuur een nieuwe code",
+      "resendIn": "Nieuwe code over {{seconds}} s",
+      "resent": "We stuurden je een nieuwe code."
+    },
+    "magicLink": {
+      "title": "Kijk in je mailbox",
+      "description": "We stuurden een aanmeldlink naar {{email}}. Open die link om je aan te melden.",
+      "resend": "Stuur de link opnieuw",
+      "resent": "We stuurden je een nieuwe link."
+    },
+    "checkInbox": {
+      "openMail": "Open je mailapp",
+      "spamHint": "Niets gekregen? Kijk dan ook even bij je spam.",
+      "wrongEmail": "Verkeerd e-mailadres?"
+    },
+    "verifyEmail": {
+      "title": "Bevestig je e-mailadres",
+      "description": "We stuurden een bevestigingslink naar {{email}}. Klik op die link om je account te activeren.",
+      "resend": "Stuur de bevestigingsmail opnieuw",
+      "resent": "We stuurden de bevestigingsmail opnieuw.",
+      "verifying": "Bezig met bevestigen…",
+      "success": "Je e-mailadres is bevestigd.",
+      "invalid": "Deze link is verlopen of niet meer geldig. Vraag een nieuwe aan."
+    },
+    "forgotPassword": {
+      "title": "Wachtwoord vergeten",
+      "description": "Vul je e-mailadres in. We sturen je een link om een nieuw wachtwoord te kiezen.",
+      "submit": "Stuur me een link",
+      "sent": "Als er een account bestaat voor {{email}}, krijg je zo meteen een e-mail.",
+      "backToSignIn": "Terug naar aanmelden"
+    },
+    "resetPassword": {
+      "title": "Kies een nieuw wachtwoord",
+      "submit": "Wachtwoord opslaan",
+      "success": "Je wachtwoord is gewijzigd. Je kunt je nu aanmelden.",
+      "invalid": "Deze link is verlopen of niet meer geldig. Vraag een nieuwe aan."
+    },
+    "passkey": {
+      "add": "Passkey toevoegen",
+      "added": "Je passkey is toegevoegd.",
+      "unsupported": "Je toestel of browser ondersteunt geen passkeys."
+    },
+    "captcha": {
+      "label": "Beveiligingscontrole"
+    },
+    "signedIn": "Je bent aangemeld.",
+    "signingIn": "Bezig met aanmelden…",
+    "signedOut": "Je bent afgemeld.",
+    "errors": {
+      "emailRequired": "Vul je e-mailadres in.",
+      "emailInvalid": "Vul een geldig e-mailadres in.",
+      "nameRequired": "Vul je naam in.",
+      "passwordRequired": "Vul je wachtwoord in.",
+      "passwordTooShort": "Je wachtwoord moet minstens {{min}} tekens tellen.",
+      "passwordTooLong": "Je wachtwoord mag hoogstens {{max}} tekens tellen.",
+      "passwordMismatch": "De wachtwoorden zijn niet hetzelfde.",
+      "invalidCredentials": "Dat e-mailadres of wachtwoord klopt niet.",
+      "emailNotVerified": "Je e-mailadres is nog niet bevestigd. Kijk in je mailbox of vraag een nieuwe bevestigingsmail aan.",
+      "userExists": "Er bestaat al een account met dit e-mailadres. Meld je aan.",
+      "codeRequired": "Vul de code in.",
+      "codeInvalid": "Die code klopt niet of is verlopen.",
+      "linkInvalid": "Deze link is verlopen of niet meer geldig.",
+      "rateLimited": "Te veel pogingen. Wacht even en probeer het dan opnieuw.",
+      "captchaFailed": "De beveiligingscontrole is mislukt. Probeer het opnieuw.",
+      "socialFailed": "Aanmelden met {{provider}} is niet gelukt. Probeer het opnieuw.",
+      "passkeyFailed": "Aanmelden met je passkey is niet gelukt.",
+      "generic": "Er ging iets mis. Probeer het opnieuw."
+    },
+    "import": {
+      "title": "Je gegevens meenemen?",
+      "description": "Je hebt op dit toestel gebaren bewaard zonder account. Voeg ze toe aan je account, dan heb je ze overal bij de hand.",
+      "prompt": "{{items}} importeren?",
+      "favorites_one": "{{count}} favoriet",
+      "favorites_other": "{{count}} favorieten",
+      "lists_one": "{{count}} lijst",
+      "lists_other": "{{count}} lijsten",
+      "confirm": "Importeren",
+      "skip": "Niet nu",
+      "importing": "Bezig met importeren…",
+      "success": "Je favorieten en lijsten staan nu in je account.",
+      "failed": "Importeren is niet gelukt. Je gegevens blijven op dit toestel staan."
+    }
+  },
+  "states": {
+    "loading": "Bezig met laden…",
+    "retry": "Opnieuw proberen",
+    "empty": {
+      "title": "Hier is nog niets",
+      "description": "Zodra er iets is, vind je het hier."
+    },
+    "error": {
+      "title": "Er ging iets mis",
+      "description": "We konden dit niet laden. Probeer het opnieuw."
+    },
+    "offline": {
+      "title": "Je bent offline",
+      "description": "Sommige functies werken pas weer als je verbinding hebt.",
+      "backOnline": "Je bent weer online."
+    },
+    "notFound": {
+      "title": "Pagina niet gevonden",
+      "description": "Deze pagina bestaat niet (meer).",
+      "action": "Naar de startpagina"
+    }
+  },
+  "kit": {
+    "close": "Sluiten",
+    "clear": "Wissen",
+    "clearSearch": "Wissen",
+    "searchPlaceholder": "Zoeken…",
+    "selectPlaceholder": "Maak een keuze",
+    "noOptions": "Geen opties",
+    "noResults": "Geen resultaten",
+    "showPassword": "Tonen",
+    "hidePassword": "Verbergen",
+    "required": "Verplicht",
+    "optional": "Optioneel",
+    "characterCount": "{{count}}/{{max}}",
+    "pageOf": "Pagina {{page}} van {{total}}",
+    "stepOf": "Stap {{current}} van {{total}}",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "loadMore": "Meer laden",
+    "confirm": "Bevestigen",
+    "cancel": "Annuleren",
+    "copy": "Kopiëren",
+    "copied": "Gekopieerd"
+  },
+  "email": {
+    "auth": {
+      "greeting": "Hallo,",
+      "greetingName": "Hallo {{name}},",
+      "signature": "Het team van SMOG & Co",
+      "linkFallback": "Werkt de knop niet? Kopieer deze link dan in je browser:",
+      "verifyEmail": {
+        "subject": "Bevestig je e-mailadres",
+        "preheader": "Nog één klik en je account is klaar.",
+        "heading": "Bevestig je e-mailadres",
+        "body": "Bedankt om een account aan te maken bij SMOG & Co. Klik op de knop hieronder om je e-mailadres te bevestigen.",
+        "button": "E-mailadres bevestigen",
+        "expiry": "De link is {{minutes}} minuten geldig.",
+        "footer": "Heb jij geen account aangemaakt? Dan mag je deze e-mail negeren."
+      },
+      "otp": {
+        "subject": "{{code}} is je code voor SMOG & Co",
+        "preheader": "Je code is {{code}}.",
+        "heading": "Je code",
+        "body": "Vul deze code in om verder te gaan:",
+        "expiry": "De code is {{minutes}} minuten geldig. Deel hem met niemand.",
+        "footer": "Heb jij geen code gevraagd? Dan mag je deze e-mail negeren."
+      },
+      "magicLink": {
+        "subject": "Je aanmeldlink voor SMOG & Co",
+        "preheader": "Klik op de link om je aan te melden.",
+        "heading": "Aanmelden bij SMOG & Co",
+        "body": "Klik op de knop hieronder om je aan te melden. Je hoeft geen wachtwoord in te vullen.",
+        "button": "Aanmelden",
+        "expiry": "De link is {{minutes}} minuten geldig en werkt maar één keer.",
+        "footer": "Heb jij je niet proberen aan te melden? Dan mag je deze e-mail negeren."
+      },
+      "resetPassword": {
+        "subject": "Kies een nieuw wachtwoord",
+        "preheader": "Met deze link kies je een nieuw wachtwoord.",
+        "heading": "Nieuw wachtwoord kiezen",
+        "body": "We kregen een vraag om het wachtwoord van je account te wijzigen. Klik op de knop hieronder om een nieuw wachtwoord te kiezen.",
+        "button": "Nieuw wachtwoord kiezen",
+        "expiry": "De link is {{minutes}} minuten geldig.",
+        "footer": "Heb jij dit niet gevraagd? Dan mag je deze e-mail negeren. Je wachtwoord blijft hetzelfde."
+      }
+    }
+  },
+  "devTools": {
+    "title": "Ontwikkelaarstools",
+    "open": "Ontwikkelaarstools openen",
+    "componentGallery": "Componentengalerij",
+    "mail": "Verstuurde e-mails",
+    "logs": "Logboek",
+    "clearLogs": "Logboek wissen",
+    "exportLogs": "Logboek exporteren",
+    "noLogs": "Er zijn nog geen logs.",
+    "environment": "Omgeving",
+    "version": "Versie",
+    "resetLocalData": "Lokale gegevens wissen"
+  }
+}
