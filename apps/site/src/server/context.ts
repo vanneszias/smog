@@ -33,6 +33,7 @@ export function createRpcContext(
     db: createDb(env.db),
     env: { ...env.worker, ...env.rateLimits },
     ip: clientIp(request),
+    kv: env.kv,
     locale: requestLocale(request),
     request,
     session: null,

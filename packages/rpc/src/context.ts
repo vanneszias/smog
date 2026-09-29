@@ -28,6 +28,8 @@ export interface RpcContext {
   env: RpcEnv;
   /** `cf-connecting-ip` (`unknown` when absent, e.g. in tests). */
   ip: string;
+  /** The `KV` binding: cache version keys and small settings. */
+  kv: KVNamespace;
   locale: Locale;
   request: Request;
   session: SessionWithUser | null;

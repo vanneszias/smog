@@ -5,7 +5,8 @@ export function newId(): string {
 
 const BASE64_PADDING = /[=]+$/;
 
-function toBase64Url(bytes: Uint8Array): string {
+/** Unpadded base64url (RFC 4648 §5) of `bytes`. */
+export function toBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) {
     binary += String.fromCharCode(byte);

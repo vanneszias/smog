@@ -24,7 +24,10 @@ type ContextOverrides = Partial<Omit<RpcContext, "env">> & {
   env?: Partial<RpcEnv>;
 };
 
-/** An rpc context for tests; `db` and `auth` are stubs unless overridden. */
+/**
+ * An rpc context for tests; `db`, `auth` and `kv` are stubs unless
+ * overridden (pass the test Worker's `env.DB` / `env.KV` for real ones).
+ */
 export function makeRpcContext(overrides: ContextOverrides = {}): RpcContext {
   const { env, ...rest } = overrides;
   return {
@@ -32,6 +35,7 @@ export function makeRpcContext(overrides: ContextOverrides = {}): RpcContext {
     db: {} as Db,
     env: { ...ENV, ...env },
     ip: "192.0.2.1",
+    kv: {} as KVNamespace,
     locale: "nl",
     request: new Request("http://localhost:5173/api/rpc/test"),
     session: null,
