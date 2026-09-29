@@ -9,7 +9,7 @@
       "packages/features/*"
     ],
     "catalog": {
-      "@cloudflare/vitest-plugin": "1.3.1",
+      "@cloudflare/vitest-plugin": "1.3.3",
       "@openpanel/react-native": "1.4.1",
       "@orpc/client": "1.15.4",
       "@orpc/contract": "1.15.4",
@@ -34,13 +34,13 @@
       "typescript": "7.0.2",
       "vite": "8.3.1",
       "vitest": "4.1.11",
-      "wrangler": "4.143.0",
+      "wrangler": "4.144.0",
       "zod": "4.6.5"
     }
   },
   "scripts": {
     "admin:grant": "bun scripts/admin-grant.ts",
-    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-3wwx-pv8p-q78v --ignore=GHSA-67mh-4wv8-2f99",
+    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-67mh-4wv8-2f99",
     "boundaries": "bun scripts/check-boundaries.ts",
     "build": "turbo build",
     "check": "biome check --write .",
