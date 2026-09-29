@@ -111,6 +111,8 @@ export const favorite = sqliteTable(
   (t) => [
     primaryKey({ columns: [t.userId, t.gestureId] }),
     index("favorite_gesture_id_idx").on(t.gestureId),
+    // A user's favorites newest first (`ids`, the `list` keyset).
+    index("favorite_user_created_idx").on(t.userId, t.createdAt, t.gestureId),
   ]
 );
 

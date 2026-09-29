@@ -6,7 +6,9 @@
  * - A subpath entry (`@smog/render/contract`) allows the package as a
  *   dependency, but only that subpath (and deeper) in imports.
  * - `@smog/feature:*` stands for every package in `FEATURE_PACKAGES`, and
- *   the same pattern followed by `/schema` means the `./schema` subpath of each.
+ *   the same pattern followed by `/schema` or `/contract` means that
+ *   subpath of each (a feature may import another's `./schema` and
+ *   `./contract`, both client-safe; never its `./server` or `./client`).
  * - Feature packages share the `@smog/feature:*` key.
  * - A package may always import itself.
  * - Packages in `TOOLING_DEV_DEPENDENCIES` may be a devDependency of any
@@ -76,6 +78,7 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/config",
     "@smog/utils",
     `${FEATURE_PATTERN}/schema`,
+    `${FEATURE_PATTERN}/contract`,
   ],
   "@smog/analytics": ["@smog/config", "@smog/utils"],
   "@smog/auth": ["@smog/db", "@smog/email", "@smog/config", "@smog/utils"],

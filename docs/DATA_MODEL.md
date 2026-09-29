@@ -467,7 +467,7 @@ Indexes: `gesture_category_category_id_idx` (category_id).
 | `gesture_id` | `gestureId` | text |  | PK; → gesture.id ON DELETE CASCADE |
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 
-Indexes: `favorite_gesture_id_idx` (gesture_id).
+Indexes: `favorite_gesture_id_idx` (gesture_id), `favorite_user_created_idx` (user_id, created_at, gesture_id): a user's favorites newest first.
 #### `list`
 
 | Column | TS | Type | Null | Notes |

@@ -99,9 +99,13 @@ describe("isAllowedImport", () => {
     );
   });
 
-  test("a feature may import another feature's schema only", () => {
+  test("a feature may import another feature's schema and contract only", () => {
     expect(isAllowedImport("@smog/lists", "@smog/gestures/schema")).toBe(true);
+    expect(isAllowedImport("@smog/favorites", "@smog/gestures/contract")).toBe(
+      true
+    );
     expect(isAllowedImport("@smog/lists", "@smog/gestures/server")).toBe(false);
+    expect(isAllowedImport("@smog/lists", "@smog/gestures/client")).toBe(false);
     expect(isAllowedImport("@smog/lists", "@smog/gestures")).toBe(false);
   });
 

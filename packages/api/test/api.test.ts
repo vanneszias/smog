@@ -1,6 +1,7 @@
 import type { ContractRouterClient } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
+import { favoritesContract } from "@smog/favorites/contract";
 import { gesturesContract } from "@smog/gestures/contract";
 import { implementRpc, requireTurnstile } from "@smog/rpc";
 import { baseContract, type RpcClientContext } from "@smog/rpc/contract";
@@ -140,6 +141,22 @@ describe("createApiClient", () => {
       client.gestures.search({ q: "x".repeat(101) })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(seen.at(-1)?.url).toBe("https://smog.test/api/rpc/gestures/search");
+  });
+
+  it("mounts the favorites slice under `favorites`, signed-in only", async () => {
+    expect(Object.keys(appRouter.favorites).sort()).toEqual(
+      Object.keys(favoritesContract).sort()
+    );
+    const client = createApiClient({
+      baseUrl: "https://smog.test",
+      fetch: serve,
+    });
+
+    await expect(client.favorites.ids()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+      defined: true,
+    });
+    expect(seen.at(-1)?.url).toBe("https://smog.test/api/rpc/favorites/ids");
   });
 
   it("builds TanStack Query options with a stable key", () => {
