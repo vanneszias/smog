@@ -243,6 +243,9 @@
       "action": "Naar de startpagina"
     }
   },
+  "lists": {
+    "ownerFallback": "een SMOG-gebruiker"
+  },
   "kit": {
     "close": "Sluiten",
     "clear": "Wissen",

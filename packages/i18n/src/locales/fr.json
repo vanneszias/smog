@@ -245,6 +245,9 @@
       "action": "Aller à l'accueil"
     }
   },
+  "lists": {
+    "ownerFallback": "un utilisateur de SMOG"
+  },
   "kit": {
     "close": "Fermer",
     "clear": "Effacer",

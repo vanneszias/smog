@@ -115,6 +115,7 @@
         "@smog/config": "workspace:*",
         "@smog/favorites": "workspace:*",
         "@smog/gestures": "workspace:*",
+        "@smog/lists": "workspace:*",
         "@smog/rpc": "workspace:*",
         "zod": "catalog:",
       },
@@ -258,6 +259,44 @@
       "version": "0.0.0",
       "dependencies": {
         "@smog/db": "workspace:*",
+        "@smog/local-store": "workspace:*",
+        "@smog/rpc": "workspace:*",
+        "@smog/utils": "workspace:*",
+        "drizzle-orm": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@cloudflare/vitest-plugin": "catalog:",
+        "@happy-dom/global-registrator": "20.14.5",
+        "@orpc/server": "catalog:",
+        "@orpc/tanstack-query": "catalog:",
+        "@smog/config": "workspace:*",
+        "@tanstack/react-query": "catalog:",
+        "@testing-library/dom": "10.4.2",
+        "@testing-library/react": "16.3.3",
+        "@types/bun": "catalog:",
+        "@types/react": "catalog:",
+        "@types/react-dom": "19.2.7",
+        "react": "catalog:",
+        "react-dom": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+        "wrangler": "catalog:",
+      },
+      "peerDependencies": {
+        "@tanstack/react-query": "catalog:",
+        "react": "catalog:",
+      },
+    },
+    "packages/features/lists": {
+      "name": "@smog/lists",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/client": "catalog:",
+        "@smog/auth": "workspace:*",
+        "@smog/db": "workspace:*",
+        "@smog/gestures": "workspace:*",
+        "@smog/i18n": "workspace:*",
         "@smog/local-store": "workspace:*",
         "@smog/rpc": "workspace:*",
         "@smog/utils": "workspace:*",
@@ -1389,6 +1428,8 @@
     "@smog/gestures": ["@smog/gestures@workspace:packages/features/gestures"],
 
     "@smog/i18n": ["@smog/i18n@workspace:packages/i18n"],
+
+    "@smog/lists": ["@smog/lists@workspace:packages/features/lists"],
 
     "@smog/local-store": ["@smog/local-store@workspace:packages/local-store"],
 

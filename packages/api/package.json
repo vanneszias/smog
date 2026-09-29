@@ -19,6 +19,7 @@
     "@smog/config": "workspace:*",
     "@smog/favorites": "workspace:*",
     "@smog/gestures": "workspace:*",
+    "@smog/lists": "workspace:*",
     "@smog/rpc": "workspace:*",
     "zod": "catalog:"
   },
