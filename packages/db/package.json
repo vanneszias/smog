@@ -1,0 +1,33 @@
+{
+  "name": "@smog/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./testing": "./src/testing/index.ts",
+    "./testing/apply-migrations": "./src/testing/apply-migrations.ts"
+  },
+  "scripts": {
+    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p scripts",
+    "db:generate": "drizzle-kit generate",
+    "migrate:dev": "cd ../../apps/site && wrangler d1 migrations apply DB --env dev --local",
+    "seed:build": "bun scripts/seed.ts",
+    "seed:dev": "bun scripts/seed.ts && cd ../../apps/site && wrangler d1 execute DB --env dev --local --file ../../packages/db/seed/dev.sql",
+    "test": "vitest run && bun test scripts"
+  },
+  "dependencies": {
+    "@smog/config": "workspace:*",
+    "@smog/utils": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "catalog:",
+    "@types/bun": "catalog:",
+    "drizzle-kit": "0.31.11",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

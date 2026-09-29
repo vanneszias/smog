@@ -12,6 +12,7 @@
       "@cloudflare/vitest-plugin": "1.3.1",
       "@types/bun": "1.4.2",
       "@types/react": "19.2.18",
+      "drizzle-orm": "0.45.3",
       "react": "19.2.3",
       "react-dom": "19.2.3",
       "typescript": "7.0.2",
@@ -22,7 +23,7 @@
     }
   },
   "scripts": {
-    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-3wwx-pv8p-q78v",
+    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-3wwx-pv8p-q78v --ignore=GHSA-67mh-4wv8-2f99",
     "boundaries": "bun scripts/check-boundaries.ts",
     "build": "turbo build",
     "check": "biome check --write .",

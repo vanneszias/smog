@@ -16,6 +16,7 @@
       "!!**/routeTree.gen.ts",
       "!!**/worker-configuration.d.ts",
       "!!**/*.gen.*",
+      "!!packages/db/migrations/meta",
       "!!apps/mobile/assets",
       "!!.agents",
       "!!docs/superpowers/analysis"
