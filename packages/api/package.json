@@ -1,0 +1,29 @@
+{
+  "name": "@smog/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@orpc/client": "catalog:",
+    "@orpc/contract": "catalog:",
+    "@orpc/server": "catalog:",
+    "@orpc/tanstack-query": "catalog:",
+    "@smog/config": "workspace:*",
+    "@smog/rpc": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

@@ -7,3 +7,12 @@ import type { Environment } from "@smog/config/env/worker";
 export function devToolsEnabled(environment: Environment): boolean {
   return environment === "dev";
 }
+
+/**
+ * The OpenAPI spec and reference UI (`/api/openapi/*`) exist in dev and
+ * staging (spec §7), never in production. Separate from `devToolsEnabled`,
+ * which is dev only.
+ */
+export function apiDocsEnabled(environment: Environment): boolean {
+  return environment !== "production";
+}

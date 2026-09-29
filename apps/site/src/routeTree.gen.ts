@@ -14,6 +14,8 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DevMailRouteImport } from './routes/dev/mail'
 import { Route as DevMailDotjsonRouteImport } from './routes/dev/mail[.]json'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
+import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +42,16 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOpenapiSplatRoute = ApiOpenapiSplatRouteImport.update({
+  id: '/api/openapi/$',
+  path: '/api/openapi/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
+  id: '/api/rpc/$',
+  path: '/api/rpc/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +59,8 @@ export interface FileRoutesByFullPath {
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/openapi/$': typeof ApiOpenapiSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +68,8 @@ export interface FileRoutesByTo {
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/openapi/$': typeof ApiOpenapiSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +78,28 @@ export interface FileRoutesById {
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/openapi/$': typeof ApiOpenapiSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/api/health' | '/dev/mail' | '/dev/mail.json' | '/api/auth/$'
+    | '/'
+    | '/api/health'
+    | '/dev/mail'
+    | '/dev/mail.json'
+    | '/api/auth/$'
+    | '/api/openapi/$'
+    | '/api/rpc/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/health' | '/dev/mail' | '/dev/mail.json' | '/api/auth/$'
+  to:
+    | '/'
+    | '/api/health'
+    | '/dev/mail'
+    | '/dev/mail.json'
+    | '/api/auth/$'
+    | '/api/openapi/$'
+    | '/api/rpc/$'
   id:
     | '__root__'
     | '/'
@@ -76,6 +107,8 @@ export interface FileRouteTypes {
     | '/dev/mail'
     | '/dev/mail.json'
     | '/api/auth/$'
+    | '/api/openapi/$'
+    | '/api/rpc/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -84,6 +117,8 @@ export interface RootRouteChildren {
   DevMailRoute: typeof DevMailRoute
   DevMailDotjsonRoute: typeof DevMailDotjsonRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
+  ApiRpcSplatRoute: typeof ApiRpcSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -123,6 +158,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/openapi/$': {
+      id: '/api/openapi/$'
+      path: '/api/openapi/$'
+      fullPath: '/api/openapi/$'
+      preLoaderRoute: typeof ApiOpenapiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/rpc/$': {
+      id: '/api/rpc/$'
+      path: '/api/rpc/$'
+      fullPath: '/api/rpc/$'
+      preLoaderRoute: typeof ApiRpcSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -132,6 +181,8 @@ const rootRouteChildren: RootRouteChildren = {
   DevMailRoute: DevMailRoute,
   DevMailDotjsonRoute: DevMailDotjsonRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
+  ApiRpcSplatRoute: ApiRpcSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
