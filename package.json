@@ -22,6 +22,7 @@
     }
   },
   "scripts": {
+    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-3wwx-pv8p-q78v",
     "boundaries": "bun scripts/check-boundaries.ts",
     "build": "turbo build",
     "check": "biome check --write .",
@@ -30,7 +31,8 @@
     "check-types:scripts": "tsc -p scripts",
     "dev": "turbo dev",
     "knip": "knip --no-progress",
-    "release:check": "bun run check:ci && bun run boundaries && bun run check-types && bun run test && bun run build && bun run knip",
+    "mobile:release-check": "bun scripts/mobile-release-check.ts",
+    "release:check": "bun run check:ci && bun run boundaries && bun scripts/release-config-check.ts && bun run check-types && bun run test && bun run build && bun run knip && bun run audit && bun scripts/mobile-release-check.ts",
     "test": "turbo run test test:scripts",
     "test:scripts": "bun test ./scripts"
   },

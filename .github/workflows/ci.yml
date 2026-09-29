@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+jobs:
+  release-check:
+    name: Release check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      # Vitest (Workers pool) and workerd run on Node.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      # Runs expo-doctor online: never set SMOG_OFFLINE here.
+      - run: bun run release:check
+
+  e2e:
+    name: Playwright e2e
+    # Placeholder: Playwright e2e is added in phase 9.
+    if: false
+    needs: release-check
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Playwright e2e is added in phase 9"

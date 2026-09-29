@@ -9,7 +9,9 @@
       "distribution": "internal",
       "channel": "development",
       "env": {
-        "EXPO_PUBLIC_ENVIRONMENT": "dev"
+        "EXPO_PUBLIC_ENVIRONMENT": "dev",
+        "EXPO_PUBLIC_API_URL": "http://localhost:5173",
+        "EXPO_PUBLIC_SITE_HOST": "localhost"
       }
     },
     "staging": {
