@@ -190,6 +190,7 @@
         "zod": "catalog:",
       },
       "devDependencies": {
+        "@happy-dom/global-registrator": "20.14.5",
         "@types/bun": "catalog:",
         "typescript": "catalog:",
       },
@@ -248,7 +249,6 @@
       },
       "devDependencies": {
         "@cloudflare/vitest-plugin": "catalog:",
-        "@happy-dom/global-registrator": "20.14.5",
         "@orpc/server": "catalog:",
         "@orpc/tanstack-query": "catalog:",
         "@tanstack/react-query": "catalog:",
@@ -283,7 +283,6 @@
       },
       "devDependencies": {
         "@cloudflare/vitest-plugin": "catalog:",
-        "@happy-dom/global-registrator": "20.14.5",
         "@orpc/server": "catalog:",
         "@orpc/tanstack-query": "catalog:",
         "@smog/config": "workspace:*",
@@ -317,7 +316,6 @@
       },
       "devDependencies": {
         "@cloudflare/vitest-plugin": "catalog:",
-        "@happy-dom/global-registrator": "20.14.5",
         "@orpc/server": "catalog:",
         "@orpc/tanstack-query": "catalog:",
         "@smog/config": "workspace:*",
@@ -355,7 +353,6 @@
       },
       "devDependencies": {
         "@cloudflare/vitest-plugin": "catalog:",
-        "@happy-dom/global-registrator": "20.14.5",
         "@orpc/server": "catalog:",
         "@orpc/tanstack-query": "catalog:",
         "@smog/config": "workspace:*",

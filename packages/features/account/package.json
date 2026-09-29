@@ -11,7 +11,7 @@
   },
   "scripts": {
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json && tsc -p tsconfig.test.json",
-    "test": "vitest run && bun test --preload ./src/testing/happy-dom.ts src"
+    "test": "vitest run && bun test --preload @smog/config/testing/happy-dom src"
   },
   "dependencies": {
     "@smog/auth": "workspace:*",
@@ -28,7 +28,6 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "catalog:",
-    "@happy-dom/global-registrator": "20.14.5",
     "@orpc/server": "catalog:",
     "@orpc/tanstack-query": "catalog:",
     "@tanstack/react-query": "catalog:",
