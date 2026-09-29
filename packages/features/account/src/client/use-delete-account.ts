@@ -10,11 +10,13 @@ import type { AccountSlice } from "./import-guest-data";
 export type DeleteAccountStatus = "idle" | "deleting" | "deleted" | "error";
 
 /**
- * Why a deletion failed: `SESSION_NOT_FRESH` (sign in again or enter the
- * password), `INVALID_PASSWORD`, `RATE_LIMITED`, or `UNKNOWN`.
+ * Why a deletion failed: `PASSWORD_REQUIRED` (the account has a password:
+ * ask for it), `INVALID_PASSWORD`, `SESSION_NOT_FRESH` (no password: sign
+ * in again), `RATE_LIMITED`, or `UNKNOWN`.
  */
 export type DeleteAccountFailure =
   | "INVALID_PASSWORD"
+  | "PASSWORD_REQUIRED"
   | "RATE_LIMITED"
   | "SESSION_NOT_FRESH"
   | "UNKNOWN";
@@ -37,6 +39,7 @@ export interface UseDeleteAccountOptions {
 
 const KNOWN_FAILURES: readonly string[] = [
   "INVALID_PASSWORD",
+  "PASSWORD_REQUIRED",
   "RATE_LIMITED",
   "SESSION_NOT_FRESH",
 ] satisfies DeleteAccountFailure[];

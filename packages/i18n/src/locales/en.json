@@ -441,8 +441,12 @@
     "title": "Your account",
     "signedInAs": "Signed in as {{email}}",
     "comingSoon": "Soon you will also manage your sign-in methods, privacy and preferences here.",
+    "export": {
+      "sensitive": "This file holds your personal data and the active share links of your lists: anyone with a link can open that list. Keep it safe and do not share it."
+    },
     "errors": {
-      "sessionNotFresh": "Sign in again or enter your password to delete your account.",
+      "passwordRequired": "Enter your password to delete your account.",
+      "sessionNotFresh": "Sign in again to delete your account.",
       "invalidPassword": "That password is not correct.",
       "deleteFailed": "Your account could not be deleted. Please try again."
     }

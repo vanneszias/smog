@@ -196,6 +196,20 @@ export async function signedUpUser(name = "Anna"): Promise<AuthedUser> {
   return { auth, cookie, user: row };
 }
 
+/**
+ * A signed-in user without a password (as after a Google, Apple or
+ * passkey sign-up): the credential account is removed after sign-in.
+ */
+export async function passwordlessUser(name = "Anna"): Promise<AuthedUser> {
+  const authed = await signedUpUser(name);
+  await env.DB.prepare(
+    "DELETE FROM account WHERE user_id = ? AND provider_id = 'credential'"
+  )
+    .bind(authed.user.id)
+    .run();
+  return authed;
+}
+
 /** An rpc context with the real auth, the cookie and the session it reads to. */
 export async function authedContext(
   authed: Pick<AuthedUser, "auth" | "cookie">,

@@ -1,15 +1,20 @@
 /**
  * Account deletion (`account.delete`) through Better Auth `deleteUser`
- * (`user.deleteUser.enabled` in `@smog/auth`). Better Auth checks the
- * session is fresh (`session.freshAge`) unless the password is sent and
- * right, deletes the sessions, the provider accounts and the user row,
- * and the foreign keys do the rest (spec §5): passkeys, favorites, lists
- * with their items and share links, and consent rows cascade;
- * `audit_log.actor_id`, `list_item.added_by`, `list_share.created_by` and
- * `sponsorship_event.actor_id` become NULL. Sponsor rows have no user
- * reference and stay (retention). Nothing runs before or after it.
+ * (`user.deleteUser.enabled` in `@smog/auth`; its HTTP route is disabled,
+ * so this is the only way in). An account with a password must send it
+ * (a stolen session alone never deletes it); one without (passkeys,
+ * Google, Apple) needs a session younger than `session.freshAge`, which
+ * Better Auth checks. Better Auth deletes the sessions, the provider
+ * accounts and the user row, and the foreign keys do the rest (spec §5):
+ * passkeys, favorites, lists with their items and share links, and
+ * consent rows cascade; `audit_log.actor_id`, `list_item.added_by`,
+ * `list_share.created_by` and `sponsorship_event.actor_id` become NULL.
+ * Sponsor rows have no user reference and stay (retention).
  */
 import type { Auth } from "@smog/auth";
+import { account } from "@smog/db";
+import type { Db } from "@smog/db/client";
+import { and, eq, isNotNull } from "drizzle-orm";
 import type { DeleteAccountErrorCode } from "../contract";
 import type { DeleteAccountResult } from "../schema";
 
@@ -47,28 +52,53 @@ function betterAuthCode(error: unknown): string | undefined {
   }
 }
 
+/** Whether the user has a credential account with a password. */
+async function hasPassword(db: Db, userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: account.id })
+    .from(account)
+    .where(
+      and(
+        eq(account.userId, userId),
+        eq(account.providerId, "credential"),
+        isNotNull(account.password)
+      )
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
 export interface DeleteAccountDeps {
   auth: Auth;
+  db: Db;
   /** The request's headers: Better Auth reads the session from them again. */
   headers: Headers;
 }
 
 /**
- * Deletes the signed-in user's account. Throws `DeleteAccountError` when
- * Better Auth refuses (a stale session without the password, a wrong
- * password, no session), and rethrows anything else.
+ * Deletes `userId`'s account (the signed-in user). Throws
+ * `DeleteAccountError` when it is refused (a password account without
+ * the password, a wrong password, a stale session, no session), and
+ * rethrows anything else.
  */
 export async function deleteAccount(
   deps: DeleteAccountDeps,
+  userId: string,
   input: { password?: string | undefined }
 ): Promise<DeleteAccountResult> {
   try {
+    if (input.password === undefined && (await hasPassword(deps.db, userId))) {
+      throw new DeleteAccountError("PASSWORD_REQUIRED");
+    }
     await deps.auth.api.deleteUser({
       body: input.password === undefined ? {} : { password: input.password },
       headers: deps.headers,
     });
     return { deleted: true };
   } catch (error) {
+    if (error instanceof DeleteAccountError) {
+      throw error;
+    }
     const code = betterAuthCode(error);
     const refusal = code === undefined ? undefined : REFUSALS[code];
     if (refusal) {

@@ -3,7 +3,7 @@
  * procedures, shared by the contract, the server and the hooks.
  * Client-safe (no server imports).
  */
-import { LOCALES } from "@smog/config/constants";
+import { CONSENT_POLICY_VERSION, LOCALES } from "@smog/config/constants";
 import {
   gestureIdSchema,
   LIST_DESCRIPTION_MAX,
@@ -180,6 +180,11 @@ export const consentStateSchema = z.object({
   analytics: z.boolean().nullable(),
   /** Epoch milliseconds, `null` while undecided. */
   decidedAt: z.number().int().nullable(),
+  /**
+   * Whether to ask: undecided, or a yes given under an older policy
+   * (`policyVersion` ≠ `CONSENT_POLICY_VERSION`). An old no stays a no.
+   */
+  needsDecision: z.boolean(),
   /** The policy version the decision refers to, `null` while undecided. */
   policyVersion: z.string().nullable(),
 });
@@ -191,8 +196,21 @@ export type ConsentState = z.infer<typeof consentStateSchema>;
 export const UNDECIDED_CONSENT: ConsentState = {
   analytics: null,
   decidedAt: null,
+  needsDecision: true,
   policyVersion: null,
 };
+
+/**
+ * `needsDecision` for a decision: undecided, or a yes under another policy
+ * version than `current` (a no needs no new consent).
+ */
+export function needsConsentDecision(
+  analytics: boolean | null,
+  policyVersion: string | null,
+  current: string = CONSENT_POLICY_VERSION
+): boolean {
+  return analytics === null || (analytics && policyVersion !== current);
+}
 
 // Export (`account.export`: GDPR access and portability)
 

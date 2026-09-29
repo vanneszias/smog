@@ -19,10 +19,18 @@ export type ConsentStatus = "loading" | "ready" | "error";
 
 export interface Consent {
   /**
-   * The analytics decision: `null` while undecided, and also while
-   * `loading` or on `error`, so nothing is ever sent before it is known.
+   * The analytics decision: `null` while undecided, while `loading` or on
+   * `error`, and while a yes given under an older policy waits for a new
+   * decision, so nothing is ever sent without a current yes.
    */
   analytics: boolean | null;
+  /**
+   * Show the consent prompt: undecided, or signed in with a yes given
+   * under an older policy (`CONSENT_POLICY_VERSION`); an old no stays.
+   * `false` while `loading` or on `error`. A guest's device choice has no
+   * policy version, so a guest is asked only while undecided.
+   */
+  needsDecision: boolean;
   /**
    * Records a decision. Signed in, it is appended to the consent log first
    * and then mirrored to the device; a guest's stays on the device. Rejects
@@ -84,7 +92,9 @@ export function useConsent(): Consent {
       !ready ||
       server === undefined ||
       server.analytics === null ||
-      server.decidedAt === null
+      server.decidedAt === null ||
+      // A yes under an older policy is not current: the device keeps its own.
+      server.needsDecision
     ) {
       return;
     }
@@ -121,17 +131,29 @@ export function useConsent(): Consent {
     [mutateAsync, queryClient, queryKey, store, userId]
   );
 
+  const unknown = { analytics: null, needsDecision: false, set } as const;
   if (auth.status === "loading" || !ready) {
-    return { analytics: null, set, status: "loading" };
+    return { ...unknown, status: "loading" };
   }
   if (userId === undefined) {
-    return { analytics: local.analytics, set, status: "ready" };
+    return {
+      analytics: local.analytics,
+      needsDecision: local.analytics === null,
+      set,
+      status: "ready",
+    };
   }
   if (remote.status === "pending") {
-    return { analytics: null, set, status: "loading" };
+    return { ...unknown, status: "loading" };
   }
   if (remote.status === "error") {
-    return { analytics: null, set, status: "error" };
+    return { ...unknown, status: "error" };
   }
-  return { analytics: remote.data.analytics, set, status: "ready" };
+  const { needsDecision } = remote.data;
+  return {
+    analytics: needsDecision ? null : remote.data.analytics,
+    needsDecision,
+    set,
+    status: "ready",
+  };
 }

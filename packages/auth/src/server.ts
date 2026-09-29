@@ -173,6 +173,10 @@ export function createAuth(options: CreateAuthOptions) {
       provider: "sqlite",
       schema: { account, passkey: passkeyTable, session, user, verification },
     }),
+    // Deletion goes only through `account.delete` (`auth.api`, which
+    // `disabledPaths` does not affect): it needs the typed DELETE and has
+    // its rate limits, which the HTTP route would skip.
+    disabledPaths: ["/delete-user", "/delete-user/callback"],
     emailAndPassword: {
       enabled: true,
       maxPasswordLength: PASSWORD_MAX_LENGTH,

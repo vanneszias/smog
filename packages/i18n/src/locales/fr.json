@@ -446,8 +446,12 @@
     "title": "Votre compte",
     "signedInAs": "Connecté en tant que {{email}}",
     "comingSoon": "Bientôt, vous gérerez aussi ici vos méthodes de connexion, votre confidentialité et vos préférences.",
+    "export": {
+      "sensitive": "Ce fichier contient vos données personnelles et les liens de partage actifs de vos listes : toute personne disposant d'un lien peut ouvrir la liste. Conservez-le en lieu sûr et ne le partagez pas."
+    },
     "errors": {
-      "sessionNotFresh": "Reconnectez-vous ou saisissez votre mot de passe pour supprimer votre compte.",
+      "passwordRequired": "Saisissez votre mot de passe pour supprimer votre compte.",
+      "sessionNotFresh": "Reconnectez-vous pour supprimer votre compte.",
       "invalidPassword": "Ce mot de passe n'est pas correct.",
       "deleteFailed": "La suppression de votre compte a échoué. Veuillez réessayer."
     }

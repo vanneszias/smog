@@ -109,6 +109,7 @@ function fakeApi(server: Server) {
           server.consent = {
             analytics: input.analytics,
             decidedAt: 5000 + server.consentCalls.length,
+            needsDecision: false,
             policyVersion: CONSENT_POLICY_VERSION,
           };
           return server.consent;
@@ -198,13 +199,19 @@ describe("useConsent: guest", () => {
     const { result } = renderHook(() => useConsent(), { wrapper });
 
     await waitFor(() => expect(result.current.status).toBe("ready"));
-    expect(result.current.analytics).toBeNull();
+    expect(result.current).toMatchObject({
+      analytics: null,
+      needsDecision: true,
+    });
 
     await act(async () => {
       await result.current.set(true);
     });
 
-    expect(result.current.analytics).toBe(true);
+    expect(result.current).toMatchObject({
+      analytics: true,
+      needsDecision: false,
+    });
     expect(store.getSnapshot().consent.analytics).toBe(true);
     expect(server.consentCalls).toEqual([]);
   });
@@ -229,6 +236,7 @@ describe("useConsent: signed in", () => {
     server.consent = {
       analytics: true,
       decidedAt: 4000,
+      needsDecision: false,
       policyVersion: CONSENT_POLICY_VERSION,
     };
     const { wrapper } = setup(store, ANNA, server);
@@ -246,6 +254,39 @@ describe("useConsent: signed in", () => {
         decidedAt: 4000,
       })
     );
+  });
+
+  test("a yes under an older policy asks again and sends nothing meanwhile", async () => {
+    const store = await newStore();
+    await store.update(setConsent(true, 1));
+    const server = newServer();
+    server.consent = {
+      analytics: true,
+      decidedAt: 4000,
+      needsDecision: true,
+      policyVersion: "2020-01-01",
+    };
+    const { wrapper } = setup(store, ANNA, server);
+    const { result } = renderHook(() => useConsent(), { wrapper });
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current).toMatchObject({
+      analytics: null,
+      needsDecision: true,
+    });
+    // Not mirrored: the old yes is not a current decision.
+    expect(store.getSnapshot().consent).toEqual({
+      analytics: true,
+      decidedAt: 1,
+    });
+
+    await act(async () => {
+      await result.current.set(true);
+    });
+    expect(result.current).toMatchObject({
+      analytics: true,
+      needsDecision: false,
+    });
   });
 
   test("leaves the device choice alone while the account has none", async () => {

@@ -46,20 +46,29 @@ export function createAccountRouter(deps: AccountRouterDeps) {
           await setConsent(context.db, context.user.id, input)
       ),
     },
-    // Limited like the auth endpoints (`RL_AUTH`, per IP): it checks a
-    // password, and Better Auth's own limiter does not see `auth.api` calls.
+    // It checks a password and Better Auth's own limiter does not see
+    // `auth.api` calls, so `RL_AUTH` (5/60 s in staging and production)
+    // limits it twice: per IP, and per user (a stolen session used from
+    // many IPs still gets 5 guesses a minute).
     delete: os.delete.handler(async ({ context, errors, input }) => {
-      if (
-        !(await checkRateLimit(
+      const allowed = await Promise.all([
+        checkRateLimit(context.env.RL_AUTH, `${context.ip}:account.delete`),
+        checkRateLimit(
           context.env.RL_AUTH,
-          `${context.ip}:account.delete`
-        ))
-      ) {
+          `user:${context.user.id}:account.delete`
+        ),
+      ]);
+      if (allowed.includes(false)) {
         throw errors.RATE_LIMITED();
       }
       try {
         return await deleteAccount(
-          { auth: context.auth, headers: context.request.headers },
+          {
+            auth: context.auth,
+            db: context.db,
+            headers: context.request.headers,
+          },
+          context.user.id,
           input
         );
       } catch (error) {
@@ -69,6 +78,8 @@ export function createAccountRouter(deps: AccountRouterDeps) {
         switch (error.code) {
           case "INVALID_PASSWORD":
             throw errors.INVALID_PASSWORD({ cause: error });
+          case "PASSWORD_REQUIRED":
+            throw errors.PASSWORD_REQUIRED({ cause: error });
           case "SESSION_NOT_FRESH":
             throw errors.SESSION_NOT_FRESH({ cause: error });
           default:

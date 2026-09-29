@@ -23,7 +23,12 @@ import {
 export const DELETE_ACCOUNT_ERRORS = {
   /** The password is wrong, or the account has none to check. */
   INVALID_PASSWORD: { status: 400 },
-  /** The session is older than `freshAge` and no password was sent. */
+  /** The account has a password, so deleting it needs the password. */
+  PASSWORD_REQUIRED: { status: 400 },
+  /**
+   * The session is older than `freshAge` (an account without a password:
+   * sign in again).
+   */
   SESSION_NOT_FRESH: { status: 403 },
 } as const;
 
@@ -38,8 +43,9 @@ export const accountContract = {
     set: baseContract.input(setConsentInputSchema).output(consentStateSchema),
   },
   /**
-   * Deletes the account through Better Auth `deleteUser`: it needs a fresh
-   * session (`freshAge`) or the password. Every session ends and the data
+   * Deletes the account through Better Auth `deleteUser`. An account with
+   * a password needs the password; one without (passkeys, Google, Apple)
+   * needs a fresh session (`freshAge`). Limited per IP and per user. Every session ends and the data
    * cascades (spec §5); sponsorship records stay (they are the sponsor's).
    * The client then signs out and clears the local store.
    */
@@ -47,7 +53,11 @@ export const accountContract = {
     .errors(DELETE_ACCOUNT_ERRORS)
     .input(deleteAccountInputSchema)
     .output(deleteAccountResultSchema),
-  /** Everything stored about the user, as a versioned JSON document. */
+  /**
+   * Everything stored about the user, as a versioned JSON document.
+   * Sensitive: it holds live share links (bearer links); the UI says so
+   * (`account.export.sensitive`).
+   */
   export: baseContract.output(accountExportSchema),
   /**
    * Merges a guest's on-device favorites, lists and consent choice into the

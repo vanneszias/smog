@@ -17,6 +17,7 @@ import {
 } from "../src/server";
 import { accountDeps } from "./deps";
 import {
+  type AuthedUser,
   addGestures,
   addList,
   addUser,
@@ -24,6 +25,7 @@ import {
   contextFor,
   count,
   PASSWORD,
+  passwordlessUser,
   SITE_URL,
   signedUpUser,
   signIn,
@@ -241,7 +243,26 @@ describe("account.consent", () => {
     expect(await getConsent(testDb(), owner.id)).toEqual({
       analytics: null,
       decidedAt: null,
+      needsDecision: true,
       policyVersion: null,
+    });
+  });
+
+  it("asks again after a policy change only when the old decision was yes", async () => {
+    const yes = await addUser();
+    const no = await addUser();
+    await addConsent(yes.id, true, 1000, { policyVersion: "2020-01-01" });
+    await addConsent(no.id, false, 1000, { policyVersion: "2020-01-01" });
+
+    expect(await getConsent(testDb(), yes.id)).toEqual({
+      analytics: true,
+      decidedAt: 1000,
+      needsDecision: true,
+      policyVersion: "2020-01-01",
+    });
+    expect(await getConsent(testDb(), no.id)).toMatchObject({
+      analytics: false,
+      needsDecision: false,
     });
   });
 
@@ -265,11 +286,13 @@ describe("account.consent", () => {
     expect(first).toEqual({
       analytics: true,
       decidedAt: NOW.getTime(),
+      needsDecision: false,
       policyVersion: CONSENT_POLICY_VERSION,
     });
     expect(second).toEqual({
       analytics: false,
       decidedAt: later.getTime(),
+      needsDecision: false,
       policyVersion: CONSENT_POLICY_VERSION,
     });
     expect(await getConsent(testDb(), owner.id)).toEqual(second);
@@ -318,6 +341,7 @@ describe("account.consent", () => {
     expect(await getConsent(testDb(), owner.id)).toEqual({
       analytics: false,
       decidedAt: 1000,
+      needsDecision: false,
       policyVersion: "2020-01-01",
     });
   });
@@ -570,7 +594,7 @@ describe("account.delete", () => {
 
     const result = await call(
       accountRouter.delete,
-      { confirm: "DELETE" },
+      { confirm: "DELETE", password: PASSWORD },
       await authedContext(authed)
     );
 
@@ -634,26 +658,60 @@ describe("account.delete", () => {
     expect(sessions).toEqual([null, null]);
   });
 
-  it("is rate-limited per IP with RL_AUTH", async () => {
+  it.each([
+    ["the IP", "192.0.2.1:account.delete"],
+    ["the user", "user:"],
+  ])("is rate-limited per %s with RL_AUTH", async (_label, limited) => {
     const authed = await signedUpUser();
     const keys: string[] = [];
     const RL_AUTH = {
       limit: ({ key }: { key: string }) => {
         keys.push(key);
-        return Promise.resolve({ success: false });
+        return Promise.resolve({ success: !key.startsWith(limited) });
       },
     };
     await expect(
       call(
         accountRouter.delete,
-        { confirm: "DELETE" },
+        { confirm: "DELETE", password: PASSWORD },
         await authedContext(authed, { RL_AUTH })
       )
     ).rejects.toMatchObject({ code: "RATE_LIMITED" });
-    expect(keys).toEqual(["192.0.2.1:account.delete"]);
+    expect(keys.sort()).toEqual([
+      "192.0.2.1:account.delete",
+      `user:${authed.user.id}:account.delete`,
+    ]);
     expect(
       await count("SELECT count(*) AS n FROM user WHERE id = ?", authed.user.id)
     ).toBe(1);
+  });
+
+  it("needs the password of an account that has one, even on a fresh session", async () => {
+    const authed = await signedUpUser();
+    await expect(
+      call(
+        accountRouter.delete,
+        { confirm: "DELETE" },
+        await authedContext(authed)
+      )
+    ).rejects.toMatchObject({ code: "PASSWORD_REQUIRED", status: 400 });
+    expect(
+      await count("SELECT count(*) AS n FROM user WHERE id = ?", authed.user.id)
+    ).toBe(1);
+  });
+
+  it("deletes an account without a password on a fresh session", async () => {
+    const authed = await passwordlessUser();
+    expect(
+      await call(
+        accountRouter.delete,
+        { confirm: "DELETE" },
+        await authedContext(authed)
+      )
+    ).toEqual({ deleted: true });
+    expect(
+      await count("SELECT count(*) AS n FROM user WHERE id = ?", authed.user.id)
+    ).toBe(0);
   });
 
   it("needs the word DELETE", async () => {
@@ -677,8 +735,7 @@ describe("account.delete", () => {
   });
 
   describe("with a session older than freshAge", () => {
-    async function staleUser() {
-      const authed = await signedUpUser();
+    async function makeStale(authed: AuthedUser): Promise<AuthedUser> {
       await env.DB.prepare(
         "UPDATE session SET created_at = ? WHERE user_id = ?"
       )
@@ -687,8 +744,12 @@ describe("account.delete", () => {
       return authed;
     }
 
-    it("refuses without the password", async () => {
-      const authed = await staleUser();
+    async function staleUser(): Promise<AuthedUser> {
+      return await makeStale(await signedUpUser());
+    }
+
+    it("refuses an account without a password: sign in again", async () => {
+      const authed = await makeStale(await passwordlessUser());
       await expect(
         call(
           accountRouter.delete,

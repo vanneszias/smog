@@ -222,6 +222,27 @@ describe("magic link", () => {
   });
 });
 
+describe("account deletion over HTTP", () => {
+  it("is not routed: only `account.delete` (auth.api) deletes", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    const member = await makeUser(ctx.db, { email, emailVerified: true });
+    const cookie = cookieHeader(await signInWithOtp(ctx, email));
+
+    const deleted = await ctx.call("/delete-user", { body: {}, cookie });
+    const callback = await ctx.call("/delete-user/callback?token=x", {
+      cookie,
+    });
+
+    expect([deleted.status, callback.status]).toEqual([404, 404]);
+    expect(
+      await ctx.db.query.user.findFirst({
+        where: (table, { eq: is }) => is(table.id, member.id),
+      })
+    ).toBeDefined();
+  });
+});
+
 describe("sessions and roles", () => {
   it("(f) getSession returns role 'admin' for an admin", async () => {
     const ctx = setup();

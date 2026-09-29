@@ -10,6 +10,7 @@ import { newId } from "@smog/utils";
 import { and, desc, eq, sql } from "drizzle-orm";
 import {
   type ConsentState,
+  needsConsentDecision,
   type SetConsent,
   UNDECIDED_CONSENT,
 } from "../schema";
@@ -41,6 +42,7 @@ export async function getConsent(
     return {
       analytics: row.granted,
       decidedAt: row.createdAt.getTime(),
+      needsDecision: needsConsentDecision(row.granted, row.policyVersion),
       policyVersion: row.policyVersion,
     };
   } catch (error) {
@@ -76,6 +78,7 @@ export async function setConsent(
   return {
     analytics: input.analytics,
     decidedAt: now.getTime(),
+    needsDecision: false,
     policyVersion: CONSENT_POLICY_VERSION,
   };
 }
