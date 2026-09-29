@@ -30,6 +30,11 @@ import "@/utils/i18n";
 
 import logger from "@/utils/logger";
 
+// Keep home underneath deep-linked detail screens so users can navigate back.
+export const unstable_settings = {
+  initialRouteName: "(tabs)",
+};
+
 function NativeAnalytics({
   showConsentPrompt,
 }: {
