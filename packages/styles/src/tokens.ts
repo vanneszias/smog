@@ -16,49 +16,73 @@ const brand = {
 } as const;
 
 /**
- * Colour roles, light and dark, exactly as spec §16 lists them, with one
- * adjustment recorded in docs/DECISIONS.md: the light `focusRing` is a darker
- * shade of the brand orange, because `#EE971C` measures 2.19:1 on
- * `background` and a focus indicator needs 3:1 (WCAG 1.4.11).
+ * Colour roles, light and dark, as spec §16 lists them. Two amendments are
+ * recorded in docs/DECISIONS.md:
+ *
+ * - The light `focusRing` is a darker shade of the brand orange, because
+ *   `#EE971C` measures 2.19:1 on `background` and a focus indicator needs
+ *   3:1 (WCAG 1.4.11).
+ * - Text roles for the status hues. `*Subtle` is a tinted background
+ *   (badges, banners), `*Strong` is the shade of the hue that passes as body
+ *   text on its subtle tint and on every page background, and
+ *   `accentForeground` is text on an `accent` fill (like
+ *   `primaryForeground` on `primary`). The base `success`/`warning`/`danger`
+ *   stay the §16 hues, for icons and fills.
  */
 const light = {
   accent: brand.orange,
+  accentForeground: "#17211A",
   background: "#F7F9F7",
   border: "#D2DAD3",
   borderSubtle: "#E4EAE4",
   danger: "#C62828",
+  dangerStrong: "#A61F1F",
+  dangerSubtle: "#FBE9E9",
   focusRing: "#C3780F",
   foreground: "#17211A",
   foregroundMuted: "#55635A",
   primary: brand.green,
   primaryForeground: "#FFFFFF",
+  primaryStrong: "#00694E",
   primarySubtle: "#E3F2EC",
   success: "#1F8A4C",
+  successStrong: "#166B3A",
+  successSubtle: "#E3F3EA",
   surface: "#FFFFFF",
   surfaceRaised: "#FFFFFF",
   surfaceSunken: "#EEF3EE",
   warning: "#B7791F",
+  warningStrong: "#7A4D06",
+  warningSubtle: "#FBF0DA",
 } as const;
 
 export type ColorRole = keyof typeof light;
 
 const dark: { readonly [Role in ColorRole]: string } = {
   accent: "#F5AB45",
+  accentForeground: "#04140E",
   background: "#0F1210",
   border: "#343B36",
   borderSubtle: "#262C28",
   danger: "#F16B6B",
+  dangerStrong: "#F16B6B",
+  dangerSubtle: "#3A1717",
   focusRing: "#F5AB45",
   foreground: "#EEF3EF",
   foregroundMuted: "#A5B2A9",
   primary: "#2BB38A",
   primaryForeground: "#04140E",
+  primaryStrong: "#2BB38A",
   primarySubtle: "#0F2A21",
   success: "#4CC27E",
+  successStrong: "#4CC27E",
+  successSubtle: "#123021",
   surface: "#171B18",
   surfaceRaised: "#1E2320",
   surfaceSunken: "#0B0D0C",
   warning: "#E9B24A",
+  warningStrong: "#E9B24A",
+  warningSubtle: "#33260B",
 };
 
 interface TypeStep {

@@ -14,22 +14,27 @@ function mapValues<T>(
   );
 }
 
+/**
+ * Every role reads its CSS variable, so one class (`bg-surface`) follows the
+ * theme: the app applies `themeVars.light` or `themeVars.dark` from
+ * `@smog/styles/native` at its root. The channel form keeps opacity
+ * modifiers (`bg-primary/10`) working.
+ */
 function colours(): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const [role, value] of Object.entries(tokens.color.light)) {
-    result[kebab(role)] = value;
-  }
-  // NativeWind needs a real class per dark colour: `dark:bg-surface-dark`.
-  for (const [role, value] of Object.entries(tokens.color.dark)) {
-    result[`${kebab(role)}-dark`] = value;
-  }
-  return result;
+  return Object.fromEntries(
+    Object.keys(tokens.color.light).map((role) => [
+      kebab(role),
+      `rgb(var(--color-${kebab(role)}) / <alpha-value>)`,
+    ])
+  );
 }
 
 /**
  * The NativeWind (Tailwind 3) preset for the mobile app and
  * `@smog/ui-native`. Its scales replace Tailwind's defaults, so only token
- * values exist. Use it after `nativewind/preset`:
+ * values exist. `darkMode: "class"` lets the app override the system scheme
+ * (`colorScheme.set`); colours switch through variables, not `dark:`
+ * classes. Use it after `nativewind/preset`:
  * `presets: [require("nativewind/preset"), require("@smog/styles/tailwind-preset")]`.
  */
 export function renderNativeTailwindConfig(): string {
@@ -54,6 +59,7 @@ export function renderNativeTailwindConfig(): string {
         { lineHeight: px(step.lineHeight) },
       ]),
       fontWeight: mapValues(fontWeight, String),
+      lineHeight: mapValues(fontSize, (step) => px(step.lineHeight)),
       // Tailwind 3 emits screens in object order, so they must ascend.
       screens: Object.fromEntries(
         Object.entries(breakpoint)

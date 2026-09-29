@@ -5,6 +5,7 @@ export {
   CONTRAST_PAIRS,
   type ContrastPair,
   contrastRatio,
+  NON_TEXT_ROLES,
 } from "./contrast";
 export { renderNativeTailwindConfig } from "./generate-native";
 export { renderWebThemeCss } from "./generate-web";

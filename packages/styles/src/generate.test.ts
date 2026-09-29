@@ -1,16 +1,18 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { join } from "node:path";
 import { renderNativeTailwindConfig } from "./generate-native";
-import { renderWebThemeCss } from "./generate-web";
+import { kebab, renderWebThemeCss } from "./generate-web";
+import { nativeThemeVariables } from "./native-variables";
 import { tokens } from "./tokens";
 
 const SHADOW_1 = /--shadow-1: [^;]+;/;
 const HEX_VALUE = /#[0-9A-Fa-f]{6}\b/g;
-const GENERATED = new URL("../generated/", import.meta.url);
+const GENERATED = join(import.meta.dir, "../generated");
 
 function committed(name: string): string {
-  return readFileSync(new URL(name, GENERATED), "utf8");
+  return readFileSync(join(GENERATED, name), "utf8");
 }
 
 describe("generated files (drift)", () => {
@@ -40,6 +42,7 @@ describe("renderWebThemeCss", () => {
       "ease",
       "breakpoint",
       "font-weight",
+      "container",
     ]) {
       expect(css).toContain(`--${namespace}-*: initial;`);
     }
@@ -103,6 +106,7 @@ interface Preset {
     borderRadius: Record<string, string>;
     colors: Record<string, string>;
     fontSize: Record<string, [string, { lineHeight: string }]>;
+    lineHeight: Record<string, string>;
     spacing: Record<string, string>;
   };
 }
@@ -116,10 +120,34 @@ describe("renderNativeTailwindConfig", () => {
     expect(preset.darkMode).toBe("class");
   });
 
-  it("has light colours and -dark variants", () => {
-    expect(preset.theme.colors.primary).toBe("#00805F");
-    expect(preset.theme.colors["primary-dark"]).toBe("#2BB38A");
-    expect(preset.theme.colors["surface-raised-dark"]).toBe("#1E2320");
+  it("maps every colour role to its CSS variable, with alpha support", () => {
+    expect(preset.theme.colors.primary).toBe(
+      "rgb(var(--color-primary) / <alpha-value>)"
+    );
+    expect(preset.theme.colors["surface-raised"]).toBe(
+      "rgb(var(--color-surface-raised) / <alpha-value>)"
+    );
+    for (const role of Object.keys(tokens.color.light)) {
+      expect(Object.keys(preset.theme.colors)).toContain(kebab(role));
+    }
+  });
+
+  it("has no *-dark colour keys (the variables switch instead)", () => {
+    expect(
+      Object.keys(preset.theme.colors).filter((key) => key.endsWith("-dark"))
+    ).toEqual([]);
+  });
+
+  it("replaces the default line heights with the type scale", () => {
+    expect(preset.theme.lineHeight).toEqual({
+      body: "24px",
+      "body-sm": "20px",
+      caption: "16px",
+      display: "48px",
+      "title-1": "34px",
+      "title-2": "28px",
+      "title-3": "24px",
+    });
   });
 
   it("uses pixel values", () => {
@@ -130,5 +158,27 @@ describe("renderNativeTailwindConfig", () => {
       "16px",
       { lineHeight: "24px" },
     ]);
+  });
+});
+
+describe("nativeThemeVariables", () => {
+  it("holds every role as space-separated RGB channels in both themes", () => {
+    for (const theme of ["light", "dark"] as const) {
+      const variables = nativeThemeVariables[theme];
+      expect(Object.keys(variables)).toHaveLength(
+        Object.keys(tokens.color[theme]).length
+      );
+      for (const [role, hex] of Object.entries(tokens.color[theme])) {
+        const channels = [1, 3, 5].map((start) =>
+          Number.parseInt(hex.slice(start, start + 2), 16)
+        );
+        expect(variables[`--color-${kebab(role)}`]).toBe(channels.join(" "));
+      }
+    }
+  });
+
+  it("switches the brand primary between the themes", () => {
+    expect(nativeThemeVariables.light["--color-primary"]).toBe("0 128 95");
+    expect(nativeThemeVariables.dark["--color-primary"]).toBe("43 179 138");
   });
 });

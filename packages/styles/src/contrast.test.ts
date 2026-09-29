@@ -5,8 +5,9 @@ import {
   CONTRAST_PAIRS,
   type ContrastPair,
   contrastRatio,
+  NON_TEXT_ROLES,
 } from "./contrast";
-import { tokens } from "./tokens";
+import { type ColorRole, tokens } from "./tokens";
 
 const HEX_ERROR = /hex/i;
 
@@ -38,6 +39,36 @@ describe("contrastRatio", () => {
 });
 
 describe("contrast pairs", () => {
+  it("put every colour role in a pair or in the non-text list", () => {
+    const paired = new Set(
+      CONTRAST_PAIRS.flatMap((pair) => [pair.foreground, pair.background])
+    );
+    for (const role of Object.keys(tokens.color.light) as ColorRole[]) {
+      expect({
+        covered: paired.has(role) !== NON_TEXT_ROLES.includes(role),
+        role,
+      }).toEqual({
+        covered: true,
+        role,
+      });
+    }
+  });
+
+  it("hold every *Strong text role to body contrast on its tint", () => {
+    for (const hue of ["primary", "success", "warning", "danger"] as const) {
+      expect(CONTRAST_PAIRS).toContainEqual({
+        background: `${hue}Subtle`,
+        foreground: `${hue}Strong`,
+        min: AA_BODY,
+      });
+    }
+    expect(CONTRAST_PAIRS).toContainEqual({
+      background: "accent",
+      foreground: "accentForeground",
+      min: AA_BODY,
+    });
+  });
+
   it("cover every text colour role on every background role", () => {
     const bodyText = CONTRAST_PAIRS.filter((pair) => pair.min === AA_BODY);
     for (const foreground of ["foreground", "foregroundMuted"] as const) {

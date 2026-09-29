@@ -107,6 +107,7 @@ function themeBlock(): string[] {
       ])
     ),
     "",
+    "  --container-*: initial;",
     `  --container-content: ${rem(layout.contentMaxWidth)};`,
     `  --container-reading: ${layout.readingMaxWidthCh}ch;`,
     "}",
