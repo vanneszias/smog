@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { Text as RNText } from "react-native";
 // biome-ignore lint/performance/noNamespaceImport: the test walks every export of the kit
 import * as kit from "./index";
+import { HELLO } from "./test/gestures";
 import { renderKit } from "./test/render";
 
 const ID = "subject";
@@ -32,8 +33,24 @@ const CASES: Record<string, ReactElement> = {
   CardFooter: <kit.CardFooter testID={ID} />,
   CardHeader: <kit.CardHeader testID={ID} />,
   CardTitle: <kit.CardTitle testID={ID}>Title</kit.CardTitle>,
+  // Domain components.
+  CategoryChips: (
+    <kit.CategoryChips
+      categories={HELLO.categories}
+      onChange={noop}
+      selected={[]}
+      testID={ID}
+    />
+  ),
   Checkbox: <kit.Checkbox label="Check" testID={ID} />,
   Chip: <kit.Chip testID={ID}>Chip</kit.Chip>,
+  CourseBanner: (
+    <kit.CourseBanner
+      courseUrl="https://example.org"
+      messageIndex={1}
+      testID={ID}
+    />
+  ),
   DialogContent: (
     <kit.Dialog open>
       <kit.DialogContent testID={ID} title="Title" />
@@ -42,17 +59,33 @@ const CASES: Record<string, ReactElement> = {
   DialogFooter: <kit.DialogFooter testID={ID} />,
   EmptyState: <kit.EmptyState testID={ID} />,
   ErrorState: <kit.ErrorState testID={ID} />,
+  FavoriteButton: <kit.FavoriteButton active onToggle={noop} testID={ID} />,
+  FavoritesEmptyState: <kit.FavoritesEmptyState testID={ID} />,
   Field: (
     <kit.Field label="Label" testID={ID}>
       <kit.Input />
     </kit.Field>
   ),
+  GestureCard: <kit.GestureCard gesture={HELLO} testID={ID} />,
+  GestureGrid: <kit.GestureGrid items={[HELLO]} testID={ID} />,
+  GestureRow: <kit.GestureRow gesture={HELLO} testID={ID} />,
   Heading: <kit.Heading testID={ID}>Title</kit.Heading>,
   IconButton: (
     <kit.IconButton icon={<RNText>x</RNText>} label="Close" testID={ID} />
   ),
   Input: <kit.Input testID={ID} />,
   ListItem: <kit.ListItem testID={ID} title="Row" />,
+  ListItemsEmptyState: <kit.ListItemsEmptyState testID={ID} />,
+  ListPicker: (
+    <kit.ListPicker
+      lists={[]}
+      onCreate={noop}
+      onToggle={noop}
+      open
+      testID={ID}
+    />
+  ),
+  ListsEmptyState: <kit.ListsEmptyState testID={ID} />,
   Logo: <kit.Logo testID={ID} />,
   MenuContent: (
     <kit.Menu defaultOpen>
@@ -89,10 +122,15 @@ const CASES: Record<string, ReactElement> = {
       </kit.MenuContent>
     </kit.Menu>
   ),
+  NoResultsEmptyState: <kit.NoResultsEmptyState testID={ID} />,
   OfflineBanner: <kit.OfflineBanner online={false} testID={ID} />,
   ProgressBar: <kit.ProgressBar label="Progress" testID={ID} value={10} />,
   RadioGroup: <kit.RadioGroup options={OPTIONS} testID={ID} />,
   SearchField: <kit.SearchField testID={ID} />,
+  SearchIdleEmptyState: <kit.SearchIdleEmptyState testID={ID} />,
+  SearchResults: (
+    <kit.SearchResults items={[]} onRetry={noop} state="idle" testID={ID} />
+  ),
   SegmentedControl: (
     <kit.SegmentedControl
       onValueChange={noop}
@@ -102,6 +140,15 @@ const CASES: Record<string, ReactElement> = {
     />
   ),
   Select: <kit.Select options={OPTIONS} testID={ID} />,
+  ShareLink: (
+    <kit.ShareLink
+      access="view"
+      onCopy={noop}
+      onRevoke={noop}
+      testID={ID}
+      url="https://example.org/s"
+    />
+  ),
   SheetContent: (
     <kit.Sheet open>
       <kit.SheetContent testID={ID} title="Title" />
@@ -136,6 +183,7 @@ const CASES: Record<string, ReactElement> = {
       Link
     </kit.TextLink>
   ),
+  VideoPlayer: <kit.VideoPlayer playbackId="pb" testID={ID} />,
 };
 
 describe("the kit contract", () => {

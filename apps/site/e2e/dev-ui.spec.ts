@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { stubMux, waitForHydration } from "./helpers";
 
 const SCREENSHOTS = "e2e/__screenshots__";
 const WIDTHS = [390, 1280] as const;
@@ -23,6 +24,7 @@ function watchErrors(page: Page): string[] {
 }
 
 async function openGallery(page: Page, width: number): Promise<void> {
+  await stubMux(page);
   await page.setViewportSize({ height: 900, width });
   await page.goto("/dev/ui");
   await expect(
@@ -30,6 +32,7 @@ async function openGallery(page: Page, width: number): Promise<void> {
   ).toBeVisible();
   // Hydrated: client-only state (the Chip toggles) responds.
   await page.waitForLoadState("networkidle");
+  await waitForHydration(page);
 }
 
 async function blockingViolations(page: Page, include?: string) {

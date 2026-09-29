@@ -128,5 +128,56 @@ export {
   type TooltipProps,
   TooltipProvider,
 } from "./components/tooltip";
+export {
+  CategoryChips,
+  type CategoryChipsProps,
+} from "./domain/category-chips";
+export {
+  COURSE_MESSAGE_COUNT,
+  CourseBanner,
+  type CourseBannerProps,
+  type CourseMessageIndex,
+} from "./domain/course-banner";
+export {
+  type DomainEmptyStateProps,
+  FavoritesEmptyState,
+  ListItemsEmptyState,
+  ListsEmptyState,
+  NoResultsEmptyState,
+  SearchIdleEmptyState,
+} from "./domain/empty-states";
+export {
+  FavoriteButton,
+  type FavoriteButtonProps,
+} from "./domain/favorite-button";
+export { GestureCard, type GestureCardProps } from "./domain/gesture-card";
+export { GestureGrid, type GestureGridProps } from "./domain/gesture-grid";
+export { GestureRow, type GestureRowProps } from "./domain/gesture-row";
+export {
+  ListPicker,
+  type ListPickerList,
+  type ListPickerProps,
+} from "./domain/list-picker";
+export {
+  SearchResults,
+  type SearchResultsProps,
+  type SearchResultsState,
+} from "./domain/search-results";
+export {
+  type ShareAccess,
+  ShareLink,
+  type ShareLinkProps,
+} from "./domain/share-link";
+export type {
+  CategoryRef,
+  GestureCardData,
+  KitLinkComponent,
+  KitLinkProps,
+} from "./domain/types";
+export {
+  type VideoAspect,
+  VideoPlayer,
+  type VideoPlayerProps,
+} from "./domain/video-player";
 export { cn } from "./lib/cn";
 export { PortalContainerProvider } from "./lib/portal";

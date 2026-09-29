@@ -271,6 +271,8 @@ export function boxShadow(
 const motion = {
   duration: { fast: 120, normal: 200, slow: 320 },
   easing: { standard: [0.2, 0, 0, 1] },
+  /** The favorite heart's pop peaks at this scale (web keyframes, native Reanimated). */
+  popScale: 1.25,
 } as const;
 
 export const tokens = {

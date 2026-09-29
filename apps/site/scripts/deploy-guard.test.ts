@@ -2,7 +2,9 @@ import { describe, expect, it } from "bun:test";
 import {
   checkDeployTarget,
   checkDevTools,
+  checkServerHasNoVideoPlayer,
   DEV_TOOLS_MARKER,
+  MUX_PLAYER_MARKERS,
 } from "./deploy-guard";
 
 describe("checkDevTools", () => {
@@ -27,6 +29,30 @@ describe("checkDevTools", () => {
     expect(() => checkDevTools("staging", [app])).toThrow(
       "staging build has no /dev/ui gallery"
     );
+  });
+});
+
+describe("checkServerHasNoVideoPlayer", () => {
+  const player = {
+    content: `var ge=${MUX_PLAYER_MARKERS[0]};`,
+    path: "dist/server/assets/player.js",
+  };
+
+  it("refuses a Worker build that bundles Mux Player", () => {
+    expect(() =>
+      checkServerHasNoVideoPlayer([
+        { content: "export default {}", path: "dist/server/index.js" },
+        player,
+      ])
+    ).toThrow("dist/server/assets/player.js");
+  });
+
+  it("allows the player in the client assets", () => {
+    expect(() =>
+      checkServerHasNoVideoPlayer([
+        { ...player, path: "dist/client/assets/player.js" },
+      ])
+    ).not.toThrow();
   });
 });
 

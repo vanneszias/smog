@@ -96,6 +96,24 @@ Native mapping: `onClick` → `onPress`, `className` → NativeWind `className`,
 | `Table` (`containerClassName`), `TableHeader` (`sticky`), `TableBody`, `TableRow`, `TableHead`, `TableCell`, `TableCaption` | HTML table props | Admin only; dense rows are allowed here. |
 | `DataTable<Row>` | `columns: { id, header, cell(row), sortValue?(row), align? ("start" · "end") }[]`, `rows`, `getRowId(row)`, `sort` / `defaultSort` / `onSortChange` (`{ id, direction: "asc" · "desc" } \| null`), `onRowClick(row)`, `stickyHeader`, `empty` | Sort cycles none → ascending → descending; `aria-sort` on the header. Clickable rows take focus and open on Enter/Space. Controlled `sort` is for URL-synced admin filters. Native shows the same data as a list of ListItems. |
 
+## Domain (learning)
+
+Presentational only: no data fetching. Screens pass the feature hooks' data. `GestureCardData` is structural (`id`, `slug`, `name`, `playbackId`, `categories: { name, slug }[]`), so `GestureSummary` and `SearchResult` from `@smog/gestures/schema` fit it. Copy comes from `gesture.*`, `search.*`, `favorites.*` and `lists.*`.
+
+| Component | Props | Notes |
+|---|---|---|
+| `GestureCard` | `gesture`, `href`, `favorite`, `onFavoriteToggle(next)`, `sponsored`, `level` (2–4, default 3), `linkComponent` (web) | An `article`: a 3:4 Mux still (`alt=""`, lazy), the name as a heading, and the categories. The name is a stretched link: one tab stop, and the whole card is the target. The heart (`FavoriteButton` `overlay`) and the `gesture.sponsored` badge sit on the still. The heart is a sibling of the link. |
+| `GestureRow` | as GestureCard without `level`/`sponsored`, plus `dragHandle` (leading slot) and `trailing` (slot before the heart) | The dense variant, 44 px minimum. The slots sit above the stretched link. |
+| `GestureGrid<T>` | `items`, `renderItem(item, index)` (a plain GestureCard by default) | A `ul` grid: 2 columns, then 3 / 4 / 5 at `sm` / `lg` / `xl`. |
+| `CategoryChips` | `categories`, `selected` (slugs), `onChange(selected)`, `showAll` (true), `aria-label` (`search.categories`) | A `fieldset` of toggle Chips, led by `All` (`search.allCategories`, which clears the selection). `onChange` gets the slugs in category order. It scrolls sideways below `md` and wraps from `md`. |
+| `VideoPlayer` | `playbackId`, `autoPlay` (muted), `loop`, `aspect` (`3:4` · `16:9`), `onNearEnd()`, `onEnded()` (not while `loop` is on: a looping video never ends), `title` (the frame's name, `a11y.gestureVideo` by default) | Mux Player is client-only (its own chunk, never in the Worker build; the deploy guard checks `dist/server`); the server and the first client render show the Mux poster. `onNearEnd` fires once per playthrough at ≤ 5 s left (`createNearEndTracker` from `@smog/utils`). Mux Data tracking and cookies are off. |
+| `FavoriteButton` | `active`, `onToggle(next)`, `size` (`sm` · `md` · `lg`), `variant` (`ghost` · `overlay`), `label` (`a11y.favorite`) | `aria-pressed`, a filled `primary` heart when on, and a pop (`animate-favorite-pop`) when switched on. No pop under reduced motion. Controlled: the caller updates optimistically. |
+| `ListPicker` | `lists: { id, name, contains }[]`, `onToggle(listId)`, `onCreate(name)` (trimmed), `nameMaxLength`, `title` (`lists.addToList`), `description`, `open` / `defaultOpen` / `onOpenChange`; `children` is the trigger | A Sheet with a Checkbox per list (`lists.noLists` when there are none) and a "New list" field whose Create button is disabled while the name is blank. Enter submits. |
+| `ShareLink` | `url`, `access` (`view` · `edit`), `onCopy()`, `onRevoke()`, `revoking` | A section headed by the access level (`lists.share.*`), with a read-only field that selects on focus, Copy and Revoke (asks first in a danger AlertDialog). Copy says `kit.copied` for 2 s and an sr-only `status` announces it. The caller does the copying and must show its own error if that fails. |
+| `CourseBanner` | `messageIndex` (1–7, `COURSE_MESSAGE_COUNT`), `courseUrl`, `onDismiss` | The disclaimer after a gesture video: `gesture.disclaimer.title` + `gesture.videoComplete.N`. The `<course>` phrase in the copy links to `courseUrl` in a new tab. A polite `status`. |
+| `SearchResults<T>` | `state` (`idle` · `loading` · `empty` · `error` · `results`), `items`, `onRetry`, `retrying`, `renderItem`, `emptyAction`, `skeletonCount` (8) | A `status` line (`search.resultCount`, `search.searching`; visible with results, screen-reader-only otherwise), skeleton cards (`aria-busy`), `NoResultsEmptyState`, `ErrorState`, `SearchIdleEmptyState`, or a GestureGrid. |
+| `FavoritesEmptyState`, `ListsEmptyState`, `ListItemsEmptyState`, `NoResultsEmptyState`, `SearchIdleEmptyState` | EmptyState props (`action` is the next action) | EmptyState with their copy and a brand hand. Any prop overrides the defaults. |
+
 ## Utilities
 
 | Export | Notes |

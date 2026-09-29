@@ -76,6 +76,7 @@ describe("renderWebThemeCss", () => {
     expect(css).toContain("--ease-standard: cubic-bezier(0.2, 0, 0, 1);");
     expect(css).toContain("--duration-fast: 120ms;");
     expect(css).toContain("--duration-slow: 320ms;");
+    expect(css).toContain("--motion-pop-scale: 1.25;");
     expect(css).toContain("--breakpoint-lg: 64rem;");
   });
 
