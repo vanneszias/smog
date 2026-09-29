@@ -1,0 +1,323 @@
+{
+  "common": {
+    "and": "et",
+    "appName": "SMOG & Co",
+    "back": "Retour",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "continue": "Continuer",
+    "copy": "Copier",
+    "copied": "Copié",
+    "delete": "Supprimer",
+    "done": "Terminé",
+    "edit": "Modifier",
+    "learnMore": "En savoir plus",
+    "next": "Suivant",
+    "no": "Non",
+    "or": "ou",
+    "previous": "Précédent",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "search": "Rechercher",
+    "send": "Envoyer",
+    "share": "Partager",
+    "yes": "Oui"
+  },
+  "a11y": {
+    "skipToContent": "Aller au contenu",
+    "skipToNavigation": "Aller à la navigation",
+    "mainNavigation": "Navigation principale",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "moreActions": "Plus d'actions",
+    "close": "Fermer",
+    "dismiss": "Fermer la notification",
+    "loading": "Chargement en cours",
+    "logo": "Logo de SMOG & Co",
+    "clearSearch": "Effacer la recherche",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "remove": "Retirer {{label}}",
+    "required": "obligatoire",
+    "optional": "facultatif",
+    "characterCount": "{{count}} caractères utilisés sur {{max}}",
+    "pagination": "Pagination",
+    "previousPage": "Page précédente",
+    "nextPage": "Page suivante",
+    "goToPage": "Aller à la page {{page}}",
+    "currentPage": "Page {{page}}, page actuelle",
+    "sortAscending": "Trier par ordre croissant",
+    "sortDescending": "Trier par ordre décroissant",
+    "sortedAscending": "Trié par ordre croissant",
+    "sortedDescending": "Trié par ordre décroissant",
+    "notifications": "Notifications",
+    "playVideo": "Lire la vidéo",
+    "pauseVideo": "Mettre la vidéo en pause",
+    "dragHandle": "Faire glisser pour réordonner",
+    "otpDigit": "Chiffre {{index}} sur {{length}}"
+  },
+  "nav": {
+    "home": "Accueil",
+    "search": "Recherche",
+    "browse": "Explorer",
+    "favorites": "Favoris",
+    "lists": "Listes",
+    "account": "Compte",
+    "settings": "Paramètres",
+    "sponsor": "Parrainer",
+    "admin": "Administration",
+    "about": "À propos de SMOG",
+    "contact": "Contact",
+    "privacy": "Confidentialité",
+    "terms": "Conditions",
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter"
+  },
+  "theme": {
+    "label": "Thème",
+    "toggle": "Changer de thème",
+    "system": "Système",
+    "light": "Clair",
+    "dark": "Sombre"
+  },
+  "language": {
+    "label": "Langue",
+    "toggle": "Changer de langue",
+    "nl": "Nederlands",
+    "en": "English",
+    "fr": "Français"
+  },
+  "auth": {
+    "title": "Se connecter ou s'inscrire",
+    "subtitle": "Avec un compte, vos favoris et vos listes vous suivent sur tous vos appareils.",
+    "signInTitle": "Bon retour parmi nous",
+    "signUpTitle": "Créer un compte",
+    "signUpSubtitle": "Il n'existe pas encore de compte pour {{email}}. Créez-en un en quelques étapes.",
+    "continueAsGuest": "Continuer sans compte",
+    "legal": "En continuant, vous acceptez nos conditions et notre politique de confidentialité.",
+    "email": {
+      "label": "Adresse e-mail",
+      "placeholder": "nom@exemple.be",
+      "submit": "Continuer",
+      "change": "Utiliser une autre adresse e-mail"
+    },
+    "name": {
+      "label": "Nom",
+      "placeholder": "Votre prénom et votre nom"
+    },
+    "methods": {
+      "title": "Comment souhaitez-vous vous connecter ?",
+      "password": "Avec mon mot de passe",
+      "emailCode": "Avec un code par e-mail",
+      "magicLink": "Avec un lien de connexion par e-mail",
+      "google": "Continuer avec Google",
+      "apple": "Continuer avec Apple",
+      "passkey": "Se connecter avec une clé d'accès",
+      "more": "Choisir une autre méthode"
+    },
+    "password": {
+      "label": "Mot de passe",
+      "placeholder": "Votre mot de passe",
+      "newLabel": "Nouveau mot de passe",
+      "confirmLabel": "Répétez votre mot de passe",
+      "forgot": "Mot de passe oublié ?",
+      "signIn": "Se connecter",
+      "signUp": "Créer le compte",
+      "rulesTitle": "Votre mot de passe :",
+      "ruleMinLength": "compte au moins {{min}} caractères",
+      "ruleMaxLength": "compte au plus {{max}} caractères",
+      "ruleMatch": "est identique dans les deux champs"
+    },
+    "otp": {
+      "title": "Saisissez votre code",
+      "description": "Nous avons envoyé un code à {{length}} chiffres à {{email}}.",
+      "label": "Code",
+      "submit": "Confirmer",
+      "resend": "Envoyer un nouveau code",
+      "resendIn": "Nouveau code dans {{seconds}} s",
+      "resent": "Nous vous avons envoyé un nouveau code."
+    },
+    "magicLink": {
+      "title": "Consultez votre boîte mail",
+      "description": "Nous avons envoyé un lien de connexion à {{email}}. Ouvrez-le pour vous connecter.",
+      "resend": "Renvoyer le lien",
+      "resent": "Nous vous avons envoyé un nouveau lien."
+    },
+    "checkInbox": {
+      "openMail": "Ouvrir votre application de messagerie",
+      "spamHint": "Rien reçu ? Vérifiez aussi vos courriers indésirables.",
+      "wrongEmail": "Mauvaise adresse e-mail ?"
+    },
+    "verifyEmail": {
+      "title": "Confirmez votre adresse e-mail",
+      "description": "Nous avons envoyé un lien de confirmation à {{email}}. Cliquez dessus pour activer votre compte.",
+      "resend": "Renvoyer l'e-mail de confirmation",
+      "resent": "Nous avons renvoyé l'e-mail de confirmation.",
+      "verifying": "Confirmation en cours…",
+      "success": "Votre adresse e-mail est confirmée.",
+      "invalid": "Ce lien a expiré ou n'est plus valide. Demandez-en un nouveau."
+    },
+    "forgotPassword": {
+      "title": "Mot de passe oublié",
+      "description": "Saisissez votre adresse e-mail. Nous vous enverrons un lien pour choisir un nouveau mot de passe.",
+      "submit": "M'envoyer un lien",
+      "sent": "Si un compte existe pour {{email}}, vous recevrez un e-mail sous peu.",
+      "backToSignIn": "Retour à la connexion"
+    },
+    "resetPassword": {
+      "title": "Choisissez un nouveau mot de passe",
+      "submit": "Enregistrer le mot de passe",
+      "success": "Votre mot de passe a été modifié. Vous pouvez maintenant vous connecter.",
+      "invalid": "Ce lien a expiré ou n'est plus valide. Demandez-en un nouveau."
+    },
+    "passkey": {
+      "add": "Ajouter une clé d'accès",
+      "added": "Votre clé d'accès a été ajoutée.",
+      "unsupported": "Votre appareil ou votre navigateur ne prend pas en charge les clés d'accès."
+    },
+    "captcha": {
+      "label": "Contrôle de sécurité"
+    },
+    "signedIn": "Vous êtes connecté.",
+    "signingIn": "Connexion en cours…",
+    "signedOut": "Vous êtes déconnecté.",
+    "errors": {
+      "emailRequired": "Saisissez votre adresse e-mail.",
+      "emailInvalid": "Saisissez une adresse e-mail valide.",
+      "nameRequired": "Saisissez votre nom.",
+      "passwordRequired": "Saisissez votre mot de passe.",
+      "passwordTooShort": "Votre mot de passe doit compter au moins {{min}} caractères.",
+      "passwordTooLong": "Votre mot de passe peut compter au plus {{max}} caractères.",
+      "passwordMismatch": "Les mots de passe ne sont pas identiques.",
+      "invalidCredentials": "Cette adresse e-mail ou ce mot de passe est incorrect.",
+      "emailNotVerified": "Votre adresse e-mail n'est pas encore confirmée. Consultez votre boîte mail ou demandez un nouvel e-mail de confirmation.",
+      "userExists": "Un compte existe déjà avec cette adresse e-mail. Connectez-vous.",
+      "codeRequired": "Saisissez le code.",
+      "codeInvalid": "Ce code est incorrect ou a expiré.",
+      "linkInvalid": "Ce lien a expiré ou n'est plus valide.",
+      "rateLimited": "Trop de tentatives. Patientez un instant, puis réessayez.",
+      "captchaFailed": "Le contrôle de sécurité a échoué. Veuillez réessayer.",
+      "socialFailed": "La connexion avec {{provider}} a échoué. Veuillez réessayer.",
+      "passkeyFailed": "La connexion avec votre clé d'accès a échoué.",
+      "generic": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "import": {
+      "title": "Récupérer vos données ?",
+      "description": "Vous avez enregistré des gestes sur cet appareil sans compte. Ajoutez-les à votre compte pour les retrouver partout.",
+      "prompt": "Importer {{items}} ?",
+      "favorites_one": "{{count}} favori",
+      "favorites_many": "{{count}} favoris",
+      "favorites_other": "{{count}} favoris",
+      "lists_one": "{{count}} liste",
+      "lists_many": "{{count}} listes",
+      "lists_other": "{{count}} listes",
+      "confirm": "Importer",
+      "skip": "Pas maintenant",
+      "importing": "Importation en cours…",
+      "success": "Vos favoris et vos listes sont maintenant dans votre compte.",
+      "failed": "L'importation a échoué. Vos données restent sur cet appareil."
+    }
+  },
+  "states": {
+    "loading": "Chargement…",
+    "retry": "Réessayer",
+    "empty": {
+      "title": "Rien pour l'instant",
+      "description": "Dès qu'il y aura quelque chose, vous le trouverez ici."
+    },
+    "error": {
+      "title": "Une erreur s'est produite",
+      "description": "Nous n'avons pas pu charger ce contenu. Veuillez réessayer."
+    },
+    "offline": {
+      "title": "Vous êtes hors ligne",
+      "description": "Certaines fonctionnalités ne marcheront à nouveau qu'une fois la connexion rétablie.",
+      "backOnline": "Vous êtes de nouveau en ligne."
+    },
+    "notFound": {
+      "title": "Page introuvable",
+      "description": "Cette page n'existe pas (ou plus).",
+      "action": "Aller à l'accueil"
+    }
+  },
+  "kit": {
+    "close": "Fermer",
+    "clear": "Effacer",
+    "clearSearch": "Effacer",
+    "searchPlaceholder": "Rechercher…",
+    "selectPlaceholder": "Faites un choix",
+    "noOptions": "Aucune option",
+    "noResults": "Aucun résultat",
+    "showPassword": "Afficher",
+    "hidePassword": "Masquer",
+    "required": "Obligatoire",
+    "optional": "Facultatif",
+    "characterCount": "{{count}}/{{max}}",
+    "pageOf": "Page {{page}} sur {{total}}",
+    "stepOf": "Étape {{current}} sur {{total}}",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "loadMore": "Charger plus",
+    "confirm": "Confirmer",
+    "cancel": "Annuler",
+    "copy": "Copier",
+    "copied": "Copié"
+  },
+  "email": {
+    "auth": {
+      "greeting": "Bonjour,",
+      "greetingName": "Bonjour {{name}},",
+      "signature": "L'équipe SMOG & Co",
+      "linkFallback": "Le bouton ne fonctionne pas ? Copiez ce lien dans votre navigateur :",
+      "verifyEmail": {
+        "subject": "Confirmez votre adresse e-mail",
+        "preheader": "Encore un clic et votre compte est prêt.",
+        "heading": "Confirmez votre adresse e-mail",
+        "body": "Merci d'avoir créé un compte SMOG & Co. Cliquez sur le bouton ci-dessous pour confirmer votre adresse e-mail.",
+        "button": "Confirmer l'adresse e-mail",
+        "expiry": "Le lien est valable {{minutes}} minutes.",
+        "footer": "Vous n'avez pas créé de compte ? Vous pouvez ignorer cet e-mail."
+      },
+      "otp": {
+        "subject": "{{code}} est votre code SMOG & Co",
+        "preheader": "Votre code est {{code}}.",
+        "heading": "Votre code",
+        "body": "Saisissez ce code pour continuer :",
+        "expiry": "Le code est valable {{minutes}} minutes. Ne le communiquez à personne.",
+        "footer": "Vous n'avez pas demandé de code ? Vous pouvez ignorer cet e-mail."
+      },
+      "magicLink": {
+        "subject": "Votre lien de connexion SMOG & Co",
+        "preheader": "Cliquez sur le lien pour vous connecter.",
+        "heading": "Connexion à SMOG & Co",
+        "body": "Cliquez sur le bouton ci-dessous pour vous connecter. Aucun mot de passe n'est nécessaire.",
+        "button": "Se connecter",
+        "expiry": "Le lien est valable {{minutes}} minutes et ne fonctionne qu'une seule fois.",
+        "footer": "Vous n'avez pas essayé de vous connecter ? Vous pouvez ignorer cet e-mail."
+      },
+      "resetPassword": {
+        "subject": "Choisissez un nouveau mot de passe",
+        "preheader": "Ce lien vous permet de choisir un nouveau mot de passe.",
+        "heading": "Choisir un nouveau mot de passe",
+        "body": "Nous avons reçu une demande de modification du mot de passe de votre compte. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.",
+        "button": "Choisir un nouveau mot de passe",
+        "expiry": "Le lien est valable {{minutes}} minutes.",
+        "footer": "Vous n'avez rien demandé ? Vous pouvez ignorer cet e-mail. Votre mot de passe reste inchangé."
+      }
+    }
+  },
+  "devTools": {
+    "title": "Outils de développement",
+    "open": "Ouvrir les outils de développement",
+    "componentGallery": "Galerie de composants",
+    "mail": "E-mails envoyés",
+    "logs": "Journaux",
+    "clearLogs": "Effacer les journaux",
+    "exportLogs": "Exporter les journaux",
+    "noLogs": "Il n'y a pas encore de journaux.",
+    "environment": "Environnement",
+    "version": "Version",
+    "resetLocalData": "Effacer les données locales"
+  }
+}
