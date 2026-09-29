@@ -1,3 +1,4 @@
+import { accountRouter } from "@smog/account/server";
 import { createFavoritesRouter } from "@smog/favorites/server";
 import { findGesturesByIds, gesturesRouter } from "@smog/gestures/server";
 import { createListsRouter } from "@smog/lists/server";
@@ -30,6 +31,7 @@ const system = os.system.router({
 
 /** The app router: implements `appContract` (feature routers join here). */
 export const appRouter = os.router({
+  account: accountRouter,
   // Favorites and lists resolve summaries with the gestures query (a
   // feature never imports another feature's server; the api wires them).
   favorites: createFavoritesRouter({ findSummaries: findGesturesByIds }),

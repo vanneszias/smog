@@ -1,7 +1,8 @@
 import { LOCALES, RECENT_SEARCHES_MAX } from "@smog/config/constants";
 import { z } from "zod";
 
-export const GUEST_DATA_VERSION = 1;
+/** 2 added `preferences.importDismissedFor` (`MIGRATIONS[1]`). */
+export const GUEST_DATA_VERSION = 2;
 
 const THEMES = ["system", "light", "dark"] as const;
 
@@ -23,6 +24,11 @@ export const guestDataSchema = z.object({
   favorites: z.array(z.string()),
   lists: z.array(localListSchema),
   preferences: z.object({
+    /**
+     * Signed-in user ids that dismissed the guest import prompt on this
+     * device, oldest first (at most `IMPORT_DISMISSED_MAX`).
+     */
+    importDismissedFor: z.array(z.string()),
     /** `null` follows the device or browser language. */
     locale: z.enum(LOCALES).nullable(),
     theme: z.enum(THEMES),
@@ -49,7 +55,7 @@ export function defaultGuestData(): GuestData {
     consent: { analytics: null },
     favorites: [],
     lists: [],
-    preferences: { locale: null, theme: "system" },
+    preferences: { importDismissedFor: [], locale: null, theme: "system" },
     recentSearches: [],
     version: GUEST_DATA_VERSION,
   };

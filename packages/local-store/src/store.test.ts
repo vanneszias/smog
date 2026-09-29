@@ -1,9 +1,10 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { createMemoryAdapter } from "./adapters/memory";
-import { defaultGuestData, type GuestData } from "./schema";
+import { defaultGuestData, GUEST_DATA_VERSION, type GuestData } from "./schema";
 import {
   createLocalStore,
   DEFAULT_STORAGE_KEY,
+  MIGRATIONS,
   type StorageAdapter,
 } from "./store";
 
@@ -43,7 +44,7 @@ describe("createLocalStore", () => {
   test("resets data that fails the schema", async () => {
     const error = spyOn(console, "error").mockImplementation(() => undefined);
     const adapter = createMemoryAdapter({
-      [KEY]: JSON.stringify({ favorites: "nope", version: 1 }),
+      [KEY]: JSON.stringify({ favorites: "nope", version: GUEST_DATA_VERSION }),
     });
     const store = createLocalStore(adapter);
     await store.ready;
@@ -57,12 +58,32 @@ describe("createLocalStore", () => {
     const adapter = createMemoryAdapter({ [KEY]: JSON.stringify(legacy) });
     const store = createLocalStore(adapter, {
       migrations: {
+        ...MIGRATIONS,
         0: (old) => ({ ...defaultGuestData(), ...(old as object), version: 1 }),
       },
     });
     await store.ready;
     expect(store.getSnapshot().favorites).toEqual(["x"]);
-    expect(store.getSnapshot().version).toBe(1);
+    expect(store.getSnapshot().version).toBe(GUEST_DATA_VERSION);
+  });
+
+  test("migrates version 1 data: preferences get importDismissedFor", async () => {
+    const v1 = {
+      consent: { analytics: true, decidedAt: 5 },
+      favorites: ["a"],
+      lists: [],
+      preferences: { locale: "fr", theme: "dark" },
+      recentSearches: ["hond"],
+      version: 1,
+    };
+    const adapter = createMemoryAdapter({ [KEY]: JSON.stringify(v1) });
+    const store = createLocalStore(adapter);
+    await store.ready;
+    expect(store.getSnapshot()).toEqual({
+      ...v1,
+      preferences: { importDismissedFor: [], locale: "fr", theme: "dark" },
+      version: 2,
+    });
   });
 
   test("persists updates and supports a custom key", async () => {
@@ -191,7 +212,10 @@ describe("createLocalStore", () => {
 
   test("newer stored versions stay untouched and read-only", async () => {
     const error = spyOn(console, "error").mockImplementation(() => undefined);
-    const raw = JSON.stringify({ favorites: ["future"], version: 2 });
+    const raw = JSON.stringify({
+      favorites: ["future"],
+      version: GUEST_DATA_VERSION + 1,
+    });
     const adapter = createMemoryAdapter({ [KEY]: raw });
     const store = createLocalStore(adapter);
     await store.ready;
