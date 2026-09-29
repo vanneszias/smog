@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@smog/styles/theme.css";
+@import "@smog/ui-web/styles.css";
 
 @layer base {
   body {

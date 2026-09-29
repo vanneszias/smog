@@ -10,6 +10,13 @@ import { defineConfig } from "vite";
 process.env.CLOUDFLARE_ENV ??= "dev";
 
 export default defineConfig({
+  // `/dev/*` pages are compiled out of production builds (spec §9: dev and
+  // staging only); see src/routes/dev/ui.tsx and scripts/deploy-guard.ts.
+  define: {
+    __SMOG_DEV_TOOLS__: JSON.stringify(
+      process.env.CLOUDFLARE_ENV !== "production"
+    ),
+  },
   plugins: [
     cloudflare({ viteEnvironment: { name: "ssr" } }),
     tanstackStart(),

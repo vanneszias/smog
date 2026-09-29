@@ -6,12 +6,13 @@
   "scripts": {
     "build": "vite build",
     "cf-typegen": "wrangler types",
-    "check-types": "wrangler types && tsc -b && tsc -p scripts",
+    "check-types": "wrangler types && tsc -b && tsc -p scripts && tsc -p e2e",
     "deploy": "vite build && bun scripts/deploy-guard.ts && wrangler deploy --env $CLOUDFLARE_ENV",
     "deploy:dry": "CLOUDFLARE_ENV=staging bun run deploy --dry-run",
     "dev": "vite dev --port 5173",
     "preview": "vite preview",
-    "test": "vitest run && bun test scripts"
+    "test": "vitest run && bun test scripts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@orpc/openapi": "catalog:",
@@ -25,15 +26,19 @@
     "@smog/i18n": "workspace:*",
     "@smog/rpc": "workspace:*",
     "@smog/styles": "workspace:*",
+    "@smog/ui-web": "workspace:*",
     "@tanstack/react-router": "1.170.40",
     "@tanstack/react-start": "1.168.59",
     "cookie-es": "3.1.1",
+    "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@cloudflare/vite-plugin": "1.62.0",
     "@cloudflare/vitest-plugin": "catalog:",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",
