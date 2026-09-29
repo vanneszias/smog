@@ -22,7 +22,8 @@
     "search": "Search",
     "send": "Send",
     "share": "Share",
-    "yes": "Yes"
+    "yes": "Yes",
+    "exploreGestures": "Explore gestures"
   },
   "a11y": {
     "skipToContent": "Skip to content",
@@ -254,7 +255,8 @@
       "title": "Page not found",
       "description": "This page doesn't exist (anymore).",
       "action": "Go to the home page"
-    }
+    },
+    "actionFailed": "That didn't work. Please try again."
   },
   "lists": {
     "ownerFallback": "a SMOG user",
@@ -281,8 +283,40 @@
       "revoke": "Revoke link",
       "revokeTitle": "Revoke this link?",
       "revokeDescription": "People who have the link lose access right away. You can create a new link later.",
-      "revokeConfirm": "Revoke"
-    }
+      "revokeConfirm": "Revoke",
+      "title": "Share list",
+      "description": "Create a link to send this list to others.",
+      "createView": "Create a view link",
+      "createEdit": "Create an edit link",
+      "send": "Send link",
+      "message": "{{name}}: {{url}}",
+      "signInTitle": "Sign in to share",
+      "signInDescription": "Sharing a list needs an account. Your lists come along when you sign in."
+    },
+    "itemCount_one": "{{count}} gesture",
+    "itemCount_other": "{{count}} gestures",
+    "shared": "Shared",
+    "actions": "List actions",
+    "rename": "Rename",
+    "nameLabel": "Name",
+    "delete": "Delete list",
+    "deleteTitle": "Delete this list?",
+    "deleteDescription": "“{{name}}” will be deleted. The gestures themselves stay.",
+    "deleted": "List deleted",
+    "addedTo": "Added to {{name}}",
+    "removedFrom": "Removed from {{name}}",
+    "itemActions": "Actions for {{name}}",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "removeItem": "Remove from list",
+    "reorderFailed": "The order couldn't be saved.",
+    "notFound": {
+      "title": "List not found",
+      "description": "This link doesn't work (anymore), or the list is private."
+    },
+    "sharedBy": "Shared by {{name}}",
+    "sharedCanEdit": "You can edit this list.",
+    "sharedSignIn": "Sign in to edit this list."
   },
   "gesture": {
     "sponsored": "Sponsored",
@@ -297,6 +331,22 @@
       "5": "Never learn the gestures only from these videos, but take a course or initiation.",
       "6": "Want to know more about SMOG and its origin? <course>Click here</course>.",
       "7": "Want to know more about SMOG? Send an email to info@smog.vlaanderen"
+    },
+    "about": "About this gesture",
+    "keywords": "Related concepts",
+    "related": "Related gestures",
+    "sponsoredBy": "Sponsored by {{name}}",
+    "share": "Share gesture",
+    "shareMessage": "{{name}} in SMOG: {{url}}",
+    "notFound": {
+      "title": "Gesture not found",
+      "description": "This gesture doesn't exist (anymore)."
+    },
+    "screenshot": {
+      "title": "Share this gesture?",
+      "message": "You took a screenshot. Send a link instead, so the video comes along.",
+      "share": "Share link",
+      "dismiss": "Not now"
     }
   },
   "search": {
@@ -312,7 +362,15 @@
     "noResults": {
       "title": "No gestures found",
       "description": "Try another word or fewer categories."
-    }
+    },
+    "placeholder": "Search for a gesture",
+    "filter": "Filter by category",
+    "filterActive_one": "Filter by category, {{count}} selected",
+    "filterActive_other": "Filter by category, {{count}} selected",
+    "clearFilter": "Clear categories",
+    "showResults": "Show results",
+    "recent": "Recent searches",
+    "clearRecent": "Clear recent searches"
   },
   "favorites": {
     "empty": {
@@ -432,7 +490,9 @@
     "unlocked": "Developer tools are on."
   },
   "home": {
-    "tagline": "Learn Flemish Sign Language gestures, whenever it suits you."
+    "tagline": "Learn Flemish Sign Language gestures, whenever it suits you.",
+    "featured": "Discover gestures",
+    "browseAll": "All gestures"
   },
   "footer": {
     "madeBy": "Made with ♡ by zias.be"

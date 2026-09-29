@@ -22,7 +22,8 @@
     "search": "Zoeken",
     "send": "Versturen",
     "share": "Delen",
-    "yes": "Ja"
+    "yes": "Ja",
+    "exploreGestures": "Gebaren ontdekken"
   },
   "a11y": {
     "skipToContent": "Naar de inhoud",
@@ -254,7 +255,8 @@
       "title": "Pagina niet gevonden",
       "description": "Deze pagina bestaat niet (meer).",
       "action": "Naar de startpagina"
-    }
+    },
+    "actionFailed": "Dat lukte niet. Probeer het opnieuw."
   },
   "lists": {
     "ownerFallback": "een SMOG-gebruiker",
@@ -281,8 +283,40 @@
       "revoke": "Link intrekken",
       "revokeTitle": "Deze link intrekken?",
       "revokeDescription": "Wie de link heeft, verliest meteen de toegang. Je kunt later een nieuwe link maken.",
-      "revokeConfirm": "Intrekken"
-    }
+      "revokeConfirm": "Intrekken",
+      "title": "Lijst delen",
+      "description": "Maak een link om deze lijst naar anderen te sturen.",
+      "createView": "Link om te bekijken maken",
+      "createEdit": "Link om te bewerken maken",
+      "send": "Link versturen",
+      "message": "{{name}}: {{url}}",
+      "signInTitle": "Meld je aan om te delen",
+      "signInDescription": "Een lijst delen kan met een account. Je lijsten gaan mee als je je aanmeldt."
+    },
+    "itemCount_one": "{{count}} gebaar",
+    "itemCount_other": "{{count}} gebaren",
+    "shared": "Gedeeld",
+    "actions": "Acties voor de lijst",
+    "rename": "Naam wijzigen",
+    "nameLabel": "Naam",
+    "delete": "Lijst verwijderen",
+    "deleteTitle": "Deze lijst verwijderen?",
+    "deleteDescription": "“{{name}}” wordt verwijderd. De gebaren zelf blijven bestaan.",
+    "deleted": "Lijst verwijderd",
+    "addedTo": "Toegevoegd aan {{name}}",
+    "removedFrom": "Verwijderd uit {{name}}",
+    "itemActions": "Acties voor {{name}}",
+    "moveUp": "Naar boven",
+    "moveDown": "Naar beneden",
+    "removeItem": "Uit de lijst halen",
+    "reorderFailed": "De volgorde kon niet bewaard worden.",
+    "notFound": {
+      "title": "Lijst niet gevonden",
+      "description": "Deze link werkt niet (meer), of de lijst is privé."
+    },
+    "sharedBy": "Gedeeld door {{name}}",
+    "sharedCanEdit": "Je kunt deze lijst bewerken.",
+    "sharedSignIn": "Meld je aan om deze lijst te bewerken."
   },
   "gesture": {
     "sponsored": "Gesponsord",
@@ -297,6 +331,22 @@
       "5": "Leer nooit de gebaren enkel vanuit deze filmpjes, maar volg een cursus of een initiatie.",
       "6": "Wil je meer weten over SMOG en het ontstaan? <course>Klik hier</course>.",
       "7": "Wil je meer weten over SMOG? Stuur een mail naar info@smog.vlaanderen"
+    },
+    "about": "Over dit gebaar",
+    "keywords": "Verwante begrippen",
+    "related": "Verwante gebaren",
+    "sponsoredBy": "Gesponsord door {{name}}",
+    "share": "Gebaar delen",
+    "shareMessage": "{{name}} in SMOG: {{url}}",
+    "notFound": {
+      "title": "Gebaar niet gevonden",
+      "description": "Dit gebaar bestaat niet (meer)."
+    },
+    "screenshot": {
+      "title": "Dit gebaar delen?",
+      "message": "Je nam een screenshot. Stuur liever een link, dan gaat de video mee.",
+      "share": "Link delen",
+      "dismiss": "Niet nu"
     }
   },
   "search": {
@@ -312,7 +362,15 @@
     "noResults": {
       "title": "Geen gebaren gevonden",
       "description": "Probeer een ander woord of minder categorieën."
-    }
+    },
+    "placeholder": "Zoek een gebaar",
+    "filter": "Filteren op categorie",
+    "filterActive_one": "Filteren op categorie, {{count}} gekozen",
+    "filterActive_other": "Filteren op categorie, {{count}} gekozen",
+    "clearFilter": "Categorieën wissen",
+    "showResults": "Resultaten tonen",
+    "recent": "Recente zoekopdrachten",
+    "clearRecent": "Recente zoekopdrachten wissen"
   },
   "favorites": {
     "empty": {
@@ -432,7 +490,9 @@
     "unlocked": "De ontwikkelaarstools staan aan."
   },
   "home": {
-    "tagline": "Leer gebaren in Vlaamse Gebarentaal, wanneer het jou past."
+    "tagline": "Leer gebaren in Vlaamse Gebarentaal, wanneer het jou past.",
+    "featured": "Ontdek gebaren",
+    "browseAll": "Alle gebaren"
   },
   "footer": {
     "madeBy": "Gemaakt met ♡ door zias.be"
