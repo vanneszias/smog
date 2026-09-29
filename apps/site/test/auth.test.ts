@@ -66,9 +66,9 @@ describe("/dev/mail", () => {
     expect(html).toContain("sandbox");
   });
 
-  it("is off in production only", () => {
+  it("is on in dev only (fails closed)", () => {
     expect(devToolsEnabled("dev")).toBe(true);
-    expect(devToolsEnabled("staging")).toBe(true);
+    expect(devToolsEnabled("staging")).toBe(false);
     expect(devToolsEnabled("production")).toBe(false);
   });
 });

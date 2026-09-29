@@ -38,6 +38,23 @@ describe("toAuthState", () => {
   });
 });
 
+describe("toAuthState on errors (M8)", () => {
+  it("keeps the last known state when a refetch fails", () => {
+    const previous = toAuthState({ data: { user }, isPending: false });
+    const state = toAuthState(
+      { data: null, error: new Error("offline"), isPending: false },
+      previous
+    );
+    expect(state).toEqual({ ...previous, error: true });
+  });
+
+  it("marks an error without a known state instead of signing out silently", () => {
+    expect(
+      toAuthState({ data: null, error: new Error("offline"), isPending: false })
+    ).toEqual({ error: true, status: "signedOut" });
+  });
+});
+
 describe("AuthStateProvider", () => {
   function Status() {
     const state = useAuthState();
@@ -57,6 +74,29 @@ describe("AuthStateProvider", () => {
     );
 
     expect(html).toContain("signedIn:Ada");
+  });
+
+  it("exposes refetch from the session hook", () => {
+    let called = false;
+    const useSession = (): SessionHookResult => ({
+      data: null,
+      isPending: false,
+      refetch: () => {
+        called = true;
+      },
+    });
+    function Refetch() {
+      useAuthState().refetch();
+      return null;
+    }
+
+    renderToString(
+      <AuthStateProvider useSession={useSession}>
+        <Refetch />
+      </AuthStateProvider>
+    );
+
+    expect(called).toBe(true);
   });
 
   it("throws outside the provider", () => {

@@ -191,4 +191,20 @@ describe("checkWranglerConfig", () => {
     const errors = checkWranglerConfig('{ "env": { "staging": {} } }');
     expect(errors.join("\n")).toContain("env.production");
   });
+
+  test("requires vars.ENVIRONMENT to equal the env name", () => {
+    const errors = checkWranglerConfig(
+      JSON.stringify({
+        env: {
+          dev: { vars: { ENVIRONMENT: "dev" } },
+          production: { vars: { ENVIRONMENT: "staging" } },
+          staging: { vars: {} },
+        },
+      })
+    );
+    expect(errors).toEqual([
+      'apps/site/wrangler.jsonc: env.production.vars.ENVIRONMENT must be "production"',
+      'apps/site/wrangler.jsonc: env.staging.vars.ENVIRONMENT must be "staging"',
+    ]);
+  });
 });

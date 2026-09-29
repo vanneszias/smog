@@ -58,7 +58,12 @@
       ],
       // Cloudflare Email Service (auth and transactional email). `dev` has
       // no binding: it uses the KV dev mailbox (/dev/mail).
-      "send_email": [{ "name": "EMAIL" }]
+      "send_email": [
+        {
+          "name": "EMAIL",
+          "allowed_sender_addresses": ["noreply@smog.vlaanderen"]
+        }
+      ]
     },
     "production": {
       "vars": {
@@ -80,7 +85,12 @@
       ],
       // Cloudflare Email Service (auth and transactional email). `dev` has
       // no binding: it uses the KV dev mailbox (/dev/mail).
-      "send_email": [{ "name": "EMAIL" }]
+      "send_email": [
+        {
+          "name": "EMAIL",
+          "allowed_sender_addresses": ["noreply@smog.vlaanderen"]
+        }
+      ]
     }
   }
 }

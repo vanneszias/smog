@@ -160,6 +160,7 @@
       "dependencies": {
         "@smog/config": "workspace:*",
         "@smog/i18n": "workspace:*",
+        "@smog/styles": "workspace:*",
         "react": "catalog:",
         "react-dom": "catalog:",
         "react-email": "6.11.0",

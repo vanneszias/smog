@@ -36,5 +36,4 @@ Execute `docs/superpowers/plans/2026-09-29-phase-2-foundations.md`, Task 1.
 - `bun -F @smog/site deploy` bypasses turbo. Once workspace packages need a build step, run `turbo run build --filter=@smog/site^...` first (or make deploy a turbo task depending on `^build`).
 - knip.json has no `packages/features/*` workspace (knip rejects an empty glob); add it with the first feature package (phase 3).
 - knip prints an Expo warning about a missing `userInterfaceStyle` although `app.config.ts` sets it (knip's Expo plugin loads the config its own way); cosmetic.
-- `packages/email/src/theme.ts` uses literal brand colours; switch to `@smog/styles` tokens when that package lands (DECISIONS, Email).
-- Better Auth rate limits on KV are approximate (no atomic increment); consider Workers Rate Limiting bindings via `rateLimit.customStorage` (DECISIONS, Auth).
+- `/api/auth/*` has only Better Auth's per-isolate memory limiter until Task 3 wraps the route with `RL_AUTH` (DECISIONS, Auth).
