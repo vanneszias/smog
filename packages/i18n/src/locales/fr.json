@@ -59,7 +59,9 @@
     "playVideo": "Lire la vidéo",
     "pauseVideo": "Mettre la vidéo en pause",
     "dragHandle": "Faire glisser pour réordonner",
-    "otpDigit": "Chiffre {{index}} sur {{length}}"
+    "otpDigit": "Chiffre {{index}} sur {{length}}",
+    "favorite": "Favori",
+    "gestureVideo": "Vidéo du geste"
   },
   "nav": {
     "home": "Accueil",
@@ -251,7 +253,69 @@
     }
   },
   "lists": {
-    "ownerFallback": "un utilisateur de SMOG"
+    "ownerFallback": "un utilisateur de SMOG",
+    "addToList": "Enregistrer dans une liste",
+    "noLists": "Vous n'avez pas encore de listes.",
+    "newList": "Nouvelle liste",
+    "newListPlaceholder": "Nom de la liste",
+    "create": "Créer",
+    "empty": {
+      "title": "Pas encore de listes",
+      "description": "Regroupez des gestes dans des listes, pour une leçon ou un thème."
+    },
+    "emptyList": {
+      "title": "Cette liste est vide",
+      "description": "Ajoutez des gestes depuis leur page avec « Enregistrer dans une liste »."
+    },
+    "share": {
+      "viewTitle": "Lien de consultation",
+      "viewDescription": "Toute personne ayant ce lien peut consulter la liste.",
+      "editTitle": "Lien de modification",
+      "editDescription": "Toute personne ayant ce lien peut modifier la liste après s'être connectée.",
+      "linkLabel": "Lien",
+      "copyLink": "Copier le lien",
+      "revoke": "Révoquer le lien",
+      "revokeTitle": "Révoquer ce lien ?",
+      "revokeDescription": "Les personnes qui ont le lien perdent l'accès immédiatement. Vous pourrez créer un nouveau lien plus tard.",
+      "revokeConfirm": "Révoquer"
+    }
+  },
+  "gesture": {
+    "sponsored": "Sponsorisé",
+    "disclaimer": {
+      "title": "Avis important"
+    },
+    "videoComplete": {
+      "1": "Ces vidéos sont un support, pas un remplacement pour un cours ou une initiation. <course>Cliquez ici</course> pour plus d'informations.",
+      "2": "Si vous souhaitez suivre un cours après avoir regardé ces vidéos, <course>cliquez ici</course>.",
+      "3": "Pour en savoir plus sur la théorie derrière SMOG, suivez un cours. <course>Cliquez ici</course>.",
+      "4": "Les gestes sont protégés. N'en inventez pas d'autres.",
+      "5": "N'apprenez jamais les gestes uniquement à partir de ces vidéos, mais suivez un cours ou une initiation.",
+      "6": "Pour en savoir plus sur SMOG et son origine, <course>cliquez ici</course>.",
+      "7": "Pour en savoir plus sur SMOG, envoyez un e-mail à info@smog.vlaanderen"
+    }
+  },
+  "search": {
+    "categories": "Catégories",
+    "allCategories": "Tous",
+    "searching": "Recherche…",
+    "resultCount_one": "{{count}} geste",
+    "resultCount_many": "{{count}} gestes",
+    "resultCount_other": "{{count}} gestes",
+    "idle": {
+      "title": "Cherchez un geste",
+      "description": "Tapez un mot ou choisissez une catégorie."
+    },
+    "noResults": {
+      "title": "Aucun geste trouvé",
+      "description": "Essayez un autre mot ou moins de catégories."
+    }
+  },
+  "favorites": {
+    "empty": {
+      "title": "Pas encore de favoris",
+      "description": "Touchez le cœur d'un geste pour le retrouver vite ici."
+    }
   },
   "kit": {
     "close": "Fermer",
@@ -350,7 +414,15 @@
       "progressLabel": "Envoi de la vidéo",
       "showToast": "Afficher une notification",
       "openDialog": "Ouvrir la boîte de dialogue",
-      "openSheet": "Ouvrir le panneau"
+      "openSheet": "Ouvrir le panneau",
+      "gestureHello": "Bonjour",
+      "gestureThankYou": "Merci",
+      "gestureEat": "Manger",
+      "gestureDrink": "Boire",
+      "gestureHappy": "Content",
+      "gestureSad": "Triste",
+      "listSchool": "À l'école",
+      "listHome": "À la maison"
     }
   }
 }

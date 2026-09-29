@@ -59,7 +59,9 @@
     "playVideo": "Video afspelen",
     "pauseVideo": "Video pauzeren",
     "dragHandle": "Slepen om de volgorde te wijzigen",
-    "otpDigit": "Cijfer {{index}} van {{length}}"
+    "otpDigit": "Cijfer {{index}} van {{length}}",
+    "favorite": "Favoriet",
+    "gestureVideo": "Video van het gebaar"
   },
   "nav": {
     "home": "Home",
@@ -248,7 +250,68 @@
     }
   },
   "lists": {
-    "ownerFallback": "een SMOG-gebruiker"
+    "ownerFallback": "een SMOG-gebruiker",
+    "addToList": "Opslaan in lijst",
+    "noLists": "Je hebt nog geen lijsten.",
+    "newList": "Nieuwe lijst",
+    "newListPlaceholder": "Naam van de lijst",
+    "create": "Aanmaken",
+    "empty": {
+      "title": "Nog geen lijsten",
+      "description": "Groepeer gebaren in lijsten, voor een les of een thema."
+    },
+    "emptyList": {
+      "title": "Deze lijst is leeg",
+      "description": "Voeg gebaren toe vanaf hun pagina met “Opslaan in lijst”."
+    },
+    "share": {
+      "viewTitle": "Link om te bekijken",
+      "viewDescription": "Iedereen met deze link kan de lijst bekijken.",
+      "editTitle": "Link om te bewerken",
+      "editDescription": "Iedereen met deze link kan de lijst bewerken na het aanmelden.",
+      "linkLabel": "Link",
+      "copyLink": "Link kopiëren",
+      "revoke": "Link intrekken",
+      "revokeTitle": "Deze link intrekken?",
+      "revokeDescription": "Wie de link heeft, verliest meteen de toegang. Je kunt later een nieuwe link maken.",
+      "revokeConfirm": "Intrekken"
+    }
+  },
+  "gesture": {
+    "sponsored": "Gesponsord",
+    "disclaimer": {
+      "title": "Belangrijke mededeling"
+    },
+    "videoComplete": {
+      "1": "Deze filmpjes zijn een ondersteuning, geen vervanging voor een cursus of initiatie. <course>Klik hier</course> voor meer info.",
+      "2": "Wil je na het bekijken van deze filmpjes een cursus volgen, <course>klik dan hier</course>.",
+      "3": "Wil je meer info over de achterliggende theorie van SMOG, volg dan een cursus. <course>Klik hier</course>.",
+      "4": "De gebaren zijn beschermd. Vind er geen anderen uit.",
+      "5": "Leer nooit de gebaren enkel vanuit deze filmpjes, maar volg een cursus of een initiatie.",
+      "6": "Wil je meer weten over SMOG en het ontstaan? <course>Klik hier</course>.",
+      "7": "Wil je meer weten over SMOG? Stuur een mail naar info@smog.vlaanderen"
+    }
+  },
+  "search": {
+    "categories": "Categorieën",
+    "allCategories": "Alle",
+    "searching": "Zoeken…",
+    "resultCount_one": "{{count}} gebaar",
+    "resultCount_other": "{{count}} gebaren",
+    "idle": {
+      "title": "Zoek een gebaar",
+      "description": "Typ een woord of kies een categorie."
+    },
+    "noResults": {
+      "title": "Geen gebaren gevonden",
+      "description": "Probeer een ander woord of minder categorieën."
+    }
+  },
+  "favorites": {
+    "empty": {
+      "title": "Nog geen favorieten",
+      "description": "Tik op het hartje bij een gebaar om het hier snel terug te vinden."
+    }
   },
   "kit": {
     "close": "Sluiten",
@@ -347,7 +410,15 @@
       "progressLabel": "Video uploaden",
       "showToast": "Melding tonen",
       "openDialog": "Dialoog openen",
-      "openSheet": "Paneel openen"
+      "openSheet": "Paneel openen",
+      "gestureHello": "Hallo",
+      "gestureThankYou": "Dank je",
+      "gestureEat": "Eten",
+      "gestureDrink": "Drinken",
+      "gestureHappy": "Blij",
+      "gestureSad": "Verdrietig",
+      "listSchool": "Op school",
+      "listHome": "Thuis"
     }
   }
 }

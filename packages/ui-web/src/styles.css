@@ -11,6 +11,7 @@
  */
 
 @source "./components";
+@source "./domain";
 @source "./lib";
 @source not "./**/*.test.tsx";
 
@@ -29,6 +30,8 @@
     var(--ease-standard);
   --animate-slide-out-left: slide-out-left var(--duration-normal)
     var(--ease-standard);
+  /* FavoriteButton: the heart pops once when it is switched on. */
+  --animate-favorite-pop: favorite-pop var(--duration-slow) var(--ease-standard);
   /* Indeterminate ProgressBar: four slow steps per sweep. */
   --animate-progress: progress calc(var(--duration-slow) * 4)
     var(--ease-standard) infinite;
@@ -83,6 +86,11 @@
   @keyframes slide-out-left {
     to {
       transform: translateX(-100%);
+    }
+  }
+  @keyframes favorite-pop {
+    50% {
+      scale: 1.25;
     }
   }
   @keyframes progress {
