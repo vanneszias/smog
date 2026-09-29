@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { createRouterClient, implement } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
+import { gesturesContract } from "@smog/gestures/contract";
 import type { GestureSummary } from "@smog/gestures/schema";
 import {
   createList,
@@ -14,8 +15,13 @@ import { RpcProvider } from "@smog/rpc/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { gesturesByIdsContract, listsContract } from "../contract";
-import type { ListDetail, ShareRole } from "../schema";
+import { listsContract } from "../contract";
+import {
+  LIST_ITEMS_MAX,
+  LISTS_MAX,
+  type ListDetail,
+  type ShareRole,
+} from "../schema";
 import { useList, useLists, useSharedList, useShareLinks } from "./index";
 
 function summary(name: string): GestureSummary {
@@ -64,7 +70,7 @@ const delay = (ms: number) =>
 /** The lists contract (and `gestures.byIds`) in memory, as a real oRPC client. */
 function fakeApi(server: Server) {
   const os = implement({
-    gestures: { byIds: gesturesByIdsContract },
+    gestures: { byIds: gesturesContract.byIds },
     lists: listsContract,
   });
   const find = (id: string, errors: { NOT_FOUND: () => Error }) => {
@@ -355,8 +361,16 @@ describe("guests: the device", () => {
     ]);
     const fetches = server.byIdsCalls.length;
 
+    // The screen reorders what it shows; "gone" (no summary) stays last.
     await act(async () => {
-      await result.current.reorder([AAP.id, "gone", KAT.id]);
+      await result.current.reorder([AAP.id, KAT.id]);
+    });
+    expect(store.getSnapshot().lists[0]?.gestureIds).toEqual([
+      AAP.id,
+      KAT.id,
+      "gone",
+    ]);
+    await act(async () => {
       await result.current.addItem(BEER.id);
       await result.current.update({
         description: "Voor thuis",
@@ -386,8 +400,26 @@ describe("guests: the device", () => {
       BEER.id,
     ]);
     expect(result.current.list?.description).toBeNull();
-    // Reorder must be an exact permutation, as on the server.
-    await expect(result.current.reorder([AAP.id])).rejects.toThrow();
+    // Reorder must be exactly the shown gestures, as on the server.
+    for (const stale of [
+      [AAP.id],
+      [AAP.id, "gone", BEER.id],
+      [AAP.id, AAP.id],
+    ]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one assertion each.
+      await expect(result.current.reorder(stale)).rejects.toMatchObject({
+        code: "INVALID_STATE",
+        defined: true,
+      });
+    }
+    await act(async () => {
+      await result.current.reorder([BEER.id, AAP.id]);
+    });
+    expect(store.getSnapshot().lists[0]?.gestureIds).toEqual([
+      BEER.id,
+      AAP.id,
+      "gone",
+    ]);
 
     await act(async () => {
       await result.current.remove();
@@ -395,6 +427,41 @@ describe("guests: the device", () => {
     expect(result.current.notFound).toBe(true);
     expect(store.getSnapshot().lists).toEqual([]);
     expect(server.calls).toEqual([]);
+  });
+
+  test("guests get the account limits as INVALID_STATE", async () => {
+    const { store, wrapper } = setup();
+    await store.update((data) => ({
+      ...data,
+      lists: Array.from({ length: LISTS_MAX }, (_list, index) => ({
+        createdAt: 1,
+        gestureIds:
+          index === 0
+            ? Array.from({ length: LIST_ITEMS_MAX }, (_, item) => `g-${item}`)
+            : [],
+        id: `loc_${index}`,
+        name: `Lijst ${index}`,
+        updatedAt: 1,
+      })),
+    }));
+    const lists = renderHook(() => useLists(), { wrapper });
+    const full = renderHook(() => useList("loc_0"), { wrapper });
+    await waitFor(() => expect(full.result.current.status).toBe("ready"));
+
+    await expect(
+      lists.result.current.create({ name: "Eén te veel" })
+    ).rejects.toMatchObject({ code: "INVALID_STATE" });
+    await expect(full.result.current.addItem(HOND.id)).rejects.toMatchObject({
+      code: "INVALID_STATE",
+    });
+    // Already present: still a no-op, not an error.
+    await act(async () => {
+      await full.result.current.addItem("g-0");
+    });
+    expect(store.getSnapshot().lists).toHaveLength(LISTS_MAX);
+    expect(store.getSnapshot().lists[0]?.gestureIds).toHaveLength(
+      LIST_ITEMS_MAX
+    );
   });
 
   test("a server list id is not found for a guest, without an API call", () => {

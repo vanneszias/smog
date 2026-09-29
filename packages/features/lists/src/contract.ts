@@ -4,7 +4,6 @@
  * `@smog/api`'s `appContract`. Owner procedures need a session; `shared.get`
  * is public; `shared.addItem/removeItem` need a session and an edit link.
  */
-import { gestureSummarySchema } from "@smog/gestures/schema";
 import { baseContract } from "@smog/rpc/contract";
 import { z } from "zod";
 import {
@@ -108,15 +107,3 @@ export const listsContract = {
 };
 
 export type ListsContract = typeof listsContract;
-
-/**
- * The one `gestures` procedure the guest hooks call (a guest list holds
- * ids; the summaries come from the catalogue), declared by its shape: a
- * feature imports another feature's `./schema` only. `@smog/api` checks
- * that `appContract.gestures.byIds` satisfies it.
- */
-export const gesturesByIdsContract = baseContract
-  .input(z.object({ ids: z.array(z.string()) }))
-  .output(z.array(gestureSummarySchema));
-
-export type GesturesByIdsContract = typeof gesturesByIdsContract;

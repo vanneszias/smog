@@ -2,11 +2,26 @@
  * Guest lists (spec §11): the `@smog/local-store` lists shaped like the
  * API's, so a screen renders both the same way.
  */
+import { ORPCError } from "@orpc/client";
 import type { GestureSummary } from "@smog/gestures/schema";
 import type { GuestData, LocalList, Mutator } from "@smog/local-store";
 import type { RpcClient } from "@smog/rpc/react";
 import type { ListItem, ListSummary } from "../schema";
 import { BY_IDS_CHUNK, type ListsSlice } from "./slice";
+
+/**
+ * The server's `INVALID_STATE`, for the same rule broken on a guest list,
+ * so a screen handles both the same way (`isDefinedError`).
+ */
+export function invalidState(
+  message: string
+): ORPCError<"INVALID_STATE", undefined> {
+  return new ORPCError("INVALID_STATE", {
+    defined: true,
+    message: `[lists] ${message}`,
+    status: 409,
+  });
+}
 
 export function toLocalSummary(list: LocalList): ListSummary {
   return {

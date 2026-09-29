@@ -15,10 +15,12 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { z } from "zod";
 import {
+  isExactSet,
   isLocalListId,
+  LIST_ITEMS_MAX,
   type ListDetail,
   listDescriptionSchema,
   listNameSchema,
@@ -26,6 +28,7 @@ import {
 import {
   editLocalList,
   fetchSummaries,
+  invalidState,
   toLocalItems,
   toLocalSummary,
 } from "./local";
@@ -56,7 +59,9 @@ export interface UseListResult {
   /** Removes a gesture (optimistic for accounts). */
   removeItem: (gestureId: string) => Promise<void>;
   /**
-   * Sets the order: exactly the list's current gestures. Optimistic for
+   * Sets the order: exactly the gestures in `list.items`, else
+   * `INVALID_STATE` (guests too). Gestures hidden from `items`
+   * (unpublished or unknown) keep their order after them. Optimistic for
    * accounts; rolled back on `INVALID_STATE` or any failure.
    */
   reorder: (gestureIds: readonly string[]) => Promise<void>;
@@ -111,8 +116,13 @@ export function useList(id: string): UseListResult {
     queryKey: ["lists", "local-items", idSet],
     staleTime: LISTS_STALE_TIME,
   });
+  const summaryData = summaries.data;
 
-  const detailKey = forUser(rpc.get.queryKey({ input: { id } }), auth.user?.id);
+  const userId = auth.user?.id;
+  const detailKey = useMemo(
+    () => forUser(rpc.get.queryKey({ input: { id } }), userId),
+    [id, rpc, userId]
+  );
   const remote = useQuery({
     ...rpc.get.queryOptions({
       input: { id },
@@ -128,7 +138,11 @@ export function useList(id: string): UseListResult {
     [queryClient, rpc]
   );
 
-  /** An optimistic edit of the cached detail, rolled back on failure. */
+  /**
+   * An optimistic edit of the cached detail, rolled back on failure, but
+   * only while the cache still holds this edit (a later optimistic edit
+   * is not overwritten with an older snapshot; the refetch settles both).
+   */
   const optimistic = useCallback(
     async <T>(
       change: (detail: ListDetail) => ListDetail,
@@ -136,13 +150,16 @@ export function useList(id: string): UseListResult {
     ): Promise<void> => {
       await queryClient.cancelQueries({ queryKey: detailKey });
       const previous = queryClient.getQueryData<ListDetail>(detailKey);
-      if (previous) {
-        queryClient.setQueryData<ListDetail>(detailKey, change(previous));
+      const next = previous ? change(previous) : undefined;
+      if (next) {
+        queryClient.setQueryData<ListDetail>(detailKey, next);
       }
       try {
         await run();
       } catch (error) {
-        queryClient.setQueryData(detailKey, previous);
+        if (queryClient.getQueryData(detailKey) === next) {
+          queryClient.setQueryData(detailKey, previous);
+        }
         throw error;
       } finally {
         await invalidate();
@@ -169,7 +186,17 @@ export function useList(id: string): UseListResult {
     async (gestureId: string) => {
       // analytics: gesture_collection_changed { action: "added", collection: "list" }
       if (local) {
-        await store.update(addToList(id, gestureId));
+        await store.update((data) => {
+          const current = selectList(data, id);
+          if (
+            current &&
+            !current.gestureIds.includes(gestureId) &&
+            current.gestureIds.length >= LIST_ITEMS_MAX
+          ) {
+            throw invalidState(`At most ${LIST_ITEMS_MAX} items`);
+          }
+          return addToList(id, gestureId)(data);
+        });
         return;
       }
       try {
@@ -199,7 +226,21 @@ export function useList(id: string): UseListResult {
   const reorder = useCallback(
     async (gestureIds: readonly string[]) => {
       if (local) {
-        await store.update(reorderList(id, gestureIds));
+        await store.update((data) => {
+          const stored = selectList(data, id)?.gestureIds ?? [];
+          // What the screen shows (and so reorders): the ids with a summary.
+          const visible = toLocalItems(stored, summaryData ?? []).map(
+            (item) => item.id
+          );
+          if (!isExactSet(visible, gestureIds)) {
+            throw invalidState(
+              "Reorder payload must include every list item exactly once"
+            );
+          }
+          const shown = new Set(visible);
+          const hidden = stored.filter((gestureId) => !shown.has(gestureId));
+          return reorderList(id, [...gestureIds, ...hidden])(data);
+        });
         return;
       }
       await optimistic(
@@ -207,7 +248,7 @@ export function useList(id: string): UseListResult {
         () => reorderRemote({ gestureIds: [...gestureIds], id })
       );
     },
-    [id, local, optimistic, reorderRemote, store]
+    [id, local, optimistic, reorderRemote, store, summaryData]
   );
 
   const update = useCallback(

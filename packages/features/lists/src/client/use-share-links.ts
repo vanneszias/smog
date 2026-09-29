@@ -20,7 +20,11 @@ export interface ShareLinksState {
   create: (role: ShareRole) => Promise<ShareLink>;
   error: unknown;
   links: ShareLinks | undefined;
-  /** Revokes the role's link and creates a new one (the old one 404s). */
+  /**
+   * Revokes the role's link and creates a new one (the old one 404s). Two
+   * calls, not atomic: if the create fails, the role has no link (it fails
+   * closed) and `create` makes one.
+   */
   regenerate: (role: ShareRole) => Promise<ShareLink>;
   requiresAccount: false;
   /** Revokes the role's link; it stops working at once. */

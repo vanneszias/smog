@@ -21,6 +21,7 @@ import {
 } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
+  isExactSet,
   LIST_ITEMS_MAX,
   LISTS_MAX,
   type ListDetail,
@@ -33,14 +34,14 @@ import {
  * unpublished ids dropped): `@smog/gestures/server` `findGesturesByIds`,
  * which `@smog/api` passes in (a feature never imports another's server).
  */
-export type GestureSummaries = (
+export type FindGestureSummaries = (
   db: Db,
   ids: readonly string[]
 ) => Promise<GestureSummary[]>;
 
 export interface ListsDeps {
   db: Db;
-  gestureSummaries: GestureSummaries;
+  findSummaries: FindGestureSummaries;
 }
 
 export type ListsErrorCode = "FORBIDDEN" | "INVALID_STATE" | "NOT_FOUND";
@@ -157,7 +158,7 @@ export async function hydrateItems(
   rows: readonly { gestureId: string; position: number }[]
 ): Promise<ListItem[]> {
   const positions = new Map(rows.map((row) => [row.gestureId, row.position]));
-  const summaries = await deps.gestureSummaries(
+  const summaries = await deps.findSummaries(
     deps.db,
     rows.map((row) => row.gestureId)
   );
@@ -207,27 +208,19 @@ export async function createList(
   ownerId: string,
   input: { description?: string | null | undefined; name: string }
 ): Promise<ListSummary> {
-  const [count] = await db
-    .select({ n: sql<number>`count(*)` })
-    .from(list)
-    .where(eq(list.ownerId, ownerId));
-  if (Number(count?.n ?? 0) >= LISTS_MAX) {
-    throw new ListsError("INVALID_STATE", `At most ${LISTS_MAX} lists`);
-  }
-  const now = new Date();
+  const now = Date.now();
+  // The limit is part of the insert (no check-then-act): the row is only
+  // selected while the owner has fewer than `LISTS_MAX` lists. The columns
+  // follow the table's order (id, owner_id, name, description, created_at,
+  // updated_at).
   const [row] = await db
     .insert(list)
-    .values({
-      createdAt: now,
-      description: input.description ?? null,
-      id: newId(),
-      name: input.name,
-      ownerId,
-      updatedAt: now,
-    })
+    .select(
+      sql`SELECT ${newId()}, ${ownerId}, ${input.name}, ${input.description ?? null}, ${now}, ${now} WHERE (SELECT count(*) FROM ${list} AS o WHERE ${ref("o", list.ownerId)} = ${ownerId}) < ${LISTS_MAX}`
+    )
     .returning();
   if (!row) {
-    throw new Error("[lists] Failed to insert a list");
+    throw new ListsError("INVALID_STATE", `At most ${LISTS_MAX} lists`);
   }
   return toSummary({ ...row, edit: 0, itemCount: 0, view: 0 });
 }
@@ -283,25 +276,31 @@ interface ItemTarget {
   listId: string;
 }
 
+function isPresent(listId: string, gestureId: string): SQL<number> {
+  return sql<number>`EXISTS (SELECT 1 FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = ${listId} AND ${ref("li", listItem.gestureId)} = ${gestureId})`;
+}
+
 /**
- * Appends a published gesture (`NOT_FOUND` otherwise) at `max + 1`; the
- * caller has authorised the list. One read, then one batch; the insert
- * computes the position itself, so concurrent adds stay dense, and
- * `OR IGNORE` on the primary key makes a repeated add a no-op.
+ * Appends a published gesture (`NOT_FOUND` otherwise) at `max + 1`. With
+ * `ownerId` the list must be theirs (the owner path); without it the
+ * caller has authorised the list (an edit link). One read, then one batch.
+ * The insert computes the position itself, so concurrent adds stay dense;
+ * `ON CONFLICT DO NOTHING` makes a repeated add a no-op; and `HAVING
+ * count(*) < LIST_ITEMS_MAX` makes the limit part of the write, so
+ * concurrent adds to a nearly full list cannot pass it.
  */
 export async function addItemToList(
   db: Db,
-  target: ItemTarget
+  target: ItemTarget & { ownerId?: string }
 ): Promise<{ added: boolean }> {
-  const { actorId, gestureId, listId } = target;
+  const { actorId, gestureId, listId, ownerId } = target;
   const [state] = await db
     .select({
-      count: sql<number>`(SELECT count(*) FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = ${listId})`,
-      present: sql<number>`EXISTS (SELECT 1 FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = ${listId} AND ${ref("li", listItem.gestureId)} = ${gestureId})`,
+      present: isPresent(listId, gestureId),
       published: sql<number>`EXISTS (SELECT 1 FROM ${gesture} AS g WHERE ${ref("g", gesture.id)} = ${gestureId} AND ${ref("g", gesture.publishedAt)} IS NOT NULL)`,
     })
     .from(list)
-    .where(eq(list.id, listId))
+    .where(ownerId === undefined ? eq(list.id, listId) : owned(ownerId, listId))
     .limit(1);
   if (!state) {
     throw notFound();
@@ -312,21 +311,38 @@ export async function addItemToList(
   if (state.present) {
     return { added: false };
   }
-  if (Number(state.count) >= LIST_ITEMS_MAX) {
-    throw new ListsError("INVALID_STATE", `At most ${LIST_ITEMS_MAX} items`);
-  }
   const now = new Date();
   const [inserted] = await db.batch([
     db
       .insert(listItem)
       .select(
-        sql`SELECT ${listId}, ${gestureId}, coalesce(max(${ref("li", listItem.position)}) + 1, 0), ${actorId}, ${now.getTime()} FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = ${listId}`
+        sql`SELECT ${listId}, ${gestureId}, coalesce(max(${ref("li", listItem.position)}) + 1, 0), ${actorId}, ${now.getTime()} FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = ${listId} HAVING count(*) < ${LIST_ITEMS_MAX}`
       )
       .onConflictDoNothing()
       .returning({ gestureId: listItem.gestureId }),
-    db.update(list).set({ updatedAt: now }).where(eq(list.id, listId)),
+    db
+      .update(list)
+      .set({ updatedAt: now })
+      .where(
+        and(
+          eq(list.id, listId),
+          sql`EXISTS (SELECT 1 FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = ${listId} AND ${ref("li", listItem.gestureId)} = ${gestureId} AND ${ref("li", listItem.createdAt)} = ${now.getTime()})`
+        )
+      ),
   ]);
-  return { added: inserted.length > 0 };
+  if (inserted.length > 0) {
+    return { added: true };
+  }
+  // Not inserted: a concurrent add of the same gesture won, or the list is full.
+  const [after] = await db
+    .select({ present: isPresent(listId, gestureId) })
+    .from(list)
+    .where(eq(list.id, listId))
+    .limit(1);
+  if (after?.present) {
+    return { added: false };
+  }
+  throw new ListsError("INVALID_STATE", `At most ${LIST_ITEMS_MAX} items`);
 }
 
 /**
@@ -373,11 +389,11 @@ export async function addItem(
   ownerId: string,
   input: { gestureId: string; id: string }
 ): Promise<{ added: boolean }> {
-  await assertOwner(db, ownerId, input.id);
   return await addItemToList(db, {
     actorId: ownerId,
     gestureId: input.gestureId,
     listId: input.id,
+    ownerId,
   });
 }
 
@@ -391,23 +407,6 @@ export async function removeItem(
     gestureId: input.gestureId,
     listId: input.id,
   });
-}
-
-/**
- * Whether `given` holds exactly the ids of `current`, each once. Anything
- * else is a stale or corrupt payload.
- */
-function isExactSet(
-  current: readonly string[],
-  given: readonly string[]
-): boolean {
-  const expected = new Set(current);
-  const seen = new Set(given);
-  return (
-    given.length === current.length &&
-    seen.size === given.length &&
-    given.every((id) => expected.has(id))
-  );
 }
 
 /**

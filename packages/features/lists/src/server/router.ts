@@ -4,7 +4,7 @@ import {
   addItem,
   createList,
   deleteList,
-  type GestureSummaries,
+  type FindGestureSummaries,
   getList,
   ListsError,
   type ListsErrorCode,
@@ -24,7 +24,7 @@ import {
 
 export interface ListsRouterDeps {
   /** `@smog/gestures/server` `findGesturesByIds` (wired by `@smog/api`). */
-  gestureSummaries: GestureSummaries;
+  findSummaries: FindGestureSummaries;
 }
 
 type ErrorFactories = Record<ListsErrorCode, () => Error>;
@@ -47,14 +47,14 @@ async function mapped<T>(
 /**
  * The `lists` slice of the app router. Owner procedures and shared edits
  * use `requireUser`; `shared.get` is public. Gesture summaries come from
- * the injected `gestureSummaries`, so lists never import `@smog/gestures`'s
+ * the injected `findSummaries`, so lists never import `@smog/gestures`'s
  * server.
  */
 export function createListsRouter(deps: ListsRouterDeps) {
   const os = implementRpc(listsContract);
-  const withDb = (db: Parameters<GestureSummaries>[0]) => ({
+  const withDb = (db: Parameters<FindGestureSummaries>[0]) => ({
     db,
-    gestureSummaries: deps.gestureSummaries,
+    findSummaries: deps.findSummaries,
   });
 
   return os.router({

@@ -7,14 +7,14 @@ import type { GestureSummary } from "@smog/gestures/schema";
 import type { Locale } from "@smog/i18n";
 import { makeRpcContext } from "@smog/rpc/testing";
 import { and, inArray, isNotNull } from "drizzle-orm";
-import { createListsRouter, type GestureSummaries } from "../src/server";
+import { createListsRouter, type FindGestureSummaries } from "../src/server";
 
 /**
  * Published gestures by id, in the order asked: what `@smog/gestures`
  * `findGesturesByIds` answers (the api wires the real one), minus the
  * categories and the sponsored video.
  */
-const fakeSummaries: GestureSummaries = async (db, ids) => {
+const fakeSummaries: FindGestureSummaries = async (db, ids) => {
   if (ids.length === 0) {
     return [];
   }
@@ -34,7 +34,7 @@ const fakeSummaries: GestureSummaries = async (db, ids) => {
   });
 };
 
-export const router = createListsRouter({ gestureSummaries: fakeSummaries });
+export const router = createListsRouter({ findSummaries: fakeSummaries });
 
 function testDb(): Db {
   return createDb(env.DB);

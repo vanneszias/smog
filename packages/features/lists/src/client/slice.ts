@@ -1,14 +1,16 @@
+import type { GesturesContract } from "@smog/gestures/contract";
 import {
   type RpcClient,
   type RpcQueryUtils,
   useRpcClient,
   useRpcQuery,
 } from "@smog/rpc/react";
-import type { GesturesByIdsContract, ListsContract } from "../contract";
+import type { ListsContract } from "../contract";
 
 /** The contract slice these hooks know, keyed as `appContract` mounts it. */
 export interface ListsSlice {
-  gestures: { byIds: GesturesByIdsContract };
+  /** Guest lists hydrate their ids with `gestures.byIds`. */
+  gestures: Pick<GesturesContract, "byIds">;
   lists: ListsContract;
 }
 

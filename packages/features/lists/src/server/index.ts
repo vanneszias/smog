@@ -4,4 +4,4 @@ export {
   type ListsRouter,
   type ListsRouterDeps,
 } from "./router";
-export type { GestureSummaries } from "./service";
+export type { FindGestureSummaries } from "./service";

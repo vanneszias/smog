@@ -5,11 +5,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { z } from "zod";
 import {
+  LISTS_MAX,
   type ListSummary,
   listDescriptionSchema,
   listNameSchema,
 } from "../schema";
-import { selectLocalSummaries, toLocalSummary } from "./local";
+import { invalidState, selectLocalSummaries, toLocalSummary } from "./local";
 import { forUser, LISTS_STALE_TIME, useListsRpc } from "./slice";
 
 /** What `create` takes: the contract's rules, applied to guests too. */
@@ -73,9 +74,17 @@ export function useLists(): UseListsResult {
       }
       const parsed = createInputSchema.parse(input);
       const id = newLocalListId();
-      await store.update(
-        createList(parsed.name, parsed.description ?? undefined, id)
-      );
+      // The account's limit applies on the device too (the import keeps it).
+      await store.update((data) => {
+        if (data.lists.length >= LISTS_MAX) {
+          throw invalidState(`At most ${LISTS_MAX} lists`);
+        }
+        return createList(
+          parsed.name,
+          parsed.description ?? undefined,
+          id
+        )(data);
+      });
       const created = store.getSnapshot().lists.find((list) => list.id === id);
       if (!created) {
         throw new Error("[lists] Failed to create a local list");

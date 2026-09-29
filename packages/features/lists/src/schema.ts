@@ -46,6 +46,24 @@ export function isLocalListId(id: string): boolean {
   return id.startsWith(LOCAL_LIST_PREFIX);
 }
 
+/**
+ * Whether `given` holds exactly the ids of `current`, each once: the
+ * reorder rule, applied by the server and to guest lists alike. Anything
+ * else is a stale or corrupt payload.
+ */
+export function isExactSet(
+  current: readonly string[],
+  given: readonly string[]
+): boolean {
+  const expected = new Set(current);
+  const seen = new Set(given);
+  return (
+    given.length === current.length &&
+    seen.size === given.length &&
+    given.every((id) => expected.has(id))
+  );
+}
+
 export const listSummarySchema = z.object({
   description: z.string().nullable(),
   id: z.string(),
