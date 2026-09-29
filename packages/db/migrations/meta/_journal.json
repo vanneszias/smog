@@ -15,6 +15,13 @@
       "when": 1790690788924,
       "tag": "0001_gesture_fts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790701714118,
+      "tag": "0002_gesture_catalog_order",
+      "breakpoints": true
     }
   ]
 }

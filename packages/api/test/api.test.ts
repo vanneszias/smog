@@ -1,6 +1,7 @@
 import type { ContractRouterClient } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
+import { gesturesContract } from "@smog/gestures/contract";
 import { implementRpc, requireTurnstile } from "@smog/rpc";
 import { baseContract, type RpcClientContext } from "@smog/rpc/contract";
 import { makeRpcContext, makeSession } from "@smog/rpc/testing";
@@ -123,6 +124,22 @@ describe("createApiClient", () => {
     ).toBe("paid");
     const body = siteverify.mock.calls[0]?.[1]?.body as FormData;
     expect(body.get("response")).toBe("widget-token");
+  });
+
+  it("mounts the gestures slice under `gestures`", async () => {
+    expect(Object.keys(appRouter.gestures).sort()).toEqual(
+      Object.keys(gesturesContract).sort()
+    );
+    const client = createApiClient({
+      baseUrl: "https://smog.test",
+      fetch: serve,
+    });
+
+    // Contract validation runs before the handler (and its D1 reads).
+    await expect(
+      client.gestures.search({ q: "x".repeat(101) })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(seen.at(-1)?.url).toBe("https://smog.test/api/rpc/gestures/search");
   });
 
   it("builds TanStack Query options with a stable key", () => {

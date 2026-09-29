@@ -1,3 +1,4 @@
+import { gesturesRouter } from "@smog/gestures/server";
 import { implementRpc } from "@smog/rpc";
 import { roleSchema } from "@smog/rpc/contract";
 import { appContract } from "./contract";
@@ -26,6 +27,6 @@ const system = os.system.router({
 });
 
 /** The app router: implements `appContract` (feature routers join here). */
-export const appRouter = os.router({ system });
+export const appRouter = os.router({ gestures: gesturesRouter, system });
 
 export type AppRouter = typeof appRouter;
