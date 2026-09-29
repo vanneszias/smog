@@ -1,6 +1,7 @@
 import { useAuthState } from "@smog/auth/react";
 import { createList, newLocalListId } from "@smog/local-store";
 import { useLocalStore, useLocalStoreInstance } from "@smog/local-store/react";
+import { usePurgeOtherUsers, userScopedKey } from "@smog/rpc/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { z } from "zod";
@@ -11,7 +12,7 @@ import {
   listNameSchema,
 } from "../schema";
 import { invalidState, selectLocalSummaries, toLocalSummary } from "./local";
-import { forUser, LISTS_STALE_TIME, useListsRpc } from "./slice";
+import { LISTS_STALE_TIME, useListsRpc } from "./slice";
 
 /** What `create` takes: the contract's rules, applied to guests too. */
 const createInputSchema = z.object({
@@ -48,6 +49,7 @@ export function queryStatus(query: {
  */
 export function useLists(): UseListsResult {
   const auth = useAuthState();
+  usePurgeOtherUsers();
   const signedIn = auth.status === "signedIn";
   const rpc = useListsRpc();
   const queryClient = useQueryClient();
@@ -58,7 +60,7 @@ export function useLists(): UseListsResult {
   const remote = useQuery({
     ...mine,
     enabled: signedIn,
-    queryKey: forUser(mine.queryKey, auth.user?.id),
+    queryKey: userScopedKey(mine.queryKey, auth.user?.id),
   });
   const remoteCreate = useMutation(
     rpc.create.mutationOptions({

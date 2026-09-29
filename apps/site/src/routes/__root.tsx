@@ -14,7 +14,7 @@ import {
 } from "@smog/local-store";
 import { LocalStoreProvider } from "@smog/local-store/react";
 import { webAdapter } from "@smog/local-store/web";
-import { RpcProvider } from "@smog/rpc/react";
+import { PurgeOtherUsers, RpcProvider } from "@smog/rpc/react";
 import {
   Button,
   EmptyState,
@@ -204,6 +204,7 @@ function RootDocument({ children }: { children: ReactNode }): ReactNode {
             <RpcProvider client={clients.api} queryUtils={clients.queryUtils}>
               <AuthClientProvider client={clients.auth}>
                 <AuthStateProvider useSession={clients.useSession}>
+                  <PurgeOtherUsers />
                   <LocalStoreProvider store={clients.store}>
                     <ThemeProvider value={themeValue}>
                       <LocaleProvider value={localeValue}>

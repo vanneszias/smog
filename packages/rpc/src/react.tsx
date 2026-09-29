@@ -1,7 +1,13 @@
 import type { NestedClient } from "@orpc/client";
 import type { AnyContractRouter, ContractRouterClient } from "@orpc/contract";
 import type { RouterUtils } from "@orpc/tanstack-query";
-import { createContext, type ReactNode, useContext } from "react";
+import { useAuthState } from "@smog/auth/react";
+import {
+  type QueryClient,
+  type QueryKey,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { createContext, type ReactNode, useContext, useEffect } from "react";
 import type { RpcClientContext } from "./contract";
 
 /**
@@ -82,4 +88,67 @@ export function useRpcQuery<
   TSlice extends ContractSlice<TSlice>,
 >(): RpcQueryUtils<TSlice> {
   return useRpcValue("useRpcQuery").queryUtils as RpcQueryUtils<TSlice>;
+}
+
+/** The last element of a user-scoped query key (`null`: no user). */
+export interface UserScope {
+  user: string | null;
+}
+
+/**
+ * A query key scoped to the signed-in user, so another account signing in
+ * on the same device never sees this one's cache (and `purgeOtherUsers`
+ * can drop it). It extends the oRPC key, so `rpc.key()` still matches it.
+ */
+export function userScopedKey<TKey extends readonly unknown[]>(
+  key: TKey,
+  userId: string | undefined
+): readonly [...TKey, UserScope] {
+  return [...key, { user: userId ?? null }];
+}
+
+/** Whether `queryKey` is `userScopedKey`-scoped to a user other than `userId`. */
+export function isOtherUsersKey(
+  queryKey: QueryKey,
+  userId: string | undefined
+): boolean {
+  const scope = queryKey.at(-1);
+  if (typeof scope !== "object" || scope === null || !("user" in scope)) {
+    return false;
+  }
+  const { user } = scope as UserScope;
+  return typeof user === "string" && user !== userId;
+}
+
+/** Removes every query scoped to a user other than `userId` (all features). */
+export function purgeOtherUsers(
+  queryClient: QueryClient,
+  userId: string | undefined
+): void {
+  queryClient.removeQueries({
+    predicate: (query) => isOtherUsersKey(query.queryKey, userId),
+  });
+}
+
+/**
+ * After a sign-out or an account switch, drops the previous user's cached
+ * queries (every `userScopedKey`), before a persisted cache could keep
+ * them. Mounted once per app (`<PurgeOtherUsers />`); feature hooks that
+ * read user data call it too, so they are correct on their own.
+ */
+export function usePurgeOtherUsers(): void {
+  const { status, user } = useAuthState();
+  const queryClient = useQueryClient();
+  const userId = user?.id;
+  useEffect(() => {
+    if (status !== "loading") {
+      purgeOtherUsers(queryClient, userId);
+    }
+  }, [queryClient, status, userId]);
+}
+
+/** `usePurgeOtherUsers` as a component, for the app's provider tree. */
+export function PurgeOtherUsers(): null {
+  usePurgeOtherUsers();
+  return null;
 }

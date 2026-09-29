@@ -436,6 +436,7 @@
       },
       "devDependencies": {
         "@cloudflare/vitest-plugin": "catalog:",
+        "@tanstack/react-query": "catalog:",
         "@types/react": "catalog:",
         "@types/react-dom": "19.2.7",
         "react": "catalog:",
@@ -445,6 +446,7 @@
         "wrangler": "catalog:",
       },
       "peerDependencies": {
+        "@tanstack/react-query": "catalog:",
         "react": "catalog:",
       },
     },

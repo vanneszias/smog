@@ -6,7 +6,7 @@ import { I18nextProvider } from "@smog/i18n/react";
 import { createLocalStore, type LocalStore } from "@smog/local-store";
 import { nativeAdapter } from "@smog/local-store/native";
 import { LocalStoreProvider } from "@smog/local-store/react";
-import { RpcProvider } from "@smog/rpc/react";
+import { PurgeOtherUsers, RpcProvider } from "@smog/rpc/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useColorScheme } from "nativewind";
 import {
@@ -86,6 +86,7 @@ export function AppProviders({
       <RpcProvider client={clients.api} queryUtils={queryUtils}>
         <AuthClientProvider client={clients.auth}>
           <AuthStateProvider useSession={clients.useSession}>
+            <PurgeOtherUsers />
             <LocalStoreProvider store={clients.store}>
               <PreferencesRoot>{children}</PreferencesRoot>
             </LocalStoreProvider>
