@@ -15,7 +15,7 @@ export const workerVarsSchema = z.object({
 
 export type WorkerVars = z.infer<typeof workerVarsSchema>;
 
-export function parseWorkerVars(env: Record<string, unknown>): WorkerVars {
+export function parseWorkerVars(env: object): WorkerVars {
   const result = workerVarsSchema.safeParse(env);
   if (!result.success) {
     throw new Error(

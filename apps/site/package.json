@@ -1,0 +1,35 @@
+{
+  "name": "@smog/site",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "cf-typegen": "wrangler types",
+    "check-types": "tsc -b",
+    "deploy:dry": "CLOUDFLARE_ENV=staging vite build && wrangler deploy --dry-run --env staging",
+    "dev": "vite dev --port 5173",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@smog/config": "workspace:*",
+    "@tanstack/react-router": "1.170.40",
+    "@tanstack/react-start": "1.168.59",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.62.0",
+    "@cloudflare/vitest-plugin": "catalog:",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/react": "catalog:",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

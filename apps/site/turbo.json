@@ -1,0 +1,13 @@
+{
+  "$schema": "../../node_modules/turbo/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "env": ["CLOUDFLARE_ENV"],
+      "outputs": ["dist/**", ".wrangler/deploy/**"]
+    },
+    "dev": {
+      "passThroughEnv": ["CLOUDFLARE_ENV"]
+    }
+  }
+}
