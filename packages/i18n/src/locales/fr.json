@@ -282,7 +282,7 @@
       "linkLabel": "Lien",
       "copyLink": "Copier le lien",
       "revoke": "Révoquer le lien",
-      "revokeTitle": "Révoquer ce lien ?",
+      "revokeTitle": "Révoquer ce lien ?",
       "revokeDescription": "Les personnes qui ont le lien perdent l'accès immédiatement. Vous pourrez créer un nouveau lien plus tard.",
       "revokeConfirm": "Révoquer"
     }
