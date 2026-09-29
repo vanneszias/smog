@@ -1,14 +1,15 @@
 import { type ApiClient, createApiClient } from "@smog/api/client";
+import type { ExpoAuthClient } from "@smog/auth/expo";
 import { type MobileEnv, parseMobileEnv } from "@smog/config/env/mobile";
 
 /**
- * What the api client needs from the Better Auth Expo client
- * (`createExpoAuthClient` from `@smog/auth/expo`): its `getCookie()`, which
- * reads the session cookie from SecureStore.
+ * What the api client needs from the app's Better Auth Expo client
+ * (`createExpoAuthClient`): its `getCookie()`, which reads the session
+ * cookie from SecureStore. The app root owns that client (Task 9 providers)
+ * and passes it in, so there is one auth client per app and tests need no
+ * SecureStore.
  */
-interface SessionCookieSource {
-  getCookie: () => string | Promise<string>;
-}
+type SessionCookieSource = Pick<ExpoAuthClient, "getCookie">;
 
 /** `EXPO_PUBLIC_*`, validated on first use (Expo inlines each member). */
 function mobileEnv(): MobileEnv {

@@ -1,12 +1,10 @@
 import { ORPCError, os } from "@orpc/server";
 import type { WorkerEnv } from "@smog/config/env/worker";
+import { TURNSTILE_HEADER } from "../contract";
 import { ERRORS } from "../errors";
 
 const SITEVERIFY_URL =
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
-
-/** The header clients send the Turnstile widget token in. */
-export const TURNSTILE_HEADER = "x-turnstile-token";
 
 interface VerifyTurnstileOptions {
   ip: string;
@@ -14,7 +12,11 @@ interface VerifyTurnstileOptions {
   token: string;
 }
 
-/** Verifies a Turnstile token with Cloudflare's siteverify endpoint. */
+/**
+ * Verifies a Turnstile token with Cloudflare's siteverify endpoint. Fails
+ * closed: a network error or a non-2xx answer counts as invalid (logged),
+ * so the caller sees `TURNSTILE_FAILED` and retries with a fresh token.
+ */
 export async function verifyTurnstile({
   ip,
   secret,
@@ -27,13 +29,16 @@ export async function verifyTurnstile({
   try {
     const response = await fetch(SITEVERIFY_URL, { body, method: "POST" });
     if (!response.ok) {
+      console.error(
+        `[rpc] Failed to verify a Turnstile token: ${response.status}`
+      );
       return false;
     }
     const result = (await response.json()) as { success?: unknown };
     return result.success === true;
   } catch (error) {
     console.error("[rpc] Failed to verify a Turnstile token:", error);
-    throw error;
+    return false;
   }
 }
 

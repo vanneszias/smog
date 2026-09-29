@@ -13,8 +13,13 @@ export {
   type RpcContext,
   type RpcEnv,
 } from "./context";
-export { baseContract } from "./contract";
+export {
+  baseContract,
+  type RpcClientContext,
+  TURNSTILE_HEADER,
+} from "./contract";
 export { ERRORS, type RpcErrorCode } from "./errors";
+export { loadSession, rpcHandlerOptions } from "./handler";
 export { requireAdmin, requireUser } from "./middleware/auth";
 export { logErrors } from "./middleware/log";
 export {
@@ -22,9 +27,5 @@ export {
   limitRequests,
   rateLimit,
 } from "./middleware/rate-limit";
-export {
-  requireTurnstile,
-  TURNSTILE_HEADER,
-  verifyTurnstile,
-} from "./middleware/turnstile";
+export { requireTurnstile, verifyTurnstile } from "./middleware/turnstile";
 export { mapValidationErrors } from "./validation";

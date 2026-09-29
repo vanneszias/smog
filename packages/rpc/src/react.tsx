@@ -2,6 +2,7 @@ import type { NestedClient } from "@orpc/client";
 import type { AnyContractRouter, ContractRouterClient } from "@orpc/contract";
 import type { RouterUtils } from "@orpc/tanstack-query";
 import { createContext, type ReactNode, useContext } from "react";
+import type { RpcClientContext } from "./contract";
 
 /**
  * A contract slice: named contract routers, e.g.
@@ -10,9 +11,12 @@ import { createContext, type ReactNode, useContext } from "react";
  */
 export type ContractSlice<T> = Record<keyof T, AnyContractRouter>;
 
-/** The typed oRPC client for a contract slice. */
+/**
+ * The typed oRPC client for a contract slice, with the per-call
+ * `RpcClientContext` (`{ context: { turnstileToken } }`).
+ */
 export type RpcClient<TSlice extends ContractSlice<TSlice>> = {
-  [K in keyof TSlice]: ContractRouterClient<TSlice[K]>;
+  [K in keyof TSlice]: ContractRouterClient<TSlice[K], RpcClientContext>;
 };
 
 /** The TanStack Query utils (`queryOptions`, `mutationOptions`, keys). */

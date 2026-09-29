@@ -5,12 +5,18 @@ middleware, the shared error map and the React provider.
 
 | Subpath | Contents | Runs on |
 |---|---|---|
-| `@smog/rpc` | `RpcContext`, `base`, `publicProcedure` / `userProcedure` / `adminProcedure`, `implementRpc`, `requireUser`, `requireAdmin`, `rateLimit`, `limitRequests`, `requireTurnstile`, `logErrors`, `mapValidationErrors` | Worker |
-| `@smog/rpc/contract` | `baseContract` (`oc` with `ERRORS`), `ERRORS`, `roleSchema` | everywhere |
+| `@smog/rpc` | `RpcContext`, `implementRpc`, `requireUser`, `requireAdmin`, `rateLimit`, `requireTurnstile`, `logErrors`, `rpcHandlerOptions` (`limitRequests`, `loadSession`, `mapValidationErrors`), `base` / `publicProcedure` / `userProcedure` / `adminProcedure` | Worker |
+| `@smog/rpc/contract` | `baseContract` (`oc` with `ERRORS`), `ERRORS`, `roleSchema`, `RpcClientContext`, `TURNSTILE_HEADER` | everywhere |
 | `@smog/rpc/react` | `RpcProvider`, `useRpcClient`, `useRpcQuery` | site + mobile |
 | `@smog/rpc/testing` | `makeRpcContext`, `makeSession` | tests |
 
 ## A feature, end to end
+
+Features are contract-first (spec §7): a `./contract`, and a router from
+`implementRpc(contract)`. The router-first builders (`base`,
+`publicProcedure`, `userProcedure`, `adminProcedure`) exist for tests and
+tooling only; a feature procedure built with them would bypass its
+contract, so features do not use them.
 
 The contract starts from `baseContract`, so every procedure declares the
 shared error map and clients get the codes typed:
@@ -98,12 +104,36 @@ implement its contract under that key.
   `context.user` is the signed-in user. `adminProcedure` / `requireAdmin`:
   `FORBIDDEN` unless `role === "admin"`.
 - `rateLimit("RL_SPONSOR")`: a Workers Rate Limiting binding keyed by
-  `<ip>:<procedure path>`, `RATE_LIMITED` when over. The site applies
-  `RL_API` per IP to every request of both transports (`limitRequests`) and
-  `RL_AUTH` to `POST /api/auth/*`.
+  `<ip>:<procedure path>`, `RATE_LIMITED` when over. Both site transports
+  use `rpcHandlerOptions`: `limitRequests("RL_API", "api")` per IP first,
+  then `loadSession` (the session is read only after the limit passed),
+  so the handler's `RATE_LIMITED` is `defined: true` too. The site also
+  applies `RL_AUTH` to `POST /api/auth/*` (sign-out and get-session exempt).
 - `requireTurnstile`: the `x-turnstile-token` header, checked with
-  siteverify; skipped when `TURNSTILE_SECRET_KEY` is unset (dev).
+  siteverify (a network error counts as invalid); skipped when
+  `TURNSTILE_SECRET_KEY` is unset, which only `dev` allows. Headers per
+  surface: rpc procedures read `x-turnstile-token` (`TURNSTILE_HEADER`);
+  Better Auth's captcha plugin on `/api/auth/*` reads `x-captcha-response`
+  (the auth client sends it). The token goes with one call through the
+  client context (below).
 - `logErrors`: logs unexpected errors as `[rpc:<path>]` and returns a bare
   `INTERNAL_SERVER_ERROR`.
 - `mapValidationErrors` (handler `clientInterceptors`): input validation
   failures become `VALIDATION` with Zod's flattened field errors.
+
+## Turnstile per call
+
+`RpcClientContext` (`{ turnstileToken? }`) is the client context of every app
+client (`ApiClient`, `useRpcClient<Slice>()`, `useRpcQuery<Slice>()`); the
+link sends the token as `x-turnstile-token` for that call only:
+
+```tsx
+const rpc = useRpcQuery<{ sponsorships: SponsorshipsContract }>();
+const checkout = useMutation(
+  rpc.sponsorships.checkout.mutationOptions({ context: { turnstileToken } })
+);
+// or: client.sponsorships.checkout(input, { context: { turnstileToken } })
+```
+
+`createApiClient({ baseUrl })` takes an origin; any path in it is ignored
+(the client always calls `<origin>/api/rpc`).

@@ -34,9 +34,14 @@ function GestureKey() {
   const { queryKey } = query.gestures.bySlug.queryOptions({
     input: { slug: "hond" },
   });
+  // The per-call client context is typed on slice utils too.
+  const { mutationKey } = query.gestures.bySlug.mutationOptions({
+    context: { turnstileToken: "widget-token" },
+  });
   return (
     <output>
-      {JSON.stringify(queryKey)} {typeof client.gestures.bySlug}
+      {JSON.stringify(queryKey)} {JSON.stringify(mutationKey)}{" "}
+      {typeof client.gestures.bySlug}
     </output>
   );
 }

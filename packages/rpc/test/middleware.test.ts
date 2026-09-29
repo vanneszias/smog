@@ -1,19 +1,21 @@
 import { call, ORPCError, os, ValidationError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
+import type { Auth } from "@smog/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   adminProcedure,
   baseContract,
   implementRpc,
-  limitRequests,
   logErrors,
   mapValidationErrors,
   publicProcedure,
   type RateLimiter,
+  type RpcContext,
   rateLimit,
   requireTurnstile,
   requireUser,
+  rpcHandlerOptions,
   userProcedure,
 } from "../src/index";
 import { makeRpcContext, makeSession } from "../src/testing";
@@ -124,36 +126,88 @@ describe("rateLimit", () => {
   });
 });
 
-describe("limitRequests", () => {
-  it("answers every request over the limit with RATE_LIMITED, keyed by ip", async () => {
+describe("rpcHandlerOptions (limitRequests, then loadSession)", () => {
+  function limiter(success: boolean): RateLimiter & { keys: string[] } {
     const keys: string[] = [];
-    const RL_API: RateLimiter = {
+    return {
+      keys,
       limit: ({ key }) => {
         keys.push(key);
-        return Promise.resolve({ success: false });
+        return Promise.resolve({ success });
       },
     };
-    const handler = new RPCHandler(
-      { ping: publicProcedure.handler(() => "pong") },
-      { interceptors: [limitRequests("RL_API", "rpc")] }
-    );
+  }
 
-    const { response } = await handler.handle(
-      new Request("https://smog.test/api/rpc/ping", {
-        body: "{}",
-        method: "POST",
-      }),
+  function setup(success: boolean) {
+    const RL_API = limiter(success);
+    const getSession = vi.fn(() => Promise.resolve(makeSession("user")));
+    const auth = { api: { getSession } } as unknown as Auth;
+    const handler = new RPCHandler<RpcContext>(
       {
-        context: makeRpcContext({ env: { RL_API }, ip: "203.0.113.9" }),
-        prefix: "/api/rpc",
-      }
+        me: publicProcedure.handler(
+          ({ context }) => context.session?.user.id ?? null
+        ),
+        slug: publicProcedure
+          .input(z.object({ slug: z.string().min(2) }))
+          .handler(({ input }) => input.slug),
+      },
+      rpcHandlerOptions
     );
+    async function post(path: string, body: unknown): Promise<Response> {
+      const { response } = await handler.handle(
+        new Request(`https://smog.test/api/rpc/${path}`, {
+          body: JSON.stringify({ json: body }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        }),
+        {
+          context: makeRpcContext({ auth, env: { RL_API }, ip: "203.0.113.9" }),
+          prefix: "/api/rpc",
+        }
+      );
+      if (!response) {
+        throw new Error("no response");
+      }
+      return response;
+    }
+    return { getSession, post, RL_API };
+  }
 
-    expect(response?.status).toBe(429);
-    expect(await response?.json()).toMatchObject({
-      json: { code: "RATE_LIMITED" },
+  it("answers over the limit with a defined RATE_LIMITED before any session lookup", async () => {
+    const { getSession, post, RL_API } = setup(false);
+
+    const response = await post("me", undefined);
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({
+      json: { code: "RATE_LIMITED", defined: true, status: 429 },
     });
-    expect(keys).toEqual(["rpc:203.0.113.9"]);
+    expect(RL_API.keys).toEqual(["api:203.0.113.9"]);
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
+  it("reads the session once when the limit passes", async () => {
+    const { getSession, post } = setup(true);
+
+    const response = await post("me", undefined);
+
+    expect(await response.json()).toEqual({ json: "user-1" });
+    expect(getSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends VALIDATION over the wire as a defined error", async () => {
+    const { post } = setup(true);
+
+    const response = await post("slug", { slug: "a" });
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({
+      json: {
+        code: "VALIDATION",
+        data: { fieldErrors: { slug: [expect.any(String)] } },
+        defined: true,
+      },
+    });
   });
 });
 

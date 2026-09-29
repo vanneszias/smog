@@ -63,17 +63,40 @@ describe("parseWorkerEnv", () => {
       BETTER_AUTH_SECRET: "x".repeat(32),
       EMAIL_FROM: "SMOG <no-reply@example.com>",
       EMAIL_REPLY_TO: "info@smog.vlaanderen",
-      ENVIRONMENT: "staging",
+      ENVIRONMENT: "dev",
       SITE_URL: "https://smog.test",
       TURNSTILE_SECRET_KEY: "",
     });
 
-    expect(env.ENVIRONMENT).toBe("staging");
+    expect(env.ENVIRONMENT).toBe("dev");
     expect(env.BETTER_AUTH_SECRET).toHaveLength(32);
     expect(env.TURNSTILE_SECRET_KEY).toBeUndefined();
   });
 
   test("names every invalid key", () => {
     expect(() => parseWorkerEnv({})).toThrow("BETTER_AUTH_SECRET");
+  });
+
+  test("requires TURNSTILE_SECRET_KEY outside dev only", () => {
+    const base = {
+      BETTER_AUTH_SECRET: "x".repeat(32),
+      EMAIL_FROM: "SMOG <no-reply@example.com>",
+      EMAIL_REPLY_TO: "info@smog.vlaanderen",
+      SITE_URL: "https://smog.test",
+    };
+    expect(parseWorkerEnv({ ...base, ENVIRONMENT: "dev" }).ENVIRONMENT).toBe(
+      "dev"
+    );
+    for (const ENVIRONMENT of ["staging", "production"]) {
+      expect(() => parseWorkerEnv({ ...base, ENVIRONMENT })).toThrow(
+        "TURNSTILE_SECRET_KEY"
+      );
+    }
+    const production = parseWorkerEnv({
+      ...base,
+      ENVIRONMENT: "production",
+      TURNSTILE_SECRET_KEY: "t",
+    });
+    expect(production.TURNSTILE_SECRET_KEY).toBe("t");
   });
 });

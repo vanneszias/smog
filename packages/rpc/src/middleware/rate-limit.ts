@@ -19,11 +19,18 @@ export async function checkRateLimit(
   }
 }
 
+/**
+ * `defined: true` because the handler-level limit runs outside any
+ * procedure, where oRPC would not mark it; every contract declares it.
+ */
 function rateLimited(): ORPCError<"RATE_LIMITED", unknown> {
-  return new ORPCError("RATE_LIMITED", { status: ERRORS.RATE_LIMITED.status });
+  return new ORPCError("RATE_LIMITED", {
+    defined: true,
+    status: ERRORS.RATE_LIMITED.status,
+  });
 }
 
-interface LimitedContext {
+export interface LimitedContext {
   env: Pick<RpcEnv, RateLimitBinding>;
   ip: string;
 }

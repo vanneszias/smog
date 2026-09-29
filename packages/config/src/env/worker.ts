@@ -39,10 +39,23 @@ export const workerSecretsSchema = z.object({
 
 export type WorkerSecrets = z.infer<typeof workerSecretsSchema>;
 
-/** Vars and secrets together: the `env` of the rpc context. */
-export const workerEnvSchema = workerVarsSchema.extend(
-  workerSecretsSchema.shape
-);
+/**
+ * Vars and secrets together: the `env` of the rpc context. Outside `dev`
+ * `TURNSTILE_SECRET_KEY` is required, so `requireTurnstile` can never fail
+ * open in staging or production (Cloudflare's always-pass test secret is
+ * fine for a staging without a real widget).
+ */
+export const workerEnvSchema = workerVarsSchema
+  .extend(workerSecretsSchema.shape)
+  .refine(
+    (env) =>
+      env.ENVIRONMENT === "dev" || env.TURNSTILE_SECRET_KEY !== undefined,
+    {
+      message:
+        "is required outside dev (requireTurnstile fails open without it)",
+      path: ["TURNSTILE_SECRET_KEY"],
+    }
+  );
 
 export type WorkerEnv = z.infer<typeof workerEnvSchema>;
 

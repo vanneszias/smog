@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@smog/api": "workspace:*",
+    "@smog/auth": "workspace:*",
     "@smog/config": "workspace:*",
     "@smog/styles": "workspace:*",
     "expo": "~57.0.26",

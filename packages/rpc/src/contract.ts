@@ -23,3 +23,20 @@ export const baseContract = oc.errors(ERRORS);
  * type test keeps it equal to `Role`.
  */
 export const roleSchema = z.enum(["user", "admin"]);
+
+/**
+ * The header `requireTurnstile` reads the widget token from. Better Auth's
+ * captcha plugin (the `/api/auth/*` endpoints) reads `x-captcha-response`
+ * instead; the auth client sends that one.
+ */
+export const TURNSTILE_HEADER = "x-turnstile-token";
+
+/**
+ * Per-call client context for every app client (`ApiClient`, slice clients):
+ * `client.sponsorships.checkout(input, { context: { turnstileToken } })` or
+ * `mutationOptions({ context: { turnstileToken } })` sends the token in
+ * `x-turnstile-token` for that call only.
+ */
+export interface RpcClientContext {
+  turnstileToken?: string | undefined;
+}
