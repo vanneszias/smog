@@ -1,6 +1,6 @@
 import type { Auth } from "./server";
 
-export type Role = "user" | "admin";
+export type { Role } from "./fields";
 
 export type SessionWithUser = NonNullable<
   Awaited<ReturnType<Auth["api"]["getSession"]>>

@@ -6,20 +6,23 @@ import type { EmailTemplate } from "../types";
 export interface VerifyEmailProps {
   /** Link lifetime in minutes. */
   minutes: number;
-  name?: string | null | undefined;
   url: string;
 }
 
-/** `auth_verify_email`: confirm the address after sign-up. */
+/**
+ * `auth_verify_email`: confirm the address after sign-up. It goes to an
+ * address the sender has not proven to own, so it never shows the
+ * sign-up name (which could carry a phishing message).
+ */
 export const verifyEmail: EmailTemplate<VerifyEmailProps> = {
-  render: ({ minutes, name, url }, { locale, t }) => (
+  render: ({ minutes, url }, { locale, t }) => (
     <EmailLayout
       heading={t("email.auth.verifyEmail.heading")}
       locale={locale}
       preheader={t("email.auth.verifyEmail.preheader")}
       t={t}
     >
-      <Greeting name={name} t={t} />
+      <Greeting t={t} />
       <Text style={styles.text}>{t("email.auth.verifyEmail.body")}</Text>
       <ActionLink label={t("email.auth.verifyEmail.button")} t={t} url={url} />
       <Text style={styles.footer}>

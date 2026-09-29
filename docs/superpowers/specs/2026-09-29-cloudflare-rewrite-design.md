@@ -269,7 +269,7 @@ live | expiring ──force expire (admin)──▶ expired
 - **Middleware** (`@smog/rpc`):
   - `withAuth`: session optional → typed user.
   - `requireUser` returns `UNAUTHORIZED`; `requireAdmin` returns `FORBIDDEN`.
-  - `rateLimit(bucket)` uses the Workers Rate Limiting bindings: `RL_API` (300/60 s per IP), `RL_SPONSOR` (20/3600 s per IP), `RL_AUTH` (30/900 s per IP), `RL_ANALYTICS` (120/60 s per IP). These are the old limits.
+  - `rateLimit(bucket)` uses the Workers Rate Limiting bindings: `RL_API` (300/60 s per IP), `RL_SPONSOR` (5/60 s per IP), `RL_AUTH` (5/60 s per IP, POST only; get-session and sign-out exempt), `RL_ANALYTICS` (120/60 s per IP). The Workers binding supports only 10 s and 60 s periods, so the old 20/3600 s and 30/900 s windows became 5/60 s, backed by Turnstile (see DECISIONS). Dev uses high limits.
   - `turnstile` for public mutations (sponsor checkout, re-edit submit).
   - `logErrors` logs with a `[rpc:<path>]` prefix and maps unknown errors to `INTERNAL_SERVER_ERROR` without internals.
 - **Errors:** a shared error map (`NOT_FOUND`, `CONFLICT`, `INVALID_STATE`, `GESTURE_UNAVAILABLE`, `PAYMENT_MISMATCH`, `TOKEN_EXPIRED`, `RATE_LIMITED`, …) is declared in contracts and used typed on clients.

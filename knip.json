@@ -23,8 +23,8 @@
       "ignoreDependencies": ["cloudflare"]
     },
     "packages/auth": {
-      "entry": ["test/**/*.test.{ts,tsx}"],
-      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
+      "entry": ["test/**/*.test.{ts,tsx}", "guard/*.ts"],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}", "guard/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },
     "packages/rpc": {

@@ -125,6 +125,7 @@
       },
       "devDependencies": {
         "@cloudflare/vitest-plugin": "catalog:",
+        "@types/bun": "catalog:",
         "@types/react": "catalog:",
         "@types/react-dom": "19.2.7",
         "expo-secure-store": "~57.0.4",
@@ -187,6 +188,7 @@
       "dependencies": {
         "@smog/config": "workspace:*",
         "@smog/i18n": "workspace:*",
+        "@smog/styles": "workspace:*",
         "react": "catalog:",
         "react-dom": "catalog:",
         "react-email": "6.11.0",

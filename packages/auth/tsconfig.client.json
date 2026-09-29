@@ -1,0 +1,18 @@
+{
+  // The client entries (`./web`, `./expo`, `./react`) as the apps compile
+  // them: DOM lib, no Workers types (no worker-configuration.d.ts). A server
+  // import (D1Database, KVNamespace, SendEmail, …) fails this check.
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": []
+  },
+  "files": [
+    "src/web.ts",
+    "src/expo.ts",
+    "src/react.tsx",
+    "guard/client-types.ts"
+  ]
+}

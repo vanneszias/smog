@@ -292,7 +292,7 @@ erDiagram
 | `payment_item.sponsorship_id` | `sponsorship` | RESTRICT |
 | `render_job.sponsorship_id`, `sponsorship_event.sponsorship_id`, `sponsorship_token.sponsorship_id` | `sponsorship` | CASCADE |
 
-`session.impersonated_by` (admin plugin) is a plain user id, not a foreign key, as Better Auth generates it. The auth tables were compared with `bunx auth@1.7.6 generate` (phase 2 Task 2): same columns, types and FKs; the differences are listed in DECISIONS ("Better Auth schema reconciled with its CLI"). Sessions and verification values are also written to KV (Better Auth secondary storage), but D1 stays the source of truth for both.
+`session.impersonated_by` (admin plugin) is a plain user id, not a foreign key, as Better Auth generates it. The auth tables were compared with `bunx auth@1.7.6 generate` (phase 2 Task 2): same columns, types and FKs; the differences are listed in DECISIONS ("Better Auth schema reconciled with its CLI"). Better Auth uses no secondary storage: sessions and verification values live only in D1, and every session read queries D1.
 
 ## Key constraints
 

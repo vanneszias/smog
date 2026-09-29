@@ -62,15 +62,23 @@ function getEmailSender(): EmailSender {
   });
 }
 
-/** A Better Auth instance for the current request. */
+let auth: Auth | undefined;
+
+/**
+ * The Better Auth instance, built once per isolate: its env, bindings and
+ * `waitUntil` do not change between requests, and it keeps no per-request
+ * state (sessions are read from D1 on every call).
+ */
 export function getAuth(): Auth {
-  const { auth, db, kv, vars } = siteEnv();
-  return createAuth({
-    baseURL: vars.SITE_URL,
-    db: createDb(db),
-    email: getEmailSender(),
-    env: auth,
-    kv,
-    waitUntil,
-  });
+  if (!auth) {
+    const { auth: authEnv, db, vars } = siteEnv();
+    auth = createAuth({
+      baseURL: vars.SITE_URL,
+      db: createDb(db),
+      email: getEmailSender(),
+      env: authEnv,
+      waitUntil,
+    });
+  }
+  return auth;
 }
