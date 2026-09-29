@@ -1,0 +1,11 @@
+# Local secrets for `vite dev` / `wrangler dev` (the `env.dev` environment).
+# Copy to `.dev.vars` (or `.dev.vars.dev`, which takes precedence for --env dev)
+# and fill in. Plain vars (SITE_URL, ENVIRONMENT, EMAIL_FROM, EMAIL_REPLY_TO)
+# live in `wrangler.jsonc` under `env.dev.vars`; only secrets belong here.
+# Staging and production secrets are set with `wrangler secret put --env <env>`.
+#
+# No secrets are needed yet. Later phases add, for example:
+# BETTER_AUTH_SECRET=
+# MOLLIE_API_KEY=
+# MUX_TOKEN_ID=
+# MUX_TOKEN_SECRET=

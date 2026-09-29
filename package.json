@@ -1,0 +1,49 @@
+{
+  "name": "smog",
+  "private": true,
+  "type": "module",
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*",
+      "packages/features/*"
+    ],
+    "catalog": {
+      "@cloudflare/vitest-plugin": "1.3.1",
+      "@types/bun": "1.4.2",
+      "@types/react": "19.2.18",
+      "react": "19.2.3",
+      "react-dom": "19.2.3",
+      "typescript": "7.0.2",
+      "vite": "8.3.1",
+      "vitest": "4.1.11",
+      "wrangler": "4.143.0",
+      "zod": "4.6.5"
+    }
+  },
+  "scripts": {
+    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-3wwx-pv8p-q78v",
+    "boundaries": "bun scripts/check-boundaries.ts",
+    "build": "turbo build",
+    "check": "biome check --write .",
+    "check:ci": "biome ci .",
+    "check-types": "turbo run check-types check-types:scripts",
+    "check-types:scripts": "tsc -p scripts",
+    "dev": "turbo dev",
+    "knip": "knip --no-progress",
+    "mobile:release-check": "bun scripts/mobile-release-check.ts",
+    "release:check": "bun run check:ci && bun run boundaries && bun scripts/release-config-check.ts && bun run check-types && bun run test && bun run build && bun run knip && bun run audit && bun scripts/mobile-release-check.ts",
+    "test": "turbo run test test:scripts",
+    "test:scripts": "bun test ./scripts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.14",
+    "@smog/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "knip": "6.38.0",
+    "turbo": "2.11.5",
+    "typescript": "catalog:",
+    "ultracite": "7.12.2"
+  },
+  "packageManager": "bun@1.3.11"
+}

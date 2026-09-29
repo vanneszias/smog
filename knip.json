@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "ignore": ["scripts/__fixtures__/**"],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.ts"],
+      "project": ["scripts/**/*.ts"]
+    },
+    "packages/*": {
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "apps/site": {
+      "entry": [
+        "src/routes/**/*.{ts,tsx}",
+        "test/**/*.test.ts",
+        "scripts/*.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx,css}", "test/**/*.ts", "scripts/**/*.ts"],
+      "ignoreDependencies": ["cloudflare"]
+    },
+    "apps/mobile": {
+      "entry": ["app/**/*.{ts,tsx}", "plugins/*.js", "src/**/*.test.{ts,tsx}"],
+      "project": [
+        "app/**/*.{ts,tsx}",
+        "src/**/*.{ts,tsx}",
+        "plugins/**/*.js",
+        "*.{js,ts,css}"
+      ]
+    }
+  }
+}

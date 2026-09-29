@@ -1,0 +1,7 @@
+{
+  "name": "@smog/styles",
+  "private": true,
+  "devDependencies": {
+    "@smog/config": "workspace:*"
+  }
+}

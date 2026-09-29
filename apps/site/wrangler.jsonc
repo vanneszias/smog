@@ -1,0 +1,52 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "smog-site",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  // No bindings or vars at the top level: everything lives in `env.*`. The
+  // Vite plugin flattens one env into the build (CLOUDFLARE_ENV, `dev` by
+  // default, see vite.config.ts), and `wrangler deploy --env <env>` refuses a
+  // build made for a different env. Deploy builds: CLOUDFLARE_ENV=<env> vite build.
+  // Secrets for `env.dev` go in `.dev.vars` (see `.dev.vars.example`).
+  // SITE_URL for staging/production is a placeholder until the workers.dev
+  // subdomain (or a custom domain) is known. KV ids are placeholders too.
+  "env": {
+    "dev": {
+      "vars": {
+        "SITE_URL": "http://localhost:5173",
+        "ENVIRONMENT": "dev",
+        "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
+        "EMAIL_REPLY_TO": "info@smog.vlaanderen"
+      },
+      "kv_namespaces": [
+        { "binding": "KV", "id": "00000000000000000000000000000000" }
+      ]
+    },
+    "staging": {
+      "vars": {
+        "SITE_URL": "https://smog-site-staging.workers.dev",
+        "ENVIRONMENT": "staging",
+        "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
+        "EMAIL_REPLY_TO": "info@smog.vlaanderen"
+      },
+      "kv_namespaces": [
+        { "binding": "KV", "id": "00000000000000000000000000000000" }
+      ]
+    },
+    "production": {
+      "vars": {
+        "SITE_URL": "https://smog-site-production.workers.dev",
+        "ENVIRONMENT": "production",
+        "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
+        "EMAIL_REPLY_TO": "info@smog.vlaanderen"
+      },
+      "kv_namespaces": [
+        { "binding": "KV", "id": "00000000000000000000000000000000" }
+      ]
+    }
+  }
+}

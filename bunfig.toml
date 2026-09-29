@@ -1,0 +1,3 @@
+[install]
+# Expo needs a single copy of each native module.
+linker = "hoisted"

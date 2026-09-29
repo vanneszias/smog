@@ -1,0 +1,10 @@
+{
+  "name": "@smog/ui-web",
+  "private": true,
+  "dependencies": {
+    "@smog/styles": "workspace:*"
+  },
+  "devDependencies": {
+    "@smog/config": "workspace:*"
+  }
+}

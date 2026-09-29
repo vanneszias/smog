@@ -1,0 +1,60 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["ultracite/biome/core", "ultracite/biome/react"],
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "!!**/dist",
+      "!!**/.wrangler",
+      "!!**/.expo",
+      "!!**/.output",
+      "!!**/.tanstack",
+      "!!**/routeTree.gen.ts",
+      "!!**/worker-configuration.d.ts",
+      "!!**/*.gen.*",
+      "!!apps/mobile/assets",
+      "!!.agents",
+      "!!docs/superpowers/analysis"
+    ]
+  },
+  "javascript": {
+    "globals": ["__DEV__"]
+  },
+  "overrides": [
+    {
+      "includes": ["scripts/**", "**/*.test.ts", "**/*.test.tsx"],
+      "javascript": {
+        "globals": ["Bun"]
+      }
+    },
+    {
+      "includes": ["apps/mobile/global.css"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnknownAtRules": {
+              "level": "error",
+              "options": {
+                "ignore": ["tailwind"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/mobile/*.js", "apps/mobile/plugins/**/*.js"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noGlobalDirnameFilename": "off"
+          }
+        }
+      }
+    }
+  ]
+}

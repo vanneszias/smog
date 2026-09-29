@@ -1,0 +1,62 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - develop
+      - master
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+jobs:
+  deploy:
+    name: Deploy site
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # develop → staging, master → production.
+    environment: ${{ github.ref_name == 'master' && 'production' || 'staging' }}
+    env:
+      CLOUDFLARE_ENV: ${{ github.ref_name == 'master' && 'production' || 'staging' }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check Cloudflare secrets
+        id: secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN is not set for the $CLOUDFLARE_ENV environment; skipping the deploy."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+      - if: steps.secrets.outputs.enabled == 'true'
+        uses: actions/checkout@v7
+      - if: steps.secrets.outputs.enabled == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - if: steps.secrets.outputs.enabled == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - if: steps.secrets.outputs.enabled == 'true'
+        run: bun install --frozen-lockfile
+      # The D1 `DB` binding arrives in phase 2 (apps/site/migrations). Until
+      # then there is nothing to apply, so the step is skipped.
+      - name: Apply D1 migrations
+        if: steps.secrets.outputs.enabled == 'true' && hashFiles('apps/site/migrations/**') != ''
+        working-directory: apps/site
+        run: bunx wrangler d1 migrations apply DB --env "$CLOUDFLARE_ENV" --remote
+      # The guarded site script: vite build for CLOUDFLARE_ENV, the deploy
+      # guard, then wrangler deploy --env. Never a bare wrangler deploy.
+      - name: Deploy
+        if: steps.secrets.outputs.enabled == 'true'
+        run: bun -F @smog/site deploy
