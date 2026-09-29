@@ -1,0 +1,18 @@
+{
+  "extends": "@smog/config/tsconfig/react-native.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "emitDeclarationOnly": false,
+    "declaration": false,
+    "declarationMap": false,
+    "jsxImportSource": "nativewind",
+    "types": []
+  },
+  "include": [
+    "src",
+    "nativewind-env.d.ts",
+    "jest.setup.ts",
+    "jest.setup-env.ts"
+  ]
+}

@@ -40,6 +40,19 @@ function colours(): Record<string, string> {
 export function renderNativeTailwindConfig(): string {
   const { breakpoint, fontSize, fontWeight, motion, radius, spacing } = tokens;
   const preset = {
+    // Tailwind 3 routes colours through `--tw-*-opacity` variables
+    // (`bg-primary` sets `--tw-bg-opacity: 1`). css-interop remounts a view
+    // that starts setting a variable after its first render (a view that
+    // gains `bg-primary` on press), so they are off; opacity modifiers
+    // (`bg-primary/40`) still work through `<alpha-value>`.
+    corePlugins: {
+      backgroundOpacity: false,
+      borderOpacity: false,
+      divideOpacity: false,
+      placeholderOpacity: false,
+      ringOpacity: false,
+      textOpacity: false,
+    },
     darkMode: "class",
     theme: {
       borderRadius: mapValues(radius, px),
