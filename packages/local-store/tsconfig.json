@@ -1,0 +1,7 @@
+{
+  "extends": "@smog/config/tsconfig/react.json",
+  "compilerOptions": {
+    "types": ["bun"]
+  },
+  "include": ["src"]
+}

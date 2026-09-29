@@ -1,0 +1,39 @@
+{
+  "name": "@smog/local-store",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react.tsx",
+    "./web": "./src/adapters/web.ts",
+    "./native": "./src/adapters/native.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -b",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@smog/config": "workspace:*",
+    "@smog/utils": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@react-native-async-storage/async-storage": "3.1.1",
+    "@types/bun": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "19.2.7",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@react-native-async-storage/async-storage": "^3.1.1",
+    "react": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "@react-native-async-storage/async-storage": {
+      "optional": true
+    }
+  }
+}
