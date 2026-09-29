@@ -14,6 +14,7 @@
       "@types/react": "19.2.18",
       "drizzle-orm": "0.45.3",
       "i18next": "26.4.2",
+      "lucide-react": "1.48.0",
       "nativewind": "4.2.7",
       "react": "19.2.3",
       "react-dom": "19.2.3",

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DevMailRouteImport } from './routes/dev/mail'
 import { Route as DevMailDotjsonRouteImport } from './routes/dev/mail[.]json'
+import { Route as DevUiRouteImport } from './routes/dev/ui'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const DevMailDotjsonRoute = DevMailDotjsonRouteImport.update({
   path: '/dev/mail.json',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevUiRoute = DevUiRouteImport.update({
+  id: '/dev/ui',
+  path: '/dev/ui',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
+  '/dev/ui': typeof DevUiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
+  '/dev/ui': typeof DevUiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -61,20 +69,33 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
+  '/dev/ui': typeof DevUiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/api/health' | '/dev/mail' | '/dev/mail.json' | '/api/auth/$'
+    | '/'
+    | '/api/health'
+    | '/dev/mail'
+    | '/dev/mail.json'
+    | '/dev/ui'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/health' | '/dev/mail' | '/dev/mail.json' | '/api/auth/$'
+  to:
+    | '/'
+    | '/api/health'
+    | '/dev/mail'
+    | '/dev/mail.json'
+    | '/dev/ui'
+    | '/api/auth/$'
   id:
     | '__root__'
     | '/'
     | '/api/health'
     | '/dev/mail'
     | '/dev/mail.json'
+    | '/dev/ui'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -83,6 +104,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   DevMailRoute: typeof DevMailRoute
   DevMailDotjsonRoute: typeof DevMailDotjsonRoute
+  DevUiRoute: typeof DevUiRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -116,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevMailDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/ui': {
+      id: '/dev/ui'
+      path: '/dev/ui'
+      fullPath: '/dev/ui'
+      preLoaderRoute: typeof DevUiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -131,6 +160,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   DevMailRoute: DevMailRoute,
   DevMailDotjsonRoute: DevMailDotjsonRoute,
+  DevUiRoute: DevUiRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

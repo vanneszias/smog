@@ -1,0 +1,3 @@
+[test]
+# happy-dom globals (document, window) and Testing Library cleanup.
+preload = ["./src/test/setup.ts"]

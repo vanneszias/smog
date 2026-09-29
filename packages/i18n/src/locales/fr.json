@@ -47,11 +47,15 @@
     "nextPage": "Page suivante",
     "goToPage": "Aller à la page {{page}}",
     "currentPage": "Page {{page}}, page actuelle",
+    "morePages": "Plus de pages",
+    "steps": "Étapes",
+    "stepCompleted": "terminée",
     "sortAscending": "Trier par ordre croissant",
     "sortDescending": "Trier par ordre décroissant",
     "sortedAscending": "Trié par ordre croissant",
     "sortedDescending": "Trié par ordre décroissant",
     "notifications": "Notifications",
+    "notification": "Notification",
     "playVideo": "Lire la vidéo",
     "pauseVideo": "Mettre la vidéo en pause",
     "dragHandle": "Faire glisser pour réordonner",
@@ -319,6 +323,26 @@
     "noLogs": "Il n'y a pas encore de journaux.",
     "environment": "Environnement",
     "version": "Version",
-    "resetLocalData": "Effacer les données locales"
+    "resetLocalData": "Effacer les données locales",
+    "gallery": {
+      "intro": "Chaque composant dans chaque variante et chaque taille, clair et sombre côte à côte.",
+      "sampleTitle": "Salutations",
+      "sampleText": "Apprenez les signes que vous utilisez tous les jours.",
+      "rowGreetings": "Salutations",
+      "rowFood": "Manger et boire",
+      "rowFeelings": "Sentiments",
+      "columnName": "Nom",
+      "columnStatus": "Statut",
+      "columnCount": "Gestes",
+      "statusActive": "Actif",
+      "statusDraft": "Brouillon",
+      "stepChoose": "Choisir des gestes",
+      "stepDetails": "Vos coordonnées",
+      "stepPay": "Aperçu et paiement",
+      "progressLabel": "Envoi de la vidéo",
+      "showToast": "Afficher une notification",
+      "openDialog": "Ouvrir la boîte de dialogue",
+      "openSheet": "Ouvrir le panneau"
+    }
   }
 }
