@@ -113,3 +113,8 @@ it("still sends users without a session to welcome", async () => {
   await renderLayout();
   expect(replace).toHaveBeenCalledWith("/welcome");
 });
+
+it("anchors deep-linked detail screens on the home tabs", () => {
+  const { unstable_settings } = require("../../app/_layout");
+  expect(unstable_settings).toEqual({ initialRouteName: "(tabs)" });
+});
