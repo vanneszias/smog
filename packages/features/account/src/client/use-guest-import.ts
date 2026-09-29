@@ -1,5 +1,6 @@
 import { useAuthState } from "@smog/auth/react";
 import type { FavoritesContract } from "@smog/favorites/contract";
+import { useTranslation } from "@smog/i18n/react";
 import type { ListsContract } from "@smog/lists/contract";
 import { dismissImportFor, type GuestData } from "@smog/local-store";
 import { useLocalStore, useLocalStoreInstance } from "@smog/local-store/react";
@@ -27,15 +28,20 @@ export interface GuestImportCounts {
 }
 
 export interface GuestImport {
-  /** Imports the device data (never rejects: `null` and `error` on failure). */
+  /**
+   * Imports the device data. Never rejects: `null` and `status: "error"`
+   * on failure. A second call while this user's import runs gets the same
+   * promise.
+   */
   accept: () => Promise<ImportResult | null>;
-  /** Hides the prompt for this user on this device; the data stays. */
+  /** Hides the prompt for this user on this device; the data stays. Never rejects. */
   dismiss: () => Promise<void>;
   /**
    * What the prompt offers, or `null`: set once the session is known to be
    * signed in, the device has favorites or lists, and this user has not
    * dismissed the prompt here. It stays set while `importing` and after an
-   * `error` (the data is still on the device).
+   * `error` (the data is still on the device), and after `done` when part
+   * of the data did not fit (it stays on the device).
    */
   pending: GuestImportCounts | null;
   /** The last `accept` result (`done`). */
@@ -60,11 +66,17 @@ function useStoreReady(): boolean {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     let active = true;
-    store.ready.then(() => {
-      if (active) {
-        setReady(true);
+    store.ready.then(
+      () => {
+        if (active) {
+          setReady(true);
+        }
+      },
+      (error: unknown) => {
+        // `ready` is documented never to reject; without it nothing is offered.
+        console.error("[account] Failed to load the local store:", error);
       }
-    });
+    );
     return () => {
       active = false;
     };
@@ -81,6 +93,7 @@ function useStoreReady(): boolean {
  */
 export function useGuestImport(): GuestImport {
   const auth = useAuthState();
+  const { t } = useTranslation();
   const store = useLocalStoreInstance();
   const ready = useStoreReady();
   const snapshot = useLocalStore(selectSnapshot);
@@ -88,6 +101,7 @@ export function useGuestImport(): GuestImport {
   const rpc = useRpcQuery<ImportedSlice>();
   const queryClient = useQueryClient();
   const userId = auth.status === "signedIn" ? auth.user?.id : undefined;
+  const untitledListName = t("auth.import.untitledList");
 
   const [state, setState] = useState<{
     result: ImportResult | null;
@@ -99,20 +113,30 @@ export function useGuestImport(): GuestImport {
     state.userId === userId
       ? state
       : { result: null, status: "idle" as const, userId };
-  const running = useRef<Promise<ImportResult | null> | null>(null);
+  /** The import in flight, per user: another user never gets it. */
+  const running = useRef<{
+    promise: Promise<ImportResult | null>;
+    userId: string;
+  } | null>(null);
 
   const accept = useCallback((): Promise<ImportResult | null> => {
     if (!userId) {
       return Promise.resolve(null);
     }
     if (running.current) {
-      return running.current;
+      return running.current.userId === userId
+        ? running.current.promise
+        : Promise.resolve(null);
     }
     setState({ result: null, status: "importing", userId });
-    const run = (async () => {
+    const promise = (async () => {
       try {
         // analytics: guest_data_imported {favorites_added, lists_created, lists_merged}
-        const result = await importGuestData({ client, store });
+        const result = await importGuestData({
+          client,
+          store,
+          untitledListName,
+        });
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: rpc.favorites.key() }),
           queryClient.invalidateQueries({ queryKey: rpc.lists.key() }),
@@ -127,9 +151,9 @@ export function useGuestImport(): GuestImport {
         running.current = null;
       }
     })();
-    running.current = run;
-    return run;
-  }, [client, queryClient, rpc, store, userId]);
+    running.current = { promise, userId };
+    return promise;
+  }, [client, queryClient, rpc, store, untitledListName, userId]);
 
   const dismiss = useCallback(async (): Promise<void> => {
     if (!userId) {
@@ -138,8 +162,8 @@ export function useGuestImport(): GuestImport {
     try {
       await store.update(dismissImportFor(userId));
     } catch (error) {
+      // The prompt then shows again next time; nothing else to do.
       console.error("[account] Failed to dismiss the guest import:", error);
-      throw error;
     }
   }, [store, userId]);
 

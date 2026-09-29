@@ -49,18 +49,40 @@ export const importGuestDataInputSchema = z.object({
 
 const count = z.number().int().nonnegative();
 
+/**
+ * What became of one guest list: `created`, `merged` into a same-name
+ * list, or `notCreated` (the account is at `LISTS_MAX`), which the device
+ * keeps. `unplaced` are its published gestures that did not fit
+ * (`LIST_ITEMS_MAX`); the device keeps those too.
+ */
+export const IMPORT_LIST_STATUSES = [
+  "created",
+  "merged",
+  "notCreated",
+] as const;
+
+export const importListOutcomeSchema = z.object({
+  status: z.enum(IMPORT_LIST_STATUSES),
+  unplaced: z.array(z.string()),
+});
+
 export const importResultSchema = z.object({
   favoritesAdded: count,
   /** Items appended to created and merged lists. */
   itemsAdded: count,
   /** Items not added because their list reached `LIST_ITEMS_MAX`. */
   itemsOverLimit: count,
+  /** One outcome per guest list sent, in the order sent. */
+  lists: z.array(importListOutcomeSchema),
   listsCreated: count,
   /** Guest lists appended to a same-name list (case-insensitive, trimmed). */
   listsMerged: count,
   /** Guest lists not created because the account has `LISTS_MAX` lists. */
   listsOverLimit: count,
-  /** Distinct gesture ids that are unknown or unpublished (skipped). */
+  /**
+   * Distinct gesture ids that are unknown, unpublished or malformed
+   * (skipped; the client adds the malformed ones it never sent).
+   */
   skippedUnknownGestures: count,
 });
 
@@ -70,12 +92,14 @@ export type ImportGuestDataInput = z.input<typeof importGuestDataInputSchema>;
 /** What the server gets after the contract parsed it (trimmed). */
 export type ImportGuestData = z.output<typeof importGuestDataInputSchema>;
 export type ImportResult = z.infer<typeof importResultSchema>;
+export type ImportListOutcome = z.infer<typeof importListOutcomeSchema>;
 
 /** Nothing imported: what `importGuestData` answers when there is nothing to send. */
 export const EMPTY_IMPORT_RESULT: ImportResult = {
   favoritesAdded: 0,
   itemsAdded: 0,
   itemsOverLimit: 0,
+  lists: [],
   listsCreated: 0,
   listsMerged: 0,
   listsOverLimit: 0,

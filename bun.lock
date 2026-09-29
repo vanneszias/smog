@@ -227,6 +227,7 @@
         "@smog/config": "workspace:*",
         "@smog/db": "workspace:*",
         "@smog/favorites": "workspace:*",
+        "@smog/i18n": "workspace:*",
         "@smog/lists": "workspace:*",
         "@smog/local-store": "workspace:*",
         "@smog/rpc": "workspace:*",

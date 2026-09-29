@@ -1,28 +1,72 @@
 /**
  * The guest → account import (spec §11): one read batch, then one write
- * batch (a D1 transaction, so it is all or nothing). Every write guards
- * itself, as the lists service does, so a retry or a concurrent write
- * cannot duplicate rows or pass a limit:
- * - favorites: `INSERT … SELECT` of the published ids, `ON CONFLICT DO
- *   NOTHING` (a union);
- * - lists: one `INSERT … SELECT … LIMIT max(0, LISTS_MAX - count)`;
- * - items: one `INSERT … SELECT` over every target list, appended at
- *   `max(position) + row_number()`, missing ones only, and only while
- *   `size + row_number() <= LIST_ITEMS_MAX`;
- * - consent: appended unless the account already has a decision at least
- *   as recent (or this very import is its newest).
- * The statements are hand-written SQL over `json_each` (one bound JSON
- * parameter each, so D1's 100-parameter limit never applies). Table names
- * come from the `@smog/db` schema; the column names are written out, and
- * the tests run every statement against the real migrations.
+ * batch (a D1 transaction, so it is all or nothing). The favorite, list
+ * and list-item writes are the favorites and lists packages' own statement
+ * builders, which `@smog/api` injects (a feature never imports another's
+ * server), so their rules (the published-gesture guard, `LISTS_MAX` and
+ * `LIST_ITEMS_MAX` inside the write, dense positions, when `updated_at`
+ * moves) are written once. This file owns the reads, the name matching and
+ * planning, and the consent statement.
  */
 import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
-import { consentEvent, favorite, gesture, list, listItem } from "@smog/db";
+import { consentEvent, gesture, list } from "@smog/db";
 import type { Db } from "@smog/db/client";
-import { LIST_ITEMS_MAX, LISTS_MAX } from "@smog/lists/schema";
+import { LISTS_MAX } from "@smog/lists/schema";
 import { newId } from "@smog/utils";
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
-import type { ImportGuestData, ImportResult } from "../schema";
+import type { RunnableQuery } from "drizzle-orm/runnable-query";
+import type {
+  ImportGuestData,
+  ImportListOutcome,
+  ImportResult,
+} from "../schema";
+
+/** A statement for `db.batch`, typed by its result rows. */
+type Statement<T> = RunnableQuery<T, "sqlite">;
+
+type Pair = readonly [listId: string, gestureId: string];
+interface PairRow {
+  gestureId: string;
+  listId: string;
+}
+
+/**
+ * The favorites and lists statement builders (`@smog/favorites/server`
+ * `insertFavoritesStmt`, `@smog/lists/server` `insertListsStmt`,
+ * `appendItemsStmt`, `touchListsWithNewItemsStmt`, `unplacedItemsStmt`),
+ * wired by `@smog/api`.
+ */
+export interface ImportDeps {
+  appendItems: (
+    db: Db,
+    actor: { actorId: string; ownerId?: string | undefined },
+    pairs: readonly Pair[],
+    at: Date
+  ) => Statement<PairRow[]>;
+  insertFavorites: (
+    db: Db,
+    userId: string,
+    gestureIds: readonly string[],
+    at: Date
+  ) => Statement<{ gestureId: string }[]>;
+  insertLists: (
+    db: Db,
+    ownerId: string,
+    lists: readonly { description: string | null; id: string; name: string }[],
+    at: Date
+  ) => Statement<{ id: string }[]>;
+  touchLists: (
+    db: Db,
+    listIds: readonly string[],
+    actorId: string,
+    at: Date
+  ) => Statement<unknown>;
+  unplacedItems: (
+    db: Db,
+    owner: { ownerId?: string | undefined },
+    pairs: readonly Pair[]
+  ) => Statement<PairRow[]>;
+}
 
 /** How list names match: trimmed, case-insensitive (Unicode-aware). */
 function listNameKey(name: string): string {
@@ -33,11 +77,6 @@ function unique(ids: readonly string[]): string[] {
   return [...new Set(ids)];
 }
 
-/** `SELECT value FROM json_each(?)`: a JSON array bound as one parameter. */
-function jsonValues(values: readonly unknown[]) {
-  return sql`(SELECT value FROM json_each(${JSON.stringify(values)}))`;
-}
-
 interface NewList {
   description: string | null;
   id: string;
@@ -46,10 +85,19 @@ interface NewList {
 
 interface Plan {
   favorites: string[];
+  /**
+   * Per guest list: its target list, how it gets there (`existing`: a list
+   * of the account; `new`: created by this import; `again`: a same-name
+   * guest list earlier in this import), and the pairs it contributes.
+   */
+  guests: {
+    into: "again" | "existing" | "new";
+    pairs: Pair[];
+    target: string;
+  }[];
   /** `[listId, gestureId]`, in append order, each pair once. */
-  items: [string, string][];
-  listsMerged: number;
-  /** Existing lists that receive items (their `updated_at` is bumped). */
+  items: Pair[];
+  /** Existing lists that may receive items (their `updated_at` moves then). */
   merged: string[];
   newLists: NewList[];
   skippedUnknownGestures: number;
@@ -74,13 +122,15 @@ function plan(
   const newLists: NewList[] = [];
   const merged = new Set<string>();
   const seen = new Map<string, Set<string>>();
-  const items: [string, string][] = [];
-  let listsMerged = 0;
+  const items: Pair[] = [];
+  const guests: Plan["guests"] = [];
 
   for (const guest of input.lists) {
     const key = listNameKey(guest.name);
     let target = targets.get(key);
+    let into: "again" | "existing" | "new" = "again";
     if (target === undefined) {
+      into = "new";
       target = newId();
       targets.set(key, target);
       newLists.push({
@@ -88,42 +138,51 @@ function plan(
         id: target,
         name: guest.name,
       });
-    } else {
-      listsMerged += 1;
-      if (existingIds.has(target)) {
-        merged.add(target);
-      }
+    } else if (existingIds.has(target)) {
+      into = "existing";
+      merged.add(target);
     }
     const inTarget = seen.get(target) ?? new Set<string>();
     seen.set(target, inTarget);
+    const pairs: Pair[] = [];
     for (const gestureId of guest.gestureIds) {
       if (published.has(gestureId) && !inTarget.has(gestureId)) {
         inTarget.add(gestureId);
-        items.push([target, gestureId]);
+        pairs.push([target, gestureId]);
       }
     }
+    items.push(...pairs);
+    guests.push({ into, pairs, target });
   }
 
   return {
     favorites: unique(input.favorites).filter((id) => published.has(id)),
+    guests,
     items,
-    listsMerged,
     merged: [...merged],
     newLists,
     skippedUnknownGestures: requested.filter((id) => !published.has(id)).length,
   };
 }
 
-/** The payload pairs as rows: `p.list_id`, `p.gesture_id`, `p.k` (order). */
-function payloadPairs(items: readonly [string, string][]) {
-  return sql`(SELECT json_extract(value, '$[0]') AS list_id, json_extract(value, '$[1]') AS gesture_id, key AS k FROM json_each(${JSON.stringify(items)}))`;
-}
-
-/** The pair's list belongs to the user, the gesture is published, and it is not in the list yet. */
-function insertablePair(userId: string) {
-  return sql`EXISTS (SELECT 1 FROM ${list} AS l WHERE l.id = p.list_id AND l.owner_id = ${userId})
-    AND EXISTS (SELECT 1 FROM ${gesture} AS g WHERE g.id = p.gesture_id AND g.published_at IS NOT NULL)
-    AND NOT EXISTS (SELECT 1 FROM ${listItem} AS li WHERE li.list_id = p.list_id AND li.gesture_id = p.gesture_id)`;
+/**
+ * The consent row, unless the account already has an analytics decision at
+ * least as recent as `decidedAt`, or its newest one is this very import
+ * (same value and policy: a retry with a device clock ahead).
+ */
+function consentStmt(
+  db: Db,
+  userId: string,
+  granted: boolean,
+  decidedAt: number
+) {
+  const value = granted ? 1 : 0;
+  // Columns: id, user_id, purpose, granted, policy_version, source, created_at.
+  return db
+    .insert(consentEvent)
+    .select(
+      sql`SELECT ${newId()}, ${userId}, 'analytics', ${value}, ${CONSENT_POLICY_VERSION}, 'import', ${decidedAt} WHERE NOT EXISTS (SELECT 1 FROM ${consentEvent} AS c WHERE c.user_id = ${userId} AND c.purpose = 'analytics' AND (c.created_at >= ${decidedAt} OR (c.source = 'import' AND c.granted = ${value} AND c.policy_version = ${CONSENT_POLICY_VERSION} AND c.created_at = (SELECT max(n.created_at) FROM ${consentEvent} AS n WHERE n.user_id = ${userId} AND n.purpose = 'analytics'))))`
+    );
 }
 
 /**
@@ -131,17 +190,18 @@ function insertablePair(userId: string) {
  * a union, lists are created or merged into a same-name list (missing
  * items appended in order), unknown and unpublished gestures are skipped
  * (and counted), and the consent choice is appended with source `import`.
- * Idempotent: a second identical call adds nothing. Past `LISTS_MAX` lists
- * or `LIST_ITEMS_MAX` items per list the rest is left out and counted
- * (`listsOverLimit`, `itemsOverLimit`).
+ * Idempotent: a second identical call adds nothing. `lists` says per guest
+ * list what was stored, so the client keeps what was not (lists past
+ * `LISTS_MAX`, items past `LIST_ITEMS_MAX`).
  */
 export async function importGuestData(
-  db: Db,
+  deps: ImportDeps & { db: Db },
   userId: string,
   input: ImportGuestData,
   now: Date = new Date()
 ): Promise<ImportResult> {
-  const at = now.getTime();
+  const { db } = deps;
+  const owner = { actorId: userId, ownerId: userId };
   const requested = unique([
     ...input.favorites,
     ...input.lists.flatMap((guest) => guest.gestureIds),
@@ -154,7 +214,7 @@ export async function importGuestData(
         .where(
           and(
             isNotNull(gesture.publishedAt),
-            sql`${gesture.id} IN ${jsonValues(requested)}`
+            sql`${gesture.id} IN (SELECT value FROM json_each(${JSON.stringify(requested)}))`
           )
         ),
       db
@@ -170,71 +230,52 @@ export async function importGuestData(
       new Set(publishedRows.map((row) => row.id)),
       existing
     );
-    const favoriteCount = steps.favorites.length;
-    const listCount = steps.newLists.length;
     const decidedAt = input.consent
-      ? Math.min(input.consent.decidedAt, at)
+      ? Math.min(input.consent.decidedAt, now.getTime())
       : undefined;
 
-    const [favorites, lists, items, , remaining] = await db.batch([
-      // The device keeps favorites oldest first: the last one is the newest.
-      db
-        .insert(favorite)
-        .select(
-          sql`SELECT ${userId}, j.value, ${at} - (${favoriteCount} - 1 - j.key) FROM json_each(${JSON.stringify(steps.favorites)}) AS j WHERE EXISTS (SELECT 1 FROM ${gesture} AS g WHERE g.id = j.value AND g.published_at IS NOT NULL)`
-        )
-        .onConflictDoNothing()
-        .returning({ gestureId: favorite.gestureId }),
-      // Columns in table order: id, owner_id, name, description, created_at, updated_at.
-      db
-        .insert(list)
-        .select(
-          sql`SELECT json_extract(j.value, '$.id'), ${userId}, json_extract(j.value, '$.name'), json_extract(j.value, '$.description'), ${at} - (${listCount} - 1 - j.key), ${at} - (${listCount} - 1 - j.key) FROM json_each(${JSON.stringify(steps.newLists)}) AS j WHERE true ORDER BY j.key LIMIT max(0, ${LISTS_MAX} - (SELECT count(*) FROM ${list} AS o WHERE o.owner_id = ${userId}))`
-        )
-        .returning({ id: list.id }),
-      // Columns: list_id, gesture_id, position, added_by, created_at.
-      db
-        .insert(listItem)
-        .select(
-          sql`SELECT c.list_id, c.gesture_id, c.base + c.rn, ${userId}, ${at} FROM (SELECT p.list_id, p.gesture_id, (SELECT coalesce(max(li.position), -1) FROM ${listItem} AS li WHERE li.list_id = p.list_id) AS base, (SELECT count(*) FROM ${listItem} AS li WHERE li.list_id = p.list_id) AS size, row_number() OVER (PARTITION BY p.list_id ORDER BY p.k) AS rn FROM ${payloadPairs(steps.items)} AS p WHERE ${insertablePair(userId)}) AS c WHERE c.size + c.rn <= ${LIST_ITEMS_MAX}`
-        )
-        .onConflictDoNothing()
-        .returning({ listId: listItem.listId }),
+    const [favorites, created, appended, , unplaced] = await db.batch([
+      deps.insertFavorites(db, userId, steps.favorites, now),
+      deps.insertLists(db, userId, steps.newLists, now),
+      deps.appendItems(db, owner, steps.items, now),
       // A merged list counts as changed only when it received items.
-      db
-        .update(list)
-        .set({ updatedAt: now })
-        .where(
-          and(
-            eq(list.ownerId, userId),
-            sql`${list.id} IN ${jsonValues(steps.merged)}`,
-            sql`EXISTS (SELECT 1 FROM ${listItem} AS li WHERE li.list_id = "list"."id" AND li.added_by = ${userId} AND li.created_at = ${at})`
-          )
-        ),
-      // What still fits nowhere: pairs of existing lists that did not go in.
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(sql`${payloadPairs(steps.items)} AS p`)
-        .where(sql`${insertablePair(userId)}`),
+      deps.touchLists(db, steps.merged, userId, now),
+      deps.unplacedItems(db, owner, steps.items),
       ...(input.consent && decidedAt !== undefined
-        ? [
-            // Columns: id, user_id, purpose, granted, policy_version, source, created_at.
-            db
-              .insert(consentEvent)
-              .select(
-                sql`SELECT ${newId()}, ${userId}, 'analytics', ${input.consent.analytics ? 1 : 0}, ${CONSENT_POLICY_VERSION}, 'import', ${decidedAt} WHERE NOT EXISTS (SELECT 1 FROM ${consentEvent} AS c WHERE c.user_id = ${userId} AND c.purpose = 'analytics' AND (c.created_at >= ${decidedAt} OR (c.source = 'import' AND c.granted = ${input.consent.analytics ? 1 : 0} AND c.policy_version = ${CONSENT_POLICY_VERSION} AND c.created_at = (SELECT max(n.created_at) FROM ${consentEvent} AS n WHERE n.user_id = ${userId} AND n.purpose = 'analytics'))))`
-              ),
-          ]
+        ? [consentStmt(db, userId, input.consent.analytics, decidedAt)]
         : []),
     ]);
 
+    const createdIds = new Set(created.map((row) => row.id));
+    const left = new Set(
+      unplaced.map((row) => `${row.listId}\u0000${row.gestureId}`)
+    );
+    const lists = steps.guests.map(
+      ({ into, pairs, target }): ImportListOutcome => {
+        if (into !== "existing" && !createdIds.has(target)) {
+          return { status: "notCreated", unplaced: [] };
+        }
+        return {
+          status: into === "new" ? "created" : "merged",
+          unplaced: pairs
+            .filter(([listId, gestureId]) =>
+              left.has(`${listId}\u0000${gestureId}`)
+            )
+            .map(([, gestureId]) => gestureId),
+        };
+      }
+    );
+
     return {
       favoritesAdded: favorites.length,
-      itemsAdded: items.length,
-      itemsOverLimit: Number(remaining[0]?.count ?? 0),
-      listsCreated: lists.length,
-      listsMerged: steps.listsMerged,
-      listsOverLimit: listCount - lists.length,
+      itemsAdded: appended.length,
+      itemsOverLimit: unplaced.length,
+      lists,
+      listsCreated: created.length,
+      listsMerged: lists.filter((outcome) => outcome.status === "merged")
+        .length,
+      listsOverLimit: lists.filter((outcome) => outcome.status === "notCreated")
+        .length,
       skippedUnknownGestures: steps.skippedUnknownGestures,
     };
   } catch (error) {

@@ -7,7 +7,8 @@ import {
   type ImportGuestDataInput,
   importGuestDataInputSchema,
 } from "../src/schema";
-import { accountRouter, importGuestData } from "../src/server";
+import { createAccountRouter, importGuestData } from "../src/server";
+import { importDeps } from "./deps";
 import {
   addGestures,
   addList,
@@ -20,6 +21,7 @@ import {
 } from "./helpers";
 
 const NOW = new Date("2026-09-29T12:00:00Z");
+const accountRouter = createAccountRouter(importDeps);
 
 function input(partial: Partial<ImportGuestDataInput>): ImportGuestDataInput {
   return { favorites: [], lists: [], ...partial };
@@ -27,7 +29,7 @@ function input(partial: Partial<ImportGuestDataInput>): ImportGuestDataInput {
 
 async function run(userId: string, data: ImportGuestDataInput, now = NOW) {
   return await importGuestData(
-    testDb(),
+    { ...importDeps, db: testDb() },
     userId,
     // The router parses with the contract; the service takes parsed input.
     importGuestDataInputSchema.parse(data),
@@ -98,6 +100,10 @@ describe("importGuestData: lists", () => {
       favoritesAdded: 0,
       itemsAdded: 2,
       itemsOverLimit: 0,
+      lists: [
+        { status: "created", unplaced: [] },
+        { status: "created", unplaced: [] },
+      ],
       listsCreated: 2,
       listsMerged: 0,
       listsOverLimit: 0,
@@ -274,6 +280,7 @@ describe("importGuestData: idempotency", () => {
       favoritesAdded: 1,
       itemsAdded: 2,
       itemsOverLimit: 0,
+      lists: [{ status: "created", unplaced: [] }],
       listsCreated: 1,
       listsMerged: 0,
       listsOverLimit: 0,
@@ -283,6 +290,7 @@ describe("importGuestData: idempotency", () => {
       favoritesAdded: 0,
       itemsAdded: 0,
       itemsOverLimit: 0,
+      lists: [{ status: "merged", unplaced: [] }],
       listsCreated: 0,
       listsMerged: 1,
       listsOverLimit: 0,
@@ -312,7 +320,7 @@ describe("importGuestData: limits", () => {
     const result = await run(
       owner.id,
       input({
-        lists: ["A", "B", "C"].map((name) => ({
+        lists: ["A", "B", "C", "b"].map((name) => ({
           gestureIds: [aap as string],
           name,
         })),
@@ -321,8 +329,16 @@ describe("importGuestData: limits", () => {
 
     expect(result).toMatchObject({
       itemsAdded: 1,
+      lists: [
+        { status: "created", unplaced: [] },
+        { status: "notCreated", unplaced: [] },
+        { status: "notCreated", unplaced: [] },
+        // Same name as "B", which was not created: not stored either.
+        { status: "notCreated", unplaced: [] },
+      ],
       listsCreated: 1,
-      listsOverLimit: 2,
+      listsMerged: 0,
+      listsOverLimit: 3,
     });
     const lists = await storedLists(owner.id);
     expect(lists).toHaveLength(LISTS_MAX);
@@ -360,7 +376,11 @@ describe("importGuestData: limits", () => {
       })
     );
 
-    expect(result).toMatchObject({ itemsAdded: 1, itemsOverLimit: 2 });
+    expect(result).toMatchObject({
+      itemsAdded: 1,
+      itemsOverLimit: 2,
+      lists: [{ status: "merged", unplaced: [beer, kat] }],
+    });
     const [list] = await storedLists(owner.id);
     expect(list?.items).toHaveLength(LIST_ITEMS_MAX);
     expect(list?.items.at(-1)).toBe(aap);

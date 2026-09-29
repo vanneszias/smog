@@ -3,6 +3,8 @@ import { createRouterClient, implement } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
 import { favoritesContract } from "@smog/favorites/contract";
+import { createI18n } from "@smog/i18n";
+import { I18nextProvider } from "@smog/i18n/react";
 import { listsContract } from "@smog/lists/contract";
 import {
   addRecentSearch,
@@ -36,6 +38,7 @@ import { importGuestData, useGuestImport } from "./index";
 const RESULT: ImportResult = {
   ...EMPTY_IMPORT_RESULT,
   favoritesAdded: 2,
+  lists: [{ status: "created", unplaced: [] }],
   listsCreated: 1,
 };
 
@@ -45,6 +48,8 @@ interface Server {
   /** Resolves when the call may answer (lets a test act in between). */
   gate?: Promise<void>;
   idsCalls: number;
+  /** The answer (default `RESULT`). */
+  result?: ImportResult;
 }
 
 function newServer(): Server {
@@ -66,7 +71,7 @@ function fakeApi(server: Server) {
         if (server.fail) {
           throw new Error("offline");
         }
-        return RESULT;
+        return server.result ?? RESULT;
       }),
     }),
     favorites: {
@@ -157,6 +162,80 @@ describe("importGuestData", () => {
     expect(data.lists.map((list) => list.id)).toEqual(["loc_2"]);
   });
 
+  test("keeps on the device what the server did not store", async () => {
+    const server = newServer();
+    const store = await guestStore();
+    await store.update(createList("Vol", undefined, "loc_2", 3));
+    await store.update(addToList("loc_2", "g-aap", 4));
+    await store.update(addToList("loc_2", "g-uil", 5));
+    await store.update(createList("Te veel", undefined, "loc_3", 6));
+    server.result = {
+      ...RESULT,
+      lists: [
+        { status: "created", unplaced: [] },
+        { status: "merged", unplaced: ["g-uil"] },
+        { status: "notCreated", unplaced: [] },
+      ],
+    };
+
+    await importGuestData({ client: fakeApi(server).client, store });
+
+    const kept = store.getSnapshot().lists;
+    expect(kept.map((list) => [list.id, list.gestureIds])).toEqual([
+      ["loc_2", ["g-uil"]],
+      ["loc_3", []],
+    ]);
+    expect(store.getSnapshot().favorites).toEqual([]);
+  });
+
+  test("bad local data is skipped and counted, never failing the call", async () => {
+    const server = newServer();
+    const store = createLocalStore(createMemoryAdapter());
+    const tooLong = "x".repeat(65);
+    await store.update((data) => ({
+      ...data,
+      favorites: ["", "g-aap", tooLong],
+      lists: [
+        {
+          createdAt: 1,
+          gestureIds: ["", "g-kat"],
+          id: "loc_1",
+          name: "   ",
+          updatedAt: 1,
+        },
+      ],
+    }));
+
+    const result = await importGuestData({
+      client: fakeApi(server).client,
+      store,
+      untitledListName: "Naamloze lijst",
+    });
+
+    expect(server.calls).toEqual([
+      {
+        favorites: ["g-aap"],
+        lists: [{ gestureIds: ["g-kat"], name: "Naamloze lijst" }],
+      },
+    ]);
+    // "" and the 65-character id, counted once each.
+    expect(result.skippedUnknownGestures).toBe(2);
+    expect(store.getSnapshot().favorites).toEqual([]);
+    expect(store.getSnapshot().lists).toEqual([]);
+  });
+
+  test("cuts names by code point, never splitting an emoji", async () => {
+    const server = newServer();
+    const store = createLocalStore(createMemoryAdapter());
+    await store.update(
+      createList(`${"a".repeat(79)}🙂`, undefined, "loc_1", 1)
+    );
+
+    await importGuestData({ client: fakeApi(server).client, store });
+
+    expect(server.calls[0]?.lists[0]?.name).toBe("a".repeat(79));
+  });
+
   test("with nothing on the device it makes no call", async () => {
     const server = newServer();
     const store = createLocalStore(createMemoryAdapter());
@@ -205,6 +284,8 @@ const ANNA: SessionHookResult = {
 const LOADING: SessionHookResult = { data: undefined, isPending: true };
 const GUEST: SessionHookResult = { data: null, isPending: false };
 
+const i18n = createI18n("nl");
+
 function setup(store: LocalStore, session: SessionHookResult) {
   const server = newServer();
   const api = fakeApi(server);
@@ -215,16 +296,18 @@ function setup(store: LocalStore, session: SessionHookResult) {
   const useSession = () => auth.current;
   function wrapper({ children }: { children: ReactNode }) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <RpcProvider client={api.client} queryUtils={api.queryUtils}>
-          <LocalStoreProvider store={store}>
-            {/* biome-ignore lint/performance/noJsxPropsBind: a stable test hook, defined once per setup. */}
-            <AuthStateProvider useSession={useSession}>
-              {children}
-            </AuthStateProvider>
-          </LocalStoreProvider>
-        </RpcProvider>
-      </QueryClientProvider>
+      <I18nextProvider i18n={i18n}>
+        <QueryClientProvider client={queryClient}>
+          <RpcProvider client={api.client} queryUtils={api.queryUtils}>
+            <LocalStoreProvider store={store}>
+              {/* biome-ignore lint/performance/noJsxPropsBind: a stable test hook, defined once per setup. */}
+              <AuthStateProvider useSession={useSession}>
+                {children}
+              </AuthStateProvider>
+            </LocalStoreProvider>
+          </RpcProvider>
+        </QueryClientProvider>
+      </I18nextProvider>
     );
   }
   return { auth, server, wrapper };
@@ -352,6 +435,46 @@ describe("useGuestImport", () => {
     };
     rerender();
     await waitFor(() => expect(result.current.pending).not.toBeNull());
+  });
+
+  test("another user starts over: status and result reset", async () => {
+    const store = await guestStore();
+    const { auth, server, wrapper } = setup(store, ANNA);
+    server.fail = true;
+    const error = spyOn(console, "error").mockImplementation(() => undefined);
+    const { result, rerender } = renderHook(() => useGuestImport(), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.pending).not.toBeNull());
+    await act(async () => {
+      await result.current.accept();
+    });
+    expect(result.current.status).toBe("error");
+
+    auth.current = {
+      data: { user: { email: "bo@smog.test", id: "user-bo", name: "Bo" } },
+      isPending: false,
+    };
+    rerender();
+
+    expect(result.current.status).toBe("idle");
+    expect(result.current.result).toBeNull();
+    expect(result.current.pending).toEqual({ favorites: 2, lists: 1 });
+    error.mockRestore();
+  });
+
+  test("names an untitled list with the localised fallback", async () => {
+    const store = createLocalStore(createMemoryAdapter());
+    await store.update(createList("  ", undefined, "loc_1", 1));
+    const { server, wrapper } = setup(store, ANNA);
+    const { result } = renderHook(() => useGuestImport(), { wrapper });
+    await waitFor(() => expect(result.current.pending).not.toBeNull());
+
+    await act(async () => {
+      await result.current.accept();
+    });
+
+    expect(server.calls[0]?.lists[0]?.name).toBe("Naamloze lijst");
   });
 
   test("a remembered dismissal does not prompt again", async () => {

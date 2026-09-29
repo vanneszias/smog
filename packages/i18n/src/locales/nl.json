@@ -221,7 +221,8 @@
       "failed": "Importeren is niet gelukt. Je gegevens blijven op dit toestel staan.",
       "skipped_one": "{{count}} gebaar is niet meer beschikbaar en is overgeslagen.",
       "skipped_other": "{{count}} gebaren zijn niet meer beschikbaar en zijn overgeslagen.",
-      "overLimit": "Niet alles paste in je account: je bewaart er tot {{maxLists}} lijsten van elk {{maxItems}} gebaren."
+      "overLimit": "Niet alles paste in je account: je bewaart er tot {{maxLists}} lijsten van elk {{maxItems}} gebaren.",
+      "untitledList": "Naamloze lijst"
     }
   },
   "states": {

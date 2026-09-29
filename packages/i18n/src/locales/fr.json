@@ -224,7 +224,8 @@
       "skipped_one": "{{count}} geste n'est plus disponible et a été ignoré.",
       "skipped_many": "{{count}} gestes ne sont plus disponibles et ont été ignorés.",
       "skipped_other": "{{count}} gestes ne sont plus disponibles et ont été ignorés.",
-      "overLimit": "Tout n'a pas pu être ajouté à votre compte : il contient jusqu'à {{maxLists}} listes de {{maxItems}} gestes chacune."
+      "overLimit": "Tout n'a pas pu être ajouté à votre compte : il contient jusqu'à {{maxLists}} listes de {{maxItems}} gestes chacune.",
+      "untitledList": "Liste sans nom"
     }
   },
   "states": {

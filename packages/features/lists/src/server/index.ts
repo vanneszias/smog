@@ -4,4 +4,13 @@ export {
   type ListsRouter,
   type ListsRouterDeps,
 } from "./router";
-export type { FindGestureSummaries } from "./service";
+export {
+  type AppendActor,
+  appendItemsStmt,
+  type FindGestureSummaries,
+  type ItemPair,
+  insertListsStmt,
+  type NewListRow,
+  touchListsWithNewItemsStmt,
+  unplacedItemsStmt,
+} from "./service";

@@ -153,6 +153,31 @@ export async function listFavorites(
 }
 
 /**
+ * Makes the published ones of `gestureIds` favorites (unknown and
+ * unpublished ids are skipped; an existing favorite keeps its row). The
+ * given order is oldest first: `created_at` ends at `at`, one millisecond
+ * apart. Returns the inserted gesture ids; a statement, not run, so a
+ * caller (the guest import) can put it in its own batch.
+ */
+export function insertFavoritesStmt(
+  db: Db,
+  userId: string,
+  gestureIds: readonly string[],
+  at: Date
+) {
+  const last = at.getTime();
+  const count = gestureIds.length;
+  // Columns in table order: user_id, gesture_id, created_at.
+  return db
+    .insert(favorite)
+    .select(
+      sql`SELECT ${userId}, j.value, ${last} - (${count} - 1 - j.key) FROM json_each(${JSON.stringify(gestureIds)}) AS j WHERE EXISTS (SELECT 1 FROM ${gesture} AS g WHERE g.${sql.identifier(gesture.id.name)} = j.value AND g.${sql.identifier(gesture.publishedAt.name)} IS NOT NULL)`
+    )
+    .onConflictDoNothing()
+    .returning({ gestureId: favorite.gestureId });
+}
+
+/**
  * Makes a published gesture a favorite; a second add keeps the first row.
  * One D1 batch (a transaction): the check and the guarded insert.
  */
@@ -166,22 +191,7 @@ export async function addFavorite(
   try {
     [found] = await db.batch([
       publishedGesture(db, gestureId),
-      db
-        .insert(favorite)
-        .select(
-          db
-            // biome-ignore assist/source/useSortedKeys: insert … select needs the table's column order.
-            .select({
-              userId: sql<string>`${userId}`.as("user_id"),
-              gestureId: gesture.id,
-              createdAt: sql<Date>`${now.getTime()}`.as("created_at"),
-            })
-            .from(gesture)
-            .where(
-              and(eq(gesture.id, gestureId), isNotNull(gesture.publishedAt))
-            )
-        )
-        .onConflictDoNothing(),
+      insertFavoritesStmt(db, userId, [gestureId], now),
     ]);
   } catch (error) {
     console.error("[favorites] Failed to add a favorite:", error);
