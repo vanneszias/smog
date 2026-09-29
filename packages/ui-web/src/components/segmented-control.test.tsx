@@ -43,7 +43,11 @@ describe("SegmentedControl", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Grid" }));
     expect(onValueChange).not.toHaveBeenCalled();
     expect(classesOf(screen.getByRole("radio", { name: "Grid" }))).toContain(
-      "after:size-touch"
+      "after:h-touch"
     );
+    // Vertical-only: neighbours 4 px apart must not share a hit area.
+    expect(
+      classesOf(screen.getByRole("radio", { name: "Grid" }))
+    ).not.toContain("after:size-touch");
   });
 });

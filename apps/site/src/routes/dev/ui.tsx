@@ -1,8 +1,21 @@
 import { createI18n, DEFAULT_LOCALE, isLocale, type Locale } from "@smog/i18n";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { UiGallery } from "../../dev/ui-gallery";
+import { lazy, type ReactNode, Suspense } from "react";
 import { getDevToolsEnabled } from "../../server/dev-tools.functions";
+
+/**
+ * `__SMOG_DEV_TOOLS__` is `false` in production builds (vite.config.ts), so
+ * this import is dropped and the gallery and kit are not in the production
+ * Worker at all; the deploy guard checks it. The runtime ENVIRONMENT check in
+ * `beforeLoad` stays as defence in depth.
+ */
+const UiGallery = __SMOG_DEV_TOOLS__
+  ? lazy(() =>
+      import("../../dev/ui-gallery").then((module) => ({
+        default: module.UiGallery,
+      }))
+    )
+  : null;
 
 export interface DevUiSearch {
   lang?: Locale;
@@ -11,7 +24,7 @@ export interface DevUiSearch {
 export const Route = createFileRoute("/dev/ui")({
   // dev and staging only; production answers 404 (spec §9).
   beforeLoad: async () => {
-    if (!(await getDevToolsEnabled())) {
+    if (!(UiGallery && (await getDevToolsEnabled()))) {
       throw notFound();
     }
   },
@@ -32,5 +45,12 @@ export const Route = createFileRoute("/dev/ui")({
 
 function DevUi(): ReactNode {
   const { lang } = Route.useSearch();
-  return <UiGallery locale={lang ?? DEFAULT_LOCALE} />;
+  if (!UiGallery) {
+    return null;
+  }
+  return (
+    <Suspense fallback={null}>
+      <UiGallery locale={lang ?? DEFAULT_LOCALE} />
+    </Suspense>
+  );
 }

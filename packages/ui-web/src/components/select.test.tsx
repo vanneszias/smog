@@ -45,5 +45,7 @@ describe("Select", () => {
       "Français",
     ]);
     expect(options[2]?.getAttribute("aria-disabled")).toBe("true");
+    const listbox = screen.getByRole("listbox");
+    expect(classesOf(listbox)).toContain("motion-reduce:animate-none");
   });
 });

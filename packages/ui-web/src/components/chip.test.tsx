@@ -29,7 +29,14 @@ describe("Chip", () => {
   test("a removable chip has a labelled remove button", async () => {
     const onRemove = mock();
     renderKit(<Chip onRemove={onRemove}>Food</Chip>);
-    await userEvent.click(screen.getByRole("button", { name: "Remove Food" }));
+    const remove = screen.getByRole("button", { name: "Remove Food" });
+    const chip = screen.getByRole("button", { name: "Food" });
+    // The remove button comes after the chip, so where their 44 px hit
+    // areas overlap the remove button is on top.
+    expect(chip.nextElementSibling).toBe(remove);
+    expect(classesOf(remove)).toContain("after:size-touch");
+    expect(classesOf(remove)).toContain("absolute");
+    await userEvent.click(remove);
     expect(onRemove).toHaveBeenCalledTimes(1);
   });
 });

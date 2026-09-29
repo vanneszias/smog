@@ -28,12 +28,24 @@ export const hitArea =
  * control's radius because the layer is a pseudo-element; the element needs
  * `relative`.
  */
+const STATE_LAYER =
+  "before:pointer-events-none before:absolute before:inset-0 before:bg-foreground before:opacity-0 before:transition-opacity before:duration-fast motion-reduce:before:transition-none hover:before:opacity-8 active:before:opacity-12";
+
+// The radius classes are written out in full so Tailwind's scanner sees them.
 export const stateLayer = {
-  full: "before:pointer-events-none before:absolute before:inset-0 before:rounded-full before:bg-foreground before:opacity-0 before:transition-opacity before:duration-fast motion-reduce:before:transition-none hover:before:opacity-8 active:before:opacity-12",
-  lg: "before:pointer-events-none before:absolute before:inset-0 before:rounded-lg before:bg-foreground before:opacity-0 before:transition-opacity before:duration-fast motion-reduce:before:transition-none hover:before:opacity-8 active:before:opacity-12",
-  md: "before:pointer-events-none before:absolute before:inset-0 before:rounded-md before:bg-foreground before:opacity-0 before:transition-opacity before:duration-fast motion-reduce:before:transition-none hover:before:opacity-8 active:before:opacity-12",
-  none: "before:pointer-events-none before:absolute before:inset-0 before:bg-foreground before:opacity-0 before:transition-opacity before:duration-fast motion-reduce:before:transition-none hover:before:opacity-8 active:before:opacity-12",
+  full: `${STATE_LAYER} before:rounded-full`,
+  lg: `${STATE_LAYER} before:rounded-lg`,
+  md: `${STATE_LAYER} before:rounded-md`,
+  none: STATE_LAYER,
 } as const;
+
+/**
+ * The vertical-only version of `hitArea`, for small controls packed side by
+ * side (SegmentedControl `sm`): 44 px tall, exactly as wide as the control,
+ * so neighbours' hit areas never overlap. Only for controls ≥ 44 px wide.
+ */
+export const hitAreaY =
+  "relative after:absolute after:inset-x-0 after:top-1/2 after:h-touch after:-translate-y-1/2";
 
 /** Disabled look for every control. */
 export const disabled =

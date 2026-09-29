@@ -10,6 +10,12 @@ The web kit's public surface, for `@smog/ui-native` to mirror (spec §16: same n
 
 Styles: import `@smog/ui-web/styles.css` after `tailwindcss` and `@smog/styles/theme.css` (it registers the kit as a Tailwind source and adds the overlay animations).
 
+Spacing of `sm` controls: the 44 × 44 hit areas of neighbouring `sm` Buttons, IconButtons and Chips overlap when they are closer than 6 px apart (`gap-2` or more is safe). SegmentedControl `sm` uses a vertical-only hit area, so its segments 4 px apart never share one. The Chip remove button sits inside the chip's hit area and comes after it in the DOM, so it wins where they overlap.
+
+Toggle vocabulary (controller ruling, 2026-09-29): Chip keeps `selected` / `onSelectedChange(next)` (selection semantics, `aria-pressed`); Checkbox and Switch keep `checked` / `onCheckedChange(checked)` (form-control semantics, Radix names). ui-native uses the same names on the same components.
+
+Icons: `icon` props take a ReactNode that the component sizes on web (`*:size-*` on its wrapper). Native cannot size a child through CSS, so ui-native passes the size to the icon (e.g. a `size` from the component's size) with the same prop name.
+
 Native mapping: `onClick` → `onPress`, `className` → NativeWind `className`, `ref` stays. `asChild` (render a link with the component's styles) is web only; native uses `href`/router props on the same component instead.
 
 ## Actions

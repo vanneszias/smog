@@ -2,7 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { ToggleGroup } from "radix-ui";
 import { type ReactNode, useCallback } from "react";
 import { cn } from "../lib/cn";
-import { disabled, focusRing, hitArea, transition } from "../lib/variants";
+import { disabled, focusRing, hitAreaY, transition } from "../lib/variants";
 
 export interface SegmentedOption {
   disabled?: boolean;
@@ -25,7 +25,8 @@ const segmentVariants = cva(
     variants: {
       size: {
         md: "min-h-touch text-body-sm",
-        sm: cn("min-h-8 text-caption", hitArea),
+        // Segments sit 4 px apart: a vertical-only hit area avoids overlap.
+        sm: cn("min-h-8 text-caption", hitAreaY),
       },
     },
   }

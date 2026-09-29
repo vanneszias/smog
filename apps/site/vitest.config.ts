@@ -8,6 +8,8 @@ const MIGRATIONS_DIR = fileURLToPath(
 );
 
 export default defineConfig(async () => ({
+  // Tests run the `dev` environment, which has the /dev pages.
+  define: { __SMOG_DEV_TOOLS__: "true" },
   plugins: [
     cloudflareTest({
       miniflare: {
@@ -31,8 +33,7 @@ export default defineConfig(async () => ({
     include: ["test/**/*.test.ts"],
     setupFiles: ["@smog/db/testing/apply-migrations"],
     // The first request in a file transforms the whole server entry
-    // (Start, Better Auth, React Email, the /dev/ui kit) on demand, which
-    // takes 15-40 s locally when the files run in parallel.
-    testTimeout: 120_000,
+    // (Start, Better Auth, React Email) on demand, which takes ~15 s.
+    testTimeout: 60_000,
   },
 }));
