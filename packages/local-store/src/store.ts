@@ -25,8 +25,28 @@ export interface StorageAdapter {
 export type Migration = (previous: unknown) => unknown;
 export type Migrations = Record<number, Migration>;
 
-/** Version migrations. Version 1 is the first, so there are none yet. */
-export const MIGRATIONS: Migrations = {};
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Version migrations. Each step only adds what its version introduced; a
+ * part that is still invalid afterwards is salvaged by `loadStored`.
+ */
+export const MIGRATIONS: Migrations = {
+  /** 1 → 2: `preferences.importDismissedFor` (empty). */
+  1: (previous) => {
+    const data = isRecord(previous) ? previous : {};
+    const { preferences } = data;
+    return {
+      ...data,
+      ...(isRecord(preferences)
+        ? { preferences: { importDismissedFor: [], ...preferences } }
+        : {}),
+      version: 2,
+    };
+  },
+};
 
 export interface LocalStoreOptions {
   key?: string;

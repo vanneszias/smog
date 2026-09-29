@@ -1,0 +1,50 @@
+{
+  "name": "@smog/account",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./schema": "./src/schema.ts",
+    "./contract": "./src/contract.ts",
+    "./server": "./src/server/index.ts",
+    "./client": "./src/client/index.ts"
+  },
+  "scripts": {
+    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json && tsc -p tsconfig.test.json",
+    "test": "vitest run && bun test --preload ./src/testing/happy-dom.ts src"
+  },
+  "dependencies": {
+    "@smog/auth": "workspace:*",
+    "@smog/config": "workspace:*",
+    "@smog/db": "workspace:*",
+    "@smog/favorites": "workspace:*",
+    "@smog/i18n": "workspace:*",
+    "@smog/lists": "workspace:*",
+    "@smog/local-store": "workspace:*",
+    "@smog/rpc": "workspace:*",
+    "@smog/utils": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "catalog:",
+    "@happy-dom/global-registrator": "20.14.5",
+    "@orpc/server": "catalog:",
+    "@orpc/tanstack-query": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/bun": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "19.2.7",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "catalog:",
+    "react": "catalog:"
+  }
+}

@@ -81,12 +81,6 @@
     "gestures": "Gebaren",
     "legal": "Juridisch"
   },
-  "home": {
-    "tagline": "Leer gebaren in Vlaamse Gebarentaal, wanneer het jou past."
-  },
-  "footer": {
-    "madeBy": "Gemaakt met ♡ door zias.be"
-  },
   "theme": {
     "label": "Thema",
     "toggle": "Thema wijzigen",
@@ -227,7 +221,11 @@
       "skip": "Niet nu",
       "importing": "Bezig met importeren…",
       "success": "Je favorieten en lijsten staan nu in je account.",
-      "failed": "Importeren is niet gelukt. Je gegevens blijven op dit toestel staan."
+      "failed": "Importeren is niet gelukt. Je gegevens blijven op dit toestel staan.",
+      "skipped_one": "{{count}} gebaar is niet meer beschikbaar en is overgeslagen.",
+      "skipped_other": "{{count}} gebaren zijn niet meer beschikbaar en zijn overgeslagen.",
+      "overLimit": "Niet alles paste in je account: je bewaart er tot {{maxLists}} lijsten van elk {{maxItems}} gebaren.",
+      "untitledList": "Naamloze lijst"
     },
     "noAccount": "Nog geen account?",
     "haveAccount": "Heb je al een account?",
@@ -254,6 +252,9 @@
       "description": "Deze pagina bestaat niet (meer).",
       "action": "Naar de startpagina"
     }
+  },
+  "lists": {
+    "ownerFallback": "een SMOG-gebruiker"
   },
   "kit": {
     "close": "Sluiten",
@@ -357,6 +358,12 @@
     "unlockHint_one": "Nog {{count}} keer tikken om de ontwikkelaarstools te openen.",
     "unlockHint_other": "Nog {{count}} keer tikken om de ontwikkelaarstools te openen.",
     "unlocked": "De ontwikkelaarstools staan aan."
+  },
+  "home": {
+    "tagline": "Leer gebaren in Vlaamse Gebarentaal, wanneer het jou past."
+  },
+  "footer": {
+    "madeBy": "Gemaakt met ♡ door zias.be"
   },
   "account": {
     "title": "Je account",

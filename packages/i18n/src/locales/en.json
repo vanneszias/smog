@@ -81,12 +81,6 @@
     "gestures": "Gestures",
     "legal": "Legal"
   },
-  "home": {
-    "tagline": "Learn Flemish Sign Language gestures, whenever it suits you."
-  },
-  "footer": {
-    "madeBy": "Made with ♡ by zias.be"
-  },
   "theme": {
     "label": "Theme",
     "toggle": "Change theme",
@@ -227,7 +221,11 @@
       "skip": "Not now",
       "importing": "Importing…",
       "success": "Your favorites and lists are now in your account.",
-      "failed": "The import didn't work. Your data stays on this device."
+      "failed": "The import didn't work. Your data stays on this device.",
+      "skipped_one": "{{count}} gesture is no longer available and was skipped.",
+      "skipped_other": "{{count}} gestures are no longer available and were skipped.",
+      "overLimit": "Not everything fit in your account: it holds up to {{maxLists}} lists of {{maxItems}} gestures each.",
+      "untitledList": "Untitled list"
     },
     "noAccount": "No account yet?",
     "haveAccount": "Already have an account?",
@@ -254,6 +252,9 @@
       "description": "This page doesn't exist (anymore).",
       "action": "Go to the home page"
     }
+  },
+  "lists": {
+    "ownerFallback": "a SMOG user"
   },
   "kit": {
     "close": "Close",
@@ -357,6 +358,12 @@
     "unlockHint_one": "Tap {{count}} more time to open the developer tools.",
     "unlockHint_other": "Tap {{count}} more times to open the developer tools.",
     "unlocked": "Developer tools are on."
+  },
+  "home": {
+    "tagline": "Learn Flemish Sign Language gestures, whenever it suits you."
+  },
+  "footer": {
+    "madeBy": "Made with ♡ by zias.be"
   },
   "account": {
     "title": "Your account",

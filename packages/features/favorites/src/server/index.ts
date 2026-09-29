@@ -6,6 +6,7 @@ export {
   type FindGestureSummaries,
   GestureNotFoundError,
   InvalidCursorError,
+  insertFavoritesStmt,
   listFavoriteIds,
   listFavorites,
   removeFavorite,

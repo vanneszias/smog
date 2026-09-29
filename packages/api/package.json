@@ -16,9 +16,11 @@
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/tanstack-query": "catalog:",
+    "@smog/account": "workspace:*",
     "@smog/config": "workspace:*",
     "@smog/favorites": "workspace:*",
     "@smog/gestures": "workspace:*",
+    "@smog/lists": "workspace:*",
     "@smog/rpc": "workspace:*",
     "zod": "catalog:"
   },

@@ -1,8 +1,10 @@
 import type { ContractRouterClient } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
+import { accountContract } from "@smog/account/contract";
 import { favoritesContract } from "@smog/favorites/contract";
 import { gesturesContract } from "@smog/gestures/contract";
+import { listsContract } from "@smog/lists/contract";
 import { implementRpc, requireTurnstile } from "@smog/rpc";
 import { baseContract, type RpcClientContext } from "@smog/rpc/contract";
 import { makeRpcContext, makeSession } from "@smog/rpc/testing";
@@ -175,6 +177,52 @@ describe("createApiClient", () => {
       defined: true,
     });
     expect(seen.at(-1)?.url).toBe("https://smog.test/api/rpc/favorites/ids");
+  });
+
+  it("mounts the lists slice under `lists`, owner procedures behind a session", async () => {
+    expect(Object.keys(appRouter.lists).sort()).toEqual(
+      Object.keys(listsContract).sort()
+    );
+    expect(Object.keys(appRouter.lists.share).sort()).toEqual(
+      Object.keys(listsContract.share).sort()
+    );
+    expect(Object.keys(appRouter.lists.shared).sort()).toEqual(
+      Object.keys(listsContract.shared).sort()
+    );
+    const client = createApiClient({
+      baseUrl: "https://smog.test",
+      fetch: serve,
+    });
+
+    // The session guard runs before the handler (and its D1 reads).
+    await expect(client.lists.mine()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+      defined: true,
+    });
+    await expect(
+      client.lists.shared.addItem({ gestureId: "g", token: "t" })
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(
+      client.lists.create({ name: "x".repeat(81) })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(seen.at(-1)?.url).toBe("https://smog.test/api/rpc/lists/create");
+  });
+
+  it("mounts the account slice under `account`, signed-in only", async () => {
+    expect(Object.keys(appRouter.account).sort()).toEqual(
+      Object.keys(accountContract).sort()
+    );
+    const client = createApiClient({
+      baseUrl: "https://smog.test",
+      fetch: serve,
+    });
+
+    await expect(
+      client.account.importGuestData({ favorites: [], lists: [] })
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED", defined: true });
+    expect(seen.at(-1)?.url).toBe(
+      "https://smog.test/api/rpc/account/importGuestData"
+    );
   });
 
   it("builds TanStack Query options with a stable key", () => {

@@ -81,12 +81,6 @@
     "gestures": "Signes",
     "legal": "Mentions légales"
   },
-  "home": {
-    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient."
-  },
-  "footer": {
-    "madeBy": "Fait avec ♡ par zias.be"
-  },
   "theme": {
     "label": "Thème",
     "toggle": "Changer de thème",
@@ -229,7 +223,12 @@
       "skip": "Pas maintenant",
       "importing": "Importation en cours…",
       "success": "Vos favoris et vos listes sont maintenant dans votre compte.",
-      "failed": "L'importation a échoué. Vos données restent sur cet appareil."
+      "failed": "L'importation a échoué. Vos données restent sur cet appareil.",
+      "skipped_one": "{{count}} geste n'est plus disponible et a été ignoré.",
+      "skipped_many": "{{count}} gestes ne sont plus disponibles et ont été ignorés.",
+      "skipped_other": "{{count}} gestes ne sont plus disponibles et ont été ignorés.",
+      "overLimit": "Tout n'a pas pu être ajouté à votre compte : il contient jusqu'à {{maxLists}} listes de {{maxItems}} gestes chacune.",
+      "untitledList": "Liste sans nom"
     },
     "noAccount": "Pas encore de compte ?",
     "haveAccount": "Vous avez déjà un compte ?",
@@ -256,6 +255,9 @@
       "description": "Cette page n'existe pas (ou plus).",
       "action": "Aller à l'accueil"
     }
+  },
+  "lists": {
+    "ownerFallback": "un utilisateur de SMOG"
   },
   "kit": {
     "close": "Fermer",
@@ -360,6 +362,12 @@
     "unlockHint_many": "Encore {{count}} appuis pour ouvrir les outils de développement.",
     "unlockHint_other": "Encore {{count}} appuis pour ouvrir les outils de développement.",
     "unlocked": "Les outils de développement sont activés."
+  },
+  "home": {
+    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient."
+  },
+  "footer": {
+    "madeBy": "Fait avec ♡ par zias.be"
   },
   "account": {
     "title": "Votre compte",

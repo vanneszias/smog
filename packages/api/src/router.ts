@@ -1,6 +1,17 @@
+import { createAccountRouter } from "@smog/account/server";
 import { publicAuthConfig } from "@smog/config/env/worker";
-import { createFavoritesRouter } from "@smog/favorites/server";
+import {
+  createFavoritesRouter,
+  insertFavoritesStmt,
+} from "@smog/favorites/server";
 import { findGesturesByIds, gesturesRouter } from "@smog/gestures/server";
+import {
+  appendItemsStmt,
+  createListsRouter,
+  insertListsStmt,
+  touchListsWithNewItemsStmt,
+  unplacedItemsStmt,
+} from "@smog/lists/server";
 import { implementRpc } from "@smog/rpc";
 import { roleSchema } from "@smog/rpc/contract";
 import { appContract } from "./contract";
@@ -33,10 +44,19 @@ const system = os.system.router({
 
 /** The app router: implements `appContract` (feature routers join here). */
 export const appRouter = os.router({
-  // Favorites resolve summaries with the gestures query (a feature never
-  // imports another feature's server; the api wires them).
+  // The guest import writes through the favorites and lists builders.
+  account: createAccountRouter({
+    appendItems: appendItemsStmt,
+    insertFavorites: insertFavoritesStmt,
+    insertLists: insertListsStmt,
+    touchLists: touchListsWithNewItemsStmt,
+    unplacedItems: unplacedItemsStmt,
+  }),
+  // Favorites and lists resolve summaries with the gestures query (a
+  // feature never imports another feature's server; the api wires them).
   favorites: createFavoritesRouter({ findSummaries: findGesturesByIds }),
   gestures: gesturesRouter,
+  lists: createListsRouter({ findSummaries: findGesturesByIds }),
   system,
 });
 
