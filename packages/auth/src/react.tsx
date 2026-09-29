@@ -1,3 +1,4 @@
+// biome-ignore-all lint/performance/noBarrelFile: the React entry point (`@smog/auth/react`) re-exports the shared auth flow next to the auth state.
 import {
   createContext,
   type ReactNode,
@@ -6,6 +7,34 @@ import {
   useRef,
 } from "react";
 import type { Role } from "./fields";
+
+export {
+  OTP_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from "./fields";
+export {
+  CAPTCHA_HEADER,
+  createFlowActions,
+  type FlowActionOptions,
+  type FlowAuthClient,
+} from "./flow-actions";
+export {
+  type AuthErrorKey,
+  type AuthFlow,
+  type AuthFlowActions,
+  type AuthFlowState,
+  type AuthMethod,
+  type AuthMode,
+  type AuthNotice,
+  type AuthResult,
+  type AuthStep,
+  authErrorKey,
+  newPasswordError,
+  type SocialProvider,
+  toAuthResult,
+  useAuthFlow,
+} from "./use-auth-flow";
 
 export interface AuthUser {
   email: string;
@@ -81,7 +110,8 @@ export function toAuthState(
       email: current.email,
       id: current.id,
       image: current.image ?? null,
-      name: current.name,
+      // Code and magic-link sign-ups have no name yet.
+      name: current.name.trim() || current.email,
       role: current.role === "admin" ? "admin" : "user",
     },
   };

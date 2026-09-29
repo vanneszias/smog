@@ -31,6 +31,7 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
   "@smog/mobile": [
     "@smog/api/client",
     "@smog/auth/expo",
+    "@smog/auth/react",
     "@smog/rpc/react",
     `${FEATURE_PATTERN}/client`,
     `${FEATURE_PATTERN}/schema`,

@@ -3,6 +3,7 @@ import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vitest/config";
 
+const SRC = fileURLToPath(new URL("./src", import.meta.url));
 const MIGRATIONS_DIR = fileURLToPath(
   new URL("../../packages/db/migrations", import.meta.url)
 );
@@ -28,12 +29,14 @@ export default defineConfig(async () => ({
     }),
     tanstackStart(),
   ],
+  resolve: { alias: { "@": SRC } },
   test: {
     // `scripts/` runs on Bun (`bun test scripts`), not in workerd.
     include: ["test/**/*.test.ts"],
     setupFiles: ["@smog/db/testing/apply-migrations"],
     // The first request in a file transforms the whole server entry
-    // (Start, Better Auth, React Email) on demand, which takes ~15 s.
-    testTimeout: 60_000,
+    // (Start, Better Auth, React Email, the app shell and the kit) on
+    // demand: ~25 s alone, over 60 s while turbo runs every package's tests.
+    testTimeout: 180_000,
   },
 }));

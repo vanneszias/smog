@@ -71,7 +71,11 @@
         "SITE_URL": "https://smog-site-staging.workers.dev",
         "ENVIRONMENT": "staging",
         "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
-        "EMAIL_REPLY_TO": "info@smog.vlaanderen"
+        "EMAIL_REPLY_TO": "info@smog.vlaanderen",
+        // Cloudflare's always-pass test site key, the pair of the test secret
+        // staging may use (DECISIONS). Production sets the real widget's key
+        // before launch; without one the sign-in pages show no widget.
+        "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
       },
       "kv_namespaces": [
         { "binding": "KV", "id": "00000000000000000000000000000000" }

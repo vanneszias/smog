@@ -22,7 +22,12 @@ import { admin, captcha, emailOTP, magicLink } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { COOKIE_PREFIX } from "./cookie";
 import type { AuthEnv } from "./env";
-import { USER_ADDITIONAL_FIELDS } from "./fields";
+import {
+  OTP_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  USER_ADDITIONAL_FIELDS,
+} from "./fields";
 
 export type { AuthEnv } from "./env";
 
@@ -165,6 +170,8 @@ export function createAuth(options: CreateAuthOptions) {
     }),
     emailAndPassword: {
       enabled: true,
+      maxPasswordLength: PASSWORD_MAX_LENGTH,
+      minPasswordLength: PASSWORD_MIN_LENGTH,
       requireEmailVerification: true,
       resetPasswordTokenExpiresIn: RESET_PASSWORD_TTL,
       revokeSessionsOnPasswordReset: true,
@@ -194,6 +201,7 @@ export function createAuth(options: CreateAuthOptions) {
       admin({ adminRoles: ["admin"], defaultRole: "user" }),
       emailOTP({
         expiresIn: OTP_TTL,
+        otpLength: OTP_LENGTH,
         sendVerificationOTP: async ({ email, otp }, ctx) => {
           await send(
             "auth/otp",

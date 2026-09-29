@@ -59,7 +59,8 @@
     "playVideo": "Lire la vidéo",
     "pauseVideo": "Mettre la vidéo en pause",
     "dragHandle": "Faire glisser pour réordonner",
-    "otpDigit": "Chiffre {{index}} sur {{length}}"
+    "otpDigit": "Chiffre {{index}} sur {{length}}",
+    "userMenu": "Menu du compte"
   },
   "nav": {
     "home": "Accueil",
@@ -76,7 +77,15 @@
     "privacy": "Confidentialité",
     "terms": "Conditions",
     "signIn": "Se connecter",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "gestures": "Signes",
+    "legal": "Mentions légales"
+  },
+  "home": {
+    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient."
+  },
+  "footer": {
+    "madeBy": "Fait avec ♡ par zias.be"
   },
   "theme": {
     "label": "Thème",
@@ -221,7 +230,10 @@
       "importing": "Importation en cours…",
       "success": "Vos favoris et vos listes sont maintenant dans votre compte.",
       "failed": "L'importation a échoué. Vos données restent sur cet appareil."
-    }
+    },
+    "noAccount": "Pas encore de compte ?",
+    "haveAccount": "Vous avez déjà un compte ?",
+    "signUpLink": "Créez-en un"
   },
   "states": {
     "loading": "Chargement…",
@@ -343,6 +355,20 @@
       "showToast": "Afficher une notification",
       "openDialog": "Ouvrir la boîte de dialogue",
       "openSheet": "Ouvrir le panneau"
-    }
+    },
+    "unlockHint_one": "Encore {{count}} appui pour ouvrir les outils de développement.",
+    "unlockHint_many": "Encore {{count}} appuis pour ouvrir les outils de développement.",
+    "unlockHint_other": "Encore {{count}} appuis pour ouvrir les outils de développement.",
+    "unlocked": "Les outils de développement sont activés."
+  },
+  "account": {
+    "title": "Votre compte",
+    "signedInAs": "Connecté en tant que {{email}}",
+    "comingSoon": "Bientôt, vous gérerez aussi ici vos méthodes de connexion, votre confidentialité et vos préférences."
+  },
+  "settings": {
+    "title": "Paramètres",
+    "preferences": "Préférences",
+    "about": "À propos de l'app"
   }
 }

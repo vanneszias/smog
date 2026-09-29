@@ -19,6 +19,24 @@ describe("appRouter.system", () => {
     );
   });
 
+  it("authConfig returns the public auth setup only", async () => {
+    const context = makeRpcContext({
+      env: {
+        GOOGLE_CLIENT_ID: "google-id",
+        GOOGLE_CLIENT_SECRET: "google-secret",
+        TURNSTILE_SECRET_KEY: "turnstile-secret",
+        TURNSTILE_SITE_KEY: "turnstile-site",
+      },
+    });
+    expect(
+      await call(appRouter.system.authConfig, undefined, { context })
+    ).toEqual({
+      apple: false,
+      google: true,
+      turnstileSiteKey: "turnstile-site",
+    });
+  });
+
   it("whoami returns null for a guest", async () => {
     expect(
       await call(appRouter.system.whoami, undefined, {

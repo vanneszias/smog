@@ -56,6 +56,7 @@ export default function createConfig({ config }: ConfigContext): ExpoConfig {
         ITSAppUsesNonExemptEncryption: false,
       },
       supportsTablet: true,
+      usesAppleSignIn: true,
     },
     name: "SMOG & Co",
     orientation: "portrait",
@@ -65,6 +66,7 @@ export default function createConfig({ config }: ConfigContext): ExpoConfig {
       "expo-localization",
       "expo-font",
       "expo-secure-store",
+      "expo-apple-authentication",
       "expo-video",
       "expo-web-browser",
       [

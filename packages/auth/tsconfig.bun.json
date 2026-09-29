@@ -1,0 +1,10 @@
+{
+  // The flow's Bun tests (`bun test src`): Bun types, no Workers types.
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "types": ["bun"]
+  },
+  "include": ["src/**/*.test.ts"]
+}

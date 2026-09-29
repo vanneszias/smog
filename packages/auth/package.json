@@ -12,8 +12,8 @@
     "./react": "./src/react.tsx"
   },
   "scripts": {
-    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json",
-    "test": "vitest run && bun test guard"
+    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json && tsc -p tsconfig.bun.json",
+    "test": "vitest run && bun test guard src"
   },
   "dependencies": {
     "@better-auth/expo": "1.7.6",

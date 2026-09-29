@@ -1,3 +1,4 @@
+import { publicAuthConfig } from "@smog/config/env/worker";
 import { createFavoritesRouter } from "@smog/favorites/server";
 import { findGesturesByIds, gesturesRouter } from "@smog/gestures/server";
 import { implementRpc } from "@smog/rpc";
@@ -7,6 +8,9 @@ import { appContract } from "./contract";
 const os = implementRpc(appContract);
 
 const system = os.system.router({
+  authConfig: os.system.authConfig.handler(({ context }) =>
+    publicAuthConfig(context.env)
+  ),
   health: os.system.health.handler(({ context }) => ({
     environment: context.env.ENVIRONMENT,
     ok: true as const,

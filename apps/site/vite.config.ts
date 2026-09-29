@@ -1,8 +1,11 @@
+import { fileURLToPath } from "node:url";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+
+const SRC = fileURLToPath(new URL("./src", import.meta.url));
 
 // The Cloudflare plugin reads the wrangler environment from CLOUDFLARE_ENV at
 // dev and build time (there are no top-level bindings). Local runs use
@@ -23,4 +26,5 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  resolve: { alias: { "@": SRC } },
 });

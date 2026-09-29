@@ -4,7 +4,7 @@ import { Stack } from "expo-router";
 import type { ReactElement } from "react";
 import { devToolsAvailable } from "@/lib/dev-tools";
 
-/** The settings stack; the settings screens themselves come in Task 9. */
+/** The settings stack: settings, then the developer tools (dev and staging). */
 export default function SettingsLayout(): ReactElement {
   const { t } = useTranslation();
   const background = useColor("background");
@@ -20,6 +20,7 @@ export default function SettingsLayout(): ReactElement {
         headerTitleStyle: { color: foreground },
       }}
     >
+      <Stack.Screen name="index" options={{ title: t("settings.title") }} />
       <Stack.Protected guard={devToolsAvailable()}>
         <Stack.Screen
           name="developer-tools/index"
