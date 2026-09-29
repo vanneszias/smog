@@ -122,3 +122,21 @@ Each entry: date · decision · alternatives · why. Newest entries go at the bo
 
 - **2026-09-29 · Guest → account import lands with the phase 3 features.** `account.importGuestData` and the `importGuestData()` client helper need the favorites and lists services, so phase 2 only ships `@smog/local-store` (the data it will import and clear).
 - **2026-09-29 · `@smog/local-store` shape.** Mutators are pure `(data) => data` functions passed to `store.update` (`store.update(toggleFavorite(id))`), so they are testable without a store and `update` serialises them through a promise queue. `preferences.locale` defaults to `null` (follow the device) rather than `nl`, so a guest who never chose a language still gets device detection. The native adapter loads `@react-native-async-storage/async-storage` (an optional peer) lazily, so importing it never fails on web or in tests; `createAsyncStorageAdapter(fake)` is the testable core. The React hook returns the defaults on the server and during hydration, so SSR markup always matches; the store then re-renders with the hydrated data.
+
+## Rule changes recorded from the feature inventory (2026-09-29)
+
+- **2026-09-29 · [rule change] Guests are device-only (user brief §3.2).** No guest rows exist, so the old monthly guest-cleanup cron, guest consent rows, `migrateGuestToUser` and the "12 months inactivity" guest retention go away. The privacy page says guest data never leaves the device.
+- **2026-09-29 · [improvement] Web guests get favorites and lists** (stored on the device); the old web required sign-in. Sharing still requires an account.
+- **2026-09-29 · [rule change] Auth provider: WorkOS → Better Auth** (user brief). New methods: email + password, email code, magic link, Google, Apple, passkeys. Migrated users sign in with a code, a magic link or social login, or set a password through "forgot password".
+- **2026-09-29 · [ux] Route names:** `/sign-in`, `/sign-up`, `/forgot-password` … replace `/login` and `/callback`; the old paths redirect (301).
+- **2026-09-29 · [rule change] Category filter URLs use slugs** (`/gestures?category=begroetingen`) instead of names. Old `?category=<Name>` values are mapped to slugs by `normalizeText` + `slugify` on read.
+- **2026-09-29 · [rule change] Sponsorship CSV export columns follow the new model:** sponsor, invoice request, payment (Mollie id, status, paid at), items (amount, logo), sponsorship (status, starts, ends). The old columns are all still present, under the same headers where the meaning is the same; added columns are appended.
+- **2026-09-29 · Rate limits use Workers Rate Limiting bindings**, with the old numbers kept: API 300/60 s, sponsor actions 20/3600 s, auth 30/900 s, analytics 120/60 s.
+- **2026-09-29 · [improvement] Mux webhooks** (`video.asset.ready`, `video.asset.master.ready`, `video.upload.asset_created`, `video.asset.errored`) replace polling, with polling kept as a fallback in the render Workflow.
+- **2026-09-29 · Search typo tolerance** is implemented in TypeScript (spec §7.1): Damerau–Levenshtein similarity ≥ 0.6 as the successor of Fuse.js threshold 0.4, with the same field weights and a 150 multiplier.
+- **2026-09-29 · [ux] Mobile gets a Favorites tab** (Home · Search · Favorites · Lists); before, favorites were a default list inside Lists.
+- **2026-09-29 · [improvement] Legal pages are localized** (nl canonical; en/fr translations marked as translations). The old pages were Dutch only.
+- **2026-09-29 · [improvement] Turnstile** on sign-up, sign-in, password reset, code and magic-link requests, sponsor checkout and re-edit submission (bot protection; skipped when no key is configured).
+- **2026-09-29 · Cutover compatibility:** unexpired re-edit tokens are migrated (hashed), and `POST /webhooks/mollie` stays as an alias for 30 days (spec §15).
+- **2026-09-29 · No sponsor email on rejection or change request (parity).** Admins contact the sponsor manually, as before. The admin screen shows the re-edit link to copy.
+- **2026-09-29 · Subjects of new emails** (`admin_render_failed`, `admin_refund_needed`, auth emails, `we_moved`) are copy decisions made in `@smog/i18n` (nl canonical); they are reviewed in the phase 6 email pass.
