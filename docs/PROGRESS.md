@@ -8,7 +8,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 
 - [x] 0. Analysis → feature inventory → design spec → phase 1 plan
 - [x] 1. Monorepo skeleton (Bun, Turbo, Biome, knip, boundaries, config, CI, empty site + mobile)
-- [ ] 2. Foundations (db, auth, rpc/api, local-store + guest import, styles/brand/i18n, ui-web/ui-native, /dev/ui)
+- [x] 2. Foundations (db, auth, rpc/api, local-store + guest import, styles/brand/i18n, ui-web/ui-native, /dev/ui)
 - [ ] 3. Learning (gestures, categories, FTS search, favorites, lists, share links; site + mobile)
 - [ ] 4. Account, consent, analytics, legal pages, deep links, legacy redirects, maintenance mode
 - [ ] 5. Admin panel
@@ -19,6 +19,8 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 
 ## Log
 
+- 2026-09-29: Phase 2 done (the phase review passed after the fix wave; release:check green).
+
 - 2026-09-29: Phase 0 done. Orphan `develop` branch created. Analysis reports, inventory, spec, DECISIONS and the phase 1 plan committed.
 - 2026-09-29: Phase 1 done. Root tooling, `@smog/config` + boundaries, `apps/site` (TanStack Start on Workers, guarded deploy), `apps/mobile` (Expo SDK 57, NativeWind 4), release gate (`bun run release:check` green with `SMOG_OFFLINE=1` here), `ci.yml` and `deploy.yml`.
 - 2026-09-29: Phase 2 tasks 1–8 merged (db, auth, email core, rpc/api, local-store, styles/brand, i18n, ui-web + /dev/ui, ui-native + gallery). Phase 3 task 1 (gestures) merged.
@@ -26,7 +28,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 
 ## Next
 
-- Phase 2: all 9 tasks are merged (ad229f7). The phase-level integration review is in progress.
+- Phase 2: done. All 9 tasks are merged, and the phase review fix wave (rpc CSRF origin check, /dev/ui staging gate, shared helpers, admin:grant) is on develop.
 - Phase 3: tasks 1–4 are merged (gestures, favorites, lists, guest import).
   - Task 5 (domain components, both kits) is in progress in a worktree.
   - Tasks 6 (site learning pages) and 7 (mobile learning screens and offline cache) are next.
