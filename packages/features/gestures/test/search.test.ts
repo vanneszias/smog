@@ -301,19 +301,23 @@ describe("catalog projection", () => {
     expect(INITIAL_CATALOG_VERSION).toBe("initial");
   });
 
-  it("shares one D1 load between concurrent cold requests", async () => {
+  it("loads per concurrent cold miss, then serves the cached projection", async () => {
     await bumpCatalogVersion(env.KV);
     const counted = countingD1(env.DB);
     const countedDb = createDb(counted.d1);
 
-    const [a, b, c] = await Promise.all([
-      getCatalogProjection(countedDb, env.KV),
+    // No promise is shared between requests: each cold miss loads on its own.
+    const cold = await Promise.all([
       getCatalogProjection(countedDb, env.KV),
       getCatalogProjection(countedDb, env.KV),
     ]);
-    expect(counted.count()).toBe(1);
-    expect(b).toBe(a);
-    expect(c).toBe(a);
+    expect(counted.count()).toBe(2);
+    expect(cold[0]).toEqual(cold[1]);
+
+    // The resolved projection (plain data) is then served from memory.
+    const warm = await getCatalogProjection(countedDb, env.KV);
+    expect(counted.count()).toBe(2);
+    expect(cold).toContain(warm);
   });
 
   it("holds normalised names, keywords, category names and slugs", async () => {

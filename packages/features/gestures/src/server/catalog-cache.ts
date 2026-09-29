@@ -7,8 +7,10 @@
  * (up to a minute), which only delays typo matches for the change.
  *
  * Reads never write KV: a missing key is the fixed `INITIAL_CATALOG_VERSION`,
- * and only writers call `bumpCatalogVersion`. Concurrent cold loads in one
- * isolate share one D1 query.
+ * and only writers call `bumpCatalogVersion`. Only the resolved projection
+ * (plain data) is shared between requests, never a promise: in workerd,
+ * awaiting another request's I/O can hang or throw once that request ends.
+ * Concurrent cold misses each load (cheap at the catalogue's size).
  */
 import { gesture } from "@smog/db";
 import type { Db } from "@smog/db/client";
@@ -30,11 +32,6 @@ export interface CatalogEntry extends SearchableGesture {
 }
 
 let cached: { entries: readonly CatalogEntry[]; version: string } | null = null;
-/** The load in flight, per version, so concurrent cold requests share it. */
-let loading: {
-  entries: Promise<readonly CatalogEntry[]>;
-  version: string;
-} | null = null;
 
 /**
  * Starts a new catalog version. A fresh id rather than a counter, so two
@@ -67,25 +64,6 @@ async function loadProjection(db: Db): Promise<CatalogEntry[]> {
   }));
 }
 
-function loadOnce(db: Db, version: string): Promise<readonly CatalogEntry[]> {
-  if (loading?.version === version) {
-    return loading.entries;
-  }
-  const entries = loadProjection(db).then((loaded) => {
-    cached = { entries: loaded, version };
-    return loaded;
-  });
-  const current = { entries, version };
-  loading = current;
-  const clear = () => {
-    if (loading === current) {
-      loading = null;
-    }
-  };
-  entries.then(clear, clear);
-  return entries;
-}
-
 /**
  * The projection for the current `catalog:version`, loaded from D1 once
  * per isolate and version. Throws when KV or D1 fails (the caller decides
@@ -101,7 +79,9 @@ export async function getCatalogProjection(
     if (cached?.version === version) {
       return cached.entries;
     }
-    return await loadOnce(db, version);
+    const entries = await loadProjection(db);
+    cached = { entries, version };
+    return entries;
   } catch (error) {
     console.error("[gestures] Failed to load the catalog projection:", error);
     throw error;
