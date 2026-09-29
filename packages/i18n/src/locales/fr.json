@@ -70,7 +70,7 @@
     "lists": "Listes",
     "account": "Compte",
     "settings": "Paramètres",
-    "sponsor": "Parrainer",
+    "sponsor": "Devenir sponsor",
     "admin": "Administration",
     "about": "À propos de SMOG",
     "contact": "Contact",
@@ -115,7 +115,7 @@
       "placeholder": "Votre prénom et votre nom"
     },
     "methods": {
-      "title": "Comment souhaitez-vous vous connecter ?",
+      "title": "Comment souhaitez-vous vous connecter\u202f?",
       "password": "Avec mon mot de passe",
       "emailCode": "Avec un code par e-mail",
       "magicLink": "Avec un lien de connexion par e-mail",
@@ -129,10 +129,10 @@
       "placeholder": "Votre mot de passe",
       "newLabel": "Nouveau mot de passe",
       "confirmLabel": "Répétez votre mot de passe",
-      "forgot": "Mot de passe oublié ?",
+      "forgot": "Mot de passe oublié\u202f?",
       "signIn": "Se connecter",
       "signUp": "Créer le compte",
-      "rulesTitle": "Votre mot de passe :",
+      "rulesTitle": "Votre mot de passe\u00a0:",
       "ruleMinLength": "compte au moins {{min}} caractères",
       "ruleMaxLength": "compte au plus {{max}} caractères",
       "ruleMatch": "est identique dans les deux champs"
@@ -154,8 +154,8 @@
     },
     "checkInbox": {
       "openMail": "Ouvrir votre application de messagerie",
-      "spamHint": "Rien reçu ? Vérifiez aussi vos courriers indésirables.",
-      "wrongEmail": "Mauvaise adresse e-mail ?"
+      "spamHint": "Rien reçu\u202f? Vérifiez aussi vos courriers indésirables.",
+      "wrongEmail": "Mauvaise adresse e-mail\u202f?"
     },
     "verifyEmail": {
       "title": "Confirmez votre adresse e-mail",
@@ -211,9 +211,9 @@
       "generic": "Une erreur s'est produite. Veuillez réessayer."
     },
     "import": {
-      "title": "Récupérer vos données ?",
+      "title": "Récupérer vos données\u202f?",
       "description": "Vous avez enregistré des gestes sur cet appareil sans compte. Ajoutez-les à votre compte pour les retrouver partout.",
-      "prompt": "Importer {{items}} ?",
+      "prompt": "Importer {{items}}\u202f?",
       "favorites_one": "{{count}} favori",
       "favorites_many": "{{count}} favoris",
       "favorites_other": "{{count}} favoris",
@@ -228,11 +228,11 @@
       "skipped_one": "{{count}} geste n'est plus disponible et a été ignoré.",
       "skipped_many": "{{count}} gestes ne sont plus disponibles et ont été ignorés.",
       "skipped_other": "{{count}} gestes ne sont plus disponibles et ont été ignorés.",
-      "overLimit": "Tout n'a pas pu être ajouté à votre compte : il contient jusqu'à {{maxLists}} listes de {{maxItems}} gestes chacune.",
+      "overLimit": "Tout n'a pas pu être ajouté à votre compte\u00a0: il contient jusqu'à {{maxLists}} listes de {{maxItems}} gestes chacune.",
       "untitledList": "Liste sans nom"
     },
-    "noAccount": "Pas encore de compte ?",
-    "haveAccount": "Vous avez déjà un compte ?",
+    "noAccount": "Pas encore de compte\u202f?",
+    "haveAccount": "Vous avez déjà un compte\u202f?",
     "signUpLink": "Créez-en un"
   },
   "states": {
@@ -248,7 +248,7 @@
     },
     "offline": {
       "title": "Vous êtes hors ligne",
-      "description": "Certaines fonctionnalités ne marcheront à nouveau qu'une fois la connexion rétablie.",
+      "description": "Certaines fonctionnalités ne fonctionneront à nouveau qu'une fois la connexion rétablie.",
       "backOnline": "Vous êtes de nouveau en ligne."
     },
     "notFound": {
@@ -288,7 +288,7 @@
       "greeting": "Bonjour,",
       "greetingName": "Bonjour {{name}},",
       "signature": "L'équipe SMOG & Co",
-      "linkFallback": "Le bouton ne fonctionne pas ? Copiez ce lien dans votre navigateur :",
+      "linkFallback": "Le bouton ne fonctionne pas\u202f? Copiez ce lien dans votre navigateur\u00a0:",
       "verifyEmail": {
         "subject": "Confirmez votre adresse e-mail",
         "preheader": "Encore un clic et votre compte est prêt.",
@@ -296,15 +296,15 @@
         "body": "Merci d'avoir créé un compte SMOG & Co. Cliquez sur le bouton ci-dessous pour confirmer votre adresse e-mail.",
         "button": "Confirmer l'adresse e-mail",
         "expiry": "Le lien est valable {{minutes}} minutes.",
-        "footer": "Vous n'avez pas créé de compte ? Vous pouvez ignorer cet e-mail."
+        "footer": "Vous n'avez pas créé de compte\u202f? Vous pouvez ignorer cet e-mail."
       },
       "otp": {
         "subject": "{{code}} est votre code SMOG & Co",
         "preheader": "Votre code est {{code}}.",
         "heading": "Votre code",
-        "body": "Saisissez ce code pour continuer :",
+        "body": "Saisissez ce code pour continuer\u00a0:",
         "expiry": "Le code est valable {{minutes}} minutes. Ne le communiquez à personne.",
-        "footer": "Vous n'avez pas demandé de code ? Vous pouvez ignorer cet e-mail."
+        "footer": "Vous n'avez pas demandé de code\u202f? Vous pouvez ignorer cet e-mail."
       },
       "magicLink": {
         "subject": "Votre lien de connexion SMOG & Co",
@@ -313,7 +313,7 @@
         "body": "Cliquez sur le bouton ci-dessous pour vous connecter. Aucun mot de passe n'est nécessaire.",
         "button": "Se connecter",
         "expiry": "Le lien est valable {{minutes}} minutes et ne fonctionne qu'une seule fois.",
-        "footer": "Vous n'avez pas essayé de vous connecter ? Vous pouvez ignorer cet e-mail."
+        "footer": "Vous n'avez pas essayé de vous connecter\u202f? Vous pouvez ignorer cet e-mail."
       },
       "resetPassword": {
         "subject": "Choisissez un nouveau mot de passe",
@@ -322,7 +322,7 @@
         "body": "Nous avons reçu une demande de modification du mot de passe de votre compte. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.",
         "button": "Choisir un nouveau mot de passe",
         "expiry": "Le lien est valable {{minutes}} minutes.",
-        "footer": "Vous n'avez rien demandé ? Vous pouvez ignorer cet e-mail. Votre mot de passe reste inchangé."
+        "footer": "Vous n'avez rien demandé\u202f? Vous pouvez ignorer cet e-mail. Votre mot de passe reste inchangé."
       }
     }
   },

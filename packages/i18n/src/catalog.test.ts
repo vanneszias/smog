@@ -154,3 +154,21 @@ describe("resolveLocale", () => {
     expect(resolveLocale({ device: [] })).toBe("nl");
   });
 });
+
+// French typography: a non-breaking space (U+00A0, or the narrow U+202F)
+// before `? ! : ;`, so the mark never wraps onto a line of its own. URLs and
+// {{placeholders}} are skipped; `?!` counts as one mark.
+const FR_HIGH_PUNCTUATION = /(?<![\u00A0\u202F?!:;])[?!:;]/;
+const SKIPPED = /\{\{[^}]*\}\}|[a-z][a-z0-9+.-]*:\/\/\S+/gi;
+
+describe("fr typography", () => {
+  test("a non-breaking space precedes every ? ! : ;", () => {
+    const flat = flatten(resources.fr.translation as unknown as Tree);
+    const offenders = [...flat]
+      .filter(([, value]) =>
+        FR_HIGH_PUNCTUATION.test(value.replace(SKIPPED, "\u00A0x"))
+      )
+      .map(([key, value]) => `${key}: ${value}`);
+    expect(offenders).toEqual([]);
+  });
+});

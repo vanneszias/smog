@@ -332,7 +332,7 @@
     "logs": "Logboek",
     "clearLogs": "Logboek wissen",
     "exportLogs": "Logboek exporteren",
-    "noLogs": "Er zijn nog geen logs.",
+    "noLogs": "Het logboek is nog leeg.",
     "environment": "Omgeving",
     "version": "Versie",
     "resetLocalData": "Lokale gegevens wissen",
