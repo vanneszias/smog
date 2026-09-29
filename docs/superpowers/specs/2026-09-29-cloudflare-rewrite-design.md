@@ -278,6 +278,22 @@ live | expiring ──force expire (admin)──▶ expired
   - `@smog/rpc/react` exports `RpcProvider`/`useRpc()`, which feature hooks use through a typed accessor. Apps create the client once (site: same-origin, cookies; mobile: `EXPO_PUBLIC_API_URL` + the Better Auth Expo cookie header).
 - **Caching:** TanStack Query with sensible `staleTime` per query, invalidation after mutations, and refetch on focus/reconnect. Optimistic updates for favorites, list items and reorder. Mobile persists the gestures catalogue and favorites (offline cache, §10.4). There are no realtime subscriptions and no Durable Objects for push.
 
+### 7.1 Search (`@smog/gestures`, replaces fuse.js)
+
+The old rules in `SEARCH_ALGORITHM.md` are kept. Ranking is one pure TypeScript function (`rankGestures`) that runs on the server, and on the device for the mobile offline cache.
+
+1. **Normalise:** the query and every field go through `normalizeText`, which lowercases, strips diacritics and collapses whitespace. An empty query returns the browse list, sorted by name (or by the first category when asked).
+2. **Candidates:** candidates come from FTS5, which tokenises and prefix-matches every query token (`"tok"*`) with the category filter applied. The filter uses OR semantics across the selected category slugs.
+3. **Score:** each candidate is scored per field value.
+   - Field weights: name 100, keyword 50, category 30, description 10.
+   - Match multipliers: exact 1000, startsWith 500, word boundary 250.
+   - The score is `multiplier × weight`, and the best field wins. Ties sort by `name` using `localeCompare("nl")`.
+4. **Typo tier:** this runs when steps 2–3 return fewer than 5 results and the query is at least 3 characters.
+   - It takes a cached projection of all published gestures (`id`, normalised name, keywords, categories), kept in isolate memory and invalidated through a KV version key that every gesture write bumps.
+   - Each value is scored by similarity = 1 − (Damerau–Levenshtein distance / max length), against the whole value and each of its words. The old Fuse threshold was 0.4; the equivalent here is similarity ≥ 0.6.
+   - The score is `150 × weight × similarity`. These results are appended after the direct matches, without duplicates.
+5. **Analytics:** only the query length and the result counts are sent (never the text).
+
 Endpoint inventory (full list in `docs/API.md`): `gestures.{list, bySlug, search, related, categories}`, `favorites.{list, ids, toggle, add, remove}`, `lists.{mine, get, create, update, delete, addItem, removeItem, reorder, share.get, share.create, share.revoke, shared.get, shared.addItem, shared.removeItem}`, `account.{me, updateProfile, consent.get, consent.set, export, delete, importGuestData}`, `sponsorships.{availability, quote, uploadLogo, checkout, paymentStatus, reedit.get, reedit.submit, renewal.get, renewal.checkout}`, `admin.{dashboard, gestures.*, categories.*, sponsorships.*, users.*, audit.list, mux.*, emails.preview, maintenance.*, export.sponsorshipsCsv}`.
 
 ## 8. Background work, video, email
@@ -478,6 +494,8 @@ External services are faked at the adapter boundary. `@smog/payments/testing` pr
     - legacy `pending` → `cancelled`
   - Consents become `consent_event`; `adminLogs` become `audit_log` (unknown shapes go to `data: { legacy: … }` under action `legacy`).
   - Mux ids carry over unchanged.
+  - Unexpired old re-edit tokens become `sponsorship_token` rows with purpose `reedit`. They store the SHA-256 hash of the old raw token and keep its expiry, so links already sent keep working. The legacy `/sponsors/re-edit?token=` path redirects to `/sponsor/edit?token=` with the token kept.
+  - Payments created just before cutover still have the old webhook URL (`<origin>/webhooks/mollie`). The site therefore also serves `POST /webhooks/mollie` as an alias of `/api/webhooks/mollie`, and matches those payments through `payment.mollie_id` from the migrated `molliePaymentId`. The alias can be removed 30 days after cutover.
 - The `we_moved` email job is optional and enqueued by `--send-we-moved`.
 
 ## 16. UI/UX design brief
