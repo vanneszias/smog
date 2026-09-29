@@ -79,7 +79,8 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
   ],
   "@smog/analytics": ["@smog/config", "@smog/utils"],
   "@smog/auth": ["@smog/db", "@smog/email", "@smog/config", "@smog/utils"],
-  "@smog/brand": ["@smog/config"],
+  // The icon generator reads the brand colours from the tokens.
+  "@smog/brand": ["@smog/styles", "@smog/config"],
   "@smog/config": [],
   "@smog/db": ["@smog/config", "@smog/utils"],
   "@smog/email": [

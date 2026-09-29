@@ -42,6 +42,14 @@ describe("BOUNDARIES", () => {
   test("config depends on nothing", () => {
     expect(allowedTargets("@smog/config")).toEqual([]);
   });
+
+  test("brand reads the tokens from styles, and styles is a leaf", () => {
+    expect(allowedTargets("@smog/brand")).toEqual([
+      "@smog/styles",
+      "@smog/config",
+    ]);
+    expect(allowedTargets("@smog/styles")).toEqual(["@smog/config"]);
+  });
 });
 
 describe("isAllowedDependency", () => {

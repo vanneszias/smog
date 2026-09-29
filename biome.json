@@ -17,7 +17,9 @@
       "!!**/worker-configuration.d.ts",
       "!!**/*.gen.*",
       "!!apps/mobile/assets",
+      "!!apps/site/public",
       "!!packages/styles/generated",
+      "!!packages/brand/src/art",
       "!!.agents",
       "!!docs/superpowers/analysis"
     ]

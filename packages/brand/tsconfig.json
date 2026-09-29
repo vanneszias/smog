@@ -1,0 +1,8 @@
+{
+  "extends": "@smog/config/tsconfig/library.json",
+  "compilerOptions": {
+    "types": ["bun"]
+  },
+  "include": ["src", "scripts"],
+  "references": [{ "path": "../styles" }]
+}
