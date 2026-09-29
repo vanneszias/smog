@@ -15,8 +15,17 @@ bun run check-types          # Typecheck all packages (turbo check-types)
 bun run test                 # Run all tests (turbo test)
 bun run knip                 # Unused files, exports and dependencies
 bun run boundaries           # Enforce the package dependency graph
+bun run audit                # bun audit --production (ignored advisories: docs/DECISIONS.md)
+bun run mobile:release-check # expo-doctor + expo export (iOS + Android) + bundle size
 bun run release:check        # Everything CI runs, in order
+SMOG_OFFLINE=1 bun run release:check  # Same, on a machine without internet access
 ```
+
+`release:check` = `check:ci` → `boundaries` → `scripts/release-config-check.ts` (workflows + wrangler envs) → `check-types` → `test` → `build` → `knip` → `audit` → `scripts/mobile-release-check.ts`. CI (`.github/workflows/ci.yml`) runs exactly this.
+
+`SMOG_OFFLINE=1` only affects expo-doctor, whose schema check (api.expo.dev / exp.host) and React Native Directory check need the network. Offline, the directory check is off (`EXPO_DOCTOR_ENABLE_DIRECTORY_CHECK=0`), fetch failures are warnings (`EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS=1`), and a schema check that crashed while fetching is tolerated; every other doctor failure still fails. Never set it in CI.
+
+Deploys run from `.github/workflows/deploy.yml` on pushes to `develop` (staging) and `master` (production): D1 migrations, then `CLOUDFLARE_ENV=<env> bun -F @smog/site deploy`. Without the `CLOUDFLARE_API_TOKEN` secret the job skips with a warning.
 
 Use `bun run <script>` for scripts whose name clashes with a Bun built-in (`build`, `test`).
 
@@ -38,6 +47,8 @@ bun -F @smog/mobile ios      # Run iOS simulator
 bun -F @smog/mobile android  # Run Android emulator
 bun -F @smog/mobile test     # Jest (jest-expo)
 bun -F @smog/mobile check-types
+bun -F @smog/mobile export   # expo export for iOS + Android into dist/
+bun -F @smog/mobile doctor   # expo-doctor (needs network, see SMOG_OFFLINE above)
 ```
 
 ### Packages
