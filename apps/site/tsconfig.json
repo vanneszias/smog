@@ -3,6 +3,9 @@
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "types": ["vite/client", "@cloudflare/vitest-plugin/types"]
   },
   "include": ["src", "test", "vite.config.ts", "vitest.config.ts"]

@@ -17,8 +17,13 @@ env:
   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
 
 jobs:
+  # The release gate (ci.yml via workflow_call). A red commit never deploys.
+  release-check:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
     name: Deploy site
+    needs: release-check
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # develop → staging, master → production.
@@ -31,8 +36,8 @@ jobs:
       - name: Check Cloudflare secrets
         id: secrets
         run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::warning::CLOUDFLARE_API_TOKEN is not set for the $CLOUDFLARE_ENV environment; skipping the deploy."
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set for the $CLOUDFLARE_ENV environment; skipping the deploy."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -49,10 +54,11 @@ jobs:
           node-version: 22
       - if: steps.secrets.outputs.enabled == 'true'
         run: bun install --frozen-lockfile
-      # The D1 `DB` binding arrives in phase 2 (apps/site/migrations). Until
-      # then there is nothing to apply, so the step is skipped.
+      # Migrations live in packages/db/migrations (wrangler.jsonc
+      # `migrations_dir`, phase 2). Until the first one exists there is
+      # nothing to apply; release-config-check keeps this path in sync.
       - name: Apply D1 migrations
-        if: steps.secrets.outputs.enabled == 'true' && hashFiles('apps/site/migrations/**') != ''
+        if: steps.secrets.outputs.enabled == 'true' && hashFiles('packages/db/migrations/*.sql') != ''
         working-directory: apps/site
         run: bunx wrangler d1 migrations apply DB --env "$CLOUDFLARE_ENV" --remote
       # The guarded site script: vite build for CLOUDFLARE_ENV, the deploy

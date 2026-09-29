@@ -19,13 +19,14 @@ bun run audit                # bun audit --production (ignored advisories: docs/
 bun run mobile:release-check # expo-doctor + expo export (iOS + Android) + bundle size
 bun run release:check        # Everything CI runs, in order
 SMOG_OFFLINE=1 bun run release:check  # Same, on a machine without internet access
+bun run admin:grant --env <dev|staging|production> [--dry-run] <email>  # Give an account the admin role (dev: local D1, else remote)
 ```
 
 `release:check` = `check:ci` → `boundaries` → `scripts/release-config-check.ts` (workflows + wrangler envs) → `check-types` → `test` → `build` → `knip` → `audit` → `scripts/mobile-release-check.ts`. CI (`.github/workflows/ci.yml`) runs exactly this.
 
-`SMOG_OFFLINE=1` only affects expo-doctor, whose schema check (api.expo.dev / exp.host) and React Native Directory check need the network. Offline, the directory check is off (`EXPO_DOCTOR_ENABLE_DIRECTORY_CHECK=0`), fetch failures are warnings (`EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS=1`), and a schema check that crashed while fetching is tolerated; every other doctor failure still fails. Never set it in CI.
+`SMOG_OFFLINE=1` only affects expo-doctor, and the result is **not equivalent to CI**. Offline, three doctor checks are degraded (the script prints this list every time): the config schema check is tolerated when the schema fetch crashes; the SDK dependency-version check only compares against the bundled native-module list, so the api.expo.dev pins (react, react-native, typescript, jest-expo, …) go unchecked; and the React Native Directory check is off. Fetch failures are warnings (`EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS=1`). Every other doctor failure still fails. Never set it in CI; CI is the authority.
 
-Deploys run from `.github/workflows/deploy.yml` on pushes to `develop` (staging) and `master` (production): D1 migrations, then `CLOUDFLARE_ENV=<env> bun -F @smog/site deploy`. Without the `CLOUDFLARE_API_TOKEN` secret the job skips with a warning.
+Deploys run from `.github/workflows/deploy.yml` on pushes to `develop` (staging) and `master` (production). It first runs `ci.yml` (reusable, `workflow_call`) as the `release-check` job; `deploy` needs it. Then D1 migrations (`packages/db/migrations/*.sql`), then `CLOUDFLARE_ENV=<env> bun -F @smog/site deploy`. Without the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets the job skips with a warning.
 
 Use `bun run <script>` for scripts whose name clashes with a Bun built-in (`build`, `test`).
 
@@ -40,6 +41,10 @@ bun -F @smog/site check-types
 bun -F @smog/site cf-typegen # Generate worker-configuration.d.ts (gitignored; check-types does it too)
 ```
 
+Local auth (dev only): copy `apps/site/.dev.vars.example` to `.dev.vars` (it has a dev `BETTER_AUTH_SECRET`), then `bun -F @smog/db migrate:dev && bun -F @smog/db seed:dev`. The seeded admin is `admin@smog.test` with the **dev-only** password `smog-dev-admin`. Emails are not sent in dev: read them at `http://localhost:5173/dev/mail` (or `/dev/mail.json`). Migrations are append-only from now on: never edit an existing migration; add a new one (`bun -F @smog/db db:generate`). To start the local D1 from scratch, `rm -rf apps/site/.wrangler/state/v3/d1` first.
+
+Turnstile: `TURNSTILE_SITE_KEY` is a public var in `wrangler.jsonc` (`env.<env>.vars`) and `TURNSTILE_SECRET_KEY` a secret (`wrangler secret put`). Both are required in production before launch: without the site key the web shows no widget and email sign-up, sign-in, reset, code and magic-link requests fail. Staging uses Cloudflare's always-pass test keys; dev needs neither.
+
 ### Mobile (Expo + Expo Router + NativeWind)
 ```bash
 bun -F @smog/mobile dev      # Start Expo dev server
@@ -50,6 +55,8 @@ bun -F @smog/mobile check-types
 bun -F @smog/mobile export   # expo export for iOS + Android into dist/
 bun -F @smog/mobile doctor   # expo-doctor (needs network, see SMOG_OFFLINE above)
 ```
+
+Local runs need the `EXPO_PUBLIC_*` env: copy `apps/mobile/.env.example` to `apps/mobile/.env` (the app points at the local site on port 5173; use your LAN address on a device).
 
 ### Packages
 ```bash

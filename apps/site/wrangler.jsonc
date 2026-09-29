@@ -13,7 +13,17 @@
   // build made for a different env. Deploy builds: CLOUDFLARE_ENV=<env> vite build.
   // Secrets for `env.dev` go in `.dev.vars` (see `.dev.vars.example`).
   // SITE_URL for staging/production is a placeholder until the workers.dev
-  // subdomain (or a custom domain) is known. KV ids are placeholders too.
+  // subdomain (or a custom domain) is known. KV and D1 ids are placeholders too.
+  // Secrets (BETTER_AUTH_SECRET, optional OAuth/Turnstile keys) are set with
+  // `wrangler secret put --env <env>`; see `.dev.vars.example`.
+  // Rate limits (Workers Rate Limiting, `ratelimits`): one namespace id per
+  // binding and env. The binding only supports 10 s or 60 s periods, so the
+  // old 20/3600 s (sponsor) and 30/900 s (auth) limits become 5/60 s in
+  // staging/production (docs/DECISIONS.md). Miniflare enforces them locally,
+  // where every request shares the `unknown` IP, so `dev` allows 1000/60 s
+  // on each (the site tests override RL_AUTH in vitest.config.ts).
+  // D1 migrations live in packages/db/migrations (drizzle-kit + hand-written
+  // FTS5); `bun -F @smog/db migrate:dev` applies them to the local dev D1.
   "env": {
     "dev": {
       "vars": {
@@ -24,6 +34,36 @@
       },
       "kv_namespaces": [
         { "binding": "KV", "id": "00000000000000000000000000000000" }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "smog-dev",
+          "database_id": "00000000-0000-4000-8000-000000000000",
+          "migrations_dir": "../../packages/db/migrations"
+        }
+      ],
+      "ratelimits": [
+        {
+          "name": "RL_API",
+          "namespace_id": "1001",
+          "simple": { "limit": 1000, "period": 60 }
+        },
+        {
+          "name": "RL_SPONSOR",
+          "namespace_id": "1002",
+          "simple": { "limit": 1000, "period": 60 }
+        },
+        {
+          "name": "RL_AUTH",
+          "namespace_id": "1003",
+          "simple": { "limit": 1000, "period": 60 }
+        },
+        {
+          "name": "RL_ANALYTICS",
+          "namespace_id": "1004",
+          "simple": { "limit": 1000, "period": 60 }
+        }
       ]
     },
     "staging": {
@@ -31,10 +71,52 @@
         "SITE_URL": "https://smog-site-staging.workers.dev",
         "ENVIRONMENT": "staging",
         "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
-        "EMAIL_REPLY_TO": "info@smog.vlaanderen"
+        "EMAIL_REPLY_TO": "info@smog.vlaanderen",
+        // Cloudflare's always-pass test site key, the pair of the test secret
+        // staging may use (DECISIONS). Production sets the real widget's key
+        // before launch; without one the sign-in pages show no widget.
+        "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
       },
       "kv_namespaces": [
         { "binding": "KV", "id": "00000000000000000000000000000000" }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "smog-staging",
+          "database_id": "00000000-0000-4000-8000-000000000000",
+          "migrations_dir": "../../packages/db/migrations"
+        }
+      ],
+      "ratelimits": [
+        {
+          "name": "RL_API",
+          "namespace_id": "2001",
+          "simple": { "limit": 300, "period": 60 }
+        },
+        {
+          "name": "RL_SPONSOR",
+          "namespace_id": "2002",
+          "simple": { "limit": 5, "period": 60 }
+        },
+        {
+          "name": "RL_AUTH",
+          "namespace_id": "2003",
+          "simple": { "limit": 5, "period": 60 }
+        },
+        {
+          "name": "RL_ANALYTICS",
+          "namespace_id": "2004",
+          "simple": { "limit": 120, "period": 60 }
+        }
+      ],
+      // Cloudflare Email Service (auth and transactional email). `dev` has
+      // no binding: it uses the KV dev mailbox (/dev/mail).
+      "send_email": [
+        {
+          "name": "EMAIL",
+          "allowed_sender_addresses": ["noreply@smog.vlaanderen"]
+        }
       ]
     },
     "production": {
@@ -46,6 +128,44 @@
       },
       "kv_namespaces": [
         { "binding": "KV", "id": "00000000000000000000000000000000" }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "smog-production",
+          "database_id": "00000000-0000-4000-8000-000000000000",
+          "migrations_dir": "../../packages/db/migrations"
+        }
+      ],
+      "ratelimits": [
+        {
+          "name": "RL_API",
+          "namespace_id": "3001",
+          "simple": { "limit": 300, "period": 60 }
+        },
+        {
+          "name": "RL_SPONSOR",
+          "namespace_id": "3002",
+          "simple": { "limit": 5, "period": 60 }
+        },
+        {
+          "name": "RL_AUTH",
+          "namespace_id": "3003",
+          "simple": { "limit": 5, "period": 60 }
+        },
+        {
+          "name": "RL_ANALYTICS",
+          "namespace_id": "3004",
+          "simple": { "limit": 120, "period": 60 }
+        }
+      ],
+      // Cloudflare Email Service (auth and transactional email). `dev` has
+      // no binding: it uses the KV dev mailbox (/dev/mail).
+      "send_email": [
+        {
+          "name": "EMAIL",
+          "allowed_sender_addresses": ["noreply@smog.vlaanderen"]
+        }
       ]
     }
   }

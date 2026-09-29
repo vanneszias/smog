@@ -1,5 +1,34 @@
 import { describe, expect, it } from "bun:test";
-import { checkDeployTarget } from "./deploy-guard";
+import {
+  checkDeployTarget,
+  checkDevTools,
+  DEV_TOOLS_MARKER,
+} from "./deploy-guard";
+
+describe("checkDevTools", () => {
+  const gallery = {
+    content: `jsx("section",{"${DEV_TOOLS_MARKER}":theme})`,
+    path: "dist/server/assets/ui-gallery.js",
+  };
+  const app = { content: "export default {}", path: "dist/server/index.js" };
+
+  it("refuses a production build that contains the /dev/ui gallery", () => {
+    expect(() => checkDevTools("production", [app, gallery])).toThrow(
+      "dist/server/assets/ui-gallery.js"
+    );
+  });
+
+  it("passes a production build without it", () => {
+    expect(() => checkDevTools("production", [app])).not.toThrow();
+  });
+
+  it("requires the gallery in a staging build (dev and staging keep /dev/ui)", () => {
+    expect(() => checkDevTools("staging", [app, gallery])).not.toThrow();
+    expect(() => checkDevTools("staging", [app])).toThrow(
+      "staging build has no /dev/ui gallery"
+    );
+  });
+});
 
 describe("checkDeployTarget", () => {
   it("passes when CLOUDFLARE_ENV matches the build", () => {

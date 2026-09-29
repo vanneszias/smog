@@ -1,0 +1,30 @@
+{
+  "name": "@smog/styles",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens": "./src/tokens.ts",
+    "./contrast": "./src/contrast.ts",
+    "./theme.css": "./generated/theme.css",
+    "./tailwind-preset": "./generated/tailwind-preset.cjs",
+    "./native": "./src/native.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -b",
+    "generate": "bun scripts/generate.ts",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@smog/config": "workspace:*",
+    "@tailwindcss/node": "4.3.3",
+    "@types/bun": "catalog:",
+    "nativewind": "catalog:",
+    "tailwindcss": "4.3.3",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "nativewind": "catalog:"
+  }
+}

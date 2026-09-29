@@ -1,0 +1,13 @@
+{
+  // The Worker side (./server) and its Vitest tests, with the Workers types.
+  // The bun tests and the client-safe entries are checked by
+  // tsconfig.client.json instead (no Workers types).
+  "extends": "@smog/config/tsconfig/worker.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["@cloudflare/vitest-plugin/types"]
+  },
+  "include": ["src", "test", "vitest.config.ts"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/testing"]
+}

@@ -1,0 +1,8 @@
+{
+  // Test-only Worker config: the middleware tests use fake rate-limit
+  // bindings and a stubbed `fetch`, so no bindings are declared here.
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "smog-rpc-test",
+  "compatibility_date": "2026-09-29",
+  "compatibility_flags": ["nodejs_compat"]
+}

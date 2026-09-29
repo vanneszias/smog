@@ -8,7 +8,8 @@
     "./boundaries": "./src/boundaries.ts",
     "./constants": "./src/constants.ts",
     "./env/worker": "./src/env/worker.ts",
-    "./env/mobile": "./src/env/mobile.ts"
+    "./env/mobile": "./src/env/mobile.ts",
+    "./testing/happy-dom": "./src/testing/happy-dom.ts"
   },
   "scripts": {
     "check-types": "tsc -b",
@@ -18,6 +19,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "20.14.5",
     "@types/bun": "catalog:",
     "typescript": "catalog:"
   }

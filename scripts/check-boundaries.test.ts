@@ -35,6 +35,24 @@ describe("checkBoundaries", () => {
     ]);
   });
 
+  test("checks optionalDependencies and vi.mock / jest.mock specifiers", () => {
+    expect(checkBoundaries(join(FIXTURES, "bad-mocks"))).toEqual([
+      { from: "@smog/ui-web", to: "@smog/db" },
+      {
+        file: "packages/ui-web/src/button.mocks.tsx",
+        from: "@smog/ui-web",
+        to: "@smog/auth",
+      },
+      ...["@smog/email", "@smog/jobs", "@smog/payments", "@smog/video"].map(
+        (to) => ({
+          file: "packages/ui-web/src/button.mocks.tsx",
+          from: "@smog/ui-web",
+          to,
+        })
+      ),
+    ]);
+  });
+
   test("passes on the real repository", () => {
     expect(checkBoundaries(join(import.meta.dir, ".."))).toEqual([]);
   });

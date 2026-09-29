@@ -9,17 +9,70 @@
     "packages/*": {
       "project": ["src/**/*.{ts,tsx}"]
     },
+    "packages/styles": {
+      "project": ["src/**/*.ts", "scripts/**/*.ts", "generated/*.{css,cjs}"]
+    },
+    "packages/ui-web": {
+      "project": ["src/**/*.{ts,tsx,css}"],
+      "ignoreDependencies": ["tailwindcss"]
+    },
+    "packages/db": {
+      "entry": ["test/**/*.test.ts", "scripts/*.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"],
+      "ignoreDependencies": ["cloudflare"]
+    },
+    "packages/email": {
+      "entry": ["test/**/*.test.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["cloudflare"]
+    },
+    "packages/auth": {
+      "entry": ["test/**/*.test.{ts,tsx}", "guard/*.ts"],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}", "guard/**/*.ts"],
+      "ignoreDependencies": ["cloudflare"]
+    },
+    "packages/rpc": {
+      "entry": ["test/**/*.test.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"]
+    },
+    "packages/features/*": {
+      "entry": ["test/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["cloudflare"]
+    },
+    "packages/api": {
+      "entry": ["test/**/*.test.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts"]
+    },
+    "packages/ui-native": {
+      "babel": {
+        "config": ["babel.config.cjs"]
+      },
+      "entry": ["src/**/*.test.{ts,tsx}", "jest.setup*.ts"],
+      "project": ["src/**/*.{ts,tsx}", "*.{ts,cts,cjs}"]
+    },
     "apps/site": {
       "entry": [
         "src/routes/**/*.{ts,tsx}",
         "test/**/*.test.ts",
-        "scripts/*.ts"
+        "scripts/*.ts",
+        "e2e/**/*.spec.ts"
       ],
-      "project": ["src/**/*.{ts,tsx,css}", "test/**/*.ts", "scripts/**/*.ts"],
+      "project": [
+        "src/**/*.{ts,tsx,css}",
+        "test/**/*.ts",
+        "scripts/**/*.ts",
+        "e2e/**/*.ts"
+      ],
       "ignoreDependencies": ["cloudflare"]
     },
     "apps/mobile": {
-      "entry": ["app/**/*.{ts,tsx}", "plugins/*.js", "src/**/*.test.{ts,tsx}"],
+      "entry": [
+        "app/**/*.{ts,tsx}",
+        "plugins/*.js",
+        "src/**/*.test.{ts,tsx}",
+        "src/dev/*.tsx"
+      ],
       "project": [
         "app/**/*.{ts,tsx}",
         "src/**/*.{ts,tsx}",

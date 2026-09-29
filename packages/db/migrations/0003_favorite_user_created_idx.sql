@@ -1,0 +1,1 @@
+CREATE INDEX `favorite_user_created_idx` ON `favorite` (`user_id`,`created_at`,`gesture_id`);

@@ -87,10 +87,10 @@ Package names: `@smog/<dir>` (`@smog/gestures`, not `@smog/features-gestures`).
 
 ```text
 apps/site    → api, auth, rpc, db, jobs, render, analytics, email, payments, video, features/*, local-store, i18n, styles, brand, ui-web, config, utils
-apps/mobile  → api (client only), auth (./expo), rpc (./react), features/* (./client, ./schema), local-store, analytics (./native), i18n, styles, brand, ui-native, config, utils
+apps/mobile  → api (client only), auth (./expo, ./react), rpc (./react), features/* (./client, ./schema), local-store, analytics (./native), i18n, styles, brand, ui-native, config, utils
 api          → rpc, features/*, config
 features/*   → rpc, db, auth, local-store, payments, video, email, jobs, render (./contract only), analytics (./server), i18n, config, utils
-               (a feature may import another feature's ./schema only; never its ./server)
+               (a feature may import another feature's ./schema and ./contract (both client-safe); never its ./server or ./client)
 jobs         → db, email, payments, video, render (./contract), config, utils
 payments     → config, utils
 video        → config, utils
@@ -103,7 +103,8 @@ local-store  → config, utils
 analytics    → config, utils
 ui-web       → styles, i18n, brand, utils
 ui-native    → styles, i18n, brand, utils
-i18n, styles, brand, utils → config (or nothing)
+brand        → styles, config                       (the icon generator reads brand colours from tokens)
+i18n, styles, utils → config (or nothing)
 ```
 
 Circularity note: feature services need jobs (to enqueue email) and jobs consumers need feature logic (for example, expiring sponsorships). The rule is that **jobs owns only message types, producers and scheduling**. The consumer and cron **handlers** that call feature services are wired in `apps/site/src/worker/*`, which may import both.
@@ -238,7 +239,7 @@ live | expiring ──force expire (admin)──▶ expired
 
 ## 6. Auth (`@smog/auth`)
 
-- Better Auth with the Drizzle adapter on D1 (`provider: "sqlite"`), `basePath: "/api/auth"`, and secondary storage in KV for rate-limit counters and verification caches.
+- Better Auth with the Drizzle adapter on D1 (`provider: "sqlite"`), `basePath: "/api/auth"`. No secondary storage: verifications live in D1 and Better Auth uses its per-isolate memory rate limiter, in front of the `RL_AUTH` binding on the route (DECISIONS, Auth).
 - Methods:
   - email + password: `requireEmailVerification: true`, reset via email.
   - `emailOTP` plugin: sign-in and verification codes.
@@ -266,9 +267,10 @@ live | expiring ──force expire (admin)──▶ expired
   - Per-request context: `{ env, db, auth, session, user, request, ctx(waitUntil), ip, locale }`.
   - `db` is Drizzle over the `DB` D1 binding; `env` is the validated `WorkerEnv` from `@smog/config/env/worker`.
 - **Middleware** (`@smog/rpc`):
+  - `checkOrigin` runs first on both transports (CSRF defence in depth on top of the SameSite=Lax cookie): a non-GET/HEAD request whose `Sec-Fetch-Site` is present and not `same-origin`/`none`, or whose `Origin` is present and not the `SITE_URL` origin (any `http://localhost` port in dev), is `FORBIDDEN`. Requests with neither header (native app, curl) pass. Other cookie-authenticated POST endpoints (`/api/analytics`) apply the same `isForeignRequest` check.
   - `withAuth`: session optional → typed user.
   - `requireUser` returns `UNAUTHORIZED`; `requireAdmin` returns `FORBIDDEN`.
-  - `rateLimit(bucket)` uses the Workers Rate Limiting bindings: `RL_API` (300/60 s per IP), `RL_SPONSOR` (20/3600 s per IP), `RL_AUTH` (30/900 s per IP), `RL_ANALYTICS` (120/60 s per IP). These are the old limits.
+  - `rateLimit(bucket)` uses the Workers Rate Limiting bindings: `RL_API` (300/60 s per IP), `RL_SPONSOR` (5/60 s per IP), `RL_AUTH` (5/60 s per IP, POST only; get-session and sign-out exempt), `RL_ANALYTICS` (120/60 s per IP). The Workers binding supports only 10 s and 60 s periods, so the old 20/3600 s and 30/900 s windows became 5/60 s, backed by Turnstile (see DECISIONS). Dev uses high limits.
   - `turnstile` for public mutations (sponsor checkout, re-edit submit).
   - `logErrors` logs with a `[rpc:<path>]` prefix and maps unknown errors to `INTERNAL_SERVER_ERROR` without internals.
 - **Errors:** a shared error map (`NOT_FOUND`, `CONFLICT`, `INVALID_STATE`, `GESTURE_UNAVAILABLE`, `PAYMENT_MISMATCH`, `TOKEN_EXPIRED`, `RATE_LIMITED`, …) is declared in contracts and used typed on clients.
@@ -276,6 +278,22 @@ live | expiring ──force expire (admin)──▶ expired
   - `@smog/api/client` exports `createApiClient({ baseUrl, fetch, headers })` (an `RPCLink`) and `createApiQueryUtils(client)` (`@orpc/tanstack-query`).
   - `@smog/rpc/react` exports `RpcProvider`/`useRpc()`, which feature hooks use through a typed accessor. Apps create the client once (site: same-origin, cookies; mobile: `EXPO_PUBLIC_API_URL` + the Better Auth Expo cookie header).
 - **Caching:** TanStack Query with sensible `staleTime` per query, invalidation after mutations, and refetch on focus/reconnect. Optimistic updates for favorites, list items and reorder. Mobile persists the gestures catalogue and favorites (offline cache, §10.4). There are no realtime subscriptions and no Durable Objects for push.
+
+### 7.1 Search (`@smog/gestures`, replaces fuse.js)
+
+The old rules in `SEARCH_ALGORITHM.md` are kept. Ranking is one pure TypeScript function (`rankGestures`) that runs on the server, and on the device for the mobile offline cache.
+
+1. **Normalise:** the query and every field go through `normalizeText`, which lowercases, strips diacritics and collapses whitespace. An empty query returns the browse list, sorted by name (or by the first category when asked).
+2. **Candidates:** candidates come from FTS5, which tokenises and prefix-matches every query token (`"tok"*`) with the category filter applied. The filter uses OR semantics across the selected category slugs.
+3. **Score:** each candidate is scored per field value.
+   - Field weights: name 100, keyword 50, category 30, description 10.
+   - Match multipliers: exact 1000, startsWith 500, word boundary 250.
+   - The score is `multiplier × weight`, and the best field wins. Ties sort by `name` using `localeCompare("nl")`.
+4. **Typo tier:** this runs when steps 2–3 return fewer than 5 results and the query is at least 3 characters.
+   - It takes a cached projection of all published gestures (`id`, normalised name, keywords, categories), kept in isolate memory and invalidated through a KV version key that every gesture write bumps.
+   - Each value is scored by similarity = 1 − (Damerau–Levenshtein distance / max length), against the whole value and each of its words. The old Fuse threshold was 0.4; the equivalent here is similarity ≥ 0.6.
+   - The score is `150 × weight × similarity`. These results are appended after the direct matches, without duplicates.
+5. **Analytics:** only the query length and the result counts are sent (never the text).
 
 Endpoint inventory (full list in `docs/API.md`): `gestures.{list, bySlug, search, related, categories}`, `favorites.{list, ids, toggle, add, remove}`, `lists.{mine, get, create, update, delete, addItem, removeItem, reorder, share.get, share.create, share.revoke, shared.get, shared.addItem, shared.removeItem}`, `account.{me, updateProfile, consent.get, consent.set, export, delete, importGuestData}`, `sponsorships.{availability, quote, uploadLogo, checkout, paymentStatus, reedit.get, reedit.submit, renewal.get, renewal.checkout}`, `admin.{dashboard, gestures.*, categories.*, sponsorships.*, users.*, audit.list, mux.*, emails.preview, maintenance.*, export.sponsorshipsCsv}`.
 
@@ -322,7 +340,7 @@ Local dev: the Container needs Docker. When Docker is missing, `RENDER_MODE=loca
 
 - `EmailSender` interface (`send({ to, from, replyTo?, subject, html, text })`) with two implementations:
   - `CloudflareEmailSender`, using the `send_email` binding `EMAIL` (Cloudflare Email Service, beta, Workers Paid).
-  - `DevEmailSender`, which logs and stores the last 50 messages in KV, viewable at `/dev/mail` in dev and staging.
+  - `DevEmailSender`, which logs and stores the last 50 messages in KV, viewable at `/dev/mail` in dev only (the mailbox holds sign-in links; staging sends real email).
 - Templates (React Email, rendered with `@react-email/render` in the Worker), localized nl/en/fr from `@smog/i18n` with nl as the default:
   - `welcome`, `sponsorship_received`, `payment_confirmed`, `sponsorship_live`, `renewal_reminder`, `admin_new_sponsorship` (sent **after payment**, not at creation), `admin_render_failed`, `admin_refund_needed`.
   - Auth emails: `auth_verify_email`, `auth_otp`, `auth_magic_link`, `auth_reset_password`.
@@ -366,7 +384,7 @@ Local dev: the Container needs Docker. When Docker is missing, `RENDER_MODE=loca
 /admin                     dashboard
 /admin/gestures, /admin/gestures/new, /admin/gestures/$id, /admin/categories,
 /admin/sponsorships, /admin/sponsorships/$id, /admin/users, /admin/audit, /admin/emails, /admin/settings (maintenance)
-/dev/ui                    component preview (dev + staging only), /dev/mail (dev + staging only)
+/dev/ui                    component preview (dev + staging only), /dev/mail (dev only)
 /.well-known/apple-app-site-association, /.well-known/assetlinks.json (static assets, application/json)
 ```
 
@@ -421,7 +439,7 @@ Local dev: the Container needs Docker. When Docker is missing, `RENDER_MODE=loca
   - New: `sign_in_completed { method }`, `guest_data_imported { favorites, lists }`, `sponsorship_checkout_started { gesture_count, has_logo }`.
   - No free text, no search terms.
 - Consent gate: nothing is initialised or sent until consent is `true`. Withdrawing consent clears the identity.
-- Web: `@smog/analytics/web` posts to the same-origin `/api/analytics` relay. The relay validates the event against the taxonomy, rate-limits it (120/min), and forwards it to OpenPanel with server-only credentials. It never fails a product action.
+- Web: `@smog/analytics/web` posts to the same-origin `/api/analytics` relay. The relay rejects foreign origins (`isForeignRequest`, as `/api/rpc`), validates the event against the taxonomy, rate-limits it (120/min), and forwards it to OpenPanel with server-only credentials. It never fails a product action.
 - Mobile: `@smog/analytics/native` uses `@openpanel/react-native` with a write-only client (the least-privileged setting).
 - Identity:
   - Signed-in users are identified by user id only; email and name are no longer sent (data minimisation).
@@ -477,6 +495,8 @@ External services are faked at the adapter boundary. `@smog/payments/testing` pr
     - legacy `pending` → `cancelled`
   - Consents become `consent_event`; `adminLogs` become `audit_log` (unknown shapes go to `data: { legacy: … }` under action `legacy`).
   - Mux ids carry over unchanged.
+  - Unexpired old re-edit tokens become `sponsorship_token` rows with purpose `reedit`. They store the SHA-256 hash of the old raw token and keep its expiry, so links already sent keep working. The legacy `/sponsors/re-edit?token=` path redirects to `/sponsor/edit?token=` with the token kept.
+  - Payments created just before cutover still have the old webhook URL (`<origin>/webhooks/mollie`). The site therefore also serves `POST /webhooks/mollie` as an alias of `/api/webhooks/mollie`, and matches those payments through `payment.mollie_id` from the migrated `molliePaymentId`. The alias can be removed 30 days after cutover.
 - The `we_moved` email job is optional and enqueued by `--send-we-moved`.
 
 ## 16. UI/UX design brief
@@ -518,7 +538,9 @@ Weights: regular 400, medium 500, semibold 600. Maximum reading line length is 7
 | `success` | `#1F8A4C` | `#4CC27E` |
 | `warning` | `#B7791F` | `#E9B24A` |
 | `danger` | `#C62828` | `#F16B6B` |
-| `focus-ring` | `#EE971C` | `#F5AB45` |
+| `focus-ring` | `#C3780F` (amended: `#EE971C` is 2.19:1, see DECISIONS) | `#F5AB45` |
+
+Status text roles (added in phase 2, see DECISIONS): `success-subtle` `#E3F3EA`/`#123021`, `warning-subtle` `#FBF0DA`/`#33260B`, `danger-subtle` `#FBE9E9`/`#3A1717`, `primary-strong` `#00694E`/`#2BB38A`, `success-strong` `#166B3A`/`#4CC27E`, `warning-strong` `#7A4D06`/`#E9B24A`, `danger-strong` `#A61F1F`/`#F16B6B`, `accent-foreground` `#17211A`/`#04140E`. `*-strong` is the hue as text on its `*-subtle` tint and on page backgrounds; `*-foreground` is text on the filled role.
 
 All text and background pairs must pass WCAG AA (4.5:1 for body text, 3:1 for large text and UI), checked by a unit test in `@smog/styles`.
 

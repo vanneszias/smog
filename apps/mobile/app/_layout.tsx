@@ -1,8 +1,27 @@
 import "../global.css";
 
+import { KitProvider, ToastProvider } from "@smog/ui-native";
 import { Stack } from "expo-router";
 import type { ReactElement } from "react";
+import { GuestImportSheet } from "@/guest-import-sheet";
+import { AppProviders } from "@/providers";
+import { ThemeRoot } from "@/theme-root";
 
 export default function RootLayout(): ReactElement {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <AppProviders>
+      <ThemeRoot>
+        <KitProvider>
+          <ToastProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" options={{ presentation: "modal" }} />
+              <Stack.Screen name="settings" />
+            </Stack>
+            <GuestImportSheet />
+          </ToastProvider>
+        </KitProvider>
+      </ThemeRoot>
+    </AppProviders>
+  );
 }

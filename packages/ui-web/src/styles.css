@@ -1,0 +1,101 @@
+/*
+ * @smog/ui-web styles. Import after `tailwindcss` and `@smog/styles/theme.css`:
+ *
+ *   @import "tailwindcss";
+ *   @import "@smog/styles/theme.css";
+ *   @import "@smog/ui-web/styles.css";
+ *
+ * `@source` makes Tailwind scan the kit's components for classes. The
+ * animations below only use the motion tokens (durations are 0 ms under
+ * `prefers-reduced-motion`, and the components add `motion-reduce:animate-none`).
+ */
+
+@source "./components";
+@source "./lib";
+@source not "./**/*.test.tsx";
+
+@theme {
+  --animate-fade-in: fade-in var(--duration-normal) var(--ease-standard);
+  --animate-fade-out: fade-out var(--duration-fast) var(--ease-standard);
+  --animate-pop-in: pop-in var(--duration-normal) var(--ease-standard);
+  --animate-pop-out: pop-out var(--duration-fast) var(--ease-standard);
+  --animate-slide-up: slide-up var(--duration-slow) var(--ease-standard);
+  --animate-slide-down: slide-down var(--duration-normal) var(--ease-standard);
+  --animate-slide-in-right: slide-in-right var(--duration-slow)
+    var(--ease-standard);
+  --animate-slide-out-right: slide-out-right var(--duration-normal)
+    var(--ease-standard);
+  --animate-slide-in-left: slide-in-left var(--duration-slow)
+    var(--ease-standard);
+  --animate-slide-out-left: slide-out-left var(--duration-normal)
+    var(--ease-standard);
+  /* Indeterminate ProgressBar: four slow steps per sweep. */
+  --animate-progress: progress calc(var(--duration-slow) * 4)
+    var(--ease-standard) infinite;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+  @keyframes pop-out {
+    to {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+  }
+  @keyframes slide-down {
+    to {
+      transform: translateY(100%);
+    }
+  }
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes slide-out-right {
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes slide-out-left {
+    to {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes progress {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
+  }
+}
+
+/* SearchField draws its own clear button. */
+[data-slot="search-field"]::-webkit-search-cancel-button {
+  appearance: none;
+}

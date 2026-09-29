@@ -42,6 +42,14 @@ describe("BOUNDARIES", () => {
   test("config depends on nothing", () => {
     expect(allowedTargets("@smog/config")).toEqual([]);
   });
+
+  test("brand reads the tokens from styles, and styles is a leaf", () => {
+    expect(allowedTargets("@smog/brand")).toEqual([
+      "@smog/styles",
+      "@smog/config",
+    ]);
+    expect(allowedTargets("@smog/styles")).toEqual(["@smog/config"]);
+  });
 });
 
 describe("isAllowedDependency", () => {
@@ -91,9 +99,13 @@ describe("isAllowedImport", () => {
     );
   });
 
-  test("a feature may import another feature's schema only", () => {
+  test("a feature may import another feature's schema and contract only", () => {
     expect(isAllowedImport("@smog/lists", "@smog/gestures/schema")).toBe(true);
+    expect(isAllowedImport("@smog/favorites", "@smog/gestures/contract")).toBe(
+      true
+    );
     expect(isAllowedImport("@smog/lists", "@smog/gestures/server")).toBe(false);
+    expect(isAllowedImport("@smog/lists", "@smog/gestures/client")).toBe(false);
     expect(isAllowedImport("@smog/lists", "@smog/gestures")).toBe(false);
   });
 

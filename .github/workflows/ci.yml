@@ -4,6 +4,8 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  # deploy.yml calls this workflow and deploys only when it passes.
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -35,8 +37,8 @@ jobs:
 
   e2e:
     name: Playwright e2e
-    # Placeholder: Playwright e2e is added in phase 9.
-    if: false
+    # Placeholder: Playwright e2e is added in phase 9 (off until then).
+    if: ${{ vars.E2E_ENABLED == 'true' }}
     needs: release-check
     runs-on: ubuntu-latest
     steps:

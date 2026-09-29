@@ -10,11 +10,59 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as MagicLinkRouteImport } from './routes/magic-link'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as DevMailRouteImport } from './routes/dev/mail'
+import { Route as DevMailDotjsonRouteImport } from './routes/dev/mail[.]json'
+import { Route as DevUiRouteImport } from './routes/dev/ui'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
+import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MagicLinkRoute = MagicLinkRouteImport.update({
+  id: '/magic-link',
+  path: '/magic-link',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -22,31 +70,159 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevMailRoute = DevMailRouteImport.update({
+  id: '/dev/mail',
+  path: '/dev/mail',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevMailDotjsonRoute = DevMailDotjsonRouteImport.update({
+  id: '/dev/mail.json',
+  path: '/dev/mail.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevUiRoute = DevUiRouteImport.update({
+  id: '/dev/ui',
+  path: '/dev/ui',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpenapiSplatRoute = ApiOpenapiSplatRouteImport.update({
+  id: '/api/openapi/$',
+  path: '/api/openapi/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
+  id: '/api/rpc/$',
+  path: '/api/rpc/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/magic-link': typeof MagicLinkRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/mail': typeof DevMailRoute
+  '/dev/mail.json': typeof DevMailDotjsonRoute
+  '/dev/ui': typeof DevUiRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/openapi/$': typeof ApiOpenapiSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/magic-link': typeof MagicLinkRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/mail': typeof DevMailRoute
+  '/dev/mail.json': typeof DevMailDotjsonRoute
+  '/dev/ui': typeof DevUiRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/openapi/$': typeof ApiOpenapiSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/magic-link': typeof MagicLinkRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/mail': typeof DevMailRoute
+  '/dev/mail.json': typeof DevMailDotjsonRoute
+  '/dev/ui': typeof DevUiRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/openapi/$': typeof ApiOpenapiSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/health'
+  fullPaths:
+    | '/'
+    | '/account'
+    | '/forgot-password'
+    | '/magic-link'
+    | '/reset-password'
+    | '/sign-in'
+    | '/sign-up'
+    | '/verify-email'
+    | '/api/health'
+    | '/dev/mail'
+    | '/dev/mail.json'
+    | '/dev/ui'
+    | '/api/auth/$'
+    | '/api/openapi/$'
+    | '/api/rpc/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/health'
-  id: '__root__' | '/' | '/api/health'
+  to:
+    | '/'
+    | '/account'
+    | '/forgot-password'
+    | '/magic-link'
+    | '/reset-password'
+    | '/sign-in'
+    | '/sign-up'
+    | '/verify-email'
+    | '/api/health'
+    | '/dev/mail'
+    | '/dev/mail.json'
+    | '/dev/ui'
+    | '/api/auth/$'
+    | '/api/openapi/$'
+    | '/api/rpc/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/account'
+    | '/forgot-password'
+    | '/magic-link'
+    | '/reset-password'
+    | '/sign-in'
+    | '/sign-up'
+    | '/verify-email'
+    | '/api/health'
+    | '/dev/mail'
+    | '/dev/mail.json'
+    | '/dev/ui'
+    | '/api/auth/$'
+    | '/api/openapi/$'
+    | '/api/rpc/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  MagicLinkRoute: typeof MagicLinkRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SignInRoute: typeof SignInRoute
+  SignUpRoute: typeof SignUpRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  DevMailRoute: typeof DevMailRoute
+  DevMailDotjsonRoute: typeof DevMailDotjsonRoute
+  DevUiRoute: typeof DevUiRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
+  ApiRpcSplatRoute: typeof ApiRpcSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +234,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/magic-link': {
+      id: '/magic-link'
+      path: '/magic-link'
+      fullPath: '/magic-link'
+      preLoaderRoute: typeof MagicLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -65,12 +290,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/mail': {
+      id: '/dev/mail'
+      path: '/dev/mail'
+      fullPath: '/dev/mail'
+      preLoaderRoute: typeof DevMailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/mail.json': {
+      id: '/dev/mail.json'
+      path: '/dev/mail.json'
+      fullPath: '/dev/mail.json'
+      preLoaderRoute: typeof DevMailDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/ui': {
+      id: '/dev/ui'
+      path: '/dev/ui'
+      fullPath: '/dev/ui'
+      preLoaderRoute: typeof DevUiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/openapi/$': {
+      id: '/api/openapi/$'
+      path: '/api/openapi/$'
+      fullPath: '/api/openapi/$'
+      preLoaderRoute: typeof ApiOpenapiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/rpc/$': {
+      id: '/api/rpc/$'
+      path: '/api/rpc/$'
+      fullPath: '/api/rpc/$'
+      preLoaderRoute: typeof ApiRpcSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  MagicLinkRoute: MagicLinkRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SignInRoute: SignInRoute,
+  SignUpRoute: SignUpRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   ApiHealthRoute: ApiHealthRoute,
+  DevMailRoute: DevMailRoute,
+  DevMailDotjsonRoute: DevMailDotjsonRoute,
+  DevUiRoute: DevUiRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
+  ApiRpcSplatRoute: ApiRpcSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

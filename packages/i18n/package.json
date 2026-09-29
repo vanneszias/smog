@@ -1,0 +1,36 @@
+{
+  "name": "@smog/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./native": "./src/setup-native.ts",
+    "./react": "./src/react.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -b",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@smog/config": "workspace:*",
+    "i18next": "catalog:",
+    "react-i18next": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "@types/react": "catalog:",
+    "expo-localization": "~57.0.2",
+    "react": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "expo-localization": "~57.0.2",
+    "react": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "expo-localization": {
+      "optional": true
+    }
+  }
+}

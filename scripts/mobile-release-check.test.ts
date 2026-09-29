@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { doctorVerdict, formatBytes } from "./mobile-release-check";
+import {
+  doctorVerdict,
+  formatBytes,
+  galleryVerdict,
+} from "./mobile-release-check";
 
 const SCHEMA = "Check Expo config (app.json/ app.config.js) schema";
 
@@ -66,5 +70,27 @@ describe("doctorVerdict", () => {
 describe("formatBytes", () => {
   test("formats megabytes", () => {
     expect(formatBytes(3_670_016)).toBe("3.50 MB");
+  });
+});
+
+describe("galleryVerdict", () => {
+  test("passes a production bundle without the gallery", () => {
+    expect(galleryVerdict({ hasMarker: false, production: true })).toBeNull();
+  });
+
+  test("fails a production bundle that contains the gallery", () => {
+    expect(galleryVerdict({ hasMarker: true, production: true })).toContain(
+      "production"
+    );
+  });
+
+  test("passes a dev bundle with the gallery", () => {
+    expect(galleryVerdict({ hasMarker: true, production: false })).toBeNull();
+  });
+
+  test("fails a dev bundle that lost the gallery (the marker moved)", () => {
+    expect(galleryVerdict({ hasMarker: false, production: false })).toContain(
+      "marker"
+    );
   });
 });
