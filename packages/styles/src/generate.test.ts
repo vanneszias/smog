@@ -101,6 +101,7 @@ describe("renderWebThemeCss", () => {
 });
 
 interface Preset {
+  corePlugins: Record<string, boolean>;
   darkMode: string;
   theme: {
     borderRadius: Record<string, string>;
@@ -118,6 +119,19 @@ describe("renderNativeTailwindConfig", () => {
 
   it("uses class-based dark mode", () => {
     expect(preset.darkMode).toBe("class");
+  });
+
+  it("turns off Tailwind's opacity variables", () => {
+    // `bg-primary` would otherwise set `--tw-bg-opacity`, and css-interop
+    // remounts a view that starts setting a variable after its first render.
+    expect(preset.corePlugins).toEqual({
+      backgroundOpacity: false,
+      borderOpacity: false,
+      divideOpacity: false,
+      placeholderOpacity: false,
+      ringOpacity: false,
+      textOpacity: false,
+    });
   });
 
   it("maps every colour role to its CSS variable, with alpha support", () => {

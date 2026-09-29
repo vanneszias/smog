@@ -1,0 +1,60 @@
+{
+  "name": "@smog/ui-native",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json",
+    "./jest-setup": "./jest.setup-env.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@gorhom/bottom-sheet": "5.2.14",
+    "@smog/brand": "workspace:*",
+    "@smog/i18n": "workspace:*",
+    "@smog/styles": "workspace:*",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react-native": "catalog:",
+    "tailwind-merge": "3.7.0"
+  },
+  "devDependencies": {
+    "@jest/globals": "~29.7.0",
+    "@smog/config": "workspace:*",
+    "@tailwindcss/oxide": "4.3.3",
+    "@testing-library/react-native": "catalog:",
+    "@types/react": "catalog:",
+    "babel-jest": "~29.7.0",
+    "babel-preset-expo": "~57.0.13",
+    "expo-haptics": "~57.0.3",
+    "jest": "~29.7.0",
+    "jest-expo": "~57.0.5",
+    "nativewind": "catalog:",
+    "postcss": "8.5.28",
+    "react": "catalog:",
+    "react-native": "0.86.3",
+    "react-native-css-interop": "0.2.7",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4",
+    "react-native-worklets": "0.10.1",
+    "tailwindcss": "3.4.19",
+    "test-renderer": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "expo-haptics": "~57.0.3",
+    "nativewind": "catalog:",
+    "react": "catalog:",
+    "react-native": "0.86.3",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4"
+  }
+}

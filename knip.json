@@ -44,6 +44,13 @@
       "entry": ["test/**/*.test.ts"],
       "project": ["src/**/*.ts", "test/**/*.ts"]
     },
+    "packages/ui-native": {
+      "babel": {
+        "config": ["babel.config.cjs"]
+      },
+      "entry": ["src/**/*.test.{ts,tsx}", "jest.setup*.ts"],
+      "project": ["src/**/*.{ts,tsx}", "*.{ts,cts,cjs}"]
+    },
     "apps/site": {
       "entry": [
         "src/routes/**/*.{ts,tsx}",
@@ -60,7 +67,12 @@
       "ignoreDependencies": ["cloudflare"]
     },
     "apps/mobile": {
-      "entry": ["app/**/*.{ts,tsx}", "plugins/*.js", "src/**/*.test.{ts,tsx}"],
+      "entry": [
+        "app/**/*.{ts,tsx}",
+        "plugins/*.js",
+        "src/**/*.test.{ts,tsx}",
+        "src/dev/*.tsx"
+      ],
       "project": [
         "app/**/*.{ts,tsx}",
         "src/**/*.{ts,tsx}",
