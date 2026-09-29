@@ -218,7 +218,11 @@
       "skip": "Not now",
       "importing": "Importing…",
       "success": "Your favorites and lists are now in your account.",
-      "failed": "The import didn't work. Your data stays on this device."
+      "failed": "The import didn't work. Your data stays on this device.",
+      "skipped_one": "{{count}} gesture is no longer available and was skipped.",
+      "skipped_other": "{{count}} gestures are no longer available and were skipped.",
+      "overLimit": "Not everything fit in your account: it holds up to {{maxLists}} lists of {{maxItems}} gestures each.",
+      "untitledList": "Untitled list"
     }
   },
   "states": {

@@ -1,6 +1,7 @@
 import type { ContractRouterClient } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
+import { accountContract } from "@smog/account/contract";
 import { favoritesContract } from "@smog/favorites/contract";
 import { gesturesContract } from "@smog/gestures/contract";
 import { listsContract } from "@smog/lists/contract";
@@ -187,6 +188,23 @@ describe("createApiClient", () => {
       client.lists.create({ name: "x".repeat(81) })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(seen.at(-1)?.url).toBe("https://smog.test/api/rpc/lists/create");
+  });
+
+  it("mounts the account slice under `account`, signed-in only", async () => {
+    expect(Object.keys(appRouter.account).sort()).toEqual(
+      Object.keys(accountContract).sort()
+    );
+    const client = createApiClient({
+      baseUrl: "https://smog.test",
+      fetch: serve,
+    });
+
+    await expect(
+      client.account.importGuestData({ favorites: [], lists: [] })
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED", defined: true });
+    expect(seen.at(-1)?.url).toBe(
+      "https://smog.test/api/rpc/account/importGuestData"
+    );
   });
 
   it("builds TanStack Query options with a stable key", () => {

@@ -6,6 +6,8 @@ import {
   clearRecentSearches,
   createList,
   deleteList,
+  dismissImportFor,
+  IMPORT_DISMISSED_MAX,
   isFavorite,
   removeFromList,
   renameList,
@@ -134,10 +136,28 @@ describe("consent and preferences", () => {
 
   test("setPreferences merges", () => {
     const data = setPreferences({ theme: "dark" })(defaultGuestData());
-    expect(data.preferences).toEqual({ locale: null, theme: "dark" });
+    expect(data.preferences).toEqual({
+      importDismissedFor: [],
+      locale: null,
+      theme: "dark",
+    });
     expect(setPreferences({ locale: "fr" })(data).preferences).toEqual({
+      importDismissedFor: [],
       locale: "fr",
       theme: "dark",
     });
+  });
+
+  test("dismissImportFor remembers the user once, newest last, bounded", () => {
+    const once = dismissImportFor("u1")(defaultGuestData());
+    expect(once.preferences.importDismissedFor).toEqual(["u1"]);
+    expect(dismissImportFor("u1")(once)).toBe(once);
+    const many = Array.from({ length: IMPORT_DISMISSED_MAX + 3 }, (_, i) =>
+      dismissImportFor(`u${i}`)
+    ).reduce((data, mutator) => mutator(data), defaultGuestData());
+    const ids = many.preferences.importDismissedFor;
+    expect(ids).toHaveLength(IMPORT_DISMISSED_MAX);
+    expect(ids.at(-1)).toBe(`u${IMPORT_DISMISSED_MAX + 2}`);
+    expect(ids).not.toContain("u0");
   });
 });

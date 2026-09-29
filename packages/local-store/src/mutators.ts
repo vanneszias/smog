@@ -188,3 +188,26 @@ export function setPreferences(
     preferences: { ...data.preferences, ...partial },
   });
 }
+
+/** How many user ids `importDismissedFor` remembers (the newest). */
+export const IMPORT_DISMISSED_MAX = 20;
+
+/**
+ * Remembers that `userId` dismissed the guest import prompt on this device
+ * (the guest data stays). Keeps the newest `IMPORT_DISMISSED_MAX` ids.
+ */
+export function dismissImportFor(userId: string): Mutator {
+  return (data) => {
+    const current = data.preferences.importDismissedFor;
+    if (current.includes(userId)) {
+      return data;
+    }
+    return {
+      ...data,
+      preferences: {
+        ...data.preferences,
+        importDismissedFor: [...current, userId].slice(-IMPORT_DISMISSED_MAX),
+      },
+    };
+  };
+}

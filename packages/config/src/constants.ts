@@ -14,3 +14,9 @@ export const RECENT_SEARCHES_MAX = 10;
 export const LOCALES = ["nl", "en", "fr"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "nl";
+
+/**
+ * The privacy policy version a consent decision refers to
+ * (`consent_event.policy_version`). Bump it with every policy change.
+ */
+export const CONSENT_POLICY_VERSION = "2026-09-29";

@@ -203,22 +203,50 @@ export async function getList(
   return { ...toSummary(summary), items: await hydrateItems(deps, rows) };
 }
 
+/** A list `insertListsStmt` inserts (`id` chosen by the caller). */
+export interface NewListRow {
+  description: string | null;
+  id: string;
+  name: string;
+}
+
+/**
+ * Inserts `lists` in order, as many as fit under `LISTS_MAX`: the limit is
+ * part of the insert (`LIMIT max(0, LISTS_MAX - count)`, no check-then-act),
+ * so concurrent inserts at the edge cannot pass it. Timestamps end at `at`,
+ * one millisecond apart, so the given order is the creation order. Returns
+ * the inserted rows; a statement, not run, so a caller (the guest import)
+ * can put it in its own batch.
+ */
+export function insertListsStmt(
+  db: Db,
+  ownerId: string,
+  lists: readonly NewListRow[],
+  at: Date
+) {
+  const last = at.getTime();
+  const count = lists.length;
+  // The columns follow the table's order (id, owner_id, name, description,
+  // created_at, updated_at).
+  return db
+    .insert(list)
+    .select(
+      sql`SELECT json_extract(j.value, '$.id'), ${ownerId}, json_extract(j.value, '$.name'), json_extract(j.value, '$.description'), ${last} - (${count} - 1 - j.key), ${last} - (${count} - 1 - j.key) FROM json_each(${JSON.stringify(lists)}) AS j WHERE true ORDER BY j.key LIMIT max(0, ${LISTS_MAX} - (SELECT count(*) FROM ${list} AS o WHERE ${ref("o", list.ownerId)} = ${ownerId}))`
+    )
+    .returning();
+}
+
 export async function createList(
   db: Db,
   ownerId: string,
   input: { description?: string | null | undefined; name: string }
 ): Promise<ListSummary> {
-  const now = Date.now();
-  // The limit is part of the insert (no check-then-act): the row is only
-  // selected while the owner has fewer than `LISTS_MAX` lists. The columns
-  // follow the table's order (id, owner_id, name, description, created_at,
-  // updated_at).
-  const [row] = await db
-    .insert(list)
-    .select(
-      sql`SELECT ${newId()}, ${ownerId}, ${input.name}, ${input.description ?? null}, ${now}, ${now} WHERE (SELECT count(*) FROM ${list} AS o WHERE ${ref("o", list.ownerId)} = ${ownerId}) < ${LISTS_MAX}`
-    )
-    .returning();
+  const [row] = await insertListsStmt(
+    db,
+    ownerId,
+    [{ description: input.description ?? null, id: newId(), name: input.name }],
+    new Date()
+  );
   if (!row) {
     throw new ListsError("INVALID_STATE", `At most ${LISTS_MAX} lists`);
   }
@@ -276,18 +304,105 @@ interface ItemTarget {
   listId: string;
 }
 
+/** Who appends: `actorId` is recorded; with `ownerId` the lists must be theirs. */
+export interface AppendActor {
+  actorId: string;
+  ownerId?: string | undefined;
+}
+
+/** `[listId, gestureId]`, in append order, each pair at most once. */
+export type ItemPair = readonly [listId: string, gestureId: string];
+
 function isPresent(listId: string, gestureId: string): SQL<number> {
   return sql<number>`EXISTS (SELECT 1 FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = ${listId} AND ${ref("li", listItem.gestureId)} = ${gestureId})`;
+}
+
+/** The pairs as rows `p.list_id`, `p.gesture_id`, `p.k` (their order). */
+function pairRows(pairs: readonly ItemPair[]): SQL {
+  return sql`(SELECT json_extract(value, '$[0]') AS list_id, json_extract(value, '$[1]') AS gesture_id, key AS k FROM json_each(${JSON.stringify(pairs)}))`;
+}
+
+/**
+ * A pair (`p`) that may go in: the list exists (and is `ownerId`'s), the
+ * gesture is published, and the list does not hold it yet.
+ */
+function insertable(ownerId: string | undefined): SQL {
+  const owner =
+    ownerId === undefined
+      ? sql``
+      : sql` AND ${ref("l", list.ownerId)} = ${ownerId}`;
+  return sql`EXISTS (SELECT 1 FROM ${list} AS l WHERE ${ref("l", list.id)} = p.list_id${owner}) AND EXISTS (SELECT 1 FROM ${gesture} AS g WHERE ${ref("g", gesture.id)} = p.gesture_id AND ${ref("g", gesture.publishedAt)} IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = p.list_id AND ${ref("li", listItem.gestureId)} = p.gesture_id)`;
+}
+
+/**
+ * Appends the insertable `pairs` to their lists, in order. Each list's new
+ * items go at `max(position) + 1, + 2, …`, computed by the insert, so
+ * concurrent appends stay dense; only while the list stays within
+ * `LIST_ITEMS_MAX` (the limit is part of the write); `ON CONFLICT DO
+ * NOTHING` makes a repeat a no-op. Returns the inserted pairs; a
+ * statement, not run.
+ */
+export function appendItemsStmt(
+  db: Db,
+  { actorId, ownerId }: AppendActor,
+  pairs: readonly ItemPair[],
+  at: Date
+) {
+  // Columns: list_id, gesture_id, position, added_by, created_at.
+  return db
+    .insert(listItem)
+    .select(
+      sql`SELECT c.list_id, c.gesture_id, c.base + c.rn, ${actorId}, ${at.getTime()} FROM (SELECT p.list_id, p.gesture_id, (SELECT coalesce(max(${ref("li", listItem.position)}), -1) FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = p.list_id) AS base, (SELECT count(*) FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = p.list_id) AS size, row_number() OVER (PARTITION BY p.list_id ORDER BY p.k) AS rn FROM ${pairRows(pairs)} AS p WHERE ${insertable(ownerId)}) AS c WHERE c.size + c.rn <= ${LIST_ITEMS_MAX}`
+    )
+    .onConflictDoNothing()
+    .returning({ gestureId: listItem.gestureId, listId: listItem.listId });
+}
+
+/**
+ * Bumps `updated_at` of those `listIds` that received an item from
+ * `actorId` at `at` (an `appendItemsStmt` earlier in the same batch).
+ */
+export function touchListsWithNewItemsStmt(
+  db: Db,
+  listIds: readonly string[],
+  actorId: string,
+  at: Date
+) {
+  return db
+    .update(list)
+    .set({ updatedAt: at })
+    .where(
+      and(
+        sql`${list.id} IN (SELECT value FROM json_each(${JSON.stringify(listIds)}))`,
+        sql`EXISTS (SELECT 1 FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = ${ref(L, list.id)} AND ${ref("li", listItem.addedBy)} = ${actorId} AND ${ref("li", listItem.createdAt)} = ${at.getTime()})`
+      )
+    );
+}
+
+/**
+ * The pairs that could still go in: after an `appendItemsStmt` in the same
+ * batch, the ones its limit left out. A statement, not run.
+ */
+export function unplacedItemsStmt(
+  db: Db,
+  { ownerId }: Pick<AppendActor, "ownerId">,
+  pairs: readonly ItemPair[]
+) {
+  return db
+    .select({
+      gestureId: sql<string>`p.gesture_id`,
+      listId: sql<string>`p.list_id`,
+    })
+    .from(sql`${pairRows(pairs)} AS p`)
+    .where(insertable(ownerId));
 }
 
 /**
  * Appends a published gesture (`NOT_FOUND` otherwise) at `max + 1`. With
  * `ownerId` the list must be theirs (the owner path); without it the
- * caller has authorised the list (an edit link). One read, then one batch.
- * The insert computes the position itself, so concurrent adds stay dense;
- * `ON CONFLICT DO NOTHING` makes a repeated add a no-op; and `HAVING
- * count(*) < LIST_ITEMS_MAX` makes the limit part of the write, so
- * concurrent adds to a nearly full list cannot pass it.
+ * caller has authorised the list (an edit link). One read, then one batch:
+ * `appendItemsStmt` for the one pair (dense position, a repeat is a no-op,
+ * `LIST_ITEMS_MAX` part of the write) and the `updated_at` bump.
  */
 export async function addItemToList(
   db: Db,
@@ -313,22 +428,8 @@ export async function addItemToList(
   }
   const now = new Date();
   const [inserted] = await db.batch([
-    db
-      .insert(listItem)
-      .select(
-        sql`SELECT ${listId}, ${gestureId}, coalesce(max(${ref("li", listItem.position)}) + 1, 0), ${actorId}, ${now.getTime()} FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = ${listId} HAVING count(*) < ${LIST_ITEMS_MAX}`
-      )
-      .onConflictDoNothing()
-      .returning({ gestureId: listItem.gestureId }),
-    db
-      .update(list)
-      .set({ updatedAt: now })
-      .where(
-        and(
-          eq(list.id, listId),
-          sql`EXISTS (SELECT 1 FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = ${listId} AND ${ref("li", listItem.gestureId)} = ${gestureId} AND ${ref("li", listItem.createdAt)} = ${now.getTime()})`
-        )
-      ),
+    appendItemsStmt(db, { actorId, ownerId }, [[listId, gestureId]], now),
+    touchListsWithNewItemsStmt(db, [listId], actorId, now),
   ]);
   if (inserted.length > 0) {
     return { added: true };
