@@ -15,6 +15,8 @@ import { Route as DevMailRouteImport } from './routes/dev/mail'
 import { Route as DevMailDotjsonRouteImport } from './routes/dev/mail[.]json'
 import { Route as DevUiRouteImport } from './routes/dev/ui'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
+import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +48,16 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOpenapiSplatRoute = ApiOpenapiSplatRouteImport.update({
+  id: '/api/openapi/$',
+  path: '/api/openapi/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
+  id: '/api/rpc/$',
+  path: '/api/rpc/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +66,8 @@ export interface FileRoutesByFullPath {
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/openapi/$': typeof ApiOpenapiSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +76,8 @@ export interface FileRoutesByTo {
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/openapi/$': typeof ApiOpenapiSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +87,8 @@ export interface FileRoutesById {
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/openapi/$': typeof ApiOpenapiSplatRoute
+  '/api/rpc/$': typeof ApiRpcSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +99,8 @@ export interface FileRouteTypes {
     | '/dev/mail.json'
     | '/dev/ui'
     | '/api/auth/$'
+    | '/api/openapi/$'
+    | '/api/rpc/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +109,8 @@ export interface FileRouteTypes {
     | '/dev/mail.json'
     | '/dev/ui'
     | '/api/auth/$'
+    | '/api/openapi/$'
+    | '/api/rpc/$'
   id:
     | '__root__'
     | '/'
@@ -97,6 +119,8 @@ export interface FileRouteTypes {
     | '/dev/mail.json'
     | '/dev/ui'
     | '/api/auth/$'
+    | '/api/openapi/$'
+    | '/api/rpc/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +130,8 @@ export interface RootRouteChildren {
   DevMailDotjsonRoute: typeof DevMailDotjsonRoute
   DevUiRoute: typeof DevUiRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
+  ApiRpcSplatRoute: typeof ApiRpcSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -152,6 +178,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/openapi/$': {
+      id: '/api/openapi/$'
+      path: '/api/openapi/$'
+      fullPath: '/api/openapi/$'
+      preLoaderRoute: typeof ApiOpenapiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/rpc/$': {
+      id: '/api/rpc/$'
+      path: '/api/rpc/$'
+      fullPath: '/api/rpc/$'
+      preLoaderRoute: typeof ApiRpcSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -162,6 +202,8 @@ const rootRouteChildren: RootRouteChildren = {
   DevMailDotjsonRoute: DevMailDotjsonRoute,
   DevUiRoute: DevUiRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
+  ApiRpcSplatRoute: ApiRpcSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

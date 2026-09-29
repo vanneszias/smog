@@ -6,7 +6,7 @@ import {
   magicLinkClient,
 } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
-import type { Auth } from "./server";
+import { USER_ADDITIONAL_FIELDS } from "./fields";
 
 /** The site's auth client (`/api/auth` on `baseURL`). */
 export function createWebAuthClient(baseURL: string) {
@@ -14,7 +14,7 @@ export function createWebAuthClient(baseURL: string) {
     basePath: "/api/auth",
     baseURL,
     plugins: [
-      inferAdditionalFields<Auth>(),
+      inferAdditionalFields({ user: USER_ADDITIONAL_FIELDS }),
       emailOTPClient(),
       magicLinkClient(),
       passkeyClient(),

@@ -1,4 +1,5 @@
 import { LOCALES } from "@smog/i18n";
+import { tokens } from "@smog/styles/tokens";
 import { describe, expect, it } from "vitest";
 import { emailLocale, renderEmail } from "../src";
 
@@ -8,7 +9,7 @@ describe("renderEmail", () => {
   it.each(LOCALES)("renders the verify email in %s", async (locale) => {
     const email = await renderEmail(
       "auth/verify-email",
-      { minutes: 60, name: "Ada", url: URL },
+      { minutes: 60, url: URL },
       locale
     );
 
@@ -22,7 +23,28 @@ describe("renderEmail", () => {
     expect(email.html).toContain(`lang="${locale}"`);
     expect(email.html).toContain(URL.replaceAll("&", "&amp;"));
     expect(email.text).toContain(URL);
-    expect(email.text).toContain("Ada");
+  });
+
+  it("never shows a sign-up name in the verify email (phishing)", async () => {
+    const email = await renderEmail(
+      "auth/verify-email",
+      // @ts-expect-error: the template has no name prop on purpose.
+      { minutes: 60, name: "Visit evil.example", url: URL },
+      "en"
+    );
+    expect(email.text).not.toContain("evil.example");
+    expect(email.text).toContain("Hello,");
+  });
+
+  it("styles the email with the @smog/styles light tokens", async () => {
+    const email = await renderEmail(
+      "auth/magic-link",
+      { minutes: 5, url: URL },
+      "en"
+    );
+    expect(email.html.toLowerCase()).toContain(
+      tokens.color.light.primary.toLowerCase()
+    );
   });
 
   it("renders the OTP code, the magic link and the reset link", async () => {
@@ -63,7 +85,7 @@ describe("renderEmail", () => {
 
   it("escapes user data in the HTML (i18n does not escape)", async () => {
     const email = await renderEmail(
-      "auth/verify-email",
+      "auth/reset-password",
       { minutes: 60, name: '<script>alert("x")</script>', url: URL },
       "en"
     );

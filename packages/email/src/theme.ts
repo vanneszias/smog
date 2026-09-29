@@ -1,76 +1,86 @@
 /**
- * Email styles. The colours are literal brand values for now (the old
- * email palette): `@smog/styles` is not available to this package yet.
- * Follow-up: replace these with `@smog/styles` tokens once it lands.
+ * Email styles from the `@smog/styles` tokens. Email clients have no CSS
+ * variables and no reliable dark mode, so the light theme is resolved to
+ * literal values here. The one non-token value is the 560 px container, the
+ * usual email body width.
  */
+import { tokens } from "@smog/styles/tokens";
 import type { CSSProperties } from "react";
 
-const COLORS = {
-  background: "#ebf4eb",
-  border: "#dddddd",
-  primary: "#00805f",
-  surface: "#ffffff",
-  text: "#333333",
-  textMuted: "#666666",
-} as const;
+const { fontFamily, fontSize, fontWeight, radius, spacing } = tokens;
+const color = tokens.color.light;
 
-const FONT_FAMILY =
-  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+const px = (value: number): string => `${value}px`;
+
+const EMAIL_WIDTH = 560;
+const FONT = fontFamily.web.join(", ");
 
 export const styles = {
   body: {
-    backgroundColor: COLORS.background,
-    fontFamily: FONT_FAMILY,
+    backgroundColor: color.background,
+    fontFamily: FONT,
     margin: "0",
     padding: "0",
   },
   brand: {
-    color: COLORS.surface,
-    fontSize: "20px",
-    fontWeight: 700,
+    color: color.primaryForeground,
+    fontSize: px(fontSize["title-3"].size),
+    fontWeight: fontWeight.semibold,
     margin: "0",
     textAlign: "center",
   },
   button: {
-    backgroundColor: COLORS.primary,
-    borderRadius: "8px",
-    color: COLORS.surface,
+    backgroundColor: color.primary,
+    borderRadius: px(radius.md),
+    color: color.primaryForeground,
     display: "inline-block",
-    fontSize: "16px",
-    fontWeight: 600,
-    padding: "12px 24px",
+    fontSize: px(fontSize.body.size),
+    fontWeight: fontWeight.semibold,
+    padding: `${px(spacing["3"])} ${px(spacing["6"])}`,
     textDecoration: "none",
   },
   code: {
-    backgroundColor: COLORS.background,
-    borderRadius: "8px",
-    color: COLORS.text,
+    backgroundColor: color.surfaceSunken,
+    borderRadius: px(radius.md),
+    color: color.foreground,
     fontFamily: "ui-monospace, Menlo, Consolas, monospace",
-    fontSize: "32px",
-    fontWeight: 700,
-    letterSpacing: "8px",
-    margin: "16px 0",
-    padding: "16px",
+    fontSize: px(fontSize["title-1"].size),
+    fontWeight: fontWeight.semibold,
+    letterSpacing: px(spacing["2"]),
+    margin: `${px(spacing["4"])} 0`,
+    padding: px(spacing["4"]),
     textAlign: "center",
   },
   container: {
-    backgroundColor: COLORS.surface,
-    border: `1px solid ${COLORS.border}`,
-    borderRadius: "12px",
-    margin: "32px auto",
-    maxWidth: "560px",
+    backgroundColor: color.surface,
+    border: `1px solid ${color.border}`,
+    borderRadius: px(radius.lg),
+    margin: `${px(spacing["8"])} auto`,
+    maxWidth: px(EMAIL_WIDTH),
     overflow: "hidden",
   },
-  content: { padding: "32px" },
-  footer: { color: COLORS.textMuted, fontSize: "13px", lineHeight: "20px" },
-  header: { backgroundColor: COLORS.primary, padding: "24px 32px" },
-  heading: {
-    color: COLORS.text,
-    fontSize: "24px",
-    fontWeight: 700,
-    margin: "0 0 16px",
+  content: { padding: px(spacing["8"]) },
+  footer: {
+    color: color.foregroundMuted,
+    fontSize: px(fontSize["body-sm"].size),
+    lineHeight: px(fontSize["body-sm"].lineHeight),
   },
-  hr: { borderColor: COLORS.border, margin: "24px 0" },
-  link: { color: COLORS.primary, wordBreak: "break-all" },
-  text: { color: COLORS.text, fontSize: "16px", lineHeight: "24px" },
+  header: {
+    backgroundColor: color.primary,
+    padding: `${px(spacing["6"])} ${px(spacing["8"])}`,
+  },
+  heading: {
+    color: color.foreground,
+    fontSize: px(fontSize["title-2"].size),
+    fontWeight: fontWeight.semibold,
+    lineHeight: px(fontSize["title-2"].lineHeight),
+    margin: `0 0 ${px(spacing["4"])}`,
+  },
+  hr: { borderColor: color.border, margin: `${px(spacing["6"])} 0` },
+  link: { color: color.primaryStrong, wordBreak: "break-all" },
+  text: {
+    color: color.foreground,
+    fontSize: px(fontSize.body.size),
+    lineHeight: px(fontSize.body.lineHeight),
+  },
 } satisfies Record<string, CSSProperties>;

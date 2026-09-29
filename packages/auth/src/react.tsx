@@ -1,5 +1,11 @@
-import { createContext, type ReactNode, useContext, useMemo } from "react";
-import type { Role } from "./session";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useMemo,
+  useRef,
+} from "react";
+import type { Role } from "./fields";
 
 export interface AuthUser {
   email: string;
@@ -10,8 +16,19 @@ export interface AuthUser {
 }
 
 export interface AuthState {
+  /**
+   * The last session fetch failed (offline, server error). `status`/`user`
+   * are then the last known values, so a signed-in user is not treated as a
+   * guest while offline.
+   */
+  error?: true;
   status: "loading" | "signedIn" | "signedOut";
   user?: AuthUser;
+}
+
+export interface AuthStateValue extends AuthState {
+  /** Refetches the session (after sign-in, or to retry after an error). */
+  refetch: () => void;
 }
 
 /** The shape of Better Auth's `useSession()` on web and Expo. */
@@ -28,11 +45,29 @@ export interface SessionHookResult {
       }
     | null
     | undefined;
+  error?: unknown;
   isPending: boolean;
+  refetch?: (() => unknown) | undefined;
 }
 
-/** Maps a session hook result to the platform-neutral auth state. */
-export function toAuthState(result: SessionHookResult): AuthState {
+/**
+ * Maps a session hook result to the platform-neutral auth state. On an
+ * error it keeps `previous` (the last known state) and flags `error`.
+ */
+export function toAuthState(
+  result: SessionHookResult,
+  previous?: AuthState
+): AuthState {
+  if (result.error) {
+    const known =
+      previous && previous.status !== "loading"
+        ? {
+            status: previous.status,
+            ...(previous.user ? { user: previous.user } : {}),
+          }
+        : { status: "signedOut" as const };
+    return { ...known, error: true };
+  }
   if (result.isPending) {
     return { status: "loading" };
   }
@@ -52,7 +87,7 @@ export function toAuthState(result: SessionHookResult): AuthState {
   };
 }
 
-const AuthStateContext = createContext<AuthState | null>(null);
+const AuthStateContext = createContext<AuthStateValue | null>(null);
 
 /**
  * Provides the auth state from an injected session hook
@@ -66,20 +101,28 @@ export function AuthStateProvider({
   children: ReactNode;
   useSession: () => SessionHookResult;
 }): ReactNode {
-  const result = useSession();
-  const { data, isPending } = result;
-  const state = useMemo(
-    () => toAuthState({ data, isPending }),
-    [data, isPending]
-  );
+  const { data, error, isPending, refetch } = useSession();
+  const last = useRef<AuthState | undefined>(undefined);
+  const value = useMemo((): AuthStateValue => {
+    const state = toAuthState({ data, error, isPending }, last.current);
+    if (!state.error) {
+      last.current = state;
+    }
+    return {
+      ...state,
+      refetch: () => {
+        refetch?.();
+      },
+    };
+  }, [data, error, isPending, refetch]);
   return (
-    <AuthStateContext.Provider value={state}>
+    <AuthStateContext.Provider value={value}>
       {children}
     </AuthStateContext.Provider>
   );
 }
 
-export function useAuthState(): AuthState {
+export function useAuthState(): AuthStateValue {
   const state = useContext(AuthStateContext);
   if (!state) {
     throw new Error(

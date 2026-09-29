@@ -1,13 +1,10 @@
 {
   // Test-only Worker config: a local D1 (`DB`, migrations applied by the
-  // `@smog/db` setup file) and KV (`KV`, Better Auth secondary storage).
+  // `@smog/db` setup file).
   "$schema": "../../../node_modules/wrangler/config-schema.json",
   "name": "smog-auth-test",
   "compatibility_date": "2026-09-29",
   "compatibility_flags": ["nodejs_compat"],
-  "kv_namespaces": [
-    { "binding": "KV", "id": "00000000000000000000000000000000" }
-  ],
   "d1_databases": [
     {
       "binding": "DB",

@@ -1,6 +1,5 @@
 import { expo } from "@better-auth/expo";
 import { passkey } from "@better-auth/passkey";
-import { LOCALES } from "@smog/config/constants";
 import {
   account,
   passkey as passkeyTable,
@@ -10,6 +9,7 @@ import {
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import {
+  APP_NAME,
   type EmailSender,
   type EmailTemplateId,
   type EmailTemplateProps,
@@ -20,10 +20,9 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, captcha, emailOTP, magicLink } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
 import { COOKIE_PREFIX } from "./cookie";
 import type { AuthEnv } from "./env";
-import { kvSecondaryStorage } from "./kv-storage";
+import { USER_ADDITIONAL_FIELDS } from "./fields";
 
 export type { AuthEnv } from "./env";
 
@@ -33,12 +32,19 @@ const RESET_PASSWORD_TTL = 60 * 60;
 const OTP_TTL = 5 * 60;
 const MAGIC_LINK_TTL = 5 * 60;
 
-/** Endpoints that need a Turnstile token when TURNSTILE_SECRET_KEY is set. */
-const CAPTCHA_ENDPOINTS = [
+/**
+ * Endpoints that need a Turnstile token when TURNSTILE_SECRET_KEY is set:
+ * sign-up/sign-in and every unauthenticated endpoint that sends an email
+ * (a test calls every endpoint and checks this list covers the senders).
+ */
+export const CAPTCHA_ENDPOINTS = [
   "/sign-up/email",
   "/sign-in/email",
   "/request-password-reset",
+  "/send-verification-email",
   "/email-otp/send-verification-otp",
+  "/email-otp/request-password-reset",
+  "/forget-password/email-otp",
   "/sign-in/magic-link",
 ];
 
@@ -48,7 +54,6 @@ export interface CreateAuthOptions {
   db: Db;
   email: EmailSender;
   env: AuthEnv;
-  kv: KVNamespace;
   /** Runs email sends after the response (`waitUntil`); awaited when unset. */
   waitUntil?: ((promise: Promise<unknown>) => void) | undefined;
 }
@@ -100,7 +105,8 @@ function socialProviders(env: AuthEnv) {
 
 /**
  * The Better Auth server for one request (spec §6): D1 through Drizzle,
- * KV secondary storage, every sign-in method, and our emails.
+ * sessions read from D1 on every request (bans, revocation and deletion
+ * take effect at once), every sign-in method, and our emails.
  */
 export function createAuth(options: CreateAuthOptions) {
   const { db, env } = options;
@@ -136,6 +142,9 @@ export function createAuth(options: CreateAuthOptions) {
     account: {
       accountLinking: {
         enabled: true,
+        // Local accounts must have a verified email before a provider is
+        // linked to them (Better Auth's default; pinned here on purpose).
+        requireLocalEmailVerified: true,
         trustedProviders: ["google", "apple", "email-password"],
       },
     },
@@ -147,7 +156,7 @@ export function createAuth(options: CreateAuthOptions) {
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
       useSecureCookies: env.ENVIRONMENT !== "dev",
     },
-    appName: "SMOG & Co",
+    appName: APP_NAME,
     basePath: "/api/auth",
     baseURL: options.baseURL,
     database: drizzleAdapter(db, {
@@ -176,7 +185,7 @@ export function createAuth(options: CreateAuthOptions) {
         await send(
           "auth/verify-email",
           target.email,
-          { minutes: minutes(VERIFY_EMAIL_TTL), name: target.name, url },
+          { minutes: minutes(VERIFY_EMAIL_TTL), url },
           { locale: localeOf(target), request }
         );
       },
@@ -210,12 +219,13 @@ export function createAuth(options: CreateAuthOptions) {
       passkey({
         origin: env.SITE_URL,
         rpID: new URL(env.SITE_URL).hostname,
-        rpName: "SMOG & Co",
+        rpName: APP_NAME,
       }),
       expo(),
       ...(env.TURNSTILE_SECRET_KEY
         ? [
             captcha({
+              allowedHostnames: [new URL(env.SITE_URL).hostname],
               endpoints: CAPTCHA_ENDPOINTS,
               provider: "cloudflare-turnstile",
               secretKey: env.TURNSTILE_SECRET_KEY,
@@ -223,31 +233,23 @@ export function createAuth(options: CreateAuthOptions) {
           ]
         : []),
     ],
-    rateLimit: { enabled: env.ENVIRONMENT !== "dev" },
-    secondaryStorage: kvSecondaryStorage(options.kv),
-    secret: env.BETTER_AUTH_SECRET,
-    session: {
-      // Sessions live in D1 too: admin revocation, the account export and
-      // the admin user list read them. KV is the fast read path.
-      storeSessionInDatabase: true,
+    // Better Auth's own limiter is a coarse per-isolate backstop: memory
+    // storage (a blocked request never extends the window, so a shared
+    // school IP cannot be locked out), and never for session reads. The
+    // per-IP limit is the RL_AUTH binding on the /api/auth route (Task 3).
+    rateLimit: {
+      customRules: { "/get-session": false },
+      enabled: env.ENVIRONMENT !== "dev",
+      storage: "memory",
     },
+    secret: env.BETTER_AUTH_SECRET,
+    // No secondary storage and no cookie cache: every session read hits D1,
+    // so a ban, a revoked session or a deleted user takes effect at once.
+    // Verification values live in D1 as well (single-use, consumed there).
     socialProviders: socialProviders(env),
     trustedOrigins: trustedOrigins(env),
     user: {
-      additionalFields: {
-        legacyId: { input: false, required: false, type: "string" },
-        locale: {
-          input: true,
-          required: false,
-          type: "string",
-          validator: { input: z.enum(LOCALES).nullish() },
-        },
-      },
-    },
-    verification: {
-      // Single-use tokens and codes are consumed in D1 (strongly
-      // consistent); KV has no atomic get-and-delete.
-      storeInDatabase: true,
+      additionalFields: USER_ADDITIONAL_FIELDS,
     },
   });
 }

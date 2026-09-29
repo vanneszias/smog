@@ -15,8 +15,10 @@ APPLE_CLIENT_ID=
 APPLE_CLIENT_SECRET=
 APPLE_APP_BUNDLE_IDENTIFIER=be.zias.smog
 
-# Optional. When set, sign-up, sign-in, password reset, email code and magic
-# link requests need a Turnstile token (`x-captcha-response` header).
+# Optional in dev, required in staging/production (`wrangler secret put`).
+# When set, sign-up, sign-in, password reset, email code and magic link
+# requests need a Turnstile token (`x-captcha-response`), and rpc mutations
+# behind `requireTurnstile` need one in `x-turnstile-token`.
 TURNSTILE_SECRET_KEY=
 
 # Dev sign-in: the seeded admin `admin@smog.test` has the DEV-ONLY password

@@ -34,7 +34,6 @@ export function setup(overrides: Partial<AuthEnv> = {}) {
     db,
     email,
     env: authEnv,
-    kv: env.KV,
   });
 
   /** Calls `/api/auth<path>` through the handler, like the site route does. */

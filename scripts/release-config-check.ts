@@ -300,6 +300,17 @@ export function checkWranglerConfig(source: string): string[] {
       errors.push(`${file}: missing env.${env}`);
     }
   }
+  // The Worker trusts ENVIRONMENT for dev-only behaviour (the dev mailbox,
+  // non-Secure cookies), so each env must name itself.
+  const envs = isRecord(config.env) ? config.env : {};
+  for (const [name, env] of Object.entries(envs).sort(([a], [b]) =>
+    a.localeCompare(b)
+  )) {
+    const vars = isRecord(env) && isRecord(env.vars) ? env.vars : {};
+    if (vars.ENVIRONMENT !== name) {
+      errors.push(`${file}: env.${name}.vars.ENVIRONMENT must be "${name}"`);
+    }
+  }
   return errors;
 }
 

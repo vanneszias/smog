@@ -16,6 +16,11 @@ export default defineConfig(async () => ({
           BETTER_AUTH_SECRET: "site-test-secret-at-least-32-characters",
           TEST_MIGRATIONS: await readD1Migrations(MIGRATIONS_DIR),
         },
+        // `env.dev` allows 1000/60 s so local use never locks out; the tests
+        // run RL_AUTH at the staging/production limit to exercise the 429.
+        ratelimits: {
+          RL_AUTH: { namespace_id: "9003", simple: { limit: 5, period: 60 } },
+        },
       },
       wrangler: { configPath: "./wrangler.jsonc", environment: "dev" },
     }),
