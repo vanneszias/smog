@@ -14,11 +14,16 @@
     "test": "vitest run && bun test scripts"
   },
   "dependencies": {
+    "@orpc/openapi": "catalog:",
+    "@orpc/server": "catalog:",
+    "@orpc/zod": "catalog:",
+    "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
     "@smog/config": "workspace:*",
     "@smog/db": "workspace:*",
     "@smog/email": "workspace:*",
     "@smog/i18n": "workspace:*",
+    "@smog/rpc": "workspace:*",
     "@smog/styles": "workspace:*",
     "@tanstack/react-router": "1.170.40",
     "@tanstack/react-start": "1.168.59",

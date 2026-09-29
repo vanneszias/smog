@@ -1,0 +1,39 @@
+{
+  "name": "@smog/rpc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./contract": "./src/contract.ts",
+    "./react": "./src/react.tsx",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@orpc/client": "catalog:",
+    "@orpc/contract": "catalog:",
+    "@orpc/server": "catalog:",
+    "@orpc/tanstack-query": "catalog:",
+    "@smog/auth": "workspace:*",
+    "@smog/config": "workspace:*",
+    "@smog/db": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "19.2.7",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "catalog:"
+  }
+}

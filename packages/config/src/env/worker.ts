@@ -39,6 +39,24 @@ export const workerSecretsSchema = z.object({
 
 export type WorkerSecrets = z.infer<typeof workerSecretsSchema>;
 
+/** Vars and secrets together: the `env` of the rpc context. */
+export const workerEnvSchema = workerVarsSchema.extend(
+  workerSecretsSchema.shape
+);
+
+export type WorkerEnv = z.infer<typeof workerEnvSchema>;
+
+/** Validates the vars and secrets once per isolate; names every invalid key. */
+export function parseWorkerEnv(env: object): WorkerEnv {
+  const result = workerEnvSchema.safeParse(env);
+  if (!result.success) {
+    throw new Error(
+      `[config] Invalid worker env:\n${z.prettifyError(result.error)}`
+    );
+  }
+  return result.data;
+}
+
 export function parseWorkerVars(env: object): WorkerVars {
   const result = workerVarsSchema.safeParse(env);
   if (!result.success) {

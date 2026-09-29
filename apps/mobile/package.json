@@ -13,6 +13,8 @@
     "test": "jest"
   },
   "dependencies": {
+    "@smog/api": "workspace:*",
+    "@smog/config": "workspace:*",
     "@smog/styles": "workspace:*",
     "expo": "~57.0.26",
     "expo-constants": "~57.0.20",
@@ -38,6 +40,7 @@
     "@jest/globals": "~29.7.0",
     "@react-native/jest-preset": "0.86.3",
     "@types/react": "catalog:",
+    "babel-jest": "~29.7.0",
     "babel-preset-expo": "~57.0.13",
     "expo-doctor": "1.20.4",
     "jest": "~29.7.0",

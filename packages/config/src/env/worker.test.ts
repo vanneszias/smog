@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseWorkerVars, workerSecretsSchema } from "./worker";
+import { parseWorkerEnv, parseWorkerVars, workerSecretsSchema } from "./worker";
 
 describe("parseWorkerVars", () => {
   test("applies defaults for optional vars", () => {
@@ -54,5 +54,26 @@ describe("workerSecretsSchema", () => {
     });
     expect(secrets.GOOGLE_CLIENT_ID).toBeUndefined();
     expect(secrets.TURNSTILE_SECRET_KEY).toBe("t");
+  });
+});
+
+describe("parseWorkerEnv", () => {
+  test("returns the vars and secrets together", () => {
+    const env = parseWorkerEnv({
+      BETTER_AUTH_SECRET: "x".repeat(32),
+      EMAIL_FROM: "SMOG <no-reply@example.com>",
+      EMAIL_REPLY_TO: "info@smog.vlaanderen",
+      ENVIRONMENT: "staging",
+      SITE_URL: "https://smog.test",
+      TURNSTILE_SECRET_KEY: "",
+    });
+
+    expect(env.ENVIRONMENT).toBe("staging");
+    expect(env.BETTER_AUTH_SECRET).toHaveLength(32);
+    expect(env.TURNSTILE_SECRET_KEY).toBeUndefined();
+  });
+
+  test("names every invalid key", () => {
+    expect(() => parseWorkerEnv({})).toThrow("BETTER_AUTH_SECRET");
   });
 });
