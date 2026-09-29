@@ -91,6 +91,38 @@ function findCandidates(db: Db, fts: string, slugs: string[] | undefined) {
     .where(sql`${gesture.id} IN (${ids})`);
 }
 
+/**
+ * The typo tier (step 4) from the catalog projection. It is best effort: a
+ * KV or D1 failure is logged and the search answers with its direct
+ * matches instead of failing.
+ */
+async function typoTier(
+  { db, kv }: SearchDeps,
+  input: SearchInput,
+  direct: readonly Ranked<{ id: string }>[]
+): Promise<Ranked<CatalogEntry>[]> {
+  let projection: readonly CatalogEntry[];
+  try {
+    projection = await getCatalogProjection(db, kv);
+  } catch (error) {
+    console.error(
+      "[gestures] Failed to load the typo tier, answering with direct matches:",
+      error
+    );
+    return [];
+  }
+  const slugs = new Set(input.category ?? []);
+  const pool =
+    slugs.size === 0
+      ? projection
+      : projection.filter((entry) =>
+          entry.categorySlugs.some((slug) => slugs.has(slug))
+        );
+  return typoMatches(pool, input.q, {
+    exclude: new Set(direct.map((result) => result.gesture.id)),
+  });
+}
+
 /** Ranked search results: direct matches, then the typo tier. */
 export async function searchGestures(
   { db, kv }: SearchDeps,
@@ -103,20 +135,9 @@ export async function searchGestures(
   try {
     const candidates = await findCandidates(db, fts, input.category);
     const direct = rankGestures(candidates, input.q);
-    let typo: Ranked<CatalogEntry>[] = [];
-    if (shouldRunTypoTier(direct.length, input.q)) {
-      const slugs = new Set(input.category ?? []);
-      const projection = await getCatalogProjection(db, kv);
-      const pool =
-        slugs.size === 0
-          ? projection
-          : projection.filter((entry) =>
-              entry.categorySlugs.some((slug) => slugs.has(slug))
-            );
-      typo = typoMatches(pool, input.q, {
-        exclude: new Set(direct.map((result) => result.gesture.id)),
-      });
-    }
+    const typo = shouldRunTypoTier(direct.length, input.q)
+      ? await typoTier({ db, kv }, input, direct)
+      : [];
 
     const page = [...direct, ...typo].slice(0, input.limit);
     const directIds = new Set(direct.map((result) => result.gesture.id));
@@ -133,7 +154,9 @@ export async function searchGestures(
       const summary = candidate ? toSummary(candidate) : hydrated.get(match.id);
       return summary ? [{ ...summary, ...ranking }] : [];
     });
-    return { items, total: direct.length + typo.length };
+    // A typo match from a stale projection may be unpublished by now.
+    const vanished = typoIds.filter((id) => !hydrated.has(id)).length;
+    return { items, total: direct.length + typo.length - vanished };
   } catch (error) {
     console.error("[gestures] Failed to search gestures:", error);
     throw error;

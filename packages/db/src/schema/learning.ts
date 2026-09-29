@@ -42,6 +42,13 @@ export const gesture = sqliteTable(
     id: text("id").primaryKey(),
     slug: text("slug").notNull().unique(),
     name: text("name").notNull(),
+    /**
+     * `gestureSortName(name)` (`normalizeText`: lowercase, no accents), the
+     * public catalogue order. SQLite can neither strip accents nor take a
+     * custom collation on D1, so the writers set it: the gestures/admin
+     * services, the seed, the data migration and the test factories.
+     */
+    sortName: text("sort_name").notNull(),
     description: text("description").notNull().default(""),
     playbackId: text("playback_id").notNull(),
     muxAssetId: text("mux_asset_id"),
@@ -51,11 +58,11 @@ export const gesture = sqliteTable(
     legacyId: text("legacy_id").unique(),
   },
   (t) => [
-    // The public catalogue order (`@smog/gestures` list: published only,
-    // `name COLLATE NOCASE, id` keyset): the partial index serves the filter,
-    // the order and the cursor, so a page reads only its own rows.
-    index("gesture_published_name_idx")
-      .on(sql`${col(t.name)} COLLATE NOCASE`, t.id)
+    // The public catalogue order (`@smog/gestures`: published only,
+    // `sort_name, id` keyset): the partial index serves the filter, the
+    // order and the cursor, so a page reads only its own rows.
+    index("gesture_published_sort_name_idx")
+      .on(t.sortName, t.id)
       .where(sql`${col(t.publishedAt)} IS NOT NULL`),
     index("gesture_mux_asset_id_idx").on(t.muxAssetId),
   ]

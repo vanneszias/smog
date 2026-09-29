@@ -100,11 +100,11 @@ export const projectionColumns = {
   name: gesture.name,
 };
 
-/** The public list order; `gesture_published_name_idx` serves it. */
-export const nameOrder: SQL[] = [
-  sql`${gesture.name} COLLATE NOCASE`,
-  sql`${gesture.id}`,
-];
+/**
+ * The public catalogue order: `sort_name` (`gestureSortName`: lowercase, no
+ * accents), then id; `gesture_published_sort_name_idx` serves it.
+ */
+export const nameOrder: SQL[] = [sql`${gesture.sortName}`, sql`${gesture.id}`];
 
 /**
  * Gestures in any of the published categories `slugs` (OR); no filter when
@@ -138,25 +138,30 @@ interface ListInput {
 /** The last row of a page: the keyset position the next page starts after. */
 interface ListPosition {
   id: string;
-  name: string;
+  sortName: string;
 }
 
 function parseListCursor(cursor: string): ListPosition {
   const key = decodeCursor(cursor);
-  const [name, id] = key ?? [];
-  if (key?.length !== 2 || typeof name !== "string" || typeof id !== "string") {
+  const [sortName, id] = key ?? [];
+  if (
+    key?.length !== 2 ||
+    typeof sortName !== "string" ||
+    typeof id !== "string"
+  ) {
     throw new InvalidCursorError();
   }
-  return { id, name };
+  return { id, sortName };
 }
 
 /**
- * After `(name, id)` in the list order. Written as a range on the first
- * key, so SQLite seeks `gesture_published_name_idx` instead of scanning it.
+ * After `(sort_name, id)` in the list order. Written as a range on the
+ * first key, so SQLite seeks the index instead of scanning it (it scans for
+ * the row-value form `(sort_name, id) > (?, ?)`).
  */
 function after(position: ListPosition): SQL {
-  const name = sql`${gesture.name} COLLATE NOCASE`;
-  return sql`${name} >= ${position.name} AND (${name} > ${position.name} OR ${gesture.id} > ${position.id})`;
+  const key = sql`${gesture.sortName}`;
+  return sql`${key} >= ${position.sortName} AND (${key} > ${position.sortName} OR ${gesture.id} > ${position.id})`;
 }
 
 /** The list query: a page (plus one row, to know there is more). */
@@ -167,7 +172,7 @@ export function listGesturesQuery(
   limit: number
 ) {
   return db
-    .select(summaryColumns)
+    .select({ ...summaryColumns, sortName: gesture.sortName })
     .from(gesture)
     .where(
       and(
@@ -194,13 +199,13 @@ export async function listGestures(
       position,
       input.limit
     );
-    const items = rows.slice(0, input.limit);
-    const last = items.at(-1);
+    const page = rows.slice(0, input.limit);
+    const last = page.at(-1);
     return {
-      items,
+      items: page.map(toSummary),
       nextCursor:
         rows.length > input.limit && last
-          ? encodeCursor([last.name, last.id])
+          ? encodeCursor([last.sortName, last.id])
           : null,
     };
   } catch (error) {

@@ -17,6 +17,9 @@ import { category, gesture, gestureCategory, gestureKeyword } from "./schema";
  * raw `db.run(sql)` statement, and the seed needs plain SQL text anyway.
  * Quote doubling is the complete escape for SQLite string literals.
  */
+const GESTURE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+// TODO(drizzle upgrade): bind the id once D1 `batch()` binds raw statements.
 function literal(value: string): SQL {
   return sql.raw(`'${value.replaceAll("'", "''")}'`);
 }
@@ -26,6 +29,10 @@ function literal(value: string): SQL {
  * bound parameters. An unknown or deleted id leaves no row.
  */
 export function rebuildGestureFtsSql(gestureId: string): readonly [SQL, SQL] {
+  // Defence in depth for the inlined literal: ids are UUIDs or seed ids.
+  if (!GESTURE_ID.test(gestureId)) {
+    throw new Error(`[db] Invalid gesture id: ${JSON.stringify(gestureId)}`);
+  }
   const id = literal(gestureId);
   return [
     sql`DELETE FROM gesture_fts WHERE gesture_id = ${id}`,

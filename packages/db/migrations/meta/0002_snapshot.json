@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ebbebb12-bf77-439b-bafd-7adf165ee47b",
+  "id": "1e275df0-aba0-4595-8a14-690606b555b9",
   "prevId": "65187616-2b48-41e3-b4ea-d58e4fe51885",
   "tables": {
     "account": {
@@ -528,6 +528,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "sort_name": {
+          "name": "sort_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "description": {
           "name": "description",
           "type": "text",
@@ -594,10 +601,10 @@
           ],
           "isUnique": true
         },
-        "gesture_published_name_idx": {
-          "name": "gesture_published_name_idx",
+        "gesture_published_sort_name_idx": {
+          "name": "gesture_published_sort_name_idx",
           "columns": [
-            "\"name\" COLLATE NOCASE",
+            "sort_name",
             "id"
           ],
           "isUnique": false,
@@ -2357,14 +2364,6 @@
     "columns": {}
   },
   "internal": {
-    "indexes": {
-      "gesture_published_name_idx": {
-        "columns": {
-          "\"name\" COLLATE NOCASE": {
-            "isExpression": true
-          }
-        }
-      }
-    }
+    "indexes": {}
   }
 }

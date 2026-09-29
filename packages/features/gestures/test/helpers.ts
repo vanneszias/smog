@@ -11,7 +11,7 @@ import {
 import type { Db } from "@smog/db/client";
 import { makeCategory, makeGesture } from "@smog/db/testing";
 import { newId, slugify } from "@smog/utils";
-import { CATALOG_VERSION_KEY, reindexGesture } from "../src/server";
+import { bumpCatalogVersion, reindexGesture } from "../src/server";
 
 export async function addCategory(
   db: Db,
@@ -95,7 +95,7 @@ export async function addSponsorship(
 
 /**
  * Empties the catalogue tables (storage is shared by the tests of a file)
- * and the catalog version key.
+ * and starts a new catalog version.
  */
 export async function resetCatalog(): Promise<void> {
   await env.DB.batch(
@@ -107,7 +107,8 @@ export async function resetCatalog(): Promise<void> {
       "DELETE FROM gesture_fts",
     ].map((statement) => env.DB.prepare(statement))
   );
-  await env.KV.delete(CATALOG_VERSION_KEY);
+  // A new version: the isolate's cached projection belongs to the old rows.
+  await bumpCatalogVersion(env.KV);
 }
 
 /** Applies `packages/db/seed/dev.sql` (one statement per line). */
@@ -169,4 +170,33 @@ export function countingD1(d1: D1Database): {
     },
   });
   return { count: () => trips, d1: proxy };
+}
+
+/** Wraps a KV binding and counts its writes (`put`, `delete`). */
+export function spyKv(kv: KVNamespace): {
+  binding: KVNamespace;
+  readonly writes: number;
+} {
+  let writes = 0;
+  const binding = new Proxy(kv, {
+    get(target, key) {
+      const value: unknown = Reflect.get(target, key);
+      if (typeof value !== "function") {
+        return value;
+      }
+      if (key === "put" || key === "delete") {
+        return (...args: unknown[]) => {
+          writes += 1;
+          return value.apply(target, args);
+        };
+      }
+      return value.bind(target);
+    },
+  });
+  return {
+    binding,
+    get writes() {
+      return writes;
+    },
+  };
 }

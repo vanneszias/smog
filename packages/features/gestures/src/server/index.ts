@@ -4,6 +4,7 @@ export {
   CATALOG_VERSION_KEY,
   type CatalogEntry,
   getCatalogProjection,
+  INITIAL_CATALOG_VERSION,
 } from "./catalog-cache";
 export {
   findGestureBySlug,

@@ -5,6 +5,10 @@
  * which every gesture or category write bumps (`bumpCatalogVersion`, admin
  * in phase 5). Other isolates see a bump within KV's propagation delay
  * (up to a minute), which only delays typo matches for the change.
+ *
+ * Reads never write KV: a missing key is the fixed `INITIAL_CATALOG_VERSION`,
+ * and only writers call `bumpCatalogVersion`. Concurrent cold loads in one
+ * isolate share one D1 query.
  */
 import { gesture } from "@smog/db";
 import type { Db } from "@smog/db/client";
@@ -14,6 +18,8 @@ import type { SearchableGesture } from "../ranking";
 import { isPublished, nameOrder, projectionColumns } from "./queries";
 
 export const CATALOG_VERSION_KEY = "catalog:version";
+/** The version while no writer has bumped it yet (a new namespace). */
+export const INITIAL_CATALOG_VERSION = "initial";
 
 /** A published gesture, normalised for the typo tier. */
 export interface CatalogEntry extends SearchableGesture {
@@ -24,6 +30,11 @@ export interface CatalogEntry extends SearchableGesture {
 }
 
 let cached: { entries: readonly CatalogEntry[]; version: string } | null = null;
+/** The load in flight, per version, so concurrent cold requests share it. */
+let loading: {
+  entries: Promise<readonly CatalogEntry[]>;
+  version: string;
+} | null = null;
 
 /**
  * Starts a new catalog version. A fresh id rather than a counter, so two
@@ -56,9 +67,29 @@ async function loadProjection(db: Db): Promise<CatalogEntry[]> {
   }));
 }
 
+function loadOnce(db: Db, version: string): Promise<readonly CatalogEntry[]> {
+  if (loading?.version === version) {
+    return loading.entries;
+  }
+  const entries = loadProjection(db).then((loaded) => {
+    cached = { entries: loaded, version };
+    return loaded;
+  });
+  const current = { entries, version };
+  loading = current;
+  const clear = () => {
+    if (loading === current) {
+      loading = null;
+    }
+  };
+  entries.then(clear, clear);
+  return entries;
+}
+
 /**
  * The projection for the current `catalog:version`, loaded from D1 once
- * per isolate and version. A missing key (a new namespace) starts one.
+ * per isolate and version. Throws when KV or D1 fails (the caller decides
+ * whether to go on without the typo tier).
  */
 export async function getCatalogProjection(
   db: Db,
@@ -66,13 +97,11 @@ export async function getCatalogProjection(
 ): Promise<readonly CatalogEntry[]> {
   try {
     const version =
-      (await kv.get(CATALOG_VERSION_KEY)) ?? (await bumpCatalogVersion(kv));
+      (await kv.get(CATALOG_VERSION_KEY)) ?? INITIAL_CATALOG_VERSION;
     if (cached?.version === version) {
       return cached.entries;
     }
-    const entries = await loadProjection(db);
-    cached = { entries, version };
-    return entries;
+    return await loadOnce(db, version);
   } catch (error) {
     console.error("[gestures] Failed to load the catalog projection:", error);
     throw error;

@@ -17,6 +17,7 @@ import { writeFileSync } from "node:fs";
 import { slugify } from "@smog/utils";
 import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 import { rebuildGestureFtsSql } from "../src/fts";
+import { gestureSortName } from "../src/sort-name";
 
 /** A public sample Mux playback id for every seeded gesture. */
 export const SEED_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
@@ -228,6 +229,7 @@ export function buildSeedSql(): string {
             playback_id: SEED_PLAYBACK_ID,
             published_at: SEED_TIME,
             slug: slugify(item.name),
+            sort_name: gestureSortName(item.name),
             updated_at: SEED_TIME,
           },
           ["id"]

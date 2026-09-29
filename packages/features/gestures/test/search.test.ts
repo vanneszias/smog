@@ -4,15 +4,22 @@ import { gesture } from "@smog/db";
 import { createDb, type Db } from "@smog/db/client";
 import { makeRpcContext } from "@smog/rpc/testing";
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   bumpCatalogVersion,
   CATALOG_VERSION_KEY,
   gesturesRouter,
   getCatalogProjection,
+  INITIAL_CATALOG_VERSION,
   reindexGesture,
 } from "../src/server";
-import { addCategory, addGesture, countingD1, resetCatalog } from "./helpers";
+import {
+  addCategory,
+  addGesture,
+  countingD1,
+  resetCatalog,
+  spyKv,
+} from "./helpers";
 
 let db: Db;
 
@@ -266,10 +273,9 @@ describe("reindexGesture", () => {
 
 describe("catalog projection", () => {
   it("is cached per isolate until the version key changes", async () => {
+    const version = await env.KV.get(CATALOG_VERSION_KEY);
     const first = await getCatalogProjection(db, env.KV);
     expect(first.map((entry) => entry.id)).toHaveLength(6);
-    const version = await env.KV.get(CATALOG_VERSION_KEY);
-    expect(version).toBeTruthy();
 
     await addGesture(db, { name: "Olifant" });
     expect(await getCatalogProjection(db, env.KV)).toBe(first);
@@ -281,6 +287,35 @@ describe("catalog projection", () => {
     expect(next.find((entry) => entry.name === "olifant")).toBeDefined();
   });
 
+  it("never writes KV on the read path; a missing key is the initial version", async () => {
+    await env.KV.delete(CATALOG_VERSION_KEY);
+    const kv = spyKv(env.KV);
+    const spied = makeRpcContext({ db, kv: kv.binding });
+
+    expect(await getCatalogProjection(db, kv.binding)).toHaveLength(6);
+    expect(
+      await call(gesturesRouter.search, { q: "hnd" }, { context: spied })
+    ).toMatchObject({ items: [{ name: "Hond" }] });
+    expect(kv.writes).toBe(0);
+    expect(await env.KV.get(CATALOG_VERSION_KEY)).toBeNull();
+    expect(INITIAL_CATALOG_VERSION).toBe("initial");
+  });
+
+  it("shares one D1 load between concurrent cold requests", async () => {
+    await bumpCatalogVersion(env.KV);
+    const counted = countingD1(env.DB);
+    const countedDb = createDb(counted.d1);
+
+    const [a, b, c] = await Promise.all([
+      getCatalogProjection(countedDb, env.KV),
+      getCatalogProjection(countedDb, env.KV),
+      getCatalogProjection(countedDb, env.KV),
+    ]);
+    expect(counted.count()).toBe(1);
+    expect(b).toBe(a);
+    expect(c).toBe(a);
+  });
+
   it("holds normalised names, keywords, category names and slugs", async () => {
     const projection = await getCatalogProjection(db, env.KV);
     expect(projection.find((entry) => entry.name === "koffie")).toMatchObject({
@@ -289,5 +324,45 @@ describe("catalog projection", () => {
       keywords: ["cafe", "espresso"],
       name: "koffie",
     });
+  });
+});
+
+describe("the typo tier is best effort", () => {
+  function failingKv(): KVNamespace {
+    return {
+      get: () => Promise.reject(new Error("KV unavailable")),
+      put: () => Promise.reject(new Error("KV unavailable")),
+    } as unknown as KVNamespace;
+  }
+
+  it("answers with the direct matches when KV fails", async () => {
+    const errors = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const result = await call(
+      gesturesRouter.search,
+      { q: "hond" },
+      { context: makeRpcContext({ db, kv: failingKv() }) }
+    );
+
+    expect(names(result)).toEqual(["Hond", "Blaffen", "Puppy"]);
+    expect(result.total).toBe(3);
+    expect(errors.mock.calls.map((args) => String(args[0]))).toContain(
+      "[gestures] Failed to load the typo tier, answering with direct matches:"
+    );
+    errors.mockRestore();
+  });
+
+  it("answers with no results, not an error, when only typos could match", async () => {
+    const errors = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const result = await call(
+      gesturesRouter.search,
+      { q: "hnd" },
+      { context: makeRpcContext({ db, kv: failingKv() }) }
+    );
+    expect(result).toEqual({ items: [], total: 0 });
+    errors.mockRestore();
   });
 });

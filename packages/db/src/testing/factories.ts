@@ -1,6 +1,7 @@
 import { newId } from "@smog/utils";
 import type { Db } from "../client";
 import { category, gesture, user } from "../schema";
+import { gestureSortName } from "../sort-name";
 import type {
   Category,
   Gesture,
@@ -60,14 +61,16 @@ export async function makeGesture(
   overrides: Partial<NewGesture> = {}
 ): Promise<Gesture> {
   const id = overrides.id ?? newId();
+  const name = overrides.name ?? "Test Gesture";
   const rows = await db
     .insert(gesture)
     .values({
       id,
-      name: "Test Gesture",
+      name,
       playbackId: SAMPLE_PLAYBACK_ID,
       publishedAt: new Date(),
       slug: `gesture-${id}`,
+      sortName: gestureSortName(name),
       ...overrides,
     })
     .returning();

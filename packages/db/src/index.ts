@@ -2,4 +2,5 @@
 export * from "./enums";
 export { rebuildGestureFtsSql } from "./fts";
 export * from "./schema";
+export { gestureSortName } from "./sort-name";
 export type * from "./types";

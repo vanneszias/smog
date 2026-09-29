@@ -55,6 +55,38 @@ describe("gestures.list", () => {
     expect(seen).toEqual(["Aap", "Beer", "Hond", "kat", "vogel"]);
   });
 
+  it("sorts accented names with their letter: Één before Zus", async () => {
+    await Promise.all(
+      ["Zus", "Één", "Eend", "appel", "Ölie"].map((name) =>
+        addGesture(db, { name })
+      )
+    );
+
+    const first = await call(
+      gesturesRouter.list,
+      { limit: 2 },
+      { context: context() }
+    );
+    const rest = await call(
+      gesturesRouter.list,
+      { cursor: first.nextCursor ?? undefined, limit: 10 },
+      { context: context() }
+    );
+    const order = [...first.items, ...rest.items].map((item) => item.name);
+    expect(order).toEqual(["appel", "Één", "Eend", "Ölie", "Zus"]);
+
+    const sitemap = await call(gesturesRouter.sitemap, undefined, {
+      context: context(),
+    });
+    expect(sitemap.map((entry) => entry.slug)).toEqual([
+      "appel",
+      "een",
+      "eend",
+      "olie",
+      "zus",
+    ]);
+  });
+
   it("returns summaries with the published categories in category order", async () => {
     const a = await addCategory(db, "Zomer", { sortOrder: 2 });
     const b = await addCategory(db, "Actie", { sortOrder: 1 });
@@ -134,7 +166,7 @@ describe("gestures.list", () => {
     const { params, sql: text } = listGesturesQuery(
       db,
       undefined,
-      { id: "b", name: "a" },
+      { id: "b", sortName: "a" },
       50
     ).toSQL();
     const plan = await env.DB.prepare(`EXPLAIN QUERY PLAN ${text}`)
@@ -143,7 +175,7 @@ describe("gestures.list", () => {
     // The outer query's own steps (subqueries hang off other parents).
     const outer = plan.results.filter((row) => row.parent === 0);
     expect(outer.map((row) => row.detail)).toContain(
-      "SEARCH gesture USING INDEX gesture_published_name_idx (name>?)"
+      "SEARCH gesture USING INDEX gesture_published_sort_name_idx (sort_name>?)"
     );
     expect(outer.some((row) => row.detail.includes("TEMP B-TREE"))).toBe(false);
   });
@@ -262,6 +294,49 @@ describe("gestures.bySlug", () => {
       { context: context() }
     );
     expect(items[0]?.playbackId).toBe("sponsored-playback");
+  });
+
+  it("plays the sponsored video while the sponsorship is expiring", async () => {
+    const hond = await addGesture(db, { name: "Hond" });
+    const until = new Date("2026-10-15T00:00:00.000Z");
+    await addSponsorship(db, hond.id, "expiring", {
+      endsAt: until,
+      videoPlaybackId: "expiring-playback",
+    });
+
+    const detail = await call(
+      gesturesRouter.bySlug,
+      { slug: "hond" },
+      { context: context() }
+    );
+    expect(detail.playbackId).toBe("expiring-playback");
+    expect(detail.sponsor).toEqual({
+      name: "Bakkerij Jan",
+      until: until.getTime(),
+    });
+  });
+
+  it("ignores expired and changes_requested sponsorships", async () => {
+    const aap = await addGesture(db, { name: "Aap" });
+    const beer = await addGesture(db, { name: "Beer" });
+    await addSponsorship(db, aap.id, "expired", {
+      endsAt: new Date("2026-01-01T00:00:00.000Z"),
+      videoPlaybackId: "expired-playback",
+    });
+    await addSponsorship(db, beer.id, "changes_requested", {
+      videoPlaybackId: "draft-playback",
+    });
+
+    const details = await Promise.all(
+      ["aap", "beer"].map((slug) =>
+        call(gesturesRouter.bySlug, { slug }, { context: context() })
+      )
+    );
+    expect(details.map((detail) => detail.playbackId)).toEqual([
+      aap.playbackId,
+      beer.playbackId,
+    ]);
+    expect(details.map((detail) => detail.sponsor)).toEqual([null, null]);
   });
 
   it("keeps the original video for a sponsorship that is not running", async () => {
