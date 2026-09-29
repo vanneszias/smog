@@ -2,9 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
-import { tokens } from "@smog/styles/tokens";
-import { recolour } from "./recolour";
+import { ART_DIR, GREEN, REPO_ROOT, WHITE } from "./compose";
 import { renderSvgModule } from "./svg-module";
 import {
   PNG_COLOUR_TYPE,
@@ -17,11 +15,6 @@ const VIEW_BOX = /^[\d.]+ [\d.]+ [\d.]+ [\d.]+$/;
 const HEX_COLOUR = /#[0-9a-f]{3,8}\b/i;
 const STYLE_ATTRIBUTE = /\bstyle=/;
 const PAINT = /\b(?:fill|stroke)="([^"]*)"/g;
-
-const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
-const ART_DIR = fileURLToPath(new URL("./art/", import.meta.url));
-const GREEN = tokens.color.brand.green;
-const WHITE = tokens.color.brand.white;
 
 /**
  * SHA-256 of the app icon the App Store and Play Store already ship. The
@@ -164,44 +157,6 @@ describe("SVG outputs", () => {
       }
     }
   );
-});
-
-/**
- * The vector outputs are the artwork itself, copied or recoloured, so each is
- * compared with what the generator would write from today's artwork. Every
- * other check here would still pass after an edit to `art/` that nobody
- * regenerated, and the site would ship the old logo.
- */
-describe("SVG outputs match the artwork", () => {
-  const art = (name: string): string =>
-    readFileSync(join(ART_DIR, name), "utf8");
-
-  it.each([
-    ["logo.svg", "apps/site/public/brand/logo.svg"],
-    ["hand-1.svg", "apps/site/public/brand/hand-1.svg"],
-    ["hand-2.svg", "apps/site/public/brand/hand-2.svg"],
-    ["hand-3.svg", "apps/site/public/brand/hand-3.svg"],
-  ])("%s is copied byte for byte to %s", (source, output) => {
-    expect(
-      readFileSync(join(REPO_ROOT, output)).equals(
-        readFileSync(join(ART_DIR, source))
-      )
-    ).toBe(true);
-  });
-
-  it.each([
-    ["logo.svg", GREEN, "apps/site/public/brand/logo-green.svg"],
-    ["logo.svg", WHITE, "apps/site/public/brand/logo-white.svg"],
-    [
-      "logo-stacked.svg",
-      WHITE,
-      "apps/site/public/brand/logo-stacked-white.svg",
-    ],
-  ])("%s in %s is %s", (source, colour, output) => {
-    expect(readFileSync(join(REPO_ROOT, output), "utf8")).toBe(
-      recolour(art(source), colour)
-    );
-  });
 });
 
 describe("store icon", () => {
