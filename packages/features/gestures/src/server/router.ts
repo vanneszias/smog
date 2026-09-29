@@ -52,7 +52,7 @@ export const gesturesRouter = os.router({
       await findRelatedGestures(context.db, input.slug, input.limit)
   ),
 
-  // analytics: search_performed is sent by the client (never the query text).
+  // Analytics: search_performed is sent by the client (useGestureSearch), never the query text.
   search: os.search.handler(
     async ({ context, input }) =>
       await searchGestures({ db: context.db, kv: context.kv }, input)

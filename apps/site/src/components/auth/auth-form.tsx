@@ -1,3 +1,4 @@
+import { markSignInStarted } from "@smog/analytics/react";
 import {
   type AuthErrorField,
   type AuthErrorKey,
@@ -192,6 +193,8 @@ function MethodButton({
   pending: AuthFlow["state"]["pending"];
 }): ReactNode {
   const onClick = useCallback(() => {
+    // Counted as sign_in_completed once the session appears.
+    markSignInStarted(method);
     choose(method);
   }, [choose, method]);
   return (

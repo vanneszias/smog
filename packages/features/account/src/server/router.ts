@@ -13,7 +13,7 @@ export type AccountRouterDeps = ImportDeps;
 export function createAccountRouter(deps: AccountRouterDeps) {
   const os = implementRpc(accountContract).use(requireUser);
   return os.router({
-    // analytics: guest_data_imported {favorites_added, lists_created, lists_merged}
+    // Analytics: guest_data_imported is sent by the client (useGuestImport).
     importGuestData: os.importGuestData.handler(
       async ({ context, input }) =>
         await importGuestData(

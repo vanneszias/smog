@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createRouterClient, implement } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { AnalyticsProvider } from "@smog/analytics/react";
+import { createRecordingAnalytics } from "@smog/analytics/testing";
 import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
 import { gesturesContract } from "@smog/gestures/contract";
 import type { GestureSummary } from "@smog/gestures/schema";
@@ -273,21 +275,35 @@ function setup(session: SessionHookResult = SIGNED_OUT) {
   const api = fakeApi(server);
   const auth = { current: session };
   const useSession = () => auth.current;
+  const recorder = createRecordingAnalytics();
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <RpcProvider client={api.client} queryUtils={api.queryUtils}>
-          <LocalStoreProvider store={store}>
-            {/* biome-ignore lint/performance/noJsxPropsBind: a stable test hook, defined once per setup. */}
-            <AuthStateProvider useSession={useSession}>
-              {children}
-            </AuthStateProvider>
-          </LocalStoreProvider>
+          <AnalyticsProvider analytics={recorder.analytics}>
+            <LocalStoreProvider store={store}>
+              {/* biome-ignore lint/performance/noJsxPropsBind: a stable test hook, defined once per setup. */}
+              <AuthStateProvider useSession={useSession}>
+                {children}
+              </AuthStateProvider>
+            </LocalStoreProvider>
+          </AnalyticsProvider>
         </RpcProvider>
       </QueryClientProvider>
     );
   }
-  return { auth, queryClient, server, store, wrapper };
+  return { auth, events: recorder.events, queryClient, server, store, wrapper };
+}
+
+function listChanged(
+  action: "added" | "removed",
+  gestureId: string,
+  source: "gesture_detail" | "gesture_list" = "gesture_list"
+) {
+  return {
+    name: "gesture_collection_changed",
+    properties: { action, collection: "list", gesture_id: gestureId, source },
+  } as const;
 }
 
 async function addLocalList(
@@ -634,6 +650,66 @@ describe("accounts: the API", () => {
       await state().revoke("view");
     });
     await waitFor(() => expect(state().links?.view).toBeNull());
+  });
+});
+
+describe("lists analytics", () => {
+  test("a device list sends gesture_collection_changed with the hook's source", async () => {
+    const { events, store, wrapper } = setup();
+    await addLocalList(store, "loc_1", "Dieren", [KAT.id]);
+    const { result } = renderHook(
+      () => useList("loc_1", { source: "gesture_detail" }),
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.list?.items).toHaveLength(1));
+    await act(async () => {
+      await result.current.addItem(BEER.id);
+      await result.current.removeItem(KAT.id);
+    });
+    expect(events).toEqual([
+      listChanged("added", BEER.id, "gesture_detail"),
+      listChanged("removed", KAT.id, "gesture_detail"),
+    ]);
+  });
+
+  test("a rejected add is not sent", async () => {
+    const { events, store, wrapper } = setup();
+    await addLocalList(
+      store,
+      "loc_1",
+      "Vol",
+      Array.from({ length: LIST_ITEMS_MAX }, (_, item) => `g-${item}`)
+    );
+    const { result } = renderHook(() => useList("loc_1"), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await expect(result.current.addItem(HOND.id)).rejects.toMatchObject({
+      code: "INVALID_STATE",
+    });
+    expect(events).toEqual([]);
+  });
+
+  test("an account list and a shared edit link send it too", async () => {
+    const { events, server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    server.userOf.set("srv-1", "user-1");
+    server.shares.set("srv-1", [{ role: "edit", token: "edit-token" }]);
+    const own = renderHook(() => useList("srv-1"), { wrapper });
+    await waitFor(() => expect(own.result.current.status).toBe("ready"));
+    await act(async () => {
+      await own.result.current.addItem(KAT.id);
+    });
+    own.unmount();
+    const shared = renderHook(() => useSharedList("edit-token"), { wrapper });
+    await waitFor(() => expect(shared.result.current.canEdit).toBe(true));
+    await act(async () => {
+      await shared.result.current.removeItem(HOND.id);
+    });
+    expect(events).toEqual([
+      listChanged("added", KAT.id),
+      listChanged("removed", HOND.id),
+    ]);
+    await waitFor(() => expect(shared.result.current.status).toBe("ready"));
+    shared.unmount();
   });
 });
 

@@ -37,6 +37,7 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     `${FEATURE_PATTERN}/schema`,
     "@smog/local-store",
     "@smog/analytics/native",
+    "@smog/analytics/react",
     "@smog/i18n",
     "@smog/styles",
     "@smog/brand",
@@ -75,6 +76,10 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/jobs",
     "@smog/render/contract",
     "@smog/analytics/server",
+    // Client hooks track through `useAnalytics()` (a no-op without a provider).
+    "@smog/analytics/react",
+    "@smog/analytics/schema",
+    "@smog/analytics/testing",
     "@smog/i18n",
     "@smog/config",
     "@smog/utils",

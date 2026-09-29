@@ -1,0 +1,43 @@
+{
+  "name": "@smog/analytics",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/gate.ts",
+    "./schema": "./src/schema.ts",
+    "./web": "./src/web.ts",
+    "./native": "./src/native.ts",
+    "./server": "./src/server/relay.ts",
+    "./react": "./src/react.tsx",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -b",
+    "test": "bun test ./src/server && bun test --preload @smog/config/testing/happy-dom --path-ignore-patterns='src/server/**' src"
+  },
+  "dependencies": {
+    "@smog/config": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@openpanel/react-native": "catalog:",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/bun": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "19.2.7",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@openpanel/react-native": "catalog:",
+    "react": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "@openpanel/react-native": {
+      "optional": true
+    }
+  }
+}

@@ -1,3 +1,5 @@
+import type { Analytics } from "@smog/analytics/native";
+import { AnalyticsProvider } from "@smog/analytics/react";
 import { type ApiClient, createApiQueryUtils } from "@smog/api/client";
 import { createExpoAuthClient, type ExpoAuthClient } from "@smog/auth/expo";
 import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
@@ -16,12 +18,15 @@ import {
   useMemo,
   useState,
 } from "react";
+import { createMobileAnalytics } from "@/analytics";
 import { createMobileApiClient } from "@/lib/api";
 import { AuthClientProvider } from "@/lib/auth-client";
 import { mobileEnv } from "@/lib/env";
 import { usePreferences } from "@/lib/preferences";
 
 export interface AppClients {
+  /** Consent-gated; tests leave it out (a no-op). */
+  analytics?: Analytics;
   api: ApiClient;
   auth: ExpoAuthClient;
   queryClient: QueryClient;
@@ -44,13 +49,30 @@ function createAppClients(): AppClients {
     scheme: "smog",
     storagePrefix: "smog",
   });
+  const store = createLocalStore(nativeAdapter);
   return {
+    analytics: createMobileAnalytics(store),
     api: createMobileApiClient(auth),
     auth,
     queryClient: new QueryClient(),
-    store: createLocalStore(nativeAdapter),
+    store,
     useSession: sessionHook(auth),
   };
+}
+
+/** Analytics for the tree; without an instance the hooks are no-ops. */
+function MaybeAnalytics({
+  analytics,
+  children,
+}: {
+  analytics: Analytics | undefined;
+  children: ReactElement;
+}): ReactElement {
+  return analytics ? (
+    <AnalyticsProvider analytics={analytics}>{children}</AnalyticsProvider>
+  ) : (
+    children
+  );
 }
 
 /** Theme and language follow the stored preferences (local-store). */
@@ -66,7 +88,8 @@ function PreferencesRoot({ children }: { children: ReactNode }): ReactElement {
 
 /**
  * Every app-wide provider: TanStack Query, oRPC, the auth client and its
- * state, the local store, then theme and language from its preferences.
+ * state, the local store, analytics, then theme and language from its
+ * preferences.
  * Tests pass fakes as `clients`.
  */
 export function AppProviders({
@@ -88,7 +111,9 @@ export function AppProviders({
           <AuthStateProvider useSession={clients.useSession}>
             <PurgeOtherUsers />
             <LocalStoreProvider store={clients.store}>
-              <PreferencesRoot>{children}</PreferencesRoot>
+              <MaybeAnalytics analytics={clients.analytics}>
+                <PreferencesRoot>{children}</PreferencesRoot>
+              </MaybeAnalytics>
             </LocalStoreProvider>
           </AuthStateProvider>
         </AuthClientProvider>

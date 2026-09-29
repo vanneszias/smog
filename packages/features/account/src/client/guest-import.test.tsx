@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { createRouterClient, implement } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { AnalyticsProvider } from "@smog/analytics/react";
+import { createRecordingAnalytics } from "@smog/analytics/testing";
 import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
 import { favoritesContract } from "@smog/favorites/contract";
 import { createI18n } from "@smog/i18n";
@@ -294,23 +296,26 @@ function setup(store: LocalStore, session: SessionHookResult) {
   });
   const auth = { current: session };
   const useSession = () => auth.current;
+  const recorder = createRecordingAnalytics();
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <I18nextProvider i18n={i18n}>
         <QueryClientProvider client={queryClient}>
           <RpcProvider client={api.client} queryUtils={api.queryUtils}>
-            <LocalStoreProvider store={store}>
-              {/* biome-ignore lint/performance/noJsxPropsBind: a stable test hook, defined once per setup. */}
-              <AuthStateProvider useSession={useSession}>
-                {children}
-              </AuthStateProvider>
-            </LocalStoreProvider>
+            <AnalyticsProvider analytics={recorder.analytics}>
+              <LocalStoreProvider store={store}>
+                {/* biome-ignore lint/performance/noJsxPropsBind: a stable test hook, defined once per setup. */}
+                <AuthStateProvider useSession={useSession}>
+                  {children}
+                </AuthStateProvider>
+              </LocalStoreProvider>
+            </AnalyticsProvider>
           </RpcProvider>
         </QueryClientProvider>
       </I18nextProvider>
     );
   }
-  return { auth, server, wrapper };
+  return { auth, events: recorder.events, server, wrapper };
 }
 
 /** Lets the hook see the loaded store (its `ready` state update). */
@@ -389,6 +394,34 @@ describe("useGuestImport", () => {
     expect(result.current.guestImport.pending).toBeNull();
     expect(store.getSnapshot().favorites).toEqual([]);
     await waitFor(() => expect(server.idsCalls).toBe(2));
+  });
+
+  test("a successful accept sends guest_data_imported with the counts only", async () => {
+    const store = await guestStore();
+    const { events, server, wrapper } = setup(store, ANNA);
+    server.result = { ...RESULT, listsMerged: 2 };
+    const { result } = renderHook(() => useGuestImport(), { wrapper });
+    await waitFor(() => expect(result.current.pending).not.toBeNull());
+    await act(async () => {
+      await result.current.accept();
+    });
+    expect(events).toEqual([
+      { name: "guest_data_imported", properties: { favorites: 2, lists: 3 } },
+    ]);
+  });
+
+  test("a failed accept sends nothing", async () => {
+    const store = await guestStore();
+    const { events, server, wrapper } = setup(store, ANNA);
+    server.fail = true;
+    const error = spyOn(console, "error").mockImplementation(() => undefined);
+    const { result } = renderHook(() => useGuestImport(), { wrapper });
+    await waitFor(() => expect(result.current.pending).not.toBeNull());
+    await act(async () => {
+      await result.current.accept();
+    });
+    expect(events).toEqual([]);
+    error.mockRestore();
   });
 
   test("a failed accept keeps the data and the prompt", async () => {

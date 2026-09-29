@@ -1,3 +1,4 @@
+import { useAnalytics } from "@smog/analytics/react";
 import { useAuthState } from "@smog/auth/react";
 import type { FavoritesContract } from "@smog/favorites/contract";
 import { useTranslation } from "@smog/i18n/react";
@@ -94,6 +95,7 @@ function useStoreReady(): boolean {
 export function useGuestImport(): GuestImport {
   const auth = useAuthState();
   const { t } = useTranslation();
+  const analytics = useAnalytics();
   const store = useLocalStoreInstance();
   const ready = useStoreReady();
   const snapshot = useLocalStore(selectSnapshot);
@@ -131,11 +133,17 @@ export function useGuestImport(): GuestImport {
     setState({ result: null, status: "importing", userId });
     const promise = (async () => {
       try {
-        // analytics: guest_data_imported {favorites_added, lists_created, lists_merged}
         const result = await importGuestData({
           client,
           store,
           untitledListName,
+        });
+        analytics.track({
+          name: "guest_data_imported",
+          properties: {
+            favorites: result.favoritesAdded,
+            lists: result.listsCreated + result.listsMerged,
+          },
         });
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: rpc.favorites.key() }),
@@ -153,7 +161,7 @@ export function useGuestImport(): GuestImport {
     })();
     running.current = { promise, userId };
     return promise;
-  }, [client, queryClient, rpc, store, untitledListName, userId]);
+  }, [analytics, client, queryClient, rpc, store, untitledListName, userId]);
 
   const dismiss = useCallback(async (): Promise<void> => {
     if (!userId) {

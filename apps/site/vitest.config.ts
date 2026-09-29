@@ -20,8 +20,13 @@ export default defineConfig(async () => ({
           TEST_MIGRATIONS: await readD1Migrations(MIGRATIONS_DIR),
         },
         // `env.dev` allows 1000/60 s so local use never locks out; the tests
-        // run RL_AUTH at the staging/production limit to exercise the 429.
+        // run RL_AUTH at the staging/production limit, and RL_ANALYTICS at 5,
+        // to exercise the 429s.
         ratelimits: {
+          RL_ANALYTICS: {
+            namespace_id: "9004",
+            simple: { limit: 5, period: 60 },
+          },
           RL_AUTH: { namespace_id: "9003", simple: { limit: 5, period: 60 } },
         },
       },

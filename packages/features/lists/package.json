@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@orpc/client": "catalog:",
+    "@smog/analytics": "workspace:*",
     "@smog/auth": "workspace:*",
     "@smog/db": "workspace:*",
     "@smog/gestures": "workspace:*",

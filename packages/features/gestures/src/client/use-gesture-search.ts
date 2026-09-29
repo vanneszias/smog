@@ -1,4 +1,7 @@
+import { useAnalytics } from "@smog/analytics/react";
+import type { SearchSource } from "@smog/analytics/schema";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import {
   normalizeCategoryFilter,
   SEARCH_STALE_TIME,
@@ -15,6 +18,8 @@ export interface UseGestureSearchOptions {
   limit?: number | undefined;
   /** The text as typed; an empty query returns the browse list. */
   q: string;
+  /** What `search_performed` reports as its trigger (default `filter_change`). */
+  source?: SearchSource | undefined;
 }
 
 /**
@@ -26,18 +31,47 @@ export function useGestureSearch({
   category,
   limit,
   q,
+  source = "filter_change",
 }: UseGestureSearchOptions) {
   const gestures = useGesturesRpc();
+  const analytics = useAnalytics();
   const typed = q.trim();
   const settled = useDebouncedValue(typed, SEARCH_DEBOUNCE_MS);
-  // analytics: search_performed { query_length, result_count, category_count,
-  // has_results } once `data` arrives for `settled`; never the query text.
+  const categories = normalizeCategoryFilter(category);
   const query = useQuery(
     gestures.search.queryOptions({
-      input: { category: normalizeCategoryFilter(category), limit, q: settled },
+      input: { category: categories, limit, q: settled },
       placeholderData: keepPreviousData,
       staleTime: SEARCH_STALE_TIME,
     })
   );
+
+  // search_performed once the results for `settled` arrive: counts only,
+  // never the query text. The browse list (no text, no category) is no search.
+  const tracked = useRef<string | null>(null);
+  const categoryCount = categories?.length ?? 0;
+  const searchKey = `${settled}\u0000${categories?.join(",") ?? ""}`;
+  const total = query.isPlaceholderData ? undefined : query.data?.total;
+  useEffect(() => {
+    if (
+      total === undefined ||
+      tracked.current === searchKey ||
+      (settled === "" && categoryCount === 0)
+    ) {
+      return;
+    }
+    tracked.current = searchKey;
+    analytics.track({
+      name: "search_performed",
+      properties: {
+        category_count: categoryCount,
+        has_results: total > 0,
+        query_length: settled.length,
+        result_count: total,
+        source,
+      },
+    });
+  }, [analytics, categoryCount, searchKey, settled, source, total]);
+
   return { ...query, isDebouncing: settled !== typed };
 }

@@ -14,6 +14,7 @@
     "test": "vitest run && bun test --preload @smog/config/testing/happy-dom src"
   },
   "dependencies": {
+    "@smog/analytics": "workspace:*",
     "@smog/auth": "workspace:*",
     "@smog/db": "workspace:*",
     "@smog/gestures": "workspace:*",

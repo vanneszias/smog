@@ -1,4 +1,5 @@
 import { isDefinedError } from "@orpc/client";
+import { useAnalytics } from "@smog/analytics/react";
 import { useAuthState } from "@smog/auth/react";
 import {
   addToList,
@@ -33,7 +34,13 @@ import {
   toLocalItems,
   toLocalSummary,
 } from "./local";
-import { LISTS_STALE_TIME, useListsClient, useListsRpc } from "./slice";
+import {
+  LISTS_STALE_TIME,
+  type ListItemOptions,
+  trackListItem,
+  useListsClient,
+  useListsRpc,
+} from "./slice";
 import { type ListsStatus, queryStatus } from "./use-lists";
 
 const updateInputSchema = z.object({
@@ -87,8 +94,12 @@ function withoutItem(detail: ListDetail, gestureId: string): ListDetail {
  * One list with its gestures and mutations. A `loc_` id is a guest list on
  * the device; any other id is the signed-in owner's list from the API.
  */
-export function useList(id: string): UseListResult {
+export function useList(
+  id: string,
+  { source = "gesture_list" }: ListItemOptions = {}
+): UseListResult {
   const local = isLocalListId(id);
+  const analytics = useAnalytics();
   const auth = useAuthState();
   usePurgeOtherUsers();
   const signedIn = auth.status === "signedIn";
@@ -181,7 +192,6 @@ export function useList(id: string): UseListResult {
 
   const addItem = useCallback(
     async (gestureId: string) => {
-      // analytics: gesture_collection_changed { action: "added", collection: "list" }
       if (local) {
         await store.update((data) => {
           const current = selectList(data, id);
@@ -194,30 +204,32 @@ export function useList(id: string): UseListResult {
           }
           return addToList(id, gestureId)(data);
         });
-        return;
+      } else {
+        try {
+          await addRemote({ gestureId, id });
+        } finally {
+          await invalidate();
+        }
       }
-      try {
-        await addRemote({ gestureId, id });
-      } finally {
-        await invalidate();
-      }
+      // Reached only when the add went through (a failure threw above).
+      trackListItem(analytics, "added", gestureId, source);
     },
-    [addRemote, id, invalidate, local, store]
+    [addRemote, analytics, id, invalidate, local, source, store]
   );
 
   const removeItem = useCallback(
     async (gestureId: string) => {
-      // analytics: gesture_collection_changed { action: "removed", collection: "list" }
       if (local) {
         await store.update(removeFromList(id, gestureId));
-        return;
+      } else {
+        await optimistic(
+          (detail) => withoutItem(detail, gestureId),
+          () => removeRemote({ gestureId, id })
+        );
       }
-      await optimistic(
-        (detail) => withoutItem(detail, gestureId),
-        () => removeRemote({ gestureId, id })
-      );
+      trackListItem(analytics, "removed", gestureId, source);
     },
-    [id, local, optimistic, removeRemote, store]
+    [analytics, id, local, optimistic, removeRemote, source, store]
   );
 
   const reorder = useCallback(

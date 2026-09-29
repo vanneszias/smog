@@ -1,9 +1,15 @@
 import { isDefinedError } from "@orpc/client";
+import { useAnalytics } from "@smog/analytics/react";
 import { useAuthState } from "@smog/auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import type { SharedList } from "../schema";
-import { SHARED_LIST_STALE_TIME, useListsRpc } from "./slice";
+import {
+  type ListItemOptions,
+  SHARED_LIST_STALE_TIME,
+  trackListItem,
+  useListsRpc,
+} from "./slice";
 import { type ListsStatus, queryStatus } from "./use-lists";
 
 export interface UseSharedListResult {
@@ -25,7 +31,11 @@ export interface UseSharedListResult {
  * A list behind a share link (`/lists/<token>`). Viewing needs no
  * account; editing needs an edit link and a session.
  */
-export function useSharedList(token: string): UseSharedListResult {
+export function useSharedList(
+  token: string,
+  { source = "gesture_list" }: ListItemOptions = {}
+): UseSharedListResult {
+  const analytics = useAnalytics();
   const auth = useAuthState();
   const signedIn = auth.status === "signedIn";
   const rpc = useListsRpc();
@@ -50,25 +60,25 @@ export function useSharedList(token: string): UseSharedListResult {
 
   const addItem = useCallback(
     async (gestureId: string) => {
-      // analytics: gesture_collection_changed { action: "added", collection: "list" }
       try {
         await addRemote({ gestureId, token });
       } finally {
         await invalidate();
       }
+      trackListItem(analytics, "added", gestureId, source);
     },
-    [addRemote, invalidate, token]
+    [addRemote, analytics, invalidate, source, token]
   );
   const removeItem = useCallback(
     async (gestureId: string) => {
-      // analytics: gesture_collection_changed { action: "removed", collection: "list" }
       try {
         await removeRemote({ gestureId, token });
       } finally {
         await invalidate();
       }
+      trackListItem(analytics, "removed", gestureId, source);
     },
-    [invalidate, removeRemote, token]
+    [analytics, invalidate, removeRemote, source, token]
   );
 
   const editLink = shared.data?.role === "edit";

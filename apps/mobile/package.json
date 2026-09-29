@@ -13,8 +13,10 @@
     "test": "jest"
   },
   "dependencies": {
+    "@openpanel/react-native": "catalog:",
     "@react-native-async-storage/async-storage": "catalog:",
     "@smog/account": "workspace:*",
+    "@smog/analytics": "workspace:*",
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
     "@smog/config": "workspace:*",
@@ -27,6 +29,7 @@
     "@tanstack/react-query": "catalog:",
     "expo": "~57.0.26",
     "expo-apple-authentication": "~57.0.2",
+    "expo-application": "~57.0.3",
     "expo-constants": "~57.0.20",
     "expo-font": "~57.0.4",
     "expo-haptics": "~57.0.3",
