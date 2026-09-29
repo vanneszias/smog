@@ -29,7 +29,11 @@ Execute `docs/superpowers/plans/2026-09-29-phase-2-foundations.md`, Task 1.
 ## Known gaps
 
 - Bun is pinned at 1.3.11 (`packageManager`); upgrade when possible (see DECISIONS).
-- expo-doctor's schema and React Native Directory checks have only run in CI (network); locally they run with `SMOG_OFFLINE=1`.
-- The deploy workflow has never run: it needs the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets per GitHub environment (`staging`, `production`), real KV ids and the workers.dev `SITE_URL`s. D1 migrations start in phase 2.
+- `SMOG_OFFLINE=1 bun run release:check` (local, no network) degrades three expo-doctor checks; CI runs them online and is the authority.
+- The deploy workflow has never deployed: it needs the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets per GitHub environment (`staging`, `production`), real KV ids and the workers.dev `SITE_URL`s. D1 migrations start in phase 2 (`packages/db/migrations`).
 - `bun run audit` ignores three moderate advisories (DECISIONS).
-- The Playwright `e2e` CI job is a disabled placeholder until phase 9.
+- The Playwright `e2e` CI job is a placeholder (off unless `vars.E2E_ENABLED == 'true'`), and the spec's root `test:e2e` script does not exist yet; both come in phase 9.
+- `bun -F @smog/site deploy` bypasses turbo. Once workspace packages need a build step, run `turbo run build --filter=@smog/site^...` first (or make deploy a turbo task depending on `^build`).
+- knip.json has no `packages/features/*` workspace (knip rejects an empty glob); add it with the first feature package (phase 3).
+- The boundaries check does not look at `optionalDependencies` or `vi.mock("@smog/…")` imports; add them in phase 2 Task 1, when packages get Vitest tests.
+- knip prints an Expo warning about a missing `userInterfaceStyle` although `app.config.ts` sets it (knip's Expo plugin loads the config its own way); cosmetic.

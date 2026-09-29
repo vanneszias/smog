@@ -23,9 +23,9 @@ SMOG_OFFLINE=1 bun run release:check  # Same, on a machine without internet acce
 
 `release:check` = `check:ci` → `boundaries` → `scripts/release-config-check.ts` (workflows + wrangler envs) → `check-types` → `test` → `build` → `knip` → `audit` → `scripts/mobile-release-check.ts`. CI (`.github/workflows/ci.yml`) runs exactly this.
 
-`SMOG_OFFLINE=1` only affects expo-doctor, whose schema check (api.expo.dev / exp.host) and React Native Directory check need the network. Offline, the directory check is off (`EXPO_DOCTOR_ENABLE_DIRECTORY_CHECK=0`), fetch failures are warnings (`EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS=1`), and a schema check that crashed while fetching is tolerated; every other doctor failure still fails. Never set it in CI.
+`SMOG_OFFLINE=1` only affects expo-doctor, and the result is **not equivalent to CI**. Offline, three doctor checks are degraded (the script prints this list every time): the config schema check is tolerated when the schema fetch crashes; the SDK dependency-version check only compares against the bundled native-module list, so the api.expo.dev pins (react, react-native, typescript, jest-expo, …) go unchecked; and the React Native Directory check is off. Fetch failures are warnings (`EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS=1`). Every other doctor failure still fails. Never set it in CI; CI is the authority.
 
-Deploys run from `.github/workflows/deploy.yml` on pushes to `develop` (staging) and `master` (production): D1 migrations, then `CLOUDFLARE_ENV=<env> bun -F @smog/site deploy`. Without the `CLOUDFLARE_API_TOKEN` secret the job skips with a warning.
+Deploys run from `.github/workflows/deploy.yml` on pushes to `develop` (staging) and `master` (production). It first runs `ci.yml` (reusable, `workflow_call`) as the `release-check` job; `deploy` needs it. Then D1 migrations (once `packages/db/migrations/*.sql` exist), then `CLOUDFLARE_ENV=<env> bun -F @smog/site deploy`. Without the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets the job skips with a warning.
 
 Use `bun run <script>` for scripts whose name clashes with a Bun built-in (`build`, `test`).
 

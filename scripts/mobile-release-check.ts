@@ -6,18 +6,29 @@ import { join } from "node:path";
  * the bundle size.
  *
  * Offline mode (`SMOG_OFFLINE=1`) is for machines without access to
- * api.expo.dev / exp.host and reactnative.directory. It turns off the React
- * Native Directory check (`EXPO_DOCTOR_ENABLE_DIRECTORY_CHECK=0`), makes
- * doctor treat fetch failures as warnings (`EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS=1`),
- * and tolerates the config schema check only when it crashed while fetching
- * the schema (a proxy that answers with a non-JSON body). Every other doctor
- * failure still fails. CI never sets it.
+ * api.expo.dev / exp.host and reactnative.directory. It is NOT equivalent to
+ * CI; three doctor checks are degraded (see OFFLINE_DEGRADED_CHECKS):
+ * - the config schema check is tolerated when it crashes fetching the schema;
+ * - the SDK dependency-version check (`expo install --check`) falls back to
+ *   the bundled native module list, so packages that only the api.expo.dev
+ *   list pins (react, react-native, typescript, jest-expo, ...) go unchecked;
+ * - the React Native Directory check is off (`EXPO_DOCTOR_ENABLE_DIRECTORY_CHECK=0`).
+ * Doctor also treats fetch failures as warnings
+ * (`EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS=1`). Every other doctor failure still
+ * fails. CI never sets it.
  */
 
 const PREFIX = "[mobileReleaseCheck]";
 const ROOT = join(import.meta.dir, "..");
 const MOBILE_DIR = join(ROOT, "apps", "mobile");
 const DIST_DIR = join(MOBILE_DIR, "dist");
+
+/** What SMOG_OFFLINE=1 degrades; printed on every offline run. */
+export const OFFLINE_DEGRADED_CHECKS: readonly string[] = [
+  "Check Expo config (app.json/ app.config.js) schema: tolerated when the schema fetch crashes",
+  "Check that packages match versions required by installed Expo SDK: bundled native modules only; react, react-native, typescript, jest-expo and other api.expo.dev pins are not checked",
+  "Validate packages against React Native Directory package metadata: disabled",
+];
 
 /** Doctor checks that only fail offline because they fetch from the network. */
 const NETWORK_CHECKS = new Set([
@@ -107,10 +118,15 @@ async function runDoctor(offline: boolean): Promise<void> {
   if (!verdict.ok) {
     throw new Error(verdict.reason);
   }
-  if (verdict.skipped?.length) {
+  if (offline) {
     console.warn(
-      `${PREFIX} SMOG_OFFLINE=1: skipped network-only checks: ${verdict.skipped.join("; ")}`
+      `${PREFIX} SMOG_OFFLINE=1: not equivalent to CI. Degraded expo-doctor checks:\n${OFFLINE_DEGRADED_CHECKS.map((check) => `  - ${check}`).join("\n")}`
     );
+    if (verdict.skipped?.length) {
+      console.warn(
+        `${PREFIX} SMOG_OFFLINE=1: tolerated failures this run: ${verdict.skipped.join("; ")}`
+      );
+    }
   }
 }
 

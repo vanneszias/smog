@@ -6,10 +6,15 @@ import {
   checkDeployWorkflow,
   checkReleaseConfig,
   checkWranglerConfig,
+  migrationsDirFromWrangler,
 } from "./release-config-check";
 
 const ROOT = join(import.meta.dir, "..");
 const FIXTURES = join(import.meta.dir, "__fixtures__", "release-config");
+const CLOUDFLARE_ENV_LINE = /CLOUDFLARE_ENV: \$\{\{.*\}\}/;
+const ACCOUNT_ID_LINE =
+  /CLOUDFLARE_ACCOUNT_ID: \$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/;
+const CI = readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8");
 const DEPLOY = readFileSync(
   join(ROOT, ".github", "workflows", "deploy.yml"),
   "utf8"
@@ -41,7 +46,76 @@ describe("checkCiWorkflow", () => {
   });
 });
 
+describe("checkCiWorkflow order and reuse", () => {
+  test("fails when release:check runs before the install", () => {
+    const swapped = CI.replace(
+      "run: bun install --frozen-lockfile",
+      "run: __INSTALL__"
+    )
+      .replace(
+        "run: bun run release:check",
+        "run: bun install --frozen-lockfile"
+      )
+      .replace("run: __INSTALL__", "run: bun run release:check");
+    expect(checkCiWorkflow(swapped).join("\n")).toContain("before");
+  });
+
+  test("fails when ci.yml cannot be called by deploy.yml", () => {
+    const errors = checkCiWorkflow(
+      CI.replace("workflow_call:", "workflow_dispatch:")
+    );
+    expect(errors.join("\n")).toContain("workflow_call");
+  });
+});
+
 describe("checkDeployWorkflow", () => {
+  test("fails when the deploy does not wait for the release check", () => {
+    const errors = checkDeployWorkflow(
+      DEPLOY.replace("needs: release-check", "")
+    );
+    expect(errors.join("\n")).toContain("needs");
+  });
+
+  test("fails when CLOUDFLARE_ENV drifts from the environment", () => {
+    const errors = checkDeployWorkflow(
+      DEPLOY.replace(CLOUDFLARE_ENV_LINE, "CLOUDFLARE_ENV: staging")
+    );
+    expect(errors.join("\n")).toContain("CLOUDFLARE_ENV");
+  });
+
+  test("fails when the migrations guard looks at another directory", () => {
+    const errors = checkDeployWorkflow(
+      DEPLOY.replace("packages/db/migrations/*.sql", "apps/site/migrations/**")
+    );
+    expect(errors.join("\n")).toContain("packages/db/migrations");
+  });
+
+  test("follows migrations_dir from wrangler.jsonc", () => {
+    expect(
+      checkDeployWorkflow(DEPLOY, "packages/other/migrations").join("\n")
+    ).toContain("packages/other/migrations");
+  });
+
+  test("a ::warning:: in a comment does not count", () => {
+    const errors = checkDeployWorkflow(
+      DEPLOY.replace('echo "::warning::', 'echo "warning:').replace(
+        "jobs:",
+        "# ::warning::\njobs:"
+      )
+    );
+    expect(errors.join("\n")).toContain("::warning::");
+  });
+
+  test("a secret named only in a comment does not count", () => {
+    const errors = checkDeployWorkflow(
+      DEPLOY.replace(
+        ACCOUNT_ID_LINE,
+        "CLOUDFLARE_ACCOUNT_ID: x # secrets.CLOUDFLARE_ACCOUNT_ID"
+      )
+    );
+    expect(errors.join("\n")).toContain("CLOUDFLARE_ACCOUNT_ID");
+  });
+
   test("fails on a raw wrangler deploy", () => {
     const errors = checkDeployWorkflow(
       DEPLOY.replace("bun -F @smog/site deploy", "bunx wrangler deploy")
@@ -69,6 +143,39 @@ describe("checkDeployWorkflow", () => {
       DEPLOY.replaceAll("secrets.CLOUDFLARE_ACCOUNT_ID", "vars.ACCOUNT")
     );
     expect(errors.join("\n")).toContain("CLOUDFLARE_ACCOUNT_ID");
+  });
+});
+
+describe("migrationsDirFromWrangler", () => {
+  test("defaults to packages/db/migrations without D1", () => {
+    expect(migrationsDirFromWrangler('{ "env": { "staging": {} } }')).toBe(
+      "packages/db/migrations"
+    );
+  });
+
+  test("resolves migrations_dir relative to apps/site", () => {
+    const config = JSON.stringify({
+      env: {
+        production: {
+          d1_databases: [
+            { binding: "DB", migrations_dir: "../../packages/db/migrations" },
+          ],
+        },
+        staging: {
+          d1_databases: [
+            { binding: "DB", migrations_dir: "../../packages/db/migrations" },
+          ],
+        },
+      },
+    });
+    expect(migrationsDirFromWrangler(config)).toBe("packages/db/migrations");
+  });
+
+  test("uses the wrangler default when migrations_dir is absent", () => {
+    const config = JSON.stringify({
+      env: { staging: { d1_databases: [{ binding: "DB" }] } },
+    });
+    expect(migrationsDirFromWrangler(config)).toBe("apps/site/migrations");
   });
 });
 
