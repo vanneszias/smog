@@ -1,0 +1,23 @@
+{
+  "name": "@smog/styles",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens": "./src/tokens.ts",
+    "./contrast": "./src/contrast.ts",
+    "./theme.css": "./generated/theme.css",
+    "./tailwind-preset": "./generated/tailwind-preset.cjs"
+  },
+  "scripts": {
+    "check-types": "tsc -b",
+    "generate": "bun scripts/generate.ts",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@smog/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

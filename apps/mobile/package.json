@@ -13,6 +13,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@smog/styles": "workspace:*",
     "expo": "~57.0.26",
     "expo-constants": "~57.0.20",
     "expo-font": "~57.0.4",

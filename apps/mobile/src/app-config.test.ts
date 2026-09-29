@@ -1,4 +1,7 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
+import { tokens } from "@smog/styles/tokens";
 import type { ConfigContext, ExpoConfig } from "expo/config";
 import createConfig from "../app.config";
 
@@ -65,6 +68,33 @@ describe("app.config", () => {
     expect(config.ios?.associatedDomains).toEqual([
       "applinks:smog-site-staging.workers.dev",
     ]);
+  });
+
+  it("uses the generated brand assets on the brand green", () => {
+    const config = load();
+    expect(config.icon).toBe("./assets/icon.png");
+    expect(config.ios?.icon).toBe("./assets/smog.icon");
+    expect(config.android?.adaptiveIcon).toEqual({
+      backgroundColor: tokens.color.brand.green,
+      foregroundImage: "./assets/android-icon-foreground.png",
+      monochromeImage: "./assets/android-icon-monochrome.png",
+    });
+    const splash = config.plugins?.find(
+      (plugin) => Array.isArray(plugin) && plugin[0] === "expo-splash-screen"
+    );
+    expect(splash?.[1]).toMatchObject({
+      backgroundColor: tokens.color.brand.green,
+      image: "./assets/splash-icon.png",
+    });
+    for (const asset of [
+      "icon.png",
+      "smog.icon/icon.json",
+      "android-icon-foreground.png",
+      "android-icon-monochrome.png",
+      "splash-icon.png",
+    ]) {
+      expect(existsSync(join(process.cwd(), "assets", asset))).toBe(true);
+    }
   });
 
   it("registers the permission-stripping plugin", () => {
