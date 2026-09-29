@@ -9,6 +9,7 @@ import {
   appendItemsStmt,
   createListsRouter,
   insertListsStmt,
+  shareUrl,
   touchListsWithNewItemsStmt,
   unplacedItemsStmt,
 } from "@smog/lists/server";
@@ -44,11 +45,13 @@ const system = os.system.router({
 
 /** The app router: implements `appContract` (feature routers join here). */
 export const appRouter = os.router({
-  // The guest import writes through the favorites and lists builders.
+  // The guest import writes through the favorites and lists builders; the
+  // export builds share links with the lists' URL.
   account: createAccountRouter({
     appendItems: appendItemsStmt,
     insertFavorites: insertFavoritesStmt,
     insertLists: insertListsStmt,
+    shareUrl,
     touchLists: touchListsWithNewItemsStmt,
     unplacedItems: unplacedItemsStmt,
   }),

@@ -1,8 +1,9 @@
 import { env } from "cloudflare:workers";
-import type { SessionWithUser } from "@smog/auth";
+import { type Auth, createAuth, type SessionWithUser } from "@smog/auth";
 import type { User } from "@smog/db";
 import { createDb, type Db } from "@smog/db/client";
 import { makeGesture, makeUser } from "@smog/db/testing";
+import { MemoryEmailSender } from "@smog/email";
 import { makeRpcContext } from "@smog/rpc/testing";
 
 export function testDb(): Db {
@@ -131,4 +132,110 @@ export async function storedConsent(userId: string): Promise<StoredConsent[]> {
     .bind(userId)
     .all<StoredConsent>();
   return results;
+}
+
+export const SITE_URL = "http://localhost:5173";
+export const PASSWORD = "correct horse battery";
+
+/** A Better Auth instance over the test D1, configured as the site's (dev). */
+function testAuth(): Auth {
+  return createAuth({
+    baseURL: SITE_URL,
+    db: testDb(),
+    email: new MemoryEmailSender(),
+    env: {
+      BETTER_AUTH_SECRET: "account-test-secret-at-least-32-characters",
+      EMAIL_FROM: "SMOG & Co <noreply@smog.vlaanderen>",
+      EMAIL_REPLY_TO: "info@smog.vlaanderen",
+      ENVIRONMENT: "dev",
+      SITE_URL,
+    },
+  });
+}
+
+/** Signs in with the password and returns the session cookie header. */
+export async function signIn(
+  auth: Auth,
+  email: string,
+  password = PASSWORD
+): Promise<string> {
+  const { headers } = await auth.api.signInEmail({
+    body: { email, password },
+    returnHeaders: true,
+  });
+  return headers
+    .getSetCookie()
+    .map((cookie) => cookie.split(";")[0])
+    .join("; ");
+}
+
+export interface AuthedUser {
+  auth: Auth;
+  cookie: string;
+  user: User;
+}
+
+/**
+ * A verified user with a password, signed in through Better Auth (a real
+ * session row and a signed cookie).
+ */
+export async function signedUpUser(name = "Anna"): Promise<AuthedUser> {
+  const auth = testAuth();
+  const email = `${crypto.randomUUID()}@smog.test`;
+  await auth.api.signUpEmail({ body: { email, name, password: PASSWORD } });
+  await env.DB.prepare("UPDATE user SET email_verified = 1 WHERE email = ?")
+    .bind(email)
+    .run();
+  const cookie = await signIn(auth, email);
+  const row = await testDb().query.user.findFirst({
+    where: (table, { eq }) => eq(table.email, email),
+  });
+  if (!row) {
+    throw new Error("[test] Failed to sign up a user");
+  }
+  return { auth, cookie, user: row };
+}
+
+/**
+ * A signed-in user without a password (as after a Google, Apple or
+ * passkey sign-up): the credential account is removed after sign-in.
+ */
+export async function passwordlessUser(name = "Anna"): Promise<AuthedUser> {
+  const authed = await signedUpUser(name);
+  await env.DB.prepare(
+    "DELETE FROM account WHERE user_id = ? AND provider_id = 'credential'"
+  )
+    .bind(authed.user.id)
+    .run();
+  return authed;
+}
+
+/** An rpc context with the real auth, the cookie and the session it reads to. */
+export async function authedContext(
+  authed: Pick<AuthedUser, "auth" | "cookie">,
+  envOverrides: NonNullable<Parameters<typeof makeRpcContext>[0]>["env"] = {}
+) {
+  const headers = new Headers({ cookie: authed.cookie, origin: SITE_URL });
+  return {
+    context: makeRpcContext({
+      auth: authed.auth,
+      db: testDb(),
+      env: envOverrides,
+      request: new Request(`${SITE_URL}/api/rpc/account`, {
+        headers,
+        method: "POST",
+      }),
+      session: await authed.auth.api.getSession({ headers }),
+    }),
+  };
+}
+
+export async function count(
+  sql: string,
+  ...params: unknown[]
+): Promise<number> {
+  const row = await env.DB.prepare(sql)
+    .bind(...params)
+    .first<{ n: number }>();
+  return row?.n ?? 0;
 }

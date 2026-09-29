@@ -59,7 +59,7 @@ function newServer(): Server {
 /** The account contract (plus the reads the hook refreshes) as a real oRPC client. */
 function fakeApi(server: Server) {
   const os = implement({
-    account: accountContract,
+    account: { importGuestData: accountContract.importGuestData },
     favorites: { ids: favoritesContract.ids },
     lists: { mine: listsContract.mine },
   });
