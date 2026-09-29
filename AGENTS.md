@@ -24,10 +24,11 @@ Use `bun run <script>` for scripts whose name clashes with a Bun built-in (`buil
 ```bash
 bun -F @smog/site dev        # Vite dev server with local bindings (port 5173)
 bun -F @smog/site build      # Build (env.dev; deploy builds set CLOUDFLARE_ENV=staging|production)
-bun -F @smog/site deploy:dry # Build for staging and validate with wrangler deploy --dry-run
+bun -F @smog/site deploy:dry # Build for staging, run the deploy guard, wrangler deploy --dry-run
+# Deploys: CLOUDFLARE_ENV=staging|production bun -F @smog/site deploy (never bare `wrangler deploy`)
 bun -F @smog/site test       # Vitest (Workers pool)
 bun -F @smog/site check-types
-bun -F @smog/site cf-typegen # Regenerate worker-configuration.d.ts
+bun -F @smog/site cf-typegen # Generate worker-configuration.d.ts (gitignored; check-types does it too)
 ```
 
 ### Mobile (Expo + Expo Router + NativeWind)

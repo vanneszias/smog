@@ -32,7 +32,7 @@
     "knip": "knip --no-progress",
     "release:check": "bun run check:ci && bun run boundaries && bun run check-types && bun run test && bun run build && bun run knip",
     "test": "turbo run test test:scripts",
-    "test:scripts": "bun test scripts"
+    "test:scripts": "bun test ./scripts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",

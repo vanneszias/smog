@@ -9,4 +9,8 @@ export default defineConfig({
     }),
     tanstackStart(),
   ],
+  test: {
+    // `scripts/` runs on Bun (`bun test scripts`), not in workerd.
+    include: ["test/**/*.test.ts"],
+  },
 });

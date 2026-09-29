@@ -6,11 +6,12 @@
   "scripts": {
     "build": "vite build",
     "cf-typegen": "wrangler types",
-    "check-types": "tsc -b",
-    "deploy:dry": "CLOUDFLARE_ENV=staging vite build && wrangler deploy --dry-run --env staging",
+    "check-types": "wrangler types && tsc -b && tsc -p scripts",
+    "deploy": "vite build && bun scripts/deploy-guard.ts && wrangler deploy --env $CLOUDFLARE_ENV",
+    "deploy:dry": "CLOUDFLARE_ENV=staging bun run deploy --dry-run",
     "dev": "vite dev --port 5173",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run && bun test scripts"
   },
   "dependencies": {
     "@smog/config": "workspace:*",
@@ -23,6 +24,7 @@
     "@cloudflare/vite-plugin": "1.62.0",
     "@cloudflare/vitest-plugin": "catalog:",
     "@tailwindcss/vite": "4.3.3",
+    "@types/bun": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",

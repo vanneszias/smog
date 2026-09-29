@@ -10,8 +10,12 @@
       "project": ["src/**/*.{ts,tsx}"]
     },
     "apps/site": {
-      "entry": ["src/routes/**/*.{ts,tsx}", "test/**/*.test.ts"],
-      "project": ["src/**/*.{ts,tsx,css}", "test/**/*.ts"],
+      "entry": [
+        "src/routes/**/*.{ts,tsx}",
+        "test/**/*.test.ts",
+        "scripts/*.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx,css}", "test/**/*.ts", "scripts/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     }
   }

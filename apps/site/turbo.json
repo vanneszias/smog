@@ -8,6 +8,9 @@
     },
     "dev": {
       "passThroughEnv": ["CLOUDFLARE_ENV"]
+    },
+    "check-types": {
+      "outputs": ["worker-configuration.d.ts"]
     }
   }
 }

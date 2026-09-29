@@ -17,11 +17,20 @@ export const Route = createRootRoute({
       { title: "SMOG & Co" },
     ],
   }),
+  notFoundComponent: NotFound,
   shellComponent: RootDocument,
 });
 
 function RootComponent(): ReactNode {
   return <Outlet />;
+}
+
+function NotFound(): ReactNode {
+  return (
+    <main className="flex min-h-screen items-center justify-center">
+      <p>404</p>
+    </main>
+  );
 }
 
 function RootDocument({ children }: { children: ReactNode }): ReactNode {

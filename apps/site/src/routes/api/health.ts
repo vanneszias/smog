@@ -6,8 +6,13 @@ export const Route = createFileRoute("/api/health")({
   server: {
     handlers: {
       GET: (): Response => {
-        const { ENVIRONMENT } = parseWorkerVars(env);
-        return Response.json({ environment: ENVIRONMENT, ok: true });
+        try {
+          const { ENVIRONMENT } = parseWorkerVars(env);
+          return Response.json({ environment: ENVIRONMENT, ok: true });
+        } catch (error) {
+          console.error("[health] Failed to read worker vars:", error);
+          throw error;
+        }
       },
     },
   },
