@@ -1,0 +1,64 @@
+import { implementRpc } from "@smog/rpc";
+import { gesturesContract } from "../contract";
+import {
+  findGestureBySlug,
+  findGesturesByIds,
+  findRelatedGestures,
+  InvalidCursorError,
+  listCategories,
+  listGestures,
+  listSitemap,
+} from "./queries";
+import { searchGestures } from "./search";
+
+const os = implementRpc(gesturesContract);
+
+/**
+ * The `gestures` slice of the app router. Every procedure is public (no
+ * guard); the site's `RL_API` limit and `logErrors` apply to all of them.
+ */
+export const gesturesRouter = os.router({
+  byIds: os.byIds.handler(
+    async ({ context, input }) => await findGesturesByIds(context.db, input.ids)
+  ),
+
+  bySlug: os.bySlug.handler(async ({ context, errors, input }) => {
+    const gesture = await findGestureBySlug(context.db, input.slug);
+    if (!gesture) {
+      throw errors.NOT_FOUND();
+    }
+    return gesture;
+  }),
+
+  categories: os.categories.handler(
+    async ({ context }) => await listCategories(context.db)
+  ),
+
+  list: os.list.handler(async ({ context, errors, input }) => {
+    try {
+      return await listGestures(context.db, input);
+    } catch (error) {
+      if (error instanceof InvalidCursorError) {
+        throw errors.VALIDATION({
+          data: { fieldErrors: { cursor: ["invalid"] }, formErrors: [] },
+        });
+      }
+      throw error;
+    }
+  }),
+
+  related: os.related.handler(
+    async ({ context, input }) =>
+      await findRelatedGestures(context.db, input.slug, input.limit)
+  ),
+
+  // analytics: search_performed is sent by the client (never the query text).
+  search: os.search.handler(
+    async ({ context, input }) =>
+      await searchGestures({ db: context.db, kv: context.kv }, input)
+  ),
+
+  sitemap: os.sitemap.handler(
+    async ({ context }) => await listSitemap(context.db)
+  ),
+});

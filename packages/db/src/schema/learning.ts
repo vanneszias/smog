@@ -51,7 +51,12 @@ export const gesture = sqliteTable(
     legacyId: text("legacy_id").unique(),
   },
   (t) => [
-    index("gesture_published_name_idx").on(t.publishedAt, t.name),
+    // The public catalogue order (`@smog/gestures` list: published only,
+    // `name COLLATE NOCASE, id` keyset): the partial index serves the filter,
+    // the order and the cursor, so a page reads only its own rows.
+    index("gesture_published_name_idx")
+      .on(sql`${col(t.name)} COLLATE NOCASE`, t.id)
+      .where(sql`${col(t.publishedAt)} IS NOT NULL`),
     index("gesture_mux_asset_id_idx").on(t.muxAssetId),
   ]
 );

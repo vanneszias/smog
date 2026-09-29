@@ -1,4 +1,5 @@
 import { ENVIRONMENTS } from "@smog/config/env/worker";
+import { gesturesContract } from "@smog/gestures/contract";
 import { baseContract, roleSchema } from "@smog/rpc/contract";
 import { z } from "zod";
 
@@ -24,6 +25,7 @@ export const systemContract = {
  * added here as they land (`gestures`, `favorites`, …).
  */
 export const appContract = {
+  gestures: gesturesContract,
   system: systemContract,
 };
 

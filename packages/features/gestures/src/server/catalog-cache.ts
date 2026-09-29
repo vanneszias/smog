@@ -1,0 +1,80 @@
+/**
+ * The typo tier's catalog projection (spec §7.1 step 4): every published
+ * gesture's id, name, keywords and categories, normalised. It lives in
+ * isolate memory and is keyed by the KV version key `catalog:version`,
+ * which every gesture or category write bumps (`bumpCatalogVersion`, admin
+ * in phase 5). Other isolates see a bump within KV's propagation delay
+ * (up to a minute), which only delays typo matches for the change.
+ */
+import { gesture } from "@smog/db";
+import type { Db } from "@smog/db/client";
+import { newId } from "@smog/utils";
+import { normalizeQuery } from "../normalize-query";
+import type { SearchableGesture } from "../ranking";
+import { isPublished, nameOrder, projectionColumns } from "./queries";
+
+export const CATALOG_VERSION_KEY = "catalog:version";
+
+/** A published gesture, normalised for the typo tier. */
+export interface CatalogEntry extends SearchableGesture {
+  categories: string[];
+  /** Published category slugs, for the category filter. */
+  categorySlugs: string[];
+  keywords: string[];
+}
+
+let cached: { entries: readonly CatalogEntry[]; version: string } | null = null;
+
+/**
+ * Starts a new catalog version. A fresh id rather than a counter, so two
+ * concurrent bumps can never leave an isolate on a stale projection under
+ * a version it has already seen.
+ */
+export async function bumpCatalogVersion(kv: KVNamespace): Promise<string> {
+  const version = newId();
+  try {
+    await kv.put(CATALOG_VERSION_KEY, version);
+    return version;
+  } catch (error) {
+    console.error("[gestures] Failed to bump the catalog version:", error);
+    throw error;
+  }
+}
+
+async function loadProjection(db: Db): Promise<CatalogEntry[]> {
+  const rows = await db
+    .select(projectionColumns)
+    .from(gesture)
+    .where(isPublished)
+    .orderBy(...nameOrder);
+  return rows.map((row) => ({
+    categories: row.categories.map((item) => normalizeQuery(item.name)),
+    categorySlugs: row.categorySlugs,
+    id: row.id,
+    keywords: row.keywords.map(normalizeQuery),
+    name: normalizeQuery(row.name),
+  }));
+}
+
+/**
+ * The projection for the current `catalog:version`, loaded from D1 once
+ * per isolate and version. A missing key (a new namespace) starts one.
+ */
+export async function getCatalogProjection(
+  db: Db,
+  kv: KVNamespace
+): Promise<readonly CatalogEntry[]> {
+  try {
+    const version =
+      (await kv.get(CATALOG_VERSION_KEY)) ?? (await bumpCatalogVersion(kv));
+    if (cached?.version === version) {
+      return cached.entries;
+    }
+    const entries = await loadProjection(db);
+    cached = { entries, version };
+    return entries;
+  } catch (error) {
+    console.error("[gestures] Failed to load the catalog projection:", error);
+    throw error;
+  }
+}

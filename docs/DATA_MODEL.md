@@ -442,7 +442,7 @@ Indexes: `category_published_sort_idx` (published_at, sort_order).
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
 | `legacy_id` | `legacyId` | text | yes | unique |
 
-Indexes: `gesture_published_name_idx` (published_at, name); `gesture_mux_asset_id_idx` (mux_asset_id).
+Indexes: `gesture_published_name_idx` (name COLLATE NOCASE, id) WHERE published_at IS NOT NULL (the public catalogue order and its keyset cursor, migration 0002); `gesture_mux_asset_id_idx` (mux_asset_id).
 #### `gesture_category`
 
 | Column | TS | Type | Null | Notes |
@@ -517,7 +517,7 @@ CHECK: `list_share_role_check`.
 | `categories` | yes | the names of its categories, joined by spaces |
 | `description` | yes | `gesture.description` |
 
-`tokenize = 'unicode61 remove_diacritics 2'`, `prefix = '2 3'`. No triggers: the gestures service rewrites the row (`reindexGesture`) in the same D1 batch as every write to the gesture, its keywords or its categories. Rank with `bm25(gesture_fts, …)` column weights (phase 3).
+`tokenize = 'unicode61 remove_diacritics 2'`, `prefix = '2 3'`. No triggers: the gestures service rewrites the row (`reindexGesture` / `reindexGestureStatements` in `@smog/gestures/server`) in the same D1 batch as every write to the gesture, its keywords or its categories. The row is defined once, in `src/fts.ts` (`rebuildGestureFtsSql`): `DELETE` + `INSERT … SELECT` from the tables, so it indexes the batch's own writes; only **published** category names are indexed, so (un)publishing or renaming a category reindexes its gestures. The dev seed renders the same statements. Search keeps the best 200 candidates by `bm25(gesture_fts, 0, 10, 5, 3, 1)`, then ranks them in TS (spec §7.1).
 
 `gesture_id` is `UNINDEXED`, so `reindexGesture`'s `DELETE FROM gesture_fts WHERE gesture_id = ?` scans the FTS table. That is fine at the catalogue's size (a few thousand gestures). If it gets slow, phase 3 can key the rows by rowid instead (a stable integer per gesture, `DELETE … WHERE rowid = ?`).
 
@@ -691,5 +691,5 @@ CHECK: `sponsorship_token_purpose_check`.
 
 - `bun -F @smog/db db:generate` runs `drizzle-kit generate` (generate only; wrangler applies migrations). Hand-written SQL (such as the FTS table) goes in a file made with `drizzle-kit generate --custom --name <name>`, so the drizzle journal stays in step.
 - `bun -F @smog/db migrate:dev` applies them to the local dev D1 (`wrangler d1 migrations apply DB --env dev --local`, from `apps/site`; `migrations_dir` is `../../packages/db/migrations` in every env). `deploy.yml` applies them remotely before each deploy.
-- `bun -F @smog/db seed:dev` regenerates `seed/dev.sql` (`scripts/seed.ts`) and applies it locally: 5 categories, 20 published gestures (sample Mux playback id, keywords, FTS rows) and the admin user `admin@smog.test` with the **dev-only** password `smog-dev-admin` (a Better Auth scrypt credential with a fixed salt; the seed replaces any other credential of that user). The admin row upserts on `email`, so an account that already signed up with that address keeps its id and is promoted to `admin`. Ids and timestamps are fixed and every statement is an upsert, so it can be re-run.
+- `bun -F @smog/db seed:dev` regenerates `seed/dev.sql` (`scripts/seed.ts`) and applies it locally: 5 categories, 20 published gestures (sample Mux playback id, keywords, FTS rows rebuilt by `rebuildGestureFtsSql`, the statements `reindexGesture` runs) and the admin user `admin@smog.test` with the **dev-only** password `smog-dev-admin` (a Better Auth scrypt credential with a fixed salt; the seed replaces any other credential of that user). The admin row upserts on `email`, so an account that already signed up with that address keeps its id and is promoted to `admin`. Ids and timestamps are fixed and every statement is an upsert, so it can be re-run.
 - Tests that need D1 use `@cloudflare/vitest-plugin`: the vitest config passes `readD1Migrations()` as the `TEST_MIGRATIONS` binding and lists `@smog/db/testing/apply-migrations` in `setupFiles`; `@smog/db/testing` has `createTestDb(env)` and the `makeUser` / `makeCategory` / `makeGesture` factories. See `packages/db/vitest.config.ts`.
