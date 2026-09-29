@@ -21,6 +21,7 @@ interface PackageJson {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   name?: string;
+  optionalDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
   workspaces?: string[] | { packages?: string[] };
 }
@@ -34,8 +35,9 @@ const SCOPE = "@smog/";
 const SOURCE_GLOB = new Bun.Glob("**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}");
 const SKIPPED_DIRS =
   /(^|\/)(node_modules|dist|build|\.wrangler|\.expo|\.output|\.tanstack|\.turbo|__fixtures__)\//;
+/** `from`, `import`, `import()`, `require()` and `vi.mock()` / `jest.mock()`. */
 const IMPORT_RE =
-  /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)["'](@smog\/[^"']+)["']/g;
+  /(?:\bfrom\s*|\bimport\s*\(?\s*|\b(?:require|(?:vi|jest)\.(?:mock|doMock|unmock|importActual|requireActual))\s*\(\s*)["'](@smog\/[^"']+)["']/g;
 
 function readJson(path: string): PackageJson {
   return JSON.parse(readFileSync(path, "utf8")) as PackageJson;
@@ -72,6 +74,7 @@ function declaredDependencies(manifest: PackageJson): string[] {
   const names = new Set([
     ...Object.keys(manifest.dependencies ?? {}),
     ...Object.keys(manifest.devDependencies ?? {}),
+    ...Object.keys(manifest.optionalDependencies ?? {}),
     ...Object.keys(manifest.peerDependencies ?? {}),
   ]);
   return [...names].filter((name) => name.startsWith(SCOPE)).sort();
@@ -116,6 +119,7 @@ export function checkBoundaries(root: string): Violation[] {
         (name) =>
           !(
             workspace.manifest.dependencies?.[name] ||
+            workspace.manifest.optionalDependencies?.[name] ||
             workspace.manifest.peerDependencies?.[name]
           )
       )
