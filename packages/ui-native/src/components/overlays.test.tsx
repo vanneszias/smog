@@ -1,6 +1,6 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import { tokens } from "@smog/styles/tokens";
-import { act, fireEvent, screen } from "@testing-library/react-native";
+import { act, fireEvent, screen, within } from "@testing-library/react-native";
 import { notificationAsync } from "expo-haptics";
 import { colorScheme } from "nativewind";
 import { type ReactElement, useCallback } from "react";
@@ -220,6 +220,52 @@ function DangerToastButton(): ReactElement {
 }
 
 describe("Toast", () => {
+  it("draws above an open dialog, once", async () => {
+    await renderKit(
+      <Dialog open>
+        <DialogContent title="Share list">
+          <ToastButton />
+        </DialogContent>
+      </Dialog>
+    );
+    await fireEvent.press(screen.getByRole("button", { name: "Show" }));
+    // Only the topmost viewport (inside the dialog's modal) draws it.
+    expect(screen.getAllByTestId("toast")).toHaveLength(1);
+    const modalRoot = screen.getByTestId("overlay-theme-root");
+    expect(within(modalRoot).getByText("Saved")).toBeOnTheScreen();
+  });
+
+  it("draws above an open sheet, once", async () => {
+    await renderKit(
+      <Sheet open>
+        <SheetContent title="Filter gestures">
+          <ToastButton />
+        </SheetContent>
+      </Sheet>
+    );
+    await fireEvent.press(screen.getByRole("button", { name: "Show" }));
+    expect(screen.getAllByTestId("toast")).toHaveLength(1);
+    expect(
+      within(screen.getByTestId("sheet-toasts")).getByText("Saved")
+    ).toBeOnTheScreen();
+  });
+
+  it("moves back to the screen when the dialog closes", async () => {
+    await renderKit(
+      <Dialog defaultOpen>
+        <DialogContent title="Share list">
+          <ToastButton />
+        </DialogContent>
+      </Dialog>
+    );
+    await fireEvent.press(screen.getByRole("button", { name: "Show" }));
+    await fireEvent.press(
+      screen.getByRole("button", { name: t("a11y.close") })
+    );
+    expect(screen.getAllByTestId("toast")).toHaveLength(1);
+    expect(screen.queryByTestId("overlay-theme-root")).toBeNull();
+  });
+
   it("shows a polite toast in the notifications region and dismisses it", async () => {
     await renderKit(<ToastButton />);
     await fireEvent.press(screen.getByRole("button", { name: "Show" }));

@@ -1,9 +1,11 @@
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 /**
  * Mobile release gate: `expo-doctor`, then `expo export` (iOS + Android), then
- * the bundle size.
+ * the bundle size, then a production export that must not contain the
+ * component gallery (`apps/mobile/app/settings/developer-tools/gallery.tsx`
+ * drops it behind the inlined `EXPO_PUBLIC_ENVIRONMENT`).
  *
  * Offline mode (`SMOG_OFFLINE=1`) is for machines without access to
  * api.expo.dev / exp.host and reactnative.directory. It is NOT equivalent to
@@ -22,6 +24,10 @@ const PREFIX = "[mobileReleaseCheck]";
 const ROOT = join(import.meta.dir, "..");
 const MOBILE_DIR = join(ROOT, "apps", "mobile");
 const DIST_DIR = join(MOBILE_DIR, "dist");
+/** Inside `dist/` so the tools that ignore `dist` ignore it too. */
+const PRODUCTION_DIST_DIR = join(DIST_DIR, "production");
+/** The gallery's testID (`apps/mobile/src/dev/component-gallery.tsx`). */
+const GALLERY_MARKER = "smog-dev-component-gallery";
 
 /** What SMOG_OFFLINE=1 degrades; printed on every offline run. */
 export const OFFLINE_DEGRADED_CHECKS: readonly string[] = [
@@ -80,6 +86,27 @@ export function doctorVerdict(
     return { ok: false, reason: `expo-doctor failed: ${real.join("; ")}` };
   }
   return { ok: true, skipped: [...failing] };
+}
+
+/**
+ * The gallery must be in dev/staging bundles and absent from production
+ * ones. A dev bundle without the marker means the marker moved, which would
+ * make the production check pass vacuously. Returns the failure, or null.
+ */
+export function galleryVerdict({
+  hasMarker,
+  production,
+}: {
+  hasMarker: boolean;
+  production: boolean;
+}): string | null {
+  if (production && hasMarker) {
+    return "the production bundle contains the component gallery";
+  }
+  if (!(production || hasMarker)) {
+    return `the dev bundle has no gallery marker "${GALLERY_MARKER}"; update GALLERY_MARKER`;
+  }
+  return null;
 }
 
 export function formatBytes(bytes: number): string {
@@ -142,6 +169,60 @@ async function runExport(): Promise<void> {
   }
 }
 
+function bundlesContain(dir: string, marker: string): boolean {
+  for (const platform of ["ios", "android"]) {
+    const bundles = join(dir, "_expo", "static", "js", platform);
+    for (const file of readdirSync(bundles)) {
+      if (readFileSync(join(bundles, file)).includes(marker)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+async function exportProduction(): Promise<void> {
+  const proc = Bun.spawn(
+    [
+      "bunx",
+      "expo",
+      "export",
+      "--platform",
+      "ios",
+      "--platform",
+      "android",
+      "--output-dir",
+      PRODUCTION_DIST_DIR,
+      // Metro's transform cache does not key on EXPO_PUBLIC_* values, so a
+      // cached dev transform would keep the gallery (the app's `export`
+      // script clears it too, for the same reason in the other direction).
+      "--clear",
+    ],
+    {
+      cwd: MOBILE_DIR,
+      env: { ...process.env, EXPO_PUBLIC_ENVIRONMENT: "production" },
+      stderr: "inherit",
+      stdout: "ignore",
+    }
+  );
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    throw new Error(`the production expo export exited with ${exitCode}`);
+  }
+}
+
+function checkGallery(dir: string, production: boolean): void {
+  const failure = galleryVerdict({
+    hasMarker: bundlesContain(dir, GALLERY_MARKER),
+    production,
+  });
+  if (failure) {
+    throw new Error(failure);
+  }
+  const state = production ? "absent from production" : "present in dev";
+  console.log(`${PREFIX} component gallery ${state} bundles`);
+}
+
 function reportBundleSize(): void {
   for (const platform of ["ios", "android"]) {
     const dir = join(DIST_DIR, "_expo", "static", "js", platform);
@@ -170,6 +251,14 @@ async function main(): Promise<void> {
     reportBundleSize();
   } catch (error) {
     console.error(`${PREFIX} Failed to measure the bundle:`, error);
+    throw error;
+  }
+  try {
+    checkGallery(DIST_DIR, false);
+    await exportProduction();
+    checkGallery(PRODUCTION_DIST_DIR, true);
+  } catch (error) {
+    console.error(`${PREFIX} Failed the gallery bundle check:`, error);
     throw error;
   }
 }

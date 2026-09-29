@@ -67,7 +67,12 @@
       "ignoreDependencies": ["cloudflare"]
     },
     "apps/mobile": {
-      "entry": ["app/**/*.{ts,tsx}", "plugins/*.js", "src/**/*.test.{ts,tsx}"],
+      "entry": [
+        "app/**/*.{ts,tsx}",
+        "plugins/*.js",
+        "src/**/*.test.{ts,tsx}",
+        "src/dev/*.tsx"
+      ],
       "project": [
         "app/**/*.{ts,tsx}",
         "src/**/*.{ts,tsx}",

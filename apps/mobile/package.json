@@ -8,7 +8,7 @@
     "check-types": "tsc --noEmit",
     "dev": "expo start",
     "doctor": "expo-doctor",
-    "export": "expo export --platform ios --platform android --output-dir dist",
+    "export": "expo export --platform ios --platform android --output-dir dist --clear",
     "ios": "expo run:ios",
     "test": "jest"
   },

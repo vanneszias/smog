@@ -14,6 +14,7 @@ import { createOverlay } from "../lib/overlay";
 import { useShadow, useThemeVars } from "../lib/theme";
 import { IconButton } from "./icon-button";
 import { Heading, Text } from "./text";
+import { ToastViewport } from "./toast";
 
 const overlay = createOverlay("Dialog");
 
@@ -74,7 +75,9 @@ export function ModalCard({
         />
         <View
           accessibilityRole={role}
-          accessibilityViewIsModal
+          // No `accessibilityViewIsModal`: the native Modal is its own
+          // window, so focus already stays inside, and the flag would hide
+          // the toasts drawn next to the card.
           className={cn(
             "w-full flex-col gap-4 rounded-xl border border-border-subtle bg-surface-raised p-6",
             className
@@ -84,6 +87,8 @@ export function ModalCard({
         >
           {children}
         </View>
+        {/* The Modal covers the app's toasts; they draw here while open. */}
+        <ToastViewport />
       </View>
     </Modal>
   );

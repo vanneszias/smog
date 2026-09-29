@@ -84,6 +84,12 @@ import { ScrollView, View } from "react-native";
 
 const noop = (): void => undefined;
 
+/**
+ * The gallery's test id, unique in the app: the mobile release check fails a
+ * production bundle that contains it (the gallery must be compiled out).
+ */
+const GALLERY_MARKER = "smog-dev-component-gallery";
+
 const VARIANTS = ["primary", "secondary", "ghost", "danger"] as const;
 const SIZES = ["sm", "md", "lg"] as const;
 const BADGES = [
@@ -104,7 +110,10 @@ function isThemeChoice(value: string): value is ThemeChoice {
 export function ComponentGallery(): ReactElement {
   const { t } = useTranslation();
   return (
-    <ScrollView contentContainerClassName="flex-col gap-10 px-4 py-6">
+    <ScrollView
+      contentContainerClassName="flex-col gap-10 px-4 py-6"
+      testID={GALLERY_MARKER}
+    >
       <View className="flex-col gap-3">
         <Logo size="md" />
         <Heading level={1}>{t("devTools.componentGallery")}</Heading>

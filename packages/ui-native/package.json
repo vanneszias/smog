@@ -25,6 +25,7 @@
   "devDependencies": {
     "@jest/globals": "~29.7.0",
     "@smog/config": "workspace:*",
+    "@tailwindcss/oxide": "4.3.3",
     "@testing-library/react-native": "catalog:",
     "@types/react": "catalog:",
     "babel-jest": "~29.7.0",

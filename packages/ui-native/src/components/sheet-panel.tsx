@@ -18,6 +18,7 @@ import { ReduceMotion, useReducedMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { cn } from "../lib/cn";
 import { useColor, useShadow, useThemeVars } from "../lib/theme";
+import { ToastViewport } from "./toast";
 
 function Backdrop(props: BottomSheetBackdropProps): ReactElement {
   return (
@@ -59,8 +60,9 @@ export interface SheetPanelProps {
 /**
  * The bottom sheet behind Sheet, Select and Menu: a `@gorhom/bottom-sheet`
  * modal sized to its content, with the theme variables re-applied at its
- * root (it mounts in the provider's portal host), VoiceOver kept inside
- * (`accessibilityViewIsModal`) and no animation under reduced motion.
+ * root (it mounts in the provider's portal host), `accessibilityViewIsModal`
+ * on the content (the sheet is not a native window, so this is best effort),
+ * a toast viewport above it while open, and no animation under reduced motion.
  */
 export function SheetPanel({
   children,
@@ -126,6 +128,9 @@ export function SheetPanel({
           </View>
         </BottomSheetScrollView>
       ) : null}
+      {/* The sheet host draws above the app's toasts; they draw here while
+          it is open (after the content, so on top of it). */}
+      {open || mounted ? <ToastViewport testID="sheet-toasts" /> : null}
     </BottomSheetModal>
   );
 }
