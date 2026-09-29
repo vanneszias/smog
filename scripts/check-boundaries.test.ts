@@ -43,6 +43,13 @@ describe("checkBoundaries", () => {
         from: "@smog/ui-web",
         to: "@smog/auth",
       },
+      ...["@smog/email", "@smog/jobs", "@smog/payments", "@smog/video"].map(
+        (to) => ({
+          file: "packages/ui-web/src/button.mocks.tsx",
+          from: "@smog/ui-web",
+          to,
+        })
+      ),
     ]);
   });
 

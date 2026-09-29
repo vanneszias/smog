@@ -21,21 +21,21 @@ import { createdAt, inValues, timestamp, updatedAt } from "./columns";
 export const user = sqliteTable(
   "user",
   {
-    banExpires: timestamp("ban_expires"),
-    banned: integer("banned", { mode: "boolean" }).default(false),
-    banReason: text("ban_reason"),
-    createdAt: createdAt(),
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
     email: text("email").notNull().unique(),
     emailVerified: integer("email_verified", { mode: "boolean" })
       .notNull()
       .default(false),
-    id: text("id").primaryKey(),
     image: text("image"),
-    legacyId: text("legacy_id").unique(),
-    locale: text("locale", { enum: LOCALES }),
-    name: text("name").notNull(),
-    role: text("role", { enum: ROLES }).notNull().default("user"),
+    createdAt: createdAt(),
     updatedAt: updatedAt(),
+    role: text("role", { enum: ROLES }).notNull().default("user"),
+    banned: integer("banned", { mode: "boolean" }).default(false),
+    banReason: text("ban_reason"),
+    banExpires: timestamp("ban_expires"),
+    locale: text("locale", { enum: LOCALES }),
+    legacyId: text("legacy_id").unique(),
   },
   (t) => [
     check("user_role_check", inValues(t.role, ROLES)),
@@ -47,17 +47,17 @@ export const user = sqliteTable(
 export const session = sqliteTable(
   "session",
   {
-    createdAt: createdAt(),
-    expiresAt: timestamp("expires_at").notNull(),
     id: text("id").primaryKey(),
-    impersonatedBy: text("impersonated_by"),
-    ipAddress: text("ip_address"),
+    expiresAt: timestamp("expires_at").notNull(),
     token: text("token").notNull().unique(),
+    createdAt: createdAt(),
     updatedAt: updatedAt(),
+    ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    impersonatedBy: text("impersonated_by"),
   },
   (t) => [index("session_user_id_idx").on(t.userId)]
 );
@@ -65,21 +65,21 @@ export const session = sqliteTable(
 export const account = sqliteTable(
   "account",
   {
-    accessToken: text("access_token"),
-    accessTokenExpiresAt: timestamp("access_token_expires_at"),
-    accountId: text("account_id").notNull(),
-    createdAt: createdAt(),
     id: text("id").primaryKey(),
-    idToken: text("id_token"),
-    password: text("password"),
+    accountId: text("account_id").notNull(),
     providerId: text("provider_id").notNull(),
-    refreshToken: text("refresh_token"),
-    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
-    scope: text("scope"),
-    updatedAt: updatedAt(),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at"),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
   },
   (t) => [
     index("account_user_id_idx").on(t.userId),
@@ -90,12 +90,12 @@ export const account = sqliteTable(
 export const verification = sqliteTable(
   "verification",
   {
-    createdAt: createdAt(),
-    expiresAt: timestamp("expires_at").notNull(),
     id: text("id").primaryKey(),
     identifier: text("identifier").notNull(),
-    updatedAt: updatedAt(),
     value: text("value").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
   },
   (t) => [index("verification_identifier_idx").on(t.identifier)]
 );
@@ -103,19 +103,19 @@ export const verification = sqliteTable(
 export const passkey = sqliteTable(
   "passkey",
   {
-    aaguid: text("aaguid"),
-    backedUp: integer("backed_up", { mode: "boolean" }).notNull(),
-    counter: integer("counter").notNull(),
-    createdAt: timestamp("created_at"),
-    credentialID: text("credential_id").notNull(),
-    deviceType: text("device_type").notNull(),
     id: text("id").primaryKey(),
     name: text("name"),
     publicKey: text("public_key").notNull(),
-    transports: text("transports"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: integer("backed_up", { mode: "boolean" }).notNull(),
+    transports: text("transports"),
+    createdAt: timestamp("created_at"),
+    aaguid: text("aaguid"),
   },
   (t) => [
     index("passkey_user_id_idx").on(t.userId),

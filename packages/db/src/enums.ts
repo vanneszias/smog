@@ -119,6 +119,7 @@ export const AUDIT_ACTIONS = [
   "category.publish",
   "category.unpublish",
   "category.delete",
+  "category.reorder",
   "user.role_change",
   "user.ban",
   "user.unban",
@@ -133,6 +134,9 @@ export const AUDIT_ACTIONS = [
   "sponsorship.force_expire",
   "sponsorship.regenerate_token",
   "payment.refund",
+  "maintenance.enable",
+  "maintenance.disable",
+  "export.sponsorships_csv",
   "legacy",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -144,5 +148,9 @@ export const AUDIT_TARGET_TYPES = [
   "sponsorship",
   "payment",
   "list",
+  /** A KV setting, such as maintenance mode (`target_id` = the setting key). */
+  "setting",
+  /** A system-wide action with no single target (`target_id` NULL), such as a CSV export. */
+  "system",
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];

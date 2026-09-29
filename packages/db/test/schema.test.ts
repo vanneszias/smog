@@ -4,12 +4,14 @@ import { eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   auditLog,
+  category,
   consentEvent,
   favorite,
   gesture,
   list,
   listItem,
   listShare,
+  renderJob,
   type SponsorshipStatus,
   sponsor,
   sponsorship,
@@ -56,6 +58,8 @@ const DUPLICATE_BLOCKING_SPONSORSHIP =
   /UNIQUE constraint failed: sponsorship\.gesture_id/;
 const DUPLICATE_ACTIVE_SHARE =
   /UNIQUE constraint failed: list_share\.list_id, list_share\.role/;
+const DUPLICATE_WORKFLOW_INSTANCE =
+  /UNIQUE constraint failed: render_job\.workflow_instance_id/;
 const CHECK_FAILED = /CHECK constraint failed/;
 const FOREIGN_KEY_FAILED = /FOREIGN KEY constraint failed/;
 
@@ -311,5 +315,82 @@ describe("schema", () => {
       sql`SELECT count(*) AS n FROM gesture_category WHERE category_id = ${group.id}`
     );
     expect(row.n).toBe(0);
+  });
+
+  it("logs system and setting actions, where a system action has no target id", async () => {
+    const admin = await makeUser(db);
+    await db.insert(auditLog).values([
+      {
+        action: "export.sponsorships_csv",
+        actorId: admin.id,
+        data: { rows: 3 },
+        id: newId(),
+        targetId: null,
+        targetType: "system",
+      },
+      {
+        action: "maintenance.enable",
+        actorId: admin.id,
+        data: {},
+        id: newId(),
+        targetId: "maintenance",
+        targetType: "setting",
+      },
+    ]);
+
+    const rows = await db
+      .select({ targetId: auditLog.targetId, targetType: auditLog.targetType })
+      .from(auditLog)
+      .where(eq(auditLog.actorId, admin.id));
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        { targetId: null, targetType: "system" },
+        { targetId: "maintenance", targetType: "setting" },
+      ])
+    );
+  });
+
+  it("uses each Workflow instance id for one render job only", async () => {
+    const item = await makeGesture(db);
+    const sponsorshipId = await makeSponsorship(item.id, "rendering");
+    const job = (id: string, workflowInstanceId: string) =>
+      db.insert(renderJob).values({
+        id,
+        input: { displayName: "Bakkerij Jansens" },
+        sponsorshipId,
+        status: "failed",
+        workflowInstanceId,
+      });
+    const first = newId();
+    await job(first, first);
+
+    expect(await failure(job(newId(), first))).toMatch(
+      DUPLICATE_WORKFLOW_INSTANCE
+    );
+    const retry = newId();
+    await expect(job(retry, retry)).resolves.toBeDefined();
+  });
+
+  it("loads relations with the relational query API", async () => {
+    const item = await makeGesture(db, { name: "Kat" });
+    const group = await makeCategory(db, { name: "Dieren" });
+    await env.DB.prepare(
+      "INSERT INTO gesture_category (gesture_id, category_id) VALUES (?, ?)"
+    )
+      .bind(item.id, group.id)
+      .run();
+
+    const found = await db.query.gesture.findFirst({
+      where: eq(gesture.id, item.id),
+      with: { categories: { with: { category: true } } },
+    });
+    expect(found?.categories.map((link) => link.category.name)).toEqual([
+      "Dieren",
+    ]);
+    const back = await db.query.category.findFirst({
+      where: eq(category.id, group.id),
+      with: { gestures: true },
+    });
+    expect(back?.gestures).toHaveLength(1);
   });
 });

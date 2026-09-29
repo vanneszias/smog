@@ -50,4 +50,20 @@ describe("seed/dev.sql", () => {
       )
     ).toBeGreaterThan(0);
   });
+
+  it("promotes an existing admin@smog.test account instead of failing", async () => {
+    await env.DB.prepare(
+      "DELETE FROM user WHERE email = 'admin@smog.test'"
+    ).run();
+    await env.DB.prepare(
+      "INSERT INTO user (id, name, email, email_verified, created_at, updated_at) VALUES ('signed-up-admin', 'Dev', 'admin@smog.test', 0, 1, 1)"
+    ).run();
+
+    await applySeed();
+
+    const row = await env.DB.prepare(
+      "SELECT id, role, email_verified AS verified FROM user WHERE email = 'admin@smog.test'"
+    ).first<{ id: string; role: string; verified: number }>();
+    expect(row).toEqual({ id: "signed-up-admin", role: "admin", verified: 1 });
+  });
 });

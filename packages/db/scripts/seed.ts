@@ -133,10 +133,13 @@ function literal(value: string | number | null): string {
 function upsert(
   table: string,
   row: Record<string, string | number | null>,
-  conflict: string[]
+  conflict: string[],
+  keep: string[] = []
 ): string {
   const columns = Object.keys(row);
-  const updates = columns.filter((column) => !conflict.includes(column));
+  const updates = columns.filter(
+    (column) => !(conflict.includes(column) || keep.includes(column))
+  );
   const values = columns.map((column) => literal(row[column] ?? null));
   const action =
     updates.length === 0
@@ -223,7 +226,9 @@ export function buildSeedSql(): string {
         role: "admin",
         updated_at: SEED_TIME,
       },
-      ["id"]
+      // An account that signed up as admin@smog.test keeps its id and is promoted.
+      ["email"],
+      ["id", "created_at"]
     )
   );
   return `${lines.join("\n")}\n`;

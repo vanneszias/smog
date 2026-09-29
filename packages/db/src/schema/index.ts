@@ -11,6 +11,7 @@ export {
   listItem,
   listShare,
 } from "./learning";
+export * from "./relations";
 export {
   invoiceRequest,
   payment,

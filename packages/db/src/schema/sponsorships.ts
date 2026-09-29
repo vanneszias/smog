@@ -35,12 +35,12 @@ import { gesture } from "./learning";
 export const sponsor = sqliteTable(
   "sponsor",
   {
-    company: text("company"),
-    createdAt: createdAt(),
-    email: text("email").notNull(),
     id: text("id").primaryKey(),
-    locale: text("locale", { enum: LOCALES }).notNull(),
     name: text("name").notNull(),
+    email: text("email").notNull(),
+    company: text("company"),
+    locale: text("locale", { enum: LOCALES }).notNull(),
+    createdAt: createdAt(),
   },
   (t) => [
     check("sponsor_name_length_check", lengthBetween(t.name, 1, 120)),
@@ -55,12 +55,12 @@ export const sponsor = sqliteTable(
 export const invoiceRequest = sqliteTable(
   "invoice_request",
   {
-    email: text("email").notNull(),
-    name: text("name").notNull(),
     sponsorId: text("sponsor_id")
       .primaryKey()
       .references(() => sponsor.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
     vatNumber: text("vat_number").notNull(),
+    email: text("email").notNull(),
   },
   (t) => [
     check("invoice_request_name_length_check", lengthBetween(t.name, 1, 160)),
@@ -71,26 +71,26 @@ export const invoiceRequest = sqliteTable(
 export const sponsorship = sqliteTable(
   "sponsorship",
   {
-    createdAt: createdAt(),
-    /** Shown in the video. */
-    displayName: text("display_name").notNull(),
-    endsAt: timestamp("ends_at"),
-    gestureId: text("gesture_id")
-      .notNull()
-      .references(() => gesture.id, { onDelete: "restrict" }),
     id: text("id").primaryKey(),
-    legacyId: text("legacy_id").unique(),
-    /** R2 object key. */
-    logoKey: text("logo_key"),
-    reminderSentAt: timestamp("reminder_sent_at"),
     sponsorId: text("sponsor_id")
       .notNull()
       .references(() => sponsor.id, { onDelete: "restrict" }),
-    startsAt: timestamp("starts_at"),
+    gestureId: text("gesture_id")
+      .notNull()
+      .references(() => gesture.id, { onDelete: "restrict" }),
+    /** Shown in the video. */
+    displayName: text("display_name").notNull(),
+    /** R2 object key. */
+    logoKey: text("logo_key"),
     status: text("status", { enum: SPONSORSHIP_STATUSES }).notNull(),
-    updatedAt: updatedAt(),
-    videoAssetId: text("video_asset_id"),
+    startsAt: timestamp("starts_at"),
+    endsAt: timestamp("ends_at"),
     videoPlaybackId: text("video_playback_id"),
+    videoAssetId: text("video_asset_id"),
+    reminderSentAt: timestamp("reminder_sent_at"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    legacyId: text("legacy_id").unique(),
   },
   (t) => [
     check("sponsorship_status_check", inValues(t.status, SPONSORSHIP_STATUSES)),
@@ -112,17 +112,17 @@ export const sponsorship = sqliteTable(
 export const payment = sqliteTable(
   "payment",
   {
+    id: text("id").primaryKey(),
+    mollieId: text("mollie_id").unique(),
+    kind: text("kind", { enum: PAYMENT_KINDS }).notNull(),
+    status: text("status", { enum: PAYMENT_STATUSES }).notNull(),
     amountCents: integer("amount_cents").notNull(),
-    checkoutUrl: text("checkout_url"),
-    createdAt: createdAt(),
     currency: text("currency", { enum: ["EUR"] })
       .notNull()
       .default("EUR"),
-    id: text("id").primaryKey(),
-    kind: text("kind", { enum: PAYMENT_KINDS }).notNull(),
-    mollieId: text("mollie_id").unique(),
+    checkoutUrl: text("checkout_url"),
     paidAt: timestamp("paid_at"),
-    status: text("status", { enum: PAYMENT_STATUSES }).notNull(),
+    createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
@@ -138,14 +138,14 @@ export const payment = sqliteTable(
 export const paymentItem = sqliteTable(
   "payment_item",
   {
-    amountCents: integer("amount_cents").notNull(),
-    includesLogo: integer("includes_logo", { mode: "boolean" }).notNull(),
     paymentId: text("payment_id")
       .notNull()
       .references(() => payment.id, { onDelete: "cascade" }),
     sponsorshipId: text("sponsorship_id")
       .notNull()
       .references(() => sponsorship.id, { onDelete: "restrict" }),
+    amountCents: integer("amount_cents").notNull(),
+    includesLogo: integer("includes_logo", { mode: "boolean" }).notNull(),
   },
   (t) => [
     primaryKey({ columns: [t.paymentId, t.sponsorshipId] }),
@@ -158,21 +158,25 @@ export const paymentItem = sqliteTable(
 export const renderJob = sqliteTable(
   "render_job",
   {
-    attempt: integer("attempt").notNull().default(1),
-    createdAt: createdAt(),
-    error: text("error"),
-    finishedAt: timestamp("finished_at"),
     id: text("id").primaryKey(),
-    input: text("input", { mode: "json" }).$type<unknown>().notNull(),
-    muxAssetId: text("mux_asset_id"),
-    muxUploadId: text("mux_upload_id"),
-    playbackId: text("playback_id"),
     sponsorshipId: text("sponsorship_id")
       .notNull()
       .references(() => sponsorship.id, { onDelete: "cascade" }),
     status: text("status", { enum: RENDER_JOB_STATUSES }).notNull(),
+    /**
+     * The Workflow instance id, which is this row's `id`. Instance ids cannot
+     * be reused, so a retry inserts a new row (`attempt` + 1).
+     */
+    workflowInstanceId: text("workflow_instance_id").notNull().unique(),
+    input: text("input", { mode: "json" }).$type<unknown>().notNull(),
+    muxUploadId: text("mux_upload_id"),
+    muxAssetId: text("mux_asset_id"),
+    playbackId: text("playback_id"),
+    error: text("error"),
+    attempt: integer("attempt").notNull().default(1),
+    createdAt: createdAt(),
     updatedAt: updatedAt(),
-    workflowInstanceId: text("workflow_instance_id").notNull(),
+    finishedAt: timestamp("finished_at"),
   },
   (t) => [
     check("render_job_status_check", inValues(t.status, RENDER_JOB_STATUSES)),
@@ -190,16 +194,16 @@ export const renderJob = sqliteTable(
 export const sponsorshipEvent = sqliteTable(
   "sponsorship_event",
   {
-    actorId: text("actor_id").references(() => user.id, {
-      onDelete: "set null",
-    }),
-    createdAt: createdAt(),
-    data: text("data", { mode: "json" }).$type<unknown>().notNull(),
     id: text("id").primaryKey(),
     sponsorshipId: text("sponsorship_id")
       .notNull()
       .references(() => sponsorship.id, { onDelete: "cascade" }),
     type: text("type", { enum: SPONSORSHIP_EVENT_TYPES }).notNull(),
+    actorId: text("actor_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    data: text("data", { mode: "json" }).$type<unknown>().notNull(),
+    createdAt: createdAt(),
   },
   (t) => [
     check(
@@ -218,21 +222,22 @@ export const sponsorshipEvent = sqliteTable(
 export const sponsorshipToken = sqliteTable(
   "sponsorship_token",
   {
-    createdAt: createdAt(),
-    expiresAt: timestamp("expires_at").notNull(),
     id: text("id").primaryKey(),
-    purpose: text("purpose", { enum: SPONSORSHIP_TOKEN_PURPOSES }).notNull(),
     sponsorshipId: text("sponsorship_id")
       .notNull()
       .references(() => sponsorship.id, { onDelete: "cascade" }),
+    purpose: text("purpose", { enum: SPONSORSHIP_TOKEN_PURPOSES }).notNull(),
     tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
     usedAt: timestamp("used_at"),
+    createdAt: createdAt(),
   },
   (t) => [
     check(
       "sponsorship_token_purpose_check",
       inValues(t.purpose, SPONSORSHIP_TOKEN_PURPOSES)
     ),
+    index("sponsorship_token_expires_at_idx").on(t.expiresAt),
     index("sponsorship_token_sponsorship_purpose_idx").on(
       t.sponsorshipId,
       t.purpose

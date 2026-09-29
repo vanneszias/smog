@@ -37,7 +37,7 @@ const SKIPPED_DIRS =
   /(^|\/)(node_modules|dist|build|\.wrangler|\.expo|\.output|\.tanstack|\.turbo|__fixtures__)\//;
 /** `from`, `import`, `import()`, `require()` and `vi.mock()` / `jest.mock()`. */
 const IMPORT_RE =
-  /(?:\bfrom\s*|\bimport\s*\(?\s*|\b(?:require|(?:vi|jest)\.(?:mock|doMock|unmock|importActual|requireActual))\s*\(\s*)["'](@smog\/[^"']+)["']/g;
+  /(?:\bfrom\s*|\bimport\s*\(?\s*|\b(?:require|(?:vi|jest)\.(?:mock|doMock|unmock|importActual|importMock|requireActual|requireMock|setMock|createMockFromModule))\s*\(\s*)["'](@smog\/[^"']+)["']/g;
 
 function readJson(path: string): PackageJson {
   return JSON.parse(readFileSync(path, "utf8")) as PackageJson;

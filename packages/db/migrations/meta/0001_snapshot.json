@@ -1,6 +1,6 @@
 {
-  "id": "3f624b26-7780-4f3b-8c14-b8fd794635f4",
-  "prevId": "145f2ce0-ccb4-4cb7-a0c2-3d84a1f732df",
+  "id": "65187616-2b48-41e3-b4ea-d58e4fe51885",
+  "prevId": "b5e92c74-b50f-45ef-9cff-21d60f6791b1",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -102,12 +102,17 @@
       "indexes": {
         "account_user_id_idx": {
           "name": "account_user_id_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         },
         "account_provider_account_idx": {
           "name": "account_provider_account_idx",
-          "columns": ["provider_id", "account_id"],
+          "columns": [
+            "provider_id",
+            "account_id"
+          ],
           "isUnique": false
         }
       },
@@ -115,9 +120,13 @@
         "account_user_id_user_id_fk": {
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
-          "columnsFrom": ["user_id"],
+          "columnsFrom": [
+            "user_id"
+          ],
           "tableTo": "user",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -161,7 +170,7 @@
           "name": "target_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "data": {
@@ -182,22 +191,32 @@
       "indexes": {
         "audit_log_created_at_idx": {
           "name": "audit_log_created_at_idx",
-          "columns": ["created_at"],
+          "columns": [
+            "created_at"
+          ],
           "isUnique": false
         },
         "audit_log_target_idx": {
           "name": "audit_log_target_idx",
-          "columns": ["target_type", "target_id"],
+          "columns": [
+            "target_type",
+            "target_id"
+          ],
           "isUnique": false
         },
         "audit_log_action_created_idx": {
           "name": "audit_log_action_created_idx",
-          "columns": ["action", "created_at"],
+          "columns": [
+            "action",
+            "created_at"
+          ],
           "isUnique": false
         },
         "audit_log_actor_id_idx": {
           "name": "audit_log_actor_id_idx",
-          "columns": ["actor_id"],
+          "columns": [
+            "actor_id"
+          ],
           "isUnique": false
         }
       },
@@ -205,9 +224,13 @@
         "audit_log_actor_id_user_id_fk": {
           "name": "audit_log_actor_id_user_id_fk",
           "tableFrom": "audit_log",
-          "columnsFrom": ["actor_id"],
+          "columnsFrom": [
+            "actor_id"
+          ],
           "tableTo": "user",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "set null"
         }
@@ -217,11 +240,11 @@
       "checkConstraints": {
         "audit_log_action_check": {
           "name": "audit_log_action_check",
-          "value": "\"action\" IN ('gesture.create', 'gesture.update', 'gesture.publish', 'gesture.unpublish', 'gesture.delete', 'gesture.bulk_update', 'category.create', 'category.update', 'category.publish', 'category.unpublish', 'category.delete', 'user.role_change', 'user.ban', 'user.unban', 'user.delete', 'user.impersonate', 'sponsorship.approve', 'sponsorship.reject', 'sponsorship.request_changes', 'sponsorship.mark_paid', 'sponsorship.cancel', 'sponsorship.retry_render', 'sponsorship.force_expire', 'sponsorship.regenerate_token', 'payment.refund', 'legacy')"
+          "value": "\"action\" IN ('gesture.create', 'gesture.update', 'gesture.publish', 'gesture.unpublish', 'gesture.delete', 'gesture.bulk_update', 'category.create', 'category.update', 'category.publish', 'category.unpublish', 'category.delete', 'category.reorder', 'user.role_change', 'user.ban', 'user.unban', 'user.delete', 'user.impersonate', 'sponsorship.approve', 'sponsorship.reject', 'sponsorship.request_changes', 'sponsorship.mark_paid', 'sponsorship.cancel', 'sponsorship.retry_render', 'sponsorship.force_expire', 'sponsorship.regenerate_token', 'payment.refund', 'maintenance.enable', 'maintenance.disable', 'export.sponsorships_csv', 'legacy')"
         },
         "audit_log_target_type_check": {
           "name": "audit_log_target_type_check",
-          "value": "\"target_type\" IN ('gesture', 'category', 'user', 'sponsorship', 'payment', 'list')"
+          "value": "\"target_type\" IN ('gesture', 'category', 'user', 'sponsorship', 'payment', 'list', 'setting', 'system')"
         }
       }
     },
@@ -289,17 +312,24 @@
       "indexes": {
         "category_slug_unique": {
           "name": "category_slug_unique",
-          "columns": ["slug"],
+          "columns": [
+            "slug"
+          ],
           "isUnique": true
         },
         "category_legacy_id_unique": {
           "name": "category_legacy_id_unique",
-          "columns": ["legacy_id"],
+          "columns": [
+            "legacy_id"
+          ],
           "isUnique": true
         },
         "category_published_sort_idx": {
           "name": "category_published_sort_idx",
-          "columns": ["published_at", "sort_order"],
+          "columns": [
+            "published_at",
+            "sort_order"
+          ],
           "isUnique": false
         }
       },
@@ -364,7 +394,11 @@
       "indexes": {
         "consent_event_user_purpose_created_idx": {
           "name": "consent_event_user_purpose_created_idx",
-          "columns": ["user_id", "purpose", "created_at"],
+          "columns": [
+            "user_id",
+            "purpose",
+            "created_at"
+          ],
           "isUnique": false
         }
       },
@@ -372,9 +406,13 @@
         "consent_event_user_id_user_id_fk": {
           "name": "consent_event_user_id_user_id_fk",
           "tableFrom": "consent_event",
-          "columnsFrom": ["user_id"],
+          "columnsFrom": [
+            "user_id"
+          ],
           "tableTo": "user",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -420,7 +458,9 @@
       "indexes": {
         "favorite_gesture_id_idx": {
           "name": "favorite_gesture_id_idx",
-          "columns": ["gesture_id"],
+          "columns": [
+            "gesture_id"
+          ],
           "isUnique": false
         }
       },
@@ -428,25 +468,36 @@
         "favorite_user_id_user_id_fk": {
           "name": "favorite_user_id_user_id_fk",
           "tableFrom": "favorite",
-          "columnsFrom": ["user_id"],
+          "columnsFrom": [
+            "user_id"
+          ],
           "tableTo": "user",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "favorite_gesture_id_gesture_id_fk": {
           "name": "favorite_gesture_id_gesture_id_fk",
           "tableFrom": "favorite",
-          "columnsFrom": ["gesture_id"],
+          "columnsFrom": [
+            "gesture_id"
+          ],
           "tableTo": "gesture",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "favorite_user_id_gesture_id_pk": {
-          "columns": ["user_id", "gesture_id"],
+          "columns": [
+            "user_id",
+            "gesture_id"
+          ],
           "name": "favorite_user_id_gesture_id_pk"
         }
       },
@@ -531,22 +582,31 @@
       "indexes": {
         "gesture_slug_unique": {
           "name": "gesture_slug_unique",
-          "columns": ["slug"],
+          "columns": [
+            "slug"
+          ],
           "isUnique": true
         },
         "gesture_legacy_id_unique": {
           "name": "gesture_legacy_id_unique",
-          "columns": ["legacy_id"],
+          "columns": [
+            "legacy_id"
+          ],
           "isUnique": true
         },
         "gesture_published_name_idx": {
           "name": "gesture_published_name_idx",
-          "columns": ["published_at", "name"],
+          "columns": [
+            "published_at",
+            "name"
+          ],
           "isUnique": false
         },
         "gesture_mux_asset_id_idx": {
           "name": "gesture_mux_asset_id_idx",
-          "columns": ["mux_asset_id"],
+          "columns": [
+            "mux_asset_id"
+          ],
           "isUnique": false
         }
       },
@@ -576,7 +636,9 @@
       "indexes": {
         "gesture_category_category_id_idx": {
           "name": "gesture_category_category_id_idx",
-          "columns": ["category_id"],
+          "columns": [
+            "category_id"
+          ],
           "isUnique": false
         }
       },
@@ -584,25 +646,36 @@
         "gesture_category_gesture_id_gesture_id_fk": {
           "name": "gesture_category_gesture_id_gesture_id_fk",
           "tableFrom": "gesture_category",
-          "columnsFrom": ["gesture_id"],
+          "columnsFrom": [
+            "gesture_id"
+          ],
           "tableTo": "gesture",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "gesture_category_category_id_category_id_fk": {
           "name": "gesture_category_category_id_category_id_fk",
           "tableFrom": "gesture_category",
-          "columnsFrom": ["category_id"],
+          "columnsFrom": [
+            "category_id"
+          ],
           "tableTo": "category",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "gesture_category_gesture_id_category_id_pk": {
-          "columns": ["gesture_id", "category_id"],
+          "columns": [
+            "gesture_id",
+            "category_id"
+          ],
           "name": "gesture_category_gesture_id_category_id_pk"
         }
       },
@@ -639,16 +712,23 @@
         "gesture_keyword_gesture_id_gesture_id_fk": {
           "name": "gesture_keyword_gesture_id_gesture_id_fk",
           "tableFrom": "gesture_keyword",
-          "columnsFrom": ["gesture_id"],
+          "columnsFrom": [
+            "gesture_id"
+          ],
           "tableTo": "gesture",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
         "gesture_keyword_gesture_id_keyword_pk": {
-          "columns": ["gesture_id", "keyword"],
+          "columns": [
+            "gesture_id",
+            "keyword"
+          ],
           "name": "gesture_keyword_gesture_id_keyword_pk"
         }
       },
@@ -692,9 +772,13 @@
         "invoice_request_sponsor_id_sponsor_id_fk": {
           "name": "invoice_request_sponsor_id_sponsor_id_fk",
           "tableFrom": "invoice_request",
-          "columnsFrom": ["sponsor_id"],
+          "columnsFrom": [
+            "sponsor_id"
+          ],
           "tableTo": "sponsor",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -761,7 +845,10 @@
       "indexes": {
         "list_owner_updated_idx": {
           "name": "list_owner_updated_idx",
-          "columns": ["owner_id", "updated_at"],
+          "columns": [
+            "owner_id",
+            "updated_at"
+          ],
           "isUnique": false
         }
       },
@@ -769,9 +856,13 @@
         "list_owner_id_user_id_fk": {
           "name": "list_owner_id_user_id_fk",
           "tableFrom": "list",
-          "columnsFrom": ["owner_id"],
+          "columnsFrom": [
+            "owner_id"
+          ],
           "tableTo": "user",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -831,17 +922,24 @@
       "indexes": {
         "list_item_list_position_idx": {
           "name": "list_item_list_position_idx",
-          "columns": ["list_id", "position"],
+          "columns": [
+            "list_id",
+            "position"
+          ],
           "isUnique": false
         },
         "list_item_gesture_id_idx": {
           "name": "list_item_gesture_id_idx",
-          "columns": ["gesture_id"],
+          "columns": [
+            "gesture_id"
+          ],
           "isUnique": false
         },
         "list_item_added_by_idx": {
           "name": "list_item_added_by_idx",
-          "columns": ["added_by"],
+          "columns": [
+            "added_by"
+          ],
           "isUnique": false
         }
       },
@@ -849,34 +947,49 @@
         "list_item_list_id_list_id_fk": {
           "name": "list_item_list_id_list_id_fk",
           "tableFrom": "list_item",
-          "columnsFrom": ["list_id"],
+          "columnsFrom": [
+            "list_id"
+          ],
           "tableTo": "list",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "list_item_gesture_id_gesture_id_fk": {
           "name": "list_item_gesture_id_gesture_id_fk",
           "tableFrom": "list_item",
-          "columnsFrom": ["gesture_id"],
+          "columnsFrom": [
+            "gesture_id"
+          ],
           "tableTo": "gesture",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "list_item_added_by_user_id_fk": {
           "name": "list_item_added_by_user_id_fk",
           "tableFrom": "list_item",
-          "columnsFrom": ["added_by"],
+          "columnsFrom": [
+            "added_by"
+          ],
           "tableTo": "user",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {
         "list_item_list_id_gesture_id_pk": {
-          "columns": ["list_id", "gesture_id"],
+          "columns": [
+            "list_id",
+            "gesture_id"
+          ],
           "name": "list_item_list_id_gesture_id_pk"
         }
       },
@@ -939,23 +1052,32 @@
       "indexes": {
         "list_share_token_unique": {
           "name": "list_share_token_unique",
-          "columns": ["token"],
+          "columns": [
+            "token"
+          ],
           "isUnique": true
         },
         "list_share_active_role_uq": {
           "name": "list_share_active_role_uq",
-          "columns": ["list_id", "role"],
+          "columns": [
+            "list_id",
+            "role"
+          ],
           "where": "\"revoked_at\" IS NULL",
           "isUnique": true
         },
         "list_share_list_id_idx": {
           "name": "list_share_list_id_idx",
-          "columns": ["list_id"],
+          "columns": [
+            "list_id"
+          ],
           "isUnique": false
         },
         "list_share_created_by_idx": {
           "name": "list_share_created_by_idx",
-          "columns": ["created_by"],
+          "columns": [
+            "created_by"
+          ],
           "isUnique": false
         }
       },
@@ -963,18 +1085,26 @@
         "list_share_list_id_list_id_fk": {
           "name": "list_share_list_id_list_id_fk",
           "tableFrom": "list_share",
-          "columnsFrom": ["list_id"],
+          "columnsFrom": [
+            "list_id"
+          ],
           "tableTo": "list",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "list_share_created_by_user_id_fk": {
           "name": "list_share_created_by_user_id_fk",
           "tableFrom": "list_share",
-          "columnsFrom": ["created_by"],
+          "columnsFrom": [
+            "created_by"
+          ],
           "tableTo": "user",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "set null"
         }
@@ -1072,12 +1202,16 @@
       "indexes": {
         "passkey_user_id_idx": {
           "name": "passkey_user_id_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         },
         "passkey_credential_id_idx": {
           "name": "passkey_credential_id_idx",
-          "columns": ["credential_id"],
+          "columns": [
+            "credential_id"
+          ],
           "isUnique": false
         }
       },
@@ -1085,9 +1219,13 @@
         "passkey_user_id_user_id_fk": {
           "name": "passkey_user_id_user_id_fk",
           "tableFrom": "passkey",
-          "columnsFrom": ["user_id"],
+          "columnsFrom": [
+            "user_id"
+          ],
           "tableTo": "user",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1174,12 +1312,17 @@
       "indexes": {
         "payment_mollie_id_unique": {
           "name": "payment_mollie_id_unique",
-          "columns": ["mollie_id"],
+          "columns": [
+            "mollie_id"
+          ],
           "isUnique": true
         },
         "payment_status_created_idx": {
           "name": "payment_status_created_idx",
-          "columns": ["status", "created_at"],
+          "columns": [
+            "status",
+            "created_at"
+          ],
           "isUnique": false
         }
       },
@@ -1240,7 +1383,9 @@
       "indexes": {
         "payment_item_sponsorship_id_idx": {
           "name": "payment_item_sponsorship_id_idx",
-          "columns": ["sponsorship_id"],
+          "columns": [
+            "sponsorship_id"
+          ],
           "isUnique": false
         }
       },
@@ -1248,25 +1393,36 @@
         "payment_item_payment_id_payment_id_fk": {
           "name": "payment_item_payment_id_payment_id_fk",
           "tableFrom": "payment_item",
-          "columnsFrom": ["payment_id"],
+          "columnsFrom": [
+            "payment_id"
+          ],
           "tableTo": "payment",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "payment_item_sponsorship_id_sponsorship_id_fk": {
           "name": "payment_item_sponsorship_id_sponsorship_id_fk",
           "tableFrom": "payment_item",
-          "columnsFrom": ["sponsorship_id"],
+          "columnsFrom": [
+            "sponsorship_id"
+          ],
           "tableTo": "sponsorship",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {
         "payment_item_payment_id_sponsorship_id_pk": {
-          "columns": ["payment_id", "sponsorship_id"],
+          "columns": [
+            "payment_id",
+            "sponsorship_id"
+          ],
           "name": "payment_item_payment_id_sponsorship_id_pk"
         }
       },
@@ -1375,19 +1531,33 @@
         }
       },
       "indexes": {
+        "render_job_workflow_instance_id_unique": {
+          "name": "render_job_workflow_instance_id_unique",
+          "columns": [
+            "workflow_instance_id"
+          ],
+          "isUnique": true
+        },
         "render_job_sponsorship_created_idx": {
           "name": "render_job_sponsorship_created_idx",
-          "columns": ["sponsorship_id", "created_at"],
+          "columns": [
+            "sponsorship_id",
+            "created_at"
+          ],
           "isUnique": false
         },
         "render_job_mux_upload_id_idx": {
           "name": "render_job_mux_upload_id_idx",
-          "columns": ["mux_upload_id"],
+          "columns": [
+            "mux_upload_id"
+          ],
           "isUnique": false
         },
         "render_job_mux_asset_id_idx": {
           "name": "render_job_mux_asset_id_idx",
-          "columns": ["mux_asset_id"],
+          "columns": [
+            "mux_asset_id"
+          ],
           "isUnique": false
         }
       },
@@ -1395,9 +1565,13 @@
         "render_job_sponsorship_id_sponsorship_id_fk": {
           "name": "render_job_sponsorship_id_sponsorship_id_fk",
           "tableFrom": "render_job",
-          "columnsFrom": ["sponsorship_id"],
+          "columnsFrom": [
+            "sponsorship_id"
+          ],
           "tableTo": "sponsorship",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1485,12 +1659,16 @@
       "indexes": {
         "session_token_unique": {
           "name": "session_token_unique",
-          "columns": ["token"],
+          "columns": [
+            "token"
+          ],
           "isUnique": true
         },
         "session_user_id_idx": {
           "name": "session_user_id_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -1498,9 +1676,13 @@
         "session_user_id_user_id_fk": {
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
-          "columnsFrom": ["user_id"],
+          "columnsFrom": [
+            "user_id"
+          ],
           "tableTo": "user",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1558,7 +1740,9 @@
       "indexes": {
         "sponsor_email_idx": {
           "name": "sponsor_email_idx",
-          "columns": ["email"],
+          "columns": [
+            "email"
+          ],
           "isUnique": false
         }
       },
@@ -1689,28 +1873,40 @@
       "indexes": {
         "sponsorship_legacy_id_unique": {
           "name": "sponsorship_legacy_id_unique",
-          "columns": ["legacy_id"],
+          "columns": [
+            "legacy_id"
+          ],
           "isUnique": true
         },
         "sponsorship_gesture_blocking_uq": {
           "name": "sponsorship_gesture_blocking_uq",
-          "columns": ["gesture_id"],
+          "columns": [
+            "gesture_id"
+          ],
           "where": "\"status\" IN ('awaiting_payment', 'rendering', 'render_failed', 'in_review', 'changes_requested', 'live', 'expiring')",
           "isUnique": true
         },
         "sponsorship_gesture_status_idx": {
           "name": "sponsorship_gesture_status_idx",
-          "columns": ["gesture_id", "status"],
+          "columns": [
+            "gesture_id",
+            "status"
+          ],
           "isUnique": false
         },
         "sponsorship_status_ends_at_idx": {
           "name": "sponsorship_status_ends_at_idx",
-          "columns": ["status", "ends_at"],
+          "columns": [
+            "status",
+            "ends_at"
+          ],
           "isUnique": false
         },
         "sponsorship_sponsor_id_idx": {
           "name": "sponsorship_sponsor_id_idx",
-          "columns": ["sponsor_id"],
+          "columns": [
+            "sponsor_id"
+          ],
           "isUnique": false
         }
       },
@@ -1718,18 +1914,26 @@
         "sponsorship_sponsor_id_sponsor_id_fk": {
           "name": "sponsorship_sponsor_id_sponsor_id_fk",
           "tableFrom": "sponsorship",
-          "columnsFrom": ["sponsor_id"],
+          "columnsFrom": [
+            "sponsor_id"
+          ],
           "tableTo": "sponsor",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "restrict"
         },
         "sponsorship_gesture_id_gesture_id_fk": {
           "name": "sponsorship_gesture_id_gesture_id_fk",
           "tableFrom": "sponsorship",
-          "columnsFrom": ["gesture_id"],
+          "columnsFrom": [
+            "gesture_id"
+          ],
           "tableTo": "gesture",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "restrict"
         }
@@ -1796,12 +2000,17 @@
       "indexes": {
         "sponsorship_event_sponsorship_created_idx": {
           "name": "sponsorship_event_sponsorship_created_idx",
-          "columns": ["sponsorship_id", "created_at"],
+          "columns": [
+            "sponsorship_id",
+            "created_at"
+          ],
           "isUnique": false
         },
         "sponsorship_event_actor_id_idx": {
           "name": "sponsorship_event_actor_id_idx",
-          "columns": ["actor_id"],
+          "columns": [
+            "actor_id"
+          ],
           "isUnique": false
         }
       },
@@ -1809,18 +2018,26 @@
         "sponsorship_event_sponsorship_id_sponsorship_id_fk": {
           "name": "sponsorship_event_sponsorship_id_sponsorship_id_fk",
           "tableFrom": "sponsorship_event",
-          "columnsFrom": ["sponsorship_id"],
+          "columnsFrom": [
+            "sponsorship_id"
+          ],
           "tableTo": "sponsorship",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "sponsorship_event_actor_id_user_id_fk": {
           "name": "sponsorship_event_actor_id_user_id_fk",
           "tableFrom": "sponsorship_event",
-          "columnsFrom": ["actor_id"],
+          "columnsFrom": [
+            "actor_id"
+          ],
           "tableTo": "user",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "set null"
         }
@@ -1890,12 +2107,24 @@
       "indexes": {
         "sponsorship_token_token_hash_unique": {
           "name": "sponsorship_token_token_hash_unique",
-          "columns": ["token_hash"],
+          "columns": [
+            "token_hash"
+          ],
           "isUnique": true
+        },
+        "sponsorship_token_expires_at_idx": {
+          "name": "sponsorship_token_expires_at_idx",
+          "columns": [
+            "expires_at"
+          ],
+          "isUnique": false
         },
         "sponsorship_token_sponsorship_purpose_idx": {
           "name": "sponsorship_token_sponsorship_purpose_idx",
-          "columns": ["sponsorship_id", "purpose"],
+          "columns": [
+            "sponsorship_id",
+            "purpose"
+          ],
           "isUnique": false
         }
       },
@@ -1903,9 +2132,13 @@
         "sponsorship_token_sponsorship_id_sponsorship_id_fk": {
           "name": "sponsorship_token_sponsorship_id_sponsorship_id_fk",
           "tableFrom": "sponsorship_token",
-          "columnsFrom": ["sponsorship_id"],
+          "columnsFrom": [
+            "sponsorship_id"
+          ],
           "tableTo": "sponsorship",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -2020,17 +2253,23 @@
       "indexes": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": ["email"],
+          "columns": [
+            "email"
+          ],
           "isUnique": true
         },
         "user_legacy_id_unique": {
           "name": "user_legacy_id_unique",
-          "columns": ["legacy_id"],
+          "columns": [
+            "legacy_id"
+          ],
           "isUnique": true
         },
         "user_created_at_idx": {
           "name": "user_created_at_idx",
-          "columns": ["created_at"],
+          "columns": [
+            "created_at"
+          ],
           "isUnique": false
         }
       },
@@ -2097,7 +2336,9 @@
       "indexes": {
         "verification_identifier_idx": {
           "name": "verification_identifier_idx",
-          "columns": ["identifier"],
+          "columns": [
+            "identifier"
+          ],
           "isUnique": false
         }
       },

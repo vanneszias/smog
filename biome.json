@@ -56,6 +56,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["packages/db/src/schema/**"],
+      "assist": {
+        "actions": {
+          "source": {
+            "useSortedKeys": "off"
+          }
+        }
+      }
     }
   ]
 }

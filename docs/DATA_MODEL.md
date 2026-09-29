@@ -11,7 +11,7 @@ The D1 (SQLite) schema of the whole product, defined with Drizzle in `packages/d
 - **Booleans:** `integer({ mode: "boolean" })` (0/1).
 - **Enums:** `text` columns with a `CHECK (col IN (…))` generated from the `const` arrays in `packages/db/src/enums.ts`. Adding a value is a schema change (`bun -F @smog/db db:generate`; SQLite rebuilds the table).
 - **JSON:** `text({ mode: "json" })` (`audit_log.data`, `sponsorship_event.data`, `render_job.input`), always validated by a Zod schema at the service boundary.
-- **Foreign keys:** every one has an explicit `ON DELETE` rule (below). Every FK column and every column that is queried by has an index. Uniqueness is enforced by the database.
+- **Foreign keys:** every one has an explicit `ON DELETE` rule (below). Every FK column, and every column that the planned queries and crons (spec §8.1) filter or sort by, has an index. `gesture_fts.gesture_id` is the one exception (see the FTS notes). Uniqueness is enforced by the database.
 - **Length limits** from the spec are `CHECK (length(col) BETWEEN …)` constraints as well as Zod rules.
 
 ## Diagram
@@ -20,9 +20,9 @@ Key columns are marked (PK, FK, UK = unique). The labels are the `ON DELETE` rul
 
 ```mermaid
 erDiagram
-  user ||--o{ session : "has"
-  user ||--o{ account : "has"
-  user ||--o{ passkey : "has"
+  user ||--o{ session : "cascade"
+  user ||--o{ account : "cascade"
+  user ||--o{ passkey : "cascade"
   user ||--o{ favorite : "cascade"
   user ||--o{ list : "owns (cascade)"
   user |o--o{ list_item : "added_by (set null)"
@@ -35,7 +35,7 @@ erDiagram
   gesture ||--o{ gesture_keyword : "cascade"
   gesture ||--o{ favorite : "cascade"
   gesture ||--o{ list_item : "cascade"
-  gesture ||--|| gesture_fts : "indexed by"
+  gesture ||--o| gesture_fts : "indexed by (no FK)"
   list ||--o{ list_item : "cascade"
   list ||--o{ list_share : "cascade"
   sponsor ||--o| invoice_request : "cascade"
@@ -238,7 +238,7 @@ erDiagram
     text id PK
     text sponsorship_id FK
     text status
-    text workflow_instance_id
+    text workflow_instance_id UK
     text input
     text mux_upload_id
     text mux_asset_id
@@ -303,6 +303,12 @@ erDiagram
 - `payment.mollie_id` unique (nullable until the Mollie payment exists); `payment.currency` is always `EUR`; amounts are ≥ 0.
 - `sponsorship_token.token_hash` unique; `list_share.token` unique.
 - `sponsorship.display_name` is 1..35 characters (`DISPLAY_NAME_MAX`), `list.name` 1..80, `list.description` ≤ 280, `sponsor.name` 1..120, `sponsor.company` ≤ 120, emails ≤ 254, `invoice_request.name` ≤ 160.
+
+## Row rules the services follow
+
+- **Render jobs:** a job's Workflow instance id is its own `id` (`workflow_instance_id = id`, unique). Workflow instance ids cannot be reused, so a retry (automatic or the admin "retry render") inserts a **new** `render_job` row with `attempt` + 1; the old row stays as `failed`. The newest row per sponsorship (`render_job_sponsorship_created_idx`) is the current one.
+- **Sponsorship tokens:** regenerating a re-edit or renewal link inserts a new token and sets `expires_at = now` on the sponsorship's older unused tokens of the same purpose (no `revoked_at` column). A token is valid when `used_at IS NULL AND expires_at > now`. The monthly cron deletes expired rows.
+- **Audit targets:** `target_type`/`target_id` name what an action touched: a row (`gesture`, `category`, `user`, `sponsorship`, `payment`, `list` + its id), a KV setting (`setting` + its key, for `maintenance.enable`/`maintenance.disable`), or nothing specific (`system` + NULL, for `export.sponsorships_csv`). `category.reorder` targets the category that moved; a bulk reorder writes one row per category.
 
 ## Sponsorship state machine
 
@@ -513,6 +519,10 @@ CHECK: `list_share_role_check`.
 
 `tokenize = 'unicode61 remove_diacritics 2'`, `prefix = '2 3'`. No triggers: the gestures service rewrites the row (`reindexGesture`) in the same D1 batch as every write to the gesture, its keywords or its categories. Rank with `bm25(gesture_fts, …)` column weights (phase 3).
 
+`gesture_id` is `UNINDEXED`, so `reindexGesture`'s `DELETE FROM gesture_fts WHERE gesture_id = ?` scans the FTS table. That is fine at the catalogue's size (a few thousand gestures). If it gets slow, phase 3 can key the rows by rowid instead (a stable integer per gesture, `DELETE … WHERE rowid = ?`).
+
+`wrangler d1 export` does not support databases with virtual tables, so `gesture_fts` blocks exporting a remote D1 as-is. To export, drop `gesture_fts` in a copy (or use D1 Time Travel to restore instead of an export), export, then recreate it with migration `0001` and a full reindex.
+
 ### Account, consent, audit
 #### `consent_event`
 
@@ -535,9 +545,9 @@ CHECK: `consent_event_purpose_check`, `consent_event_source_check`.
 |---|---|---|---|---|
 | `id` | `id` | text |  | PK |
 | `actor_id` | `actorId` | text | yes | → user.id ON DELETE SET NULL |
-| `action` | `action` | text |  | enum `AUDIT_ACTIONS` (26 values, `src/enums.ts`) |
-| `target_type` | `targetType` | text |  | enum: `gesture`, `category`, `user`, `sponsorship`, `payment`, `list` |
-| `target_id` | `targetId` | text |  |  |
+| `action` | `action` | text |  | enum `AUDIT_ACTIONS` (30 values, `src/enums.ts`) |
+| `target_type` | `targetType` | text |  | enum `AUDIT_TARGET_TYPES`: `gesture`, `category`, `user`, `sponsorship`, `payment`, `list`, `setting`, `system` |
+| `target_id` | `targetId` | text | yes | the target row's id; the setting key for `setting` (e.g. `maintenance`); NULL for `system` actions (e.g. `export.sponsorships_csv`) |
 | `data` | `data` | text (JSON) |  |  |
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 
@@ -629,7 +639,7 @@ CHECK: `payment_item_amount_check`.
 | `id` | `id` | text |  | PK |
 | `sponsorship_id` | `sponsorshipId` | text |  | → sponsorship.id ON DELETE CASCADE |
 | `status` | `status` | text |  | enum: `queued`, `running`, `succeeded`, `failed` |
-| `workflow_instance_id` | `workflowInstanceId` | text |  |  |
+| `workflow_instance_id` | `workflowInstanceId` | text |  | unique; equals `id` (see the render job notes) |
 | `input` | `input` | text (JSON) |  |  |
 | `mux_upload_id` | `muxUploadId` | text | yes |  |
 | `mux_asset_id` | `muxAssetId` | text | yes |  |
@@ -669,13 +679,17 @@ CHECK: `sponsorship_event_type_check`.
 | `used_at` | `usedAt` | integer (ms) → Date | yes |  |
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 
-Indexes: `sponsorship_token_sponsorship_purpose_idx` (sponsorship_id, purpose).
+Indexes: `sponsorship_token_expires_at_idx` (expires_at, for the monthly clean-up of expired tokens); `sponsorship_token_sponsorship_purpose_idx` (sponsorship_id, purpose).
 
 CHECK: `sponsorship_token_purpose_check`.
+
+## Relations
+
+`src/schema/relations.ts` declares Drizzle `relations()` for every foreign key (both directions), so `db.query.<table>.findMany({ with: … })` works, and so does Better Auth's adapter when its joins are enabled. They add no SQL.
 
 ## Migrations, seed and tests
 
 - `bun -F @smog/db db:generate` runs `drizzle-kit generate` (generate only; wrangler applies migrations). Hand-written SQL (such as the FTS table) goes in a file made with `drizzle-kit generate --custom --name <name>`, so the drizzle journal stays in step.
 - `bun -F @smog/db migrate:dev` applies them to the local dev D1 (`wrangler d1 migrations apply DB --env dev --local`, from `apps/site`; `migrations_dir` is `../../packages/db/migrations` in every env). `deploy.yml` applies them remotely before each deploy.
-- `bun -F @smog/db seed:dev` regenerates `seed/dev.sql` (`scripts/seed.ts`) and applies it locally: 5 categories, 20 published gestures (sample Mux playback id, keywords, FTS rows) and the admin user `admin@smog.test` (no password; sign in with an email code or magic link). Ids and timestamps are fixed and every statement is an upsert, so it can be re-run.
+- `bun -F @smog/db seed:dev` regenerates `seed/dev.sql` (`scripts/seed.ts`) and applies it locally: 5 categories, 20 published gestures (sample Mux playback id, keywords, FTS rows) and the admin user `admin@smog.test` (no password; sign in with an email code or magic link). The admin row upserts on `email`, so an account that already signed up with that address keeps its id and is promoted to `admin`. Ids and timestamps are fixed and every statement is an upsert, so it can be re-run.
 - Tests that need D1 use `@cloudflare/vitest-plugin`: the vitest config passes `readD1Migrations()` as the `TEST_MIGRATIONS` binding and lists `@smog/db/testing/apply-migrations` in `setupFiles`; `@smog/db/testing` has `createTestDb(env)` and the `makeUser` / `makeCategory` / `makeGesture` factories. See `packages/db/vitest.config.ts`.

@@ -19,15 +19,15 @@ import { createdAt, inValues } from "./columns";
 export const consentEvent = sqliteTable(
   "consent_event",
   {
-    createdAt: createdAt(),
-    granted: integer("granted", { mode: "boolean" }).notNull(),
     id: text("id").primaryKey(),
-    policyVersion: text("policy_version").notNull(),
-    purpose: text("purpose", { enum: CONSENT_PURPOSES }).notNull(),
-    source: text("source", { enum: CONSENT_SOURCES }).notNull(),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    purpose: text("purpose", { enum: CONSENT_PURPOSES }).notNull(),
+    granted: integer("granted", { mode: "boolean" }).notNull(),
+    policyVersion: text("policy_version").notNull(),
+    source: text("source", { enum: CONSENT_SOURCES }).notNull(),
+    createdAt: createdAt(),
   },
   (t) => [
     check("consent_event_purpose_check", inValues(t.purpose, CONSENT_PURPOSES)),
@@ -44,15 +44,16 @@ export const consentEvent = sqliteTable(
 export const auditLog = sqliteTable(
   "audit_log",
   {
-    action: text("action", { enum: AUDIT_ACTIONS }).notNull(),
+    id: text("id").primaryKey(),
     actorId: text("actor_id").references(() => user.id, {
       onDelete: "set null",
     }),
-    createdAt: createdAt(),
-    data: text("data", { mode: "json" }).$type<unknown>().notNull(),
-    id: text("id").primaryKey(),
-    targetId: text("target_id").notNull(),
+    action: text("action", { enum: AUDIT_ACTIONS }).notNull(),
     targetType: text("target_type", { enum: AUDIT_TARGET_TYPES }).notNull(),
+    /** NULL for `system` actions that have no single target. */
+    targetId: text("target_id"),
+    data: text("data", { mode: "json" }).$type<unknown>().notNull(),
+    createdAt: createdAt(),
   },
   (t) => [
     check("audit_log_action_check", inValues(t.action, AUDIT_ACTIONS)),

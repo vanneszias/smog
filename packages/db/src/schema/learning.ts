@@ -24,14 +24,14 @@ import {
 export const category = sqliteTable(
   "category",
   {
-    createdAt: createdAt(),
     id: text("id").primaryKey(),
-    legacyId: text("legacy_id").unique(),
-    name: text("name").notNull(),
-    publishedAt: timestamp("published_at"),
     slug: text("slug").notNull().unique(),
+    name: text("name").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
+    publishedAt: timestamp("published_at"),
+    createdAt: createdAt(),
     updatedAt: updatedAt(),
+    legacyId: text("legacy_id").unique(),
   },
   (t) => [index("category_published_sort_idx").on(t.publishedAt, t.sortOrder)]
 );
@@ -39,16 +39,16 @@ export const category = sqliteTable(
 export const gesture = sqliteTable(
   "gesture",
   {
-    createdAt: createdAt(),
-    description: text("description").notNull().default(""),
     id: text("id").primaryKey(),
-    legacyId: text("legacy_id").unique(),
-    muxAssetId: text("mux_asset_id"),
-    name: text("name").notNull(),
-    playbackId: text("playback_id").notNull(),
-    publishedAt: timestamp("published_at"),
     slug: text("slug").notNull().unique(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    playbackId: text("playback_id").notNull(),
+    muxAssetId: text("mux_asset_id"),
+    publishedAt: timestamp("published_at"),
+    createdAt: createdAt(),
     updatedAt: updatedAt(),
+    legacyId: text("legacy_id").unique(),
   },
   (t) => [
     index("gesture_published_name_idx").on(t.publishedAt, t.name),
@@ -59,12 +59,12 @@ export const gesture = sqliteTable(
 export const gestureCategory = sqliteTable(
   "gesture_category",
   {
-    categoryId: text("category_id")
-      .notNull()
-      .references(() => category.id, { onDelete: "cascade" }),
     gestureId: text("gesture_id")
       .notNull()
       .references(() => gesture.id, { onDelete: "cascade" }),
+    categoryId: text("category_id")
+      .notNull()
+      .references(() => category.id, { onDelete: "cascade" }),
   },
   (t) => [
     primaryKey({ columns: [t.gestureId, t.categoryId] }),
@@ -88,13 +88,13 @@ export const gestureKeyword = sqliteTable(
 export const favorite = sqliteTable(
   "favorite",
   {
-    createdAt: createdAt(),
-    gestureId: text("gesture_id")
-      .notNull()
-      .references(() => gesture.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    gestureId: text("gesture_id")
+      .notNull()
+      .references(() => gesture.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
   },
   (t) => [
     primaryKey({ columns: [t.userId, t.gestureId] }),
@@ -105,13 +105,13 @@ export const favorite = sqliteTable(
 export const list = sqliteTable(
   "list",
   {
-    createdAt: createdAt(),
-    description: text("description"),
     id: text("id").primaryKey(),
-    name: text("name").notNull(),
     ownerId: text("owner_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
@@ -127,17 +127,17 @@ export const list = sqliteTable(
 export const listItem = sqliteTable(
   "list_item",
   {
+    listId: text("list_id")
+      .notNull()
+      .references(() => list.id, { onDelete: "cascade" }),
+    gestureId: text("gesture_id")
+      .notNull()
+      .references(() => gesture.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
     addedBy: text("added_by").references(() => user.id, {
       onDelete: "set null",
     }),
     createdAt: createdAt(),
-    gestureId: text("gesture_id")
-      .notNull()
-      .references(() => gesture.id, { onDelete: "cascade" }),
-    listId: text("list_id")
-      .notNull()
-      .references(() => list.id, { onDelete: "cascade" }),
-    position: integer("position").notNull(),
   },
   (t) => [
     primaryKey({ columns: [t.listId, t.gestureId] }),
@@ -150,18 +150,18 @@ export const listItem = sqliteTable(
 export const listShare = sqliteTable(
   "list_share",
   {
-    createdAt: createdAt(),
-    createdBy: text("created_by").references(() => user.id, {
-      onDelete: "set null",
-    }),
     id: text("id").primaryKey(),
     listId: text("list_id")
       .notNull()
       .references(() => list.id, { onDelete: "cascade" }),
-    revokedAt: timestamp("revoked_at"),
     role: text("role", { enum: LIST_SHARE_ROLES }).notNull(),
     /** 32 random bytes, base64url (`newToken()`); stored in plain text. */
     token: text("token").notNull().unique(),
+    createdBy: text("created_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: createdAt(),
+    revokedAt: timestamp("revoked_at"),
   },
   (t) => [
     check("list_share_role_check", inValues(t.role, LIST_SHARE_ROLES)),

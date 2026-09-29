@@ -22,12 +22,12 @@ CREATE TABLE `audit_log` (
 	`actor_id` text,
 	`action` text NOT NULL,
 	`target_type` text NOT NULL,
-	`target_id` text NOT NULL,
+	`target_id` text,
 	`data` text NOT NULL,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`actor_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null,
-	CONSTRAINT "audit_log_action_check" CHECK("action" IN ('gesture.create', 'gesture.update', 'gesture.publish', 'gesture.unpublish', 'gesture.delete', 'gesture.bulk_update', 'category.create', 'category.update', 'category.publish', 'category.unpublish', 'category.delete', 'user.role_change', 'user.ban', 'user.unban', 'user.delete', 'user.impersonate', 'sponsorship.approve', 'sponsorship.reject', 'sponsorship.request_changes', 'sponsorship.mark_paid', 'sponsorship.cancel', 'sponsorship.retry_render', 'sponsorship.force_expire', 'sponsorship.regenerate_token', 'payment.refund', 'legacy')),
-	CONSTRAINT "audit_log_target_type_check" CHECK("target_type" IN ('gesture', 'category', 'user', 'sponsorship', 'payment', 'list'))
+	CONSTRAINT "audit_log_action_check" CHECK("action" IN ('gesture.create', 'gesture.update', 'gesture.publish', 'gesture.unpublish', 'gesture.delete', 'gesture.bulk_update', 'category.create', 'category.update', 'category.publish', 'category.unpublish', 'category.delete', 'category.reorder', 'user.role_change', 'user.ban', 'user.unban', 'user.delete', 'user.impersonate', 'sponsorship.approve', 'sponsorship.reject', 'sponsorship.request_changes', 'sponsorship.mark_paid', 'sponsorship.cancel', 'sponsorship.retry_render', 'sponsorship.force_expire', 'sponsorship.regenerate_token', 'payment.refund', 'maintenance.enable', 'maintenance.disable', 'export.sponsorships_csv', 'legacy')),
+	CONSTRAINT "audit_log_target_type_check" CHECK("target_type" IN ('gesture', 'category', 'user', 'sponsorship', 'payment', 'list', 'setting', 'system'))
 );
 --> statement-breakpoint
 CREATE INDEX `audit_log_created_at_idx` ON `audit_log` (`created_at`);--> statement-breakpoint
@@ -228,6 +228,7 @@ CREATE TABLE `render_job` (
 	CONSTRAINT "render_job_attempt_check" CHECK("attempt" >= 1)
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `render_job_workflow_instance_id_unique` ON `render_job` (`workflow_instance_id`);--> statement-breakpoint
 CREATE INDEX `render_job_sponsorship_created_idx` ON `render_job` (`sponsorship_id`,`created_at`);--> statement-breakpoint
 CREATE INDEX `render_job_mux_upload_id_idx` ON `render_job` (`mux_upload_id`);--> statement-breakpoint
 CREATE INDEX `render_job_mux_asset_id_idx` ON `render_job` (`mux_asset_id`);--> statement-breakpoint
@@ -313,6 +314,7 @@ CREATE TABLE `sponsorship_token` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `sponsorship_token_token_hash_unique` ON `sponsorship_token` (`token_hash`);--> statement-breakpoint
+CREATE INDEX `sponsorship_token_expires_at_idx` ON `sponsorship_token` (`expires_at`);--> statement-breakpoint
 CREATE INDEX `sponsorship_token_sponsorship_purpose_idx` ON `sponsorship_token` (`sponsorship_id`,`purpose`);--> statement-breakpoint
 CREATE TABLE `user` (
 	`id` text PRIMARY KEY NOT NULL,
