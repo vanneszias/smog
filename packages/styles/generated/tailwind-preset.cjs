@@ -3,6 +3,14 @@
  * The source is packages/styles/src/tokens.ts; src/generate.test.ts fails on drift.
  */
 module.exports = {
+  "corePlugins": {
+    "backgroundOpacity": false,
+    "borderOpacity": false,
+    "divideOpacity": false,
+    "placeholderOpacity": false,
+    "ringOpacity": false,
+    "textOpacity": false
+  },
   "darkMode": "class",
   "theme": {
     "borderRadius": {

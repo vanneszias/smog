@@ -39,6 +39,13 @@
       "entry": ["test/**/*.test.ts"],
       "project": ["src/**/*.ts", "test/**/*.ts"]
     },
+    "packages/ui-native": {
+      "babel": {
+        "config": ["babel.config.cjs"]
+      },
+      "entry": ["src/**/*.test.{ts,tsx}", "jest.setup*.ts"],
+      "project": ["src/**/*.{ts,tsx}", "*.{ts,cts,cjs}"]
+    },
     "apps/site": {
       "entry": [
         "src/routes/**/*.{ts,tsx}",
