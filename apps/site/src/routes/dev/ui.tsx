@@ -2,7 +2,7 @@ import { createI18n, isLocale, type Locale } from "@smog/i18n";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { lazy, type ReactNode, Suspense } from "react";
 import { pageMeta } from "@/lib/head";
-import { getDevToolsEnabled } from "@/server/dev-tools.functions";
+import { getDevUiEnabled } from "@/server/dev-tools.functions";
 
 /**
  * `__SMOG_DEV_TOOLS__` is `false` in production builds (vite.config.ts), so
@@ -25,7 +25,7 @@ export interface DevUiSearch {
 export const Route = createFileRoute("/dev/ui")({
   // dev and staging only; production answers 404 (spec §9).
   beforeLoad: async () => {
-    if (!(UiGallery && (await getDevToolsEnabled()))) {
+    if (!(UiGallery && (await getDevUiEnabled()))) {
       throw notFound();
     }
   },
