@@ -1,6 +1,6 @@
 import { isContractProcedure } from "@orpc/contract";
 import { call } from "@orpc/server";
-import { makeRpcContext } from "@smog/rpc/testing";
+import { makeRpcContext, makeSession } from "@smog/rpc/testing";
 import { describe, expect, it } from "vitest";
 import { appContract } from "../src/contract";
 import { appRouter } from "../src/index";
@@ -11,7 +11,15 @@ import { appRouter } from "../src/index";
  * answers `UNAUTHORIZED` to an anonymous call. A new procedure fails this
  * test until it is added to one of the two lists, so a forgotten
  * `requireUser` cannot ship unnoticed.
+ *
+ * `admin.*` is the third class: every one needs the admin role, checked
+ * here on the mounted router for every admin path. `adminProcedure`'s
+ * guards run before input validation (oRPC validates after the
+ * middlewares), so no input is needed. The admin package's own auth test
+ * adds the admin's successful call, with inputs per area.
  */
+
+const ADMIN_PREFIX = "admin.";
 
 /** Anyone may call these (a new public procedure is a deliberate entry). */
 const PUBLIC_PROCEDURES = [
@@ -82,7 +90,9 @@ function procedureAt(path: string): Parameters<typeof call>[0] {
 }
 
 describe("authorization matrix", () => {
-  const paths = procedurePaths(appContract).sort();
+  const paths = procedurePaths(appContract)
+    .filter((path) => !path.startsWith(ADMIN_PREFIX))
+    .sort();
 
   it("classifies every procedure of appContract as public or signed-in", () => {
     const publicPaths = new Set<string>(PUBLIC_PROCEDURES);
@@ -103,6 +113,37 @@ describe("authorization matrix", () => {
       await expect(
         call(procedureAt(path), input, { context: makeRpcContext() })
       ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    });
+  }
+});
+
+describe("admin mount", () => {
+  it("has admin procedures, each built by the admin router", () => {
+    const admin = procedurePaths(appContract).filter((path) =>
+      path.startsWith(ADMIN_PREFIX)
+    );
+    expect(admin).toContain("admin.dashboard");
+    for (const path of admin) {
+      expect(procedureAt(path), path).toBeDefined();
+    }
+  });
+
+  for (const path of procedurePaths(appContract).filter((name) =>
+    name.startsWith(ADMIN_PREFIX)
+  )) {
+    it(`${path} is UNAUTHORIZED for a guest and FORBIDDEN for a user`, async () => {
+      await expect(
+        call(procedureAt(path), undefined, {
+          context: makeRpcContext(),
+          path: path.split("."),
+        })
+      ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+      await expect(
+        call(procedureAt(path), undefined, {
+          context: makeRpcContext({ session: makeSession("user") }),
+          path: path.split("."),
+        })
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
     });
   }
 });

@@ -62,10 +62,18 @@ export const auditLog = sqliteTable(
       "audit_log_target_type_check",
       inValues(t.targetType, AUDIT_TARGET_TYPES)
     ),
+    // Every audit list filter seeks its index in `created_at` order (the
+    // admin viewer's keyset), so no page sorts the matching rows.
     index("audit_log_created_at_idx").on(t.createdAt),
-    index("audit_log_target_idx").on(t.targetType, t.targetId),
     index("audit_log_action_created_idx").on(t.action, t.createdAt),
-    index("audit_log_actor_id_idx").on(t.actorId),
+    index("audit_log_type_created_idx").on(t.targetType, t.createdAt),
+    index("audit_log_target_created_idx").on(
+      t.targetType,
+      t.targetId,
+      t.createdAt
+    ),
+    // Leads with `actor_id`, so it also serves the `ON DELETE SET NULL` lookup.
+    index("audit_log_actor_created_idx").on(t.actorId, t.createdAt),
   ]
 );
 

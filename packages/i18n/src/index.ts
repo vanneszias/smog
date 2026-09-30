@@ -6,7 +6,7 @@ export {
   matchLocale,
   resolveLocale,
 } from "./detect";
-export { formatDate, formatList } from "./format";
+export { dayRange, formatDate, formatList } from "./format";
 export {
   DEFAULT_NAMESPACE,
   type Messages,

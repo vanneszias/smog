@@ -23,6 +23,7 @@
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
     "@smog/account": "workspace:*",
+    "@smog/admin": "workspace:*",
     "@smog/analytics": "workspace:*",
     "@smog/api": "workspace:*",
     "@smog/auth": "workspace:*",
