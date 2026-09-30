@@ -190,17 +190,17 @@ function SharedList(): ReactNode {
         <Badge variant={data.role === "edit" ? "primary" : "neutral"}>
           {t(
             data.role === "edit"
-              ? "lists.shared.editable"
-              : "lists.shared.viewOnly"
+              ? "lists.sharedView.editable"
+              : "lists.sharedView.viewOnly"
           )}
         </Badge>
         <Text size="body-sm" tone="muted">
-          {t("lists.shared.by", { owner: data.list.ownerName })}
+          {t("lists.sharedView.by", { owner: data.list.ownerName })}
         </Text>
       </div>
       {shared.requiresSignIn ? (
         <div className="flex flex-wrap items-center gap-3">
-          <Text tone="muted">{t("lists.shared.signInToEdit")}</Text>
+          <Text tone="muted">{t("lists.sharedView.signInToEdit")}</Text>
           <Button asChild size="sm" variant="secondary">
             <Link search={{ redirect: `/lists/${shareToken}` }} to="/sign-in">
               {t("nav.signIn")}

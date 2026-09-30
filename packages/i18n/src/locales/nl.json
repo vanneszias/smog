@@ -22,7 +22,8 @@
     "search": "Zoeken",
     "send": "Versturen",
     "share": "Delen",
-    "yes": "Ja"
+    "yes": "Ja",
+    "exploreGestures": "Gebaren ontdekken"
   },
   "a11y": {
     "skipToContent": "Naar de inhoud",
@@ -284,39 +285,49 @@
       "revokeDescription": "Wie de link heeft, verliest meteen de toegang. Je kunt later een nieuwe link maken.",
       "revokeConfirm": "Intrekken",
       "title": "Lijst delen",
-      "description": "Maak een link om de lijst te bekijken of om ze samen te bewerken.",
+      "description": "Maak een link om deze lijst naar anderen te sturen.",
       "createView": "Link om te bekijken maken",
       "createEdit": "Link om te bewerken maken",
-      "copied": "Link gekopieerd",
-      "copyFailed": "Kopiëren lukte niet. De link is {{url}}",
+      "send": "Link versturen",
+      "message": "{{name}}: {{url}}",
       "signInTitle": "Meld je aan om te delen",
-      "signInDescription": "Een lijst delen kan met een account. Je lijsten op dit toestel gaan mee naar je account."
+      "signInDescription": "Een lijst delen kan met een account. Je lijsten gaan mee als je je aanmeldt.",
+      "copied": "Link gekopieerd",
+      "copyFailed": "Kopiëren lukte niet. De link is {{url}}"
     },
-    "description": "Groepeer gebaren voor een les, een thema of thuis.",
     "itemCount_one": "{{count}} gebaar",
     "itemCount_other": "{{count}} gebaren",
-    "all": "Alle lijsten",
+    "shared": "Gedeeld",
     "actions": "Acties voor de lijst",
-    "itemActions": "Acties voor {{name}}",
+    "rename": "Naam wijzigen",
     "nameLabel": "Naam",
-    "descriptionLabel": "Beschrijving",
-    "rename": "Bewerken",
-    "renameTitle": "Lijst bewerken",
     "delete": "Lijst verwijderen",
     "deleteTitle": "Deze lijst verwijderen?",
-    "deleteDescription": "“{{name}}” verdwijnt met alle gebaren erin. Dit kun je niet ongedaan maken.",
-    "moveUp": "Omhoog",
-    "moveDown": "Omlaag",
+    "deleteDescription": "“{{name}}” wordt verwijderd. De gebaren zelf blijven bestaan.",
+    "deleted": "Lijst verwijderd",
+    "addedTo": "Toegevoegd aan {{name}}",
+    "removedFrom": "Verwijderd uit {{name}}",
+    "itemActions": "Acties voor {{name}}",
+    "moveUp": "Naar boven",
+    "moveDown": "Naar beneden",
     "removeItem": "Uit de lijst halen",
+    "reorderFailed": "De volgorde kon niet bewaard worden.",
+    "notFound": {
+      "title": "Lijst niet gevonden",
+      "description": "Deze link werkt niet (meer), of de lijst is privé."
+    },
+    "sharedBy": "Gedeeld door {{name}}",
+    "sharedCanEdit": "Je kunt deze lijst bewerken.",
+    "sharedSignIn": "Meld je aan om deze lijst te bewerken.",
+    "description": "Groepeer gebaren voor een les, een thema of thuis.",
+    "all": "Alle lijsten",
+    "descriptionLabel": "Beschrijving",
+    "renameTitle": "Lijst bewerken",
     "added": "Toegevoegd aan “{{name}}”",
     "removed": "Verwijderd uit “{{name}}”",
     "select": {
       "title": "Kies een lijst",
       "description": "Selecteer een lijst om de gebaren erin te zien."
-    },
-    "notFound": {
-      "title": "Lijst niet gevonden",
-      "description": "Deze lijst bestaat niet (meer) of hoort bij een ander account."
     },
     "reorder": {
       "instructions": "Druk op spatie of Enter om een gebaar op te pakken. Verplaats het met de pijltjestoetsen en druk opnieuw op spatie of Enter om het neer te zetten. Escape annuleert.",
@@ -326,7 +337,7 @@
       "cancelled": "Verplaatsen geannuleerd. {{name}} staat terug op positie {{position}}.",
       "failed": "De nieuwe volgorde kon niet worden bewaard."
     },
-    "shared": {
+    "sharedView": {
       "by": "Gedeeld door {{owner}}",
       "viewOnly": "Alleen bekijken",
       "editable": "Bewerkbaar",
@@ -351,13 +362,25 @@
       "6": "Wil je meer weten over SMOG en het ontstaan? <course>Klik hier</course>.",
       "7": "Wil je meer weten over SMOG? Stuur een mail naar info@smog.vlaanderen"
     },
-    "metaDescription": "Bekijk het SMOG-gebaar voor “{{name}}” in video.",
-    "description": "Beschrijving",
+    "about": "Over dit gebaar",
     "keywords": "Verwante begrippen",
     "related": "Verwante gebaren",
-    "sponsoredBy": "Dit gebaar wordt gesponsord door {{name}}.",
+    "sponsoredBy": "Gesponsord door {{name}}",
+    "share": "Gebaar delen",
+    "shareMessage": "{{name}} in SMOG: {{url}}",
+    "notFound": {
+      "title": "Gebaar niet gevonden",
+      "description": "Dit gebaar bestaat niet (meer)."
+    },
+    "screenshot": {
+      "title": "Dit gebaar delen?",
+      "message": "Je nam een screenshot. Stuur liever een link, dan gaat de video mee.",
+      "share": "Link delen",
+      "dismiss": "Niet nu"
+    },
+    "metaDescription": "Bekijk het SMOG-gebaar voor “{{name}}” in video.",
+    "description": "Beschrijving",
     "actions": "Acties voor {{name}}",
-    "share": "Delen",
     "linkCopied": "Link gekopieerd",
     "copyFailed": "Kopiëren lukte niet. De link is {{url}}",
     "qr": {
@@ -380,6 +403,12 @@
       "title": "Geen gebaren gevonden",
       "description": "Probeer een ander woord of minder categorieën."
     },
+    "placeholder": "Zoek een gebaar",
+    "filter": "Filteren op categorie",
+    "filterActive_one": "Filteren op categorie, {{count}} gekozen",
+    "filterActive_other": "Filteren op categorie, {{count}} gekozen",
+    "clearFilter": "Categorieën wissen",
+    "showResults": "Resultaten tonen",
     "recent": "Recente zoekopdrachten",
     "clearRecent": "Recente zoekopdrachten wissen",
     "refine": "Verfijn je zoekopdracht om meer gebaren te zien.",
@@ -506,12 +535,12 @@
   },
   "home": {
     "tagline": "Leer gebaren in Vlaamse Gebarentaal, wanneer het jou past.",
+    "featured": "Ontdek gebaren",
+    "browseAll": "Alle gebaren",
     "title": "Gebaren die je spraak ondersteunen",
     "description": "Leer SMOG-gebaren met korte video's. Zoek een gebaar, bewaar je favorieten en maak lijsten voor je les.",
     "searchLabel": "Zoek een gebaar",
-    "searchPlaceholder": "Zoek een gebaar, bijvoorbeeld hond",
-    "featured": "Ontdek gebaren",
-    "browseAll": "Alle gebaren bekijken"
+    "searchPlaceholder": "Zoek een gebaar, bijvoorbeeld hond"
   },
   "footer": {
     "madeBy": "Gemaakt met ♡ door zias.be"

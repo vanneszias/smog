@@ -29,7 +29,7 @@ function AddButton({
   return (
     <IconButton
       icon={<Plus />}
-      label={t("lists.shared.addOne", { name: gesture.name })}
+      label={t("lists.sharedView.addOne", { name: gesture.name })}
       onClick={add}
     />
   );
@@ -67,7 +67,7 @@ function Results({
             gesture={gesture}
             trailing={
               present.has(gesture.id) ? (
-                <Badge variant="primary">{t("lists.shared.inList")}</Badge>
+                <Badge variant="primary">{t("lists.sharedView.inList")}</Badge>
               ) : (
                 <AddButton gesture={gesture} onAdd={onAdd} />
               )
@@ -96,9 +96,9 @@ export function AddToSharedList({
   return (
     <Sheet onOpenChange={setOpen} open={open}>
       <SheetTrigger asChild>
-        <Button icon={<Plus />}>{t("lists.shared.add")}</Button>
+        <Button icon={<Plus />}>{t("lists.sharedView.add")}</Button>
       </SheetTrigger>
-      <SheetContent title={t("lists.shared.addTitle", { name: listName })}>
+      <SheetContent title={t("lists.sharedView.addTitle", { name: listName })}>
         <SearchField
           aria-label={t("home.searchLabel")}
           onValueChange={setQ}
