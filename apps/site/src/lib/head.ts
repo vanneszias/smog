@@ -69,7 +69,7 @@ export interface SeoOptions {
  * JSON for a `<script>` element: `<` is escaped so no value can close the
  * element (`</script>`) or open a comment.
  */
-function scriptJson(value: unknown): string {
+export function scriptJson(value: unknown): string {
   return JSON.stringify(value).replaceAll("<", "\\u003c");
 }
 

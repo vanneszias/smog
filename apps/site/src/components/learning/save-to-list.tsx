@@ -31,6 +31,7 @@ function withoutKey(flags: Flags, key: string, value?: boolean): Flags {
 interface Membership {
   contains: boolean;
   list: UseListResult;
+  status: UseListResult["status"];
 }
 
 /**
@@ -50,9 +51,20 @@ function ListMembership({
   const list = useList(id);
   const contains =
     list.list?.items.some((item) => item.id === gestureId) ?? false;
+  // The mutations of the latest render, without re-reporting on each one.
+  const latest = useRef(list);
+  latest.current = list;
+  const { status } = list;
   useEffect(() => {
-    onReport(id, { contains, list });
-  });
+    onReport(id, {
+      contains,
+      // Always the latest render's hook result.
+      get list() {
+        return latest.current;
+      },
+      status,
+    });
+  }, [contains, id, onReport, status]);
   return null;
 }
 
@@ -78,6 +90,7 @@ export function SaveToList({
   const memberships = useRef(new Map<string, Membership>());
   // A list created here gets the gesture once its membership reports.
   const [addTo, setAddTo] = useState<string | null>(null);
+  const addToRef = useRef<string | null>(null);
 
   const fail = useCallback(
     (error: unknown): void => {
@@ -96,12 +109,14 @@ export function SaveToList({
           : { ...current, [id]: membership.contains }
       );
       setPending((current) => withoutKey(current, id, membership.contains));
-      if (addTo === id && membership.list.status === "ready") {
+      // Cleared through the ref first: two reports in one tick add once.
+      if (addToRef.current === id && membership.status === "ready") {
+        addToRef.current = null;
         setAddTo(null);
         membership.list.addItem(gestureId).catch(fail);
       }
     },
-    [addTo, fail, gestureId]
+    [fail, gestureId]
   );
 
   const toggle = useCallback(
@@ -134,7 +149,10 @@ export function SaveToList({
   const createList = useCallback(
     (name: string): void => {
       create({ name })
-        .then((created) => setAddTo(created.id))
+        .then((created) => {
+          addToRef.current = created.id;
+          setAddTo(created.id);
+        })
         .catch(fail);
     },
     [create, fail]

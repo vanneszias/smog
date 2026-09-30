@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/client";
 import { useTranslation } from "@smog/i18n/react";
-import { SHARED_LIST_STALE_TIME, useSharedList } from "@smog/lists/client";
+import { sharedListOptions, useSharedList } from "@smog/lists/client";
 import type { ListItem } from "@smog/lists/schema";
 import {
   Badge,
@@ -40,12 +40,7 @@ async function loadSharedList({
 }): Promise<{ name: string }> {
   const { queryClient, queryUtils } = context;
   const shared = await queryClient
-    .ensureQueryData(
-      queryUtils.lists.shared.get.queryOptions({
-        input: { token: params.shareToken },
-        staleTime: SHARED_LIST_STALE_TIME,
-      })
-    )
+    .ensureQueryData(sharedListOptions(queryUtils.lists, params.shareToken))
     .catch((error: unknown) => {
       if (error instanceof ORPCError && error.code === "NOT_FOUND") {
         throw notFound();

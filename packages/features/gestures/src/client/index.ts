@@ -13,6 +13,16 @@ export {
   typoMatches,
 } from "../ranking";
 export {
+  categoriesOptions,
+  type GestureSearchInput,
+  type GesturesQueryUtils,
+  gestureOptions,
+  gestureSearchOptions,
+  gesturesBrowseOptions,
+  gesturesPageOptions,
+  relatedOptions,
+} from "./options";
+export {
   CATALOG_STALE_TIME,
   CATEGORIES_STALE_TIME,
   SEARCH_STALE_TIME,

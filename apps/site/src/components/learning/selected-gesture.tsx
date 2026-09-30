@@ -2,7 +2,7 @@ import { isDefinedError } from "@orpc/client";
 import { useGesture, useRelated } from "@smog/gestures/client";
 import { useTranslation } from "@smog/i18n/react";
 import { EmptyState, ErrorState } from "@smog/ui-web";
-import { type ReactNode, useCallback } from "react";
+import { type ReactNode, useCallback, useEffect } from "react";
 import { GestureDetailView, RELATED_LIMIT } from "./gesture-detail";
 import { GestureDetailSkeleton } from "./gesture-detail-skeleton";
 import type { Hearts } from "./use-hearts";
@@ -22,6 +22,18 @@ function SelectedDetail({
   const retry = useCallback(() => {
     refetch();
   }, [refetch]);
+  // The URL reads `/gestures/<slug>` (masked): so does the tab title.
+  const name = gesture.data?.name;
+  useEffect(() => {
+    if (!name) {
+      return;
+    }
+    const previous = document.title;
+    document.title = `${name} · ${t("common.appName")}`;
+    return () => {
+      document.title = previous;
+    };
+  }, [name, t]);
   if (gesture.data) {
     return (
       <GestureDetailView

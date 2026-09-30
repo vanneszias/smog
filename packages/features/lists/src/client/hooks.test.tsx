@@ -22,7 +22,13 @@ import {
   type ListDetail,
   type ShareRole,
 } from "../schema";
-import { useList, useLists, useSharedList, useShareLinks } from "./index";
+import {
+  sharedListOptions,
+  useList,
+  useLists,
+  useSharedList,
+  useShareLinks,
+} from "./index";
 
 function summary(name: string): GestureSummary {
   const slug = name.toLowerCase();
@@ -206,6 +212,7 @@ function fakeApi(server: Server) {
           return { added: true };
         }),
         get: os.lists.shared.get.handler(({ errors, input }) => {
+          server.calls.push("shared.get");
           for (const [listId, shares] of server.shares) {
             const share = shares.find((item) => item.token === input.token);
             const list = server.lists.get(listId);
@@ -287,7 +294,14 @@ function setup(session: SessionHookResult = SIGNED_OUT) {
       </QueryClientProvider>
     );
   }
-  return { auth, queryClient, server, store, wrapper };
+  return {
+    auth,
+    queryClient,
+    server,
+    store,
+    utils: api.queryUtils,
+    wrapper,
+  };
 }
 
 async function addLocalList(
@@ -680,6 +694,23 @@ describe("useSharedList", () => {
     // The invalidation refetches the shared list; let it settle.
     await waitFor(() => expect(edit.result.current.status).toBe("ready"));
     edit.unmount();
+  });
+
+  test("a prefetch with sharedListOptions is what the hook reads (SSR)", async () => {
+    const { queryClient, server, utils, wrapper } = setup();
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    server.shares.set("srv-1", [{ role: "view", token: "view-token" }]);
+    await queryClient.prefetchQuery(
+      sharedListOptions(utils.lists, "view-token")
+    );
+    expect(server.calls).toEqual(["shared.get"]);
+
+    const { result } = renderHook(() => useSharedList("view-token"), {
+      wrapper,
+    });
+    expect(result.current.data?.list.name).toBe("Dieren");
+    expect(result.current.status).toBe("ready");
+    expect(server.calls).toEqual(["shared.get"]);
   });
 
   test("an unknown or revoked link is notFound", async () => {

@@ -1,4 +1,8 @@
-import { useCategories } from "@smog/gestures/client";
+import {
+  categoriesOptions,
+  gesturesPageOptions,
+  useCategories,
+} from "@smog/gestures/client";
 import { useTranslation } from "@smog/i18n/react";
 import { Button, ErrorState, Heading, Text } from "@smog/ui-web";
 import { useQuery } from "@tanstack/react-query";
@@ -12,11 +16,7 @@ import {
 import { Page } from "@/components/learning/page";
 import { SearchBox } from "@/components/learning/search-box";
 import { useHearts } from "@/components/learning/use-hearts";
-import {
-  categoriesOptions,
-  FEATURED_LIMIT,
-  featuredOptions,
-} from "@/lib/gesture-queries";
+import { FEATURED_LIMIT } from "@/lib/gesture-queries";
 import { seoHead, shellHead } from "@/lib/head";
 
 export const Route = createFileRoute("/")({
@@ -46,8 +46,10 @@ export const Route = createFileRoute("/")({
   loader: async ({ context }) => {
     const { queryClient, queryUtils } = context;
     await Promise.all([
-      queryClient.prefetchQuery(categoriesOptions(queryUtils)),
-      queryClient.prefetchQuery(featuredOptions(queryUtils)),
+      queryClient.prefetchQuery(categoriesOptions(queryUtils.gestures)),
+      queryClient.prefetchQuery(
+        gesturesPageOptions(queryUtils.gestures, FEATURED_LIMIT)
+      ),
     ]);
   },
 });
@@ -55,7 +57,9 @@ export const Route = createFileRoute("/")({
 function Featured(): ReactNode {
   const { t } = useTranslation();
   const { queryUtils } = Route.useRouteContext();
-  const featured = useQuery(featuredOptions(queryUtils));
+  const featured = useQuery(
+    gesturesPageOptions(queryUtils.gestures, FEATURED_LIMIT)
+  );
   const hearts = useHearts();
   const { refetch } = featured;
   const retry = useCallback(() => {

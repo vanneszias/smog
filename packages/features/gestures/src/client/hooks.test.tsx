@@ -16,6 +16,11 @@ import type { GestureSummary } from "../schema";
 import {
   CATALOG_STALE_TIME,
   CATEGORIES_STALE_TIME,
+  categoriesOptions,
+  gestureOptions,
+  gestureSearchOptions,
+  gesturesBrowseOptions,
+  relatedOptions,
   SEARCH_DEBOUNCE_MS,
   useCategories,
   useGesture,
@@ -54,7 +59,9 @@ function fakeApi(calls: Calls) {
           canonicalSlug: found.slug,
           description: "",
           keywords: [],
+          publishedAt: 0,
           sponsor: null,
+          updatedAt: 0,
         };
       }),
       categories: os.categories.handler(() => [
@@ -114,7 +121,7 @@ function setup() {
       </QueryClientProvider>
     );
   }
-  return { calls, queryClient, store, wrapper };
+  return { calls, queryClient, store, utils: api.queryUtils, wrapper };
 }
 
 function staleTimeOf(queryClient: QueryClient, procedure: string): unknown {
@@ -275,5 +282,61 @@ describe("useRecentSearches", () => {
       await result.current.clear();
     });
     expect(result.current.items).toEqual([]);
+  });
+});
+
+describe("query option factories (SSR prefetch)", () => {
+  test("a prefetch with the factories is what the hooks read: no second fetch", async () => {
+    const { calls, queryClient, utils, wrapper } = setup();
+    await Promise.all([
+      queryClient.prefetchQuery(
+        gestureSearchOptions(utils.gestures, {
+          category: ["familie", "dieren"],
+          limit: 3,
+          q: " hond ",
+        })
+      ),
+      queryClient.prefetchInfiniteQuery(
+        gesturesBrowseOptions(utils.gestures, { category: ["dieren"] })
+      ),
+      queryClient.prefetchQuery(gestureOptions(utils.gestures, "hond")),
+      queryClient.prefetchQuery(relatedOptions(utils.gestures, "hond", 2)),
+      queryClient.prefetchQuery(categoriesOptions(utils.gestures)),
+    ]);
+    const before = {
+      list: calls.list.length,
+      related: calls.related.length,
+      search: calls.search.length,
+    };
+
+    const { result } = renderHook(
+      () => ({
+        browse: useGestures({ category: ["dieren"] }),
+        categories: useCategories(),
+        gesture: useGesture("hond"),
+        related: useRelated("hond", 2),
+        search: useGestureSearch({
+          category: ["dieren", "familie"],
+          limit: 3,
+          q: "hond",
+        }),
+      }),
+      { wrapper }
+    );
+
+    // Everything is there on the first render.
+    expect(result.current.search.data?.items.length).toBeGreaterThan(0);
+    expect(result.current.browse.data?.length).toBeGreaterThan(0);
+    expect(result.current.gesture.data?.name).toBe("Hond");
+    expect(result.current.related.data?.length).toBe(2);
+    expect(result.current.categories.data?.length).toBe(1);
+    await new Promise((resolve) => {
+      setTimeout(resolve, SEARCH_DEBOUNCE_MS + 50);
+    });
+    expect({
+      list: calls.list.length,
+      related: calls.related.length,
+      search: calls.search.length,
+    }).toEqual(before);
   });
 });

@@ -16,6 +16,8 @@ import {
 import { bumpCatalogVersion, reindexGesture } from "@smog/gestures/server";
 import { newId } from "@smog/utils";
 import { beforeAll, describe, expect, it } from "vitest";
+import { scriptJson } from "../src/lib/head";
+import { robotsTxt } from "../src/lib/robots";
 
 const ORIGIN = "http://localhost:5173";
 function binding<T>(value: T | undefined, name: string): T {
@@ -29,7 +31,15 @@ const db = createTestDb({ DB: binding(env.DB, "DB") });
 
 const CANONICAL_LINK =
   /<link (?=[^>]*rel="canonical")(?=[^>]*href="http:\/\/localhost:5173\/gestures\/hond")[^>]*>/;
-const CANONICAL_LOCATION = /\/gestures\/hond$/;
+/** The legacy 301 keeps the query string (spec §9). */
+const CANONICAL_LOCATION = /\/gestures\/hond\?ref=qr&lang=nl$/;
+const JSON_LD = /<script type="application\/ld\+json">(.*?)<\/script>/;
+const ISO_DATE = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/;
+/** The dehydrated query's hash: the key `useGestureSearch` reads. */
+const DEHYDRATED_SEARCH_KEY =
+  /queryHash:"\[\[\\"gestures\\",\\"search\\"\],\{\\"input\\":\{\\"limit\\":48,\\"q\\":\\"hond\\"\},\\"type\\":\\"query\\"\}\]"/;
+/** Seroval writes the data as JS literals; the ranking fields are data only. */
+const DEHYDRATED_HOND_RESULT = /name:"Hond"[^}]*matchedField:"name"/;
 const LEGACY_ID = "j57d0legacyconvexid0000000000";
 const VIEW_TOKEN = "view-token-learning-test-0000000000000000000";
 const REVOKED_TOKEN = "revoked-token-learning-test-00000000000000000";
@@ -166,12 +176,13 @@ describe("/gestures (SSR search)", () => {
     expect(body).not.toContain('href="/gestures/kat"');
   });
 
-  it("dehydrates the results so the client does not fetch them again", async () => {
+  it("dehydrates the search query (key and ranked result) for the client", async () => {
     const { body } = await get("/gestures?q=hond");
-    // The query cache travels in the router's dehydrated state.
-    expect(body).toContain("gestures");
-    expect(body).toContain("search");
-    expect(body).toContain("matchedField");
+    // The query cache travels in the router's dehydrated state: the key the
+    // hook reads (`gestures.search` with q "hond", limit 48) and the ranking
+    // fields, which only the query data carries (the page never shows them).
+    expect(body).toMatch(DEHYDRATED_SEARCH_KEY);
+    expect(body).toMatch(DEHYDRATED_HOND_RESULT);
   });
 });
 
@@ -194,10 +205,27 @@ describe("/gestures/$slug (SSR detail)", () => {
     expect(body).toContain('href="/gestures?category=dieren"');
   });
 
-  it("answers a legacy id with a 301 to the canonical slug", async () => {
-    const { response } = await get(`/gestures/${LEGACY_ID}`);
+  it("answers a legacy id with a 301 to the canonical slug, query kept", async () => {
+    const { response } = await get(`/gestures/${LEGACY_ID}?ref=qr&lang=nl`);
     expect(response.status).toBe(301);
     expect(response.headers.get("location")).toMatch(CANONICAL_LOCATION);
+  });
+
+  it("gives the VideoObject its uploadDate and dateModified (ISO 8601)", async () => {
+    const { body } = await get("/gestures/hond");
+    const jsonLd = body.match(JSON_LD)?.[1] ?? "{}";
+    const video = JSON.parse(jsonLd) as Record<string, string>;
+    expect(video["@type"]).toBe("VideoObject");
+    expect(video.uploadDate).toMatch(ISO_DATE);
+    expect(video.dateModified).toMatch(ISO_DATE);
+  });
+
+  it("escapes < in JSON-LD, so a name cannot close the script element", () => {
+    const json = scriptJson({ name: "</script><script>alert(1)</script>" });
+    expect(json).not.toContain("<");
+    expect(JSON.parse(json)).toEqual({
+      name: "</script><script>alert(1)</script>",
+    });
   });
 
   it.each(["bestaat-niet", "geheim"])(
@@ -244,13 +272,27 @@ describe("sitemap.xml and robots.txt", () => {
     expect(body).not.toContain("geheim");
   });
 
-  it("disallows the private areas and points at the sitemap", async () => {
+  it("keeps everything out of the index outside production (this is dev)", async () => {
     const { body, response } = await get("/robots.txt");
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/plain");
+    expect(body).toBe("User-agent: *\nDisallow: /\n");
+  });
+
+  it("in production disallows the private areas and the SEO bots, with the sitemap", () => {
+    const body = robotsTxt({
+      environment: "production",
+      origin: "https://smog.example",
+    });
     for (const path of ["/admin", "/api/", "/dev/", "/account"]) {
       expect(body).toContain(`Disallow: ${path}`);
     }
-    expect(body).toContain(`Sitemap: ${ORIGIN}/sitemap.xml`);
+    for (const bot of ["AhrefsBot", "SemrushBot", "MJ12bot", "DotBot"]) {
+      expect(body).toContain(`User-agent: ${bot}\nDisallow: /\n`);
+    }
+    expect(body).toContain("Sitemap: https://smog.example/sitemap.xml");
+    expect(robotsTxt({ environment: "staging", origin: "x" })).toBe(
+      "User-agent: *\nDisallow: /\n"
+    );
   });
 });

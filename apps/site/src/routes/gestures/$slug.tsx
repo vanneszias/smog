@@ -1,5 +1,10 @@
 import { ORPCError } from "@orpc/client";
-import { useGesture, useRelated } from "@smog/gestures/client";
+import {
+  gestureOptions,
+  relatedOptions,
+  useGesture,
+  useRelated,
+} from "@smog/gestures/client";
 import { muxStreamUrl, muxThumbnailUrl } from "@smog/utils";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -11,7 +16,6 @@ import { GestureDetailSkeleton } from "@/components/learning/gesture-detail-skel
 import { gestureHref } from "@/components/learning/links";
 import { Page, RouteError } from "@/components/learning/page";
 import { useHearts } from "@/components/learning/use-hearts";
-import { gestureOptions, relatedOptions } from "@/lib/gesture-queries";
 import { pageMeta, seoHead, shellHead } from "@/lib/head";
 import type { RouterContext } from "@/router";
 
@@ -20,44 +24,52 @@ export interface GestureHead {
   description: string;
   name: string;
   playbackId: string;
+  /** Epoch ms. */
+  publishedAt: number;
   slug: string;
+  /** Epoch ms. */
+  updatedAt: number;
 }
 
-// The detail and its related gestures in parallel (two D1 reads); a
-// legacy id answers 301 to the slug, an unknown one the 404 page.
+/**
+ * The detail, then its related gestures (two D1 reads). A legacy id or an
+ * old slug answers 301 to the canonical slug with the query string kept
+ * (spec §9), before `related` is read; an unknown one is the 404 page.
+ */
 async function loadGesture({
   context,
+  location,
   params,
 }: {
   context: RouterContext;
+  location: { searchStr: string };
   params: { slug: string };
 }): Promise<GestureHead> {
   const { queryClient, queryUtils } = context;
-  const [gesture] = await Promise.all([
-    queryClient
-      .ensureQueryData(gestureOptions(queryUtils, params.slug))
-      .catch((error: unknown) => {
-        if (error instanceof ORPCError && error.code === "NOT_FOUND") {
-          throw notFound();
-        }
-        throw error;
-      }),
-    queryClient.prefetchQuery(
-      relatedOptions(queryUtils, params.slug, RELATED_LIMIT)
-    ),
-  ]);
+  const gesture = await queryClient
+    .ensureQueryData(gestureOptions(queryUtils.gestures, params.slug))
+    .catch((error: unknown) => {
+      if (error instanceof ORPCError && error.code === "NOT_FOUND") {
+        throw notFound();
+      }
+      throw error;
+    });
   if (gesture.canonicalSlug !== params.slug) {
     throw redirect({
-      params: { slug: gesture.canonicalSlug },
+      href: `${gestureHref(gesture.canonicalSlug)}${location.searchStr}`,
       statusCode: 301,
-      to: "/gestures/$slug",
     });
   }
+  await queryClient.prefetchQuery(
+    relatedOptions(queryUtils.gestures, gesture.slug, RELATED_LIMIT)
+  );
   return {
     description: gesture.description,
     name: gesture.name,
     playbackId: gesture.playbackId,
+    publishedAt: gesture.publishedAt,
     slug: gesture.slug,
+    updatedAt: gesture.updatedAt,
   };
 }
 
@@ -81,9 +93,11 @@ export const Route = createFileRoute("/gestures/$slug")({
         "@context": "https://schema.org",
         "@type": "VideoObject",
         contentUrl: muxStreamUrl(loaderData.playbackId),
+        dateModified: new Date(loaderData.updatedAt).toISOString(),
         description,
         name: loaderData.name,
         thumbnailUrl: image,
+        uploadDate: new Date(loaderData.publishedAt).toISOString(),
         url: `${siteUrl}${path}`,
       },
       path,

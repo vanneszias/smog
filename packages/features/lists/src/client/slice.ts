@@ -21,7 +21,10 @@ export const SHARED_LIST_STALE_TIME = 30_000;
 /** `gestures.byIds` takes at most this many ids per call. */
 export const BY_IDS_CHUNK = 100;
 
-export function useListsRpc(): RpcQueryUtils<ListsSlice>["lists"] {
+/** The TanStack Query utils for `lists.*`. */
+export type ListsQueryUtils = RpcQueryUtils<ListsSlice>["lists"];
+
+export function useListsRpc(): ListsQueryUtils {
   return useRpcQuery<ListsSlice>().lists;
 }
 

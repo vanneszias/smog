@@ -226,8 +226,10 @@ export async function findGestureBySlug(
     const [row] = await db
       .select({
         ...searchableColumns,
+        publishedAt: gesture.publishedAt,
         sponsorName: sponsorship.displayName,
         sponsorUntil: sponsorship.endsAt,
+        updatedAt: gesture.updatedAt,
       })
       .from(gesture)
       .leftJoin(
@@ -248,14 +250,18 @@ export async function findGestureBySlug(
     if (!row) {
       return null;
     }
-    const { sponsorName, sponsorUntil, ...detail } = row;
+    const { publishedAt, sponsorName, sponsorUntil, updatedAt, ...detail } =
+      row;
     return {
       ...detail,
       canonicalSlug: detail.slug,
+      // `isPublished` guarantees the date; the fallback only satisfies the type.
+      publishedAt: (publishedAt ?? updatedAt).getTime(),
       sponsor:
         sponsorName !== null && sponsorUntil !== null
           ? { name: sponsorName, until: sponsorUntil.getTime() }
           : null,
+      updatedAt: updatedAt.getTime(),
     };
   } catch (error) {
     console.error("[gestures] Failed to find a gesture by slug:", error);

@@ -103,7 +103,9 @@ function fillCache(queryClient: QueryClient): void {
     canonicalSlug: "hond",
     description: "",
     keywords: [],
+    publishedAt: 0,
     sponsor: null,
+    updatedAt: 0,
   });
   queryClient.setQueryData(keys.favoritesIds, ["g1"]);
   queryClient.setQueryData(keys.guestIds, ["g9"]);
