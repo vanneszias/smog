@@ -10,6 +10,7 @@
     ],
     "catalog": {
       "@cloudflare/vitest-plugin": "1.3.1",
+      "@openpanel/react-native": "1.4.1",
       "@orpc/client": "1.15.4",
       "@orpc/contract": "1.15.4",
       "@orpc/openapi": "1.15.4",
@@ -65,5 +66,8 @@
     "typescript": "catalog:",
     "ultracite": "7.12.2"
   },
-  "packageManager": "bun@1.3.11"
+  "packageManager": "bun@1.3.11",
+  "patchedDependencies": {
+    "@openpanel/react-native@1.4.1": "patches/@openpanel%2Freact-native@1.4.1.patch"
+  }
 }

@@ -1,4 +1,5 @@
 import {
+  type UseGestureSearchOptions,
   useCategories,
   useGestureSearch,
   useRecentSearches,
@@ -88,6 +89,8 @@ function RecentSearchList({
  * SearchField. `?q=` and `?category=` (deep links, the gesture screen's
  * category chips) set the query and the filter.
  */
+type SearchSource = NonNullable<UseGestureSearchOptions["source"]>;
+
 export default function SearchScreen(): ReactElement {
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ category?: string; q?: string }>();
@@ -95,15 +98,29 @@ export default function SearchScreen(): ReactElement {
   const [category, setCategory] = useState(() =>
     parseCategories(params.category)
   );
+  // What `search_performed` reports: typing and filters, a submit (also
+  // a `?q=` link from Home), or a recent search.
+  const [source, setSource] = useState<SearchSource>(
+    params.q ? "submit" : "filter_change"
+  );
+  const typeQuery = useCallback((q: string) => {
+    setSource("filter_change");
+    setQuery(q);
+  }, []);
+  const changeCategory = useCallback((next: string[]) => {
+    setSource("filter_change");
+    setCategory(next);
+  }, []);
   const [focused, setFocused] = useState(false);
   const searchBar = useRef<SearchBarCommands>(null);
   const recent = useRecentSearches();
   const categories = useCategories();
-  const renderCard = useGestureCardRenderer();
+  const renderCard = useGestureCardRenderer("search_results");
 
   // The tab stays mounted: a new link or category chip replaces the search.
   useEffect(() => {
     if (params.q !== undefined) {
+      setSource("submit");
       setQuery(params.q);
       searchBar.current?.setText(params.q);
     }
@@ -114,20 +131,25 @@ export default function SearchScreen(): ReactElement {
     }
   }, [params.category]);
 
-  const search = useGestureSearch({ category, limit: SEARCH_LIMIT, q: query });
+  const search = useGestureSearch({
+    category,
+    limit: SEARCH_LIMIT,
+    q: query,
+    source,
+  });
   const items = search.data?.items ?? [];
 
   const submit = useCallback(() => {
     const q = query.trim();
     if (q) {
-      // analytics: search_performed { source: "submit" }
+      setSource("submit");
       recent.add(q).catch((error: unknown) => {
         console.error("[search] Failed to save a recent search:", error);
       });
     }
   }, [query, recent]);
   const pickRecent = useCallback((q: string) => {
-    // analytics: search_performed { source: "recent_search" }
+    setSource("recent_search");
     setQuery(q);
     searchBar.current?.setText(q);
   }, []);
@@ -151,11 +173,11 @@ export default function SearchScreen(): ReactElement {
     () => (
       <CategoryFilterSheet
         categories={categories.data ?? []}
-        onChange={setCategory}
+        onChange={changeCategory}
         selected={category}
       />
     ),
-    [categories.data, category]
+    [categories.data, category, changeCategory]
   );
   const headerRight = useCallback(() => filter, [filter]);
 
@@ -182,7 +204,7 @@ export default function SearchScreen(): ReactElement {
                   hideWhenScrolling: false,
                   onBlur: blur,
                   onCancelButtonPress: cancel,
-                  onChangeText: (event) => setQuery(event.nativeEvent.text),
+                  onChangeText: (event) => typeQuery(event.nativeEvent.text),
                   onFocus: focus,
                   onSearchButtonPress: submit,
                   placeholder: t("search.placeholder"),
@@ -200,7 +222,7 @@ export default function SearchScreen(): ReactElement {
               onBlur={blur}
               onFocus={focus}
               onSubmitEditing={submit}
-              onValueChange={setQuery}
+              onValueChange={typeQuery}
               placeholder={t("search.placeholder")}
               value={query}
             />

@@ -59,7 +59,7 @@ export function CategoryFilterSheet({
       } else {
         next.delete(slug);
       }
-      // analytics: search_performed { source: "filter_change" } (sent by the search hook)
+      // search_performed (source filter_change) is sent by the search hook.
       onChange(
         categories.map((item) => item.slug).filter((item) => next.has(item))
       );

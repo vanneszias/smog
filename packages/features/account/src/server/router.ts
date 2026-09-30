@@ -98,7 +98,7 @@ export function createAccountRouter(deps: AccountRouterDeps) {
           errors.UNAUTHORIZED
         )
     ),
-    // analytics: guest_data_imported {favorites_added, lists_created, lists_merged}
+    // Analytics: guest_data_imported is sent by the client (useGuestImport).
     importGuestData: os.importGuestData.handler(
       async ({ context, input }) =>
         await importGuestData(

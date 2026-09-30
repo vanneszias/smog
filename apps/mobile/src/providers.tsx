@@ -27,6 +27,11 @@ import {
   useMemo,
   useState,
 } from "react";
+import {
+  createMobileAnalytics,
+  type MobileAnalytics,
+  MobileAnalyticsProvider,
+} from "@/analytics";
 import { createMobileApiClient } from "@/lib/api";
 import { AuthClientProvider } from "@/lib/auth-client";
 import { mobileEnv } from "@/lib/env";
@@ -40,6 +45,8 @@ import {
 } from "@/lib/query-persist";
 
 export interface AppClients {
+  /** Consent-gated; tests leave it out (a no-op). */
+  analytics?: MobileAnalytics;
   api: ApiClient;
   auth: ExpoAuthClient;
   /** Where the offline query cache lives (AsyncStorage in the app). */
@@ -66,12 +73,14 @@ function createAppClients(): AppClients {
   });
   const queryClient = new QueryClient();
   keepPersistedQueries(queryClient);
+  const store = createLocalStore(nativeAdapter);
   return {
+    analytics: createMobileAnalytics(),
     api: createMobileApiClient(auth),
     auth,
     cacheStorage: AsyncStorage,
     queryClient,
-    store: createLocalStore(nativeAdapter),
+    store,
     useSession: sessionHook(auth),
   };
 }
@@ -108,7 +117,7 @@ function PreferencesRoot({ children }: { children: ReactNode }): ReactElement {
 /**
  * Every app-wide provider: TanStack Query (persisted for offline use and
  * paused while offline, `@/lib/query-persist`), oRPC, the auth client and
- * its state, the local store, then theme and language from its
+ * its state, the local store, analytics, then theme and language from its
  * preferences. Tests pass fakes as `clients`.
  */
 export function AppProviders({
@@ -143,7 +152,9 @@ export function AppProviders({
             <PurgeOtherUsers />
             <PurgeRestoredQueries />
             <LocalStoreProvider store={clients.store}>
-              <PreferencesRoot>{children}</PreferencesRoot>
+              <MobileAnalyticsProvider value={clients.analytics}>
+                <PreferencesRoot>{children}</PreferencesRoot>
+              </MobileAnalyticsProvider>
             </LocalStoreProvider>
           </AuthStateProvider>
         </AuthClientProvider>

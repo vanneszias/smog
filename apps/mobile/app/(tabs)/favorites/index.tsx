@@ -30,7 +30,7 @@ export default function FavoritesScreen(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const favorites = useFavorites();
-  const renderCard = useGestureCardRenderer();
+  const renderCard = useGestureCardRenderer("favorites");
   const explore = useCallback(() => router.navigate("/search"), [router]);
   const retry = useRetry(favoriteQueries);
   const { hasMoreItems, loadMoreItems } = favorites;

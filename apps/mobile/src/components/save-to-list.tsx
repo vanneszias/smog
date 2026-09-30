@@ -32,7 +32,10 @@ function ListMembership({
   listId: string;
   onChange: (listId: string, membership: Membership | null) => void;
 }): null {
-  const { addItem, list, removeItem, status } = useList(listId);
+  // Only the gesture screen saves to lists.
+  const { addItem, list, removeItem, status } = useList(listId, {
+    source: "gesture_detail",
+  });
   const contains = list?.items.some((item) => item.id === gestureId) ?? false;
   const ready = status === "ready" && list !== undefined;
   useEffect(() => {

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createRouterClient, implement } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { AnalyticsProvider } from "@smog/analytics/react";
+import { createRecordingAnalytics } from "@smog/analytics/testing";
 import {
   createLocalStore,
   createMemoryAdapter,
@@ -105,16 +107,19 @@ function setup() {
   });
   const store: LocalStore = createLocalStore(createMemoryAdapter());
   const api = fakeApi(calls);
+  const recorder = createRecordingAnalytics();
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <RpcProvider client={api.client} queryUtils={api.queryUtils}>
-          <LocalStoreProvider store={store}>{children}</LocalStoreProvider>
+          <AnalyticsProvider analytics={recorder.analytics}>
+            <LocalStoreProvider store={store}>{children}</LocalStoreProvider>
+          </AnalyticsProvider>
         </RpcProvider>
       </QueryClientProvider>
     );
   }
-  return { calls, queryClient, store, wrapper };
+  return { calls, events: recorder.events, queryClient, store, wrapper };
 }
 
 function staleTimeOf(queryClient: QueryClient, procedure: string): unknown {
@@ -205,6 +210,87 @@ describe("useRelated", () => {
 });
 
 describe("useGestureSearch", () => {
+  test("sends search_performed once per settled search, never the text", async () => {
+    const { events, wrapper } = setup();
+    const { rerender, result } = renderHook(
+      ({ q }: { q: string }) =>
+        useGestureSearch({ category: ["dieren"], q, source: "submit" }),
+      { initialProps: { q: "" }, wrapper }
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    rerender({ q: "ho" });
+    rerender({ q: " hond " });
+    await waitFor(() =>
+      expect(result.current.data?.items.map((item) => item.name)).toEqual([
+        "Hond",
+      ])
+    );
+    rerender({ q: " hond " });
+    await waitFor(() => expect(events.length).toBeGreaterThan(1));
+    expect(events).toEqual([
+      {
+        name: "search_performed",
+        properties: {
+          category_count: 1,
+          has_results: true,
+          query_length: 0,
+          result_count: 5,
+          source: "submit",
+        },
+      },
+      {
+        name: "search_performed",
+        properties: {
+          category_count: 1,
+          has_results: true,
+          query_length: 4,
+          result_count: 1,
+          source: "submit",
+        },
+      },
+    ]);
+    expect(JSON.stringify(events)).not.toContain("hond");
+  });
+
+  test("a new source for the settled search counts again; a pending one waits", async () => {
+    const { events, wrapper } = setup();
+    interface Props {
+      q: string;
+      source: "filter_change" | "submit" | "recent_search";
+    }
+    const { rerender, result } = renderHook(
+      ({ q, source }: Props) => useGestureSearch({ q, source }),
+      {
+        initialProps: { q: "hond", source: "filter_change" } as Props,
+        wrapper,
+      }
+    );
+    await waitFor(() => expect(events).toHaveLength(1));
+    // Submit of the same, settled text.
+    rerender({ q: "hond", source: "submit" });
+    await waitFor(() => expect(events).toHaveLength(2));
+    // A recent search: the new source must not be pinned on the old text.
+    rerender({ q: "kat", source: "recent_search" });
+    await waitFor(() =>
+      expect(result.current.data?.items[0]?.name).toBe("Kat")
+    );
+    await waitFor(() => expect(events).toHaveLength(3));
+    expect(events.map((event) => [event.properties])).toEqual([
+      [expect.objectContaining({ query_length: 4, source: "filter_change" })],
+      [expect.objectContaining({ query_length: 4, source: "submit" })],
+      [expect.objectContaining({ query_length: 3, source: "recent_search" })],
+    ]);
+  });
+
+  test("the browse list (no text, no category) is not a search", async () => {
+    const { events, wrapper } = setup();
+    const { result } = renderHook(() => useGestureSearch({ q: "" }), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(events).toEqual([]);
+  });
+
   test("debounces the query by 250 ms and sends only the settled text", async () => {
     expect(SEARCH_DEBOUNCE_MS).toBe(250);
     const { calls, wrapper } = setup();

@@ -5,8 +5,11 @@ export const RENDER_MODES = ["container", "local", "fake"] as const;
 
 export type Environment = (typeof ENVIRONMENTS)[number];
 
+/** The self-hosted OpenPanel (spec §12), for the relay and the native client. */
+export const OPENPANEL_DEFAULT_API_URL = "https://analytics.zias.be/api";
+
 /** An optional value: unset and empty (`KEY=` in `.dev.vars`) both mean "off". */
-const optionalValue = z.preprocess(
+export const optionalValue = z.preprocess(
   (value) => (value === "" ? undefined : value),
   z.string().min(1).optional()
 );
@@ -16,7 +19,7 @@ export const workerVarsSchema = z.object({
   EMAIL_FROM: z.string().min(1),
   EMAIL_REPLY_TO: z.email(),
   ENVIRONMENT: z.enum(ENVIRONMENTS),
-  OPENPANEL_API_URL: z.url().default("https://analytics.zias.be/api"),
+  OPENPANEL_API_URL: z.url().default(OPENPANEL_DEFAULT_API_URL),
   RENDER_MODE: z.enum(RENDER_MODES).default("container"),
   SITE_URL: z.url(),
   /** The public Turnstile widget key; the widget is hidden without it. */
@@ -27,7 +30,7 @@ export type WorkerVars = z.infer<typeof workerVarsSchema>;
 
 /**
  * Secrets of the site Worker (`.dev.vars` locally, `wrangler secret put`
- * in staging/production). Later phases add Mollie, Mux and OpenPanel.
+ * in staging/production). Later phases add Mollie and Mux.
  */
 export const workerSecretsSchema = z.object({
   APPLE_APP_BUNDLE_IDENTIFIER: optionalValue,
@@ -36,6 +39,9 @@ export const workerSecretsSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: optionalValue,
   GOOGLE_CLIENT_SECRET: optionalValue,
+  /** The OpenPanel relay (`/api/analytics`); events are dropped without them. */
+  OPENPANEL_CLIENT_ID: optionalValue,
+  OPENPANEL_CLIENT_SECRET: optionalValue,
   TURNSTILE_SECRET_KEY: optionalValue,
 });
 

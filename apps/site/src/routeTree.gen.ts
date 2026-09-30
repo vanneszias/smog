@@ -17,6 +17,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DevMailRouteImport } from './routes/dev/mail'
 import { Route as DevMailDotjsonRouteImport } from './routes/dev/mail[.]json'
@@ -65,6 +66,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAnalyticsRoute = ApiAnalyticsRouteImport.update({
+  id: '/api/analytics',
+  path: '/api/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/verify-email'
+    | '/api/analytics'
     | '/api/health'
     | '/dev/mail'
     | '/dev/mail.json'
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/verify-email'
+    | '/api/analytics'
     | '/api/health'
     | '/dev/mail'
     | '/dev/mail.json'
@@ -198,6 +209,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/verify-email'
+    | '/api/analytics'
     | '/api/health'
     | '/dev/mail'
     | '/dev/mail.json'
@@ -216,6 +228,7 @@ export interface RootRouteChildren {
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   DevMailRoute: typeof DevMailRoute
   DevMailDotjsonRoute: typeof DevMailDotjsonRoute
@@ -283,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/analytics': {
+      id: '/api/analytics'
+      path: '/api/analytics'
+      fullPath: '/api/analytics'
+      preLoaderRoute: typeof ApiAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -344,6 +364,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  ApiAnalyticsRoute: ApiAnalyticsRoute,
   ApiHealthRoute: ApiHealthRoute,
   DevMailRoute: DevMailRoute,
   DevMailDotjsonRoute: DevMailDotjsonRoute,

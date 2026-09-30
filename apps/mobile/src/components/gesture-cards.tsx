@@ -1,3 +1,7 @@
+import type {
+  CollectionSource,
+  GestureViewSource,
+} from "@smog/analytics/schema";
 import { useFavorites } from "@smog/favorites/client";
 import { useTranslation } from "@smog/i18n/react";
 import {
@@ -9,14 +13,20 @@ import {
 import { useRouter } from "expo-router";
 import { type ReactElement, type ReactNode, useCallback } from "react";
 
-/** Opens a gesture on the gesture screen (the root stack's card). */
-export function useOpenGesture(): (slug: string) => void {
+/**
+ * Opens a gesture on the gesture screen (the root stack's card). `from`
+ * is where it was opened, for `gesture_viewed` (a deep link has none and
+ * counts as `direct`).
+ */
+export function useOpenGesture(
+  from: GestureViewSource = "direct"
+): (slug: string) => void {
   const router = useRouter();
   return useCallback(
     (slug: string) => {
-      router.push({ params: { slug }, pathname: "/gestures/[slug]" });
+      router.push({ params: { from, slug }, pathname: "/gestures/[slug]" });
     },
-    [router]
+    [from, router]
   );
 }
 
@@ -24,13 +34,13 @@ export function useOpenGesture(): (slug: string) => void {
  * The heart of a gesture: flips at once (optimistic for accounts, on the
  * device for guests); a failed flip is rolled back by the hook and toasted.
  */
-export function useToggleFavorite(): {
+export function useToggleFavorite(source: CollectionSource = "gesture_list"): {
   isFavorite: (gestureId: string) => boolean;
   toggle: (gestureId: string) => void;
 } {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const favorites = useFavorites({ items: false });
+  const favorites = useFavorites({ items: false, source });
   const { toggle: flip } = favorites;
   const toggle = useCallback(
     (gestureId: string) => {
@@ -102,13 +112,15 @@ export function GestureRowItem({
 
 /**
  * `renderItem` for a GestureGrid or SearchResults: a card that opens the
- * gesture, with its heart.
+ * gesture, with its heart. `from` is the screen, for analytics.
  */
-export function useGestureCardRenderer<T extends GestureCardData>(): (
-  item: T
-) => ReactElement {
-  const open = useOpenGesture();
-  const { isFavorite, toggle } = useToggleFavorite();
+export function useGestureCardRenderer<T extends GestureCardData>(
+  from: GestureViewSource = "direct"
+): (item: T) => ReactElement {
+  const open = useOpenGesture(from);
+  const { isFavorite, toggle } = useToggleFavorite(
+    from === "search_results" ? "search_results" : "gesture_list"
+  );
   return useCallback(
     (item: T) => (
       <GestureCardItem

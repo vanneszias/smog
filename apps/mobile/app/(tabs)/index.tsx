@@ -74,7 +74,7 @@ export default function HomeScreen(): ReactElement {
     if (!q) {
       return;
     }
-    // analytics: search_performed { source: "submit" } (sent by the search tab)
+    // search_performed (source submit) is sent by the search tab (`?q=`).
     recent.add(q).catch((error: unknown) => {
       console.error("[home] Failed to save a recent search:", error);
     });

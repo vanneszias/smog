@@ -58,7 +58,7 @@ export function createListsRouter(deps: ListsRouterDeps) {
   });
 
   return os.router({
-    // analytics: gesture_collection_changed is sent by the client.
+    // Analytics: gesture_collection_changed is sent by the client (useList, useSharedList).
     addItem: os.addItem
       .use(requireUser)
       .handler(({ context, errors, input }) =>

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createRouterClient, implement } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { AnalyticsProvider } from "@smog/analytics/react";
+import { createRecordingAnalytics } from "@smog/analytics/testing";
 import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
 import { gesturesContract } from "@smog/gestures/contract";
 import type { GestureSummary } from "@smog/gestures/schema";
@@ -152,15 +154,18 @@ function setup(mode: AuthMode, favorites: string[] = []) {
   const store: LocalStore = createLocalStore(createMemoryAdapter());
   const api = fakeApi(server);
   authMode = mode;
+  const recorder = createRecordingAnalytics();
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <RpcProvider client={api.client} queryUtils={api.queryUtils}>
-          <LocalStoreProvider store={store}>
-            <AuthStateProvider useSession={useFakeSession}>
-              {children}
-            </AuthStateProvider>
-          </LocalStoreProvider>
+          <AnalyticsProvider analytics={recorder.analytics}>
+            <LocalStoreProvider store={store}>
+              <AuthStateProvider useSession={useFakeSession}>
+                {children}
+              </AuthStateProvider>
+            </LocalStoreProvider>
+          </AnalyticsProvider>
         </RpcProvider>
       </QueryClientProvider>
     );
@@ -171,7 +176,23 @@ function setup(mode: AuthMode, favorites: string[] = []) {
     await act(() => store.ready);
     return hook;
   }
-  return { queryClient, render, server, store };
+  return { events: recorder.events, queryClient, render, server, store };
+}
+
+function collectionChanged(
+  action: "added" | "removed",
+  gestureId: string,
+  source: "gesture_detail" | "gesture_list" = "gesture_list"
+) {
+  return {
+    name: "gesture_collection_changed",
+    properties: {
+      action,
+      collection: "favorites",
+      gesture_id: gestureId,
+      source,
+    },
+  } as const;
 }
 
 afterEach(() => {
@@ -248,6 +269,39 @@ describe("useFavorites for a guest", () => {
     expect(result.current.items).toEqual([]);
     expect(result.current.hasMoreItems).toBe(false);
     expect(server.byIds).toEqual([]);
+  });
+});
+
+describe("useFavorites analytics", () => {
+  test("a guest toggle sends gesture_collection_changed with the hook's source", async () => {
+    const { events, render, store } = setup("signedOut");
+    await store.update(toggleFavorite(HOND.id));
+    const { result } = await render({ items: false, source: "gesture_detail" });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await act(async () => {
+      await result.current.toggle(BEER.id);
+      await result.current.toggle(HOND.id);
+    });
+    expect(events).toEqual([
+      collectionChanged("added", BEER.id, "gesture_detail"),
+      collectionChanged("removed", HOND.id, "gesture_detail"),
+    ]);
+  });
+
+  test("signed in, only a flip the server confirmed is sent", async () => {
+    const { events, render, server } = setup("signedIn", [AAP.id]);
+    const { result } = await render({ items: false });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await act(async () => {
+      await result.current.toggle(HOND.id);
+    });
+    expect(events).toEqual([collectionChanged("added", HOND.id)]);
+
+    server.fail = true;
+    await act(async () => {
+      await result.current.toggle(AAP.id).catch(() => undefined);
+    });
+    expect(events).toHaveLength(1);
   });
 });
 

@@ -1,3 +1,5 @@
+import type { Analytics } from "@smog/analytics/react";
+import type { CollectionSource } from "@smog/analytics/schema";
 import type { GesturesContract } from "@smog/gestures/contract";
 import {
   type RpcClient,
@@ -27,4 +29,23 @@ export function useListsRpc(): RpcQueryUtils<ListsSlice>["lists"] {
 
 export function useListsClient(): RpcClient<ListsSlice> {
   return useRpcClient<ListsSlice>();
+}
+
+/** Options of the hooks that add to or remove from a list. */
+export interface ListItemOptions {
+  /** Where the change happens, for `gesture_collection_changed` (default `gesture_list`). */
+  source?: CollectionSource;
+}
+
+/** `gesture_collection_changed` for a list item the list really gained or lost. */
+export function trackListItem(
+  analytics: Analytics,
+  action: "added" | "removed",
+  gestureId: string,
+  source: CollectionSource
+): void {
+  analytics.track({
+    name: "gesture_collection_changed",
+    properties: { action, collection: "list", gesture_id: gestureId, source },
+  });
 }

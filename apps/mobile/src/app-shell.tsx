@@ -1,6 +1,7 @@
 import { KitProvider, ToastProvider } from "@smog/ui-native";
 import { Stack } from "expo-router";
 import type { ReactElement } from "react";
+import { AnalyticsBridge } from "@/analytics";
 import { GuestImportSheet } from "@/guest-import-sheet";
 import { type StackHeaderOptions, useStackHeaderOptions } from "@/lib/header";
 import { ThemeRoot } from "@/theme-root";
@@ -39,6 +40,7 @@ export function AppShell(): ReactElement {
             <Stack.Screen name="shared/[token]" options={card} />
           </Stack>
           <GuestImportSheet />
+          <AnalyticsBridge />
         </ToastProvider>
       </KitProvider>
     </ThemeRoot>
