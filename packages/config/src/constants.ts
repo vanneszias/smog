@@ -9,6 +9,14 @@ export const COURSE_URL = "https://smog.vlaanderen/volg-een-cursus";
 export const SMOG_WEBSITE_URL = "https://smog.vlaanderen";
 export const CONTACT_EMAIL = "info@smog.vlaanderen";
 
+/** The app's store pages (the old site's banner, inventory L-16). */
+export const APP_STORE_URL = "https://apps.apple.com/app/smog-co/id6758547774";
+export const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=be.zias.smog";
+/** The app's URL scheme and Android package (`apps/mobile/app.config.ts`). */
+export const APP_SCHEME = "smog";
+export const ANDROID_PACKAGE = "be.zias.smog";
+
 export const RECENT_SEARCHES_MAX = 10;
 
 export const LOCALES = ["nl", "en", "fr"] as const;

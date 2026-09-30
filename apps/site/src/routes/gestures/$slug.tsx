@@ -8,6 +8,7 @@ import {
 import { muxStreamUrl, muxThumbnailUrl } from "@smog/utils";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { OpenInApp } from "@/components/app-banner";
 import {
   GestureDetailView,
   RELATED_LIMIT,
@@ -115,6 +116,7 @@ function GesturePage(): ReactNode {
   const hearts = useHearts();
   return (
     <Page>
+      <OpenInApp path={gestureHref(slug)} />
       {gesture.data ? (
         <GestureDetailView
           gesture={gesture.data}

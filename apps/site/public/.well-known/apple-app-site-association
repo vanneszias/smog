@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["96XKP6MU2A.be.zias.smog"],
+        "components": [
+          { "/": "/gestures/*", "comment": "A gesture (slug or legacy id)" },
+          { "/": "/lists/*", "comment": "A shared list (share token)" }
+        ]
+      }
+    ]
+  }
+}

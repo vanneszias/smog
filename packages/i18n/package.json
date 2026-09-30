@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./legal": "./src/legal/index.ts",
     "./native": "./src/setup-native.ts",
     "./react": "./src/react.ts"
   },

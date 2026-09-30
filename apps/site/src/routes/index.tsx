@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
+import { SiteAppBanner } from "@/components/app-banner";
 import {
   GestureGridSkeleton,
   LinkedGestureGrid,
@@ -143,6 +144,7 @@ function Home(): ReactNode {
 
   return (
     <Page className="gap-10 md:gap-12">
+      <SiteAppBanner />
       <section className="flex flex-col items-center gap-6 pt-6 text-center md:pt-12">
         <div className="flex max-w-reading flex-col gap-3">
           <Heading level={1} size="display">

@@ -637,6 +637,26 @@
     "saved": "Your choice has been saved.",
     "saveFailed": "Your choice could not be saved. Please try again."
   },
+  "appBanner": {
+    "badge": "New",
+    "title": "SMOG is now available on your phone!",
+    "description": "Download the app and learn gestures wherever you are.",
+    "appStorePrefix": "Download on the",
+    "googlePlayPrefix": "Get it on",
+    "dismiss": "Close the app banner"
+  },
+  "openInApp": {
+    "title": "Have the SMOG app?",
+    "description": "View this gesture in the app.",
+    "action": "Open in the app"
+  },
+  "legal": {
+    "lastUpdated": "Last updated on {{date}}",
+    "contents": "Contents",
+    "translationNotice": "This translation is provided for convenience; the Dutch version prevails.",
+    "readDutch": "Read the Dutch version",
+    "consentControl": "Your statistics choice"
+  },
   "gestures": {
     "description": "Look up SMOG gestures by word or category and watch them on video.",
     "select": {

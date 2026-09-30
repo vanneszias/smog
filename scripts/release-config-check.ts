@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { join, posix } from "node:path";
 
 /**
- * Static checks on the release plumbing: the CI and deploy workflows and the
- * site's wrangler envs. Each `check*` function returns a list of problems; an
+ * Static checks on the release plumbing: the CI and deploy workflows, the
+ * site's wrangler envs and the app-link files against the Expo config. Each `check*` function returns a list of problems; an
  * empty list means the file is fine.
  */
 
@@ -343,6 +343,200 @@ export function migrationsDirFromWrangler(source: string): string {
   return [...dirs][0] ?? DEFAULT_MIGRATIONS_DIR;
 }
 
+/** What the app-link files must agree on (`apps/mobile/app.config.ts`). */
+export interface AppLinkIdentity {
+  androidPackage: string;
+  bundleId: string;
+  /** The verified https intent filters' `pathPrefix`es, e.g. `/gestures/`. */
+  pathPrefixes: string[];
+  teamId: string;
+}
+
+const APP_CONFIG = "apps/mobile/app.config.ts";
+const AASA_FILE = "apps/site/public/.well-known/apple-app-site-association";
+const ASSETLINKS_FILE = "apps/site/public/.well-known/assetlinks.json";
+const HEADERS_FILE = "apps/site/public/_headers";
+const HANDLE_ALL_URLS = "delegate_permission/common.handle_all_urls";
+/** Play's app-signing key, as Play Console shows it (inventory P-20). */
+const SHA256_FINGERPRINT = /^(?:[A-F0-9]{2}:){31}[A-F0-9]{2}$/;
+const INDENTED = /^\s/;
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+/** The ids and verified app-link paths of an Expo config, or its problems. */
+export function appLinkIdentity(config: unknown): AppLinkIdentity | string[] {
+  const ios = isRecord(config) && isRecord(config.ios) ? config.ios : {};
+  const android =
+    isRecord(config) && isRecord(config.android) ? config.android : {};
+  const { appleTeamId, bundleIdentifier } = ios;
+  const androidPackage = android.package;
+  if (
+    typeof appleTeamId !== "string" ||
+    typeof bundleIdentifier !== "string" ||
+    typeof androidPackage !== "string"
+  ) {
+    return [
+      `${APP_CONFIG}: ios.appleTeamId, ios.bundleIdentifier and android.package are required`,
+    ];
+  }
+  const pathPrefixes = asArray(android.intentFilters)
+    .filter((filter) => isRecord(filter) && filter.autoVerify === true)
+    .flatMap((filter) => asArray(isRecord(filter) ? filter.data : undefined))
+    .flatMap((data) =>
+      isRecord(data) &&
+      data.scheme === "https" &&
+      typeof data.pathPrefix === "string"
+        ? [data.pathPrefix]
+        : []
+    );
+  return {
+    androidPackage,
+    bundleId: bundleIdentifier,
+    pathPrefixes,
+    teamId: appleTeamId,
+  };
+}
+
+function parseJson(source: string, file: string, errors: string[]): unknown {
+  try {
+    return JSON.parse(source);
+  } catch {
+    errors.push(`${file}: invalid JSON`);
+  }
+}
+
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+}
+
+function checkAasa(source: string, app: AppLinkIdentity): string[] {
+  const errors: string[] = [];
+  const parsed = parseJson(source, AASA_FILE, errors);
+  if (errors.length > 0) {
+    return errors;
+  }
+  const applinks =
+    isRecord(parsed) && isRecord(parsed.applinks) ? parsed.applinks : {};
+  const details = asArray(applinks.details).filter(isRecord);
+  const appIDs = details.flatMap((detail) => asArray(detail.appIDs));
+  const paths = details.flatMap((detail) =>
+    asArray(detail.components).flatMap((component) =>
+      isRecord(component) && typeof component["/"] === "string"
+        ? [component["/"]]
+        : []
+    )
+  );
+  const appId = `${app.teamId}.${app.bundleId}`;
+  if (!sameList(appIDs.map(String), [appId])) {
+    errors.push(`${AASA_FILE}: appIDs must be ${JSON.stringify([appId])}`);
+  }
+  const expected = app.pathPrefixes.map((prefix) => `${prefix}*`);
+  if (!sameList(paths, expected)) {
+    errors.push(
+      `${AASA_FILE}: components must be ${JSON.stringify(expected)} (app.config.ts intent filters)`
+    );
+  }
+  return errors;
+}
+
+function checkAssetlinks(source: string, app: AppLinkIdentity): string[] {
+  const errors: string[] = [];
+  const parsed = parseJson(source, ASSETLINKS_FILE, errors);
+  if (errors.length > 0) {
+    return errors;
+  }
+  const statements = asArray(parsed).filter(isRecord);
+  const statement = statements.find((entry) =>
+    asArray(entry.relation).includes(HANDLE_ALL_URLS)
+  );
+  const target =
+    statement && isRecord(statement.target) ? statement.target : undefined;
+  if (target?.namespace !== "android_app") {
+    return [
+      `${ASSETLINKS_FILE}: needs an android_app statement with ${HANDLE_ALL_URLS}`,
+    ];
+  }
+  if (target.package_name !== app.androidPackage) {
+    errors.push(
+      `${ASSETLINKS_FILE}: package_name must be ${JSON.stringify(app.androidPackage)}`
+    );
+  }
+  const fingerprints = asArray(target.sha256_cert_fingerprints);
+  if (fingerprints.length === 0) {
+    errors.push(`${ASSETLINKS_FILE}: sha256_cert_fingerprints is empty`);
+  }
+  for (const fingerprint of fingerprints) {
+    if (
+      typeof fingerprint !== "string" ||
+      !SHA256_FINGERPRINT.test(fingerprint)
+    ) {
+      errors.push(
+        `${ASSETLINKS_FILE}: ${JSON.stringify(fingerprint)} is not an upper-case SHA-256 fingerprint`
+      );
+    }
+  }
+  return errors;
+}
+
+/** `_headers` rules: path → header name (lower case) → value. */
+function parseHeaders(source: string): Map<string, Map<string, string>> {
+  const rules = new Map<string, Map<string, string>>();
+  let current: Map<string, string> | undefined;
+  for (const line of source.split("\n")) {
+    if (line.trim() === "" || line.trimStart().startsWith("#")) {
+      continue;
+    }
+    // An indented line is a header of the path above it.
+    if (INDENTED.test(line)) {
+      const [name = "", ...value] = line.split(":");
+      current?.set(name.trim().toLowerCase(), value.join(":").trim());
+    } else {
+      current = new Map();
+      rules.set(line.trim(), current);
+    }
+  }
+  return rules;
+}
+
+function checkHeaders(source: string): string[] {
+  const rules = parseHeaders(source);
+  return [AASA_FILE, ASSETLINKS_FILE].flatMap((file) => {
+    const path = file.slice("apps/site/public".length);
+    return rules.get(path)?.get("content-type") === "application/json"
+      ? []
+      : [`${HEADERS_FILE}: ${path} needs Content-Type: application/json`];
+  });
+}
+
+/**
+ * The AASA and assetlinks files (static assets, spec §9) must name the app
+ * that `app.config.ts` builds, for the paths it verifies, and be served as
+ * `application/json` (`_headers`: an extensionless file would not be).
+ */
+export function checkAppLinks(
+  files: { aasa: string; assetlinks: string; headers: string },
+  app: AppLinkIdentity
+): string[] {
+  return [
+    ...checkAasa(files.aasa, app),
+    ...checkAssetlinks(files.assetlinks, app),
+    ...checkHeaders(files.headers),
+  ];
+}
+
+/** Evaluates `app.config.ts` the way Expo does (no base config). */
+function loadAppConfig(root: string): unknown {
+  const module = require(join(root, APP_CONFIG)) as {
+    default?: (context: { config: object }) => unknown;
+  };
+  if (typeof module.default !== "function") {
+    throw new Error(`${APP_CONFIG}: no default export function`);
+  }
+  return module.default({ config: {} });
+}
+
 export function checkReleaseConfig(root: string): string[] {
   const read = (path: string): string => readFileSync(join(root, path), "utf8");
   const wrangler = read("apps/site/wrangler.jsonc");
@@ -355,10 +549,22 @@ export function checkReleaseConfig(root: string): string[] {
       wranglerErrors.push(String(error));
     }
   }
+  const app = appLinkIdentity(loadAppConfig(root));
+  const appLinkErrors = Array.isArray(app)
+    ? app
+    : checkAppLinks(
+        {
+          aasa: read(AASA_FILE),
+          assetlinks: read(ASSETLINKS_FILE),
+          headers: read(HEADERS_FILE),
+        },
+        app
+      );
   return [
     ...checkCiWorkflow(read(".github/workflows/ci.yml")),
     ...checkDeployWorkflow(read(".github/workflows/deploy.yml"), migrationsDir),
     ...wranglerErrors,
+    ...appLinkErrors,
   ];
 }
 
