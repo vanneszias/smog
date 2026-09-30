@@ -4,11 +4,13 @@
  * the published categories with their counts (`gestures.categories`). It
  * lives in isolate memory and is keyed by the KV version key
  * `catalog:version`, which every gesture or category write bumps
- * (`bumpCatalogVersion`, admin in phase 5). The version is read with a 60 s
- * `cacheTtl`, so other isolates see a bump within KV's propagation delay
- * plus that minute. This only delays typo matches and category counts for
- * the change: typo matches are re-read from D1, so an unpublished gesture
- * never shows.
+ * (`bumpCatalogVersion`, admin in phase 5). The version is read with a 30 s
+ * `cacheTtl` (KV's minimum), so other isolates see a bump within KV's
+ * propagation delay plus that half minute. This only delays typo matches
+ * and category counts for the change: typo matches are re-read from D1, so
+ * an unpublished gesture never shows. A D1 write without a bump (a manual
+ * `wrangler d1 execute`, a data import) stays invisible until the isolate
+ * is recycled (a deploy recycles them all).
  *
  * Both parts load in one D1 batch, so the search page's SSR (the search,
  * then the categories) reads D1 at most twice, plus the session.
@@ -36,8 +38,11 @@ import {
 export const CATALOG_VERSION_KEY = "catalog:version";
 /** The version while no writer has bumped it yet (a new namespace). */
 export const INITIAL_CATALOG_VERSION = "initial";
-/** KV's edge cache for the version key, in seconds (KV's minimum). */
-const CATALOG_VERSION_CACHE_TTL = 60;
+/**
+ * KV's edge cache for the version key, in seconds: KV's minimum (30 s since
+ * 2026-01-30; the default is 60 s).
+ */
+const CATALOG_VERSION_CACHE_TTL = 30;
 
 /** A published gesture, normalised for the typo tier. */
 export interface CatalogEntry extends SearchableGesture {

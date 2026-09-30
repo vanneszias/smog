@@ -292,7 +292,7 @@ The old rules in `SEARCH_ALGORITHM.md` are kept. Ranking is one pure TypeScript 
    - Match multipliers: exact 1000, startsWith 500, word boundary 250.
    - The score is `multiplier × weight`, and the best field wins. Ties sort by `name` using `localeCompare("nl")`.
 4. **Typo tier:** this runs when steps 2–3 return fewer than 5 results and the query is at least 3 characters.
-   - It takes a cached projection of all published gestures (`id`, normalised name, keywords, categories), kept in isolate memory with the published categories (one "catalog snapshot") and invalidated through a KV version key that every gesture or category write bumps. The key is read with a 60 s KV `cacheTtl`.
+   - It takes a cached projection of all published gestures (`id`, normalised name, keywords, categories), kept in isolate memory with the published categories (one "catalog snapshot") and invalidated through a KV version key that every gesture or category write bumps. The key is read with a 30 s KV `cacheTtl` (the minimum). The typo scoring is skipped when the snapshot alone has 5 or more direct matches (the tier cannot apply).
    - Each value is scored by similarity = 1 − (Damerau–Levenshtein distance / max length), against the whole value and each of its words. The old Fuse threshold was 0.4; the equivalent here is similarity ≥ 0.6.
    - The score is `150 × weight × similarity`. These results are appended after the direct matches, without duplicates.
 5. **Analytics:** only the query length and the result counts are sent (never the text).

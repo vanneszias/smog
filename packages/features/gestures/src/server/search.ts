@@ -20,7 +20,7 @@ import {
   type Ranked,
   rankGestures,
   shouldRunTypoTier,
-  typoMatches,
+  typoCandidates,
 } from "../ranking";
 import type { SearchResult } from "../schema";
 import { type CatalogEntry, getCatalogProjection } from "./catalog-cache";
@@ -95,17 +95,14 @@ function findCandidates(db: Db, fts: string, slugs: string[] | undefined) {
 }
 
 /**
- * The typo tier (step 4) from the catalog projection. It is best effort: a
+ * The typo tier's matches (step 4) from the catalog projection, before the
+ * direct ones are known: best first, category filter applied, nothing
+ * excluded yet. Empty when the projection alone has 5 direct matches (the
+ * tier cannot apply; `typoCandidates` in the ranking). It is best effort: a
  * KV or D1 failure is logged and the search answers with its direct
  * matches instead of failing.
  */
-/**
- * The typo tier's matches (step 4) from the catalog projection, before the
- * direct ones are known: best first, category filter applied, nothing
- * excluded yet. It is best effort: a KV or D1 failure is logged and the
- * search answers with its direct matches instead of failing.
- */
-async function typoCandidates(
+async function typoTier(
   { db, kv }: SearchDeps,
   input: SearchInput
 ): Promise<Ranked<CatalogEntry>[]> {
@@ -130,15 +127,16 @@ async function typoCandidates(
       : projection.filter((entry) =>
           entry.categorySlugs.some((slug) => slugs.has(slug))
         );
-  return typoMatches(pool, input.q);
+  return typoCandidates(pool, input.q);
 }
 
 /**
  * Ranked search results: direct matches, then the typo tier. The typo
  * matches are computed first (from isolate memory), so their summaries are
  * read in the same D1 batch as the FTS candidates. The first `limit` typo
- * matches are enough: the tier only runs below 5 direct results, and
- * dropping those from the typo list still leaves a full page.
+ * matches are enough: the page needs `limit - direct` typo matches, and at
+ * most `direct` of the first `limit` are direct matches themselves (dropped
+ * after the batch), so the rest still fill the page.
  */
 export async function searchGestures(
   { db, kv }: SearchDeps,
@@ -149,7 +147,7 @@ export async function searchGestures(
     return await browse(db, input);
   }
   try {
-    const typoAll = await typoCandidates({ db, kv }, input);
+    const typoAll = await typoTier({ db, kv }, input);
     const typoPage = typoAll
       .slice(0, input.limit)
       .map((result) => result.gesture.id);

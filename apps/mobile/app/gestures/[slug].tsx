@@ -3,11 +3,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COURSE_URL } from "@smog/config/constants";
 import {
   gestureViewSource,
-  useCourseBanner,
   useGesture,
   useGestureViewed,
   useRelated,
-  useVideoCompleted,
+  useVideoEnd,
 } from "@smog/gestures/client";
 import type { GestureBySlug } from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
@@ -144,7 +143,8 @@ function GestureDetail({
 }): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const course = useCourseBanner<CourseMessageIndex>({
+  // video_playback_completed and the course banner, once per visit.
+  const { banner: course, onNearEnd } = useVideoEnd<CourseMessageIndex>({
     gestureId: gesture.id,
     messageCount: COURSE_MESSAGE_COUNT,
     storage: AsyncStorage,
@@ -154,13 +154,6 @@ function GestureDetail({
       router.navigate({ params: { category }, pathname: "/search" }),
     [router]
   );
-  // Both count once per visit: the video loops, so the end comes round again.
-  const trackCompleted = useVideoCompleted(gesture.id);
-  const { onVideoComplete } = course;
-  const onNearEnd = useCallback(() => {
-    trackCompleted();
-    onVideoComplete();
-  }, [onVideoComplete, trackCompleted]);
   return (
     <ScrollView contentContainerClassName="gap-6 px-4 pb-10 pt-2">
       <ConnectionBanner className="mx-0" />

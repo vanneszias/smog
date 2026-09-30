@@ -60,7 +60,6 @@
         "src/routes/**/*.{ts,tsx}",
         "test/**/*.test.ts",
         "src/**/*.test.tsx",
-        "src/test/dom-setup.ts",
         "scripts/*.ts",
         "e2e/**/*.spec.ts"
       ],

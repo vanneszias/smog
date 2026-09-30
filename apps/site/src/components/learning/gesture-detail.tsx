@@ -1,10 +1,6 @@
 import type { GestureViewSource } from "@smog/analytics/schema";
 import { COURSE_URL } from "@smog/config/constants";
-import {
-  useCourseBanner,
-  useGestureViewed,
-  useVideoCompleted,
-} from "@smog/gestures/client";
+import { useGestureViewed, useVideoEnd } from "@smog/gestures/client";
 import type { GestureDetail, GestureSummary } from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
 import { webAdapter } from "@smog/local-store/web";
@@ -82,26 +78,6 @@ function Related({
 }
 
 /**
- * The video's end, once per visit (`@smog/gestures/client`, the rule mobile
- * uses): `video_playback_completed`, and the course banner's count, which
- * shows the banner under the video after every seventh video on the device.
- */
-function useVideoEnd(gestureId: string) {
-  const trackCompleted = useVideoCompleted(gestureId);
-  const course = useCourseBanner<CourseMessageIndex>({
-    gestureId,
-    messageCount: COURSE_MESSAGE_COUNT,
-    storage: webAdapter,
-  });
-  const { onVideoComplete } = course;
-  const onNearEnd = useCallback(() => {
-    trackCompleted();
-    onVideoComplete();
-  }, [onVideoComplete, trackCompleted]);
-  return { course, onNearEnd };
-}
-
-/**
  * A gesture: the video on top (3:4, the course banner under it when due),
  * then the name, its categories (links to the filtered browse), the
  * actions, the sponsor credit, description, related concepts and related
@@ -129,7 +105,12 @@ export function GestureDetailView({
   const titleLevel = page ? 1 : 2;
   const sectionLevel = page ? 2 : 3;
   useGestureViewed(gesture.id, viewSource);
-  const { course, onNearEnd } = useVideoEnd(gesture.id);
+  // video_playback_completed and the course banner, once per visit.
+  const { banner: course, onNearEnd } = useVideoEnd<CourseMessageIndex>({
+    gestureId: gesture.id,
+    messageCount: COURSE_MESSAGE_COUNT,
+    storage: webAdapter,
+  });
   return (
     <div className="flex flex-col gap-10">
       <article

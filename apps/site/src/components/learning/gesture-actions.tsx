@@ -15,8 +15,9 @@ import {
 } from "@smog/ui-web";
 import { slugify } from "@smog/utils";
 import { Copy, Download, Ellipsis, QrCode, Share2 } from "lucide-react";
-import { QRCodeCanvas } from "qrcode.react";
+import { QRCodeSVG } from "qrcode.react";
 import { type ReactNode, useCallback, useRef, useState } from "react";
+import { qrPngDataUrl } from "@/lib/qr-png";
 import { copyText, shareUrl, useSiteUrl } from "@/lib/share";
 import { gestureHref } from "./links";
 import { SaveToList } from "./save-to-list";
@@ -27,10 +28,6 @@ interface ActionGesture {
   name: string;
   slug: string;
 }
-
-/** The QR code is drawn at print size and shown scaled down. */
-const QR_SIZE = 1024;
-const QR_STYLE = { height: 256, width: 256 } as const;
 
 /** The downloaded PNG's name: `smog-<slug>-qr.png` (the old dialog's pattern). */
 export function qrFileName(slug: string): string {
@@ -54,21 +51,24 @@ function QrDialog({
 }): ReactNode {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const canvas = useRef<HTMLCanvasElement>(null);
+  const qr = useRef<SVGSVGElement>(null);
+  // A fixed 1024 px PNG, drawn from the SVG only when asked for.
   const download = useCallback((): void => {
-    const drawn = canvas.current;
-    if (!drawn) {
+    const svg = qr.current;
+    if (!svg) {
       return;
     }
-    try {
-      const link = document.createElement("a");
-      link.href = drawn.toDataURL("image/png");
-      link.download = qrFileName(gesture.slug);
-      link.click();
-    } catch (error) {
-      console.error("[gesture] Failed to download the QR code:", error);
-      toast({ title: t("states.actionFailed"), variant: "danger" });
-    }
+    qrPngDataUrl(svg)
+      .then((href) => {
+        const link = document.createElement("a");
+        link.href = href;
+        link.download = qrFileName(gesture.slug);
+        link.click();
+      })
+      .catch((error: unknown) => {
+        console.error("[gesture] Failed to download the QR code:", error);
+        toast({ title: t("states.actionFailed"), variant: "danger" });
+      });
   }, [gesture.slug, t, toast]);
   const copy = useCallback((): void => {
     copyText(url)
@@ -84,17 +84,15 @@ function QrDialog({
         title={t("gesture.qr.title", { name: gesture.name })}
       >
         <div className="flex flex-col items-center gap-3">
-          <QRCodeCanvas
-            aria-label={t("gesture.qr.title", { name: gesture.name })}
+          <QRCodeSVG
             bgColor="#FFFFFF"
-            className="rounded-md"
+            className="size-64 rounded-md"
             fgColor="#000000"
             level="M"
             marginSize={2}
-            ref={canvas}
-            role="img"
-            size={QR_SIZE}
-            style={QR_STYLE}
+            ref={qr}
+            size={256}
+            title={t("gesture.qr.title", { name: gesture.name })}
             value={url}
           />
           <Text className="break-all text-center" size="body-sm" tone="muted">

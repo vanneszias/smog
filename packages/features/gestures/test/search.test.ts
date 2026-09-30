@@ -363,10 +363,10 @@ describe("catalog projection", () => {
     expect(cold).toContain(warm);
   });
 
-  it("reads the version key with a 60 s KV cacheTtl", async () => {
+  it("reads the version key with a 30 s KV cacheTtl (the minimum; the default is 60 s)", async () => {
     const kv = spyKv(env.KV);
     await getCatalogProjection(db, kv.binding);
-    expect(kv.gets).toEqual([[CATALOG_VERSION_KEY, { cacheTtl: 60 }]]);
+    expect(kv.gets).toEqual([[CATALOG_VERSION_KEY, { cacheTtl: 30 }]]);
   });
 
   it("serves categories from the snapshot until the version changes", async () => {

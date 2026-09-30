@@ -73,29 +73,40 @@ export interface TypoOptions {
   /** Ids already in the results (the direct matches). */
   exclude?: ReadonlySet<string>;
   minSimilarity?: number;
+  /**
+   * The values are already `normalizeQuery`d (the catalog snapshot), so
+   * they are not normalised again: about a third of the typo pass's time.
+   */
+  normalized?: boolean;
 }
 
 type Fields = readonly (readonly [MatchField, readonly string[]])[];
 
 const NL = new Intl.Collator("nl");
 
-/** Field values, normalised, heaviest field first. */
+function same(value: string): string {
+  return value;
+}
+
+/** Field values, normalised (unless they already are), heaviest field first. */
 function fieldsOf(
   gesture: SearchableGesture,
-  withDescription: boolean
+  withDescription: boolean,
+  normalized = false
 ): Fields {
+  const norm = normalized ? same : normalizeQuery;
   const fields: [MatchField, string[]][] = [
-    ["name", [normalizeQuery(gesture.name)]],
-    ["keyword", (gesture.keywords ?? []).map(normalizeQuery)],
+    ["name", [norm(gesture.name)]],
+    ["keyword", (gesture.keywords ?? []).map(norm)],
     [
       "category",
       (gesture.categories ?? []).map((item) =>
-        normalizeQuery(typeof item === "string" ? item : item.name)
+        norm(typeof item === "string" ? item : item.name)
       ),
     ],
   ];
   if (withDescription) {
-    fields.push(["description", [normalizeQuery(gesture.description ?? "")]]);
+    fields.push(["description", [norm(gesture.description ?? "")]]);
   }
   return fields.map(
     ([field, values]) => [field, values.filter((v) => v !== "")] as const
@@ -142,8 +153,7 @@ function spreadMatch(fields: Fields, tokens: readonly string[]): Match | null {
   };
 }
 
-function directMatch(gesture: SearchableGesture, q: string): Match | null {
-  const fields = fieldsOf(gesture, true);
+function directMatchIn(fields: Fields, q: string): Match | null {
   let best: Match | null = null;
   for (const [field, values] of fields) {
     for (const value of values) {
@@ -156,6 +166,40 @@ function directMatch(gesture: SearchableGesture, q: string): Match | null {
   }
   const tokens = q.split(" ");
   return best ?? (tokens.length > 1 ? spreadMatch(fields, tokens) : null);
+}
+
+function directMatch(gesture: SearchableGesture, q: string): Match | null {
+  return directMatchIn(fieldsOf(gesture, true), q);
+}
+
+/**
+ * How many of `pool` match `query` directly (steps 1–3) on name, keywords
+ * or categories, counting up to `stopAt`. The FTS candidates are a superset
+ * of these matches (the same tokens, prefix-matched), so it is a lower
+ * bound on the server's direct count.
+ */
+export function countDirectMatches(
+  pool: readonly SearchableGesture[],
+  query: string,
+  {
+    normalized = false,
+    stopAt = Number.POSITIVE_INFINITY,
+  }: { normalized?: boolean; stopAt?: number } = {}
+): number {
+  const q = normalizeQuery(query);
+  if (q === "") {
+    return 0;
+  }
+  let count = 0;
+  for (const gesture of pool) {
+    if (directMatchIn(fieldsOf(gesture, false, normalized), q)) {
+      count += 1;
+      if (count >= stopAt) {
+        break;
+      }
+    }
+  }
+  return count;
 }
 
 function compareRanked<T extends SearchableGesture>(
@@ -226,7 +270,11 @@ export function typoMatches<T extends SearchableGesture>(
       continue;
     }
     let best: Ranked<T> | null = null;
-    for (const [field, values] of fieldsOf(gesture, false)) {
+    for (const [field, values] of fieldsOf(
+      gesture,
+      false,
+      options.normalized
+    )) {
       for (const value of values) {
         const sim = bestSimilarity(q, value, min);
         const score = MATCH_MULTIPLIERS.fuzzy * FIELD_WEIGHTS[field] * sim;
@@ -299,4 +347,30 @@ export function damerauLevenshtein(a: string, b: string): number {
     [beforePrevious, previous, current] = [previous, current, beforePrevious];
   }
   return previous[b.length] ?? 0;
+}
+
+/**
+ * The typo tier's matches over a normalised pool (the catalog snapshot),
+ * before the direct results are known. When the pool alone has
+ * `TYPO_BELOW_RESULTS` (5) direct matches, the server's direct count is at
+ * least that and the tier cannot apply, so the Damerau–Levenshtein pass is
+ * skipped (it is most of a search's CPU). A stale pool can at worst skip
+ * the tier for a query whose matches just changed.
+ */
+export function typoCandidates<T extends SearchableGesture>(
+  pool: readonly T[],
+  query: string
+): Ranked<T>[] {
+  if (!shouldRunTypoTier(0, query)) {
+    return [];
+  }
+  if (
+    countDirectMatches(pool, query, {
+      normalized: true,
+      stopAt: TYPO_BELOW_RESULTS,
+    }) >= TYPO_BELOW_RESULTS
+  ) {
+    return [];
+  }
+  return typoMatches(pool, query, { normalized: true });
 }
