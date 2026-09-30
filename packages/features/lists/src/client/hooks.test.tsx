@@ -27,6 +27,7 @@ import {
 import {
   sharedListOptions,
   useList,
+  useListMembership,
   useLists,
   useSharedList,
   useShareLinks,
@@ -48,8 +49,12 @@ const [AAP, BEER, HOND, KAT] = CATALOGUE as [
 interface Server {
   byIdsCalls: string[][];
   calls: string[];
+  /** Makes the next addItem fail with INVALID_STATE. */
+  failNextAdd?: boolean;
   /** Makes the next reorder wait, then fail with INVALID_STATE. */
   failNextReorder: boolean;
+  /** When set, `addItem` waits for it. */
+  holdAdd?: Promise<void>;
   lists: Map<string, ListDetail>;
   shares: Map<string, { role: ShareRole; token: string }[]>;
   tokens: number;
@@ -101,8 +106,13 @@ function fakeApi(server: Server) {
       }),
     },
     lists: os.lists.router({
-      addItem: os.lists.addItem.handler(({ errors, input }) => {
+      addItem: os.lists.addItem.handler(async ({ errors, input }) => {
         server.calls.push("addItem");
+        await server.holdAdd;
+        if (server.failNextAdd) {
+          server.failNextAdd = false;
+          throw errors.INVALID_STATE();
+        }
         const list = find(input.id, errors);
         const gesture = CATALOGUE.find((item) => item.id === input.gestureId);
         if (!gesture) {
@@ -113,6 +123,16 @@ function fakeApi(server: Server) {
           detail(list.id, list.name, [...list.items, gesture])
         );
         return { added: true };
+      }),
+      containing: os.lists.containing.handler(({ input }) => {
+        server.calls.push("containing");
+        return [...server.lists.values()]
+          .filter(
+            (list) =>
+              (server.userOf.get(list.id) ?? "user-1") === server.user &&
+              list.items.some((item) => item.id === input.gestureId)
+          )
+          .map((list) => list.id);
       }),
       create: os.lists.create.handler(({ input }) => {
         server.calls.push("create");
@@ -147,6 +167,7 @@ function fakeApi(server: Server) {
         }));
       }),
       removeItem: os.lists.removeItem.handler(({ errors, input }) => {
+        server.calls.push("removeItem");
         const list = find(input.id, errors);
         server.lists.set(
           input.id,
@@ -725,6 +746,185 @@ describe("lists analytics", () => {
     ]);
     await waitFor(() => expect(shared.result.current.status).toBe("ready"));
     shared.unmount();
+  });
+});
+
+describe("useListMembership", () => {
+  const byName = (
+    lists: readonly { contains: boolean; name: string }[]
+  ): Record<string, boolean> =>
+    Object.fromEntries(lists.map((list) => [list.name, list.contains]));
+
+  test("a guest's lists come from the device, toggled and created there", async () => {
+    const { events, server, store, wrapper } = setup();
+    await addLocalList(store, "loc_1", "Dieren", [HOND.id]);
+    await addLocalList(store, "loc_2", "Thuis", []);
+    const { result } = renderHook(
+      () => useListMembership(HOND.id, { source: "gesture_detail" }),
+      { wrapper }
+    );
+    expect(result.current.status).toBe("ready");
+    expect(byName(result.current.lists)).toEqual({
+      Dieren: true,
+      Thuis: false,
+    });
+
+    await act(async () => {
+      expect(await result.current.toggle("loc_2")).toEqual({
+        action: "added",
+        name: "Thuis",
+      });
+      expect(await result.current.toggle("loc_1")).toEqual({
+        action: "removed",
+        name: "Dieren",
+      });
+    });
+    expect(byName(result.current.lists)).toEqual({
+      Dieren: false,
+      Thuis: true,
+    });
+
+    await act(async () => {
+      expect(await result.current.createWith("  Familie ")).toEqual({
+        action: "added",
+        name: "Familie",
+      });
+    });
+    expect(byName(result.current.lists)).toMatchObject({ Familie: true });
+    expect(
+      store.getSnapshot().lists.find((list) => list.name === "Familie")
+        ?.gestureIds
+    ).toEqual([HOND.id]);
+    expect(events).toEqual([
+      listChanged("added", HOND.id, "gesture_detail"),
+      listChanged("removed", HOND.id, "gesture_detail"),
+      listChanged("added", HOND.id, "gesture_detail"),
+    ]);
+    expect(server.calls).toEqual([]);
+  });
+
+  test("signed in, one `containing` call answers every list (no list details)", async () => {
+    const { server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    server.lists.set("srv-2", detail("srv-2", "Thuis", [KAT]));
+    server.lists.set("srv-3", detail("srv-3", "Werk", [HOND, KAT]));
+    const { result } = renderHook(
+      () => useListMembership(HOND.id, { source: "gesture_detail" }),
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(byName(result.current.lists)).toEqual({
+      Dieren: true,
+      Thuis: false,
+      Werk: true,
+    });
+    expect(server.calls.filter((call) => call === "containing")).toHaveLength(
+      1
+    );
+    expect(server.calls).not.toContain("get");
+  });
+
+  test("signed in, a toggle shows at once and settles from the server", async () => {
+    const { events, server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", []));
+    const { result } = renderHook(
+      () => useListMembership(HOND.id, { source: "gesture_detail" }),
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    let release = (): void => undefined;
+    server.holdAdd = new Promise((resolve) => {
+      release = resolve;
+    });
+    let adding: Promise<unknown> | undefined;
+    act(() => {
+      adding = result.current.toggle("srv-1");
+    });
+    // Optimistic: checked while the call is in flight, and busy.
+    await waitFor(() =>
+      expect(result.current.lists[0]).toMatchObject({
+        contains: true,
+        pending: true,
+      })
+    );
+    // A second tap while busy is ignored.
+    await act(async () => {
+      expect(await result.current.toggle("srv-1")).toBeNull();
+    });
+    release();
+    await act(async () => {
+      await adding;
+    });
+    expect(server.lists.get("srv-1")?.items.map((item) => item.id)).toEqual([
+      HOND.id,
+    ]);
+    await waitFor(() =>
+      expect(result.current.lists[0]).toMatchObject({
+        contains: true,
+        pending: false,
+      })
+    );
+    expect(events).toEqual([listChanged("added", HOND.id, "gesture_detail")]);
+
+    await act(async () => {
+      await result.current.toggle("srv-1");
+    });
+    await waitFor(() => expect(result.current.lists[0]?.contains).toBe(false));
+    expect(server.lists.get("srv-1")?.items).toEqual([]);
+  });
+
+  test("signed in, a failed toggle rolls back and rejects", async () => {
+    const { events, server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", []));
+    const { result } = renderHook(() => useListMembership(HOND.id), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    server.failNextAdd = true;
+    await act(async () => {
+      await expect(result.current.toggle("srv-1")).rejects.toMatchObject({
+        code: "INVALID_STATE",
+      });
+    });
+    expect(result.current.lists[0]).toMatchObject({
+      contains: false,
+      pending: false,
+    });
+    expect(events).toEqual([]);
+  });
+
+  test("signed in, createWith makes the list with the gesture in it", async () => {
+    const { server, wrapper } = setup(SIGNED_IN);
+    const { result } = renderHook(() => useListMembership(HOND.id), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await act(async () => {
+      expect(await result.current.createWith("Familie")).toEqual({
+        action: "added",
+        name: "Familie",
+      });
+    });
+    await waitFor(() =>
+      expect(byName(result.current.lists)).toEqual({ Familie: true })
+    );
+    expect(server.lists.get("srv-1")?.items.map((item) => item.id)).toEqual([
+      HOND.id,
+    ]);
+  });
+
+  test("asks nothing about the gesture while disabled (a closed picker)", async () => {
+    const { server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    const { result } = renderHook(
+      () => useListMembership(HOND.id, { enabled: false }),
+      { wrapper }
+    );
+    await act(() => delay(20));
+    expect(server.calls).not.toContain("containing");
+    expect(result.current.status).toBe("loading");
   });
 });
 

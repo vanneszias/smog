@@ -305,8 +305,8 @@
     "deleteTitle": "Delete this list?",
     "deleteDescription": "“{{name}}” will be deleted. The gestures themselves stay.",
     "deleted": "List deleted",
-    "addedTo": "Added to {{name}}",
-    "removedFrom": "Removed from {{name}}",
+    "addedTo": "Added to “{{name}}”",
+    "removedFrom": "Removed from “{{name}}”",
     "itemActions": "Actions for {{name}}",
     "moveUp": "Move up",
     "moveDown": "Move down",
@@ -316,15 +316,11 @@
       "title": "List not found",
       "description": "This link doesn't work (anymore), or the list is private."
     },
-    "sharedBy": "Shared by {{name}}",
     "sharedCanEdit": "You can edit this list.",
-    "sharedSignIn": "Sign in to edit this list.",
     "description": "Group gestures for a lesson, a theme or at home.",
     "all": "All lists",
     "descriptionLabel": "Description",
     "renameTitle": "Edit list",
-    "added": "Added to “{{name}}”",
-    "removed": "Removed from “{{name}}”",
     "select": {
       "title": "Choose a list",
       "description": "Select a list to see the gestures in it."
