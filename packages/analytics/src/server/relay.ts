@@ -31,23 +31,72 @@ function status(code: string, statusCode: number, headers = {}): Response {
 
 const accepted = (): Response => new Response(null, { status: 202 });
 
-function clientIp(request: Request): string {
-  return request.headers.get("cf-connecting-ip") ?? "unknown";
+const DIGITS = /^\d+$/;
+
+/** `cf-connecting-ip`; always set on Cloudflare, absent in local tools. */
+function clientIp(request: Request): string | null {
+  return request.headers.get("cf-connecting-ip");
 }
 
-async function readBody(request: Request): Promise<RelayBody | null> {
-  const text = await request.text();
-  if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) {
-    return null;
+type ReadResult = { body: RelayBody } | { status: 400 | 413 };
+
+/**
+ * Reads at most `MAX_BODY_BYTES`: a declared `content-length` over the cap
+ * is refused before any read, and a chunked body is read with a running
+ * count and cancelled once past the cap, so a large upload is never
+ * buffered.
+ */
+async function readCapped(request: Request): Promise<string | 400 | 413> {
+  const declared = request.headers.get("content-length");
+  if (declared !== null) {
+    if (!DIGITS.test(declared)) {
+      return 400;
+    }
+    if (Number(declared) > MAX_BODY_BYTES) {
+      return 413;
+    }
+  }
+  if (!request.body) {
+    return "";
+  }
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    // biome-ignore lint/performance/noAwaitInLoops: a stream is read chunk by chunk.
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    size += value.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel();
+      return 413;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+async function readBody(request: Request): Promise<ReadResult> {
+  const text = await readCapped(request);
+  if (typeof text === "number") {
+    return { status: text };
   }
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch {
-    return null;
+    return { status: 400 };
   }
   const parsed = relayBodySchema.safeParse(json);
-  return parsed.success ? parsed.data : null;
+  return parsed.success ? { body: parsed.data } : { status: 400 };
 }
 
 /** The OpenPanel `/track` body: a screen's path goes in `__path`. */
@@ -77,8 +126,11 @@ async function forward(
       "openpanel-client-secret": options.clientSecret,
       "openpanel-sdk-name": SDK_NAME,
       "openpanel-sdk-version": SDK_VERSION,
-      "x-client-ip": clientIp(request),
     };
+    const ip = clientIp(request);
+    if (ip) {
+      headers["x-client-ip"] = ip;
+    }
     const userAgent = request.headers.get("user-agent");
     if (userAgent) {
       headers["user-agent"] = userAgent;
@@ -102,7 +154,7 @@ async function forward(
  *
  * 1. A foreign origin gets 403 (`isForeignRequest`, as `/api/rpc`).
  * 2. Over `RL_ANALYTICS` (120/min per IP) gets 429.
- * 3. A body outside the taxonomy gets 400.
+ * 3. A body over 4 KB gets 413 (never buffered); one outside the taxonomy 400.
  * 4. Everything else is forwarded to `${OPENPANEL_API_URL}/track` with the
  *    server-only credentials, the client IP and the user agent, and gets
  *    202 whatever OpenPanel answers: analytics never fails a product
@@ -115,18 +167,27 @@ export async function handleAnalyticsRelay(
   if (options.isForeign(request)) {
     return status("FORBIDDEN", 403);
   }
+  const ip = clientIp(request);
+  if (ip === null) {
+    console.warn(
+      "[analytics] No cf-connecting-ip: one shared rate-limit bucket, no x-client-ip"
+    );
+  }
   try {
-    if (!(await options.limit(`analytics:${clientIp(request)}`))) {
+    if (!(await options.limit(`analytics:${ip ?? "unknown"}`))) {
       return status("RATE_LIMITED", 429, { "retry-after": "60" });
     }
   } catch (error) {
     console.error("[analytics] Failed to check the rate limit:", error);
     return accepted();
   }
-  const body = await readBody(request);
-  if (!body) {
-    return status("BAD_REQUEST", 400);
+  const read = await readBody(request);
+  if ("status" in read) {
+    return read.status === 413
+      ? status("PAYLOAD_TOO_LARGE", 413)
+      : status("BAD_REQUEST", 400);
   }
+  const { body } = read;
   const {
     OPENPANEL_CLIENT_ID: clientId,
     OPENPANEL_CLIENT_SECRET: clientSecret,

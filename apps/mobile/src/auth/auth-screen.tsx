@@ -1,4 +1,4 @@
-import { markSignInStarted } from "@smog/analytics/react";
+import { useMarkSignInStarted } from "@smog/analytics/react";
 import type { AppContract } from "@smog/api/client";
 import {
   type AuthErrorField,
@@ -139,11 +139,12 @@ function MethodButton({
   method: NativeMethod;
   pending: AuthFlow["state"]["pending"];
 }): ReactElement {
+  const markSignIn = useMarkSignInStarted();
   const press = useCallback(() => {
     // Counted as sign_in_completed once the session appears.
-    markSignInStarted(method);
+    markSignIn(method);
     choose(method);
-  }, [choose, method]);
+  }, [choose, markSignIn, method]);
   return (
     <Button
       disabled={pending !== null && pending !== method}

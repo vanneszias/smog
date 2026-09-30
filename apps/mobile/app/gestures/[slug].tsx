@@ -1,4 +1,9 @@
 import { isDefinedError } from "@orpc/client";
+import { useAnalytics } from "@smog/analytics/react";
+import {
+  GESTURE_VIEW_SOURCES,
+  type GestureViewSource,
+} from "@smog/analytics/schema";
 import { COURSE_URL } from "@smog/config/constants";
 import { useGesture, useRelated } from "@smog/gestures/client";
 import type { GestureBySlug } from "@smog/gestures/schema";
@@ -26,7 +31,7 @@ import {
 } from "expo-router";
 import { addScreenshotListener } from "expo-screen-capture";
 import Share2 from "lucide-react-native/icons/share-2";
-import { type ReactElement, useCallback, useEffect } from "react";
+import { type ReactElement, useCallback, useEffect, useRef } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { ConnectionBanner } from "@/components/connection-banner";
 import {
@@ -85,11 +90,35 @@ function useScreenshotPrompt(active: boolean, share: () => void): void {
   }, [active, share, t]);
 }
 
+/** `gesture_viewed` once per gesture shown, with where it was opened from. */
+function useGestureViewed(
+  gestureId: string | undefined,
+  from: string | undefined
+): void {
+  const analytics = useAnalytics();
+  const sent = useRef<string | null>(null);
+  useEffect(() => {
+    if (gestureId === undefined || sent.current === gestureId) {
+      return;
+    }
+    sent.current = gestureId;
+    const source: GestureViewSource = (
+      GESTURE_VIEW_SOURCES as readonly (string | undefined)[]
+    ).includes(from)
+      ? (from as GestureViewSource)
+      : "direct";
+    analytics.track({
+      name: "gesture_viewed",
+      properties: { gesture_id: gestureId, source },
+    });
+  }, [analytics, from, gestureId]);
+}
+
 function RelatedGestures({ slug }: { slug: string }): ReactElement | null {
   const { t } = useTranslation();
   const related = useRelated(slug, RELATED_LIMIT);
-  const open = useOpenGesture();
-  const { isFavorite, toggle } = useToggleFavorite();
+  const open = useOpenGesture("related_gestures");
+  const { isFavorite, toggle } = useToggleFavorite("gesture_detail");
   const items = related.data ?? [];
   if (items.length === 0) {
     return null;
@@ -100,7 +129,6 @@ function RelatedGestures({ slug }: { slug: string }): ReactElement | null {
         {t("gesture.related")}
       </Heading>
       {items.map((item) => (
-        // analytics: gesture_viewed { source: "related_gestures" } on open
         <GestureRowItem
           favorite={isFavorite(item.id)}
           gesture={item}
@@ -142,10 +170,19 @@ function GestureDetail({
       router.navigate({ params: { category }, pathname: "/search" }),
     [router]
   );
+  const analytics = useAnalytics();
+  // Once per visit: the video loops, so the end comes round again.
+  const completed = useRef<boolean>(false);
   const onNearEnd = useCallback(() => {
-    // analytics: video_playback_completed { gesture_id }
+    if (!completed.current) {
+      completed.current = true;
+      analytics.track({
+        name: "video_playback_completed",
+        properties: { gesture_id: gesture.id },
+      });
+    }
     course.onVideoComplete();
-  }, [course]);
+  }, [analytics, course, gesture.id]);
   return (
     <ScrollView contentContainerClassName="gap-6 px-4 pb-10 pt-2">
       <ConnectionBanner className="mx-0" />
@@ -223,12 +260,15 @@ function GestureDetail({
 export default function GestureScreen(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const { slug = "" } = useLocalSearchParams<{ slug: string }>();
+  const { from, slug = "" } = useLocalSearchParams<{
+    from?: string;
+    slug: string;
+  }>();
   const isFocused = useIsFocused();
   const gesture = useGesture(slug);
-  // analytics: gesture_viewed { gesture_id, source: "direct" } once `data` arrives
   const { data, isRefetching, refetch } = gesture;
-  const { isFavorite, toggle } = useToggleFavorite();
+  useGestureViewed(data?.id, from);
+  const { isFavorite, toggle } = useToggleFavorite("gesture_detail");
   const share = useShareGesture(data);
   useScreenshotPrompt(isFocused && data !== undefined, share);
   const dataId = data?.id;

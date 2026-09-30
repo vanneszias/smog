@@ -1,5 +1,3 @@
-import type { Analytics } from "@smog/analytics/native";
-import { AnalyticsProvider } from "@smog/analytics/react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { type ApiClient, createApiQueryUtils } from "@smog/api/client";
 import { createExpoAuthClient, type ExpoAuthClient } from "@smog/auth/expo";
@@ -29,7 +27,11 @@ import {
   useMemo,
   useState,
 } from "react";
-import { createMobileAnalytics } from "@/analytics";
+import {
+  createMobileAnalytics,
+  type MobileAnalytics,
+  MobileAnalyticsProvider,
+} from "@/analytics";
 import { createMobileApiClient } from "@/lib/api";
 import { AuthClientProvider } from "@/lib/auth-client";
 import { mobileEnv } from "@/lib/env";
@@ -44,7 +46,7 @@ import {
 
 export interface AppClients {
   /** Consent-gated; tests leave it out (a no-op). */
-  analytics?: Analytics;
+  analytics?: MobileAnalytics;
   api: ApiClient;
   auth: ExpoAuthClient;
   /** Where the offline query cache lives (AsyncStorage in the app). */
@@ -73,7 +75,7 @@ function createAppClients(): AppClients {
   keepPersistedQueries(queryClient);
   const store = createLocalStore(nativeAdapter);
   return {
-    analytics: createMobileAnalytics(store),
+    analytics: createMobileAnalytics(),
     api: createMobileApiClient(auth),
     auth,
     cacheStorage: AsyncStorage,
@@ -81,21 +83,6 @@ function createAppClients(): AppClients {
     store,
     useSession: sessionHook(auth),
   };
-}
-
-/** Analytics for the tree; without an instance the hooks are no-ops. */
-function MaybeAnalytics({
-  analytics,
-  children,
-}: {
-  analytics: Analytics | undefined;
-  children: ReactElement;
-}): ReactElement {
-  return analytics ? (
-    <AnalyticsProvider analytics={analytics}>{children}</AnalyticsProvider>
-  ) : (
-    children
-  );
 }
 
 /**
@@ -165,9 +152,9 @@ export function AppProviders({
             <PurgeOtherUsers />
             <PurgeRestoredQueries />
             <LocalStoreProvider store={clients.store}>
-              <MaybeAnalytics analytics={clients.analytics}>
+              <MobileAnalyticsProvider value={clients.analytics}>
                 <PreferencesRoot>{children}</PreferencesRoot>
-              </MaybeAnalytics>
+              </MobileAnalyticsProvider>
             </LocalStoreProvider>
           </AuthStateProvider>
         </AuthClientProvider>

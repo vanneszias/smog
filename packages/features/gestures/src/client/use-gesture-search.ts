@@ -50,11 +50,13 @@ export function useGestureSearch({
   // never the query text. The browse list (no text, no category) is no search.
   const tracked = useRef<string | null>(null);
   const categoryCount = categories?.length ?? 0;
-  const searchKey = `${settled}\u0000${categories?.join(",") ?? ""}`;
+  const searchKey = `${settled}\u0000${categories?.join(",") ?? ""}\u0000${source}`;
   const total = query.isPlaceholderData ? undefined : query.data?.total;
   useEffect(() => {
     if (
       total === undefined ||
+      // A new source while typing waits for its own text to settle.
+      settled !== typed ||
       tracked.current === searchKey ||
       (settled === "" && categoryCount === 0)
     ) {
@@ -71,7 +73,7 @@ export function useGestureSearch({
         source,
       },
     });
-  }, [analytics, categoryCount, searchKey, settled, source, total]);
+  }, [analytics, categoryCount, searchKey, settled, source, total, typed]);
 
   return { ...query, isDebouncing: settled !== typed };
 }

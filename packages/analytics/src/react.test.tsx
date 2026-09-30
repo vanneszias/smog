@@ -1,14 +1,16 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { cleanup, render, renderHook } from "@testing-library/react";
+import { act, cleanup, render, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { Analytics } from "./gate";
 import {
   AnalyticsProvider,
-  markSignInStarted,
+  createConsentSource,
   useAnalytics,
   useAnalyticsIdentity,
+  useMarkSignInStarted,
   useScreenTracking,
   useSignInCompleted,
+  useSyncConsent,
 } from "./react";
 import type { AnalyticsEvent } from "./schema";
 
@@ -17,11 +19,15 @@ afterEach(() => {
   globalThis.sessionStorage?.clear();
 });
 
-function recording(): { analytics: Analytics; calls: unknown[][] } {
+function recording(allowed = true): {
+  analytics: Analytics;
+  calls: unknown[][];
+} {
   const calls: unknown[][] = [];
   return {
     analytics: {
       identify: (userId) => calls.push(["identify", userId]),
+      isAllowed: () => allowed,
       reset: () => calls.push(["reset"]),
       screen: (path) => calls.push(["screen", path]),
       track: (event: AnalyticsEvent) => calls.push(["track", event]),
@@ -104,14 +110,17 @@ describe("useAnalyticsIdentity", () => {
 describe("useSignInCompleted", () => {
   test("tracks the marked method once the user is signed in", () => {
     const { analytics, calls } = recording();
-    const { rerender } = renderHook(
-      ({ userId }: { userId: string | null }) => useSignInCompleted(userId),
+    const { rerender, result } = renderHook(
+      ({ userId }: { userId: string | null }) => {
+        useSignInCompleted(userId);
+        return useMarkSignInStarted();
+      },
       {
         initialProps: { userId: null as string | null },
         wrapper: wrapper(analytics),
       }
     );
-    markSignInStarted("passkey");
+    result.current("passkey");
     rerender({ userId: "user-1" });
     rerender({ userId: "user-1" });
     expect(calls).toEqual([
@@ -128,8 +137,12 @@ describe("useSignInCompleted", () => {
     expect(calls).toEqual([]);
   });
 
-  test("the mark survives a full-page redirect (sessionStorage)", () => {
-    markSignInStarted("google");
+  test("with consent, the mark survives a full-page redirect (sessionStorage)", () => {
+    const { analytics } = recording(true);
+    const { result } = renderHook(() => useMarkSignInStarted(), {
+      wrapper: wrapper(analytics),
+    });
+    result.current("google");
     expect(
       globalThis.sessionStorage.getItem("smog:analytics:sign-in")
     ).toContain("google");
@@ -140,3 +153,48 @@ function Probe({ userId }: { userId: string | null }): null {
   useSignInCompleted(userId);
   return null;
 }
+
+describe("useMarkSignInStarted without consent", () => {
+  test("keeps the mark in memory only: nothing is written to storage", () => {
+    const { analytics, calls } = recording(false);
+    const { result, rerender } = renderHook(
+      ({ userId }: { userId: string | null }) => {
+        useSignInCompleted(userId);
+        return useMarkSignInStarted();
+      },
+      {
+        initialProps: { userId: null as string | null },
+        wrapper: wrapper(analytics),
+      }
+    );
+    result.current("emailCode");
+    expect(
+      globalThis.sessionStorage.getItem("smog:analytics:sign-in")
+    ).toBeNull();
+    rerender({ userId: "user-1" });
+    expect(calls).toEqual([
+      [
+        "track",
+        { name: "sign_in_completed", properties: { method: "emailCode" } },
+      ],
+    ]);
+  });
+});
+
+describe("createConsentSource + useSyncConsent", () => {
+  test("a hook's decision feeds the gate's getConsent / subscribe", () => {
+    const source = createConsentSource();
+    const seen: (boolean | null)[] = [];
+    source.subscribe(() => seen.push(source.getConsent()));
+    expect(source.getConsent()).toBeNull();
+    const { rerender } = renderHook(
+      ({ value }: { value: boolean | null }) => useSyncConsent(source, value),
+      { initialProps: { value: null as boolean | null } }
+    );
+    act(() => rerender({ value: true }));
+    act(() => rerender({ value: true }));
+    act(() => rerender({ value: false }));
+    expect(seen).toEqual([true, false]);
+    expect(source.getConsent()).toBe(false);
+  });
+});

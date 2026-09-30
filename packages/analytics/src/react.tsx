@@ -2,6 +2,7 @@ import {
   createContext,
   type ReactElement,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -100,18 +101,79 @@ function readStoredMark(): SignInMark | null {
   }
 }
 
-/**
- * Remembers the method a sign-in started with (the auth screens call it on
- * the method choice). `sessionStorage` carries it over a full-page redirect
- * (Google, Apple, a magic link in the same tab); natively memory does.
- */
-export function markSignInStarted(method: SignInMethod): void {
+function markSignInStarted(method: SignInMethod, persist: boolean): void {
   pendingSignIn = { at: Date.now(), method };
+  if (!persist) {
+    return;
+  }
   try {
     sessionStore()?.setItem(SIGN_IN_KEY, JSON.stringify(pendingSignIn));
   } catch {
     // Blocked storage: the memory mark still covers in-page sign-ins.
   }
+}
+
+/**
+ * Returns the function the auth screens call on the method choice: it
+ * remembers the method a sign-in started with. In memory always (an
+ * in-page sign-in); in `sessionStorage` only with consent, which carries
+ * it over a full-page redirect (Google, Apple, a same-tab magic link), so
+ * nothing is written to the device before Allow.
+ */
+export function useMarkSignInStarted(): (method: SignInMethod) => void {
+  const analytics = useAnalytics();
+  return useCallback(
+    (method: SignInMethod) => {
+      markSignInStarted(method, analytics.isAllowed());
+    },
+    [analytics]
+  );
+}
+
+/**
+ * The consent as the gate reads it (`getConsent` / `subscribe`), fed by a
+ * React hook through `useSyncConsent`: the apps pass `useConsent()` from
+ * `@smog/account`, so analytics never depends on the account package.
+ */
+export interface ConsentFeed {
+  getConsent: () => boolean | null;
+  set: (value: boolean | null) => void;
+  subscribe: (onChange: () => void) => () => void;
+}
+
+export function createConsentSource(
+  initial: boolean | null = null
+): ConsentFeed {
+  let value = initial;
+  const listeners = new Set<() => void>();
+  return {
+    getConsent: () => value,
+    set: (next) => {
+      if (next === value) {
+        return;
+      }
+      value = next;
+      for (const listener of [...listeners]) {
+        listener();
+      }
+    },
+    subscribe: (onChange) => {
+      listeners.add(onChange);
+      return () => {
+        listeners.delete(onChange);
+      };
+    },
+  };
+}
+
+/** Pushes a hook's consent decision into a `ConsentFeed`. */
+export function useSyncConsent(
+  feed: ConsentFeed,
+  consent: boolean | null
+): void {
+  useEffect(() => {
+    feed.set(consent);
+  }, [consent, feed]);
 }
 
 function takeSignInMark(): SignInMethod | null {
@@ -129,7 +191,7 @@ function takeSignInMark(): SignInMethod | null {
 
 /**
  * Tracks `sign_in_completed { method }` when a user id appears after
- * `markSignInStarted`. A session that was already there (no mark) tracks
+ * `useMarkSignInStarted`. A session that was already there (no mark) tracks
  * nothing.
  */
 export function useSignInCompleted(userId: string | null): void {

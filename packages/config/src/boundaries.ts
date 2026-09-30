@@ -38,6 +38,7 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/local-store",
     "@smog/analytics/native",
     "@smog/analytics/react",
+    "@smog/analytics/schema",
     "@smog/i18n",
     "@smog/styles",
     "@smog/brand",

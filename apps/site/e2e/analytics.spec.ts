@@ -87,8 +87,20 @@ test("no /api/analytics request before consent, or after withdraw", async ({
     expect(request.method()).toBe("POST");
   }
 
-  // Withdrawn: nothing new.
-  await setConsent(page, false);
+  // Withdrawn in another tab, without a reload here: the live store
+  // subscription closes the gate, so a client-side navigation sends nothing.
+  const other = await page.context().newPage();
+  await other.goto("/");
+  await setConsent(other, false);
+  await other.close();
+  await page.waitForTimeout(500);
+  const live = relay.requests.length;
+  await page.getByRole("link", { name: "Aanmelden" }).first().click();
+  await expect(page).toHaveURL(SIGN_IN_URL);
+  await page.waitForLoadState("networkidle");
+  expect(relay.requests).toHaveLength(live);
+
+  // Withdrawn and reloaded: nothing new.
   await page.reload();
   await page.waitForLoadState("networkidle");
   const before = relay.requests.length;

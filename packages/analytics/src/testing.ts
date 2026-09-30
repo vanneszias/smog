@@ -13,6 +13,7 @@ export function createRecordingAnalytics(): {
   return {
     analytics: {
       identify: () => undefined,
+      isAllowed: () => true,
       reset: () => undefined,
       screen: () => undefined,
       track: (event) => {

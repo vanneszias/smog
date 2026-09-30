@@ -147,7 +147,6 @@ describe("handleAnalyticsRelay", () => {
       },
       { payload: { profileId: "a@b.be" }, type: "identify" },
       "{not json",
-      JSON.stringify({ ...TRACK, padding: "x".repeat(10_000) }),
     ];
     for (const body of bodies) {
       // biome-ignore lint/performance/noAwaitInLoops: one request at a time keeps the assertions readable.
@@ -155,6 +154,86 @@ describe("handleAnalyticsRelay", () => {
       expect(response.status).toBe(400);
     }
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("413 for a declared content-length over 4 KB, without reading the body", async () => {
+    const { fetch, options } = setup();
+    let pulled = false;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull: (controller) => {
+          pulled = true;
+          controller.enqueue(new TextEncoder().encode(JSON.stringify(TRACK)));
+          controller.close();
+        },
+      },
+      { highWaterMark: 0 }
+    );
+    const request = new Request(`${SITE}/api/analytics`, {
+      body,
+      duplex: "half",
+      headers: {
+        "cf-connecting-ip": "198.51.100.7",
+        "content-length": "100000",
+        "content-type": "application/json",
+        origin: SITE,
+      },
+      method: "POST",
+    } as RequestInit);
+    const response = await handleAnalyticsRelay(request, options);
+    expect(response.status).toBe(413);
+    expect(pulled).toBe(false);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("400 for a non-numeric content-length", async () => {
+    const { options } = setup();
+    const response = await handleAnalyticsRelay(
+      post(TRACK, { "content-length": "lots" }),
+      options
+    );
+    expect([400, 413]).toContain(response.status);
+  });
+
+  test("413 for a chunked body past 4 KB: the read stops at the cap", async () => {
+    const { fetch, options } = setup();
+    let chunks = 0;
+    let cancelled = false;
+    // An endless stream: the handler only returns if it stops reading.
+    const body = new ReadableStream<Uint8Array>({
+      cancel: () => {
+        cancelled = true;
+      },
+      pull: (controller) => {
+        chunks += 1;
+        controller.enqueue(new Uint8Array(1024).fill(32));
+      },
+    });
+    const request = new Request(`${SITE}/api/analytics`, {
+      body,
+      duplex: "half",
+      headers: {
+        "cf-connecting-ip": "198.51.100.7",
+        "content-type": "application/json",
+        origin: SITE,
+      },
+      method: "POST",
+    } as RequestInit);
+    const response = await handleAnalyticsRelay(request, options);
+    expect(response.status).toBe(413);
+    expect(chunks).toBeLessThanOrEqual(6);
+    expect(cancelled).toBe(true);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("without cf-connecting-ip no x-client-ip is forwarded", async () => {
+    const { fetch, options } = setup();
+    const request = post(TRACK);
+    request.headers.delete("cf-connecting-ip");
+    const response = await handleAnalyticsRelay(request, options);
+    expect(response.status).toBe(202);
+    const [, init] = fetch.mock.calls[0] as [string, RequestInit];
+    expect(new Headers(init.headers).has("x-client-ip")).toBe(false);
   });
 
   test("202 when OpenPanel fails or is unreachable", async () => {

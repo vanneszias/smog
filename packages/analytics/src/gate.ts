@@ -27,6 +27,8 @@ export interface ConsentSource {
 export interface Analytics {
   /** Signed in: the user id only (no email or name, spec §12). */
   identify: (userId: string) => void;
+  /** Whether consent is `true` right now (nothing else may touch the device before). */
+  isAllowed: () => boolean;
   /** Signed out: forget the identity. */
   reset: () => void;
   /** A route template (`/lists/$token`), never the filled-in path. */
@@ -42,6 +44,7 @@ export interface CreateAnalyticsOptions extends ConsentSource {
 /** An `Analytics` that never sends anything (no provider, tests). */
 export const NOOP_ANALYTICS: Analytics = {
   identify: () => undefined,
+  isAllowed: () => false,
   reset: () => undefined,
   screen: () => undefined,
   track: () => undefined,
@@ -126,6 +129,7 @@ export function createAnalytics(options: CreateAnalyticsOptions): Analytics {
         sendIdentity();
       }
     },
+    isAllowed: allowed,
     reset: () => {
       const had = userId !== null;
       userId = null;

@@ -252,6 +252,36 @@ describe("useGestureSearch", () => {
     expect(JSON.stringify(events)).not.toContain("hond");
   });
 
+  test("a new source for the settled search counts again; a pending one waits", async () => {
+    const { events, wrapper } = setup();
+    interface Props {
+      q: string;
+      source: "filter_change" | "submit" | "recent_search";
+    }
+    const { rerender, result } = renderHook(
+      ({ q, source }: Props) => useGestureSearch({ q, source }),
+      {
+        initialProps: { q: "hond", source: "filter_change" } as Props,
+        wrapper,
+      }
+    );
+    await waitFor(() => expect(events).toHaveLength(1));
+    // Submit of the same, settled text.
+    rerender({ q: "hond", source: "submit" });
+    await waitFor(() => expect(events).toHaveLength(2));
+    // A recent search: the new source must not be pinned on the old text.
+    rerender({ q: "kat", source: "recent_search" });
+    await waitFor(() =>
+      expect(result.current.data?.items[0]?.name).toBe("Kat")
+    );
+    await waitFor(() => expect(events).toHaveLength(3));
+    expect(events.map((event) => [event.properties])).toEqual([
+      [expect.objectContaining({ query_length: 4, source: "filter_change" })],
+      [expect.objectContaining({ query_length: 4, source: "submit" })],
+      [expect.objectContaining({ query_length: 3, source: "recent_search" })],
+    ]);
+  });
+
   test("the browse list (no text, no category) is not a search", async () => {
     const { events, wrapper } = setup();
     const { result } = renderHook(() => useGestureSearch({ q: "" }), {

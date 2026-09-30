@@ -207,7 +207,7 @@ function RootDocument({ children }: { children: ReactNode }): ReactNode {
                 <AuthStateProvider useSession={clients.useSession}>
                   <PurgeOtherUsers />
                   <LocalStoreProvider store={clients.store}>
-                    <SiteAnalytics store={clients.store}>
+                    <SiteAnalytics>
                       <ThemeProvider value={themeValue}>
                         <LocaleProvider value={localeValue}>
                           <TooltipProvider>
