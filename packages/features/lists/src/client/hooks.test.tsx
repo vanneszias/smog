@@ -55,6 +55,8 @@ interface Server {
   failNextReorder: boolean;
   /** When set, `addItem` waits for it. */
   holdAdd?: Promise<void>;
+  /** When set, `containing` waits for it. */
+  holdContaining?: Promise<void>;
   lists: Map<string, ListDetail>;
   shares: Map<string, { role: ShareRole; token: string }[]>;
   tokens: number;
@@ -124,8 +126,9 @@ function fakeApi(server: Server) {
         );
         return { added: true };
       }),
-      containing: os.lists.containing.handler(({ input }) => {
+      containing: os.lists.containing.handler(async ({ input }) => {
         server.calls.push("containing");
+        await server.holdContaining;
         return [...server.lists.values()]
           .filter(
             (list) =>
@@ -871,6 +874,32 @@ describe("useListMembership", () => {
       await result.current.toggle("srv-1");
     });
     await waitFor(() => expect(result.current.lists[0]?.contains).toBe(false));
+    expect(server.lists.get("srv-1")?.items).toEqual([]);
+  });
+
+  test("signed in, a tap before the lists loaded waits for them (never lost)", async () => {
+    const { server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    let release = (): void => undefined;
+    server.holdContaining = new Promise((resolve) => {
+      release = resolve;
+    });
+    const { result } = renderHook(() => useListMembership(HOND.id), {
+      wrapper,
+    });
+    // The picker shows the lists (from `mine`) before `containing` answers.
+    await waitFor(() => expect(result.current.lists).toHaveLength(1));
+    expect(result.current.status).toBe("loading");
+
+    let tap: Promise<unknown> | undefined;
+    act(() => {
+      tap = result.current.toggle("srv-1");
+    });
+    release();
+    await act(async () => {
+      // It holds the gesture, so the tap takes it out.
+      expect(await tap).toEqual({ action: "removed", name: "Dieren" });
+    });
     expect(server.lists.get("srv-1")?.items).toEqual([]);
   });
 

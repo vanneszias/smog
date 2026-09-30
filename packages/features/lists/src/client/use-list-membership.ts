@@ -44,8 +44,9 @@ export interface UseListMembershipResult {
   status: ListsStatus;
   /**
    * Adds the gesture to the list or takes it out (optimistic for
-   * accounts; rolled back, and rejected, on failure). `null`: ignored,
-   * because the list is still loading or a change of it is in flight.
+   * accounts; rolled back, and rejected, on failure). A tap before the
+   * lists loaded waits for them. `null`: ignored, because a change of
+   * that list is still in flight.
    */
   toggle: (listId: string) => Promise<MembershipChange | null>;
 }
@@ -98,21 +99,29 @@ export function useListMembership(
       userScopedKey(rpc.containing.queryKey({ input: { gestureId } }), userId),
     [gestureId, rpc, userId]
   );
-  const containing = useQuery({
-    ...rpc.containing.queryOptions({
-      input: { gestureId },
-      staleTime: LISTS_STALE_TIME,
+  const containingOptions = useMemo(
+    () => ({
+      ...rpc.containing.queryOptions({
+        input: { gestureId },
+        staleTime: LISTS_STALE_TIME,
+      }),
+      queryKey: containingKey,
     }),
+    [containingKey, gestureId, rpc]
+  );
+  const containing = useQuery({
+    ...containingOptions,
     enabled: signedIn && enabled,
-    queryKey: containingKey,
   });
   const { mutateAsync: addRemote } = useMutation(rpc.addItem.mutationOptions());
   const { mutateAsync: removeRemote } = useMutation(
     rpc.removeItem.mutationOptions()
   );
 
-  // Changes in flight: list id → the state asked for. The ref is the
-  // guard (a second tap in the same tick sees the first), the state renders.
+  // Lists with a tap being handled: a second tap on one (even in the same
+  // tick) is ignored until the first settles.
+  const busy = useRef(new Set<string>());
+  // Changes in flight: list id → the state asked for (what `lists` shows).
   const inFlight = useRef(new Map<string, boolean>());
   const [pending, setPending] = useState<ReadonlyMap<string, boolean>>(
     () => new Map()
@@ -130,7 +139,6 @@ export function useListMembership(
   );
 
   const serverIds = signedIn ? (containing.data ?? NO_IDS) : localIds;
-  const loaded = signedIn ? containing.data !== undefined : true;
   const nameOf = useCallback(
     (listId: string) => lists.find((list) => list.id === listId)?.name ?? "",
     [lists]
@@ -171,32 +179,48 @@ export function useListMembership(
     ]
   );
 
+  /**
+   * The lists holding the gesture now: the device's, or the cached
+   * `containing` (fetched first when a tap comes before it loaded, so the
+   * tap is never lost or decided on a guess).
+   */
+  const currentIds = useCallback(async (): Promise<readonly string[]> => {
+    if (!signedIn) {
+      return selectLocal(store.getSnapshot());
+    }
+    return (
+      queryClient.getQueryData<string[]>(containingKey) ??
+      (await queryClient.fetchQuery(containingOptions))
+    );
+  }, [
+    containingKey,
+    containingOptions,
+    queryClient,
+    selectLocal,
+    signedIn,
+    store,
+  ]);
+
   const toggle = useCallback(
     async (listId: string): Promise<MembershipChange | null> => {
-      if (!loaded || inFlight.current.has(listId)) {
+      if (busy.current.has(listId)) {
         return null;
       }
-      const add = !serverIds.includes(listId);
-      setInFlight(listId, add);
+      busy.current.add(listId);
+      let add: boolean;
       try {
+        add = !(await currentIds()).includes(listId);
+        setInFlight(listId, add);
         await apply(listId, add);
       } finally {
+        busy.current.delete(listId);
         setInFlight(listId, undefined);
       }
       const action = add ? "added" : "removed";
       trackListItem(analytics, action, gestureId, source);
       return { action, name: nameOf(listId) };
     },
-    [
-      analytics,
-      apply,
-      gestureId,
-      loaded,
-      nameOf,
-      serverIds,
-      setInFlight,
-      source,
-    ]
+    [analytics, apply, currentIds, gestureId, nameOf, setInFlight, source]
   );
 
   const createWith = useCallback(
