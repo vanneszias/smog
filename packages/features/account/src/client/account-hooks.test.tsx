@@ -1,31 +1,19 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { createRouterClient, implement, ORPCError } from "@orpc/server";
-import { createTanstackQueryUtils } from "@orpc/tanstack-query";
-import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
 import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
-import {
-  createLocalStore,
-  createMemoryAdapter,
-  type LocalStore,
-  setConsent,
-  setPreferences,
-  toggleFavorite,
-} from "@smog/local-store";
-import { LocalStoreProvider } from "@smog/local-store/react";
-import { RpcProvider } from "@smog/rpc/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { setConsent, setPreferences, toggleFavorite } from "@smog/local-store";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { accountContract } from "../contract";
 import {
-  type AccountExport,
-  type ConsentState,
-  type DeleteAccountInput,
-  type Me,
-  type SetConsent,
-  UNDECIDED_CONSENT,
-  type UpdateProfile,
-} from "../schema";
+  ANNA,
+  EXPORT,
+  fakeAuthClient,
+  GUEST,
+  LOADING,
+  ME,
+  newServer,
+  newStore,
+  setup,
+} from "../../test/hooks-harness";
+import type { AccountExport } from "../schema";
 import {
   accountActionError,
   accountActionMessage,
@@ -41,159 +29,6 @@ import {
   usePasskeys,
   useSignInMethods,
 } from "./index";
-
-const ME: Me = {
-  createdAt: 1000,
-  email: "anna@smog.test",
-  emailVerified: true,
-  id: "user-anna",
-  image: null,
-  locale: null,
-  methods: { apple: false, google: false, passkeys: 0, password: true },
-  name: "Anna",
-  role: "user",
-};
-
-const EXPORT: AccountExport = {
-  consent: [],
-  exportedAt: "2026-09-29T12:00:00.000Z",
-  exportVersion: 2,
-  favorites: [],
-  lists: [],
-  profile: {
-    createdAt: "2026-09-01T12:00:00.000Z",
-    email: ME.email,
-    emailVerified: true,
-    id: ME.id,
-    image: null,
-    locale: null,
-    name: ME.name,
-    role: "user",
-  },
-  signInMethods: { passkeys: [], providers: [] },
-  sponsorships: [],
-};
-
-interface Server {
-  consent: ConsentState;
-  consentCalls: SetConsent[];
-  deleteCalls: DeleteAccountInput[];
-  /** The code `delete` fails with, if any. */
-  deleteFails?: "SESSION_NOT_FRESH";
-  failConsent: boolean;
-  me: Me;
-  updateCalls: UpdateProfile[];
-}
-
-function newServer(): Server {
-  return {
-    consent: UNDECIDED_CONSENT,
-    consentCalls: [],
-    deleteCalls: [],
-    failConsent: false,
-    me: ME,
-    updateCalls: [],
-  };
-}
-
-/** The account contract as a real in-process oRPC client. */
-function fakeApi(server: Server) {
-  const os = implement({ account: accountContract });
-  const router = {
-    account: os.account.router({
-      consent: {
-        get: os.account.consent.get.handler(() => {
-          if (server.failConsent) {
-            throw new Error("offline");
-          }
-          return server.consent;
-        }),
-        set: os.account.consent.set.handler(({ input }) => {
-          if (server.failConsent) {
-            throw new Error("offline");
-          }
-          server.consentCalls.push(input);
-          server.consent = {
-            analytics: input.analytics,
-            decidedAt: 5000 + server.consentCalls.length,
-            needsDecision: false,
-            policyVersion: CONSENT_POLICY_VERSION,
-          };
-          return server.consent;
-        }),
-      },
-      delete: os.account.delete.handler(({ errors, input }) => {
-        server.deleteCalls.push(input as DeleteAccountInput);
-        if (server.deleteFails) {
-          throw errors.SESSION_NOT_FRESH();
-        }
-        return { deleted: true as const };
-      }),
-      export: os.account.export.handler(() => EXPORT),
-      importGuestData: os.account.importGuestData.handler(() => {
-        throw new ORPCError("NOT_FOUND");
-      }),
-      me: os.account.me.handler(() => server.me),
-      updateProfile: os.account.updateProfile.handler(({ input }) => {
-        server.updateCalls.push(input);
-        server.me = {
-          ...server.me,
-          ...(input.name === undefined ? {} : { name: input.name }),
-          ...(input.locale === undefined ? {} : { locale: input.locale }),
-        };
-        return server.me;
-      }),
-    }),
-  };
-  const client = createRouterClient(router);
-  return { client, queryUtils: createTanstackQueryUtils(client) };
-}
-
-const ANNA: SessionHookResult = {
-  data: { user: { email: ME.email, id: ME.id, name: ME.name } },
-  isPending: false,
-};
-const LOADING: SessionHookResult = { data: undefined, isPending: true };
-const GUEST: SessionHookResult = { data: null, isPending: false };
-
-function setup(
-  store: LocalStore,
-  session: SessionHookResult,
-  server = newServer()
-) {
-  const api = fakeApi(server);
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  const auth = { current: session, refetches: 0 };
-  const useSession = () => ({
-    ...auth.current,
-    refetch: () => {
-      auth.refetches += 1;
-    },
-  });
-  function wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <RpcProvider client={api.client} queryUtils={api.queryUtils}>
-          <LocalStoreProvider store={store}>
-            {/* biome-ignore lint/performance/noJsxPropsBind: a stable test hook, defined once per setup. */}
-            <AuthStateProvider useSession={useSession}>
-              {children}
-            </AuthStateProvider>
-          </LocalStoreProvider>
-        </RpcProvider>
-      </QueryClientProvider>
-    );
-  }
-  return { auth, queryClient, server, wrapper };
-}
-
-async function newStore(): Promise<LocalStore> {
-  const store = createLocalStore(createMemoryAdapter());
-  await store.ready;
-  return store;
-}
 
 afterEach(() => {
   cleanup();
@@ -319,20 +154,6 @@ describe("useConsent: signed in", () => {
     expect(result.current).toMatchObject({
       analytics: true,
       needsDecision: false,
-    });
-  });
-
-  test("leaves the device choice alone while the account has none", async () => {
-    const store = await newStore();
-    await store.update(setConsent(true, 1));
-    const { wrapper } = setup(store, ANNA);
-    const { result } = renderHook(() => useConsent(), { wrapper });
-
-    await waitFor(() => expect(result.current.status).toBe("ready"));
-    expect(result.current.analytics).toBeNull();
-    expect(store.getSnapshot().consent).toEqual({
-      analytics: true,
-      decidedAt: 1,
     });
   });
 
@@ -530,56 +351,6 @@ describe("useDeleteAccount", () => {
     error.mockRestore();
   });
 });
-
-/** Better Auth's client calls the methods hooks use, recorded. */
-function fakeAuthClient(
-  accounts: { id: string; providerId: string }[] = [],
-  failures: Record<string, { code?: string; status?: number }> = {}
-) {
-  const calls: [string, unknown][] = [];
-  const answer = (name: string) =>
-    Promise.resolve(
-      failures[name] ? { data: null, error: failures[name] } : { error: null }
-    );
-  let passkeys: { createdAt: Date | string; id: string; name?: string }[] = [
-    { createdAt: new Date(2000), id: "pk-1", name: "Laptop" },
-    { createdAt: "1970-01-01T00:00:03.000Z", id: "pk-2" },
-  ];
-  const client = {
-    changePassword: (body: unknown) => {
-      calls.push(["changePassword", body]);
-      return answer("changePassword");
-    },
-    linkSocial: (body: unknown) => {
-      calls.push(["linkSocial", body]);
-      return answer("linkSocial");
-    },
-    listAccounts: () => {
-      calls.push(["listAccounts", undefined]);
-      return Promise.resolve({ data: accounts, error: null });
-    },
-    passkey: {
-      addPasskey: (body?: unknown) => {
-        calls.push(["addPasskey", body]);
-        return answer("addPasskey");
-      },
-      deletePasskey: (body: { id: string }) => {
-        calls.push(["deletePasskey", body]);
-        passkeys = passkeys.filter((entry) => entry.id !== body.id);
-        return answer("deletePasskey");
-      },
-      listUserPasskeys: () => {
-        calls.push(["listUserPasskeys", undefined]);
-        return Promise.resolve({ data: passkeys, error: null });
-      },
-    },
-    unlinkAccount: (body: unknown) => {
-      calls.push(["unlinkAccount", body]);
-      return answer("unlinkAccount");
-    },
-  };
-  return { calls, client };
-}
 
 describe("sign-in method rules", () => {
   test("a provider can be unlinked only while another account stays", () => {

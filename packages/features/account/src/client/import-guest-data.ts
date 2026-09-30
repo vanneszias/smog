@@ -188,6 +188,48 @@ function clearImported(payload: Payload, result: ImportResult): Mutator {
  * makes no call. Malformed ids are skipped and counted in
  * `skippedUnknownGestures`.
  */
+/**
+ * Carries only the device's consent choice to the account (spec §11 step
+ * 2, source `import`), for a device with nothing else to import or a user
+ * who skipped the import. Clears the choice from the device on success
+ * (the account's log then mirrors back). Resolves the choice sent, or
+ * `null` when the device has none. Logs and rethrows on failure.
+ */
+export async function importGuestConsent({
+  client,
+  onSaved,
+  store,
+}: Pick<ImportGuestDataOptions, "client" | "store"> & {
+  /** Called once the account has it, before the device copy is cleared. */
+  onSaved?: (consent: { analytics: boolean; decidedAt: number }) => void;
+}): Promise<{
+  analytics: boolean;
+  decidedAt: number;
+} | null> {
+  try {
+    await store.ready;
+    const full = toPayload(store.getSnapshot(), UNTITLED_LIST);
+    const { consent } = full.input;
+    if (!consent) {
+      return null;
+    }
+    const payload: Payload = {
+      consentDecidedAt: consent.decidedAt,
+      favorites: new Set(),
+      input: { consent, favorites: [], lists: [] },
+      invalid: new Set(),
+      lists: [],
+    };
+    const result = await client.account.importGuestData(payload.input);
+    onSaved?.(consent);
+    await store.update(clearImported(payload, result));
+    return consent;
+  } catch (error) {
+    console.error("[account] Failed to carry the consent choice:", error);
+    throw error;
+  }
+}
+
 export async function importGuestData({
   client,
   store,

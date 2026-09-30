@@ -1,3 +1,5 @@
+import { useAccount } from "@smog/account/client";
+import { useAuthState } from "@smog/auth/react";
 import { isLocale, LOCALES } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import { Field, SegmentedControl, Select } from "@smog/ui-native";
@@ -12,14 +14,28 @@ function isTheme(value: string): value is (typeof THEMES)[number] {
   return (THEMES as readonly string[]).includes(value);
 }
 
-/** The device's language and theme (local store; guests and users alike). */
+/**
+ * The device's language and theme (local store; guests and users alike).
+ * Signed in, the language is also the account's (`user.locale`, the
+ * language of our emails), as on the site.
+ */
 export function PreferencesFields(): ReactElement {
   const { t } = useTranslation();
+  const auth = useAuthState();
+  const { updateProfile } = useAccount();
   const [preferences, setPreferences] = usePreferences();
+  const signedIn = auth.status === "signedIn";
   const changeLocale = useCallback(
-    (value: string) =>
-      setPreferences({ locale: isLocale(value) ? value : null }),
-    [setPreferences]
+    (value: string) => {
+      const locale = isLocale(value) ? value : null;
+      setPreferences({ locale });
+      if (signedIn) {
+        updateProfile({ locale }).catch(() => {
+          // `useAccount` logged it; the device keeps the choice.
+        });
+      }
+    },
+    [setPreferences, signedIn, updateProfile]
   );
   const changeTheme = useCallback(
     (value: string) => {
@@ -31,7 +47,10 @@ export function PreferencesFields(): ReactElement {
   );
   return (
     <>
-      <Field label={t("language.label")}>
+      <Field
+        hint={signedIn ? t("account.preferences.languageHint") : undefined}
+        label={t("language.label")}
+      >
         <Select
           onValueChange={changeLocale}
           options={[

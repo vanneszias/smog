@@ -10,6 +10,7 @@ import {
   blockingViolations,
   ORIGIN,
   otpFor,
+  stubMux,
   uniqueEmail,
   verifyLinkFor,
   watchErrors,
@@ -99,6 +100,11 @@ async function decideConsent(page: Page): Promise<void> {
   }, STORE_KEY);
 }
 
+// Home and gesture pages load Mux stills; tests answer them locally.
+test.beforeEach(async ({ page }) => {
+  await stubMux(page);
+});
+
 /** Review screenshots (gitignored); `SCREENSHOTS_DIR` sends them elsewhere. */
 const SCREENSHOTS = process.env.SCREENSHOTS_DIR ?? "e2e/__screenshots__";
 
@@ -127,6 +133,13 @@ test.describe("screenshots", () => {
           animations: "disabled",
           path: `${SCREENSHOTS}/banner-${width}-${theme}.png`,
         });
+        await page.evaluate(() =>
+          window.scrollTo(0, document.documentElement.scrollHeight)
+        );
+        await page.screenshot({
+          animations: "disabled",
+          path: `${SCREENSHOTS}/banner-bottom-${width}-${theme}.png`,
+        });
         await page.screenshot({
           animations: "disabled",
           fullPage: true,
@@ -143,9 +156,11 @@ test.describe("screenshots", () => {
         // biome-ignore lint/performance/noAwaitInLoops: one theme after the other on the same page.
         await setTheme(page, theme);
         await page.goto("/account");
-        await expect(
-          page.getByRole("region", { name: "Profiel" })
-        ).toBeVisible();
+        await expect(page.getByRole("region", { name: "Profiel" })).toBeVisible(
+          {
+            timeout: 15_000,
+          }
+        );
         await page.waitForLoadState("networkidle");
         await page.screenshot({
           animations: "disabled",
@@ -167,7 +182,65 @@ test.describe("screenshots", () => {
   }
 });
 
+/** Whether the element's centre is the topmost thing there (nothing covers it). */
+function uncovered(page: Page, name: string): Promise<boolean> {
+  return page
+    .getByRole("contentinfo")
+    .getByRole("link", { exact: true, name })
+    .evaluate((link) => {
+      const box = link.getBoundingClientRect();
+      const top = document.elementFromPoint(
+        box.left + box.width / 2,
+        box.top + box.height / 2
+      );
+      return top !== null && link.contains(top);
+    });
+}
+
 test.describe("consent banner", () => {
+  test("keeps room for itself: the footer can be seen and focused (WCAG 2.4.11)", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 800, width: 390 });
+    await page.goto("/");
+    await expect(page.getByRole("region", { name: BANNER })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.evaluate(() =>
+      window.scrollTo(0, document.documentElement.scrollHeight)
+    );
+    expect(await uncovered(page, "Privacy")).toBe(true);
+    // Focus scrolled to the footer stays clear of the banner too.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page
+      .getByRole("contentinfo")
+      .getByRole("link", { exact: true, name: "Contact" })
+      .focus();
+    expect(await uncovered(page, "Contact")).toBe(true);
+  });
+
+  test("a guest's choice goes with them on sign-up: not asked again (review I1)", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page
+      .getByRole("region", { name: BANNER })
+      .getByRole("button", { name: ALLOW })
+      .click();
+    await signUpWithPassword(page);
+    await page.goto("/account");
+    await expect(page.getByRole("region", { name: "Profiel" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("region", { name: BANNER })).toHaveCount(0);
+    await expect(
+      page.getByRole("switch", { name: "Gebruiksstatistieken" })
+    ).toBeChecked();
+    const { json } = await rpc(page.request, "account/consent/get");
+    expect(json).toMatchObject({ analytics: true, needsDecision: false });
+  });
+
   test("shows on a first visit and sends nothing until Allow", async ({
     page,
   }) => {
@@ -265,7 +338,9 @@ test("the export downloads valid JSON (version 2)", async ({ page }) => {
   await decideConsent(page);
   const email = await signUpWithPassword(page);
   await page.goto("/account");
-  await expect(page.getByRole("region", { name: "Profiel" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Profiel" })).toBeVisible({
+    timeout: 15_000,
+  });
   expect(await blockingViolations(page)).toEqual([]);
 
   const downloading = page.waitForEvent("download");
@@ -368,4 +443,109 @@ test("deleting the account: its sessions end, sign-in fails, favorites are gone"
         )
     )
   ).toEqual([]);
+});
+
+test("changing the password: the old one stops working, the new one signs in", async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await decideConsent(page);
+  const email = await signUpWithPassword(page);
+  await page.goto("/account");
+  await page.getByRole("button", { name: "Wachtwoord wijzigen" }).click();
+  const dialog = page.getByRole("dialog", { name: "Wachtwoord wijzigen" });
+  const next = "e2e-new-password-5678";
+  await dialog.getByLabel("Huidig wachtwoord").fill("not-the-password");
+  await dialog.getByLabel("Nieuw wachtwoord").fill(next);
+  await dialog.getByLabel("Herhaal je wachtwoord").fill(next);
+  await dialog.getByRole("button", { name: "Opslaan" }).click();
+  await expect(dialog.getByText("Dat wachtwoord klopt niet.")).toBeVisible();
+
+  await dialog.getByLabel("Huidig wachtwoord").fill(PASSWORD);
+  await dialog.getByRole("button", { name: "Opslaan" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.getByText(
+      "Je wachtwoord is gewijzigd. Je andere toestellen zijn afgemeld.",
+      { exact: true }
+    )
+  ).toBeVisible();
+
+  const context = await page.context().browser()?.newContext();
+  if (!context) {
+    throw new Error("no browser");
+  }
+  const old = await context.request.post(`${ORIGIN}/api/auth/sign-in/email`, {
+    data: { email, password: PASSWORD },
+    headers: HEADERS,
+  });
+  expect(old.ok()).toBe(false);
+  const fresh = await context.request.post(`${ORIGIN}/api/auth/sign-in/email`, {
+    data: { email, password: next },
+    headers: HEADERS,
+  });
+  expect(fresh.ok()).toBe(true);
+  await context.close();
+  // Only the refused current password was logged.
+  expect(
+    errors.filter(
+      (error) =>
+        !(
+          error.includes("[account] Failed to change the password") ||
+          error.includes("status of 400")
+        )
+    )
+  ).toEqual([]);
+});
+
+test("passkeys: add one with a virtual authenticator, then remove it", async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  // Chromium's WebAuthn emulation: a platform authenticator that verifies.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: {
+      automaticPresenceSimulation: true,
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      protocol: "ctap2",
+      transport: "internal",
+    },
+  });
+  await decideConsent(page);
+  await signUpWithPassword(page);
+  await page.goto("/account");
+  await expect(
+    page.getByText("Je hebt nog geen passkey toegevoegd.")
+  ).toBeVisible({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Passkey toevoegen" }).click();
+  await expect(
+    page.getByText("Je passkey is toegevoegd.", { exact: true })
+  ).toBeVisible();
+  const remove = page.getByRole("button", {
+    name: "Passkey verwijderen: Passkey",
+  });
+  await expect(remove).toBeVisible();
+  expect(await blockingViolations(page)).toEqual([]);
+  await page.getByRole("region", { name: "Aanmeldmethodes" }).screenshot({
+    animations: "disabled",
+    path: `${SCREENSHOTS}/account-methods-passkey.png`,
+  });
+
+  await remove.click();
+  await page
+    .getByRole("alertdialog", { name: "Deze passkey verwijderen?" })
+    .getByRole("button", { name: "Verwijderen" })
+    .click();
+  await expect(
+    page.getByText("De passkey is verwijderd.", { exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByText("Je hebt nog geen passkey toegevoegd.")
+  ).toBeVisible();
+  expect(errors).toEqual([]);
 });

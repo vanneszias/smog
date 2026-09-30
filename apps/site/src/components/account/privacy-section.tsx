@@ -1,9 +1,8 @@
 import {
   type Account,
-  deleteFailureMessage,
   exportFileName,
   serializeExport,
-  useDeleteAccount,
+  useDeleteAccountForm,
   useExport,
 } from "@smog/account/client";
 import { DELETE_CONFIRMATION } from "@smog/account/schema";
@@ -19,19 +18,17 @@ import {
 } from "@smog/ui-web";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { Download, Trash2 } from "lucide-react";
-import {
-  type ChangeEvent,
-  type ReactNode,
-  useCallback,
-  useRef,
-  useState,
-} from "react";
+import { type ChangeEvent, type ReactNode, useCallback } from "react";
 import { AnalyticsSwitch } from "@/components/consent-banner";
 import { useAuthClient } from "@/lib/auth-client";
 import { AccountRow, AccountSection } from "./section";
 import { useSignInAgain } from "./use-action-toast";
 
-/** Saves `text` as a file through a temporary object URL. */
+/**
+ * Saves `text` as a file through a temporary object URL. The anchor is in
+ * the document while clicked and the URL outlives the click (older Safari
+ * and Firefox drop the download otherwise).
+ */
 function download(text: string, fileName: string): void {
   const url = URL.createObjectURL(
     new Blob([text], { type: "application/json" })
@@ -39,8 +36,11 @@ function download(text: string, fileName: string): void {
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = fileName;
+  anchor.hidden = true;
+  document.body.appendChild(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function ExportRow(): ReactNode {
@@ -103,8 +103,9 @@ export function PrivacySection({ signedIn }: { signedIn: boolean }): ReactNode {
 
 /**
  * Deletion (spec §5.3): an AlertDialog where the user types DELETE (and
- * the password, when the account has one). A session that is too old
- * without a password needs a fresh sign-in, which the dialog offers.
+ * the password, when the account has one), from `useDeleteAccountForm`.
+ * A session that is too old without a password needs a fresh sign-in,
+ * which the dialog offers.
  */
 export function DeleteAccountSection({
   account,
@@ -117,58 +118,31 @@ export function DeleteAccountSection({
   const navigate = useNavigate();
   const router = useRouter();
   const signInAgain = useSignInAgain();
-  // Leave the page as part of signing out: `useDeleteAccount` clears the
-  // query cache next, and this page's queries must not refetch for a user
-  // that no longer exists.
-  const signOut = useCallback(async () => {
-    const result = await client.signOut();
-    await navigate({ replace: true, to: "/" });
-    return result;
-  }, [client, navigate]);
-  const { deleteAccount, error, status } = useDeleteAccount({ signOut });
-  const [open, setOpen] = useState(false);
-  const [typed, setTyped] = useState("");
-  const [password, setPassword] = useState("");
-  // Radix closes the dialog on confirm; keep it open while the call runs.
-  const deleting = useRef(false);
-  const needsPassword = account.me?.methods.password ?? false;
-  const ready =
-    typed.trim() === DELETE_CONFIRMATION && (!needsPassword || password !== "");
+  const signOut = useCallback(() => client.signOut(), [client]);
+  const form = useDeleteAccountForm({
+    needsPassword: account.me?.methods.password ?? false,
+    signOut,
+  });
+  const { confirm, setPassword, setTyped } = form;
 
-  const onOpenChange = useCallback((next: boolean) => {
-    if (next || !deleting.current) {
-      setOpen(next);
+  const onTyped = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setTyped(event.target.value),
+    [setTyped]
+  );
+  const onPassword = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value),
+    [setPassword]
+  );
+  // Leave only once deleted: by then the session reads signed out, so the
+  // next page's user queries stay off (no request for the deleted user).
+  const onConfirm = useCallback(async () => {
+    if (await confirm()) {
+      toast({ title: t("account.delete.deleted"), variant: "success" });
+      await router.invalidate();
+      await navigate({ replace: true, to: "/" });
     }
-    if (!(next || deleting.current)) {
-      setTyped("");
-      setPassword("");
-    }
-  }, []);
-  const onTyped = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setTyped(event.target.value);
-  }, []);
-  const onPassword = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setPassword(event.target.value);
-  }, []);
+  }, [confirm, navigate, router, t, toast]);
 
-  const confirm = useCallback(async () => {
-    deleting.current = true;
-    try {
-      await deleteAccount({
-        confirm: DELETE_CONFIRMATION,
-        ...(needsPassword ? { password } : {}),
-      });
-    } catch {
-      // The dialog shows `error`; `useDeleteAccount` logged it.
-      return;
-    } finally {
-      deleting.current = false;
-    }
-    toast({ title: t("account.delete.deleted"), variant: "success" });
-    await router.invalidate();
-  }, [deleteAccount, needsPassword, password, router, t, toast]);
-
-  const failure = status === "error" && error ? error : null;
   return (
     <AccountSection
       description={t("account.delete.description")}
@@ -189,25 +163,25 @@ export function DeleteAccountSection({
                   autoComplete="off"
                   onChange={onTyped}
                   spellCheck={false}
-                  value={typed}
+                  value={form.typed}
                 />
               </Field>
-              {needsPassword ? (
+              {account.me?.methods.password ? (
                 <Field label={t("account.delete.password")}>
                   <Input
                     autoComplete="current-password"
                     onChange={onPassword}
                     type="password"
-                    value={password}
+                    value={form.password}
                   />
                 </Field>
               ) : null}
-              {failure ? (
+              {form.failureMessage ? (
                 <div className="flex flex-col items-start gap-2" role="alert">
                   <Text size="body-sm" tone="danger">
-                    {t(deleteFailureMessage(failure))}
+                    {form.failureMessage}
                   </Text>
-                  {failure === "SESSION_NOT_FRESH" ? (
+                  {form.failure === "SESSION_NOT_FRESH" ? (
                     <Button onClick={signInAgain} size="sm" variant="secondary">
                       {t("account.delete.signInAgain")}
                     </Button>
@@ -216,13 +190,13 @@ export function DeleteAccountSection({
               ) : null}
             </>
           }
-          confirmDisabled={!ready}
+          confirmDisabled={!form.ready}
           confirmLabel={t("account.delete.action")}
           description={t("account.delete.dialogDescription")}
-          loading={status === "deleting"}
-          onConfirm={confirm}
-          onOpenChange={onOpenChange}
-          open={open}
+          loading={form.deleting}
+          onConfirm={onConfirm}
+          onOpenChange={form.onOpenChange}
+          open={form.open}
           title={t("account.delete.dialogTitle")}
           tone="danger"
         >

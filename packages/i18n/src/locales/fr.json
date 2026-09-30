@@ -574,9 +574,6 @@
       "name": "Nom",
       "email": "Adresse e-mail",
       "emailHint": "Votre adresse e-mail ne peut pas être modifiée.",
-      "language": "Langue des e-mails",
-      "languageHint": "Les e-mails que nous vous envoyons sont dans cette langue.",
-      "languageAuto": "Comme le site",
       "saved": "Votre profil a été enregistré."
     },
     "methods": {
@@ -587,7 +584,7 @@
       "passwordNone": "Vous n'avez pas encore de mot de passe.",
       "changePassword": "Modifier le mot de passe",
       "setPassword": "Définir un mot de passe",
-      "setPasswordHint": "Nous vous enverrons un lien par e-mail pour choisir un mot de passe.",
+      "setPasswordHint": "Nous vous enverrons un lien par e-mail pour choisir un mot de passe. Vous vous reconnecterez ensuite partout.",
       "currentPassword": "Mot de passe actuel",
       "passwordChanged": "Votre mot de passe a été modifié. Vos autres appareils ont été déconnectés.",
       "passkeys": "Clés d'accès",
@@ -630,6 +627,9 @@
       "password": "Votre mot de passe",
       "deleted": "Votre compte a été définitivement supprimé.",
       "signInAgain": "Se reconnecter"
+    },
+    "preferences": {
+      "languageHint": "Si vous êtes connecté, c'est aussi la langue des e-mails que nous vous envoyons."
     }
   },
   "settings": {

@@ -14,7 +14,7 @@ module.exports = {
   testMatch: ["<rootDir>/src/**/*.test.{ts,tsx}"],
   // The first render of a suite (expo-router, NativeWind, transforms) can
   // pass 5 s when turbo runs every package's tests at once on a small box.
-  testTimeout: 20_000,
+  testTimeout: 10_000,
   // oRPC and lucide ship ES modules only (`.mjs`), which jest-expo's
   // `\.[jt]sx?$` transform does not cover. Merged with the preset's transforms.
   transform: {

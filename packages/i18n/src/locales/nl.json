@@ -567,9 +567,6 @@
       "name": "Naam",
       "email": "E-mailadres",
       "emailHint": "Je e-mailadres kun je niet wijzigen.",
-      "language": "Taal van e-mails",
-      "languageHint": "De e-mails die we je sturen, zijn in deze taal.",
-      "languageAuto": "Zelfde als de website",
       "saved": "Je profiel is bewaard."
     },
     "methods": {
@@ -580,7 +577,7 @@
       "passwordNone": "Je hebt nog geen wachtwoord.",
       "changePassword": "Wachtwoord wijzigen",
       "setPassword": "Wachtwoord instellen",
-      "setPasswordHint": "We sturen je een link om een wachtwoord te kiezen.",
+      "setPasswordHint": "We sturen je een link om een wachtwoord te kiezen. Daarna meld je je overal opnieuw aan.",
       "currentPassword": "Huidig wachtwoord",
       "passwordChanged": "Je wachtwoord is gewijzigd. Je andere toestellen zijn afgemeld.",
       "passkeys": "Passkeys",
@@ -623,6 +620,9 @@
       "password": "Je wachtwoord",
       "deleted": "Je account is definitief verwijderd.",
       "signInAgain": "Opnieuw aanmelden"
+    },
+    "preferences": {
+      "languageHint": "Als je aangemeld bent, is dit ook de taal van de e-mails die we je sturen."
     }
   },
   "settings": {

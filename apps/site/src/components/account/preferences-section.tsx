@@ -1,3 +1,4 @@
+import { useAuthState } from "@smog/auth/react";
 import { useTranslation } from "@smog/i18n/react";
 import { Text } from "@smog/ui-web";
 import type { ReactNode } from "react";
@@ -7,9 +8,11 @@ import { AccountSection } from "./section";
 
 function Preference({
   children,
+  hint,
   label,
 }: {
   children: ReactNode;
+  hint?: string | undefined;
   label: string;
 }): ReactNode {
   return (
@@ -19,19 +22,36 @@ function Preference({
         {label}
       </Text>
       {children}
+      {hint ? (
+        <Text size="body-sm" tone="muted">
+          {hint}
+        </Text>
+      ) : null}
     </div>
   );
 }
 
-/** Theme and language: this browser's (cookies), for guests and users alike. */
+/**
+ * Theme and language: this browser's (cookies), for guests and users
+ * alike. Signed in, the language is also the account's (`user.locale`,
+ * the language of our emails): the root's `setLocale` writes it.
+ */
 export function PreferencesSection(): ReactNode {
   const { t } = useTranslation();
+  const auth = useAuthState();
   return (
     <AccountSection title={t("settings.preferences")}>
       <Preference label={t("theme.label")}>
         <ThemeControl />
       </Preference>
-      <Preference label={t("language.label")}>
+      <Preference
+        hint={
+          auth.status === "signedIn"
+            ? t("account.preferences.languageHint")
+            : undefined
+        }
+        label={t("language.label")}
+      >
         <LanguageControl />
       </Preference>
     </AccountSection>

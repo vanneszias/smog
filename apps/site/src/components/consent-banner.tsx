@@ -1,57 +1,85 @@
-import { useConsent, useConsentChoice } from "@smog/account/client";
+import {
+  useConsent,
+  useConsentChoice,
+  useConsentPrompt,
+} from "@smog/account/client";
 import { useTranslation } from "@smog/i18n/react";
 import { ConsentBanner, Switch, useToast } from "@smog/ui-web";
-import { type ReactNode, useCallback } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 const PRIVACY_HREF = "/privacy";
 
-/** Saves a decision; a failure is a toast and leaves the decision open. */
-function useDecide(): {
-  busy: boolean;
-  decide: (value: boolean) => Promise<boolean>;
-} {
+/** The toast for a decision that could not be saved (the prompt stays). */
+function useSaveFailed(): () => void {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { busy, choose } = useConsentChoice();
-  const decide = useCallback(
-    async (value: boolean): Promise<boolean> => {
-      const saved = await choose(value);
-      if (!saved) {
-        toast({ title: t("consent.saveFailed"), variant: "danger" });
-      }
-      return saved;
-    },
-    [choose, t, toast]
-  );
-  return { busy, decide };
+  return useCallback(() => {
+    toast({ title: t("consent.saveFailed"), variant: "danger" });
+  }, [t, toast]);
+}
+
+/**
+ * While the banner shows, the page keeps room for it at the bottom (WCAG
+ * 2.4.11): an in-flow spacer of its height, so the footer can be scrolled
+ * into view, and `scroll-padding-bottom`, so focus is never scrolled under it.
+ */
+function useReservedSpace(): {
+  height: number;
+  ref: (element: HTMLElement | null) => void;
+} {
+  const [element, setElement] = useState<HTMLElement | null>(null);
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    if (!element) {
+      setHeight(0);
+      return;
+    }
+    const measure = (): void => setHeight(element.offsetHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element]);
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.scrollPaddingBottom = height > 0 ? `${height}px` : "";
+    return () => {
+      root.style.scrollPaddingBottom = "";
+    };
+  }, [height]);
+  return { height, ref: setElement };
 }
 
 /**
  * The analytics consent banner (inventory P-05), fixed at the bottom while
- * the decision is open: a first visit, or a yes under an older policy.
- * Nothing renders on the server or before the device store has loaded
- * (`useConsent` is `loading` then), so it never flashes for a visitor who
- * already decided.
+ * the decision is open (`useConsentPrompt`): not during SSR, before the
+ * device store has loaded, or while the guest import is offered.
  */
 export function SiteConsentBanner(): ReactNode {
-  const consent = useConsent();
-  const { busy, decide } = useDecide();
-  const allow = useCallback(() => {
-    decide(true);
-  }, [decide]);
-  const decline = useCallback(() => {
-    decide(false);
-  }, [decide]);
-  if (consent.status !== "ready" || !consent.needsDecision) {
+  const onSaveFailed = useSaveFailed();
+  const prompt = useConsentPrompt({ onSaveFailed });
+  const space = useReservedSpace();
+  const { allow, decline } = prompt;
+  const onAllow = useCallback(() => {
+    allow();
+  }, [allow]);
+  const onDecline = useCallback(() => {
+    decline();
+  }, [decline]);
+  if (!prompt.open) {
     return null;
   }
   return (
-    <ConsentBanner
-      busy={busy}
-      onAllow={allow}
-      onDecline={decline}
-      privacyHref={PRIVACY_HREF}
-    />
+    <>
+      <div aria-hidden="true" style={{ height: space.height }} />
+      <ConsentBanner
+        busy={prompt.busy}
+        onAllow={onAllow}
+        onDecline={onDecline}
+        privacyHref={PRIVACY_HREF}
+        ref={space.ref}
+      />
+    </>
   );
 }
 
@@ -60,14 +88,15 @@ export function AnalyticsSwitch(): ReactNode {
   const { t } = useTranslation();
   const { toast } = useToast();
   const consent = useConsent();
-  const { busy, decide } = useDecide();
+  const onSaveFailed = useSaveFailed();
+  const { busy, choose } = useConsentChoice({ onSaveFailed });
   const change = useCallback(
     async (checked: boolean): Promise<void> => {
-      if (await decide(checked)) {
+      if (await choose(checked)) {
         toast({ title: t("consent.saved"), variant: "success" });
       }
     },
-    [decide, t, toast]
+    [choose, t, toast]
   );
   return (
     <Switch

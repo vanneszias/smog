@@ -1,9 +1,8 @@
 import {
-  deleteFailureMessage,
   exportFileName,
   serializeExport,
   useAccount,
-  useDeleteAccount,
+  useDeleteAccountForm,
   useExport,
 } from "@smog/account/client";
 import { DELETE_CONFIRMATION } from "@smog/account/schema";
@@ -23,18 +22,27 @@ import {
   useToast,
 } from "@smog/ui-native";
 import { useRouter } from "expo-router";
-import { type ReactElement, useCallback, useRef, useState } from "react";
+import { type ReactElement, useCallback } from "react";
 import { ScrollView, View } from "react-native";
 import { AnalyticsSwitch, openPrivacy } from "@/components/consent-sheet";
 import { PreferencesFields } from "@/components/preferences-fields";
 import { useAuthClient } from "@/lib/auth-client";
-import { shareJsonFile } from "@/lib/export-file";
+import { shareJsonFile, sweepExportFiles } from "@/lib/export-file";
 import {
   ProfileSection,
   Section,
   SignInMethodsSection,
 } from "./profile-methods";
 import { useSignInAgain } from "./use-action-toast";
+
+/** Back to settings, or home when the screen was opened without a stack. */
+function leave(router: ReturnType<typeof useRouter>): void {
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace("/");
+  }
+}
 
 function PrivacySection({ signedIn }: { signedIn: boolean }): ReactElement {
   const { t } = useTranslation();
@@ -79,7 +87,7 @@ function PrivacySection({ signedIn }: { signedIn: boolean }): ReactElement {
   );
 }
 
-/** Deletion: type DELETE (and the password, when there is one). */
+/** Deletion: type DELETE (and the password), from `useDeleteAccountForm`. */
 function DeleteSection({
   needsPassword,
 }: {
@@ -90,48 +98,22 @@ function DeleteSection({
   const client = useAuthClient();
   const router = useRouter();
   const signInAgain = useSignInAgain();
-  // Leave the screen while signing out: `useDeleteAccount` then clears the
-  // cache, and this screen's queries must not refetch for a deleted user.
+  // Any export file left on the device goes with the account.
   const signOut = useCallback(async () => {
     const result = await client.signOut();
-    router.back();
+    sweepExportFiles();
     return result;
-  }, [client, router]);
-  const { deleteAccount, error, status } = useDeleteAccount({ signOut });
-  const [open, setOpen] = useState(false);
-  const [typed, setTyped] = useState("");
-  const [password, setPassword] = useState("");
-  const deleting = useRef(false);
-  const ready =
-    typed.trim() === DELETE_CONFIRMATION && (!needsPassword || password !== "");
+  }, [client]);
+  const form = useDeleteAccountForm({ needsPassword, signOut });
+  const { confirm } = form;
+  // Leave once deleted (the session then reads signed out).
+  const onConfirm = useCallback(async () => {
+    if (await confirm()) {
+      toast({ title: t("account.delete.deleted"), variant: "success" });
+      leave(router);
+    }
+  }, [confirm, router, t, toast]);
 
-  const onOpenChange = useCallback((next: boolean) => {
-    // Confirming closes the dialog; it stays open while the call runs.
-    if (next || !deleting.current) {
-      setOpen(next);
-    }
-    if (!(next || deleting.current)) {
-      setTyped("");
-      setPassword("");
-    }
-  }, []);
-  const confirm = useCallback(async () => {
-    deleting.current = true;
-    try {
-      await deleteAccount({
-        confirm: DELETE_CONFIRMATION,
-        ...(needsPassword ? { password } : {}),
-      });
-    } catch {
-      // The dialog shows `error`; `useDeleteAccount` logged it.
-      return;
-    } finally {
-      deleting.current = false;
-    }
-    toast({ title: t("account.delete.deleted"), variant: "success" });
-  }, [deleteAccount, needsPassword, password, t, toast]);
-
-  const failure = status === "error" && error ? error : null;
   return (
     <Section
       description={t("account.delete.description")}
@@ -149,26 +131,26 @@ function DeleteSection({
                 autoCapitalize="characters"
                 autoComplete="off"
                 autoCorrect={false}
-                onChangeText={setTyped}
-                value={typed}
+                onChangeText={form.setTyped}
+                value={form.typed}
               />
             </Field>
             {needsPassword ? (
               <Field label={t("account.delete.password")}>
                 <Input
                   autoComplete="current-password"
-                  onChangeText={setPassword}
+                  onChangeText={form.setPassword}
                   secureTextEntry
-                  value={password}
+                  value={form.password}
                 />
               </Field>
             ) : null}
-            {failure ? (
+            {form.failureMessage ? (
               <View accessibilityRole="alert" className="gap-2">
                 <Text size="body-sm" tone="danger">
-                  {t(deleteFailureMessage(failure))}
+                  {form.failureMessage}
                 </Text>
-                {failure === "SESSION_NOT_FRESH" ? (
+                {form.failure === "SESSION_NOT_FRESH" ? (
                   <Button onPress={signInAgain} size="sm" variant="secondary">
                     {t("account.delete.signInAgain")}
                   </Button>
@@ -177,13 +159,13 @@ function DeleteSection({
             ) : null}
           </>
         }
-        confirmDisabled={!ready}
+        confirmDisabled={!form.ready}
         confirmLabel={t("account.delete.action")}
         description={t("account.delete.dialogDescription")}
-        loading={status === "deleting"}
-        onConfirm={confirm}
-        onOpenChange={onOpenChange}
-        open={open}
+        loading={form.deleting}
+        onConfirm={onConfirm}
+        onOpenChange={form.onOpenChange}
+        open={form.open}
         title={t("account.delete.dialogTitle")}
         tone="danger"
       >
@@ -207,7 +189,7 @@ function SignedIn(): ReactElement | null {
         throw new Error(error.message ?? error.statusText);
       }
       toast({ title: t("auth.signedOut"), variant: "success" });
-      router.back();
+      leave(router);
     } catch (error) {
       console.error("[account] Failed to sign out:", error);
       toast({ title: t("auth.errors.generic"), variant: "danger" });

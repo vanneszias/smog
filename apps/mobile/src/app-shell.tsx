@@ -1,9 +1,10 @@
 import { KitProvider, ToastProvider } from "@smog/ui-native";
 import { Stack } from "expo-router";
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect } from "react";
 import { AnalyticsBridge } from "@/analytics";
 import { ConsentSheet } from "@/components/consent-sheet";
 import { GuestImportSheet } from "@/guest-import-sheet";
+import { sweepExportFiles } from "@/lib/export-file";
 import { type StackHeaderOptions, useStackHeaderOptions } from "@/lib/header";
 import { ThemeRoot } from "@/theme-root";
 
@@ -29,6 +30,10 @@ function useCardOptions(): StackHeaderOptions & {
  */
 export function AppShell(): ReactElement {
   const card = useCardOptions();
+  // An account export left behind by an interrupted share (it holds personal data).
+  useEffect(() => {
+    sweepExportFiles();
+  }, []);
   return (
     <ThemeRoot>
       <KitProvider>

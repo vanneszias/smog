@@ -2,15 +2,12 @@ import {
   type Account,
   canUnlink,
   type Passkey,
+  type SignInMethodsActions,
+  useChangePasswordForm,
   usePasskeys,
   useSignInMethods,
 } from "@smog/account/client";
-import {
-  newPasswordError,
-  PASSWORD_MAX_LENGTH,
-  PASSWORD_MIN_LENGTH,
-  type SocialProvider,
-} from "@smog/auth/react";
+import { PASSWORD_MIN_LENGTH, type SocialProvider } from "@smog/auth/react";
 import { formatDate } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
@@ -39,7 +36,7 @@ import { useAuthClient } from "@/lib/auth-client";
 import { useLocale } from "@/lib/locale";
 import { usePasskeySupport } from "@/lib/passkeys";
 import { AccountRow, AccountSection } from "./section";
-import { useActionErrorMessage, useActionToast } from "./use-action-toast";
+import { useActionToast, useShowFeedback } from "./use-action-toast";
 
 const rootApi = getRouteApi("__root__");
 const ACCOUNT_PATH = "/account";
@@ -47,98 +44,64 @@ const ACCOUNT_PATH = "/account";
 type Methods = NonNullable<Account["me"]>["methods"];
 
 function PasswordDialog({
+  actions,
   onDone,
   open,
   setOpen,
 }: {
+  actions: SignInMethodsActions;
   onDone: () => void;
   open: boolean;
   setOpen: (open: boolean) => void;
 }): ReactNode {
   const { t } = useTranslation();
-  const client = useAuthClient();
-  const { changePassword, pending } = useSignInMethods({ client });
-  const message = useActionErrorMessage();
-  const report = useActionToast();
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState<{
-    field: "current" | "next" | "confirm";
-    text: string;
-  } | null>(null);
+  const form = useChangePasswordForm(actions);
+  const show = useShowFeedback();
+  const { setConfirm, setCurrent, setNext, submit } = form;
 
-  const onCurrent = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setCurrent(event.target.value);
-  }, []);
-  const onNext = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setNext(event.target.value);
-  }, []);
-  const onConfirm = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setConfirm(event.target.value);
-  }, []);
-
-  const submit = useCallback(
+  const onCurrent = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setCurrent(event.target.value),
+    [setCurrent]
+  );
+  const onNext = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setNext(event.target.value),
+    [setNext]
+  );
+  const onConfirm = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setConfirm(event.target.value),
+    [setConfirm]
+  );
+  const onSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>): Promise<void> => {
       event.preventDefault();
-      if (!current) {
-        setError({ field: "current", text: t("auth.errors.passwordRequired") });
-        return;
-      }
-      const invalid = newPasswordError({ confirm, password: next });
-      if (invalid) {
-        setError({
-          field: invalid === "passwordMismatch" ? "confirm" : "next",
-          text: t(`auth.errors.${invalid}`, {
-            max: PASSWORD_MAX_LENGTH,
-            min: PASSWORD_MIN_LENGTH,
-          }),
-        });
-        return;
-      }
-      setError(null);
-      const result = await changePassword({
-        currentPassword: current,
-        newPassword: next,
-      });
-      if (result.ok) {
-        report(result, t("account.methods.passwordChanged"));
-        setCurrent("");
-        setNext("");
-        setConfirm("");
-        onDone();
-        return;
-      }
-      if (result.error === "INVALID_PASSWORD") {
-        setError({ field: "current", text: message(result.error) });
-      } else if (result.error.startsWith("PASSWORD_TOO")) {
-        setError({ field: "next", text: message(result.error) });
-      } else {
-        report(result, "");
+      const feedback = await submit();
+      if (feedback) {
+        show(feedback);
+        if (feedback.variant === "success") {
+          onDone();
+        }
       }
     },
-    [changePassword, confirm, current, message, next, onDone, report, t]
+    [onDone, show, submit]
   );
 
-  const errorFor = (field: "current" | "next" | "confirm") =>
-    error?.field === field ? error.text : undefined;
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogContent title={t("account.methods.changePassword")}>
-        <form className="flex flex-col gap-4" noValidate onSubmit={submit}>
+        <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
           <Field
-            error={errorFor("current")}
+            error={form.errorFor("current")}
             label={t("account.methods.currentPassword")}
           >
             <Input
               autoComplete="current-password"
               onChange={onCurrent}
               type="password"
-              value={current}
+              value={form.values.current}
             />
           </Field>
           <Field
-            error={errorFor("next")}
+            error={form.errorFor("next")}
             hint={t("auth.password.ruleMinLength", {
               min: PASSWORD_MIN_LENGTH,
             })}
@@ -148,22 +111,22 @@ function PasswordDialog({
               autoComplete="new-password"
               onChange={onNext}
               type="password"
-              value={next}
+              value={form.values.next}
             />
           </Field>
           <Field
-            error={errorFor("confirm")}
+            error={form.errorFor("confirm")}
             label={t("auth.password.confirmLabel")}
           >
             <Input
               autoComplete="new-password"
               onChange={onConfirm}
               type="password"
-              value={confirm}
+              value={form.values.confirm}
             />
           </Field>
           <DialogFooter>
-            <Button loading={pending === "password"} type="submit">
+            <Button loading={form.pending} type="submit">
               {t("common.save")}
             </Button>
           </DialogFooter>
@@ -173,7 +136,13 @@ function PasswordDialog({
   );
 }
 
-function PasswordRow({ methods }: { methods: Methods }): ReactNode {
+function PasswordRow({
+  actions,
+  methods,
+}: {
+  actions: SignInMethodsActions;
+  methods: Methods;
+}): ReactNode {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const show = useCallback(() => setOpen(true), []);
@@ -201,22 +170,28 @@ function PasswordRow({ methods }: { methods: Methods }): ReactNode {
       title={t("account.methods.password")}
     >
       {methods.password ? (
-        <PasswordDialog onDone={close} open={open} setOpen={setOpen} />
+        <PasswordDialog
+          actions={actions}
+          onDone={close}
+          open={open}
+          setOpen={setOpen}
+        />
       ) : null}
     </AccountRow>
   );
 }
 
 function ProviderRow({
+  actions,
   methods,
   provider,
 }: {
+  actions: SignInMethodsActions;
   methods: Methods;
   provider: SocialProvider;
 }): ReactNode {
   const { t } = useTranslation();
-  const client = useAuthClient();
-  const { link, pending, unlink } = useSignInMethods({ client });
+  const { link, pending, unlink } = actions;
   const report = useActionToast();
   const label = t(`account.methods.${provider}`);
   const linked = methods[provider];
@@ -253,7 +228,9 @@ function ProviderRow({
             tone="danger"
           >
             <Button
-              disabled={!removable}
+              disabled={
+                !removable || (pending !== null && pending !== provider)
+              }
               icon={<Unlink />}
               loading={pending === provider}
               variant="secondary"
@@ -263,6 +240,7 @@ function ProviderRow({
           </AlertDialog>
         ) : (
           <Button
+            disabled={pending !== null && pending !== provider}
             icon={<Link2 />}
             loading={pending === provider}
             onClick={startLink}
@@ -404,6 +382,9 @@ export function SignInMethodsSection({
   account: Account;
 }): ReactNode {
   const { t } = useTranslation();
+  const client = useAuthClient();
+  // One instance for the section, so one method change runs at a time.
+  const actions = useSignInMethods({ client });
   const { auth: config } = rootApi.useLoaderData();
   const methods = account.me?.methods;
   const providers = (["google", "apple"] as const).filter(
@@ -417,10 +398,15 @@ export function SignInMethodsSection({
     >
       {methods ? (
         <div className="flex flex-col gap-4">
-          <PasswordRow methods={methods} />
+          <PasswordRow actions={actions} methods={methods} />
           <PasskeysRow />
           {providers.map((provider) => (
-            <ProviderRow key={provider} methods={methods} provider={provider} />
+            <ProviderRow
+              actions={actions}
+              key={provider}
+              methods={methods}
+              provider={provider}
+            />
           ))}
         </div>
       ) : (

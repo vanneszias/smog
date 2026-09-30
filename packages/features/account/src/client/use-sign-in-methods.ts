@@ -59,7 +59,7 @@ export interface SignInMethodsActions {
     provider: SocialProvider,
     options: LinkOptions
   ) => Promise<AccountActionResult>;
-  /** The action running, if any (one at a time per screen). */
+  /** The action running through this instance, if any (a screen uses one, so one runs at a time). */
   pending: SignInMethodAction | null;
   /** Unlinks a provider (Better Auth keeps the last account). */
   unlink: (provider: SocialProvider) => Promise<AccountActionResult>;

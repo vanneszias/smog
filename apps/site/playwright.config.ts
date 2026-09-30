@@ -1,7 +1,12 @@
 import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 5173;
+/**
+ * The dev server's port. `E2E_PORT` moves it when 5173 is taken (several
+ * checkouts on one machine); `.dev.vars` must then set the same
+ * `SITE_URL` (`http://localhost:<port>`), which auth and the mails use.
+ */
+const PORT = Number(process.env.E2E_PORT ?? 5173);
 
 /**
  * Browsers are preinstalled (never run `playwright install` here). The
@@ -33,7 +38,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "bun run dev",
+    command: `bunx vite dev --port ${PORT} --strictPort`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     url: `http://localhost:${PORT}/api/health`,

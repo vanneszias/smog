@@ -1,9 +1,8 @@
 import {
-  type AccountActionError,
   type AccountActionResult,
-  accountActionMessage,
+  type ActionFeedback,
+  useActionFeedback,
 } from "@smog/account/client";
-import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@smog/auth/react";
 import { useTranslation } from "@smog/i18n/react";
 import { useToast } from "@smog/ui-web";
 import { useNavigate } from "@tanstack/react-router";
@@ -27,39 +26,15 @@ export function useSignInAgain(): () => Promise<void> {
   }, [client, navigate]);
 }
 
-/** The words for a failed account action (both apps use the same keys). */
-export function useActionErrorMessage(): (error: AccountActionError) => string {
-  const { t } = useTranslation();
-  return useCallback(
-    (error: AccountActionError) =>
-      t(accountActionMessage(error), {
-        max: PASSWORD_MAX_LENGTH,
-        min: PASSWORD_MIN_LENGTH,
-      }),
-    [t]
-  );
-}
-
-/**
- * Says how an account action went: `success` on success, the reason
- * otherwise, with "Sign in again" when a fresh session is needed.
- */
-export function useActionToast(): (
-  result: AccountActionResult,
-  success: string
-) => void {
+/** Shows an `ActionFeedback` as a toast, with "Sign in again" when asked. */
+export function useShowFeedback(): (feedback: ActionFeedback) => void {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const message = useActionErrorMessage();
   const signInAgain = useSignInAgain();
   return useCallback(
-    (result: AccountActionResult, success: string) => {
-      if (result.ok) {
-        toast({ title: success, variant: "success" });
-        return;
-      }
+    ({ signInAgain: offer, title, variant }: ActionFeedback) => {
       toast({
-        ...(result.error === "SIGN_IN_AGAIN"
+        ...(offer
           ? {
               action: {
                 label: t("account.delete.signInAgain"),
@@ -69,10 +44,25 @@ export function useActionToast(): (
               },
             }
           : {}),
-        title: message(result.error),
-        variant: "danger",
+        title,
+        variant,
       });
     },
-    [message, signInAgain, t, toast]
+    [signInAgain, t, toast]
+  );
+}
+
+/** Says how an account action went (`useActionFeedback` as a toast). */
+export function useActionToast(): (
+  result: AccountActionResult,
+  success: string
+) => void {
+  const feedback = useActionFeedback();
+  const show = useShowFeedback();
+  return useCallback(
+    (result: AccountActionResult, success: string) => {
+      show(feedback(result, success));
+    },
+    [feedback, show]
   );
 }

@@ -1,4 +1,8 @@
-import { useConsent, useConsentChoice } from "@smog/account/client";
+import {
+  useConsent,
+  useConsentChoice,
+  useConsentPrompt,
+} from "@smog/account/client";
 import { useTranslation } from "@smog/i18n/react";
 import { ConsentBanner, Switch, useToast } from "@smog/ui-native";
 import { type ReactElement, useCallback, useState } from "react";
@@ -12,51 +16,41 @@ export function openPrivacy(): void {
   });
 }
 
-/** Saves a decision; a failure is a toast and leaves the decision open. */
-function useDecide(): {
-  busy: boolean;
-  decide: (value: boolean) => Promise<boolean>;
-} {
+/** The toast for a decision that could not be saved (the prompt stays). */
+function useSaveFailed(): () => void {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { busy, choose } = useConsentChoice();
-  const decide = useCallback(
-    async (value: boolean): Promise<boolean> => {
-      const saved = await choose(value);
-      if (!saved) {
-        toast({ title: t("consent.saveFailed"), variant: "danger" });
-      }
-      return saved;
-    },
-    [choose, t, toast]
-  );
-  return { busy, decide };
+  return useCallback(() => {
+    toast({ title: t("consent.saveFailed"), variant: "danger" });
+  }, [t, toast]);
 }
 
 /**
  * The consent sheet (spec §10, inventory P-06): shown on launch while the
- * analytics decision is open. Dismissing it leaves the decision open and
- * hides it until the next launch; nothing is sent meanwhile.
+ * decision is open (`useConsentPrompt`), after the guest import sheet.
+ * Dismissing it leaves the decision open and hides it until the next
+ * launch; nothing is sent meanwhile.
  */
 export function ConsentSheet(): ReactElement | null {
-  const consent = useConsent();
-  const { busy, decide } = useDecide();
+  const onSaveFailed = useSaveFailed();
+  const prompt = useConsentPrompt({ onSaveFailed });
   const [dismissed, setDismissed] = useState(false);
-  const allow = useCallback(() => {
-    decide(true);
-  }, [decide]);
-  const decline = useCallback(() => {
-    decide(false);
-  }, [decide]);
+  const { allow, decline } = prompt;
+  const onAllow = useCallback(() => {
+    allow();
+  }, [allow]);
+  const onDecline = useCallback(() => {
+    decline();
+  }, [decline]);
   const dismiss = useCallback(() => setDismissed(true), []);
-  if (consent.status !== "ready" || !consent.needsDecision || dismissed) {
+  if (!prompt.open || dismissed) {
     return null;
   }
   return (
     <ConsentBanner
-      busy={busy}
-      onAllow={allow}
-      onDecline={decline}
+      busy={prompt.busy}
+      onAllow={onAllow}
+      onDecline={onDecline}
       onDismiss={dismiss}
       onOpenPrivacy={openPrivacy}
       open
@@ -70,14 +64,15 @@ export function AnalyticsSwitch(): ReactElement {
   const { t } = useTranslation();
   const { toast } = useToast();
   const consent = useConsent();
-  const { busy, decide } = useDecide();
+  const onSaveFailed = useSaveFailed();
+  const { busy, choose } = useConsentChoice({ onSaveFailed });
   const change = useCallback(
     async (checked: boolean): Promise<void> => {
-      if (await decide(checked)) {
+      if (await choose(checked)) {
         toast({ title: t("consent.saved"), variant: "success" });
       }
     },
-    [decide, t, toast]
+    [choose, t, toast]
   );
   return (
     <Switch

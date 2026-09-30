@@ -1,17 +1,14 @@
 import {
   type Account,
   canUnlink,
+  type SignInMethodsActions,
+  useChangePasswordForm,
+  useProfileForm,
   useSignInMethods,
 } from "@smog/account/client";
 import { PROFILE_NAME_MAX } from "@smog/account/schema";
 import type { AppContract } from "@smog/api/client";
-import {
-  newPasswordError,
-  PASSWORD_MAX_LENGTH,
-  PASSWORD_MIN_LENGTH,
-  type SocialProvider,
-} from "@smog/auth/react";
-import { isLocale, LOCALES } from "@smog/i18n";
+import { PASSWORD_MIN_LENGTH, type SocialProvider } from "@smog/auth/react";
 import { useTranslation } from "@smog/i18n/react";
 import { useRpcQuery } from "@smog/rpc/react";
 import {
@@ -21,7 +18,6 @@ import {
   Field,
   Heading,
   Input,
-  Select,
   Text,
   useToast,
 } from "@smog/ui-native";
@@ -37,12 +33,10 @@ import {
 import { View } from "react-native";
 import { appleIdentityToken, useAppleSignInAvailable } from "@/auth/apple";
 import { useAuthClient } from "@/lib/auth-client";
-import { useActionErrorMessage, useActionToast } from "./use-action-toast";
+import { useActionToast, useShowFeedback } from "./use-action-toast";
 
 /** Where a linked provider returns to (Expo turns it into `smog://`). */
 const ACCOUNT_PATH = "/settings/account";
-/** The email language picker's "follow the app" value (`locale: null`). */
-const AUTO = "auto";
 
 type Methods = NonNullable<Account["me"]>["methods"];
 
@@ -53,7 +47,7 @@ export function Section({
   title,
 }: {
   children: ReactNode;
-  description?: string;
+  description?: string | undefined;
   title: string;
 }): ReactElement {
   return (
@@ -80,7 +74,7 @@ function Row({
 }: {
   action?: ReactNode;
   children?: ReactNode;
-  description?: string;
+  description?: string | undefined;
   title: ReactNode;
 }): ReactElement {
   return (
@@ -97,6 +91,10 @@ function Row({
   );
 }
 
+/**
+ * Name (editable) and email (read-only). The language is under
+ * Preferences: signed in, it is also the language of our emails.
+ */
 export function ProfileSection({
   account,
 }: {
@@ -104,60 +102,31 @@ export function ProfileSection({
 }): ReactElement {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { me, updateProfile } = account;
-  const saved = me?.name ?? "";
-  const [name, setName] = useState(saved);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  useEffect(() => {
-    setName(saved);
-  }, [saved]);
-
-  const save = useCallback(async (): Promise<void> => {
-    if (!name.trim()) {
-      setError(t("auth.errors.nameRequired"));
-      return;
-    }
-    setError(null);
-    setSaving(true);
-    try {
-      await updateProfile({ name });
+  const form = useProfileForm(account);
+  const { save } = form;
+  const submit = useCallback(async (): Promise<void> => {
+    if (await save()) {
       toast({ title: t("account.profile.saved"), variant: "success" });
-    } catch {
-      // `useAccount` logged it.
+    } else if (form.name.trim()) {
       toast({ title: t("auth.errors.generic"), variant: "danger" });
-    } finally {
-      setSaving(false);
     }
-  }, [name, t, toast, updateProfile]);
-
-  const changeLocale = useCallback(
-    async (value: string): Promise<void> => {
-      try {
-        await updateProfile({ locale: isLocale(value) ? value : null });
-        toast({ title: t("account.profile.saved"), variant: "success" });
-      } catch {
-        toast({ title: t("auth.errors.generic"), variant: "danger" });
-      }
-    },
-    [t, toast, updateProfile]
-  );
+  }, [form.name, save, t, toast]);
 
   return (
     <Section title={t("account.profile.title")}>
-      <Field error={error} label={t("account.profile.name")}>
+      <Field error={form.error} label={t("account.profile.name")}>
         <Input
           autoComplete="name"
           maxLength={PROFILE_NAME_MAX}
-          onChangeText={setName}
-          onSubmitEditing={save}
-          value={name}
+          onChangeText={form.setName}
+          onSubmitEditing={submit}
+          value={form.name}
         />
       </Field>
       <Button
-        disabled={name.trim() === saved}
-        loading={saving}
-        onPress={save}
+        disabled={!form.dirty}
+        loading={form.saving}
+        onPress={submit}
         variant="secondary"
       >
         {t("common.save")}
@@ -166,121 +135,83 @@ export function ProfileSection({
         hint={t("account.profile.emailHint")}
         label={t("account.profile.email")}
       >
-        <Input editable={false} value={me?.email ?? ""} />
-      </Field>
-      <Field
-        hint={t("account.profile.languageHint")}
-        label={t("account.profile.language")}
-      >
-        <Select
-          onValueChange={changeLocale}
-          options={[
-            { label: t("account.profile.languageAuto"), value: AUTO },
-            ...LOCALES.map((locale) => ({
-              label: t(`language.${locale}`),
-              value: locale,
-            })),
-          ]}
-          value={me?.locale ?? AUTO}
-        />
+        <Input editable={false} value={account.me?.email ?? ""} />
       </Field>
     </Section>
   );
 }
 
-function PasswordForm({ onDone }: { onDone: () => void }): ReactElement {
+function PasswordForm({
+  actions,
+  onDone,
+}: {
+  actions: SignInMethodsActions;
+  onDone: () => void;
+}): ReactElement {
   const { t } = useTranslation();
-  const client = useAuthClient();
-  const { changePassword, pending } = useSignInMethods({ client });
-  const message = useActionErrorMessage();
-  const report = useActionToast();
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState<{
-    field: "current" | "next" | "confirm";
-    text: string;
-  } | null>(null);
+  const form = useChangePasswordForm(actions);
+  const show = useShowFeedback();
+  const { submit } = form;
+  const onSubmit = useCallback(async (): Promise<void> => {
+    const feedback = await submit();
+    if (feedback) {
+      show(feedback);
+      if (feedback.variant === "success") {
+        onDone();
+      }
+    }
+  }, [onDone, show, submit]);
 
-  const submit = useCallback(async (): Promise<void> => {
-    if (!current) {
-      setError({ field: "current", text: t("auth.errors.passwordRequired") });
-      return;
-    }
-    const invalid = newPasswordError({ confirm, password: next });
-    if (invalid) {
-      setError({
-        field: invalid === "passwordMismatch" ? "confirm" : "next",
-        text: t(`auth.errors.${invalid}`, {
-          max: PASSWORD_MAX_LENGTH,
-          min: PASSWORD_MIN_LENGTH,
-        }),
-      });
-      return;
-    }
-    setError(null);
-    const result = await changePassword({
-      currentPassword: current,
-      newPassword: next,
-    });
-    if (result.ok) {
-      report(result, t("account.methods.passwordChanged"));
-      onDone();
-    } else if (result.error === "INVALID_PASSWORD") {
-      setError({ field: "current", text: message(result.error) });
-    } else if (result.error.startsWith("PASSWORD_TOO")) {
-      setError({ field: "next", text: message(result.error) });
-    } else {
-      report(result, "");
-    }
-  }, [changePassword, confirm, current, message, next, onDone, report, t]);
-
-  const errorFor = (field: "current" | "next" | "confirm") =>
-    error?.field === field ? error.text : undefined;
   return (
     <View className="gap-3">
       <Field
-        error={errorFor("current")}
+        error={form.errorFor("current")}
         label={t("account.methods.currentPassword")}
       >
         <Input
           autoComplete="current-password"
-          onChangeText={setCurrent}
+          onChangeText={form.setCurrent}
           secureTextEntry
-          value={current}
+          value={form.values.current}
         />
       </Field>
       <Field
-        error={errorFor("next")}
+        error={form.errorFor("next")}
         hint={t("auth.password.ruleMinLength", { min: PASSWORD_MIN_LENGTH })}
         label={t("auth.password.newLabel")}
       >
         <Input
           autoComplete="new-password"
-          onChangeText={setNext}
+          onChangeText={form.setNext}
           secureTextEntry
-          value={next}
+          value={form.values.next}
         />
       </Field>
       <Field
-        error={errorFor("confirm")}
+        error={form.errorFor("confirm")}
         label={t("auth.password.confirmLabel")}
       >
         <Input
           autoComplete="new-password"
-          onChangeText={setConfirm}
+          onChangeText={form.setConfirm}
           secureTextEntry
-          value={confirm}
+          value={form.values.confirm}
         />
       </Field>
-      <Button loading={pending === "password"} onPress={submit}>
+      <Button loading={form.pending} onPress={onSubmit}>
         {t("common.save")}
       </Button>
     </View>
   );
 }
 
-function PasswordRow({ methods }: { methods: Methods }): ReactElement {
+function PasswordRow({
+  actions,
+  methods,
+}: {
+  actions: SignInMethodsActions;
+  methods: Methods;
+}): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -310,25 +241,45 @@ function PasswordRow({ methods }: { methods: Methods }): ReactElement {
       }
       title={<Text weight="medium">{t("account.methods.password")}</Text>}
     >
-      {methods.password && open ? <PasswordForm onDone={close} /> : null}
+      {methods.password && open ? (
+        <PasswordForm actions={actions} onDone={close} />
+      ) : null}
     </Row>
   );
 }
 
 function ProviderRow({
+  actions,
   methods,
   provider,
 }: {
+  actions: SignInMethodsActions;
   methods: Methods;
   provider: SocialProvider;
 }): ReactElement {
   const { t } = useTranslation();
-  const client = useAuthClient();
-  const { link, pending, unlink } = useSignInMethods({ client });
   const report = useActionToast();
+  const { toast } = useToast();
+  const { link, pending, unlink } = actions;
   const label = t(`account.methods.${provider}`);
   const linked = methods[provider];
   const removable = canUnlink(methods, provider);
+  const busy = pending !== null && pending !== provider;
+  // A closed browser also resolves without an error: only the profile
+  // read after the link says whether it happened.
+  const [awaiting, setAwaiting] = useState(false);
+  useEffect(() => {
+    if (!awaiting) {
+      return;
+    }
+    setAwaiting(false);
+    if (linked) {
+      toast({
+        title: t("account.methods.linkedToast", { provider: label }),
+        variant: "success",
+      });
+    }
+  }, [awaiting, label, linked, t, toast]);
 
   const startLink = useCallback(async () => {
     // Apple on iOS: the native sheet's token, no browser.
@@ -340,8 +291,12 @@ function ProviderRow({
       callbackURL: ACCOUNT_PATH,
       ...(token ? { idToken: { token } } : {}),
     });
-    report(result, t("account.methods.linkedToast", { provider: label }));
-  }, [label, link, provider, report, t]);
+    if (result.ok) {
+      setAwaiting(true);
+    } else {
+      report(result, "");
+    }
+  }, [link, provider, report]);
   const confirmUnlink = useCallback(async () => {
     report(
       await unlink(provider),
@@ -363,7 +318,7 @@ function ProviderRow({
             tone="danger"
           >
             <Button
-              disabled={!removable}
+              disabled={!removable || busy}
               loading={pending === provider}
               variant="secondary"
             >
@@ -372,6 +327,7 @@ function ProviderRow({
           </AlertDialog>
         ) : (
           <Button
+            disabled={busy}
             loading={pending === provider}
             onPress={startLink}
             variant="secondary"
@@ -407,6 +363,9 @@ export function SignInMethodsSection({
   account: Account;
 }): ReactElement | null {
   const { t } = useTranslation();
+  const client = useAuthClient();
+  // One instance for the section, so one method change runs at a time.
+  const actions = useSignInMethods({ client });
   const rpc = useRpcQuery<AppContract>();
   const config = useQuery(rpc.system.authConfig.queryOptions());
   const apple = useAppleSignInAvailable();
@@ -425,9 +384,14 @@ export function SignInMethodsSection({
       description={t("account.methods.description")}
       title={t("account.methods.title")}
     >
-      <PasswordRow methods={methods} />
+      <PasswordRow actions={actions} methods={methods} />
       {providers.map((provider) => (
-        <ProviderRow key={provider} methods={methods} provider={provider} />
+        <ProviderRow
+          actions={actions}
+          key={provider}
+          methods={methods}
+          provider={provider}
+        />
       ))}
     </Section>
   );

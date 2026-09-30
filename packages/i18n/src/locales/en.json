@@ -567,9 +567,6 @@
       "name": "Name",
       "email": "Email address",
       "emailHint": "Your email address can't be changed.",
-      "language": "Email language",
-      "languageHint": "The emails we send you are in this language.",
-      "languageAuto": "Same as the website",
       "saved": "Your profile has been saved."
     },
     "methods": {
@@ -580,7 +577,7 @@
       "passwordNone": "You don't have a password yet.",
       "changePassword": "Change password",
       "setPassword": "Set a password",
-      "setPasswordHint": "We'll email you a link to choose a password.",
+      "setPasswordHint": "We'll email you a link to choose a password. After that you sign in again everywhere.",
       "currentPassword": "Current password",
       "passwordChanged": "Your password has been changed. Your other devices were signed out.",
       "passkeys": "Passkeys",
@@ -623,6 +620,9 @@
       "password": "Your password",
       "deleted": "Your account has been permanently deleted.",
       "signInAgain": "Sign in again"
+    },
+    "preferences": {
+      "languageHint": "When you're signed in, this is also the language of the emails we send you."
     }
   },
   "settings": {

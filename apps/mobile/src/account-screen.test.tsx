@@ -106,6 +106,42 @@ describe("consent sheet", () => {
     expect(clients.store.getSnapshot().consent.analytics).toBe(true);
   });
 
+  it("waits for the guest import sheet (review I1)", async () => {
+    await renderApp({
+      guest: {
+        consent: { analytics: null },
+        favorites: ["g-hond"],
+        preferences: { importDismissedFor: [], locale: "en", theme: "light" },
+      },
+      routes: {
+        "account/consent/get": {
+          analytics: null,
+          decidedAt: null,
+          needsDecision: true,
+          policyVersion: null,
+        },
+        "favorites/ids": [],
+      },
+      signedIn: true,
+    });
+    expect(
+      await screen.findByRole("header", { name: "Bring your data along?" })
+    ).toBeOnTheScreen();
+    expect(screen.queryByTestId("consent-banner")).not.toBeOnTheScreen();
+  });
+
+  it("removes an export left behind at launch (review I3)", async () => {
+    mockFiles.set("file:///cache/smog-export-2026-01-01.json", "{}");
+    mockFiles.set("file:///cache/other.json", "{}");
+    await renderApp();
+    await screen.findByTestId("home-screen");
+    expect(mockFiles.has("file:///cache/smog-export-2026-01-01.json")).toBe(
+      false
+    );
+    expect(mockFiles.has("file:///cache/other.json")).toBe(true);
+    mockFiles.clear();
+  });
+
   it("stays closed once decided", async () => {
     await renderApp();
     await screen.findByTestId("home-screen");
@@ -141,6 +177,12 @@ describe("settings/account", () => {
     expect(account.getByText("Linked")).toBeOnTheScreen();
     expect(account.getByRole("button", { name: "Unlink" })).toBeEnabled();
 
+    // What the share sheet gets, read while it is open.
+    let shared: string | undefined;
+    (shareAsync as jest.Mock).mockImplementationOnce((path: unknown) => {
+      shared = mockFiles.get(path as string);
+      return Promise.resolve();
+    });
     await fireEvent.press(
       account.getByRole("button", { name: "Download my data" })
     );
@@ -151,10 +193,58 @@ describe("settings/account", () => {
     ];
     expect(uri).toMatch(EXPORT_URI);
     expect(options).toMatchObject({ mimeType: "application/json" });
-    expect(JSON.parse(mockFiles.get(uri) ?? "")).toMatchObject({
+    expect(JSON.parse(shared ?? "")).toMatchObject({
       exportVersion: 2,
       profile: { email: ME.email },
     });
+    // Deleted once the sheet is done (review I3).
+    await waitFor(() => expect(mockFiles.has(uri)).toBe(false));
+  });
+
+  it("a signed-in switch writes the account's consent log (review M12)", async () => {
+    const sets: unknown[] = [];
+    await renderApp({
+      routes: signedInRoutes({
+        "account/consent/set": (input: unknown) => {
+          sets.push(input);
+          return { ...DECIDED, analytics: true, decidedAt: 20 };
+        },
+      }),
+      signedIn: true,
+    });
+    const account = await inAccount();
+    await fireEvent.press(
+      await account.findByRole("switch", { name: "Usage statistics" })
+    );
+    await waitFor(() =>
+      expect(sets).toEqual([expect.objectContaining({ analytics: true })])
+    );
+  });
+
+  it("signed in, the language is also the account's (review I2)", async () => {
+    const updates: unknown[] = [];
+    await renderApp({
+      routes: signedInRoutes({
+        "account/updateProfile": (input: unknown) => {
+          updates.push(input);
+          return { ...ME, locale: "fr" };
+        },
+      }),
+      signedIn: true,
+    });
+    const account = await inAccount();
+    await account.findByDisplayValue("An");
+    expect(account.queryByText("Email language")).not.toBeOnTheScreen();
+    expect(
+      account.getByText(
+        "When you're signed in, this is also the language of the emails we send you."
+      )
+    ).toBeOnTheScreen();
+    await fireEvent.press(account.getByRole("combobox", { name: "Language" }));
+    await fireEvent.press(
+      await screen.findByRole("radio", { name: "Français" })
+    );
+    await waitFor(() => expect(updates).toEqual([{ locale: "fr" }]));
   });
 
   it("the last provider account cannot be unlinked", async () => {

@@ -4,7 +4,7 @@ import type { TranslationKey } from "@smog/i18n";
 import { useLocalStoreInstance } from "@smog/local-store/react";
 import { useRpcClient } from "@smog/rpc/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DeleteAccountInput } from "../schema";
 import type { AccountSlice } from "./import-guest-data";
 
@@ -24,9 +24,9 @@ export type DeleteAccountFailure =
 
 export interface DeleteAccount {
   /**
-   * Deletes the account; then signs out, clears the local store and the
-   * query cache (the queries on screen once the session reads signed out),
-   * and reads the session again. Rejects with the rpc error
+   * Deletes the account; then signs out, clears the local store, reads the
+   * session again and clears the query cache (queries and mutations).
+   * Rejects with the rpc error
    * if the server refuses (nothing on the device changes then).
    */
   deleteAccount: (input: DeleteAccountInput) => Promise<void>;
@@ -38,6 +38,9 @@ export interface UseDeleteAccountOptions {
   /** The platform auth client's `signOut` (web or Expo). */
   signOut: () => Promise<unknown>;
 }
+
+/** At most this long for the signed-out state to render before clearing. */
+const SIGNED_OUT_WAIT_MS = 1000;
 
 const FAILURE_MESSAGES = {
   INVALID_PASSWORD: "account.errors.invalidPassword",
@@ -79,7 +82,35 @@ export function useDeleteAccount({
   const client = useRpcClient<AccountSlice>();
   const store = useLocalStoreInstance();
   const queryClient = useQueryClient();
-  const { refetch } = useAuthState();
+  const { refresh, status: authStatus } = useAuthState();
+  // Resolved once the rendered auth state no longer says signed in.
+  const signedOut = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (authStatus !== "signedIn") {
+      signedOut.current?.();
+      signedOut.current = null;
+    }
+  }, [authStatus]);
+  // A screen that only shows while signed in unmounts on that render.
+  useEffect(
+    () => () => {
+      signedOut.current?.();
+    },
+    []
+  );
+  const whenSignedOut = useCallback(
+    (): Promise<void> =>
+      new Promise((resolve) => {
+        // A render may never come (unmounted, or a session that stays):
+        // the cache is cleared after a short wait anyway.
+        const timer = setTimeout(resolve, SIGNED_OUT_WAIT_MS);
+        signedOut.current = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+      }),
+    []
+  );
   const [state, setState] = useState<{
     error: DeleteAccountFailure | null;
     status: DeleteAccountStatus;
@@ -107,15 +138,18 @@ export function useDeleteAccount({
       } catch (error) {
         console.error("[account] Failed to clear the local store:", error);
       }
-      // Everything no screen shows goes now. A mounted query of this user
-      // would refetch (401) if removed while the session still reads
-      // signed in; `usePurgeOtherUsers` drops those once it reads signed
-      // out, when they are disabled.
-      queryClient.removeQueries({ type: "inactive" });
-      refetch();
+      // Read the session first and wait until the screen has rendered it:
+      // while it still says signed in, a mounted query of this user would
+      // refetch (401) once removed. Signed out, those are disabled, so the
+      // whole cache (queries, mutations and the mobile persisted copy,
+      // which follows it) can go.
+      const rendered = whenSignedOut();
+      await refresh();
+      await rendered;
+      queryClient.clear();
       setState({ error: null, status: "deleted" });
     },
-    [client, queryClient, refetch, signOut, store]
+    [client, queryClient, refresh, signOut, store, whenSignedOut]
   );
 
   return { deleteAccount, ...state };
