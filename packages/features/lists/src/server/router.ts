@@ -9,6 +9,7 @@ import {
   ListsError,
   type ListsErrorCode,
   listMine,
+  listsContaining,
   removeItem,
   reorderList,
   updateList,
@@ -63,6 +64,12 @@ export function createListsRouter(deps: ListsRouterDeps) {
       .use(requireUser)
       .handler(({ context, errors, input }) =>
         mapped(errors, () => addItem(context.db, context.user.id, input))
+      ),
+
+    containing: os.containing
+      .use(requireUser)
+      .handler(({ context, input }) =>
+        listsContaining(context.db, context.user.id, input.gestureId)
       ),
 
     create: os.create

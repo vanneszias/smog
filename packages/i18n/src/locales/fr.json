@@ -309,8 +309,8 @@
     "deleteTitle": "Supprimer cette liste\u202f?",
     "deleteDescription": "«\u00a0{{name}}\u00a0» sera supprimée. Les gestes eux-mêmes restent.",
     "deleted": "Liste supprimée",
-    "addedTo": "Ajouté à {{name}}",
-    "removedFrom": "Retiré de {{name}}",
+    "addedTo": "Ajouté à « {{name}} »",
+    "removedFrom": "Retiré de « {{name}} »",
     "itemActions": "Actions pour {{name}}",
     "moveUp": "Monter",
     "moveDown": "Descendre",
@@ -320,15 +320,11 @@
       "title": "Liste introuvable",
       "description": "Ce lien ne fonctionne pas (ou plus), ou la liste est privée."
     },
-    "sharedBy": "Partagée par {{name}}",
     "sharedCanEdit": "Vous pouvez modifier cette liste.",
-    "sharedSignIn": "Connectez-vous pour modifier cette liste.",
     "description": "Regroupez des gestes pour un cours, un thème ou à la maison.",
     "all": "Toutes les listes",
     "descriptionLabel": "Description",
     "renameTitle": "Modifier la liste",
-    "added": "Ajouté à « {{name}} »",
-    "removed": "Retiré de « {{name}} »",
     "select": {
       "title": "Choisissez une liste",
       "description": "Sélectionnez une liste pour voir ses gestes."

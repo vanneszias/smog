@@ -305,8 +305,8 @@
     "deleteTitle": "Deze lijst verwijderen?",
     "deleteDescription": "“{{name}}” wordt verwijderd. De gebaren zelf blijven bestaan.",
     "deleted": "Lijst verwijderd",
-    "addedTo": "Toegevoegd aan {{name}}",
-    "removedFrom": "Verwijderd uit {{name}}",
+    "addedTo": "Toegevoegd aan “{{name}}”",
+    "removedFrom": "Verwijderd uit “{{name}}”",
     "itemActions": "Acties voor {{name}}",
     "moveUp": "Naar boven",
     "moveDown": "Naar beneden",
@@ -316,15 +316,11 @@
       "title": "Lijst niet gevonden",
       "description": "Deze link werkt niet (meer), of de lijst is privé."
     },
-    "sharedBy": "Gedeeld door {{name}}",
     "sharedCanEdit": "Je kunt deze lijst bewerken.",
-    "sharedSignIn": "Meld je aan om deze lijst te bewerken.",
     "description": "Groepeer gebaren voor een les, een thema of thuis.",
     "all": "Alle lijsten",
     "descriptionLabel": "Beschrijving",
     "renameTitle": "Lijst bewerken",
-    "added": "Toegevoegd aan “{{name}}”",
-    "removed": "Verwijderd uit “{{name}}”",
     "select": {
       "title": "Kies een lijst",
       "description": "Selecteer een lijst om de gebaren erin te zien."

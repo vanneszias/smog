@@ -13,9 +13,11 @@ import {
 } from "@smog/ui-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import LogIn from "lucide-react-native/icons/log-in";
+import Plus from "lucide-react-native/icons/plus";
 import X from "lucide-react-native/icons/x";
-import { type ReactElement, useCallback } from "react";
+import { type ReactElement, useCallback, useMemo, useState } from "react";
 import { FlatList, type ListRenderItemInfo, View } from "react-native";
+import { AddToSharedList } from "@/components/add-to-shared-list";
 import { ConnectionBanner } from "@/components/connection-banner";
 import {
   GestureRowItem,
@@ -52,10 +54,10 @@ function keyOf(item: ListItem): string {
 
 /**
  * A list behind a share link (`/lists/<token>` on the site). Anyone can
- * view it; with an edit link a signed-in user can also take gestures out
- * (adding happens from a gesture's "Save to list" for the owner's lists),
- * and a guest with an edit link is asked to sign in. Revoked or unknown
- * links show "not found".
+ * view it; with an edit link a signed-in user can also add gestures (the
+ * header's "Add gestures" sheet) and take them out, as on the site, and a
+ * guest with an edit link is asked to sign in. Revoked or unknown links
+ * show "not found".
  */
 export default function SharedListScreen(): ReactElement {
   const { t } = useTranslation();
@@ -65,8 +67,47 @@ export default function SharedListScreen(): ReactElement {
   const shared = useSharedList(token);
   const open = useOpenGesture();
   const { isFavorite, toggle } = useToggleFavorite();
-  const { canEdit, removeItem } = shared;
+  const { addItem, canEdit, removeItem } = shared;
   const retry = useRetry(sharedQueries);
+  const [adding, setAdding] = useState(false);
+  const listName = shared.data?.list.name ?? "";
+
+  const add = useCallback(
+    (gestureId: string) => {
+      addItem(gestureId)
+        .then((added) => {
+          // Nothing to say when it was there already, or a double tap.
+          if (added) {
+            toast({
+              title: t("lists.addedTo", { name: listName }),
+              variant: "success",
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          console.error("[lists] Failed to add to a shared list:", error);
+          toast({ title: t("states.actionFailed"), variant: "danger" });
+        });
+    },
+    [addItem, listName, t, toast]
+  );
+  const present = useMemo(
+    () => shared.data?.items.map((item) => item.id) ?? [],
+    [shared.data]
+  );
+  const startAdding = useCallback(() => setAdding(true), []);
+  const headerRight = useCallback(
+    () =>
+      canEdit ? (
+        <IconButton
+          icon={<Plus />}
+          label={t("lists.sharedView.add")}
+          onPress={startAdding}
+          variant="ghost"
+        />
+      ) : null,
+    [canEdit, startAdding, t]
+  );
 
   const remove = useCallback(
     (gestureId: string) => {
@@ -121,7 +162,7 @@ export default function SharedListScreen(): ReactElement {
         ListHeaderComponent={
           <View className="gap-2 px-4 pb-3">
             <Text tone="muted">
-              {t("lists.sharedBy", { name: data.list.ownerName })}
+              {t("lists.sharedView.by", { owner: data.list.ownerName })}
             </Text>
             {data.list.description ? (
               <Text>{data.list.description}</Text>
@@ -133,7 +174,7 @@ export default function SharedListScreen(): ReactElement {
             ) : null}
             {shared.requiresSignIn ? (
               <View className="gap-2 rounded-lg bg-surface p-4">
-                <Text>{t("lists.sharedSignIn")}</Text>
+                <Text>{t("lists.sharedView.signInToEdit")}</Text>
                 <Button
                   className="self-start"
                   icon={<LogIn />}
@@ -162,9 +203,18 @@ export default function SharedListScreen(): ReactElement {
 
   return (
     <View className="flex-1 gap-2 bg-background pt-2" testID="shared-screen">
-      <Stack.Screen options={{ title: data?.list.name ?? "" }} />
+      <Stack.Screen options={{ headerRight, title: listName }} />
       <ConnectionBanner />
       {content}
+      {canEdit ? (
+        <AddToSharedList
+          listName={listName}
+          onAdd={add}
+          onOpenChange={setAdding}
+          open={adding}
+          present={present}
+        />
+      ) : null}
     </View>
   );
 }

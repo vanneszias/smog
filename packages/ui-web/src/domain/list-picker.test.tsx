@@ -30,6 +30,21 @@ describe("ListPicker", () => {
     expect(onToggle).toHaveBeenCalledWith("l2");
   });
 
+  test("a pending list's checkbox is disabled (its state is not known yet)", () => {
+    renderKit(
+      <ListPicker
+        lists={[
+          { contains: false, id: "l1", name: "At school", pending: true },
+        ]}
+        onCreate={noop}
+        onToggle={noop}
+        open
+      />
+    );
+    const school = screen.getByRole("checkbox", { name: "At school" });
+    expect(school.hasAttribute("disabled")).toBe(true);
+  });
+
   test("creates a list from the trimmed name and clears the field", async () => {
     const onCreate = mock();
     renderKit(

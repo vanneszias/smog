@@ -19,6 +19,8 @@ export interface ListPickerList {
   contains: boolean;
   id: string;
   name: string;
+  /** Its state is loading or changing: the checkbox is disabled meanwhile. */
+  pending?: boolean;
 }
 
 export interface ListPickerProps {
@@ -92,6 +94,7 @@ function ListOption({
     <li className="flex min-h-touch items-center">
       <Checkbox
         checked={list.contains}
+        disabled={list.pending}
         label={list.name}
         onCheckedChange={toggle}
       />
