@@ -34,6 +34,7 @@ import {
   EMPTY_IMPORT_RESULT,
   type ImportGuestDataInput,
   type ImportResult,
+  UNDECIDED_CONSENT,
 } from "../schema";
 import { importGuestData, useGuestImport } from "./index";
 
@@ -46,6 +47,7 @@ const RESULT: ImportResult = {
 
 interface Server {
   calls: ImportGuestDataInput[];
+  consentReads: number;
   fail: boolean;
   /** Resolves when the call may answer (lets a test act in between). */
   gate?: Promise<void>;
@@ -55,18 +57,27 @@ interface Server {
 }
 
 function newServer(): Server {
-  return { calls: [], fail: false, idsCalls: 0 };
+  return { calls: [], consentReads: 0, fail: false, idsCalls: 0 };
 }
 
 /** The account contract (plus the reads the hook refreshes) as a real oRPC client. */
 function fakeApi(server: Server) {
   const os = implement({
-    account: { importGuestData: accountContract.importGuestData },
+    account: {
+      consent: { get: accountContract.consent.get },
+      importGuestData: accountContract.importGuestData,
+    },
     favorites: { ids: favoritesContract.ids },
     lists: { mine: listsContract.mine },
   });
   const router = {
     account: os.account.router({
+      consent: {
+        get: os.account.consent.get.handler(() => {
+          server.consentReads += 1;
+          return UNDECIDED_CONSENT;
+        }),
+      },
       importGuestData: os.account.importGuestData.handler(async ({ input }) => {
         server.calls.push(input);
         await server.gate;
@@ -394,6 +405,26 @@ describe("useGuestImport", () => {
     expect(result.current.guestImport.pending).toBeNull();
     expect(store.getSnapshot().favorites).toEqual([]);
     await waitFor(() => expect(server.idsCalls).toBe(2));
+  });
+
+  test("accept reads the consent again: the device choice went too (review I1)", async () => {
+    const store = await guestStore();
+    const { server, wrapper } = setup(store, ANNA);
+    const { result } = renderHook(
+      () => {
+        const rpc = useRpcQuery<{
+          account: { consent: { get: typeof accountContract.consent.get } };
+        }>();
+        const consent = useQuery(rpc.account.consent.get.queryOptions());
+        return { consent, guestImport: useGuestImport() };
+      },
+      { wrapper }
+    );
+    await waitFor(() => expect(server.consentReads).toBe(1));
+    await act(async () => {
+      await result.current.guestImport.accept();
+    });
+    await waitFor(() => expect(server.consentReads).toBe(2));
   });
 
   test("a successful accept sends guest_data_imported with the counts only", async () => {

@@ -17,7 +17,7 @@ import {
 import { useStoreReady } from "./store-ready";
 
 /** The reads an import changes, refetched once it succeeds. */
-interface ImportedSlice {
+interface ImportedSlice extends AccountSlice {
   favorites: FavoritesContract;
   lists: ListsContract;
 }
@@ -65,7 +65,8 @@ function selectSnapshot(data: GuestData): Snapshot {
 /**
  * The guest import prompt after sign-in or sign-up (spec §11), for both
  * apps; the apps render the sheet. `accept` runs `importGuestData`, then
- * refetches the account's favorites and lists so the API data shows.
+ * refetches the account's favorites, lists and consent so the API data
+ * shows.
  * Nothing is pending while the session loads, for a guest, or before the
  * local store has loaded.
  */
@@ -125,6 +126,10 @@ export function useGuestImport(): GuestImport {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: rpc.favorites.key() }),
           queryClient.invalidateQueries({ queryKey: rpc.lists.key() }),
+          // The device's consent choice went too (source `import`).
+          queryClient.invalidateQueries({
+            queryKey: rpc.account.consent.key(),
+          }),
         ]);
         setState({ result, status: "done", userId });
         return result;

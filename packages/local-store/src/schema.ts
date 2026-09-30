@@ -20,6 +20,13 @@ export const guestDataSchema = z.object({
     /** `null` while the guest has not decided. */
     analytics: z.boolean().nullable(),
     decidedAt: z.number().int().optional(),
+    /**
+     * Set when this is a copy of a signed-in account's decision (its user
+     * id), not a guest's own choice. Only a guest's own choice is ever
+     * sent to an account (a shared device must never pass one user's
+     * consent to another).
+     */
+    mirroredFrom: z.string().min(1).optional(),
   }),
   favorites: z.array(z.string()),
   lists: z.array(localListSchema),

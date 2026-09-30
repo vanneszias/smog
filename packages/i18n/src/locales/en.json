@@ -544,7 +544,6 @@
   "account": {
     "title": "Your account",
     "signedInAs": "Signed in as {{email}}",
-    "comingSoon": "Soon you will also manage your sign-in methods, privacy and preferences here.",
     "export": {
       "sensitive": "This file holds your personal data and the active share links of your lists: anyone with a link can open that list. Keep it safe and do not share it."
     },
@@ -552,13 +551,91 @@
       "passwordRequired": "Enter your password to delete your account.",
       "sessionNotFresh": "Sign in again to delete your account.",
       "invalidPassword": "That password is not correct.",
-      "deleteFailed": "Your account could not be deleted. Please try again."
+      "deleteFailed": "Your account could not be deleted. Please try again.",
+      "signInAgain": "For your security, sign in again to do this."
+    },
+    "guest": {
+      "title": "Sign in to manage your account",
+      "description": "Your favorites, lists and preferences are on this device. Sign in to keep them in your account, share lists and manage your data."
+    },
+    "profile": {
+      "title": "Profile",
+      "name": "Name",
+      "email": "Email address",
+      "emailHint": "Your email address can't be changed.",
+      "saved": "Your profile has been saved."
+    },
+    "methods": {
+      "title": "Sign-in methods",
+      "description": "You can always sign in with a code or a link sent by email.",
+      "password": "Password",
+      "passwordSet": "You sign in with your email address and password.",
+      "passwordNone": "You don't have a password yet.",
+      "changePassword": "Change password",
+      "setPassword": "Set a password",
+      "setPasswordHint": "We'll email you a link to choose a password. After that you sign in again everywhere.",
+      "currentPassword": "Current password",
+      "passwordChanged": "Your password has been changed. Your other devices were signed out.",
+      "passkeys": "Passkeys",
+      "passkeysDescription": "Sign in with your fingerprint, face or device PIN.",
+      "noPasskeys": "You haven't added a passkey yet.",
+      "passkeyName": "Passkey",
+      "addedOn": "Added on {{date}}",
+      "removePasskey": "Remove passkey",
+      "removePasskeyTitle": "Remove this passkey?",
+      "removePasskeyDescription": "You will no longer be able to sign in with it.",
+      "passkeyRemoved": "The passkey has been removed.",
+      "linked": "Linked",
+      "notLinked": "Not linked",
+      "link": "Link",
+      "unlink": "Unlink",
+      "linkedToast": "{{provider}} has been linked.",
+      "unlinkTitle": "Unlink {{provider}}?",
+      "unlinkDescription": "You will no longer be able to sign in with {{provider}}. You can link it again later.",
+      "unlinked": "{{provider}} has been unlinked.",
+      "lastMethod": "This is your only sign-in method. Add another one first.",
+      "google": "Google",
+      "apple": "Apple"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "export": "Download my data",
+      "exportDescription": "A JSON file with your profile, favorites, lists, consent history and sponsorships.",
+      "exported": "Your data has been downloaded.",
+      "exportFailed": "Your data could not be downloaded. Please try again.",
+      "shareTitle": "Your SMOG data",
+      "policy": "Privacy policy"
+    },
+    "delete": {
+      "title": "Delete account",
+      "description": "This permanently deletes your account, favorites, lists and share links. Sponsorships are kept, as the law requires.",
+      "action": "Delete my account",
+      "dialogTitle": "Delete your account for good?",
+      "dialogDescription": "This can't be undone.",
+      "confirmLabel": "Type {{word}} to confirm",
+      "password": "Your password",
+      "deleted": "Your account has been permanently deleted.",
+      "signInAgain": "Sign in again"
+    },
+    "preferences": {
+      "languageHint": "When you're signed in, this is also the language of the emails we send you."
     }
   },
   "settings": {
     "title": "Settings",
     "preferences": "Preferences",
     "about": "About the app"
+  },
+  "consent": {
+    "title": "Help improve SMOG",
+    "description": "With your permission we collect limited usage statistics to improve SMOG. We don't use them for advertising and don't follow you in other apps or on other websites.",
+    "privacyLink": "Read the privacy policy",
+    "allow": "Allow statistics",
+    "decline": "Only necessary",
+    "toggle": "Usage statistics",
+    "toggleDescription": "Share limited usage statistics to help improve SMOG.",
+    "saved": "Your choice has been saved.",
+    "saveFailed": "Your choice could not be saved. Please try again."
   },
   "gestures": {
     "description": "Look up SMOG gestures by word or category and watch them on video.",

@@ -85,13 +85,19 @@ describe("/api/openapi/*", () => {
 
 describe("RL_AUTH on /api/auth/*", () => {
   // IPs no other test uses, so no earlier request shares their bucket.
-  const IP = "198.51.100.23";
+  const IPS = ["198.51.100.23", "198.51.100.25"] as const;
+  /** Miniflare's limiter counts in wall-clock windows of the period (60 s). */
+  const WINDOW_MS = 60_000;
 
-  function postAuth(path: string, body: unknown = {}): Promise<Response> {
+  function postAuth(
+    ip: string,
+    path: string,
+    body: unknown = {}
+  ): Promise<Response> {
     return exports.default.fetch(`${ORIGIN}/api/auth${path}`, {
       body: JSON.stringify(body),
       headers: {
-        "cf-connecting-ip": IP,
+        "cf-connecting-ip": ip,
         "content-type": "application/json",
         origin: ORIGIN,
       },
@@ -101,24 +107,48 @@ describe("RL_AUTH on /api/auth/*", () => {
 
   it("answers POSTs over the limit with 429 RATE_LIMITED, per IP", async () => {
     const credentials = { email: "nobody@smog.test", password: "x" };
-    const statuses: number[] = [];
-    for (let attempt = 0; attempt < 6; attempt += 1) {
-      // biome-ignore lint/performance/noAwaitInLoops: the limit counts requests in order.
-      statuses.push((await postAuth("/sign-in/email", credentials)).status);
+    /**
+     * Seven sign-ins from `from`: their statuses and the last body, or
+     * `null` when they straddled a limiter window.
+     */
+    async function seven(
+      from: string
+    ): Promise<{ last: unknown; statuses: number[] } | null> {
+      const started = Math.floor(Date.now() / WINDOW_MS);
+      const statuses: number[] = [];
+      let last: unknown;
+      for (let attempt = 0; attempt < 7; attempt += 1) {
+        // biome-ignore lint/performance/noAwaitInLoops: the limit counts requests in order.
+        const response = await postAuth(from, "/sign-in/email", credentials);
+        statuses.push(response.status);
+        last = await response.json();
+      }
+      return Math.floor(Date.now() / WINDOW_MS) === started
+        ? { last, statuses }
+        : null;
+    }
+    // Each sign-in hashes a password: under load seven can cross a minute
+    // boundary, where the count starts again. Then retry once, on a fresh IP.
+    const [first, second] = IPS;
+    let ip: string = first;
+    let run = await seven(ip);
+    if (run === null) {
+      ip = second;
+      run = await seven(ip);
     }
 
-    expect(statuses.slice(0, 5)).not.toContain(429);
-    expect(statuses[5]).toBe(429);
-    const limited = await postAuth("/sign-in/email", credentials);
-    expect(await limited.json()).toEqual({ code: "RATE_LIMITED" });
+    expect(run).not.toBeNull();
+    expect(run?.statuses.slice(0, 5)).not.toContain(429);
+    expect(run?.statuses.slice(5)).toEqual([429, 429]);
+    expect(run?.last).toEqual({ code: "RATE_LIMITED" });
 
     // Session reads and sign-out stay available to the same IP.
     const session = await exports.default.fetch(
       `${ORIGIN}/api/auth/get-session`,
-      { headers: { "cf-connecting-ip": IP } }
+      { headers: { "cf-connecting-ip": ip } }
     );
     expect(session.status).toBe(200);
-    expect((await postAuth("/sign-out")).status).not.toBe(429);
+    expect((await postAuth(ip, "/sign-out")).status).not.toBe(429);
 
     // Another IP has its own bucket.
     const other = await exports.default.fetch(

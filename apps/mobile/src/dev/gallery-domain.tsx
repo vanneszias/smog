@@ -3,6 +3,7 @@ import { useTranslation } from "@smog/i18n/react";
 import {
   Button,
   CategoryChips,
+  ConsentBanner,
   CourseBanner,
   FavoriteButton,
   FavoritesEmptyState,
@@ -103,6 +104,7 @@ export function DomainGallery(): ReactElement {
       <CardsSection />
       <FiltersSection />
       <VideoSection />
+      <ConsentSection />
       <ListsSection />
       <SearchSection />
       <EmptySection />
@@ -208,6 +210,28 @@ function FiltersSection(): ReactElement {
         </View>
       </Section>
     </>
+  );
+}
+
+/** The consent prompt is a sheet on native: a button opens it. */
+function ConsentSection(): ReactElement {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const show = useCallback((): void => setOpen(true), []);
+  const hide = useCallback((): void => setOpen(false), []);
+  return (
+    <Section name="ConsentBanner">
+      <Button onPress={show} variant="secondary">
+        {t("consent.title")}
+      </Button>
+      <ConsentBanner
+        onAllow={hide}
+        onDecline={hide}
+        onDismiss={hide}
+        onOpenPrivacy={noop}
+        open={open}
+      />
+    </Section>
   );
 }
 

@@ -108,9 +108,11 @@ function toPayload(data: GuestData, untitled: string): Payload {
     });
   const favorites = valid(data.favorites).slice(0, IMPORT_FAVORITES_MAX);
   const lists = data.lists.slice(0, IMPORT_LISTS_MAX);
-  const { analytics, decidedAt } = data.consent;
+  const { analytics, decidedAt, mirroredFrom } = data.consent;
+  // Only a guest's own choice: a copy of some account's decision (a shared
+  // device) never goes into another account's log.
   const consent =
-    analytics === null || decidedAt === undefined
+    analytics === null || decidedAt === undefined || mirroredFrom !== undefined
       ? undefined
       : { analytics, decidedAt };
   return {
@@ -188,6 +190,52 @@ function clearImported(payload: Payload, result: ImportResult): Mutator {
  * makes no call. Malformed ids are skipped and counted in
  * `skippedUnknownGestures`.
  */
+/**
+ * Carries only the device's consent choice to the account (spec §11 step
+ * 2, source `import`), for a device with nothing else to import or a user
+ * who skipped the import. Clears the choice from the device on success
+ * (the account's log then mirrors back). Resolves the choice sent, or
+ * `null` when the device has none. Logs and rethrows on failure.
+ */
+export async function importGuestConsent({
+  beforeClear,
+  client,
+  store,
+}: Pick<ImportGuestDataOptions, "client" | "store"> & {
+  /**
+   * Awaited once the server answered, before the device copy is cleared
+   * (the caller reads the account's consent again: the server may have
+   * kept a newer decision instead).
+   */
+  beforeClear?: () => Promise<unknown>;
+}): Promise<{
+  analytics: boolean;
+  decidedAt: number;
+} | null> {
+  try {
+    await store.ready;
+    const full = toPayload(store.getSnapshot(), UNTITLED_LIST);
+    const { consent } = full.input;
+    if (!consent) {
+      return null;
+    }
+    const payload: Payload = {
+      consentDecidedAt: consent.decidedAt,
+      favorites: new Set(),
+      input: { consent, favorites: [], lists: [] },
+      invalid: new Set(),
+      lists: [],
+    };
+    const result = await client.account.importGuestData(payload.input);
+    await beforeClear?.();
+    await store.update(clearImported(payload, result));
+    return consent;
+  } catch (error) {
+    console.error("[account] Failed to carry the consent choice:", error);
+    throw error;
+  }
+}
+
 export async function importGuestData({
   client,
   store,

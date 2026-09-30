@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   CategoryChips,
+  ConsentBanner,
   CourseBanner,
   FavoriteButton,
   FavoritesEmptyState,
@@ -123,6 +124,7 @@ export function DomainShowcase(): ReactNode {
       <RowsSection />
       <FiltersSection />
       <VideoSection />
+      <ConsentSection />
       <ListsSection />
       <SearchSection />
       <EmptySection />
@@ -243,6 +245,19 @@ function VideoSection(): ReactNode {
         ) : null}
         <CourseBanner courseUrl={COURSE_URL} messageIndex={4} />
       </div>
+    </Section>
+  );
+}
+
+function ConsentSection(): ReactNode {
+  return (
+    <Section name="ConsentBanner">
+      <ConsentBanner
+        inline
+        onAllow={noop}
+        onDecline={noop}
+        privacyHref="#privacy"
+      />
     </Section>
   );
 }

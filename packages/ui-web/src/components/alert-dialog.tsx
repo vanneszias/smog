@@ -7,11 +7,15 @@ import { Button } from "./button";
 import { overlayClasses } from "./dialog";
 
 export interface AlertDialogProps {
+  /** Content between the description and the actions (e.g. a confirmation field). */
+  body?: ReactNode;
   /** Cancel label (`kit.cancel` by default). */
   cancelLabel?: string;
   /** The trigger element (optional when controlled with `open`). */
   children?: ReactNode;
   className?: string;
+  /** Disables confirm (until the body's field is filled in). */
+  confirmDisabled?: boolean;
   /** Confirm label (`kit.confirm` by default). */
   confirmLabel?: string;
   defaultOpen?: boolean;
@@ -28,9 +32,11 @@ export interface AlertDialogProps {
 
 /** A confirmation that interrupts: title, description, cancel and confirm. */
 export function AlertDialog({
+  body,
   cancelLabel,
   children,
   className,
+  confirmDisabled = false,
   confirmLabel,
   defaultOpen,
   description,
@@ -74,6 +80,7 @@ export function AlertDialog({
               </AlertDialogPrimitive.Description>
             ) : null}
           </div>
+          {body ? <div className="flex flex-col gap-4">{body}</div> : null}
           <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <AlertDialogPrimitive.Cancel asChild>
               <Button variant="secondary">
@@ -82,6 +89,7 @@ export function AlertDialog({
             </AlertDialogPrimitive.Cancel>
             <AlertDialogPrimitive.Action asChild>
               <Button
+                disabled={confirmDisabled}
                 loading={loading}
                 onClick={onConfirm}
                 variant={tone === "danger" ? "danger" : "primary"}

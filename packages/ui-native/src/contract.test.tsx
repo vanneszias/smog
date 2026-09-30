@@ -44,6 +44,16 @@ const CASES: Record<string, ReactElement> = {
   ),
   Checkbox: <kit.Checkbox label="Check" testID={ID} />,
   Chip: <kit.Chip testID={ID}>Chip</kit.Chip>,
+  ConsentBanner: (
+    <kit.ConsentBanner
+      onAllow={noop}
+      onDecline={noop}
+      onDismiss={noop}
+      onOpenPrivacy={noop}
+      open
+      testID={ID}
+    />
+  ),
   CourseBanner: (
     <kit.CourseBanner
       courseUrl="https://example.org"

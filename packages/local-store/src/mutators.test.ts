@@ -17,7 +17,7 @@ import {
   setPreferences,
   toggleFavorite,
 } from "./mutators";
-import { defaultGuestData, type GuestData } from "./schema";
+import { defaultGuestData, type GuestData, guestDataSchema } from "./schema";
 
 function withList(ids: string[]): GuestData {
   return {
@@ -132,6 +132,22 @@ describe("consent and preferences", () => {
     const data = setConsent(true, 42)(defaultGuestData());
     expect(data.consent).toEqual({ analytics: true, decidedAt: 42 });
     expect(setConsent(false, 43)(data).consent.analytics).toBe(false);
+  });
+
+  test("setConsent marks a copy of an account's decision, and a guest's own choice drops the mark", () => {
+    const mirrored = setConsent(true, 42, "user-anna")(defaultGuestData());
+    expect(mirrored.consent).toEqual({
+      analytics: true,
+      decidedAt: 42,
+      mirroredFrom: "user-anna",
+    });
+    expect(setConsent(false, 43)(mirrored).consent).toEqual({
+      analytics: false,
+      decidedAt: 43,
+    });
+    expect(guestDataSchema.parse(mirrored).consent.mirroredFrom).toBe(
+      "user-anna"
+    );
   });
 
   test("setPreferences merges", () => {
