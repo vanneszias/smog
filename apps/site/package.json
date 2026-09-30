@@ -47,7 +47,8 @@
     "lucide-react": "catalog:",
     "qrcode.react": "4.2.0",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

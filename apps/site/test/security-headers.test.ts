@@ -130,6 +130,22 @@ describe("security headers on the site", () => {
     );
   });
 
+  it("keeps /turnstile-bridge's own CSP (a route's policy wins)", async () => {
+    const response = await fetchSite("/turnstile-bridge");
+    const csp = response.headers.get("content-security-policy") ?? "";
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).not.toContain(`'sha256-${THEME_SCRIPT_HASH}'`);
+    expect(csp).not.toContain("default-src 'self'");
+    expect(
+      response.headers.get("content-security-policy-report-only")
+    ).toBeNull();
+    // The shared headers are still added.
+    expect(response.headers.get("referrer-policy")).toBe(
+      "strict-origin-when-cross-origin"
+    );
+    await response.body?.cancel();
+  });
+
   it("sends the HTML 404 page with the full set", async () => {
     const response = await fetchSite("/does-not-exist");
     expect(response.status).toBe(404);

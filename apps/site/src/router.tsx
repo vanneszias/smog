@@ -1,3 +1,5 @@
+// First: Zod reads the flag as each schema is built (see the module).
+import "@/lib/zod-jitless";
 import {
   type ApiClient,
   type ApiQueryUtils,

@@ -15,7 +15,8 @@ import { signInWithApi, stubMux, waitForApp } from "./helpers";
 
 const CSP_MESSAGE = /Content Security Policy|Content-Security-Policy/i;
 const NONCE_SOURCE = /'nonce-[A-Za-z0-9+/=]+'/;
-const TURNSTILE_FRAME = "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/e2e/turnstile";
+const TURNSTILE_FRAME =
+  "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/e2e/turnstile";
 const DUMMY_TOKEN = "XXXX.DUMMY.TOKEN.XXXX";
 
 declare global {
@@ -53,7 +54,7 @@ function hits(): Map<string, number> {
 }
 
 function count(map: Map<string, number>, url: string): void {
-  const host = new URL(url).host;
+  const { host } = new URL(url);
   map.set(host, (map.get(host) ?? 0) + 1);
 }
 

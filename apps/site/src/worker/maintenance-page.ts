@@ -59,8 +59,8 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 main{width:100%;max-width:30rem;padding:3rem 2rem;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:${radius.xl}px;box-shadow:0 4px 24px rgb(0 0 0 / .06)}
 .logo{color:var(--primary);margin:0 auto 2rem;width:12.5rem}
 .logo svg{display:block;width:100%;height:auto}
-.hands{display:flex;gap:2rem;justify-content:center;align-items:center;margin-bottom:2rem;color:var(--hands);opacity:.55}
-.hands svg{width:3rem;height:auto}
+.hands{display:flex;gap:2rem;justify-content:center;align-items:center;margin-bottom:2rem;color:var(--hands);opacity:.8}
+.hands svg{width:3.5rem;height:auto}
 .badge{display:inline-flex;gap:.5rem;align-items:center;padding:.375rem .875rem;margin-bottom:1.75rem;font-size:.75rem;font-weight:600;letter-spacing:.03em;color:var(--primary-foreground);background:var(--primary-strong);border-radius:${radius.full}px}
 .dot{flex-shrink:0;width:7px;height:7px;background:currentColor;border-radius:50%;animation:pulse 1.6s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}

@@ -20,6 +20,7 @@ bun run mobile:release-check # expo-doctor + expo export (iOS + Android) + bundl
 bun run release:check        # Everything CI runs, in order
 SMOG_OFFLINE=1 bun run release:check  # Same, on a machine without internet access
 bun run admin:grant --env <dev|staging|production> [--dry-run] <email>  # Give an account the admin role (dev: local D1, else remote)
+bun run maintenance --env <dev|staging|production> on|off [--message …] [--until ISO] [--dry-run] [--yes]  # Maintenance mode (KV; production needs --yes)
 ```
 
 `release:check` = `check:ci` → `boundaries` → `scripts/release-config-check.ts` (workflows + wrangler envs) → `check-types` → `test` → `build` → `knip` → `audit` → `scripts/mobile-release-check.ts`. CI (`.github/workflows/ci.yml`) runs exactly this.
@@ -44,6 +45,8 @@ bun -F @smog/site cf-typegen # Generate worker-configuration.d.ts (gitignored; c
 Local auth (dev only): copy `apps/site/.dev.vars.example` to `.dev.vars` (it has a dev `BETTER_AUTH_SECRET`), then `bun -F @smog/db migrate:dev && bun -F @smog/db seed:dev`. The seeded admin is `admin@smog.test` with the **dev-only** password `smog-dev-admin`. Emails are not sent in dev: read them at `http://localhost:5173/dev/mail` (or `/dev/mail.json`). Migrations are append-only from now on: never edit an existing migration; add a new one (`bun -F @smog/db db:generate`). To start the local D1 from scratch, `rm -rf apps/site/.wrangler/state/v3/d1` first.
 
 Turnstile: `TURNSTILE_SITE_KEY` is a public var in `wrangler.jsonc` (`env.<env>.vars`) and `TURNSTILE_SECRET_KEY` a secret (`wrangler secret put`). Both are required in production before launch: without the site key the web shows no widget and email sign-up, sign-in, reset, code and magic-link requests fail. Staging uses Cloudflare's always-pass test keys; dev needs neither.
+
+Security headers and the CSP come from `apps/site/src/worker/headers.ts`, on every Worker response. The CSP is enforced in dev and production and `Report-Only` in staging. Inline scripts need Start's per-request nonce (automatic for anything Start renders) or a build-time hash (the theme script). A route that sets its own `Content-Security-Policy` keeps it; any other header the route set is kept too. Maintenance mode is the KV key `maintenance` (`bun run maintenance`); an admin gets past it with `POST /api/maintenance/bypass`.
 
 ### Mobile (Expo + Expo Router + NativeWind)
 ```bash
