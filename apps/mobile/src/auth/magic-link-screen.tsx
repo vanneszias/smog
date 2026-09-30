@@ -14,7 +14,7 @@ import { View } from "react-native";
 import { useAuthClient } from "@/lib/auth-client";
 import {
   clearMagicLinkRequest,
-  isMagicLinkPending,
+  pendingMagicLinkEmail,
 } from "./magic-link-request";
 
 /** The account Better Auth signed in (a good token answers with it). */
@@ -47,17 +47,6 @@ type Phase =
   | "invalid"
   | "wrongAccount";
 
-/** What a valid link does, given who is signed in (see the screen). */
-function decide(
-  email: string,
-  currentEmail: string | null | undefined
-): "home" | "switch" | "exchange" | "confirm" {
-  if (currentEmail) {
-    return same(currentEmail, email) ? "home" : "switch";
-  }
-  return isMagicLinkPending(email) ? "exchange" : "confirm";
-}
-
 /** The account Better Auth signed in with the token, or null. */
 async function verifyToken(
   client: ReturnType<typeof useAuthClient>,
@@ -83,29 +72,32 @@ function Screen({
 }
 
 /**
- * `/magic-link?token=…&email=…`: the app's magic link (the universal link
- * `<site>/magic-link/app?…`, mapped by `+native-intent`). The app exchanges
- * the single-use token itself (`magicLink.verify` without a callback: JSON
- * and the session cookie, which the Expo client stores), so no session
- * cookie travels in a URL. The token is never logged by this code.
+ * `/magic-link?token=…`: the app's magic link (the universal link
+ * `<site>/magic-link/app?token=…`, mapped by `+native-intent`). The app
+ * exchanges the single-use token itself (`magicLink.verify` without a
+ * callback: JSON and the session cookie, which the Expo client stores), so
+ * no session cookie travels in a URL, and the link carries no address. The
+ * token is never logged by this code.
  *
  * Login CSRF: anyone can send a link for their own account. So the link is
- * exchanged at once only while this app has a request pending for that
- * address (`magic-link-request`); otherwise the user confirms "Sign in as
- * …?". A signed-in user is never switched without "Switch to …?", a link
- * for the current account changes nothing, the account Better Auth
- * returns must be the one shown (else it is signed out again), and the
- * toast names the account.
+ * exchanged at once only while this app has a request pending
+ * (`magic-link-request`), and then the account must be the one requested
+ * (else it is signed out again). Otherwise the user confirms "Sign in with
+ * the link from your email?"; a signed-in user always gets "Switch
+ * account?". The toast names the account of the new session.
  */
 export function MagicLinkScreen(): ReactElement {
-  const params = useLocalSearchParams<{ email?: string; token?: string }>();
-  const link = linkOf(params);
-  const { currentEmail, exchange, phase } = useMagicLinkExchange(link);
+  const params = useLocalSearchParams<{ token?: string }>();
+  const token =
+    typeof params.token === "string" &&
+    MAGIC_LINK_TOKEN_PATTERN.test(params.token)
+      ? params.token
+      : null;
+  const { currentEmail, exchange, phase } = useMagicLinkExchange(token);
   if (phase === "confirm" || phase === "switch") {
     return (
       <ConfirmView
         current={currentEmail ?? null}
-        email={link?.email ?? ""}
         exchange={exchange}
         switching={phase === "switch"}
       />
@@ -117,28 +109,16 @@ export function MagicLinkScreen(): ReactElement {
   return <SigningInView />;
 }
 
-interface AppLink {
-  email: string;
-  token: string;
+/** How the exchange was started: which account it must end in, if any. */
+interface ExchangeMode {
+  /** The address this app requested the link for (automatic exchange). */
+  expected: string | null;
+  signOutFirst: boolean;
 }
 
-/** The link's token and address, or null when either is malformed. */
-function linkOf(params: { email?: string; token?: string }): AppLink | null {
-  const { email, token } = params;
-  if (
-    typeof token !== "string" ||
-    !MAGIC_LINK_TOKEN_PATTERN.test(token) ||
-    typeof email !== "string" ||
-    !email.includes("@")
-  ) {
-    return null;
-  }
-  return { email, token };
-}
-
-function useMagicLinkExchange(link: AppLink | null): {
+function useMagicLinkExchange(token: string | null): {
   currentEmail: string | null | undefined;
-  exchange: (signOutFirst: boolean) => void;
+  exchange: (mode: ExchangeMode) => void;
   phase: Phase;
 } {
   const { t } = useTranslation();
@@ -146,16 +126,14 @@ function useMagicLinkExchange(link: AppLink | null): {
   const auth = useAuthState();
   const router = useRouter();
   const { toast } = useToast();
-  const [phase, setPhase] = useState<Phase>(link ? "deciding" : "invalid");
+  const [phase, setPhase] = useState<Phase>(token ? "deciding" : "invalid");
   const started = useRef(false);
   const { refetch } = auth;
   const currentEmail = auth.status === "signedIn" ? auth.user?.email : null;
-  const token = link?.token;
-  const email = link?.email;
 
   const run = useCallback(
-    async (signOutFirst: boolean): Promise<void> => {
-      if (!(token && email) || started.current) {
+    async ({ expected, signOutFirst }: ExchangeMode): Promise<void> => {
+      if (!token || started.current) {
         return;
       }
       started.current = true;
@@ -171,8 +149,8 @@ function useMagicLinkExchange(link: AppLink | null): {
           return;
         }
         clearMagicLinkRequest();
-        if (!same(signedIn, email)) {
-          // The link named another address than the account it holds.
+        if (expected && !same(signedIn, expected)) {
+          // Not the link this app asked for: undo the automatic sign-in.
           await client.signOut();
           refetch();
           setPhase("wrongAccount");
@@ -193,54 +171,56 @@ function useMagicLinkExchange(link: AppLink | null): {
         setPhase("invalid");
       }
     },
-    [client, email, refetch, router, t, toast, token]
+    [client, refetch, router, t, toast, token]
   );
   const exchange = useCallback(
-    (signOutFirst: boolean) => {
-      run(signOutFirst);
+    (mode: ExchangeMode) => {
+      run(mode);
     },
     [run]
   );
 
   useEffect(() => {
-    if (phase !== "deciding" || auth.status === "loading" || !email) {
+    if (phase !== "deciding" || auth.status === "loading") {
       return;
     }
-    const next = decide(email, currentEmail);
-    if (next === "home") {
-      // Already that account: the token stays unused.
-      router.replace("/");
-    } else if (next === "exchange") {
-      exchange(false);
-    } else {
-      setPhase(next);
+    if (currentEmail) {
+      setPhase("switch");
+      return;
     }
-  }, [auth.status, currentEmail, email, exchange, phase, router]);
+    const expected = pendingMagicLinkEmail();
+    if (expected) {
+      exchange({ expected, signOutFirst: false });
+    } else {
+      setPhase("confirm");
+    }
+  }, [auth.status, currentEmail, exchange, phase]);
 
   return { currentEmail, exchange, phase };
 }
 
 function ConfirmView({
   current,
-  email,
   exchange,
   switching,
 }: {
   current: string | null;
-  email: string;
-  exchange: (signOutFirst: boolean) => void;
+  exchange: (mode: ExchangeMode) => void;
   switching: boolean;
 }): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const toHome = useCallback(() => router.replace("/"), [router]);
-  const accept = useCallback(() => exchange(switching), [exchange, switching]);
+  const accept = useCallback(
+    () => exchange({ expected: null, signOutFirst: switching }),
+    [exchange, switching]
+  );
   return (
     <Screen
       title={
         switching
-          ? t("auth.magicLink.switchTitle", { email })
-          : t("auth.magicLink.confirmTitle", { email })
+          ? t("auth.magicLink.switchTitle")
+          : t("auth.magicLink.confirmTitle")
       }
     >
       <Text tone="muted">

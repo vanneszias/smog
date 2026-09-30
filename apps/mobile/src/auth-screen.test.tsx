@@ -272,14 +272,13 @@ describe("sign-in with Turnstile on (the WebView sheet)", () => {
     );
     expect(await screen.findByText("Check your inbox")).toBeOnTheScreen();
     // The app remembers it asked, so the link exchanges without a prompt.
-    expect(isMagicLinkPending(EMAIL)).toBe(true);
+    expect(isMagicLinkPending()).toBe(true);
   });
 });
 
 describe("the app's magic link", () => {
   const OTHER = "other@smog.test";
-  const link = (email = EMAIL): string =>
-    `/magic-link/app?token=${TOKEN}&email=${encodeURIComponent(email)}`;
+  const LINK = `/magic-link/app?token=${TOKEN}`;
   const verified = (email = EMAIL) =>
     jest.fn(() =>
       Promise.resolve({
@@ -296,18 +295,18 @@ describe("the app's magic link", () => {
     clearMagicLinkRequest();
   });
 
-  it("exchanges at once when this app just asked for a link for that address", async () => {
+  it("exchanges at once while this app has a link request pending", async () => {
     markMagicLinkRequested(EMAIL);
     const verify = verified();
     const { result } = await renderApp({
       auth: { magicLink: { verify } },
-      initialUrl: link(),
+      initialUrl: LINK,
     });
     await waitFor(() =>
       expect(verify).toHaveBeenCalledWith({ query: { token: TOKEN } })
     );
     await waitFor(() => expect(result.getPathname()).toBe("/"));
-    // The toast names the account, so a swap is visible.
+    // The toast names the account of the new session.
     expect(
       await screen.findByText(`You're signed in as ${EMAIL}.`)
     ).toBeOnTheScreen();
@@ -315,21 +314,27 @@ describe("the app's magic link", () => {
 
   it.each([
     ["no request from this app", () => undefined],
-    ["a request for another address", () => markMagicLinkRequested(OTHER)],
     [
       "a request older than the link's lifetime",
       () => markMagicLinkRequested(EMAIL, Date.now() - 301_000),
     ],
   ])("with %s it asks first (a tap signs in)", async (_label, arrange) => {
     arrange();
-    const verify = verified();
-    await renderApp({ auth: { magicLink: { verify } }, initialUrl: link() });
+    const verify = verified(OTHER);
+    await renderApp({ auth: { magicLink: { verify } }, initialUrl: LINK });
     expect(
-      await screen.findByRole("header", { name: `Sign in as ${EMAIL}?` })
+      await screen.findByRole("header", {
+        name: "Sign in with the link from your email?",
+      })
     ).toBeOnTheScreen();
+    // No address is shown before the exchange (the link carries none).
+    expect(screen.queryByText(OTHER, { exact: false })).not.toBeOnTheScreen();
     expect(verify).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
     await waitFor(() => expect(verify).toHaveBeenCalledTimes(1));
+    expect(
+      await screen.findByText(`You're signed in as ${OTHER}.`)
+    ).toBeOnTheScreen();
   });
 
   it("never switches a signed-in user without asking", async () => {
@@ -338,11 +343,11 @@ describe("the app's magic link", () => {
     const signOut = jest.fn(() => Promise.resolve({ data: {}, error: null }));
     await renderApp({
       auth: { magicLink: { verify }, signOut },
-      initialUrl: link(OTHER),
+      initialUrl: LINK,
       signedIn: true,
     });
     expect(
-      await screen.findByRole("header", { name: `Switch to ${OTHER}?` })
+      await screen.findByRole("header", { name: "Switch account?" })
     ).toBeOnTheScreen();
     expect(
       screen.getByText(`You're signed in as ${EMAIL}.`, { exact: false })
@@ -355,24 +360,27 @@ describe("the app's magic link", () => {
     expect(signOut).toHaveBeenCalled();
   });
 
-  it("a link for the signed-in account itself changes nothing", async () => {
-    const verify = verified();
+  it("cancel keeps the current account and sends nothing", async () => {
+    const verify = verified(OTHER);
     const { result } = await renderApp({
       auth: { magicLink: { verify } },
-      initialUrl: link(EMAIL),
+      initialUrl: LINK,
       signedIn: true,
     });
+    await fireEvent.press(
+      await screen.findByRole("button", { name: "Cancel" })
+    );
     await waitFor(() => expect(result.getPathname()).toBe("/"));
     expect(verify).not.toHaveBeenCalled();
   });
 
-  it("an account other than the link's is signed out again", async () => {
+  it("an automatic exchange into another account than requested is undone", async () => {
     markMagicLinkRequested(EMAIL);
     const verify = verified(OTHER);
     const signOut = jest.fn(() => Promise.resolve({ data: {}, error: null }));
     await renderApp({
       auth: { magicLink: { verify }, signOut },
-      initialUrl: link(),
+      initialUrl: LINK,
     });
     expect(
       await screen.findByText("This link signs in to another account.")
@@ -385,7 +393,7 @@ describe("the app's magic link", () => {
     const verify = jest.fn(() =>
       Promise.resolve({ data: null, error: { status: 302 } })
     );
-    await renderApp({ auth: { magicLink: { verify } }, initialUrl: link() });
+    await renderApp({ auth: { magicLink: { verify } }, initialUrl: LINK });
     expect(
       await screen.findByText("This link has expired or is no longer valid.")
     ).toBeOnTheScreen();
@@ -394,11 +402,11 @@ describe("the app's magic link", () => {
     ).toBeOnTheScreen();
   });
 
-  it("a link without a valid token or address never calls the server", async () => {
+  it("a link without a valid token never calls the server", async () => {
     const verify = jest.fn();
     await renderApp({
       auth: { magicLink: { verify } },
-      initialUrl: `/magic-link/app?token=${TOKEN}`,
+      initialUrl: "/magic-link/app?token=short",
     });
     expect(
       await screen.findByText("This link has expired or is no longer valid.")

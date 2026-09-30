@@ -274,13 +274,13 @@ describe("magic link", () => {
     expect(sent.status).toBe(200);
     const link = new URL(linkIn(ctx.email.sent[0]?.text));
 
-    // The universal link: the site host, a fixed path, the token and the
-    // address it signs in (the app shows it before exchanging).
+    // The universal link: the site host, a fixed path, only the token (no
+    // address: it would land in logs and the address bar).
     expect(`${link.origin}${link.pathname}`).toBe(
       `${SITE_URL}${APP_MAGIC_LINK_PATH}`
     );
-    expect([...link.searchParams.keys()]).toEqual(["token", "email"]);
-    expect(link.searchParams.get("email")).toBe(email);
+    expect([...link.searchParams.keys()]).toEqual(["token"]);
+    expect(link.toString()).not.toContain(encodeURIComponent(email));
     expect(link.toString()).not.toContain("smog:");
 
     // The app verifies without a callback: JSON and the cookie, no redirect.
@@ -337,25 +337,22 @@ describe("magic link", () => {
     const verify = `${SITE_URL}/api/auth/magic-link/verify?token=abc`;
     expect(
       appMagicLinkURL({
-        email: "a@smog.test",
         siteURL: SITE_URL,
         token: "abc",
         url: `${verify}&callbackURL=${encodeURIComponent("smog:///")}`,
       })
-    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc&email=a%40smog.test`);
+    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc`);
     expect(
       appMagicLinkURL({
-        email: "a@smog.test",
         siteURL: SITE_URL,
         token: "abc",
         url: `${verify}&callbackURL=${encodeURIComponent("exp://10.0.0.2:8081/--/")}`,
       })
-    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc&email=a%40smog.test`);
+    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc`);
     for (const callback of ["/", "/account", `${SITE_URL}/lists`]) {
       const url = `${verify}&callbackURL=${encodeURIComponent(callback)}`;
       expect(
         appMagicLinkURL({
-          email: "a@smog.test",
           siteURL: SITE_URL,
           token: "abc",
           url,
