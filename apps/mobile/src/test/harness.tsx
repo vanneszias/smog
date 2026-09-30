@@ -177,6 +177,8 @@ export function memoryStorage(): PersistStorage & { map: Map<string, string> } {
 export interface RenderAppOptions {
   /** Better Auth client calls the screens make (signOut, linkSocial, …). */
   auth?: Record<string, unknown>;
+  /** The real sign-in screen instead of the stub (auth screen tests). */
+  authScreens?: boolean;
   cacheStorage?: PersistStorage;
   /** Replaces the fake API fetch (e.g. one that always fails, offline). */
   fetch?: (request: Request) => Promise<Response>;
@@ -200,12 +202,18 @@ function SettingsStub(): ReactElement {
 }
 
 /** The app's routes, as files (`require` keeps the real module objects). */
-function appRoutes(root: () => ReactElement): Record<string, RouteModule> {
+function appRoutes(
+  root: () => ReactElement,
+  authScreens: boolean
+): Record<string, RouteModule> {
   const layout = require("../../app/_layout");
   return {
     _layout: { default: root, unstable_settings: layout.unstable_settings },
     "(auth)/_layout": require("../../app/(auth)/_layout"),
-    "(auth)/sign-in": { default: SignInStub },
+    "(auth)/magic-link": require("../../app/(auth)/magic-link"),
+    "(auth)/sign-in": authScreens
+      ? require("../../app/(auth)/sign-in")
+      : { default: SignInStub },
     "(tabs)/_layout": require("../../app/(tabs)/_layout"),
     "(tabs)/favorites/_layout": require("../../app/(tabs)/favorites/_layout"),
     "(tabs)/favorites/index": require("../../app/(tabs)/favorites/index"),
@@ -233,6 +241,7 @@ export interface RenderedApp {
 /** Renders the app at `initialUrl` (home by default). */
 export async function renderApp({
   auth: authCalls = {},
+  authScreens = false,
   cacheStorage = memoryStorage(),
   fetch: customFetch,
   guest,
@@ -278,7 +287,7 @@ export async function renderApp({
   }
   // RNTL 14 renders asynchronously: the router helpers (`getPathname`) are
   // on the returned promise, which resolves once the first render is done.
-  const result = renderRouter(appRoutes(Root), { initialUrl });
+  const result = renderRouter(appRoutes(Root, authScreens), { initialUrl });
   await result;
   return { clients, fetch, result };
 }

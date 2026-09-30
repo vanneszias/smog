@@ -153,7 +153,10 @@
       "title": "Kijk in je mailbox",
       "description": "We stuurden een aanmeldlink naar {{email}}. Open die link om je aan te melden.",
       "resend": "Stuur de link opnieuw",
-      "resent": "We stuurden je een nieuwe link."
+      "resent": "We stuurden je een nieuwe link.",
+      "appTitle": "Aanmelden in de app",
+      "appDescription": "Deze link meldt je aan in de SMOG & Co-app. Open hem op de telefoon waarop de app staat.",
+      "continueInBrowser": "Aanmelden in deze browser"
     },
     "checkInbox": {
       "openMail": "Open je mailapp",
@@ -188,7 +191,11 @@
       "unsupported": "Je toestel of browser ondersteunt geen passkeys."
     },
     "captcha": {
-      "label": "Beveiligingscontrole"
+      "label": "Beveiligingscontrole",
+      "description": "Even controleren of je geen robot bent. Dat duurt maar een paar seconden.",
+      "appOnly": "Deze pagina werkt alleen in de SMOG & Co-app.",
+      "failed": "De beveiligingscontrole is niet gelukt. Probeer het opnieuw.",
+      "retry": "Opnieuw proberen"
     },
     "signedIn": "Je bent aangemeld.",
     "signingIn": "Bezig met aanmelden…",

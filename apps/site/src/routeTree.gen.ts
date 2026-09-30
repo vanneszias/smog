@@ -19,6 +19,7 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TurnstileBridgeRouteImport } from './routes/turnstile-bridge'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
@@ -29,6 +30,7 @@ import { Route as GesturesIndexRouteImport } from './routes/gestures/index'
 import { Route as GesturesSlugRouteImport } from './routes/gestures/$slug'
 import { Route as ListsIndexRouteImport } from './routes/lists/index'
 import { Route as ListsShareTokenRouteImport } from './routes/lists/$shareToken'
+import { Route as MagicLinkAppRouteImport } from './routes/magic-link_.app'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
@@ -83,6 +85,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TurnstileBridgeRoute = TurnstileBridgeRouteImport.update({
+  id: '/turnstile-bridge',
+  path: '/turnstile-bridge',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
@@ -133,6 +140,11 @@ const ListsShareTokenRoute = ListsShareTokenRouteImport.update({
   path: '/lists/$shareToken',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MagicLinkAppRoute = MagicLinkAppRouteImport.update({
+  id: '/magic-link_/app',
+  path: '/magic-link/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -160,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/turnstile-bridge': typeof TurnstileBridgeRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
@@ -168,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/dev/ui': typeof DevUiRoute
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
+  '/magic-link/app': typeof MagicLinkAppRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -185,6 +199,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/turnstile-bridge': typeof TurnstileBridgeRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
@@ -193,6 +208,7 @@ export interface FileRoutesByTo {
   '/dev/ui': typeof DevUiRoute
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
+  '/magic-link/app': typeof MagicLinkAppRoute
   '/gestures': typeof GesturesIndexRoute
   '/lists': typeof ListsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -211,6 +227,7 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/turnstile-bridge': typeof TurnstileBridgeRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
@@ -219,6 +236,7 @@ export interface FileRoutesById {
   '/dev/ui': typeof DevUiRoute
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
+  '/magic-link_/app': typeof MagicLinkAppRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -238,6 +256,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/sitemap.xml'
+    | '/turnstile-bridge'
     | '/verify-email'
     | '/api/analytics'
     | '/api/health'
@@ -246,6 +265,7 @@ export interface FileRouteTypes {
     | '/dev/ui'
     | '/gestures/$slug'
     | '/lists/$shareToken'
+    | '/magic-link/app'
     | '/gestures/'
     | '/lists/'
     | '/api/auth/$'
@@ -263,6 +283,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/sitemap.xml'
+    | '/turnstile-bridge'
     | '/verify-email'
     | '/api/analytics'
     | '/api/health'
@@ -271,6 +292,7 @@ export interface FileRouteTypes {
     | '/dev/ui'
     | '/gestures/$slug'
     | '/lists/$shareToken'
+    | '/magic-link/app'
     | '/gestures'
     | '/lists'
     | '/api/auth/$'
@@ -288,6 +310,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/sitemap.xml'
+    | '/turnstile-bridge'
     | '/verify-email'
     | '/api/analytics'
     | '/api/health'
@@ -296,6 +319,7 @@ export interface FileRouteTypes {
     | '/dev/ui'
     | '/gestures/$slug'
     | '/lists/$shareToken'
+    | '/magic-link_/app'
     | '/gestures/'
     | '/lists/'
     | '/api/auth/$'
@@ -314,6 +338,7 @@ export interface RootRouteChildren {
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TurnstileBridgeRoute: typeof TurnstileBridgeRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   ApiHealthRoute: typeof ApiHealthRoute
@@ -322,6 +347,7 @@ export interface RootRouteChildren {
   DevUiRoute: typeof DevUiRoute
   GesturesSlugRoute: typeof GesturesSlugRoute
   ListsShareTokenRoute: typeof ListsShareTokenRoute
+  MagicLinkAppRoute: typeof MagicLinkAppRoute
   GesturesIndexRoute: typeof GesturesIndexRoute
   ListsIndexRoute: typeof ListsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -401,6 +427,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/turnstile-bridge': {
+      id: '/turnstile-bridge'
+      path: '/turnstile-bridge'
+      fullPath: '/turnstile-bridge'
+      preLoaderRoute: typeof TurnstileBridgeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify-email': {
       id: '/verify-email'
       path: '/verify-email'
@@ -471,6 +504,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListsShareTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/magic-link_/app': {
+      id: '/magic-link_/app'
+      path: '/magic-link/app'
+      fullPath: '/magic-link/app'
+      preLoaderRoute: typeof MagicLinkAppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -506,6 +546,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TurnstileBridgeRoute: TurnstileBridgeRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   ApiHealthRoute: ApiHealthRoute,
@@ -514,6 +555,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevUiRoute: DevUiRoute,
   GesturesSlugRoute: GesturesSlugRoute,
   ListsShareTokenRoute: ListsShareTokenRoute,
+  MagicLinkAppRoute: MagicLinkAppRoute,
   GesturesIndexRoute: GesturesIndexRoute,
   ListsIndexRoute: ListsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

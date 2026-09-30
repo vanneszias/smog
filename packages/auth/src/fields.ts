@@ -29,3 +29,15 @@ export const USER_ADDITIONAL_FIELDS = {
     validator: { input: z.enum(LOCALES).nullish() },
   },
 } as const;
+
+/**
+ * The site path of a magic link the app requested (a universal / app
+ * link): `?token=` only. The app opens it and exchanges the single-use
+ * token itself (`magicLink.verify` without a callback), so no session
+ * cookie ever travels in a URL. In a browser the site offers to sign in
+ * there instead.
+ */
+export const APP_MAGIC_LINK_PATH = "/magic-link/app";
+
+/** Better Auth's magic-link token: 32 letters; generous but strict. */
+export const MAGIC_LINK_TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,128}$/;

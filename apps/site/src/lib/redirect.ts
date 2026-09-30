@@ -45,17 +45,23 @@ export function safeRedirect(value: unknown): string {
 
 /** Search params of the auth pages. */
 export interface AuthSearch {
-  error?: string;
-  redirect?: string;
+  error?: string | undefined;
+  redirect?: string | undefined;
 }
 
+/**
+ * Both keys are always present (`undefined` when absent or unsafe): the
+ * root route validates no search, so its raw params flow into every
+ * child's `search`, and an omitted key would keep the raw `redirect`
+ * (an open redirect through `/magic-link`).
+ */
 export function validateAuthSearch(
   search: Record<string, unknown>
 ): AuthSearch {
   const redirect = safeRedirect(search.redirect);
   return {
-    ...(typeof search.error === "string" ? { error: search.error } : {}),
-    ...(redirect === "/" ? {} : { redirect }),
+    error: typeof search.error === "string" ? search.error : undefined,
+    redirect: redirect === "/" ? undefined : redirect,
   };
 }
 

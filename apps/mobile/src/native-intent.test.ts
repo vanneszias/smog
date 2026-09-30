@@ -120,4 +120,31 @@ describe("redirectSystemPath", () => {
       expect(redirect(path)).toBe("/");
     }
   });
+
+  const TOKEN = "abcdefghijklmnopqrstuvwxyzABCDEF";
+
+  it.each([
+    `${ORIGIN}/magic-link/app?token=${TOKEN}`,
+    `${ORIGIN}/magic-link/app?callbackURL=https%3A%2F%2Fevil.test&token=${TOKEN}`,
+    `smog://magic-link/app?token=${TOKEN}`,
+    `/magic-link?token=${TOKEN}`,
+  ])(
+    "opens the app's magic link %s on the magic-link screen, token only",
+    (path) => {
+      expect(redirect(path)).toBe(`/magic-link?token=${TOKEN}`);
+    }
+  );
+
+  it.each([
+    `${ORIGIN}/magic-link/app`,
+    `${ORIGIN}/magic-link/app?token=short`,
+    `${ORIGIN}/magic-link/app?token=%3Cscript%3E${TOKEN}`,
+    `${ORIGIN}/magic-link?error=INVALID_TOKEN`,
+    `${ORIGIN}/magic-link/other?token=${TOKEN}`,
+  ])(
+    "sends the malformed magic link %s to the magic-link screen without a token",
+    (path) => {
+      expect(redirect(path)).toBe("/magic-link");
+    }
+  );
 });

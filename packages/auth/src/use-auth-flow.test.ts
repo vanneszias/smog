@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   type AuthFlowActions,
+  type AuthFlowCaptcha,
   type AuthFlowEvent,
   type AuthFlowState,
   type AuthResult,
@@ -17,13 +18,16 @@ const OK: AuthResult = { ok: true };
 /** A store around the reducer, the way the hook drives it. */
 function harness(
   mode: AuthFlowState["mode"],
-  overrides: Partial<AuthFlowActions> = {}
+  overrides: Partial<AuthFlowActions> = {},
+  captcha?: AuthFlowCaptcha
 ) {
   const calls: string[] = [];
   const record =
     (name: string, result: AuthResult = OK) =>
     (...args: unknown[]): Promise<AuthResult> => {
-      calls.push(`${name}(${args.map((a) => JSON.stringify(a)).join(",")})`);
+      // A missing captcha token is not an argument.
+      const given = args.filter((arg) => arg !== undefined);
+      calls.push(`${name}(${given.map((a) => JSON.stringify(a)).join(",")})`);
       return Promise.resolve(result);
     };
   const actions: AuthFlowActions = {
@@ -46,6 +50,7 @@ function harness(
   };
   const commands = authFlowCommands({
     actions,
+    ...(captcha ? { captcha } : {}),
     dispatch,
     getState: () => state,
   });
@@ -332,5 +337,145 @@ describe("authFlowCommands: forgot password", () => {
     await flow.commands.submitEmail(EMAIL);
     flow.commands.changeEmail();
     expect(flow.state()).toMatchObject({ email: EMAIL, step: "email" });
+  });
+});
+
+/** A captcha that hands out numbered tokens and records each request. */
+function tokens(required = true) {
+  const asked: string[] = [];
+  const captcha: AuthFlowCaptcha = {
+    request: () => {
+      const token = `tok-${asked.length + 1}`;
+      asked.push(token);
+      return Promise.resolve(token);
+    },
+    required: () => required,
+  };
+  return { asked, captcha };
+}
+
+describe("authFlowCommands: captcha (the server requires Turnstile)", () => {
+  test("asks for a fresh token before every guarded request", async () => {
+    const { asked, captcha } = tokens();
+    const flow = harness("signIn", {}, captcha);
+    await flow.commands.submitEmail(EMAIL);
+    await flow.commands.choose("emailCode");
+    await flow.commands.resend();
+    await flow.commands.submitCode("123456");
+    expect(flow.calls).toEqual([
+      `sendCode("${EMAIL}","tok-1")`,
+      `sendCode("${EMAIL}","tok-2")`,
+      // Code sign-in is not captcha-guarded.
+      `signInCode("${EMAIL}","123456")`,
+    ]);
+    expect(asked).toEqual(["tok-1", "tok-2"]);
+  });
+
+  test("covers password sign-in, sign-up, magic links, resends and resets", async () => {
+    const signIn = harness("signIn", {}, tokens().captcha);
+    await signIn.commands.submitEmail(EMAIL);
+    await signIn.commands.choose("magicLink");
+    await signIn.commands.back();
+    await signIn.commands.choose("password");
+    await signIn.commands.submitPassword({ password: "correct horse" });
+    expect(signIn.calls).toEqual([
+      `sendMagicLink("${EMAIL}","tok-1")`,
+      `signInPassword("${EMAIL}","correct horse","tok-2")`,
+    ]);
+
+    const signUp = harness("signUp", {}, tokens().captcha);
+    await signUp.commands.submitEmail(EMAIL);
+    await signUp.commands.choose("password");
+    await signUp.commands.submitPassword({
+      confirm: "long enough",
+      name: "Ada",
+      password: "long enough",
+    });
+    await signUp.commands.resend();
+    expect(signUp.calls).toEqual([
+      `signUpPassword("${EMAIL}","long enough","Ada","tok-1")`,
+      `sendVerificationEmail("${EMAIL}","tok-2")`,
+    ]);
+
+    const reset = harness("forgotPassword", {}, tokens().captcha);
+    await reset.commands.submitEmail(EMAIL);
+    expect(reset.calls).toEqual([`requestPasswordReset("${EMAIL}","tok-1")`]);
+  });
+
+  test("keeps the request pending while the challenge runs", async () => {
+    let solve: (token: string | null) => void = () => undefined;
+    const flow = harness(
+      "signIn",
+      {},
+      {
+        request: () =>
+          new Promise<string | null>((resolve) => {
+            solve = resolve;
+          }),
+        required: () => true,
+      }
+    );
+    await flow.commands.submitEmail(EMAIL);
+    const sending = flow.commands.choose("emailCode");
+    expect(flow.state().pending).toBe("emailCode");
+    // A second tap during the challenge does nothing.
+    await flow.commands.choose("emailCode");
+    expect(flow.calls).toEqual([]);
+    solve("tok");
+    await sending;
+    expect(flow.calls).toEqual([`sendCode("${EMAIL}","tok")`]);
+    expect(flow.state()).toMatchObject({ pending: null, step: "code" });
+  });
+
+  test("a closed challenge sends nothing and leaves the step as it was", async () => {
+    const flow = harness(
+      "signIn",
+      {},
+      { request: () => Promise.resolve(null), required: () => true }
+    );
+    await flow.commands.submitEmail(EMAIL);
+    await flow.commands.choose("emailCode");
+    expect(flow.calls).toEqual([]);
+    expect(flow.state()).toMatchObject({
+      error: null,
+      pending: null,
+      step: "method",
+    });
+  });
+
+  test("a challenge that fails to load is a captcha error", async () => {
+    const flow = harness(
+      "signIn",
+      {},
+      {
+        request: () => Promise.reject(new Error("webview crashed")),
+        required: () => true,
+      }
+    );
+    await flow.commands.submitEmail(EMAIL);
+    await flow.commands.choose("emailCode");
+    expect(flow.calls).toEqual([]);
+    expect(flow.state()).toMatchObject({
+      error: "captchaFailed",
+      pending: null,
+    });
+  });
+
+  test("asks for nothing when the server does not require it", async () => {
+    const { asked, captcha } = tokens(false);
+    const flow = harness("signIn", {}, captcha);
+    await flow.commands.submitEmail(EMAIL);
+    await flow.commands.choose("emailCode");
+    expect(asked).toEqual([]);
+    expect(flow.calls).toEqual([`sendCode("${EMAIL}")`]);
+  });
+
+  test("social and passkey sign-in never ask", async () => {
+    const { asked, captcha } = tokens();
+    const flow = harness("signIn", {}, captcha);
+    await flow.commands.submitEmail(EMAIL);
+    await flow.commands.choose("google");
+    await flow.commands.choose("passkey");
+    expect(asked).toEqual([]);
   });
 });

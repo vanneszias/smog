@@ -9,12 +9,16 @@
  *   a legacy id through `gestures.bySlug`)
  * - `/lists/<token>` → the shared list screen (`/shared/<token>`)
  * - `/gestures?q=&category=` → the search tab, with the query and filter
+ * - `/magic-link/app?token=` (the app's magic link) → the magic-link
+ *   screen with the token only; a malformed token opens it without one
  * - the app's own routes (`/`, `/search`, `/favorites`, `/lists`,
  *   `/shared/<token>`, `/settings`, the sign-in screens) → themselves
  * - anything else, deeper paths, dot segments and malformed escapes → home
  *
  * It never throws: a throw here is a crash at launch.
  */
+
+import { MAGIC_LINK_TOKEN_PATTERN } from "@smog/auth/react";
 
 const HOME = "/";
 
@@ -113,6 +117,14 @@ function searchPath(query: string): string {
   return search ? `/search?${search}` : "/search";
 }
 
+/** The magic-link screen, with the link's token when it is well formed. */
+function magicLinkPath(query: string): string {
+  const token = parseQuery(query).get("token") ?? "";
+  return MAGIC_LINK_TOKEN_PATTERN.test(token)
+    ? `/magic-link?token=${token}`
+    : "/magic-link";
+}
+
 function route(path: string): string {
   const [withoutHash = ""] = path.split("#");
   const queryStart = withoutHash.indexOf("?");
@@ -132,6 +144,9 @@ function route(path: string): string {
   }
   if (deeper.length > 0) {
     return HOME;
+  }
+  if (first === "magic-link") {
+    return magicLinkPath(second === undefined || second === "app" ? query : "");
   }
   if (second === undefined) {
     if (first === "gestures" || first === "search") {

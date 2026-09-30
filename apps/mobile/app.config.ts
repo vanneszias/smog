@@ -7,6 +7,12 @@ const BRAND_GREEN = tokens.color.brand.green;
 const DEFAULT_SITE_HOST = "smog-site-staging.workers.dev";
 /** Site paths the app opens itself instead of the browser. */
 const APP_LINK_PATH_PREFIXES = ["/gestures/", "/lists/"] as const;
+/**
+ * The magic link the app requested (`APP_MAGIC_LINK_PATH` in
+ * `@smog/auth`, `?token=`): an exact path, so no other page matches it.
+ * The site's apple-app-site-association must list it too.
+ */
+const APP_MAGIC_LINK_PATH = "/magic-link/app";
 
 export default function createConfig({ config }: ConfigContext): ExpoConfig {
   const host = process.env.EXPO_PUBLIC_SITE_HOST || DEFAULT_SITE_HOST;
@@ -29,11 +35,14 @@ export default function createConfig({ config }: ConfigContext): ExpoConfig {
           action: "VIEW",
           autoVerify: true,
           category: ["BROWSABLE", "DEFAULT"],
-          data: APP_LINK_PATH_PREFIXES.map((pathPrefix) => ({
-            host,
-            pathPrefix,
-            scheme: "https",
-          })),
+          data: [
+            ...APP_LINK_PATH_PREFIXES.map((pathPrefix) => ({
+              host,
+              pathPrefix,
+              scheme: "https",
+            })),
+            { host, path: APP_MAGIC_LINK_PATH, scheme: "https" },
+          ],
         },
       ],
       package: "be.zias.smog",

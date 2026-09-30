@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
+import { APP_MAGIC_LINK_PATH } from "@smog/auth/react";
 import { tokens } from "@smog/styles/tokens";
 import type { ConfigContext, ExpoConfig } from "expo/config";
 import createConfig from "../app.config";
@@ -59,6 +60,9 @@ describe("app.config", () => {
     expect(https?.data).toEqual([
       { host: "example.test", pathPrefix: "/gestures/", scheme: "https" },
       { host: "example.test", pathPrefix: "/lists/", scheme: "https" },
+      // The app's magic link (an exact path; the token is its query),
+      // the same path the server mails (`@smog/auth`).
+      { host: "example.test", path: APP_MAGIC_LINK_PATH, scheme: "https" },
     ]);
   });
 
