@@ -10,6 +10,7 @@
     "./client": "./src/client/index.ts"
   },
   "scripts": {
+    "bench": "SMOG_PERF=1 bun test src/typo-gate.test.ts",
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json",
     "test": "vitest run && bun test --preload @smog/config/testing/happy-dom src"
   },

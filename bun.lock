@@ -102,6 +102,7 @@
         "@smog/analytics": "workspace:*",
         "@smog/api": "workspace:*",
         "@smog/auth": "workspace:*",
+        "@smog/brand": "workspace:*",
         "@smog/config": "workspace:*",
         "@smog/db": "workspace:*",
         "@smog/email": "workspace:*",
@@ -123,6 +124,7 @@
         "qrcode.react": "4.2.0",
         "react": "catalog:",
         "react-dom": "catalog:",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@axe-core/playwright": "4.13.0",

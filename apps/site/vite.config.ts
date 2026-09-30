@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { THEME_SCRIPT_HASH_DEFINE } from "./build-defines";
 
 const SRC = fileURLToPath(new URL("./src", import.meta.url));
 
@@ -19,6 +20,7 @@ export default defineConfig({
     __SMOG_DEV_TOOLS__: JSON.stringify(
       process.env.CLOUDFLARE_ENV !== "production"
     ),
+    __SMOG_THEME_SCRIPT_HASH__: THEME_SCRIPT_HASH_DEFINE,
   },
   plugins: [
     cloudflare({ viteEnvironment: { name: "ssr" } }),

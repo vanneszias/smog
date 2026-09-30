@@ -1,3 +1,5 @@
+// First: Zod reads the flag as each schema is built (see the module).
+import "@/lib/zod-jitless";
 import {
   type ApiClient,
   type ApiQueryUtils,
@@ -6,6 +8,7 @@ import {
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
+import { getGlobalStartContext } from "@tanstack/react-start";
 import { createAppApiClient } from "@/lib/api";
 import { routeTree } from "./routeTree.gen";
 
@@ -14,6 +17,21 @@ export interface RouterContext {
   api: ApiClient;
   queryClient: QueryClient;
   queryUtils: ApiQueryUtils;
+}
+
+/**
+ * The request's CSP nonce, which `src/worker.ts` passes to Start as
+ * request context. Undefined outside a request (the router is also built
+ * for redirects and server functions, where no page is rendered).
+ */
+function requestNonce(): string | undefined {
+  try {
+    // Start types the request context from `Register`; ours only adds `nonce`.
+    const context = getGlobalStartContext() as { nonce?: unknown } | undefined;
+    return typeof context?.nonce === "string" ? context.nonce : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -32,6 +50,8 @@ function createAppRouter() {
     defaultPreloadStaleTime: 0,
     routeTree,
     scrollRestoration: true,
+    // Start's inline hydration scripts carry the CSP nonce (worker/headers.ts).
+    ssr: { nonce: import.meta.env.SSR ? requestNonce() : undefined },
   });
   setupRouterSsrQueryIntegration({
     // Only settled data: errors are retried by the client, and pending

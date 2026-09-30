@@ -49,6 +49,7 @@
     "check-types:scripts": "tsc -p scripts",
     "dev": "turbo dev",
     "knip": "knip --no-progress",
+    "maintenance": "bun scripts/maintenance.ts",
     "mobile:release-check": "bun scripts/mobile-release-check.ts",
     "release:check": "bun run check:ci && bun run boundaries && bun scripts/release-config-check.ts && bun run check-types && bun run test && bun run build && bun run knip && bun run audit && bun scripts/mobile-release-check.ts",
     "test": "turbo run test test:scripts",
