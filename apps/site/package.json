@@ -11,7 +11,7 @@
     "deploy:dry": "CLOUDFLARE_ENV=staging bun run deploy --dry-run",
     "dev": "vite dev --port 5173",
     "preview": "vite preview",
-    "test": "vitest run && bun test scripts",
+    "test": "vitest run && bun test scripts && bun test --preload @smog/config/testing/happy-dom src",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -54,6 +54,8 @@
     "@cloudflare/vitest-plugin": "catalog:",
     "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "19.2.7",

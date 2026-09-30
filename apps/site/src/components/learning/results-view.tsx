@@ -134,7 +134,12 @@ export function ResultsView(props: ResultsViewProps): ReactNode {
     props;
   const renderItem = useCallback(
     (gesture: GestureSummary) => (
-      <LinkedGestureCard gesture={gesture} hearts={hearts} level={2} />
+      <LinkedGestureCard
+        from="search_results"
+        gesture={gesture}
+        hearts={hearts}
+        level={2}
+      />
     ),
     [hearts]
   );

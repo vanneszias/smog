@@ -15,12 +15,13 @@ import type { QueryClient } from "@tanstack/react-query";
 
 /** Search results per request (the contract allows 50). */
 export const SEARCH_LIMIT = 48;
-/** Featured gestures on the home page (the first of the catalogue). */
-export const FEATURED_LIMIT = 8;
 
 /**
- * Prefetches the browse page: search results for a query, else the first
- * catalogue page, plus the categories (one D1 read each).
+ * Prefetches the browse page, within 3 D1 reads with the session:
+ * - a query: the search, then the categories. The search loads this
+ *   isolate's catalog snapshot when it is stale, and the categories come
+ *   from that snapshot, so they must not run alongside (two cold loads);
+ * - no query: the first catalogue page and the categories, together.
  */
 export async function prefetchBrowse(
   queryClient: QueryClient,
@@ -28,18 +29,23 @@ export async function prefetchBrowse(
   q: string,
   categories: readonly string[]
 ): Promise<void> {
+  const loadCategories = () =>
+    queryClient.prefetchQuery(categoriesOptions(utils.gestures));
+  if (q.trim()) {
+    await queryClient.prefetchQuery(
+      gestureSearchOptions(utils.gestures, {
+        category: categories,
+        limit: SEARCH_LIMIT,
+        q,
+      })
+    );
+    await loadCategories();
+    return;
+  }
   await Promise.all([
-    q.trim()
-      ? queryClient.prefetchQuery(
-          gestureSearchOptions(utils.gestures, {
-            category: categories,
-            limit: SEARCH_LIMIT,
-            q,
-          })
-        )
-      : queryClient.prefetchInfiniteQuery(
-          gesturesBrowseOptions(utils.gestures, { category: categories })
-        ),
-    queryClient.prefetchQuery(categoriesOptions(utils.gestures)),
+    queryClient.prefetchInfiniteQuery(
+      gesturesBrowseOptions(utils.gestures, { category: categories })
+    ),
+    loadCategories(),
   ]);
 }

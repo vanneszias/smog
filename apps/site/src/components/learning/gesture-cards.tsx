@@ -1,3 +1,4 @@
+import type { GestureViewSource } from "@smog/analytics/schema";
 import { useTranslation } from "@smog/i18n/react";
 import {
   GestureCard,
@@ -10,13 +11,15 @@ import { type ReactNode, useCallback } from "react";
 import { gestureHref, RouterLink } from "./links";
 import { type Hearts, useHeart } from "./use-hearts";
 
-/** A card that links to the gesture page, with its heart. */
+/** A card that links to the gesture page (`from`: this screen), with its heart. */
 export function LinkedGestureCard({
+  from,
   gesture,
   hearts,
   level,
   linkComponent = RouterLink,
 }: {
+  from?: GestureViewSource | undefined;
   gesture: GestureCardData;
   hearts: Hearts;
   level?: 2 | 3 | 4;
@@ -27,7 +30,7 @@ export function LinkedGestureCard({
     <GestureCard
       favorite={heart.active}
       gesture={gesture}
-      href={gestureHref(gesture.slug)}
+      href={gestureHref(gesture.slug, from)}
       level={level}
       linkComponent={linkComponent}
       onFavoriteToggle={heart.onToggle}
@@ -38,21 +41,29 @@ export function LinkedGestureCard({
 /** A grid of linked cards with hearts. */
 export function LinkedGestureGrid({
   className,
+  from,
   hearts,
   items,
   level,
 }: {
   /** Merged into the kit grid (e.g. fewer columns for a short row). */
   className?: string;
+  /** Where the cards open the gesture from (`gesture_viewed`). */
+  from?: GestureViewSource | undefined;
   hearts: Hearts;
   items: readonly GestureCardData[];
   level?: 2 | 3 | 4;
 }): ReactNode {
   const renderItem = useCallback(
     (gesture: GestureCardData) => (
-      <LinkedGestureCard gesture={gesture} hearts={hearts} level={level} />
+      <LinkedGestureCard
+        from={from}
+        gesture={gesture}
+        hearts={hearts}
+        level={level}
+      />
     ),
-    [hearts, level]
+    [from, hearts, level]
   );
   return (
     <GestureGrid className={className} items={items} renderItem={renderItem} />

@@ -1,13 +1,15 @@
 import { ORPCError } from "@orpc/client";
+import type { GestureViewSource } from "@smog/analytics/schema";
 import {
   gestureOptions,
+  gestureViewSource,
   relatedOptions,
   useGesture,
   useRelated,
 } from "@smog/gestures/client";
 import { muxStreamUrl, muxThumbnailUrl } from "@smog/utils";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { OpenInApp } from "@/components/app-banner";
 import {
   GestureDetailView,
@@ -30,6 +32,19 @@ export interface GestureHead {
   slug: string;
   /** Epoch ms. */
   updatedAt: number;
+}
+
+/** `?from=`: where the gesture was opened from (cards and links set it). */
+export interface GestureSearch {
+  from?: GestureViewSource;
+}
+
+/** A known `from` is kept; anything else is dropped (it counts as `direct`). */
+export function validateGestureSearch(
+  search: Record<string, unknown>
+): GestureSearch {
+  const from = gestureViewSource(search.from);
+  return from === "direct" ? {} : { from };
 }
 
 /**
@@ -107,13 +122,42 @@ export const Route = createFileRoute("/gestures/$slug")({
     });
   },
   loader: loadGesture,
+  validateSearch: validateGestureSearch,
 });
+
+/**
+ * `?from=` is read once: the detail tracks `gesture_viewed` with it (its
+ * effect runs first, in the same commit), then it leaves the URL, so a
+ * reload or a copied address counts as `direct`. The router's own
+ * navigation keeps its location in step; `from` is no loader dependency.
+ */
+function useViewSource(ready: boolean): GestureViewSource {
+  const search: Record<string, unknown> = Route.useSearch();
+  const navigate = Route.useNavigate();
+  // The root passes unvalidated params through, so check `from` again.
+  const source = gestureViewSource(search.from);
+  const present = search.from !== undefined;
+  useEffect(() => {
+    if (!(ready && present)) {
+      return;
+    }
+    navigate({
+      replace: true,
+      resetScroll: false,
+      search: ({ from: _from, ...rest }: Record<string, unknown>) => rest,
+    } as never).catch((error: unknown) => {
+      console.error("[gesture] Failed to clean the URL:", error);
+    });
+  }, [navigate, present, ready]);
+  return source;
+}
 
 function GesturePage(): ReactNode {
   const { slug } = Route.useParams();
   const gesture = useGesture(slug);
   const related = useRelated(slug, RELATED_LIMIT);
-  const hearts = useHearts();
+  const hearts = useHearts("gesture_detail");
+  const viewSource = useViewSource(gesture.data !== undefined);
   return (
     <Page>
       <OpenInApp path={gestureHref(slug)} />
@@ -123,6 +167,7 @@ function GesturePage(): ReactNode {
           hearts={hearts}
           layout="page"
           related={related}
+          viewSource={viewSource}
         />
       ) : (
         <GestureDetailSkeleton />

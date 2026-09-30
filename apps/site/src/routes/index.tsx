@@ -1,11 +1,12 @@
 import {
   categoriesOptions,
+  FEATURED_LIMIT,
   gesturesPageOptions,
   useCategories,
+  useFeaturedGestures,
 } from "@smog/gestures/client";
 import { useTranslation } from "@smog/i18n/react";
 import { Button, ErrorState, Heading, Text } from "@smog/ui-web";
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
@@ -17,7 +18,6 @@ import {
 import { Page } from "@/components/learning/page";
 import { SearchBox } from "@/components/learning/search-box";
 import { useHearts } from "@/components/learning/use-hearts";
-import { FEATURED_LIMIT } from "@/lib/gesture-queries";
 import { seoHead, shellHead } from "@/lib/head";
 
 export const Route = createFileRoute("/")({
@@ -57,10 +57,7 @@ export const Route = createFileRoute("/")({
 
 function Featured(): ReactNode {
   const { t } = useTranslation();
-  const { queryUtils } = Route.useRouteContext();
-  const featured = useQuery(
-    gesturesPageOptions(queryUtils.gestures, FEATURED_LIMIT)
-  );
+  const featured = useFeaturedGestures(FEATURED_LIMIT);
   const hearts = useHearts();
   const { refetch } = featured;
   const retry = useCallback(() => {
@@ -73,7 +70,7 @@ function Featured(): ReactNode {
         // Eight featured gestures: two full rows of four on desktop.
         className="xl:grid-cols-4"
         hearts={hearts}
-        items={featured.data.items}
+        items={featured.data}
         level={3}
       />
     );

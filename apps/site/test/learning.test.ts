@@ -161,7 +161,9 @@ describe("/gestures (SSR search)", () => {
   it("server-renders the results for ?q=", async () => {
     const { body, response } = await get("/gestures?q=hond");
     expect(response.status).toBe(200);
+    // Desktop rows (masked to the page) and cards (with their source).
     expect(body).toContain('href="/gestures/hond"');
+    expect(body).toContain('href="/gestures/hond?from=search_results"');
     expect(body).not.toContain('href="/gestures/koffie"');
   });
 
@@ -199,9 +201,10 @@ describe("/gestures/$slug (SSR detail)", () => {
     expect(body).toContain("Het gebaar voor hond.");
     expect(body).toContain('"@type":"VideoObject"');
     expect(body).toContain(`https://stream.mux.com/${SAMPLE_PLAYBACK_ID}.m3u8`);
-    // Keywords and a related gesture (same category).
+    // Keywords and a related gesture (same category), linked with its
+    // gesture_viewed source.
     expect(body).toContain("hondje");
-    expect(body).toContain('href="/gestures/kat"');
+    expect(body).toContain('href="/gestures/kat?from=related_gestures"');
     expect(body).toContain('href="/gestures?category=dieren"');
   });
 

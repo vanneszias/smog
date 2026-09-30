@@ -23,12 +23,18 @@ function RecentSearch({
   return <ListItem leading={<History />} onClick={pick} title={query} />;
 }
 
+/** How a search was started: Enter, or a recent search picked. */
+export type SearchTrigger = "recent_search" | "submit";
+
 export interface SearchBoxProps {
   /** `action` of the form without JavaScript (the home page: `/gestures`). */
   action?: string;
   label: string;
-  /** Enter, or a recent search picked (a non-empty one is stored first). */
-  onSubmit: (query: string) => void;
+  /**
+   * Enter, or a recent search picked (a non-empty one is stored first);
+   * `trigger` says which (`search_performed.source`).
+   */
+  onSubmit: (query: string, trigger: SearchTrigger) => void;
   onValueChange: (value: string) => void;
   placeholder?: string;
   size?: "md" | "lg";
@@ -59,13 +65,13 @@ export function SearchBox({
   const showRecent = focused && value.trim() === "" && recent.length > 0;
 
   const run = useCallback(
-    (query: string): void => {
+    (query: string, trigger: SearchTrigger): void => {
       if (query) {
         add(query).catch((error: unknown) => {
           console.error("[search] Failed to store a recent search:", error);
         });
       }
-      onSubmit(query);
+      onSubmit(query, trigger);
     },
     [add, onSubmit]
   );
@@ -74,7 +80,7 @@ export function SearchBox({
       event.preventDefault();
       inputRef.current?.blur();
       setFocused(false);
-      run(value.trim());
+      run(value.trim(), "submit");
     },
     [run, value]
   );
@@ -94,7 +100,7 @@ export function SearchBox({
     (query: string): void => {
       setFocused(false);
       onValueChange(query);
-      run(query);
+      run(query, "recent_search");
     },
     [onValueChange, run]
   );

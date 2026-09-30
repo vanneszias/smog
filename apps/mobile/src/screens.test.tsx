@@ -1,6 +1,8 @@
 import { describe, expect, it, jest } from "@jest/globals";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { createApiClient, createApiQueryUtils } from "@smog/api/client";
+import { COURSE_PROGRESS_KEY, FEATURED_LIMIT } from "@smog/gestures/client";
 import { QueryClient } from "@tanstack/react-query";
 import { persistQueryClientSave } from "@tanstack/react-query-persist-client";
 import {
@@ -33,6 +35,12 @@ jest.mock("nativewind", () => {
 
 const { mockScreenshot } = jest.requireMock("expo-screen-capture") as {
   mockScreenshot: () => void;
+};
+const { mockVideoPlayers } = jest.requireMock("expo-video") as {
+  mockVideoPlayers: {
+    duration: number;
+    emit: (event: string, payload?: unknown) => void;
+  }[];
 };
 
 const LES_1 = /Les 1/;
@@ -224,8 +232,9 @@ describe("gesture", () => {
     expect(screen.getByLabelText("Hond")).toBeOnTheScreen();
     expect(screen.getByText("Het gebaar voor hond.")).toBeOnTheScreen();
     expect(screen.getByText("huisdier")).toBeOnTheScreen();
+    // `related` is its own query: it may settle after the detail.
     expect(
-      screen.getByRole("header", { name: "Related gestures" })
+      await screen.findByRole("header", { name: "Related gestures" })
     ).toBeOnTheScreen();
     expect(
       screen.getAllByRole("button", { name: "Kat" }).length
@@ -247,6 +256,29 @@ describe("gesture", () => {
       expect.arrayContaining([expect.objectContaining({ text: "Share link" })])
     );
     alert.mockRestore();
+  });
+
+  it("counts a looping video once per visit for the course banner (bug 21)", async () => {
+    // Six videos watched before: this visit is the seventh.
+    await AsyncStorage.setItem(COURSE_PROGRESS_KEY, "6");
+    await renderApp({ initialUrl: "/gestures/hond" });
+    await screen.findByRole("header", { name: "Hond" });
+    const player = mockVideoPlayers.at(-1);
+    if (!player) {
+      throw new Error("No video player");
+    }
+    player.duration = 20;
+    // Ten loops of one video are one completed video, not ten.
+    for (let loop = 0; loop < 10; loop += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: one loop after another, as the player plays
+      await act(() => {
+        player.emit("timeUpdate", { currentTime: 0.5 });
+        player.emit("timeUpdate", { currentTime: 17 });
+      });
+    }
+    expect(await screen.findByText("Important notice")).toBeOnTheScreen();
+    expect(await AsyncStorage.getItem(COURSE_PROGRESS_KEY)).toBe("0");
+    await AsyncStorage.removeItem(COURSE_PROGRESS_KEY);
   });
 
   it("saves to the account's lists from one containing call", async () => {
@@ -493,15 +525,10 @@ describe("offline", () => {
     const rpc = createApiQueryUtils(
       createApiClient({ baseUrl: "https://smog.test" })
     );
+    // Home's featured row (useFeaturedGestures: one page of the list).
     previous.setQueryData(
-      rpc.gestures.list.infiniteKey({
-        initialPageParam: undefined,
-        input: (cursor: string | undefined) => ({
-          category: undefined,
-          cursor,
-        }),
-      }),
-      { pageParams: [undefined], pages: [{ items: [HOND], nextCursor: null }] }
+      rpc.gestures.list.queryKey({ input: { limit: FEATURED_LIMIT } }),
+      { items: [HOND], nextCursor: null }
     );
     await persistQueryClientSave({
       queryClient: previous,

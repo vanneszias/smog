@@ -58,7 +58,12 @@ function Favorites(): ReactNode {
   } else {
     body = (
       <div className="flex flex-col gap-6">
-        <LinkedGestureGrid hearts={hearts} items={favorites.items} level={2} />
+        <LinkedGestureGrid
+          from="favorites"
+          hearts={hearts}
+          items={favorites.items}
+          level={2}
+        />
         {favorites.hasMoreItems ? (
           <Button
             className="self-center"

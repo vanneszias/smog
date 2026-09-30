@@ -1,3 +1,4 @@
+import type { SearchSource } from "@smog/analytics/schema";
 import {
   SEARCH_DEBOUNCE_MS,
   useCategories,
@@ -17,6 +18,7 @@ import {
 } from "react";
 import { Page, PageHeader, RouteError } from "@/components/learning/page";
 import { ResultsView } from "@/components/learning/results-view";
+import type { SearchTrigger } from "@/components/learning/search-box";
 import { SearchBox } from "@/components/learning/search-box";
 import { SelectedGesture } from "@/components/learning/selected-gesture";
 import { type Hearts, useHearts } from "@/components/learning/use-hearts";
@@ -99,12 +101,14 @@ function QueryResults({
   onClearFilters,
   q,
   selected,
-}: ResultsProps & { q: string }): ReactNode {
+  source,
+}: ResultsProps & { q: string; source: SearchSource }): ReactNode {
   const { t } = useTranslation();
   const search = useGestureSearch({
     category: categories,
     limit: SEARCH_LIMIT,
     q,
+    source,
   });
   const { refetch } = search;
   const retry = useCallback(() => {
@@ -184,13 +188,22 @@ function Gestures(): ReactNode {
   const { t } = useTranslation();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const hearts = useHearts();
+  const hearts = useHearts("search_results");
   const categories = useCategories();
   const selectedCategories = useMemo(
     () => parseCategories(search.category),
     [search.category]
   );
   const [text, setText] = useState(search.q ?? "");
+  // What search_performed reports, as on mobile: typing and filters, a
+  // submit (also a `?q=` landing, from Home or a link), or a recent search.
+  const [source, setSource] = useState<SearchSource>(
+    search.q ? "submit" : "filter_change"
+  );
+  const type = useCallback((value: string): void => {
+    setSource("filter_change");
+    setText(value);
+  }, []);
   // The q this page wrote last: a URL change from elsewhere (back, a link)
   // replaces the field; our own debounced write does not.
   const written = useRef(search.q ?? "");
@@ -217,6 +230,7 @@ function Gestures(): ReactNode {
     const q = search.q ?? "";
     if (q !== written.current) {
       written.current = q;
+      setSource("submit");
       setText(q);
     }
   }, [search.q]);
@@ -234,20 +248,24 @@ function Gestures(): ReactNode {
   }, [text, update]);
 
   const submit = useCallback(
-    (query: string): void => {
+    (query: string, trigger: SearchTrigger): void => {
       written.current = query;
+      setSource(trigger);
       update({ q: query || undefined });
     },
     [update]
   );
   const changeCategories = useCallback(
-    (slugs: string[]): void => update({ category: formatCategories(slugs) }),
+    (slugs: string[]): void => {
+      setSource("filter_change");
+      update({ category: formatCategories(slugs) });
+    },
     [update]
   );
-  const clearCategories = useCallback(
-    (): void => update({ category: undefined }),
-    [update]
-  );
+  const clearCategories = useCallback((): void => {
+    setSource("filter_change");
+    update({ category: undefined });
+  }, [update]);
   // While the field is emptied, the last query shows until the URL follows.
   const q = text.trim() ? text : (search.q ?? "");
   const results: ResultsProps = {
@@ -264,7 +282,7 @@ function Gestures(): ReactNode {
         <SearchBox
           label={t("home.searchLabel")}
           onSubmit={submit}
-          onValueChange={setText}
+          onValueChange={type}
           placeholder={t("home.searchPlaceholder")}
           value={text}
         />
@@ -277,7 +295,7 @@ function Gestures(): ReactNode {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <div className="flex min-w-0 flex-col">
           {search.q ? (
-            <QueryResults {...results} q={q} />
+            <QueryResults {...results} q={q} source={source} />
           ) : (
             <BrowseResults {...results} />
           )}
@@ -287,7 +305,7 @@ function Gestures(): ReactNode {
           className="hidden lg:block"
         >
           <div className="sticky top-24">
-            <SelectedGesture hearts={hearts} slug={selected} />
+            <SelectedGesture slug={selected} />
           </div>
         </aside>
       </div>

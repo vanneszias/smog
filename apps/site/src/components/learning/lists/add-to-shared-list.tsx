@@ -45,7 +45,8 @@ function Results({
   q: string;
 }): ReactNode {
   const { t } = useTranslation();
-  const search = useGestureSearch({ limit: SEARCH_LIMIT, q });
+  // Adding to a list is not a catalogue search: no search_performed.
+  const search = useGestureSearch({ limit: SEARCH_LIMIT, q, track: false });
   const { refetch } = search;
   const retry = useCallback(() => {
     refetch();
