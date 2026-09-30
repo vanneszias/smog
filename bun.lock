@@ -98,6 +98,7 @@
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",
         "@smog/account": "workspace:*",
+        "@smog/admin": "workspace:*",
         "@smog/analytics": "workspace:*",
         "@smog/api": "workspace:*",
         "@smog/auth": "workspace:*",
@@ -177,6 +178,7 @@
         "@orpc/server": "catalog:",
         "@orpc/tanstack-query": "catalog:",
         "@smog/account": "workspace:*",
+        "@smog/admin": "workspace:*",
         "@smog/config": "workspace:*",
         "@smog/favorites": "workspace:*",
         "@smog/gestures": "workspace:*",
@@ -316,6 +318,36 @@
         "@types/react-dom": "19.2.7",
         "react": "catalog:",
         "react-dom": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+        "wrangler": "catalog:",
+      },
+      "peerDependencies": {
+        "@tanstack/react-query": "catalog:",
+        "react": "catalog:",
+      },
+    },
+    "packages/features/admin": {
+      "name": "@smog/admin",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@smog/auth": "workspace:*",
+        "@smog/config": "workspace:*",
+        "@smog/db": "workspace:*",
+        "@smog/gestures": "workspace:*",
+        "@smog/rpc": "workspace:*",
+        "@smog/utils": "workspace:*",
+        "drizzle-orm": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@cloudflare/vitest-plugin": "catalog:",
+        "@orpc/server": "catalog:",
+        "@smog/email": "workspace:*",
+        "@tanstack/react-query": "catalog:",
+        "@types/react": "catalog:",
+        "react": "catalog:",
         "typescript": "catalog:",
         "vitest": "catalog:",
         "wrangler": "catalog:",
@@ -1558,6 +1590,8 @@
     "@sinonjs/fake-timers": ["@sinonjs/fake-timers@10.3.0", "", { "dependencies": { "@sinonjs/commons": "^3.0.0" } }, "sha512-V4BG07kuYSUkTCSBHG8G8TNhM+F19jXFWnQtzj+we8DrkpSBCee9Z3Ms8yiGer/dlmhe35/Xdgyo3/0rQKg7YA=="],
 
     "@smog/account": ["@smog/account@workspace:packages/features/account"],
+
+    "@smog/admin": ["@smog/admin@workspace:packages/features/admin"],
 
     "@smog/analytics": ["@smog/analytics@workspace:packages/analytics"],
 

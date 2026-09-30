@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as MagicLinkRouteImport } from './routes/magic-link'
@@ -23,6 +24,12 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TurnstileBridgeRouteImport } from './routes/turnstile-bridge'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminAuditRouteImport } from './routes/admin/audit'
+import { Route as AdminCategoriesRouteImport } from './routes/admin/categories'
+import { Route as AdminEmailsRouteImport } from './routes/admin/emails'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DevMailRouteImport } from './routes/dev/mail'
@@ -33,6 +40,8 @@ import { Route as GesturesSlugRouteImport } from './routes/gestures/$slug'
 import { Route as ListsIndexRouteImport } from './routes/lists/index'
 import { Route as ListsShareTokenRouteImport } from './routes/lists/$shareToken'
 import { Route as MagicLinkAppRouteImport } from './routes/magic-link_.app'
+import { Route as AdminGesturesIndexRouteImport } from './routes/admin/gestures/index'
+import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
@@ -45,6 +54,11 @@ const IndexRoute = IndexRouteImport.update({
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FavoritesRoute = FavoritesRouteImport.update({
@@ -107,6 +121,36 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAuditRoute = AdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEmailsRoute = AdminEmailsRouteImport.update({
+  id: '/emails',
+  path: '/emails',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ApiAnalyticsRoute = ApiAnalyticsRouteImport.update({
   id: '/api/analytics',
   path: '/api/analytics',
@@ -157,6 +201,16 @@ const MagicLinkAppRoute = MagicLinkAppRouteImport.update({
   path: '/magic-link/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminGesturesIndexRoute = AdminGesturesIndexRouteImport.update({
+  id: '/gestures/',
+  path: '/gestures/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminGesturesIdRoute = AdminGesturesIdRouteImport.update({
+  id: '/gestures/$id',
+  path: '/gestures/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -176,6 +230,7 @@ const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/admin': typeof AdminRouteWithChildren
   '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
@@ -188,6 +243,11 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/turnstile-bridge': typeof TurnstileBridgeRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/emails': typeof AdminEmailsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
@@ -196,11 +256,14 @@ export interface FileRoutesByFullPath {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link/app': typeof MagicLinkAppRoute
+  '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
+  '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/admin/gestures/': typeof AdminGesturesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -217,6 +280,11 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/turnstile-bridge': typeof TurnstileBridgeRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/emails': typeof AdminEmailsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
@@ -225,16 +293,20 @@ export interface FileRoutesByTo {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link/app': typeof MagicLinkAppRoute
+  '/admin': typeof AdminIndexRoute
   '/gestures': typeof GesturesIndexRoute
   '/lists': typeof ListsIndexRoute
+  '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/admin/gestures': typeof AdminGesturesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/admin': typeof AdminRouteWithChildren
   '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
@@ -247,6 +319,11 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/turnstile-bridge': typeof TurnstileBridgeRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/emails': typeof AdminEmailsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
@@ -255,17 +332,21 @@ export interface FileRoutesById {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link_/app': typeof MagicLinkAppRoute
+  '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
+  '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/admin/gestures/': typeof AdminGesturesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/account'
+    | '/admin'
     | '/favorites'
     | '/forgot-password'
     | '/magic-link'
@@ -278,6 +359,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/turnstile-bridge'
     | '/verify-email'
+    | '/admin/audit'
+    | '/admin/categories'
+    | '/admin/emails'
+    | '/admin/settings'
+    | '/admin/users'
     | '/api/analytics'
     | '/api/health'
     | '/dev/mail'
@@ -286,11 +372,14 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link/app'
+    | '/admin/'
     | '/gestures/'
     | '/lists/'
+    | '/admin/gestures/$id'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/admin/gestures/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -307,6 +396,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/turnstile-bridge'
     | '/verify-email'
+    | '/admin/audit'
+    | '/admin/categories'
+    | '/admin/emails'
+    | '/admin/settings'
+    | '/admin/users'
     | '/api/analytics'
     | '/api/health'
     | '/dev/mail'
@@ -315,15 +409,19 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link/app'
+    | '/admin'
     | '/gestures'
     | '/lists'
+    | '/admin/gestures/$id'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/admin/gestures'
   id:
     | '__root__'
     | '/'
     | '/account'
+    | '/admin'
     | '/favorites'
     | '/forgot-password'
     | '/magic-link'
@@ -336,6 +434,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/turnstile-bridge'
     | '/verify-email'
+    | '/admin/audit'
+    | '/admin/categories'
+    | '/admin/emails'
+    | '/admin/settings'
+    | '/admin/users'
     | '/api/analytics'
     | '/api/health'
     | '/dev/mail'
@@ -344,16 +447,20 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link_/app'
+    | '/admin/'
     | '/gestures/'
     | '/lists/'
+    | '/admin/gestures/$id'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/admin/gestures/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  AdminRoute: typeof AdminRouteWithChildren
   FavoritesRoute: typeof FavoritesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   MagicLinkRoute: typeof MagicLinkRoute
@@ -395,6 +502,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/favorites': {
@@ -481,6 +595,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/audit': {
+      id: '/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AdminAuditRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/categories': {
+      id: '/admin/categories'
+      path: '/categories'
+      fullPath: '/admin/categories'
+      preLoaderRoute: typeof AdminCategoriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/emails': {
+      id: '/admin/emails'
+      path: '/emails'
+      fullPath: '/admin/emails'
+      preLoaderRoute: typeof AdminEmailsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/analytics': {
       id: '/api/analytics'
       path: '/api/analytics'
@@ -551,6 +707,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MagicLinkAppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/gestures/': {
+      id: '/admin/gestures/'
+      path: '/gestures'
+      fullPath: '/admin/gestures/'
+      preLoaderRoute: typeof AdminGesturesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/gestures/$id': {
+      id: '/admin/gestures/$id'
+      path: '/gestures/$id'
+      fullPath: '/admin/gestures/$id'
+      preLoaderRoute: typeof AdminGesturesIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -575,9 +745,34 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminAuditRoute: typeof AdminAuditRoute
+  AdminCategoriesRoute: typeof AdminCategoriesRoute
+  AdminEmailsRoute: typeof AdminEmailsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminGesturesIdRoute: typeof AdminGesturesIdRoute
+  AdminGesturesIndexRoute: typeof AdminGesturesIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAuditRoute: AdminAuditRoute,
+  AdminCategoriesRoute: AdminCategoriesRoute,
+  AdminEmailsRoute: AdminEmailsRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  AdminIndexRoute: AdminIndexRoute,
+  AdminGesturesIdRoute: AdminGesturesIdRoute,
+  AdminGesturesIndexRoute: AdminGesturesIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  AdminRoute: AdminRouteWithChildren,
   FavoritesRoute: FavoritesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   MagicLinkRoute: MagicLinkRoute,

@@ -1,4 +1,5 @@
 import { accountContract } from "@smog/account/contract";
+import { adminContract } from "@smog/admin/contract";
 import { ENVIRONMENTS } from "@smog/config/env/worker";
 import { favoritesContract } from "@smog/favorites/contract";
 import { gesturesContract } from "@smog/gestures/contract";
@@ -37,6 +38,7 @@ export const systemContract = {
  */
 export const appContract = {
   account: accountContract,
+  admin: adminContract,
   favorites: favoritesContract,
   gestures: gesturesContract,
   lists: listsContract,

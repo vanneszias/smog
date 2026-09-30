@@ -682,5 +682,152 @@
       "title": "Kies een gebaar",
       "description": "Selecteer een gebaar in de lijst om de video en de details te bekijken."
     }
+  },
+  "admin": {
+    "title": "Beheer",
+    "rail": {
+      "label": "Beheer",
+      "open": "Beheermenu openen",
+      "dashboard": "Overzicht",
+      "gestures": "Gebaren",
+      "categories": "Categorieën",
+      "users": "Gebruikers",
+      "audit": "Logboek",
+      "emails": "E-mails",
+      "settings": "Instellingen"
+    },
+    "comingSoon": {
+      "title": "Komt in deze fase",
+      "description": "Dit deel van het beheer wordt nog gebouwd."
+    },
+    "dashboard": {
+      "title": "Overzicht",
+      "description": "De stand van de catalogus en de accounts.",
+      "gestures": "Gebaren",
+      "categories": "Categorieën",
+      "users": "Gebruikers",
+      "published_one": "{{count}} gepubliceerd",
+      "published_other": "{{count}} gepubliceerd",
+      "unpublished_one": "{{count}} verborgen",
+      "unpublished_other": "{{count}} verborgen",
+      "admins_one": "{{count}} beheerder",
+      "admins_other": "{{count}} beheerders",
+      "banned_one": "{{count}} geblokkeerd",
+      "banned_other": "{{count}} geblokkeerd",
+      "newUsers_one": "{{count}} nieuw in 30 dagen",
+      "newUsers_other": "{{count}} nieuw in 30 dagen",
+      "recentAudit": "Recente acties",
+      "allAudit": "Volledig logboek",
+      "noAudit": "Nog geen acties gelogd.",
+      "quickLinks": "Snel naar",
+      "newGesture": "Nieuw gebaar",
+      "manageCategories": "Categorieën beheren"
+    },
+    "audit": {
+      "title": "Logboek",
+      "description": "Elke wijziging door een beheerder, nieuwste eerst.",
+      "filters": {
+        "label": "Filters",
+        "action": "Actie",
+        "targetType": "Soort",
+        "actor": "Door",
+        "from": "Van",
+        "to": "Tot en met",
+        "all": "Alles",
+        "clear": "Filters wissen"
+      },
+      "columns": {
+        "when": "Wanneer",
+        "action": "Actie",
+        "target": "Doel",
+        "actor": "Door"
+      },
+      "empty": "Geen acties gevonden.",
+      "deletedActor": "Verwijderd account",
+      "noTarget": "Geen",
+      "detail": {
+        "data": "Gegevens",
+        "target": "Doel",
+        "actor": "Door",
+        "when": "Wanneer",
+        "open": "Openen"
+      },
+      "nextPage": "Oudere acties",
+      "firstPage": "Nieuwste acties",
+      "actions": {
+        "gesture": {
+          "create": "Gebaar aangemaakt",
+          "update": "Gebaar bewerkt",
+          "publish": "Gebaar gepubliceerd",
+          "unpublish": "Gebaar verborgen",
+          "delete": "Gebaar verwijderd",
+          "bulk_update": "Gebaren in bulk bewerkt"
+        },
+        "category": {
+          "create": "Categorie aangemaakt",
+          "update": "Categorie bewerkt",
+          "publish": "Categorie gepubliceerd",
+          "unpublish": "Categorie verborgen",
+          "delete": "Categorie verwijderd",
+          "reorder": "Categorieën herschikt"
+        },
+        "user": {
+          "role_change": "Rol gewijzigd",
+          "ban": "Gebruiker geblokkeerd",
+          "unban": "Blokkering opgeheven",
+          "delete": "Gebruiker verwijderd",
+          "impersonate": "Aangemeld als gebruiker"
+        },
+        "sponsorship": {
+          "approve": "Sponsoring goedgekeurd",
+          "reject": "Sponsoring afgewezen",
+          "request_changes": "Wijzigingen gevraagd",
+          "mark_paid": "Handmatig als betaald gemarkeerd",
+          "cancel": "Sponsoring geannuleerd",
+          "retry_render": "Video opnieuw gemaakt",
+          "force_expire": "Sponsoring beëindigd",
+          "regenerate_token": "Nieuwe bewerklink gemaakt"
+        },
+        "payment": {
+          "refund": "Betaling terugbetaald"
+        },
+        "maintenance": {
+          "enable": "Onderhoudsmodus aan",
+          "disable": "Onderhoudsmodus uit"
+        },
+        "export": {
+          "sponsorships_csv": "Sponsorings geëxporteerd (CSV)"
+        },
+        "legacy": "Oude logregel"
+      },
+      "targetTypes": {
+        "gesture": "Gebaar",
+        "category": "Categorie",
+        "user": "Gebruiker",
+        "sponsorship": "Sponsoring",
+        "payment": "Betaling",
+        "list": "Lijst",
+        "setting": "Instelling",
+        "system": "Systeem"
+      }
+    },
+    "gestures": {
+      "title": "Gebaren"
+    },
+    "categories": {
+      "title": "Categorieën"
+    },
+    "mux": {
+      "title": "Video"
+    },
+    "users": {
+      "title": "Gebruikers"
+    },
+    "settings": {
+      "title": "Instellingen"
+    },
+    "emails": {
+      "title": "E-mails"
+    }
   }
 }
