@@ -417,6 +417,7 @@ Each entry: date · decision · alternatives · why. Newest entries go at the bo
 
     - A typo query with no direct hits costs 17 ms at 2,000 and 33 ms at 5,000 with the normalised fast path (27 and 71 ms without it).
     - `src/typo-gate.test.ts` checks this against a baseline, not an absolute time: the gated path must be under a fifth of the ungated pass on 5,000 gestures, and the fast path must beat the full one.
+    - [2026-09-30, phase 4 task 6 fix round 1] That timing comparison timed out (bun's 5 s per-test default) when turbo ran every suite in parallel, so it is now an opt-in benchmark: `bun -F @smog/gestures bench` (`SMOG_PERF=1`), skipped in `test`. `test` instead checks the gate deterministically: over 5,000 gestures whose fields record each read, the gated path reads exactly 5 gestures (it stops at the 5th direct match, so no Damerau–Levenshtein pass runs), and the ungated pass reads all 5,000. The measured numbers above still stand.
   - [fix round 1, M4] The rows-read cost: a cold categories read (Home, the browse page) loads the whole published projection in the same batch (every gesture's name, keywords and categories), once per isolate and catalog version. That is one read, which is fine at today's size (about 0.3 MB of JSON per 2,000 gestures). Revisit if the catalogue grows past about 10,000 or if isolates are recycled often.
   - *Alternatives:* summaries in the projection with no hydration (rejected: the running sponsorship's video and publish state change without a catalog bump); categories in the search response (a contract change); documenting 5.
   - Phase 5 carry, unchanged: category writes must bump too, since the snapshot holds the categories.
@@ -475,3 +476,62 @@ Each entry: date · decision · alternatives · why. Newest entries go at the bo
   Alternatives: the address in the link (personal data in logs and the address bar), or a server endpoint that reveals a token's address before use (couples to Better Auth's token hashing).
 - **2026-09-30 · [Review fix M1] The captcha requirement fails safe in the app.** Until `system.authConfig` has loaded (or when it failed), `requiresCaptcha` is false. A guarded request then goes out without a token, and if the captcha plugin answers `MISSING_RESPONSE` (`toAuthResult` flags it as `captchaMissing`), the flow runs the challenge and retries once with the token. A rejected token (`VERIFICATION_FAILED`) is not retried. The web has no on-demand challenge, so it never retries.
 - **2026-09-30 · [Review fix M3, M6] No token in the header's "Sign in" link; `/reset-password` sets its keys.** `signInReturnPath` (`apps/site/src/lib/redirect.ts`) drops any `token` query parameter from the return path and never returns to `/sign-*` or `/magic-link*`. `validateResetSearch` always sets `error` and `token` (strings only; the router JSON-parses `?token=123` to a number).
+
+## Maintenance mode, security headers and CSP (phase 4 task 6)
+
+- **2026-09-30 · The CSP carries a per-request nonce as well as the theme hash.**
+  - TanStack Start streams its hydration data as inline `<script>`s whose content changes per request (`$_TSR`, Seroval records, the stream boundary), so no hash can allow them. The brief's `script-src 'self' 'sha256-<theme>' https://challenges.cloudflare.com` would stop the site from hydrating.
+  - `src/worker.ts` makes a 128-bit nonce per request and passes it to Start as request context (`handler.fetch(request, { context: { nonce } })`). `src/router.tsx` sets `ssr.nonce` from `getGlobalStartContext()`, so Start puts it on every script it writes.
+  - The theme pre-paint script keeps its hash. `build-defines.ts` hashes `SYSTEM_THEME_SCRIPT` at build time into the `__SMOG_THEME_SCRIPT_HASH__` define (vite.config.ts and vitest.config.ts), and a test hashes the served page's script again.
+  - Alternatives: `'unsafe-inline'` (no protection), and `'strict-dynamic'`. Under `'strict-dynamic'` browsers ignore `'self'` and the host list, so it would need `https:` fallbacks and a Turnstile retest, and it would make this policy no safer.
+  - [fix round 1, M5] **The nonce is readable in the DOM.** Start emits `<meta property="csp-nonce" content="…">` (its client reads it back for scripts it adds later), and browsers do not hide a meta's content the way they hide `script.nonce`. With `style-src 'unsafe-inline'`, injected CSS could select on that attribute. It could only exfiltrate through `img-src`/`font-src`, which list our own origin, Mux and Google's avatar host. This is Start's design and is accepted. Any later widening of `img-src` or `font-src` must weigh it.
+- **2026-09-30 · The directives beyond the nonce.**
+  - They are the brief's, with two changes made in fix round 1:
+    - `img-src` adds exactly `https://lh3.googleusercontent.com`, so Google accounts show their profile picture (never a `*.googleusercontent.com` wildcard). Copying the picture to R2 at sign-in, so a page view does not send the viewer's IP to Google, is the better long-term option.
+    - `font-src` drops `https://fonts.gstatic.com`: the site loads no web fonts.
+  - `https://stream.mux.com` next to `https://*.mux.com` in `media-src` is redundant and kept as the brief wrote it.
+  - Mux serves renditions and segments from several `*.mux.com` hosts, so the wildcard in `connect-src`/`media-src` is needed (the e2e fetches a rendition and a segment from `*.cfcdn.mux.com` stubs).
+  - `inferred.litix.io` stays for Mux Data, although the player runs with `disableTracking`, so no beacon is sent today (the e2e cannot show it).
+- **2026-09-30 · Header rules.**
+  - One function (`respondSecurely`, `src/worker/headers.ts`) is the Worker's `fetch` body. It makes the nonce, runs the pipeline (the maintenance gate, the bypass endpoint, the legacy 301s, Start), and adds the headers with `withSecurityHeaders` to whatever comes back.
+  - [fix round 1, M2] An exception that escapes the pipeline is logged (`[site] Failed to handle the request:`) and answered with a plain 500 (`no-store`) that has the headers. Without that, Cloudflare's error page would go out with none.
+  - Every response gets `X-Content-Type-Options: nosniff`, `Referrer-Policy` and, outside dev, `Strict-Transport-Security: max-age=31536000; includeSubDomains` (the old Caddy value, no preload).
+  - HTML responses and redirects also get the CSP, `X-Frame-Options: DENY`, `Permissions-Policy` and `Cross-Origin-Opener-Policy`. `/api/*` JSON gets only the first set.
+  - [fix round 1, M3] HTML also gets `Cache-Control: private, no-cache` when the route set none. The page carries its response's nonce, so no shared cache (a later Cache Rule, a proxy) may serve it to someone else. `no-cache` still allows the back/forward cache.
+  - A header the route already set is never overwritten. A route that sends its own `Content-Security-Policy` or `-Report-Only` gets neither CSP header from the wrapper, because two policies would both apply. `/turnstile-bridge` relies on this (tested); it takes its nonce from the same `createNonce`.
+  - Static assets are served before the Worker, so `public/_headers` gives them `nosniff` and the `Referrer-Policy`.
+- **2026-09-30 · CSP modes: production and dev enforce, staging reports.**
+  - Staging sends `Content-Security-Policy-Report-Only`, as the brief says. It has no report endpoint yet, so violations show only in the browser console. A same-origin `report-to`/`report-uri` endpoint is a phase 8 carry (docs/PROGRESS.md).
+  - Dev enforces, so `bun dev`, the Vitest suite and the whole Playwright suite run under the production policy. Vite's dev client needs nothing more: its modules are same-origin, its HMR socket is `'self'`, and its styles are inline.
+  - Alternatives: Report-Only in dev (the e2e would then prove nothing), or a separate CSP flag for tests (a second configuration to keep in step).
+- **2026-09-30 · Maintenance: what the gate lets through, and how.**
+  - The gate runs first in the Worker's pipeline, before the legacy redirects: their category lookup reads D1, which may be the thing under maintenance.
+  - Exempt paths:
+    - `/api/health`, `/api/webhooks/*`, `/.well-known/*`;
+    - [fix round 1, I2] `/api/auth/*` (it has `RL_AUTH` per IP and the captcha) and the `/sign-in` page, so an admin can sign in during a window;
+    - `POST /api/maintenance/bypass`.
+  - Matching is by exact path or whole segments on the normalised URL. `/api/healthz`, `/sign-in/x` and `/sign-up` are blocked. `..` and `%2e%2e` are resolved before the check (tested). Everything else, `/account` included, stays 503 for a signed-in admin until they hold the bypass cookie (tested). Start's JS and CSS are static assets, and the sign-in page needs nothing else from the Worker.
+  - A blocked document gets the static page. A blocked `/api/*` call gets JSON `{ code: "MAINTENANCE", message?, until }`. Both are 503 with `Retry-After` (seconds until `until`, else 600) and `Cache-Control: no-store`. `HEAD` gets the same 503 with an empty body.
+  - The page has no script, no font and no asset request: the logo and hands are inline SVG from `@smog/brand/svg`, and the colours come from the `@smog/styles` tokens. It follows the `locale` cookie, then `Accept-Language`, like the site, and the `theme` cookie (system by default). The operator's `message` is shown as escaped text under the standard copy; it is one string, not translated.
+  - [review M8] An exempt prefix with no route (`/api/webhooks/*` until phase 6) renders Start's SSR 404, which may read the session. Once webhooks exist, consider answering unknown exempt paths with a plain 404 in the Worker.
+- **2026-09-30 · Maintenance state: KV, cached 30 s, fails open.**
+  - `readMaintenance` caches the parsed value per isolate for 30 s and reads KV with `cacheTtl: 30` (KV's minimum; the default is 60), so on/off reaches every isolate within about a minute.
+  - [fix round 1, I2] The bypass cookie is signed, and checked, against a fresh KV read that skips the isolate cache and refreshes it. That costs one extra read per request carrying the cookie while the cache says "on". So a window's version is never taken from a stale isolate.
+  - A malformed value, or a KV read that throws, is logged and treated as "off" (the last known state while cached): a KV hiccup must not take the site down.
+  - The value is validated by hand, with no zod in the Worker's hot path: `enabled` boolean, `bypassVersion` integer, optional `message` string, and optional `until` parseable date.
+- **2026-09-30 · Bypass cookie and endpoint.**
+  - The cookie is `smog_mx=<exp>.<base64url HMAC-SHA-256(exp|bypassVersion, BETTER_AUTH_SECRET)>`, 12 h, `Path=/; HttpOnly; SameSite=Lax`, plus `Secure` outside dev. [fix round 1, M1] Dev runs on http://localhost or a LAN address.
+  - Verification uses `crypto.subtle.verify` (constant time) and checks the expiry, so a forged, tampered, expired or earlier-version cookie gets the 503 (tested). The gate reads no session: the signature is enough.
+  - [review M7] The cookie is not bound to a user, so a demoted admin keeps it until it expires or the window ends (`off` voids it). The endpoint itself re-reads the role on every call (Better Auth has no cookie cache here), so a demoted admin gets no new cookie (tested).
+  - `POST /api/maintenance/bypass` is handled in the Worker entry, not as a Start route (so `routeTree.gen.ts` is untouched). In order, it:
+    - refuses foreign requests with `isForeignRequest` (403);
+    - [fix round 1, I1] applies `RL_AUTH` per IP (`mx:<ip>`, 429 with `retry-after: 60`), so a caller cannot hammer D1 during a window;
+    - requires an admin session through `getSession` + `requireAdminUser` (401/403);
+    - answers `{ expiresAt }` with the cookie.
+  - The endpoint is exempt from the gate, and it also works while maintenance is off.
+  - Until the phase 5 settings screen, an admin signs in at `/sign-in` (before or during the window) and runs `fetch("/api/maintenance/bypass", { method: "POST" })` in the browser console. Phase 5's toggle should set the admin's cookie in the same response that turns maintenance on.
+- **2026-09-30 · `bun run maintenance`.**
+  - Usage: `scripts/maintenance.ts --env <env> on|off [--message …] [--until ISO] [--dry-run] [--yes]`.
+  - It first reads the key (`wrangler kv key get maintenance --binding KV --env <env> --text`), then writes it with `wrangler kv key put maintenance <json> --binding KV --env <env>`, from `apps/site`. It uses `--local` in dev and `--remote` in staging and production (wrangler 4 defaults to local).
+  - [fix round 1, I2] `on` keeps the current `bypassVersion` (the current Unix second when there is no key yet), so a cookie fetched before or during a window keeps working. `off` writes `max(now, current + 1)`, which voids the cookies of the window that just ended.
+  - Production is refused without `--yes`, before anything runs (also with `--dry-run`). `--dry-run` prints both commands, with the version as a placeholder. `--until` must be a future ISO date and goes with `on` only.

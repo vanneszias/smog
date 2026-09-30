@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vitest/config";
+import { THEME_SCRIPT_HASH_DEFINE } from "./build-defines";
 
 const SRC = fileURLToPath(new URL("./src", import.meta.url));
 const MIGRATIONS_DIR = fileURLToPath(
@@ -10,7 +11,10 @@ const MIGRATIONS_DIR = fileURLToPath(
 
 export default defineConfig(async () => ({
   // Tests run the `dev` environment, which has the /dev pages.
-  define: { __SMOG_DEV_TOOLS__: "true" },
+  define: {
+    __SMOG_DEV_TOOLS__: "true",
+    __SMOG_THEME_SCRIPT_HASH__: THEME_SCRIPT_HASH_DEFINE,
+  },
   plugins: [
     cloudflareTest({
       miniflare: {

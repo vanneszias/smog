@@ -69,6 +69,19 @@ const PLAYER_STYLE: MuxCSSProperties = {
   width: "100%",
 };
 
+/**
+ * No Google Cast: Chromium-based browsers would load Cast's sender script
+ * from www.gstatic.com, which the site CSP does not allow, and the old
+ * site never offered casting either (DECISIONS, phase 4 task 6). Set on the
+ * inner `<mux-video>` as soon as mux-player has rendered it, before
+ * media-chrome first asks for `media.remote`.
+ */
+function disableRemotePlayback(
+  player: { media?: Element | null } | null
+): void {
+  player?.media?.setAttribute("disableremoteplayback", "");
+}
+
 interface TimeEventTarget {
   currentTime?: number;
   duration?: number;
@@ -157,6 +170,7 @@ export function VideoPlayer({
             playbackId={playbackId}
             playsInline
             poster={posterUrl}
+            ref={disableRemotePlayback}
             streamType="on-demand"
             style={PLAYER_STYLE}
           />

@@ -682,5 +682,12 @@
       "title": "Kies een gebaar",
       "description": "Selecteer een gebaar in de lijst om de video en de details te bekijken."
     }
+  },
+  "maintenance": {
+    "documentTitle": "SMOG — Even geduld",
+    "badge": "Onderhoud bezig",
+    "title": "We zijn zo terug",
+    "description": "SMOG is momenteel niet beschikbaar vanwege gepland onderhoud. We zijn hard aan het werk en zijn binnenkort weer online.",
+    "until": "We verwachten terug te zijn op {{time}}."
   }
 }

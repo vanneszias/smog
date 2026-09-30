@@ -3,6 +3,7 @@ import { createI18n, isLocale, type Locale, resolveLocale } from "@smog/i18n";
 import { parseCookie } from "cookie-es";
 import { scriptJson } from "@/lib/head";
 import { LOCALE_COOKIE } from "@/lib/preferences";
+import { createNonce } from "@/worker/headers";
 import { siteEnv } from "./auth";
 
 /**
@@ -77,11 +78,6 @@ function escapeHtml(text: string): string {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
-}
-
-function createNonce(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return btoa(String.fromCharCode(...bytes));
 }
 
 function bridgeCsp(nonce: string): string {
