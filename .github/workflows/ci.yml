@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    # Deploy calls this same gate on these branches; do not run it twice.
+    branches-ignore: [develop, master]
   pull_request:
   # deploy.yml calls this workflow and deploys only when it passes.
   workflow_call:
@@ -19,9 +20,13 @@ env:
 
 jobs:
   release-check:
-    name: Release check
+    name: Release check (${{ matrix.check }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [core, tests, mobile]
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -33,7 +38,7 @@ jobs:
           node-version: 22
       - run: bun install --frozen-lockfile
       # Runs expo-doctor online: never set SMOG_OFFLINE here.
-      - run: bun run release:check
+      - run: bun run release:check:${{ matrix.check }}
 
   e2e:
     name: Playwright e2e

@@ -68,7 +68,7 @@
     },
     "staging": {
       "vars": {
-        "SITE_URL": "https://smog-site-staging.workers.dev",
+        "SITE_URL": "https://smog-site-staging.zias.workers.dev",
         "ENVIRONMENT": "staging",
         "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
         "EMAIL_REPLY_TO": "info@smog.vlaanderen",
@@ -78,13 +78,13 @@
         "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
       },
       "kv_namespaces": [
-        { "binding": "KV", "id": "00000000000000000000000000000000" }
+        { "binding": "KV", "id": "e9e96b50c93342e992a9da54621bad2a" }
       ],
       "d1_databases": [
         {
           "binding": "DB",
           "database_name": "smog-staging",
-          "database_id": "00000000-0000-4000-8000-000000000000",
+          "database_id": "8903bac9-695b-4475-9fa2-6dfa94b16320",
           "migrations_dir": "../../packages/db/migrations"
         }
       ],
