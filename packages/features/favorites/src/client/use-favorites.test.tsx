@@ -261,6 +261,30 @@ describe("useFavorites for a guest", () => {
     expect(server.calls).toEqual([]);
   });
 
+  test("keeps one catalogue query for the guest's favorites, scoped to the guest", async () => {
+    const { queryClient, render, store } = setup("signedOut");
+    await store.update(toggleFavorite(AAP.id));
+    const { result } = await render();
+    await waitFor(() => expect(result.current.items).toHaveLength(1));
+
+    for (const gesture of [BEER, HOND]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one tap after another
+      await act(async () => {
+        await result.current.toggle(gesture.id);
+        await tick();
+      });
+    }
+    await waitFor(() => expect(result.current.items).toHaveLength(3));
+
+    const byIds = queryClient
+      .getQueryCache()
+      .findAll({ queryKey: [["gestures", "byIds"]] });
+    // Every tap made a new variant; only the one shown is kept.
+    expect(byIds).toHaveLength(1);
+    // Scoped to the guest, so a sign-in drops it (`purgeOtherUsers`).
+    expect(byIds[0]?.queryKey.at(-1)).toEqual({ user: null });
+  });
+
   test("with no favorites, has no items and calls nothing", async () => {
     const { server, render } = setup("signedOut");
     const { result } = await render();

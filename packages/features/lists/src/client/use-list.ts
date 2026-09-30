@@ -2,7 +2,6 @@ import { isDefinedError } from "@orpc/client";
 import { useAnalytics } from "@smog/analytics/react";
 import { useAuthState } from "@smog/auth/react";
 import {
-  addToList,
   deleteList,
   type GuestData,
   removeFromList,
@@ -22,12 +21,12 @@ import { z } from "zod";
 import {
   isExactSet,
   isLocalListId,
-  LIST_ITEMS_MAX,
   type ListDetail,
   listDescriptionSchema,
   listNameSchema,
 } from "../schema";
 import {
+  addLocalItem,
   editLocalList,
   fetchSummaries,
   invalidState,
@@ -193,17 +192,7 @@ export function useList(
   const addItem = useCallback(
     async (gestureId: string) => {
       if (local) {
-        await store.update((data) => {
-          const current = selectList(data, id);
-          if (
-            current &&
-            !current.gestureIds.includes(gestureId) &&
-            current.gestureIds.length >= LIST_ITEMS_MAX
-          ) {
-            throw invalidState(`At most ${LIST_ITEMS_MAX} items`);
-          }
-          return addToList(id, gestureId)(data);
-        });
+        await store.update(addLocalItem(id, gestureId));
       } else {
         try {
           await addRemote({ gestureId, id });

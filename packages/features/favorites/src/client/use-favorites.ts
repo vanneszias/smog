@@ -16,8 +16,10 @@ import {
   userScopedKey,
 } from "@smog/rpc/react";
 import {
+  hashKey,
   keepPreviousData,
   type Mutation,
+  type QueryKey,
   type QueryStatus,
   useInfiniteQuery,
   useMutation,
@@ -303,6 +305,17 @@ function useAccountFavorites(
   };
 }
 
+/** A guest favorites key: `gestures.byIds` pages scoped to the guest. */
+function isGuestPagesKey(queryKey: QueryKey): boolean {
+  const scope = queryKey.at(-1);
+  return (
+    typeof scope === "object" &&
+    scope !== null &&
+    "user" in scope &&
+    (scope as { user: unknown }).user === null
+  );
+}
+
 function selectFavorites(data: GuestData): string[] {
   return data.favorites;
 }
@@ -339,6 +352,16 @@ function useGuestFavorites(
   const order = useMemo(() => [...stored].reverse(), [stored]);
   const idSet = useMemo(() => new Set(order), [order]);
   const hasFavorites = order.length > 0;
+  const queryClient = useQueryClient();
+  // Scoped to the guest (`null`), so a sign-in drops it (`purgeOtherUsers`).
+  const queryKey = useMemo(
+    () =>
+      userScopedKey(
+        [...rpc.byIds.key({ type: "infinite" }), { ids: order }],
+        undefined
+      ),
+    [order, rpc]
+  );
 
   const list = useInfiniteQuery({
     enabled: enabled && withItems && ready && hasFavorites,
@@ -354,9 +377,23 @@ function useGuestFavorites(
         { ids: order.slice(pageParam, pageParam + GUEST_PAGE_SIZE) },
         { signal }
       ),
-    queryKey: [...rpc.byIds.key({ type: "infinite" }), { ids: order }],
+    queryKey,
     staleTime: FAVORITES_STALE_TIME,
   });
+
+  // Each change of the favorites is a new key: once it loaded, the earlier
+  // variants go, so they do not pile up in memory (or the mobile cache).
+  const loadedHash =
+    list.isSuccess && !list.isPlaceholderData ? hashKey(queryKey) : undefined;
+  useEffect(() => {
+    if (loadedHash !== undefined) {
+      queryClient.removeQueries({
+        predicate: (query) =>
+          query.queryHash !== loadedHash && isGuestPagesKey(query.queryKey),
+        queryKey: rpc.byIds.key({ type: "infinite" }),
+      });
+    }
+  }, [loadedHash, queryClient, rpc]);
 
   const toggle = useCallback(
     async (gestureId: string) => {

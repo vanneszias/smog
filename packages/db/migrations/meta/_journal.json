@@ -29,6 +29,13 @@
       "when": 1790703952561,
       "tag": "0003_favorite_user_created_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790733500480,
+      "tag": "0004_guest_import_guard",
+      "breakpoints": true
     }
   ]
 }

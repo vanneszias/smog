@@ -19,6 +19,7 @@ import {
 } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import Constants from "expo-constants";
+import { runtimeVersion, updateId } from "expo-updates";
 import { useColorScheme } from "nativewind";
 import {
   type ReactElement,
@@ -62,6 +63,15 @@ export function sessionHook(auth: ExpoAuthClient): () => SessionHookResult {
   return function useAppSession(): SessionHookResult {
     return auth.useSession();
   };
+}
+
+/** This bundle's cache buster: the app version and the OTA update. */
+export function appCacheBuster(): string {
+  return cacheBuster({
+    runtimeVersion,
+    updateId,
+    version: Constants.expoConfig?.version,
+  });
 }
 
 /** The app's clients: one each, for the whole app lifetime. */
@@ -135,7 +145,7 @@ export function AppProviders({
   const persistOptions = useMemo(
     () =>
       createPersistOptions({
-        buster: cacheBuster(Constants.expoConfig?.version),
+        buster: appCacheBuster(),
         storage: clients.cacheStorage,
       }),
     [clients.cacheStorage]
