@@ -254,7 +254,8 @@
       "title": "Pagina niet gevonden",
       "description": "Deze pagina bestaat niet (meer).",
       "action": "Naar de startpagina"
-    }
+    },
+    "actionFailed": "Dat lukte niet. Probeer het opnieuw."
   },
   "lists": {
     "ownerFallback": "een SMOG-gebruiker",
@@ -281,7 +282,59 @@
       "revoke": "Link intrekken",
       "revokeTitle": "Deze link intrekken?",
       "revokeDescription": "Wie de link heeft, verliest meteen de toegang. Je kunt later een nieuwe link maken.",
-      "revokeConfirm": "Intrekken"
+      "revokeConfirm": "Intrekken",
+      "title": "Lijst delen",
+      "description": "Maak een link om de lijst te bekijken of om ze samen te bewerken.",
+      "createView": "Link om te bekijken maken",
+      "createEdit": "Link om te bewerken maken",
+      "copied": "Link gekopieerd",
+      "copyFailed": "Kopiëren lukte niet. De link is {{url}}",
+      "signInTitle": "Meld je aan om te delen",
+      "signInDescription": "Een lijst delen kan met een account. Je lijsten op dit toestel gaan mee naar je account."
+    },
+    "description": "Groepeer gebaren voor een les, een thema of thuis.",
+    "itemCount_one": "{{count}} gebaar",
+    "itemCount_other": "{{count}} gebaren",
+    "all": "Alle lijsten",
+    "actions": "Acties voor de lijst",
+    "itemActions": "Acties voor {{name}}",
+    "nameLabel": "Naam",
+    "descriptionLabel": "Beschrijving",
+    "rename": "Bewerken",
+    "renameTitle": "Lijst bewerken",
+    "delete": "Lijst verwijderen",
+    "deleteTitle": "Deze lijst verwijderen?",
+    "deleteDescription": "“{{name}}” verdwijnt met alle gebaren erin. Dit kun je niet ongedaan maken.",
+    "moveUp": "Omhoog",
+    "moveDown": "Omlaag",
+    "removeItem": "Uit de lijst halen",
+    "added": "Toegevoegd aan “{{name}}”",
+    "removed": "Verwijderd uit “{{name}}”",
+    "select": {
+      "title": "Kies een lijst",
+      "description": "Selecteer een lijst om de gebaren erin te zien."
+    },
+    "notFound": {
+      "title": "Lijst niet gevonden",
+      "description": "Deze lijst bestaat niet (meer) of hoort bij een ander account."
+    },
+    "reorder": {
+      "instructions": "Druk op spatie of Enter om een gebaar op te pakken. Verplaats het met de pijltjestoetsen en druk opnieuw op spatie of Enter om het neer te zetten. Escape annuleert.",
+      "picked": "{{name}} opgepakt, positie {{position}} van {{total}}.",
+      "moved": "{{name}} verplaatst naar positie {{position}} van {{total}}.",
+      "dropped": "{{name}} neergezet op positie {{position}} van {{total}}.",
+      "cancelled": "Verplaatsen geannuleerd. {{name}} staat terug op positie {{position}}.",
+      "failed": "De nieuwe volgorde kon niet worden bewaard."
+    },
+    "shared": {
+      "by": "Gedeeld door {{owner}}",
+      "viewOnly": "Alleen bekijken",
+      "editable": "Bewerkbaar",
+      "signInToEdit": "Meld je aan om gebaren toe te voegen of te verwijderen.",
+      "add": "Gebaren toevoegen",
+      "addTitle": "Gebaren toevoegen aan “{{name}}”",
+      "addOne": "{{name}} toevoegen",
+      "inList": "In de lijst"
     }
   },
   "gesture": {
@@ -297,6 +350,20 @@
       "5": "Leer nooit de gebaren enkel vanuit deze filmpjes, maar volg een cursus of een initiatie.",
       "6": "Wil je meer weten over SMOG en het ontstaan? <course>Klik hier</course>.",
       "7": "Wil je meer weten over SMOG? Stuur een mail naar info@smog.vlaanderen"
+    },
+    "metaDescription": "Bekijk het SMOG-gebaar voor “{{name}}” in video.",
+    "description": "Beschrijving",
+    "keywords": "Verwante begrippen",
+    "related": "Verwante gebaren",
+    "sponsoredBy": "Dit gebaar wordt gesponsord door {{name}}.",
+    "actions": "Acties voor {{name}}",
+    "share": "Delen",
+    "linkCopied": "Link gekopieerd",
+    "copyFailed": "Kopiëren lukte niet. De link is {{url}}",
+    "qr": {
+      "open": "QR-code",
+      "title": "QR-code voor {{name}}",
+      "description": "Scan de code om dit gebaar te openen."
     }
   },
   "search": {
@@ -312,13 +379,19 @@
     "noResults": {
       "title": "Geen gebaren gevonden",
       "description": "Probeer een ander woord of minder categorieën."
-    }
+    },
+    "recent": "Recente zoekopdrachten",
+    "clearRecent": "Recente zoekopdrachten wissen",
+    "refine": "Verfijn je zoekopdracht om meer gebaren te zien.",
+    "clearFilters": "Filters wissen",
+    "browse": "Gebaren ontdekken"
   },
   "favorites": {
     "empty": {
       "title": "Nog geen favorieten",
       "description": "Tik op het hartje bij een gebaar om het hier snel terug te vinden."
-    }
+    },
+    "description": "De gebaren die je met een hartje hebt bewaard."
   },
   "kit": {
     "close": "Sluiten",
@@ -432,7 +505,13 @@
     "unlocked": "De ontwikkelaarstools staan aan."
   },
   "home": {
-    "tagline": "Leer gebaren in Vlaamse Gebarentaal, wanneer het jou past."
+    "tagline": "Leer gebaren in Vlaamse Gebarentaal, wanneer het jou past.",
+    "title": "Gebaren die je spraak ondersteunen",
+    "description": "Leer SMOG-gebaren met korte video's. Zoek een gebaar, bewaar je favorieten en maak lijsten voor je les.",
+    "searchLabel": "Zoek een gebaar",
+    "searchPlaceholder": "Zoek een gebaar, bijvoorbeeld hond",
+    "featured": "Ontdek gebaren",
+    "browseAll": "Alle gebaren bekijken"
   },
   "footer": {
     "madeBy": "Gemaakt met ♡ door zias.be"
@@ -446,5 +525,12 @@
     "title": "Instellingen",
     "preferences": "Voorkeuren",
     "about": "Over de app"
+  },
+  "gestures": {
+    "description": "Zoek SMOG-gebaren op woord of categorie en bekijk ze in video.",
+    "select": {
+      "title": "Kies een gebaar",
+      "description": "Selecteer een gebaar in de lijst om de video en de details te bekijken."
+    }
   }
 }

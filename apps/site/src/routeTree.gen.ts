@@ -11,16 +11,23 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
+import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as MagicLinkRouteImport } from './routes/magic-link'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DevMailRouteImport } from './routes/dev/mail'
 import { Route as DevMailDotjsonRouteImport } from './routes/dev/mail[.]json'
 import { Route as DevUiRouteImport } from './routes/dev/ui'
+import { Route as GesturesIndexRouteImport } from './routes/gestures/index'
+import { Route as GesturesSlugRouteImport } from './routes/gestures/$slug'
+import { Route as ListsIndexRouteImport } from './routes/lists/index'
+import { Route as ListsShareTokenRouteImport } from './routes/lists/$shareToken'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
@@ -33,6 +40,11 @@ const IndexRoute = IndexRouteImport.update({
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FavoritesRoute = FavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -50,6 +62,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
@@ -58,6 +75,11 @@ const SignInRoute = SignInRouteImport.update({
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -85,6 +107,26 @@ const DevUiRoute = DevUiRouteImport.update({
   path: '/dev/ui',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GesturesIndexRoute = GesturesIndexRouteImport.update({
+  id: '/gestures/',
+  path: '/gestures/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GesturesSlugRoute = GesturesSlugRouteImport.update({
+  id: '/gestures/$slug',
+  path: '/gestures/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListsIndexRoute = ListsIndexRouteImport.update({
+  id: '/lists/',
+  path: '/lists/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListsShareTokenRoute = ListsShareTokenRouteImport.update({
+  id: '/lists/$shareToken',
+  path: '/lists/$shareToken',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -104,16 +146,23 @@ const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
+  '/gestures/$slug': typeof GesturesSlugRoute
+  '/lists/$shareToken': typeof ListsShareTokenRoute
+  '/gestures/': typeof GesturesIndexRoute
+  '/lists/': typeof ListsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
@@ -121,16 +170,23 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
+  '/gestures/$slug': typeof GesturesSlugRoute
+  '/lists/$shareToken': typeof ListsShareTokenRoute
+  '/gestures': typeof GesturesIndexRoute
+  '/lists': typeof ListsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
@@ -139,16 +195,23 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
+  '/gestures/$slug': typeof GesturesSlugRoute
+  '/lists/$shareToken': typeof ListsShareTokenRoute
+  '/gestures/': typeof GesturesIndexRoute
+  '/lists/': typeof ListsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
@@ -158,16 +221,23 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/favorites'
     | '/forgot-password'
     | '/magic-link'
     | '/reset-password'
+    | '/robots.txt'
     | '/sign-in'
     | '/sign-up'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/api/health'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
+    | '/gestures/$slug'
+    | '/lists/$shareToken'
+    | '/gestures/'
+    | '/lists/'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
@@ -175,16 +245,23 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
+    | '/favorites'
     | '/forgot-password'
     | '/magic-link'
     | '/reset-password'
+    | '/robots.txt'
     | '/sign-in'
     | '/sign-up'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/api/health'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
+    | '/gestures/$slug'
+    | '/lists/$shareToken'
+    | '/gestures'
+    | '/lists'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
@@ -192,16 +269,23 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/account'
+    | '/favorites'
     | '/forgot-password'
     | '/magic-link'
     | '/reset-password'
+    | '/robots.txt'
     | '/sign-in'
     | '/sign-up'
+    | '/sitemap.xml'
     | '/verify-email'
     | '/api/health'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
+    | '/gestures/$slug'
+    | '/lists/$shareToken'
+    | '/gestures/'
+    | '/lists/'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
@@ -210,16 +294,23 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  FavoritesRoute: typeof FavoritesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   MagicLinkRoute: typeof MagicLinkRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiHealthRoute: typeof ApiHealthRoute
   DevMailRoute: typeof DevMailRoute
   DevMailDotjsonRoute: typeof DevMailDotjsonRoute
   DevUiRoute: typeof DevUiRoute
+  GesturesSlugRoute: typeof GesturesSlugRoute
+  ListsShareTokenRoute: typeof ListsShareTokenRoute
+  GesturesIndexRoute: typeof GesturesIndexRoute
+  ListsIndexRoute: typeof ListsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
@@ -239,6 +330,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/favorites': {
+      id: '/favorites'
+      path: '/favorites'
+      fullPath: '/favorites'
+      preLoaderRoute: typeof FavoritesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -262,6 +360,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-in': {
       id: '/sign-in'
       path: '/sign-in'
@@ -274,6 +379,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-up'
       fullPath: '/sign-up'
       preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verify-email': {
@@ -311,6 +423,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevUiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gestures/': {
+      id: '/gestures/'
+      path: '/gestures'
+      fullPath: '/gestures/'
+      preLoaderRoute: typeof GesturesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gestures/$slug': {
+      id: '/gestures/$slug'
+      path: '/gestures/$slug'
+      fullPath: '/gestures/$slug'
+      preLoaderRoute: typeof GesturesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lists/': {
+      id: '/lists/'
+      path: '/lists'
+      fullPath: '/lists/'
+      preLoaderRoute: typeof ListsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lists/$shareToken': {
+      id: '/lists/$shareToken'
+      path: '/lists/$shareToken'
+      fullPath: '/lists/$shareToken'
+      preLoaderRoute: typeof ListsShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -338,16 +478,23 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  FavoritesRoute: FavoritesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   MagicLinkRoute: MagicLinkRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ApiHealthRoute: ApiHealthRoute,
   DevMailRoute: DevMailRoute,
   DevMailDotjsonRoute: DevMailDotjsonRoute,
   DevUiRoute: DevUiRoute,
+  GesturesSlugRoute: GesturesSlugRoute,
+  ListsShareTokenRoute: ListsShareTokenRoute,
+  GesturesIndexRoute: GesturesIndexRoute,
+  ListsIndexRoute: ListsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,

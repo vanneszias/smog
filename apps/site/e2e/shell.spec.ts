@@ -3,6 +3,7 @@ import {
   blockingViolations,
   ORIGIN,
   signInWithApi,
+  stubMux,
   watchErrors,
 } from "./helpers";
 
@@ -12,7 +13,12 @@ const THEMES = ["light", "dark"] as const;
 const DARK = /\bdark\b/;
 
 const PAGES = [
-  { heading: "SMOG & Co", name: "home", path: "/", signedIn: false },
+  {
+    heading: "Gebaren die je spraak ondersteunen",
+    name: "home",
+    path: "/",
+    signedIn: false,
+  },
   {
     heading: "Aanmelden of registreren",
     name: "sign-in",
@@ -29,6 +35,11 @@ async function setTheme(page: Page, theme: string): Promise<void> {
 }
 
 test.describe("app shell", () => {
+  // The home page shows featured gestures: answer their Mux stills locally.
+  test.beforeEach(async ({ page }) => {
+    await stubMux(page);
+  });
+
   for (const { heading, name, path, signedIn } of PAGES) {
     for (const width of WIDTHS) {
       test(`${name} at ${width}px in light and dark`, async ({ page }) => {

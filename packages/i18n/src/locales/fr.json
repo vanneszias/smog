@@ -257,7 +257,8 @@
       "title": "Page introuvable",
       "description": "Cette page n'existe pas (ou plus).",
       "action": "Aller à l'accueil"
-    }
+    },
+    "actionFailed": "Cela n'a pas fonctionné. Réessayez."
   },
   "lists": {
     "ownerFallback": "un utilisateur de SMOG",
@@ -282,9 +283,62 @@
       "linkLabel": "Lien",
       "copyLink": "Copier le lien",
       "revoke": "Révoquer le lien",
-      "revokeTitle": "Révoquer ce lien ?",
+      "revokeTitle": "Révoquer ce lien\u202f?",
       "revokeDescription": "Les personnes qui ont le lien perdent l'accès immédiatement. Vous pourrez créer un nouveau lien plus tard.",
-      "revokeConfirm": "Révoquer"
+      "revokeConfirm": "Révoquer",
+      "title": "Partager la liste",
+      "description": "Créez un lien pour consulter la liste ou pour la modifier ensemble.",
+      "createView": "Créer un lien de consultation",
+      "createEdit": "Créer un lien de modification",
+      "copied": "Lien copié",
+      "copyFailed": "La copie n'a pas fonctionné. Le lien est {{url}}",
+      "signInTitle": "Connectez-vous pour partager",
+      "signInDescription": "Partager une liste nécessite un compte. Vos listes sur cet appareil suivent dans votre compte."
+    },
+    "description": "Regroupez des gestes pour un cours, un thème ou à la maison.",
+    "itemCount_one": "{{count}} geste",
+    "itemCount_many": "{{count}} gestes",
+    "itemCount_other": "{{count}} gestes",
+    "all": "Toutes les listes",
+    "actions": "Actions de la liste",
+    "itemActions": "Actions pour {{name}}",
+    "nameLabel": "Nom",
+    "descriptionLabel": "Description",
+    "rename": "Modifier",
+    "renameTitle": "Modifier la liste",
+    "delete": "Supprimer la liste",
+    "deleteTitle": "Supprimer cette liste\u202f?",
+    "deleteDescription": "« {{name}} » disparaît avec tous ses gestes. Cette action est définitive.",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "removeItem": "Retirer de la liste",
+    "added": "Ajouté à « {{name}} »",
+    "removed": "Retiré de « {{name}} »",
+    "select": {
+      "title": "Choisissez une liste",
+      "description": "Sélectionnez une liste pour voir ses gestes."
+    },
+    "notFound": {
+      "title": "Liste introuvable",
+      "description": "Cette liste n'existe pas (ou plus) ou appartient à un autre compte."
+    },
+    "reorder": {
+      "instructions": "Appuyez sur espace ou Entrée pour saisir un geste. Déplacez-le avec les flèches et appuyez de nouveau sur espace ou Entrée pour le déposer. Échap annule.",
+      "picked": "{{name}} saisi, position {{position}} sur {{total}}.",
+      "moved": "{{name}} déplacé en position {{position}} sur {{total}}.",
+      "dropped": "{{name}} déposé en position {{position}} sur {{total}}.",
+      "cancelled": "Déplacement annulé. {{name}} est revenu en position {{position}}.",
+      "failed": "Le nouvel ordre n'a pas pu être enregistré."
+    },
+    "shared": {
+      "by": "Partagée par {{owner}}",
+      "viewOnly": "Consultation seule",
+      "editable": "Modifiable",
+      "signInToEdit": "Connectez-vous pour ajouter ou retirer des gestes.",
+      "add": "Ajouter des gestes",
+      "addTitle": "Ajouter des gestes à « {{name}} »",
+      "addOne": "Ajouter {{name}}",
+      "inList": "Dans la liste"
     }
   },
   "gesture": {
@@ -300,6 +354,20 @@
       "5": "N'apprenez jamais les gestes uniquement à partir de ces vidéos, mais suivez un cours ou une initiation.",
       "6": "Pour en savoir plus sur SMOG et son origine, <course>cliquez ici</course>.",
       "7": "Pour en savoir plus sur SMOG, envoyez un e-mail à info@smog.vlaanderen"
+    },
+    "metaDescription": "Regardez le geste SMOG pour « {{name}} » en vidéo.",
+    "description": "Description",
+    "keywords": "Notions liées",
+    "related": "Gestes liés",
+    "sponsoredBy": "Ce geste est parrainé par {{name}}.",
+    "actions": "Actions pour {{name}}",
+    "share": "Partager",
+    "linkCopied": "Lien copié",
+    "copyFailed": "La copie n'a pas fonctionné. Le lien est {{url}}",
+    "qr": {
+      "open": "Code QR",
+      "title": "Code QR pour {{name}}",
+      "description": "Scannez le code pour ouvrir ce geste."
     }
   },
   "search": {
@@ -316,13 +384,19 @@
     "noResults": {
       "title": "Aucun geste trouvé",
       "description": "Essayez un autre mot ou moins de catégories."
-    }
+    },
+    "recent": "Recherches récentes",
+    "clearRecent": "Effacer les recherches récentes",
+    "refine": "Affinez votre recherche pour voir plus de gestes.",
+    "clearFilters": "Effacer les filtres",
+    "browse": "Découvrir des gestes"
   },
   "favorites": {
     "empty": {
       "title": "Pas encore de favoris",
       "description": "Touchez le cœur d'un geste pour le retrouver vite ici."
-    }
+    },
+    "description": "Les gestes que vous avez gardés avec un cœur."
   },
   "kit": {
     "close": "Fermer",
@@ -437,7 +511,13 @@
     "unlocked": "Les outils de développement sont activés."
   },
   "home": {
-    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient."
+    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient.",
+    "title": "Des gestes qui soutiennent la parole",
+    "description": "Apprenez les gestes SMOG avec de courtes vidéos. Cherchez un geste, gardez vos favoris et créez des listes pour vos cours.",
+    "searchLabel": "Chercher un geste",
+    "searchPlaceholder": "Cherchez un geste, par exemple chien",
+    "featured": "Découvrir des gestes",
+    "browseAll": "Voir tous les gestes"
   },
   "footer": {
     "madeBy": "Fait avec ♡ par zias.be"
@@ -451,5 +531,12 @@
     "title": "Paramètres",
     "preferences": "Préférences",
     "about": "À propos de l'app"
+  },
+  "gestures": {
+    "description": "Cherchez les gestes SMOG par mot ou par catégorie et regardez-les en vidéo.",
+    "select": {
+      "title": "Choisissez un geste",
+      "description": "Sélectionnez un geste dans la liste pour voir sa vidéo et ses détails."
+    }
   }
 }
