@@ -14,7 +14,7 @@
 
 import { escapeHtml } from "@smog/utils";
 
-export const SCALAR_VERSION = "1.72.2";
+const SCALAR_VERSION = "1.72.2";
 export const SCALAR_SCRIPT_URL = `https://cdn.jsdelivr.net/npm/@scalar/api-reference@${SCALAR_VERSION}/dist/browser/standalone.js`;
 export const SCALAR_SCRIPT_INTEGRITY =
   "sha384-mc6GgHVwdYe1ZSU5XmJBa2pe6QzCRDSd0Pk8TqiqM7iiAOFMKtpBTOOa2RZDHkYN";
@@ -46,7 +46,7 @@ const REFERENCE_CONFIG = {
  * The page's own CSP. Scalar injects its styles at runtime (inline
  * `<style>`), and draws some icons and the logo as `data:` images.
  */
-export function openApiReferenceCsp(): string {
+function openApiReferenceCsp(): string {
   return [
     "default-src 'none'",
     `script-src 'self' ${SCALAR_SCRIPT_URL}`,

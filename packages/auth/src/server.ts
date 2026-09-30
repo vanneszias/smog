@@ -191,7 +191,7 @@ function badRequest(code: string, message: string): APIError {
  * refused. Server-side creates (no endpoint: the seed, the migration) are
  * trusted.
  */
-export function newUserProfile(
+function newUserProfile(
   data: { image?: string | null | undefined; name?: string | undefined },
   path: string | undefined
 ): { image?: null; name: string } {

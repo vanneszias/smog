@@ -3,13 +3,13 @@ import { readDevMail, type StoredEmail } from "@smog/email";
 
 export const ORIGIN = "http://localhost:5173";
 
-export type DevMailMessage = StoredEmail;
+type DevMailMessage = StoredEmail;
 
 /**
  * The dev mailbox now (what `/dev/mail.json` shows), read from KV so it
  * works while maintenance answers `/dev/*` with a 503.
  */
-export async function readMailbox(): Promise<DevMailMessage[]> {
+async function readMailbox(): Promise<DevMailMessage[]> {
   if (!env.KV) {
     throw new Error("[test] The KV binding is missing");
   }
