@@ -24,14 +24,14 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - 2026-09-29: Phase 0 done. Orphan `develop` branch created. Analysis reports, inventory, spec, DECISIONS and the phase 1 plan committed.
 - 2026-09-29: Phase 1 done. Root tooling, `@smog/config` + boundaries, `apps/site` (TanStack Start on Workers, guarded deploy), `apps/mobile` (Expo SDK 57, NativeWind 4), release gate (`bun run release:check` green with `SMOG_OFFLINE=1` here), `ci.yml` and `deploy.yml`.
 - 2026-09-29: Phase 2 tasks 1–8 merged (db, auth, email core, rpc/api, local-store, styles/brand, i18n, ui-web + /dev/ui, ui-native + gallery). Phase 3 task 1 (gestures) merged.
+- 2026-09-30: Phase 3 tasks 5 and 7 merged; phase 4 plan written, task 1 merged.
 - 2026-09-29: Phase 2 review fix wave: CSRF origin check on `/api/rpc` + `/api/openapi`, `/dev/ui` back in staging, shared test preload / cursor error / user-scoped query keys, `admin:grant`, fr typography test, stale docs.
 
 ## Next
 
 - Phase 2: done. All 9 tasks are merged, and the phase review fix wave (rpc CSRF origin check, /dev/ui staging gate, shared helpers, admin:grant) is on develop.
-- Phase 3: tasks 1–4 are merged (gestures, favorites, lists, guest import).
-  - Task 5 (domain components, both kits) is in progress in a worktree.
-  - Tasks 6 (site learning pages) and 7 (mobile learning screens and offline cache) are next.
+- Phase 3: tasks 1–5 and 7 are merged (gestures, favorites, lists, guest import, domain components, mobile screens + offline cache). Task 6 (site learning pages) is in review. Then the phase 3 review and fix wave.
+- Phase 4: the plan is written; task 1 (account profile, consent, export, deletion) is merged; task 2 (analytics) is in its fix round.
 - Carry into the phase 4 plan: a native Turnstile widget (WebView), so mobile email sign-in works with captcha on; magic link on mobile via a universal link; a CSP with a hash for the theme pre-paint script; the `/api/analytics` relay must reject foreign origins with `isForeignRequest` from `@smog/rpc` (spec §7, §12), like `/api/rpc`.
 - Carry into the phase 5 plan: admin gesture and category writes must set `sort_name`, reindex FTS and call `bumpCatalogVersion`; gesture name ≤ 120.
 - Carry into phase 3 tasks 6–7: prefetch in SSR loaders with `createRouterClient(appRouter, { context })`, not an HTTP subrequest to `SITE_URL` (phase 2 review M5).
