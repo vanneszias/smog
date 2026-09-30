@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { signInWithApi, watchErrors } from "./helpers";
+import { signInWithApi, stubMux, watchErrors } from "./helpers";
 
 /** A guest's device data (local-store v2) with one favorite no catalogue has. */
 const GUEST_DATA = {
@@ -15,6 +15,8 @@ test("offers the guest import after sign-in and shows the result", async ({
   page,
 }) => {
   const errors = watchErrors(page);
+  // The home page shows featured gestures (Mux stills).
+  await stubMux(page);
   await page.addInitScript((data) => {
     localStorage.setItem("smog:guest:v1", data);
   }, JSON.stringify(GUEST_DATA));

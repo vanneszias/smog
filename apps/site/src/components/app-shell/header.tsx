@@ -8,18 +8,13 @@ import {
   Text,
   TextLink,
 } from "@smog/ui-web";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Menu as MenuIcon, Search } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useCallback } from "react";
 import { LanguageControl, LanguageMenu } from "./language-menu";
 import { MainNav, MainNavList } from "./nav";
 import { ThemeControl, ThemeMenu } from "./theme-menu";
 import { UserMenu } from "./user-menu";
-
-/** Search lives on /gestures (phase 3), a full page load for now. */
-function openSearch(): void {
-  window.location.assign("/gestures");
-}
 
 /**
  * The site header: logo, sections, search, language, theme and the account
@@ -27,6 +22,13 @@ function openSearch(): void {
  */
 export function Header(): ReactNode {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  // Search lives on /gestures.
+  const openSearch = useCallback((): void => {
+    navigate({ to: "/gestures" }).catch((error: unknown) => {
+      console.error("[header] Failed to open the search:", error);
+    });
+  }, [navigate]);
   return (
     <header className="sticky top-0 z-40 border-border-subtle border-b bg-background">
       <div className="mx-auto flex h-16 w-full max-w-content items-center gap-2 px-4 md:px-6 lg:px-8">

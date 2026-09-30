@@ -133,3 +133,17 @@ export async function waitForHydration(page: Page): Promise<void> {
     );
   });
 }
+
+/**
+ * A server-rendered page reacts to clicks and typing only once React has
+ * hydrated it; React tags hydrated elements with its fiber key.
+ */
+export async function waitForApp(page: Page): Promise<void> {
+  await page.waitForFunction(() => {
+    const main = document.getElementById("main");
+    return (
+      main !== null &&
+      Object.keys(main).some((key) => key.startsWith("__reactFiber"))
+    );
+  });
+}

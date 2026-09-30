@@ -8,6 +8,7 @@
 export {
   BY_IDS_CHUNK,
   LISTS_STALE_TIME,
+  type ListsQueryUtils,
   type ListsSlice,
   SHARED_LIST_STALE_TIME,
 } from "./slice";
@@ -24,4 +25,8 @@ export {
   type UseShareLinksResult,
   useShareLinks,
 } from "./use-share-links";
-export { type UseSharedListResult, useSharedList } from "./use-shared-list";
+export {
+  sharedListOptions,
+  type UseSharedListResult,
+  useSharedList,
+} from "./use-shared-list";

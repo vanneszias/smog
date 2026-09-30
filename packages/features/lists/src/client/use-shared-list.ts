@@ -6,11 +6,25 @@ import { useCallback } from "react";
 import type { SharedList } from "../schema";
 import {
   type ListItemOptions,
+  type ListsQueryUtils,
   SHARED_LIST_STALE_TIME,
   trackListItem,
   useListsRpc,
 } from "./slice";
 import { type ListsStatus, queryStatus } from "./use-lists";
+
+/**
+ * The shared list's query options, for the hook and for SSR prefetches
+ * (`ensureQueryData(sharedListOptions(utils.lists, token))`), so both build
+ * the same key. A defined error (`NOT_FOUND`) is not retried.
+ */
+export function sharedListOptions(utils: ListsQueryUtils, token: string) {
+  return utils.shared.get.queryOptions({
+    input: { token },
+    retry: (count, error) => !isDefinedError(error) && count < 2,
+    staleTime: SHARED_LIST_STALE_TIME,
+  });
+}
 
 export interface UseSharedListResult {
   /** Adds through the edit link (needs `canEdit`). */
@@ -40,13 +54,7 @@ export function useSharedList(
   const signedIn = auth.status === "signedIn";
   const rpc = useListsRpc();
   const queryClient = useQueryClient();
-  const shared = useQuery(
-    rpc.shared.get.queryOptions({
-      input: { token },
-      retry: (count, error) => !isDefinedError(error) && count < 2,
-      staleTime: SHARED_LIST_STALE_TIME,
-    })
-  );
+  const shared = useQuery(sharedListOptions(rpc, token));
   const { mutateAsync: addRemote } = useMutation(
     rpc.shared.addItem.mutationOptions()
   );
