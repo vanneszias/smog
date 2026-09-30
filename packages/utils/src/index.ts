@@ -6,6 +6,7 @@ export {
   encodeCursor,
   InvalidCursorError,
 } from "./cursor";
+export { escapeHtml } from "./html";
 export { newId, newToken, sha256Hex } from "./ids";
 export {
   createNearEndTracker,

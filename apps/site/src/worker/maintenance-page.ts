@@ -1,6 +1,7 @@
 import { handSvgs, logoSvg } from "@smog/brand/svg";
 import { createI18n, formatDate, type Locale, resolveLocale } from "@smog/i18n";
 import { tokens } from "@smog/styles/tokens";
+import { escapeHtml } from "@smog/utils";
 import { parseCookie } from "cookie-es";
 import {
   LOCALE_COOKIE,
@@ -22,19 +23,6 @@ import { retryAfterSeconds } from "./maintenance";
 const { dark, light } = tokens.color;
 const { radius } = tokens;
 const FONT = tokens.fontFamily.web.join(", ");
-
-const ESCAPES: Record<string, string> = {
-  "'": "&#39;",
-  '"': "&quot;",
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-};
-const ESCAPED = /[&<>"']/g;
-
-function escapeHtml(value: string): string {
-  return value.replace(ESCAPED, (char) => ESCAPES[char] ?? char);
-}
 
 function palette(colors: typeof light | typeof dark): string {
   return [

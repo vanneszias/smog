@@ -270,6 +270,8 @@ describe("sitemap.xml and robots.txt", () => {
     expect(body).toContain("<urlset");
     expect(body).toContain(`<loc>${ORIGIN}/</loc>`);
     expect(body).toContain(`<loc>${ORIGIN}/gestures</loc>`);
+    expect(body).toContain(`<loc>${ORIGIN}/privacy</loc>`);
+    expect(body).toContain(`<loc>${ORIGIN}/terms</loc>`);
     expect(body).toContain(`<loc>${ORIGIN}/gestures/hond</loc>`);
     expect(body).toContain(`<loc>${ORIGIN}/gestures/koffie</loc>`);
     expect(body).not.toContain("geheim");
