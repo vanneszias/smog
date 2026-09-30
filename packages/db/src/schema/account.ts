@@ -74,8 +74,10 @@ export const auditLog = sqliteTable(
  * `(user_id, seq + 1)`, where `seq` is what its read batch saw. Two
  * imports planned from the same read cannot both insert it (the primary
  * key aborts the second batch, which re-reads and plans again), so a
- * concurrent import never creates a second same-name list. Only the
- * newest row is kept; nothing here is personal data beyond the user id.
+ * concurrent import never creates a second same-name list. Every row is
+ * kept (one per import, gone with the account): deleting older ones would
+ * let a stale import insert a freed `seq`. Nothing here is personal data
+ * beyond the user id.
  */
 export const guestImport = sqliteTable(
   "guest_import",

@@ -58,6 +58,8 @@ interface Server {
   /** When set, `containing` waits for it. */
   holdContaining?: Promise<void>;
   lists: Map<string, ListDetail>;
+  /** Gestures `shared.addItem` finds already in the list (`added: false`). */
+  sharedPresent?: Set<string>;
   shares: Map<string, { role: ShareRole; token: string }[]>;
   tokens: number;
   /** Who calls (`mine` answers that user's lists); lists default to user-1. */
@@ -233,9 +235,10 @@ function fakeApi(server: Server) {
         }),
       },
       shared: {
-        addItem: os.lists.shared.addItem.handler(({ input }) => {
+        addItem: os.lists.shared.addItem.handler(async ({ input }) => {
           server.calls.push(`shared.addItem:${input.gestureId}`);
-          return { added: true };
+          await delay(10);
+          return { added: !server.sharedPresent?.has(input.gestureId) };
         }),
         get: os.lists.shared.get.handler(({ errors, input }) => {
           server.calls.push("shared.get");
@@ -890,6 +893,8 @@ describe("useListMembership", () => {
     // The picker shows the lists (from `mine`) before `containing` answers.
     await waitFor(() => expect(result.current.lists).toHaveLength(1));
     expect(result.current.status).toBe("loading");
+    // Not a guessed "unchecked": busy until `containing` says.
+    expect(result.current.lists[0]).toMatchObject({ pending: true });
 
     let tap: Promise<unknown> | undefined;
     act(() => {
@@ -1000,6 +1005,34 @@ describe("useSharedList", () => {
     // The invalidation refetches the shared list; let it settle.
     await waitFor(() => expect(edit.result.current.status).toBe("ready"));
     edit.unmount();
+  });
+
+  test("addItem reports and tracks only a real add, once per tap burst", async () => {
+    const { events, server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    server.shares.set("srv-1", [{ role: "edit", token: "edit-token" }]);
+    server.sharedPresent = new Set([HOND.id]);
+    const { result } = renderHook(() => useSharedList("edit-token"), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.canEdit).toBe(true));
+
+    let first: Promise<boolean> | undefined;
+    let second: Promise<boolean> | undefined;
+    await act(async () => {
+      // A double tap: the second is ignored while the first is in flight.
+      first = result.current.addItem(KAT.id);
+      second = result.current.addItem(KAT.id);
+      expect(await first).toBe(true);
+      expect(await second).toBe(false);
+      // Already in the list (someone else added it): no event, `false`.
+      expect(await result.current.addItem(HOND.id)).toBe(false);
+    });
+    expect(
+      server.calls.filter((call) => call.startsWith("shared.addItem"))
+    ).toEqual([`shared.addItem:${KAT.id}`, `shared.addItem:${HOND.id}`]);
+    expect(events).toEqual([listChanged("added", KAT.id)]);
+    await waitFor(() => expect(result.current.status).toBe("ready"));
   });
 
   test("a prefetch with sharedListOptions is what the hook reads (SSR)", async () => {

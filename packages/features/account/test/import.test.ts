@@ -448,6 +448,27 @@ describe("importGuestData: concurrency", () => {
     expect(await storedFavorites(owner.id)).toEqual([aap]);
   });
 
+  it("stays guarded when two more imports land between one's read and write", async () => {
+    const owner = await addUser();
+    const [aap] = await addGestures(["Aap"]);
+    const data = input({
+      lists: [{ gestureIds: [aap as string], name: "Dieren" }],
+    });
+    // B writes with a stale read after A (same read) and C (a later read).
+    const racing = raceBeforeWrite(testDb(), async () => {
+      await run(owner.id, data);
+      await run(owner.id, input({}));
+    });
+
+    const result = await run(owner.id, data, NOW, racing);
+
+    const lists = await storedLists(owner.id);
+    expect(lists.map((list) => [list.name, list.items])).toEqual([
+      ["Dieren", [aap]],
+    ]);
+    expect(result).toMatchObject({ listsCreated: 0, listsMerged: 1 });
+  });
+
   it("two imports started together give one list per name", async () => {
     const owner = await addUser();
     const [aap] = await addGestures(["Aap"]);

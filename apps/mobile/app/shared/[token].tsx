@@ -75,11 +75,14 @@ export default function SharedListScreen(): ReactElement {
   const add = useCallback(
     (gestureId: string) => {
       addItem(gestureId)
-        .then(() => {
-          toast({
-            title: t("lists.addedTo", { name: listName }),
-            variant: "success",
-          });
+        .then((added) => {
+          // Nothing to say when it was there already, or a double tap.
+          if (added) {
+            toast({
+              title: t("lists.addedTo", { name: listName }),
+              variant: "success",
+            });
+          }
         })
         .catch((error: unknown) => {
           console.error("[lists] Failed to add to a shared list:", error);

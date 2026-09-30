@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "@jest/globals";
+import { afterEach, describe, expect, it, jest } from "@jest/globals";
 import { createApiClient, createApiQueryUtils } from "@smog/api/client";
 import { purgeOtherUsers, userScopedKey } from "@smog/rpc/react";
 import { QueryClient } from "@tanstack/react-query";
@@ -333,6 +333,57 @@ describe("the offline query cache", () => {
     expect(stored.length).toBeLessThanOrEqual(4000);
     expect(stored).not.toContain("groot");
     expect(stored).toContain('"hond"');
+  });
+
+  it("trims an oversized cache in one pass, not one full serialization per query", async () => {
+    const storage = memoryStorage();
+    const source = newClient();
+    fillCache(source);
+    // A day of browsing: 60 old gesture pages, 1 kB each.
+    for (let index = 0; index < 60; index += 1) {
+      const slug = `oud-${index}`;
+      source.setQueryData(
+        rpc.gestures.bySlug.queryKey({ input: { slug } }),
+        {
+          ...HOND,
+          canonicalSlug: slug,
+          description: "x".repeat(1000),
+          keywords: [],
+          publishedAt: 0,
+          slug,
+          sponsor: null,
+          updatedAt: 0,
+        },
+        { updatedAt: index + 1 }
+      );
+    }
+    const stringify = jest.spyOn(JSON, "stringify");
+    try {
+      await persistQueryClientSave({
+        queryClient: source,
+        ...createPersistOptions({
+          buster: "v1",
+          maxBytes: 8000,
+          storage,
+          throttleTime: 0,
+        }),
+      });
+      await waitForWrite(storage);
+      // Full-cache serializations only (the one-pass trim sizes each query once).
+      const whole = stringify.mock.calls.filter(
+        ([value]) =>
+          typeof value === "object" && value !== null && "clientState" in value
+      );
+      expect(whole.length).toBeLessThanOrEqual(3);
+    } finally {
+      stringify.mockRestore();
+    }
+    const stored = storage.map.get(QUERY_CACHE_KEY) ?? "";
+    expect(new TextEncoder().encode(stored).length).toBeLessThanOrEqual(8000);
+    // The newest are kept, the oldest go.
+    expect(stored).toContain('"hond"');
+    expect(stored).toContain("oud-59");
+    expect(stored).not.toContain('"oud-0"');
   });
 
   it("keeps the persisted procedures in memory for as long as on disk", () => {

@@ -238,15 +238,18 @@ export function useListMembership(
     [analytics, apply, create, gestureId, setInFlight, source]
   );
 
+  // Signed in, "contains" is unknown until `containing` answers: every entry
+  // is busy then, rather than a guessed "unchecked".
+  const unknown = signedIn && containing.data === undefined;
   const entries = useMemo(
     () =>
       lists.map((list) => ({
         contains: pending.get(list.id) ?? serverIds.includes(list.id),
         id: list.id,
         name: list.name,
-        pending: pending.has(list.id),
+        pending: unknown || pending.has(list.id),
       })),
-    [lists, pending, serverIds]
+    [lists, pending, serverIds, unknown]
   );
 
   let status: ListsStatus = listsStatus;

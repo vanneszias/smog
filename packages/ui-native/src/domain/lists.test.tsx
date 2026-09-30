@@ -31,6 +31,20 @@ describe("ListPicker", () => {
     expect(onToggle).toHaveBeenCalledWith("l2");
   });
 
+  it("a pending list's checkbox is disabled (its state is not known yet)", async () => {
+    await renderKit(
+      <ListPicker
+        lists={[
+          { contains: false, id: "l1", name: "At school", pending: true },
+        ]}
+        onCreate={noop}
+        onToggle={noop}
+        open
+      />
+    );
+    expect(screen.getByRole("checkbox", { name: "At school" })).toBeDisabled();
+  });
+
   it("creates a list from the trimmed name and clears the field", async () => {
     const onCreate = jest.fn();
     await renderKit(

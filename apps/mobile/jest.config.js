@@ -13,7 +13,7 @@ module.exports = {
   // The first test of a route-rendering suite pays the cold require of every
   // route module (under 1 s alone); with the whole turbo test run in
   // parallel on a loaded machine that passed Jest's 5 s default.
-  testTimeout: 20_000,
+  testTimeout: 10_000,
   // oRPC and lucide ship ES modules only (`.mjs`), which jest-expo's
   // `\.[jt]sx?$` transform does not cover. Merged with the preset's transforms.
   transform: {

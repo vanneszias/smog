@@ -17,7 +17,7 @@ import { consentEvent, gesture, guestImport, list } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { LISTS_MAX } from "@smog/lists/schema";
 import { newId } from "@smog/utils";
-import { and, desc, eq, isNotNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import type { RunnableQuery } from "drizzle-orm/runnable-query";
 import type {
   ImportGuestData,
@@ -78,10 +78,8 @@ const IMPORT_ATTEMPTS = 3;
 /** Whether `error` (or its cause) is the `guest_import` guard's conflict. */
 function isGuardConflict(error: unknown): boolean {
   for (let current = error; current instanceof Error; ) {
-    if (
-      current.message.includes("UNIQUE constraint failed: guest_import") ||
-      current.message.includes("SQLITE_CONSTRAINT_PRIMARYKEY")
-    ) {
+    // Only the guard's key: any other constraint failure is a real error.
+    if (current.message.includes("UNIQUE constraint failed: guest_import")) {
       return true;
     }
     current = current.cause;
@@ -284,13 +282,11 @@ async function importOnce(
     ? Math.min(input.consent.decidedAt, now.getTime())
     : undefined;
 
-  const [, , favorites, created, appended, , unplaced] = await db.batch([
+  const [, favorites, created, appended, , unplaced] = await db.batch([
     // No ON CONFLICT: an import that wrote since our read took `seq`, and
-    // this batch aborts before anything else is written.
+    // this batch aborts before anything else is written. Earlier rows are
+    // never deleted, so a stale `seq` always collides.
     db.insert(guestImport).values({ seq, userId }),
-    db
-      .delete(guestImport)
-      .where(and(eq(guestImport.userId, userId), lt(guestImport.seq, seq))),
     deps.insertFavorites(db, userId, steps.favorites, now),
     deps.insertLists(db, userId, steps.newLists, now),
     deps.appendItems(db, owner, steps.items, now),

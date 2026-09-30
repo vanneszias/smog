@@ -378,6 +378,34 @@ describe("shared list", () => {
     expect(await screen.findByText("Added to “Klas 2B”")).toBeOnTheScreen();
   });
 
+  it("does not toast an add the list already had", async () => {
+    const { fetch } = await renderApp({
+      initialUrl: "/shared/tok-edit",
+      routes: {
+        "lists/shared/addItem": { added: false },
+        "lists/shared/get": { ...SHARED, role: "edit" },
+      },
+      signedIn: true,
+    });
+    await fireEvent.press(
+      await screen.findByRole("button", { name: "Add gestures" })
+    );
+    const sheet = within(await screen.findByTestId("add-to-shared-list"));
+    await fireEvent.press(
+      await sheet.findByRole("button", { name: "Add Kat" })
+    );
+    // `addItem` resolves after the list's refetch, so wait for that.
+    const refetches = () =>
+      fetch.mock.calls.filter(([request]) =>
+        request.url.includes("/api/rpc/lists/shared/get")
+      ).length;
+    await waitFor(() => expect(refetches()).toBeGreaterThan(1));
+    await waitFor(() =>
+      expect(sheet.getByRole("button", { name: "Add Kat" })).toBeEnabled()
+    );
+    expect(screen.queryByText("Added to “Klas 2B”")).toBeNull();
+  });
+
   it("offers no add to a view link, even signed in", async () => {
     await renderApp({
       initialUrl: "/shared/tok-view",

@@ -1,4 +1,7 @@
-import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import {
+  type AsyncPersistRetryer,
+  createAsyncStoragePersister,
+} from "@tanstack/query-async-storage-persister";
 import {
   defaultShouldDehydrateQuery,
   type OmitKeyof,
@@ -106,18 +109,67 @@ function byteLength(text: string): number {
   return new TextEncoder().encode(text).length;
 }
 
+/** A serialized cache over the size cap (`trimToFit` then trims it). */
+class CacheTooLarge extends Error {
+  readonly bytes: number;
+
+  constructor(bytes: number, maxBytes: number) {
+    super(`[query-persist] The cache is ${bytes} bytes, over ${maxBytes}`);
+    this.bytes = bytes;
+    this.name = "CacheTooLarge";
+  }
+}
+
 /** `JSON.stringify`, refusing a cache above `maxBytes` (the retry trims it). */
 function serializeWithin(
   maxBytes: number
 ): (client: PersistedClient) => string {
   return (client) => {
     const serialized = JSON.stringify(client);
-    if (byteLength(serialized) > maxBytes) {
-      throw new Error(
-        `[query-persist] The cache is over ${maxBytes} bytes; trimming`
-      );
+    const bytes = byteLength(serialized);
+    if (bytes > maxBytes) {
+      throw new CacheTooLarge(bytes, maxBytes);
     }
     return serialized;
+  };
+}
+
+/**
+ * The persister's retry. Over the cap, it drops the oldest queries in one
+ * pass: each query is sized once and the oldest go until the rest fits (a
+ * query's JSON plus its comma), so the next try is the last one (or one
+ * more, should the estimate fall short). Any other failure (a full
+ * storage) drops the oldest query, as TanStack's `removeOldestQuery`.
+ */
+function trimToFit(maxBytes: number): AsyncPersistRetryer {
+  return (props) => {
+    const { error, persistedClient } = props;
+    if (!(error instanceof CacheTooLarge)) {
+      return removeOldestQuery(props);
+    }
+    const { queries } = persistedClient.clientState;
+    const oldestFirst = [...queries].sort(
+      (a, b) => a.state.dataUpdatedAt - b.state.dataUpdatedAt
+    );
+    const dropped = new Set<(typeof queries)[number]>();
+    let { bytes } = error;
+    for (const query of oldestFirst) {
+      if (bytes <= maxBytes) {
+        break;
+      }
+      bytes -= byteLength(JSON.stringify(query)) + 1;
+      dropped.add(query);
+    }
+    if (dropped.size === 0) {
+      return;
+    }
+    return {
+      ...persistedClient,
+      clientState: {
+        ...persistedClient.clientState,
+        queries: queries.filter((query) => !dropped.has(query)),
+      },
+    };
   };
 }
 
@@ -167,8 +219,9 @@ export interface CreatePersistOptions {
 /**
  * `PersistQueryClientProvider`'s options: AsyncStorage, 24 h, the bundle
  * as buster, and only `shouldPersistQuery` queries. When the cache is over
- * `maxBytes` or the storage refuses a write (full), the oldest query is
- * dropped and the write retried.
+ * `maxBytes`, the oldest queries are dropped in one pass (`trimToFit`);
+ * when the storage refuses a write (full), the oldest query is dropped.
+ * Then the write is retried.
  */
 export function createPersistOptions({
   buster,
@@ -183,7 +236,7 @@ export function createPersistOptions({
     persister: createAsyncStoragePersister({
       deserialize: deserializeCache,
       key: QUERY_CACHE_KEY,
-      retry: removeOldestQuery,
+      retry: trimToFit(maxBytes),
       serialize: serializeWithin(maxBytes),
       storage,
       ...(throttleTime === undefined ? {} : { throttleTime }),

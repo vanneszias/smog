@@ -2,7 +2,7 @@ import { isDefinedError } from "@orpc/client";
 import { useAnalytics } from "@smog/analytics/react";
 import { useAuthState } from "@smog/auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import type { SharedList } from "../schema";
 import {
   type ListItemOptions,
@@ -27,8 +27,12 @@ export function sharedListOptions(utils: ListsQueryUtils, token: string) {
 }
 
 export interface UseSharedListResult {
-  /** Adds through the edit link (needs `canEdit`). */
-  addItem: (gestureId: string) => Promise<void>;
+  /**
+   * Adds through the edit link (needs `canEdit`). `true` only when the list
+   * gained the gesture: `false` when it was there already, or when an add
+   * of it is still in flight (a double tap), and then nothing is tracked.
+   */
+  addItem: (gestureId: string) => Promise<boolean>;
   /** An edit link and a signed-in user. */
   canEdit: boolean;
   data: SharedList | undefined;
@@ -66,14 +70,25 @@ export function useSharedList(
     [queryClient, rpc]
   );
 
+  // Gestures being added: a repeat tap is ignored until the first settles.
+  const adding = useRef(new Set<string>());
   const addItem = useCallback(
-    async (gestureId: string) => {
+    async (gestureId: string): Promise<boolean> => {
+      if (adding.current.has(gestureId)) {
+        return false;
+      }
+      adding.current.add(gestureId);
+      let added: boolean;
       try {
-        await addRemote({ gestureId, token });
+        ({ added } = await addRemote({ gestureId, token }));
       } finally {
+        adding.current.delete(gestureId);
         await invalidate();
       }
-      trackListItem(analytics, "added", gestureId, source);
+      if (added) {
+        trackListItem(analytics, "added", gestureId, source);
+      }
+      return added;
     },
     [addRemote, analytics, invalidate, source, token]
   );
