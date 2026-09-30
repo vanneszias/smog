@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import {
   ANNA,
+  BEN,
   fakeAuthClient,
   GUEST,
   ME,
@@ -12,6 +13,7 @@ import {
   newStore,
   setup,
 } from "../../test/hooks-harness";
+import { UNDECIDED_CONSENT } from "../schema";
 import {
   useAccount,
   useActionFeedback,
@@ -100,6 +102,126 @@ describe("consent after sign-in (review I1)", () => {
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.needsDecision).toBe(true);
     expect(server.importCalls).toEqual([]);
+  });
+});
+
+describe("consent on a shared device (re-review N1, M-a, M-b)", () => {
+  test("A signs in, A signs out, B signs in: B is asked, and A's choice never reaches B's log", async () => {
+    const store = await newStore();
+    const server = newServer();
+    server.consent = {
+      analytics: true,
+      decidedAt: 100,
+      needsDecision: false,
+      policyVersion: CONSENT_POLICY_VERSION,
+    };
+    const { auth, wrapper } = setup(store, ANNA, server);
+    const { result } = renderHook(() => useConsent(), { wrapper });
+
+    // A's decision is mirrored to the device, marked as A's.
+    await waitFor(() =>
+      expect(store.getSnapshot().consent).toEqual({
+        analytics: true,
+        decidedAt: 100,
+        mirroredFrom: "user-anna",
+      })
+    );
+
+    // A signs out: the device keeps the choice (by design).
+    await act(async () => {
+      auth.current = GUEST;
+      await auth.refresh();
+    });
+    await waitFor(() => expect(result.current.analytics).toBe(true));
+
+    // B signs in; B's account never decided.
+    server.consent = UNDECIDED_CONSENT;
+    await act(async () => {
+      auth.current = BEN;
+      await auth.refresh();
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await waitFor(() => expect(result.current.needsDecision).toBe(true));
+    expect(result.current.analytics).toBeNull();
+    expect(server.importAttempts).toBe(0);
+  });
+
+  test("the import sheet never sends another account's mirrored choice", async () => {
+    const store = await newStore();
+    await store.update(setConsent(true, 100, "user-anna"));
+    await store.update(toggleFavorite("g-aap"));
+    const server = newServer();
+    const { wrapper } = setup(store, BEN, server);
+    const { result } = renderHook(() => useGuestImport(), { wrapper });
+    await waitFor(() => expect(result.current.pending).not.toBeNull());
+    await act(async () => {
+      await result.current.accept();
+    });
+    expect(server.importCalls).toHaveLength(1);
+    expect(server.importCalls[0]?.consent).toBeUndefined();
+  });
+
+  test("a failed carry keeps the choice, asks nothing, and retries on the next consent read", async () => {
+    const store = await newStore();
+    await store.update(setConsent(true, 1234));
+    const server = newServer();
+    server.failImport = true;
+    const { queryClient, wrapper } = setup(store, ANNA, server);
+    const error = quiet();
+    const { result } = renderHook(() => useConsent(), { wrapper });
+
+    await waitFor(() => expect(server.importAttempts).toBe(1));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.needsDecision).toBe(false);
+    expect(result.current.analytics).toBeNull();
+    expect(store.getSnapshot().consent).toEqual({
+      analytics: true,
+      decidedAt: 1234,
+    });
+
+    // The next consent read (focus, reconnect) retries in the same session.
+    server.failImport = false;
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+    await waitFor(() => expect(server.importCalls).toHaveLength(1));
+    await waitFor(() => expect(result.current.analytics).toBe(true));
+    error.mockRestore();
+  });
+
+  test("a carried choice the server skipped (another device decided first) is never shown or mirrored", async () => {
+    const store = await newStore();
+    await store.update(setConsent(true, 1234));
+    const server = newServer();
+    // While the carry is in flight, another device says no; the import
+    // then keeps the newer row.
+    server.onImport = () => {
+      server.consent = {
+        analytics: false,
+        decidedAt: 5000,
+        needsDecision: false,
+        policyVersion: CONSENT_POLICY_VERSION,
+      };
+    };
+    const { wrapper } = setup(store, ANNA, server);
+    const seen: (boolean | null)[] = [];
+    const { result } = renderHook(
+      () => {
+        const consent = useConsent();
+        seen.push(consent.analytics);
+        return consent;
+      },
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.analytics).toBe(false));
+    expect(seen).not.toContain(true);
+    await waitFor(() =>
+      expect(store.getSnapshot().consent).toEqual({
+        analytics: false,
+        decidedAt: 5000,
+        mirroredFrom: "user-anna",
+      })
+    );
   });
 });
 

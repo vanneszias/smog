@@ -1,5 +1,4 @@
 import { useAuthState } from "@smog/auth/react";
-import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
 import { type LocalStore, setConsent } from "@smog/local-store";
 import { useLocalStore, useLocalStoreInstance } from "@smog/local-store/react";
 import {
@@ -108,7 +107,8 @@ export function useConsent(): Consent {
   const server = userId === undefined ? undefined : remote.data;
   const mirrored =
     server?.analytics === local.analytics &&
-    (server?.decidedAt ?? undefined) === local.decidedAt;
+    (server?.decidedAt ?? undefined) === local.decidedAt &&
+    local.mirroredFrom === userId;
   useEffect(() => {
     if (
       !ready ||
@@ -122,45 +122,43 @@ export function useConsent(): Consent {
     }
     if (!mirrored) {
       store
-        .update(setConsent(server.analytics, server.decidedAt))
+        .update(setConsent(server.analytics, server.decidedAt, userId))
         .catch((error: unknown) => {
           // The server decision still applies; the device copy follows later.
           console.error("[account] Failed to mirror the consent:", error);
         });
     }
-  }, [mirrored, ready, server, store]);
+  }, [mirrored, ready, server, store, userId]);
 
-  // A device choice for an account that never decided (not an old yes).
+  // A guest's own device choice (not a copy of some account's decision)
+  // for an account that never decided (not an old yes).
   const carrying =
     ready &&
     userId !== undefined &&
     server !== undefined &&
     server.decidedAt === null &&
     local.analytics !== null &&
-    local.decidedAt !== undefined;
+    local.decidedAt !== undefined &&
+    local.mirroredFrom === undefined;
+  const readAt = remote.dataUpdatedAt;
   useEffect(() => {
-    if (!(carrying && userId) || carriedFor(store).has(userId)) {
+    // `readAt`: every consent read (focus, reconnect) may retry a failed carry.
+    if (!(carrying && userId && readAt) || carriedFor(store).has(userId)) {
       return;
     }
     carriedFor(store).add(userId);
     importGuestConsent({
+      // Read what the account now holds before the device copy goes: the
+      // server may have kept a newer decision instead of this one.
+      beforeClear: () =>
+        queryClient.fetchQuery({ ...options, queryKey, staleTime: 0 }),
       client,
-      onSaved: ({ analytics, decidedAt }) => {
-        // The server dates it `min(decidedAt, now)` under this policy.
-        queryClient.setQueryData(queryKey, {
-          analytics,
-          decidedAt: Math.min(decidedAt, Date.now()),
-          needsDecision: false,
-          policyVersion: CONSENT_POLICY_VERSION,
-        } satisfies ConsentState);
-      },
       store,
-    })
-      .then(() => queryClient.invalidateQueries({ queryKey }))
-      .catch(() => {
-        // Logged; the choice stays on the device and is carried next launch.
-      });
-  }, [carrying, client, queryClient, queryKey, store, userId]);
+    }).catch(() => {
+      // Logged; the choice stays on the device. The next read retries.
+      carriedFor(store).delete(userId);
+    });
+  }, [carrying, client, options, queryClient, queryKey, readAt, store, userId]);
 
   const set = useCallback(
     async (value: boolean): Promise<void> => {
@@ -175,7 +173,9 @@ export function useConsent(): Consent {
         });
         queryClient.setQueryData(queryKey, next);
         if (next.analytics !== null && next.decidedAt !== null) {
-          await store.update(setConsent(next.analytics, next.decidedAt));
+          await store.update(
+            setConsent(next.analytics, next.decidedAt, userId)
+          );
         }
       } catch (error) {
         console.error("[account] Failed to save the consent decision:", error);

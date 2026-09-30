@@ -107,32 +107,40 @@ describe("RL_AUTH on /api/auth/*", () => {
 
   it("answers POSTs over the limit with 429 RATE_LIMITED, per IP", async () => {
     const credentials = { email: "nobody@smog.test", password: "x" };
-    /** Six sign-ins from `ip`; `null` when they straddled a window. */
-    async function six(from: string): Promise<number[] | null> {
+    /**
+     * Seven sign-ins from `from`: their statuses and the last body, or
+     * `null` when they straddled a limiter window.
+     */
+    async function seven(
+      from: string
+    ): Promise<{ last: unknown; statuses: number[] } | null> {
       const started = Math.floor(Date.now() / WINDOW_MS);
       const statuses: number[] = [];
-      for (let attempt = 0; attempt < 6; attempt += 1) {
+      let last: unknown;
+      for (let attempt = 0; attempt < 7; attempt += 1) {
         // biome-ignore lint/performance/noAwaitInLoops: the limit counts requests in order.
         const response = await postAuth(from, "/sign-in/email", credentials);
         statuses.push(response.status);
+        last = await response.json();
       }
-      return Math.floor(Date.now() / WINDOW_MS) === started ? statuses : null;
+      return Math.floor(Date.now() / WINDOW_MS) === started
+        ? { last, statuses }
+        : null;
     }
-    // Each sign-in hashes a password: under load six can cross a minute
+    // Each sign-in hashes a password: under load seven can cross a minute
     // boundary, where the count starts again. Then retry once, on a fresh IP.
     const [first, second] = IPS;
     let ip: string = first;
-    let statuses = await six(ip);
-    if (statuses === null) {
+    let run = await seven(ip);
+    if (run === null) {
       ip = second;
-      statuses = await six(ip);
+      run = await seven(ip);
     }
 
-    expect(statuses).not.toBeNull();
-    expect(statuses?.slice(0, 5)).not.toContain(429);
-    expect(statuses?.[5]).toBe(429);
-    const limited = await postAuth(ip, "/sign-in/email", credentials);
-    expect(await limited.json()).toEqual({ code: "RATE_LIMITED" });
+    expect(run).not.toBeNull();
+    expect(run?.statuses.slice(0, 5)).not.toContain(429);
+    expect(run?.statuses.slice(5)).toEqual([429, 429]);
+    expect(run?.last).toEqual({ code: "RATE_LIMITED" });
 
     // Session reads and sign-out stay available to the same IP.
     const session = await exports.default.fetch(

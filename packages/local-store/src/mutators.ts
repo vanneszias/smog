@@ -173,11 +173,23 @@ export function reorderList(
 
 // Consent and preferences
 
+/**
+ * Records the analytics decision. `mirroredFrom` marks a copy of a
+ * signed-in account's decision (its user id); a guest's own choice has none.
+ */
 export function setConsent(
   analytics: boolean,
-  now: number = Date.now()
+  now: number = Date.now(),
+  mirroredFrom?: string
 ): Mutator {
-  return (data) => ({ ...data, consent: { analytics, decidedAt: now } });
+  return (data) => ({
+    ...data,
+    consent: {
+      analytics,
+      decidedAt: now,
+      ...(mirroredFrom ? { mirroredFrom } : {}),
+    },
+  });
 }
 
 export function setPreferences(

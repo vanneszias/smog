@@ -85,7 +85,10 @@ export function useDeleteAccount({
   const { refresh, status: authStatus } = useAuthState();
   // Resolved once the rendered auth state no longer says signed in.
   const signedOut = useRef<(() => void) | null>(null);
+  // The auth status of the last committed render.
+  const rendered = useRef(authStatus);
   useEffect(() => {
+    rendered.current = authStatus;
     if (authStatus !== "signedIn") {
       signedOut.current?.();
       signedOut.current = null;
@@ -101,6 +104,11 @@ export function useDeleteAccount({
   const whenSignedOut = useCallback(
     (): Promise<void> =>
       new Promise((resolve) => {
+        // Already rendered signed out (during the sign-out or the reset).
+        if (rendered.current !== "signedIn") {
+          resolve();
+          return;
+        }
         // A render may never come (unmounted, or a session that stays):
         // the cache is cleared after a short wait anyway.
         const timer = setTimeout(resolve, SIGNED_OUT_WAIT_MS);
@@ -143,9 +151,9 @@ export function useDeleteAccount({
       // refetch (401) once removed. Signed out, those are disabled, so the
       // whole cache (queries, mutations and the mobile persisted copy,
       // which follows it) can go.
-      const rendered = whenSignedOut();
+      const signedOutRendered = whenSignedOut();
       await refresh();
-      await rendered;
+      await signedOutRendered;
       queryClient.clear();
       setState({ error: null, status: "deleted" });
     },

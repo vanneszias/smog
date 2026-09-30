@@ -108,9 +108,11 @@ function toPayload(data: GuestData, untitled: string): Payload {
     });
   const favorites = valid(data.favorites).slice(0, IMPORT_FAVORITES_MAX);
   const lists = data.lists.slice(0, IMPORT_LISTS_MAX);
-  const { analytics, decidedAt } = data.consent;
+  const { analytics, decidedAt, mirroredFrom } = data.consent;
+  // Only a guest's own choice: a copy of some account's decision (a shared
+  // device) never goes into another account's log.
   const consent =
-    analytics === null || decidedAt === undefined
+    analytics === null || decidedAt === undefined || mirroredFrom !== undefined
       ? undefined
       : { analytics, decidedAt };
   return {
@@ -196,12 +198,16 @@ function clearImported(payload: Payload, result: ImportResult): Mutator {
  * `null` when the device has none. Logs and rethrows on failure.
  */
 export async function importGuestConsent({
+  beforeClear,
   client,
-  onSaved,
   store,
 }: Pick<ImportGuestDataOptions, "client" | "store"> & {
-  /** Called once the account has it, before the device copy is cleared. */
-  onSaved?: (consent: { analytics: boolean; decidedAt: number }) => void;
+  /**
+   * Awaited once the server answered, before the device copy is cleared
+   * (the caller reads the account's consent again: the server may have
+   * kept a newer decision instead).
+   */
+  beforeClear?: () => Promise<unknown>;
 }): Promise<{
   analytics: boolean;
   decidedAt: number;
@@ -221,7 +227,7 @@ export async function importGuestConsent({
       lists: [],
     };
     const result = await client.account.importGuestData(payload.input);
-    onSaved?.(consent);
+    await beforeClear?.();
     await store.update(clearImported(payload, result));
     return consent;
   } catch (error) {

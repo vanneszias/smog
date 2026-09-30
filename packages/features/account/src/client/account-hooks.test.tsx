@@ -120,6 +120,7 @@ describe("useConsent: signed in", () => {
       expect(store.getSnapshot().consent).toEqual({
         analytics: true,
         decidedAt: 4000,
+        mirroredFrom: "user-anna",
       })
     );
   });
@@ -172,6 +173,7 @@ describe("useConsent: signed in", () => {
     expect(store.getSnapshot().consent).toEqual({
       analytics: false,
       decidedAt: 5001,
+      mirroredFrom: "user-anna",
     });
   });
 

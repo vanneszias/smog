@@ -74,10 +74,14 @@ export interface Server {
   deleteFails?: "SESSION_NOT_FRESH";
   failConsent: boolean;
   failImport?: boolean;
+  /** Every import call, failed ones included. */
+  importAttempts: number;
   importCalls: ImportGuestData[];
   me: Me;
   /** `me` calls. */
   meReads: number;
+  /** Replaces what an import does to `consent` (e.g. the server skips it). */
+  onImport?: (input: ImportGuestData) => void;
   updateCalls: UpdateProfile[];
 }
 
@@ -88,6 +92,7 @@ export function newServer(): Server {
     consentReads: 0,
     deleteCalls: [],
     failConsent: false,
+    importAttempts: 0,
     importCalls: [],
     me: ME,
     meReads: 0,
@@ -131,11 +136,14 @@ function fakeApi(server: Server) {
       }),
       export: os.account.export.handler(() => EXPORT),
       importGuestData: os.account.importGuestData.handler(({ input }) => {
+        server.importAttempts += 1;
         if (server.failImport) {
           throw new ORPCError("INTERNAL_SERVER_ERROR");
         }
         server.importCalls.push(input);
-        if (input.consent) {
+        if (server.onImport) {
+          server.onImport(input);
+        } else if (input.consent) {
           server.consent = {
             analytics: input.consent.analytics,
             decidedAt: input.consent.decidedAt,
@@ -168,6 +176,11 @@ export const ANNA: SessionHookResult = {
   data: { user: { email: ME.email, id: ME.id, name: ME.name } },
   isPending: false,
 };
+/** Another user on the same device (a shared tablet). */
+export const BEN: SessionHookResult = {
+  data: { user: { email: "ben@smog.test", id: "user-ben", name: "Ben" } },
+  isPending: false,
+};
 export const LOADING: SessionHookResult = { data: undefined, isPending: true };
 export const GUEST: SessionHookResult = { data: null, isPending: false };
 
@@ -185,7 +198,12 @@ export function setup(
   // As Better Auth's session store: `refetch` reads `current` again and
   // re-renders the provider (a test sets `current` to what the server says).
   const listeners = new Set<() => void>();
-  const auth = { current: session, refetches: 0 };
+  const auth = {
+    current: session,
+    refetches: 0,
+    /** Re-reads the session (`current`), as a sign-in or sign-out does. */
+    refresh: (): Promise<void> => refetch(),
+  };
   const subscribe = (listener: () => void): (() => void) => {
     listeners.add(listener);
     return () => listeners.delete(listener);

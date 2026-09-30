@@ -100,9 +100,11 @@ function DeleteSection({
   const signInAgain = useSignInAgain();
   // Any export file left on the device goes with the account.
   const signOut = useCallback(async () => {
-    const result = await client.signOut();
-    sweepExportFiles();
-    return result;
+    try {
+      return await client.signOut();
+    } finally {
+      sweepExportFiles();
+    }
   }, [client]);
   const form = useDeleteAccountForm({ needsPassword, signOut });
   const { confirm } = form;
