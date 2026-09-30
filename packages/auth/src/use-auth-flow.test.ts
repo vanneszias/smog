@@ -10,6 +10,7 @@ import {
   authFlowCommands,
   authFlowReducer,
   initialAuthFlowState,
+  toAuthResult,
 } from "./use-auth-flow";
 
 const EMAIL = "ada@smog.test";
@@ -477,5 +478,89 @@ describe("authFlowCommands: captcha (the server requires Turnstile)", () => {
     await flow.commands.choose("google");
     await flow.commands.choose("passkey");
     expect(asked).toEqual([]);
+  });
+});
+
+describe("authFlowCommands: captcha fails safe (config not loaded yet)", () => {
+  const MISSING: AuthResult = {
+    captchaMissing: true,
+    error: "captchaFailed",
+    ok: false,
+  };
+
+  test("the server's 'captcha required' answer runs the challenge and retries once", async () => {
+    const { asked, captcha } = tokens(false);
+    const answers = [MISSING, OK];
+    const calls: string[] = [];
+    const flow = harness(
+      "signIn",
+      {
+        sendCode: (email, token) => {
+          calls.push(`sendCode(${email},${token ?? "-"})`);
+          return Promise.resolve(answers.shift() ?? OK);
+        },
+      },
+      captcha
+    );
+    await flow.commands.submitEmail(EMAIL);
+    await flow.commands.choose("emailCode");
+    expect(calls).toEqual([`sendCode(${EMAIL},-)`, `sendCode(${EMAIL},tok-1)`]);
+    expect(asked).toEqual(["tok-1"]);
+    expect(flow.state()).toMatchObject({ error: null, step: "code" });
+  });
+
+  test("retries only once", async () => {
+    const { asked, captcha } = tokens(false);
+    const flow = harness(
+      "signIn",
+      { sendCode: () => Promise.resolve(MISSING) },
+      captcha
+    );
+    await flow.commands.submitEmail(EMAIL);
+    await flow.commands.choose("emailCode");
+    expect(asked).toEqual(["tok-1"]);
+    expect(flow.state()).toMatchObject({
+      error: "captchaFailed",
+      pending: null,
+    });
+  });
+
+  test("a rejected token (not a missing one) is not retried", async () => {
+    const { asked, captcha } = tokens(false);
+    const rejected: AuthResult = { error: "captchaFailed", ok: false };
+    const flow = harness(
+      "signIn",
+      { sendCode: () => Promise.resolve(rejected) },
+      captcha
+    );
+    await flow.commands.submitEmail(EMAIL);
+    await flow.commands.choose("emailCode");
+    expect(asked).toEqual([]);
+    expect(flow.state().error).toBe("captchaFailed");
+  });
+
+  test("without a challenge (the web's inline widget) nothing is retried", async () => {
+    let sent = 0;
+    const flow = harness("signIn", {
+      sendCode: () => {
+        sent += 1;
+        return Promise.resolve(MISSING);
+      },
+    });
+    await flow.commands.submitEmail(EMAIL);
+    await flow.commands.choose("emailCode");
+    expect(sent).toBe(1);
+    expect(flow.state().error).toBe("captchaFailed");
+  });
+});
+
+describe("toAuthResult", () => {
+  test("flags the captcha plugin's missing-token answer", () => {
+    expect(
+      toAuthResult({ error: { code: "MISSING_RESPONSE", status: 400 } })
+    ).toEqual({ captchaMissing: true, error: "captchaFailed", ok: false });
+    expect(
+      toAuthResult({ error: { code: "VERIFICATION_FAILED", status: 403 } })
+    ).toEqual({ error: "captchaFailed", ok: false });
   });
 });

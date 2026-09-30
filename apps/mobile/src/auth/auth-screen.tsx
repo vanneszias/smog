@@ -4,6 +4,7 @@ import {
   type AuthErrorField,
   type AuthErrorKey,
   type AuthFlow,
+  type AuthFlowActions,
   type AuthMethod,
   type AuthMode,
   authErrorField,
@@ -49,6 +50,7 @@ import {
 import { useAuthClient } from "@/lib/auth-client";
 import { mobileEnv } from "@/lib/env";
 import { signInWithApple, useAppleSignInAvailable } from "./apple";
+import { markMagicLinkRequested } from "./magic-link-request";
 
 type NativeMethod = Exclude<AuthMethod, "passkey">;
 
@@ -435,22 +437,31 @@ export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
   const config = useQuery(rpc.system.authConfig.queryOptions());
   const apple = useAppleSignInAvailable();
 
-  const actions = useMemo(
-    () =>
-      createFlowActions(client, {
-        callbackURL: "/",
-        errorCallbackURL: "/",
-        resetPasswordURL: siteURL("/reset-password"),
-        social: { apple: () => signInWithApple(client) },
-        socialErrorCallbackURL: "/",
-        socialFlow: {
-          hasSession: async () => Boolean((await client.getSession()).data),
-          kind: "session",
-        },
-        verifyEmailURL: siteURL("/verify-email"),
-      }),
-    [client]
-  );
+  const actions = useMemo((): AuthFlowActions => {
+    const base = createFlowActions(client, {
+      callbackURL: "/",
+      errorCallbackURL: "/",
+      resetPasswordURL: siteURL("/reset-password"),
+      social: { apple: () => signInWithApple(client) },
+      socialErrorCallbackURL: "/",
+      socialFlow: {
+        hasSession: async () => Boolean((await client.getSession()).data),
+        kind: "session",
+      },
+      verifyEmailURL: siteURL("/verify-email"),
+    });
+    return {
+      ...base,
+      // Remembered, so this link exchanges without a prompt (login CSRF).
+      sendMagicLink: async (email, token) => {
+        const result = await base.sendMagicLink(email, token);
+        if (result.ok) {
+          markMagicLinkRequested(email);
+        }
+        return result;
+      },
+    };
+  }, [client]);
   const captcha = useTurnstileChallenge();
   const flow = useAuthFlow({
     actions,

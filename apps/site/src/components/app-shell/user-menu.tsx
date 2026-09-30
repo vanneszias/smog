@@ -22,6 +22,7 @@ import {
 import { LogIn, LogOut, UserRound } from "lucide-react";
 import { type ReactNode, useCallback } from "react";
 import { useAuthClient } from "@/lib/auth-client";
+import { signInReturnPath } from "@/lib/redirect";
 
 /** Signs out, refreshes the route data and says so. */
 export function useSignOut(): () => Promise<void> {
@@ -59,7 +60,7 @@ export function UserMenu(): ReactNode {
     return <Skeleton className="size-10" shape="circle" />;
   }
   if (!auth.user) {
-    const redirect = href.startsWith("/sign-") ? undefined : href;
+    const redirect = signInReturnPath(href);
     return (
       <Button asChild icon={<LogIn />} variant="secondary">
         <Link search={redirect ? { redirect } : {}} to="/sign-in">

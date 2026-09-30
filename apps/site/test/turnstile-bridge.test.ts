@@ -71,6 +71,14 @@ describe("GET /turnstile-bridge", () => {
       await (await bridge("", { "accept-language": "fr-BE" })).text()
     ).toContain('lang="fr"');
     expect(await (await bridge("?lang=de")).text()).toContain('lang="nl"');
+    expect(
+      await (
+        await bridge("", {
+          "accept-language": "fr",
+          cookie: "theme=dark; locale=en",
+        })
+      ).text()
+    ).toContain('lang="en"');
   });
 
   it("escapes the embedded config so it cannot close its script", async () => {

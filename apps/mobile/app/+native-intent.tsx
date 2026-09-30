@@ -9,8 +9,10 @@
  *   a legacy id through `gestures.bySlug`)
  * - `/lists/<token>` → the shared list screen (`/shared/<token>`)
  * - `/gestures?q=&category=` → the search tab, with the query and filter
- * - `/magic-link/app?token=` (the app's magic link) → the magic-link
- *   screen with the token only; a malformed token opens it without one
+ * - `/magic-link/app?token=&email=` (the app's magic link, https or
+ *   `smog://`) → the magic-link screen with the token and address only; a
+ *   malformed one opens it without them. `/magic-link` itself is not
+ *   mapped: no legitimate sender uses it.
  * - the app's own routes (`/`, `/search`, `/favorites`, `/lists`,
  *   `/shared/<token>`, `/settings`, the sign-in screens) → themselves
  * - anything else, deeper paths, dot segments and malformed escapes → home
@@ -117,11 +119,19 @@ function searchPath(query: string): string {
   return search ? `/search?${search}` : "/search";
 }
 
-/** The magic-link screen, with the link's token when it is well formed. */
+/** An address as the server puts it in the link (loosely checked). */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_MAX = 254;
+
+/** The magic-link screen, with the link's token and address when valid. */
 function magicLinkPath(query: string): string {
-  const token = parseQuery(query).get("token") ?? "";
-  return MAGIC_LINK_TOKEN_PATTERN.test(token)
-    ? `/magic-link?token=${token}`
+  const params = parseQuery(query);
+  const token = params.get("token") ?? "";
+  const email = params.get("email") ?? "";
+  return MAGIC_LINK_TOKEN_PATTERN.test(token) &&
+    email.length <= EMAIL_MAX &&
+    EMAIL_PATTERN.test(email)
+    ? `/magic-link?token=${token}&email=${encodeURIComponent(email)}`
     : "/magic-link";
 }
 
@@ -145,8 +155,8 @@ function route(path: string): string {
   if (deeper.length > 0) {
     return HOME;
   }
-  if (first === "magic-link") {
-    return magicLinkPath(second === undefined || second === "app" ? query : "");
+  if (first === "magic-link" && second === "app") {
+    return magicLinkPath(query);
   }
   if (second === undefined) {
     if (first === "gestures" || first === "search") {

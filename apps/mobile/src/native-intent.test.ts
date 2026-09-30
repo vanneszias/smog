@@ -123,28 +123,41 @@ describe("redirectSystemPath", () => {
 
   const TOKEN = "abcdefghijklmnopqrstuvwxyzABCDEF";
 
+  const EMAIL = "an%40smog.test";
+  const TARGET = `/magic-link?token=${TOKEN}&email=${EMAIL}`;
+
   it.each([
-    `${ORIGIN}/magic-link/app?token=${TOKEN}`,
-    `${ORIGIN}/magic-link/app?callbackURL=https%3A%2F%2Fevil.test&token=${TOKEN}`,
-    `smog://magic-link/app?token=${TOKEN}`,
-    `/magic-link?token=${TOKEN}`,
+    `${ORIGIN}/magic-link/app?token=${TOKEN}&email=${EMAIL}`,
+    `${ORIGIN}/magic-link/app?callbackURL=https%3A%2F%2Fevil.test&email=${EMAIL}&token=${TOKEN}`,
+    `smog://magic-link/app?token=${TOKEN}&email=${EMAIL}`,
+    `exp://192.168.1.10:8081/--/magic-link/app?token=${TOKEN}&email=${EMAIL}`,
   ])(
-    "opens the app's magic link %s on the magic-link screen, token only",
+    "opens the app's magic link %s on the magic-link screen, token and address only",
     (path) => {
-      expect(redirect(path)).toBe(`/magic-link?token=${TOKEN}`);
+      expect(redirect(path)).toBe(TARGET);
     }
   );
 
   it.each([
     `${ORIGIN}/magic-link/app`,
-    `${ORIGIN}/magic-link/app?token=short`,
-    `${ORIGIN}/magic-link/app?token=%3Cscript%3E${TOKEN}`,
-    `${ORIGIN}/magic-link?error=INVALID_TOKEN`,
-    `${ORIGIN}/magic-link/other?token=${TOKEN}`,
+    `${ORIGIN}/magic-link/app?token=short&email=${EMAIL}`,
+    `${ORIGIN}/magic-link/app?token=%3Cscript%3E${TOKEN}&email=${EMAIL}`,
+    `${ORIGIN}/magic-link/app?token=${TOKEN}`,
+    `${ORIGIN}/magic-link/app?token=${TOKEN}&email=not-an-address`,
   ])(
-    "sends the malformed magic link %s to the magic-link screen without a token",
+    "sends the malformed app link %s to the magic-link screen without a token",
     (path) => {
       expect(redirect(path)).toBe("/magic-link");
     }
   );
+
+  it.each([
+    // No legitimate sender uses these: only /magic-link/app is mapped.
+    `/magic-link?token=${TOKEN}&email=${EMAIL}`,
+    `smog://magic-link?token=${TOKEN}&email=${EMAIL}`,
+    `${ORIGIN}/magic-link?error=INVALID_TOKEN`,
+    `${ORIGIN}/magic-link/other?token=${TOKEN}&email=${EMAIL}`,
+  ])("does not open %s on the magic-link screen", (path) => {
+    expect(redirect(path)).toBe("/");
+  });
 });

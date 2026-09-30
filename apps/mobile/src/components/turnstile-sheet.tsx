@@ -53,6 +53,12 @@ function siteOrigin(): string {
 /**
  * A message from the bridge page, or `null` for anything else: another
  * origin, not JSON, another shape, an empty or oversized token.
+ *
+ * `event.url` is the top frame's URL, not the sender's: on Android the
+ * bridge object is injected into every frame, so this check cannot tell
+ * which frame posted. It holds because the only possible subframe is
+ * Cloudflare's (the navigation lock in `allowBridgeLoad` and the page's
+ * CSP `frame-src`); never rely on the origin check alone.
  */
 export function parseBridgeMessage(
   event: { data: string; url: string },
@@ -177,7 +183,11 @@ export function TurnstileSheet({
               key={attempt}
               onMessage={onMessage}
               onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
-              originWhitelist={[origin]}
+              // The library checks this prefix-match list before our
+              // handler, for iframes too on iOS: without the challenges
+              // origin it cancels Turnstile's frame and opens it in
+              // Safari. `allowBridgeLoad` stays the exact gate.
+              originWhitelist={[origin, CHALLENGES_ORIGIN]}
               source={{ uri }}
               testID="turnstile-webview"
             />

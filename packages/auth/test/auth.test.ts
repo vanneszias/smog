@@ -1,10 +1,10 @@
 import { env } from "cloudflare:workers";
 import { scrypt } from "node:crypto";
-import { account, session } from "@smog/db";
+import { account, session, verification } from "@smog/db";
 import { makeUser } from "@smog/db/testing";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { APP_MAGIC_LINK_PATH } from "../src/fields";
+import { APP_MAGIC_LINK_PATH, MAGIC_LINK_TTL_SECONDS } from "../src/fields";
 import { appMagicLinkURL } from "../src/server";
 import { getSession, requireAdminUser } from "../src/session";
 import {
@@ -274,11 +274,13 @@ describe("magic link", () => {
     expect(sent.status).toBe(200);
     const link = new URL(linkIn(ctx.email.sent[0]?.text));
 
-    // The universal link: the site host, a fixed path, only the token.
+    // The universal link: the site host, a fixed path, the token and the
+    // address it signs in (the app shows it before exchanging).
     expect(`${link.origin}${link.pathname}`).toBe(
       `${SITE_URL}${APP_MAGIC_LINK_PATH}`
     );
-    expect([...link.searchParams.keys()]).toEqual(["token"]);
+    expect([...link.searchParams.keys()]).toEqual(["token", "email"]);
+    expect(link.searchParams.get("email")).toBe(email);
     expect(link.toString()).not.toContain("smog:");
 
     // The app verifies without a callback: JSON and the cookie, no redirect.
@@ -315,27 +317,50 @@ describe("magic link", () => {
     expect(link.searchParams.get("callbackURL")).toBe("/account");
   });
 
+  it("the link lives 5 minutes (MAGIC_LINK_TTL_SECONDS)", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+    const before = Date.now();
+    await ctx.call("/sign-in/magic-link", {
+      body: { callbackURL: "/", email },
+    });
+    const rows = await ctx.db.select().from(verification);
+    const row = rows.find((candidate) => candidate.value.includes(email));
+    expect(MAGIC_LINK_TTL_SECONDS).toBe(300);
+    const lifetime = (row?.expiresAt.getTime() ?? 0) - before;
+    expect(lifetime).toBeGreaterThan(299_000);
+    expect(lifetime).toBeLessThanOrEqual(301_000);
+  });
+
   it("appMagicLinkURL only rewrites links whose callback is the app", () => {
     const verify = `${SITE_URL}/api/auth/magic-link/verify?token=abc`;
     expect(
       appMagicLinkURL({
+        email: "a@smog.test",
         siteURL: SITE_URL,
         token: "abc",
         url: `${verify}&callbackURL=${encodeURIComponent("smog:///")}`,
       })
-    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc`);
+    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc&email=a%40smog.test`);
     expect(
       appMagicLinkURL({
+        email: "a@smog.test",
         siteURL: SITE_URL,
         token: "abc",
         url: `${verify}&callbackURL=${encodeURIComponent("exp://10.0.0.2:8081/--/")}`,
       })
-    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc`);
+    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc&email=a%40smog.test`);
     for (const callback of ["/", "/account", `${SITE_URL}/lists`]) {
       const url = `${verify}&callbackURL=${encodeURIComponent(callback)}`;
-      expect(appMagicLinkURL({ siteURL: SITE_URL, token: "abc", url })).toBe(
-        url
-      );
+      expect(
+        appMagicLinkURL({
+          email: "a@smog.test",
+          siteURL: SITE_URL,
+          token: "abc",
+          url,
+        })
+      ).toBe(url);
     }
   });
 });

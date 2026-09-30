@@ -80,7 +80,15 @@ export type AuthFlowEvent =
  */
 export type AuthResult =
   | { ok: true; redirected?: boolean }
-  | { error: AuthErrorKey; ok: false };
+  | {
+      /**
+       * The captcha plugin said a token is required and none was sent
+       * (`MISSING_RESPONSE`): the flow can run the challenge and retry.
+       */
+      captchaMissing?: true;
+      error: AuthErrorKey;
+      ok: false;
+    };
 
 export type SocialProvider = "google" | "apple";
 
@@ -268,9 +276,13 @@ export function authErrorField(
 export function toAuthResult(response: {
   error?: AuthClientError | null;
 }): AuthResult {
-  return response.error
-    ? { error: authErrorKey(response.error), ok: false }
-    : { ok: true };
+  if (!response.error) {
+    return { ok: true };
+  }
+  const error = authErrorKey(response.error);
+  return response.error.code === "MISSING_RESPONSE"
+    ? { captchaMissing: true, error, ok: false }
+    : { error, ok: false };
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -345,16 +357,62 @@ export function authFlowCommands({
   dispatch,
   getState,
 }: CommandOptions): AuthFlowCommands {
-  /**
-   * The token for a guarded call: `undefined` when the server requires
-   * none (or the platform's widget supplies it), `null` when the user
-   * closed the challenge.
-   */
-  async function captchaToken(): Promise<string | null | undefined> {
-    if (!captcha?.required()) {
-      return undefined;
+  type Challenge = { token: string } | "cancelled" | "failed";
+
+  /** Runs the challenge; the flow's outcome when it does not give a token. */
+  async function challenge(action: AuthPending): Promise<Challenge> {
+    let token: string | null;
+    try {
+      token = captcha ? await captcha.request() : null;
+    } catch (error) {
+      console.error(`[auth] Failed to run the captcha for ${action}:`, error);
+      dispatch({ error: "captchaFailed", type: "failed" });
+      return "failed";
     }
-    return await captcha.request();
+    if (token === null) {
+      dispatch({ type: "cancelled" });
+      return "cancelled";
+    }
+    return { token };
+  }
+
+  async function attempt(
+    action: AuthPending,
+    call: (token?: string) => Promise<AuthResult>,
+    token: string | undefined
+  ): Promise<AuthResult> {
+    try {
+      return await call(token);
+    } catch (error) {
+      console.error(`[auth] Failed to run ${action}:`, error);
+      return { error: "generic", ok: false };
+    }
+  }
+
+  /**
+   * A guarded call: with a token first when the server is known to
+   * require one; otherwise without, and when the server then answers
+   * "captcha required" (config not loaded yet, or its fetch failed), once
+   * more with a fresh token. `null` means the flow already dispatched.
+   */
+  async function guardedCall(
+    action: AuthPending,
+    call: (token?: string) => Promise<AuthResult>
+  ): Promise<AuthResult | null> {
+    if (captcha?.required()) {
+      const first = await challenge(action);
+      return typeof first === "object"
+        ? await attempt(action, call, first.token)
+        : null;
+    }
+    const result = await attempt(action, call, undefined);
+    if (result.ok || !result.captchaMissing || !captcha) {
+      return result;
+    }
+    const retry = await challenge(action);
+    return typeof retry === "object"
+      ? await attempt(action, call, retry.token)
+      : null;
   }
 
   async function run(
@@ -367,28 +425,11 @@ export function authFlowCommands({
       return;
     }
     dispatch({ action, type: "started" });
-    let token: string | undefined;
-    if (guarded) {
-      let answer: string | null | undefined;
-      try {
-        answer = await captchaToken();
-      } catch (error) {
-        console.error(`[auth] Failed to run the captcha for ${action}:`, error);
-        dispatch({ error: "captchaFailed", type: "failed" });
-        return;
-      }
-      if (answer === null) {
-        dispatch({ type: "cancelled" });
-        return;
-      }
-      token = answer;
-    }
-    let result: AuthResult;
-    try {
-      result = await call(token);
-    } catch (error) {
-      console.error(`[auth] Failed to run ${action}:`, error);
-      result = { error: "generic", ok: false };
+    const result = guarded
+      ? await guardedCall(action, call)
+      : await attempt(action, call, undefined);
+    if (!result) {
+      return;
     }
     if (!result.ok) {
       dispatch({ error: result.error, type: "failed" });
@@ -592,16 +633,22 @@ export function useAuthFlow({
     };
     return authFlowCommands({
       actions: latest,
-      captcha: {
-        request: async () => {
-          const { request } = captchaRef.current;
-          if (!request) {
-            throw new Error("requiresCaptcha without requestCaptcha");
+      // Only a platform with an on-demand challenge (the app) gets one;
+      // the web's inline widget supplies its token through the actions.
+      ...(captchaRef.current.request
+        ? {
+            captcha: {
+              request: async () => {
+                const { request } = captchaRef.current;
+                if (!request) {
+                  throw new Error("[auth] requestCaptcha went away");
+                }
+                return await request();
+              },
+              required: () => captchaRef.current.requiresCaptcha,
+            },
           }
-          return await request();
-        },
-        required: () => captchaRef.current.requiresCaptcha,
-      },
+        : {}),
       // The ref follows every dispatch, so a command reads the state it
       // just produced (validation → request in one call).
       dispatch: (event) => {

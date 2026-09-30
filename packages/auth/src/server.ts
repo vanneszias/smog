@@ -24,6 +24,7 @@ import { COOKIE_PREFIX } from "./cookie";
 import type { AuthEnv } from "./env";
 import {
   APP_MAGIC_LINK_PATH,
+  MAGIC_LINK_TTL_SECONDS,
   OTP_LENGTH,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
@@ -36,7 +37,7 @@ export type { AuthEnv } from "./env";
 const VERIFY_EMAIL_TTL = 60 * 60;
 const RESET_PASSWORD_TTL = 60 * 60;
 const OTP_TTL = 5 * 60;
-const MAGIC_LINK_TTL = 5 * 60;
+const MAGIC_LINK_TTL = MAGIC_LINK_TTL_SECONDS;
 /**
  * How recent a sign-in must be for sensitive actions (seconds): Better
  * Auth's `session.freshAge` default, one day.
@@ -85,15 +86,20 @@ function localeOf(value: unknown): string | null {
  * (`/api/auth/magic-link/verify?token=…&callbackURL=…`) stays for the web.
  * When the callback is the app (`smog://`, or `exp://` in development;
  * Better Auth's origin check already accepted it as trusted), the email
- * gets the app link instead: `<site>/magic-link/app?token=…`, a universal
- * link the app opens and exchanges itself. The callbacks are dropped, so
- * the link can redirect nowhere.
+ * gets the app link instead: `<site>/magic-link/app?token=…&email=…`, a
+ * universal link the app opens and exchanges itself. The callbacks are
+ * dropped, so the link can redirect nowhere. `email` is only what the app
+ * shows before exchanging ("Sign in as …?"); the app checks the account it
+ * got against it and signs out on a mismatch, so a forged value achieves
+ * nothing.
  */
 export function appMagicLinkURL({
+  email,
   siteURL,
   token,
   url,
 }: {
+  email: string;
   siteURL: string;
   token: string;
   url: string;
@@ -112,6 +118,7 @@ export function appMagicLinkURL({
   }
   const link = new URL(APP_MAGIC_LINK_PATH, siteURL);
   link.searchParams.set("token", token);
+  link.searchParams.set("email", email);
   return link.toString();
 }
 
@@ -265,7 +272,12 @@ export function createAuth(options: CreateAuthOptions) {
             email,
             {
               minutes: minutes(MAGIC_LINK_TTL),
-              url: appMagicLinkURL({ siteURL: env.SITE_URL, token, url }),
+              url: appMagicLinkURL({
+                email,
+                siteURL: env.SITE_URL,
+                token,
+                url,
+              }),
             },
             { locale: await userLocale(email), request: ctx?.request }
           );

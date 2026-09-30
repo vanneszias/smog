@@ -71,3 +71,40 @@ export function withRedirect(path: string, redirect: string): string {
     ? path
     : `${path}?redirect=${encodeURIComponent(redirect)}`;
 }
+
+/** Pages the header's "Sign in" link never returns to. */
+const NO_RETURN = /^\/(?:sign-|magic-link(?:[/?#]|$))/;
+
+/**
+ * Where the header's "Sign in" link returns to: the current page without
+ * any `token` in its query (a magic-link or reset token must not spread
+ * into more URLs), and never an auth page or a magic link.
+ */
+export function signInReturnPath(href: string): string | undefined {
+  if (NO_RETURN.test(href)) {
+    return;
+  }
+  const url = new URL(href, PROBE_ORIGIN);
+  url.searchParams.delete("token");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+/** Search params of `/reset-password`. */
+export interface ResetSearch {
+  error?: string | undefined;
+  token?: string | undefined;
+}
+
+/**
+ * Both keys always set (`undefined` unless a string), like
+ * `validateAuthSearch`: the router JSON-parses `?token=123` to a number,
+ * and an omitted key would let the raw value through.
+ */
+export function validateResetSearch(
+  search: Record<string, unknown>
+): ResetSearch {
+  return {
+    error: typeof search.error === "string" ? search.error : undefined,
+    token: typeof search.token === "string" ? search.token : undefined,
+  };
+}

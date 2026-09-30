@@ -156,7 +156,14 @@
       "resent": "We stuurden je een nieuwe link.",
       "appTitle": "Aanmelden in de app",
       "appDescription": "Deze link meldt je aan in de SMOG & Co-app. Open hem op de telefoon waarop de app staat.",
-      "continueInBrowser": "Aanmelden in deze browser"
+      "continueInBrowser": "Aanmelden in deze browser",
+      "confirmTitle": "Aanmelden als {{email}}?",
+      "confirmDescription": "Deze link meldt je aan met dat e-mailadres. Is dat jouw account?",
+      "confirm": "Aanmelden",
+      "switchTitle": "Overschakelen naar {{email}}?",
+      "switchDescription": "Je bent aangemeld als {{current}}. Deze link meldt je aan met een ander account.",
+      "switch": "Ander account gebruiken",
+      "wrongAccount": "Deze link meldt je aan bij een ander account."
     },
     "checkInbox": {
       "openMail": "Open je mailapp",
@@ -198,6 +205,7 @@
       "retry": "Opnieuw proberen"
     },
     "signedIn": "Je bent aangemeld.",
+    "signedInAs": "Je bent aangemeld als {{email}}.",
     "signingIn": "Bezig met aanmelden…",
     "signedOut": "Je bent afgemeld.",
     "errors": {

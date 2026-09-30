@@ -156,7 +156,14 @@
       "resent": "Nous vous avons envoyé un nouveau lien.",
       "appTitle": "Se connecter dans l'app",
       "appDescription": "Ce lien vous connecte à l'app SMOG & Co. Ouvrez-le sur le téléphone où l'app est installée.",
-      "continueInBrowser": "Se connecter dans ce navigateur"
+      "continueInBrowser": "Se connecter dans ce navigateur",
+      "confirmTitle": "Se connecter en tant que {{email}}\u202f?",
+      "confirmDescription": "Ce lien vous connecte avec cette adresse. Est-ce votre compte\u202f?",
+      "confirm": "Se connecter",
+      "switchTitle": "Passer à {{email}}\u202f?",
+      "switchDescription": "Vous êtes connecté en tant que {{current}}. Ce lien vous connecte à un autre compte.",
+      "switch": "Changer de compte",
+      "wrongAccount": "Ce lien connecte à un autre compte."
     },
     "checkInbox": {
       "openMail": "Ouvrir votre application de messagerie",
@@ -198,6 +205,7 @@
       "retry": "Réessayer"
     },
     "signedIn": "Vous êtes connecté.",
+    "signedInAs": "Vous êtes connecté en tant que {{email}}.",
     "signingIn": "Connexion en cours…",
     "signedOut": "Vous êtes déconnecté.",
     "errors": {

@@ -1,5 +1,6 @@
 import { publicAuthConfig } from "@smog/config/env/worker";
 import { createI18n, isLocale, type Locale, resolveLocale } from "@smog/i18n";
+import { parseCookie } from "cookie-es";
 import { scriptJson } from "@/lib/head";
 import { LOCALE_COOKIE } from "@/lib/preferences";
 import { siteEnv } from "./auth";
@@ -131,16 +132,6 @@ function bridgePage({ locale, nonce, siteKey }: BridgePageOptions): string {
 </html>`;
 }
 
-function cookieValue(header: string | null, name: string): string | null {
-  for (const part of (header ?? "").split(";")) {
-    const [key, ...value] = part.trim().split("=");
-    if (key === name) {
-      return value.join("=");
-    }
-  }
-  return null;
-}
-
 /** The app's `?lang=`, else the locale cookie, else Accept-Language. */
 function bridgeLocale(request: Request): Locale {
   const lang = new URL(request.url).searchParams.get("lang");
@@ -149,7 +140,7 @@ function bridgeLocale(request: Request): Locale {
   }
   return resolveLocale({
     acceptLanguage: request.headers.get("accept-language"),
-    cookie: cookieValue(request.headers.get("cookie"), LOCALE_COOKIE),
+    cookie: parseCookie(request.headers.get("cookie") ?? "")[LOCALE_COOKIE],
   });
 }
 

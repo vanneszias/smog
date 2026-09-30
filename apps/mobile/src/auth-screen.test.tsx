@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from "@jest/globals";
+import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import {
   act,
   fireEvent,
@@ -6,7 +6,13 @@ import {
   waitFor,
   within,
 } from "expo-router/testing-library";
+import { Linking } from "react-native";
 import type { TestInstance } from "test-renderer";
+import {
+  clearMagicLinkRequest,
+  isMagicLinkPending,
+  markMagicLinkRequested,
+} from "./auth/magic-link-request";
 import { renderApp } from "./test/harness";
 
 // The real auth client (Better Auth, SecureStore) is never built: tests pass fakes.
@@ -80,7 +86,10 @@ describe("sign-in with Turnstile on (the WebView sheet)", () => {
     expect(view.props.source).toEqual({
       uri: `${SITE}/turnstile-bridge?lang=en`,
     });
-    expect(view.props.originWhitelist).toEqual([SITE]);
+    expect(view.props.originWhitelist).toEqual([
+      SITE,
+      "https://challenges.cloudflare.com",
+    ]);
     expect(sendVerificationOtp).not.toHaveBeenCalled();
 
     // Another origin (a navigated frame, a spoofed message) is ignored.
@@ -122,22 +131,51 @@ describe("sign-in with Turnstile on (the WebView sheet)", () => {
     });
     await act(() => Promise.resolve());
     await chooseEmailCode();
-    const allow = (await webview()).props
-      .onShouldStartLoadWithRequest as (request: {
-      isTopFrame?: boolean;
-      url: string;
-    }) => boolean;
-    expect(allow({ isTopFrame: true, url: `${SITE}/turnstile-bridge` })).toBe(
-      true
+    const { props } = await webview();
+    // The library's own gate (whitelist first, then our handler), as the
+    // native side calls it for every navigation, iframes included on iOS.
+    const { createOnShouldStartLoadWithRequest } = jest.requireActual<
+      typeof import("react-native-webview/lib/WebViewShared")
+    >("react-native-webview/lib/WebViewShared");
+    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    const canOpenURL = jest
+      .spyOn(Linking, "canOpenURL")
+      .mockResolvedValue(true);
+    const decisions: [boolean, string][] = [];
+    const gate = createOnShouldStartLoadWithRequest(
+      (shouldStart: boolean, url: string) => {
+        decisions.push([shouldStart, url]);
+      },
+      props.originWhitelist,
+      props.onShouldStartLoadWithRequest
     );
-    expect(allow({ isTopFrame: true, url: "https://evil.test/" })).toBe(false);
-    expect(
-      allow({
-        isTopFrame: false,
-        url: "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/x",
-      })
-    ).toBe(true);
-    expect(allow({ isTopFrame: false, url: "https://evil.test/" })).toBe(false);
+    const load = (url: string, isTopFrame: boolean): void =>
+      gate({ nativeEvent: { isTopFrame, lockIdentifier: 1, url } } as never);
+
+    const challenge =
+      "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/x";
+    load(`${SITE}/turnstile-bridge?lang=en`, true);
+    load(challenge, false);
+    load("https://evil.test/", true);
+    load("https://evil.test/", false);
+    load(challenge, true);
+    // The library's whitelist is a prefix match; our exact check is not.
+    load("https://smog.test.evil.test/", true);
+    await act(() => Promise.resolve());
+
+    expect(decisions).toEqual([
+      [true, `${SITE}/turnstile-bridge?lang=en`],
+      [true, challenge],
+      [false, "https://evil.test/"],
+      [false, "https://evil.test/"],
+      [false, challenge],
+      [false, "https://smog.test.evil.test/"],
+    ]);
+    // Refused loads outside the whitelist go to the OS, but never the
+    // challenge frame (the iOS bug: Safari popping up with it).
+    expect(openURL).not.toHaveBeenCalledWith(challenge);
+    openURL.mockRestore();
+    canOpenURL.mockRestore();
   });
 
   it("closing the sheet sends nothing and lets the user try again", async () => {
@@ -233,36 +271,121 @@ describe("sign-in with Turnstile on (the WebView sheet)", () => {
       })
     );
     expect(await screen.findByText("Check your inbox")).toBeOnTheScreen();
+    // The app remembers it asked, so the link exchanges without a prompt.
+    expect(isMagicLinkPending(EMAIL)).toBe(true);
   });
 });
 
 describe("the app's magic link", () => {
-  it("exchanges the token for a session and goes home", async () => {
-    const verify = jest.fn(() =>
+  const OTHER = "other@smog.test";
+  const link = (email = EMAIL): string =>
+    `/magic-link/app?token=${TOKEN}&email=${encodeURIComponent(email)}`;
+  const verified = (email = EMAIL) =>
+    jest.fn(() =>
       Promise.resolve({
-        data: { session: { id: "s" }, token: "session", user: { id: "u" } },
+        data: {
+          session: { id: "s" },
+          token: "session",
+          user: { email, id: "u" },
+        },
         error: null,
       })
     );
+
+  beforeEach(() => {
+    clearMagicLinkRequest();
+  });
+
+  it("exchanges at once when this app just asked for a link for that address", async () => {
+    markMagicLinkRequested(EMAIL);
+    const verify = verified();
     const { result } = await renderApp({
       auth: { magicLink: { verify } },
-      initialUrl: `/magic-link?token=${TOKEN}`,
+      initialUrl: link(),
     });
     await waitFor(() =>
       expect(verify).toHaveBeenCalledWith({ query: { token: TOKEN } })
     );
     await waitFor(() => expect(result.getPathname()).toBe("/"));
-    expect(await screen.findByText("You're signed in.")).toBeOnTheScreen();
+    // The toast names the account, so a swap is visible.
+    expect(
+      await screen.findByText(`You're signed in as ${EMAIL}.`)
+    ).toBeOnTheScreen();
+  });
+
+  it.each([
+    ["no request from this app", () => undefined],
+    ["a request for another address", () => markMagicLinkRequested(OTHER)],
+    [
+      "a request older than the link's lifetime",
+      () => markMagicLinkRequested(EMAIL, Date.now() - 301_000),
+    ],
+  ])("with %s it asks first (a tap signs in)", async (_label, arrange) => {
+    arrange();
+    const verify = verified();
+    await renderApp({ auth: { magicLink: { verify } }, initialUrl: link() });
+    expect(
+      await screen.findByRole("header", { name: `Sign in as ${EMAIL}?` })
+    ).toBeOnTheScreen();
+    expect(verify).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => expect(verify).toHaveBeenCalledTimes(1));
+  });
+
+  it("never switches a signed-in user without asking", async () => {
+    markMagicLinkRequested(OTHER);
+    const verify = verified(OTHER);
+    const signOut = jest.fn(() => Promise.resolve({ data: {}, error: null }));
+    await renderApp({
+      auth: { magicLink: { verify }, signOut },
+      initialUrl: link(OTHER),
+      signedIn: true,
+    });
+    expect(
+      await screen.findByRole("header", { name: `Switch to ${OTHER}?` })
+    ).toBeOnTheScreen();
+    expect(
+      screen.getByText(`You're signed in as ${EMAIL}.`, { exact: false })
+    ).toBeOnTheScreen();
+    expect(verify).not.toHaveBeenCalled();
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Switch account" })
+    );
+    await waitFor(() => expect(verify).toHaveBeenCalledTimes(1));
+    expect(signOut).toHaveBeenCalled();
+  });
+
+  it("a link for the signed-in account itself changes nothing", async () => {
+    const verify = verified();
+    const { result } = await renderApp({
+      auth: { magicLink: { verify } },
+      initialUrl: link(EMAIL),
+      signedIn: true,
+    });
+    await waitFor(() => expect(result.getPathname()).toBe("/"));
+    expect(verify).not.toHaveBeenCalled();
+  });
+
+  it("an account other than the link's is signed out again", async () => {
+    markMagicLinkRequested(EMAIL);
+    const verify = verified(OTHER);
+    const signOut = jest.fn(() => Promise.resolve({ data: {}, error: null }));
+    await renderApp({
+      auth: { magicLink: { verify }, signOut },
+      initialUrl: link(),
+    });
+    expect(
+      await screen.findByText("This link signs in to another account.")
+    ).toBeOnTheScreen();
+    expect(signOut).toHaveBeenCalled();
   });
 
   it("an expired or used link says so and offers sign-in", async () => {
+    markMagicLinkRequested(EMAIL);
     const verify = jest.fn(() =>
       Promise.resolve({ data: null, error: { status: 302 } })
     );
-    await renderApp({
-      auth: { magicLink: { verify } },
-      initialUrl: `/magic-link?token=${TOKEN}`,
-    });
+    await renderApp({ auth: { magicLink: { verify } }, initialUrl: link() });
     expect(
       await screen.findByText("This link has expired or is no longer valid.")
     ).toBeOnTheScreen();
@@ -271,11 +394,11 @@ describe("the app's magic link", () => {
     ).toBeOnTheScreen();
   });
 
-  it("a link without a valid token never calls the server", async () => {
+  it("a link without a valid token or address never calls the server", async () => {
     const verify = jest.fn();
     await renderApp({
       auth: { magicLink: { verify } },
-      initialUrl: "/magic-link",
+      initialUrl: `/magic-link/app?token=${TOKEN}`,
     });
     expect(
       await screen.findByText("This link has expired or is no longer valid.")

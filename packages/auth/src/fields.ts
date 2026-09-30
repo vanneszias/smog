@@ -39,5 +39,11 @@ export const USER_ADDITIONAL_FIELDS = {
  */
 export const APP_MAGIC_LINK_PATH = "/magic-link/app";
 
+/**
+ * A magic link's lifetime (seconds). The app also uses it: it exchanges a
+ * link without asking only within this window after it requested one.
+ */
+export const MAGIC_LINK_TTL_SECONDS = 5 * 60;
+
 /** Better Auth's magic-link token: 32 letters; generous but strict. */
 export const MAGIC_LINK_TOKEN_PATTERN = /^[A-Za-z0-9_-]{16,128}$/;

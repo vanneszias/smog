@@ -4,6 +4,7 @@ import { Button, Heading, Spinner, Text, useToast } from "@smog/ui-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   type ReactElement,
+  type ReactNode,
   useCallback,
   useEffect,
   useRef,
@@ -11,55 +12,177 @@ import {
 } from "react";
 import { View } from "react-native";
 import { useAuthClient } from "@/lib/auth-client";
+import {
+  clearMagicLinkRequest,
+  isMagicLinkPending,
+} from "./magic-link-request";
 
-/** Better Auth answers a good token with the new session (no redirect). */
-function isSession(data: unknown): boolean {
+/** The account Better Auth signed in (a good token answers with it). */
+function sessionEmail(data: unknown): string | null {
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !("session" in data) ||
+    typeof data.session !== "object" ||
+    data.session === null ||
+    !("user" in data) ||
+    typeof data.user !== "object" ||
+    data.user === null ||
+    !("email" in data.user) ||
+    typeof data.user.email !== "string"
+  ) {
+    return null;
+  }
+  return data.user.email;
+}
+
+const same = (a: string, b: string): boolean =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
+
+type Phase =
+  | "deciding"
+  | "confirm"
+  | "switch"
+  | "verifying"
+  | "invalid"
+  | "wrongAccount";
+
+/** What a valid link does, given who is signed in (see the screen). */
+function decide(
+  email: string,
+  currentEmail: string | null | undefined
+): "home" | "switch" | "exchange" | "confirm" {
+  if (currentEmail) {
+    return same(currentEmail, email) ? "home" : "switch";
+  }
+  return isMagicLinkPending(email) ? "exchange" : "confirm";
+}
+
+/** The account Better Auth signed in with the token, or null. */
+async function verifyToken(
+  client: ReturnType<typeof useAuthClient>,
+  token: string
+): Promise<string | null> {
+  const result = await client.magicLink.verify({ query: { token } });
+  return result.error ? null : sessionEmail(result.data);
+}
+
+function Screen({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}): ReactElement {
   return (
-    typeof data === "object" &&
-    data !== null &&
-    "session" in data &&
-    typeof data.session === "object" &&
-    data.session !== null
+    <View className="flex-1 gap-6 bg-background px-4 py-6">
+      <Heading level={1}>{title}</Heading>
+      {children}
+    </View>
   );
 }
 
 /**
- * `/magic-link?token=…`: the app's magic link (the universal link
- * `<site>/magic-link/app?token=…`, mapped by `+native-intent`). The app
- * exchanges the single-use token itself (`magicLink.verify` without a
- * callback, so the server answers with JSON and the session cookie, which
- * the Expo client stores); no session cookie travels in a URL. The token is
- * never logged.
+ * `/magic-link?token=…&email=…`: the app's magic link (the universal link
+ * `<site>/magic-link/app?…`, mapped by `+native-intent`). The app exchanges
+ * the single-use token itself (`magicLink.verify` without a callback: JSON
+ * and the session cookie, which the Expo client stores), so no session
+ * cookie travels in a URL. The token is never logged by this code.
+ *
+ * Login CSRF: anyone can send a link for their own account. So the link is
+ * exchanged at once only while this app has a request pending for that
+ * address (`magic-link-request`); otherwise the user confirms "Sign in as
+ * …?". A signed-in user is never switched without "Switch to …?", a link
+ * for the current account changes nothing, the account Better Auth
+ * returns must be the one shown (else it is signed out again), and the
+ * toast names the account.
  */
 export function MagicLinkScreen(): ReactElement {
+  const params = useLocalSearchParams<{ email?: string; token?: string }>();
+  const link = linkOf(params);
+  const { currentEmail, exchange, phase } = useMagicLinkExchange(link);
+  if (phase === "confirm" || phase === "switch") {
+    return (
+      <ConfirmView
+        current={currentEmail ?? null}
+        email={link?.email ?? ""}
+        exchange={exchange}
+        switching={phase === "switch"}
+      />
+    );
+  }
+  if (phase === "invalid" || phase === "wrongAccount") {
+    return <FailedView wrongAccount={phase === "wrongAccount"} />;
+  }
+  return <SigningInView />;
+}
+
+interface AppLink {
+  email: string;
+  token: string;
+}
+
+/** The link's token and address, or null when either is malformed. */
+function linkOf(params: { email?: string; token?: string }): AppLink | null {
+  const { email, token } = params;
+  if (
+    typeof token !== "string" ||
+    !MAGIC_LINK_TOKEN_PATTERN.test(token) ||
+    typeof email !== "string" ||
+    !email.includes("@")
+  ) {
+    return null;
+  }
+  return { email, token };
+}
+
+function useMagicLinkExchange(link: AppLink | null): {
+  currentEmail: string | null | undefined;
+  exchange: (signOutFirst: boolean) => void;
+  phase: Phase;
+} {
   const { t } = useTranslation();
   const client = useAuthClient();
-  const { refetch } = useAuthState();
+  const auth = useAuthState();
   const router = useRouter();
   const { toast } = useToast();
-  const params = useLocalSearchParams<{ token?: string }>();
-  const token =
-    typeof params.token === "string" &&
-    MAGIC_LINK_TOKEN_PATTERN.test(params.token)
-      ? params.token
-      : null;
-  const [failed, setFailed] = useState(token === null);
-  const started = useRef<string | null>(null);
+  const [phase, setPhase] = useState<Phase>(link ? "deciding" : "invalid");
+  const started = useRef(false);
+  const { refetch } = auth;
+  const currentEmail = auth.status === "signedIn" ? auth.user?.email : null;
+  const token = link?.token;
+  const email = link?.email;
 
-  useEffect(() => {
-    if (!token || started.current === token) {
-      return;
-    }
-    started.current = token;
-    const verify = async (): Promise<void> => {
+  const run = useCallback(
+    async (signOutFirst: boolean): Promise<void> => {
+      if (!(token && email) || started.current) {
+        return;
+      }
+      started.current = true;
+      setPhase("verifying");
       try {
-        const result = await client.magicLink.verify({ query: { token } });
-        if (result.error || !isSession(result.data)) {
-          setFailed(true);
+        if (signOutFirst) {
+          // Switching: end the current session instead of leaving it behind.
+          await client.signOut();
+        }
+        const signedIn = await verifyToken(client, token);
+        if (!signedIn) {
+          setPhase("invalid");
+          return;
+        }
+        clearMagicLinkRequest();
+        if (!same(signedIn, email)) {
+          // The link named another address than the account it holds.
+          await client.signOut();
+          refetch();
+          setPhase("wrongAccount");
           return;
         }
         refetch();
-        toast({ title: t("auth.signedIn"), variant: "success" });
+        toast({
+          title: t("auth.signedInAs", { email: signedIn }),
+          variant: "success",
+        });
         router.replace("/");
       } catch (error) {
         // The name only: the request (and so the token) stays out of logs.
@@ -67,29 +190,99 @@ export function MagicLinkScreen(): ReactElement {
           "[auth] Failed to verify the magic link:",
           error instanceof Error ? error.name : "unknown error"
         );
-        setFailed(true);
+        setPhase("invalid");
       }
-    };
-    verify();
-  }, [client, refetch, router, t, toast, token]);
+    },
+    [client, email, refetch, router, t, toast, token]
+  );
+  const exchange = useCallback(
+    (signOutFirst: boolean) => {
+      run(signOutFirst);
+    },
+    [run]
+  );
 
-  const toSignIn = useCallback(() => router.replace("/sign-in"), [router]);
+  useEffect(() => {
+    if (phase !== "deciding" || auth.status === "loading" || !email) {
+      return;
+    }
+    const next = decide(email, currentEmail);
+    if (next === "home") {
+      // Already that account: the token stays unused.
+      router.replace("/");
+    } else if (next === "exchange") {
+      exchange(false);
+    } else {
+      setPhase(next);
+    }
+  }, [auth.status, currentEmail, email, exchange, phase, router]);
 
+  return { currentEmail, exchange, phase };
+}
+
+function ConfirmView({
+  current,
+  email,
+  exchange,
+  switching,
+}: {
+  current: string | null;
+  email: string;
+  exchange: (signOutFirst: boolean) => void;
+  switching: boolean;
+}): ReactElement {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const toHome = useCallback(() => router.replace("/"), [router]);
+  const accept = useCallback(() => exchange(switching), [exchange, switching]);
   return (
-    <View className="flex-1 gap-6 bg-background px-4 py-6">
-      <Heading level={1}>
-        {failed ? t("auth.magicLink.appTitle") : t("auth.signingIn")}
-      </Heading>
-      {failed ? (
-        <View className="gap-4">
-          <Text accessibilityRole="alert" tone="danger">
-            {t("auth.errors.linkInvalid")}
-          </Text>
-          <Button onPress={toSignIn}>{t("auth.magicLink.resend")}</Button>
-        </View>
-      ) : (
-        <Spinner />
-      )}
-    </View>
+    <Screen
+      title={
+        switching
+          ? t("auth.magicLink.switchTitle", { email })
+          : t("auth.magicLink.confirmTitle", { email })
+      }
+    >
+      <Text tone="muted">
+        {switching
+          ? t("auth.magicLink.switchDescription", { current })
+          : t("auth.magicLink.confirmDescription")}
+      </Text>
+      <View className="gap-3">
+        <Button onPress={accept}>
+          {switching ? t("auth.magicLink.switch") : t("auth.magicLink.confirm")}
+        </Button>
+        <Button onPress={toHome} variant="ghost">
+          {t("common.cancel")}
+        </Button>
+      </View>
+    </Screen>
+  );
+}
+
+function FailedView({ wrongAccount }: { wrongAccount: boolean }): ReactElement {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const toSignIn = useCallback(() => router.replace("/sign-in"), [router]);
+  return (
+    <Screen title={t("auth.magicLink.appTitle")}>
+      <View className="gap-4">
+        <Text accessibilityRole="alert" tone="danger">
+          {wrongAccount
+            ? t("auth.magicLink.wrongAccount")
+            : t("auth.errors.linkInvalid")}
+        </Text>
+        <Button onPress={toSignIn}>{t("auth.magicLink.resend")}</Button>
+      </View>
+    </Screen>
+  );
+}
+
+function SigningInView(): ReactElement {
+  const { t } = useTranslation();
+  return (
+    <Screen title={t("auth.signingIn")}>
+      <Spinner />
+    </Screen>
   );
 }
