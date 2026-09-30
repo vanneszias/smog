@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { scrypt } from "node:crypto";
 import { account, session } from "@smog/db";
 import { makeUser } from "@smog/db/testing";
 import { eq } from "drizzle-orm";
@@ -134,26 +135,48 @@ describe("email + password", () => {
     expect(response.status).toBe(200);
     expect(elapsed).toBeLessThan(1500);
 
-    // The hash alone (workerd resolves Better Auth's scrypt to node:crypto).
+    // The hash alone: workerd must resolve Better Auth's scrypt to native
+    // node:crypto, not the pure-JS fallback (DECISIONS, password hashing).
+    // A fixed millisecond limit fails on a busy CI runner, so the hash is
+    // judged against native scrypt with the same parameters, timed in turns
+    // with it: the fallback is many times slower, contention hits both.
     const context = await ctx.auth.$context;
-    // Wall-clock time also counts CPU contention from other processes, so
-    // judge the fastest of a few runs: a slow algorithm is slow every time,
-    // a busy machine only some of the time.
-    const timeHash = async (): Promise<{ elapsed: number; hash: string }> => {
-      const hashStarted = performance.now();
-      const value = await context.password.hash(PASSWORD);
-      return { elapsed: performance.now() - hashStarted, hash: value };
+    const nativeScrypt = (): Promise<void> =>
+      new Promise((resolve, reject) => {
+        scrypt(
+          PASSWORD.normalize("NFKC"),
+          "0123456789abcdef0123456789abcdef",
+          64,
+          { maxmem: 128 * 16_384 * 16 * 2, N: 16_384, p: 1, r: 16 },
+          (error) => (error ? reject(error) : resolve())
+        );
+      });
+    const time = async (run: () => Promise<unknown>): Promise<number> => {
+      const runStarted = performance.now();
+      await run();
+      return performance.now() - runStarted;
     };
-    const first = await timeHash();
-    const second = await timeHash();
-    const third = await timeHash();
-    const { hash } = third;
-    const hashElapsed = Math.min(first.elapsed, second.elapsed, third.elapsed);
-    console.log(`[auth.test] scrypt hash took ${hashElapsed.toFixed(0)} ms`);
+    const hashTimes: number[] = [];
+    const nativeTimes: number[] = [];
+    let hash = "";
+    for (let run = 0; run < 3; run += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: timed one after another on purpose.
+      nativeTimes.push(await time(nativeScrypt));
+      hashTimes.push(
+        await time(async () => {
+          hash = await context.password.hash(PASSWORD);
+        })
+      );
+    }
+    const hashElapsed = Math.min(...hashTimes);
+    const nativeElapsed = Math.min(...nativeTimes);
+    console.log(
+      `[auth.test] scrypt hash took ${hashElapsed.toFixed(0)} ms (native ${nativeElapsed.toFixed(0)} ms)`
+    );
     expect(await context.password.verify({ hash, password: PASSWORD })).toBe(
       true
     );
-    expect(hashElapsed).toBeLessThan(500);
+    expect(hashElapsed).toBeLessThan(nativeElapsed * 3 + 50);
   });
 });
 
