@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@smog/analytics": "workspace:*",
+    "@smog/config": "workspace:*",
     "@smog/db": "workspace:*",
     "@smog/local-store": "workspace:*",
     "@smog/rpc": "workspace:*",
@@ -26,7 +27,6 @@
     "@cloudflare/vitest-plugin": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/tanstack-query": "catalog:",
-    "@smog/config": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",

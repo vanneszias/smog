@@ -2,7 +2,8 @@
 /**
  * `@smog/gestures/client`: platform-neutral hooks (TanStack Query over the
  * typed `gestures` slice, and the local store for recent searches), plus
- * the pure ranking for the mobile offline cache. Never imports ./server.
+ * the shared screen rules (the course banner, gesture view and playback
+ * tracking). Never imports ./server.
  */
 export {
   type Ranked,
@@ -12,6 +13,13 @@ export {
   shouldRunTypoTier,
   typoMatches,
 } from "../ranking";
+export {
+  COURSE_PROGRESS_KEY,
+  type CourseBannerState,
+  type CourseStorage,
+  type UseCourseBannerOptions,
+  useCourseBanner,
+} from "./course-banner";
 export {
   categoriesOptions,
   type GestureSearchInput,
@@ -27,7 +35,16 @@ export {
   CATEGORIES_STALE_TIME,
   SEARCH_STALE_TIME,
 } from "./slice";
+export {
+  gestureViewSource,
+  useGestureViewed,
+  useVideoCompleted,
+} from "./tracking";
 export { useCategories } from "./use-categories";
+export {
+  FEATURED_LIMIT,
+  useFeaturedGestures,
+} from "./use-featured-gestures";
 export { useGesture } from "./use-gesture";
 export {
   SEARCH_DEBOUNCE_MS,

@@ -22,9 +22,11 @@ import {
   gestureOptions,
   gestureSearchOptions,
   gesturesBrowseOptions,
+  gesturesPageOptions,
   relatedOptions,
   SEARCH_DEBOUNCE_MS,
   useCategories,
+  useFeaturedGestures,
   useGesture,
   useGestureSearch,
   useGestures,
@@ -296,6 +298,22 @@ describe("useGestureSearch", () => {
     ]);
   });
 
+  test("track: false searches without search_performed (the shared-list add sheet)", async () => {
+    const { events, wrapper } = setup();
+    const { result } = renderHook(
+      () => useGestureSearch({ q: "hond", track: false }),
+      { wrapper }
+    );
+    await waitFor(() =>
+      expect(result.current.data?.items.map((item) => item.name)).toEqual([
+        "Hond",
+      ])
+    );
+    // Past the debounce and the fetch: still nothing.
+    await new Promise((resolve) => setTimeout(resolve, SEARCH_DEBOUNCE_MS));
+    expect(events).toEqual([]);
+  });
+
   test("the browse list (no text, no category) is not a search", async () => {
     const { events, wrapper } = setup();
     const { result } = renderHook(() => useGestureSearch({ q: "" }), {
@@ -354,6 +372,23 @@ describe("useGestureSearch", () => {
       expect(result.current.data?.items[0]?.name).toBe("Kat")
     );
     expect(result.current.isPlaceholderData).toBe(false);
+  });
+});
+
+describe("useFeaturedGestures", () => {
+  test("is the first gestures of the catalogue, one page, read from the SSR prefetch", async () => {
+    const { calls, queryClient, utils, wrapper } = setup();
+    await queryClient.prefetchQuery(gesturesPageOptions(utils.gestures, 3));
+    const before = calls.list.length;
+    const { result } = renderHook(() => useFeaturedGestures(3), { wrapper });
+    expect(result.current.data?.map((item) => item.name)).toEqual([
+      "Aap",
+      "Beer",
+      "Hond",
+    ]);
+    expect(result.current.isSuccess).toBe(true);
+    expect(calls.list).toHaveLength(before);
+    expect(staleTimeOf(queryClient, "list")).toBe(CATALOG_STALE_TIME);
   });
 });
 
