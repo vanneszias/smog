@@ -638,6 +638,29 @@
     "saved": "Je keuze is bewaard.",
     "saveFailed": "Je keuze bewaren is niet gelukt. Probeer het opnieuw."
   },
+  "appBanner": {
+    "badge": "Nieuw",
+    "title": "SMOG is nu beschikbaar op je telefoon!",
+    "description": "Download de app en leer gebaren waar je ook bent.",
+    "appStorePrefix": "Download in de",
+    "googlePlayPrefix": "Beschikbaar op",
+    "dismiss": "Sluit de app-banner"
+  },
+  "openInApp": {
+    "title": "Heb je de SMOG-app?",
+    "description": "Bekijk dit gebaar in de app.",
+    "action": "Open in de app",
+    "getApp": "Nog geen app? Download hem"
+  },
+  "legal": {
+    "lastUpdated": "Laatst bijgewerkt op {{date}}",
+    "contents": "Inhoud",
+    "translationNotice": "Deze vertaling is er voor je gemak; de Nederlandse versie heeft voorrang.",
+    "readDutch": "Lees de Nederlandse versie",
+    "consentControl": "Je keuze voor statistieken",
+    "readingDutch": "Je leest de Nederlandse versie, die voorrang heeft.",
+    "showTranslation": "Toon de vertaling"
+  },
   "gestures": {
     "description": "Zoek SMOG-gebaren op woord of categorie en bekijk ze in video.",
     "select": {

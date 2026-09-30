@@ -1,0 +1,6 @@
+# Workers static assets headers, checked by scripts/release-config-check.ts.
+# The AASA file has no extension, so without this it is not served as JSON.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+/.well-known/assetlinks.json
+  Content-Type: application/json

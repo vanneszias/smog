@@ -84,15 +84,18 @@ function Related({
  * gestures (spec §16 flow 1). `page` puts the video beside the text from
  * `lg`; `panel` stacks everything (the browse page's detail column).
  * `viewSource` is where it was opened from (`gesture_viewed`, once per
- * gesture shown).
+ * gesture shown). `appLink` goes under the actions (the page's "Open in
+ * the app" on phones).
  */
 export function GestureDetailView({
+  appLink,
   gesture,
   hearts,
   layout,
   related,
   viewSource,
 }: {
+  appLink?: ReactNode;
   gesture: GestureDetail;
   hearts: Hearts;
   layout: "page" | "panel";
@@ -161,6 +164,7 @@ export function GestureDetailView({
             ) : null}
           </div>
           <GestureActions gesture={gesture} hearts={hearts} />
+          {appLink}
           {gesture.sponsor ? (
             <Text size="body-sm" tone="muted">
               {t("gesture.sponsoredBy", { name: gesture.sponsor.name })}

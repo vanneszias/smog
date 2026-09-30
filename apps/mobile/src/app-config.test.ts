@@ -59,6 +59,7 @@ describe("app.config", () => {
     expect(https?.data).toEqual([
       { host: "example.test", pathPrefix: "/gestures/", scheme: "https" },
       { host: "example.test", pathPrefix: "/lists/", scheme: "https" },
+      { host: "example.test", path: "/magic-link/app", scheme: "https" },
     ]);
   });
 

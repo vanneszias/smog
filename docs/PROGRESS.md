@@ -36,10 +36,14 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - Carry into the phase 4 plan: a native Turnstile widget (WebView), so mobile email sign-in works with captcha on; magic link on mobile via a universal link; a CSP with a hash for the theme pre-paint script; the `/api/analytics` relay must reject foreign origins with `isForeignRequest` from `@smog/rpc` (spec §7, §12), like `/api/rpc`.
 - Carry into the phase 5 plan: admin gesture and category writes must set `sort_name`, reindex FTS and call `bumpCatalogVersion` (the catalog snapshot also serves `gestures.categories`); gesture name ≤ 120. The admin gestures tab gets the QR dialog (inventory L-14's admin half). The admin screens read categories (and gestures) from D1, not through the cached `gestures.categories`, so an admin sees their own edit at once.
 - Carry into the phase 6 plan: the sponsor call-to-action on the gesture detail (inventory L-17), from `sponsorships.availability`, on the site and mobile. L-15 (open in app) and L-16 (home app banner) are already phase 4 task 4.
+- Carry into phase 4 task 6: the legacy 301s (`apps/site/src/lib/legacy-redirects.ts`) answer in the Worker's `fetch` before Start. If the security-headers middleware lives in Start, wrap the Worker `fetch` so the 301s get HSTS and the other headers too, or accept bare 301s and record it.
+- Carry into the phase 6 plan (required before cutover, the privacy text promises it): a scheduled purge that deletes `audit_log` rows older than 3 years and expired `session` and `verification` rows within 30 days of their expiry.
 - Carry into phase 8: the Convex → D1 data import must call `bumpCatalogVersion` (and rebuild FTS) when it finishes; otherwise isolates keep serving the old catalog snapshot until they are recycled.
 - Carry into phase 8: required secrets and vars checked before deploy, including production `TURNSTILE_SITE_KEY` (var) and `TURNSTILE_SECRET_KEY` (secret); `SITE_URL` per env must be the origin browsers use (the rpc origin check and Better Auth compare against it).
 
 ## Known gaps
+
+- The legal texts (`/privacy`, `/terms`) need the owner's sign-off before any develop → master merge: `docs/LEGAL-SIGNOFF.md` lists every change from the old pages and the open decisions (effective date, consent history on deletion, renewal price wording).
 
 - Bun is pinned at 1.3.11 (`packageManager`); upgrade when possible (see DECISIONS).
 - `SMOG_OFFLINE=1 bun run release:check` (local, no network) degrades three expo-doctor checks; CI runs them online and is the authority.

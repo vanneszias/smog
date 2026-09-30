@@ -32,6 +32,11 @@ export const guestDataSchema = z.object({
   lists: z.array(localListSchema),
   preferences: z.object({
     /**
+     * When the web app banner (spec §9, inventory L-16) was dismissed on
+     * this device. Optional and additive, so stored v2 data still parses.
+     */
+    appBannerDismissedAt: z.number().int().optional(),
+    /**
      * Signed-in user ids that dismissed the guest import prompt on this
      * device, oldest first (at most `IMPORT_DISMISSED_MAX`).
      */
