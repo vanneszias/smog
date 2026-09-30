@@ -9,6 +9,9 @@ import {
 import type { Role } from "./fields";
 
 export {
+  APP_MAGIC_LINK_PATH,
+  MAGIC_LINK_TOKEN_PATTERN,
+  MAGIC_LINK_TTL_SECONDS,
   OTP_LENGTH,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
@@ -24,6 +27,7 @@ export {
   type AuthErrorKey,
   type AuthFlow,
   type AuthFlowActions,
+  type AuthFlowCaptcha,
   type AuthFlowState,
   type AuthMethod,
   type AuthMode,

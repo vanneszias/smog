@@ -23,6 +23,8 @@ import { eq } from "drizzle-orm";
 import { COOKIE_PREFIX } from "./cookie";
 import type { AuthEnv } from "./env";
 import {
+  APP_MAGIC_LINK_PATH,
+  MAGIC_LINK_TTL_SECONDS,
   OTP_LENGTH,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
@@ -35,7 +37,7 @@ export type { AuthEnv } from "./env";
 const VERIFY_EMAIL_TTL = 60 * 60;
 const RESET_PASSWORD_TTL = 60 * 60;
 const OTP_TTL = 5 * 60;
-const MAGIC_LINK_TTL = 5 * 60;
+const MAGIC_LINK_TTL = MAGIC_LINK_TTL_SECONDS;
 /**
  * How recent a sign-in must be for sensitive actions (seconds): Better
  * Auth's `session.freshAge` default, one day.
@@ -77,6 +79,42 @@ function localeOf(value: unknown): string | null {
     typeof value.locale === "string"
     ? value.locale
     : null;
+}
+
+/**
+ * The link a magic-link email carries. Better Auth's own link
+ * (`/api/auth/magic-link/verify?token=…&callbackURL=…`) stays for the web.
+ * When the callback is the app (`smog://`, or `exp://` in development;
+ * Better Auth's origin check already accepted it as trusted), the email
+ * gets the app link instead: `<site>/magic-link/app?token=…`, a universal
+ * link the app opens and exchanges itself. The callbacks are dropped, so
+ * the link can redirect nowhere, and it carries no address (no personal
+ * data in logs or the address bar).
+ */
+export function appMagicLinkURL({
+  siteURL,
+  token,
+  url,
+}: {
+  siteURL: string;
+  token: string;
+  url: string;
+}): string {
+  let callback: URL;
+  try {
+    callback = new URL(
+      new URL(url).searchParams.get("callbackURL") ?? "/",
+      siteURL
+    );
+  } catch {
+    return url;
+  }
+  if (callback.protocol === "http:" || callback.protocol === "https:") {
+    return url;
+  }
+  const link = new URL(APP_MAGIC_LINK_PATH, siteURL);
+  link.searchParams.set("token", token);
+  return link.toString();
 }
 
 /** `trustedOrigins` for an env: the site, the app scheme, Expo Go in dev. */
@@ -223,11 +261,14 @@ export function createAuth(options: CreateAuthOptions) {
       }),
       magicLink({
         expiresIn: MAGIC_LINK_TTL,
-        sendMagicLink: async ({ email, url }, ctx) => {
+        sendMagicLink: async ({ email, token, url }, ctx) => {
           await send(
             "auth/magic-link",
             email,
-            { minutes: minutes(MAGIC_LINK_TTL), url },
+            {
+              minutes: minutes(MAGIC_LINK_TTL),
+              url: appMagicLinkURL({ siteURL: env.SITE_URL, token, url }),
+            },
             { locale: await userLocale(email), request: ctx?.request }
           );
         },
