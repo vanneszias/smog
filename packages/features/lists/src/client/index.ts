@@ -14,6 +14,13 @@ export {
 } from "./slice";
 export { type UpdateListInput, type UseListResult, useList } from "./use-list";
 export {
+  type ListMembershipEntry,
+  type MembershipChange,
+  type UseListMembershipOptions,
+  type UseListMembershipResult,
+  useListMembership,
+} from "./use-list-membership";
+export {
   type CreateListInput,
   type ListsStatus,
   type UseListsResult,

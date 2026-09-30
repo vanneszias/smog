@@ -14,6 +14,7 @@ import {
 } from "expo-router/testing-library";
 import { Alert } from "react-native";
 import { createPersistOptions } from "./lib/query-persist";
+import { appCacheBuster } from "./providers";
 import { HOND, KAT, memoryStorage, renderApp, rpcError } from "./test/harness";
 
 // The real auth client (Better Auth, SecureStore) is never built: tests pass fakes.
@@ -280,6 +281,57 @@ describe("gesture", () => {
     await AsyncStorage.removeItem(COURSE_PROGRESS_KEY);
   });
 
+  it("saves to the account's lists from one containing call", async () => {
+    const added: unknown[] = [];
+    const { fetch } = await renderApp({
+      initialUrl: "/gestures/hond",
+      routes: {
+        "lists/addItem": (input: unknown) => {
+          added.push(input);
+          return { added: true };
+        },
+        "lists/containing": ["list-1"],
+        "lists/mine": [
+          ACCOUNT_LIST,
+          { ...ACCOUNT_LIST, id: "list-2", name: "Thuis", updatedAt: 2 },
+        ],
+      },
+      signedIn: true,
+    });
+    await screen.findByRole("header", { name: "Hond" });
+    await fireEvent.press(screen.getByTestId("save-to-list"));
+    const picker = within(await screen.findByTestId("list-picker"));
+    await waitFor(() =>
+      expect(
+        picker.getByRole("checkbox", { name: "Dieren op school" })
+      ).toBeChecked()
+    );
+    expect(picker.getByRole("checkbox", { name: "Thuis" })).not.toBeChecked();
+
+    await fireEvent.press(picker.getByRole("checkbox", { name: "Thuis" }));
+    await waitFor(() =>
+      expect(added).toEqual([{ gestureId: HOND.id, id: "list-2" }])
+    );
+    expect(await screen.findByText("Added to “Thuis”")).toBeOnTheScreen();
+    const paths = fetch.mock.calls.map(
+      ([request]) => new URL(request.url).pathname
+    );
+    expect(paths).not.toContain("/api/rpc/lists/get");
+  });
+
+  it("saves to a guest's device list", async () => {
+    const { clients } = await renderApp({
+      guest: { lists: [{ ...LOCAL_LIST, gestureIds: [] }] },
+      initialUrl: "/gestures/hond",
+    });
+    await screen.findByRole("header", { name: "Hond" });
+    await fireEvent.press(screen.getByTestId("save-to-list"));
+    const picker = within(await screen.findByTestId("list-picker"));
+    await fireEvent.press(picker.getByRole("checkbox", { name: "Les 1" }));
+    expect(await screen.findByText("Added to “Les 1”")).toBeOnTheScreen();
+    expect(clients.store.getSnapshot().lists[0]?.gestureIds).toEqual([HOND.id]);
+  });
+
   it("says an unknown gesture is not found", async () => {
     await renderApp({ initialUrl: "/gestures/olifant" });
     expect(await screen.findByText("Gesture not found")).toBeOnTheScreen();
@@ -311,8 +363,9 @@ describe("shared list", () => {
       routes: { "lists/shared/get": { ...SHARED, role: "edit" } },
     });
     expect(
-      await screen.findByText("Sign in to edit this list.")
+      await screen.findByText("Sign in to add or remove gestures.")
     ).toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: "Add gestures" })).toBeNull();
   });
 
   it("lets a signed-in editor take gestures out", async () => {
@@ -324,6 +377,75 @@ describe("shared list", () => {
     expect(
       await screen.findByRole("button", { name: "Remove from list" })
     ).toBeOnTheScreen();
+  });
+
+  it("lets a signed-in editor search and add gestures", async () => {
+    const added: unknown[] = [];
+    await renderApp({
+      initialUrl: "/shared/tok-edit",
+      routes: {
+        "lists/shared/addItem": (input: unknown) => {
+          added.push(input);
+          return { added: true };
+        },
+        "lists/shared/get": { ...SHARED, role: "edit" },
+      },
+      signedIn: true,
+    });
+    await fireEvent.press(
+      await screen.findByRole("button", { name: "Add gestures" })
+    );
+    const sheet = within(await screen.findByTestId("add-to-shared-list"));
+    expect(
+      await sheet.findByText("Add gestures to “Klas 2B”")
+    ).toBeOnTheScreen();
+    // Already in the list: marked, not addable.
+    expect(await sheet.findByText("In the list")).toBeOnTheScreen();
+    await fireEvent.press(
+      await sheet.findByRole("button", { name: "Add Kat" })
+    );
+    await waitFor(() =>
+      expect(added).toEqual([{ gestureId: KAT.id, token: "tok-edit" }])
+    );
+    expect(await screen.findByText("Added to “Klas 2B”")).toBeOnTheScreen();
+  });
+
+  it("does not toast an add the list already had", async () => {
+    const { fetch } = await renderApp({
+      initialUrl: "/shared/tok-edit",
+      routes: {
+        "lists/shared/addItem": { added: false },
+        "lists/shared/get": { ...SHARED, role: "edit" },
+      },
+      signedIn: true,
+    });
+    await fireEvent.press(
+      await screen.findByRole("button", { name: "Add gestures" })
+    );
+    const sheet = within(await screen.findByTestId("add-to-shared-list"));
+    await fireEvent.press(
+      await sheet.findByRole("button", { name: "Add Kat" })
+    );
+    // `addItem` resolves after the list's refetch, so wait for that.
+    const refetches = () =>
+      fetch.mock.calls.filter(([request]) =>
+        request.url.includes("/api/rpc/lists/shared/get")
+      ).length;
+    await waitFor(() => expect(refetches()).toBeGreaterThan(1));
+    await waitFor(() =>
+      expect(sheet.getByRole("button", { name: "Add Kat" })).toBeEnabled()
+    );
+    expect(screen.queryByText("Added to “Klas 2B”")).toBeNull();
+  });
+
+  it("offers no add to a view link, even signed in", async () => {
+    await renderApp({
+      initialUrl: "/shared/tok-view",
+      routes: { "lists/shared/get": SHARED },
+      signedIn: true,
+    });
+    expect(await screen.findByText("Shared by Els")).toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: "Add gestures" })).toBeNull();
   });
 
   it("says a revoked link is not found", async () => {
@@ -411,7 +533,7 @@ describe("offline", () => {
     await persistQueryClientSave({
       queryClient: previous,
       ...createPersistOptions({
-        buster: "dev",
+        buster: appCacheBuster(),
         storage: cacheStorage,
         throttleTime: 0,
       }),

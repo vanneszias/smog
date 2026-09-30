@@ -107,7 +107,12 @@ export function userScopedKey<TKey extends readonly unknown[]>(
   return [...key, { user: userId ?? null }];
 }
 
-/** Whether `queryKey` is `userScopedKey`-scoped to a user other than `userId`. */
+/**
+ * Whether `queryKey` is `userScopedKey`-scoped to someone other than
+ * `userId`: another user, or the guest (`null`) once a user is signed in,
+ * so a guest's cache (their favorites' catalogue pages) never outlives the
+ * sign-in.
+ */
 export function isOtherUsersKey(
   queryKey: QueryKey,
   userId: string | undefined
@@ -117,10 +122,13 @@ export function isOtherUsersKey(
     return false;
   }
   const { user } = scope as UserScope;
+  if (user === null) {
+    return userId !== undefined;
+  }
   return typeof user === "string" && user !== userId;
 }
 
-/** Removes every query scoped to a user other than `userId` (all features). */
+/** Removes every query scoped to someone other than `userId` (all features). */
 export function purgeOtherUsers(
   queryClient: QueryClient,
   userId: string | undefined
