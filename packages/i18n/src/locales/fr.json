@@ -22,7 +22,8 @@
     "search": "Rechercher",
     "send": "Envoyer",
     "share": "Partager",
-    "yes": "Oui"
+    "yes": "Oui",
+    "exploreGestures": "Découvrir les gestes"
   },
   "a11y": {
     "skipToContent": "Aller au contenu",
@@ -257,7 +258,8 @@
       "title": "Page introuvable",
       "description": "Cette page n'existe pas (ou plus).",
       "action": "Aller à l'accueil"
-    }
+    },
+    "actionFailed": "Cela n'a pas fonctionné. Réessayez."
   },
   "lists": {
     "ownerFallback": "un utilisateur de SMOG",
@@ -284,8 +286,41 @@
       "revoke": "Révoquer le lien",
       "revokeTitle": "Révoquer ce lien\u00a0?",
       "revokeDescription": "Les personnes qui ont le lien perdent l'accès immédiatement. Vous pourrez créer un nouveau lien plus tard.",
-      "revokeConfirm": "Révoquer"
-    }
+      "revokeConfirm": "Révoquer",
+      "title": "Partager la liste",
+      "description": "Créez un lien pour envoyer cette liste à d'autres.",
+      "createView": "Créer un lien de consultation",
+      "createEdit": "Créer un lien de modification",
+      "send": "Envoyer le lien",
+      "message": "{{name}}\u00a0: {{url}}",
+      "signInTitle": "Connectez-vous pour partager",
+      "signInDescription": "Partager une liste nécessite un compte. Vos listes vous suivent lorsque vous vous connectez."
+    },
+    "itemCount_one": "{{count}} geste",
+    "itemCount_other": "{{count}} gestes",
+    "itemCount_many": "{{count}} gestes",
+    "shared": "Partagée",
+    "actions": "Actions de la liste",
+    "rename": "Renommer",
+    "nameLabel": "Nom",
+    "delete": "Supprimer la liste",
+    "deleteTitle": "Supprimer cette liste\u202f?",
+    "deleteDescription": "«\u00a0{{name}}\u00a0» sera supprimée. Les gestes eux-mêmes restent.",
+    "deleted": "Liste supprimée",
+    "addedTo": "Ajouté à {{name}}",
+    "removedFrom": "Retiré de {{name}}",
+    "itemActions": "Actions pour {{name}}",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "removeItem": "Retirer de la liste",
+    "reorderFailed": "L'ordre n'a pas pu être enregistré.",
+    "notFound": {
+      "title": "Liste introuvable",
+      "description": "Ce lien ne fonctionne pas (ou plus), ou la liste est privée."
+    },
+    "sharedBy": "Partagée par {{name}}",
+    "sharedCanEdit": "Vous pouvez modifier cette liste.",
+    "sharedSignIn": "Connectez-vous pour modifier cette liste."
   },
   "gesture": {
     "sponsored": "Sponsorisé",
@@ -300,6 +335,22 @@
       "5": "N'apprenez jamais les gestes uniquement à partir de ces vidéos, mais suivez un cours ou une initiation.",
       "6": "Pour en savoir plus sur SMOG et son origine, <course>cliquez ici</course>.",
       "7": "Pour en savoir plus sur SMOG, envoyez un e-mail à info@smog.vlaanderen"
+    },
+    "about": "À propos de ce geste",
+    "keywords": "Concepts liés",
+    "related": "Gestes liés",
+    "sponsoredBy": "Sponsorisé par {{name}}",
+    "share": "Partager le geste",
+    "shareMessage": "{{name}} en SMOG\u00a0: {{url}}",
+    "notFound": {
+      "title": "Geste introuvable",
+      "description": "Ce geste n'existe pas (ou plus)."
+    },
+    "screenshot": {
+      "title": "Partager ce geste\u202f?",
+      "message": "Vous avez fait une capture d'écran. Envoyez plutôt un lien\u00a0: la vidéo suivra.",
+      "share": "Partager le lien",
+      "dismiss": "Pas maintenant"
     }
   },
   "search": {
@@ -316,7 +367,16 @@
     "noResults": {
       "title": "Aucun geste trouvé",
       "description": "Essayez un autre mot ou moins de catégories."
-    }
+    },
+    "placeholder": "Rechercher un geste",
+    "filter": "Filtrer par catégorie",
+    "filterActive_one": "Filtrer par catégorie, {{count}} choisie",
+    "filterActive_other": "Filtrer par catégorie, {{count}} choisies",
+    "filterActive_many": "Filtrer par catégorie, {{count}} choisies",
+    "clearFilter": "Effacer les catégories",
+    "showResults": "Afficher les résultats",
+    "recent": "Recherches récentes",
+    "clearRecent": "Effacer les recherches récentes"
   },
   "favorites": {
     "empty": {
@@ -437,7 +497,9 @@
     "unlocked": "Les outils de développement sont activés."
   },
   "home": {
-    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient."
+    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient.",
+    "featured": "Découvrez des gestes",
+    "browseAll": "Tous les gestes"
   },
   "footer": {
     "madeBy": "Fait avec ♡ par zias.be"

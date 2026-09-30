@@ -4,7 +4,11 @@ module.exports = {
   preset: "jest-expo",
   // The kit's mocks for native modules (reanimated, gesture handler, the
   // bottom sheet, haptics, safe area), shared so they are written once.
-  setupFiles: [require.resolve("@smog/ui-native/jest-setup")],
+  setupFiles: [
+    require.resolve("@smog/ui-native/jest-setup"),
+    "<rootDir>/jest.setup.ts",
+  ],
+  setupFilesAfterEnv: ["<rootDir>/jest.setup-after-env.ts"],
   testMatch: ["<rootDir>/src/**/*.test.{ts,tsx}"],
   // oRPC and lucide ship ES modules only (`.mjs`), which jest-expo's
   // `\.[jt]sx?$` transform does not cover. Merged with the preset's transforms.
