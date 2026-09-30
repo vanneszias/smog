@@ -53,14 +53,27 @@ export async function getConsent(
 
 /**
  * Appends an analytics decision (policy `CONSENT_POLICY_VERSION`, dated
- * `now`) and returns the new state.
+ * `now`) and returns the new state. A decision that repeats the current
+ * one (same answer, current policy) appends nothing and returns the
+ * current state, so the log (and the export) grows only with changes.
+ * `beforeAppend` runs only when a row will be appended (the router's
+ * per-user limit); it throws to refuse.
  */
 export async function setConsent(
   db: Db,
   userId: string,
   input: SetConsent,
-  now: Date = new Date()
+  now: Date = new Date(),
+  { beforeAppend }: { beforeAppend?: () => Promise<void> } = {}
 ): Promise<ConsentState> {
+  const current = await getConsent(db, userId);
+  if (
+    current.analytics === input.analytics &&
+    current.policyVersion === CONSENT_POLICY_VERSION
+  ) {
+    return current;
+  }
+  await beforeAppend?.();
   try {
     await db.insert(consentEvent).values({
       createdAt: now,

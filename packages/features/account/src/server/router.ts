@@ -41,9 +41,21 @@ export function createAccountRouter(deps: AccountRouterDeps) {
       get: os.consent.get.handler(
         async ({ context }) => await getConsent(context.db, context.user.id)
       ),
+      // A change appends a row: `RL_AUTH` per user (5/60 s in staging and
+      // production) bounds the log; a repeat appends nothing and is free.
       set: os.consent.set.handler(
-        async ({ context, input }) =>
-          await setConsent(context.db, context.user.id, input)
+        async ({ context, errors, input }) =>
+          await setConsent(context.db, context.user.id, input, new Date(), {
+            beforeAppend: async () => {
+              const allowed = await checkRateLimit(
+                context.env.RL_AUTH,
+                `user:${context.user.id}:account.consent.set`
+              );
+              if (!allowed) {
+                throw errors.RATE_LIMITED();
+              }
+            },
+          })
       ),
     },
     // It checks a password and Better Auth's own limiter does not see
@@ -87,17 +99,25 @@ export function createAccountRouter(deps: AccountRouterDeps) {
         }
       }
     }),
-    export: os.export.handler(
-      async ({ context, errors }) =>
-        await forUser(
-          () =>
-            exportAccount(
-              { ...deps, db: context.db, siteUrl: context.env.SITE_URL },
-              context.user.id
-            ),
-          errors.UNAUTHORIZED
-        )
-    ),
+    // It holds bearer share links and runs a multi-table read: `RL_AUTH`
+    // per user, so a stolen session cannot poll it cheaply.
+    export: os.export.handler(async ({ context, errors }) => {
+      const allowed = await checkRateLimit(
+        context.env.RL_AUTH,
+        `user:${context.user.id}:account.export`
+      );
+      if (!allowed) {
+        throw errors.RATE_LIMITED();
+      }
+      return await forUser(
+        () =>
+          exportAccount(
+            { ...deps, db: context.db, siteUrl: context.env.SITE_URL },
+            context.user.id
+          ),
+        errors.UNAUTHORIZED
+      );
+    }),
     // Analytics: guest_data_imported is sent by the client (useGuestImport).
     importGuestData: os.importGuestData.handler(
       async ({ context, input }) =>
