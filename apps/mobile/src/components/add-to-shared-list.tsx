@@ -59,8 +59,8 @@ function Results({
   if (!search.data) {
     return (
       <View className="gap-2">
-        <Skeleton className="h-14" />
-        <Skeleton className="h-14" />
+        <Skeleton className="h-16" />
+        <Skeleton className="h-16" />
       </View>
     );
   }
