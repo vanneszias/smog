@@ -23,7 +23,7 @@ export const QUERY_CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
  * row through a CursorWindow of about 2 MB, and a failed read drops the
  * whole cache, so a larger one is trimmed, oldest query first.
  */
-export const QUERY_CACHE_MAX_BYTES = 1024 * 1024;
+const QUERY_CACHE_MAX_BYTES = 1024 * 1024;
 
 /**
  * The procedures kept offline: public catalogue reads, plus the signed-in
