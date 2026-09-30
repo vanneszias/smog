@@ -1,9 +1,15 @@
 import { env } from "cloudflare:workers";
 import { call } from "@orpc/server";
 import type { User } from "@smog/db";
+import { createDb, type Db } from "@smog/db/client";
 import { newId } from "@smog/utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import { LISTS_MAX } from "../src/schema";
+import {
+  containingQuery,
+  removeItem,
+  reorderList,
+} from "../src/server/service";
 import {
   addGestures,
   addUser,
@@ -191,6 +197,7 @@ describe("lists: ownership", () => {
       () => call(router.addItem, { gestureId: "g", id: created.id }, guest),
       () => call(router.removeItem, { gestureId: "g", id: created.id }, guest),
       () => call(router.reorder, { gestureIds: [], id: created.id }, guest),
+      () => call(router.containing, { gestureId: "g" }, guest),
       () => call(router.share.get, { id: created.id }, guest),
       () => call(router.share.create, { id: created.id, role: "view" }, guest),
       () => call(router.share.revoke, { id: created.id, role: "view" }, guest),
@@ -237,6 +244,78 @@ describe("lists: ownership", () => {
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
+
+describe("lists: containing", () => {
+  it("answers which of the owner's lists hold the gesture, in one query", async () => {
+    const [hond, kat] = (await addGestures(["Hond", "Kat"])) as [
+      string,
+      string,
+    ];
+    const dieren = await listWith([hond, kat]);
+    const huisdieren = await listWith([hond]);
+    await listWith([kat]);
+    // Someone else's list with the same gesture is never answered.
+    const other = await addUser("Bert");
+    const theirs = await newList("Van Bert", other);
+    await call(
+      router.addItem,
+      { gestureId: hond, id: theirs.id },
+      contextFor(other)
+    );
+
+    const ids = await call(
+      router.containing,
+      { gestureId: hond },
+      contextFor(owner)
+    );
+    expect([...ids].sort()).toEqual([dieren.id, huisdieren.id].sort());
+    expect(
+      await call(router.containing, { gestureId: "nope" }, contextFor(owner))
+    ).toEqual([]);
+  });
+
+  it("seeks the owner's lists and the list_item key (no scan)", async () => {
+    const { params, sql: text } = containingQuery(
+      createDb(env.DB),
+      owner.id,
+      "g"
+    ).toSQL();
+    const plan = await env.DB.prepare(`EXPLAIN QUERY PLAN ${text}`)
+      .bind(...params)
+      .all<{ detail: string }>();
+    const details = plan.results.map((row) => row.detail);
+    expect(details.some((detail) => detail.startsWith("SCAN"))).toBe(false);
+    expect(details.some((detail) => detail.includes("TEMP B-TREE"))).toBe(
+      false
+    );
+  });
+});
+
+/**
+ * `db` whose `nth` batch first runs `before`: a write that lands between a
+ * service's read and its write.
+ */
+function raceBeforeBatch(
+  db: Db,
+  nth: number,
+  before: () => Promise<unknown>
+): Db {
+  let batches = 0;
+  return new Proxy(db, {
+    get(target, property, receiver) {
+      if (property !== "batch") {
+        return Reflect.get(target, property, receiver);
+      }
+      return async (statements: Parameters<Db["batch"]>[0]) => {
+        batches += 1;
+        if (batches === nth) {
+          await before();
+        }
+        return await target.batch(statements);
+      };
+    },
+  });
+}
 
 describe("lists: items and order", () => {
   it("appends in order and is idempotent", async () => {
@@ -318,6 +397,111 @@ describe("lists: items and order", () => {
       { gestureId: ids[0], position: 0 },
       { gestureId: ids[2], position: 1 },
       { gestureId: ids[3], position: 2 },
+    ]);
+  });
+
+  it("keeps positions dense when a remove lands between a reorder's read and write", async () => {
+    const [a, b, c] = (await addGestures(["A", "B", "C"])) as [
+      string,
+      string,
+      string,
+    ];
+    const created = await listWith([a, b, c]);
+    const db = createDb(env.DB);
+    const racing = raceBeforeBatch(db, 2, () =>
+      removeItem(db, owner.id, { gestureId: b, id: created.id })
+    );
+
+    await reorderList(racing, owner.id, {
+      gestureIds: [b, c, a],
+      id: created.id,
+    });
+
+    expect(await storedItems(created.id)).toEqual([
+      { gestureId: c, position: 0 },
+      { gestureId: a, position: 1 },
+    ]);
+  });
+
+  it("closes a gap a gesture delete left on the list's next write", async () => {
+    const [a, b, c, d] = (await addGestures(["A", "B", "C", "D"])) as [
+      string,
+      string,
+      string,
+      string,
+    ];
+    const created = await listWith([a, b, c, d]);
+    // Deleting a gesture cascades to its list items (phase 5 admin).
+    await env.DB.prepare("DELETE FROM gesture WHERE id = ?").bind(b).run();
+    expect((await storedItems(created.id)).map((row) => row.position)).toEqual([
+      0, 2, 3,
+    ]);
+
+    await call(
+      router.removeItem,
+      { gestureId: d, id: created.id },
+      contextFor(owner)
+    );
+    expect(await storedItems(created.id)).toEqual([
+      { gestureId: a, position: 0 },
+      { gestureId: c, position: 1 },
+    ]);
+
+    await env.DB.prepare("DELETE FROM gesture WHERE id = ?").bind(a).run();
+    await call(
+      router.reorder,
+      { gestureIds: [c], id: created.id },
+      contextFor(owner)
+    );
+    expect(await storedItems(created.id)).toEqual([
+      { gestureId: c, position: 0 },
+    ]);
+  });
+
+  it("renumbers by position when the row order differs from it", async () => {
+    const [a, b, c, d] = (await addGestures(["A", "B", "C", "D"])) as [
+      string,
+      string,
+      string,
+      string,
+    ];
+    const created = await listWith([a, b, c, d]);
+    await call(
+      router.reorder,
+      { gestureIds: [d, c, b, a], id: created.id },
+      contextFor(owner)
+    );
+    await env.DB.prepare("DELETE FROM gesture WHERE id = ?").bind(d).run();
+
+    await call(
+      router.removeItem,
+      { gestureId: c, id: created.id },
+      contextFor(owner)
+    );
+    expect(await storedItems(created.id)).toEqual([
+      { gestureId: b, position: 0 },
+      { gestureId: a, position: 1 },
+    ]);
+  });
+
+  it("keeps an add that lands between a reorder's read and write after the rest", async () => {
+    const [a, b, c] = (await addGestures(["A", "B", "C"])) as [
+      string,
+      string,
+      string,
+    ];
+    const created = await listWith([a, b]);
+    const db = createDb(env.DB);
+    const racing = raceBeforeBatch(db, 2, () =>
+      call(router.addItem, { gestureId: c, id: created.id }, contextFor(owner))
+    );
+
+    await reorderList(racing, owner.id, { gestureIds: [b, a], id: created.id });
+
+    expect(await storedItems(created.id)).toEqual([
+      { gestureId: b, position: 0 },
+      { gestureId: a, position: 1 },
+      { gestureId: c, position: 2 },
     ]);
   });
 
