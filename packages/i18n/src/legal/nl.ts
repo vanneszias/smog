@@ -26,7 +26,7 @@ export const nl: LegalTexts = {
         blocks: [
           {
             list: [
-              "**Account en aanmelding:** naam, e-mailadres en of het bevestigd is, taal, rol, eventueel een profielfoto van Google of Apple, sessies (met IP-adres en browser- of appgegevens) en tijdstippen. Een wachtwoord bewaren we alleen als onomkeerbare hash; van een passkey bewaren we alleen de publieke sleutel. Meldt u zich aan met Google of Apple, dan ontvangen we van hen een account-ID, uw naam en uw e-mailadres.",
+              "**Account en aanmelding:** naam, e-mailadres en of het bevestigd is, taal, rol, eventueel een profielfoto van Google (die uw browser rechtstreeks bij Google ophaalt wanneer ze getoond wordt), sessies (met IP-adres en browser- of appgegevens) en tijdstippen. Een wachtwoord bewaren we alleen als onomkeerbare hash; van een passkey bewaren we alleen de publieke sleutel. Meldt u zich aan met Google of Apple, dan ontvangen we van hen een account-ID, uw naam en uw e-mailadres.",
               "**Gebruik zonder account:** favorieten, lijsten, recente zoekopdrachten, voorkeuren en uw analyticskeuze blijven op uw apparaat. Ze verlaten uw apparaat niet, tenzij u na het aanmelden kiest om ze in uw account te importeren, en behalve de optionele analytics hieronder (bijvoorbeeld welk gebaar u bekeek of bewaarde).",
               "**Leerfuncties:** favoriete gebaren, lijsten, lijstbeschrijvingen, deellinks en hun rechten (bekijken of bewerken). Recente zoektermen blijven lokaal op uw apparaat.",
               "**Sponsoring:** contactnaam, sponsor- of bedrijfsnaam, e-mail, gekozen gebaren, weergavenaam, optioneel logo, voorbeeld- en eindvideo's, status, betaalreferentie en looptijd.",
@@ -64,7 +64,7 @@ export const nl: LegalTexts = {
               "**Mux:** opslag, verwerking en streaming van gebaren- en sponsorvideo's. [Privacybeleid](https://www.mux.com/privacy)",
               "**Mollie:** gehoste betaalafhandeling en betaalstatus. [Privacybeleid](https://www.mollie.com/legal/privacy)",
               "**Expo:** distributie en updates van de mobiele app. [Privacybeleid](https://expo.dev/privacy)",
-              "**Google en Apple:** alleen wanneer u kiest om u met uw Google- of Apple-account aan te melden. [Google](https://policies.google.com/privacy) · [Apple](https://www.apple.com/legal/privacy/)",
+              "**Google en Apple:** wanneer u kiest om u met uw Google- of Apple-account aan te melden. Hebt u een profielfoto van Google, dan haalt uw browser die bij elke weergave rechtstreeks bij Google op; Google ziet dan uw IP-adres en browsergegevens. [Google](https://policies.google.com/privacy) · [Apple](https://www.apple.com/legal/privacy/)",
               "**OpenPanel:** zelfgehoste analysesoftware op analytics.zias.be, uitsluitend na analytics-toestemming. De OpenPanel-cloud wordt niet gebruikt voor onze gebeurtenisdata.",
             ],
           },
@@ -91,8 +91,8 @@ export const nl: LegalTexts = {
         blocks: [
           {
             list: [
-              "Noodzakelijke cookies houden uw sessie actief wanneer u aangemeld bent en onthouden uw taal en thema.",
-              "Lokale opslag bewaart onder meer favorieten en lijsten zonder account, recente zoekopdrachten, voorkeuren, appcache en uw analyticskeuze.",
+              "Noodzakelijke cookies houden uw sessie actief wanneer u aangemeld bent en onthouden uw taal en thema. Daarnaast zetten we tijdens onderhoud een technische cookie voor beheerders, zodat zij de site kunnen blijven gebruiken.",
+              "Lokale opslag bewaart onder meer favorieten en lijsten zonder account, recente zoekopdrachten, voorkeuren, appcache en uw analyticskeuze. Een keuze die u aangemeld maakte, blijft ook op het apparaat, maar geldt alleen voor uw account: wie het apparaat daarna zonder account gebruikt, krijgt de vraag opnieuw.",
               "Na analytics-toestemming kan de app lokale identificatie- en wachtrijgegevens bewaren om gebeurtenissen af te leveren. De website bewaart alleen tijdens het aanmelden een tijdelijke markering in de sessie-opslag van uw browser, zodat een voltooide aanmelding één keer wordt geteld.",
             ],
           },

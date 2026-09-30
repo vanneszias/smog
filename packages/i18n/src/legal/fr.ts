@@ -22,7 +22,7 @@ export const fr: LegalTexts = {
         blocks: [
           {
             list: [
-              "**Compte et connexion\u202f:** nom, adresse e-mail et sa vérification, langue, rôle, éventuellement une photo de profil de Google ou d'Apple, sessions (avec l'adresse IP et les données du navigateur ou de l'application) et horodatages. Un mot de passe n'est conservé que sous forme de hachage irréversible\u202f; d'une clé d'accès (passkey), nous ne conservons que la clé publique. Si vous vous connectez avec Google ou Apple, ils nous transmettent un identifiant de compte, votre nom et votre adresse e-mail.",
+              "**Compte et connexion\u202f:** nom, adresse e-mail et sa vérification, langue, rôle, éventuellement une photo de profil de Google (que votre navigateur récupère directement auprès de Google lorsqu'elle est affichée), sessions (avec l'adresse IP et les données du navigateur ou de l'application) et horodatages. Un mot de passe n'est conservé que sous forme de hachage irréversible\u202f; d'une clé d'accès (passkey), nous ne conservons que la clé publique. Si vous vous connectez avec Google ou Apple, ils nous transmettent un identifiant de compte, votre nom et votre adresse e-mail.",
               "**Utilisation sans compte\u202f:** les favoris, les listes, les recherches récentes, les préférences et votre choix concernant les statistiques restent sur votre appareil. Ils ne quittent pas votre appareil, sauf si, après vous être connecté, vous choisissez de les importer dans votre compte, et hormis les statistiques facultatives ci-dessous (par exemple le geste que vous avez regardé ou enregistré).",
               "**Fonctions d'apprentissage\u202f:** gestes favoris, listes, descriptions de listes, liens de partage et leurs droits (consulter ou modifier). Les termes de recherche récents restent localement sur votre appareil.",
               "**Parrainage\u202f:** nom de contact, nom du sponsor ou de l'entreprise, e-mail, gestes choisis, nom affiché, logo facultatif, vidéos d'aperçu et finales, statut, référence de paiement et durée.",
@@ -60,7 +60,7 @@ export const fr: LegalTexts = {
               "**Mux\u202f:** stockage, traitement et diffusion des vidéos de gestes et de parrainage. [Politique de confidentialité](https://www.mux.com/privacy)",
               "**Mollie\u202f:** traitement hébergé des paiements et statut des paiements. [Politique de confidentialité](https://www.mollie.com/legal/privacy)",
               "**Expo\u202f:** distribution et mises à jour de l'application mobile. [Politique de confidentialité](https://expo.dev/privacy)",
-              "**Google et Apple\u202f:** uniquement lorsque vous choisissez de vous connecter avec votre compte Google ou Apple. [Google](https://policies.google.com/privacy) · [Apple](https://www.apple.com/legal/privacy/)",
+              "**Google et Apple\u202f:** lorsque vous choisissez de vous connecter avec votre compte Google ou Apple. Si vous avez une photo de profil Google, votre navigateur la récupère directement auprès de Google à chaque affichage\u202f; Google voit votre adresse IP et les données de votre navigateur. [Google](https://policies.google.com/privacy) · [Apple](https://www.apple.com/legal/privacy/)",
               "**OpenPanel\u202f:** logiciel de statistiques auto-hébergé sur analytics.zias.be, uniquement avec le consentement aux statistiques. Le cloud OpenPanel n'est pas utilisé pour nos données d'événements.",
             ],
           },
@@ -87,8 +87,8 @@ export const fr: LegalTexts = {
         blocks: [
           {
             list: [
-              "Des cookies nécessaires maintiennent votre session active lorsque vous êtes connecté et retiennent votre langue et votre thème.",
-              "Le stockage local conserve notamment les favoris et les listes sans compte, les recherches récentes, les préférences, le cache de l'application et votre choix concernant les statistiques.",
+              "Des cookies nécessaires maintiennent votre session active lorsque vous êtes connecté et retiennent votre langue et votre thème. Nous plaçons aussi un cookie technique pour les administrateurs pendant une maintenance, afin qu'ils puissent continuer à utiliser le site.",
+              "Le stockage local conserve notamment les favoris et les listes sans compte, les recherches récentes, les préférences, le cache de l'application et votre choix concernant les statistiques. Un choix fait en étant connecté reste aussi sur l'appareil, mais ne vaut que pour votre compte\u202f: la personne qui utilise ensuite l'appareil sans compte est de nouveau interrogée.",
               "Avec le consentement aux statistiques, l'application peut conserver localement des données d'identification et de file d'attente pour transmettre les événements. Le site web ne conserve qu'un marqueur temporaire dans le stockage de session de votre navigateur pendant la connexion, afin qu'une connexion réussie soit comptée une seule fois.",
             ],
           },
