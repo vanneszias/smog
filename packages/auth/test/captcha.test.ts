@@ -1,5 +1,5 @@
 import { makeUser } from "@smog/db/testing";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CAPTCHA_ENDPOINTS } from "../src/server";
 import { PASSWORD, SITE_URL, setup, uniqueEmail } from "./helpers";
 
@@ -28,6 +28,66 @@ function postPaths(api: Record<string, unknown>): string[] {
 }
 
 describe("captcha endpoints (I2)", () => {
+  it.each([
+    {
+      accepted: true,
+      environment: "staging",
+      ip: "192.0.2.1",
+      success: true,
+      testKey: true,
+    },
+    {
+      accepted: false,
+      environment: "staging",
+      ip: "192.0.2.2",
+      success: true,
+      testKey: false,
+    },
+    {
+      accepted: false,
+      environment: "production",
+      ip: "192.0.2.3",
+      success: true,
+      testKey: true,
+    },
+    {
+      accepted: false,
+      environment: "staging",
+      ip: "192.0.2.4",
+      success: false,
+      testKey: true,
+    },
+  ] as const)(
+    "limits the dummy hostname exception: $environment / testKey=$testKey / success=$success",
+    async ({ environment, ip, testKey, success, accepted }) => {
+      const guarded = setup({
+        ENVIRONMENT: environment,
+        TURNSTILE_SECRET_KEY: testKey
+          ? "1x0000000000000000000000000000000AA"
+          : "real-turnstile-secret",
+      });
+      const email = uniqueEmail();
+      await makeUser(guarded.db, { email, emailVerified: true });
+      const verify = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(Response.json({ hostname: "example.com", success }));
+      try {
+        const response = await guarded.call("/request-password-reset", {
+          body: { email, redirectTo: `${SITE_URL}/reset-password` },
+          headers: {
+            "cf-connecting-ip": ip,
+            "x-captcha-response": "XXXX.DUMMY.TOKEN.XXXX",
+          },
+        });
+        expect(verify).toHaveBeenCalled();
+        expect(response.ok).toBe(accepted);
+        expect(guarded.email.sent).toHaveLength(accepted ? 1 : 0);
+      } finally {
+        verify.mockRestore();
+      }
+    }
+  );
+
   it("cover every endpoint that sends an email without a session", {
     timeout: 120_000,
   }, async () => {

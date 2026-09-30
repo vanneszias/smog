@@ -283,7 +283,15 @@ export function createAuth(options: CreateAuthOptions) {
       ...(env.TURNSTILE_SECRET_KEY
         ? [
             captcha({
-              allowedHostnames: [new URL(env.SITE_URL).hostname],
+              allowedHostnames: [
+                new URL(env.SITE_URL).hostname,
+                // Cloudflare's dummy verifier returns a synthetic hostname.
+                ...(env.ENVIRONMENT === "staging" &&
+                env.TURNSTILE_SECRET_KEY ===
+                  "1x0000000000000000000000000000000AA"
+                  ? ["example.com"]
+                  : []),
+              ],
               endpoints: CAPTCHA_ENDPOINTS,
               provider: "cloudflare-turnstile",
               secretKey: env.TURNSTILE_SECRET_KEY,
