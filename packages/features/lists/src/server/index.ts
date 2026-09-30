@@ -14,3 +14,4 @@ export {
   touchListsWithNewItemsStmt,
   unplacedItemsStmt,
 } from "./service";
+export { shareUrl } from "./sharing";

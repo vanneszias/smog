@@ -53,6 +53,9 @@
     "test": "turbo run test test:scripts",
     "test:scripts": "bun test ./scripts"
   },
+  "overrides": {
+    "undici": "7.29.1"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
     "@smog/config": "workspace:*",

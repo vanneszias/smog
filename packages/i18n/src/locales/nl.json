@@ -519,7 +519,16 @@
   "account": {
     "title": "Je account",
     "signedInAs": "Aangemeld als {{email}}",
-    "comingSoon": "Binnenkort beheer je hier ook je aanmeldmethodes, privacy en voorkeuren."
+    "comingSoon": "Binnenkort beheer je hier ook je aanmeldmethodes, privacy en voorkeuren.",
+    "export": {
+      "sensitive": "Dit bestand bevat je persoonsgegevens en de actieve deellinks van je lijsten: wie een link heeft, kan die lijst openen. Bewaar het veilig en deel het niet."
+    },
+    "errors": {
+      "passwordRequired": "Vul je wachtwoord in om je account te verwijderen.",
+      "sessionNotFresh": "Meld je opnieuw aan om je account te verwijderen.",
+      "invalidPassword": "Dat wachtwoord klopt niet.",
+      "deleteFailed": "Je account verwijderen is niet gelukt. Probeer het opnieuw."
+    }
   },
   "settings": {
     "title": "Instellingen",

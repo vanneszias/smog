@@ -36,6 +36,11 @@ const VERIFY_EMAIL_TTL = 60 * 60;
 const RESET_PASSWORD_TTL = 60 * 60;
 const OTP_TTL = 5 * 60;
 const MAGIC_LINK_TTL = 5 * 60;
+/**
+ * How recent a sign-in must be for sensitive actions (seconds): Better
+ * Auth's `session.freshAge` default, one day.
+ */
+const SESSION_FRESH_AGE = 24 * 60 * 60;
 
 /**
  * Endpoints that need a Turnstile token when TURNSTILE_SECRET_KEY is set:
@@ -168,6 +173,10 @@ export function createAuth(options: CreateAuthOptions) {
       provider: "sqlite",
       schema: { account, passkey: passkeyTable, session, user, verification },
     }),
+    // Deletion goes only through `account.delete` (`auth.api`, which
+    // `disabledPaths` does not affect): it needs the typed DELETE and has
+    // its rate limits, which the HTTP route would skip.
+    disabledPaths: ["/delete-user", "/delete-user/callback"],
     emailAndPassword: {
       enabled: true,
       maxPasswordLength: PASSWORD_MAX_LENGTH,
@@ -251,6 +260,10 @@ export function createAuth(options: CreateAuthOptions) {
       storage: "memory",
     },
     secret: env.BETTER_AUTH_SECRET,
+    // Better Auth's own freshness window (its default, pinned): account
+    // deletion, listing sessions, unlinking a provider and adding a passkey
+    // need a session signed in within it (deletion: or the password).
+    session: { freshAge: SESSION_FRESH_AGE },
     // No secondary storage and no cookie cache: every session read hits D1,
     // so a ban, a revoked session or a deleted user takes effect at once.
     // Verification values live in D1 as well (single-use, consumed there).
@@ -258,6 +271,10 @@ export function createAuth(options: CreateAuthOptions) {
     trustedOrigins: trustedOrigins(env),
     user: {
       additionalFields: USER_ADDITIONAL_FIELDS,
+      // `account.delete` (`@smog/account`) calls it after the user typed
+      // DELETE. No confirmation email: a fresh session or the password is
+      // the proof. The foreign keys cascade the user's data (spec §5).
+      deleteUser: { enabled: true },
     },
   });
 }

@@ -24,8 +24,11 @@ import {
 
 const TRAILING_SLASHES = /\/+$/;
 
-/** `SITE_URL/lists/<token>`: the site's shared-list route. */
-function shareUrl(siteUrl: string, token: string): string {
+/**
+ * `SITE_URL/lists/<token>`: the site's shared-list route (also used by the
+ * account export, wired by `@smog/api`).
+ */
+export function shareUrl(siteUrl: string, token: string): string {
   return `${siteUrl.replace(TRAILING_SLASHES, "")}/lists/${token}`;
 }
 

@@ -136,9 +136,19 @@ describe("email + password", () => {
 
     // The hash alone (workerd resolves Better Auth's scrypt to node:crypto).
     const context = await ctx.auth.$context;
-    const hashStarted = performance.now();
-    const hash = await context.password.hash(PASSWORD);
-    const hashElapsed = performance.now() - hashStarted;
+    // Wall-clock time also counts CPU contention from other processes, so
+    // judge the fastest of a few runs: a slow algorithm is slow every time,
+    // a busy machine only some of the time.
+    const timeHash = async (): Promise<{ elapsed: number; hash: string }> => {
+      const hashStarted = performance.now();
+      const value = await context.password.hash(PASSWORD);
+      return { elapsed: performance.now() - hashStarted, hash: value };
+    };
+    const first = await timeHash();
+    const second = await timeHash();
+    const third = await timeHash();
+    const { hash } = third;
+    const hashElapsed = Math.min(first.elapsed, second.elapsed, third.elapsed);
     console.log(`[auth.test] scrypt hash took ${hashElapsed.toFixed(0)} ms`);
     expect(await context.password.verify({ hash, password: PASSWORD })).toBe(
       true
@@ -219,6 +229,27 @@ describe("magic link", () => {
       new Headers({ cookie: cookieHeader(verify) })
     );
     expect(current?.user.email).toBe(email);
+  });
+});
+
+describe("account deletion over HTTP", () => {
+  it("is not routed: only `account.delete` (auth.api) deletes", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    const member = await makeUser(ctx.db, { email, emailVerified: true });
+    const cookie = cookieHeader(await signInWithOtp(ctx, email));
+
+    const deleted = await ctx.call("/delete-user", { body: {}, cookie });
+    const callback = await ctx.call("/delete-user/callback?token=x", {
+      cookie,
+    });
+
+    expect([deleted.status, callback.status]).toEqual([404, 404]);
+    expect(
+      await ctx.db.query.user.findFirst({
+        where: (table, { eq: is }) => is(table.id, member.id),
+      })
+    ).toBeDefined();
   });
 });
 

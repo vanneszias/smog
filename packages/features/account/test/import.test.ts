@@ -8,7 +8,7 @@ import {
   importGuestDataInputSchema,
 } from "../src/schema";
 import { createAccountRouter, importGuestData } from "../src/server";
-import { importDeps } from "./deps";
+import { accountDeps, importDeps } from "./deps";
 import {
   addGestures,
   addList,
@@ -21,7 +21,7 @@ import {
 } from "./helpers";
 
 const NOW = new Date("2026-09-29T12:00:00Z");
-const accountRouter = createAccountRouter(importDeps);
+const accountRouter = createAccountRouter(accountDeps);
 
 function input(partial: Partial<ImportGuestDataInput>): ImportGuestDataInput {
   return { favorites: [], lists: [], ...partial };
