@@ -70,8 +70,8 @@
       "vars": {
         "SITE_URL": "https://smog-site-staging.zias.workers.dev",
         "ENVIRONMENT": "staging",
-        "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
-        "EMAIL_REPLY_TO": "info@smog.vlaanderen",
+        "EMAIL_FROM": "SMOG & Co <info@smog.zias.be>",
+        "EMAIL_REPLY_TO": "info@smog.zias.be",
         // Cloudflare's always-pass test site key, the pair of the test secret
         // staging may use (DECISIONS). Production sets the real widget's key
         // before launch; without one the sign-in pages show no widget.
@@ -115,7 +115,7 @@
       "send_email": [
         {
           "name": "EMAIL",
-          "allowed_sender_addresses": ["noreply@smog.vlaanderen"]
+          "allowed_sender_addresses": ["info@smog.zias.be"]
         }
       ]
     },
