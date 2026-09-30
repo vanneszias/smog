@@ -3,6 +3,9 @@ import { join } from "node:path";
 import {
   buildMaintenanceCommand,
   buildMaintenanceValue,
+  buildReadCommand,
+  nextBypassVersion,
+  parseCurrentVersion,
   parseMaintenanceArgs,
 } from "./maintenance";
 
@@ -67,31 +70,58 @@ describe("parseMaintenanceArgs", () => {
   });
 });
 
+describe("nextBypassVersion", () => {
+  test("on keeps the current version, so cookies fetched before still work", () => {
+    expect(nextBypassVersion("on", 1234, NOW)).toBe(1234);
+    // No key yet: a first version.
+    expect(nextBypassVersion("on", null, NOW)).toBe(NOW_S);
+  });
+
+  test("off starts a new version, which voids the window's cookies", () => {
+    expect(nextBypassVersion("off", 1234, NOW)).toBe(NOW_S);
+    // Always greater, even within the same second or with a clock behind.
+    expect(nextBypassVersion("off", NOW_S, NOW)).toBe(NOW_S + 1);
+    expect(nextBypassVersion("off", NOW_S + 50, NOW)).toBe(NOW_S + 51);
+    expect(nextBypassVersion("off", null, NOW)).toBe(NOW_S);
+  });
+});
+
+describe("parseCurrentVersion", () => {
+  test("reads bypassVersion from `wrangler kv key get --text`", () => {
+    expect(parseCurrentVersion('{"bypassVersion":42,"enabled":true}\n')).toBe(
+      42
+    );
+    expect(parseCurrentVersion("Value not found\n")).toBeNull();
+    expect(parseCurrentVersion('{"enabled":true}')).toBeNull();
+    expect(parseCurrentVersion('{"bypassVersion":1.5}')).toBeNull();
+  });
+});
+
 describe("buildMaintenanceValue", () => {
-  test("starts a new bypass version on every write", () => {
+  test("writes the state with the given version", () => {
     expect(
       JSON.parse(
         buildMaintenanceValue(
           { action: "on", message: "m", until: "2026-10-01T10:00:00.000Z" },
-          NOW
+          77
         )
       )
     ).toEqual({
-      bypassVersion: NOW_S,
+      bypassVersion: 77,
       enabled: true,
       message: "m",
       until: "2026-10-01T10:00:00.000Z",
     });
-    expect(JSON.parse(buildMaintenanceValue({ action: "off" }, NOW))).toEqual({
-      bypassVersion: NOW_S,
+    expect(JSON.parse(buildMaintenanceValue({ action: "off" }, 78))).toEqual({
+      bypassVersion: 78,
       enabled: false,
     });
   });
 });
 
-describe("buildMaintenanceCommand", () => {
-  test("writes the local KV in dev and the remote one elsewhere", () => {
-    const value = buildMaintenanceValue({ action: "off" }, NOW);
+describe("the wrangler commands", () => {
+  test("write the local KV in dev and the remote one elsewhere", () => {
+    const value = buildMaintenanceValue({ action: "off" }, 1);
     expect(buildMaintenanceCommand("dev", value)).toEqual([
       "wrangler",
       "kv",
@@ -111,6 +141,23 @@ describe("buildMaintenanceCommand", () => {
       "--remote",
     ]);
   });
+
+  test("read the current value first, from the same KV", () => {
+    expect(buildReadCommand("staging")).toEqual([
+      "wrangler",
+      "kv",
+      "key",
+      "get",
+      "maintenance",
+      "--binding",
+      "KV",
+      "--env",
+      "staging",
+      "--remote",
+      "--text",
+    ]);
+    expect(buildReadCommand("dev")).toContain("--local");
+  });
 });
 
 describe("the CLI", () => {
@@ -121,7 +168,11 @@ describe("the CLI", () => {
     );
     const out = proc.stdout.toString();
     expect(proc.exitCode).toBe(0);
+    expect(out).toContain(
+      '(cd apps/site && bunx "wrangler" "kv" "key" "get" "maintenance" "--binding" "KV" "--env" "staging" "--remote" "--text")'
+    );
     expect(out).toContain('(cd apps/site && bunx "wrangler" "kv" "key" "put"');
+    expect(out).toContain('\\"bypassVersion\\":\\"<current>\\"');
     expect(out).toContain('"--binding" "KV" "--env" "staging" "--remote")');
     expect(out).toContain('\\"enabled\\":true');
   });

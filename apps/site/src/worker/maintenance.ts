@@ -1,7 +1,9 @@
 import { AuthError, getSession, requireAdminUser } from "@smog/auth";
-import { isForeignRequest } from "@smog/rpc";
+import type { Environment } from "@smog/config/env/worker";
+import { checkRateLimit, isForeignRequest } from "@smog/rpc";
 import { parseCookie } from "cookie-es";
 import { getAuth, siteEnv } from "@/server/auth";
+import { clientIp } from "@/server/context";
 import { maintenanceResponse } from "./maintenance-page";
 
 /**
@@ -9,10 +11,16 @@ import { maintenanceResponse } from "./maintenance-page";
  * `MaintenanceState`; `bun run maintenance` writes it. While it is enabled,
  * the Worker answers every request with a 503, except:
  * - `/api/webhooks/*`, `/api/health` and `/.well-known/*`;
+ * - `/api/auth/*` (it has its own `RL_AUTH` limit and captcha) and the
+ *   `/sign-in` page, so an admin can sign in;
  * - `POST /api/maintenance/bypass`, where a signed-in admin gets the bypass
- *   cookie (it has to work during maintenance: each `on` starts a new
- *   `bypassVersion`, which voids every earlier cookie);
+ *   cookie;
  * - requests with a valid bypass cookie.
+ *
+ * `bypassVersion` changes only when maintenance is turned off
+ * (`bun run maintenance … off`), so a cookie fetched before or during a
+ * window lasts for that window and dies with it. Cookies are signed and
+ * checked against a fresh KV read, never the isolate cache.
  */
 
 export const MAINTENANCE_KEY = "maintenance";
@@ -89,15 +97,16 @@ export function clearMaintenanceCache(): void {
 }
 
 /**
- * The current state, cached for 30 s per isolate. A KV failure keeps the
- * site up: it is logged, and the last known state (or "off") stands until
- * the next read.
+ * The current state, cached for 30 s per isolate (`fresh` skips that cache
+ * and refreshes it). A KV failure keeps the site up: it is logged, and the
+ * last known state (or "off") stands until the next read.
  */
 async function readMaintenance(
   kv: KVNamespace,
-  now: number = Date.now()
+  { fresh = false }: { fresh?: boolean } = {}
 ): Promise<MaintenanceState | null> {
-  if (cache && cache.expiresAt > now) {
+  const now = Date.now();
+  if (!fresh && cache && cache.expiresAt > now) {
     return cache.state;
   }
   let state: MaintenanceState | null;
@@ -129,13 +138,17 @@ export function retryAfterSeconds(
     : DEFAULT_RETRY_AFTER_S;
 }
 
-/** The paths maintenance never blocks (path segments, not prefixes). */
+/**
+ * The paths maintenance never blocks: exact paths, or whole path segments
+ * under a prefix. The URL is already normalised (`..` resolved) here.
+ */
+const EXEMPT_PATHS = new Set(["/api/health", BYPASS_PATH, "/sign-in"]);
+const EXEMPT_PREFIXES = ["/api/webhooks/", "/.well-known/", "/api/auth/"];
+
 function isExemptPath(pathname: string): boolean {
   return (
-    pathname === "/api/health" ||
-    pathname === BYPASS_PATH ||
-    pathname.startsWith("/api/webhooks/") ||
-    pathname.startsWith("/.well-known/")
+    EXEMPT_PATHS.has(pathname) ||
+    EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix))
   );
 }
 
@@ -207,14 +220,20 @@ async function verifyBypassCookie(
   );
 }
 
-function bypassCookieHeader(value: string): string {
-  return `${BYPASS_COOKIE}=${value}; Path=/; Max-Age=${BYPASS_TTL_S}; HttpOnly; Secure; SameSite=Lax`;
+/** `Secure` outside dev only: dev runs on http://localhost or a LAN address. */
+export function bypassCookieHeader(
+  value: string,
+  environment: Environment
+): string {
+  const secure = environment === "dev" ? "" : " Secure;";
+  return `${BYPASS_COOKIE}=${value}; Path=/; Max-Age=${BYPASS_TTL_S}; HttpOnly;${secure} SameSite=Lax`;
 }
 
 /**
  * The 503 for this request while maintenance is on, or null to let it
- * through. It reads KV at most once per 30 s per isolate, and the session
- * never: the bypass cookie is checked by its signature alone.
+ * through. It reads KV at most once per 30 s per isolate, plus one fresh
+ * read for a request that carries a bypass cookie while the cache says
+ * "on". The session is never read: the cookie is checked by its signature.
  */
 export async function maintenanceGate(
   request: Request
@@ -224,18 +243,26 @@ export async function maintenanceGate(
     return null;
   }
   const { auth, kv } = siteEnv();
-  const state = await readMaintenance(kv);
+  const cached = await readMaintenance(kv);
+  if (!cached?.enabled) {
+    return null;
+  }
+  const cookie = parseCookie(request.headers.get("cookie") ?? "")[
+    BYPASS_COOKIE
+  ];
+  const state = cookie ? await readMaintenance(kv, { fresh: true }) : cached;
   if (!state?.enabled) {
     return null;
   }
-  const cookies = parseCookie(request.headers.get("cookie") ?? "");
   const now = Date.now();
-  const bypass = await verifyBypassCookie(
-    cookies[BYPASS_COOKIE],
-    auth.BETTER_AUTH_SECRET,
-    state.bypassVersion,
-    Math.floor(now / 1000)
-  );
+  const bypass =
+    cookie !== undefined &&
+    (await verifyBypassCookie(
+      cookie,
+      auth.BETTER_AUTH_SECRET,
+      state.bypassVersion,
+      Math.floor(now / 1000)
+    ));
   return bypass ? null : maintenanceResponse(request, state, now);
 }
 
@@ -248,19 +275,23 @@ function json(status: number, body: unknown, init: HeadersInit = {}): Response {
 
 /**
  * `POST /api/maintenance/bypass`: an admin session gets the 12 h bypass
- * cookie for the current `bypassVersion` (also while maintenance is off, so
- * it can be fetched just before). Same-origin only (`isForeignRequest`, the
- * rpc CSRF rule). Phase 5 calls it from the admin settings; until then an
- * admin runs `fetch("/api/maintenance/bypass", { method: "POST" })` in the
- * browser console.
+ * cookie for the current `bypassVersion`, read fresh from KV. It also works
+ * while maintenance is off, so it can be fetched just before a window.
+ * Same-origin only (`isForeignRequest`, the rpc CSRF rule), then `RL_AUTH`
+ * per IP, then the session (one D1 read). Phase 5 calls it from the admin
+ * settings; until then an admin signs in at `/sign-in` and runs
+ * `fetch("/api/maintenance/bypass", { method: "POST" })` in the console.
  */
 export async function handleBypass(request: Request): Promise<Response> {
   if (request.method !== "POST") {
     return json(405, { code: "METHOD_NOT_ALLOWED" }, { allow: "POST" });
   }
-  const { auth, kv, worker } = siteEnv();
+  const { auth, kv, rateLimits, vars, worker } = siteEnv();
   if (isForeignRequest(request, worker)) {
     return json(403, { code: "FORBIDDEN" });
+  }
+  if (!(await checkRateLimit(rateLimits.RL_AUTH, `mx:${clientIp(request)}`))) {
+    return json(429, { code: "RATE_LIMITED" }, { "retry-after": "60" });
   }
   try {
     requireAdminUser(await getSession(getAuth(), request.headers));
@@ -273,7 +304,7 @@ export async function handleBypass(request: Request): Promise<Response> {
     console.error("[maintenance] Failed to check the admin session:", error);
     throw error;
   }
-  const state = await readMaintenance(kv);
+  const state = await readMaintenance(kv, { fresh: true });
   const nowS = Math.floor(Date.now() / 1000);
   const value = await signBypassCookie(
     auth.BETTER_AUTH_SECRET,
@@ -283,6 +314,6 @@ export async function handleBypass(request: Request): Promise<Response> {
   return json(
     200,
     { expiresAt: new Date((nowS + BYPASS_TTL_S) * 1000).toISOString() },
-    { "set-cookie": bypassCookieHeader(value) }
+    { "set-cookie": bypassCookieHeader(value, vars.ENVIRONMENT) }
   );
 }

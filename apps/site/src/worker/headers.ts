@@ -41,19 +41,21 @@ const DOCUMENT_HEADERS: Readonly<Record<string, string>> = {
  * theme pre-paint script is allowed by its hash. Turnstile loads from
  * challenges.cloudflare.com (script + frame); Mux Player is bundled and
  * fetches posters, storyboards and HLS from *.mux.com (hls.js runs in a
- * blob: worker). The OpenPanel relay is same-origin (`/api/analytics`).
+ * blob: worker). Google profile pictures come from lh3.googleusercontent.com.
+ * The OpenPanel relay is same-origin (`/api/analytics`). The site loads no
+ * web fonts, so `font-src` is the brief's minus fonts.gstatic.com.
  */
 export function buildCsp(nonce: string): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'sha256-${THEME_SCRIPT_HASH}' https://challenges.cloudflare.com`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://image.mux.com",
+    "img-src 'self' data: blob: https://image.mux.com https://lh3.googleusercontent.com",
     "media-src 'self' blob: https://stream.mux.com https://*.mux.com",
     "connect-src 'self' https://*.mux.com https://inferred.litix.io",
     "frame-src https://challenges.cloudflare.com",
     "worker-src 'self' blob:",
-    "font-src 'self' data: https://fonts.gstatic.com",
+    "font-src 'self' data:",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -114,6 +116,11 @@ export function withSecurityHeaders(
     return secured;
   }
   setMissing(headers, DOCUMENT_HEADERS);
+  if (headers.get("content-type")?.startsWith("text/html")) {
+    // The page carries this response's nonce: never let a shared cache
+    // (a later Cache Rule, a proxy) serve it to someone else.
+    setMissing(headers, { "cache-control": "private, no-cache" });
+  }
   if (!(headers.has(CSP) || headers.has(CSP_REPORT_ONLY))) {
     headers.set(
       options.environment === "staging" ? CSP_REPORT_ONLY : CSP,
@@ -121,4 +128,30 @@ export function withSecurityHeaders(
     );
   }
   return secured;
+}
+
+/**
+ * The Worker's `fetch` body: one nonce for the handler and the CSP, and an
+ * exception that escapes the handler becomes a plain 500 with the security
+ * headers (Cloudflare's own error page would have none).
+ */
+export async function respondSecurely(
+  environment: Environment,
+  handle: (nonce: string) => Promise<Response> | Response
+): Promise<Response> {
+  const nonce = createNonce();
+  let response: Response;
+  try {
+    response = await handle(nonce);
+  } catch (error) {
+    console.error("[site] Failed to handle the request:", error);
+    response = new Response("Internal Server Error", {
+      headers: {
+        "cache-control": "no-store",
+        "content-type": "text/plain; charset=utf-8",
+      },
+      status: 500,
+    });
+  }
+  return withSecurityHeaders(response, { environment, nonce });
 }

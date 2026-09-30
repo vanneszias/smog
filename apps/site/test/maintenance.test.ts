@@ -2,6 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   BYPASS_COOKIE,
+  bypassCookieHeader,
   clearMaintenanceCache,
   MAINTENANCE_KEY,
   type MaintenanceState,
@@ -16,8 +17,9 @@ const SECRET = "site-test-secret-at-least-32-characters";
 const TOKEN_LINK =
   /http:\/\/localhost:5173\/api\/auth\/verify-email\?token=\S+/;
 const HOUR_S = 3600;
-const COOKIE_ATTRS =
-  /; Path=\/; Max-Age=43200; HttpOnly; Secure; SameSite=Lax$/;
+/** dev: no `Secure` (http://localhost and LAN addresses); see the unit test. */
+const COOKIE_ATTRS = /; Path=\/; Max-Age=43200; HttpOnly; SameSite=Lax$/;
+const PASSWORD = "correct horse battery";
 
 interface DevMail {
   messages: { text: string; to: string }[];
@@ -32,6 +34,16 @@ function binding<T>(value: T | undefined, name: string): T {
 
 const kv = binding(env.KV, "KV");
 const db = binding(env.DB, "DB");
+
+/** Writes KV without clearing the isolate cache (a change another isolate made). */
+async function writeKvOnly(state: MaintenanceState): Promise<void> {
+  await kv.put(MAINTENANCE_KEY, JSON.stringify(state));
+}
+
+/** A fresh client IP, so `RL_AUTH` never carries over between tests. */
+function ip(): string {
+  return `203.0.113.${Math.floor(Math.random() * 250) + 1}-${crypto.randomUUID()}`;
+}
 
 async function setMaintenance(state: MaintenanceState | null): Promise<void> {
   if (state) {
@@ -55,7 +67,7 @@ async function signedIn(): Promise<{ cookie: string; email: string }> {
     body: JSON.stringify({
       email,
       name: "M",
-      password: "correct horse battery",
+      password: PASSWORD,
     }),
     headers: { "content-type": "application/json", origin: ORIGIN },
     method: "POST",
@@ -150,7 +162,7 @@ describe("maintenance mode", () => {
     expect(enHtml).toContain('<html lang="en"');
     expect(enHtml).toContain("back soon");
 
-    const fr = await fetchSite("/sign-in", {
+    const fr = await fetchSite("/sign-up", {
       headers: { "accept-language": "fr-BE" },
     });
     expect(fr.status).toBe(503);
@@ -207,17 +219,60 @@ describe("maintenance mode", () => {
       "/api/webhooks/mollie",
       "/.well-known/nothing-here",
       "/api/maintenance/bypass",
+      "/api/auth/sign-out",
     ]) {
       // biome-ignore lint/performance/noAwaitInLoops: one path at a time.
-      const response = await fetchSite(path, { method: "POST" });
+      const response = await fetchSite(path, {
+        headers: { "cf-connecting-ip": ip(), origin: ORIGIN },
+        method: "POST",
+      });
       expect(response.status, path).not.toBe(503);
+      await response.body?.cancel();
+    }
+  });
+
+  it("serves the sign-in page, so an admin can sign in", async () => {
+    await setMaintenance({ bypassVersion: 1, enabled: true });
+    const response = await fetchSite("/sign-in");
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("</html>");
+  });
+
+  it("answers HEAD with an empty 503", async () => {
+    await setMaintenance({ bypassVersion: 1, enabled: true });
+    const response = await fetchSite("/", { method: "HEAD" });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("600");
+    expect(await response.text()).toBe("");
+  });
+
+  it("gates traversal out of an exempt prefix", async () => {
+    await setMaintenance({ bypassVersion: 1, enabled: true });
+    for (const path of [
+      "/.well-known/../gestures",
+      "/.well-known/%2e%2e/gestures",
+      "/api/webhooks/%2e%2e/%2e%2e/gestures",
+      "/api/auth/../../gestures",
+      "/sign-in/../account",
+    ]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one path at a time.
+      const response = await fetchSite(path);
+      expect(response.status, path).toBe(503);
       await response.body?.cancel();
     }
   });
 
   it("does not exempt look-alike paths", async () => {
     await setMaintenance({ bypassVersion: 1, enabled: true });
-    for (const path of ["/api/healthz", "/api/webhooksx", "/.well-knownx"]) {
+    for (const path of [
+      "/api/healthz",
+      "/api/webhooksx",
+      "/.well-knownx",
+      "/api/authx",
+      "/sign-in-x",
+      "/sign-in/extra",
+      "/sign-up",
+    ]) {
       // biome-ignore lint/performance/noAwaitInLoops: one path at a time.
       const response = await fetchSite(path);
       expect(response.status, path).toBe(503);
@@ -255,6 +310,28 @@ describe("maintenance mode", () => {
     }
   });
 
+  it("checks a bypass cookie against a fresh KV read, not the isolate cache", async () => {
+    await setMaintenance({ bypassVersion: 7, enabled: true });
+    // Primes this isolate's 30 s cache with version 7.
+    const primed = await fetchSite("/");
+    expect(primed.status).toBe(503);
+    await primed.body?.cancel();
+    // Another isolate ended the window (version 8) and a new one began.
+    await writeKvOnly({ bypassVersion: 8, enabled: true });
+    const current = await signBypassCookie(SECRET, 8, nowS());
+    const passed = await fetchSite("/", {
+      headers: { cookie: `${BYPASS_COOKIE}=${current}` },
+    });
+    expect(passed.status).toBe(200);
+    await passed.body?.cancel();
+    const stale = await signBypassCookie(SECRET, 7, nowS());
+    const blocked = await fetchSite("/", {
+      headers: { cookie: `${BYPASS_COOKIE}=${stale}` },
+    });
+    expect(blocked.status).toBe(503);
+    await blocked.body?.cancel();
+  });
+
   it("lets a valid bypass cookie through", async () => {
     await setMaintenance({ bypassVersion: 7, enabled: true });
     const value = await signBypassCookie(SECRET, 7, nowS());
@@ -268,20 +345,30 @@ describe("maintenance mode", () => {
 
 describe("POST /api/maintenance/bypass", () => {
   let admin = "";
+  let adminEmail = "";
   let member = "";
 
   beforeAll(async () => {
     const adminUser = await signedIn();
-    await db
-      .prepare("UPDATE user SET role = 'admin' WHERE email = ?")
-      .bind(adminUser.email)
-      .run();
+    await setRole(adminUser.email, "admin");
     admin = adminUser.cookie;
+    adminEmail = adminUser.email;
     member = (await signedIn()).cookie;
   });
 
-  function bypass(init: RequestInit = {}): Promise<Response> {
-    return fetchSite("/api/maintenance/bypass", { method: "POST", ...init });
+  async function setRole(email: string, role: "admin" | "user"): Promise<void> {
+    await db
+      .prepare("UPDATE user SET role = ? WHERE email = ?")
+      .bind(role, email)
+      .run();
+  }
+
+  /** A same-origin POST from its own IP (unless the test passes one). */
+  function bypass(headers: Record<string, string> = {}): Promise<Response> {
+    return fetchSite("/api/maintenance/bypass", {
+      headers: { "cf-connecting-ip": ip(), origin: ORIGIN, ...headers },
+      method: "POST",
+    });
   }
 
   it("refuses anonymous and non-admin callers", async () => {
@@ -289,7 +376,7 @@ describe("POST /api/maintenance/bypass", () => {
     const anonymous = await bypass();
     expect(anonymous.status).toBe(401);
     expect(anonymous.headers.getSetCookie()).toEqual([]);
-    const notAdmin = await bypass({ headers: { cookie: member } });
+    const notAdmin = await bypass({ cookie: member });
     expect(notAdmin.status).toBe(403);
     expect(notAdmin.headers.getSetCookie()).toEqual([]);
   });
@@ -297,11 +384,9 @@ describe("POST /api/maintenance/bypass", () => {
   it("refuses a cross-site request (CSRF)", async () => {
     await setMaintenance({ bypassVersion: 2, enabled: true });
     const foreign = await bypass({
-      headers: {
-        cookie: admin,
-        origin: "https://evil.example",
-        "sec-fetch-site": "cross-site",
-      },
+      cookie: admin,
+      origin: "https://evil.example",
+      "sec-fetch-site": "cross-site",
     });
     expect(foreign.status).toBe(403);
     expect(foreign.headers.getSetCookie()).toEqual([]);
@@ -317,9 +402,7 @@ describe("POST /api/maintenance/bypass", () => {
 
   it("gives an admin a 12 h cookie that passes the gate", async () => {
     await setMaintenance({ bypassVersion: 2, enabled: true });
-    const response = await bypass({
-      headers: { cookie: admin, origin: ORIGIN },
-    });
+    const response = await bypass({ cookie: admin });
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     const [setCookie] = response.headers.getSetCookie();
@@ -335,11 +418,105 @@ describe("POST /api/maintenance/bypass", () => {
     expect(page.status).toBe(200);
     await page.body?.cancel();
 
-    // A new maintenance window (a new bypassVersion) invalidates it.
+    // Turning maintenance off starts a new bypassVersion (the CLI), which
+    // voids the cookie for the next window.
     await setMaintenance({ bypassVersion: 3, enabled: true });
     const later = await fetchSite("/", { headers: { cookie: value } });
     expect(later.status).toBe(503);
     await later.body?.cancel();
+  });
+
+  it("signs with a fresh KV read, not the isolate cache", async () => {
+    await setMaintenance({ bypassVersion: 4, enabled: true });
+    const primed = await fetchSite("/");
+    expect(primed.status).toBe(503);
+    await primed.body?.cancel();
+    await writeKvOnly({ bypassVersion: 5, enabled: true });
+    const response = await bypass({ cookie: admin });
+    expect(response.status).toBe(200);
+    const value = response.headers.getSetCookie()[0]?.split(";")[0] ?? "";
+    const page = await fetchSite("/", { headers: { cookie: value } });
+    expect(page.status).toBe(200);
+    await page.body?.cancel();
+  });
+
+  it("refuses an admin who was demoted after signing in", async () => {
+    const demoted = await signedIn();
+    await setMaintenance({ bypassVersion: 2, enabled: true });
+    await setRole(demoted.email, "admin");
+    expect((await bypass({ cookie: demoted.cookie })).status).toBe(200);
+    await setRole(demoted.email, "user");
+    const response = await bypass({ cookie: demoted.cookie });
+    expect(response.status).toBe(403);
+    expect(response.headers.getSetCookie()).toEqual([]);
+  });
+
+  it("is rate-limited per IP (RL_AUTH), after the origin check", async () => {
+    const address = ip();
+    const statuses: number[] = [];
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: one request at a time.
+      const response = await bypass({ "cf-connecting-ip": address });
+      statuses.push(response.status);
+      await response.body?.cancel();
+    }
+    // The tests run RL_AUTH at 5/60 s.
+    expect(statuses).toEqual([401, 401, 401, 401, 401, 429]);
+    const limited = await bypass({ "cf-connecting-ip": address });
+    expect(limited.headers.get("retry-after")).toBe("60");
+    // A foreign request is refused before it counts.
+    const foreign = await bypass({
+      "cf-connecting-ip": ip(),
+      origin: "https://evil.example",
+    });
+    expect(foreign.status).toBe(403);
+  });
+
+  it("lets an admin sign in during maintenance, bypass, and use the site", async () => {
+    await setMaintenance({ bypassVersion: 9, enabled: true });
+    const address = ip();
+    const signIn = await fetchSite("/api/auth/sign-in/email", {
+      body: JSON.stringify({ email: adminEmail, password: PASSWORD }),
+      headers: {
+        "cf-connecting-ip": address,
+        "content-type": "application/json",
+        origin: ORIGIN,
+      },
+      method: "POST",
+    });
+    expect(signIn.status).toBe(200);
+    const session = signIn.headers
+      .getSetCookie()
+      .map((cookie) => cookie.split(";")[0])
+      .join("; ");
+    // Signed in is not enough: the rest of the site is still closed.
+    const closed = await fetchSite("/account", {
+      headers: { cookie: session },
+    });
+    expect(closed.status).toBe(503);
+    await closed.body?.cancel();
+
+    const issued = await bypass({ cookie: session });
+    expect(issued.status).toBe(200);
+    const bypassCookie = issued.headers.getSetCookie()[0]?.split(";")[0] ?? "";
+    const account = await fetchSite("/account", {
+      headers: { cookie: `${session}; ${bypassCookie}` },
+    });
+    expect(account.status).toBe(200);
+    await account.body?.cancel();
+  });
+});
+
+describe("bypassCookieHeader", () => {
+  it("is Secure outside dev only", () => {
+    expect(bypassCookieHeader("v", "dev")).toBe(
+      `${BYPASS_COOKIE}=v; Path=/; Max-Age=43200; HttpOnly; SameSite=Lax`
+    );
+    for (const environment of ["staging", "production"] as const) {
+      expect(bypassCookieHeader("v", environment)).toBe(
+        `${BYPASS_COOKIE}=v; Path=/; Max-Age=43200; HttpOnly; Secure; SameSite=Lax`
+      );
+    }
   });
 });
 

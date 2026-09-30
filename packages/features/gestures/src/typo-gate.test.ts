@@ -44,6 +44,29 @@ function catalogue(size: number): SearchableGesture[] {
   });
 }
 
+/** `gesture`, recording its id in `touched` whenever a field is read. */
+function tracked(
+  gesture: SearchableGesture,
+  touched: Set<string>
+): SearchableGesture {
+  const read = <T>(value: T): T => {
+    touched.add(gesture.id);
+    return value;
+  };
+  return {
+    get categories() {
+      return read(gesture.categories);
+    },
+    id: gesture.id,
+    get keywords() {
+      return read(gesture.keywords);
+    },
+    get name() {
+      return read(gesture.name);
+    },
+  };
+}
+
 /** The median of `runs` timings of `fn`, in ms. */
 function median(fn: () => unknown, runs = 7): number {
   const times: number[] = [];
@@ -90,16 +113,34 @@ describe("typoCandidates", () => {
     expect(normalizeQuery(pool[0]?.name ?? "")).toBe(pool[0]?.name ?? "");
   });
 
-  test("CPU budget on 5,000 gestures: the gated path costs a fraction of the typo pass", () => {
-    const pool = catalogue(5000);
-    // Baseline: the typo pass the server ran on every search before the gate.
-    const baseline = median(() => typoMatches(pool, "dieren"));
-    const gated = median(() => typoCandidates(pool, "dieren"));
-    // Measured (bun, this container): baseline ~160 ms, gated < 1 ms.
-    expect(gated).toBeLessThan(baseline / 5);
-    // The normalised typo pass (few direct hits) beats the full one.
-    const full = median(() => typoMatches(pool, "kta"));
-    const fast = median(() => typoMatches(pool, "kta", { normalized: true }));
-    expect(fast).toBeLessThan(full);
+  test("the gated path never runs the typo pass: it stops at the 5th direct match", () => {
+    const touched = new Set<string>();
+    const pool = catalogue(5000).map((gesture) => tracked(gesture, touched));
+    // Every gesture's category matches "dieren": 5 are read, then it stops.
+    expect(typoCandidates(pool, "dieren")).toEqual([]);
+    expect(touched.size).toBe(5);
+    // The ungated typo pass reads (and scores) every gesture.
+    touched.clear();
+    typoMatches(pool, "dieren", { normalized: true });
+    expect(touched.size).toBe(5000);
   });
+
+  // Opt-in benchmark (`bun -F @smog/gestures bench`), skipped in `test`:
+  // timings are noise when turbo runs every suite in parallel.
+  test.skipIf(!process.env.SMOG_PERF)(
+    "CPU budget on 5,000 gestures: the gated path costs a fraction of the typo pass",
+    () => {
+      const pool = catalogue(5000);
+      // Baseline: the typo pass the server ran on every search before the gate.
+      const baseline = median(() => typoMatches(pool, "dieren"));
+      const gated = median(() => typoCandidates(pool, "dieren"));
+      // Measured (bun, this container): baseline ~160 ms, gated < 1 ms.
+      expect(gated).toBeLessThan(baseline / 5);
+      // The normalised typo pass (few direct hits) beats the full one.
+      const full = median(() => typoMatches(pool, "kta"));
+      const fast = median(() => typoMatches(pool, "kta", { normalized: true }));
+      expect(fast).toBeLessThan(full);
+    },
+    60_000
+  );
 });

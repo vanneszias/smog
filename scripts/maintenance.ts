@@ -7,9 +7,10 @@ import { join } from "node:path";
  * Writes the site's KV key `maintenance` with
  * `wrangler kv key put --binding KV` from `apps/site` (`--local` in dev,
  * `--remote` otherwise; spec §9, apps/site/src/worker/maintenance.ts).
- * Every write starts a new `bypassVersion` (the current Unix second), so
- * bypass cookies from an earlier window stop working. Production needs
- * `--yes`. `--dry-run` prints the command instead of running it. Isolates
+ * It reads the current value first (`wrangler kv key get`): `on` keeps its
+ * `bypassVersion`, `off` writes a new one, so bypass cookies last one
+ * window. Production needs `--yes`. `--dry-run` prints both commands
+ * instead of running them (the version as a placeholder). Isolates
  * pick the change up within about a minute (30 s isolate cache + 30 s KV
  * `cacheTtl`).
  */
@@ -138,31 +139,56 @@ export function parseMaintenanceArgs(
   };
 }
 
-/** The KV value (`MaintenanceState` in the Worker). */
+/**
+ * The version to write. `on` keeps the current one, so a bypass cookie an
+ * admin fetched before the window (or earlier in it) keeps working; `off`
+ * starts a new one (the current second, always above the old value), which
+ * voids every cookie of the window that just ended.
+ */
+export function nextBypassVersion(
+  action: Action,
+  current: number | null,
+  now: number = Date.now()
+): number {
+  const nowS = Math.floor(now / 1000);
+  if (action === "on") {
+    return current ?? nowS;
+  }
+  return Math.max(nowS, (current ?? 0) + 1);
+}
+
+/** `bypassVersion` from `wrangler kv key get --text`, or null (no key). */
+export function parseCurrentVersion(stdout: string): number | null {
+  try {
+    const value: unknown = JSON.parse(stdout);
+    const version =
+      typeof value === "object" && value !== null && "bypassVersion" in value
+        ? value.bypassVersion
+        : undefined;
+    return Number.isSafeInteger(version) ? (version as number) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The KV value (`MaintenanceState` in the Worker). A string version is
+ * only a `--dry-run` placeholder.
+ */
 export function buildMaintenanceValue(
   args: Pick<MaintenanceArgs, "action" | "message" | "until">,
-  now: number = Date.now()
+  bypassVersion: number | string
 ): string {
   return JSON.stringify({
-    bypassVersion: Math.floor(now / 1000),
+    bypassVersion,
     enabled: args.action === "on",
     ...(args.message === undefined ? {} : { message: args.message }),
     ...(args.until === undefined ? {} : { until: args.until }),
   });
 }
 
-/** The wrangler argv (no shell, so the JSON is one argument). */
-export function buildMaintenanceCommand(
-  env: MaintenanceEnv,
-  value: string
-): string[] {
+function target(env: MaintenanceEnv): string[] {
   return [
-    "wrangler",
-    "kv",
-    "key",
-    "put",
-    "maintenance",
-    value,
     "--binding",
     "KV",
     "--env",
@@ -171,25 +197,81 @@ export function buildMaintenanceCommand(
   ];
 }
 
+/** Reads the current value (its `bypassVersion`). */
+export function buildReadCommand(env: MaintenanceEnv): string[] {
+  return [
+    "wrangler",
+    "kv",
+    "key",
+    "get",
+    "maintenance",
+    ...target(env),
+    "--text",
+  ];
+}
+
+/** The wrangler argv (no shell, so the JSON is one argument). */
+export function buildMaintenanceCommand(
+  env: MaintenanceEnv,
+  value: string
+): string[] {
+  return ["wrangler", "kv", "key", "put", "maintenance", value, ...target(env)];
+}
+
+const SITE_DIR = join(import.meta.dir, "..", "apps", "site");
+const NOT_FOUND = /not found/i;
+
+function shown(command: string[]): string {
+  return `(cd apps/site && bunx ${command.map((arg) => JSON.stringify(arg)).join(" ")})`;
+}
+
+function readCurrentVersion(env: MaintenanceEnv): number | null {
+  const proc = Bun.spawnSync(["bunx", ...buildReadCommand(env)], {
+    cwd: SITE_DIR,
+    stderr: "pipe",
+    stdout: "pipe",
+  });
+  if (proc.exitCode !== 0) {
+    // A missing key is not an error for `on` (first window) or `off`.
+    const stderr = proc.stderr.toString();
+    if (!NOT_FOUND.test(`${stderr}${proc.stdout.toString()}`)) {
+      throw new Error(`[maintenance] Failed to read the key: ${stderr.trim()}`);
+    }
+    return null;
+  }
+  return parseCurrentVersion(proc.stdout.toString());
+}
+
 function run(args: MaintenanceArgs): void {
-  const command = buildMaintenanceCommand(
-    args.env,
-    buildMaintenanceValue(args)
-  );
   if (args.dryRun) {
-    const shown = command.map((arg) => JSON.stringify(arg)).join(" ");
-    console.log(`(cd apps/site && bunx ${shown})`);
+    const placeholder = args.action === "on" ? "<current>" : "<new>";
+    console.log(shown(buildReadCommand(args.env)));
+    console.log(
+      shown(
+        buildMaintenanceCommand(
+          args.env,
+          buildMaintenanceValue(args, placeholder)
+        )
+      )
+    );
     return;
   }
-  const proc = Bun.spawnSync(["bunx", ...command], {
-    cwd: join(import.meta.dir, "..", "apps", "site"),
-    stdio: ["inherit", "inherit", "inherit"],
-  });
+  const version = nextBypassVersion(args.action, readCurrentVersion(args.env));
+  const proc = Bun.spawnSync(
+    [
+      "bunx",
+      ...buildMaintenanceCommand(
+        args.env,
+        buildMaintenanceValue(args, version)
+      ),
+    ],
+    { cwd: SITE_DIR, stdio: ["inherit", "inherit", "inherit"] }
+  );
   if (proc.exitCode !== 0) {
     throw new Error(`[maintenance] wrangler exited with ${proc.exitCode}`);
   }
   console.log(
-    `[maintenance] ${args.env}: maintenance ${args.action}. Isolates follow within about a minute.`
+    `[maintenance] ${args.env}: maintenance ${args.action} (bypassVersion ${version}). Isolates follow within about a minute.`
   );
 }
 

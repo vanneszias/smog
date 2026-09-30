@@ -11,6 +11,11 @@ import { signInWithApi, stubMux, waitForApp } from "./helpers";
  * answered by `page.route`. A request the CSP blocks never reaches a route
  * handler, so each handler also counts its hits: a hit proves the page was
  * allowed to make that request.
+ *
+ * Not covered here: `inferred.litix.io` (Mux Data), because the player runs
+ * with `disableTracking` and never beacons; and `media-src`, because only
+ * Chromium runs (hls.js fetches through `connect-src`; Safari would play
+ * HLS natively through `media-src`).
  */
 
 const CSP_MESSAGE = /Content Security Policy|Content-Security-Policy/i;
@@ -18,6 +23,22 @@ const NONCE_SOURCE = /'nonce-[A-Za-z0-9+/=]+'/;
 const TURNSTILE_FRAME =
   "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/e2e/turnstile";
 const DUMMY_TOKEN = "XXXX.DUMMY.TOKEN.XXXX";
+/** Mux serves renditions and segments from other *.mux.com hosts. */
+const RENDITION_URL = "https://manifest-e2e.cfcdn.mux.com/rendition.m3u8";
+const SEGMENT_URL = "https://chunk-e2e.cfcdn.mux.com/segment0.ts";
+const MASTER_PLAYLIST = `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=480x640
+${RENDITION_URL}
+`;
+const MEDIA_PLAYLIST = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:4
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:4.0,
+${SEGMENT_URL}
+#EXT-X-ENDLIST
+`;
 
 declare global {
   interface Window {
@@ -110,15 +131,44 @@ test.describe("CSP (enforced in dev)", () => {
         contentType: "image/svg+xml",
       });
     });
+    const playlist = (body: string) => ({
+      body,
+      contentType: "application/vnd.apple.mpegurl",
+      headers: { "access-control-allow-origin": "*" },
+    });
     await page.route("https://stream.mux.com/**", async (route) => {
       count(answered, route.request().url());
-      await route.fulfill({ body: "", status: 404 });
+      await route.fulfill(playlist(MASTER_PLAYLIST));
+    });
+    await page.route(RENDITION_URL, async (route) => {
+      count(answered, route.request().url());
+      await route.fulfill(playlist(MEDIA_PLAYLIST));
+    });
+    // Not a real segment: the request is the proof, not the playback.
+    await page.route(SEGMENT_URL, async (route) => {
+      count(answered, route.request().url());
+      await route.fulfill({
+        body: "",
+        headers: { "access-control-allow-origin": "*" },
+        status: 404,
+      });
     });
     await page.goto("/gestures/hond");
     await waitForApp(page);
     await expect(page.locator("mux-player")).toBeAttached();
     await expect
       .poll(() => answered.get("stream.mux.com") ?? 0, { timeout: 15_000 })
+      .toBeGreaterThan(0);
+    // The rendition and segment hosts (connect-src https://*.mux.com).
+    await expect
+      .poll(() => answered.get("manifest-e2e.cfcdn.mux.com") ?? 0, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(0);
+    await expect
+      .poll(() => answered.get("chunk-e2e.cfcdn.mux.com") ?? 0, {
+        timeout: 15_000,
+      })
       .toBeGreaterThan(0);
     expect(answered.get("image.mux.com") ?? 0).toBeGreaterThan(0);
     await page.waitForLoadState("networkidle");

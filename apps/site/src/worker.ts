@@ -1,8 +1,8 @@
+import { ENVIRONMENTS } from "@smog/config/env/worker";
 import handler from "@tanstack/react-start/server-entry";
 import { legacyRedirect } from "@/lib/legacy-redirects";
-import { siteEnv } from "@/server/auth";
 import { loadCategorySlugs } from "@/server/legacy-categories";
-import { createNonce, withSecurityHeaders } from "@/worker/headers";
+import { respondSecurely } from "@/worker/headers";
 import {
   BYPASS_PATH,
   handleBypass,
@@ -28,17 +28,17 @@ async function route(request: Request, nonce: string): Promise<Response> {
 
 /**
  * Site Worker entry. Every response it answers gets the security headers
- * (`worker/headers.ts`), the maintenance 503 and the legacy 301s included;
- * queue consumers and cron jobs are added in later phases.
+ * (`worker/headers.ts`), the maintenance 503, the legacy 301s and a 500 for
+ * an escaping exception included; queue consumers and cron jobs are added
+ * in later phases.
  */
 export default {
-  async fetch(request: Request): Promise<Response> {
-    const nonce = createNonce();
-    const response = await route(request, nonce);
-    return withSecurityHeaders(response, {
-      environment: siteEnv().vars.ENVIRONMENT,
-      nonce,
-    });
+  fetch(request: Request, env: Env): Promise<Response> {
+    // Read raw so a broken env still gets a headed 500 (dev: no HSTS).
+    const environment = ENVIRONMENTS.find((name) => name === env.ENVIRONMENT);
+    return respondSecurely(environment ?? "production", (nonce) =>
+      route(request, nonce)
+    );
   },
 
   queue(batch: MessageBatch): void {
