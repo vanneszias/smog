@@ -28,6 +28,7 @@
   "a11y": {
     "skipToContent": "Naar de inhoud",
     "skipToNavigation": "Naar de navigatie",
+    "noscript": "Zet JavaScript aan om te zoeken en om favorieten, lijsten en je account te gebruiken.",
     "mainNavigation": "Hoofdnavigatie",
     "openMenu": "Menu openen",
     "closeMenu": "Menu sluiten",

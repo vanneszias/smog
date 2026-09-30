@@ -1,5 +1,6 @@
 import { publicAuthConfig } from "@smog/config/env/worker";
 import { createI18n, isLocale, type Locale, resolveLocale } from "@smog/i18n";
+import { escapeHtml } from "@smog/utils";
 import { parseCookie } from "cookie-es";
 import { scriptJson } from "@/lib/head";
 import { LOCALE_COOKIE } from "@/lib/preferences";
@@ -71,14 +72,6 @@ const STYLE = `:root{color-scheme:light dark;font-family:system-ui,-apple-system
 body{margin:0;padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
 #widget{min-height:65px}
 p{margin:0;font-size:14px}`;
-
-function escapeHtml(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
 
 function bridgeCsp(nonce: string): string {
   return [

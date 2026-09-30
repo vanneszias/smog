@@ -3,6 +3,10 @@
  * procedures, shared by the contract, the server and the hooks.
  * Client-safe (no server imports).
  */
+import {
+  PROFILE_NAME_MAX as AUTH_PROFILE_NAME_MAX,
+  profileNameSchema as authProfileNameSchema,
+} from "@smog/auth/fields";
 import { CONSENT_POLICY_VERSION, LOCALES } from "@smog/config/constants";
 import {
   gestureIdSchema,
@@ -111,10 +115,13 @@ export const EMPTY_IMPORT_RESULT: ImportResult = {
 
 // Profile (`account.me`, `account.updateProfile`)
 
-/** `user.name`, trimmed. */
-export const PROFILE_NAME_MAX = 80;
+/**
+ * `user.name`, trimmed, 1..80: one schema with sign-up (`@smog/auth`'s
+ * create hook), so the name has the same bound on every write path.
+ */
+export const PROFILE_NAME_MAX = AUTH_PROFILE_NAME_MAX;
 
-export const profileNameSchema = z.string().trim().min(1).max(PROFILE_NAME_MAX);
+export const profileNameSchema = authProfileNameSchema;
 
 /** An app language (`LOCALES`), or `null` to follow the device or browser. */
 export const profileLocaleSchema = z.enum(LOCALES).nullable();

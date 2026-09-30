@@ -248,7 +248,8 @@ live | expiring ──force expire (admin)──▶ expired
   - `@better-auth/passkey`.
   - `admin` plugin: roles, bans, user list.
   - `@better-auth/expo` on the server for the mobile app.
-  - `captcha` plugin with Cloudflare Turnstile on sign-up, sign-in and password-reset endpoints.
+  - `captcha` plugin with Cloudflare Turnstile on sign-up, sign-in, password-reset, and every other endpoint that sends an email (the verification email, email codes and magic links).
+  - The profile (name, language) is written only by `account.updateProfile`; Better Auth's `/update-user` is disabled. Sign-up bounds the name the same way (trimmed, at most 80 characters).
 - Account linking: `accountLinking: { enabled: true, trustedProviders: ["google", "apple", "email-password"] }`. Accounts are linked by verified email.
 - Migrated users have `email_verified = true` and no credential. They sign in with OTP, magic link, Google or Apple, or set a password via "forgot password". The password-reset flow must create a credential account when none exists; this is verified by a test.
 - Mobile uses `@better-auth/expo` with `expo-secure-store` storage and the `smog://` scheme. Sign in with Apple on iOS uses `expo-apple-authentication` (idToken sign-in); Google uses the browser flow. Passkeys on mobile are a known gap at first (web only), unless a maintained Expo passkey module works with SDK 57 (see DECISIONS).
@@ -396,8 +397,11 @@ Local dev: the Container needs Docker. When Docker is missing, `RENDER_MODE=loca
   - `/gestures/<convexId>` → `/gestures/<slug>`.
   - `/lists/<token>` stays valid: migrated share tokens keep their value.
 - Maintenance mode:
-  - The KV key `maintenance` holds `{ enabled, message?, until? }` and is read with a 30 s in-isolate cache.
-  - When it is enabled, every HTML request gets a 503 static page (a port of the old maintenance page, nl/en/fr, `Retry-After`), except `/api/webhooks/*`, `/api/health`, `/.well-known/*`, and admins holding a bypass cookie.
+  - The KV key `maintenance` holds `{ enabled, bypassVersion, message?, until? }` and is read with a 30 s in-isolate cache.
+  - When it is enabled, every page request gets a 503 static page (a port of the old maintenance page, nl/en/fr, `Retry-After`) and every other request a JSON 503 (`{ code: "MAINTENANCE", until }`), except:
+    - `/api/webhooks/*`, `/api/health`, `/.well-known/*` and `/api/analytics`;
+    - `POST /api/maintenance/bypass`, where a signed-in admin gets the bypass cookie (HMAC-signed for the current `bypassVersion`, 12 h), and every request that carries a valid one;
+    - the `/sign-in` page and the `/api/auth` routes an existing admin needs to sign in (password, Google/Apple and their callbacks, email code and magic-link sign-in, passkey sign-in, session, sign-out). They are served by a sign-in-only Better Auth: no sign-up, no user created, no email to an unknown address, sign-in codes only. Everything else under `/api/auth` gets the JSON 503.
   - It is toggled from `/admin/settings` or `wrangler kv key put`.
 - Security headers equivalent to the old Caddy set (CSP including Mux, Turnstile and the OpenPanel relay being same-origin; HSTS; `X-Frame-Options DENY`; Permissions-Policy), set by a response middleware. `robots.txt` and a dynamic `sitemap.xml` with every published gesture.
 

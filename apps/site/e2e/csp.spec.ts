@@ -232,6 +232,85 @@ test.describe("CSP (enforced in dev)", () => {
     expect(await violations(page, csp)).toEqual([]);
   });
 
+  test.describe("the OpenAPI reference (/api/openapi)", () => {
+    /*
+     * The page loads Scalar from jsDelivr, pinned and with an SRI hash,
+     * under its own CSP. This machine has no route to jsDelivr, so the
+     * bundle is answered by `page.route`: with the real file when
+     * SCALAR_STANDALONE_JS points at it (`npm pack
+     * @scalar/api-reference@<version>`, `package/dist/browser/standalone.js`),
+     * else with a stand-in the SRI check must refuse.
+     */
+    const JSDELIVR = "https://cdn.jsdelivr.net/npm/@scalar/api-reference@*";
+
+    async function openReference(
+      page: Page,
+      body: string
+    ): Promise<{ csp: string; bundleHits: number; messages: string[] }> {
+      const messages = await watchCsp(page);
+      let bundleHits = 0;
+      await page.route(`${JSDELIVR}/**`, async (route) => {
+        bundleHits += 1;
+        await route.fulfill({
+          body,
+          contentType: "text/javascript",
+          headers: { "access-control-allow-origin": "*" },
+        });
+      });
+      const response = await page.goto("/api/openapi");
+      expect(response?.status()).toBe(200);
+      const csp = response?.headers()["content-security-policy"] ?? "";
+      return { bundleHits, csp, messages };
+    }
+
+    test("its CSP allows the pinned bundle, and SRI refuses anything else", async ({
+      page,
+    }) => {
+      const logged: string[] = [];
+      page.on("console", (message) => {
+        logged.push(message.text());
+      });
+      const errors: string[] = [];
+      page.on("pageerror", (error) => {
+        errors.push(error.message);
+      });
+      const { csp, messages } = await openReference(
+        page,
+        "window.Scalar = { createApiReference() { document.title = 'tampered'; } };"
+      );
+      expect(csp).not.toContain("nonce-");
+      await expect
+        .poll(() => logged.some((text) => text.includes("integrity")))
+        .toBe(true);
+      // Our mount script ran (it was allowed) and found no Scalar.
+      await expect
+        .poll(() => errors.some((text) => text.includes("Scalar")))
+        .toBe(true);
+      await expect(page).not.toHaveTitle("tampered");
+      expect(await violations(page, messages)).toEqual([]);
+    });
+
+    test("renders with the real bundle and no violation", async ({ page }) => {
+      const bundle = process.env.SCALAR_STANDALONE_JS;
+      test.skip(
+        !bundle,
+        "Set SCALAR_STANDALONE_JS to Scalar's dist/browser/standalone.js"
+      );
+      const { readFile } = await import("node:fs/promises");
+      const { bundleHits, messages } = await openReference(
+        page,
+        await readFile(bundle ?? "", "utf8")
+      );
+      expect(bundleHits).toBe(1);
+      // The spec was fetched and rendered: a procedure's path is listed.
+      await expect(page.getByText("/system/health").first()).toBeVisible({
+        timeout: 30_000,
+      });
+      await page.waitForLoadState("networkidle");
+      expect(await violations(page, messages)).toEqual([]);
+    });
+  });
+
   for (const path of ["/dev/ui", "/dev/mail"]) {
     test(`${path} works under the CSP`, async ({ page }) => {
       const csp = await watchCsp(page);

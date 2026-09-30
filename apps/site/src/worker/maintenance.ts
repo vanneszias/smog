@@ -10,9 +10,10 @@ import { maintenanceResponse } from "./maintenance-page";
  * Maintenance mode (spec §9). The KV key `maintenance` holds a
  * `MaintenanceState`; `bun run maintenance` writes it. While it is enabled,
  * the Worker answers every request with a 503, except:
- * - `/api/webhooks/*`, `/api/health` and `/.well-known/*`;
- * - `/api/auth/*` (it has its own `RL_AUTH` limit and captcha) and the
- *   `/sign-in` page, so an admin can sign in;
+ * - `/api/webhooks/*`, `/api/health`, `/.well-known/*` and `/api/analytics`;
+ * - the `/sign-in` page and `AUTH_SIGN_IN_ROUTES`, so an existing admin
+ *   can sign in (served by a sign-in-only Better Auth: no sign-up, no
+ *   reset, no email to an unknown address);
  * - `POST /api/maintenance/bypass`, where a signed-in admin gets the bypass
  *   cookie;
  * - requests with a valid bypass cookie.
@@ -142,8 +143,66 @@ export function retryAfterSeconds(
  * The paths maintenance never blocks: exact paths, or whole path segments
  * under a prefix. The URL is already normalised (`..` resolved) here.
  */
-const EXEMPT_PATHS = new Set(["/api/health", BYPASS_PATH, "/sign-in"]);
-const EXEMPT_PREFIXES = ["/api/webhooks/", "/.well-known/", "/api/auth/"];
+const EXEMPT_PATHS = new Set([
+  "/api/health",
+  BYPASS_PATH,
+  "/sign-in",
+  // It only forwards consented events; without it the sign-in page's
+  // screen views would fail (and log) through the window.
+  "/api/analytics",
+]);
+const EXEMPT_PREFIXES = ["/api/webhooks/", "/.well-known/"];
+
+/**
+ * `METHOD path`: the `/api/auth` routes an existing admin needs to sign in
+ * during a window (`:provider` is one lowercase segment). They are served
+ * by the sign-in-only Better Auth (`createAuth({ signInOnly })`), so none
+ * of them creates a user or mails an address without an account. Social
+ * sign-in is the web flow only (the app gets 503s anyway). Everything else
+ * under `/api/auth` gets the JSON 503.
+ */
+export const AUTH_SIGN_IN_ROUTES = [
+  "POST /api/auth/sign-in/email",
+  "POST /api/auth/sign-in/social",
+  "GET /api/auth/callback/:provider",
+  "POST /api/auth/callback/:provider",
+  "POST /api/auth/email-otp/send-verification-otp",
+  "POST /api/auth/sign-in/email-otp",
+  "POST /api/auth/sign-in/magic-link",
+  "GET /api/auth/magic-link/verify",
+  "GET /api/auth/passkey/generate-authenticate-options",
+  "POST /api/auth/passkey/verify-authentication",
+  "GET /api/auth/get-session",
+  "POST /api/auth/get-session",
+  "POST /api/auth/sign-out",
+] as const;
+
+const PROVIDER = /^[a-z0-9-]+$/;
+const PROVIDER_PARAM = ":provider";
+
+function matchesRoute(
+  route: string,
+  method: string,
+  pathname: string
+): boolean {
+  const [routeMethod, routePath = ""] = route.split(" ");
+  if (routeMethod !== method) {
+    return false;
+  }
+  if (!routePath.endsWith(PROVIDER_PARAM)) {
+    return routePath === pathname;
+  }
+  const prefix = routePath.slice(0, -PROVIDER_PARAM.length);
+  return (
+    pathname.startsWith(prefix) && PROVIDER.test(pathname.slice(prefix.length))
+  );
+}
+
+function isAuthSignInRoute(method: string, pathname: string): boolean {
+  return AUTH_SIGN_IN_ROUTES.some((route) =>
+    matchesRoute(route, method, pathname)
+  );
+}
 
 function isExemptPath(pathname: string): boolean {
   return (
@@ -229,15 +288,21 @@ export function bypassCookieHeader(
   return `${BYPASS_COOKIE}=${value}; Path=/; Max-Age=${BYPASS_TTL_S}; HttpOnly;${secure} SameSite=Lax`;
 }
 
+/** The gate's answer for an admin sign-in route during a window. */
+export const SIGN_IN_ONLY = "sign-in-only";
+
 /**
- * The 503 for this request while maintenance is on, or null to let it
- * through. It reads KV at most once per 30 s per isolate, plus one fresh
- * read for a request that carries a bypass cookie while the cache says
- * "on". The session is never read: the cookie is checked by its signature.
+ * The 503 for this request while maintenance is on; `SIGN_IN_ONLY` for an
+ * `AUTH_SIGN_IN_ROUTES` request then (serve it with the sign-in-only
+ * auth); or null to let it through. It reads KV at most once per 30 s per
+ * isolate, plus one fresh read for a request that carries a bypass cookie
+ * while the cache says "on". The session is never read: the cookie is
+ * checked by its signature. A valid cookie gets the whole site, all of
+ * `/api/auth` included.
  */
 export async function maintenanceGate(
   request: Request
-): Promise<Response | null> {
+): Promise<Response | typeof SIGN_IN_ONLY | null> {
   const { pathname } = new URL(request.url);
   if (isExemptPath(pathname)) {
     return null;
@@ -263,7 +328,12 @@ export async function maintenanceGate(
       state.bypassVersion,
       Math.floor(now / 1000)
     ));
-  return bypass ? null : maintenanceResponse(request, state, now);
+  if (bypass) {
+    return null;
+  }
+  return isAuthSignInRoute(request.method, pathname)
+    ? SIGN_IN_ONLY
+    : maintenanceResponse(request, state, now);
 }
 
 function json(status: number, body: unknown, init: HeadersInit = {}): Response {

@@ -114,6 +114,40 @@ test.describe("app shell", () => {
     expect(errors).toEqual([]);
   });
 
+  test("signed in, the language menu also saves the account's language (account.updateProfile)", async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    await signInWithApi(page);
+    await page.setViewportSize({ height: 900, width: 1280 });
+    const calls: string[] = [];
+    page.on("request", (request) => {
+      const { pathname } = new URL(request.url());
+      if (pathname.startsWith("/api/")) {
+        calls.push(pathname);
+      }
+    });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const saved = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/rpc/account/updateProfile") &&
+        response.ok()
+    );
+    await page.getByRole("button", { name: "Taal wijzigen" }).click();
+    await page.getByRole("menuitemradio", { name: "Français" }).click();
+    await saved;
+    await expect(page.locator("html")).toHaveAttribute("lang", "fr");
+    expect(calls).not.toContain("/api/auth/update-user");
+
+    // Another browser of this account, with no locale cookie: French.
+    await page.context().clearCookies({ name: "locale" });
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("lang", "fr");
+    expect(errors).toEqual([]);
+  });
+
   test("the mobile menu opens the sections in a sheet", async ({ page }) => {
     await page.setViewportSize({ height: 800, width: 390 });
     await page.goto("/");

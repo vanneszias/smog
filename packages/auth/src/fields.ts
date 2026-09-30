@@ -13,6 +13,15 @@ export type Role = "user" | "admin";
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
+/**
+ * `user.name`, trimmed: 1..80 characters. `account.updateProfile` and
+ * sign-up by email use this schema; a code, magic-link or Apple sign-up
+ * may leave the name empty (the account is shown by its email).
+ */
+export const PROFILE_NAME_MAX = 80;
+
+export const profileNameSchema = z.string().trim().min(1).max(PROFILE_NAME_MAX);
+
 /** Digits in an email sign-in code. */
 export const OTP_LENGTH = 6;
 

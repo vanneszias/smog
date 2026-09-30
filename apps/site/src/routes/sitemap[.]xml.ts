@@ -1,26 +1,18 @@
+import { escapeHtml } from "@smog/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { siteOrigin } from "@/lib/site-url";
 import { siteEnv } from "@/server/auth";
 import { createInProcessApiClient } from "@/server/in-process-api";
 
-/** The public pages that exist today (sponsor and legal pages follow). */
-const STATIC_PATHS = ["/", "/gestures"] as const;
-
-function escapeXml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
-}
+/** The public pages that exist today (sponsor pages follow). */
+const STATIC_PATHS = ["/", "/gestures", "/privacy", "/terms"] as const;
 
 function url(loc: string, lastmod?: number): string {
   const modified =
     lastmod === undefined
       ? ""
       : `<lastmod>${new Date(lastmod).toISOString()}</lastmod>`;
-  return `<url><loc>${escapeXml(loc)}</loc>${modified}</url>`;
+  return `<url><loc>${escapeHtml(loc)}</loc>${modified}</url>`;
 }
 
 /**

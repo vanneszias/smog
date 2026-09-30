@@ -314,6 +314,55 @@ describe("account.consent", () => {
     ]);
   });
 
+  it("does not append a decision that repeats the current one", async () => {
+    const owner = await addUser();
+    const first = await setConsent(
+      testDb(),
+      owner.id,
+      { analytics: true, source: "web" },
+      NOW
+    );
+    const again = await setConsent(
+      testDb(),
+      owner.id,
+      { analytics: true, source: "mobile" },
+      new Date(NOW.getTime() + 1000)
+    );
+    expect(again).toEqual(first);
+    expect(await storedConsent(owner.id)).toHaveLength(1);
+
+    // A change is appended; so is a repeat after a policy change.
+    await setConsent(testDb(), owner.id, { analytics: false, source: "web" });
+    expect(await storedConsent(owner.id)).toHaveLength(2);
+    const stale = await addUser();
+    await addConsent(stale.id, true, 1000, { policyVersion: "2020-01-01" });
+    await setConsent(testDb(), stale.id, { analytics: true, source: "web" });
+    expect(await storedConsent(stale.id)).toHaveLength(2);
+  });
+
+  it("limits appends per user with RL_AUTH, and a repeat costs nothing", async () => {
+    const owner = await addUser();
+    const keys: string[] = [];
+    const call$ = contextFor(owner);
+    call$.context.env = {
+      ...call$.context.env,
+      RL_AUTH: {
+        limit: ({ key }: { key: string }) => {
+          keys.push(key);
+          return Promise.resolve({ success: keys.length < 2 });
+        },
+      },
+    };
+    await call(accountRouter.consent.set, { analytics: true }, call$);
+    // The same decision again: no row, no limit spent.
+    await call(accountRouter.consent.set, { analytics: true }, call$);
+    expect(keys).toEqual([`user:${owner.id}:account.consent.set`]);
+    await expect(
+      call(accountRouter.consent.set, { analytics: false }, call$)
+    ).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    expect(await storedConsent(owner.id)).toHaveLength(1);
+  });
+
   it("the later of two decisions in the same millisecond wins", async () => {
     const owner = await addUser();
     await setConsent(
@@ -363,6 +412,25 @@ describe("account.consent", () => {
 });
 
 describe("account.export", () => {
+  it("is rate-limited per user with RL_AUTH", async () => {
+    const owner = await addUser();
+    const keys: string[] = [];
+    const call$ = contextFor(owner);
+    call$.context.env = {
+      ...call$.context.env,
+      RL_AUTH: {
+        limit: ({ key }: { key: string }) => {
+          keys.push(key);
+          return Promise.resolve({ success: false });
+        },
+      },
+    };
+    await expect(
+      call(accountRouter.export, undefined, call$)
+    ).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    expect(keys).toEqual([`user:${owner.id}:account.export`]);
+  });
+
   it("contains everything about the user, and nothing secret", async () => {
     const { user } = await signedUpUser("Sofie");
     const [aap, beer] = await addGestures(["Aap", "Beer"]);

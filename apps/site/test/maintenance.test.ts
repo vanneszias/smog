@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
+  AUTH_SIGN_IN_ROUTES,
   BYPASS_COOKIE,
   bypassCookieHeader,
   clearMaintenanceCache,
@@ -11,19 +12,15 @@ import {
   signBypassCookie,
 } from "../src/worker/maintenance";
 import { renderMaintenancePage } from "../src/worker/maintenance-page";
+import { mailTo, ORIGIN, signedUp, waitForMail } from "./helpers";
 
-const ORIGIN = "http://localhost:5173";
 const SECRET = "site-test-secret-at-least-32-characters";
-const TOKEN_LINK =
-  /http:\/\/localhost:5173\/api\/auth\/verify-email\?token=\S+/;
 const HOUR_S = 3600;
 /** dev: no `Secure` (http://localhost and LAN addresses); see the unit test. */
 const COOKIE_ATTRS = /; Path=\/; Max-Age=43200; HttpOnly; SameSite=Lax$/;
 const PASSWORD = "correct horse battery";
-
-interface DevMail {
-  messages: { text: string; to: string }[];
-}
+const OTP_CODE = /\b\d{6}\b/;
+const PROVIDER_SEGMENT = /\/callback\/[a-z]+$/;
 
 function binding<T>(value: T | undefined, name: string): T {
   if (!value) {
@@ -60,39 +57,9 @@ function fetchSite(path: string, init?: RequestInit): Promise<Response> {
 
 const nowS = (): number => Math.floor(Date.now() / 1000);
 
-/** Signs up, verifies and returns the session cookie and the user's email. */
-async function signedIn(): Promise<{ cookie: string; email: string }> {
-  const email = `${crypto.randomUUID()}@smog.test`;
-  const signUp = await fetchSite("/api/auth/sign-up/email", {
-    body: JSON.stringify({
-      email,
-      name: "M",
-      password: PASSWORD,
-    }),
-    headers: { "content-type": "application/json", origin: ORIGIN },
-    method: "POST",
-  });
-  expect(signUp.status).toBe(200);
-  let link: string | undefined;
-  for (let attempt = 0; attempt < 50 && !link; attempt += 1) {
-    // biome-ignore lint/performance/noAwaitInLoops: polling until the background send lands.
-    const response = await fetchSite("/dev/mail.json");
-    const { messages } = (await response.json()) as DevMail;
-    link = messages.find((m) => m.to === email)?.text.match(TOKEN_LINK)?.[0];
-    if (!link) {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
-  }
-  if (!link) {
-    throw new Error("no verification email");
-  }
-  const verified = await exports.default.fetch(link, { redirect: "manual" });
-  const cookie = verified.headers
-    .getSetCookie()
-    .map((value) => value.split(";")[0])
-    .join("; ");
-  return { cookie, email };
-}
+/** Signs up (password `PASSWORD`), verifies: the session cookie and email. */
+const signedIn = (): Promise<{ cookie: string; email: string }> =>
+  signedUp({ password: PASSWORD });
 
 afterEach(async () => {
   await setMaintenance(null);
@@ -504,6 +471,249 @@ describe("POST /api/maintenance/bypass", () => {
     });
     expect(account.status).toBe(200);
     await account.body?.cancel();
+  });
+});
+
+/*
+ * During a window `/api/auth/*` serves only what an existing admin needs
+ * to sign in (`AUTH_SIGN_IN_ROUTES`), through a sign-in-only Better Auth:
+ * no sign-up, no reset, no account change, and no email to an address
+ * without an account.
+ */
+describe("/api/auth during maintenance", () => {
+  const ALLOWED: [method: string, path: string][] = [
+    ["POST", "/api/auth/sign-in/email"],
+    ["POST", "/api/auth/sign-in/social"],
+    ["GET", "/api/auth/callback/google"],
+    ["POST", "/api/auth/callback/apple"],
+    ["POST", "/api/auth/email-otp/send-verification-otp"],
+    ["POST", "/api/auth/sign-in/email-otp"],
+    ["POST", "/api/auth/sign-in/magic-link"],
+    ["GET", "/api/auth/magic-link/verify"],
+    ["GET", "/api/auth/passkey/generate-authenticate-options"],
+    ["POST", "/api/auth/passkey/verify-authentication"],
+    ["GET", "/api/auth/get-session"],
+    ["POST", "/api/auth/get-session"],
+    ["POST", "/api/auth/sign-out"],
+  ];
+  const BLOCKED: [method: string, path: string][] = [
+    ["POST", "/api/auth/sign-up/email"],
+    ["POST", "/api/auth/request-password-reset"],
+    ["POST", "/api/auth/reset-password"],
+    ["GET", "/api/auth/reset-password/some-token"],
+    ["GET", "/api/auth/verify-email?token=x"],
+    ["POST", "/api/auth/send-verification-email"],
+    ["POST", "/api/auth/email-otp/request-password-reset"],
+    ["POST", "/api/auth/forget-password/email-otp"],
+    ["POST", "/api/auth/email-otp/reset-password"],
+    ["POST", "/api/auth/email-otp/verify-email"],
+    ["POST", "/api/auth/email-otp/check-verification-otp"],
+    ["POST", "/api/auth/change-password"],
+    ["POST", "/api/auth/change-email"],
+    ["POST", "/api/auth/update-user"],
+    ["POST", "/api/auth/link-social"],
+    ["POST", "/api/auth/unlink-account"],
+    ["GET", "/api/auth/list-accounts"],
+    ["GET", "/api/auth/list-sessions"],
+    ["POST", "/api/auth/revoke-session"],
+    ["POST", "/api/auth/revoke-sessions"],
+    ["POST", "/api/auth/revoke-other-sessions"],
+    ["GET", "/api/auth/passkey/generate-register-options"],
+    ["POST", "/api/auth/passkey/verify-registration"],
+    ["POST", "/api/auth/passkey/delete-passkey"],
+    ["POST", "/api/auth/passkey/update-passkey"],
+    ["GET", "/api/auth/passkey/list-user-passkeys"],
+    ["POST", "/api/auth/admin/set-role"],
+    ["GET", "/api/auth/expo-authorization-proxy"],
+    ["GET", "/api/auth/ok"],
+    // The right path with the wrong method, or a longer path.
+    ["GET", "/api/auth/sign-in/email"],
+    ["GET", "/api/auth/sign-out"],
+    ["POST", "/api/auth/magic-link/verify"],
+    ["POST", "/api/auth/sign-in/email/"],
+    ["GET", "/api/auth/callback/google/extra"],
+    ["GET", "/api/auth/callback/"],
+  ];
+
+  let adminEmail = "";
+
+  beforeAll(async () => {
+    adminEmail = (await signedIn()).email;
+    await db
+      .prepare("UPDATE user SET role = 'admin' WHERE email = ?")
+      .bind(adminEmail)
+      .run();
+  });
+
+  function authCall(
+    method: string,
+    path: string,
+    {
+      body,
+      headers = {},
+    }: { body?: unknown; headers?: Record<string, string> } = {}
+  ): Promise<Response> {
+    return fetchSite(path, {
+      body:
+        method === "GET"
+          ? undefined
+          : JSON.stringify(body === undefined ? {} : body),
+      headers: {
+        "cf-connecting-ip": ip(),
+        "content-type": "application/json",
+        origin: ORIGIN,
+        ...headers,
+      },
+      method,
+      redirect: "manual",
+    });
+  }
+
+  /** An email code to the admin: proves the mailbox works, and when. */
+  async function adminCode(): Promise<string> {
+    const seen = new Set((await mailTo(adminEmail)).map(({ text }) => text));
+    const sent = await authCall(
+      "POST",
+      "/api/auth/email-otp/send-verification-otp",
+      { body: { email: adminEmail, type: "sign-in" } }
+    );
+    expect(sent.status).toBe(200);
+    const [message] = await waitForMail(adminEmail, {
+      match: ({ text }) => OTP_CODE.test(text) && !seen.has(text),
+    });
+    return message?.text.match(OTP_CODE)?.[0] ?? "";
+  }
+
+  it("lets each sign-in route through", async () => {
+    await setMaintenance({ bypassVersion: 1, enabled: true });
+    for (const [method, path] of ALLOWED) {
+      // biome-ignore lint/performance/noAwaitInLoops: one route at a time.
+      const response = await authCall(method, path);
+      expect(response.status, `${method} ${path}`).not.toBe(503);
+      await response.body?.cancel();
+    }
+  });
+
+  it("answers every other auth route with the JSON 503", async () => {
+    await setMaintenance({ bypassVersion: 1, enabled: true });
+    for (const [method, path] of BLOCKED) {
+      // biome-ignore lint/performance/noAwaitInLoops: one route at a time.
+      const response = await authCall(method, path);
+      expect(response.status, `${method} ${path}`).toBe(503);
+      expect(await response.json(), `${method} ${path}`).toEqual({
+        code: "MAINTENANCE",
+        until: null,
+      });
+    }
+  });
+
+  it("tests every allowed route (the list and this test agree)", () => {
+    const tested = ALLOWED.map(([method, path]) =>
+      `${method} ${path}`.replace(PROVIDER_SEGMENT, "/callback/:provider")
+    );
+    expect([...AUTH_SIGN_IN_ROUTES].sort()).toEqual(tested.sort());
+  });
+
+  it("creates no user and sends no email for a sign-up, a reset or a stranger's code", async () => {
+    await setMaintenance({ bypassVersion: 1, enabled: true });
+    const stranger = `${crypto.randomUUID()}@smog.test`;
+    const requests: [string, unknown][] = [
+      [
+        "/api/auth/sign-up/email",
+        { email: stranger, name: "S", password: PASSWORD },
+      ],
+      ["/api/auth/request-password-reset", { email: adminEmail }],
+      ["/api/auth/email-otp/request-password-reset", { email: adminEmail }],
+      [
+        "/api/auth/email-otp/send-verification-otp",
+        { email: stranger, type: "sign-in" },
+      ],
+      ["/api/auth/sign-in/magic-link", { callbackURL: "/", email: stranger }],
+    ];
+    const before = (await mailTo(adminEmail)).length;
+    for (const [path, body] of requests) {
+      // biome-ignore lint/performance/noAwaitInLoops: one request at a time.
+      const response = await authCall("POST", path, { body });
+      await response.body?.cancel();
+    }
+    // A code to the admin lands after them: had any of them sent, it
+    // would have been mailed by now too.
+    await adminCode();
+    expect(await mailTo(stranger)).toEqual([]);
+    const adminMail = await mailTo(adminEmail);
+    expect(adminMail).toHaveLength(before + 1);
+    const users = await db
+      .prepare("SELECT count(*) AS n FROM user WHERE email = ?")
+      .bind(stranger)
+      .first<{ n: number }>();
+    expect(users?.n).toBe(0);
+  });
+
+  it("sends only sign-in codes", async () => {
+    await setMaintenance({ bypassVersion: 1, enabled: true });
+    const response = await authCall(
+      "POST",
+      "/api/auth/email-otp/send-verification-otp",
+      { body: { email: adminEmail, type: "forget-password" } }
+    );
+    expect(response.status).toBe(403);
+    await response.body?.cancel();
+  });
+
+  it("an admin signs in with an email code", async () => {
+    await setMaintenance({ bypassVersion: 1, enabled: true });
+    const otp = await adminCode();
+    const response = await authCall("POST", "/api/auth/sign-in/email-otp", {
+      body: { email: adminEmail, otp },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.getSetCookie().join("; ")).toContain(
+      "session_token="
+    );
+  });
+
+  it("a code for an unknown address signs nobody up", async () => {
+    await setMaintenance({ bypassVersion: 1, enabled: true });
+    const stranger = `${crypto.randomUUID()}@smog.test`;
+    const response = await authCall("POST", "/api/auth/sign-in/email-otp", {
+      body: { email: stranger, otp: "123456" },
+    });
+    expect(response.status).toBe(400);
+    const users = await db
+      .prepare("SELECT count(*) AS n FROM user WHERE email = ?")
+      .bind(stranger)
+      .first<{ n: number }>();
+    expect(users?.n).toBe(0);
+  });
+
+  it("a valid bypass cookie gets the whole of /api/auth", async () => {
+    await setMaintenance({ bypassVersion: 3, enabled: true });
+    const value = await signBypassCookie(SECRET, 3, nowS());
+    const response = await authCall("POST", "/api/auth/sign-up/email", {
+      body: {
+        email: `${crypto.randomUUID()}@smog.test`,
+        name: "B",
+        password: PASSWORD,
+      },
+      headers: { cookie: `${BYPASS_COOKIE}=${value}` },
+    });
+    expect(response.status).toBe(200);
+    await response.body?.cancel();
+  });
+
+  it("lets the analytics relay through (it only forwards)", async () => {
+    await setMaintenance({ bypassVersion: 1, enabled: true });
+    const response = await fetchSite("/api/analytics", {
+      body: "{}",
+      headers: {
+        "cf-connecting-ip": ip(),
+        "content-type": "application/json",
+        origin: ORIGIN,
+      },
+      method: "POST",
+    });
+    expect(response.status).not.toBe(503);
+    await response.body?.cancel();
   });
 });
 
