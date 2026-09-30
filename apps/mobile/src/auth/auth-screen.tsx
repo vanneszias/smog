@@ -4,6 +4,7 @@ import {
   type AuthErrorField,
   type AuthErrorKey,
   type AuthFlow,
+  type AuthFlowActions,
   type AuthMethod,
   type AuthMode,
   authErrorField,
@@ -30,6 +31,7 @@ import { useRouter } from "expo-router";
 import Apple from "lucide-react-native/icons/apple";
 import ArrowLeft from "lucide-react-native/icons/arrow-left";
 import KeyRound from "lucide-react-native/icons/key-round";
+import Link2 from "lucide-react-native/icons/link-2";
 import Mail from "lucide-react-native/icons/mail";
 import {
   type ReactElement,
@@ -41,16 +43,22 @@ import {
   useState,
 } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import {
+  TurnstileSheet,
+  useTurnstileChallenge,
+} from "@/components/turnstile-sheet";
 import { useAuthClient } from "@/lib/auth-client";
 import { mobileEnv } from "@/lib/env";
 import { signInWithApple, useAppleSignInAvailable } from "./apple";
+import { markMagicLinkRequested } from "./magic-link-request";
 
-type NativeMethod = Exclude<AuthMethod, "passkey" | "magicLink">;
+type NativeMethod = Exclude<AuthMethod, "passkey">;
 
 const ICONS: Record<NativeMethod, ReactElement> = {
   apple: <Apple />,
   emailCode: <Mail />,
   google: <KeyRound />,
+  magicLink: <Link2 />,
   password: <KeyRound />,
 };
 
@@ -170,6 +178,7 @@ function MethodStep({
     apple: t("auth.methods.apple"),
     emailCode: t("auth.methods.emailCode"),
     google: t("auth.methods.google"),
+    magicLink: t("auth.methods.magicLink"),
     password: t("auth.methods.password"),
   };
   return (
@@ -322,19 +331,26 @@ function InboxStep({ flow }: { flow: AuthFlow }): ReactElement {
   const router = useRouter();
   const { email, notice, pending, step } = flow.state;
   const reset = step === "resetSent";
+  const link = step === "magicLinkSent";
   const toSignIn = useCallback(() => router.replace("/sign-in"), [router]);
+  let description = t("auth.verifyEmail.description", { email });
+  if (reset) {
+    description = t("auth.forgotPassword.sent", { email });
+  } else if (link) {
+    description = t("auth.magicLink.description", { email });
+  }
   return (
     <View className="gap-4">
-      <Text>
-        {reset
-          ? t("auth.forgotPassword.sent", { email })
-          : t("auth.verifyEmail.description", { email })}
-      </Text>
+      <Text>{description}</Text>
       <Text size="body-sm" tone="muted">
         {t("auth.checkInbox.spamHint")}
       </Text>
       <ErrorText error={flow.state.error} />
-      {notice ? <Notice>{t("auth.verifyEmail.resent")}</Notice> : null}
+      {notice ? (
+        <Notice>
+          {link ? t("auth.magicLink.resent") : t("auth.verifyEmail.resent")}
+        </Notice>
+      ) : null}
       {reset ? (
         <Button onPress={toSignIn} variant="secondary">
           {t("auth.forgotPassword.backToSignIn")}
@@ -345,7 +361,7 @@ function InboxStep({ flow }: { flow: AuthFlow }): ReactElement {
           onPress={flow.resend}
           variant="secondary"
         >
-          {t("auth.verifyEmail.resend")}
+          {link ? t("auth.magicLink.resend") : t("auth.verifyEmail.resend")}
         </Button>
       )}
       <Button onPress={flow.changeEmail} variant="ghost">
@@ -389,6 +405,8 @@ function useTitle(flow: AuthFlow): string {
       return t("auth.otp.title");
     case "verifyEmailSent":
       return t("auth.verifyEmail.title");
+    case "magicLinkSent":
+      return t("auth.magicLink.title");
     case "done":
       return t("auth.signingIn");
     default:
@@ -403,9 +421,11 @@ function siteURL(path: string): string {
 
 /**
  * Sign in, sign up and forgot password (`useAuthFlow`, shared with the
- * site). Mobile differences: no passkeys (web only, DECISIONS), no magic
- * link and email links open the site (the app cannot take over a browser
- * session yet), Apple uses the native sheet, and no Turnstile widget.
+ * site). Mobile differences: no passkeys (web only, DECISIONS); the
+ * verification and reset links open the site; the magic link is an app
+ * link the app exchanges itself (`/magic-link`); Apple uses the native
+ * sheet; and when the server requires Turnstile, each guarded request
+ * first runs the challenge in a WebView sheet (`TurnstileSheet`).
  */
 export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
   const { t } = useTranslation();
@@ -417,26 +437,41 @@ export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
   const config = useQuery(rpc.system.authConfig.queryOptions());
   const apple = useAppleSignInAvailable();
 
-  const actions = useMemo(
-    () =>
-      createFlowActions(client, {
-        callbackURL: "/",
-        errorCallbackURL: "/",
-        resetPasswordURL: siteURL("/reset-password"),
-        social: { apple: () => signInWithApple(client) },
-        socialErrorCallbackURL: "/",
-        socialFlow: {
-          hasSession: async () => Boolean((await client.getSession()).data),
-          kind: "session",
-        },
-        verifyEmailURL: siteURL("/verify-email"),
-      }),
-    [client]
-  );
-  const flow = useAuthFlow({ actions, mode });
+  const actions = useMemo((): AuthFlowActions => {
+    const base = createFlowActions(client, {
+      callbackURL: "/",
+      errorCallbackURL: "/",
+      resetPasswordURL: siteURL("/reset-password"),
+      social: { apple: () => signInWithApple(client) },
+      socialErrorCallbackURL: "/",
+      socialFlow: {
+        hasSession: async () => Boolean((await client.getSession()).data),
+        kind: "session",
+      },
+      verifyEmailURL: siteURL("/verify-email"),
+    });
+    return {
+      ...base,
+      // Remembered, so this link exchanges without a prompt (login CSRF).
+      sendMagicLink: async (email, token) => {
+        const result = await base.sendMagicLink(email, token);
+        if (result.ok) {
+          markMagicLinkRequested(email);
+        }
+        return result;
+      },
+    };
+  }, [client]);
+  const captcha = useTurnstileChallenge();
+  const flow = useAuthFlow({
+    actions,
+    mode,
+    requestCaptcha: captcha.request,
+    requiresCaptcha: Boolean(config.data?.turnstileSiteKey),
+  });
 
   const methods = useMemo((): NativeMethod[] => {
-    const list: NativeMethod[] = ["password", "emailCode"];
+    const list: NativeMethod[] = ["password", "emailCode", "magicLink"];
     if (config.data?.google) {
       list.push("google");
     }
@@ -517,6 +552,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
           </Text>
         )}
       </ScrollView>
+      <TurnstileSheet {...captcha.sheet} />
     </KeyboardAvoidingView>
   );
 }

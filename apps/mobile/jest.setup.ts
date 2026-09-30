@@ -87,6 +87,18 @@ jest.mock("react-native-reorderable-list", () => {
   };
 });
 
+// The WebView is native: a View with the same props stands in, so tests
+// read its source and call its handlers (`onMessage`).
+jest.mock("react-native-webview", () => {
+  const { createElement } = jest.requireActual<typeof import("react")>("react");
+  const { View } =
+    jest.requireActual<typeof import("react-native")>("react-native");
+  function WebView(props: Record<string, unknown>) {
+    return createElement(View, props);
+  }
+  return { __esModule: true, default: WebView, WebView };
+});
+
 // The public env Expo inlines at build time.
 process.env.EXPO_PUBLIC_API_URL ??= "https://smog.test";
 process.env.EXPO_PUBLIC_ENVIRONMENT ??= "dev";

@@ -1,9 +1,11 @@
 import { env } from "cloudflare:workers";
 import { scrypt } from "node:crypto";
-import { account, session } from "@smog/db";
+import { account, session, verification } from "@smog/db";
 import { makeUser } from "@smog/db/testing";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { APP_MAGIC_LINK_PATH, MAGIC_LINK_TTL_SECONDS } from "../src/fields";
+import { appMagicLinkURL } from "../src/server";
 import { getSession, requireAdminUser } from "../src/session";
 import {
   codeIn,
@@ -252,6 +254,111 @@ describe("magic link", () => {
       new Headers({ cookie: cookieHeader(verify) })
     );
     expect(current?.user.email).toBe(email);
+  });
+
+  it("an app request mails the app link, which the app exchanges itself", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+
+    // What the Expo client sends: the `smog://` callbacks, `expo-origin`.
+    const sent = await ctx.call("/sign-in/magic-link", {
+      body: {
+        callbackURL: "smog:///",
+        email,
+        errorCallbackURL: "smog:///",
+        newUserCallbackURL: "smog:///",
+      },
+      headers: { "expo-origin": "smog://", origin: "" },
+    });
+    expect(sent.status).toBe(200);
+    const link = new URL(linkIn(ctx.email.sent[0]?.text));
+
+    // The universal link: the site host, a fixed path, only the token (no
+    // address: it would land in logs and the address bar).
+    expect(`${link.origin}${link.pathname}`).toBe(
+      `${SITE_URL}${APP_MAGIC_LINK_PATH}`
+    );
+    expect([...link.searchParams.keys()]).toEqual(["token"]);
+    expect(link.toString()).not.toContain(encodeURIComponent(email));
+    expect(link.toString()).not.toContain("smog:");
+
+    // The app verifies without a callback: JSON and the cookie, no redirect.
+    const token = link.searchParams.get("token") ?? "";
+    const verify = await ctx.call(
+      `/magic-link/verify?token=${encodeURIComponent(token)}`,
+      { headers: { "expo-origin": "smog://", origin: "" } }
+    );
+    expect(verify.status).toBe(200);
+    expect(verify.headers.get("location")).toBeNull();
+    const current = await getSession(
+      ctx.auth,
+      new Headers({ cookie: cookieHeader(verify) })
+    );
+    expect(current?.user.email).toBe(email);
+
+    // Single use.
+    const again = await ctx.call(
+      `/magic-link/verify?token=${encodeURIComponent(token)}`,
+      { headers: { "expo-origin": "smog://", origin: "" } }
+    );
+    expect(sessionCookie(again)).toBeUndefined();
+  });
+
+  it("a web request keeps Better Auth's verify link", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+    await ctx.call("/sign-in/magic-link", {
+      body: { callbackURL: "/account", email },
+    });
+    const link = new URL(linkIn(ctx.email.sent[0]?.text));
+    expect(link.pathname).toBe("/api/auth/magic-link/verify");
+    expect(link.searchParams.get("callbackURL")).toBe("/account");
+  });
+
+  it("the link lives 5 minutes (MAGIC_LINK_TTL_SECONDS)", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+    const before = Date.now();
+    await ctx.call("/sign-in/magic-link", {
+      body: { callbackURL: "/", email },
+    });
+    const rows = await ctx.db.select().from(verification);
+    const row = rows.find((candidate) => candidate.value.includes(email));
+    expect(MAGIC_LINK_TTL_SECONDS).toBe(300);
+    const lifetime = (row?.expiresAt.getTime() ?? 0) - before;
+    expect(lifetime).toBeGreaterThan(299_000);
+    expect(lifetime).toBeLessThanOrEqual(301_000);
+  });
+
+  it("appMagicLinkURL only rewrites links whose callback is the app", () => {
+    const verify = `${SITE_URL}/api/auth/magic-link/verify?token=abc`;
+    expect(
+      appMagicLinkURL({
+        siteURL: SITE_URL,
+        token: "abc",
+        url: `${verify}&callbackURL=${encodeURIComponent("smog:///")}`,
+      })
+    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc`);
+    expect(
+      appMagicLinkURL({
+        siteURL: SITE_URL,
+        token: "abc",
+        url: `${verify}&callbackURL=${encodeURIComponent("exp://10.0.0.2:8081/--/")}`,
+      })
+    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc`);
+    for (const callback of ["/", "/account", `${SITE_URL}/lists`]) {
+      const url = `${verify}&callbackURL=${encodeURIComponent(callback)}`;
+      expect(
+        appMagicLinkURL({
+          siteURL: SITE_URL,
+          token: "abc",
+          url,
+        })
+      ).toBe(url);
+    }
   });
 });
 

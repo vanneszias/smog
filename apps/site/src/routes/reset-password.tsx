@@ -12,19 +12,12 @@ import { type FormEvent, type ReactNode, useCallback, useState } from "react";
 import { AuthCard } from "@/components/auth/auth-card";
 import { useAuthClient } from "@/lib/auth-client";
 import { pageMeta } from "@/lib/head";
-
-export interface ResetSearch {
-  error?: string;
-  token?: string;
-}
+import { validateResetSearch } from "@/lib/redirect";
 
 export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
   head: ({ matches }) => pageMeta(matches, "auth.resetPassword.title"),
-  validateSearch: (search: Record<string, unknown>): ResetSearch => ({
-    ...(typeof search.error === "string" ? { error: search.error } : {}),
-    ...(typeof search.token === "string" ? { token: search.token } : {}),
-  }),
+  validateSearch: validateResetSearch,
 });
 
 function field(event: FormEvent<HTMLFormElement>, name: string): string {

@@ -153,7 +153,17 @@
       "title": "Check your inbox",
       "description": "We sent a sign-in link to {{email}}. Open it to sign in.",
       "resend": "Send the link again",
-      "resent": "We sent you a new link."
+      "resent": "We sent you a new link.",
+      "appTitle": "Sign in to the app",
+      "appDescription": "This link signs you in to the SMOG & Co app. Open it on the phone that has the app.",
+      "continueInBrowser": "Sign in in this browser",
+      "confirmTitle": "Sign in with the link from your email?",
+      "confirmDescription": "Only continue if you asked for this link yourself. You'll see which account you're signed in to.",
+      "confirm": "Sign in",
+      "switchTitle": "Switch account?",
+      "switchDescription": "You're signed in as {{current}}. This link may sign you in to a different account.",
+      "switch": "Switch account",
+      "wrongAccount": "This link signs in to another account."
     },
     "checkInbox": {
       "openMail": "Open your mail app",
@@ -188,9 +198,14 @@
       "unsupported": "Your device or browser doesn't support passkeys."
     },
     "captcha": {
-      "label": "Security check"
+      "label": "Security check",
+      "description": "Just checking that you're not a robot. This takes a few seconds.",
+      "appOnly": "This page only works in the SMOG & Co app.",
+      "failed": "The security check didn't work. Please try again.",
+      "retry": "Try again"
     },
     "signedIn": "You're signed in.",
+    "signedInAs": "You're signed in as {{email}}.",
     "signingIn": "Signing you in…",
     "signedOut": "You're signed out.",
     "errors": {

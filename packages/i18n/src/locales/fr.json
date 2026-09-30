@@ -153,7 +153,17 @@
       "title": "Consultez votre boîte mail",
       "description": "Nous avons envoyé un lien de connexion à {{email}}. Ouvrez-le pour vous connecter.",
       "resend": "Renvoyer le lien",
-      "resent": "Nous vous avons envoyé un nouveau lien."
+      "resent": "Nous vous avons envoyé un nouveau lien.",
+      "appTitle": "Se connecter dans l'app",
+      "appDescription": "Ce lien vous connecte à l'app SMOG & Co. Ouvrez-le sur le téléphone où l'app est installée.",
+      "continueInBrowser": "Se connecter dans ce navigateur",
+      "confirmTitle": "Se connecter avec le lien de votre e-mail\u202f?",
+      "confirmDescription": "Ne continuez que si vous avez demandé ce lien vous-même. Vous verrez à quel compte vous êtes connecté.",
+      "confirm": "Se connecter",
+      "switchTitle": "Changer de compte\u202f?",
+      "switchDescription": "Vous êtes connecté en tant que {{current}}. Ce lien peut vous connecter à un autre compte.",
+      "switch": "Changer de compte",
+      "wrongAccount": "Ce lien connecte à un autre compte."
     },
     "checkInbox": {
       "openMail": "Ouvrir votre application de messagerie",
@@ -188,9 +198,14 @@
       "unsupported": "Votre appareil ou votre navigateur ne prend pas en charge les clés d'accès."
     },
     "captcha": {
-      "label": "Contrôle de sécurité"
+      "label": "Contrôle de sécurité",
+      "description": "Nous vérifions que vous n'êtes pas un robot. Cela prend quelques secondes.",
+      "appOnly": "Cette page ne fonctionne que dans l'app SMOG & Co.",
+      "failed": "Le contrôle de sécurité a échoué. Veuillez réessayer.",
+      "retry": "Réessayer"
     },
     "signedIn": "Vous êtes connecté.",
+    "signedInAs": "Vous êtes connecté en tant que {{email}}.",
     "signingIn": "Connexion en cours…",
     "signedOut": "Vous êtes déconnecté.",
     "errors": {
