@@ -552,7 +552,6 @@
   "account": {
     "title": "Votre compte",
     "signedInAs": "Connecté en tant que {{email}}",
-    "comingSoon": "Bientôt, vous gérerez aussi ici vos méthodes de connexion, votre confidentialité et vos préférences.",
     "export": {
       "sensitive": "Ce fichier contient vos données personnelles et les liens de partage actifs de vos listes\u00a0: toute personne disposant d'un lien peut ouvrir la liste. Conservez-le en lieu sûr et ne le partagez pas."
     },
@@ -560,13 +559,91 @@
       "passwordRequired": "Saisissez votre mot de passe pour supprimer votre compte.",
       "sessionNotFresh": "Reconnectez-vous pour supprimer votre compte.",
       "invalidPassword": "Ce mot de passe n'est pas correct.",
-      "deleteFailed": "La suppression de votre compte a échoué. Veuillez réessayer."
+      "deleteFailed": "La suppression de votre compte a échoué. Veuillez réessayer.",
+      "signInAgain": "Pour votre sécurité, reconnectez-vous pour effectuer cette action."
+    },
+    "guest": {
+      "title": "Connectez-vous pour gérer votre compte",
+      "description": "Vos favoris, listes et préférences sont sur cet appareil. Connectez-vous pour les conserver dans votre compte, partager des listes et gérer vos données."
+    },
+    "profile": {
+      "title": "Profil",
+      "name": "Nom",
+      "email": "Adresse e-mail",
+      "emailHint": "Votre adresse e-mail ne peut pas être modifiée.",
+      "saved": "Votre profil a été enregistré."
+    },
+    "methods": {
+      "title": "Méthodes de connexion",
+      "description": "Vous pouvez toujours vous connecter avec un code ou un lien envoyé par e-mail.",
+      "password": "Mot de passe",
+      "passwordSet": "Vous vous connectez avec votre adresse e-mail et votre mot de passe.",
+      "passwordNone": "Vous n'avez pas encore de mot de passe.",
+      "changePassword": "Modifier le mot de passe",
+      "setPassword": "Définir un mot de passe",
+      "setPasswordHint": "Nous vous enverrons un lien par e-mail pour choisir un mot de passe. Vous vous reconnecterez ensuite partout.",
+      "currentPassword": "Mot de passe actuel",
+      "passwordChanged": "Votre mot de passe a été modifié. Vos autres appareils ont été déconnectés.",
+      "passkeys": "Clés d'accès",
+      "passkeysDescription": "Connectez-vous avec votre empreinte, votre visage ou le code de votre appareil.",
+      "noPasskeys": "Vous n'avez pas encore ajouté de clé d'accès.",
+      "passkeyName": "Clé d'accès",
+      "addedOn": "Ajoutée le {{date}}",
+      "removePasskey": "Supprimer la clé d'accès",
+      "removePasskeyTitle": "Supprimer cette clé d'accès\u202f?",
+      "removePasskeyDescription": "Vous ne pourrez plus vous connecter avec elle.",
+      "passkeyRemoved": "La clé d'accès a été supprimée.",
+      "linked": "Associé",
+      "notLinked": "Non associé",
+      "link": "Associer",
+      "unlink": "Dissocier",
+      "linkedToast": "{{provider}} a été associé.",
+      "unlinkTitle": "Dissocier {{provider}}\u202f?",
+      "unlinkDescription": "Vous ne pourrez plus vous connecter avec {{provider}}. Vous pourrez l'associer à nouveau plus tard.",
+      "unlinked": "{{provider}} a été dissocié.",
+      "lastMethod": "C'est votre seule méthode de connexion. Ajoutez-en d'abord une autre.",
+      "google": "Google",
+      "apple": "Apple"
+    },
+    "privacy": {
+      "title": "Confidentialité",
+      "export": "Télécharger mes données",
+      "exportDescription": "Un fichier JSON avec votre profil, vos favoris, vos listes, l'historique de vos consentements et vos parrainages.",
+      "exported": "Vos données ont été téléchargées.",
+      "exportFailed": "Vos données n'ont pas pu être téléchargées. Veuillez réessayer.",
+      "shareTitle": "Vos données SMOG",
+      "policy": "Politique de confidentialité"
+    },
+    "delete": {
+      "title": "Supprimer le compte",
+      "description": "Cela supprime définitivement votre compte, vos favoris, vos listes et vos liens de partage. Les parrainages sont conservés, comme la loi l'exige.",
+      "action": "Supprimer mon compte",
+      "dialogTitle": "Supprimer définitivement votre compte\u202f?",
+      "dialogDescription": "Cette action est irréversible.",
+      "confirmLabel": "Tapez {{word}} pour confirmer",
+      "password": "Votre mot de passe",
+      "deleted": "Votre compte a été définitivement supprimé.",
+      "signInAgain": "Se reconnecter"
+    },
+    "preferences": {
+      "languageHint": "Si vous êtes connecté, c'est aussi la langue des e-mails que nous vous envoyons."
     }
   },
   "settings": {
     "title": "Paramètres",
     "preferences": "Préférences",
     "about": "À propos de l'app"
+  },
+  "consent": {
+    "title": "Aidez-nous à améliorer SMOG",
+    "description": "Avec votre accord, nous collectons des statistiques d'utilisation limitées pour améliorer SMOG. Nous ne les utilisons pas pour la publicité et ne vous suivons pas dans d'autres applications ni sur d'autres sites.",
+    "privacyLink": "Lire la politique de confidentialité",
+    "allow": "Autoriser les statistiques",
+    "decline": "Uniquement le nécessaire",
+    "toggle": "Statistiques d'utilisation",
+    "toggleDescription": "Partagez des statistiques d'utilisation limitées pour aider à améliorer SMOG.",
+    "saved": "Votre choix a été enregistré.",
+    "saveFailed": "Votre choix n'a pas pu être enregistré. Veuillez réessayer."
   },
   "gestures": {
     "description": "Cherchez les gestes SMOG par mot ou par catégorie et regardez-les en vidéo.",

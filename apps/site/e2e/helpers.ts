@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type APIRequestContext, expect, type Page } from "@playwright/test";
 
-export const ORIGIN = "http://localhost:5173";
+export const ORIGIN = `http://localhost:${process.env.E2E_PORT ?? 5173}`;
 
 interface DevMail {
   messages: { subject: string; text: string; to: string }[];
@@ -9,7 +9,7 @@ interface DevMail {
 
 const BLOCKING = new Set(["serious", "critical"]);
 const OTP = /\b(\d{6})\b/;
-const VERIFY_LINK = /http:\/\/localhost:5173\/api\/auth\/verify-email\?\S+/;
+const VERIFY_LINK = new RegExp(`${ORIGIN}/api/auth/verify-email\\?\\S+`);
 
 export function uniqueEmail(): string {
   return `e2e-${crypto.randomUUID()}@smog.test`;

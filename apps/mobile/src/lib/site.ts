@@ -6,6 +6,11 @@ function siteUrl(path: string): string {
   return `https://${mobileEnv().EXPO_PUBLIC_SITE_HOST}${path}`;
 }
 
+/** The site's privacy policy (the consent prompt and settings link to it). */
+export function privacyUrl(): string {
+  return siteUrl("/privacy");
+}
+
 /** `https://<site host>/gestures/<slug>`: what the gesture share sends. */
 export function gestureUrl(slug: string): string {
   return siteUrl(`/gestures/${encodeURIComponent(slug)}`);

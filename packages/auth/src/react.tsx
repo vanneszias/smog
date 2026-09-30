@@ -60,6 +60,11 @@ export interface AuthState {
 export interface AuthStateValue extends AuthState {
   /** Refetches the session (after sign-in, or to retry after an error). */
   refetch: () => void;
+  /**
+   * The same, resolving once the session has been read again (a failure
+   * is logged). Account deletion waits on it before clearing the cache.
+   */
+  refresh: () => Promise<void>;
 }
 
 /** The shape of Better Auth's `useSession()` on web and Expo. */
@@ -144,6 +149,13 @@ export function AuthStateProvider({
       ...state,
       refetch: () => {
         refetch?.();
+      },
+      refresh: async () => {
+        try {
+          await refetch?.();
+        } catch (failure) {
+          console.error("[auth] Failed to read the session again:", failure);
+        }
       },
     };
   }, [data, error, isPending, refetch]);

@@ -1,21 +1,37 @@
 import { useAuthState } from "@smog/auth/react";
-import { setConsent } from "@smog/local-store";
+import { type LocalStore, setConsent } from "@smog/local-store";
 import { useLocalStore, useLocalStoreInstance } from "@smog/local-store/react";
 import {
   usePurgeOtherUsers,
+  useRpcClient,
   useRpcQuery,
   userScopedKey,
 } from "@smog/rpc/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ConsentSetSource, ConsentState } from "../schema";
-import type { AccountSlice } from "./import-guest-data";
+import { type AccountSlice, importGuestConsent } from "./import-guest-data";
 import { useStoreReady } from "./store-ready";
 
 /** The decision changes only through this user; every write sets it. */
 const CONSENT_STALE_TIME = 5 * 60_000;
 
 export type ConsentStatus = "loading" | "ready" | "error";
+
+/**
+ * The users whose device choice was sent this session, per store: every
+ * `useConsent` sees the same state, and only the first carries it.
+ */
+const CARRIED = new WeakMap<LocalStore, Set<string>>();
+
+function carriedFor(store: LocalStore): Set<string> {
+  let users = CARRIED.get(store);
+  if (!users) {
+    users = new Set();
+    CARRIED.set(store, users);
+  }
+  return users;
+}
 
 export interface Consent {
   /**
@@ -28,7 +44,9 @@ export interface Consent {
    * Show the consent prompt: undecided, or signed in with a yes given
    * under an older policy (`CONSENT_POLICY_VERSION`); an old no stays.
    * `false` while `loading` or on `error`. A guest's device choice has no
-   * policy version, so a guest is asked only while undecided.
+   * policy version, so a guest is asked only while undecided. `false` too
+   * while a device choice is being carried to an account that never
+   * decided: that choice stands.
    */
   needsDecision: boolean;
   /**
@@ -53,8 +71,10 @@ function consentSource(): ConsentSetSource {
  * The analytics consent (spec §5.3, §11), platform-neutral. A guest's
  * decision lives in the local store only. Signed in, the account's consent
  * log is the source: it is read from the server and mirrored to the local
- * store (so the device keeps it after signing out); while the account has
- * no decision the device's is left alone (the guest import carries it).
+ * store (so the device keeps it after signing out). When the account never
+ * decided and the device has a choice, that choice is carried to the
+ * account (`importGuestConsent`, source `import`) without the import sheet;
+ * until it lands `analytics` stays `null` and nothing asks again.
  */
 export function useConsent(): Consent {
   const auth = useAuthState();
@@ -63,6 +83,7 @@ export function useConsent(): Consent {
   const ready = useStoreReady();
   const local = useLocalStore((data) => data.consent);
   const rpc = useRpcQuery<AccountSlice>();
+  const client = useRpcClient<AccountSlice>();
   const queryClient = useQueryClient();
   const userId = auth.status === "signedIn" ? auth.user?.id : undefined;
   const options = rpc.account.consent.get.queryOptions({
@@ -86,7 +107,8 @@ export function useConsent(): Consent {
   const server = userId === undefined ? undefined : remote.data;
   const mirrored =
     server?.analytics === local.analytics &&
-    (server?.decidedAt ?? undefined) === local.decidedAt;
+    (server?.decidedAt ?? undefined) === local.decidedAt &&
+    local.mirroredFrom === userId;
   useEffect(() => {
     if (
       !ready ||
@@ -100,13 +122,43 @@ export function useConsent(): Consent {
     }
     if (!mirrored) {
       store
-        .update(setConsent(server.analytics, server.decidedAt))
+        .update(setConsent(server.analytics, server.decidedAt, userId))
         .catch((error: unknown) => {
           // The server decision still applies; the device copy follows later.
           console.error("[account] Failed to mirror the consent:", error);
         });
     }
-  }, [mirrored, ready, server, store]);
+  }, [mirrored, ready, server, store, userId]);
+
+  // A guest's own device choice (not a copy of some account's decision)
+  // for an account that never decided (not an old yes).
+  const carrying =
+    ready &&
+    userId !== undefined &&
+    server !== undefined &&
+    server.decidedAt === null &&
+    local.analytics !== null &&
+    local.decidedAt !== undefined &&
+    local.mirroredFrom === undefined;
+  const readAt = remote.dataUpdatedAt;
+  useEffect(() => {
+    // `readAt`: every consent read (focus, reconnect) may retry a failed carry.
+    if (!(carrying && userId && readAt) || carriedFor(store).has(userId)) {
+      return;
+    }
+    carriedFor(store).add(userId);
+    importGuestConsent({
+      // Read what the account now holds before the device copy goes: the
+      // server may have kept a newer decision instead of this one.
+      beforeClear: () =>
+        queryClient.fetchQuery({ ...options, queryKey, staleTime: 0 }),
+      client,
+      store,
+    }).catch(() => {
+      // Logged; the choice stays on the device. The next read retries.
+      carriedFor(store).delete(userId);
+    });
+  }, [carrying, client, options, queryClient, queryKey, readAt, store, userId]);
 
   const set = useCallback(
     async (value: boolean): Promise<void> => {
@@ -121,7 +173,9 @@ export function useConsent(): Consent {
         });
         queryClient.setQueryData(queryKey, next);
         if (next.analytics !== null && next.decidedAt !== null) {
-          await store.update(setConsent(next.analytics, next.decidedAt));
+          await store.update(
+            setConsent(next.analytics, next.decidedAt, userId)
+          );
         }
       } catch (error) {
         console.error("[account] Failed to save the consent decision:", error);
@@ -152,8 +206,48 @@ export function useConsent(): Consent {
   const { needsDecision } = remote.data;
   return {
     analytics: needsDecision ? null : remote.data.analytics,
-    needsDecision,
+    needsDecision: needsDecision && !carrying,
     set,
     status: "ready",
   };
+}
+
+export interface ConsentChoice {
+  /** A decision is being saved (disable the prompt's buttons). */
+  busy: boolean;
+  /**
+   * Saves a decision (`useConsent().set`): `true` once saved, `false` if it
+   * failed (logged; the app says so). Never rejects.
+   */
+  choose: (value: boolean) => Promise<boolean>;
+}
+
+export interface ConsentChoiceOptions {
+  /** A save failed (logged): the app says so (a toast). */
+  onSaveFailed?: () => void;
+}
+
+/** The consent prompt and switch's save step, shared by both apps. */
+export function useConsentChoice({
+  onSaveFailed,
+}: ConsentChoiceOptions = {}): ConsentChoice {
+  const { set } = useConsent();
+  const [busy, setBusy] = useState(false);
+  const choose = useCallback(
+    async (value: boolean): Promise<boolean> => {
+      setBusy(true);
+      try {
+        await set(value);
+        return true;
+      } catch {
+        // `set` logged it.
+        onSaveFailed?.();
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [onSaveFailed, set]
+  );
+  return { busy, choose };
 }

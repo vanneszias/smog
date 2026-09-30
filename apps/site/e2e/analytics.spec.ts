@@ -1,5 +1,5 @@
 import { expect, type Page, type Request, test } from "@playwright/test";
-import { watchErrors } from "./helpers";
+import { stubMux, watchErrors } from "./helpers";
 
 const STORE_KEY = "smog:guest:v1";
 const SIGN_IN_URL = /\/sign-in/;
@@ -58,6 +58,8 @@ test("no /api/analytics request before consent, or after withdraw", async ({
 }) => {
   const errors = watchErrors(page);
   const relay = recordRelay(page);
+  // The home page's cards load Mux stills.
+  await stubMux(page);
 
   // Undecided: browsing sends nothing.
   await page.goto("/");

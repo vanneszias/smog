@@ -45,4 +45,23 @@ describe("AlertDialog", () => {
     expect(screen.getByRole("button", { name: "Remove" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Keep" })).toBeDefined();
   });
+
+  test("a body between the text and the actions; confirmDisabled", async () => {
+    const onConfirm = mock();
+    renderKit(
+      <AlertDialog
+        body={<input aria-label="Type DELETE" />}
+        confirmDisabled
+        onConfirm={onConfirm}
+        open
+        title="Delete account?"
+      />
+    );
+    const dialog = screen.getByRole("alertdialog", { name: "Delete account?" });
+    expect(dialog.contains(screen.getByLabelText("Type DELETE"))).toBe(true);
+    const confirm = screen.getByRole("button", { name: "Confirm" });
+    expect(confirm.hasAttribute("disabled")).toBe(true);
+    await userEvent.click(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
 });

@@ -27,7 +27,7 @@ export interface WebTransportOptions {
  * Each call is a same-origin `POST /api/analytics` with `keepalive`, so an
  * event sent while navigating away still arrives. The relay adds the
  * OpenPanel credentials (spec §12). A non-2xx answer rejects, and the gate
- * logs it.
+ * logs it; a network failure only warns (the event is dropped).
  */
 export function createWebTransport(
   options: WebTransportOptions = {}
@@ -36,13 +36,24 @@ export function createWebTransport(
 
   const send = async (body: RelayBody): Promise<void> => {
     const doFetch = options.fetch ?? globalThis.fetch;
-    const response = await doFetch(ANALYTICS_RELAY_PATH, {
-      body: JSON.stringify(body),
-      credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      keepalive: true,
-      method: "POST",
-    });
+    let response: Response;
+    try {
+      response = await doFetch(ANALYTICS_RELAY_PATH, {
+        body: JSON.stringify(body),
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        keepalive: true,
+        method: "POST",
+      });
+    } catch (error) {
+      // Offline, or a reload or navigation cut the request off (keepalive
+      // may still deliver it): the event is dropped, which is no error.
+      if (error instanceof TypeError) {
+        console.warn("[analytics] Dropped an event (no connection):", error);
+        return;
+      }
+      throw error;
+    }
     if (!response.ok) {
       throw new Error(`The relay answered ${response.status}`);
     }

@@ -1,6 +1,8 @@
 /** @type {import('jest').Config} */
 module.exports = {
   clearMocks: true,
+  // Two jest packages and the Workers pools share the cores under turbo.
+  maxWorkers: "50%",
   preset: "jest-expo",
   // The kit's mocks for native modules (reanimated, gesture handler, the
   // bottom sheet, haptics, safe area), shared so they are written once.
