@@ -317,6 +317,10 @@ describe("settings/account", () => {
 
   it("clears the export files even when the sign-out after deletion fails", async () => {
     const signOut = jest.fn(() => Promise.reject(new Error("offline")));
+    // The failed sign-out is logged by design; keep the run's output clean.
+    const logged = jest.spyOn(console, "error").mockImplementation(() => {
+      // Intentionally empty.
+    });
     await renderApp({
       auth: { signOut },
       routes: signedInRoutes({ "account/delete": { deleted: true } }),
@@ -346,6 +350,7 @@ describe("settings/account", () => {
     await fireEvent.press(confirm);
     await waitFor(() => expect(signOut).toHaveBeenCalled());
     await waitFor(() => expect(mockFiles.has(leftover)).toBe(false));
+    logged.mockRestore();
   });
 
   it("a refused password keeps the dialog open with the reason", async () => {
