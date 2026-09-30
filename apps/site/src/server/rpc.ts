@@ -5,6 +5,7 @@ import { type RpcContext, rpcHandlerOptions } from "@smog/rpc";
 import { siteEnv } from "./auth";
 import { createRpcContext } from "./context";
 import { apiDocsEnabled } from "./dev-tools";
+import { referenceHeaders, referenceScriptResponse } from "./openapi-reference";
 
 type Prefix = `/${string}`;
 
@@ -53,6 +54,22 @@ export async function handleOpenApi(request: Request): Promise<Response> {
   if (!apiDocsEnabled(siteEnv().vars.ENVIRONMENT)) {
     return new Response(null, { status: 404 });
   }
+  const script =
+    request.method === "GET"
+      ? referenceScriptResponse(new URL(request.url).pathname)
+      : null;
+  if (script) {
+    return script;
+  }
   const { openApiHandler } = await import("./openapi");
-  return await serve(openApiHandler, "/api/openapi", request);
+  const response = await serve(openApiHandler, "/api/openapi", request);
+  if (!response.headers.get("content-type")?.startsWith("text/html")) {
+    return response;
+  }
+  // The reference page: its own CSP, which the site-wide headers keep.
+  const page = new Response(response.body, response);
+  for (const [name, value] of Object.entries(referenceHeaders())) {
+    page.headers.set(name, value);
+  }
+  return page;
 }

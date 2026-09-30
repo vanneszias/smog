@@ -3,9 +3,20 @@ import { describe, expect, it } from "vitest";
 import { siteEnv } from "../src/server/auth";
 import { createRpcContext } from "../src/server/context";
 import { apiDocsEnabled } from "../src/server/dev-tools";
+import {
+  OPENAPI_PRELUDE_SCRIPT,
+  OPENAPI_REFERENCE_SCRIPT,
+  SCALAR_SCRIPT_INTEGRITY,
+  SCALAR_SCRIPT_URL,
+} from "../src/server/openapi-reference";
 
 const ORIGIN = "http://localhost:5173";
 const OPENAPI_3 = /^3\./;
+/** A `<script>` without `src`: inline code. */
+const INLINE_SCRIPT = /<script(?![^>]*\bsrc=)[^>]*>/;
+/** An exact version, never a range or `latest`. */
+const PINNED_SCALAR =
+  /^https:\/\/cdn\.jsdelivr\.net\/npm\/@scalar\/api-reference@\d+\.\d+\.\d+\/dist\/browser\/standalone\.js$/;
 
 describe("/api/rpc/*", () => {
   it("system.health returns ok: true", async () => {
@@ -68,8 +79,50 @@ describe("/api/openapi/*", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/html");
     const html = await response.text();
-    expect(html).toContain("@scalar/api-reference");
-    expect(html).toContain("system.health");
+    // The pinned bundle with its SRI hash, then our own script: no inline
+    // script, so the page's CSP needs neither a nonce nor 'unsafe-inline'.
+    expect(html).toContain(
+      `<script src="${SCALAR_SCRIPT_URL}" integrity="${SCALAR_SCRIPT_INTEGRITY}" crossorigin="anonymous"></script>`
+    );
+    expect(html).toContain(
+      `<script src="${OPENAPI_REFERENCE_SCRIPT}"></script>`
+    );
+    // The prelude (Zod jitless) runs before the bundle.
+    expect(html.indexOf(`<script src="${OPENAPI_PRELUDE_SCRIPT}">`)).toBe(
+      html.indexOf("<script")
+    );
+    expect(html.match(INLINE_SCRIPT)).toBeNull();
+    expect(SCALAR_SCRIPT_URL).toMatch(PINNED_SCALAR);
+  });
+
+  it("gives the reference UI its own CSP (the site's would block Scalar)", async () => {
+    const response = await exports.default.fetch(`${ORIGIN}/api/openapi`);
+    await response.body?.cancel();
+    const csp = response.headers.get("content-security-policy") ?? "";
+    expect(csp).toContain(`script-src 'self' ${SCALAR_SCRIPT_URL}`);
+    expect(csp).not.toContain("nonce-");
+    expect(csp).toContain("connect-src 'self'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(
+      response.headers.get("content-security-policy-report-only")
+    ).toBeNull();
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("serves the reference UI's script, which loads the spec", async () => {
+    const response = await exports.default.fetch(
+      `${ORIGIN}${OPENAPI_REFERENCE_SCRIPT}`
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/javascript");
+    const script = await response.text();
+    expect(script).toContain("Scalar.createApiReference");
+    expect(script).toContain("/api/openapi/spec.json");
+
+    const prelude = await exports.default.fetch(
+      `${ORIGIN}${OPENAPI_PRELUDE_SCRIPT}`
+    );
+    expect(await prelude.text()).toContain("jitless: true");
   });
 
   it("calls procedures over the OpenAPI transport", async () => {
