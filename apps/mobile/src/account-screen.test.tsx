@@ -315,6 +315,39 @@ describe("settings/account", () => {
     );
   });
 
+  it("clears the export files even when the sign-out after deletion fails", async () => {
+    const signOut = jest.fn(() => Promise.reject(new Error("offline")));
+    await renderApp({
+      auth: { signOut },
+      routes: signedInRoutes({ "account/delete": { deleted: true } }),
+      signedIn: true,
+    });
+    const account = await inAccount();
+    // Written after the launch sweep, as an interrupted share would leave it.
+    const leftover = "file:///cache/smog-export-2026-09-30.json";
+    mockFiles.set(leftover, "{}");
+    await fireEvent.press(
+      await account.findByRole("button", { name: "Delete my account" })
+    );
+    await fireEvent.changeText(
+      screen.getByLabelText("Type DELETE to confirm"),
+      "DELETE"
+    );
+    await fireEvent.changeText(
+      screen.getByLabelText("Your password"),
+      "secret-password"
+    );
+    const confirm = screen
+      .getAllByRole("button", { name: "Delete my account" })
+      .at(-1);
+    if (!confirm) {
+      throw new Error("no confirm button");
+    }
+    await fireEvent.press(confirm);
+    await waitFor(() => expect(signOut).toHaveBeenCalled());
+    await waitFor(() => expect(mockFiles.has(leftover)).toBe(false));
+  });
+
   it("a refused password keeps the dialog open with the reason", async () => {
     const { rpcError } =
       jest.requireActual<typeof import("./test/harness")>("./test/harness");

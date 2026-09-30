@@ -63,15 +63,22 @@ function memoryStorage(): {
   };
 }
 
-async function waitForWrite(storage: ReturnType<typeof memoryStorage>) {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    if (storage.map.has(QUERY_CACHE_KEY)) {
-      return;
+/**
+ * Waits for the throttled write against a deadline (not a count of short
+ * sleeps, which a loaded machine outruns). A missing write still fails.
+ */
+async function waitForWrite(
+  storage: ReturnType<typeof memoryStorage>,
+  timeoutMs = 5000
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!storage.map.has(QUERY_CACHE_KEY)) {
+    if (Date.now() > deadline) {
+      throw new Error(`The cache was not written within ${timeoutMs} ms`);
     }
     // biome-ignore lint/performance/noAwaitInLoops: polling for the throttled write
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
-  throw new Error("The cache was never written");
 }
 
 const keys = {

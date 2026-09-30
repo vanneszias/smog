@@ -144,9 +144,7 @@ test.describe("on a phone", () => {
     await page.setViewportSize({ height: 844, width: 390 });
     await page.goto("/");
     await waitForApp(page);
-    await expect(page.getByRole("region", { name: CONSENT })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(page.getByRole("region", { name: CONSENT })).toBeVisible();
     await expect(page.getByRole("region", { name: APP_BANNER })).toHaveCount(0);
     await page
       .getByRole("region", { name: CONSENT })
