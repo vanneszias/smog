@@ -55,7 +55,7 @@
     "release:check:core": "bun run check:ci && bun run boundaries && bun scripts/release-config-check.ts && bun run check-types && bun run build && bun run knip && bun run audit",
     "release:check:mobile": "bun run mobile:release-check",
     "release:check:tests": "bun run test",
-    "test": "turbo run test test:scripts --concurrency=3",
+    "test": "turbo run test test:scripts",
     "test:scripts": "bun test ./scripts"
   },
   "overrides": {
