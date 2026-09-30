@@ -93,7 +93,7 @@ export function clearMaintenanceCache(): void {
  * site up: it is logged, and the last known state (or "off") stands until
  * the next read.
  */
-export async function readMaintenance(
+async function readMaintenance(
   kv: KVNamespace,
   now: number = Date.now()
 ): Promise<MaintenanceState | null> {
@@ -130,7 +130,7 @@ export function retryAfterSeconds(
 }
 
 /** The paths maintenance never blocks (path segments, not prefixes). */
-export function isExemptPath(pathname: string): boolean {
+function isExemptPath(pathname: string): boolean {
   return (
     pathname === "/api/health" ||
     pathname === BYPASS_PATH ||
@@ -183,7 +183,7 @@ export async function signBypassCookie(
 }
 
 /** Whether a cookie value is unexpired and signed for this version. */
-export async function verifyBypassCookie(
+async function verifyBypassCookie(
   value: string | undefined,
   secret: string,
   bypassVersion: number,
