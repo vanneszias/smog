@@ -23,7 +23,7 @@ bun run admin:grant --env <dev|staging|production> [--dry-run] <email>  # Give a
 bun run maintenance --env <dev|staging|production> on|off [--message …] [--until ISO] [--dry-run] [--yes]  # Maintenance mode (KV; production needs --yes)
 ```
 
-`release:check` = `check:ci` → `boundaries` → `scripts/release-config-check.ts` (workflows + wrangler envs) → `check-types` → `test` → `build` → `knip` → `audit` → `scripts/mobile-release-check.ts`. CI (`.github/workflows/ci.yml`) runs exactly this.
+`release:check` runs three scripts sequentially locally; CI (`.github/workflows/ci.yml`) runs the same scripts on separate runners with `fail-fast: false`: `release:check:core` (`check:ci` → `boundaries` → `scripts/release-config-check.ts` → `check-types` → `build` → `knip` → `audit`), `release:check:tests` (all tests), and `release:check:mobile` (online expo-doctor, both iOS/Android exports, bundle sizes and gallery checks). Deploy waits for every lane. Pushes to `develop`/`master` run the gate through Deploy only; other branch pushes and pull requests run CI directly.
 
 `SMOG_OFFLINE=1` only affects expo-doctor, and the result is **not equivalent to CI**. Offline, three doctor checks are degraded (the script prints this list every time): the config schema check is tolerated when the schema fetch crashes; the SDK dependency-version check only compares against the bundled native-module list, so the api.expo.dev pins (react, react-native, typescript, jest-expo, …) go unchecked; and the React Native Directory check is off. Fetch failures are warnings (`EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS=1`). Every other doctor failure still fails. Never set it in CI; CI is the authority.
 
