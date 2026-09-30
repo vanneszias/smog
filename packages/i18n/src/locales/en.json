@@ -22,7 +22,8 @@
     "search": "Search",
     "send": "Send",
     "share": "Share",
-    "yes": "Yes"
+    "yes": "Yes",
+    "exploreGestures": "Explore gestures"
   },
   "a11y": {
     "skipToContent": "Skip to content",
@@ -60,7 +61,9 @@
     "pauseVideo": "Pause video",
     "dragHandle": "Drag to reorder",
     "otpDigit": "Digit {{index}} of {{length}}",
-    "userMenu": "Account menu"
+    "userMenu": "Account menu",
+    "favorite": "Favorite",
+    "gestureVideo": "Gesture video"
   },
   "nav": {
     "home": "Home",
@@ -252,10 +255,128 @@
       "title": "Page not found",
       "description": "This page doesn't exist (anymore).",
       "action": "Go to the home page"
-    }
+    },
+    "actionFailed": "That didn't work. Please try again."
   },
   "lists": {
-    "ownerFallback": "a SMOG user"
+    "ownerFallback": "a SMOG user",
+    "addToList": "Save to list",
+    "noLists": "You don't have any lists yet.",
+    "newList": "New list",
+    "newListPlaceholder": "Name of the list",
+    "create": "Create",
+    "empty": {
+      "title": "No lists yet",
+      "description": "Group gestures in lists, for a lesson or a theme."
+    },
+    "emptyList": {
+      "title": "This list is empty",
+      "description": "Add gestures from their page with “Save to list”."
+    },
+    "share": {
+      "viewTitle": "View link",
+      "viewDescription": "Anyone with this link can view the list.",
+      "editTitle": "Edit link",
+      "editDescription": "Anyone with this link can edit the list after signing in.",
+      "linkLabel": "Link",
+      "copyLink": "Copy link",
+      "revoke": "Revoke link",
+      "revokeTitle": "Revoke this link?",
+      "revokeDescription": "People who have the link lose access right away. You can create a new link later.",
+      "revokeConfirm": "Revoke",
+      "title": "Share list",
+      "description": "Create a link to send this list to others.",
+      "createView": "Create a view link",
+      "createEdit": "Create an edit link",
+      "send": "Send link",
+      "message": "{{name}}: {{url}}",
+      "signInTitle": "Sign in to share",
+      "signInDescription": "Sharing a list needs an account. Your lists come along when you sign in."
+    },
+    "itemCount_one": "{{count}} gesture",
+    "itemCount_other": "{{count}} gestures",
+    "shared": "Shared",
+    "actions": "List actions",
+    "rename": "Rename",
+    "nameLabel": "Name",
+    "delete": "Delete list",
+    "deleteTitle": "Delete this list?",
+    "deleteDescription": "“{{name}}” will be deleted. The gestures themselves stay.",
+    "deleted": "List deleted",
+    "addedTo": "Added to {{name}}",
+    "removedFrom": "Removed from {{name}}",
+    "itemActions": "Actions for {{name}}",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "removeItem": "Remove from list",
+    "reorderFailed": "The order couldn't be saved.",
+    "notFound": {
+      "title": "List not found",
+      "description": "This link doesn't work (anymore), or the list is private."
+    },
+    "sharedBy": "Shared by {{name}}",
+    "sharedCanEdit": "You can edit this list.",
+    "sharedSignIn": "Sign in to edit this list."
+  },
+  "gesture": {
+    "sponsored": "Sponsored",
+    "disclaimer": {
+      "title": "Important notice"
+    },
+    "videoComplete": {
+      "1": "These videos are support, not a replacement for a course or initiation. <course>Click here</course> for more info.",
+      "2": "If you want to take a course after watching these videos, <course>click here</course>.",
+      "3": "If you want more info about the underlying theory of SMOG, take a course. <course>Click here</course>.",
+      "4": "The gestures are protected. Don't invent others.",
+      "5": "Never learn the gestures only from these videos, but take a course or initiation.",
+      "6": "Want to know more about SMOG and its origin? <course>Click here</course>.",
+      "7": "Want to know more about SMOG? Send an email to info@smog.vlaanderen"
+    },
+    "about": "About this gesture",
+    "keywords": "Related concepts",
+    "related": "Related gestures",
+    "sponsoredBy": "Sponsored by {{name}}",
+    "share": "Share gesture",
+    "shareMessage": "{{name}} in SMOG: {{url}}",
+    "notFound": {
+      "title": "Gesture not found",
+      "description": "This gesture doesn't exist (anymore)."
+    },
+    "screenshot": {
+      "title": "Share this gesture?",
+      "message": "You took a screenshot. Send a link instead, so the video comes along.",
+      "share": "Share link",
+      "dismiss": "Not now"
+    }
+  },
+  "search": {
+    "categories": "Categories",
+    "allCategories": "All",
+    "searching": "Searching…",
+    "resultCount_one": "{{count}} gesture",
+    "resultCount_other": "{{count}} gestures",
+    "idle": {
+      "title": "Look up a gesture",
+      "description": "Type a word, or choose a category."
+    },
+    "noResults": {
+      "title": "No gestures found",
+      "description": "Try another word or fewer categories."
+    },
+    "placeholder": "Search for a gesture",
+    "filter": "Filter by category",
+    "filterActive_one": "Filter by category, {{count}} selected",
+    "filterActive_other": "Filter by category, {{count}} selected",
+    "clearFilter": "Clear categories",
+    "showResults": "Show results",
+    "recent": "Recent searches",
+    "clearRecent": "Clear recent searches"
+  },
+  "favorites": {
+    "empty": {
+      "title": "No favorites yet",
+      "description": "Tap the heart on a gesture to find it here quickly."
+    }
   },
   "kit": {
     "close": "Close",
@@ -354,14 +475,24 @@
       "progressLabel": "Uploading video",
       "showToast": "Show notification",
       "openDialog": "Open dialog",
-      "openSheet": "Open panel"
+      "openSheet": "Open panel",
+      "gestureHello": "Hello",
+      "gestureThankYou": "Thank you",
+      "gestureEat": "Eat",
+      "gestureDrink": "Drink",
+      "gestureHappy": "Happy",
+      "gestureSad": "Sad",
+      "listSchool": "At school",
+      "listHome": "At home"
     },
     "unlockHint_one": "Tap {{count}} more time to open the developer tools.",
     "unlockHint_other": "Tap {{count}} more times to open the developer tools.",
     "unlocked": "Developer tools are on."
   },
   "home": {
-    "tagline": "Learn Flemish Sign Language gestures, whenever it suits you."
+    "tagline": "Learn Flemish Sign Language gestures, whenever it suits you.",
+    "featured": "Discover gestures",
+    "browseAll": "All gestures"
   },
   "footer": {
     "madeBy": "Made with ♡ by zias.be"
@@ -369,7 +500,16 @@
   "account": {
     "title": "Your account",
     "signedInAs": "Signed in as {{email}}",
-    "comingSoon": "Soon you will also manage your sign-in methods, privacy and preferences here."
+    "comingSoon": "Soon you will also manage your sign-in methods, privacy and preferences here.",
+    "export": {
+      "sensitive": "This file holds your personal data and the active share links of your lists: anyone with a link can open that list. Keep it safe and do not share it."
+    },
+    "errors": {
+      "passwordRequired": "Enter your password to delete your account.",
+      "sessionNotFresh": "Sign in again to delete your account.",
+      "invalidPassword": "That password is not correct.",
+      "deleteFailed": "Your account could not be deleted. Please try again."
+    }
   },
   "settings": {
     "title": "Settings",

@@ -80,6 +80,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { DomainShowcase } from "./ui-gallery-domain";
 
 /*
  * `/dev/ui`: every kit component in every variant and size, light and dark
@@ -194,6 +195,7 @@ function Showcase(): ReactNode {
       <ProgressSection />
       <DataSection />
       <BrandSection />
+      <DomainShowcase />
     </>
   );
 }

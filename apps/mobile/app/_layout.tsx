@@ -1,29 +1,21 @@
 import "../global.css";
 
-import { KitProvider, ToastProvider } from "@smog/ui-native";
-import { Stack } from "expo-router";
 import type { ReactElement } from "react";
-import { AnalyticsBridge } from "@/analytics";
-import { GuestImportSheet } from "@/guest-import-sheet";
+import { AppShell } from "@/app-shell";
 import { AppProviders } from "@/providers";
-import { ThemeRoot } from "@/theme-root";
+
+/**
+ * The tabs sit beneath every screen the root stack pushes, including one
+ * the app was launched into from a link (`+native-intent.tsx`), so back
+ * from a deep-linked gesture or shared list lands on the tabs (the old
+ * app's go-back fix, spec §10).
+ */
+export const unstable_settings = { initialRouteName: "(tabs)" };
 
 export default function RootLayout(): ReactElement {
   return (
     <AppProviders>
-      <ThemeRoot>
-        <KitProvider>
-          <ToastProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="(auth)" options={{ presentation: "modal" }} />
-              <Stack.Screen name="settings" />
-            </Stack>
-            <GuestImportSheet />
-            <AnalyticsBridge />
-          </ToastProvider>
-        </KitProvider>
-      </ThemeRoot>
+      <AppShell />
     </AppProviders>
   );
 }

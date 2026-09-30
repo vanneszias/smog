@@ -14,6 +14,7 @@
     "test": "vitest run && bun test --preload @smog/config/testing/happy-dom src"
   },
   "dependencies": {
+    "@orpc/client": "catalog:",
     "@smog/analytics": "workspace:*",
     "@smog/auth": "workspace:*",
     "@smog/config": "workspace:*",
@@ -31,6 +32,7 @@
     "@cloudflare/vitest-plugin": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/tanstack-query": "catalog:",
+    "@smog/email": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",

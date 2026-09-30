@@ -22,7 +22,8 @@
     "search": "Rechercher",
     "send": "Envoyer",
     "share": "Partager",
-    "yes": "Oui"
+    "yes": "Oui",
+    "exploreGestures": "Découvrir les gestes"
   },
   "a11y": {
     "skipToContent": "Aller au contenu",
@@ -60,7 +61,9 @@
     "pauseVideo": "Mettre la vidéo en pause",
     "dragHandle": "Faire glisser pour réordonner",
     "otpDigit": "Chiffre {{index}} sur {{length}}",
-    "userMenu": "Menu du compte"
+    "userMenu": "Menu du compte",
+    "favorite": "Favori",
+    "gestureVideo": "Vidéo du geste"
   },
   "nav": {
     "home": "Accueil",
@@ -255,10 +258,131 @@
       "title": "Page introuvable",
       "description": "Cette page n'existe pas (ou plus).",
       "action": "Aller à l'accueil"
-    }
+    },
+    "actionFailed": "Cela n'a pas fonctionné. Réessayez."
   },
   "lists": {
-    "ownerFallback": "un utilisateur de SMOG"
+    "ownerFallback": "un utilisateur de SMOG",
+    "addToList": "Enregistrer dans une liste",
+    "noLists": "Vous n'avez pas encore de listes.",
+    "newList": "Nouvelle liste",
+    "newListPlaceholder": "Nom de la liste",
+    "create": "Créer",
+    "empty": {
+      "title": "Pas encore de listes",
+      "description": "Regroupez des gestes dans des listes, pour une leçon ou un thème."
+    },
+    "emptyList": {
+      "title": "Cette liste est vide",
+      "description": "Ajoutez des gestes depuis leur page avec « Enregistrer dans une liste »."
+    },
+    "share": {
+      "viewTitle": "Lien de consultation",
+      "viewDescription": "Toute personne ayant ce lien peut consulter la liste.",
+      "editTitle": "Lien de modification",
+      "editDescription": "Toute personne ayant ce lien peut modifier la liste après s'être connectée.",
+      "linkLabel": "Lien",
+      "copyLink": "Copier le lien",
+      "revoke": "Révoquer le lien",
+      "revokeTitle": "Révoquer ce lien\u00a0?",
+      "revokeDescription": "Les personnes qui ont le lien perdent l'accès immédiatement. Vous pourrez créer un nouveau lien plus tard.",
+      "revokeConfirm": "Révoquer",
+      "title": "Partager la liste",
+      "description": "Créez un lien pour envoyer cette liste à d'autres.",
+      "createView": "Créer un lien de consultation",
+      "createEdit": "Créer un lien de modification",
+      "send": "Envoyer le lien",
+      "message": "{{name}}\u00a0: {{url}}",
+      "signInTitle": "Connectez-vous pour partager",
+      "signInDescription": "Partager une liste nécessite un compte. Vos listes vous suivent lorsque vous vous connectez."
+    },
+    "itemCount_one": "{{count}} geste",
+    "itemCount_other": "{{count}} gestes",
+    "itemCount_many": "{{count}} gestes",
+    "shared": "Partagée",
+    "actions": "Actions de la liste",
+    "rename": "Renommer",
+    "nameLabel": "Nom",
+    "delete": "Supprimer la liste",
+    "deleteTitle": "Supprimer cette liste\u202f?",
+    "deleteDescription": "«\u00a0{{name}}\u00a0» sera supprimée. Les gestes eux-mêmes restent.",
+    "deleted": "Liste supprimée",
+    "addedTo": "Ajouté à {{name}}",
+    "removedFrom": "Retiré de {{name}}",
+    "itemActions": "Actions pour {{name}}",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "removeItem": "Retirer de la liste",
+    "reorderFailed": "L'ordre n'a pas pu être enregistré.",
+    "notFound": {
+      "title": "Liste introuvable",
+      "description": "Ce lien ne fonctionne pas (ou plus), ou la liste est privée."
+    },
+    "sharedBy": "Partagée par {{name}}",
+    "sharedCanEdit": "Vous pouvez modifier cette liste.",
+    "sharedSignIn": "Connectez-vous pour modifier cette liste."
+  },
+  "gesture": {
+    "sponsored": "Sponsorisé",
+    "disclaimer": {
+      "title": "Avis important"
+    },
+    "videoComplete": {
+      "1": "Ces vidéos sont un support, pas un remplacement pour un cours ou une initiation. <course>Cliquez ici</course> pour plus d'informations.",
+      "2": "Si vous souhaitez suivre un cours après avoir regardé ces vidéos, <course>cliquez ici</course>.",
+      "3": "Pour en savoir plus sur la théorie derrière SMOG, suivez un cours. <course>Cliquez ici</course>.",
+      "4": "Les gestes sont protégés. N'en inventez pas d'autres.",
+      "5": "N'apprenez jamais les gestes uniquement à partir de ces vidéos, mais suivez un cours ou une initiation.",
+      "6": "Pour en savoir plus sur SMOG et son origine, <course>cliquez ici</course>.",
+      "7": "Pour en savoir plus sur SMOG, envoyez un e-mail à info@smog.vlaanderen"
+    },
+    "about": "À propos de ce geste",
+    "keywords": "Concepts liés",
+    "related": "Gestes liés",
+    "sponsoredBy": "Sponsorisé par {{name}}",
+    "share": "Partager le geste",
+    "shareMessage": "{{name}} en SMOG\u00a0: {{url}}",
+    "notFound": {
+      "title": "Geste introuvable",
+      "description": "Ce geste n'existe pas (ou plus)."
+    },
+    "screenshot": {
+      "title": "Partager ce geste\u202f?",
+      "message": "Vous avez fait une capture d'écran. Envoyez plutôt un lien\u00a0: la vidéo suivra.",
+      "share": "Partager le lien",
+      "dismiss": "Pas maintenant"
+    }
+  },
+  "search": {
+    "categories": "Catégories",
+    "allCategories": "Tous",
+    "searching": "Recherche…",
+    "resultCount_one": "{{count}} geste",
+    "resultCount_many": "{{count}} gestes",
+    "resultCount_other": "{{count}} gestes",
+    "idle": {
+      "title": "Cherchez un geste",
+      "description": "Tapez un mot ou choisissez une catégorie."
+    },
+    "noResults": {
+      "title": "Aucun geste trouvé",
+      "description": "Essayez un autre mot ou moins de catégories."
+    },
+    "placeholder": "Rechercher un geste",
+    "filter": "Filtrer par catégorie",
+    "filterActive_one": "Filtrer par catégorie, {{count}} choisie",
+    "filterActive_other": "Filtrer par catégorie, {{count}} choisies",
+    "filterActive_many": "Filtrer par catégorie, {{count}} choisies",
+    "clearFilter": "Effacer les catégories",
+    "showResults": "Afficher les résultats",
+    "recent": "Recherches récentes",
+    "clearRecent": "Effacer les recherches récentes"
+  },
+  "favorites": {
+    "empty": {
+      "title": "Pas encore de favoris",
+      "description": "Touchez le cœur d'un geste pour le retrouver vite ici."
+    }
   },
   "kit": {
     "close": "Fermer",
@@ -357,7 +481,15 @@
       "progressLabel": "Envoi de la vidéo",
       "showToast": "Afficher une notification",
       "openDialog": "Ouvrir la boîte de dialogue",
-      "openSheet": "Ouvrir le panneau"
+      "openSheet": "Ouvrir le panneau",
+      "gestureHello": "Bonjour",
+      "gestureThankYou": "Merci",
+      "gestureEat": "Manger",
+      "gestureDrink": "Boire",
+      "gestureHappy": "Content",
+      "gestureSad": "Triste",
+      "listSchool": "À l'école",
+      "listHome": "À la maison"
     },
     "unlockHint_one": "Encore {{count}} appui pour ouvrir les outils de développement.",
     "unlockHint_many": "Encore {{count}} appuis pour ouvrir les outils de développement.",
@@ -365,7 +497,9 @@
     "unlocked": "Les outils de développement sont activés."
   },
   "home": {
-    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient."
+    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient.",
+    "featured": "Découvrez des gestes",
+    "browseAll": "Tous les gestes"
   },
   "footer": {
     "madeBy": "Fait avec ♡ par zias.be"
@@ -373,7 +507,16 @@
   "account": {
     "title": "Votre compte",
     "signedInAs": "Connecté en tant que {{email}}",
-    "comingSoon": "Bientôt, vous gérerez aussi ici vos méthodes de connexion, votre confidentialité et vos préférences."
+    "comingSoon": "Bientôt, vous gérerez aussi ici vos méthodes de connexion, votre confidentialité et vos préférences.",
+    "export": {
+      "sensitive": "Ce fichier contient vos données personnelles et les liens de partage actifs de vos listes : toute personne disposant d'un lien peut ouvrir la liste. Conservez-le en lieu sûr et ne le partagez pas."
+    },
+    "errors": {
+      "passwordRequired": "Saisissez votre mot de passe pour supprimer votre compte.",
+      "sessionNotFresh": "Reconnectez-vous pour supprimer votre compte.",
+      "invalidPassword": "Ce mot de passe n'est pas correct.",
+      "deleteFailed": "La suppression de votre compte a échoué. Veuillez réessayer."
+    }
   },
   "settings": {
     "title": "Paramètres",

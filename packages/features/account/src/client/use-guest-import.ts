@@ -7,13 +7,14 @@ import { dismissImportFor, type GuestData } from "@smog/local-store";
 import { useLocalStore, useLocalStoreInstance } from "@smog/local-store/react";
 import { useRpcClient, useRpcQuery } from "@smog/rpc/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { ImportResult } from "../schema";
 import {
   type AccountSlice,
   countGuestData,
   importGuestData,
 } from "./import-guest-data";
+import { useStoreReady } from "./store-ready";
 
 /** The reads an import changes, refetched once it succeeds. */
 interface ImportedSlice {
@@ -59,30 +60,6 @@ function selectSnapshot(data: GuestData): Snapshot {
     ...countGuestData(data),
     dismissedFor: data.preferences.importDismissedFor,
   };
-}
-
-/** Whether the store has read its adapter (before that it holds defaults). */
-function useStoreReady(): boolean {
-  const store = useLocalStoreInstance();
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let active = true;
-    store.ready.then(
-      () => {
-        if (active) {
-          setReady(true);
-        }
-      },
-      (error: unknown) => {
-        // `ready` is documented never to reject; without it nothing is offered.
-        console.error("[account] Failed to load the local store:", error);
-      }
-    );
-    return () => {
-      active = false;
-    };
-  }, [store]);
-  return ready;
 }
 
 /**

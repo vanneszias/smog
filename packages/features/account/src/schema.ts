@@ -3,13 +3,16 @@
  * procedures, shared by the contract, the server and the hooks.
  * Client-safe (no server imports).
  */
+import { CONSENT_POLICY_VERSION, LOCALES } from "@smog/config/constants";
 import {
   gestureIdSchema,
   LIST_DESCRIPTION_MAX,
   LIST_ITEMS_MAX,
   LISTS_MAX,
   listNameSchema,
+  SHARE_ROLES,
 } from "@smog/lists/schema";
+import { roleSchema } from "@smog/rpc/contract";
 import { z } from "zod";
 
 /** Favorites per import call (the rest stays on the device for the next one). */
@@ -105,3 +108,235 @@ export const EMPTY_IMPORT_RESULT: ImportResult = {
   listsOverLimit: 0,
   skippedUnknownGestures: 0,
 };
+
+// Profile (`account.me`, `account.updateProfile`)
+
+/** `user.name`, trimmed. */
+export const PROFILE_NAME_MAX = 80;
+
+export const profileNameSchema = z.string().trim().min(1).max(PROFILE_NAME_MAX);
+
+/** An app language (`LOCALES`), or `null` to follow the device or browser. */
+export const profileLocaleSchema = z.enum(LOCALES).nullable();
+
+/** Only the fields sent change; an empty object changes nothing. */
+export const updateProfileInputSchema = z.object({
+  locale: profileLocaleSchema.optional(),
+  name: profileNameSchema.optional(),
+});
+
+/** How the user can sign in (never a token or a credential id). */
+export const signInMethodsSchema = z.object({
+  apple: z.boolean(),
+  google: z.boolean(),
+  /** Registered passkeys. */
+  passkeys: z.number().int().nonnegative(),
+  /** A credential account with a password. */
+  password: z.boolean(),
+});
+
+export const meSchema = z.object({
+  /** Epoch milliseconds. */
+  createdAt: z.number().int(),
+  email: z.string(),
+  emailVerified: z.boolean(),
+  id: z.string(),
+  image: z.string().nullable(),
+  locale: profileLocaleSchema,
+  methods: signInMethodsSchema,
+  name: z.string(),
+  role: roleSchema,
+});
+
+/** What a client sends. */
+export type UpdateProfileInput = z.input<typeof updateProfileInputSchema>;
+/** What the server gets after the contract parsed it (trimmed). */
+export type UpdateProfile = z.output<typeof updateProfileInputSchema>;
+export type SignInMethods = z.infer<typeof signInMethodsSchema>;
+export type Me = z.infer<typeof meSchema>;
+
+// Consent (`account.consent.get`, `account.consent.set`)
+
+/**
+ * `consent_event.purpose` and `.source`: the values of `@smog/db`
+ * `CONSENT_PURPOSES` / `CONSENT_SOURCES` (the server writes and reads those
+ * columns, so a mismatch fails its type-check).
+ */
+export const CONSENT_PURPOSES = ["analytics", "marketing"] as const;
+export const CONSENT_SOURCES = ["web", "mobile", "import"] as const;
+/** Where a signed-in decision is made (`import` is the guest import's). */
+export const CONSENT_SET_SOURCES = ["web", "mobile"] as const;
+export type ConsentSetSource = (typeof CONSENT_SET_SOURCES)[number];
+
+export const setConsentInputSchema = z.object({
+  analytics: z.boolean(),
+  /** Default `web`; `useConsent` sends `mobile` in the app. */
+  source: z.enum(CONSENT_SET_SOURCES).default("web"),
+});
+
+/** The current analytics decision: the newest `consent_event` row. */
+export const consentStateSchema = z.object({
+  /** `null` while the user has not decided. */
+  analytics: z.boolean().nullable(),
+  /** Epoch milliseconds, `null` while undecided. */
+  decidedAt: z.number().int().nullable(),
+  /**
+   * Whether to ask: undecided, or a yes given under an older policy
+   * (`policyVersion` ≠ `CONSENT_POLICY_VERSION`). An old no stays a no.
+   */
+  needsDecision: z.boolean(),
+  /** The policy version the decision refers to, `null` while undecided. */
+  policyVersion: z.string().nullable(),
+});
+
+export type SetConsentInput = z.input<typeof setConsentInputSchema>;
+export type SetConsent = z.output<typeof setConsentInputSchema>;
+export type ConsentState = z.infer<typeof consentStateSchema>;
+
+export const UNDECIDED_CONSENT: ConsentState = {
+  analytics: null,
+  decidedAt: null,
+  needsDecision: true,
+  policyVersion: null,
+};
+
+/**
+ * `needsDecision` for a decision: undecided, or a yes under another policy
+ * version than `current` (a no needs no new consent).
+ */
+export function needsConsentDecision(
+  analytics: boolean | null,
+  policyVersion: string | null,
+  current: string = CONSENT_POLICY_VERSION
+): boolean {
+  return analytics === null || (analytics && policyVersion !== current);
+}
+
+// Export (`account.export`: GDPR access and portability)
+
+export const ACCOUNT_EXPORT_VERSION = 2;
+
+/** Dates in the export are ISO 8601 (UTC): the file is meant to be read. */
+const isoDate = z.iso.datetime();
+
+const exportGestureSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+});
+
+export const accountExportSchema = z.object({
+  /** The consent log, oldest first. */
+  consent: z.array(
+    z.object({
+      createdAt: isoDate,
+      granted: z.boolean(),
+      policyVersion: z.string(),
+      purpose: z.enum(CONSENT_PURPOSES),
+      source: z.enum(CONSENT_SOURCES),
+    })
+  ),
+  exportedAt: isoDate,
+  exportVersion: z.literal(ACCOUNT_EXPORT_VERSION),
+  /** Newest first. */
+  favorites: z.array(
+    z.object({ addedAt: isoDate, gesture: exportGestureSchema })
+  ),
+  /** Oldest first, with the items in list order and the active share links. */
+  lists: z.array(
+    z.object({
+      createdAt: isoDate,
+      description: z.string().nullable(),
+      id: z.string(),
+      items: z.array(
+        z.object({
+          addedAt: isoDate,
+          gesture: exportGestureSchema,
+          position: z.number().int().nonnegative(),
+        })
+      ),
+      name: z.string(),
+      shareLinks: z.array(
+        z.object({
+          createdAt: isoDate,
+          role: z.enum(SHARE_ROLES),
+          url: z.string(),
+        })
+      ),
+      updatedAt: isoDate,
+    })
+  ),
+  profile: z.object({
+    createdAt: isoDate,
+    email: z.string(),
+    emailVerified: z.boolean(),
+    id: z.string(),
+    image: z.string().nullable(),
+    locale: profileLocaleSchema,
+    name: z.string(),
+    role: roleSchema,
+  }),
+  /** Provider names, passkey names and dates only: never a token, hash or key. */
+  signInMethods: z.object({
+    passkeys: z.array(
+      z.object({ createdAt: isoDate.nullable(), name: z.string().nullable() })
+    ),
+    /** Better Auth provider ids: `credential` (password), `google`, `apple`. */
+    providers: z.array(z.object({ linkedAt: isoDate, provider: z.string() })),
+  }),
+  /**
+   * Checkouts whose sponsor email is the user's verified email, oldest
+   * first: the contact and invoice details, and each sponsorship's status
+   * and dates. No payment ids or amounts.
+   */
+  sponsorships: z.array(
+    z.object({
+      contact: z.object({
+        company: z.string().nullable(),
+        email: z.string(),
+        locale: z.enum(LOCALES),
+        name: z.string(),
+      }),
+      createdAt: isoDate,
+      invoice: z
+        .object({ email: z.string(), name: z.string(), vatNumber: z.string() })
+        .nullable(),
+      items: z.array(
+        z.object({
+          createdAt: isoDate,
+          displayName: z.string(),
+          endsAt: isoDate.nullable(),
+          gesture: exportGestureSchema,
+          hasLogo: z.boolean(),
+          startsAt: isoDate.nullable(),
+          status: z.string(),
+          updatedAt: isoDate,
+        })
+      ),
+    })
+  ),
+});
+
+export type AccountExport = z.infer<typeof accountExportSchema>;
+
+// Deletion (`account.delete`)
+
+/** What the user types to confirm (the same word in every language). */
+export const DELETE_CONFIRMATION = "DELETE";
+
+export const deleteAccountInputSchema = z.object({
+  confirm: z.literal(DELETE_CONFIRMATION),
+  /**
+   * The current password, when the session is older than Better Auth's
+   * `freshAge` (after a recent sign-in none is needed). Better Auth checks
+   * its length; this bound only keeps the request small.
+   */
+  password: z.string().min(1).max(1024).optional(),
+});
+
+export const deleteAccountResultSchema = z.object({
+  deleted: z.literal(true),
+});
+
+export type DeleteAccountInput = z.input<typeof deleteAccountInputSchema>;
+export type DeleteAccountResult = z.infer<typeof deleteAccountResultSchema>;
