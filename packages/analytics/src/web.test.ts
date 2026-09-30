@@ -97,6 +97,24 @@ describe("createWebTransport", () => {
     });
     await expect(transport.screen("/", "web")).rejects.toThrow("429");
   });
+
+  test("a network failure (offline, a navigation cut it off) is dropped, not an error", async () => {
+    const warn = mock(() => undefined);
+    const original = console.warn;
+    console.warn = warn;
+    try {
+      const transport = createWebTransport({
+        fetch: (() =>
+          Promise.reject(
+            new TypeError("Failed to fetch")
+          )) as unknown as typeof globalThis.fetch,
+      });
+      await expect(transport.screen("/", "web")).resolves.toBeUndefined();
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      console.warn = original;
+    }
+  });
 });
 
 describe("createWebAnalytics", () => {
