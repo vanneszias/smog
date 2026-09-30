@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { readDevMail, type StoredEmail } from "@smog/email";
 
 export const ORIGIN = "http://localhost:5173";
@@ -53,4 +53,47 @@ export async function waitForMail(
   throw new Error(
     `[test] No email to ${email} within ${timeoutMs} ms; the mailbox held: ${JSON.stringify(held)}`
   );
+}
+
+const VERIFY_LINK =
+  /http:\/\/localhost:5173\/api\/auth\/verify-email\?token=\S+/;
+
+/**
+ * Signs up by email (plus `extra` sign-up fields), follows the
+ * verification link and returns the session cookie header and the email.
+ */
+export async function signedUp(
+  extra: Record<string, unknown> = {}
+): Promise<{ cookie: string; email: string }> {
+  const email = `${crypto.randomUUID()}@smog.test`;
+  const signUp = await exports.default.fetch(
+    `${ORIGIN}/api/auth/sign-up/email`,
+    {
+      body: JSON.stringify({
+        email,
+        name: "A",
+        password: "correct horse battery",
+        ...extra,
+      }),
+      headers: {
+        "cf-connecting-ip": `198.51.100.${crypto.randomUUID()}`,
+        "content-type": "application/json",
+        origin: ORIGIN,
+      },
+      method: "POST",
+    }
+  );
+  if (signUp.status !== 200) {
+    throw new Error(`[test] Sign-up answered ${signUp.status}`);
+  }
+  const [message] = await waitForMail(email, {
+    match: ({ text }) => VERIFY_LINK.test(text),
+  });
+  const link = message?.text.match(VERIFY_LINK)?.[0] ?? "";
+  const verified = await exports.default.fetch(link, { redirect: "manual" });
+  const cookie = verified.headers
+    .getSetCookie()
+    .map((value) => value.split(";")[0])
+    .join("; ");
+  return { cookie, email };
 }

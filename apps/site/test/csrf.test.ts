@@ -1,37 +1,6 @@
 import { exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
-
-import { ORIGIN, waitForMail } from "./helpers";
-
-const TOKEN_LINK =
-  /http:\/\/localhost:5173\/api\/auth\/verify-email\?token=\S+/;
-
-/** Signs up, follows the verification link and returns the session cookie. */
-async function signedInCookie(): Promise<string> {
-  const email = `${crypto.randomUUID()}@smog.test`;
-  const signUp = await exports.default.fetch(
-    `${ORIGIN}/api/auth/sign-up/email`,
-    {
-      body: JSON.stringify({
-        email,
-        name: "A",
-        password: "correct horse battery",
-      }),
-      headers: { "content-type": "application/json", origin: ORIGIN },
-      method: "POST",
-    }
-  );
-  expect(signUp.status).toBe(200);
-  const [message] = await waitForMail(email, {
-    match: ({ text }) => TOKEN_LINK.test(text),
-  });
-  const link = message?.text.match(TOKEN_LINK)?.[0] ?? "";
-  const verified = await exports.default.fetch(link, { redirect: "manual" });
-  return verified.headers
-    .getSetCookie()
-    .map((cookie) => cookie.split(";")[0])
-    .join("; ");
-}
+import { ORIGIN, signedUp } from "./helpers";
 
 function multipart(): FormData {
   // A plain HTML <form enctype=multipart/form-data> body oRPC would accept.
@@ -44,7 +13,7 @@ describe("CSRF defence on /api/rpc", () => {
   let cookie = "";
 
   beforeAll(async () => {
-    cookie = await signedInCookie();
+    ({ cookie } = await signedUp());
   });
 
   async function myLists(): Promise<unknown[]> {

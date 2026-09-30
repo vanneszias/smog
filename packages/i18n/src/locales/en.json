@@ -28,6 +28,7 @@
   "a11y": {
     "skipToContent": "Skip to content",
     "skipToNavigation": "Skip to navigation",
+    "noscript": "Turn on JavaScript to search and to use favorites, lists and your account.",
     "mainNavigation": "Main navigation",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",

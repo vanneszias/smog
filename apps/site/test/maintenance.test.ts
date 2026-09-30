@@ -12,11 +12,9 @@ import {
   signBypassCookie,
 } from "../src/worker/maintenance";
 import { renderMaintenancePage } from "../src/worker/maintenance-page";
-import { mailTo, ORIGIN, waitForMail } from "./helpers";
+import { mailTo, ORIGIN, signedUp, waitForMail } from "./helpers";
 
 const SECRET = "site-test-secret-at-least-32-characters";
-const TOKEN_LINK =
-  /http:\/\/localhost:5173\/api\/auth\/verify-email\?token=\S+/;
 const HOUR_S = 3600;
 /** dev: no `Secure` (http://localhost and LAN addresses); see the unit test. */
 const COOKIE_ATTRS = /; Path=\/; Max-Age=43200; HttpOnly; SameSite=Lax$/;
@@ -59,30 +57,9 @@ function fetchSite(path: string, init?: RequestInit): Promise<Response> {
 
 const nowS = (): number => Math.floor(Date.now() / 1000);
 
-/** Signs up, verifies and returns the session cookie and the user's email. */
-async function signedIn(): Promise<{ cookie: string; email: string }> {
-  const email = `${crypto.randomUUID()}@smog.test`;
-  const signUp = await fetchSite("/api/auth/sign-up/email", {
-    body: JSON.stringify({
-      email,
-      name: "M",
-      password: PASSWORD,
-    }),
-    headers: { "content-type": "application/json", origin: ORIGIN },
-    method: "POST",
-  });
-  expect(signUp.status).toBe(200);
-  const [message] = await waitForMail(email, {
-    match: ({ text }) => TOKEN_LINK.test(text),
-  });
-  const link = message?.text.match(TOKEN_LINK)?.[0] ?? "";
-  const verified = await exports.default.fetch(link, { redirect: "manual" });
-  const cookie = verified.headers
-    .getSetCookie()
-    .map((value) => value.split(";")[0])
-    .join("; ");
-  return { cookie, email };
-}
+/** Signs up (password `PASSWORD`), verifies: the session cookie and email. */
+const signedIn = (): Promise<{ cookie: string; email: string }> =>
+  signedUp({ password: PASSWORD });
 
 afterEach(async () => {
   await setMaintenance(null);

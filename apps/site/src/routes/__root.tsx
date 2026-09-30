@@ -2,6 +2,7 @@ import {
   AuthStateProvider,
   type AuthUser,
   type SessionHookResult,
+  useAuthState,
 } from "@smog/auth/react";
 import { createWebAuthClient, type WebAuthClient } from "@smog/auth/web";
 import { createI18n, type Locale } from "@smog/i18n";
@@ -14,6 +15,7 @@ import {
 import { LocalStoreProvider } from "@smog/local-store/react";
 import { webAdapter } from "@smog/local-store/web";
 import { PurgeOtherUsers, RpcProvider } from "@smog/rpc/react";
+import { tokens } from "@smog/styles/tokens";
 import {
   Button,
   EmptyState,
@@ -145,7 +147,6 @@ function useClients(shell: Shell) {
 
 function RootDocument({ children }: { children: ReactNode }): ReactNode {
   const shell = Route.useLoaderData();
-  const router = useRouter();
   const clients = useClients(shell);
   const [theme, setThemeState] = useState<Theme>(shell.theme);
   const systemDark = useSystemDark();
@@ -165,26 +166,6 @@ function RootDocument({ children }: { children: ReactNode }): ReactNode {
     [theme]
   );
 
-  const localeValue = useMemo(
-    () => ({
-      locale: shell.locale,
-      setLocale: (next: Locale): void => {
-        const save = async (): Promise<void> => {
-          await saveLocale({ data: next });
-          await router.invalidate();
-          const { data } = await clients.auth.getSession();
-          if (data) {
-            await clients.auth.updateUser({ locale: next });
-          }
-        };
-        save().catch((error: unknown) => {
-          console.error("[shell] Failed to save the language:", error);
-        });
-      },
-    }),
-    [clients.auth, router, shell.locale]
-  );
-
   return (
     <html
       className={dark ? "dark" : undefined}
@@ -199,6 +180,7 @@ function RootDocument({ children }: { children: ReactNode }): ReactNode {
             dangerouslySetInnerHTML={{ __html: SYSTEM_THEME_SCRIPT }}
           />
         ) : null}
+        <ThemeColor theme={theme} />
         <HeadContent />
       </head>
       <body>
@@ -211,13 +193,13 @@ function RootDocument({ children }: { children: ReactNode }): ReactNode {
                   <LocalStoreProvider store={clients.store}>
                     <SiteAnalytics>
                       <ThemeProvider value={themeValue}>
-                        <LocaleProvider value={localeValue}>
+                        <SiteLocaleProvider locale={shell.locale}>
                           <TooltipProvider>
                             <ToastProvider>
                               <Layout>{children}</Layout>
                             </ToastProvider>
                           </TooltipProvider>
-                        </LocaleProvider>
+                        </SiteLocaleProvider>
                       </ThemeProvider>
                     </SiteAnalytics>
                   </LocalStoreProvider>
@@ -232,6 +214,72 @@ function RootDocument({ children }: { children: ReactNode }): ReactNode {
   );
 }
 
+/**
+ * `theme-color` (the browser chrome): the page background of the chosen
+ * theme, or both, by media query, for `system`. Rendered here, not in
+ * `head()`, which keeps one meta per name.
+ */
+function ThemeColor({ theme }: { theme: Theme }): ReactNode {
+  const { dark, light } = tokens.color;
+  if (theme !== "system") {
+    return (
+      <meta
+        content={theme === "dark" ? dark.background : light.background}
+        name="theme-color"
+      />
+    );
+  }
+  return (
+    <>
+      <meta
+        content={light.background}
+        media="(prefers-color-scheme: light)"
+        name="theme-color"
+      />
+      <meta
+        content={dark.background}
+        media="(prefers-color-scheme: dark)"
+        name="theme-color"
+      />
+    </>
+  );
+}
+
+/**
+ * The language: this browser's `locale` cookie, and signed in also the
+ * account's (`user.locale`, the language of our emails) through
+ * `account.updateProfile`, the one profile write path, as in the app.
+ */
+function SiteLocaleProvider({
+  children,
+  locale,
+}: {
+  children: ReactNode;
+  locale: Locale;
+}): ReactNode {
+  const router = useRouter();
+  const { api } = Route.useRouteContext();
+  const signedIn = useAuthState().status === "signedIn";
+  const value = useMemo(
+    () => ({
+      locale,
+      setLocale: (next: Locale): void => {
+        const save = async (): Promise<void> => {
+          await Promise.all([
+            saveLocale({ data: next }).then(() => router.invalidate()),
+            signedIn ? api.account.updateProfile({ locale: next }) : null,
+          ]);
+        };
+        save().catch((error: unknown) => {
+          console.error("[shell] Failed to save the language:", error);
+        });
+      },
+    }),
+    [api, locale, router, signedIn]
+  );
+  return <LocaleProvider value={value}>{children}</LocaleProvider>;
+}
+
 function Layout({ children }: { children: ReactNode }): ReactNode {
   const { t } = useTranslation();
   return (
@@ -242,6 +290,11 @@ function Layout({ children }: { children: ReactNode }): ReactNode {
       >
         {t("a11y.skipToContent")}
       </a>
+      <noscript>
+        <p className="bg-surface px-4 py-3 text-center text-foreground text-sm">
+          {t("a11y.noscript")}
+        </p>
+      </noscript>
       <Header />
       <main className="flex flex-1 flex-col" id="main" tabIndex={-1}>
         {children}
