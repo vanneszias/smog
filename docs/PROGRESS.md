@@ -9,7 +9,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - [x] 0. Analysis → feature inventory → design spec → phase 1 plan
 - [x] 1. Monorepo skeleton (Bun, Turbo, Biome, knip, boundaries, config, CI, empty site + mobile)
 - [x] 2. Foundations (db, auth, rpc/api, local-store + guest import, styles/brand/i18n, ui-web/ui-native, /dev/ui)
-- [ ] 3. Learning (gestures, categories, FTS search, favorites, lists, share links; site + mobile)
+- [x] 3. Learning (gestures, categories, FTS search, favorites, lists, share links; site + mobile)
 - [ ] 4. Account, consent, analytics, legal pages, deep links, legacy redirects, maintenance mode
 - [ ] 5. Admin panel
 - [ ] 6. Payments, sponsorships, jobs, emails
@@ -26,16 +26,16 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - 2026-09-29: Phase 2 done (the phase review passed after the fix wave; release:check green).
 - 2026-09-30: Phase 3 tasks 5 and 7 merged; phase 4 plan written, task 1 merged.
 - 2026-09-30: Phase 3 task 6 merged (all 7 tasks in). Phase 3 review: pass with a fix wave (two groups). Group A: site analytics sources, one course banner rule (`@smog/gestures/client`, once per visit), web CourseBanner, QR PNG download, `useFeaturedGestures`, search SSR within 3 D1 reads, inventory ticks and docs.
+- 2026-09-30: Phase 3 done: both fix-wave groups reviewed and merged; release:check and the full site e2e (42/42) green. Phase 4 tasks 2 (analytics) and 3 (account and consent UI) merged.
 
 ## Next
 
 - Phase 2: done. All 9 tasks are merged, and the phase review fix wave (rpc CSRF origin check, /dev/ui staging gate, shared helpers, admin:grant) is on develop.
-- Phase 3: all 7 tasks are merged, and the phase review passed with a fix wave. Both groups are done: A (site analytics, shared gestures hooks, SSR budget, QR PNG, docs) and B (`lists.containing` + `useListMembership`, mobile favorites offline and cache buster, guest import guard, mobile shared-list add, list positions, authz matrix, e2e). Inventory L-21 and U-21 are re-checked and ticked. Next: close the phase after the wave's review.
-- Phase 4: the plan is written; task 1 (account profile, consent, export, deletion) is merged; task 2 (analytics) is in its fix round.
+- Phase 3: done.
+- Phase 4: tasks 1–3 are merged (account, analytics, account and consent UI). Task 4 (legal pages, app links, open-in-app, legacy redirects, AppBanner) is in progress; `/privacy` 404s until it lands, so it must merge before any develop → master merge. Then tasks 5 (Turnstile bridge + magic link on mobile) and 6 (maintenance, headers, CSP), and the phase review.
 - Carry into the phase 4 plan: a native Turnstile widget (WebView), so mobile email sign-in works with captcha on; magic link on mobile via a universal link; a CSP with a hash for the theme pre-paint script; the `/api/analytics` relay must reject foreign origins with `isForeignRequest` from `@smog/rpc` (spec §7, §12), like `/api/rpc`.
 - Carry into the phase 5 plan: admin gesture and category writes must set `sort_name`, reindex FTS and call `bumpCatalogVersion` (the catalog snapshot also serves `gestures.categories`); gesture name ≤ 120. The admin gestures tab gets the QR dialog (inventory L-14's admin half). The admin screens read categories (and gestures) from D1, not through the cached `gestures.categories`, so an admin sees their own edit at once.
 - Carry into the phase 6 plan: the sponsor call-to-action on the gesture detail (inventory L-17), from `sponsorships.availability`, on the site and mobile. L-15 (open in app) and L-16 (home app banner) are already phase 4 task 4.
-- Carry into phase 3 tasks 6–7: prefetch in SSR loaders with `createRouterClient(appRouter, { context })`, not an HTTP subrequest to `SITE_URL` (phase 2 review M5).
 - Carry into phase 8: the Convex → D1 data import must call `bumpCatalogVersion` (and rebuild FTS) when it finishes; otherwise isolates keep serving the old catalog snapshot until they are recycled.
 - Carry into phase 8: required secrets and vars checked before deploy, including production `TURNSTILE_SITE_KEY` (var) and `TURNSTILE_SECRET_KEY` (secret); `SITE_URL` per env must be the origin browsers use (the rpc origin check and Better Auth compare against it).
 
