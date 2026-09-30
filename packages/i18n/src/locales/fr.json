@@ -696,5 +696,157 @@
     "title": "Nous revenons bientôt",
     "description": "SMOG est momentanément indisponible en raison d'une maintenance planifiée. Nous y travaillons et serons bientôt de retour en ligne.",
     "until": "Nous prévoyons d'être de retour le {{time}}."
+  },
+  "admin": {
+    "title": "Administration",
+    "rail": {
+      "label": "Administration",
+      "open": "Ouvrir le menu d’administration",
+      "dashboard": "Tableau de bord",
+      "gestures": "Gestes",
+      "categories": "Catégories",
+      "users": "Utilisateurs",
+      "audit": "Journal",
+      "emails": "E-mails",
+      "settings": "Paramètres"
+    },
+    "comingSoon": {
+      "title": "Prévu dans cette phase",
+      "description": "Cette partie de l’administration est encore en construction."
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "description": "L’état du catalogue et des comptes.",
+      "gestures": "Gestes",
+      "categories": "Catégories",
+      "users": "Utilisateurs",
+      "published_one": "{{count}} publié",
+      "published_many": "{{count}} publiés",
+      "published_other": "{{count}} publiés",
+      "unpublished_one": "{{count}} masqué",
+      "unpublished_many": "{{count}} masqués",
+      "unpublished_other": "{{count}} masqués",
+      "admins_one": "{{count}} administrateur",
+      "admins_many": "{{count}} administrateurs",
+      "admins_other": "{{count}} administrateurs",
+      "banned_one": "{{count}} bloqué",
+      "banned_many": "{{count}} bloqués",
+      "banned_other": "{{count}} bloqués",
+      "newUsers_one": "{{count}} nouveau en 30 jours",
+      "newUsers_many": "{{count}} nouveaux en 30 jours",
+      "newUsers_other": "{{count}} nouveaux en 30 jours",
+      "recentAudit": "Actions récentes",
+      "allAudit": "Journal complet",
+      "noAudit": "Aucune action enregistrée pour l’instant.",
+      "quickLinks": "Accès rapide",
+      "newGesture": "Nouveau geste",
+      "manageCategories": "Gérer les catégories"
+    },
+    "audit": {
+      "title": "Journal",
+      "description": "Chaque modification faite par un administrateur, la plus récente d’abord.",
+      "filters": {
+        "label": "Filtres",
+        "action": "Action",
+        "targetType": "Type",
+        "actor": "Par",
+        "from": "Du",
+        "to": "Au",
+        "all": "Tout",
+        "clear": "Effacer les filtres"
+      },
+      "columns": {
+        "when": "Quand",
+        "action": "Action",
+        "target": "Cible",
+        "actor": "Par"
+      },
+      "empty": "Aucune action trouvée.",
+      "deletedActor": "Compte supprimé",
+      "noTarget": "Aucune",
+      "detail": {
+        "data": "Données",
+        "target": "Cible",
+        "actor": "Par",
+        "when": "Quand",
+        "open": "Ouvrir"
+      },
+      "nextPage": "Actions plus anciennes",
+      "firstPage": "Actions les plus récentes",
+      "actions": {
+        "gesture": {
+          "create": "Geste créé",
+          "update": "Geste modifié",
+          "publish": "Geste publié",
+          "unpublish": "Geste masqué",
+          "delete": "Geste supprimé",
+          "bulk_update": "Gestes modifiés en masse"
+        },
+        "category": {
+          "create": "Catégorie créée",
+          "update": "Catégorie modifiée",
+          "publish": "Catégorie publiée",
+          "unpublish": "Catégorie masquée",
+          "delete": "Catégorie supprimée",
+          "reorder": "Catégories réordonnées"
+        },
+        "user": {
+          "role_change": "Rôle modifié",
+          "ban": "Utilisateur bloqué",
+          "unban": "Blocage levé",
+          "delete": "Utilisateur supprimé",
+          "impersonate": "Connecté en tant qu’utilisateur"
+        },
+        "sponsorship": {
+          "approve": "Parrainage approuvé",
+          "reject": "Parrainage refusé",
+          "request_changes": "Modifications demandées",
+          "mark_paid": "Marqué comme payé manuellement",
+          "cancel": "Parrainage annulé",
+          "retry_render": "Vidéo relancée",
+          "force_expire": "Parrainage terminé",
+          "regenerate_token": "Nouveau lien de modification créé"
+        },
+        "payment": {
+          "refund": "Paiement remboursé"
+        },
+        "maintenance": {
+          "enable": "Mode maintenance activé",
+          "disable": "Mode maintenance désactivé"
+        },
+        "export": {
+          "sponsorships_csv": "Parrainages exportés (CSV)"
+        },
+        "legacy": "Ancienne entrée du journal"
+      },
+      "targetTypes": {
+        "gesture": "Geste",
+        "category": "Catégorie",
+        "user": "Utilisateur",
+        "sponsorship": "Parrainage",
+        "payment": "Paiement",
+        "list": "Liste",
+        "setting": "Paramètre",
+        "system": "Système"
+      }
+    },
+    "gestures": {
+      "title": "Gestes"
+    },
+    "categories": {
+      "title": "Catégories"
+    },
+    "mux": {
+      "title": "Vidéo"
+    },
+    "users": {
+      "title": "Utilisateurs"
+    },
+    "settings": {
+      "title": "Paramètres"
+    },
+    "emails": {
+      "title": "E-mails"
+    }
   }
 }

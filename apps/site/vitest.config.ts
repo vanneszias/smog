@@ -1,12 +1,36 @@
 import { fileURLToPath } from "node:url";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
+import { workerSecretsSchema } from "@smog/config/env/worker";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vitest/config";
+import { unstable_readConfig } from "wrangler";
 import { THEME_SCRIPT_HASH_DEFINE } from "./build-defines";
 
 const SRC = fileURLToPath(new URL("./src", import.meta.url));
 const MIGRATIONS_DIR = fileURLToPath(
   new URL("../../packages/db/migrations", import.meta.url)
+);
+
+/*
+ * The tests' env is pinned, never read from the machine. The pool builds
+ * the Worker's bindings with wrangler, which merges a local `.dev.vars`
+ * (or `.env*`, and with CLOUDFLARE_INCLUDE_PROCESS_ENV the process env)
+ * over `env.dev.vars`; only keys set in `miniflare.bindings` win over those.
+ * So every var comes from `wrangler.jsonc` `env.dev.vars` and every secret
+ * is off (`""`, `optionalValue`) unless set here. `test/env-isolation.test.ts`
+ * checks it.
+ */
+process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = "false";
+Reflect.deleteProperty(process.env, "CLOUDFLARE_INCLUDE_PROCESS_ENV");
+const DEV_VARS = unstable_readConfig(
+  {
+    config: fileURLToPath(new URL("./wrangler.jsonc", import.meta.url)),
+    env: "dev",
+  },
+  { hideWarnings: true }
+).vars;
+const SECRETS_OFF = Object.fromEntries(
+  Object.keys(workerSecretsSchema.shape).map((key) => [key, ""])
 );
 
 export default defineConfig(async () => ({
@@ -19,7 +43,8 @@ export default defineConfig(async () => ({
     cloudflareTest({
       miniflare: {
         bindings: {
-          // `.dev.vars` is not read in tests.
+          ...DEV_VARS,
+          ...SECRETS_OFF,
           BETTER_AUTH_SECRET: "site-test-secret-at-least-32-characters",
           TEST_MIGRATIONS: await readD1Migrations(MIGRATIONS_DIR),
         },

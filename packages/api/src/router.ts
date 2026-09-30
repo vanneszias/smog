@@ -1,10 +1,15 @@
 import { createAccountRouter } from "@smog/account/server";
+import { createAdminRouter } from "@smog/admin/server";
 import { publicAuthConfig } from "@smog/config/env/worker";
 import {
   createFavoritesRouter,
   insertFavoritesStmt,
 } from "@smog/favorites/server";
-import { findGesturesByIds, gesturesRouter } from "@smog/gestures/server";
+import {
+  bumpCatalogVersion,
+  findGesturesByIds,
+  gesturesRouter,
+} from "@smog/gestures/server";
 import {
   appendItemsStmt,
   createListsRouter,
@@ -55,6 +60,9 @@ export const appRouter = os.router({
     touchLists: touchListsWithNewItemsStmt,
     unplacedItems: unplacedItemsStmt,
   }),
+  // Admin catalogue writes start a new catalogue version (the gestures
+  // cache); every admin procedure is `requireAdmin`.
+  admin: createAdminRouter({ bumpCatalogVersion }),
   // Favorites and lists resolve summaries with the gestures query (a
   // feature never imports another feature's server; the api wires them).
   favorites: createFavoritesRouter({ findSummaries: findGesturesByIds }),

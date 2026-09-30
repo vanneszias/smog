@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
+    "./enums": "./src/enums.ts",
     "./testing": "./src/testing/index.ts",
     "./testing/apply-migrations": "./src/testing/apply-migrations.ts"
   },
