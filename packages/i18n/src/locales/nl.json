@@ -291,7 +291,9 @@
       "send": "Link versturen",
       "message": "{{name}}: {{url}}",
       "signInTitle": "Meld je aan om te delen",
-      "signInDescription": "Een lijst delen kan met een account. Je lijsten gaan mee als je je aanmeldt."
+      "signInDescription": "Een lijst delen kan met een account. Je lijsten gaan mee als je je aanmeldt.",
+      "copied": "Link gekopieerd",
+      "copyFailed": "Kopiëren lukte niet. De link is {{url}}"
     },
     "itemCount_one": "{{count}} gebaar",
     "itemCount_other": "{{count}} gebaren",
@@ -316,7 +318,35 @@
     },
     "sharedBy": "Gedeeld door {{name}}",
     "sharedCanEdit": "Je kunt deze lijst bewerken.",
-    "sharedSignIn": "Meld je aan om deze lijst te bewerken."
+    "sharedSignIn": "Meld je aan om deze lijst te bewerken.",
+    "description": "Groepeer gebaren voor een les, een thema of thuis.",
+    "all": "Alle lijsten",
+    "descriptionLabel": "Beschrijving",
+    "renameTitle": "Lijst bewerken",
+    "added": "Toegevoegd aan “{{name}}”",
+    "removed": "Verwijderd uit “{{name}}”",
+    "select": {
+      "title": "Kies een lijst",
+      "description": "Selecteer een lijst om de gebaren erin te zien."
+    },
+    "reorder": {
+      "instructions": "Druk op spatie of Enter om een gebaar op te pakken. Verplaats het met de pijltjestoetsen en druk opnieuw op spatie of Enter om het neer te zetten. Escape annuleert.",
+      "picked": "{{name}} opgepakt, positie {{position}} van {{total}}.",
+      "moved": "{{name}} verplaatst naar positie {{position}} van {{total}}.",
+      "dropped": "{{name}} neergezet op positie {{position}} van {{total}}.",
+      "cancelled": "Verplaatsen geannuleerd. {{name}} staat terug op positie {{position}}.",
+      "failed": "De nieuwe volgorde kon niet worden bewaard."
+    },
+    "sharedView": {
+      "by": "Gedeeld door {{owner}}",
+      "viewOnly": "Alleen bekijken",
+      "editable": "Bewerkbaar",
+      "signInToEdit": "Meld je aan om gebaren toe te voegen of te verwijderen.",
+      "add": "Gebaren toevoegen",
+      "addTitle": "Gebaren toevoegen aan “{{name}}”",
+      "addOne": "{{name}} toevoegen",
+      "inList": "In de lijst"
+    }
   },
   "gesture": {
     "sponsored": "Gesponsord",
@@ -347,6 +377,16 @@
       "message": "Je nam een screenshot. Stuur liever een link, dan gaat de video mee.",
       "share": "Link delen",
       "dismiss": "Niet nu"
+    },
+    "metaDescription": "Bekijk het SMOG-gebaar voor “{{name}}” in video.",
+    "description": "Beschrijving",
+    "actions": "Acties voor {{name}}",
+    "linkCopied": "Link gekopieerd",
+    "copyFailed": "Kopiëren lukte niet. De link is {{url}}",
+    "qr": {
+      "open": "QR-code",
+      "title": "QR-code voor {{name}}",
+      "description": "Scan de code om dit gebaar te openen."
     }
   },
   "search": {
@@ -370,13 +410,17 @@
     "clearFilter": "Categorieën wissen",
     "showResults": "Resultaten tonen",
     "recent": "Recente zoekopdrachten",
-    "clearRecent": "Recente zoekopdrachten wissen"
+    "clearRecent": "Recente zoekopdrachten wissen",
+    "refine": "Verfijn je zoekopdracht om meer gebaren te zien.",
+    "clearFilters": "Filters wissen",
+    "browse": "Gebaren ontdekken"
   },
   "favorites": {
     "empty": {
       "title": "Nog geen favorieten",
       "description": "Tik op het hartje bij een gebaar om het hier snel terug te vinden."
-    }
+    },
+    "description": "De gebaren die je met een hartje hebt bewaard."
   },
   "kit": {
     "close": "Sluiten",
@@ -492,7 +536,11 @@
   "home": {
     "tagline": "Leer gebaren in Vlaamse Gebarentaal, wanneer het jou past.",
     "featured": "Ontdek gebaren",
-    "browseAll": "Alle gebaren"
+    "browseAll": "Alle gebaren",
+    "title": "Gebaren die je spraak ondersteunen",
+    "description": "Leer SMOG-gebaren met korte video's. Zoek een gebaar, bewaar je favorieten en maak lijsten voor je les.",
+    "searchLabel": "Zoek een gebaar",
+    "searchPlaceholder": "Zoek een gebaar, bijvoorbeeld hond"
   },
   "footer": {
     "madeBy": "Gemaakt met ♡ door zias.be"
@@ -592,5 +640,12 @@
     "toggleDescription": "Deel beperkte gebruiksstatistieken om SMOG te helpen verbeteren.",
     "saved": "Je keuze is bewaard.",
     "saveFailed": "Je keuze bewaren is niet gelukt. Probeer het opnieuw."
+  },
+  "gestures": {
+    "description": "Zoek SMOG-gebaren op woord of categorie en bekijk ze in video.",
+    "select": {
+      "title": "Kies een gebaar",
+      "description": "Selecteer een gebaar in de lijst om de video en de details te bekijken."
+    }
   }
 }

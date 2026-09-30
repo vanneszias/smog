@@ -1,4 +1,3 @@
-import { getSession } from "@smog/auth";
 import { type AuthUser, toAuthState } from "@smog/auth/react";
 import {
   type PublicAuthConfig,
@@ -20,7 +19,8 @@ import {
   THEME_COOKIE,
   type Theme,
 } from "../lib/preferences";
-import { getAuth, siteEnv } from "./auth";
+import { siteEnv } from "./auth";
+import { requestSession } from "./session";
 
 /** What every page needs before it renders (the root route's loader). */
 export interface Shell {
@@ -34,7 +34,7 @@ export interface Shell {
 
 /** The request's signed-in user (one D1 read), or null. */
 async function requestUser(): Promise<AuthUser | null> {
-  const session = await getSession(getAuth(), getRequest().headers);
+  const session = await requestSession(getRequest());
   return toAuthState({ data: session, isPending: false }).user ?? null;
 }
 

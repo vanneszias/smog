@@ -291,7 +291,9 @@
       "send": "Send link",
       "message": "{{name}}: {{url}}",
       "signInTitle": "Sign in to share",
-      "signInDescription": "Sharing a list needs an account. Your lists come along when you sign in."
+      "signInDescription": "Sharing a list needs an account. Your lists come along when you sign in.",
+      "copied": "Link copied",
+      "copyFailed": "Copying didn't work. The link is {{url}}"
     },
     "itemCount_one": "{{count}} gesture",
     "itemCount_other": "{{count}} gestures",
@@ -316,7 +318,35 @@
     },
     "sharedBy": "Shared by {{name}}",
     "sharedCanEdit": "You can edit this list.",
-    "sharedSignIn": "Sign in to edit this list."
+    "sharedSignIn": "Sign in to edit this list.",
+    "description": "Group gestures for a lesson, a theme or at home.",
+    "all": "All lists",
+    "descriptionLabel": "Description",
+    "renameTitle": "Edit list",
+    "added": "Added to “{{name}}”",
+    "removed": "Removed from “{{name}}”",
+    "select": {
+      "title": "Choose a list",
+      "description": "Select a list to see the gestures in it."
+    },
+    "reorder": {
+      "instructions": "Press space or Enter to pick up a gesture. Move it with the arrow keys and press space or Enter again to drop it. Escape cancels.",
+      "picked": "Picked up {{name}}, position {{position}} of {{total}}.",
+      "moved": "Moved {{name}} to position {{position}} of {{total}}.",
+      "dropped": "Dropped {{name}} at position {{position}} of {{total}}.",
+      "cancelled": "Move cancelled. {{name}} is back at position {{position}}.",
+      "failed": "The new order couldn't be saved."
+    },
+    "sharedView": {
+      "by": "Shared by {{owner}}",
+      "viewOnly": "View only",
+      "editable": "Editable",
+      "signInToEdit": "Sign in to add or remove gestures.",
+      "add": "Add gestures",
+      "addTitle": "Add gestures to “{{name}}”",
+      "addOne": "Add {{name}}",
+      "inList": "In the list"
+    }
   },
   "gesture": {
     "sponsored": "Sponsored",
@@ -347,6 +377,16 @@
       "message": "You took a screenshot. Send a link instead, so the video comes along.",
       "share": "Share link",
       "dismiss": "Not now"
+    },
+    "metaDescription": "Watch the SMOG gesture for “{{name}}” on video.",
+    "description": "Description",
+    "actions": "Actions for {{name}}",
+    "linkCopied": "Link copied",
+    "copyFailed": "Copying didn't work. The link is {{url}}",
+    "qr": {
+      "open": "QR code",
+      "title": "QR code for {{name}}",
+      "description": "Scan the code to open this gesture."
     }
   },
   "search": {
@@ -370,13 +410,17 @@
     "clearFilter": "Clear categories",
     "showResults": "Show results",
     "recent": "Recent searches",
-    "clearRecent": "Clear recent searches"
+    "clearRecent": "Clear recent searches",
+    "refine": "Refine your search to see more gestures.",
+    "clearFilters": "Clear filters",
+    "browse": "Discover gestures"
   },
   "favorites": {
     "empty": {
       "title": "No favorites yet",
       "description": "Tap the heart on a gesture to find it here quickly."
-    }
+    },
+    "description": "The gestures you saved with a heart."
   },
   "kit": {
     "close": "Close",
@@ -492,7 +536,11 @@
   "home": {
     "tagline": "Learn Flemish Sign Language gestures, whenever it suits you.",
     "featured": "Discover gestures",
-    "browseAll": "All gestures"
+    "browseAll": "All gestures",
+    "title": "Gestures that support your speech",
+    "description": "Learn SMOG gestures with short videos. Look up a gesture, keep your favorites and make lists for your lesson.",
+    "searchLabel": "Look up a gesture",
+    "searchPlaceholder": "Look up a gesture, for example dog"
   },
   "footer": {
     "madeBy": "Made with ♡ by zias.be"
@@ -592,5 +640,12 @@
     "toggleDescription": "Share limited usage statistics to help improve SMOG.",
     "saved": "Your choice has been saved.",
     "saveFailed": "Your choice could not be saved. Please try again."
+  },
+  "gestures": {
+    "description": "Look up SMOG gestures by word or category and watch them on video.",
+    "select": {
+      "title": "Choose a gesture",
+      "description": "Select a gesture in the list to see its video and details."
+    }
   }
 }

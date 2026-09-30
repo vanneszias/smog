@@ -72,7 +72,9 @@ const CATALOG_ROUTES: Routes = {
       canonicalSlug: gesture.slug,
       description: `Het gebaar voor ${gesture.name.toLowerCase()}.`,
       keywords: ["huisdier"],
+      publishedAt: 0,
       sponsor: null,
+      updatedAt: 0,
     };
   },
   "gestures/categories": [{ gestureCount: 2, name: "Dieren", slug: "dieren" }],

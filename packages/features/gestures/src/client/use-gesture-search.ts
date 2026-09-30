@@ -2,11 +2,8 @@ import { useAnalytics } from "@smog/analytics/react";
 import type { SearchSource } from "@smog/analytics/schema";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import {
-  normalizeCategoryFilter,
-  SEARCH_STALE_TIME,
-  useGesturesRpc,
-} from "./slice";
+import { gestureSearchOptions } from "./options";
+import { normalizeCategoryFilter, useGesturesRpc } from "./slice";
 import { useDebouncedValue } from "./use-debounced-value";
 
 /** Typing pauses this long before a search is sent (spec §16). */
@@ -38,13 +35,10 @@ export function useGestureSearch({
   const typed = q.trim();
   const settled = useDebouncedValue(typed, SEARCH_DEBOUNCE_MS);
   const categories = normalizeCategoryFilter(category);
-  const query = useQuery(
-    gestures.search.queryOptions({
-      input: { category: categories, limit, q: settled },
-      placeholderData: keepPreviousData,
-      staleTime: SEARCH_STALE_TIME,
-    })
-  );
+  const query = useQuery({
+    ...gestureSearchOptions(gestures, { category, limit, q: settled }),
+    placeholderData: keepPreviousData,
+  });
 
   // search_performed once the results for `settled` arrive: counts only,
   // never the query text. The browse list (no text, no category) is no search.
