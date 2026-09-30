@@ -82,8 +82,3 @@ export const setLocale = createServerFn({ method: "POST" })
   .handler(({ data }): void => {
     setCookie(LOCALE_COOKIE, data, preferenceCookie(secureCookies()));
   });
-
-/** For guarded pages (`/account`): the signed-in user, or null. */
-export const getSessionUser = createServerFn().handler(
-  (): Promise<AuthUser | null> => requestUser()
-);

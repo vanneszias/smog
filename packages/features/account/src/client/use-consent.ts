@@ -7,7 +7,7 @@ import {
   userScopedKey,
 } from "@smog/rpc/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ConsentSetSource, ConsentState } from "../schema";
 import type { AccountSlice } from "./import-guest-data";
 import { useStoreReady } from "./store-ready";
@@ -156,4 +156,36 @@ export function useConsent(): Consent {
     set,
     status: "ready",
   };
+}
+
+export interface ConsentChoice {
+  /** A decision is being saved (disable the prompt's buttons). */
+  busy: boolean;
+  /**
+   * Saves a decision (`useConsent().set`): `true` once saved, `false` if it
+   * failed (logged; the app says so). Never rejects.
+   */
+  choose: (value: boolean) => Promise<boolean>;
+}
+
+/** The consent prompt and switch's save step, shared by both apps. */
+export function useConsentChoice(): ConsentChoice {
+  const { set } = useConsent();
+  const [busy, setBusy] = useState(false);
+  const choose = useCallback(
+    async (value: boolean): Promise<boolean> => {
+      setBusy(true);
+      try {
+        await set(value);
+        return true;
+      } catch {
+        // `set` logged it.
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [set]
+  );
+  return { busy, choose };
 }

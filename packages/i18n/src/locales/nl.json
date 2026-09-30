@@ -500,7 +500,6 @@
   "account": {
     "title": "Je account",
     "signedInAs": "Aangemeld als {{email}}",
-    "comingSoon": "Binnenkort beheer je hier ook je aanmeldmethodes, privacy en voorkeuren.",
     "export": {
       "sensitive": "Dit bestand bevat je persoonsgegevens en de actieve deellinks van je lijsten: wie een link heeft, kan die lijst openen. Bewaar het veilig en deel het niet."
     },
@@ -508,12 +507,90 @@
       "passwordRequired": "Vul je wachtwoord in om je account te verwijderen.",
       "sessionNotFresh": "Meld je opnieuw aan om je account te verwijderen.",
       "invalidPassword": "Dat wachtwoord klopt niet.",
-      "deleteFailed": "Je account verwijderen is niet gelukt. Probeer het opnieuw."
+      "deleteFailed": "Je account verwijderen is niet gelukt. Probeer het opnieuw.",
+      "signInAgain": "Meld je voor je veiligheid opnieuw aan om dit te doen."
+    },
+    "guest": {
+      "title": "Meld je aan om je account te beheren",
+      "description": "Je favorieten, lijsten en voorkeuren staan nu op dit toestel. Meld je aan om ze in je account te bewaren, lijsten te delen en je gegevens te beheren."
+    },
+    "profile": {
+      "title": "Profiel",
+      "name": "Naam",
+      "email": "E-mailadres",
+      "emailHint": "Je e-mailadres kun je niet wijzigen.",
+      "language": "Taal van e-mails",
+      "languageHint": "De e-mails die we je sturen, zijn in deze taal.",
+      "languageAuto": "Zelfde als de website",
+      "saved": "Je profiel is bewaard."
+    },
+    "methods": {
+      "title": "Aanmeldmethodes",
+      "description": "Je kunt je altijd aanmelden met een code of een link per e-mail.",
+      "password": "Wachtwoord",
+      "passwordSet": "Je meldt je aan met je e-mailadres en wachtwoord.",
+      "passwordNone": "Je hebt nog geen wachtwoord.",
+      "changePassword": "Wachtwoord wijzigen",
+      "setPassword": "Wachtwoord instellen",
+      "setPasswordHint": "We sturen je een link om een wachtwoord te kiezen.",
+      "currentPassword": "Huidig wachtwoord",
+      "passwordChanged": "Je wachtwoord is gewijzigd. Je andere toestellen zijn afgemeld.",
+      "passkeys": "Passkeys",
+      "passkeysDescription": "Meld je aan met je vingerafdruk, gezicht of de pincode van je toestel.",
+      "noPasskeys": "Je hebt nog geen passkey toegevoegd.",
+      "passkeyName": "Passkey",
+      "addedOn": "Toegevoegd op {{date}}",
+      "removePasskey": "Passkey verwijderen",
+      "removePasskeyTitle": "Deze passkey verwijderen?",
+      "removePasskeyDescription": "Je kunt je er daarna niet meer mee aanmelden.",
+      "passkeyRemoved": "De passkey is verwijderd.",
+      "linked": "Gekoppeld",
+      "notLinked": "Niet gekoppeld",
+      "link": "Koppelen",
+      "unlink": "Ontkoppelen",
+      "linkedToast": "{{provider}} is gekoppeld.",
+      "unlinkTitle": "{{provider}} ontkoppelen?",
+      "unlinkDescription": "Je kunt je dan niet meer aanmelden met {{provider}}. Je kunt het later opnieuw koppelen.",
+      "unlinked": "{{provider}} is ontkoppeld.",
+      "lastMethod": "Dit is je enige aanmeldmethode. Voeg eerst een andere toe.",
+      "google": "Google",
+      "apple": "Apple"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "export": "Mijn gegevens downloaden",
+      "exportDescription": "Een JSON-bestand met je profiel, favorieten, lijsten, toestemmingen en sponsoringen.",
+      "exported": "Je gegevens zijn gedownload.",
+      "exportFailed": "Je gegevens downloaden is niet gelukt. Probeer het opnieuw.",
+      "shareTitle": "Je SMOG-gegevens",
+      "policy": "Privacybeleid"
+    },
+    "delete": {
+      "title": "Account verwijderen",
+      "description": "Dit verwijdert je account, favorieten, lijsten en deellinks definitief. Sponsoringen blijven bewaard, zoals de wet vraagt.",
+      "action": "Mijn account verwijderen",
+      "dialogTitle": "Je account definitief verwijderen?",
+      "dialogDescription": "Dit kun je niet ongedaan maken.",
+      "confirmLabel": "Typ {{word}} om te bevestigen",
+      "password": "Je wachtwoord",
+      "deleted": "Je account is definitief verwijderd.",
+      "signInAgain": "Opnieuw aanmelden"
     }
   },
   "settings": {
     "title": "Instellingen",
     "preferences": "Voorkeuren",
     "about": "Over de app"
+  },
+  "consent": {
+    "title": "Help SMOG verbeteren",
+    "description": "Met je toestemming verzamelen we beperkte gebruiksstatistieken om SMOG te verbeteren. We gebruiken ze niet voor advertenties en volgen je niet in andere apps of op andere websites.",
+    "privacyLink": "Lees het privacybeleid",
+    "allow": "Statistieken toestaan",
+    "decline": "Alleen noodzakelijke",
+    "toggle": "Gebruiksstatistieken",
+    "toggleDescription": "Deel beperkte gebruiksstatistieken om SMOG te helpen verbeteren.",
+    "saved": "Je keuze is bewaard.",
+    "saveFailed": "Je keuze bewaren is niet gelukt. Probeer het opnieuw."
   }
 }

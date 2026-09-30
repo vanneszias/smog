@@ -33,6 +33,7 @@ import {
 import { type ReactNode, useMemo, useState } from "react";
 import { Footer } from "@/components/app-shell/footer";
 import { Header } from "@/components/app-shell/header";
+import { SiteConsentBanner } from "@/components/consent-banner";
 import { GuestImportSheet } from "@/components/guest-import-sheet";
 import { SiteAnalytics } from "@/lib/analytics";
 import { AuthClientProvider } from "@/lib/auth-client";
@@ -246,6 +247,7 @@ function Layout({ children }: { children: ReactNode }): ReactNode {
       </main>
       <Footer />
       <GuestImportSheet />
+      <SiteConsentBanner />
     </div>
   );
 }

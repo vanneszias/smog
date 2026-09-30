@@ -110,6 +110,10 @@ export {
   type CategoryChipsProps,
 } from "./domain/category-chips";
 export {
+  ConsentBanner,
+  type ConsentBannerProps,
+} from "./domain/consent-banner";
+export {
   COURSE_MESSAGE_COUNT,
   CourseBanner,
   type CourseBannerProps,

@@ -140,7 +140,8 @@ const USER = {
 
 function guestData(partial: Partial<GuestData> = {}): GuestData {
   return {
-    consent: { analytics: null },
+    // Decided, so the consent sheet stays closed unless a test opens it.
+    consent: { analytics: false, decidedAt: 1 },
     favorites: [],
     lists: [],
     preferences: {
@@ -172,6 +173,8 @@ export function memoryStorage(): PersistStorage & { map: Map<string, string> } {
 }
 
 export interface RenderAppOptions {
+  /** Better Auth client calls the screens make (signOut, linkSocial, …). */
+  auth?: Record<string, unknown>;
   cacheStorage?: PersistStorage;
   /** Replaces the fake API fetch (e.g. one that always fails, offline). */
   fetch?: (request: Request) => Promise<Response>;
@@ -213,6 +216,7 @@ function appRoutes(root: () => ReactElement): Record<string, RouteModule> {
     "+native-intent": require("../../app/+native-intent"),
     "gestures/[slug]": require("../../app/gestures/[slug]"),
     "settings/_layout": require("../../app/settings/_layout"),
+    "settings/account": require("../../app/settings/account"),
     "settings/index": { default: SettingsStub },
     "shared/[token]": require("../../app/shared/[token]"),
   };
@@ -226,6 +230,7 @@ export interface RenderedApp {
 
 /** Renders the app at `initialUrl` (home by default). */
 export async function renderApp({
+  auth: authCalls = {},
   cacheStorage = memoryStorage(),
   fetch: customFetch,
   guest,
@@ -247,6 +252,8 @@ export async function renderApp({
     isPending: false,
   };
   const auth = {
+    signOut: () => Promise.resolve({ data: { success: true }, error: null }),
+    ...authCalls,
     getCookie: () => (signedIn ? "smog.session_token=t" : ""),
     useSession: () => session,
   } as unknown as ExpoAuthClient;

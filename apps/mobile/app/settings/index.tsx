@@ -1,78 +1,39 @@
 import { useAuthState } from "@smog/auth/react";
-import { isLocale, LOCALES } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
-import {
-  Avatar,
-  Button,
-  Field,
-  Heading,
-  ListItem,
-  SegmentedControl,
-  Select,
-  useColor,
-  useToast,
-} from "@smog/ui-native";
+import { Avatar, Heading, ListItem, useColor, useToast } from "@smog/ui-native";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import ChevronRight from "lucide-react-native/icons/chevron-right";
 import Info from "lucide-react-native/icons/info";
 import LogIn from "lucide-react-native/icons/log-in";
+import ShieldCheck from "lucide-react-native/icons/shield-check";
 import Wrench from "lucide-react-native/icons/wrench";
 import { type ReactElement, useCallback } from "react";
 import { ScrollView, View } from "react-native";
-import { useAuthClient } from "@/lib/auth-client";
+import { AnalyticsSwitch, openPrivacy } from "@/components/consent-sheet";
+import { PreferencesFields } from "@/components/preferences-fields";
 import { useDevToolsUnlock } from "@/lib/dev-tools";
-import { usePreferences } from "@/lib/preferences";
 
-const THEMES = ["system", "light", "dark"] as const;
-/** The language picker's "follow the device" value (`preferences.locale: null`). */
-const DEVICE = "device";
-
-function isTheme(value: string): value is (typeof THEMES)[number] {
-  return (THEMES as readonly string[]).includes(value);
-}
-
-/** Settings: language, theme, the account entry and the developer tools. */
+/**
+ * Settings: language, theme, analytics, the account entry and the
+ * developer tools.
+ */
 export default function SettingsScreen(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const auth = useAuthState();
-  const client = useAuthClient();
   const { toast } = useToast();
   const muted = useColor("foregroundMuted");
-  const [preferences, setPreferences] = usePreferences();
   const devTools = useDevToolsUnlock();
-  const changeLocale = useCallback(
-    (value: string) =>
-      setPreferences({ locale: isLocale(value) ? value : null }),
-    [setPreferences]
-  );
-  const changeTheme = useCallback(
-    (value: string) => {
-      if (isTheme(value)) {
-        setPreferences({ theme: value });
-      }
-    },
-    [setPreferences]
+  const openAccount = useCallback(
+    () => router.push("/settings/account"),
+    [router]
   );
   const openSignIn = useCallback(() => router.push("/sign-in"), [router]);
   const openDevTools = useCallback(
     () => router.push("/settings/developer-tools"),
     [router]
   );
-
-  const signOut = async (): Promise<void> => {
-    try {
-      const { error } = await client.signOut();
-      if (error) {
-        throw new Error(error.message ?? error.statusText);
-      }
-      toast({ title: t("auth.signedOut"), variant: "success" });
-    } catch (error) {
-      console.error("[settings] Failed to sign out:", error);
-      toast({ title: t("auth.errors.generic"), variant: "danger" });
-    }
-  };
 
   const tapVersion = (): void => {
     if (devTools.unlocked) {
@@ -90,45 +51,30 @@ export default function SettingsScreen(): ReactElement {
     <ScrollView contentContainerClassName="gap-8 px-4 py-6">
       <View className="gap-4">
         <Heading level={2}>{t("settings.preferences")}</Heading>
-        <Field label={t("language.label")}>
-          <Select
-            onValueChange={changeLocale}
-            options={[
-              { label: t("language.device"), value: DEVICE },
-              ...LOCALES.map((locale) => ({
-                label: t(`language.${locale}`),
-                value: locale,
-              })),
-            ]}
-            value={preferences.locale ?? DEVICE}
-          />
-        </Field>
-        <Field label={t("theme.label")}>
-          <SegmentedControl
-            aria-label={t("theme.label")}
-            onValueChange={changeTheme}
-            options={THEMES.map((theme) => ({
-              label: t(`theme.${theme}`),
-              value: theme,
-            }))}
-            value={preferences.theme}
-          />
-        </Field>
+        <PreferencesFields />
+      </View>
+
+      <View className="gap-2">
+        <Heading level={2}>{t("account.privacy.title")}</Heading>
+        <AnalyticsSwitch />
+        <ListItem
+          leading={<ShieldCheck color={muted} />}
+          onPress={openPrivacy}
+          title={t("account.privacy.policy")}
+          trailing={<ChevronRight color={muted} />}
+        />
       </View>
 
       <View className="gap-2">
         <Heading level={2}>{t("nav.account")}</Heading>
         {auth.user ? (
-          <>
-            <ListItem
-              description={auth.user.email}
-              leading={<Avatar name={auth.user.name} size="md" />}
-              title={auth.user.name}
-            />
-            <Button onPress={signOut} variant="secondary">
-              {t("nav.signOut")}
-            </Button>
-          </>
+          <ListItem
+            description={auth.user.email}
+            leading={<Avatar name={auth.user.name} size="md" />}
+            onPress={openAccount}
+            title={auth.user.name}
+            trailing={<ChevronRight color={muted} />}
+          />
         ) : (
           <ListItem
             leading={<LogIn color={muted} />}

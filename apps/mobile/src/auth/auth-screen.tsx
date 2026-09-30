@@ -43,7 +43,7 @@ import {
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useAuthClient } from "@/lib/auth-client";
 import { mobileEnv } from "@/lib/env";
-import { appleSignInAvailable, signInWithApple } from "./apple";
+import { signInWithApple, useAppleSignInAvailable } from "./apple";
 
 type NativeMethod = Exclude<AuthMethod, "passkey" | "magicLink">;
 
@@ -401,22 +401,6 @@ function siteURL(path: string): string {
   return new URL(path, mobileEnv().EXPO_PUBLIC_API_URL).toString();
 }
 
-function useAppleAvailable(): boolean {
-  const [available, setAvailable] = useState(false);
-  useEffect(() => {
-    let active = true;
-    appleSignInAvailable().then((value) => {
-      if (active) {
-        setAvailable(value);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-  return available;
-}
-
 /**
  * Sign in, sign up and forgot password (`useAuthFlow`, shared with the
  * site). Mobile differences: no passkeys (web only, DECISIONS), no magic
@@ -431,7 +415,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
   const { toast } = useToast();
   const rpc = useRpcQuery<AppContract>();
   const config = useQuery(rpc.system.authConfig.queryOptions());
-  const apple = useAppleAvailable();
+  const apple = useAppleSignInAvailable();
 
   const actions = useMemo(
     () =>

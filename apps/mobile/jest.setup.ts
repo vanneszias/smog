@@ -19,6 +19,30 @@ jest.mock("expo-clipboard", () => ({
   setStringAsync: jest.fn(() => Promise.resolve(true)),
 }));
 
+// Files are a Map (`mockFiles`: uri → text); sharing is recorded.
+const mockFiles = new Map<string, string>();
+jest.mock("expo-file-system", () => ({
+  File: class {
+    uri: string;
+    constructor(...parts: (string | { uri: string })[]) {
+      this.uri = parts
+        .map((part) => (typeof part === "string" ? part : part.uri))
+        .join("/");
+    }
+    create(): void {
+      mockFiles.set(this.uri, "");
+    }
+    write(text: string): void {
+      mockFiles.set(this.uri, text);
+    }
+  },
+  mockFiles,
+  Paths: { cache: { uri: "file:///cache" } },
+}));
+jest.mock("expo-sharing", () => ({
+  shareAsync: jest.fn(() => Promise.resolve()),
+}));
+
 // Screenshots: `mockScreenshot()` calls every listener, as the OS would.
 const mockScreenshotListeners = new Set<() => void>();
 jest.mock("expo-screen-capture", () => ({

@@ -1,5 +1,6 @@
 import { ORPCError } from "@orpc/client";
 import { useAuthState } from "@smog/auth/react";
+import type { TranslationKey } from "@smog/i18n";
 import { useLocalStoreInstance } from "@smog/local-store/react";
 import { useRpcClient } from "@smog/rpc/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,7 +25,8 @@ export type DeleteAccountFailure =
 export interface DeleteAccount {
   /**
    * Deletes the account; then signs out, clears the local store and the
-   * query cache, and reads the session again. Rejects with the rpc error
+   * query cache (the queries on screen once the session reads signed out),
+   * and reads the session again. Rejects with the rpc error
    * if the server refuses (nothing on the device changes then).
    */
   deleteAccount: (input: DeleteAccountInput) => Promise<void>;
@@ -35,6 +37,21 @@ export interface DeleteAccount {
 export interface UseDeleteAccountOptions {
   /** The platform auth client's `signOut` (web or Expo). */
   signOut: () => Promise<unknown>;
+}
+
+const FAILURE_MESSAGES = {
+  INVALID_PASSWORD: "account.errors.invalidPassword",
+  PASSWORD_REQUIRED: "account.errors.passwordRequired",
+  RATE_LIMITED: "auth.errors.rateLimited",
+  SESSION_NOT_FRESH: "account.errors.sessionNotFresh",
+  UNKNOWN: "account.errors.deleteFailed",
+} as const satisfies Record<DeleteAccountFailure, TranslationKey>;
+
+/** The `@smog/i18n` key that explains a refused deletion (both apps). */
+export function deleteFailureMessage(
+  failure: DeleteAccountFailure
+): (typeof FAILURE_MESSAGES)[DeleteAccountFailure] {
+  return FAILURE_MESSAGES[failure];
 }
 
 const KNOWN_FAILURES: readonly string[] = [
@@ -90,7 +107,11 @@ export function useDeleteAccount({
       } catch (error) {
         console.error("[account] Failed to clear the local store:", error);
       }
-      queryClient.clear();
+      // Everything no screen shows goes now. A mounted query of this user
+      // would refetch (401) if removed while the session still reads
+      // signed in; `usePurgeOtherUsers` drops those once it reads signed
+      // out, when they are disabled.
+      queryClient.removeQueries({ type: "inactive" });
       refetch();
       setState({ error: null, status: "deleted" });
     },
