@@ -18,6 +18,7 @@ import {
 } from "@smog/email";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { admin, captcha, emailOTP, magicLink } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { COOKIE_PREFIX } from "./cookie";
@@ -28,6 +29,8 @@ import {
   OTP_LENGTH,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
+  PROFILE_NAME_MAX,
+  profileNameSchema,
   USER_ADDITIONAL_FIELDS,
 } from "./fields";
 
@@ -66,6 +69,13 @@ export interface CreateAuthOptions {
   db: Db;
   email: EmailSender;
   env: AuthEnv;
+  /**
+   * Existing users only (the site during maintenance): every sign-up is
+   * off, no user is ever created (the create hook refuses), a code or a
+   * magic link is mailed only to an address that has an account, and the
+   * code endpoint sends sign-in codes only.
+   */
+  signInOnly?: boolean | undefined;
   /** Runs email sends after the response (`waitUntil`); awaited when unset. */
   waitUntil?: ((promise: Promise<unknown>) => void) | undefined;
 }
@@ -127,13 +137,14 @@ function trustedOrigins(env: AuthEnv): string[] {
   ];
 }
 
-function socialProviders(env: AuthEnv) {
+function socialProviders(env: AuthEnv, disableSignUp: boolean) {
   return {
     ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
       ? {
           google: {
             clientId: env.GOOGLE_CLIENT_ID,
             clientSecret: env.GOOGLE_CLIENT_SECRET,
+            disableSignUp,
           },
         }
       : {}),
@@ -142,6 +153,7 @@ function socialProviders(env: AuthEnv) {
           apple: {
             clientId: env.APPLE_CLIENT_ID,
             clientSecret: env.APPLE_CLIENT_SECRET,
+            disableSignUp,
             ...(env.APPLE_APP_BUNDLE_IDENTIFIER
               ? { appBundleIdentifier: env.APPLE_APP_BUNDLE_IDENTIFIER }
               : {}),
@@ -151,6 +163,64 @@ function socialProviders(env: AuthEnv) {
   };
 }
 
+/** Where a new user's name and photo come from a provider, not our client. */
+function isProviderPath(path: string): boolean {
+  return path === "/sign-in/social" || path.startsWith("/callback/");
+}
+
+/** At most `PROFILE_NAME_MAX` UTF-16 units, never half a character. */
+function truncateName(name: string): string {
+  const chars = Array.from(name);
+  while (chars.join("").length > PROFILE_NAME_MAX) {
+    chars.pop();
+  }
+  return chars.join("");
+}
+
+function badRequest(code: string, message: string): APIError {
+  return new APIError("BAD_REQUEST", { code, message });
+}
+
+/**
+ * The name and photo a new user gets (`databaseHooks.user.create.before`).
+ * Sign-up by email: `profileNameSchema` (1..80 after trim, as
+ * `account.updateProfile`). A code or magic-link sign-up may leave it
+ * empty, never over 80. A provider's name (Google, Apple) is cut to 80
+ * instead, so a long display name never blocks a sign-in. Only a provider
+ * sets `image`: our clients never send one, so a client-set photo is
+ * refused. Server-side creates (no endpoint: the seed, the migration) are
+ * trusted.
+ */
+export function newUserProfile(
+  data: { image?: string | null | undefined; name?: string | undefined },
+  path: string | undefined
+): { image?: null; name: string } {
+  const name = (data.name ?? "").trim();
+  if (path === undefined) {
+    return { name };
+  }
+  if (isProviderPath(path)) {
+    return { name: truncateName(name) };
+  }
+  if (data.image !== undefined && data.image !== null) {
+    throw badRequest("INVALID_IMAGE", "A profile photo cannot be set here");
+  }
+  const valid =
+    path === "/sign-up/email"
+      ? profileNameSchema.safeParse(name).success
+      : name.length <= PROFILE_NAME_MAX;
+  if (!valid) {
+    throw badRequest(
+      "INVALID_NAME",
+      `The name must be 1 to ${PROFILE_NAME_MAX} characters`
+    );
+  }
+  return { image: null, name };
+}
+
+/** The only code type a sign-in-only server sends. */
+const SIGN_IN_OTP_TYPE = "sign-in";
+
 /**
  * The Better Auth server for one request (spec §6): D1 through Drizzle,
  * sessions read from D1 on every request (bans, revocation and deletion
@@ -158,13 +228,20 @@ function socialProviders(env: AuthEnv) {
  */
 export function createAuth(options: CreateAuthOptions) {
   const { db, env } = options;
+  const signInOnly = options.signInOnly ?? false;
 
-  async function userLocale(email: string): Promise<string | null> {
-    const row = await db.query.user.findFirst({
+  /** The account behind an address (its locale), or undefined. */
+  async function findAccount(
+    email: string
+  ): Promise<{ locale: string | null } | undefined> {
+    return await db.query.user.findFirst({
       columns: { locale: true },
       where: eq(user.email, email.toLowerCase()),
     });
-    return row?.locale ?? null;
+  }
+
+  async function userLocale(email: string): Promise<string | null> {
+    return (await findAccount(email))?.locale ?? null;
   }
 
   async function send<Id extends EmailTemplateId>(
@@ -211,11 +288,30 @@ export function createAuth(options: CreateAuthOptions) {
       provider: "sqlite",
       schema: { account, passkey: passkeyTable, session, user, verification },
     }),
+    databaseHooks: {
+      user: {
+        create: {
+          // biome-ignore lint/suspicious/useAwait: Better Auth's hook signature is async.
+          before: async (data, context) => {
+            if (signInOnly) {
+              throw new APIError("FORBIDDEN", {
+                code: "SIGN_UP_DISABLED",
+                message: "Sign-up is closed during maintenance",
+              });
+            }
+            return { data: newUserProfile(data, context?.path) };
+          },
+        },
+      },
+    },
     // Deletion goes only through `account.delete` (`auth.api`, which
     // `disabledPaths` does not affect): it needs the typed DELETE and has
-    // its rate limits, which the HTTP route would skip.
-    disabledPaths: ["/delete-user", "/delete-user/callback"],
+    // its rate limits, which the HTTP route would skip. The profile is
+    // written only by `account.updateProfile` (the name bound); Better
+    // Auth's `/update-user` takes any name and photo.
+    disabledPaths: ["/delete-user", "/delete-user/callback", "/update-user"],
     emailAndPassword: {
+      disableSignUp: signInOnly,
       enabled: true,
       maxPasswordLength: PASSWORD_MAX_LENGTH,
       minPasswordLength: PASSWORD_MIN_LENGTH,
@@ -244,9 +340,26 @@ export function createAuth(options: CreateAuthOptions) {
         );
       },
     },
+    hooks: {
+      // biome-ignore lint/suspicious/useAwait: Better Auth's middleware signature is async.
+      before: createAuthMiddleware(async (ctx) => {
+        const type = (ctx.body as { type?: unknown } | undefined)?.type;
+        if (
+          signInOnly &&
+          ctx.path === "/email-otp/send-verification-otp" &&
+          type !== SIGN_IN_OTP_TYPE
+        ) {
+          throw new APIError("FORBIDDEN", {
+            code: "SIGN_IN_ONLY",
+            message: "Only sign-in codes are sent during maintenance",
+          });
+        }
+      }),
+    },
     plugins: [
       admin({ adminRoles: ["admin"], defaultRole: "user" }),
       emailOTP({
+        disableSignUp: signInOnly,
         expiresIn: OTP_TTL,
         otpLength: OTP_LENGTH,
         sendVerificationOTP: async ({ email, otp }, ctx) => {
@@ -260,8 +373,15 @@ export function createAuth(options: CreateAuthOptions) {
         storeOTP: "hashed",
       }),
       magicLink({
+        disableSignUp: signInOnly,
         expiresIn: MAGIC_LINK_TTL,
         sendMagicLink: async ({ email, token, url }, ctx) => {
+          const known = await findAccount(email);
+          if (signInOnly && !known) {
+            // No account and no sign-up: the link could only fail, so
+            // nothing is mailed (Better Auth sends before it checks).
+            return;
+          }
           await send(
             "auth/magic-link",
             email,
@@ -269,7 +389,7 @@ export function createAuth(options: CreateAuthOptions) {
               minutes: minutes(MAGIC_LINK_TTL),
               url: appMagicLinkURL({ siteURL: env.SITE_URL, token, url }),
             },
-            { locale: await userLocale(email), request: ctx?.request }
+            { locale: known?.locale ?? null, request: ctx?.request }
           );
         },
         storeToken: "hashed",
@@ -308,7 +428,7 @@ export function createAuth(options: CreateAuthOptions) {
     // No secondary storage and no cookie cache: every session read hits D1,
     // so a ban, a revoked session or a deleted user takes effect at once.
     // Verification values live in D1 as well (single-use, consumed there).
-    socialProviders: socialProviders(env),
+    socialProviders: socialProviders(env, signInOnly),
     trustedOrigins: trustedOrigins(env),
     user: {
       additionalFields: USER_ADDITIONAL_FIELDS,

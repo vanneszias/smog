@@ -25,7 +25,10 @@ export function uniqueEmail(): string {
   return `${newId()}@smog.test`;
 }
 
-export function setup(overrides: Partial<AuthEnv> = {}) {
+export function setup(
+  overrides: Partial<AuthEnv> = {},
+  options: { signInOnly?: boolean } = {}
+) {
   const authEnv = { ...DEV_ENV, ...overrides };
   const email = new MemoryEmailSender();
   const db: Db = createTestDb(env);
@@ -34,6 +37,7 @@ export function setup(overrides: Partial<AuthEnv> = {}) {
     db,
     email,
     env: authEnv,
+    ...options,
   });
 
   /** Calls `/api/auth<path>` through the handler, like the site route does. */
