@@ -187,6 +187,7 @@ export function createAnalytics(options: CreateAnalyticsOptions): Analytics {
     isAllowed: allowed,
     reset: () => {
       userId = null;
+      heldSignIn = null;
       if (identified) {
         identified = false;
         safely("reset", () => transport.reset());

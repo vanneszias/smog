@@ -238,6 +238,24 @@ describe("createAnalytics", () => {
     }
   });
 
+  test("signing out during a pause drops the held sign_in_completed", () => {
+    const h = harness(null);
+    const analytics = createAnalytics({
+      getConsent: h.consent.get,
+      platform: "web",
+      subscribe: h.consent.subscribe,
+      transport: h.transport,
+    });
+    analytics.identify("user-1");
+    analytics.track({
+      name: "sign_in_completed",
+      properties: { method: "password" },
+    });
+    analytics.reset();
+    h.setConsent(true);
+    expect(h.calls.filter((call) => call[0] === "track")).toEqual([]);
+  });
+
   test("a refused consent never holds a sign_in_completed", () => {
     const h = harness(false);
     const analytics = createAnalytics({
