@@ -269,6 +269,19 @@ export async function findGestureBySlug(
   }
 }
 
+/** The published gestures among `ids` as summaries, in no order (one read). */
+export function gesturesByIdsQuery(db: Db, ids: readonly string[]) {
+  return db
+    .select(summaryColumns)
+    .from(gesture)
+    .where(
+      and(
+        isPublished,
+        sql`${gesture.id} IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`
+      )
+    );
+}
+
 /** Published gestures by id, in the order given (duplicates and unknown ids dropped). */
 export async function findGesturesByIds(
   db: Db,
@@ -278,15 +291,7 @@ export async function findGesturesByIds(
     return [];
   }
   try {
-    const rows = await db
-      .select(summaryColumns)
-      .from(gesture)
-      .where(
-        and(
-          isPublished,
-          sql`${gesture.id} IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`
-        )
-      );
+    const rows = await gesturesByIdsQuery(db, ids);
     const byId = new Map(rows.map((row) => [row.id, row]));
     return [...new Set(ids)].flatMap((id) => {
       const row = byId.get(id);
@@ -332,18 +337,26 @@ export async function findRelatedGestures(
 }
 
 /** Published categories (`sort_order`, name) with their published gesture counts. */
+export function categoriesQuery(db: Db) {
+  return db
+    .select({
+      gestureCount: sql<number>`(SELECT count(*) FROM ${gestureCategory} AS gc JOIN ${gesture} AS g ON ${ref("g", gesture.id)} = ${ref("gc", gestureCategory.gestureId)} WHERE ${ref("gc", gestureCategory.categoryId)} = ${ref("category", category.id)} AND ${ref("g", gesture.publishedAt)} IS NOT NULL)`,
+      name: category.name,
+      slug: category.slug,
+    })
+    .from(category)
+    .where(isNotNull(category.publishedAt))
+    .orderBy(category.sortOrder, sql`${category.name} COLLATE NOCASE`)
+    .limit(CATEGORY_LIMIT);
+}
+
+/**
+ * The categories straight from D1. `gestures.categories` serves them from
+ * the catalog snapshot (`getCatalogCategories`) and falls back to this.
+ */
 export async function listCategories(db: Db): Promise<Category[]> {
   try {
-    return await db
-      .select({
-        gestureCount: sql<number>`(SELECT count(*) FROM ${gestureCategory} AS gc JOIN ${gesture} AS g ON ${ref("g", gesture.id)} = ${ref("gc", gestureCategory.gestureId)} WHERE ${ref("gc", gestureCategory.categoryId)} = ${ref("category", category.id)} AND ${ref("g", gesture.publishedAt)} IS NOT NULL)`,
-        name: category.name,
-        slug: category.slug,
-      })
-      .from(category)
-      .where(isNotNull(category.publishedAt))
-      .orderBy(category.sortOrder, sql`${category.name} COLLATE NOCASE`)
-      .limit(CATEGORY_LIMIT);
+    return await categoriesQuery(db);
   } catch (error) {
     console.error("[gestures] Failed to list categories:", error);
     throw error;

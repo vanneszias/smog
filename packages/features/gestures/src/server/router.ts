@@ -1,11 +1,11 @@
 import { implementRpc } from "@smog/rpc";
 import { InvalidCursorError } from "@smog/utils";
 import { gesturesContract } from "../contract";
+import { getCatalogCategories } from "./catalog-cache";
 import {
   findGestureBySlug,
   findGesturesByIds,
   findRelatedGestures,
-  listCategories,
   listGestures,
   listSitemap,
 } from "./queries";
@@ -30,8 +30,9 @@ export const gesturesRouter = os.router({
     return gesture;
   }),
 
+  // From the catalog snapshot (isolate memory per catalog version).
   categories: os.categories.handler(
-    async ({ context }) => await listCategories(context.db)
+    async ({ context }) => await getCatalogCategories(context.db, context.kv)
   ),
 
   list: os.list.handler(async ({ context, errors, input }) => {
