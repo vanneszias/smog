@@ -13,9 +13,10 @@ import {
   Text,
   useToast,
 } from "@smog/ui-web";
-import { Copy, Ellipsis, QrCode, Share2 } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
-import { type ReactNode, useCallback, useState } from "react";
+import { slugify } from "@smog/utils";
+import { Copy, Download, Ellipsis, QrCode, Share2 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 import { copyText, shareUrl, useSiteUrl } from "@/lib/share";
 import { gestureHref } from "./links";
 import { SaveToList } from "./save-to-list";
@@ -27,7 +28,19 @@ interface ActionGesture {
   slug: string;
 }
 
-/** The QR code of the gesture page (black on white, also in dark mode). */
+/** The QR code is drawn at print size and shown scaled down. */
+const QR_SIZE = 1024;
+const QR_STYLE = { height: 256, width: 256 } as const;
+
+/** The downloaded PNG's name: `smog-<slug>-qr.png` (the old dialog's pattern). */
+export function qrFileName(slug: string): string {
+  return `smog-${slugify(slug) || "gesture"}-qr.png`;
+}
+
+/**
+ * The QR code of the gesture page (black on white, also in dark mode), with
+ * copy and a PNG download (inventory L-14).
+ */
 function QrDialog({
   gesture,
   onOpenChange,
@@ -41,6 +54,22 @@ function QrDialog({
 }): ReactNode {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const download = useCallback((): void => {
+    const drawn = canvas.current;
+    if (!drawn) {
+      return;
+    }
+    try {
+      const link = document.createElement("a");
+      link.href = drawn.toDataURL("image/png");
+      link.download = qrFileName(gesture.slug);
+      link.click();
+    } catch (error) {
+      console.error("[gesture] Failed to download the QR code:", error);
+      toast({ title: t("states.actionFailed"), variant: "danger" });
+    }
+  }, [gesture.slug, t, toast]);
   const copy = useCallback((): void => {
     copyText(url)
       .then(() => toast({ title: t("gesture.linkCopied"), variant: "success" }))
@@ -55,14 +84,17 @@ function QrDialog({
         title={t("gesture.qr.title", { name: gesture.name })}
       >
         <div className="flex flex-col items-center gap-3">
-          <QRCodeSVG
+          <QRCodeCanvas
+            aria-label={t("gesture.qr.title", { name: gesture.name })}
             bgColor="#FFFFFF"
-            className="size-64 rounded-md"
+            className="rounded-md"
             fgColor="#000000"
             level="M"
             marginSize={2}
-            size={256}
-            title={t("gesture.qr.title", { name: gesture.name })}
+            ref={canvas}
+            role="img"
+            size={QR_SIZE}
+            style={QR_STYLE}
             value={url}
           />
           <Text className="break-all text-center" size="body-sm" tone="muted">
@@ -72,6 +104,9 @@ function QrDialog({
         <DialogFooter>
           <Button icon={<Copy />} onClick={copy} variant="secondary">
             {t("lists.share.copyLink")}
+          </Button>
+          <Button icon={<Download />} onClick={download}>
+            {t("gesture.qr.download")}
           </Button>
         </DialogFooter>
       </DialogContent>

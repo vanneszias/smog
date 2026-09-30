@@ -386,7 +386,8 @@
     "qr": {
       "open": "QR code",
       "title": "QR code for {{name}}",
-      "description": "Scan the code to open this gesture."
+      "description": "Scan the code to open this gesture.",
+      "download": "Download QR code"
     }
   },
   "search": {

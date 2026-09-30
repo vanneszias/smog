@@ -1,6 +1,8 @@
 import { ORPCError } from "@orpc/client";
+import type { GestureViewSource } from "@smog/analytics/schema";
 import {
   gestureOptions,
+  gestureViewSource,
   relatedOptions,
   useGesture,
   useRelated,
@@ -29,6 +31,19 @@ export interface GestureHead {
   slug: string;
   /** Epoch ms. */
   updatedAt: number;
+}
+
+/** `?from=`: where the gesture was opened from (cards and links set it). */
+export interface GestureSearch {
+  from?: GestureViewSource;
+}
+
+/** A known `from` is kept; anything else is dropped (it counts as `direct`). */
+export function validateGestureSearch(
+  search: Record<string, unknown>
+): GestureSearch {
+  const from = gestureViewSource(search.from);
+  return from === "direct" ? {} : { from };
 }
 
 /**
@@ -106,13 +121,15 @@ export const Route = createFileRoute("/gestures/$slug")({
     });
   },
   loader: loadGesture,
+  validateSearch: validateGestureSearch,
 });
 
 function GesturePage(): ReactNode {
   const { slug } = Route.useParams();
+  const { from } = Route.useSearch();
   const gesture = useGesture(slug);
   const related = useRelated(slug, RELATED_LIMIT);
-  const hearts = useHearts();
+  const hearts = useHearts("gesture_detail");
   return (
     <Page>
       {gesture.data ? (
@@ -121,6 +138,7 @@ function GesturePage(): ReactNode {
           hearts={hearts}
           layout="page"
           related={related}
+          viewSource={from ?? "direct"}
         />
       ) : (
         <GestureDetailSkeleton />

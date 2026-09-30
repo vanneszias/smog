@@ -1,3 +1,4 @@
+import type { CollectionSource } from "@smog/analytics/schema";
 import { useFavorites } from "@smog/favorites/client";
 import { useTranslation } from "@smog/i18n/react";
 import { useToast } from "@smog/ui-web";
@@ -11,12 +12,14 @@ export interface Hearts {
 
 /**
  * The heart on every card and row: `useFavorites` without its items (the
- * device for guests, the account when signed in).
+ * device for guests, the account when signed in). `source` is the screen,
+ * as mobile reports it: `gesture_detail` on a gesture, `search_results` on
+ * the browse page, `gesture_list` elsewhere.
  */
-export function useHearts(): Hearts {
+export function useHearts(source: CollectionSource = "gesture_list"): Hearts {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const favorites = useFavorites({ items: false });
+  const favorites = useFavorites({ items: false, source });
   const { toggle: flip } = favorites;
   const toggle = useCallback(
     (gestureId: string): void => {

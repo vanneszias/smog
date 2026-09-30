@@ -386,7 +386,8 @@
     "qr": {
       "open": "QR-code",
       "title": "QR-code voor {{name}}",
-      "description": "Scan de code om dit gebaar te openen."
+      "description": "Scan de code om dit gebaar te openen.",
+      "download": "QR-code downloaden"
     }
   },
   "search": {

@@ -390,7 +390,8 @@
     "qr": {
       "open": "Code QR",
       "title": "Code QR pour {{name}}",
-      "description": "Scannez le code pour ouvrir ce geste."
+      "description": "Scannez le code pour ouvrir ce geste.",
+      "download": "Télécharger le code QR"
     }
   },
   "search": {

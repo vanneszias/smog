@@ -5,17 +5,15 @@ import { EmptyState, ErrorState } from "@smog/ui-web";
 import { type ReactNode, useCallback, useEffect } from "react";
 import { GestureDetailView, RELATED_LIMIT } from "./gesture-detail";
 import { GestureDetailSkeleton } from "./gesture-detail-skeleton";
-import type { Hearts } from "./use-hearts";
+import { useHearts } from "./use-hearts";
 
-/** The browse page's detail column (desktop), for the selected slug. */
-function SelectedDetail({
-  hearts,
-  slug,
-}: {
-  hearts: Hearts;
-  slug: string;
-}): ReactNode {
+/**
+ * The browse page's detail column (desktop), for the selected slug: a
+ * gesture opened from the results, with the detail's hearts.
+ */
+function SelectedDetail({ slug }: { slug: string }): ReactNode {
   const { t } = useTranslation();
+  const hearts = useHearts("gesture_detail");
   const gesture = useGesture(slug);
   const related = useRelated(slug, RELATED_LIMIT);
   const { refetch } = gesture;
@@ -41,6 +39,7 @@ function SelectedDetail({
         hearts={hearts}
         layout="panel"
         related={related}
+        viewSource="search_results"
       />
     );
   }
@@ -66,10 +65,8 @@ function SelectedDetail({
  * prompt to choose one.
  */
 export function SelectedGesture({
-  hearts,
   slug,
 }: {
-  hearts: Hearts;
   slug: string | undefined;
 }): ReactNode {
   const { t } = useTranslation();
@@ -83,5 +80,5 @@ export function SelectedGesture({
       />
     );
   }
-  return <SelectedDetail hearts={hearts} key={slug} slug={slug} />;
+  return <SelectedDetail key={slug} slug={slug} />;
 }

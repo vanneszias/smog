@@ -1,8 +1,19 @@
+import type { GestureViewSource } from "@smog/analytics/schema";
+import { COURSE_URL } from "@smog/config/constants";
+import {
+  useCourseBanner,
+  useGestureViewed,
+  useVideoCompleted,
+} from "@smog/gestures/client";
 import type { GestureDetail, GestureSummary } from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
+import { webAdapter } from "@smog/local-store/web";
 import {
   Badge,
   Button,
+  COURSE_MESSAGE_COUNT,
+  CourseBanner,
+  type CourseMessageIndex,
   cn,
   ErrorState,
   Heading,
@@ -55,6 +66,7 @@ function Related({
   } else {
     body = (
       <LinkedGestureGrid
+        from="related_gestures"
         hearts={hearts}
         items={related.data}
         level={level === 2 ? 3 : 4}
@@ -70,30 +82,54 @@ function Related({
 }
 
 /**
- * A gesture: the video on top (3:4), then the name, its categories (links
- * to the filtered browse), the actions, the sponsor credit, description,
- * related concepts and related gestures (spec §16 flow 1). `page` puts the
- * video beside the text from `lg`; `panel` stacks everything (the browse
- * page's detail column).
+ * The video's end, once per visit (`@smog/gestures/client`, the rule mobile
+ * uses): `video_playback_completed`, and the course banner's count, which
+ * shows the banner under the video after every seventh video on the device.
+ */
+function useVideoEnd(gestureId: string) {
+  const trackCompleted = useVideoCompleted(gestureId);
+  const course = useCourseBanner<CourseMessageIndex>({
+    gestureId,
+    messageCount: COURSE_MESSAGE_COUNT,
+    storage: webAdapter,
+  });
+  const { onVideoComplete } = course;
+  const onNearEnd = useCallback(() => {
+    trackCompleted();
+    onVideoComplete();
+  }, [onVideoComplete, trackCompleted]);
+  return { course, onNearEnd };
+}
+
+/**
+ * A gesture: the video on top (3:4, the course banner under it when due),
+ * then the name, its categories (links to the filtered browse), the
+ * actions, the sponsor credit, description, related concepts and related
+ * gestures (spec §16 flow 1). `page` puts the video beside the text from
+ * `lg`; `panel` stacks everything (the browse page's detail column).
+ * `viewSource` is where it was opened from (`gesture_viewed`, once per
+ * gesture shown).
  */
 export function GestureDetailView({
   gesture,
   hearts,
   layout,
   related,
+  viewSource,
 }: {
   gesture: GestureDetail;
   hearts: Hearts;
   layout: "page" | "panel";
   related: RelatedState;
+  viewSource: GestureViewSource;
 }): ReactNode {
   const { t } = useTranslation();
   const page = layout === "page";
   // The page's name is its h1; in the browse panel the page title is.
   const titleLevel = page ? 1 : 2;
   const sectionLevel = page ? 2 : 3;
-  // analytics: gesture_viewed { gesture_id, source } once per shown gesture
-  // analytics: video_playback_completed { gesture_id } from VideoPlayer onEnded
+  useGestureViewed(gesture.id, viewSource);
+  const { course, onNearEnd } = useVideoEnd(gesture.id);
   return (
     <div className="flex flex-col gap-10">
       <article
@@ -102,11 +138,25 @@ export function GestureDetailView({
           page && "lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-10"
         )}
       >
-        <VideoPlayer
-          className={cn("mx-auto max-w-md", page && "lg:mx-0 lg:max-w-none")}
-          playbackId={gesture.playbackId}
-          title={gesture.name}
-        />
+        <div
+          className={cn(
+            "mx-auto flex w-full max-w-md flex-col gap-4",
+            page && "lg:mx-0 lg:max-w-none"
+          )}
+        >
+          <VideoPlayer
+            onNearEnd={onNearEnd}
+            playbackId={gesture.playbackId}
+            title={gesture.name}
+          />
+          {course.messageIndex ? (
+            <CourseBanner
+              courseUrl={COURSE_URL}
+              messageIndex={course.messageIndex}
+              onDismiss={course.dismiss}
+            />
+          ) : null}
+        </div>
         <div className="flex min-w-0 flex-col gap-6">
           <div className="flex flex-col gap-3">
             <Heading level={titleLevel} size="title-1">
