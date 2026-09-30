@@ -674,5 +674,12 @@
       "title": "Choisissez un geste",
       "description": "Sélectionnez un geste dans la liste pour voir sa vidéo et ses détails."
     }
+  },
+  "maintenance": {
+    "documentTitle": "SMOG — Merci de votre patience",
+    "badge": "Maintenance en cours",
+    "title": "Nous revenons bientôt",
+    "description": "SMOG est momentanément indisponible en raison d'une maintenance planifiée. Nous y travaillons et serons bientôt de retour en ligne.",
+    "until": "Nous prévoyons d'être de retour le {{time}}."
   }
 }

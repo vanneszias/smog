@@ -33,7 +33,7 @@ const CANONICAL_LINK =
   /<link (?=[^>]*rel="canonical")(?=[^>]*href="http:\/\/localhost:5173\/gestures\/hond")[^>]*>/;
 /** The legacy 301 keeps the query string (spec §9). */
 const CANONICAL_LOCATION = /\/gestures\/hond\?ref=qr&lang=nl$/;
-const JSON_LD = /<script type="application\/ld\+json">(.*?)<\/script>/;
+const JSON_LD = /<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/;
 const ISO_DATE = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/;
 /** The dehydrated query's hash: the key `useGestureSearch` reads. */
 const DEHYDRATED_SEARCH_KEY =
