@@ -19,21 +19,22 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 
 ## Log
 
-- 2026-09-29: Phase 2 done (the phase review passed after the fix wave; release:check green).
-
 - 2026-09-29: Phase 0 done. Orphan `develop` branch created. Analysis reports, inventory, spec, DECISIONS and the phase 1 plan committed.
 - 2026-09-29: Phase 1 done. Root tooling, `@smog/config` + boundaries, `apps/site` (TanStack Start on Workers, guarded deploy), `apps/mobile` (Expo SDK 57, NativeWind 4), release gate (`bun run release:check` green with `SMOG_OFFLINE=1` here), `ci.yml` and `deploy.yml`.
 - 2026-09-29: Phase 2 tasks 1–8 merged (db, auth, email core, rpc/api, local-store, styles/brand, i18n, ui-web + /dev/ui, ui-native + gallery). Phase 3 task 1 (gestures) merged.
-- 2026-09-30: Phase 3 tasks 5 and 7 merged; phase 4 plan written, task 1 merged.
 - 2026-09-29: Phase 2 review fix wave: CSRF origin check on `/api/rpc` + `/api/openapi`, `/dev/ui` back in staging, shared test preload / cursor error / user-scoped query keys, `admin:grant`, fr typography test, stale docs.
+- 2026-09-29: Phase 2 done (the phase review passed after the fix wave; release:check green).
+- 2026-09-30: Phase 3 tasks 5 and 7 merged; phase 4 plan written, task 1 merged.
+- 2026-09-30: Phase 3 task 6 merged (all 7 tasks in). Phase 3 review: pass with a fix wave (two groups). Group A: site analytics sources, one course banner rule (`@smog/gestures/client`, once per visit), web CourseBanner, QR PNG download, `useFeaturedGestures`, search SSR within 3 D1 reads, inventory ticks and docs.
 
 ## Next
 
 - Phase 2: done. All 9 tasks are merged, and the phase review fix wave (rpc CSRF origin check, /dev/ui staging gate, shared helpers, admin:grant) is on develop.
-- Phase 3: tasks 1–5 and 7 are merged (gestures, favorites, lists, guest import, domain components, mobile screens + offline cache). Task 6 (site learning pages) is in review. Then the phase 3 review and fix wave.
+- Phase 3: all 7 tasks are merged, and the phase review passed with a fix wave. Group A (site analytics, shared gestures hooks, SSR budget, QR PNG, docs) is done. Group B (`lists.containing` + `useListMembership`, mobile favorites offline and cache buster, guest import guard, mobile shared-list add, list positions, authz matrix, e2e) is in progress. After B lands, re-check and tick inventory L-21 and U-21, then close the phase.
 - Phase 4: the plan is written; task 1 (account profile, consent, export, deletion) is merged; task 2 (analytics) is in its fix round.
 - Carry into the phase 4 plan: a native Turnstile widget (WebView), so mobile email sign-in works with captcha on; magic link on mobile via a universal link; a CSP with a hash for the theme pre-paint script; the `/api/analytics` relay must reject foreign origins with `isForeignRequest` from `@smog/rpc` (spec §7, §12), like `/api/rpc`.
-- Carry into the phase 5 plan: admin gesture and category writes must set `sort_name`, reindex FTS and call `bumpCatalogVersion`; gesture name ≤ 120.
+- Carry into the phase 5 plan: admin gesture and category writes must set `sort_name`, reindex FTS and call `bumpCatalogVersion` (the catalog snapshot also serves `gestures.categories`); gesture name ≤ 120. The admin gestures tab gets the QR dialog (inventory L-14's admin half).
+- Carry into the phase 6 plan: the sponsor call-to-action on the gesture detail (inventory L-17), from `sponsorships.availability`, on the site and mobile. L-15 (open in app) and L-16 (home app banner) are already phase 4 task 4.
 - Carry into phase 3 tasks 6–7: prefetch in SSR loaders with `createRouterClient(appRouter, { context })`, not an HTTP subrequest to `SITE_URL` (phase 2 review M5).
 - Carry into phase 8: required secrets and vars checked before deploy, including production `TURNSTILE_SITE_KEY` (var) and `TURNSTILE_SECRET_KEY` (secret); `SITE_URL` per env must be the origin browsers use (the rpc origin check and Better Auth compare against it).
 

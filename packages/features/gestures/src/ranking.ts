@@ -1,6 +1,7 @@
 /**
- * The search ranking (spec §7.1), one pure function for the server (on the
- * FTS5 candidates) and the device (on the mobile offline cache).
+ * The search ranking (spec §7.1), one pure function, run by the server on
+ * the FTS5 candidates. It is platform-neutral, but no app ranks on the device
+ * yet: search needs a connection (DECISIONS, "Offline search").
  *
  * - Every value goes through `normalizeQuery` (lowercase, no diacritics,
  *   words joined by one space), like the query.
@@ -63,7 +64,7 @@ export interface Ranked<T> {
 export interface RankOptions<T> {
   /**
    * Where the typo tier looks (spec §7.1 step 4); without it the tier is
-   * skipped. The server passes the catalog projection, the device its cache.
+   * skipped (the server runs `typoMatches` on the catalog projection itself).
    */
   typoPool?: readonly T[];
 }
