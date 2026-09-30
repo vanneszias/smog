@@ -141,7 +141,6 @@ function Home(): ReactNode {
 
   return (
     <Page className="gap-10 md:gap-12">
-      <SiteAppBanner />
       <section className="flex flex-col items-center gap-6 pt-6 text-center md:pt-12">
         <div className="flex max-w-reading flex-col gap-3">
           <Heading level={1} size="display">
@@ -160,6 +159,8 @@ function Home(): ReactNode {
           />
         </div>
       </section>
+      {/* Under the hero: it mounts after hydration, so the hero stays put (review M6). */}
+      <SiteAppBanner />
       <Categories />
       <Featured />
     </Page>

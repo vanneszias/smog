@@ -16,6 +16,7 @@ const OPEN_IN_APP = "Heb je de SMOG-app?";
 const IPHONE = devices["iPhone 15"].userAgent;
 const SIGN_IN_URL = /\/sign-in\?redirect=%2Faccount$/;
 const DUTCH_TITLE = "Privacybeleid";
+const DUTCH_TERMS = /\/terms\?lang=nl$/;
 const RIGHTS_ANCHOR = /#rights$/;
 const DIEREN_FILTER = /\/gestures\?category=dieren$/;
 const APP_STORE_LINK = /App Store/;
@@ -61,13 +62,29 @@ test.describe("legal pages", () => {
     const notice = page.getByRole("note");
     await expect(notice).toContainText("the Dutch version prevails");
     await notice
-      .getByRole("button", { name: "Read the Dutch version" })
+      .getByRole("link", { name: "Lees de Nederlandse versie" })
       .click();
+    // The Dutch text in place: the site and the saved language stay English
+    // (review I2).
+    await expect(page).toHaveURL(DUTCH_TERMS);
     await expect(
       page.getByRole("heading", { level: 1, name: "Servicevoorwaarden" })
     ).toBeVisible();
-    await expect(page.getByRole("note")).toHaveCount(0);
+    await expect(page.getByRole("note")).toContainText(
+      "You are reading the Dutch version"
+    );
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    const cookies = await page.context().cookies();
+    expect(cookies.find((cookie) => cookie.name === "locale")?.value).toBe(
+      "en"
+    );
     expect(await blockingViolations(page)).toEqual([]);
+    await page
+      .getByRole("link", { name: "Show the English translation" })
+      .click();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Terms of service" })
+    ).toBeVisible();
   });
 
   test("the footer links resolve", async ({ page }) => {
@@ -164,6 +181,13 @@ test.describe("on a phone", () => {
     await expect(
       region.getByRole("link", { name: "Open in de app" })
     ).toHaveAttribute("href", `${ORIGIN}/gestures/hond`);
+    // iOS: no timed fallback, a separate App Store link (review I1).
+    await expect(
+      region.getByRole("link", { name: "Nog geen app? Download hem" })
+    ).toHaveAttribute(
+      "href",
+      "https://apps.apple.com/app/smog-co/id6758547774"
+    );
   });
 });
 

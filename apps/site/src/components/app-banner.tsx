@@ -11,8 +11,8 @@ import {
   useState,
 } from "react";
 import {
-  followOpenInAppPlan,
   openInAppPlan,
+  shouldShowAppBanner,
   useMobilePlatform,
 } from "@/lib/open-in-app";
 import { useSiteUrl } from "@/lib/share";
@@ -63,8 +63,13 @@ export function SiteAppBanner({
       console.error("[appBanner] Failed to save the dismissal:", error);
     });
   }, [store]);
-  const decided = consent.status === "ready" && !consent.needsDecision;
-  if (!(platform && decided && loaded) || dismissedAt !== undefined) {
+  const show = shouldShowAppBanner({
+    consentDecided: consent.status === "ready" && !consent.needsDecision,
+    dismissed: dismissedAt !== undefined,
+    platform,
+    storeLoaded: loaded,
+  });
+  if (!show) {
     return null;
   }
   return (
@@ -81,23 +86,30 @@ export function SiteAppBanner({
  * "Open in the app" on a gesture page (inventory L-15), on iOS and
  * Android browsers only. The link is the page's universal link; a click
  * goes through the app scheme (`openInAppPlan`), since a universal link to
- * the current site stays in the browser.
+ * the current site stays in the browser. On iOS a separate App Store link
+ * sits next to it (no timed fallback, review I1).
  */
 export function OpenInApp({ path }: { path: string }): ReactNode {
   const platform = useMobilePlatform();
   const siteUrl = useSiteUrl();
+  const plan = platform ? openInAppPlan(path, platform) : null;
   const open = useCallback(
     (event: MouseEvent<HTMLAnchorElement>): void => {
-      const plan = platform ? openInAppPlan(path, platform) : null;
       if (plan) {
         event.preventDefault();
-        followOpenInAppPlan(plan);
+        window.location.href = plan.href;
       }
     },
-    [path, platform]
+    [plan]
   );
-  if (platform !== "ios" && platform !== "android") {
+  if (!plan) {
     return null;
   }
-  return <OpenInAppBanner href={`${siteUrl}${path}`} onOpen={open} />;
+  return (
+    <OpenInAppBanner
+      href={`${siteUrl}${path}`}
+      onOpen={open}
+      storeUrl={plan.storeUrl}
+    />
+  );
 }

@@ -5,7 +5,11 @@
         "appIDs": ["96XKP6MU2A.be.zias.smog"],
         "components": [
           { "/": "/gestures/*", "comment": "A gesture (slug or legacy id)" },
-          { "/": "/lists/*", "comment": "A shared list (share token)" }
+          { "/": "/lists/*", "comment": "A shared list (share token)" },
+          {
+            "/": "/magic-link/app",
+            "comment": "The app's magic-link hand-off (exact path)"
+          }
         ]
       }
     ]

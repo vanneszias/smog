@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import {
   blockingViolations,
+  ORIGIN,
   stubMux,
   waitForApp,
   watchErrors,
@@ -40,7 +41,7 @@ test("opens a gesture: the video, the related gestures and the SEO head", async 
   await page.getByRole("button", { name: "Acties voor Hond" }).click();
   await page.getByRole("menuitem", { name: "QR-code" }).click();
   const qr = page.getByRole("dialog", { name: "QR-code voor Hond" });
-  await expect(qr).toContainText("http://localhost:5173/gestures/hond");
+  await expect(qr).toContainText(`${ORIGIN}/gestures/hond`);
   await qr.getByRole("button", { name: "Sluiten" }).click();
 
   expect(await blockingViolations(page)).toEqual([]);

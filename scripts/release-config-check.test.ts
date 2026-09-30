@@ -216,8 +216,10 @@ const IDENTITY: AppLinkIdentity = {
   androidPackage: "be.zias.smog",
   bundleId: "be.zias.smog",
   pathPrefixes: ["/gestures/", "/lists/"],
+  paths: ["/magic-link/app"],
   teamId: "96XKP6MU2A",
 };
+const AASA_PATHS = ["/gestures/*", "/lists/*", "/magic-link/app"];
 const FINGERPRINT =
   "23:4A:F1:75:8A:A7:4E:68:6B:D0:C0:9B:DA:E0:7F:ED:3F:64:C8:4E:D5:BD:EE:4A:AF:E6:EE:27:73:60:B1:C5";
 
@@ -260,6 +262,7 @@ describe("appLinkIdentity", () => {
               data: [
                 { host: "h", pathPrefix: "/gestures/", scheme: "https" },
                 { host: "h", pathPrefix: "/lists/", scheme: "https" },
+                { host: "h", path: "/magic-link/app", scheme: "https" },
               ],
             },
           ],
@@ -282,13 +285,40 @@ describe("checkAppLinks", () => {
     expect(
       checkAppLinks(
         {
-          aasa: aasa(["96XKP6MU2A.be.zias.smog"], ["/gestures/*", "/lists/*"]),
+          aasa: aasa(["96XKP6MU2A.be.zias.smog"], AASA_PATHS),
           assetlinks: assetlinks("be.zias.smog", [FINGERPRINT]),
           headers: HEADERS,
         },
         IDENTITY
       )
     ).toEqual([]);
+  });
+
+  test("compares exact paths too (the magic-link hand-off, phase 4 task 5)", () => {
+    const missing = checkAppLinks(
+      {
+        aasa: aasa(["96XKP6MU2A.be.zias.smog"], ["/gestures/*", "/lists/*"]),
+        assetlinks: assetlinks("be.zias.smog", [FINGERPRINT]),
+        headers: HEADERS,
+      },
+      IDENTITY
+    );
+    expect(missing).toEqual([
+      'apps/site/public/.well-known/apple-app-site-association: components must be ["/gestures/*","/lists/*","/magic-link/app"] (app.config.ts intent filters)',
+    ]);
+    // An exact path is not a prefix: `/magic-link/app*` does not match it.
+    const wildcard = checkAppLinks(
+      {
+        aasa: aasa(
+          ["96XKP6MU2A.be.zias.smog"],
+          ["/gestures/*", "/lists/*", "/magic-link/app*"]
+        ),
+        assetlinks: assetlinks("be.zias.smog", [FINGERPRINT]),
+        headers: HEADERS,
+      },
+      IDENTITY
+    );
+    expect(wildcard).toHaveLength(1);
   });
 
   test("fails on another team, bundle or path set", () => {
@@ -302,14 +332,14 @@ describe("checkAppLinks", () => {
     );
     expect(errors).toEqual([
       'apps/site/public/.well-known/apple-app-site-association: appIDs must be ["96XKP6MU2A.be.zias.smog"]',
-      'apps/site/public/.well-known/apple-app-site-association: components must be ["/gestures/*","/lists/*"] (app.config.ts intent filters)',
+      'apps/site/public/.well-known/apple-app-site-association: components must be ["/gestures/*","/lists/*","/magic-link/app"] (app.config.ts intent filters)',
     ]);
   });
 
   test("fails on another package or a malformed fingerprint", () => {
     const errors = checkAppLinks(
       {
-        aasa: aasa(["96XKP6MU2A.be.zias.smog"], ["/gestures/*", "/lists/*"]),
+        aasa: aasa(["96XKP6MU2A.be.zias.smog"], AASA_PATHS),
         assetlinks: assetlinks("be.zias.other", ["23:4a:f1"]),
         headers: HEADERS,
       },
@@ -340,7 +370,7 @@ describe("checkAppLinks", () => {
   test("requires both files to be served as application/json", () => {
     const errors = checkAppLinks(
       {
-        aasa: aasa(["96XKP6MU2A.be.zias.smog"], ["/gestures/*", "/lists/*"]),
+        aasa: aasa(["96XKP6MU2A.be.zias.smog"], AASA_PATHS),
         assetlinks: assetlinks("be.zias.smog", [FINGERPRINT]),
         headers:
           "/.well-known/assetlinks.json\n  Content-Type: application/json\n",

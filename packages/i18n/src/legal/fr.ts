@@ -23,13 +23,13 @@ export const fr: LegalTexts = {
           {
             list: [
               "**Compte et connexion\u202f:** nom, adresse e-mail et sa vérification, langue, rôle, éventuellement une photo de profil de Google ou d'Apple, sessions (avec l'adresse IP et les données du navigateur ou de l'application) et horodatages. Un mot de passe n'est conservé que sous forme de hachage irréversible\u202f; d'une clé d'accès (passkey), nous ne conservons que la clé publique. Si vous vous connectez avec Google ou Apple, ils nous transmettent un identifiant de compte, votre nom et votre adresse e-mail.",
-              "**Utilisation sans compte\u202f:** les favoris, les listes, les recherches récentes, les préférences et votre choix concernant les statistiques restent sur votre appareil. Ils ne quittent pas votre appareil, sauf si, après vous être connecté, vous choisissez de les importer dans votre compte.",
+              "**Utilisation sans compte\u202f:** les favoris, les listes, les recherches récentes, les préférences et votre choix concernant les statistiques restent sur votre appareil. Ils ne quittent pas votre appareil, sauf si, après vous être connecté, vous choisissez de les importer dans votre compte, et hormis les statistiques facultatives ci-dessous (par exemple le geste que vous avez regardé ou enregistré).",
               "**Fonctions d'apprentissage\u202f:** gestes favoris, listes, descriptions de listes, liens de partage et leurs droits (consulter ou modifier). Les termes de recherche récents restent localement sur votre appareil.",
               "**Parrainage\u202f:** nom de contact, nom du sponsor ou de l'entreprise, e-mail, gestes choisis, nom affiché, logo facultatif, vidéos d'aperçu et finales, statut, référence de paiement et durée.",
               "**Facturation\u202f:** nom de facturation, numéro de TVA ou d'entreprise et adresse e-mail de facturation lorsque vous demandez une facture. Mollie traite les données de paiement\u202f; SMOG&Co ne reçoit pas les données complètes de carte ou de compte bancaire.",
-              "**Données techniques\u202f:** adresse IP, données de l'appareil, du navigateur et de l'application, journaux de sécurité, informations d'erreur et données nécessaires à la diffusion des vidéos et au trafic réseau. Lors de la connexion et de l'inscription, Cloudflare Turnstile vérifie que la demande provient d'un humain.",
+              "**Données techniques\u202f:** adresse IP, données de l'appareil, du navigateur et de l'application, journaux de sécurité, informations d'erreur et données nécessaires à la diffusion des vidéos et au trafic réseau. Lors de la connexion, de l'inscription, de la réinitialisation du mot de passe et d'autres formulaires (comme la demande d'un code ou d'un lien de connexion), Cloudflare Turnstile vérifie que la demande provient d'un humain.",
               "**Historique du consentement\u202f:** lorsque vous êtes connecté, nous conservons vos choix concernant les statistiques (oui ou non, moment et version de la politique), afin de pouvoir démontrer quel choix s'applique.",
-              "**Statistiques facultatives\u202f:** uniquement avec votre consentement\u202f: chemin de l'écran, plateforme, données d'événement limitées, identifiants de gestes, nombres de résultats et de catégories, longueur d'une recherche et lecture terminée. Nous n'envoyons ni termes de recherche, ni noms, ni adresses e-mail et n'enregistrons pas les sessions.",
+              "**Statistiques facultatives\u202f:** uniquement avec votre consentement\u202f: chemin de l'écran, plateforme, données d'événement limitées, identifiants de gestes, nombres de résultats et de catégories, longueur d'une recherche et lecture terminée, avec votre adresse IP et les données de votre navigateur ou de l'application (voir Statistiques et identification). Nous n'envoyons ni termes de recherche, ni noms, ni adresses e-mail et n'enregistrons pas les sessions.",
             ],
           },
         ],
@@ -55,7 +55,7 @@ export const fr: LegalTexts = {
           "Seuls les collaborateurs autorisés et les prestataires qui soutiennent le Service y ont accès, dans la mesure nécessaire\u202f:",
           {
             list: [
-              "**Cloudflare\u202f:** hébergement du site web et de l'API (Workers), de la base de données (D1), stockage de fichiers comme les logos des sponsors (R2), données temporaires (KV), files d'attente (Queues), envoi des e-mails (Email) et prévention des abus (Turnstile). [Politique de confidentialité](https://www.cloudflare.com/privacypolicy/)",
+              "**Cloudflare\u202f:** hébergement du site web et de l'API (Workers), de la base de données (D1), stockage de fichiers comme les logos des sponsors (R2), données temporaires (KV), files d'attente (Queues), génération des vidéos de parrainage avec le nom et le logo (Workflows, Containers), envoi des e-mails (Email) et prévention des abus (Turnstile). [Politique de confidentialité](https://www.cloudflare.com/privacypolicy/)",
               "**Better Auth\u202f:** logiciel de connexion open source que nous faisons fonctionner nous-mêmes dans notre environnement Cloudflare. Aucune donnée n'est envoyée à un prestataire distinct pour cela.",
               "**Mux\u202f:** stockage, traitement et diffusion des vidéos de gestes et de parrainage. [Politique de confidentialité](https://www.mux.com/privacy)",
               "**Mollie\u202f:** traitement hébergé des paiements et statut des paiements. [Politique de confidentialité](https://www.mollie.com/legal/privacy)",
@@ -71,7 +71,7 @@ export const fr: LegalTexts = {
       },
       {
         blocks: [
-          "Les statistiques sont désactivées par défaut. Avec votre consentement, le site web et l'application utilisent un profil d'appareil anonyme. Le site web transmet les événements par notre propre serveur, sans scripts ni cookies de tiers. Après la connexion, le profil n'est lié qu'à votre identifiant d'utilisateur\u202f; votre nom et votre adresse e-mail ne sont pas envoyés aux statistiques. La déconnexion ou le retrait du consentement efface l'identité statistique. Le retrait arrête les nouvelles mesures\u202f; les données collectées légalement auparavant ne sont pas supprimées automatiquement. Vous pouvez en demander la suppression à notre adresse de contact.",
+          "Les statistiques sont désactivées par défaut. Avec votre consentement, le site web transmet les événements par notre propre serveur à notre installation OpenPanel auto-hébergée, sans scripts ni cookies de tiers. Notre serveur transmet votre adresse IP et les données de votre navigateur (user agent)\u202f; OpenPanel en déduit un profil d'appareil pseudonyme et une localisation approximative (pays et région). Notre serveur ne conserve pas ces données à cette fin. L'application envoie les événements directement à la même installation OpenPanel, avec un identifiant d'appareil pseudonyme. Après la connexion, le profil n'est lié qu'à votre identifiant d'utilisateur\u202f; votre nom et votre adresse e-mail ne sont pas envoyés aux statistiques. La déconnexion ou le retrait du consentement efface l'identité statistique. Le retrait arrête les nouvelles mesures\u202f; les données collectées légalement auparavant ne sont pas supprimées automatiquement. Vous pouvez en demander la suppression à notre adresse de contact.",
         ],
         id: "analytics",
         title: "Statistiques et identification",
@@ -89,7 +89,7 @@ export const fr: LegalTexts = {
             list: [
               "Des cookies nécessaires maintiennent votre session active lorsque vous êtes connecté et retiennent votre langue et votre thème.",
               "Le stockage local conserve notamment les favoris et les listes sans compte, les recherches récentes, les préférences, le cache de l'application et votre choix concernant les statistiques.",
-              "Avec le consentement aux statistiques, le site web et l'application peuvent conserver localement des données d'identification et de file d'attente pour transmettre les événements.",
+              "Avec le consentement aux statistiques, l'application peut conserver localement des données d'identification et de file d'attente pour transmettre les événements. Le site web ne conserve qu'un marqueur temporaire dans le stockage de session de votre navigateur pendant la connexion, afin qu'une connexion réussie soit comptée une seule fois.",
             ],
           },
           "Vous pouvez modifier votre choix concernant les statistiques ci-dessous à tout moment\u202f:",
@@ -102,8 +102,9 @@ export const fr: LegalTexts = {
         blocks: [
           {
             list: [
-              "Les données du compte, les favoris et les listes sont conservés tant que votre compte existe ou jusqu'à ce que vous les supprimiez.",
+              "Les données du compte, les favoris, les listes et votre historique du consentement sont conservés tant que votre compte existe ou jusqu'à ce que vous les supprimiez.",
               "Les journaux d'administration sont conservés au maximum 3 ans.",
+              "Une session expire 7 jours après votre dernière utilisation du Service, ou immédiatement lorsque vous vous déconnectez. Les codes et liens de connexion sont à usage unique et valables 5 minutes\u202f; les liens de vérification de l'adresse e-mail ou de réinitialisation du mot de passe, 1 heure. Les sessions, codes et liens expirés sont effacés dans les 30 jours.",
               "Les demandes de parrainage non payées sont annulées après 24 heures. Les fichiers techniques sous-jacents peuvent disparaître plus tard, selon les cycles opérationnels de sauvegarde et de nettoyage.",
               "Les données de paiement, de sponsor et de facturation sont conservées aussi longtemps que nécessaire pour le contrat et jusqu'à 10 ans lorsque les règles comptables ou fiscales belges l'exigent.",
               "Les données statistiques sont conservées selon la durée de conservation définie dans notre installation OpenPanel et pas plus longtemps que nécessaire pour l'analyse du produit.",
@@ -115,7 +116,7 @@ export const fr: LegalTexts = {
       },
       {
         blocks: [
-          "Vous pouvez supprimer votre compte sur la [page du compte](/account). Cela supprime immédiatement votre compte, vos sessions, vos méthodes de connexion et clés d'accès, vos favoris, vos propres listes avec leurs liens de partage et votre historique du consentement\u202f; les journaux d'administration qui vous concernent en sont détachés. Vous êtes déconnecté sur tous les appareils et les données de l'appareil utilisé sont effacées. Les données de sponsor, de paiement et de facturation ne sont pas liées à votre compte et sont conservées aussi longtemps que la loi l'exige (voir Durées de conservation). Les sauvegardes et les données chez des prestataires distincts peuvent suivre leur propre cycle de suppression.",
+          "Vous pouvez supprimer votre compte sur la [page du compte](/account). Cela supprime immédiatement votre compte, vos sessions, vos méthodes de connexion et clés d'accès, vos favoris, vos propres listes avec leurs liens de partage et votre historique du consentement. Dans les journaux d'administration, vous êtes détaché en tant qu'auteur\u202f; les journaux d'administration concernant votre compte subsistent jusqu'à la fin de leur durée de conservation. Vous êtes déconnecté sur tous les appareils et les données de l'appareil utilisé sont effacées. Les données de sponsor, de paiement et de facturation ne sont pas liées à votre compte et sont conservées aussi longtemps que la loi l'exige (voir Durées de conservation). Les sauvegardes et les données chez des prestataires distincts peuvent suivre leur propre cycle de suppression.",
         ],
         id: "deletion",
         title: "Suppression du compte",

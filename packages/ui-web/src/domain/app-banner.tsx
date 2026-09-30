@@ -9,6 +9,7 @@ import {
 import { Badge } from "../components/badge";
 import { buttonVariants } from "../components/button";
 import { IconButton } from "../components/icon-button";
+import { TextLink } from "../components/text-link";
 import { cn } from "../lib/cn";
 import { focusRing, stateLayer, transition } from "../lib/variants";
 
@@ -119,6 +120,8 @@ export interface OpenInAppBannerProps
   href: string;
   /** Called on click, before the browser follows `href` (it may prevent that). */
   onOpen?: MouseEventHandler<HTMLAnchorElement>;
+  /** A "Get the app" store link beside it (the site passes it on iOS). */
+  storeUrl?: string;
 }
 
 /**
@@ -130,6 +133,7 @@ export function OpenInAppBanner({
   className,
   href,
   onOpen,
+  storeUrl,
   ...props
 }: OpenInAppBannerProps): ReactNode {
   const { t } = useTranslation();
@@ -154,6 +158,16 @@ export function OpenInAppBanner({
         <p className="text-body-sm text-foreground-muted">
           {t("openInApp.description")}
         </p>
+        {storeUrl ? (
+          <TextLink
+            className="self-start text-body-sm underline"
+            href={storeUrl}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {t("openInApp.getApp")}
+          </TextLink>
+        ) : null}
       </div>
       <a className={buttonVariants()} href={href} onClick={onOpen}>
         {t("openInApp.action")}

@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { CONSENT_POLICY_VERSION, LOCALES } from "@smog/config/constants";
 import {
   LEGAL_CANONICAL_LOCALE,
+  LEGAL_EFFECTIVE_DATE,
   LEGAL_KINDS,
-  LEGAL_UPDATED,
   type LegalBlock,
   legalDocument,
   parseLegalInline,
@@ -16,6 +16,7 @@ const DPA_SITES = [
   "autoriteprotectiondonnees.be",
 ];
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ANCHOR = /^[a-z]+(?:-[a-z]+)*$/;
 
 function shape(block: LegalBlock): string {
@@ -77,9 +78,11 @@ describe("parseLegalInline", () => {
 });
 
 describe("the legal texts (spec §9, inventory P-07, P-08)", () => {
-  test("Dutch is canonical and the privacy date is the consent policy version", () => {
+  test("Dutch is canonical; the effective date is its own and not before the consent version", () => {
     expect(LEGAL_CANONICAL_LOCALE).toBe("nl");
-    expect(LEGAL_UPDATED.privacy).toBe(CONSENT_POLICY_VERSION);
+    // Own date (review M2); a consent refers to a policy already in force.
+    expect(LEGAL_EFFECTIVE_DATE).toMatch(ISO_DATE);
+    expect(CONSENT_POLICY_VERSION <= LEGAL_EFFECTIVE_DATE).toBe(true);
   });
 
   test("the old section counts: 16 for privacy, 15 for the terms", () => {
@@ -162,6 +165,19 @@ describe("the legal texts (spec §9, inventory P-07, P-08)", () => {
       expect(text).toContain("3 ");
       expect(text).toContain("24 ");
       expect(text).toContain("10 ");
+      // Analytics is pseudonymous and carries the IP (review I3).
+      expect(text).toContain("pseudon");
+      expect(text).toContain("OpenPanel");
+      for (const claim of [
+        "anoniem apparaatprofiel",
+        "anonymous device profile",
+        "profil d'appareil anonyme",
+      ]) {
+        expect(text, `${locale}: ${claim}`).not.toContain(claim);
+      }
+      // Retention for sessions and codes (review I4): 7 days, 5 min, 1 h.
+      expect(text).toContain("7 ");
+      expect(text).toContain("5 minut");
       // No server-side guest retention any more.
       expect(text).not.toContain("12 ");
     }

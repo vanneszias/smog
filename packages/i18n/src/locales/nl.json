@@ -649,14 +649,17 @@
   "openInApp": {
     "title": "Heb je de SMOG-app?",
     "description": "Bekijk dit gebaar in de app.",
-    "action": "Open in de app"
+    "action": "Open in de app",
+    "getApp": "Nog geen app? Download hem"
   },
   "legal": {
     "lastUpdated": "Laatst bijgewerkt op {{date}}",
     "contents": "Inhoud",
     "translationNotice": "Deze vertaling is er voor je gemak; de Nederlandse versie heeft voorrang.",
     "readDutch": "Lees de Nederlandse versie",
-    "consentControl": "Je keuze voor statistieken"
+    "consentControl": "Je keuze voor statistieken",
+    "readingDutch": "Je leest de Nederlandse versie, die voorrang heeft.",
+    "showTranslation": "Toon de vertaling"
   },
   "gestures": {
     "description": "Zoek SMOG-gebaren op woord of categorie en bekijk ze in video.",

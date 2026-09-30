@@ -25,8 +25,6 @@ const MAC_UA = /macintosh/i;
 const LEADING_SLASHES = /^\/+/;
 /** Below `lg` (the old breakpoint): a touch screen this narrow is a tablet. */
 const TABLET_MAX_WIDTH = 1024;
-/** How long the iOS scheme gets to open the app before the store fallback. */
-const OPEN_IN_APP_FALLBACK_MS = 500;
 
 /** A phone or tablet: its user agent, or touch on a screen narrower than `lg`. */
 export function isMobileBrowser(traits: BrowserTraits): boolean {
@@ -48,10 +46,10 @@ export function mobilePlatform(traits: BrowserTraits): MobilePlatform {
 }
 
 export interface OpenInAppPlan {
-  /** Where the app store is, if the app did not take over in time (iOS). */
-  fallback?: string;
   /** The link that opens the app. */
   href: string;
+  /** A separate "Get the app" link the page shows (iOS). */
+  storeUrl?: string;
 }
 
 /**
@@ -63,8 +61,10 @@ export interface OpenInAppPlan {
  * ignore same-site taps). So on a phone the click goes through the app:
  * - Android: an `intent:` link to the package; Chrome opens Google Play
  *   when the app is missing (`S.browser_fallback_url`).
- * - iOS: `smog://<path>`, then the App Store if the page is still visible
- *   after `OPEN_IN_APP_FALLBACK_MS`.
+ * - iOS: `smog://<path>` only. There is no timed store fallback: Safari's
+ *   "Open in the app?" sheet keeps the page visible, so a timer would send
+ *   people who have the app to the App Store (review I1). The page shows a
+ *   separate App Store link instead (`storeUrl`).
  * Elsewhere (`null`) the universal link is simply followed.
  */
 export function openInAppPlan(
@@ -73,7 +73,7 @@ export function openInAppPlan(
 ): OpenInAppPlan | null {
   const rest = path.replace(LEADING_SLASHES, "");
   if (platform === "ios") {
-    return { fallback: APP_STORE_URL, href: `${APP_SCHEME}://${rest}` };
+    return { href: `${APP_SCHEME}://${rest}`, storeUrl: APP_STORE_URL };
   }
   if (platform === "android") {
     const fallback = encodeURIComponent(PLAY_STORE_URL);
@@ -84,19 +84,29 @@ export function openInAppPlan(
   return null;
 }
 
-/** Follows a plan in this browser tab (the store if the app did not open). */
-export function followOpenInAppPlan(plan: OpenInAppPlan): void {
-  window.location.href = plan.href;
-  const { fallback } = plan;
-  if (!fallback) {
-    return;
-  }
-  window.setTimeout(() => {
-    // The app took over: the page went to the background.
-    if (document.visibilityState === "visible") {
-      window.location.href = fallback;
-    }
-  }, OPEN_IN_APP_FALLBACK_MS);
+export interface AppBannerGate {
+  /** `useConsent()` is ready and no decision is pending. */
+  consentDecided: boolean;
+  /** `preferences.appBannerDismissedAt` is set on this device. */
+  dismissed: boolean;
+  /** `useMobilePlatform()`: `null` on the server, before hydration and on desktops. */
+  platform: MobilePlatform | null;
+  /** The device store has been read (its defaults would show it too early). */
+  storeLoaded: boolean;
+}
+
+/**
+ * The home page's app banner (inventory L-16): phones only, once the
+ * consent decision is made (never stacked with the consent banner), until
+ * it is dismissed on this device.
+ */
+export function shouldShowAppBanner(gate: AppBannerGate): boolean {
+  return (
+    gate.platform !== null &&
+    gate.consentDecided &&
+    gate.storeLoaded &&
+    !gate.dismissed
+  );
 }
 
 function currentTraits(): BrowserTraits {

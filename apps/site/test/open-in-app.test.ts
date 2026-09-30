@@ -4,6 +4,7 @@ import {
   isMobileBrowser,
   mobilePlatform,
   openInAppPlan,
+  shouldShowAppBanner,
 } from "../src/lib/open-in-app";
 
 const IPHONE =
@@ -54,10 +55,12 @@ describe("mobilePlatform", () => {
 });
 
 describe("openInAppPlan", () => {
-  it("iOS: the smog:// link, then the App Store if the page is still shown", () => {
+  it("iOS: the smog:// link only, with a separate App Store link (review I1)", () => {
+    // No timed fallback: Safari's "Open in the app?" sheet keeps the page
+    // visible, so a timer would send users who have the app to the store.
     expect(openInAppPlan("/gestures/goede-morgen", "ios")).toEqual({
-      fallback: "https://apps.apple.com/app/smog-co/id6758547774",
       href: "smog://gestures/goede-morgen",
+      storeUrl: "https://apps.apple.com/app/smog-co/id6758547774",
     });
   });
 
@@ -75,5 +78,31 @@ describe("openInAppPlan", () => {
     expect(openInAppPlan("/gestures/a%20b", "ios")?.href).toBe(
       "smog://gestures/a%20b"
     );
+  });
+});
+
+describe("shouldShowAppBanner (inventory L-16)", () => {
+  const shown = {
+    consentDecided: true,
+    dismissed: false,
+    platform: "ios",
+    storeLoaded: true,
+  } as const;
+
+  it("shows on a phone once the consent is decided and the store is read", () => {
+    expect(shouldShowAppBanner(shown)).toBe(true);
+    expect(shouldShowAppBanner({ ...shown, platform: "android" })).toBe(true);
+  });
+
+  it("waits for the consent decision, so the two prompts never stack", () => {
+    expect(shouldShowAppBanner({ ...shown, consentDecided: false })).toBe(
+      false
+    );
+  });
+
+  it("stays hidden before hydration, on desktops and once dismissed", () => {
+    expect(shouldShowAppBanner({ ...shown, platform: null })).toBe(false);
+    expect(shouldShowAppBanner({ ...shown, storeLoaded: false })).toBe(false);
+    expect(shouldShowAppBanner({ ...shown, dismissed: true })).toBe(false);
   });
 });

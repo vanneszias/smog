@@ -656,14 +656,17 @@
   "openInApp": {
     "title": "Vous avez l'application SMOG\u202f?",
     "description": "Regardez ce geste dans l'application.",
-    "action": "Ouvrir dans l'application"
+    "action": "Ouvrir dans l'application",
+    "getApp": "Obtenir l'application"
   },
   "legal": {
     "lastUpdated": "Dernière mise à jour le {{date}}",
     "contents": "Sommaire",
     "translationNotice": "Cette traduction est fournie pour votre commodité\u202f; la version néerlandaise prévaut.",
     "readDutch": "Lire la version néerlandaise",
-    "consentControl": "Votre choix pour les statistiques"
+    "consentControl": "Votre choix pour les statistiques",
+    "readingDutch": "Vous lisez la version néerlandaise, qui prévaut.",
+    "showTranslation": "Afficher la traduction française"
   },
   "gestures": {
     "description": "Cherchez les gestes SMOG par mot ou par catégorie et regardez-les en vidéo.",

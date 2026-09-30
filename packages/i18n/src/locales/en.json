@@ -649,14 +649,17 @@
   "openInApp": {
     "title": "Have the SMOG app?",
     "description": "View this gesture in the app.",
-    "action": "Open in the app"
+    "action": "Open in the app",
+    "getApp": "Get the app"
   },
   "legal": {
     "lastUpdated": "Last updated on {{date}}",
     "contents": "Contents",
     "translationNotice": "This translation is provided for convenience; the Dutch version prevails.",
     "readDutch": "Read the Dutch version",
-    "consentControl": "Your statistics choice"
+    "consentControl": "Your statistics choice",
+    "readingDutch": "You are reading the Dutch version, which prevails.",
+    "showTranslation": "Show the English translation"
   },
   "gestures": {
     "description": "Look up SMOG gestures by word or category and watch them on video.",

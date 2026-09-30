@@ -85,4 +85,21 @@ describe("OpenInAppBanner", () => {
     await userEvent.click(link);
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
+
+  test("shows a separate store link only when given one (review I1)", () => {
+    const { unmount } = renderKit(
+      <OpenInAppBanner href="https://smog.test/gestures/hallo" />
+    );
+    expect(screen.queryByRole("link", { name: "Get the app" })).toBeNull();
+    unmount();
+    renderKit(
+      <OpenInAppBanner
+        href="https://smog.test/gestures/hallo"
+        storeUrl={APP_STORE}
+      />
+    );
+    const store = screen.getByRole("link", { name: "Get the app" });
+    expect(store.getAttribute("href")).toBe(APP_STORE);
+    expect(store.getAttribute("target")).toBe("_blank");
+  });
 });

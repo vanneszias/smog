@@ -1,4 +1,4 @@
-import { CONSENT_POLICY_VERSION, type Locale } from "@smog/config/constants";
+import type { Locale } from "@smog/config/constants";
 import { en } from "./en";
 import { fr } from "./fr";
 import { nl } from "./nl";
@@ -21,14 +21,12 @@ export const LEGAL_KINDS = [
 export const LEGAL_CANONICAL_LOCALE: Locale = "nl";
 
 /**
- * When each text last changed (ISO date). The privacy policy's date is the
- * policy version a consent decision refers to, so a change there that
- * affects analytics comes with a new `CONSENT_POLICY_VERSION`.
+ * The date both texts take effect (ISO date), shown as "last updated". The
+ * owner sets it at cutover (docs/LEGAL-SIGNOFF.md). It is independent of
+ * `CONSENT_POLICY_VERSION`, so correcting it never asks for consent again;
+ * a test keeps the consent version no later than it (review M2).
  */
-export const LEGAL_UPDATED: Readonly<Record<LegalKind, string>> = {
-  privacy: CONSENT_POLICY_VERSION,
-  terms: "2026-09-29",
-};
+export const LEGAL_EFFECTIVE_DATE = "2026-09-30";
 
 const TEXTS: Readonly<Record<Locale, LegalTexts>> = { en, fr, nl };
 

@@ -160,9 +160,11 @@ function GesturePage(): ReactNode {
   const viewSource = useViewSource(gesture.data !== undefined);
   return (
     <Page>
-      <OpenInApp path={gestureHref(slug)} />
       {gesture.data ? (
         <GestureDetailView
+          // Under the actions, not above the video: it mounts after
+          // hydration, so the video never moves (review M6).
+          appLink={<OpenInApp path={gestureHref(slug)} />}
           gesture={gesture.data}
           hearts={hearts}
           layout="page"

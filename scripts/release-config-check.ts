@@ -349,6 +349,8 @@ export interface AppLinkIdentity {
   bundleId: string;
   /** The verified https intent filters' `pathPrefix`es, e.g. `/gestures/`. */
   pathPrefixes: string[];
+  /** Their exact `path`s, e.g. `/magic-link/app` (no wildcard in the AASA). */
+  paths: string[];
   teamId: string;
 }
 
@@ -381,20 +383,23 @@ export function appLinkIdentity(config: unknown): AppLinkIdentity | string[] {
       `${APP_CONFIG}: ios.appleTeamId, ios.bundleIdentifier and android.package are required`,
     ];
   }
-  const pathPrefixes = asArray(android.intentFilters)
+  const verified = asArray(android.intentFilters)
     .filter((filter) => isRecord(filter) && filter.autoVerify === true)
     .flatMap((filter) => asArray(isRecord(filter) ? filter.data : undefined))
-    .flatMap((data) =>
-      isRecord(data) &&
-      data.scheme === "https" &&
-      typeof data.pathPrefix === "string"
-        ? [data.pathPrefix]
-        : []
+    .filter(
+      (data): data is Record<string, unknown> =>
+        isRecord(data) && data.scheme === "https"
     );
+  const strings = (key: "path" | "pathPrefix"): string[] =>
+    verified.flatMap((data) => {
+      const value = data[key];
+      return typeof value === "string" ? [value] : [];
+    });
   return {
     androidPackage,
     bundleId: bundleIdentifier,
-    pathPrefixes,
+    pathPrefixes: strings("pathPrefix"),
+    paths: strings("path"),
     teamId: appleTeamId,
   };
 }
@@ -432,7 +437,10 @@ function checkAasa(source: string, app: AppLinkIdentity): string[] {
   if (!sameList(appIDs.map(String), [appId])) {
     errors.push(`${AASA_FILE}: appIDs must be ${JSON.stringify([appId])}`);
   }
-  const expected = app.pathPrefixes.map((prefix) => `${prefix}*`);
+  const expected = [
+    ...app.pathPrefixes.map((prefix) => `${prefix}*`),
+    ...app.paths,
+  ];
   if (!sameList(paths, expected)) {
     errors.push(
       `${AASA_FILE}: components must be ${JSON.stringify(expected)} (app.config.ts intent filters)`

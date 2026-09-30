@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 
 const ORIGIN = "http://localhost:5173";
 const NOTICE = 'role="note"';
+const DUTCH_ARTICLE =
+  /<article[^>]*lang="nl"[^>]*>[\s\S]*<h1[^>]*>Privacybeleid<\/h1>/;
 const CANONICAL_PRIVACY =
   /<link (?=[^>]*rel="canonical")(?=[^>]*href="http:\/\/localhost:5173\/privacy")[^>]*>/;
 
@@ -22,19 +24,19 @@ describe("/privacy and /terms (spec §9, inventory P-07, P-08, R-16)", () => {
       "nl",
       "Privacybeleid",
       "Verwerkingsverantwoordelijke",
-      "Laatst bijgewerkt op 29 september 2026",
+      "Laatst bijgewerkt op 30 september 2026",
     ],
     [
       "en",
       "Privacy policy",
       "Data controller",
-      "Last updated on 29 September 2026",
+      "Last updated on 30 September 2026",
     ],
     [
       "fr",
       "Politique de confidentialité",
       "Responsable du traitement",
-      "Dernière mise à jour le 29 septembre 2026",
+      "Dernière mise à jour le 30 septembre 2026",
     ],
   ])(
     "renders the privacy policy in %s",
@@ -75,6 +77,24 @@ describe("/privacy and /terms (spec §9, inventory P-07, P-08, R-16)", () => {
     const fr = await page("/privacy", "fr");
     expect(fr.body).toContain(NOTICE);
     expect(fr.body).toContain("la version néerlandaise prévaut");
+  });
+
+  it("shows the Dutch text in place for ?lang=nl, changing no setting (review I2)", async () => {
+    const en = await page("/terms", "en");
+    expect(en.body).toContain('href="/terms?lang=nl"');
+    const { body, response } = await page("/privacy?lang=nl", "en");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toBeNull();
+    // The site stays English; only the legal text is Dutch.
+    expect(body).toContain('<html lang="en"');
+    expect(body).toMatch(DUTCH_ARTICLE);
+    expect(body).toContain(
+      "You are reading the Dutch version, which prevails."
+    );
+    expect(body).toContain('href="/privacy"');
+    // Dutch readers never see the switch.
+    const nl = await page("/privacy?lang=nl", "nl");
+    expect(nl.body).not.toContain(NOTICE);
   });
 
   it("puts the analytics switch in the cookies section", async () => {

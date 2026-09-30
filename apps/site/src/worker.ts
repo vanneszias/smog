@@ -1,5 +1,6 @@
 import handler from "@tanstack/react-start/server-entry";
 import { legacyRedirect } from "@/lib/legacy-redirects";
+import { loadCategorySlugs } from "@/server/legacy-categories";
 
 /**
  * Site Worker entry. `fetch` answers the old site's URLs with their 301
@@ -8,8 +9,9 @@ import { legacyRedirect } from "@/lib/legacy-redirects";
  * later phases.
  */
 export default {
-  fetch(request: Request): Promise<Response> | Response {
-    return legacyRedirect(request) ?? handler.fetch(request);
+  async fetch(request: Request): Promise<Response> {
+    const redirect = await legacyRedirect(request, loadCategorySlugs);
+    return redirect ?? (await handler.fetch(request));
   },
 
   queue(batch: MessageBatch): void {

@@ -27,13 +27,13 @@ export const nl: LegalTexts = {
           {
             list: [
               "**Account en aanmelding:** naam, e-mailadres en of het bevestigd is, taal, rol, eventueel een profielfoto van Google of Apple, sessies (met IP-adres en browser- of appgegevens) en tijdstippen. Een wachtwoord bewaren we alleen als onomkeerbare hash; van een passkey bewaren we alleen de publieke sleutel. Meldt u zich aan met Google of Apple, dan ontvangen we van hen een account-ID, uw naam en uw e-mailadres.",
-              "**Gebruik zonder account:** favorieten, lijsten, recente zoekopdrachten, voorkeuren en uw analyticskeuze blijven op uw apparaat. Ze verlaten uw apparaat niet, tenzij u na het aanmelden kiest om ze in uw account te importeren.",
+              "**Gebruik zonder account:** favorieten, lijsten, recente zoekopdrachten, voorkeuren en uw analyticskeuze blijven op uw apparaat. Ze verlaten uw apparaat niet, tenzij u na het aanmelden kiest om ze in uw account te importeren, en behalve de optionele analytics hieronder (bijvoorbeeld welk gebaar u bekeek of bewaarde).",
               "**Leerfuncties:** favoriete gebaren, lijsten, lijstbeschrijvingen, deellinks en hun rechten (bekijken of bewerken). Recente zoektermen blijven lokaal op uw apparaat.",
               "**Sponsoring:** contactnaam, sponsor- of bedrijfsnaam, e-mail, gekozen gebaren, weergavenaam, optioneel logo, voorbeeld- en eindvideo's, status, betaalreferentie en looptijd.",
               "**Facturatie:** factuurnaam, btw- of ondernemingsnummer en factuur-e-mailadres wanneer u een factuur vraagt. Mollie verwerkt de betaalgegevens; SMOG&Co ontvangt geen volledige kaart- of bankgegevens.",
-              "**Technische gegevens:** IP-adres, apparaat-, browser- en appgegevens, beveiligingslogs, foutinformatie en gegevens die nodig zijn voor video- en netwerklevering. Bij het aanmelden en registreren controleert Cloudflare Turnstile of het verzoek van een mens komt.",
+              "**Technische gegevens:** IP-adres, apparaat-, browser- en appgegevens, beveiligingslogs, foutinformatie en gegevens die nodig zijn voor video- en netwerklevering. Bij aanmelden, registreren, wachtwoordherstel en andere formulieren (zoals het aanvragen van een aanmeldcode of -link) controleert Cloudflare Turnstile of het verzoek van een mens komt.",
               "**Toestemmingsgeschiedenis:** bent u aangemeld, dan bewaren we uw analyticskeuzes (ja of nee, tijdstip en beleidsversie), zodat we kunnen aantonen welke keuze geldt.",
-              "**Optionele analytics:** alleen na toestemming: schermpad, platform, beperkte gebeurtenisgegevens, gebaar-ID's, resultaat- en categorietellingen, lengte van een zoekopdracht en voltooid afspelen. We sturen geen zoektermen, namen of e-mailadressen en maken geen sessie-opnames.",
+              "**Optionele analytics:** alleen na toestemming: schermpad, platform, beperkte gebeurtenisgegevens, gebaar-ID's, resultaat- en categorietellingen, lengte van een zoekopdracht en voltooid afspelen, met uw IP-adres en browser- of appgegevens (zie Analytics en identificatie). We sturen geen zoektermen, namen of e-mailadressen en maken geen sessie-opnames.",
             ],
           },
         ],
@@ -59,7 +59,7 @@ export const nl: LegalTexts = {
           "Alleen bevoegde medewerkers en dienstverleners die de Dienst ondersteunen krijgen toegang voor zover dat nodig is:",
           {
             list: [
-              "**Cloudflare:** hosting van de website en de API (Workers), de database (D1), bestandsopslag zoals sponsorlogo's (R2), tijdelijke gegevens (KV), wachtrijen (Queues), het verzenden van e-mails (Email) en misbruikpreventie (Turnstile). [Privacybeleid](https://www.cloudflare.com/privacypolicy/)",
+              "**Cloudflare:** hosting van de website en de API (Workers), de database (D1), bestandsopslag zoals sponsorlogo's (R2), tijdelijke gegevens (KV), wachtrijen (Queues), het renderen van sponsorvideo's met naam en logo (Workflows, Containers), het verzenden van e-mails (Email) en misbruikpreventie (Turnstile). [Privacybeleid](https://www.cloudflare.com/privacypolicy/)",
               "**Better Auth:** open-source aanmeldsoftware die wij zelf binnen onze Cloudflare-omgeving draaien. Er gaan daarvoor geen gegevens naar een aparte aanbieder.",
               "**Mux:** opslag, verwerking en streaming van gebaren- en sponsorvideo's. [Privacybeleid](https://www.mux.com/privacy)",
               "**Mollie:** gehoste betaalafhandeling en betaalstatus. [Privacybeleid](https://www.mollie.com/legal/privacy)",
@@ -75,7 +75,7 @@ export const nl: LegalTexts = {
       },
       {
         blocks: [
-          "Analytics staat standaard uit. Na toestemming gebruiken de website en de app een anoniem apparaatprofiel. De website stuurt gebeurtenissen via onze eigen server door, zonder scripts of cookies van derden. Na aanmelding wordt het profiel alleen aan uw gebruikers-ID gekoppeld; uw naam en e-mailadres gaan niet naar analytics. Bij uitloggen of intrekken wordt de analytics-identiteit gewist. Intrekken stopt nieuwe metingen; eerder rechtmatig verzamelde gegevens worden daardoor niet automatisch verwijderd. U kunt verwijdering aanvragen via ons contactadres.",
+          "Analytics staat standaard uit. Na toestemming stuurt de website gebeurtenissen via onze eigen server door naar onze zelfgehoste OpenPanel-installatie, zonder scripts of cookies van derden. Onze server geeft daarbij uw IP-adres en browsergegevens (user agent) door; OpenPanel leidt daaruit een pseudoniem apparaatprofiel en een benaderende locatie (land en regio) af. Onze server bewaart die gegevens daarvoor zelf niet. De app stuurt gebeurtenissen rechtstreeks naar dezelfde OpenPanel-installatie, met een pseudonieme apparaat-ID. Na aanmelding wordt het profiel alleen aan uw gebruikers-ID gekoppeld; uw naam en e-mailadres gaan niet naar analytics. Bij uitloggen of intrekken wordt de analytics-identiteit gewist. Intrekken stopt nieuwe metingen; eerder rechtmatig verzamelde gegevens worden daardoor niet automatisch verwijderd. U kunt verwijdering aanvragen via ons contactadres.",
         ],
         id: "analytics",
         title: "Analytics en identificatie",
@@ -93,7 +93,7 @@ export const nl: LegalTexts = {
             list: [
               "Noodzakelijke cookies houden uw sessie actief wanneer u aangemeld bent en onthouden uw taal en thema.",
               "Lokale opslag bewaart onder meer favorieten en lijsten zonder account, recente zoekopdrachten, voorkeuren, appcache en uw analyticskeuze.",
-              "Na analytics-toestemming kunnen de website en de app lokale identificatie- en wachtrijgegevens bewaren om gebeurtenissen af te leveren.",
+              "Na analytics-toestemming kan de app lokale identificatie- en wachtrijgegevens bewaren om gebeurtenissen af te leveren. De website bewaart alleen tijdens het aanmelden een tijdelijke markering in de sessie-opslag van uw browser, zodat een voltooide aanmelding één keer wordt geteld.",
             ],
           },
           "U kunt uw analyticskeuze hieronder op elk moment wijzigen:",
@@ -106,8 +106,9 @@ export const nl: LegalTexts = {
         blocks: [
           {
             list: [
-              "Accountgegevens, favorieten en lijsten blijven bewaard zolang uw account bestaat of totdat u ze verwijdert.",
+              "Accountgegevens, favorieten, lijsten en uw toestemmingsgeschiedenis blijven bewaard zolang uw account bestaat of totdat u ze verwijdert.",
               "Beheerlogs worden maximaal 3 jaar bewaard.",
+              "Een sessie verloopt 7 dagen nadat u de Dienst het laatst gebruikte, of meteen wanneer u zich afmeldt. Aanmeldcodes en aanmeldlinks zijn eenmalig en 5 minuten geldig; links om uw e-mailadres te bevestigen of uw wachtwoord te herstellen 1 uur. Verlopen sessies, codes en links worden binnen 30 dagen gewist.",
               "Niet-betaalde sponsoraanvragen worden na 24 uur geannuleerd. Onderliggende technische bestanden kunnen volgens operationele back-up- en opschooncycli later verdwijnen.",
               "Betaal-, sponsor- en factuurgegevens worden bewaard zolang dat nodig is voor de overeenkomst en maximaal 10 jaar wanneer de Belgische boekhoud- of fiscale regels dat vereisen.",
               "Analyticsgegevens worden bewaard volgens de ingestelde bewaartermijn van onze OpenPanel-installatie en niet langer dan nodig voor productanalyse.",
@@ -119,7 +120,7 @@ export const nl: LegalTexts = {
       },
       {
         blocks: [
-          "Op de [accountpagina](/account) kunt u uw account verwijderen. Dat verwijdert meteen uw account, sessies, aanmeldmethodes en passkeys, favorieten, eigen lijsten met hun deellinks en uw toestemmingsgeschiedenis; beheerlogs die naar u verwijzen worden losgekoppeld. U wordt op elk apparaat afgemeld en de gegevens op het gebruikte apparaat worden gewist. Sponsor-, betaal- en factuurgegevens zijn niet aan uw account gekoppeld en worden bewaard zolang de wet dat vereist (zie Bewaartermijnen). Back-ups en gegevens bij afzonderlijke dienstverleners kunnen hun eigen verwijdercyclus volgen.",
+          "Op de [accountpagina](/account) kunt u uw account verwijderen. Dat verwijdert meteen uw account, sessies, aanmeldmethodes en passkeys, favorieten, eigen lijsten met hun deellinks en uw toestemmingsgeschiedenis. In beheerlogs wordt u als uitvoerder losgekoppeld; beheerlogs over uw account blijven tot het einde van hun bewaartermijn bestaan. U wordt op elk apparaat afgemeld en de gegevens op het gebruikte apparaat worden gewist. Sponsor-, betaal- en factuurgegevens zijn niet aan uw account gekoppeld en worden bewaard zolang de wet dat vereist (zie Bewaartermijnen). Back-ups en gegevens bij afzonderlijke dienstverleners kunnen hun eigen verwijdercyclus volgen.",
         ],
         id: "deletion",
         title: "Accountverwijdering",

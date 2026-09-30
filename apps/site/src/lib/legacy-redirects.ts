@@ -83,23 +83,53 @@ function tablePath(
 }
 
 /**
- * `/gestures?category=<Name>[,<Name>]` (the old filter, by name) becomes the
- * slugs (inventory R-02, DECISIONS: `normalizeText` + `slugify`). Current
- * slug URLs are left alone, so this runs once per old link.
+ * Category slugs by `slugify(name)`, from the published categories, so an
+ * old name finds a slug the migration de-duplicated (`gevoelens-2`).
  */
-function categoryTarget(url: URL): string | null {
+export type CategorySlugs = ReadonlyMap<string, string>;
+
+function categoryParts(url: URL): string[] | null {
   const raw = url.searchParams.get("category");
   if (raw === null) {
     return null;
   }
-  const parts = raw
+  return raw
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean);
-  if (parts.every((part) => slugify(part) === part)) {
+}
+
+/** `/gestures` with an old `?category=<Name>`: the redirect needs the categories. */
+export function needsCategoryLookup(url: URL): boolean {
+  if (withoutTrailingSlash(url.pathname) !== GESTURES_PATH) {
+    return false;
+  }
+  const parts = categoryParts(url);
+  return parts?.some((part) => slugify(part) !== part) ?? false;
+}
+
+/**
+ * `/gestures?category=<Name>[,<Name>]` (the old filter, by name) becomes the
+ * slugs (inventory R-02): the category whose name slugifies the same, else
+ * `slugify(name)` (DECISIONS). A category renamed since the old link cannot
+ * be found: the link then filters by a slug that matches nothing. Current
+ * slug URLs are left alone, so this runs once per old link.
+ */
+function categoryTarget(url: URL, known: CategorySlugs): string | null {
+  const parts = categoryParts(url);
+  if (parts === null || parts.every((part) => slugify(part) === part)) {
     return null;
   }
-  const slugs = [...new Set(parts.map(slugify).filter(Boolean))];
+  const slugs = [
+    ...new Set(
+      parts
+        .map((part) => {
+          const slug = slugify(part);
+          return slug === part ? part : (known.get(slug) ?? slug);
+        })
+        .filter(Boolean)
+    ),
+  ];
   const params = new URLSearchParams(url.search);
   if (slugs.length > 0) {
     params.set("category", slugs.join(","));
@@ -109,16 +139,22 @@ function categoryTarget(url: URL): string | null {
   return `${GESTURES_PATH}${search(params)}`;
 }
 
+const NO_CATEGORIES: CategorySlugs = new Map();
+
 /**
  * Where an old URL now lives (a same-site path with its query), or `null`
- * when the URL is current.
+ * when the URL is current. The table's paths match case-insensitively, as
+ * the old router did (`/Login`).
  */
-export function legacyRedirectTarget(url: URL): string | null {
+export function legacyRedirectTarget(
+  url: URL,
+  categories: CategorySlugs = NO_CATEGORIES
+): string | null {
   const pathname = withoutTrailingSlash(url.pathname);
   if (pathname === GESTURES_PATH) {
-    return categoryTarget(url);
+    return categoryTarget(url, categories);
   }
-  const match = tablePath(pathname);
+  const match = tablePath(pathname.toLowerCase());
   if (!match) {
     return null;
   }
@@ -130,13 +166,26 @@ export function legacyRedirectTarget(url: URL): string | null {
 /**
  * The Worker's first step for GET and HEAD: a 301 for an old URL, else
  * `null` (the request goes on to the app). `Location` is a path, so the
- * browser stays on this origin.
+ * browser stays on this origin. `loadCategories` runs only for an old
+ * `?category=<Name>`; when it fails, `slugify(name)` stands in.
  */
-export function legacyRedirect(request: Request): Response | null {
+export async function legacyRedirect(
+  request: Request,
+  loadCategories: () => Promise<CategorySlugs>
+): Promise<Response | null> {
   if (request.method !== "GET" && request.method !== "HEAD") {
     return null;
   }
-  const location = legacyRedirectTarget(new URL(request.url));
+  const url = new URL(request.url);
+  let categories = NO_CATEGORIES;
+  if (needsCategoryLookup(url)) {
+    try {
+      categories = await loadCategories();
+    } catch (error) {
+      console.error("[legacyRedirects] Failed to load the categories:", error);
+    }
+  }
+  const location = legacyRedirectTarget(url, categories);
   if (location === null) {
     return null;
   }

@@ -6,6 +6,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   LEGACY_REDIRECTS,
   legacyRedirectTarget,
+  needsCategoryLookup,
 } from "../src/lib/legacy-redirects";
 
 const ORIGIN = "http://localhost:5173";
@@ -49,6 +50,15 @@ beforeAll(async () => {
   await db
     .insert(gestureCategory)
     .values({ categoryId: category.id, gestureId: row.id });
+  // The migration de-duplicates slugs: this name's slug is not slugify(name).
+  const feelings = await makeCategory(db, {
+    name: "Gevoelens",
+    slug: "gevoelens-2",
+    sortOrder: 1,
+  });
+  await db
+    .insert(gestureCategory)
+    .values({ categoryId: feelings.id, gestureId: row.id });
   await reindexGesture(db, row.id);
   await bumpCatalogVersion(env.KV);
 });
@@ -90,6 +100,38 @@ describe("the legacy redirect table (spec §9, inventory §7)", () => {
     );
     // A name that has no slug characters is dropped.
     expect(target("/gestures?q=a&category=%21%21")).toBe("/gestures?q=a");
+  });
+
+  it("resolves names through the categories when they are known (review M3)", () => {
+    const known = new Map([["gevoelens", "gevoelens-2"]]);
+    expect(
+      legacyRedirectTarget(
+        new URL("/gestures?category=Gevoelens,Dieren", ORIGIN),
+        known
+      )
+    ).toBe("/gestures?category=gevoelens-2%2Cdieren");
+    expect(
+      needsCategoryLookup(new URL("/gestures?category=Gevoelens", ORIGIN))
+    ).toBe(true);
+    expect(
+      needsCategoryLookup(new URL("/gestures?category=gevoelens-2", ORIGIN))
+    ).toBe(false);
+    expect(needsCategoryLookup(new URL("/login", ORIGIN))).toBe(false);
+  });
+
+  it("matches the old paths case-insensitively, like the old router (review M5)", () => {
+    expect(target("/Login?redirect=%2Faccount")).toBe(
+      "/sign-in?redirect=%2Faccount"
+    );
+    expect(target("/SPONSORS/Success?paymentId=tr_1")).toBe(
+      "/sponsor/success?payment=tr_1"
+    );
+    expect(target("/Callback")).toBe("/");
+  });
+
+  it("leaves the app hand-off pages alone (phase 4 task 5)", () => {
+    expect(target("/magic-link/app?token=t")).toBeNull();
+    expect(target("/turnstile-bridge")).toBeNull();
   });
 
   it("leaves current URLs alone", () => {
@@ -160,6 +202,14 @@ describe("the Worker applies the table first", () => {
     expect(response.status).toBe(301);
     expect(response.headers.get("location")).toBe(
       "/gestures?category=begroetingen"
+    );
+  });
+
+  it("maps a name to its de-duplicated slug through D1 (review M3)", async () => {
+    const response = await get("/gestures?category=Gevoelens");
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(
+      "/gestures?category=gevoelens-2"
     );
   });
 

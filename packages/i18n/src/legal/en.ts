@@ -23,13 +23,13 @@ export const en: LegalTexts = {
           {
             list: [
               "**Account and sign-in:** name, email address and whether it is verified, language, role, a profile picture from Google or Apple if any, sessions (with IP address and browser or app details) and timestamps. A password is only stored as an irreversible hash; for a passkey we only store its public key. If you sign in with Google or Apple, they send us an account ID, your name and your email address.",
-              "**Use without an account:** favorites, lists, recent searches, preferences and your analytics choice stay on your device. They do not leave your device unless, after signing in, you choose to import them into your account.",
+              "**Use without an account:** favorites, lists, recent searches, preferences and your analytics choice stay on your device. They do not leave your device unless, after signing in, you choose to import them into your account, except for the optional analytics below (for example which gesture you viewed or saved).",
               "**Learning features:** favorite gestures, lists, list descriptions, share links and their rights (view or edit). Recent search terms stay locally on your device.",
               "**Sponsorship:** contact name, sponsor or company name, email, chosen gestures, display name, optional logo, preview and final videos, status, payment reference and term.",
               "**Invoicing:** invoice name, VAT or company number and invoice email address when you ask for an invoice. Mollie processes the payment details; SMOG&Co does not receive full card or bank details.",
-              "**Technical data:** IP address, device, browser and app details, security logs, error information and data needed to deliver video and network traffic. When you sign in or sign up, Cloudflare Turnstile checks that the request comes from a human.",
+              "**Technical data:** IP address, device, browser and app details, security logs, error information and data needed to deliver video and network traffic. When you sign in, sign up, reset your password or use other forms (such as asking for a sign-in code or link), Cloudflare Turnstile checks that the request comes from a human.",
               "**Consent history:** when you are signed in, we keep your analytics choices (yes or no, time and policy version), so we can show which choice applies.",
-              "**Optional analytics:** only with consent: screen path, platform, limited event data, gesture IDs, result and category counts, the length of a search and completed playback. We do not send search terms, names or email addresses and do not record sessions.",
+              "**Optional analytics:** only with consent: screen path, platform, limited event data, gesture IDs, result and category counts, the length of a search and completed playback, with your IP address and browser or app details (see Analytics and identification). We do not send search terms, names or email addresses and do not record sessions.",
             ],
           },
         ],
@@ -55,7 +55,7 @@ export const en: LegalTexts = {
           "Only authorised staff and service providers that support the Service get access, as far as needed:",
           {
             list: [
-              "**Cloudflare:** hosting of the website and the API (Workers), the database (D1), file storage such as sponsor logos (R2), temporary data (KV), queues (Queues), sending email (Email) and abuse prevention (Turnstile). [Privacy policy](https://www.cloudflare.com/privacypolicy/)",
+              "**Cloudflare:** hosting of the website and the API (Workers), the database (D1), file storage such as sponsor logos (R2), temporary data (KV), queues (Queues), rendering sponsor videos with the name and logo (Workflows, Containers), sending email (Email) and abuse prevention (Turnstile). [Privacy policy](https://www.cloudflare.com/privacypolicy/)",
               "**Better Auth:** open-source sign-in software that we run ourselves inside our Cloudflare environment. No data goes to a separate provider for it.",
               "**Mux:** storage, processing and streaming of gesture and sponsor videos. [Privacy policy](https://www.mux.com/privacy)",
               "**Mollie:** hosted payment processing and payment status. [Privacy policy](https://www.mollie.com/legal/privacy)",
@@ -71,7 +71,7 @@ export const en: LegalTexts = {
       },
       {
         blocks: [
-          "Analytics is off by default. With consent, the website and the app use an anonymous device profile. The website forwards events through our own server, without third-party scripts or cookies. After you sign in, the profile is only linked to your user ID; your name and email address are not sent to analytics. Signing out or withdrawing consent clears the analytics identity. Withdrawing stops new measurements; data collected lawfully before is not deleted automatically. You can ask for its deletion at our contact address.",
+          "Analytics is off by default. With consent, the website forwards events through our own server to our self-hosted OpenPanel installation, without third-party scripts or cookies. Our server passes on your IP address and browser details (user agent); OpenPanel derives a pseudonymous device profile and an approximate location (country and region) from them. Our server does not store that data for this purpose. The app sends events directly to the same OpenPanel installation, with a pseudonymous device ID. After you sign in, the profile is only linked to your user ID; your name and email address are not sent to analytics. Signing out or withdrawing consent clears the analytics identity. Withdrawing stops new measurements; data collected lawfully before is not deleted automatically. You can ask for its deletion at our contact address.",
         ],
         id: "analytics",
         title: "Analytics and identification",
@@ -89,7 +89,7 @@ export const en: LegalTexts = {
             list: [
               "Necessary cookies keep your session active when you are signed in and remember your language and theme.",
               "Local storage keeps, among other things, favorites and lists without an account, recent searches, preferences, the app cache and your analytics choice.",
-              "With analytics consent, the website and the app may keep local identification and queue data to deliver events.",
+              "With analytics consent, the app may keep local identification and queue data to deliver events. The website only keeps a temporary marker in your browser's session storage while you sign in, so a completed sign-in is counted once.",
             ],
           },
           "You can change your analytics choice below at any time:",
@@ -102,8 +102,9 @@ export const en: LegalTexts = {
         blocks: [
           {
             list: [
-              "Account data, favorites and lists are kept as long as your account exists or until you delete them.",
+              "Account data, favorites, lists and your consent history are kept as long as your account exists or until you delete them.",
               "Administration logs are kept for at most 3 years.",
+              "A session expires 7 days after you last used the Service, or at once when you sign out. Sign-in codes and sign-in links are single-use and valid for 5 minutes; links to verify your email address or reset your password for 1 hour. Expired sessions, codes and links are erased within 30 days.",
               "Unpaid sponsorship requests are cancelled after 24 hours. Underlying technical files may disappear later, following operational backup and clean-up cycles.",
               "Payment, sponsor and invoice data is kept as long as needed for the contract and for up to 10 years when Belgian accounting or tax rules require it.",
               "Analytics data is kept according to the retention period set in our OpenPanel installation and no longer than needed for product analysis.",
@@ -115,7 +116,7 @@ export const en: LegalTexts = {
       },
       {
         blocks: [
-          "You can delete your account on the [account page](/account). This immediately deletes your account, sessions, sign-in methods and passkeys, favorites, your own lists with their share links and your consent history; administration logs that refer to you are unlinked. You are signed out on every device and the data on the device you used is cleared. Sponsor, payment and invoice data is not linked to your account and is kept as long as the law requires (see Retention periods). Backups and data at separate service providers may follow their own deletion cycle.",
+          "You can delete your account on the [account page](/account). This immediately deletes your account, sessions, sign-in methods and passkeys, favorites, your own lists with their share links and your consent history. In administration logs you are unlinked as the actor; administration logs about your account remain until the end of their retention period. You are signed out on every device and the data on the device you used is cleared. Sponsor, payment and invoice data is not linked to your account and is kept as long as the law requires (see Retention periods). Backups and data at separate service providers may follow their own deletion cycle.",
         ],
         id: "deletion",
         title: "Account deletion",
