@@ -192,7 +192,7 @@ describe("handleAnalyticsRelay", () => {
       post(TRACK, { "content-length": "lots" }),
       options
     );
-    expect([400, 413]).toContain(response.status);
+    expect(response.status).toBe(400);
   });
 
   test("413 for a chunked body past 4 KB: the read stops at the cap", async () => {
@@ -224,6 +224,48 @@ describe("handleAnalyticsRelay", () => {
     expect(chunks).toBeLessThanOrEqual(6);
     expect(cancelled).toBe(true);
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("a client abort mid-read gets 400, not a thrown error", async () => {
+    const { fetch, options } = setup();
+    let sent = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull: (controller) => {
+        if (sent) {
+          controller.error(new Error("client went away"));
+          return;
+        }
+        sent = true;
+        controller.enqueue(new TextEncoder().encode('{"type":'));
+      },
+    });
+    const request = new Request(`${SITE}/api/analytics`, {
+      body,
+      duplex: "half",
+      headers: {
+        "cf-connecting-ip": "198.51.100.7",
+        "content-type": "application/json",
+        origin: SITE,
+      },
+      method: "POST",
+    } as RequestInit);
+    const response = await handleAnalyticsRelay(request, options);
+    expect(response.status).toBe(400);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("a missing cf-connecting-ip warns once per isolate", async () => {
+    const { options } = setup();
+    for (let i = 0; i < 3; i += 1) {
+      const request = post(TRACK);
+      request.headers.delete("cf-connecting-ip");
+      // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose.
+      await handleAnalyticsRelay(request, options);
+    }
+    const ipWarnings = warn.mock.calls.filter((call: unknown[]) =>
+      String(call[0]).includes("cf-connecting-ip")
+    );
+    expect(ipWarnings.length).toBeLessThanOrEqual(1);
   });
 
   test("without cf-connecting-ip no x-client-ip is forwarded", async () => {

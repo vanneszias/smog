@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { act, cleanup, render, renderHook } from "@testing-library/react";
-import type { ReactNode } from "react";
-import type { Analytics } from "./gate";
+import { type ReactNode, useCallback } from "react";
+import {
+  type Analytics,
+  type AnalyticsTransport,
+  createAnalytics,
+} from "./gate";
 import {
   AnalyticsProvider,
   createConsentSource,
@@ -196,5 +200,127 @@ describe("createConsentSource + useSyncConsent", () => {
     act(() => rerender({ value: false }));
     expect(seen).toEqual([true, false]);
     expect(source.getConsent()).toBe(false);
+  });
+});
+
+/** The apps' bridge order: the consent feed first, then identity and sign-in. */
+function Bridge({
+  consent,
+  feed,
+  userId,
+}: {
+  consent: boolean | null;
+  feed: ReturnType<typeof createConsentSource>;
+  userId: string | null;
+}): null {
+  useSyncConsent(feed, consent);
+  useScreenTracking("/");
+  useAnalyticsIdentity(userId);
+  useSignInCompleted(userId);
+  return null;
+}
+
+function gateHarness(platform: "web" | "native", initial: boolean | null) {
+  const calls: unknown[][] = [];
+  const transport: AnalyticsTransport = {
+    identify: (id) => calls.push(["identify", id]),
+    reset: () => calls.push(["reset"]),
+    screen: (path) => calls.push(["screen", path]),
+    track: (event) => calls.push(["track", event.name]),
+  };
+  const feed = createConsentSource(initial);
+  const analytics = createAnalytics({
+    getConsent: feed.getConsent,
+    platform,
+    subscribe: feed.subscribe,
+    transport,
+  });
+  return { analytics, calls, feed };
+}
+
+describe("sign-in while useConsent loads (true, then null, then true)", () => {
+  for (const platform of ["web", "native"] as const) {
+    test(`${platform}: sign_in_completed is sent once, with no reset or repeat`, () => {
+      const { analytics, calls, feed } = gateHarness(platform, true);
+      function App({
+        consent,
+        userId,
+      }: {
+        consent: boolean | null;
+        userId: string | null;
+      }) {
+        const mark = useMarkSignInStarted();
+        const signIn = useCallback(() => mark("password"), [mark]);
+        return (
+          <>
+            <Bridge consent={consent} feed={feed} userId={userId} />
+            <button onClick={signIn} type="button">
+              sign in
+            </button>
+          </>
+        );
+      }
+      const view = render(
+        <AnalyticsProvider analytics={analytics}>
+          <App consent={true} userId={null} />
+        </AnalyticsProvider>
+      );
+      act(() => view.getByRole("button").click());
+      // Signed in: the user's consent query is pending.
+      view.rerender(
+        <AnalyticsProvider analytics={analytics}>
+          <App consent={null} userId="user-1" />
+        </AnalyticsProvider>
+      );
+      view.rerender(
+        <AnalyticsProvider analytics={analytics}>
+          <App consent={true} userId="user-1" />
+        </AnalyticsProvider>
+      );
+      expect(calls).toEqual([
+        ["screen", "/"],
+        ["identify", "user-1"],
+        ["track", "sign_in_completed"],
+      ]);
+    });
+  }
+
+  test("web OAuth redirect: a fresh page with the stored mark sends it on true", () => {
+    // The page before the redirect stored the mark (with consent).
+    globalThis.sessionStorage.setItem(
+      "smog:analytics:sign-in",
+      JSON.stringify({ at: Date.now(), method: "google" })
+    );
+    const { analytics, calls, feed } = gateHarness("web", null);
+    const tree = (consent: boolean | null) => (
+      <AnalyticsProvider analytics={analytics}>
+        <Bridge consent={consent} feed={feed} userId="user-1" />
+      </AnalyticsProvider>
+    );
+    const view = render(tree(null));
+    expect(calls).toEqual([]);
+    view.rerender(tree(true));
+    expect(calls).toEqual([
+      ["identify", "user-1"],
+      ["screen", "/"],
+      ["track", "sign_in_completed"],
+    ]);
+  });
+
+  test("a loading consent that turns out false drops the sign-in", () => {
+    globalThis.sessionStorage.setItem(
+      "smog:analytics:sign-in",
+      JSON.stringify({ at: Date.now(), method: "apple" })
+    );
+    const { analytics, calls, feed } = gateHarness("web", null);
+    const tree = (consent: boolean | null) => (
+      <AnalyticsProvider analytics={analytics}>
+        <Bridge consent={consent} feed={feed} userId="user-1" />
+      </AnalyticsProvider>
+    );
+    const view = render(tree(null));
+    view.rerender(tree(false));
+    view.rerender(tree(true));
+    expect(calls.filter((call) => call[0] === "track")).toEqual([]);
   });
 });

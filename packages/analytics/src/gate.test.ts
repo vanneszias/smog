@@ -165,6 +165,95 @@ describe("createAnalytics", () => {
     expect(h.calls.filter((call) => call[0] === "screen")).toHaveLength(2);
   });
 
+  test("null (loading) only pauses: no reset, no second identify or screen on reopen", () => {
+    const h = harness(true);
+    const analytics = createAnalytics({
+      getConsent: h.consent.get,
+      platform: "web",
+      subscribe: h.consent.subscribe,
+      transport: h.transport,
+    });
+    analytics.identify("user-1");
+    analytics.screen("/");
+    h.setConsent(null);
+    analytics.track(VIEWED);
+    h.setConsent(true);
+    expect(h.calls).toEqual([
+      ["identify", "user-1", "web"],
+      ["screen", "/", "web"],
+    ]);
+    // A screen changed during the pause is sent once on reopen.
+    h.setConsent(null);
+    analytics.screen("/lists");
+    h.setConsent(true);
+    expect(h.calls.at(-1)).toEqual(["screen", "/lists", "web"]);
+    expect(h.calls).toHaveLength(3);
+  });
+
+  test("an explicit false after a pause resets", () => {
+    const h = harness(true);
+    const analytics = createAnalytics({
+      getConsent: h.consent.get,
+      platform: "web",
+      subscribe: h.consent.subscribe,
+      transport: h.transport,
+    });
+    analytics.identify("user-1");
+    h.setConsent(null);
+    h.setConsent(false);
+    expect(h.calls.at(-1)).toEqual(["reset"]);
+  });
+
+  test("sign_in_completed during a pause is held: sent on true, dropped on false", () => {
+    const signIn = {
+      name: "sign_in_completed",
+      properties: { method: "google" },
+    } as const;
+    for (const decided of [true, false]) {
+      const h = harness(null);
+      const analytics = createAnalytics({
+        getConsent: h.consent.get,
+        platform: "native",
+        subscribe: h.consent.subscribe,
+        transport: h.transport,
+      });
+      analytics.track(signIn);
+      analytics.track(VIEWED);
+      h.setConsent(decided);
+      h.setConsent(true);
+      const tracked = h.calls.filter((call) => call[0] === "track");
+      expect(tracked).toEqual(
+        decided
+          ? [
+              [
+                "track",
+                {
+                  name: "sign_in_completed",
+                  properties: { method: "google", platform: "native" },
+                },
+              ],
+            ]
+          : []
+      );
+    }
+  });
+
+  test("a refused consent never holds a sign_in_completed", () => {
+    const h = harness(false);
+    const analytics = createAnalytics({
+      getConsent: h.consent.get,
+      platform: "web",
+      subscribe: h.consent.subscribe,
+      transport: h.transport,
+    });
+    analytics.track({
+      name: "sign_in_completed",
+      properties: { method: "password" },
+    });
+    h.setConsent(true);
+    expect(h.calls).toEqual([]);
+  });
+
   test("reset forgets the identity, and is a no-op without consent", () => {
     const h = harness(true);
     const analytics = createAnalytics({

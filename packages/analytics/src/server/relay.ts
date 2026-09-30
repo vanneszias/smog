@@ -63,8 +63,15 @@ async function readCapped(request: Request): Promise<string | 400 | 413> {
   const chunks: Uint8Array[] = [];
   let size = 0;
   for (;;) {
-    // biome-ignore lint/performance/noAwaitInLoops: a stream is read chunk by chunk.
-    const { done, value } = await reader.read();
+    let chunk: Awaited<ReturnType<typeof reader.read>>;
+    try {
+      // biome-ignore lint/performance/noAwaitInLoops: a stream is read chunk by chunk.
+      chunk = await reader.read();
+    } catch {
+      // The client went away mid-upload: a bad request, never a 500.
+      return 400;
+    }
+    const { done, value } = chunk;
     if (done) {
       break;
     }
@@ -112,6 +119,7 @@ function toOpenPanel(body: RelayBody): unknown {
 }
 
 let warned = false;
+let warnedIp = false;
 
 async function forward(
   request: Request,
@@ -168,7 +176,8 @@ export async function handleAnalyticsRelay(
     return status("FORBIDDEN", 403);
   }
   const ip = clientIp(request);
-  if (ip === null) {
+  if (ip === null && !warnedIp) {
+    warnedIp = true;
     console.warn(
       "[analytics] No cf-connecting-ip: one shared rate-limit bucket, no x-client-ip"
     );
