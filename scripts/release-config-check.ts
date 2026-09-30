@@ -22,6 +22,10 @@ interface Job {
   environment?: unknown;
   needs?: string | string[];
   steps?: Step[];
+  strategy?: {
+    "fail-fast"?: boolean;
+    matrix?: { check?: string[] };
+  };
   uses?: string;
 }
 
@@ -86,6 +90,16 @@ export function checkCiWorkflow(source: string): string[] {
     return [workflow];
   }
   const errors: string[] = [];
+  const gate = workflow.jobs?.["release-check"];
+  const lanes = gate?.strategy?.matrix?.check ?? [];
+  if (!sameList(lanes, ["core", "tests", "mobile"])) {
+    errors.push(
+      `${file}: release:check matrix must include core, tests and mobile`
+    );
+  }
+  if (gate?.strategy?.["fail-fast"] !== false) {
+    errors.push(`${file}: release:check matrix must set fail-fast: false`);
+  }
   for (const event of ["push", "pull_request", "workflow_call"]) {
     if (!hasTrigger(workflow, event)) {
       errors.push(`${file}: missing the on.${event} trigger`);
@@ -94,7 +108,7 @@ export function checkCiWorkflow(source: string): string[] {
   if (workflow.permissions?.contents !== "read") {
     errors.push(`${file}: permissions.contents must be "read"`);
   }
-  const steps = allSteps(workflow);
+  const steps = gate?.steps ?? [];
   const setupBun = steps.find((step) =>
     step.uses?.startsWith("oven-sh/setup-bun@")
   );
@@ -105,7 +119,8 @@ export function checkCiWorkflow(source: string): string[] {
   }
   for (const command of [
     "bun install --frozen-lockfile",
-    "bun run release:check",
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expression, not JavaScript interpolation.
+    "bun run release:check:${{ matrix.check }}",
   ]) {
     if (findStepIndex(steps, command) === -1) {
       errors.push(`${file}: no step runs \`${command}\``);
@@ -123,7 +138,7 @@ export function checkCiWorkflow(source: string): string[] {
   const offline =
     envMentions(workflow.env, "SMOG_OFFLINE") ||
     jobs.some((job) => envMentions(job.env, "SMOG_OFFLINE")) ||
-    steps.some(
+    allSteps(workflow).some(
       (step) =>
         envMentions(step.env, "SMOG_OFFLINE") ||
         (step.run?.includes("SMOG_OFFLINE") ?? false)

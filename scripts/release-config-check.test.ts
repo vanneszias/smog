@@ -30,6 +30,22 @@ describe("checkReleaseConfig", () => {
 });
 
 describe("checkCiWorkflow", () => {
+  test("fails when a release lane is dropped", () => {
+    for (const lanes of ["core, tests", "core, mobile", "tests, mobile"]) {
+      expect(
+        checkCiWorkflow(CI.replace("core, tests, mobile", lanes)).join("\n")
+      ).toContain("matrix must include");
+    }
+  });
+
+  test("keeps other checks running after a lane fails", () => {
+    expect(
+      checkCiWorkflow(CI.replace("fail-fast: false", "fail-fast: true")).join(
+        "\n"
+      )
+    ).toContain("fail-fast: false");
+  });
+
   test("fails when ci.yml does not run release:check", () => {
     const errors = checkCiWorkflow(
       readFileSync(join(FIXTURES, "ci-missing-release-check.yml"), "utf8")
