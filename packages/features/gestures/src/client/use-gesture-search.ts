@@ -17,6 +17,12 @@ export interface UseGestureSearchOptions {
   q: string;
   /** What `search_performed` reports as its trigger (default `filter_change`). */
   source?: SearchSource | undefined;
+  /**
+   * `false` searches without `search_performed`: a search that is part of
+   * another task (the shared-list "add gestures" sheet), not the catalogue
+   * search the event measures. Default `true`.
+   */
+  track?: boolean | undefined;
 }
 
 /**
@@ -29,6 +35,7 @@ export function useGestureSearch({
   limit,
   q,
   source = "filter_change",
+  track = true,
 }: UseGestureSearchOptions) {
   const gestures = useGesturesRpc();
   const analytics = useAnalytics();
@@ -48,6 +55,7 @@ export function useGestureSearch({
   const total = query.isPlaceholderData ? undefined : query.data?.total;
   useEffect(() => {
     if (
+      !track ||
       total === undefined ||
       // A new source while typing waits for its own text to settle.
       settled !== typed ||
@@ -67,7 +75,16 @@ export function useGestureSearch({
         source,
       },
     });
-  }, [analytics, categoryCount, searchKey, settled, source, total, typed]);
+  }, [
+    analytics,
+    categoryCount,
+    searchKey,
+    settled,
+    source,
+    total,
+    track,
+    typed,
+  ]);
 
   return { ...query, isDebouncing: settled !== typed };
 }

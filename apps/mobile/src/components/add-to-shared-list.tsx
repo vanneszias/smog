@@ -48,7 +48,8 @@ function Results({
   q: string;
 }): ReactElement {
   const { t } = useTranslation();
-  const search = useGestureSearch({ limit: ADD_SEARCH_LIMIT, q });
+  // Adding to a list is not a catalogue search: no search_performed.
+  const search = useGestureSearch({ limit: ADD_SEARCH_LIMIT, q, track: false });
   const { refetch } = search;
   const retry = useCallback(() => {
     refetch();

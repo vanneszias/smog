@@ -1,6 +1,6 @@
 import {
   useCategories,
-  useGestures,
+  useFeaturedGestures,
   useRecentSearches,
 } from "@smog/gestures/client";
 import { useTranslation } from "@smog/i18n/react";
@@ -19,14 +19,11 @@ import {
 import { useRouter } from "expo-router";
 import ArrowRight from "lucide-react-native/icons/arrow-right";
 import Settings from "lucide-react-native/icons/settings";
-import { type ReactElement, useCallback, useMemo, useState } from "react";
+import { type ReactElement, useCallback, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
-
-/** The featured row: the first gestures of the catalogue (as the site). */
-const FEATURED_COUNT = 8;
 
 function FeaturedSkeleton(): ReactElement {
   return (
@@ -56,12 +53,10 @@ export default function HomeScreen(): ReactElement {
   const [query, setQuery] = useState("");
   const recent = useRecentSearches();
   const categories = useCategories();
-  const gestures = useGestures();
+  // The featured row: the first gestures of the catalogue, as the site.
+  const gestures = useFeaturedGestures();
   const renderCard = useGestureCardRenderer();
-  const featured = useMemo(
-    () => (gestures.data ?? []).slice(0, FEATURED_COUNT),
-    [gestures.data]
-  );
+  const featured = gestures.data ?? [];
 
   const openSettings = useCallback(() => router.push("/settings"), [router]);
   const openSearch = useCallback(

@@ -1,18 +1,22 @@
 import { isDefinedError } from "@orpc/client";
-import { useAnalytics } from "@smog/analytics/react";
-import {
-  GESTURE_VIEW_SOURCES,
-  type GestureViewSource,
-} from "@smog/analytics/schema";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COURSE_URL } from "@smog/config/constants";
-import { useGesture, useRelated } from "@smog/gestures/client";
+import {
+  gestureViewSource,
+  useGesture,
+  useGestureViewed,
+  useRelated,
+  useVideoEnd,
+} from "@smog/gestures/client";
 import type { GestureBySlug } from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
 import {
   Badge,
   Button,
   Chip,
+  COURSE_MESSAGE_COUNT,
   CourseBanner,
+  type CourseMessageIndex,
   EmptyState,
   ErrorState,
   FavoriteButton,
@@ -31,7 +35,7 @@ import {
 } from "expo-router";
 import { addScreenshotListener } from "expo-screen-capture";
 import Share2 from "lucide-react-native/icons/share-2";
-import { type ReactElement, useCallback, useEffect, useRef } from "react";
+import { type ReactElement, useCallback, useEffect } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { ConnectionBanner } from "@/components/connection-banner";
 import {
@@ -40,7 +44,6 @@ import {
   useToggleFavorite,
 } from "@/components/gesture-cards";
 import { SaveToList } from "@/components/save-to-list";
-import { useCourseBanner } from "@/lib/course-banner";
 import { gestureUrl, shareUrl } from "@/lib/site";
 
 /** Related gestures under the detail (the contract's default is 5). */
@@ -88,30 +91,6 @@ function useScreenshotPrompt(active: boolean, share: () => void): void {
     });
     return () => subscription.remove();
   }, [active, share, t]);
-}
-
-/** `gesture_viewed` once per gesture shown, with where it was opened from. */
-function useGestureViewed(
-  gestureId: string | undefined,
-  from: string | undefined
-): void {
-  const analytics = useAnalytics();
-  const sent = useRef<string | null>(null);
-  useEffect(() => {
-    if (gestureId === undefined || sent.current === gestureId) {
-      return;
-    }
-    sent.current = gestureId;
-    const source: GestureViewSource = (
-      GESTURE_VIEW_SOURCES as readonly (string | undefined)[]
-    ).includes(from)
-      ? (from as GestureViewSource)
-      : "direct";
-    analytics.track({
-      name: "gesture_viewed",
-      properties: { gesture_id: gestureId, source },
-    });
-  }, [analytics, from, gestureId]);
 }
 
 function RelatedGestures({ slug }: { slug: string }): ReactElement | null {
@@ -164,25 +143,17 @@ function GestureDetail({
 }): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const course = useCourseBanner();
+  // video_playback_completed and the course banner, once per visit.
+  const { banner: course, onNearEnd } = useVideoEnd<CourseMessageIndex>({
+    gestureId: gesture.id,
+    messageCount: COURSE_MESSAGE_COUNT,
+    storage: AsyncStorage,
+  });
   const openCategory = useCallback(
     (category: string) =>
       router.navigate({ params: { category }, pathname: "/search" }),
     [router]
   );
-  const analytics = useAnalytics();
-  // Once per visit: the video loops, so the end comes round again.
-  const completed = useRef<boolean>(false);
-  const onNearEnd = useCallback(() => {
-    if (!completed.current) {
-      completed.current = true;
-      analytics.track({
-        name: "video_playback_completed",
-        properties: { gesture_id: gesture.id },
-      });
-    }
-    course.onVideoComplete();
-  }, [analytics, course, gesture.id]);
   return (
     <ScrollView contentContainerClassName="gap-6 px-4 pb-10 pt-2">
       <ConnectionBanner className="mx-0" />
@@ -267,7 +238,7 @@ export default function GestureScreen(): ReactElement {
   const isFocused = useIsFocused();
   const gesture = useGesture(slug);
   const { data, isRefetching, refetch } = gesture;
-  useGestureViewed(data?.id, from);
+  useGestureViewed(data?.id, gestureViewSource(from));
   const { isFavorite, toggle } = useToggleFavorite("gesture_detail");
   const share = useShareGesture(data);
   useScreenshotPrompt(isFocused && data !== undefined, share);

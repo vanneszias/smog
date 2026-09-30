@@ -59,6 +59,7 @@
       "entry": [
         "src/routes/**/*.{ts,tsx}",
         "test/**/*.test.ts",
+        "src/**/*.test.{ts,tsx}",
         "scripts/*.ts",
         "e2e/**/*.spec.ts"
       ],
