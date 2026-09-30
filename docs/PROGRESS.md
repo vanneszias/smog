@@ -34,7 +34,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 ## Next
 
 - Phases 2 and 3: done.
-- Phase 4: all 6 tasks merged; phase review: pass with fix wave. Group B (tests, consent, legal, docs) is done; group A (maintenance allowlist for `/api/auth/*`, `/update-user`, the OpenAPI CSP, the dev-mail polls, Minors) closes the phase once merged. Then `bun run release:check`, the full site e2e and `bunx turbo run test --force` twice.
+- Phase 4: all 6 tasks merged; phase review: pass with fix wave. Group A (maintenance lets only the admin sign-in into `/api/auth/*`, no `/update-user`, the OpenAPI CSP, the dev-mail deadline, Minors) is merged; group B (tests, consent, legal, docs) closes the phase once merged. Then `bun run release:check`, the full site e2e and `bunx turbo run test --force` twice.
 - Phase 5: task 1 merged (admin package, audit log, admin shell); the rest of the phase 5 plan follows.
 - Carry into phase 5: admin gesture and category writes must set `sort_name`, reindex FTS and call `bumpCatalogVersion` (the catalog snapshot also serves `gestures.categories`); gesture name ≤ 120. The admin gestures tab gets the QR dialog (inventory L-14's admin half). The admin screens read categories (and gestures) from D1, not through the cached `gestures.categories`, so an admin sees their own edit at once. The maintenance toggle sets the admin's bypass cookie in the same response.
 - Carry into phase 6: the sponsor call-to-action on the gesture detail (inventory L-17), from `sponsorships.availability`, on the site and mobile, and the `sponsorship_checkout_started` event.
@@ -51,7 +51,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 2. The retention purges the privacy text promises: `audit_log` older than 3 years, and expired `session`/`verification` rows within 30 days (phase 6 carry).
 3. Production `TURNSTILE_SITE_KEY` (var) and `TURNSTILE_SECRET_KEY` (secret), and a production `SITE_URL` equal to the browser origin (phase 8 carry).
 4. Device checks no test covers: Turnstile in the iOS simulator and on an Android device with the always-pass key; open in app and universal links (including `/magic-link/app`) on a real iPhone.
-5. The phase 4 fix wave (group A and group B) merged, with release:check, the site e2e and two forced test runs green.
+5. The phase 4 fix wave merged (group A is; group B next), with release:check, the site e2e and two forced test runs green.
 
 ## Known gaps
 
