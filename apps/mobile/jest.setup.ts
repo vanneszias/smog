@@ -3,12 +3,11 @@ import { jest } from "@jest/globals";
 // The app's native modules, on top of the kit's (`@smog/ui-native/jest-setup`).
 type Module = Record<string, unknown>;
 
-jest.mock(
-  "@react-native-async-storage/async-storage",
-  () =>
-    jest.requireActual<Module>(
-      "@react-native-async-storage/async-storage/jest/async-storage-mock"
-    ).default
+// The mock is CommonJS (module.exports = the mock), so it is the module.
+jest.mock("@react-native-async-storage/async-storage", () =>
+  jest.requireActual<Module>(
+    "@react-native-async-storage/async-storage/jest/async-storage-mock"
+  )
 );
 jest.mock("@react-native-community/netinfo", () =>
   jest.requireActual<Module>(
