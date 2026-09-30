@@ -1,6 +1,10 @@
 /**
  * The guest → account import (spec §11): one read batch, then one write
- * batch (a D1 transaction, so it is all or nothing). The favorite, list
+ * batch (a D1 transaction, so it is all or nothing). The write batch
+ * starts with the `guest_import` guard row planned from the read, so an
+ * import that another one overtook between its read and its write aborts
+ * on the primary key and runs again from the read (it then merges into
+ * the lists the other one created, instead of creating them twice). The favorite, list
  * and list-item writes are the favorites and lists packages' own statement
  * builders, which `@smog/api` injects (a feature never imports another's
  * server), so their rules (the published-gesture guard, `LISTS_MAX` and
@@ -9,11 +13,11 @@
  * planning, and the consent statement.
  */
 import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
-import { consentEvent, gesture, list } from "@smog/db";
+import { consentEvent, gesture, guestImport, list } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { LISTS_MAX } from "@smog/lists/schema";
 import { newId } from "@smog/utils";
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, lt, sql } from "drizzle-orm";
 import type { RunnableQuery } from "drizzle-orm/runnable-query";
 import type {
   ImportGuestData,
@@ -66,6 +70,23 @@ export interface ImportDeps {
     owner: { ownerId?: string | undefined },
     pairs: readonly Pair[]
   ) => Statement<PairRow[]>;
+}
+
+/** Tries of one import when concurrent imports keep overtaking it. */
+const IMPORT_ATTEMPTS = 3;
+
+/** Whether `error` (or its cause) is the `guest_import` guard's conflict. */
+function isGuardConflict(error: unknown): boolean {
+  for (let current = error; current instanceof Error; ) {
+    if (
+      current.message.includes("UNIQUE constraint failed: guest_import") ||
+      current.message.includes("SQLITE_CONSTRAINT_PRIMARYKEY")
+    ) {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
 }
 
 /** How list names match: trimmed, case-insensitive (Unicode-aware). */
@@ -200,86 +221,116 @@ export async function importGuestData(
   input: ImportGuestData,
   now: Date = new Date()
 ): Promise<ImportResult> {
-  const { db } = deps;
-  const owner = { actorId: userId, ownerId: userId };
   const requested = unique([
     ...input.favorites,
     ...input.lists.flatMap((guest) => guest.gestureIds),
   ]);
   try {
-    const [publishedRows, existing] = await db.batch([
-      db
-        .select({ id: gesture.id })
-        .from(gesture)
-        .where(
-          and(
-            isNotNull(gesture.publishedAt),
-            sql`${gesture.id} IN (SELECT value FROM json_each(${JSON.stringify(requested)}))`
-          )
-        ),
-      db
-        .select({ id: list.id, name: list.name })
-        .from(list)
-        .where(eq(list.ownerId, userId))
-        .orderBy(desc(list.updatedAt), desc(list.id))
-        .limit(LISTS_MAX),
-    ]);
-    const steps = plan(
-      input,
-      requested,
-      new Set(publishedRows.map((row) => row.id)),
-      existing
-    );
-    const decidedAt = input.consent
-      ? Math.min(input.consent.decidedAt, now.getTime())
-      : undefined;
-
-    const [favorites, created, appended, , unplaced] = await db.batch([
-      deps.insertFavorites(db, userId, steps.favorites, now),
-      deps.insertLists(db, userId, steps.newLists, now),
-      deps.appendItems(db, owner, steps.items, now),
-      // A merged list counts as changed only when it received items.
-      deps.touchLists(db, steps.merged, userId, now),
-      deps.unplacedItems(db, owner, steps.items),
-      ...(input.consent && decidedAt !== undefined
-        ? [consentStmt(db, userId, input.consent.analytics, decidedAt)]
-        : []),
-    ]);
-
-    const createdIds = new Set(created.map((row) => row.id));
-    const left = new Set(
-      unplaced.map((row) => `${row.listId}\u0000${row.gestureId}`)
-    );
-    const lists = steps.guests.map(
-      ({ into, pairs, target }): ImportListOutcome => {
-        if (into !== "existing" && !createdIds.has(target)) {
-          return { status: "notCreated", unplaced: [] };
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        // biome-ignore lint/performance/noAwaitInLoops: a retry runs after the failed try, by design.
+        return await importOnce(deps, userId, input, requested, now);
+      } catch (error) {
+        if (!isGuardConflict(error) || attempt >= IMPORT_ATTEMPTS) {
+          throw error;
         }
-        return {
-          status: into === "new" ? "created" : "merged",
-          unplaced: pairs
-            .filter(([listId, gestureId]) =>
-              left.has(`${listId}\u0000${gestureId}`)
-            )
-            .map(([, gestureId]) => gestureId),
-        };
       }
-    );
-
-    return {
-      favoritesAdded: favorites.length,
-      itemsAdded: appended.length,
-      itemsOverLimit: unplaced.length,
-      lists,
-      listsCreated: created.length,
-      listsMerged: lists.filter((outcome) => outcome.status === "merged")
-        .length,
-      listsOverLimit: lists.filter((outcome) => outcome.status === "notCreated")
-        .length,
-      skippedUnknownGestures: steps.skippedUnknownGestures,
-    };
+    }
   } catch (error) {
     console.error("[account] Failed to import guest data:", error);
     throw error;
   }
+}
+
+/** One read, plan and write; the write aborts when another import overtook it. */
+async function importOnce(
+  deps: ImportDeps & { db: Db },
+  userId: string,
+  input: ImportGuestData,
+  requested: readonly string[],
+  now: Date
+): Promise<ImportResult> {
+  const { db } = deps;
+  const owner = { actorId: userId, ownerId: userId };
+  const [publishedRows, existing, guard] = await db.batch([
+    db
+      .select({ id: gesture.id })
+      .from(gesture)
+      .where(
+        and(
+          isNotNull(gesture.publishedAt),
+          sql`${gesture.id} IN (SELECT value FROM json_each(${JSON.stringify(requested)}))`
+        )
+      ),
+    db
+      .select({ id: list.id, name: list.name })
+      .from(list)
+      .where(eq(list.ownerId, userId))
+      .orderBy(desc(list.updatedAt), desc(list.id))
+      .limit(LISTS_MAX),
+    db
+      .select({ seq: sql<number>`coalesce(max(${guestImport.seq}), 0)` })
+      .from(guestImport)
+      .where(eq(guestImport.userId, userId)),
+  ]);
+  const seq = Number(guard[0]?.seq ?? 0) + 1;
+  const steps = plan(
+    input,
+    requested,
+    new Set(publishedRows.map((row) => row.id)),
+    existing
+  );
+  const decidedAt = input.consent
+    ? Math.min(input.consent.decidedAt, now.getTime())
+    : undefined;
+
+  const [, , favorites, created, appended, , unplaced] = await db.batch([
+    // No ON CONFLICT: an import that wrote since our read took `seq`, and
+    // this batch aborts before anything else is written.
+    db.insert(guestImport).values({ seq, userId }),
+    db
+      .delete(guestImport)
+      .where(and(eq(guestImport.userId, userId), lt(guestImport.seq, seq))),
+    deps.insertFavorites(db, userId, steps.favorites, now),
+    deps.insertLists(db, userId, steps.newLists, now),
+    deps.appendItems(db, owner, steps.items, now),
+    // A merged list counts as changed only when it received items.
+    deps.touchLists(db, steps.merged, userId, now),
+    deps.unplacedItems(db, owner, steps.items),
+    ...(input.consent && decidedAt !== undefined
+      ? [consentStmt(db, userId, input.consent.analytics, decidedAt)]
+      : []),
+  ]);
+
+  const createdIds = new Set(created.map((row) => row.id));
+  const left = new Set(
+    unplaced.map((row) => `${row.listId}\u0000${row.gestureId}`)
+  );
+  const lists = steps.guests.map(
+    ({ into, pairs, target }): ImportListOutcome => {
+      if (into !== "existing" && !createdIds.has(target)) {
+        return { status: "notCreated", unplaced: [] };
+      }
+      return {
+        status: into === "new" ? "created" : "merged",
+        unplaced: pairs
+          .filter(([listId, gestureId]) =>
+            left.has(`${listId}\u0000${gestureId}`)
+          )
+          .map(([, gestureId]) => gestureId),
+      };
+    }
+  );
+
+  return {
+    favoritesAdded: favorites.length,
+    itemsAdded: appended.length,
+    itemsOverLimit: unplaced.length,
+    lists,
+    listsCreated: created.length,
+    listsMerged: lists.filter((outcome) => outcome.status === "merged").length,
+    listsOverLimit: lists.filter((outcome) => outcome.status === "notCreated")
+      .length,
+    skippedUnknownGestures: steps.skippedUnknownGestures,
+  };
 }

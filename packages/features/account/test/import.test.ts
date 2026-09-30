@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { call } from "@orpc/server";
 import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
+import type { Db } from "@smog/db/client";
 import { LIST_ITEMS_MAX, LISTS_MAX } from "@smog/lists/schema";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -27,9 +28,14 @@ function input(partial: Partial<ImportGuestDataInput>): ImportGuestDataInput {
   return { favorites: [], lists: [], ...partial };
 }
 
-async function run(userId: string, data: ImportGuestDataInput, now = NOW) {
+async function run(
+  userId: string,
+  data: ImportGuestDataInput,
+  now = NOW,
+  db: Db = testDb()
+) {
   return await importGuestData(
-    { ...importDeps, db: testDb() },
+    { ...importDeps, db },
     userId,
     // The router parses with the contract; the service takes parsed input.
     importGuestDataInputSchema.parse(data),
@@ -385,6 +391,80 @@ describe("importGuestData: limits", () => {
     expect(list?.items).toHaveLength(LIST_ITEMS_MAX);
     expect(list?.items.at(-1)).toBe(aap);
     expect(list?.positions.at(-1)).toBe(LIST_ITEMS_MAX - 1);
+  });
+});
+
+/**
+ * `db` whose first write batch (its 2nd batch: read, then write) first
+ * runs `before`: another import that lands between this one's read and
+ * its write.
+ */
+function raceBeforeWrite(db: Db, before: () => Promise<unknown>): Db {
+  let batches = 0;
+  return new Proxy(db, {
+    get(target, property, receiver) {
+      if (property !== "batch") {
+        return Reflect.get(target, property, receiver);
+      }
+      return async (statements: Parameters<Db["batch"]>[0]) => {
+        batches += 1;
+        if (batches === 2) {
+          await before();
+        }
+        return await target.batch(statements);
+      };
+    },
+  });
+}
+
+describe("importGuestData: concurrency", () => {
+  it("an import landing between another's read and write creates no duplicate list", async () => {
+    const owner = await addUser();
+    const [aap, beer] = await addGestures(["Aap", "Beer"]);
+    const data = input({
+      favorites: [aap as string],
+      lists: [{ gestureIds: [aap as string, beer as string], name: "Dieren" }],
+    });
+    let other: Awaited<ReturnType<typeof run>> | undefined;
+    const racing = raceBeforeWrite(testDb(), async () => {
+      other = await run(owner.id, data);
+    });
+
+    const result = await run(owner.id, data, NOW, racing);
+
+    const lists = await storedLists(owner.id);
+    expect(lists.map((list) => [list.name, list.items])).toEqual([
+      ["Dieren", [aap, beer]],
+    ]);
+    expect(other).toMatchObject({ itemsAdded: 2, listsCreated: 1 });
+    // The later one re-read and found the list: a merge that adds nothing.
+    expect(result).toMatchObject({
+      favoritesAdded: 0,
+      itemsAdded: 0,
+      lists: [{ status: "merged", unplaced: [] }],
+      listsCreated: 0,
+      listsMerged: 1,
+    });
+    expect(await storedFavorites(owner.id)).toEqual([aap]);
+  });
+
+  it("two imports started together give one list per name", async () => {
+    const owner = await addUser();
+    const [aap] = await addGestures(["Aap"]);
+    const data = input({
+      lists: [
+        { gestureIds: [aap as string], name: "Dieren" },
+        { gestureIds: [], name: "Thuis" },
+      ],
+    });
+
+    await Promise.all([run(owner.id, data), run(owner.id, data)]);
+
+    const lists = await storedLists(owner.id);
+    expect(lists.map((list) => [list.name, list.items])).toEqual([
+      ["Dieren", [aap]],
+      ["Thuis", []],
+    ]);
   });
 });
 
