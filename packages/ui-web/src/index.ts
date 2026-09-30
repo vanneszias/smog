@@ -129,6 +129,12 @@ export {
   TooltipProvider,
 } from "./components/tooltip";
 export {
+  AppBanner,
+  type AppBannerProps,
+  OpenInAppBanner,
+  type OpenInAppBannerProps,
+} from "./domain/app-banner";
+export {
   CategoryChips,
   type CategoryChipsProps,
 } from "./domain/category-chips";

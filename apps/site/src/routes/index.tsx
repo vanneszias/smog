@@ -10,6 +10,7 @@ import { Button, ErrorState, Heading, Text } from "@smog/ui-web";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
+import { SiteAppBanner } from "@/components/app-banner";
 import {
   GestureGridSkeleton,
   LinkedGestureGrid,
@@ -158,6 +159,8 @@ function Home(): ReactNode {
           />
         </div>
       </section>
+      {/* Under the hero: it mounts after hydration, so the hero stays put (review M6). */}
+      <SiteAppBanner />
       <Categories />
       <Featured />
     </Page>

@@ -14,11 +14,13 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as MagicLinkRouteImport } from './routes/magic-link'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TurnstileBridgeRouteImport } from './routes/turnstile-bridge'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
@@ -60,6 +62,11 @@ const MagicLinkRoute = MagicLinkRouteImport.update({
   path: '/magic-link',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -83,6 +90,11 @@ const SignUpRoute = SignUpRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TurnstileBridgeRoute = TurnstileBridgeRouteImport.update({
@@ -167,11 +179,13 @@ export interface FileRoutesByFullPath {
   '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/turnstile-bridge': typeof TurnstileBridgeRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/analytics': typeof ApiAnalyticsRoute
@@ -194,11 +208,13 @@ export interface FileRoutesByTo {
   '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/turnstile-bridge': typeof TurnstileBridgeRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/analytics': typeof ApiAnalyticsRoute
@@ -222,11 +238,13 @@ export interface FileRoutesById {
   '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/turnstile-bridge': typeof TurnstileBridgeRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/analytics': typeof ApiAnalyticsRoute
@@ -251,11 +269,13 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/forgot-password'
     | '/magic-link'
+    | '/privacy'
     | '/reset-password'
     | '/robots.txt'
     | '/sign-in'
     | '/sign-up'
     | '/sitemap.xml'
+    | '/terms'
     | '/turnstile-bridge'
     | '/verify-email'
     | '/api/analytics'
@@ -278,11 +298,13 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/forgot-password'
     | '/magic-link'
+    | '/privacy'
     | '/reset-password'
     | '/robots.txt'
     | '/sign-in'
     | '/sign-up'
     | '/sitemap.xml'
+    | '/terms'
     | '/turnstile-bridge'
     | '/verify-email'
     | '/api/analytics'
@@ -305,11 +327,13 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/forgot-password'
     | '/magic-link'
+    | '/privacy'
     | '/reset-password'
     | '/robots.txt'
     | '/sign-in'
     | '/sign-up'
     | '/sitemap.xml'
+    | '/terms'
     | '/turnstile-bridge'
     | '/verify-email'
     | '/api/analytics'
@@ -333,11 +357,13 @@ export interface RootRouteChildren {
   FavoritesRoute: typeof FavoritesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   MagicLinkRoute: typeof MagicLinkRoute
+  PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermsRoute: typeof TermsRoute
   TurnstileBridgeRoute: typeof TurnstileBridgeRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
@@ -392,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MagicLinkRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -425,6 +458,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/turnstile-bridge': {
@@ -541,11 +581,13 @@ const rootRouteChildren: RootRouteChildren = {
   FavoritesRoute: FavoritesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   MagicLinkRoute: MagicLinkRoute,
+  PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TermsRoute: TermsRoute,
   TurnstileBridgeRoute: TurnstileBridgeRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,

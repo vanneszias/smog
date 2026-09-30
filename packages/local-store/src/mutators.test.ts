@@ -6,6 +6,7 @@ import {
   clearRecentSearches,
   createList,
   deleteList,
+  dismissAppBanner,
   dismissImportFor,
   IMPORT_DISMISSED_MAX,
   isFavorite,
@@ -175,5 +176,17 @@ describe("consent and preferences", () => {
     expect(ids).toHaveLength(IMPORT_DISMISSED_MAX);
     expect(ids.at(-1)).toBe(`u${IMPORT_DISMISSED_MAX + 2}`);
     expect(ids).not.toContain("u0");
+  });
+
+  test("dismissAppBanner remembers when, once; stored v2 data without it parses", () => {
+    const fresh = defaultGuestData();
+    expect(fresh.preferences.appBannerDismissedAt).toBeUndefined();
+    const dismissed = dismissAppBanner(42)(fresh);
+    expect(dismissed.preferences.appBannerDismissedAt).toBe(42);
+    expect(dismissAppBanner(43)(dismissed)).toBe(dismissed);
+    expect(
+      guestDataSchema.parse(dismissed).preferences.appBannerDismissedAt
+    ).toBe(42);
+    expect(guestDataSchema.safeParse(fresh).success).toBe(true);
   });
 });

@@ -10,6 +10,7 @@ import {
 import { muxStreamUrl, muxThumbnailUrl } from "@smog/utils";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
+import { OpenInApp } from "@/components/app-banner";
 import {
   GestureDetailView,
   RELATED_LIMIT,
@@ -161,6 +162,9 @@ function GesturePage(): ReactNode {
     <Page>
       {gesture.data ? (
         <GestureDetailView
+          // Under the actions, not above the video: it mounts after
+          // hydration, so the video never moves (review M6).
+          appLink={<OpenInApp path={gestureHref(slug)} />}
           gesture={gesture.data}
           hearts={hearts}
           layout="page"

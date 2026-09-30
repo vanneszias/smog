@@ -223,3 +223,14 @@ export function dismissImportFor(userId: string): Mutator {
     };
   };
 }
+
+/** Hides the app banner on this device for good (the first dismissal wins). */
+export function dismissAppBanner(at: number = Date.now()): Mutator {
+  return (data) =>
+    data.preferences.appBannerDismissedAt === undefined
+      ? {
+          ...data,
+          preferences: { ...data.preferences, appBannerDismissedAt: at },
+        }
+      : data;
+}

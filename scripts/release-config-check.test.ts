@@ -2,6 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  type AppLinkIdentity,
+  appLinkIdentity,
+  checkAppLinks,
   checkCiWorkflow,
   checkDeployWorkflow,
   checkReleaseConfig,
@@ -205,6 +208,177 @@ describe("checkWranglerConfig", () => {
     expect(errors).toEqual([
       'apps/site/wrangler.jsonc: env.production.vars.ENVIRONMENT must be "production"',
       'apps/site/wrangler.jsonc: env.staging.vars.ENVIRONMENT must be "staging"',
+    ]);
+  });
+});
+
+const IDENTITY: AppLinkIdentity = {
+  androidPackage: "be.zias.smog",
+  bundleId: "be.zias.smog",
+  pathPrefixes: ["/gestures/", "/lists/"],
+  paths: ["/magic-link/app"],
+  teamId: "96XKP6MU2A",
+};
+const AASA_PATHS = ["/gestures/*", "/lists/*", "/magic-link/app"];
+const FINGERPRINT =
+  "23:4A:F1:75:8A:A7:4E:68:6B:D0:C0:9B:DA:E0:7F:ED:3F:64:C8:4E:D5:BD:EE:4A:AF:E6:EE:27:73:60:B1:C5";
+
+function aasa(appIDs: string[], paths: string[]): string {
+  return JSON.stringify({
+    applinks: {
+      details: [{ appIDs, components: paths.map((path) => ({ "/": path })) }],
+    },
+  });
+}
+
+function assetlinks(packageName: string, fingerprints: string[]): string {
+  return JSON.stringify([
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: packageName,
+        sha256_cert_fingerprints: fingerprints,
+      },
+    },
+  ]);
+}
+
+const HEADERS = `/.well-known/apple-app-site-association
+  Content-Type: application/json
+/.well-known/assetlinks.json
+  Content-Type: application/json
+`;
+
+describe("appLinkIdentity", () => {
+  test("reads the ids and the app-link paths from the Expo config", () => {
+    expect(
+      appLinkIdentity({
+        android: {
+          intentFilters: [
+            { data: [{ scheme: "smog" }] },
+            {
+              autoVerify: true,
+              data: [
+                { host: "h", pathPrefix: "/gestures/", scheme: "https" },
+                { host: "h", pathPrefix: "/lists/", scheme: "https" },
+                { host: "h", path: "/magic-link/app", scheme: "https" },
+              ],
+            },
+          ],
+          package: "be.zias.smog",
+        },
+        ios: { appleTeamId: "96XKP6MU2A", bundleIdentifier: "be.zias.smog" },
+      })
+    ).toEqual(IDENTITY);
+  });
+
+  test("reports what is missing", () => {
+    expect(appLinkIdentity({})).toEqual([
+      "apps/mobile/app.config.ts: ios.appleTeamId, ios.bundleIdentifier and android.package are required",
+    ]);
+  });
+});
+
+describe("checkAppLinks", () => {
+  test("passes when the files match the app", () => {
+    expect(
+      checkAppLinks(
+        {
+          aasa: aasa(["96XKP6MU2A.be.zias.smog"], AASA_PATHS),
+          assetlinks: assetlinks("be.zias.smog", [FINGERPRINT]),
+          headers: HEADERS,
+        },
+        IDENTITY
+      )
+    ).toEqual([]);
+  });
+
+  test("compares exact paths too (the magic-link hand-off, phase 4 task 5)", () => {
+    const missing = checkAppLinks(
+      {
+        aasa: aasa(["96XKP6MU2A.be.zias.smog"], ["/gestures/*", "/lists/*"]),
+        assetlinks: assetlinks("be.zias.smog", [FINGERPRINT]),
+        headers: HEADERS,
+      },
+      IDENTITY
+    );
+    expect(missing).toEqual([
+      'apps/site/public/.well-known/apple-app-site-association: components must be ["/gestures/*","/lists/*","/magic-link/app"] (app.config.ts intent filters)',
+    ]);
+    // An exact path is not a prefix: `/magic-link/app*` does not match it.
+    const wildcard = checkAppLinks(
+      {
+        aasa: aasa(
+          ["96XKP6MU2A.be.zias.smog"],
+          ["/gestures/*", "/lists/*", "/magic-link/app*"]
+        ),
+        assetlinks: assetlinks("be.zias.smog", [FINGERPRINT]),
+        headers: HEADERS,
+      },
+      IDENTITY
+    );
+    expect(wildcard).toHaveLength(1);
+  });
+
+  test("fails on another team, bundle or path set", () => {
+    const errors = checkAppLinks(
+      {
+        aasa: aasa(["ABCDE12345.be.zias.smog"], ["/gestures/*"]),
+        assetlinks: assetlinks("be.zias.smog", [FINGERPRINT]),
+        headers: HEADERS,
+      },
+      IDENTITY
+    );
+    expect(errors).toEqual([
+      'apps/site/public/.well-known/apple-app-site-association: appIDs must be ["96XKP6MU2A.be.zias.smog"]',
+      'apps/site/public/.well-known/apple-app-site-association: components must be ["/gestures/*","/lists/*","/magic-link/app"] (app.config.ts intent filters)',
+    ]);
+  });
+
+  test("fails on another package or a malformed fingerprint", () => {
+    const errors = checkAppLinks(
+      {
+        aasa: aasa(["96XKP6MU2A.be.zias.smog"], AASA_PATHS),
+        assetlinks: assetlinks("be.zias.other", ["23:4a:f1"]),
+        headers: HEADERS,
+      },
+      IDENTITY
+    );
+    expect(errors).toEqual([
+      'apps/site/public/.well-known/assetlinks.json: package_name must be "be.zias.smog"',
+      'apps/site/public/.well-known/assetlinks.json: "23:4a:f1" is not an upper-case SHA-256 fingerprint',
+    ]);
+  });
+
+  test("requires at least one fingerprint and valid JSON", () => {
+    expect(
+      checkAppLinks(
+        {
+          aasa: "{",
+          assetlinks: assetlinks("be.zias.smog", []),
+          headers: HEADERS,
+        },
+        IDENTITY
+      )
+    ).toEqual([
+      "apps/site/public/.well-known/apple-app-site-association: invalid JSON",
+      "apps/site/public/.well-known/assetlinks.json: sha256_cert_fingerprints is empty",
+    ]);
+  });
+
+  test("requires both files to be served as application/json", () => {
+    const errors = checkAppLinks(
+      {
+        aasa: aasa(["96XKP6MU2A.be.zias.smog"], AASA_PATHS),
+        assetlinks: assetlinks("be.zias.smog", [FINGERPRINT]),
+        headers:
+          "/.well-known/assetlinks.json\n  Content-Type: application/json\n",
+      },
+      IDENTITY
+    );
+    expect(errors).toEqual([
+      "apps/site/public/_headers: /.well-known/apple-app-site-association needs Content-Type: application/json",
     ]);
   });
 });
