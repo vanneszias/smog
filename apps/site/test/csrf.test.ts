@@ -1,13 +1,10 @@
 import { exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
 
-const ORIGIN = "http://localhost:5173";
+import { ORIGIN, waitForMail } from "./helpers";
+
 const TOKEN_LINK =
   /http:\/\/localhost:5173\/api\/auth\/verify-email\?token=\S+/;
-
-interface DevMail {
-  messages: { text: string; to: string }[];
-}
 
 /** Signs up, follows the verification link and returns the session cookie. */
 async function signedInCookie(): Promise<string> {
@@ -25,19 +22,10 @@ async function signedInCookie(): Promise<string> {
     }
   );
   expect(signUp.status).toBe(200);
-  let link: string | undefined;
-  for (let attempt = 0; attempt < 50 && !link; attempt += 1) {
-    // biome-ignore lint/performance/noAwaitInLoops: polling until the background send lands.
-    const response = await exports.default.fetch(`${ORIGIN}/dev/mail.json`);
-    const { messages } = (await response.json()) as DevMail;
-    link = messages.find((m) => m.to === email)?.text.match(TOKEN_LINK)?.[0];
-    if (!link) {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
-  }
-  if (!link) {
-    throw new Error("no verification email");
-  }
+  const [message] = await waitForMail(email, {
+    match: ({ text }) => TOKEN_LINK.test(text),
+  });
+  const link = message?.text.match(TOKEN_LINK)?.[0] ?? "";
   const verified = await exports.default.fetch(link, { redirect: "manual" });
   return verified.headers
     .getSetCookie()

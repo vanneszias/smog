@@ -62,14 +62,22 @@ function getEmailSender(): EmailSender {
   });
 }
 
-let auth: Auth | undefined;
+const instances: { open?: Auth; signInOnly?: Auth } = {};
 
 /**
  * The Better Auth instance, built once per isolate: its env, bindings and
  * `waitUntil` do not change between requests, and it keeps no per-request
- * state (sessions are read from D1 on every call).
+ * state (sessions are read from D1 on every call). `signInOnly` is the
+ * second instance, for the admin sign-in routes during maintenance
+ * (`createAuth({ signInOnly })`: nothing creates a user).
  */
-export function getAuth(): Auth {
+export function getAuth({
+  signInOnly = false,
+}: {
+  signInOnly?: boolean;
+} = {}): Auth {
+  const key = signInOnly ? "signInOnly" : "open";
+  let auth = instances[key];
   if (!auth) {
     const { auth: authEnv, db, vars } = siteEnv();
     auth = createAuth({
@@ -77,8 +85,10 @@ export function getAuth(): Auth {
       db: createDb(db),
       email: getEmailSender(),
       env: authEnv,
+      signInOnly,
       waitUntil,
     });
+    instances[key] = auth;
   }
   return auth;
 }
