@@ -37,7 +37,7 @@ export const CATALOG_VERSION_KEY = "catalog:version";
 /** The version while no writer has bumped it yet (a new namespace). */
 export const INITIAL_CATALOG_VERSION = "initial";
 /** KV's edge cache for the version key, in seconds (KV's minimum). */
-export const CATALOG_VERSION_CACHE_TTL = 60;
+const CATALOG_VERSION_CACHE_TTL = 60;
 
 /** A published gesture, normalised for the typo tier. */
 export interface CatalogEntry extends SearchableGesture {
@@ -47,7 +47,7 @@ export interface CatalogEntry extends SearchableGesture {
   keywords: string[];
 }
 
-export interface CatalogSnapshot {
+interface CatalogSnapshot {
   categories: readonly Category[];
   entries: readonly CatalogEntry[];
 }
@@ -96,7 +96,7 @@ async function loadSnapshot(db: Db): Promise<CatalogSnapshot> {
  * isolate and version. Throws when KV or D1 fails (the callers decide how
  * to go on).
  */
-export async function getCatalogSnapshot(
+async function getCatalogSnapshot(
   db: Db,
   kv: KVNamespace
 ): Promise<CatalogSnapshot> {
