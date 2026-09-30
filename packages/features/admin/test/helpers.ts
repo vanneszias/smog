@@ -8,12 +8,13 @@ import { env } from "cloudflare:workers";
 import { isContractProcedure } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { type Auth, createAuth } from "@smog/auth";
-import type { Role, User } from "@smog/db";
+import type { Category, Gesture, Role, User } from "@smog/db";
 import { createDb, type Db } from "@smog/db/client";
+import { makeCategory, makeGesture, makeUser } from "@smog/db/testing";
 import { MemoryEmailSender } from "@smog/email";
 import { makeRpcContext } from "@smog/rpc/testing";
 import { expect } from "vitest";
-import { ADMIN_SLICES, adminContract } from "../src/contract";
+import { ADMIN_PROCEDURE_KINDS, adminContract } from "../src/contract";
 import { auditDataSchema, type WritableAuditAction } from "../src/schema";
 import { createAdminRouter } from "../src/server";
 import { adminDeps } from "./deps";
@@ -141,25 +142,40 @@ export async function callAs<T = unknown>(
 ): Promise<T> {
   return (await call(procedureAt(path), input, {
     context: await contextAs(as),
+    // As `/api/rpc` routes it: `adminProcedure`'s guard reads the path.
+    path: ["admin", ...path.split(".")],
   })) as T;
 }
 
 /** The audit action a mutation is mapped to (throws for reads and exempt ones). */
 export function mappedAction(procedure: string): WritableAuditAction {
-  for (const slice of Object.values(ADMIN_SLICES)) {
-    const mutations = slice.auditMap.mutations as Record<
-      string,
-      WritableAuditAction | { exempt: string } | undefined
-    >;
-    const entry = mutations[procedure];
-    if (typeof entry === "string") {
-      return entry;
-    }
-    if (entry) {
-      throw new Error(`[test] ${procedure} is exempt from the audit`);
-    }
+  const kind = ADMIN_PROCEDURE_KINDS[procedure];
+  if (kind && typeof kind === "object" && "audit" in kind) {
+    return kind.audit;
   }
   throw new Error(`[test] ${procedure} is not a mapped admin mutation`);
+}
+
+/**
+ * What the auth test's admin calls work on: rows created once per test
+ * file. An area's input function may create its own rows too.
+ */
+export interface Fixtures {
+  admin: Authed;
+  category: Category;
+  gesture: Gesture;
+  /** A plain account, the target of user actions. */
+  user: User;
+}
+
+export async function seedFixtures(admin: Authed): Promise<Fixtures> {
+  const db = testDb();
+  return {
+    admin,
+    category: await makeCategory(db, { name: "Fixture category" }),
+    gesture: await makeGesture(db, { name: "Fixture gesture" }),
+    user: await makeUser(db, { name: "Fixture user" }),
+  };
 }
 
 /** The newest audit row id so far: `expectAudit` looks at rows after it. */
@@ -199,10 +215,11 @@ export interface ExpectedAudit {
 }
 
 /**
- * Asserts that `procedure` (an `admin.*` path, as a string literal: the
- * coverage test reads these calls from the test sources) wrote exactly one
- * audit entry for the target since `mark`: its mapped action, the actor,
- * and `data` that its action's schema accepts.
+ * Asserts that `procedure` (an `admin.*` path) wrote exactly one audit
+ * entry for the target since `mark`: its mapped action, the actor, and
+ * `data` that its action's schema accepts (and equal to `data` when
+ * given). `adminProcedure` already fails a mutation that built no entry;
+ * this checks what was stored.
  */
 export async function expectAudit(
   procedure: string,

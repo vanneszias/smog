@@ -11,10 +11,13 @@ task 7 backfills them here.
 
 Every admin procedure needs the admin role: `UNAUTHORIZED` for a guest,
 `FORBIDDEN` for a signed-in user. The role is read from D1 on every request,
-so a demotion applies to the next call. Every mutation writes one audit entry
-per target (`audit_log`, in the same D1 batch as the change, or right after an
-external change), unless its slice's `ADMIN_AUDIT_MAP` exempts it with a
-reason. One section per area; each task fills its own.
+so a demotion applies to the next call. Each procedure has a kind in its
+slice's `ADMIN_PROCEDURES`: a read cannot write D1 or KV, a mutation writes
+one audit entry per target with its mapped action (`audit_log`, in the same
+D1 batch as the change, or right after an external change), and an exempt
+mutation says why it writes none. `adminProcedure` enforces the kind on every
+call (a broken rule is `INTERNAL_SERVER_ERROR`, logged). One section per
+area; each task fills its own.
 
 ### Dashboard
 
@@ -30,11 +33,11 @@ accounts created in the last 30 days. Phase 6 adds the sponsorship stats.
 | Procedure | Input | Output | Audit |
 |---|---|---|---|
 | `admin.audit.list` | `{ action?, targetType?, targetId?, actorId?, from?, to?, cursor?, limit? }` | `{ items: AuditEntry[], nextCursor: string \| null }` | read |
-| `admin.audit.actors` | none | `{ id, name }[]` (≤ 100, by name) | read |
+| `admin.audit.actors` | none | `{ actors: { id, name }[] (≤ 100, by name), truncated }` | read |
 
 - `AuditEntry` is `{ id, action, targetType, targetId, data, actor: { id, name } | null, createdAt }`. `createdAt` is epoch milliseconds; `actor` is `null` once the account is deleted (the entries stay). `data` is parsed with its action's schema (`AUDIT_DATA_SCHEMAS`) when it has one, else returned as stored.
-- `list` is newest first, a keyset page (`created_at, id`) at a time. `limit` is 1..100 (default 50). `from`/`to` are inclusive epoch milliseconds (`from` ≤ `to`, else `BAD_REQUEST`). A cursor the list did not issue is `VALIDATION` (`fieldErrors.cursor`).
-- `actors` lists the accounts that have audit entries, for the actor filter.
+- `list` is newest first, a keyset page (`created_at, id`) at a time. `limit` is 1..100 (default 50). `from`/`to` are inclusive epoch milliseconds (`from` ≤ `to`, else `BAD_REQUEST`). A `targetId` needs its `targetType` (else `BAD_REQUEST`). A cursor the list did not issue is `VALIDATION` (`fieldErrors.cursor`). Every filter seeks an index ending in `created_at` (migration 0005), so a page costs its limit, not the matching rows.
+- `actors` lists every admin and every account with audit entries, for the actor filter; `truncated` is `true` past 100.
 
 ### Gestures
 

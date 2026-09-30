@@ -14,7 +14,7 @@ import {
   Hand,
   LayoutDashboard,
   Mail,
-  Menu as MenuIcon,
+  PanelLeft,
   ScrollText,
   Settings,
   Users,
@@ -110,7 +110,7 @@ export function AdminRail(): ReactNode {
       <div className="flex items-center gap-2 border-border-subtle border-b px-4 py-2 md:hidden">
         <Sheet onOpenChange={setOpen} open={open}>
           <SheetTrigger asChild>
-            <IconButton icon={<MenuIcon />} label={t("admin.rail.open")} />
+            <IconButton icon={<PanelLeft />} label={t("admin.rail.open")} />
           </SheetTrigger>
           <SheetContent side="left" title={t("admin.rail.label")}>
             <AdminRailNav />

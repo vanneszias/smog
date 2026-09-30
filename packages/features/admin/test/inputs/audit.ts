@@ -1,10 +1,11 @@
 import type { ProcedureInputs } from "./index";
 
 /**
- * A valid input for each `admin.audit` procedure (`undefined` for none), so
- * the auth test's calls pass input validation and reach the guard.
+ * For each `admin.audit` procedure, a function from the fixtures to an
+ * input the admin call succeeds with (a mutation then proves it built its
+ * audit entry).
  */
 export const AUDIT_INPUTS: ProcedureInputs = {
-  "audit.actors": undefined,
-  "audit.list": {},
+  "audit.actors": () => undefined,
+  "audit.list": () => ({}),
 };

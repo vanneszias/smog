@@ -1,9 +1,10 @@
 import type { ProcedureInputs } from "./index";
 
 /**
- * A valid input for each `admin.dashboard` procedure (`undefined` for none), so
- * the auth test's calls pass input validation and reach the guard.
+ * For each `admin.dashboard` procedure, a function from the fixtures to an
+ * input the admin call succeeds with (a mutation then proves it built its
+ * audit entry).
  */
 export const DASHBOARD_INPUTS: ProcedureInputs = {
-  dashboard: undefined,
+  dashboard: () => undefined,
 };

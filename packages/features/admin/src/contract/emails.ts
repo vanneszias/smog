@@ -1,4 +1,4 @@
-import type { AdminAuditMap } from "./audit-map";
+import type { AdminProcedures } from "./audit-map";
 
 /**
  * `admin.emails.*`: the email previews (A-25, W-07). Task 6 fills this slice (and only this file,
@@ -6,7 +6,7 @@ import type { AdminAuditMap } from "./audit-map";
  */
 export const emailsSlice = {};
 
-export const ADMIN_AUDIT_MAP = {
-  mutations: {},
-  reads: [],
-} satisfies AdminAuditMap<typeof emailsSlice>;
+/** Each procedure's kind: `"read"`, `{ audit: <action> }` or `{ exempt: <reason> }`. */
+export const ADMIN_PROCEDURES = {} as const satisfies AdminProcedures<
+  typeof emailsSlice
+>;

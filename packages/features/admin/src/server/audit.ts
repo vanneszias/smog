@@ -1,7 +1,19 @@
 import { auditLog, user } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { decodeCursorAs, encodeCursor, InvalidCursorError } from "@smog/utils";
-import { and, asc, desc, eq, gte, lt, lte, or, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  exists,
+  gte,
+  lt,
+  lte,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import {
   AUDIT_ACTORS_MAX,
   type AuditActor,
@@ -141,15 +153,34 @@ async function listAudit(db: Db, input: AuditListQuery): Promise<AuditPage> {
   }
 }
 
-/** The accounts that have audit entries, by name (bounded). */
-async function listAuditActors(db: Db): Promise<AuditActor[]> {
+/**
+ * Every admin and every account with audit entries (a demoted or former
+ * admin), by name, bounded. The `EXISTS` seeks `audit_log_actor_created_idx`.
+ */
+async function listAuditActors(
+  db: Db
+): Promise<{ actors: AuditActor[]; truncated: boolean }> {
   try {
-    return await db
-      .selectDistinct({ id: user.id, name: user.name })
-      .from(auditLog)
-      .innerJoin(user, eq(user.id, auditLog.actorId))
+    const rows = await db
+      .select({ id: user.id, name: user.name })
+      .from(user)
+      .where(
+        or(
+          eq(user.role, "admin"),
+          exists(
+            db
+              .select({ one: sql`1` })
+              .from(auditLog)
+              .where(eq(auditLog.actorId, user.id))
+          )
+        )
+      )
       .orderBy(asc(user.name), asc(user.id))
-      .limit(AUDIT_ACTORS_MAX);
+      .limit(AUDIT_ACTORS_MAX + 1);
+    return {
+      actors: rows.slice(0, AUDIT_ACTORS_MAX),
+      truncated: rows.length > AUDIT_ACTORS_MAX,
+    };
   } catch (error) {
     console.error("[admin] Failed to list the audit actors:", error);
     throw error;

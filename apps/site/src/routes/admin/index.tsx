@@ -164,7 +164,7 @@ function AdminDashboard(): ReactNode {
           className="flex flex-wrap gap-2"
         >
           <Button asChild icon={<Plus />}>
-            <Link params={{ id: "new" }} to="/admin/gestures/$id">
+            <Link to="/admin/gestures/new">
               {t("admin.dashboard.newGesture")}
             </Link>
           </Button>

@@ -42,6 +42,7 @@ import { Route as ListsShareTokenRouteImport } from './routes/lists/$shareToken'
 import { Route as MagicLinkAppRouteImport } from './routes/magic-link_.app'
 import { Route as AdminGesturesIndexRouteImport } from './routes/admin/gestures/index'
 import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id'
+import { Route as AdminGesturesNewRouteImport } from './routes/admin/gestures/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
@@ -211,6 +212,11 @@ const AdminGesturesIdRoute = AdminGesturesIdRouteImport.update({
   path: '/gestures/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminGesturesNewRoute = AdminGesturesNewRouteImport.update({
+  id: '/gestures/new',
+  path: '/gestures/new',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -260,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
+  '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
@@ -297,6 +304,7 @@ export interface FileRoutesByTo {
   '/gestures': typeof GesturesIndexRoute
   '/lists': typeof ListsIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
+  '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
@@ -336,6 +344,7 @@ export interface FileRoutesById {
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
+  '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
@@ -376,6 +385,7 @@ export interface FileRouteTypes {
     | '/gestures/'
     | '/lists/'
     | '/admin/gestures/$id'
+    | '/admin/gestures/new'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
@@ -413,6 +423,7 @@ export interface FileRouteTypes {
     | '/gestures'
     | '/lists'
     | '/admin/gestures/$id'
+    | '/admin/gestures/new'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
@@ -451,6 +462,7 @@ export interface FileRouteTypes {
     | '/gestures/'
     | '/lists/'
     | '/admin/gestures/$id'
+    | '/admin/gestures/new'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
@@ -721,6 +733,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGesturesIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/gestures/new': {
+      id: '/admin/gestures/new'
+      path: '/gestures/new'
+      fullPath: '/admin/gestures/new'
+      preLoaderRoute: typeof AdminGesturesNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -753,6 +772,7 @@ interface AdminRouteChildren {
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminGesturesIdRoute: typeof AdminGesturesIdRoute
+  AdminGesturesNewRoute: typeof AdminGesturesNewRoute
   AdminGesturesIndexRoute: typeof AdminGesturesIndexRoute
 }
 
@@ -764,6 +784,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminGesturesIdRoute: AdminGesturesIdRoute,
+  AdminGesturesNewRoute: AdminGesturesNewRoute,
   AdminGesturesIndexRoute: AdminGesturesIndexRoute,
 }
 

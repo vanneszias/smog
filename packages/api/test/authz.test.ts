@@ -12,10 +12,11 @@ import { appRouter } from "../src/index";
  * test until it is added to one of the two lists, so a forgotten
  * `requireUser` cannot ship unnoticed.
  *
- * `admin.*` is the third class: every one needs the admin role. The admin
- * package's own auth test enumerates them all with valid inputs (one file
- * per area, so parallel work never shares a list); here only the mount is
- * checked.
+ * `admin.*` is the third class: every one needs the admin role, checked
+ * here on the mounted router for every admin path. `adminProcedure`'s
+ * guards run before input validation (oRPC validates after the
+ * middlewares), so no input is needed. The admin package's own auth test
+ * adds the admin's successful call, with inputs per area.
  */
 
 const ADMIN_PREFIX = "admin.";
@@ -127,16 +128,22 @@ describe("admin mount", () => {
     }
   });
 
-  it("admin.dashboard is UNAUTHORIZED for a guest and FORBIDDEN for a user", async () => {
-    await expect(
-      call(procedureAt("admin.dashboard"), undefined, {
-        context: makeRpcContext(),
-      })
-    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
-    await expect(
-      call(procedureAt("admin.dashboard"), undefined, {
-        context: makeRpcContext({ session: makeSession("user") }),
-      })
-    ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  });
+  for (const path of procedurePaths(appContract).filter((name) =>
+    name.startsWith(ADMIN_PREFIX)
+  )) {
+    it(`${path} is UNAUTHORIZED for a guest and FORBIDDEN for a user`, async () => {
+      await expect(
+        call(procedureAt(path), undefined, {
+          context: makeRpcContext(),
+          path: path.split("."),
+        })
+      ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+      await expect(
+        call(procedureAt(path), undefined, {
+          context: makeRpcContext({ session: makeSession("user") }),
+          path: path.split("."),
+        })
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    });
+  }
 });

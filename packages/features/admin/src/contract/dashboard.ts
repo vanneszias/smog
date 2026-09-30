@@ -1,6 +1,6 @@
 import { baseContract } from "@smog/rpc/contract";
 import { dashboardSchema } from "../schema";
-import type { AdminAuditMap } from "./audit-map";
+import type { AdminProcedures } from "./audit-map";
 
 /** `admin.dashboard` (A-03). */
 export const dashboardSlice = {
@@ -11,7 +11,6 @@ export const dashboardSlice = {
   dashboard: baseContract.output(dashboardSchema),
 };
 
-export const ADMIN_AUDIT_MAP = {
-  mutations: {},
-  reads: ["dashboard"],
-} satisfies AdminAuditMap<typeof dashboardSlice>;
+export const ADMIN_PROCEDURES = {
+  dashboard: "read",
+} as const satisfies AdminProcedures<typeof dashboardSlice>;

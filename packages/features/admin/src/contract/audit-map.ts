@@ -13,19 +13,27 @@ export interface AuditExempt {
   exempt: string;
 }
 
-/**
- * What each procedure of a slice does to the audit log (ruling 5).
- *
- * - `mutations`: every procedure that changes stored state, mapped to the
- *   action it writes (one entry per target), or exempt with a reason.
- * - `reads`: every procedure that changes nothing.
- *
- * `test/coverage.test.ts` fails on a procedure in neither list (or both),
- * and on a mapped mutation that no test checks with `expectAudit`.
- */
-export interface AdminAuditMap<TSlice> {
-  mutations: Partial<
-    Record<ProcedurePath<TSlice>, WritableAuditAction | AuditExempt>
-  >;
-  reads: readonly ProcedurePath<TSlice>[];
+/** A mutation and the audit action it writes (ruling 5). */
+export interface AuditWrite {
+  audit: WritableAuditAction;
 }
+
+/**
+ * What a procedure does to stored state:
+ * - `"read"`: nothing. `adminProcedure` gives it a D1 and a KV that throw
+ *   on any write.
+ * - `{ audit }`: a mutation. `adminProcedure` fails the call when the
+ *   handler did not build an entry with exactly this action.
+ * - `{ exempt }`: a mutation with no audit row (the reason says why); it
+ *   may build none.
+ */
+export type AdminProcedureKind = "read" | AuditWrite | AuditExempt;
+
+/**
+ * Every procedure of a slice with its kind. Not `Partial`: `check-types`
+ * fails on a procedure without a kind, and on a stale entry.
+ */
+export type AdminProcedures<TSlice> = Record<
+  ProcedurePath<TSlice>,
+  AdminProcedureKind
+>;

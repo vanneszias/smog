@@ -10,29 +10,35 @@
  * and `export` here: one import, one spread and one `ADMIN_SLICES` entry.
  */
 
-import { ADMIN_AUDIT_MAP as AUDIT_AUDIT_MAP, auditSlice } from "./audit";
-import type { AuditExempt } from "./audit-map";
+import { ADMIN_PROCEDURES as AUDIT_PROCEDURES, auditSlice } from "./audit";
+import type { AdminProcedureKind } from "./audit-map";
 import {
-  ADMIN_AUDIT_MAP as CATEGORIES_AUDIT_MAP,
+  ADMIN_PROCEDURES as CATEGORIES_PROCEDURES,
   categoriesSlice,
 } from "./categories";
 import {
-  ADMIN_AUDIT_MAP as DASHBOARD_AUDIT_MAP,
+  ADMIN_PROCEDURES as DASHBOARD_PROCEDURES,
   dashboardSlice,
 } from "./dashboard";
-import { ADMIN_AUDIT_MAP as EMAILS_AUDIT_MAP, emailsSlice } from "./emails";
+import { ADMIN_PROCEDURES as EMAILS_PROCEDURES, emailsSlice } from "./emails";
 import {
-  ADMIN_AUDIT_MAP as GESTURES_AUDIT_MAP,
+  ADMIN_PROCEDURES as GESTURES_PROCEDURES,
   gesturesSlice,
 } from "./gestures";
 import {
-  ADMIN_AUDIT_MAP as MAINTENANCE_AUDIT_MAP,
+  ADMIN_PROCEDURES as MAINTENANCE_PROCEDURES,
   maintenanceSlice,
 } from "./maintenance";
-import { ADMIN_AUDIT_MAP as MUX_AUDIT_MAP, muxSlice } from "./mux";
-import { ADMIN_AUDIT_MAP as USERS_AUDIT_MAP, usersSlice } from "./users";
+import { ADMIN_PROCEDURES as MUX_PROCEDURES, muxSlice } from "./mux";
+import { ADMIN_PROCEDURES as USERS_PROCEDURES, usersSlice } from "./users";
 
-export type { AdminAuditMap, AuditExempt, ProcedurePath } from "./audit-map";
+export type {
+  AdminProcedureKind,
+  AdminProcedures,
+  AuditExempt,
+  AuditWrite,
+  ProcedurePath,
+} from "./audit-map";
 
 export const adminContract = {
   ...dashboardSlice,
@@ -48,27 +54,32 @@ export const adminContract = {
 export type AdminContract = typeof adminContract;
 
 interface AdminSlice {
-  auditMap: {
-    mutations: Record<string, string | AuditExempt>;
-    reads: readonly string[];
-  };
   contract: Record<string, unknown>;
+  procedures: Readonly<Record<string, AdminProcedureKind>>;
 }
 
 /**
- * Every slice with its audit map; the coverage test walks these. Paths in
- * a map are relative to `admin` (`"audit.list"`).
+ * Every slice with its procedure kinds. Paths are relative to `admin`
+ * (`"audit.list"`).
  */
 export const ADMIN_SLICES = {
-  audit: { auditMap: AUDIT_AUDIT_MAP, contract: auditSlice },
-  categories: { auditMap: CATEGORIES_AUDIT_MAP, contract: categoriesSlice },
-  dashboard: { auditMap: DASHBOARD_AUDIT_MAP, contract: dashboardSlice },
-  emails: { auditMap: EMAILS_AUDIT_MAP, contract: emailsSlice },
-  gestures: { auditMap: GESTURES_AUDIT_MAP, contract: gesturesSlice },
+  audit: { contract: auditSlice, procedures: AUDIT_PROCEDURES },
+  categories: { contract: categoriesSlice, procedures: CATEGORIES_PROCEDURES },
+  dashboard: { contract: dashboardSlice, procedures: DASHBOARD_PROCEDURES },
+  emails: { contract: emailsSlice, procedures: EMAILS_PROCEDURES },
+  gestures: { contract: gesturesSlice, procedures: GESTURES_PROCEDURES },
   maintenance: {
-    auditMap: MAINTENANCE_AUDIT_MAP,
     contract: maintenanceSlice,
+    procedures: MAINTENANCE_PROCEDURES,
   },
-  mux: { auditMap: MUX_AUDIT_MAP, contract: muxSlice },
-  users: { auditMap: USERS_AUDIT_MAP, contract: usersSlice },
+  mux: { contract: muxSlice, procedures: MUX_PROCEDURES },
+  users: { contract: usersSlice, procedures: USERS_PROCEDURES },
 } satisfies Record<string, AdminSlice>;
+
+/** Every admin procedure's kind, by path; `adminProcedure` enforces it. */
+export const ADMIN_PROCEDURE_KINDS: Readonly<
+  Record<string, AdminProcedureKind>
+> = Object.assign(
+  {},
+  ...Object.values(ADMIN_SLICES).map((slice) => slice.procedures)
+);

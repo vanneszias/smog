@@ -4,7 +4,7 @@ import {
   auditListInputSchema,
   auditPageSchema,
 } from "../schema";
-import type { AdminAuditMap } from "./audit-map";
+import type { AdminProcedures } from "./audit-map";
 
 /** `admin.audit.*` (A-24): the audit log viewer. */
 export const auditSlice = {
@@ -20,7 +20,7 @@ export const auditSlice = {
   },
 };
 
-export const ADMIN_AUDIT_MAP = {
-  mutations: {},
-  reads: ["audit.actors", "audit.list"],
-} satisfies AdminAuditMap<typeof auditSlice>;
+export const ADMIN_PROCEDURES = {
+  "audit.actors": "read",
+  "audit.list": "read",
+} as const satisfies AdminProcedures<typeof auditSlice>;

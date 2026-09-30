@@ -1,7 +1,8 @@
 import type { ProcedureInputs } from "./index";
 
 /**
- * A valid input for each `admin.mux` procedure (`undefined` for none), so
- * the auth test's calls pass input validation and reach the guard. Task 3 adds its procedures here.
+ * For each `admin.mux` procedure, a function from the fixtures to an
+ * input the admin call succeeds with (a mutation then proves it built its
+ * audit entry). Task 3 adds its procedures here.
  */
 export const MUX_INPUTS: ProcedureInputs = {};

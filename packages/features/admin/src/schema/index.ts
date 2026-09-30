@@ -1,9 +1,8 @@
 // biome-ignore-all lint/performance/noBarrelFile: the `@smog/admin/schema` entry point (client-safe).
 /**
  * `@smog/admin/schema`: the Zod schemas of the admin procedures, shared by
- * the contract, the server and the hooks. One file per area; Tasks 2, 5
- * and 6 add theirs (`catalog.ts`, `users.ts`, `maintenance.ts`) and export
- * them below, one line each.
+ * the contract, the server and the hooks. One file per area; each area's
+ * file is re-exported whole below, so a task edits only its own file.
  */
 export {
   AUDIT_ACTIONS,
@@ -27,11 +26,17 @@ export {
   auditListInputSchema,
   auditPageSchema,
   auditTargetTypeSchema,
+  isWritableAuditAction,
+  READ_ONLY_AUDIT_ACTIONS,
   type WritableAuditAction,
 } from "./audit";
+// The area files (Tasks 2, 5 and 6 fill them).
+export * from "./catalog";
 export {
   DASHBOARD_NEW_USER_DAYS,
   DASHBOARD_RECENT_AUDIT,
   type Dashboard,
   dashboardSchema,
 } from "./dashboard";
+export * from "./maintenance";
+export * from "./users";

@@ -1,176 +1,94 @@
 import { describe, expect, it } from "vitest";
-import { ADMIN_SLICES, type AuditExempt } from "../src/contract";
-import { AUDIT_DATA_SCHEMAS } from "../src/schema";
+import {
+  ADMIN_PROCEDURE_KINDS,
+  ADMIN_SLICES,
+  type AdminProcedureKind,
+  type AdminProcedures,
+} from "../src/contract";
+import type { dashboardSlice } from "../src/contract/dashboard";
+import { isWritableAuditAction } from "../src/schema";
 import { adminProcedurePaths } from "./helpers";
 
 /*
- * The audit safety net (ruling 5). Every admin procedure is either a read
- * or a mutation, per slice, and every mutation is mapped to the audit
- * action it writes or exempt with a reason. A mapped mutation must be
- * checked by an `expectAudit("<path>", …)` call in some test, so no admin
- * write ships with an audit entry nobody verified. (A mutation listed as
- * a read is caught by the auth test: an admin read must change no table.)
+ * The audit classification (ruling 5). Each slice's `ADMIN_PROCEDURES` is
+ * an exhaustive `Record` of its paths, so `check-types` already fails on an
+ * unclassified or stale path; this is the runtime backstop, plus the rules
+ * the type cannot state. `adminProcedure`'s guard enforces the kinds on
+ * every call (`guard.test.ts`), and the auth test calls every procedure.
  */
 
-/** The test sources (raw), read at build time by Vite. */
-const SOURCES = import.meta.glob<string>("./**/*.test.ts", {
-  eager: true,
-  import: "default",
-  query: "?raw",
-});
-
-const EXPECT_AUDIT = /expectAudit\(\s*["'`]([\w.]+)["'`]/g;
-
-/** Every procedure path the given sources pass to `expectAudit`. */
-function assertedProcedures(sources: Record<string, string>): Set<string> {
-  const found = new Set<string>();
-  for (const [file, source] of Object.entries(sources)) {
-    if (file.endsWith("coverage.test.ts")) {
-      continue;
-    }
-    for (const match of source.matchAll(EXPECT_AUDIT)) {
-      if (match[1]) {
-        found.add(match[1]);
-      }
-    }
+/** Everything wrong with one kind; empty when it is valid. */
+function kindProblems(path: string, kind: AdminProcedureKind | undefined) {
+  if (kind === undefined) {
+    return [`${path}: no procedure kind`];
   }
-  return found;
+  if (kind === "read") {
+    return [];
+  }
+  if ("audit" in kind) {
+    return isWritableAuditAction(kind.audit)
+      ? []
+      : [`${path}: ${kind.audit} is not writable`];
+  }
+  return kind.exempt.trim().length >= 10
+    ? []
+    : [`${path}: exempt without a reason`];
 }
 
-interface SliceMap {
-  mutations: Record<string, string | AuditExempt>;
-  reads: readonly string[];
-}
-
-/** Everything wrong with one slice's audit map; empty when it is complete. */
-function coverageProblems(
-  procedures: readonly string[],
-  auditMap: SliceMap,
-  asserted: ReadonlySet<string>
-): string[] {
-  const mutations = Object.entries(auditMap.mutations);
-  const mutationPaths = mutations.map(([path]) => path);
-  const classified = new Set([...mutationPaths, ...auditMap.reads]);
-  const problems: string[] = [];
-  for (const path of procedures) {
-    if (!classified.has(path)) {
-      problems.push(`${path}: neither a read nor a mutation`);
-    }
-  }
-  for (const path of classified) {
-    if (!procedures.includes(path)) {
-      problems.push(`${path}: not a procedure of this slice`);
-    }
-  }
-  for (const path of auditMap.reads) {
-    if (mutationPaths.includes(path)) {
-      problems.push(`${path}: both a read and a mutation`);
-    }
-  }
-  for (const [path, entry] of mutations) {
-    if (typeof entry !== "string") {
-      if (entry.exempt.trim().length < 10) {
-        problems.push(`${path}: exempt without a reason`);
-      }
-    } else if (!Object.hasOwn(AUDIT_DATA_SCHEMAS, entry)) {
-      problems.push(`${path}: ${entry} has no data schema`);
-    } else if (!asserted.has(path)) {
-      problems.push(`${path}: no test checks its entry with expectAudit`);
-    }
-  }
-  return problems;
-}
-
-describe("audit coverage", () => {
-  const asserted = assertedProcedures(SOURCES);
-
-  it("reads the test sources", () => {
-    expect(Object.keys(SOURCES).length).toBeGreaterThan(1);
-  });
-
-  for (const [area, { auditMap, contract }] of Object.entries(ADMIN_SLICES)) {
-    it(`${area}: every procedure is classified and every mapped mutation checked`, () => {
+describe("admin procedure kinds", () => {
+  for (const [area, { contract, procedures }] of Object.entries(ADMIN_SLICES)) {
+    it(`${area}: every procedure has a valid kind, and no kind is stale`, () => {
+      const paths = adminProcedurePaths(contract);
+      const kinds = procedures as Readonly<Record<string, AdminProcedureKind>>;
+      expect(paths.flatMap((path) => kindProblems(path, kinds[path]))).toEqual(
+        []
+      );
       expect(
-        coverageProblems(adminProcedurePaths(contract), auditMap, asserted)
+        Object.keys(kinds).filter((path) => !paths.includes(path))
       ).toEqual([]);
     });
   }
 
-  it("covers the whole admin contract with its slices", () => {
+  it("the slices make up the whole admin contract, and the kinds cover it", () => {
     const fromSlices = Object.values(ADMIN_SLICES)
       .flatMap(({ contract }) => adminProcedurePaths(contract))
       .sort();
     expect(fromSlices).toEqual(adminProcedurePaths());
+    expect(Object.keys(ADMIN_PROCEDURE_KINDS).sort()).toEqual(fromSlices);
   });
 
-  describe("the check itself", () => {
-    const procedures = ["things.create", "things.delete", "things.list"];
+  it("rejects legacy, unknown actions and bare exemptions", () => {
+    expect(kindProblems("things.import", { audit: "legacy" as never })).toEqual(
+      ["things.import: legacy is not writable"]
+    );
+    expect(
+      kindProblems("things.create", { audit: "gesture.nope" as never })
+    ).toEqual(["things.create: gesture.nope is not writable"]);
+    expect(kindProblems("things.upload", { exempt: " " })).toEqual([
+      "things.upload: exempt without a reason",
+    ]);
+    expect(kindProblems("things.gone", undefined)).toEqual([
+      "things.gone: no procedure kind",
+    ]);
+    expect(kindProblems("things.list", "read")).toEqual([]);
+  });
+});
 
-    it("fails on a procedure in neither list, and on stale or double entries", () => {
-      expect(
-        coverageProblems(
-          procedures,
-          {
-            mutations: { "things.create": "legacy", "things.gone": "legacy" },
-            reads: ["things.list", "things.create"],
-          },
-          new Set(["things.create"])
-        )
-      ).toEqual([
-        "things.delete: neither a read nor a mutation",
-        "things.gone: not a procedure of this slice",
-        "things.create: both a read and a mutation",
-        "things.gone: no test checks its entry with expectAudit",
-      ]);
-    });
-
-    it("fails on a mapped mutation no test checks, and on a bare exemption", () => {
-      expect(
-        coverageProblems(
-          procedures,
-          {
-            mutations: {
-              "things.create": "legacy",
-              "things.delete": { exempt: "" },
-            },
-            reads: ["things.list"],
-          },
-          assertedProcedures({
-            "./other.test.ts": 'await expectAudit("things.update", {})',
-          })
-        )
-      ).toEqual([
-        "things.create: no test checks its entry with expectAudit",
-        "things.delete: exempt without a reason",
-      ]);
-    });
-
-    it("fails on an action without a data schema", () => {
-      expect(
-        coverageProblems(
-          ["things.create"],
-          { mutations: { "things.create": "gesture.nope" }, reads: [] },
-          new Set(["things.create"])
-        )
-      ).toEqual(["things.create: gesture.nope has no data schema"]);
-    });
-
-    it("passes a complete map", () => {
-      expect(
-        coverageProblems(
-          procedures,
-          {
-            mutations: {
-              "things.create": "legacy",
-              "things.delete": { exempt: "changes no stored state" },
-            },
-            reads: ["things.list"],
-          },
-          assertedProcedures({
-            "./things.test.ts": 'await expectAudit(\n  "things.create", {})',
-          })
-        )
-      ).toEqual([]);
-    });
+describe("the kinds type", () => {
+  it("rejects a slice map with a missing or a stale path (check-types)", () => {
+    // @ts-expect-error: `dashboard` has no kind.
+    const missing = {} as const satisfies AdminProcedures<
+      typeof dashboardSlice
+    >;
+    const stale = {
+      dashboard: "read",
+      // @ts-expect-error: `stale` is not a procedure of the slice.
+      stale: "read",
+    } as const satisfies AdminProcedures<typeof dashboardSlice>;
+    const legacy = {
+      // @ts-expect-error: `legacy` is not a writable action.
+      dashboard: { audit: "legacy" },
+    } as const satisfies AdminProcedures<typeof dashboardSlice>;
+    expect([missing, stale, legacy]).toHaveLength(3);
   });
 });

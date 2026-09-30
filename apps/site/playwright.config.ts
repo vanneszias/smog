@@ -3,8 +3,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * The dev server's port. `E2E_PORT` moves it when 5173 is taken (several
- * checkouts on one machine); `.dev.vars` must then set the same
- * `SITE_URL` (`http://localhost:<port>`), which auth and the mails use.
+ * checkouts on one machine). The web server gets the matching `SITE_URL`
+ * through `SMOG_DEV_SITE_URL` (vite.config.ts), so `.dev.vars` needs no
+ * edit; a `SITE_URL` in `.dev.vars` would override it (and leak into
+ * nothing else: the unit tests pin their own env).
  */
 const PORT = Number(process.env.E2E_PORT ?? 5173);
 
@@ -39,6 +41,7 @@ export default defineConfig({
   },
   webServer: {
     command: `bunx vite dev --port ${PORT} --strictPort`,
+    env: { SMOG_DEV_SITE_URL: `http://localhost:${PORT}` },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     url: `http://localhost:${PORT}/api/health`,

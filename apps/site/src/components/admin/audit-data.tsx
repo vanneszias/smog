@@ -29,10 +29,11 @@ export function targetTypeLabel(t: Translate, type: AuditTargetType): string {
   );
 }
 
-export interface AuditTargetLink {
-  search?: Record<string, string>;
-  to: string;
-}
+/** A typed link to the target's admin page. */
+export type AuditTargetLink =
+  | { params: { id: string }; to: "/admin/gestures/$id" }
+  | { search: { user: string }; to: "/admin/users" }
+  | { to: "/admin/categories" | "/admin/settings" };
 
 /**
  * Where the target lives in the admin, if it has a page: the gesture
@@ -46,7 +47,7 @@ export function auditTargetLink(entry: AuditEntry): AuditTargetLink | null {
   }
   switch (entry.targetType) {
     case "gesture":
-      return { to: `/admin/gestures/${encodeURIComponent(id)}` };
+      return { params: { id }, to: "/admin/gestures/$id" };
     case "category":
       return { to: "/admin/categories" };
     case "user":
@@ -143,9 +144,7 @@ export function AuditDetail({ entry }: { entry: AuditEntry }): ReactNode {
           <AuditTarget entry={entry} />
           {link ? (
             <TextLink asChild>
-              <Link search={link.search} to={link.to}>
-                {t("admin.audit.detail.open")}
-              </Link>
+              <Link {...link}>{t("admin.audit.detail.open")}</Link>
             </TextLink>
           ) : null}
         </div>
@@ -154,9 +153,17 @@ export function AuditDetail({ entry }: { entry: AuditEntry }): ReactNode {
         <AuditActorName actor={entry.actor} />
       </Row>
       <Row label={t("admin.audit.detail.data")}>
-        <pre className="max-h-96 overflow-auto rounded-md border border-border-subtle bg-surface-sunken p-3 font-mono text-caption text-foreground">
-          {JSON.stringify(entry.data, null, 2)}
-        </pre>
+        {/* Scrollable, so it takes focus (keyboard scrolling, axe). */}
+        <section
+          aria-label={t("admin.audit.detail.data")}
+          className="max-h-96 overflow-auto rounded-md border border-border-subtle bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be reachable by keyboard.
+          tabIndex={0}
+        >
+          <pre className="p-3 font-mono text-caption text-foreground">
+            {JSON.stringify(entry.data, null, 2)}
+          </pre>
+        </section>
       </Row>
     </dl>
   );

@@ -23,10 +23,14 @@ type AuditSchemaBlock = Partial<Record<AuditAction, z.ZodType>>;
 /*
  * One block per area. Each task adds its actions to its own block only, so
  * parallel tasks never edit the same lines. An action without a schema
- * cannot be written (`WritableAuditAction`).
+ * cannot be written (`WritableAuditAction`), and neither can `legacy`.
  */
 
-/** Migrated Convex `adminLogs` rows whose shape is not known (spec §15). */
+/**
+ * Migrated Convex `adminLogs` rows whose shape is not known (spec §15).
+ * Read-only: parsed on read, never written (its `{ legacy: unknown }` would
+ * bypass the per-action schemas and their data minimisation).
+ */
 const LEGACY_AUDIT_SCHEMAS = {
   legacy: z.object({ legacy: z.unknown() }),
 } satisfies AuditSchemaBlock;
@@ -52,8 +56,26 @@ export const AUDIT_DATA_SCHEMAS = {
   ...MAINTENANCE_AUDIT_SCHEMAS,
 } satisfies AuditSchemaBlock;
 
-/** The actions the writer accepts: those with a `data` schema. */
-export type WritableAuditAction = keyof typeof AUDIT_DATA_SCHEMAS;
+/** Actions that are parsed on read but never written. */
+export const READ_ONLY_AUDIT_ACTIONS = [
+  "legacy",
+] as const satisfies readonly AuditAction[];
+
+/** The actions the writer accepts: those with a `data` schema, except `legacy`. */
+export type WritableAuditAction = Exclude<
+  keyof typeof AUDIT_DATA_SCHEMAS,
+  (typeof READ_ONLY_AUDIT_ACTIONS)[number]
+>;
+
+/** Whether the writer accepts `action` (it has a schema and is not read-only). */
+export function isWritableAuditAction(
+  action: string
+): action is WritableAuditAction {
+  return (
+    Object.hasOwn(AUDIT_DATA_SCHEMAS, action) &&
+    !(READ_ONLY_AUDIT_ACTIONS as readonly string[]).includes(action)
+  );
+}
 
 /** What `data` must look like for `action` (before parsing). */
 export type AuditData<A extends WritableAuditAction> = z.input<
@@ -111,6 +133,11 @@ export const auditListInputSchema = z
   .refine((input) => !(input.from && input.to) || input.from <= input.to, {
     message: "from must not be after to",
     path: ["to"],
+  })
+  // `(target_type, target_id, created_at)` cannot be sought by the id alone.
+  .refine((input) => !input.targetId || input.targetType, {
+    message: "targetId needs targetType",
+    path: ["targetType"],
   });
 
 export type AuditListInput = z.input<typeof auditListInputSchema>;
@@ -125,12 +152,16 @@ export const auditPageSchema = z.object({
 
 export type AuditPage = z.infer<typeof auditPageSchema>;
 
-/** The actors the audit log has entries for (the actor filter). */
-export const auditActorsSchema = z.array(
-  z.object({ id: z.string(), name: z.string() })
-);
+/**
+ * The actor filter's choices: every admin and every account with audit
+ * entries, by name, at most `AUDIT_ACTORS_MAX` (`truncated` says so).
+ */
+export const auditActorsSchema = z.object({
+  actors: z.array(z.object({ id: z.string(), name: z.string() })),
+  truncated: z.boolean(),
+});
 
-export type AuditActor = z.infer<typeof auditActorsSchema>[number];
+export type AuditActor = z.infer<typeof auditActorsSchema>["actors"][number];
 
 /** At most this many actors in the filter (admins are few). */
 export const AUDIT_ACTORS_MAX = 100;

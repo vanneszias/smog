@@ -3,9 +3,15 @@ import { auditLog, gesture } from "@smog/db";
 import { makeUser } from "@smog/db/testing";
 import { encodeCursor } from "@smog/utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import type { AuditEntry, AuditPage } from "../src/schema";
 import { AuditDataError, auditStatement, writeAudit } from "../src/server";
 import { auditEntriesQuery } from "../src/server/audit";
+import {
+  type AuditSchemas,
+  buildAuditStatement,
+  writeAuditWith,
+} from "../src/server/audit-writer";
 import { type Authed, callAs, signedUp, testDb } from "./helpers";
 
 async function auditCount(): Promise<number> {
@@ -59,34 +65,78 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("auditStatement", () => {
+/** A test-only schema map: phase 5 Task 1 has no writable action yet. */
+const SCHEMAS: AuditSchemas = {
+  "gesture.create": z.object({ name: z.string() }),
+};
+
+function entry(
+  actorId: string,
+  targetId: string,
+  data: unknown = { name: "Hond" }
+) {
+  return {
+    action: "gesture.create" as const,
+    actorId,
+    data,
+    targetId,
+    targetType: "gesture" as const,
+  };
+}
+
+describe("the audit writer", () => {
   it("throws on data its action's schema rejects, before anything is written", async () => {
     const actor = await makeUser(testDb());
     const before = await auditCount();
     expect(() =>
-      auditStatement(testDb(), {
-        action: "legacy",
-        actorId: actor.id,
-        // @ts-expect-error: `legacy` data is `{ legacy: unknown }`.
-        data: "not an object",
-        targetId: "g-1",
-        targetType: "gesture",
-      })
+      buildAuditStatement(testDb(), SCHEMAS, entry(actor.id, "g-1", "nope"))
     ).toThrow(AuditDataError);
     expect(await auditCount()).toBe(before);
   });
 
   it("refuses an action without a data schema", () => {
     expect(() =>
-      auditStatement(testDb(), {
-        // @ts-expect-error: only actions with a schema are writable.
+      buildAuditStatement(testDb(), SCHEMAS, {
+        ...entry("someone", "s-1"),
         action: "sponsorship.approve",
-        actorId: "someone",
-        data: { legacy: 1 },
-        targetId: "s-1",
-        targetType: "sponsorship",
       })
     ).toThrow(AuditDataError);
+  });
+
+  it("never writes legacy (the type, and at runtime)", async () => {
+    const actor = await makeUser(testDb());
+    const before = await auditCount();
+    const legacy = {
+      actorId: actor.id,
+      data: { legacy: { anything: "goes" } },
+      targetId: "g-legacy",
+      targetType: "gesture" as const,
+    };
+    expect(() =>
+      // @ts-expect-error: `legacy` is read-only.
+      auditStatement(testDb(), { ...legacy, action: "legacy" })
+    ).toThrow(AuditDataError);
+    await expect(
+      // @ts-expect-error: `legacy` is read-only.
+      writeAudit(testDb(), { ...legacy, action: "legacy" })
+    ).rejects.toThrow(AuditDataError);
+    expect(await auditCount()).toBe(before);
+  });
+
+  it("strips unknown keys from data (the schema decides what is stored)", async () => {
+    const db = testDb();
+    const actor = await makeUser(db);
+    await db.batch([
+      buildAuditStatement(
+        db,
+        SCHEMAS,
+        entry(actor.id, "g-strip", { email: "a@smog.test", name: "Hond" })
+      ),
+    ]);
+    const row = await db.query.auditLog.findFirst({
+      where: (table, { eq }) => eq(table.targetId, "g-strip"),
+    });
+    expect(row?.data).toEqual({ name: "Hond" });
   });
 
   it("is written in the same batch as the change", async () => {
@@ -94,22 +144,16 @@ describe("auditStatement", () => {
     const actor = await makeUser(db);
     const before = await auditCount();
     await db.batch([
-      auditStatement(db, {
-        action: "legacy",
-        actorId: actor.id,
-        data: { legacy: { from: "test" } },
-        targetId: "g-batch",
-        targetType: "gesture",
-      }),
+      buildAuditStatement(db, SCHEMAS, entry(actor.id, "g-batch")),
     ]);
     expect(await auditCount()).toBe(before + 1);
     const row = await db.query.auditLog.findFirst({
       where: (table, { eq }) => eq(table.targetId, "g-batch"),
     });
     expect(row).toMatchObject({
-      action: "legacy",
+      action: "gesture.create",
       actorId: actor.id,
-      data: { legacy: { from: "test" } },
+      data: { name: "Hond" },
       targetType: "gesture",
     });
   });
@@ -119,6 +163,13 @@ describe("auditStatement", () => {
     const actor = await makeUser(db);
     const before = await auditCount();
     const name = `Batch ${crypto.randomUUID()}`;
+    const duplicate = {
+      action: "legacy" as const,
+      actorId: actor.id,
+      data: { legacy: null },
+      id: `duplicate-${crypto.randomUUID()}`,
+      targetType: "gesture" as const,
+    };
     await expect(
       db.batch([
         db.insert(gesture).values({
@@ -128,28 +179,10 @@ describe("auditStatement", () => {
           slug: `slug-${crypto.randomUUID()}`,
           sortName: name.toLowerCase(),
         }),
-        auditStatement(db, {
-          action: "legacy",
-          actorId: actor.id,
-          data: { legacy: null },
-          targetId: "g-fail",
-          targetType: "gesture",
-        }),
-        // The audit id is fresh, so this duplicate primary key fails the batch.
-        db.insert(auditLog).values({
-          action: "legacy",
-          actorId: actor.id,
-          data: { legacy: null },
-          id: "duplicate",
-          targetType: "gesture",
-        }),
-        db.insert(auditLog).values({
-          action: "legacy",
-          actorId: actor.id,
-          data: { legacy: null },
-          id: "duplicate",
-          targetType: "gesture",
-        }),
+        buildAuditStatement(db, SCHEMAS, entry(actor.id, "g-fail")),
+        // The same primary key twice fails the batch.
+        db.insert(auditLog).values(duplicate),
+        db.insert(auditLog).values(duplicate),
       ])
     ).rejects.toThrow();
     expect(await auditCount()).toBe(before);
@@ -160,38 +193,26 @@ describe("auditStatement", () => {
       .first<{ n: number }>();
     expect(kept?.n).toBe(0);
   });
-});
 
-describe("writeAudit", () => {
-  it("writes one entry", async () => {
+  it("writes one entry standalone (after an external change)", async () => {
     const actor = await makeUser(testDb());
     const before = await auditCount();
-    await writeAudit(testDb(), {
-      action: "legacy",
-      actorId: actor.id,
-      data: { legacy: 1 },
-      targetId: "setting-key",
-      targetType: "setting",
-    });
+    await writeAuditWith(testDb(), SCHEMAS, entry(actor.id, "g-standalone"));
     expect(await auditCount()).toBe(before + 1);
   });
 
-  it("logs and rethrows a failed write (after an external change)", async () => {
+  it("logs and rethrows a failed standalone write", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {
       // Silenced: the failure is the point of this test.
     });
     await expect(
-      writeAudit(testDb(), {
-        action: "legacy",
-        // No such user: the foreign key fails the insert.
-        actorId: "no-such-user",
-        data: { legacy: 1 },
-        targetId: "u-1",
-        targetType: "user",
-      })
+      // No such user: the foreign key fails the insert.
+      writeAuditWith(testDb(), SCHEMAS, entry("no-such-user", "g-fk"))
     ).rejects.toThrow();
     expect(logged).toHaveBeenCalledWith(
-      expect.stringContaining("[admin] Failed to write the audit entry legacy"),
+      expect.stringContaining(
+        "[admin] Failed to write the audit entry gesture.create for gesture:g-fk"
+      ),
       expect.anything()
     );
   });
@@ -340,46 +361,98 @@ describe("admin.audit.list", () => {
     });
   });
 
-  it("seeks an index for each filter", async () => {
+  it("seeks an index for every filter shape, never sorting the matches", async () => {
     const db = testDb();
-    const plan = async (filters: Parameters<typeof auditEntriesQuery>[1]) => {
-      const { params, sql } = auditEntriesQuery(db, filters, null, 51).toSQL();
+    const plan = async (
+      filters: Parameters<typeof auditEntriesQuery>[1],
+      cursor: boolean
+    ) => {
+      const position = cursor ? { createdAt: 5000, id: "m" } : null;
+      const { params, sql } = auditEntriesQuery(
+        db,
+        filters,
+        position,
+        51
+      ).toSQL();
       const { results } = await env.DB.prepare(`EXPLAIN QUERY PLAN ${sql}`)
         .bind(...params)
         .all<{ detail: string }>();
       return results.map((row) => row.detail).join("\n");
     };
-    expect(await plan({})).toContain("audit_log_created_at_idx");
-    expect(await plan({ action: "legacy" })).toContain(
-      "audit_log_action_created_idx"
-    );
-    expect(await plan({ targetId: "g", targetType: "gesture" })).toContain(
-      "audit_log_target_idx"
-    );
-    expect(await plan({ actorId: "a" })).toContain("audit_log_actor_id_idx");
+    /** Each UI filter shape and the indexes it may seek (any one of them). */
+    const shapes: [Parameters<typeof auditEntriesQuery>[1], string[]][] = [
+      [{}, ["audit_log_created_at_idx"]],
+      [{ from: 1000, to: 9000 }, ["audit_log_created_at_idx"]],
+      [{ action: "legacy" }, ["audit_log_action_created_idx"]],
+      [{ targetType: "gesture" }, ["audit_log_type_created_idx"]],
+      [
+        { targetId: "g", targetType: "gesture" },
+        ["audit_log_target_created_idx"],
+      ],
+      [{ actorId: "a" }, ["audit_log_actor_created_idx"]],
+      [
+        { action: "legacy", actorId: "a" },
+        ["audit_log_action_created_idx", "audit_log_actor_created_idx"],
+      ],
+      [
+        { actorId: "a", targetType: "gesture" },
+        ["audit_log_actor_created_idx", "audit_log_type_created_idx"],
+      ],
+      [
+        { action: "legacy", from: 1000, targetType: "user" },
+        ["audit_log_action_created_idx", "audit_log_type_created_idx"],
+      ],
+    ];
+    for (const [filters, indexes] of shapes) {
+      for (const cursor of [false, true]) {
+        // biome-ignore lint/performance/noAwaitInLoops: one plan at a time.
+        const detail = await plan(filters, cursor);
+        const shape = `${JSON.stringify(filters)} cursor=${cursor}`;
+        expect(
+          indexes.some((index) => detail.includes(index)),
+          `${shape}: ${detail}`
+        ).toBe(true);
+        expect(detail, shape).not.toContain("USE TEMP B-TREE FOR ORDER BY");
+      }
+    }
+  });
+
+  it("refuses a target id without its type (it could not seek an index)", async () => {
+    const admin = await signedUp("admin");
+    await expect(list(admin, { targetId: "g-1" })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
   });
 });
 
 describe("admin.audit.actors", () => {
-  it("lists each account with entries once, by name", async () => {
-    const admin = await signedUp("admin");
+  it("lists every admin and every account with entries, once, by name", async () => {
+    const admin = await signedUp("admin", "Aaron Admin");
     const zed = await makeUser(testDb(), { name: "Zed Actor" });
     const amy = await makeUser(testDb(), { name: "Amy Actor" });
+    const bystander = await makeUser(testDb(), { name: "Bystander" });
     await seed([
       { actorId: zed.id, createdAt: 80_000 },
       { actorId: zed.id, createdAt: 81_000 },
       { actorId: amy.id, createdAt: 82_000 },
       { actorId: null, createdAt: 83_000 },
     ]);
-    const actors = await callAs<{ id: string; name: string }[]>(
-      admin,
-      "audit.actors"
-    );
-    const mine = actors.filter((actor) => [zed.id, amy.id].includes(actor.id));
-    expect(mine).toEqual([
+    const { actors, truncated } = await callAs<{
+      actors: { id: string; name: string }[];
+      truncated: boolean;
+    }>(admin, "audit.actors");
+    const actorIds = actors.map((actor) => actor.id);
+    expect(actorIds).toContain(admin.user.id);
+    expect(actorIds).not.toContain(bystander.id);
+    expect(
+      actors.filter((actor) => [zed.id, amy.id].includes(actor.id))
+    ).toEqual([
       { id: amy.id, name: "Amy Actor" },
       { id: zed.id, name: "Zed Actor" },
     ]);
-    expect(actors.some((actor) => actor.id === null)).toBe(false);
+    expect(new Set(actorIds).size).toBe(actorIds.length);
+    const names = actors.map((actor) => actor.name);
+    expect(names).toEqual([...names].sort((x, y) => (x < y ? -1 : 1)));
+    expect(truncated).toBe(false);
   });
 });

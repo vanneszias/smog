@@ -1,4 +1,4 @@
-import type { AdminAuditMap } from "./audit-map";
+import type { AdminProcedures } from "./audit-map";
 
 /**
  * `admin.categories.*`: the category list, create, rename, publish, reorder and delete (A-22). Task 2 fills this slice (and only this file,
@@ -6,7 +6,7 @@ import type { AdminAuditMap } from "./audit-map";
  */
 export const categoriesSlice = {};
 
-export const ADMIN_AUDIT_MAP = {
-  mutations: {},
-  reads: [],
-} satisfies AdminAuditMap<typeof categoriesSlice>;
+/** Each procedure's kind: `"read"`, `{ audit: <action> }` or `{ exempt: <reason> }`. */
+export const ADMIN_PROCEDURES = {} as const satisfies AdminProcedures<
+  typeof categoriesSlice
+>;

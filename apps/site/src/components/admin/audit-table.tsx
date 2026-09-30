@@ -7,6 +7,7 @@ import {
   type AuditListInput,
   type AuditTargetType,
 } from "@smog/admin/schema";
+import { dayRange } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
   Button,
@@ -37,16 +38,19 @@ import {
   useAuditTime,
 } from "./audit-data";
 
-/** The audit filters as they live in the URL (`/admin/audit?…`). */
+/**
+ * The audit filters as they live in the URL (`/admin/audit?…`). The days
+ * are Brussels calendar days, as the times in the table are shown.
+ */
 export interface AuditSearch {
   action?: AuditAction | undefined;
   actor?: string | undefined;
   /** The page's start (a cursor from the previous page). */
   cursor?: string | undefined;
-  /** `YYYY-MM-DD`, inclusive, local time. */
+  /** `YYYY-MM-DD`, inclusive, Brussels time. */
   from?: string | undefined;
   targetType?: AuditTargetType | undefined;
-  /** `YYYY-MM-DD`, inclusive, local time. */
+  /** `YYYY-MM-DD`, inclusive, Brussels time. */
   to?: string | undefined;
 }
 
@@ -87,15 +91,6 @@ export function validateAuditSearch(
   };
 }
 
-/** A local calendar day as epoch milliseconds (start, or its last ms). */
-function dayMs(day: string | undefined, end: boolean): number | undefined {
-  if (!day) {
-    return;
-  }
-  const ms = new Date(`${day}T${end ? "23:59:59.999" : "00:00:00"}`).getTime();
-  return Number.isFinite(ms) ? ms : undefined;
-}
-
 /** The list input for the URL's filters (a reversed day range is swapped). */
 export function auditListInput(search: AuditSearch): AuditListInput {
   const reversed = Boolean(search.from && search.to && search.from > search.to);
@@ -106,9 +101,9 @@ export function auditListInput(search: AuditSearch): AuditListInput {
     action: search.action,
     actorId: search.actor,
     cursor: search.cursor,
-    from: dayMs(first, false),
+    from: first ? dayRange(first)?.start : undefined,
     targetType: search.targetType,
-    to: dayMs(last, true),
+    to: last ? dayRange(last)?.end : undefined,
   };
 }
 
@@ -205,7 +200,7 @@ function AuditFilters({ onSearchChange, search }: AuditTableProps): ReactNode {
           onValueChange={onActor}
           options={[
             all,
-            ...(actors.data ?? []).map((actor) => ({
+            ...(actors.data?.actors ?? []).map((actor) => ({
               label: actor.name,
               value: actor.id,
             })),
@@ -335,8 +330,19 @@ export function AuditTable({
 
   let body: ReactNode;
   if (audit.data) {
+    // The previous filter's rows stay while the new page loads: dimmed.
     body = (
-      <AuditEntries entries={audit.data.items} label={t("admin.audit.title")} />
+      <div
+        aria-busy={audit.isPlaceholderData}
+        className={
+          audit.isPlaceholderData ? "opacity-60 transition-opacity" : undefined
+        }
+      >
+        <AuditEntries
+          entries={audit.data.items}
+          label={t("admin.audit.title")}
+        />
+      </div>
     );
   } else if (audit.isError) {
     body = <ErrorState level={2} onRetry={retry} />;

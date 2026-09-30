@@ -115,6 +115,8 @@ These are recorded here and go into `docs/DECISIONS.md` with the task that imple
 - Parallel tasks each touch only their own blocks in shared files:
   - the i18n catalogues: `admin.<area>.*`; Task 1 creates the empty area blocks
   - `routeTree.gen.ts`: regenerate on merge; never hand-merge it
+  - `bun.lock` conflicts: take either side and re-run `bun install`; never hand-merge
+  - `docs/DECISIONS.md`: each task adds its entries under its own pre-created `## … (phase 5 task N)` heading
 - Docs per task: DECISIONS entries for the rulings the task implements and any deviation, `docs/API.md` for new procedures, and the inventory `Done` ticks.
 
 ## Review focus
@@ -194,7 +196,7 @@ These are recorded here and go into `docs/DECISIONS.md` with the task that imple
 - `packages/features/admin/src/{schema/catalog.ts,contract/gestures.ts,contract/categories.ts,server/gestures.ts,server/categories.ts,server/catalog-writes.ts,client/use-admin-gestures.ts,client/use-admin-categories.ts}` and `test/{gestures,categories}.test.ts`
 - The audit schemas for `gesture.*` and `category.*` in `src/schema/audit.ts`
 - `packages/db/src/fts.ts`: add `rebuildGesturesFtsSql(gestureIds)` and `rebuildCategoryGesturesFtsSql(categoryId)`, the set forms of the one row definition, with tests
-- `packages/db/migrations/0005_admin_gesture_order.sql`: a full `(sort_name, id)` index for the admin list, which includes unpublished rows (`db:generate`; renumber if 0005 is taken at merge)
+- `packages/db/migrations/0006_admin_gesture_order.sql` (0005 is Task 1's `audit_log_order`): a full `(sort_name, id)` index for the admin list, which includes unpublished rows (`db:generate`; renumber if 0005 is taken at merge)
 
 **Interfaces:**
 - Gestures:
@@ -235,7 +237,7 @@ These are recorded here and go into `docs/DECISIONS.md` with the task that imple
   - reorder exact-set validation
   - a KV failure on the bump still returns success and logs
   - the name limit of 120
-  - the list reads unpublished rows, and a query-plan test shows the admin list seeks the 0005 index
+  - the list reads unpublished rows, and a query-plan test shows the admin list seeks the 0006 index
 - [ ] Commit `feat(admin): gesture and category management API`.
 
 ### Task 3: `@smog/video` and the Mux admin integration
@@ -433,7 +435,7 @@ Depends on Tasks 1–6.
 | Wave | Tasks | Why they can run together |
 |---|---|---|
 | A | 1 | Everything depends on the package, the slice files, the shell and the route placeholders. |
-| B | 2, 3, 5, 6 | Disjoint slice files: 2 is catalog + `packages/db/src/fts.ts` + migration 0005; 3 is `packages/video` + `mux` slices + the webhook route + `components/admin/video`; 5 is `users` slices + `packages/auth` + `admin/users.tsx`; 6 is `maintenance`/`emails` slices + `packages/email/samples` + `worker/maintenance.ts` + `admin/{settings,emails}.tsx`. The shared files are only `src/schema/audit.ts` (a separate block per task), the i18n `admin.<area>` blocks, `routeTree.gen.ts` (regenerate) and `packages/config/src/env/worker.ts` (Task 3 only). Task 6 waits for phase 4 task 6 to merge. |
+| B | 2, 3, 5, 6 | Disjoint slice files: 2 is catalog + `packages/db/src/fts.ts` + migration 0006; 3 is `packages/video` + `mux` slices + the webhook route + `components/admin/video`; 5 is `users` slices + `packages/auth` + `admin/users.tsx`; 6 is `maintenance`/`emails` slices + `packages/email/samples` + `worker/maintenance.ts` + `admin/{settings,emails}.tsx`. The shared files are only `src/schema/audit.ts` (a separate block per task), the i18n `admin.<area>` blocks, `routeTree.gen.ts` (regenerate) and `packages/config/src/env/worker.ts` (Task 3 only). Task 6 waits for phase 4 task 6 to merge. |
 | C | 4 | Needs the catalog API (2) and `VideoField` (3). |
 | D | 7 | Needs all of them. |
 

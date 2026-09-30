@@ -334,6 +334,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@orpc/contract": "catalog:",
+        "@orpc/server": "catalog:",
         "@smog/auth": "workspace:*",
         "@smog/config": "workspace:*",
         "@smog/db": "workspace:*",
@@ -345,7 +346,6 @@
       },
       "devDependencies": {
         "@cloudflare/vitest-plugin": "catalog:",
-        "@orpc/server": "catalog:",
         "@smog/email": "workspace:*",
         "@tanstack/react-query": "catalog:",
         "@types/react": "catalog:",

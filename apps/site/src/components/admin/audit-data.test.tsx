@@ -43,7 +43,10 @@ describe("audit labels", () => {
 
 describe("audit target links", () => {
   test("point at the target's admin page", () => {
-    expect(auditTargetLink(ENTRY)).toEqual({ to: "/admin/gestures/g-1" });
+    expect(auditTargetLink(ENTRY)).toEqual({
+      params: { id: "g-1" },
+      to: "/admin/gestures/$id",
+    });
     expect(
       auditTargetLink({ ...ENTRY, targetId: "u-1", targetType: "user" })
     ).toEqual({ search: { user: "u-1" }, to: "/admin/users" });
@@ -74,10 +77,11 @@ describe("audit search", () => {
     });
   });
 
-  test("turns the day range into an inclusive, ordered time range", () => {
+  test("turns the day range into an inclusive, ordered Brussels time range", () => {
     const input = auditListInput({ from: "2026-09-30", to: "2026-09-01" });
-    expect(input.from).toBe(new Date("2026-09-01T00:00:00").getTime());
-    expect(input.to).toBe(new Date("2026-09-30T23:59:59.999").getTime());
+    // Brussels is UTC+2 in September, whatever the browser's zone.
+    expect(input.from).toBe(Date.UTC(2026, 7, 31, 22));
+    expect(input.to).toBe(Date.UTC(2026, 8, 30, 22) - 1);
   });
 });
 
