@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "@jest/globals";
 import { createApiClient, createApiQueryUtils } from "@smog/api/client";
-import { userScopedKey } from "@smog/rpc/react";
+import { purgeOtherUsers, userScopedKey } from "@smog/rpc/react";
 import { QueryClient } from "@tanstack/react-query";
 import {
   persistQueryClientRestore,
@@ -9,6 +9,7 @@ import {
 import {
   cacheBuster,
   createPersistOptions,
+  keepPersistedQueries,
   QUERY_CACHE_KEY,
   QUERY_CACHE_MAX_AGE,
 } from "./query-persist";
@@ -144,7 +145,7 @@ async function persistAndRestore(
 }
 
 describe("the offline query cache", () => {
-  it("restores the catalogue and the user's favorite ids", async () => {
+  it("restores the catalogue and the user's favorites (ids and pages)", async () => {
     const restored = await persistAndRestore(memoryStorage());
     expect(restored.getQueryData(keys.list)).toEqual({
       pageParams: [undefined],
@@ -153,14 +154,19 @@ describe("the offline query cache", () => {
     expect(restored.getQueryData(keys.categories)).toHaveLength(1);
     expect(restored.getQueryData(keys.bySlug)).toMatchObject({ slug: "hond" });
     expect(restored.getQueryData(keys.favoritesIds)).toEqual(["g1"]);
+    // The signed-in favorites tab renders offline too (the null cursor is
+    // put back, so the refetch sends a valid first page).
+    expect(restored.getQueryData(keys.favoritesList)).toEqual({
+      pageParams: [undefined],
+      pages: [{ items: [HOND], nextCursor: null }],
+    });
   });
 
-  it("never persists searches, lists, favorite pages or unscoped ids", async () => {
+  it("never persists searches, lists or unscoped ids", async () => {
     const storage = memoryStorage();
     const restored = await persistAndRestore(storage);
     expect(restored.getQueryData(keys.search)).toBeUndefined();
     expect(restored.getQueryData(keys.mine)).toBeUndefined();
-    expect(restored.getQueryData(keys.favoritesList)).toBeUndefined();
     expect(restored.getQueryData(keys.guestIds)).toBeUndefined();
     const stored = storage.map.get(QUERY_CACHE_KEY) ?? "";
     expect(stored).not.toContain("Les 1");
@@ -201,10 +207,140 @@ describe("the offline query cache", () => {
     expect(restored.getQueryData(keys.list)).toBeUndefined();
   });
 
-  it("keeps 24 hours and busts on the app version", () => {
+  it("keeps 24 hours and busts on the app version and the OTA update", () => {
     expect(QUERY_CACHE_MAX_AGE).toBe(24 * 60 * 60 * 1000);
-    expect(cacheBuster("3.0.0")).toBe("3.0.0");
-    expect(cacheBuster("3.0.1")).not.toBe(cacheBuster("3.0.0"));
-    expect(cacheBuster(undefined)).toBe("dev");
+    expect(cacheBuster({ updateId: "u1", version: "3.0.0" })).toBe("3.0.0:u1");
+    expect(cacheBuster({ updateId: "u1", version: "3.0.1" })).not.toBe(
+      cacheBuster({ updateId: "u1", version: "3.0.0" })
+    );
+    // An EAS Update ships new JS under the same app version.
+    expect(cacheBuster({ updateId: "u2", version: "3.0.0" })).not.toBe(
+      cacheBuster({ updateId: "u1", version: "3.0.0" })
+    );
+    // The embedded bundle: its runtime version, else "embedded".
+    expect(
+      cacheBuster({ runtimeVersion: "fp1", updateId: null, version: "3.0.0" })
+    ).toBe("3.0.0:fp1");
+    expect(cacheBuster({})).toBe("dev:embedded");
+  });
+
+  it("drops the cache written by another OTA update", async () => {
+    const storage = memoryStorage();
+    const source = newClient();
+    fillCache(source);
+    await persistQueryClientSave({
+      queryClient: source,
+      ...createPersistOptions({
+        buster: cacheBuster({ updateId: "u1", version: "3.0.0" }),
+        storage,
+        throttleTime: 0,
+      }),
+    });
+    await waitForWrite(storage);
+    const restored = newClient();
+    await persistQueryClientRestore({
+      queryClient: restored,
+      ...createPersistOptions({
+        buster: cacheBuster({ updateId: "u2", version: "3.0.0" }),
+        storage,
+        throttleTime: 0,
+      }),
+    });
+    expect(restored.getQueryData(keys.bySlug)).toBeUndefined();
+    expect(storage.map.has(QUERY_CACHE_KEY)).toBe(false);
+  });
+
+  it("after an account switch, the next write leaves the previous user out", async () => {
+    const storage = memoryStorage();
+    // User u1 persisted their favorites; u2 signs in on the same device.
+    const restored = await persistAndRestore(storage);
+    expect(restored.getQueryData(keys.favoritesIds)).toEqual(["g1"]);
+    purgeOtherUsers(restored, "u2");
+    const u2Ids = userScopedKey(rpc.favorites.ids.key({ type: "query" }), "u2");
+    restored.setQueryData(u2Ids, ["g7"]);
+    storage.map.clear();
+    await persistQueryClientSave({
+      queryClient: restored,
+      ...createPersistOptions({ buster: "v1", storage, throttleTime: 0 }),
+    });
+    await waitForWrite(storage);
+    const stored = storage.map.get(QUERY_CACHE_KEY) ?? "";
+    expect(stored).not.toContain('"u1"');
+    expect(stored).toContain('"u2"');
+    expect(stored).toContain("g7");
+    // The catalogue is nobody's and stays.
+    expect(stored).toContain("hond");
+  });
+
+  it("drops a guest's favorites pages once a user signs in", async () => {
+    const storage = memoryStorage();
+    const source = newClient();
+    fillCache(source);
+    const guestPages = userScopedKey(
+      [...rpc.gestures.byIds.key({ type: "infinite" }), { ids: ["g9"] }],
+      undefined
+    );
+    source.setQueryData(guestPages, {
+      pageParams: [0],
+      pages: [[{ ...HOND, id: "g9", slug: "guest-only" }]],
+    });
+    const options = createPersistOptions({
+      buster: "v1",
+      storage,
+      throttleTime: 0,
+    });
+    await persistQueryClientSave({ queryClient: source, ...options });
+    await waitForWrite(storage);
+    const restored = newClient();
+    await persistQueryClientRestore({ queryClient: restored, ...options });
+    expect(restored.getQueryData(guestPages)).toBeDefined();
+
+    purgeOtherUsers(restored, "u1");
+    expect(restored.getQueryData(guestPages)).toBeUndefined();
+  });
+
+  it("trims the oldest queries when the cache grows past the size limit", async () => {
+    const storage = memoryStorage();
+    const source = newClient();
+    fillCache(source);
+    // A large catalogue page, older than the rest.
+    const big = rpc.gestures.bySlug.queryKey({ input: { slug: "groot" } });
+    source.setQueryData(
+      big,
+      {
+        ...HOND,
+        canonicalSlug: "groot",
+        description: "x".repeat(5000),
+        keywords: [],
+        publishedAt: 0,
+        slug: "groot",
+        sponsor: null,
+        updatedAt: 0,
+      },
+      { updatedAt: 1 }
+    );
+    await persistQueryClientSave({
+      queryClient: source,
+      ...createPersistOptions({
+        buster: "v1",
+        maxBytes: 4000,
+        storage,
+        throttleTime: 0,
+      }),
+    });
+    await waitForWrite(storage);
+    const stored = storage.map.get(QUERY_CACHE_KEY) ?? "";
+    expect(stored.length).toBeLessThanOrEqual(4000);
+    expect(stored).not.toContain("groot");
+    expect(stored).toContain('"hond"');
+  });
+
+  it("keeps the persisted procedures in memory for as long as on disk", () => {
+    const client = newClient();
+    keepPersistedQueries(client);
+    for (const key of [keys.favoritesList, keys.favoritesIds, keys.list]) {
+      expect(client.getQueryDefaults(key).gcTime).toBe(QUERY_CACHE_MAX_AGE);
+    }
+    expect(client.getQueryDefaults(keys.search).gcTime).toBeUndefined();
   });
 });

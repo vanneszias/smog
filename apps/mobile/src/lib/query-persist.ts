@@ -19,10 +19,19 @@ export const QUERY_CACHE_KEY = "smog:query-cache:v1";
 export const QUERY_CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
 
 /**
+ * The largest cache written to AsyncStorage (UTF-8 bytes). Android reads a
+ * row through a CursorWindow of about 2 MB, and a failed read drops the
+ * whole cache, so a larger one is trimmed, oldest query first.
+ */
+export const QUERY_CACHE_MAX_BYTES = 1024 * 1024;
+
+/**
  * The procedures kept offline: public catalogue reads, plus the signed-in
- * user's favorite ids (the hearts). Searches (one entry per query), lists
- * and favorite pages stay online only. `gestures.byIds`/`related` fill the
- * favorites, lists and the gesture screen from the same catalogue.
+ * user's favorites (the hearts and the favorites tab). Searches (one entry
+ * per query) and lists stay online only. `gestures.byIds`/`related` fill
+ * the guest favorites, lists and the gesture screen from the same
+ * catalogue (the guest's `byIds` pages are guest-scoped: one variant is
+ * kept by `useFavorites`, and a sign-in drops it).
  */
 const PUBLIC_PROCEDURES = [
   "gestures.list",
@@ -31,7 +40,7 @@ const PUBLIC_PROCEDURES = [
   "gestures.byIds",
   "gestures.related",
 ] as const;
-const USER_PROCEDURES = ["favorites.ids"] as const;
+const USER_PROCEDURES = ["favorites.ids", "favorites.list"] as const;
 
 /** `["gestures","list"]` from an oRPC key (`[path, { input, type }]`). */
 function procedureOf(queryKey: QueryKey): string | undefined {
@@ -69,9 +78,47 @@ function shouldPersistQuery(query: Query): boolean {
   );
 }
 
-/** The cache buster: a cache written by another app version is dropped. */
-export function cacheBuster(appVersion: string | null | undefined): string {
-  return appVersion || "dev";
+/** What identifies the running JS bundle (`expo-constants`, `expo-updates`). */
+export interface BundleIdentity {
+  /** `expo-updates` `runtimeVersion` (the fingerprint), for the embedded bundle. */
+  runtimeVersion?: string | null;
+  /** `expo-updates` `updateId`: set when an OTA update is running. */
+  updateId?: string | null;
+  /** The app version (`expoConfig.version`). */
+  version?: string | null;
+}
+
+/**
+ * The cache buster: a cache written by another app version or another JS
+ * bundle (an EAS Update keeps the app version) is dropped, so an old
+ * output shape is never restored into new code.
+ */
+export function cacheBuster({
+  runtimeVersion,
+  updateId,
+  version,
+}: BundleIdentity): string {
+  return `${version || "dev"}:${updateId || runtimeVersion || "embedded"}`;
+}
+
+/** UTF-8 bytes of `text` (what AsyncStorage stores). */
+function byteLength(text: string): number {
+  return new TextEncoder().encode(text).length;
+}
+
+/** `JSON.stringify`, refusing a cache above `maxBytes` (the retry trims it). */
+function serializeWithin(
+  maxBytes: number
+): (client: PersistedClient) => string {
+  return (client) => {
+    const serialized = JSON.stringify(client);
+    if (byteLength(serialized) > maxBytes) {
+      throw new Error(
+        `[query-persist] The cache is over ${maxBytes} bytes; trimming`
+      );
+    }
+    return serialized;
+  };
 }
 
 function isInfiniteData(
@@ -110,18 +157,22 @@ export interface PersistStorage {
 
 export interface CreatePersistOptions {
   buster: string;
+  /** The largest cache written (`QUERY_CACHE_MAX_BYTES` by default). */
+  maxBytes?: number;
   storage: PersistStorage;
   /** Writes are throttled (1 s by default). */
   throttleTime?: number;
 }
 
 /**
- * `PersistQueryClientProvider`'s options: AsyncStorage, 24 h, the app
- * version as buster, and only `shouldPersistQuery` queries. When the
- * storage refuses a write (full), the oldest query is dropped and retried.
+ * `PersistQueryClientProvider`'s options: AsyncStorage, 24 h, the bundle
+ * as buster, and only `shouldPersistQuery` queries. When the cache is over
+ * `maxBytes` or the storage refuses a write (full), the oldest query is
+ * dropped and the write retried.
  */
 export function createPersistOptions({
   buster,
+  maxBytes = QUERY_CACHE_MAX_BYTES,
   storage,
   throttleTime,
 }: CreatePersistOptions): OmitKeyof<PersistQueryClientOptions, "queryClient"> {
@@ -133,6 +184,7 @@ export function createPersistOptions({
       deserialize: deserializeCache,
       key: QUERY_CACHE_KEY,
       retry: removeOldestQuery,
+      serialize: serializeWithin(maxBytes),
       storage,
       ...(throttleTime === undefined ? {} : { throttleTime }),
     }),

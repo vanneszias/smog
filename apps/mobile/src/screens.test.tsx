@@ -12,6 +12,7 @@ import {
 } from "expo-router/testing-library";
 import { Alert } from "react-native";
 import { createPersistOptions } from "./lib/query-persist";
+import { appCacheBuster } from "./providers";
 import { HOND, KAT, memoryStorage, renderApp, rpcError } from "./test/harness";
 
 // The real auth client (Better Auth, SecureStore) is never built: tests pass fakes.
@@ -384,7 +385,7 @@ describe("offline", () => {
     await persistQueryClientSave({
       queryClient: previous,
       ...createPersistOptions({
-        buster: "dev",
+        buster: appCacheBuster(),
         storage: cacheStorage,
         throttleTime: 0,
       }),
