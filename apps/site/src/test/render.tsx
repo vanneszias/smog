@@ -32,7 +32,7 @@ function useGuestSession(): SessionHookResult {
 }
 
 /** A procedure's answer (`gestures/search` → its output, or from its input). */
-export type ApiRoutes = Record<string, unknown>;
+type ApiRoutes = Record<string, unknown>;
 
 /** A fetch that answers `/api/rpc/<path>` from `routes` (404 otherwise). */
 function fakeFetch(
