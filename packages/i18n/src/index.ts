@@ -11,6 +11,7 @@ export {
   DEFAULT_NAMESPACE,
   type Messages,
   resources,
+  type Translate,
   type TranslationKey,
 } from "./keys";
 export { createI18n } from "./setup-web";

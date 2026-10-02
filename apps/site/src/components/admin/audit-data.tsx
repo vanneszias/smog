@@ -3,30 +3,32 @@ import type {
   AuditEntry,
   AuditTargetType,
 } from "@smog/admin/schema";
-import { DEFAULT_LOCALE, formatDate, isLocale } from "@smog/i18n";
+import {
+  DEFAULT_LOCALE,
+  formatDate,
+  isLocale,
+  type Translate,
+} from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import { Badge, Text, TextLink } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useCallback } from "react";
 
-type Translate = ReturnType<typeof useTranslation>["t"];
-
 /*
  * The label keys are built from the enums (`admin.audit.actions.gesture.create`).
- * The cast keeps i18next's key types from expanding every combination;
+ * `Translate` (`@smog/i18n`) checks the built keys without i18next's whole
+ * return-type expansion (TS2589 on a large catalogue);
  * `audit-data.test.ts` checks that each action and target type has its
  * label in every locale.
  */
 
 /** "Gesture created" for `gesture.create`. */
 export function actionLabel(t: Translate, action: AuditAction): string {
-  return t(`admin.audit.actions.${action}` as "admin.audit.actions.legacy");
+  return t(`admin.audit.actions.${action}`);
 }
 
 export function targetTypeLabel(t: Translate, type: AuditTargetType): string {
-  return t(
-    `admin.audit.targetTypes.${type}` as "admin.audit.targetTypes.system"
-  );
+  return t(`admin.audit.targetTypes.${type}`);
 }
 
 /** A typed link to the target's admin page. */
