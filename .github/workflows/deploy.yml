@@ -54,6 +54,21 @@ jobs:
           node-version: 22
       - if: steps.secrets.outputs.enabled == 'true'
         run: bun install --frozen-lockfile
+      # The queues, their DLQs and the R2 bucket (with its CORS) that
+      # wrangler.jsonc binds must exist before the deploy (phase 6). The
+      # script never changes or deletes what exists. Staging creates what is
+      # missing; production only checks, and fails with the exact commands,
+      # unless the repository variable SMOG_PROVISION_PRODUCTION is 1.
+      - name: Ensure Cloudflare resources
+        if: steps.secrets.outputs.enabled == 'true'
+        env:
+          SMOG_PROVISION_PRODUCTION: ${{ vars.SMOG_PROVISION_PRODUCTION }}
+        run: |
+          if [ "$CLOUDFLARE_ENV" = "production" ] && [ "$SMOG_PROVISION_PRODUCTION" != "1" ]; then
+            bun scripts/ensure-cloudflare-resources.ts --env "$CLOUDFLARE_ENV" --check
+          else
+            bun scripts/ensure-cloudflare-resources.ts --env "$CLOUDFLARE_ENV" --create
+          fi
       # Migrations live in packages/db/migrations (wrangler.jsonc
       # `migrations_dir`, phase 2). Until the first one exists there is
       # nothing to apply; release-config-check keeps this path in sync.

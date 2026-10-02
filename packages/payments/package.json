@@ -1,0 +1,25 @@
+{
+  "name": "@smog/payments",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./testing": "./src/testing/index.ts",
+    "./testing/server": "./src/testing/fake-server.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -b",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@smog/config": "workspace:*",
+    "@smog/utils": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

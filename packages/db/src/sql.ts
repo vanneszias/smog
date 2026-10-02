@@ -1,5 +1,10 @@
 import { type SQL, type SQLWrapper, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
+import type { Db } from "./client";
+
+/** One statement of a D1 batch (`db.batch([...])`). */
+export type Statement = BatchItem<"sqlite">;
 
 /**
  * `alias."column"`. Drizzle renders columns unqualified in single-table
@@ -44,4 +49,56 @@ export function userBanInForce(now: Date, alias = "user"): SQL {
  */
 export function otherActiveAdminExists(userId: string, now: Date): SQL {
   return sql`EXISTS (SELECT 1 FROM ${sql.identifier("user")} AS ${sql.identifier("other")} WHERE ${sql.identifier("other")}.${sql.identifier("role")} = 'admin' AND ${sql.identifier("other")}.${sql.identifier("id")} <> ${userId} AND NOT ${userBanInForce(now, "other")})`;
+}
+
+/**
+ * A `failWhen` guard that fired: the batch rolled back. `guard` is its
+ * name; `cause` is D1's error.
+ */
+export class GuardFailedError extends Error {
+  readonly guard: string;
+
+  constructor(guard: string, options: { cause: unknown }) {
+    super(`[db] The ${guard} guard stopped the write`, options);
+    this.guard = guard;
+    this.name = "GuardFailedError";
+  }
+}
+
+const GUARD_PREFIX = "smog-guard:";
+/** Where a guard's name ends in the error message. */
+const GUARD_NAME_END = /[^A-Za-z0-9-]|$/;
+
+/**
+ * A batch statement that fails the whole batch when `condition` holds at
+ * that point of the batch (it sees the earlier statements' writes). SQLite
+ * has no `RAISE` outside triggers, so the guard evaluates an invalid JSON
+ * path, whose error names the guard (`bad JSON path: 'smog-guard:<name>'`);
+ * `toGuardFailure` turns that error into `GuardFailedError`. The
+ * catalogue writes (`@smog/admin`) and the sponsorship transitions
+ * (`@smog/sponsorships`) use the same guard.
+ */
+export function failWhen(db: Db, guard: string, condition: SQL): Statement {
+  return db
+    .select({
+      guard: sql`CASE WHEN ${condition} THEN json_extract('{}', ${GUARD_PREFIX + guard}) END`,
+    })
+    .from(sql`(SELECT 1)`);
+}
+
+/**
+ * The `GuardFailedError` for a batch error that a `failWhen` guard
+ * caused (D1 wraps it in causes), or `null` for any other error.
+ */
+export function toGuardFailure(error: unknown): GuardFailedError | null {
+  for (let e: unknown = error; e instanceof Error; e = e.cause) {
+    const at = e.message.indexOf(GUARD_PREFIX);
+    if (at !== -1) {
+      const rest = e.message.slice(at + GUARD_PREFIX.length);
+      return new GuardFailedError(rest.slice(0, rest.search(GUARD_NAME_END)), {
+        cause: error,
+      });
+    }
+  }
+  return null;
 }

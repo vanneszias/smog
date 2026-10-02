@@ -47,6 +47,7 @@
     "check:ci": "biome ci .",
     "check-types": "turbo run check-types check-types:scripts",
     "check-types:scripts": "tsc -p scripts",
+    "cron": "bun scripts/cron.ts",
     "dev": "turbo dev",
     "knip": "knip --no-progress",
     "maintenance": "bun scripts/maintenance.ts",
@@ -64,6 +65,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
     "@smog/config": "workspace:*",
+    "@smog/jobs": "workspace:*",
     "@types/bun": "catalog:",
     "knip": "6.38.0",
     "turbo": "2.11.5",

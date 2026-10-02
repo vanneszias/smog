@@ -10,6 +10,8 @@ import {
   maintenanceGate,
   SIGN_IN_ONLY,
 } from "@/worker/maintenance";
+import { dispatchQueue } from "@/worker/queues";
+import { dispatchScheduled } from "@/worker/scheduled";
 
 /**
  * The request pipeline, in order: the maintenance gate (503 unless exempt
@@ -35,8 +37,8 @@ async function route(request: Request, nonce: string): Promise<Response> {
 /**
  * Site Worker entry. Every response it answers gets the security headers
  * (`worker/headers.ts`), the maintenance 503, the legacy 301s and a 500 for
- * an escaping exception included; queue consumers and cron jobs are added
- * in later phases.
+ * an escaping exception included. `queue` dispatches by queue name
+ * (`worker/queues.ts`) and `scheduled` by cron (`worker/scheduled.ts`).
  */
 export default {
   fetch(request: Request, env: Env): Promise<Response> {
@@ -50,12 +52,15 @@ export default {
     });
   },
 
-  queue(batch: MessageBatch): void {
-    console.log(`[worker] queue ${batch.queue}`);
-    batch.ackAll();
+  queue(batch: MessageBatch, env: Env, ctx: ExecutionContext): Promise<void> {
+    return dispatchQueue(batch, env, ctx);
   },
 
-  scheduled(controller: ScheduledController): void {
-    console.log(`[worker] scheduled ${controller.cron}`);
+  scheduled(
+    controller: ScheduledController,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<void> {
+    return dispatchScheduled(controller, env, ctx);
   },
 } satisfies ExportedHandler<Env>;

@@ -69,6 +69,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 5. The phase 5 fix wave merged, with `release:check` and the full site e2e green (run locally: the Playwright CI job is still a placeholder). Phase 4 and its fix waves are done.
 6. The Mux production setup: a production Mux environment of its own with `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET` and `MUX_WEBHOOK_SECRET` set, and its webhook at `<SITE_URL>/api/webhooks/mux` (phase 8 carry). Without them the admin can only paste a playback id.
 7. A first admin on production through `bun run admin:grant --env production <email>`, since no admin can be made in the UI without one.
+8. The production queues (`smog-production-email`, `-email-dlq`, `-sponsorship-events`, `-sponsorship-events-dlq`) and the bucket `smog-production-media` with its CORS (phase 6 task 1). The deploy job runs `scripts/ensure-cloudflare-resources.ts --check` for production and fails with the exact `wrangler` commands until they exist; set the repository variable `SMOG_PROVISION_PRODUCTION=1` to let it create them, or run the printed commands. Also the production `R2_ACCOUNT_ID` and `TURNSTILE_SITE_KEY` vars (empty placeholders in `wrangler.jsonc`) and the secrets of `REQUIRED_WORKER_CONFIG.production` (phase 8 checks them against `wrangler secret list`: `MOLLIE_API_KEY`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` join the list).
 
 ## Known gaps
 
@@ -78,6 +79,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - `SMOG_OFFLINE=1 bun run release:check` (local, no network) degrades three expo-doctor checks; CI runs them online and is the authority.
 - The deploy workflow deploys staging on every push to `develop`, once the three CI lanes pass (the `staging` GitHub environment has its secrets and ids). Production has never deployed: `master` needs the `production` environment's `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`, real KV ids, `SITE_URL` and the Turnstile keys, and the list under "Pending before develop → master". D1 migrations run before each deploy (`packages/db/migrations`, append-only).
 - `bun run audit` ignores three moderate advisories (DECISIONS).
+- The queue DLQs (`smog-<env>-email-dlq`, `smog-<env>-sponsorship-events-dlq`) have no consumer: a message lands there after its retries and Cloudflare keeps it 4 days. Check them by hand (dashboard → Queues) after an incident; nothing alerts yet (phase 6 ruling 8).
 - The Playwright `e2e` CI job is a placeholder (off unless `vars.E2E_ENABLED == 'true'`), and the spec's root `test:e2e` script does not exist yet; both come in phase 9.
 - `bun -F @smog/site deploy` bypasses turbo. Once workspace packages need a build step, run `turbo run build --filter=@smog/site^...` first (or make deploy a turbo task depending on `^build`).
 - knip prints an Expo warning about a missing `userInterfaceStyle` although `app.config.ts` sets it (knip's Expo plugin loads the config its own way); cosmetic.

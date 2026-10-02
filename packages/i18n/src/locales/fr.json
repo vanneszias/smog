@@ -405,7 +405,8 @@
       "title": "Code QR pour {{name}}",
       "description": "Scannez le code pour ouvrir ce geste.",
       "download": "Télécharger le code QR"
-    }
+    },
+    "sponsorCta": {}
   },
   "search": {
     "categories": "Catégories",
@@ -505,6 +506,40 @@
         "button": "Choisir un nouveau mot de passe",
         "expiry": "Le lien est valable {{minutes}} minutes.",
         "footer": "Vous n'avez rien demandé\u202f? Vous pouvez ignorer cet e-mail. Votre mot de passe reste inchangé."
+      }
+    },
+    "transactional": {
+      "welcome": {
+        "subject": "Bienvenue sur SMOG & Co",
+        "body": "Votre compte est prêt. Découvrez les gestes et gardez vos favoris."
+      },
+      "sponsorshipReceived": {
+        "subject": "Nous avons reçu votre parrainage",
+        "body": "Merci\u00a0! Nous préparons votre vidéo et la vérifions avant sa mise en ligne."
+      },
+      "paymentConfirmed": {
+        "subject": "Votre paiement est confirmé",
+        "body": "Merci pour votre paiement. Vous trouverez les détails ci-dessous."
+      },
+      "sponsorshipLive": {
+        "subject": "Votre parrainage est en ligne",
+        "body": "Votre vidéo parrainée s'affiche maintenant avec le geste."
+      },
+      "renewalReminder": {
+        "subject": "Votre parrainage se termine bientôt",
+        "body": "Votre parrainage se termine dans 30 jours. Renouvelez-le avec le lien ci-dessous."
+      },
+      "adminNewSponsorship": {
+        "subject": "Nouveau parrainage payé",
+        "body": "Un nouveau parrainage a été payé. Consultez-le dans l'administration."
+      },
+      "adminRenderFailed": {
+        "subject": "Échec de la vidéo",
+        "body": "La vidéo d'un parrainage n'a pas pu être créée. Consultez-la dans l'administration."
+      },
+      "adminRefundNeeded": {
+        "subject": "Remboursement nécessaire",
+        "body": "Un paiement doit être remboursé dans le tableau de bord Mollie."
       }
     }
   },
@@ -743,7 +778,8 @@
       "noAudit": "Aucune action enregistrée pour l’instant.",
       "quickLinks": "Accès rapide",
       "newGesture": "Nouveau geste",
-      "manageCategories": "Gérer les catégories"
+      "manageCategories": "Gérer les catégories",
+      "sponsorships": {}
     },
     "audit": {
       "title": "Journal",
@@ -1331,7 +1367,15 @@
         "magicLink": "Lien de connexion",
         "otp": "Code de connexion",
         "resetPassword": "Réinitialisation du mot de passe",
-        "verifyEmail": "Confirmation de l’adresse e-mail"
+        "verifyEmail": "Confirmation de l’adresse e-mail",
+        "welcome": "Bienvenue",
+        "sponsorshipReceived": "Parrainage reçu",
+        "paymentConfirmed": "Paiement confirmé",
+        "sponsorshipLive": "Parrainage en ligne",
+        "renewalReminder": "Rappel de renouvellement",
+        "adminNewSponsorship": "Nouveau parrainage (admin)",
+        "adminRenderFailed": "Échec de la vidéo (admin)",
+        "adminRefundNeeded": "Remboursement nécessaire (admin)"
       },
       "locale": "Langue",
       "width": "Largeur",
@@ -1346,6 +1390,10 @@
       "previewError": "Cet aperçu n’a pas pu être affiché.",
       "empty": "Pas encore de modèles d’e-mail.",
       "sandboxed": "Affiché dans un bac à sable\u00a0: pas de scripts, les liens ne s’ouvrent pas."
-    }
-  }
+    },
+    "sponsorships": {},
+    "export": {}
+  },
+  "sponsorship": {},
+  "sponsor": {}
 }

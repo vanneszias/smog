@@ -47,6 +47,22 @@ OPENPANEL_CLIENT_SECRET=
 # MUX_TOKEN_ID=
 # MUX_TOKEN_SECRET=
 # MUX_WEBHOOK_SECRET=
-#
-# Phase 6 adds, for example:
+
+# Optional. Mollie (sponsorship payments). Without it the sponsor wizard
+# says sponsoring is paused, checkout answers `paymentsUnavailable` and
+# /api/webhooks/mollie answers 503. Dev and staging take a test_ key only,
+# production a live_ key only. There is no webhook secret: Mollie's webhook
+# is checked by fetching the payment back with this key. MOLLIE_API_URL
+# (default https://api.mollie.com) is a var; only dev may point it at the
+# fake (`bun packages/payments/src/testing/fake-server.ts`, whose key is
+# FAKE_MOLLIE_API_KEY in @smog/payments/testing). Commented out for the same
+# reason as the Mux ones.
 # MOLLIE_API_KEY=
+
+# Optional. An R2 API token (S3 credentials, Object Read & Write on the
+# media bucket) for the presigned logo upload. Without both, logos go
+# through the signed same-origin fallback (PUT /api/logos/upload/…). With
+# them, R2_ACCOUNT_ID and MEDIA_BUCKET (vars in wrangler.jsonc) are needed
+# too. Production needs them before launch (phase 8).
+# R2_ACCESS_KEY_ID=
+# R2_SECRET_ACCESS_KEY=

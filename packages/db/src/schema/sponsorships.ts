@@ -124,6 +124,13 @@ export const payment = sqliteTable(
     paidAt: timestamp("paid_at"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
+    /**
+     * Mollie's `amountRefunded`, stored on every re-fetch (migration 0008,
+     * phase 6 ruling 4). Refunds are made by hand in the Mollie dashboard.
+     */
+    refundedCents: integer("refunded_cents").notNull().default(0),
+    /** When a refund was first recorded (`admin.sponsorships.recordRefund` or a webhook). */
+    refundedAt: timestamp("refunded_at"),
   },
   (t) => [
     check("payment_kind_check", inValues(t.kind, PAYMENT_KINDS)),

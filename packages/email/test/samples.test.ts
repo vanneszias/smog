@@ -20,6 +20,14 @@ describe("EMAIL_SAMPLES", () => {
       "auth/otp": true,
       "auth/reset-password": true,
       "auth/verify-email": true,
+      "transactional/admin-new-sponsorship": true,
+      "transactional/admin-refund-needed": true,
+      "transactional/admin-render-failed": true,
+      "transactional/payment-confirmed": true,
+      "transactional/renewal-reminder": true,
+      "transactional/sponsorship-live": true,
+      "transactional/sponsorship-received": true,
+      "transactional/welcome": true,
     };
     expect([...EMAIL_TEMPLATE_IDS].sort()).toEqual(
       Object.keys(registered).sort()
@@ -44,7 +52,10 @@ describe("EMAIL_SAMPLES", () => {
 
   it("uses no real host or address", () => {
     const json = JSON.stringify(EMAIL_SAMPLES);
-    expect(json).not.toContain("@");
+    // Addresses only on the example host (the admin email's contact).
+    for (const address of json.match(/[^\s"@]+@[^\s"]+/g) ?? []) {
+      expect(address.split("@")[1]).toMatch(EXAMPLE_HOST);
+    }
     for (const url of json.match(URL_IN_TEXT) ?? []) {
       expect(new URL(url).hostname).toMatch(EXAMPLE_HOST);
     }

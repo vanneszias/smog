@@ -10,14 +10,51 @@ import {
   type VerifyEmailProps,
   verifyEmail,
 } from "./templates/auth/verify-email";
+import {
+  type AdminNewSponsorshipProps,
+  adminNewSponsorship,
+} from "./templates/transactional/admin-new-sponsorship";
+import {
+  type AdminRefundNeededProps,
+  adminRefundNeeded,
+} from "./templates/transactional/admin-refund-needed";
+import {
+  type AdminRenderFailedProps,
+  adminRenderFailed,
+} from "./templates/transactional/admin-render-failed";
+import {
+  type PaymentConfirmedProps,
+  paymentConfirmed,
+} from "./templates/transactional/payment-confirmed";
+import {
+  type RenewalReminderProps,
+  renewalReminder,
+} from "./templates/transactional/renewal-reminder";
+import {
+  type SponsorshipLiveProps,
+  sponsorshipLive,
+} from "./templates/transactional/sponsorship-live";
+import {
+  type SponsorshipReceivedProps,
+  sponsorshipReceived,
+} from "./templates/transactional/sponsorship-received";
+import { type WelcomeProps, welcome } from "./templates/transactional/welcome";
 import type { EmailTemplate } from "./templates/types";
 
-/** Every template and its props. Phase 6 adds the transactional ones. */
+/** Every template and its props. */
 export interface EmailTemplateProps {
   "auth/magic-link": MagicLinkProps;
   "auth/otp": OtpProps;
   "auth/reset-password": ResetPasswordProps;
   "auth/verify-email": VerifyEmailProps;
+  "transactional/admin-new-sponsorship": AdminNewSponsorshipProps;
+  "transactional/admin-refund-needed": AdminRefundNeededProps;
+  "transactional/admin-render-failed": AdminRenderFailedProps;
+  "transactional/payment-confirmed": PaymentConfirmedProps;
+  "transactional/renewal-reminder": RenewalReminderProps;
+  "transactional/sponsorship-live": SponsorshipLiveProps;
+  "transactional/sponsorship-received": SponsorshipReceivedProps;
+  "transactional/welcome": WelcomeProps;
 }
 
 export type EmailTemplateId = keyof EmailTemplateProps;
@@ -29,6 +66,14 @@ const TEMPLATES: {
   "auth/otp": otp,
   "auth/reset-password": resetPassword,
   "auth/verify-email": verifyEmail,
+  "transactional/admin-new-sponsorship": adminNewSponsorship,
+  "transactional/admin-refund-needed": adminRefundNeeded,
+  "transactional/admin-render-failed": adminRenderFailed,
+  "transactional/payment-confirmed": paymentConfirmed,
+  "transactional/renewal-reminder": renewalReminder,
+  "transactional/sponsorship-live": sponsorshipLive,
+  "transactional/sponsorship-received": sponsorshipReceived,
+  "transactional/welcome": welcome,
 };
 
 export interface RenderedEmail {

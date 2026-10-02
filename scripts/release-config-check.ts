@@ -1,9 +1,17 @@
 import { readFileSync } from "node:fs";
 import { join, posix } from "node:path";
+import {
+  type Environment,
+  REQUIRED_WORKER_CONFIG,
+  workerSecretsSchema,
+  workerVarsSchema,
+} from "@smog/config/env/worker";
+import { CRON } from "@smog/jobs/cron";
 
 /**
  * Static checks on the release plumbing: the CI and deploy workflows, the
- * site's wrangler envs and the app-link files against the Expo config. Each `check*` function returns a list of problems; an
+ * site's wrangler envs (and their phase 6 queues, bucket and crons), the
+ * required worker config and the app-link files against the Expo config. Each `check*` function returns a list of problems; an
  * empty list means the file is fine.
  */
 
@@ -37,6 +45,7 @@ interface Workflow {
 }
 
 const DEPLOY_COMMAND = "bun -F @smog/site deploy";
+const ENSURE_COMMAND = "scripts/ensure-cloudflare-resources.ts";
 const MIGRATIONS_COMMAND = "wrangler d1 migrations apply DB";
 const TOP_LEVEL_BINDINGS = ["d1_databases", "kv_namespaces", "r2_buckets"];
 const DEPLOY_ENVS = ["staging", "production"];
@@ -244,6 +253,7 @@ function checkDeploySteps(
   if (migrations !== -1 && deploy !== -1 && migrations > deploy) {
     errors.push(`${file}: the D1 migrations must run before the deploy`);
   }
+  errors.push(...checkEnsureStep(steps, migrations, file));
   if (
     steps.some(
       (step) => step.run !== undefined && RAW_WRANGLER_DEPLOY.test(step.run)
@@ -262,6 +272,52 @@ function checkDeploySteps(
   if (!skip) {
     errors.push(
       `${file}: a step must skip with ::warning:: when CLOUDFLARE_API_TOKEN is absent`
+    );
+  }
+  return errors;
+}
+
+/**
+ * The resources step (phase 6 ruling 12): `ensure-cloudflare-resources.ts`
+ * runs before the D1 migrations (so before the deploy), creates for
+ * staging, and only checks production unless SMOG_PROVISION_PRODUCTION.
+ */
+function checkEnsureStep(
+  steps: Step[],
+  migrations: number,
+  file: string
+): string[] {
+  const at = findStepIndex(steps, ENSURE_COMMAND);
+  if (at === -1) {
+    return [
+      `${file}: no step runs \`${ENSURE_COMMAND}\` (the queues and the R2 bucket must exist before the deploy)`,
+    ];
+  }
+  const errors: string[] = [];
+  if (migrations !== -1 && at > migrations) {
+    errors.push(
+      `${file}: \`${ENSURE_COMMAND}\` must run before the D1 migrations and the deploy`
+    );
+  }
+  const step = steps[at];
+  const run = step?.run ?? "";
+  for (const flag of ["--create", "--check"]) {
+    if (!run.includes(flag)) {
+      errors.push(
+        `${file}: the resources step must run ${flag} (staging creates, production checks)`
+      );
+    }
+  }
+  if (
+    !(
+      run.includes("SMOG_PROVISION_PRODUCTION") &&
+      String(step?.env?.SMOG_PROVISION_PRODUCTION ?? "").includes(
+        "vars.SMOG_PROVISION_PRODUCTION"
+      )
+    )
+  ) {
+    errors.push(
+      `${file}: the resources step may create production resources only when vars.SMOG_PROVISION_PRODUCTION is 1`
     );
   }
   return errors;
@@ -327,6 +383,188 @@ export function checkWranglerConfig(source: string): string[] {
     }
   }
   return errors;
+}
+
+/** The consumer settings of ruling 8, per queue kind. */
+const CONSUMER_SETTINGS = {
+  email: { max_batch_size: 10, max_retries: 5, retry_delay: 30 },
+  "sponsorship-events": {
+    max_batch_size: 10,
+    max_retries: 10,
+    retry_delay: 30,
+  },
+} as const;
+const QUEUE_BINDINGS = {
+  EMAIL_QUEUE: "email",
+  EVENTS_QUEUE: "sponsorship-events",
+} as const;
+const COMMENT_PREFIX = /^#\s*/;
+
+function checkQueues(
+  name: string,
+  env: Record<string, unknown>,
+  where: string
+): string[] {
+  const errors: string[] = [];
+  const queues = isRecord(env.queues) ? env.queues : {};
+  const producers = asArray(queues.producers).filter(isRecord);
+  for (const [binding, kind] of Object.entries(QUEUE_BINDINGS)) {
+    const expected = `smog-${name}-${kind}`;
+    const producer = producers.find((entry) => entry.binding === binding);
+    if (producer?.queue !== expected) {
+      errors.push(`${where}: the producer ${binding} must be ${expected}`);
+    }
+  }
+  const consumers = asArray(queues.consumers).filter(isRecord);
+  for (const [kind, settings] of Object.entries(CONSUMER_SETTINGS)) {
+    const queue = `smog-${name}-${kind}`;
+    const consumer = consumers.find((entry) => entry.queue === queue);
+    if (!consumer) {
+      errors.push(`${where}: no consumer for ${queue}`);
+      continue;
+    }
+    if (consumer.dead_letter_queue !== `${queue}-dlq`) {
+      errors.push(
+        `${where}: the consumer of ${queue} needs dead_letter_queue ${queue}-dlq`
+      );
+    }
+    for (const [key, value] of Object.entries(settings)) {
+      if (consumer[key] !== value) {
+        errors.push(`${where}: the consumer of ${queue} needs ${key} ${value}`);
+      }
+    }
+  }
+  for (const consumer of consumers) {
+    const known = Object.keys(CONSUMER_SETTINGS).some(
+      (kind) => consumer.queue === `smog-${name}-${kind}`
+    );
+    if (!known) {
+      errors.push(
+        `${where}: unexpected consumer ${String(consumer.queue)} (worker/queues.ts dispatches email and sponsorship-events only)`
+      );
+    }
+  }
+  return errors;
+}
+
+/**
+ * The phase 6 bindings of every env (ruling 12): the queues
+ * `smog-<env>-email` and `smog-<env>-sponsorship-events` with their
+ * producers and consumers (each with its `…-dlq`), the R2 bucket
+ * `smog-<env>-media` as `MEDIA` (and `vars.MEDIA_BUCKET`), `RENDER_MODE`,
+ * and the four `CRON` schedules of `@smog/jobs`.
+ */
+export function checkWranglerResources(source: string): string[] {
+  const file = "apps/site/wrangler.jsonc";
+  const config: unknown = Bun.JSONC.parse(source);
+  const envs = isRecord(config) && isRecord(config.env) ? config.env : {};
+  const crons = Object.values(CRON);
+  const errors: string[] = [];
+  for (const [name, env] of Object.entries(envs).sort(([a], [b]) =>
+    a.localeCompare(b)
+  )) {
+    if (!isRecord(env)) {
+      continue;
+    }
+    const where = `${file}: env.${name}`;
+    errors.push(...checkQueues(name, env, where));
+    const bucket = `smog-${name}-media`;
+    const media = asArray(env.r2_buckets)
+      .filter(isRecord)
+      .find((entry) => entry.binding === "MEDIA");
+    if (media?.bucket_name !== bucket) {
+      errors.push(`${where}: MEDIA must be the bucket ${bucket}`);
+    }
+    const vars = isRecord(env.vars) ? env.vars : {};
+    if (vars.MEDIA_BUCKET !== bucket) {
+      errors.push(`${where}: vars.MEDIA_BUCKET must be ${bucket}`);
+    }
+    if (typeof vars.RENDER_MODE !== "string") {
+      errors.push(
+        `${where}: vars.RENDER_MODE must be set (fake until phase 7)`
+      );
+    }
+    const triggers = isRecord(env.triggers) ? env.triggers : {};
+    const listed = asArray(triggers.crons).map(String);
+    if (!sameList(listed, crons)) {
+      errors.push(
+        `${where}: triggers.crons must be the CRON schedules of @smog/jobs (${crons.join(", ")})`
+      );
+    }
+  }
+  return errors;
+}
+
+/** `KEY=` or `# KEY=` at the start of a `.dev.vars.example` line. */
+function documentsKey(devVarsExample: string, key: string): boolean {
+  return devVarsExample
+    .split("\n")
+    .some((line) => line.replace(COMMENT_PREFIX, "").startsWith(`${key}=`));
+}
+
+/**
+ * `REQUIRED_WORKER_CONFIG` (ruling 12): each key is in the env schema, each
+ * secret is documented in `.dev.vars.example`, and each var is named in
+ * that env's `wrangler.jsonc` vars (empty means "set before launch").
+ */
+export function checkRequiredConfig({
+  devVarsExample,
+  required = REQUIRED_WORKER_CONFIG,
+  wrangler,
+}: {
+  devVarsExample: string;
+  required?: Record<
+    Environment,
+    { secrets: readonly string[]; vars: readonly string[] }
+  >;
+  wrangler: string;
+}): string[] {
+  const config: unknown = Bun.JSONC.parse(wrangler);
+  const envs = isRecord(config) && isRecord(config.env) ? config.env : {};
+  return Object.entries(required).flatMap(([name, keys]) => {
+    const env = envs[name];
+    const vars = isRecord(env) && isRecord(env.vars) ? env.vars : {};
+    return [
+      ...keys.secrets.flatMap((key) =>
+        checkRequiredSecret(name, key, devVarsExample)
+      ),
+      ...keys.vars.flatMap((key) => checkRequiredVar(name, key, vars)),
+    ];
+  });
+}
+
+function checkRequiredSecret(
+  env: string,
+  key: string,
+  devVarsExample: string
+): string[] {
+  const errors: string[] = [];
+  if (!(key in workerSecretsSchema.shape)) {
+    errors.push(
+      `REQUIRED_WORKER_CONFIG.${env}: ${key} is not in workerSecretsSchema`
+    );
+  }
+  if (!documentsKey(devVarsExample, key)) {
+    errors.push(
+      `apps/site/.dev.vars.example: must document ${key} (required in ${env})`
+    );
+  }
+  return errors;
+}
+
+function checkRequiredVar(
+  env: string,
+  key: string,
+  vars: Record<string, unknown>
+): string[] {
+  if (!(key in workerVarsSchema.shape)) {
+    return [`REQUIRED_WORKER_CONFIG.${env}: ${key} is not in workerVarsSchema`];
+  }
+  return key in vars
+    ? []
+    : [
+        `apps/site/wrangler.jsonc: env.${env}.vars must name ${key} (REQUIRED_WORKER_CONFIG)`,
+      ];
 }
 
 /**
@@ -583,10 +821,17 @@ export function checkReleaseConfig(root: string): string[] {
         },
         app
       );
+  const resourceErrors =
+    wranglerErrors.length === 0 ? checkWranglerResources(wrangler) : [];
   return [
     ...checkCiWorkflow(read(".github/workflows/ci.yml")),
     ...checkDeployWorkflow(read(".github/workflows/deploy.yml"), migrationsDir),
     ...wranglerErrors,
+    ...resourceErrors,
+    ...checkRequiredConfig({
+      devVarsExample: read("apps/site/.dev.vars.example"),
+      wrangler,
+    }),
     ...appLinkErrors,
   ];
 }

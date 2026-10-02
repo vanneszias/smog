@@ -27,13 +27,25 @@ import {
 
 /**
  * Each template's name. The key map makes `check-types` fail when a
- * registered template (phase 6) has no label.
+ * registered template has no label.
  */
 const TEMPLATE_LABELS = {
   "auth/magic-link": "admin.emails.template.magicLink",
   "auth/otp": "admin.emails.template.otp",
   "auth/reset-password": "admin.emails.template.resetPassword",
   "auth/verify-email": "admin.emails.template.verifyEmail",
+  "transactional/admin-new-sponsorship":
+    "admin.emails.template.adminNewSponsorship",
+  "transactional/admin-refund-needed":
+    "admin.emails.template.adminRefundNeeded",
+  "transactional/admin-render-failed":
+    "admin.emails.template.adminRenderFailed",
+  "transactional/payment-confirmed": "admin.emails.template.paymentConfirmed",
+  "transactional/renewal-reminder": "admin.emails.template.renewalReminder",
+  "transactional/sponsorship-live": "admin.emails.template.sponsorshipLive",
+  "transactional/sponsorship-received":
+    "admin.emails.template.sponsorshipReceived",
+  "transactional/welcome": "admin.emails.template.welcome",
 } as const satisfies Record<EmailTemplateId, TranslationKey>;
 
 const LOCALE_LABELS = {

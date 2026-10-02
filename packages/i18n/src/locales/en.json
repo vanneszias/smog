@@ -401,7 +401,8 @@
       "title": "QR code for {{name}}",
       "description": "Scan the code to open this gesture.",
       "download": "Download QR code"
-    }
+    },
+    "sponsorCta": {}
   },
   "search": {
     "categories": "Categories",
@@ -499,6 +500,40 @@
         "button": "Choose a new password",
         "expiry": "The link is valid for {{minutes}} minutes.",
         "footer": "Didn't ask for this? You can ignore this email. Your password stays the same."
+      }
+    },
+    "transactional": {
+      "welcome": {
+        "subject": "Welcome to SMOG & Co",
+        "body": "Your account is ready. Explore the gestures and save your favourites."
+      },
+      "sponsorshipReceived": {
+        "subject": "We received your sponsorship",
+        "body": "Thank you! We are now making your video and will review it before it goes live."
+      },
+      "paymentConfirmed": {
+        "subject": "Your payment is confirmed",
+        "body": "Thank you for your payment. The details are below."
+      },
+      "sponsorshipLive": {
+        "subject": "Your sponsorship is live",
+        "body": "Your sponsored video now shows with the gesture."
+      },
+      "renewalReminder": {
+        "subject": "Your sponsorship ends soon",
+        "body": "Your sponsorship ends in 30 days. Renew it with the link below."
+      },
+      "adminNewSponsorship": {
+        "subject": "New sponsorship paid",
+        "body": "A new sponsorship was paid. Review it in the admin."
+      },
+      "adminRenderFailed": {
+        "subject": "Video render failed",
+        "body": "A sponsorship's video could not be made. Review it in the admin."
+      },
+      "adminRefundNeeded": {
+        "subject": "Refund needed",
+        "body": "A payment needs a refund in the Mollie dashboard."
       }
     }
   },
@@ -731,7 +766,8 @@
       "noAudit": "No actions logged yet.",
       "quickLinks": "Go to",
       "newGesture": "New gesture",
-      "manageCategories": "Manage categories"
+      "manageCategories": "Manage categories",
+      "sponsorships": {}
     },
     "audit": {
       "title": "Audit log",
@@ -1307,7 +1343,15 @@
         "magicLink": "Sign-in link",
         "otp": "Sign-in code",
         "resetPassword": "Password reset",
-        "verifyEmail": "Confirm email address"
+        "verifyEmail": "Confirm email address",
+        "welcome": "Welcome",
+        "sponsorshipReceived": "Sponsorship received",
+        "paymentConfirmed": "Payment confirmed",
+        "sponsorshipLive": "Sponsorship live",
+        "renewalReminder": "Renewal reminder",
+        "adminNewSponsorship": "New sponsorship (admin)",
+        "adminRenderFailed": "Render failed (admin)",
+        "adminRefundNeeded": "Refund needed (admin)"
       },
       "locale": "Language",
       "width": "Width",
@@ -1322,6 +1366,10 @@
       "previewError": "This preview could not be rendered.",
       "empty": "No email templates yet.",
       "sandboxed": "Shown in a sandbox: no scripts, links do not open."
-    }
-  }
+    },
+    "sponsorships": {},
+    "export": {}
+  },
+  "sponsorship": {},
+  "sponsor": {}
 }

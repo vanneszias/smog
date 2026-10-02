@@ -8,7 +8,9 @@ import {
   checkCiWorkflow,
   checkDeployWorkflow,
   checkReleaseConfig,
+  checkRequiredConfig,
   checkWranglerConfig,
+  checkWranglerResources,
   migrationsDirFromWrangler,
 } from "./release-config-check";
 
@@ -22,6 +24,15 @@ const DEPLOY = readFileSync(
   join(ROOT, ".github", "workflows", "deploy.yml"),
   "utf8"
 );
+const WRANGLER = readFileSync(
+  join(ROOT, "apps", "site", "wrangler.jsonc"),
+  "utf8"
+);
+const DEV_VARS_EXAMPLE = readFileSync(
+  join(ROOT, "apps", "site", ".dev.vars.example"),
+  "utf8"
+);
+const ENSURE_SCRIPT = "scripts/ensure-cloudflare-resources.ts";
 
 describe("checkReleaseConfig", () => {
   test("passes on the real repository", () => {
@@ -157,6 +168,31 @@ describe("checkDeployWorkflow", () => {
     expect(errors.join("\n")).toContain("master");
   });
 
+  test("fails without the resources step, or when it runs after the migrations", () => {
+    const without = DEPLOY.replaceAll(ENSURE_SCRIPT, "scripts/other.ts");
+    expect(checkDeployWorkflow(without).join("\n")).toContain(ENSURE_SCRIPT);
+    const ensureStep = DEPLOY.slice(
+      DEPLOY.indexOf("      - name: Ensure Cloudflare resources"),
+      DEPLOY.indexOf("      # Migrations live")
+    );
+    const after = DEPLOY.replace(ensureStep, "").replace(
+      "      # The guarded site script",
+      `${ensureStep}      # The guarded site script`
+    );
+    expect(checkDeployWorkflow(after).join("\n")).toContain(
+      "before the D1 migrations"
+    );
+  });
+
+  test("fails when production would create without SMOG_PROVISION_PRODUCTION", () => {
+    const errors = checkDeployWorkflow(
+      DEPLOY.replaceAll("SMOG_PROVISION_PRODUCTION", "SOMETHING_ELSE")
+    );
+    expect(errors.join("\n")).toContain("SMOG_PROVISION_PRODUCTION");
+    const noCheck = checkDeployWorkflow(DEPLOY.replace("--check", "--create"));
+    expect(noCheck.join("\n")).toContain("--check");
+  });
+
   test("fails without the Cloudflare secrets", () => {
     const errors = checkDeployWorkflow(
       DEPLOY.replaceAll("secrets.CLOUDFLARE_ACCOUNT_ID", "vars.ACCOUNT")
@@ -225,6 +261,130 @@ describe("checkWranglerConfig", () => {
       'apps/site/wrangler.jsonc: env.production.vars.ENVIRONMENT must be "production"',
       'apps/site/wrangler.jsonc: env.staging.vars.ENVIRONMENT must be "staging"',
     ]);
+  });
+});
+
+describe("checkWranglerResources (phase 6)", () => {
+  const config = () =>
+    Bun.JSONC.parse(WRANGLER) as {
+      env: { staging: Record<string, unknown> };
+    };
+  const check = (mutate: (env: Record<string, unknown>) => void) => {
+    const parsed = config();
+    mutate(parsed.env.staging);
+    return checkWranglerResources(JSON.stringify(parsed)).join("\n");
+  };
+
+  test("passes on the real config", () => {
+    expect(checkWranglerResources(WRANGLER)).toEqual([]);
+  });
+
+  test("fails when a consumer has no DLQ", () => {
+    expect(
+      check((env) => {
+        const queues = env.queues as { consumers: Record<string, unknown>[] };
+        if (queues.consumers[0]) {
+          queues.consumers[0].dead_letter_queue = undefined;
+        }
+      })
+    ).toContain(
+      "env.staging: the consumer of smog-staging-email needs dead_letter_queue smog-staging-email-dlq"
+    );
+  });
+
+  test("fails on a queue or bucket named off the pattern", () => {
+    expect(
+      check((env) => {
+        const queues = env.queues as { producers: Record<string, unknown>[] };
+        if (queues.producers[0]) {
+          queues.producers[0].queue = "email-staging";
+        }
+      })
+    ).toContain("EMAIL_QUEUE must be smog-staging-email");
+    expect(
+      check((env) => {
+        env.r2_buckets = [{ binding: "MEDIA", bucket_name: "smog-media" }];
+      })
+    ).toContain("MEDIA must be the bucket smog-staging-media");
+  });
+
+  test("fails when a consumer, the bucket var or a cron is missing", () => {
+    expect(
+      check((env) => {
+        const queues = env.queues as { consumers: unknown[] };
+        queues.consumers.pop();
+      })
+    ).toContain("no consumer for smog-staging-sponsorship-events");
+    expect(
+      check((env) => {
+        (env.vars as Record<string, unknown>).MEDIA_BUCKET = "other";
+      })
+    ).toContain("vars.MEDIA_BUCKET must be smog-staging-media");
+    expect(
+      check((env) => {
+        env.triggers = { crons: ["0 0 * * *"] };
+      })
+    ).toContain("triggers.crons must be the CRON schedules");
+  });
+
+  test("checks the consumer settings of ruling 8", () => {
+    expect(
+      check((env) => {
+        const queues = env.queues as { consumers: Record<string, unknown>[] };
+        if (queues.consumers[1]) {
+          queues.consumers[1].max_retries = 3;
+        }
+      })
+    ).toContain("smog-staging-sponsorship-events needs max_retries 10");
+  });
+});
+
+describe("checkRequiredConfig (ruling 12)", () => {
+  test("passes on the real files", () => {
+    expect(
+      checkRequiredConfig({
+        devVarsExample: DEV_VARS_EXAMPLE,
+        wrangler: WRANGLER,
+      })
+    ).toEqual([]);
+  });
+
+  test("fails when a required secret is not documented in .dev.vars.example", () => {
+    const errors = checkRequiredConfig({
+      devVarsExample: DEV_VARS_EXAMPLE.replace("# MOLLIE_API_KEY=", ""),
+      wrangler: WRANGLER,
+    });
+    expect(errors.join("\n")).toContain("MOLLIE_API_KEY");
+  });
+
+  test("fails when a required var is not in env.<env>.vars", () => {
+    const parsed = Bun.JSONC.parse(WRANGLER) as {
+      env: { production: { vars: Record<string, unknown> } };
+    };
+    parsed.env.production.vars.R2_ACCOUNT_ID = undefined;
+    const errors = checkRequiredConfig({
+      devVarsExample: DEV_VARS_EXAMPLE,
+      wrangler: JSON.stringify(parsed),
+    });
+    expect(errors).toEqual([
+      "apps/site/wrangler.jsonc: env.production.vars must name R2_ACCOUNT_ID (REQUIRED_WORKER_CONFIG)",
+    ]);
+  });
+
+  test("fails when a required key is absent from the env schema", () => {
+    const errors = checkRequiredConfig({
+      devVarsExample: `${DEV_VARS_EXAMPLE}\nNOT_IN_SCHEMA=\n`,
+      required: {
+        dev: { secrets: [], vars: [] },
+        production: { secrets: ["NOT_IN_SCHEMA"], vars: ["NOT_A_VAR"] },
+        staging: { secrets: [], vars: [] },
+      },
+      wrangler: WRANGLER,
+    });
+    expect(errors.join("\n")).toContain(
+      "NOT_IN_SCHEMA is not in workerSecretsSchema"
+    );
+    expect(errors.join("\n")).toContain("NOT_A_VAR is not in workerVarsSchema");
   });
 });
 

@@ -33,8 +33,13 @@ export const FEATURE_PACKAGES = [
 
 export const BOUNDARIES: Record<string, readonly string[]> = {
   // Scripts read the env schemas and the client-safe feature schemas
-  // (`admin:grant`, `maintenance`); they never import feature servers.
-  [ROOT_PACKAGE]: ["@smog/config", `${FEATURE_PATTERN}/schema`],
+  // (`admin:grant`, `maintenance`) and the cron table (`bun run cron`,
+  // release-config-check); they never import feature servers.
+  [ROOT_PACKAGE]: [
+    "@smog/config",
+    "@smog/jobs/cron",
+    `${FEATURE_PATTERN}/schema`,
+  ],
   "@smog/api": ["@smog/rpc", FEATURE_PATTERN, "@smog/config"],
   "@smog/mobile": [
     "@smog/api/client",

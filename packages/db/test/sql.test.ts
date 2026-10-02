@@ -2,7 +2,14 @@ import { env } from "cloudflare:workers";
 import { newId } from "@smog/utils";
 import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { category, inList, jsonList } from "../src";
+import {
+  category,
+  failWhen,
+  GuardFailedError,
+  inList,
+  jsonList,
+  toGuardFailure,
+} from "../src";
 import { createDb, type Db } from "../src/client";
 import { makeCategory } from "../src/testing";
 
@@ -65,5 +72,57 @@ describe("inList", () => {
       .where(inList(sql`lower(${category.slug})`, ["x"]))
       .toSQL();
     expect(query.params).toEqual(['["x"]']);
+  });
+});
+
+/*
+ * The in-batch guard (moved from `@smog/admin` in phase 6): a guard that
+ * fires rolls the whole batch back and names itself.
+ */
+describe("failWhen", () => {
+  it("rolls back the statements before it and is named by toGuardFailure", async () => {
+    const made = await makeCategory(db);
+    let caught: unknown;
+    try {
+      await db.batch([
+        db
+          .update(category)
+          .set({ name: "Half geschreven" })
+          .where(sql`${category.id} = ${made.id}`),
+        failWhen(db, "stale", sql`1 = 1`),
+      ]);
+    } catch (error) {
+      caught = error;
+    }
+    const failure = toGuardFailure(caught);
+    expect(failure).toBeInstanceOf(GuardFailedError);
+    expect(failure?.guard).toBe("stale");
+    expect(failure?.cause).toBe(caught);
+    const [row] = await db
+      .select({ name: category.name })
+      .from(category)
+      .where(sql`${category.id} = ${made.id}`);
+    expect(row?.name).toBe(made.name);
+  });
+
+  it("lets the batch through when the condition does not hold", async () => {
+    const made = await makeCategory(db);
+    await db.batch([
+      failWhen(db, "stale", sql`1 = 0`),
+      db
+        .update(category)
+        .set({ name: "Doorgelaten" })
+        .where(sql`${category.id} = ${made.id}`),
+    ]);
+    const [row] = await db
+      .select({ name: category.name })
+      .from(category)
+      .where(sql`${category.id} = ${made.id}`);
+    expect(row?.name).toBe("Doorgelaten");
+  });
+
+  it("toGuardFailure is null for any other error", () => {
+    expect(toGuardFailure(new Error("UNIQUE constraint failed"))).toBeNull();
+    expect(toGuardFailure("smog-guard:x")).toBeNull();
   });
 });
