@@ -1,13 +1,16 @@
-import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
 import {
   type Browser,
   type BrowserContext,
-  chromium,
   expect,
   type Page,
   test,
 } from "@playwright/test";
+import {
+  forEachThemeAndWidth,
+  launchReviewBrowser,
+  openAdmin,
+  shotsDir,
+} from "./admin";
 import { blockingViolations, ORIGIN, waitForApp, watchErrors } from "./helpers";
 import {
   getBypass,
@@ -27,8 +30,6 @@ import {
  * maintenance --no-deps`.
  */
 
-/** As playwright.config.ts: the preinstalled Chromium, launched by path. */
-const PREINSTALLED_CHROMIUM = "/opt/pw-browsers/chromium";
 const ACTIVE_UNTIL = /^Actief tot /;
 const PROPAGATION_NOTE = /binnen ongeveer 2 minuten/;
 const MESSAGE_LABEL = /^Bericht/;
@@ -161,90 +162,50 @@ test.describe("admin settings: maintenance", () => {
 });
 
 /**
- * The review screenshots (light/dark × 390/1280, reduced motion, nl-BE),
- * when ADMIN_SHOTS_DIR is set:
+ * The settings review screenshots with maintenance on and off (light/dark
+ * × 390/1280, reduced motion, nl-BE), when ADMIN_SHOTS_DIR is set:
  * `ADMIN_SHOTS_DIR=/tmp/shots bunx playwright test --project maintenance --no-deps`.
+ * Every other admin screen is shot by `admin-screenshots.spec.ts`.
  */
 test.describe("admin settings screenshots", () => {
   test("screenshots", async () => {
-    const dir = process.env.ADMIN_SHOTS_DIR;
+    const dir = await shotsDir();
     test.skip(!dir, "set ADMIN_SHOTS_DIR to take the review screenshots");
     test.setTimeout(240_000);
-    await mkdir(dir ?? "", { recursive: true });
-    const browser = await chromium.launch({
-      args: ["--lang=nl-BE"],
-      env: { ...process.env, LANG: "nl_BE.UTF-8", LANGUAGE: "nl_BE" },
-      ...(existsSync(PREINSTALLED_CHROMIUM)
-        ? { executablePath: PREINSTALLED_CHROMIUM }
-        : {}),
-    });
+    const browser = await launchReviewBrowser();
     try {
-      for (const theme of ["light", "dark"] as const) {
-        for (const width of [390, 1280]) {
-          // biome-ignore lint/performance/noAwaitInLoops: one browser context at a time.
-          const context = await browser.newContext({
-            colorScheme: theme,
-            locale: "nl-BE",
-            reducedMotion: "reduce",
-            timezoneId: "Europe/Brussels",
-            viewport: { height: 900, width },
+      await forEachThemeAndWidth(browser, async (page, theme, width) => {
+        const file = (name: string): string =>
+          `${dir}/settings-${name}-${theme}-${width}.png`;
+        try {
+          await maintenanceOff(page.request);
+          await openAdmin(page, "/admin/settings");
+          await page.waitForLoadState("networkidle");
+          await page.screenshot({ fullPage: true, path: file("off") });
+          const on = await page.request.post("/api/rpc/admin/maintenance/set", {
+            data: {
+              json: {
+                enabled: true,
+                message: "We zetten nieuwe video's klaar.",
+                until: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+              },
+            },
+            headers: { origin: ORIGIN },
           });
-          try {
-            await context.addCookies([
-              { name: "theme", url: ORIGIN, value: theme },
-            ]);
-            const page = await context.newPage();
-            await signInAsAdmin(page.request);
-            await maintenanceOff(page.request);
-            await page.goto("/admin/settings");
-            await waitForApp(page);
-            await page.waitForLoadState("networkidle");
-            const decline = page.getByRole("button", {
-              name: "Alleen noodzakelijke",
-            });
-            if (await decline.isVisible()) {
-              await decline.click();
-            }
-            await page.screenshot({
-              fullPage: true,
-              path: `${dir}/settings-off-${theme}-${width}.png`,
-            });
-            const on = await page.request.post(
-              "/api/rpc/admin/maintenance/set",
-              {
-                data: {
-                  json: {
-                    enabled: true,
-                    message: "We zetten nieuwe video's klaar.",
-                    until: new Date(
-                      Date.now() + 2 * 60 * 60 * 1000
-                    ).toISOString(),
-                  },
-                },
-                headers: { origin: ORIGIN },
-              }
-            );
-            expect(on.ok()).toBe(true);
-            await page.reload();
-            await waitForApp(page);
-            await page.waitForLoadState("networkidle");
-            await page.screenshot({
-              fullPage: true,
-              path: `${dir}/settings-on-${theme}-${width}.png`,
-            });
-            await page
-              .getByRole("button", { name: "Onderhoud uitzetten" })
-              .click();
-            await page.getByRole("alertdialog").waitFor();
-            await page.screenshot({
-              path: `${dir}/settings-disable-${theme}-${width}.png`,
-            });
-          } finally {
-            await maintenanceOff(context.request);
-            await context.close();
-          }
+          expect(on.ok()).toBe(true);
+          await page.reload();
+          await waitForApp(page);
+          await page.waitForLoadState("networkidle");
+          await page.screenshot({ fullPage: true, path: file("on") });
+          await page
+            .getByRole("button", { name: "Onderhoud uitzetten" })
+            .click();
+          await page.getByRole("alertdialog").waitFor();
+          await page.screenshot({ path: file("disable") });
+        } finally {
+          await maintenanceOff(page.request);
         }
-      }
+      });
     } finally {
       await browser.close();
     }

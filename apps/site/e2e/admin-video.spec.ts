@@ -1,20 +1,6 @@
-import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
-import {
-  type Browser,
-  chromium,
-  expect,
-  type Page,
-  test,
-} from "@playwright/test";
-import {
-  blockingViolations,
-  ORIGIN,
-  stubMux,
-  stubMuxStream,
-  waitForApp,
-} from "./helpers";
+import { expect, type Page, test } from "@playwright/test";
+import { stubMuxMedia } from "./admin";
+import { blockingViolations, ORIGIN, waitForApp } from "./helpers";
 
 /*
  * The gesture editor's VideoField against the Mux fake (playwright.config.ts starts
@@ -31,7 +17,6 @@ const EDITOR = "/admin/gestures/new";
 const GESTURE_EDITOR_URL = /\/admin\/gestures\/(?!new$)[A-Za-z0-9_-]+$/;
 const MUX_FAKE_URL = `http://localhost:${process.env.E2E_MUX_PORT ?? 4010}`;
 const SAMPLE_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
-const PREINSTALLED_CHROMIUM = "/opt/pw-browsers/chromium";
 const VIDEO = {
   buffer: Buffer.from("not really a video, the fake does not care"),
   mimeType: "video/mp4",
@@ -54,12 +39,6 @@ async function signInAsAdmin(page: Page): Promise<void> {
     headers: { origin: ORIGIN },
   });
   expect(response.ok()).toBe(true);
-}
-
-/** Mux stills and HLS are not reachable offline: stills are stubbed, streams refused. */
-async function stubMuxMedia(page: Page): Promise<void> {
-  await stubMux(page);
-  await stubMuxStream(page);
 }
 
 async function seedFakeAssets(count: number): Promise<void> {
@@ -183,97 +162,5 @@ test.describe("admin video field", () => {
       page.getByRole("textbox", { name: "Playback-id" })
     ).toBeVisible();
     expect(await blockingViolations(page)).toEqual([]);
-  });
-});
-
-/*
- * Review screenshots of the VideoField states (light/dark × 390/1280,
- * reduced motion, nl-BE), only when ADMIN_SHOTS_DIR is set:
- * `ADMIN_SHOTS_DIR=/tmp/shots bunx playwright test admin-video`.
- */
-test.describe("admin video field screenshots", () => {
-  test("screenshots", async () => {
-    test.setTimeout(600_000);
-    const dir = process.env.ADMIN_SHOTS_DIR;
-    test.skip(!dir, "set ADMIN_SHOTS_DIR to take the review screenshots");
-    await mkdir(dir ?? "", { recursive: true });
-    const browser: Browser = await chromium.launch({
-      args: ["--lang=nl-BE"],
-      env: { ...process.env, LANG: "nl_BE.UTF-8", LANGUAGE: "nl_BE" },
-      ...(existsSync(PREINSTALLED_CHROMIUM)
-        ? { executablePath: PREINSTALLED_CHROMIUM }
-        : {}),
-    });
-    await seedFakeAssets(6);
-    for (const theme of ["light", "dark"] as const) {
-      for (const width of [390, 1280]) {
-        // biome-ignore lint/performance/noAwaitInLoops: one context at a time.
-        const context = await browser.newContext({
-          colorScheme: theme,
-          locale: "nl-BE",
-          reducedMotion: "reduce",
-          timezoneId: "Europe/Brussels",
-          viewport: { height: 900, width },
-        });
-        await context.addCookies([
-          { name: "theme", url: ORIGIN, value: theme },
-        ]);
-        const page = await context.newPage();
-        await stubMuxMedia(page);
-        await signInAsAdmin(page);
-        const shot = async (name: string): Promise<void> => {
-          await page.screenshot({
-            fullPage: true,
-            path: join(dir ?? "", `video-${name}-${theme}-${width}.png`),
-          });
-        };
-        await openEditor(page);
-        await expect(page.getByText("Sleep een video hierheen")).toBeVisible();
-        await shot("idle");
-        await page.getByTestId("mux-file-input").setInputFiles(VIDEO);
-        await expect(page.getByTestId("mux-upload-progress")).toHaveText(
-          "Mux verwerkt de video…"
-        );
-        await shot("processing");
-        await expect(page.getByTestId("mux-upload-announcer")).toHaveText(
-          "De video is klaar.",
-          {
-            timeout: 20_000,
-          }
-        );
-        await shot("ready");
-        await page.getByRole("tab", { name: "Bestaande kiezen" }).click();
-        await expect(page.getByTestId("mux-asset").first()).toBeVisible();
-        // Load every (stubbed) still now, also the lazy ones below the fold.
-        await page.evaluate(() => {
-          for (const image of document.querySelectorAll("img")) {
-            image.loading = "eager";
-          }
-        });
-        await page.waitForTimeout(1000);
-        await shot("picker");
-        await page.getByRole("tab", { name: "Playback-id" }).click();
-        await page
-          .getByRole("textbox", { name: "Playback-id" })
-          .fill("geen geldige id!");
-        await page
-          .getByRole("button", { name: "Deze video gebruiken" })
-          .click();
-        await shot("playback-invalid");
-        await page.route("**/api/rpc/admin/mux/status**", (route) =>
-          route.fulfill({
-            contentType: "application/json",
-            json: { json: { configured: false }, meta: [] },
-          })
-        );
-        await openEditor(page);
-        await expect(
-          page.getByText("Video-uploads zijn niet ingesteld")
-        ).toBeVisible();
-        await shot("not-configured");
-        await context.close();
-      }
-    }
-    await browser.close();
   });
 });

@@ -260,7 +260,14 @@ function PreviewPane({ locale, template, width }: PreviewPaneProps): ReactNode {
         </TabsList>
         <TabsContent value="html">
           <div className="flex flex-col gap-2">
-            <div className="overflow-x-auto rounded-md border border-border-subtle bg-surface-sunken p-2">
+            {/* Wider than a phone: scrollable, so it takes focus (keyboard
+                scrolling, axe scrollable-region-focusable). */}
+            <section
+              aria-label={t("admin.emails.frameTitle", { name })}
+              className="overflow-x-auto rounded-md border border-border-subtle bg-surface-sunken p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be reachable by keyboard.
+              tabIndex={0}
+            >
               <iframe
                 className="mx-auto block h-[40rem] max-w-none rounded-sm bg-surface"
                 sandbox=""
@@ -268,7 +275,7 @@ function PreviewPane({ locale, template, width }: PreviewPaneProps): ReactNode {
                 style={{ width: `${WIDTHS[width]}px` }}
                 title={t("admin.emails.frameTitle", { name })}
               />
-            </div>
+            </section>
             <Text size="caption" tone="muted">
               {t("admin.emails.sandboxed")}
             </Text>

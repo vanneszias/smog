@@ -1,22 +1,12 @@
-import { existsSync } from "node:fs";
-import { mkdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
 import {
   type APIRequestContext,
-  type Browser,
-  chromium,
   expect,
   type Page,
   test,
 } from "@playwright/test";
-import {
-  blockingViolations,
-  ORIGIN,
-  stubMux,
-  stubMuxStream,
-  waitForApp,
-  watchErrors,
-} from "./helpers";
+import { stubMuxMedia } from "./admin";
+import { blockingViolations, ORIGIN, waitForApp, watchErrors } from "./helpers";
 
 /*
  * The catalogue admin (phase 5 task 4) against the dev server's local D1,
@@ -32,7 +22,6 @@ import {
 
 const ADMIN = { email: "admin@smog.test", password: "smog-dev-admin" };
 const SAMPLE_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
-const PREINSTALLED_CHROMIUM = "/opt/pw-browsers/chromium";
 const GESTURE_EDITOR_URL = /\/admin\/gestures\/(?!new$)[A-Za-z0-9_-]+$/;
 const HEADERS = { origin: ORIGIN };
 const PNG_MAGIC = "89504e470d0a1a0a";
@@ -171,12 +160,6 @@ async function deleteGestures(
       id,
     });
   }
-}
-
-/** Mux stills and HLS are not reachable offline: stills are stubbed, streams refused. */
-async function stubMuxMedia(page: Page): Promise<void> {
-  await stubMux(page);
-  await stubMuxStream(page);
 }
 
 async function open(page: Page, path: string): Promise<void> {
@@ -633,94 +616,3 @@ async function qrDownload(page: Page): Promise<void> {
     await deleteGestures(page.request, [gesture.id]);
   }
 }
-
-/*
- * Review screenshots (light/dark × 390/1280, reduced motion, nl-BE) of the
- * list, the table editor, the editor and the categories, only when
- * ADMIN_SHOTS_DIR is set:
- * `ADMIN_SHOTS_DIR=/tmp/shots bunx playwright test admin-catalog`.
- */
-test.describe("admin catalogue screenshots", () => {
-  test("screenshots", async () => {
-    test.setTimeout(600_000);
-    const dir = process.env.ADMIN_SHOTS_DIR;
-    test.skip(!dir, "set ADMIN_SHOTS_DIR to take the review screenshots");
-    await mkdir(dir ?? "", { recursive: true });
-    const browser: Browser = await chromium.launch({
-      args: ["--lang=nl-BE"],
-      env: { ...process.env, LANG: "nl_BE.UTF-8", LANGUAGE: "nl_BE" },
-      ...(existsSync(PREINSTALLED_CHROMIUM)
-        ? { executablePath: PREINSTALLED_CHROMIUM }
-        : {}),
-    });
-    for (const theme of ["light", "dark"] as const) {
-      for (const width of [390, 1280]) {
-        // biome-ignore lint/performance/noAwaitInLoops: one context at a time.
-        const context = await browser.newContext({
-          colorScheme: theme,
-          locale: "nl-BE",
-          reducedMotion: "reduce",
-          timezoneId: "Europe/Brussels",
-          viewport: { height: 900, width },
-        });
-        await context.addCookies([
-          { name: "theme", url: ORIGIN, value: theme },
-        ]);
-        const page = await context.newPage();
-        await stubMuxMedia(page);
-        await signInAsAdmin(page);
-        const shot = async (name: string): Promise<void> => {
-          await page.evaluate(() => {
-            for (const image of document.querySelectorAll("img")) {
-              image.loading = "eager";
-            }
-          });
-          await page.waitForTimeout(500);
-          await page.screenshot({
-            fullPage: true,
-            path: join(dir ?? "", `catalog-${name}-${theme}-${width}.png`),
-          });
-        };
-        await open(page, "/admin/gestures");
-        await expect(page.getByRole("link", { name: "Hond" })).toBeVisible();
-        await page.getByRole("checkbox", { name: "Hond selecteren" }).click();
-        await shot("list");
-        await page.getByRole("button", { name: "Selectie wissen" }).click();
-        await page.getByRole("button", { name: "Tabel bewerken" }).click();
-        await page
-          .getByRole("textbox", { name: "Naam van Hond" })
-          .fill("Hond (bewerkt)");
-        // Focus elsewhere, so the shot shows the changed style, not the ring.
-        await page.getByRole("heading", { name: "Tabeleditor" }).focus();
-        await shot("table-editor");
-        await page.getByRole("button", { name: "Wijzigingen opslaan" }).click();
-        await shot("table-changes");
-        await page.keyboard.press("Escape");
-        await page.getByRole("button", { name: "Verwerpen (1)" }).click();
-        await open(page, "/admin/gestures/new");
-        await page.getByRole("button", { name: "Gebaar aanmaken" }).click();
-        await shot("editor-new");
-        const hond = (
-          await rpc<{ items: AdminGesture[] }>(
-            page.request,
-            "admin/gestures/list",
-            {
-              q: "hond",
-            }
-          )
-        ).items.find((item) => item.name === "Hond");
-        await open(page, `/admin/gestures/${hond?.id}`);
-        await page.getByRole("textbox", { name: "Naam" }).fill("Kat");
-        await expect(page.getByText("Mogelijk dubbel")).toBeVisible();
-        await shot("editor");
-        await open(page, "/admin/categories");
-        await expect(
-          page.getByRole("heading", { name: "Verborgen" })
-        ).toBeVisible();
-        await shot("categories");
-        await context.close();
-      }
-    }
-    await browser.close();
-  });
-});

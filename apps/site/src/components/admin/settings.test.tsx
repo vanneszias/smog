@@ -315,6 +315,13 @@ describe("email previews", () => {
     expect(frame.getAttribute("srcdoc")).toContain("OTP body");
     expect(screen.getByText("482913 is je code")).toBeDefined();
     expect(frame.style.width).toBe("780px");
+    // The frame scrolls sideways on a phone: its scroller takes the focus
+    // (axe `scrollable-region-focusable`), named after the preview.
+    const scroller = screen.getByRole("region", {
+      name: "Preview: Sign-in code",
+    });
+    expect(scroller.getAttribute("tabindex")).toBe("0");
+    expect(scroller.contains(frame)).toBe(true);
     // The text tab escapes it (React text, not HTML).
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Plain text" }));
     expect(await screen.findByText("Plain OTP <b>body</b>")).toBeDefined();
