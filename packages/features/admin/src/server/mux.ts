@@ -1,4 +1,4 @@
-import { gesture } from "@smog/db";
+import { gesture, inList } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import type { RpcContext } from "@smog/rpc";
 import {
@@ -18,7 +18,6 @@ import {
 import { isFinalUpload } from "@smog/video/schema";
 import { asc, or } from "drizzle-orm";
 import type { MuxAssetItem, MuxUploadProgress } from "../schema";
-import { inList } from "./catalog-writes";
 import { type AdminDeps, adminProcedure } from "./procedure";
 
 /** Mux refused for its rate limit: the admin may retry (`RATE_LIMITED`). */

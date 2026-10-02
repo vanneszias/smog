@@ -106,14 +106,18 @@ test.describe("admin video field", () => {
     await page.getByRole("button", { name: "Gebaar aanmaken" }).click();
     await expect(page).toHaveURL(GESTURE_EDITOR_URL);
     const id = new URL(page.url()).pathname.split("/").pop() ?? "";
-    const saved = await rpc<{ muxAssetId: string | null; playbackId: string }>(
-      page,
-      "admin/gestures/get",
-      { id }
-    );
-    expect(saved.playbackId).toBe(SAMPLE_PLAYBACK_ID);
-    expect(saved.muxAssetId).not.toBeNull();
-    await rpc(page, "admin/gestures/delete", { confirmName: name, id });
+    try {
+      const saved = await rpc<{
+        muxAssetId: string | null;
+        playbackId: string;
+      }>(page, "admin/gestures/get", { id });
+      expect(saved.playbackId).toBe(SAMPLE_PLAYBACK_ID);
+      expect(saved.muxAssetId).not.toBeNull();
+    } finally {
+      // Also when a check failed: no hidden `Zzupload …` row is left in
+      // the shared category for later runs and screenshots.
+      await rpc(page, "admin/gestures/delete", { confirmName: name, id });
+    }
     await openEditor(page);
     await page.getByTestId("mux-file-input").setInputFiles(VIDEO);
     await expect(page.getByTestId("mux-upload-announcer")).toHaveText(

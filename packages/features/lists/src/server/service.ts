@@ -9,19 +9,19 @@
  * one until the list's next write; readers sort on `position` and never
  * index by it.
  */
-import { gesture, list, listItem, listShare, ref } from "@smog/db";
+import {
+  gesture,
+  inList,
+  jsonList,
+  list,
+  listItem,
+  listShare,
+  ref,
+} from "@smog/db";
 import type { Db } from "@smog/db/client";
 import type { GestureSummary } from "@smog/gestures/schema";
 import { newId } from "@smog/utils";
-import {
-  and,
-  desc,
-  eq,
-  inArray,
-  type SQL,
-  type SQLWrapper,
-  sql,
-} from "drizzle-orm";
+import { and, desc, eq, type SQL, type SQLWrapper, sql } from "drizzle-orm";
 import {
   isExactSet,
   LIST_ITEMS_MAX,
@@ -140,7 +140,7 @@ export function itemRowsQuery(db: Db, listId: string | SQLWrapper) {
     .where(
       typeof listId === "string"
         ? eq(listItem.listId, listId)
-        : inArray(listItem.listId, listId)
+        : sql`${listItem.listId} IN ${listId}`
     )
     .orderBy(listItem.position, listItem.gestureId)
     .limit(LIST_ITEMS_MAX);
@@ -253,7 +253,7 @@ export function insertListsStmt(
   return db
     .insert(list)
     .select(
-      sql`SELECT json_extract(j.value, '$.id'), ${ownerId}, json_extract(j.value, '$.name'), json_extract(j.value, '$.description'), ${last} - (${count} - 1 - j.key), ${last} - (${count} - 1 - j.key) FROM json_each(${JSON.stringify(lists)}) AS j WHERE true ORDER BY j.key LIMIT max(0, ${LISTS_MAX} - (SELECT count(*) FROM ${list} AS o WHERE ${ref("o", list.ownerId)} = ${ownerId}))`
+      sql`SELECT json_extract(j.value, '$.id'), ${ownerId}, json_extract(j.value, '$.name'), json_extract(j.value, '$.description'), ${last} - (${count} - 1 - j.key), ${last} - (${count} - 1 - j.key) FROM json_each(${jsonList(lists)}) AS j WHERE true ORDER BY j.key LIMIT max(0, ${LISTS_MAX} - (SELECT count(*) FROM ${list} AS o WHERE ${ref("o", list.ownerId)} = ${ownerId}))`
     )
     .returning();
 }
@@ -341,7 +341,7 @@ function isPresent(listId: string, gestureId: string): SQL<number> {
 
 /** The pairs as rows `p.list_id`, `p.gesture_id`, `p.k` (their order). */
 function pairRows(pairs: readonly ItemPair[]): SQL {
-  return sql`(SELECT json_extract(value, '$[0]') AS list_id, json_extract(value, '$[1]') AS gesture_id, key AS k FROM json_each(${JSON.stringify(pairs)}))`;
+  return sql`(SELECT json_extract(value, '$[0]') AS list_id, json_extract(value, '$[1]') AS gesture_id, key AS k FROM json_each(${jsonList(pairs)}))`;
 }
 
 /**
@@ -395,7 +395,7 @@ export function touchListsWithNewItemsStmt(
     .set({ updatedAt: at })
     .where(
       and(
-        sql`${list.id} IN (SELECT value FROM json_each(${JSON.stringify(listIds)}))`,
+        inList(list.id, listIds),
         sql`EXISTS (SELECT 1 FROM ${listItem} AS li WHERE ${ref("li", listItem.listId)} = ${ref(L, list.id)} AND ${ref("li", listItem.addedBy)} = ${actorId} AND ${ref("li", listItem.createdAt)} = ${at.getTime()})`
       )
     );
@@ -482,7 +482,7 @@ function renumberItemsStmt(
 ) {
   // `UPDATE … FROM`: the ranks are computed once, before any row changes
   // (a correlated subquery per row would see the rows already renumbered).
-  const ranked = sql`(SELECT r.gesture_id AS gesture_id, row_number() OVER (ORDER BY o.key IS NULL, o.key, r.position, r.gesture_id) - 1 AS rank FROM ${listItem} AS r LEFT JOIN json_each(${JSON.stringify(order)}) AS o ON o.value = r.gesture_id WHERE r.list_id = ${listId}) AS n`;
+  const ranked = sql`(SELECT r.gesture_id AS gesture_id, row_number() OVER (ORDER BY o.key IS NULL, o.key, r.position, r.gesture_id) - 1 AS rank FROM ${listItem} AS r LEFT JOIN json_each(${jsonList(order)}) AS o ON o.value = r.gesture_id WHERE r.list_id = ${listId}) AS n`;
   return db
     .update(listItem)
     .set({ position: sql`n.rank` })

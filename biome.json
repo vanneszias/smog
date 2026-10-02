@@ -41,6 +41,26 @@
       }
     },
     {
+      "includes": ["packages/**/src/**", "apps/site/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "drizzle-orm": {
+                    "importNames": ["inArray", "notInArray"],
+                    "message": "D1 binds at most 100 parameters per statement: use inList or jsonList from @smog/db (one json_each parameter), or a subquery in sql``."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["apps/mobile/global.css"],
       "linter": {
         "rules": {

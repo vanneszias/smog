@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { AUDIT_TARGET_TYPES } from "@smog/db/enums";
 import { e2eSeedEnabled, e2eSeedSchema, seedStatement } from "./e2e-seed";
 
 /** A D1 stand-in that records the SQL and the bound values. */
@@ -40,6 +41,21 @@ describe("the e2e seed endpoint's operations", () => {
         slug: "hond",
       }).success
     ).toBe(false);
+  });
+
+  test("takes exactly the audit target types the database allows", () => {
+    const entry = (targetType: string) =>
+      e2eSeedSchema.safeParse({
+        data: { legacy: {} },
+        id: "e2e-target",
+        op: "legacyAuditEntry",
+        targetId: "maintenance",
+        targetType,
+      }).success;
+    for (const targetType of AUDIT_TARGET_TYPES) {
+      expect(entry(targetType)).toBe(true);
+    }
+    expect(entry("settings")).toBe(false);
   });
 
   test("binds every value", () => {

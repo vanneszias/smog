@@ -1,4 +1,4 @@
-import { type SQL, sql } from "drizzle-orm";
+import { type SQL, type SQLWrapper, sql } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 /**
@@ -10,6 +10,21 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
  */
 export function ref(alias: string, column: SQLiteColumn): SQL {
   return sql`${sql.raw(alias)}.${sql.identifier(column.name)}`;
+}
+
+/**
+ * A JSON array parameter, for `json_each(?)`: one bound value for any list.
+ * D1 allows at most 100 bound parameters per statement (also in a batch),
+ * so a list of values is never bound one parameter per value (`inArray`,
+ * which biome refuses in package source).
+ */
+export function jsonList(values: readonly unknown[]): string {
+  return JSON.stringify(values);
+}
+
+/** `column IN (the values)`, bound as one parameter (see `jsonList`). */
+export function inList(column: SQLWrapper, values: readonly unknown[]): SQL {
+  return sql`${column} IN (SELECT value FROM json_each(${jsonList(values)}))`;
 }
 
 /**

@@ -16,7 +16,7 @@
 import { type category, gesture } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { slugify } from "@smog/utils";
-import { or, type SQL, type SQLWrapper, sql } from "drizzle-orm";
+import { or, type SQL, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { AdminDeps } from "./procedure";
 
@@ -201,18 +201,4 @@ export async function withFreeSlug(
 export function nextUpdatedAt(previous: Date | number): Date {
   const at = typeof previous === "number" ? previous : previous.getTime();
   return new Date(Math.max(Date.now(), at + 1));
-}
-
-/**
- * A JSON array parameter, for `json_each(?)`: one bound value for any list.
- * D1 allows at most 100 bound parameters per statement (also in a batch),
- * so a list of ids is never bound one parameter per id (`inArray`).
- */
-export function jsonList(values: readonly unknown[]): string {
-  return JSON.stringify(values);
-}
-
-/** `column IN (the values)`, bound as one parameter (see `jsonList`). */
-export function inList(column: SQLWrapper, values: readonly unknown[]): SQL {
-  return sql`${column} IN (SELECT value FROM json_each(${jsonList(values)}))`;
 }
