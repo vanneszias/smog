@@ -3,6 +3,7 @@ import {
   DEFAULT_LOCALE,
   isLocale,
   type Locale,
+  type Translate,
   type TranslationKey,
 } from "@smog/i18n";
 import { siteOrigin } from "./site-url";
@@ -10,8 +11,6 @@ import { siteOrigin } from "./site-url";
 interface MatchWithData {
   loaderData?: unknown;
 }
-
-type Translate = ReturnType<typeof createI18n>["t"];
 
 interface ShellHead {
   locale: Locale;

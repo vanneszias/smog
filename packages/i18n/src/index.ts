@@ -13,4 +13,4 @@ export {
   resources,
   type TranslationKey,
 } from "./keys";
-export { createI18n } from "./setup-web";
+export { createI18n, type Translate } from "./setup-web";

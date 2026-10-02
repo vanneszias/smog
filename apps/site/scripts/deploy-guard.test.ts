@@ -1,8 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import {
+  CLIENT_SECRET_MARKERS,
+  checkClientHasNoMuxSecrets,
   checkDeployTarget,
   checkDevTools,
   checkServerHasNoVideoPlayer,
+  DEV_PREVIEW_MARKER,
   DEV_TOOLS_MARKER,
   MUX_PLAYER_MARKERS,
 } from "./deploy-guard";
@@ -24,10 +27,26 @@ describe("checkDevTools", () => {
     expect(() => checkDevTools("production", [app])).not.toThrow();
   });
 
-  it("requires the gallery in a staging build (dev and staging keep /dev/ui)", () => {
-    expect(() => checkDevTools("staging", [app, gallery])).not.toThrow();
-    expect(() => checkDevTools("staging", [app])).toThrow(
+  const preview = {
+    content: `jsx("div",{"${DEV_PREVIEW_MARKER}":"video-field"})`,
+    path: "dist/client/assets/video-field-preview.js",
+  };
+
+  it("requires the gallery and the admin preview in a staging build (dev and staging keep them)", () => {
+    expect(() =>
+      checkDevTools("staging", [app, gallery, preview])
+    ).not.toThrow();
+    expect(() => checkDevTools("staging", [app, preview])).toThrow(
       "staging build has no /dev/ui gallery"
+    );
+    expect(() => checkDevTools("staging", [app, gallery])).toThrow(
+      "staging build has no /admin/dev/video-field preview"
+    );
+  });
+
+  it("refuses a production build that contains the /admin/dev/video-field preview", () => {
+    expect(() => checkDevTools("production", [app, preview])).toThrow(
+      "dist/client/assets/video-field-preview.js"
     );
   });
 });
@@ -94,5 +113,38 @@ describe("checkDeployTarget", () => {
     expect(() => checkDeployTarget("staging", null)).toThrow(
       "dist/ was built for null"
     );
+  });
+});
+
+describe("checkClientHasNoMuxSecrets", () => {
+  it("passes a client bundle without Mux credentials or the Mux SDK", () => {
+    expect(() =>
+      checkClientHasNoMuxSecrets([
+        {
+          content: 'fetch("https://direct.production.mux.com/upload/x")',
+          path: "dist/client/assets/admin.js",
+        },
+        // The Worker reads the token; only the browser bundle matters.
+        {
+          content: "env.MUX_TOKEN_ID",
+          path: "dist/server/index.js",
+        },
+      ])
+    ).not.toThrow();
+  });
+
+  it("fails on any Mux credential name or the Mux SDK in dist/client", () => {
+    for (const marker of CLIENT_SECRET_MARKERS) {
+      expect(() =>
+        checkClientHasNoMuxSecrets([
+          { content: `x.${marker}`, path: "dist/client/assets/a.js" },
+        ])
+      ).toThrow("dist/client/assets/a.js");
+    }
+    expect(CLIENT_SECRET_MARKERS).toEqual([
+      "MUX_TOKEN",
+      "MUX_WEBHOOK_SECRET",
+      "@mux/mux-node",
+    ]);
   });
 });

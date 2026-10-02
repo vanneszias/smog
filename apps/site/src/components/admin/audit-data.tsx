@@ -3,30 +3,77 @@ import type {
   AuditEntry,
   AuditTargetType,
 } from "@smog/admin/schema";
-import { DEFAULT_LOCALE, formatDate, isLocale } from "@smog/i18n";
+import {
+  DEFAULT_LOCALE,
+  formatDate,
+  isLocale,
+  type Translate,
+  type TranslationKey,
+} from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import { Badge, Text, TextLink } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useCallback } from "react";
 
-type Translate = ReturnType<typeof useTranslation>["t"];
-
 /*
- * The label keys are built from the enums (`admin.audit.actions.gesture.create`).
- * The cast keeps i18next's key types from expanding every combination;
- * `audit-data.test.ts` checks that each action and target type has its
- * label in every locale.
+ * One literal key per enum value (never a template-literal key cast to one
+ * literal): TypeScript checks each against the catalogue once, and `t`
+ * never widens to the whole key union (TS2589; DECISIONS, phase 5 task 3).
+ * `audit-data.test.ts` checks that each label exists in every locale.
  */
+const ACTION_LABEL_KEYS = {
+  "category.create": "admin.audit.actions.category.create",
+  "category.delete": "admin.audit.actions.category.delete",
+  "category.publish": "admin.audit.actions.category.publish",
+  "category.reorder": "admin.audit.actions.category.reorder",
+  "category.unpublish": "admin.audit.actions.category.unpublish",
+  "category.update": "admin.audit.actions.category.update",
+  "export.sponsorships_csv": "admin.audit.actions.export.sponsorships_csv",
+  "gesture.bulk_update": "admin.audit.actions.gesture.bulk_update",
+  "gesture.create": "admin.audit.actions.gesture.create",
+  "gesture.delete": "admin.audit.actions.gesture.delete",
+  "gesture.publish": "admin.audit.actions.gesture.publish",
+  "gesture.unpublish": "admin.audit.actions.gesture.unpublish",
+  "gesture.update": "admin.audit.actions.gesture.update",
+  legacy: "admin.audit.actions.legacy",
+  "maintenance.disable": "admin.audit.actions.maintenance.disable",
+  "maintenance.enable": "admin.audit.actions.maintenance.enable",
+  "payment.refund": "admin.audit.actions.payment.refund",
+  "sponsorship.approve": "admin.audit.actions.sponsorship.approve",
+  "sponsorship.cancel": "admin.audit.actions.sponsorship.cancel",
+  "sponsorship.force_expire": "admin.audit.actions.sponsorship.force_expire",
+  "sponsorship.mark_paid": "admin.audit.actions.sponsorship.mark_paid",
+  "sponsorship.regenerate_token":
+    "admin.audit.actions.sponsorship.regenerate_token",
+  "sponsorship.reject": "admin.audit.actions.sponsorship.reject",
+  "sponsorship.request_changes":
+    "admin.audit.actions.sponsorship.request_changes",
+  "sponsorship.retry_render": "admin.audit.actions.sponsorship.retry_render",
+  "user.ban": "admin.audit.actions.user.ban",
+  "user.delete": "admin.audit.actions.user.delete",
+  "user.impersonate": "admin.audit.actions.user.impersonate",
+  "user.role_change": "admin.audit.actions.user.role_change",
+  "user.unban": "admin.audit.actions.user.unban",
+} as const satisfies Record<AuditAction, TranslationKey>;
+
+const TARGET_TYPE_LABEL_KEYS = {
+  category: "admin.audit.targetTypes.category",
+  gesture: "admin.audit.targetTypes.gesture",
+  list: "admin.audit.targetTypes.list",
+  payment: "admin.audit.targetTypes.payment",
+  setting: "admin.audit.targetTypes.setting",
+  sponsorship: "admin.audit.targetTypes.sponsorship",
+  system: "admin.audit.targetTypes.system",
+  user: "admin.audit.targetTypes.user",
+} as const satisfies Record<AuditTargetType, TranslationKey>;
 
 /** "Gesture created" for `gesture.create`. */
 export function actionLabel(t: Translate, action: AuditAction): string {
-  return t(`admin.audit.actions.${action}` as "admin.audit.actions.legacy");
+  return t(ACTION_LABEL_KEYS[action]);
 }
 
 export function targetTypeLabel(t: Translate, type: AuditTargetType): string {
-  return t(
-    `admin.audit.targetTypes.${type}` as "admin.audit.targetTypes.system"
-  );
+  return t(TARGET_TYPE_LABEL_KEYS[type]);
 }
 
 /** A typed link to the target's admin page. */
