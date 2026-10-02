@@ -10,7 +10,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - [x] 1. Monorepo skeleton (Bun, Turbo, Biome, knip, boundaries, config, CI, empty site + mobile)
 - [x] 2. Foundations (db, auth, rpc/api, local-store + guest import, styles/brand/i18n, ui-web/ui-native, /dev/ui)
 - [x] 3. Learning (gestures, categories, FTS search, favorites, lists, share links; site + mobile)
-- [ ] 4. Account, consent, analytics, legal pages, deep links, legacy redirects, maintenance mode
+- [x] 4. Account, consent, analytics, legal pages, deep links, legacy redirects, maintenance mode
 - [ ] 5. Admin panel
 - [ ] 6. Payments, sponsorships, jobs, emails
 - [ ] 7. Render (Remotion, Container, Workflow, Mux upload, wizard preview)
@@ -29,13 +29,13 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - 2026-09-30: Phase 3 done: both fix-wave groups reviewed and merged; release:check and the full site e2e (42/42) green. Phase 4 tasks 2 (analytics) and 3 (account and consent UI) merged.
 - 2026-09-30: Phase 4 tasks 4 (legal pages, app links, open in app, legacy 301s, AppBanner), 5 (Turnstile bridge for the app, app magic link) and 6 (maintenance, security headers, CSP) merged. Phase 4 review: pass with a fix wave (I1–I7, two groups). Phase 5 task 1 (admin package, audit log, admin shell) merged.
 - 2026-09-30: CI split into three lanes (`release:check:core`, `:tests`, `:mobile`); every push to `develop` now deploys to staging once the lanes pass.
+- 2026-10-02: Phase 4 done: fix wave B merged (fdcd6cd); release:check green. Phase 5 task 2 (catalogue API, migration 0006) merged and deployed to staging; `bun audit` ignores GHSA-86w9-cpqp-85rv (node-forge, Expo tooling only, DECISIONS).
 - 2026-09-30: Phase 4 fix wave B: load-robust tests (route warm-up, RNTL and Testing Library timeouts, deferred gates, batched seeds, Workers-pool `testTimeout`, Playwright workers and warm-up, turbo `--concurrency=3`), a guest never inherits a mirrored consent (I7), the legal additions (Google photo, `smog_mx`, a shared device) and LEGAL-SIGNOFF P29–P32, inventory ticks.
 
 ## Next
 
-- Phases 2 and 3: done.
-- Phase 4: all 6 tasks merged; phase review: pass with fix wave. Group A (maintenance lets only the admin sign-in into `/api/auth/*`, no `/update-user`, the OpenAPI CSP, the dev-mail deadline, Minors) is merged; group B (tests, consent, legal, docs) closes the phase once merged. Then `bun run release:check`, the full site e2e and `bunx turbo run test --force` twice.
-- Phase 5: task 1 merged (admin package, audit log, admin shell); the rest of the phase 5 plan follows.
+- Phases 2, 3 and 4: done.
+- Phase 5: tasks 1 (admin package, audit log, admin shell) and 2 (catalogue API) merged; task 3 (`@smog/video` + Mux) in progress; then 5 (users and roles), 6 (settings and emails), 4 (catalogue screens) and 7 (hardening).
 - Carry into phase 5: admin gesture and category writes must set `sort_name`, reindex FTS and call `bumpCatalogVersion` (the catalog snapshot also serves `gestures.categories`); gesture name ≤ 120. The admin gestures tab gets the QR dialog (inventory L-14's admin half). The admin screens read categories (and gestures) from D1, not through the cached `gestures.categories`, so an admin sees their own edit at once. The maintenance toggle sets the admin's bypass cookie in the same response.
 - Carry into phase 6: the sponsor call-to-action on the gesture detail (inventory L-17), from `sponsorships.availability`, on the site and mobile, and the `sponsorship_checkout_started` event.
 - Carry into phase 6 (required before cutover, the privacy text promises it): a scheduled purge that deletes `audit_log` rows older than 3 years and expired `session` and `verification` rows within 30 days of their expiry.
