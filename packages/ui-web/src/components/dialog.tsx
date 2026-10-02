@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../lib/cn";
 import { usePortalContainer } from "../lib/portal";
+import { useReturnFocus } from "../lib/return-focus";
 import { IconButton } from "./icon-button";
 
 export const Dialog = DialogPrimitive.Root;
@@ -29,11 +30,14 @@ export function DialogContent({
   className,
   description,
   hideClose = false,
+  onCloseAutoFocus,
+  onOpenAutoFocus,
   title,
   ...props
 }: DialogContentProps): ReactNode {
   const { t } = useTranslation();
   const container = usePortalContainer();
+  const focus = useReturnFocus({ onCloseAutoFocus, onOpenAutoFocus });
   return (
     <DialogPrimitive.Portal container={container}>
       <DialogPrimitive.Overlay className={overlayClasses} />
@@ -45,6 +49,7 @@ export function DialogContent({
         )}
         {...(description ? {} : { "aria-describedby": undefined })}
         {...props}
+        {...focus}
       >
         <div className="flex flex-col gap-1 pr-10">
           <DialogPrimitive.Title className="font-semibold text-title-2">

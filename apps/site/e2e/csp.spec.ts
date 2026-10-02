@@ -1,5 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
+import { ADMIN_PAGES, openAdmin, stubMuxMedia } from "./admin";
 import { signInWithApi, stubMux, waitForApp } from "./helpers";
+import { signInAsAdmin } from "./maintenance";
 
 /**
  * The CSP is enforced in dev (`src/worker/headers.ts`), so this suite sees
@@ -26,6 +28,9 @@ const DUMMY_TOKEN = "XXXX.DUMMY.TOKEN.XXXX";
 /** Mux serves renditions and segments from other *.mux.com hosts. */
 const RENDITION_URL = "https://manifest-e2e.cfcdn.mux.com/rendition.m3u8";
 const SEGMENT_URL = "https://chunk-e2e.cfcdn.mux.com/segment0.ts";
+/** A direct-upload URL as Mux hands them out (a `*.mux.com` host). */
+const MUX_UPLOAD_URL =
+  "https://direct-uploads.e2e.production.mux.com/upload/e2e-csp";
 const MASTER_PLAYLIST = `#EXTM3U
 #EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=480x640
 ${RENDITION_URL}
@@ -309,6 +314,70 @@ test.describe("CSP (enforced in dev)", () => {
       await page.waitForLoadState("networkidle");
       expect(await violations(page, messages)).toEqual([]);
     });
+  });
+
+  test("the admin pages, a Mux direct upload and the email preview have no violation", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const csp = await watchCsp(page);
+    await stubMuxMedia(page);
+    await signInAsAdmin(page.request);
+    for (const [, path] of ADMIN_PAGES) {
+      // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
+      await openAdmin(page, path);
+      await page.waitForLoadState("networkidle");
+    }
+    // The email preview's sandboxed srcdoc frame rendered.
+    await expect(
+      page.frameLocator("iframe").getByText("482913", { exact: true })
+    ).toBeVisible();
+
+    // A real direct-upload URL is on a `*.mux.com` host (the dev server's
+    // Mux fake hands out its own origin): the browser's PUT must pass
+    // `connect-src`, so the route counts it.
+    const uploads = hits();
+    await page.route("**/api/rpc/admin/mux/createUpload**", (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        json: { json: { uploadId: "e2e-csp", url: MUX_UPLOAD_URL }, meta: [] },
+      })
+    );
+    await page.route("**/api/rpc/admin/mux/uploadStatus**", (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        json: {
+          json: {
+            asset: {
+              id: "e2e-csp-asset",
+              playbackId: "e2ecsp",
+              status: "ready",
+            },
+            upload: "asset_created",
+          },
+          meta: [],
+        },
+      })
+    );
+    await page.route(`${new URL(MUX_UPLOAD_URL).origin}/**`, (route) => {
+      count(uploads, route.request().url());
+      return route.fulfill({
+        headers: { "access-control-allow-origin": "*" },
+        status: 200,
+      });
+    });
+    await openAdmin(page, "/admin/gestures/new");
+    await page.getByTestId("mux-file-input").setInputFiles({
+      buffer: Buffer.from("not really a video"),
+      mimeType: "video/mp4",
+      name: "csp.mp4",
+    });
+    await expect(page.getByTestId("mux-upload-announcer")).toHaveText(
+      "De video is klaar.",
+      { timeout: 20_000 }
+    );
+    expect(uploads.get(new URL(MUX_UPLOAD_URL).host)).toBeGreaterThan(0);
+    expect(await violations(page, csp)).toEqual([]);
   });
 
   for (const path of ["/dev/ui", "/dev/mail"]) {

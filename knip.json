@@ -45,7 +45,7 @@
       "ignoreDependencies": ["cloudflare"]
     },
     "packages/features/admin": {
-      "entry": ["test/**/*.test.ts", "test/helpers.ts"],
+      "entry": ["test/**/*.test.ts"],
       "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },

@@ -1,11 +1,7 @@
-import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
 import {
   type APIRequestContext,
-  chromium,
   expect,
   type Page,
-  request as playwrightRequest,
   test,
 } from "@playwright/test";
 import {
@@ -22,9 +18,6 @@ import {
 const ADMIN = { email: "admin@smog.test", password: "smog-dev-admin" };
 const SIGN_IN_BACK_TO_AUDIT = /\/sign-in\?redirect=%2Fadmin%2Faudit$/;
 const FROM_IN_URL = /from=2026-01-01/;
-
-/** As playwright.config.ts: the preinstalled Chromium, launched by path. */
-const PREINSTALLED_CHROMIUM = "/opt/pw-browsers/chromium";
 
 /** Sets a role through the dev Worker's seed endpoint (as `admin:grant`). */
 async function setRole(
@@ -203,76 +196,5 @@ test.describe("admin shell", () => {
     await sheet.getByRole("link", { name: "Logboek" }).click();
     await expect(page).toHaveURL(`${ORIGIN}/admin/audit`);
     await expect(sheet).toBeHidden();
-  });
-});
-
-/*
- * Review screenshots (light/dark × 390/1280), only when ADMIN_SHOTS_DIR is
- * set: `ADMIN_SHOTS_DIR=/tmp/shots bunx playwright test admin-shell`.
- * Chromium's own UI (the date inputs) in Belgian Dutch, and no motion, so
- * the sheet is shot where it stops.
- */
-test.describe("admin shell screenshots", () => {
-  test("screenshots", async () => {
-    const dir = process.env.ADMIN_SHOTS_DIR;
-    test.skip(!dir, "set ADMIN_SHOTS_DIR to take the review screenshots");
-    await mkdir(dir ?? "", { recursive: true });
-    // Its own browser: `--lang` is a launch option (per worker in the config).
-    // Chromium formats the date inputs in its own UI language (LANG).
-    const browser = await chromium.launch({
-      args: ["--lang=nl-BE"],
-      env: { ...process.env, LANG: "nl_BE.UTF-8", LANGUAGE: "nl_BE" },
-      ...(existsSync(PREINSTALLED_CHROMIUM)
-        ? { executablePath: PREINSTALLED_CHROMIUM }
-        : {}),
-    });
-    const seeding = await playwrightRequest.newContext({ baseURL: ORIGIN });
-    await seedAuditEntry(seeding);
-    await seeding.dispose();
-    for (const theme of ["light", "dark"] as const) {
-      for (const width of [390, 1280]) {
-        // biome-ignore lint/performance/noAwaitInLoops: one browser context at a time.
-        const context = await browser.newContext({
-          colorScheme: theme,
-          locale: "nl-BE",
-          reducedMotion: "reduce",
-          timezoneId: "Europe/Brussels",
-          viewport: { height: 900, width },
-        });
-        await context.addCookies([
-          { name: "theme", url: ORIGIN, value: theme },
-        ]);
-        const page = await context.newPage();
-        await signInAsAdmin(page);
-        for (const [name, path] of [
-          ["dashboard", "/admin"],
-          ["audit", "/admin/audit"],
-        ] as const) {
-          // biome-ignore lint/performance/noAwaitInLoops: the pages are shot one after another.
-          await page.goto(path);
-          await waitForApp(page);
-          await page.waitForLoadState("networkidle");
-          const decline = page.getByRole("button", {
-            name: "Alleen noodzakelijke",
-          });
-          if (await decline.isVisible()) {
-            await decline.click();
-          }
-          await page.screenshot({
-            fullPage: true,
-            path: `${dir}/${name}-${theme}-${width}.png`,
-          });
-        }
-        // The long entry's sheet, once it has stopped moving.
-        await page.getByText(LONG_TARGET).first().click();
-        const sheet = page.getByRole("dialog");
-        await sheet.getByRole("button", { name: "Sluiten" }).waitFor();
-        await page.screenshot({
-          path: `${dir}/audit-detail-${theme}-${width}.png`,
-        });
-        await context.close();
-      }
-    }
-    await browser.close();
   });
 });

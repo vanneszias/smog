@@ -3,9 +3,81 @@
 The oRPC procedures of `appContract` (`@smog/api`), served at `/api/rpc`.
 Every procedure declares the
 shared error map (`@smog/rpc/contract` `ERRORS`); the codes each one adds are
-listed with it. The public, account, favorites and lists procedures are
-documented in their contracts (`packages/features/*/src/contract.ts`); phase 5
-task 7 backfills them here.
+listed with it. The contracts (`packages/features/*/src/contract.ts` and
+`packages/api/src/contract.ts`) are the source of truth: their doc comments
+hold the full rules, and this page is the index. The OpenAPI reference is
+served at `/api/openapi`.
+
+## `system.*` (`@smog/api`)
+
+| Procedure | Auth | Input | Output |
+|---|---|---|---|
+| `system.health` | public | none | `{ ok: true, environment }` |
+| `system.whoami` | public | none | `{ user: { id, email, name, image, role } \| null }` |
+| `system.authConfig` | public | none | `{ google, apple, turnstileSiteKey }` (which sign-in methods and captcha to show; no secrets) |
+
+## `gestures.*` (`@smog/gestures`)
+
+Public reads. Unpublished gestures and categories never appear; the reads
+come from the catalog snapshot (spec §7.1), which every admin write bumps.
+
+| Procedure | Input | Output |
+|---|---|---|
+| `gestures.categories` | none | published categories (`sort_order`, then name; ≤ 100) |
+| `gestures.list` | `{ category?: slug[] (≤ 20, any of), cursor?, limit? (1..100, = 50) }` | `{ items: GestureSummary[], nextCursor }` (name order, keyset) |
+| `gestures.search` | `{ q (≤ 100), category?, limit? (1..50, = 20) }` | `{ items: SearchResult[], total }` (FTS5 candidates ≤ 200, the TS ranking, then the typo tier; an empty `q` is the browse list) |
+| `gestures.bySlug` | `{ slug }` | the gesture, also by its legacy id (`canonicalSlug` then differs); `NOT_FOUND` otherwise |
+| `gestures.byIds` | `{ ids (≤ 100) }` | `GestureSummary[]` in the order asked; unknown ids are skipped |
+| `gestures.related` | `{ slug, limit? (1..20, = 5) }` | gestures sharing a category, most shared first |
+| `gestures.sitemap` | none | every published gesture's sitemap entry |
+
+## `favorites.*` (`@smog/favorites`)
+
+Every procedure needs a session (`UNAUTHORIZED`); guests keep theirs on the
+device (`@smog/local-store`).
+
+| Procedure | Input | Output |
+|---|---|---|
+| `favorites.ids` | none | favorite gesture ids, newest first |
+| `favorites.list` | `{ cursor?, limit? }` | a keyset page of favorite gestures, newest first |
+| `favorites.add` | `{ gestureId }` | `{ favorite: true }`, idempotent; `NOT_FOUND` for an unknown or unpublished gesture |
+| `favorites.remove` | `{ gestureId }` | `{ favorite: false }`, idempotent, whatever the gesture's state |
+| `favorites.toggle` | `{ gestureId }` | `{ favorite }`: adds when missing, removes when present |
+
+## `lists.*` (`@smog/lists`)
+
+Owner procedures need a session; `lists.shared.get` is public;
+`lists.shared.addItem/removeItem` need a session and an edit link.
+
+| Procedure | Input | Output |
+|---|---|---|
+| `lists.mine` | none | the owner's lists, most recently changed first |
+| `lists.get` | `{ id }` | the list with its published gestures in order; `NOT_FOUND` otherwise |
+| `lists.containing` | `{ gestureId }` | the ids of the owner's lists holding it |
+| `lists.create` | `{ name, description? }` | the list; `INVALID_STATE` at `LISTS_MAX` |
+| `lists.update` | `{ id, name?, description? }` | the list (an empty or `null` description clears it) |
+| `lists.delete` | `{ id }` | nothing; items and share links go with it |
+| `lists.addItem` / `lists.removeItem` | `{ id, gestureId }` | `{ added }` / `{ removed }`; a no-op when already so |
+| `lists.reorder` | `{ id, gestureIds }` | nothing; exactly the current gestures, else `INVALID_STATE` |
+| `lists.share.get` | `{ id }` | the active view and edit links (`null` where none) |
+| `lists.share.create` | `{ id, role }` | the role's active link, created when none |
+| `lists.share.revoke` | `{ id, role }` | nothing; the link 404s at once |
+| `lists.shared.get` | `{ token }` | public: the list behind an active link |
+| `lists.shared.addItem` / `lists.shared.removeItem` | `{ token, gestureId }` | edit link and a session (`FORBIDDEN` for a view link) |
+
+## `account.*` (`@smog/account`)
+
+Every procedure needs a session (`UNAUTHORIZED`).
+
+| Procedure | Input | Output |
+|---|---|---|
+| `account.me` | none | the profile and the sign-in methods |
+| `account.updateProfile` | `{ name?, locale? }` | the new profile |
+| `account.consent.get` | none | the current analytics decision |
+| `account.consent.set` | `{ analytics, source? (= "web") }` | appends to the consent log; the new state |
+| `account.export` | none | everything stored about the user, as versioned JSON (holds live share links) |
+| `account.importGuestData` | the guest's favorites, lists and consent | counts of what was merged and skipped; all or nothing, idempotent |
+| `account.delete` | `{ confirm, password? }` | `{ deleted: true }`; adds `INVALID_PASSWORD`, `PASSWORD_REQUIRED`, `SESSION_NOT_FRESH`, and `INVALID_STATE` for the last admin whose ban is not in force |
 
 ## `admin.*` (`@smog/admin`)
 

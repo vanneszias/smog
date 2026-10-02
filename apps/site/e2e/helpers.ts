@@ -117,8 +117,20 @@ export function watchErrors(page: Page): string[] {
   return errors;
 }
 
-export async function blockingViolations(page: Page) {
-  const results = await new AxeBuilder({ page }).analyze();
+/**
+ * axe's serious and critical violations. `exclude` leaves selectors out,
+ * frames included: axe never enters an excluded frame (a sandboxed
+ * preview frame refuses its script, and the run can hang there).
+ */
+export async function blockingViolations(
+  page: Page,
+  { exclude = [] }: { exclude?: readonly string[] } = {}
+) {
+  let builder = new AxeBuilder({ page });
+  for (const selector of exclude) {
+    builder = builder.exclude(selector);
+  }
+  const results = await builder.analyze();
   return results.violations
     .filter((violation) => BLOCKING.has(violation.impact ?? ""))
     .map((violation) => ({
