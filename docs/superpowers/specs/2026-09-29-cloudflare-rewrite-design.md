@@ -298,7 +298,7 @@ The old rules in `SEARCH_ALGORITHM.md` are kept. Ranking is one pure TypeScript 
    - The score is `150 × weight × similarity`. These results are appended after the direct matches, without duplicates.
 5. **Analytics:** only the query length and the result counts are sent (never the text).
 
-Endpoint inventory (full list in `docs/API.md`): `gestures.{list, bySlug, search, related, categories}`, `favorites.{list, ids, toggle, add, remove}`, `lists.{mine, get, create, update, delete, addItem, removeItem, reorder, share.get, share.create, share.revoke, shared.get, shared.addItem, shared.removeItem}`, `account.{me, updateProfile, consent.get, consent.set, export, delete, importGuestData}`, `sponsorships.{availability, quote, uploadLogo, checkout, paymentStatus, reedit.get, reedit.submit, renewal.get, renewal.checkout}`, `admin.{dashboard, gestures.*, categories.*, sponsorships.*, users.*, audit.list, mux.*, emails.preview, maintenance.*, export.sponsorshipsCsv}`.
+Endpoint inventory (full list in `docs/API.md`): `gestures.{list, bySlug, search, related, categories}`, `favorites.{list, ids, toggle, add, remove}`, `lists.{mine, get, create, update, delete, addItem, removeItem, reorder, share.get, share.create, share.revoke, shared.get, shared.addItem, shared.removeItem}`, `account.{me, updateProfile, consent.get, consent.set, export, delete, importGuestData}`, `sponsorships.{availability, quote, uploadLogo, checkout, paymentStatus, reedit.get, reedit.submit, renewal.get, renewal.checkout}`, `admin.{dashboard, gestures.*, categories.*, sponsorships.*, users.*, audit.{list, actors}, mux.*, emails.{list, preview}, maintenance.*, export.sponsorshipsCsv}`.
 
 ## 8. Background work, video, email
 
@@ -335,7 +335,7 @@ All handlers are idempotent, process records one at a time, and can safely be re
 4. **Mux webhooks** arrive at `POST /api/webhooks/mux`, verified with the Mux signing secret (Web Crypto HMAC in `@smog/video`, a thin `fetch` client with no `@mux/mux-node`; DECISIONS, phase 5 task 3). They are routed to Workflow events and to admin upload status.
 5. **Mux asset lifecycle:**
    - On expiry, the sponsored asset is deleted (old behaviour; failures are logged and swallowed).
-   - Admin gesture uploads use direct uploads with `playback_policy: ["public"]`, `static_renditions: [{ resolution: "highest" }]`, and `passthrough = gesture draft id`.
+   - Admin gesture uploads use direct uploads with `cors_origin` = the `SITE_URL` origin and `new_asset_settings: { playback_policies: ["public"], static_renditions: [{ resolution: "highest" }], passthrough: "gesture-upload:<uuid>" }`; `test: true` is sent in dev only (DECISIONS, phase 5 task 3, "Ruling 4 as implemented").
 
 Local dev: the Container needs Docker. When Docker is missing, `RENDER_MODE=local` makes the Workflow call a local Bun render server (`bun -F @smog/render serve`) instead, and `RENDER_MODE=fake` (tests) returns the source playback id immediately.
 
