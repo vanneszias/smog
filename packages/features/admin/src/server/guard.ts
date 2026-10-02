@@ -98,7 +98,8 @@ function fail(message: string): never {
 
 /**
  * A mutation's audit rule, after its handler succeeded: `{ audit }` built
- * at least one entry, each with one of its actions; `{ exempt }` built none.
+ * at least one entry, all with the same one of its actions; `{ exempt }`
+ * built none.
  */
 function checkMutation(
   name: string,
@@ -119,6 +120,14 @@ function checkMutation(
   if (entries.some((action) => !allowed.includes(action))) {
     fail(
       `[admin] ${name} built ${entries.join(", ")}, not only ${allowed.join(" or ")}`
+    );
+  }
+  // A one-of kind picks one action per call from its input (`setPublished`:
+  // publish or unpublish); which one is the input's is checked by the
+  // procedure's tests (`expectAudit` with `action`).
+  if (new Set(entries).size > 1) {
+    fail(
+      `[admin] ${name} built ${entries.join(", ")}: a one-of kind writes one of its actions`
     );
   }
 }

@@ -749,6 +749,64 @@ describe("admin.gestures reads", () => {
     );
   });
 
+  it("list plans: the status and q filters keep the index order, a category reads its members", async () => {
+    const db = testDb();
+    const shapes = [
+      { filters: undefined, status: "published" as const },
+      { filters: undefined, status: "unpublished" as const },
+      {
+        filters: sql`${gesture.id} IN (SELECT gc.gesture_id FROM gesture_category AS gc WHERE gc.category_id IN (SELECT value FROM json_each(${'["a"]'})))`,
+        status: "all" as const,
+      },
+      {
+        filters: sql`(instr(${gesture.sortName}, ${"x"}) > 0 OR ${gesture.id} IN (SELECT value FROM json_each(${'["a"]'})))`,
+        status: "unpublished" as const,
+      },
+    ];
+    const plans = await Promise.all(
+      shapes.flatMap(({ filters, status }) =>
+        [null, { id: "x", sortName: "m" }].map(async (position) => {
+          const query = adminGesturesQuery(
+            db,
+            filters,
+            status,
+            position,
+            50
+          ).toSQL();
+          const { results } = await env.DB.prepare(
+            `EXPLAIN QUERY PLAN ${query.sql}`
+          )
+            .bind(...query.params)
+            .all<{ detail: string; parent: number }>();
+          return results
+            .filter(
+              (row) => row.parent === 0 && !row.detail.startsWith("CORRELATED")
+            )
+            .map((row) => row.detail)
+            .join(" | ");
+        })
+      )
+    );
+    // Status and q keep the index order (q filters while it scans). A
+    // category filter reads only its members by primary key and sorts them:
+    // a category holds a small part of the catalogue.
+    const ordered = (index: string) => [
+      `SCAN gesture USING INDEX ${index}`,
+      `SEARCH gesture USING INDEX ${index} (sort_name>?)`,
+    ];
+    const members =
+      "SEARCH gesture USING INDEX sqlite_autoindex_gesture_1 (id=?) | LIST SUBQUERY 6 | USE TEMP B-TREE FOR ORDER BY";
+    expect(plans).toEqual([
+      ...ordered("gesture_published_sort_name_idx"),
+      ...ordered("gesture_sort_name_idx"),
+      members,
+      members,
+      ...ordered("gesture_sort_name_idx").map(
+        (plan) => `${plan} | LIST SUBQUERY 5`
+      ),
+    ]);
+  });
+
   it("list seeks the full (sort_name, id) index of migration 0006", async () => {
     const db = testDb();
     const plans = await Promise.all(

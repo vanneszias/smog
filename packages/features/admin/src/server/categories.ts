@@ -3,6 +3,7 @@ import {
   gesture,
   gestureCategory,
   rebuildCategoryGesturesFtsSql,
+  ref,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { newId, normalizeText } from "@smog/utils";
@@ -15,7 +16,6 @@ import {
   GuardFailedError,
   jsonList,
   nextUpdatedAt,
-  ref,
   runCatalogBatch,
   type Statement,
   withFreeSlug,
@@ -124,33 +124,53 @@ export function categoriesRoutes(deps: AdminDeps) {
           if (await nameTaken(db, input.name)) {
             throw errors.CONFLICT({ data: { reason: "duplicateName" } });
           }
+          // `list` and `reorder` handle at most this many (the exact set).
+          const full = sql`(SELECT count(*) FROM ${category}) >= ${ADMIN_CATEGORIES_MAX}`;
+          const [{ isFull } = { isFull: 0 }] = await db
+            .select({ isFull: sql<number>`${full}`.mapWith(Number) })
+            .from(sql`(SELECT 1)`);
+          if (isFull) {
+            throw errors.INVALID_STATE();
+          }
           const id = newId();
           const now = new Date();
-          await withFreeSlug(db, category, input.name, async (slug) => {
-            await runCatalogBatch(
-              db,
-              [
-                db.insert(category).values({
-                  createdAt: now,
-                  id,
-                  name: input.name,
-                  publishedAt: input.published ? now : null,
-                  slug,
-                  // At the end of the order.
-                  sortOrder: sql`(SELECT coalesce(max(${category.sortOrder}) + 1, 0) FROM ${category})`,
-                  updatedAt: now,
-                }),
-                auditStatement(db, {
-                  action: "category.create",
-                  actorId: context.user.id,
-                  data: { name: input.name, published: input.published, slug },
-                  targetId: id,
-                  targetType: "category",
-                }),
-              ],
-              "create a category"
-            );
-          });
+          try {
+            await withFreeSlug(db, category, input.name, async (slug) => {
+              await runCatalogBatch(
+                db,
+                [
+                  failWhen(db, "full", full),
+                  db.insert(category).values({
+                    createdAt: now,
+                    id,
+                    name: input.name,
+                    publishedAt: input.published ? now : null,
+                    slug,
+                    // At the end of the order.
+                    sortOrder: sql`(SELECT coalesce(max(${category.sortOrder}) + 1, 0) FROM ${category})`,
+                    updatedAt: now,
+                  }),
+                  auditStatement(db, {
+                    action: "category.create",
+                    actorId: context.user.id,
+                    data: {
+                      name: input.name,
+                      published: input.published,
+                      slug,
+                    },
+                    targetId: id,
+                    targetType: "category",
+                  }),
+                ],
+                "create a category"
+              );
+            });
+          } catch (error) {
+            if (error instanceof GuardFailedError) {
+              throw errors.INVALID_STATE();
+            }
+            throw error;
+          }
           await bumpCatalog(deps, context.kv, "a category create");
           return (await findCategory(db, id)) as AdminCategory;
         }

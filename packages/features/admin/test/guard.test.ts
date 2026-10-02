@@ -34,6 +34,7 @@ const ok = baseContract.output(z.string());
 const testContract = {
   things: {
     create: ok,
+    createMixedOneOf: ok,
     createNothing: ok,
     createOneOf: ok,
     createOutsideOneOf: ok,
@@ -55,6 +56,7 @@ const testContract = {
 
 const KINDS: Record<string, GuardKind> = {
   "things.create": { audit: "gesture.create" },
+  "things.createMixedOneOf": { audit: ["gesture.create", "gesture.delete"] },
   "things.createNothing": { audit: "gesture.create" },
   "things.createOneOf": { audit: ["gesture.create", "gesture.delete"] },
   "things.createOutsideOneOf": { audit: ["gesture.delete"] },
@@ -98,6 +100,23 @@ const router = os.router({
       ]);
       return "created";
     }),
+    createMixedOneOf: os.things.createMixedOneOf.handler(
+      async ({ context }) => {
+        await context.db.batch([
+          buildAuditStatement(
+            context.db,
+            SCHEMAS,
+            entry(context.user.id, "gesture.create", "t-mixed")
+          ),
+          buildAuditStatement(
+            context.db,
+            SCHEMAS,
+            entry(context.user.id, "gesture.delete", "t-mixed")
+          ),
+        ]);
+        return "mixed";
+      }
+    ),
     createNothing: os.things.createNothing.handler(async ({ context }) => {
       await context.db.run(sql.raw("UPDATE category SET name = name WHERE 0"));
       return "no audit";
@@ -304,6 +323,10 @@ describe("the admin guard: mutations", () => {
     const logged = quiet();
     await expect(run("createOneOf")).resolves.toBe("one of");
     await expect(run("createOutsideOneOf")).rejects.toMatchObject(INTERNAL);
+    await expect(run("createMixedOneOf")).rejects.toMatchObject(INTERNAL);
+    expect(logged).toHaveBeenCalledWith(
+      "[admin] things.createMixedOneOf built gesture.create, gesture.delete: a one-of kind writes one of its actions"
+    );
     expect(logged).toHaveBeenCalledWith(
       "[admin] things.createOutsideOneOf built gesture.create, not only gesture.delete"
     );

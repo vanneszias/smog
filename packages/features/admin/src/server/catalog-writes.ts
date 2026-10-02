@@ -16,22 +16,11 @@
 import { type category, gesture } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { slugify } from "@smog/utils";
-import { or, type SQL, sql } from "drizzle-orm";
+import { or, type SQL, type SQLWrapper, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
-import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import type { AdminDeps } from "./procedure";
 
 export type Statement = BatchItem<"sqlite">;
-
-/**
- * `alias."column"`. Drizzle renders columns unqualified in single-table
- * statements, where a correlated subquery would resolve them against its
- * own tables (`json_each` has an `id` column too), so every subquery names
- * both sides: the outer row by its table name, inner tables by an alias.
- */
-export function ref(alias: string, column: SQLiteColumn): SQL {
-  return sql`${sql.raw(alias)}.${sql.identifier(column.name)}`;
-}
 
 /** A `failWhen` guard that fired: the batch rolled back. */
 export class GuardFailedError extends Error {
@@ -214,7 +203,16 @@ export function nextUpdatedAt(previous: Date | number): Date {
   return new Date(Math.max(Date.now(), at + 1));
 }
 
-/** A JSON array parameter, for `json_each(?)`: one bound value for any list. */
+/**
+ * A JSON array parameter, for `json_each(?)`: one bound value for any list.
+ * D1 allows at most 100 bound parameters per statement (also in a batch),
+ * so a list of ids is never bound one parameter per id (`inArray`).
+ */
 export function jsonList(values: readonly unknown[]): string {
   return JSON.stringify(values);
+}
+
+/** `column IN (the values)`, bound as one parameter (see `jsonList`). */
+export function inList(column: SQLWrapper, values: readonly unknown[]): SQL {
+  return sql`${column} IN (SELECT value FROM json_each(${jsonList(values)}))`;
 }

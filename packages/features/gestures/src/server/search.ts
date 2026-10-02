@@ -12,7 +12,7 @@
  *
  * An empty query is the browse list and its total, in one batch.
  */
-import { gesture } from "@smog/db";
+import { gesture, ref } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { and, sql } from "drizzle-orm";
 import { buildFtsQuery } from "../normalize-query";
@@ -31,7 +31,6 @@ import {
   inCategories,
   isPublished,
   nameOrder,
-  ref,
   searchableColumns,
   summaryColumns,
   toSummary,

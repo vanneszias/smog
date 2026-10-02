@@ -6,6 +6,7 @@ import {
   gestureSortName,
   rebuildGestureFtsSql,
   rebuildGesturesFtsSql,
+  ref,
   sponsorship,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
@@ -16,16 +17,7 @@ import {
   newId,
   normalizeText,
 } from "@smog/utils";
-import {
-  and,
-  eq,
-  inArray,
-  isNotNull,
-  isNull,
-  ne,
-  type SQL,
-  sql,
-} from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne, type SQL, sql } from "drizzle-orm";
 import {
   type AdminGestureCategory,
   type AdminGestureDetail,
@@ -41,9 +33,9 @@ import {
   bumpCatalog,
   failWhen,
   GuardFailedError,
+  inList,
   jsonList,
   nextUpdatedAt,
-  ref,
   runCatalogBatch,
   type Statement,
   withFreeSlug,
@@ -287,7 +279,7 @@ async function findAdminGestureRows(
   const rows = await db
     .select(rowColumns)
     .from(gesture)
-    .where(inArray(gesture.id, [...ids]));
+    .where(inList(gesture.id, ids));
   const byId = new Map(rows.map((row) => [row.id, toRow(row)]));
   return ids.flatMap((id) => {
     const row = byId.get(id);
@@ -319,7 +311,7 @@ async function currentGestures(
       updatedAt: gesture.updatedAt,
     })
     .from(gesture)
-    .where(inArray(gesture.id, [...ids]));
+    .where(inList(gesture.id, ids));
   return new Map(rows.map((row) => [row.id, row]));
 }
 
@@ -334,7 +326,7 @@ async function unknownCategories(
   const rows = await db
     .select({ id: category.id })
     .from(category)
-    .where(inArray(category.id, [...ids]));
+    .where(inList(category.id, ids));
   const known = new Set(rows.map((row) => row.id));
   return ids.filter((id) => !known.has(id));
 }
@@ -573,7 +565,7 @@ async function wouldLeaveUncategorised(
       gestureId: gestureCategory.gestureId,
     })
     .from(gestureCategory)
-    .where(inArray(gestureCategory.gestureId, [...ids]));
+    .where(inList(gestureCategory.gestureId, ids));
   return ids.some(
     (id) =>
       !links.some(
@@ -609,7 +601,7 @@ function bulkStatements(
             }),
         updatedAt: sql`max(${now}, ${gesture.updatedAt} + 1)`,
       })
-      .where(inArray(gesture.id, gestureIds)),
+      .where(inList(gesture.id, gestureIds)),
   ];
   if (patch.remove.length > 0) {
     statements.push(
@@ -617,8 +609,8 @@ function bulkStatements(
         .delete(gestureCategory)
         .where(
           and(
-            inArray(gestureCategory.gestureId, gestureIds),
-            inArray(gestureCategory.categoryId, patch.remove)
+            inList(gestureCategory.gestureId, gestureIds),
+            inList(gestureCategory.categoryId, patch.remove)
           )
         )
     );
