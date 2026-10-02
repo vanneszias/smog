@@ -10,7 +10,12 @@ import {
   buildAuditStatement,
   writeAuditWith,
 } from "../src/server/audit-writer";
-import { adminGuard, type GuardKind, markUnchanged } from "../src/server/guard";
+import {
+  AUTH_READ_METHODS,
+  adminGuard,
+  type GuardKind,
+  markUnchanged,
+} from "../src/server/guard";
 import {
   type Authed,
   auditMark,
@@ -34,17 +39,23 @@ const ok = baseContract.output(z.string());
 const testContract = {
   things: {
     create: ok,
+    createBuiltNotRun: ok,
     createMixedOneOf: ok,
     createNothing: ok,
     createOneOf: ok,
     createOutsideOneOf: ok,
     createTwoKinds: ok,
+    createUnbuiltAudit: ok,
     createUnchanged: ok,
     createUnchangedAudited: ok,
     createWrong: ok,
     exempt: ok,
     exemptAudited: ok,
+    exemptRawAudit: ok,
     list: ok,
+    listAuthHandler: ok,
+    listAuthRead: ok,
+    listAuthWrite: ok,
     listBuildsAudit: ok,
     listDeletes: ok,
     listKvDelete: ok,
@@ -65,17 +76,23 @@ const KV_KEY = "guard:noop";
 
 const KINDS: Record<string, GuardKind> = {
   "things.create": { audit: "gesture.create" },
+  "things.createBuiltNotRun": { audit: "gesture.create" },
   "things.createMixedOneOf": { audit: ["gesture.create", "gesture.delete"] },
   "things.createNothing": { audit: "gesture.create" },
   "things.createOneOf": { audit: ["gesture.create", "gesture.delete"] },
   "things.createOutsideOneOf": { audit: ["gesture.delete"] },
   "things.createTwoKinds": { audit: "gesture.create" },
+  "things.createUnbuiltAudit": { audit: "gesture.create" },
   "things.createUnchanged": { audit: "gesture.create", noop: NOOP },
   "things.createUnchangedAudited": { audit: "gesture.create", noop: NOOP },
   "things.createWrong": { audit: "gesture.create" },
   "things.exempt": { exempt: "changes no stored state" },
   "things.exemptAudited": { exempt: "changes no stored state" },
+  "things.exemptRawAudit": { exempt: "changes no stored state" },
   "things.list": "read",
+  "things.listAuthHandler": "read",
+  "things.listAuthRead": "read",
+  "things.listAuthWrite": "read",
   "things.listBuildsAudit": "read",
   "things.listDeletes": "read",
   "things.listKvDelete": "read",
@@ -115,6 +132,20 @@ const router = os.router({
       ]);
       return "created";
     }),
+    createBuiltNotRun: os.things.createBuiltNotRun.handler(
+      async ({ context }) => {
+        // Built, then left out of the batch that runs.
+        buildAuditStatement(
+          context.db,
+          SCHEMAS,
+          entry(context.user.id, "gesture.create", "t-built-not-run")
+        );
+        await context.db.batch([
+          context.db.run(sql.raw("UPDATE category SET name = name WHERE 0")),
+        ]);
+        return "built, not run";
+      }
+    ),
     createMixedOneOf: os.things.createMixedOneOf.handler(
       async ({ context }) => {
         await context.db.batch([
@@ -173,6 +204,22 @@ const router = os.router({
       ]);
       return "two";
     }),
+    createUnbuiltAudit: os.things.createUnbuiltAudit.handler(
+      async ({ context }) => {
+        await context.db.batch([
+          buildAuditStatement(
+            context.db,
+            SCHEMAS,
+            entry(context.user.id, "gesture.create", "t-unbuilt")
+          ),
+          // An audit_log insert that skipped the writer (and its schema).
+          context.db.run(
+            sql.raw("INSERT INTO audit_log SELECT * FROM audit_log WHERE 0")
+          ),
+        ]);
+        return "unbuilt audit";
+      }
+    ),
     createUnchanged: os.things.createUnchanged.handler(({ context }) => {
       markUnchanged(context.db);
       return "unchanged";
@@ -209,10 +256,33 @@ const router = os.router({
       ]);
       return "exempt, audited";
     }),
+    exemptRawAudit: os.things.exemptRawAudit.handler(async ({ context }) => {
+      await context.db.run(
+        sql.raw('INSERT INTO "audit_log" SELECT * FROM audit_log WHERE 0')
+      );
+      return "exempt, raw audit";
+    }),
     list: os.things.list.handler(async ({ context }) => {
       await context.db.run(sql.raw("SELECT 1"));
       await context.kv.get("anything");
       return "read";
+    }),
+    listAuthHandler: os.things.listAuthHandler.handler(async ({ context }) => {
+      await context.auth.handler(new Request("https://smog.test/api/auth/ok"));
+      return "auth handler";
+    }),
+    listAuthRead: os.things.listAuthRead.handler(async ({ context }) => {
+      const session = await context.auth.api.getSession({
+        headers: context.request.headers,
+      });
+      return session?.user.id === context.user.id ? "auth read" : "no session";
+    }),
+    listAuthWrite: os.things.listAuthWrite.handler(async ({ context }) => {
+      await context.auth.api.banUser({
+        body: { userId: context.user.id },
+        headers: context.request.headers,
+      });
+      return "banned";
     }),
     listBuildsAudit: os.things.listBuildsAudit.handler(({ context }) => {
       buildAuditStatement(
@@ -353,6 +423,43 @@ describe("the admin guard: reads", () => {
   });
 });
 
+describe("the admin guard: reads and Better Auth", () => {
+  it("lets a read call Better Auth's read methods", async () => {
+    await expect(run("listAuthRead")).resolves.toBe("auth read");
+    for (const method of AUTH_READ_METHODS) {
+      expect(typeof admin.auth.api[method]).toBe("function");
+    }
+  });
+
+  it("stops a read that calls a Better Auth write, before it runs", async () => {
+    const logged = quiet();
+    await expect(run("listAuthWrite")).rejects.toMatchObject(INTERNAL);
+    expect(logged).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        message:
+          "[admin] A read procedure tried to write (things.listAuthWrite): auth.api.banUser",
+      })
+    );
+    const row = await env.DB.prepare("SELECT banned FROM user WHERE id = ?")
+      .bind(admin.user.id)
+      .first<{ banned: number | null }>();
+    expect(row?.banned ?? 0).toBe(0);
+  });
+
+  it("gives a read nothing of Better Auth beyond its read methods", async () => {
+    const logged = quiet();
+    await expect(run("listAuthHandler")).rejects.toMatchObject(INTERNAL);
+    expect(logged).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        message:
+          "[admin] A read procedure tried to write (things.listAuthHandler): auth.handler",
+      })
+    );
+  });
+});
+
 describe("the admin guard: mutations", () => {
   it("passes a mutation that built its mapped entry (batch or standalone)", async () => {
     const mark = await auditMark();
@@ -369,6 +476,28 @@ describe("the admin guard: mutations", () => {
     await expect(run("createNothing")).rejects.toMatchObject(INTERNAL);
     expect(logged).toHaveBeenCalledWith(
       "[admin] things.createNothing finished without its audit entry"
+    );
+  });
+
+  it("fails a mutation whose built entry never reached D1", async () => {
+    const logged = quiet();
+    const mark = await auditMark();
+    await expect(run("createBuiltNotRun")).rejects.toMatchObject(INTERNAL);
+    expect(logged).toHaveBeenCalledWith(
+      "[admin] things.createBuiltNotRun built 1 audit entry but ran 0 audit_log inserts"
+    );
+    expect(await auditRowsSince(mark)).toEqual([]);
+  });
+
+  it("fails a mutation that ran an audit_log insert it did not build", async () => {
+    const logged = quiet();
+    await expect(run("createUnbuiltAudit")).rejects.toMatchObject(INTERNAL);
+    expect(logged).toHaveBeenCalledWith(
+      "[admin] things.createUnbuiltAudit built 1 audit entry but ran 2 audit_log inserts"
+    );
+    await expect(run("exemptRawAudit")).rejects.toMatchObject(INTERNAL);
+    expect(logged).toHaveBeenCalledWith(
+      "[admin] things.exemptRawAudit is exempt but ran 1 audit_log insert"
     );
   });
 

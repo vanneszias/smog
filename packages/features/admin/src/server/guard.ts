@@ -29,31 +29,90 @@ function isReadSql(query: string): boolean {
   );
 }
 
+/** An `INSERT INTO audit_log` (Drizzle quotes the name; raw SQL may not). */
+const AUDIT_INSERT_SQL = /^\s*insert\s+into\s+["`]?audit_log["`]?[\s(]/i;
+
 /**
  * What a call's D1 and KV may do, shared by both proxies:
  * - `readOnly`: every write throws before it reaches D1 or KV (`refusal`
  *   says why);
  * - `writes`: the writes so far (D1 statements that are not reads, KV puts
- *   and deletes, D1 `exec` and `withSession`).
+ *   and deletes, D1 `exec` and `withSession`);
+ * - `auditInserts`: the `audit_log` inserts D1 ran (counted when their
+ *   `run`, `all`, `raw`, `first` or `batch` resolved, not when they were
+ *   built or prepared), which the mutation rule compares with the entries
+ *   the writer built.
  */
 interface WriteGate {
+  auditInserts: number;
   readOnly: boolean;
   refusal: string;
   writes: number;
 }
 
+/** A read-only gate's refusal of `what`. */
+function refuse(gate: WriteGate, what: string): never {
+  throw new AdminGuardError(`${gate.refusal}: ${what}`);
+}
+
 function guardWrite(gate: WriteGate, what: string): void {
   if (gate.readOnly) {
-    throw new AdminGuardError(`${gate.refusal}: ${what}`);
+    refuse(gate, what);
   }
   gate.writes += 1;
+}
+
+/** D1's own statement behind each statement the gate handed out. */
+const unwrapped = new WeakMap<object, D1PreparedStatement>();
+
+/** D1's statements that are `audit_log` inserts (counted in a `batch`). */
+const auditStatements = new WeakSet<D1PreparedStatement>();
+
+const RUNS: ReadonlySet<PropertyKey> = new Set(["all", "first", "raw", "run"]);
+
+/**
+ * `stmt`, counting in `gate.auditInserts` each time D1 ran it when it is an
+ * `audit_log` insert (`audit`). `bind` hands out a tracked statement too;
+ * a `batch` unwraps them (D1 wants its own statements).
+ */
+function trackedStatement(
+  stmt: D1PreparedStatement,
+  gate: WriteGate,
+  audit: boolean
+): D1PreparedStatement {
+  if (audit) {
+    auditStatements.add(stmt);
+  }
+  const tracked = new Proxy(stmt, {
+    get(target, key) {
+      if (key === "bind") {
+        return (...values: unknown[]) =>
+          trackedStatement(target.bind(...values), gate, audit);
+      }
+      const value: unknown = Reflect.get(target, key, target);
+      if (typeof value !== "function") {
+        return value;
+      }
+      if (audit && RUNS.has(key)) {
+        return async (...args: unknown[]) => {
+          const result: unknown = await Reflect.apply(value, target, args);
+          gate.auditInserts += 1;
+          return result;
+        };
+      }
+      return value.bind(target);
+    },
+  });
+  unwrapped.set(tracked, stmt);
+  return tracked;
 }
 
 /**
  * A D1 binding that counts the writes it lets through, or refuses them
  * when the gate is read-only: a statement that is not a `SELECT` (or a
  * `WITH … SELECT`) counts or throws when it is prepared, before it reaches
- * D1.
+ * D1. Its statements also count the `audit_log` inserts D1 ran, alone or
+ * in a `batch` (phase 5 fix wave M1).
  */
 function gatedD1(d1: D1Database, gate: WriteGate): D1Database {
   return new Proxy(d1, {
@@ -63,7 +122,21 @@ function gatedD1(d1: D1Database, gate: WriteGate): D1Database {
           if (!isReadSql(query)) {
             guardWrite(gate, query.slice(0, 80));
           }
-          return target.prepare(query);
+          return trackedStatement(
+            target.prepare(query),
+            gate,
+            AUDIT_INSERT_SQL.test(query)
+          );
+        };
+      }
+      if (key === "batch") {
+        return async (statements: D1PreparedStatement[]) => {
+          const own = statements.map((stmt) => unwrapped.get(stmt) ?? stmt);
+          const results = await target.batch(own);
+          gate.auditInserts += own.filter((stmt) =>
+            auditStatements.has(stmt)
+          ).length;
+          return results;
         };
       }
       if (key === "exec" || key === "withSession") {
@@ -97,6 +170,60 @@ function gatedKv(kv: KVNamespace, gate: WriteGate): KVNamespace {
       }
       const value: unknown = Reflect.get(target, key, target);
       return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
+/**
+ * The Better Auth methods a read procedure may call: reads only. Better
+ * Auth writes D1 through its own adapter, which the D1 gate never sees, so
+ * a read gets `auth.api` frozen to this list (phase 5 fix wave M2).
+ * `getSession` may refresh the caller's own session row, as on any request.
+ */
+export const AUTH_READ_METHODS = [
+  "getSession",
+  "getUser",
+  "listSessions",
+  "listUserAccounts",
+  "listUserSessions",
+  "listUsers",
+  "userHasPermission",
+] as const;
+
+const AUTH_READS: ReadonlySet<PropertyKey> = new Set(AUTH_READ_METHODS);
+
+type AuthApi = RpcContext["auth"]["api"];
+
+/**
+ * `auth` for a read: `api` answers only `AUTH_READ_METHODS`, and calling
+ * any other method throws before it runs; anything else (`handler`,
+ * `$context`, `options`) throws when read.
+ */
+function readOnlyAuth(
+  auth: RpcContext["auth"],
+  gate: WriteGate
+): RpcContext["auth"] {
+  const api = new Proxy(auth.api, {
+    get(target, key) {
+      const value: unknown = Reflect.get(target, key, target);
+      if (typeof key === "symbol" || typeof value !== "function") {
+        return value;
+      }
+      if (AUTH_READS.has(key)) {
+        return value.bind(target);
+      }
+      return () => refuse(gate, `auth.api.${key}`);
+    },
+  }) as AuthApi;
+  return new Proxy(auth, {
+    get(_target, key) {
+      if (key === "api") {
+        return api;
+      }
+      if (typeof key === "symbol" || key === "then") {
+        return;
+      }
+      return refuse(gate, `auth.${key}`);
     },
   });
 }
@@ -155,10 +282,14 @@ export function markUnchanged(db: Db): void {
   call.gate.refusal = `[admin] ${call.name} wrote after markUnchanged`;
 }
 
+function inserts(count: number): string {
+  return count === 1 ? "1 audit_log insert" : `${count} audit_log inserts`;
+}
+
 /**
  * A mutation's audit rule, after its handler succeeded: `{ audit }` built
- * at least one entry, all with the same one of its actions; `{ exempt }`
- * built none.
+ * at least one entry, all with the same one of its actions, and D1 ran
+ * exactly as many `audit_log` inserts; `{ exempt }` built and ran none.
  */
 function checkMutation(
   name: string,
@@ -173,9 +304,13 @@ function checkMutation(
     }
     return;
   }
+  const ran = call.gate.auditInserts;
   if ("exempt" in kind) {
     if (entries.length > 0) {
       fail(`[admin] ${name} is exempt but built an audit entry`);
+    }
+    if (ran > 0) {
+      fail(`[admin] ${name} is exempt but ran ${inserts(ran)}`);
     }
     return;
   }
@@ -183,6 +318,15 @@ function checkMutation(
     typeof kind.audit === "string" ? [kind.audit] : kind.audit;
   if (entries.length === 0) {
     fail(`[admin] ${name} finished without its audit entry`);
+  }
+  // What D1 ran, not only what was built: an entry left out of the batch
+  // that ran, or an `audit_log` insert that skipped the writer, fails.
+  if (ran !== entries.length) {
+    const built =
+      entries.length === 1
+        ? "1 audit entry"
+        : `${entries.length} audit entries`;
+    fail(`[admin] ${name} built ${built} but ran ${inserts(ran)}`);
   }
   if (entries.some((action) => !allowed.includes(action))) {
     fail(
@@ -202,13 +346,14 @@ function checkMutation(
 /**
  * The audit rule of every admin procedure, by its kind (ruling 5), after
  * `requireAdmin`:
- * - a read gets a D1 and a KV that throw on any write, and may build no
- *   audit entry;
+ * - a read gets a D1 and a KV that throw on any write, and a Better Auth
+ *   whose `api` has only its read methods; it may build no audit entry;
  * - `{ audit: A }` must build at least one entry, all with action `A`
- *   (`{ audit: [A, B] }`: each entry `A` or `B`)
+ *   (`{ audit: [A, B] }`: each entry `A` or `B`), and D1 must have run
+ *   each of them (counted per executed `audit_log` insert)
  *   (checked when the handler succeeded; a handler that throws changed
  *   nothing, since the entry shares the change's batch);
- * - `{ exempt }` may build none;
+ * - `{ exempt }` may build and run none;
  * - `{ audit, noop }` may instead call `markUnchanged(db)` before writing
  *   anything (a no-op leaves nothing to audit); the rest of the call is
  *   read-only.
@@ -231,6 +376,7 @@ export function adminGuard(kinds: Readonly<Record<string, GuardKind>>) {
       }
       if (kind === "read") {
         const gate: WriteGate = {
+          auditInserts: 0,
           readOnly: true,
           refusal: `[admin] A read procedure tried to write (${name})`,
           writes: 0,
@@ -238,14 +384,23 @@ export function adminGuard(kinds: Readonly<Record<string, GuardKind>>) {
         const db = createDb(gatedD1(raw, gate));
         const entries = trackAudits(db);
         const result = await next({
-          context: { db, kv: gatedKv(context.kv, gate) },
+          context: {
+            auth: readOnlyAuth(context.auth, gate),
+            db,
+            kv: gatedKv(context.kv, gate),
+          },
         });
         if (entries.length > 0) {
           fail(`[admin] ${name} is a read but built an audit entry`);
         }
         return result;
       }
-      const gate: WriteGate = { readOnly: false, refusal: "", writes: 0 };
+      const gate: WriteGate = {
+        auditInserts: 0,
+        readOnly: false,
+        refusal: "",
+        writes: 0,
+      };
       const db = createDb(gatedD1(raw, gate));
       const call: MutationCall = {
         gate,
