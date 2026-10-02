@@ -7,5 +7,11 @@ export {
 } from "./fts";
 export * from "./schema";
 export { gestureSortName } from "./sort-name";
-export { otherActiveAdminExists, ref, userBanInForce } from "./sql";
+export {
+  inList,
+  jsonList,
+  otherActiveAdminExists,
+  ref,
+  userBanInForce,
+} from "./sql";
 export type * from "./types";
