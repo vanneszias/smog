@@ -11,14 +11,14 @@ import {
   useState,
 } from "react";
 
-export type KeywordProblem = "duplicate" | "max" | "tooLong";
+type KeywordProblem = "duplicate" | "max" | "tooLong";
 
 /**
  * Adds one typed keyword under the contract's rules (ruling 8): trimmed,
  * at most 60 characters, at most 30, no `normalizeText` duplicate. `null`
  * for an empty entry.
  */
-export function addKeyword(
+function addKeyword(
   keywords: readonly string[],
   raw: string
 ): { keywords: string[] } | { problem: KeywordProblem } | null {

@@ -16,7 +16,7 @@ import {
  */
 
 /** The cells the table editor edits, in column order. */
-export const TABLE_FIELDS = [
+const TABLE_FIELDS = [
   "name",
   "description",
   "playbackId",
@@ -42,7 +42,7 @@ export interface RowEdit {
 /** Gesture id → its buffered edit (only rows with a change). */
 export type TableEdits = ReadonlyMap<string, RowEdit>;
 
-export function valuesOf(row: AdminGestureRow): TableValues {
+function valuesOf(row: AdminGestureRow): TableValues {
   return {
     categoryIds: row.categories.map((category) => category.id),
     description: row.description,
@@ -144,7 +144,7 @@ export function saveManyItems(edits: TableEdits): SaveManyInput["items"] {
   }));
 }
 
-export interface FieldChange {
+interface FieldChange {
   after: string;
   before: string;
   field: TableField;
