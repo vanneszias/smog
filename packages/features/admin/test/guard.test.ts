@@ -35,6 +35,8 @@ const testContract = {
   things: {
     create: ok,
     createNothing: ok,
+    createOneOf: ok,
+    createOutsideOneOf: ok,
     createTwoKinds: ok,
     createWrong: ok,
     exempt: ok,
@@ -54,6 +56,8 @@ const testContract = {
 const KINDS: Record<string, GuardKind> = {
   "things.create": { audit: "gesture.create" },
   "things.createNothing": { audit: "gesture.create" },
+  "things.createOneOf": { audit: ["gesture.create", "gesture.delete"] },
+  "things.createOutsideOneOf": { audit: ["gesture.delete"] },
   "things.createTwoKinds": { audit: "gesture.create" },
   "things.createWrong": { audit: "gesture.create" },
   "things.exempt": { exempt: "changes no stored state" },
@@ -98,6 +102,28 @@ const router = os.router({
       await context.db.run(sql.raw("UPDATE category SET name = name WHERE 0"));
       return "no audit";
     }),
+    createOneOf: os.things.createOneOf.handler(async ({ context }) => {
+      await context.db.batch([
+        buildAuditStatement(
+          context.db,
+          SCHEMAS,
+          entry(context.user.id, "gesture.delete", "t-one-of")
+        ),
+      ]);
+      return "one of";
+    }),
+    createOutsideOneOf: os.things.createOutsideOneOf.handler(
+      async ({ context }) => {
+        await context.db.batch([
+          buildAuditStatement(
+            context.db,
+            SCHEMAS,
+            entry(context.user.id, "gesture.create", "t-outside")
+          ),
+        ]);
+        return "outside";
+      }
+    ),
     createTwoKinds: os.things.createTwoKinds.handler(async ({ context }) => {
       await context.db.batch([
         buildAuditStatement(
@@ -272,6 +298,15 @@ describe("the admin guard: mutations", () => {
     quiet();
     await expect(run("createWrong")).rejects.toMatchObject(INTERNAL);
     await expect(run("createTwoKinds")).rejects.toMatchObject(INTERNAL);
+  });
+
+  it("passes a one-of kind for any of its actions, and fails another", async () => {
+    const logged = quiet();
+    await expect(run("createOneOf")).resolves.toBe("one of");
+    await expect(run("createOutsideOneOf")).rejects.toMatchObject(INTERNAL);
+    expect(logged).toHaveBeenCalledWith(
+      "[admin] things.createOutsideOneOf built gesture.create, not only gesture.delete"
+    );
   });
 
   it("passes an exempt mutation, and fails one that audits", async () => {

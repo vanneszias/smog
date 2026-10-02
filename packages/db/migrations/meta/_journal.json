@@ -43,6 +43,13 @@
       "when": 1790761137136,
       "tag": "0005_audit_log_order",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790768221048,
+      "tag": "0006_admin_gesture_order",
+      "breakpoints": true
     }
   ]
 }

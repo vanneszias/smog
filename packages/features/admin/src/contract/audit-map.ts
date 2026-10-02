@@ -13,9 +13,15 @@ export interface AuditExempt {
   exempt: string;
 }
 
-/** A mutation and the audit action it writes (ruling 5). */
+/**
+ * A mutation and the audit action it writes (ruling 5), or the actions it
+ * picks from by its input (`setPublished`: `gesture.publish` or
+ * `gesture.unpublish`).
+ */
 export interface AuditWrite {
-  audit: WritableAuditAction;
+  audit:
+    | WritableAuditAction
+    | readonly [WritableAuditAction, ...WritableAuditAction[]];
 }
 
 /**
@@ -23,7 +29,7 @@ export interface AuditWrite {
  * - `"read"`: nothing. `adminProcedure` gives it a D1 and a KV that throw
  *   on any write.
  * - `{ audit }`: a mutation. `adminProcedure` fails the call when the
- *   handler did not build an entry with exactly this action.
+ *   handler did not build an entry, or built one with another action.
  * - `{ exempt }`: a mutation with no audit row (the reason says why); it
  *   may build none.
  */

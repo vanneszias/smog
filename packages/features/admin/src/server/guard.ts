@@ -4,7 +4,10 @@ import type { RpcContext } from "@smog/rpc";
 import { trackAudits } from "./audit-writer";
 
 /** A procedure kind as the guard reads it (the contract types the actions). */
-export type GuardKind = "read" | { audit: string } | { exempt: string };
+export type GuardKind =
+  | "read"
+  | { audit: string | readonly string[] }
+  | { exempt: string };
 
 /** A read that tried to write, or a mutation that broke its audit rule. */
 class AdminGuardError extends Error {
@@ -94,11 +97,39 @@ function fail(message: string): never {
 }
 
 /**
+ * A mutation's audit rule, after its handler succeeded: `{ audit }` built
+ * at least one entry, each with one of its actions; `{ exempt }` built none.
+ */
+function checkMutation(
+  name: string,
+  kind: Exclude<GuardKind, "read">,
+  entries: readonly string[]
+): void {
+  if ("exempt" in kind) {
+    if (entries.length > 0) {
+      fail(`[admin] ${name} is exempt but built an audit entry`);
+    }
+    return;
+  }
+  const allowed: readonly string[] =
+    typeof kind.audit === "string" ? [kind.audit] : kind.audit;
+  if (entries.length === 0) {
+    fail(`[admin] ${name} finished without its audit entry`);
+  }
+  if (entries.some((action) => !allowed.includes(action))) {
+    fail(
+      `[admin] ${name} built ${entries.join(", ")}, not only ${allowed.join(" or ")}`
+    );
+  }
+}
+
+/**
  * The audit rule of every admin procedure, by its kind (ruling 5), after
  * `requireAdmin`:
  * - a read gets a D1 and a KV that throw on any write, and may build no
  *   audit entry;
  * - `{ audit: A }` must build at least one entry, all with action `A`
+ *   (`{ audit: [A, B] }`: each entry `A` or `B`)
  *   (checked when the handler succeeded; a handler that throws changed
  *   nothing, since the entry shares the change's batch);
  * - `{ exempt }` may build none.
@@ -133,18 +164,7 @@ export function adminGuard(kinds: Readonly<Record<string, GuardKind>>) {
       const db = createDb(raw);
       const entries = trackAudits(db);
       const result = await next({ context: { db } });
-      if ("audit" in kind) {
-        if (entries.length === 0) {
-          fail(`[admin] ${name} finished without its audit entry`);
-        }
-        if (entries.some((action) => action !== kind.audit)) {
-          fail(
-            `[admin] ${name} built ${entries.join(", ")}, not only ${kind.audit}`
-          );
-        }
-      } else if (entries.length > 0) {
-        fail(`[admin] ${name} is exempt but built an audit entry`);
-      }
+      checkMutation(name, kind, entries);
       return result;
     });
 }
