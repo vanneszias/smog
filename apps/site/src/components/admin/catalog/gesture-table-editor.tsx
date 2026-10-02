@@ -156,7 +156,7 @@ function CellShell({
         {state.changed ? (
           <span
             aria-hidden="true"
-            className="absolute -top-1 -right-1 size-2.5 rounded-full bg-primary ring-2 ring-surface"
+            className="pointer-events-none absolute top-1.5 right-1.5 size-2 rounded-full bg-primary"
           />
         ) : null}
       </div>

@@ -690,6 +690,8 @@ test.describe("admin catalogue screenshots", () => {
         await page
           .getByRole("textbox", { name: "Naam van Hond" })
           .fill("Hond (bewerkt)");
+        // Focus elsewhere, so the shot shows the changed style, not the ring.
+        await page.getByRole("heading", { name: "Tabeleditor" }).focus();
         await shot("table-editor");
         await page.getByRole("button", { name: "Wijzigingen opslaan" }).click();
         await shot("table-changes");
