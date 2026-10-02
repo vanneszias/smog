@@ -7,6 +7,7 @@ import {
   type AdminUserDetail,
   BAN_DAYS_MAX,
   BAN_REASON_MAX,
+  type UserGuardReason,
 } from "@smog/admin/schema";
 import type { Translate, TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
@@ -43,11 +44,28 @@ import { RoleBadge, StatusBadge, useUserDate } from "./user-table";
 const BAN_DAYS = [1, 7, 30, 90, BAN_DAYS_MAX] as const;
 const FOREVER = "forever";
 
+const REFUSED = {
+  adminTarget: "admin.users.refused.adminTarget",
+  alreadyBanned: "admin.users.refused.alreadyBanned",
+  lastAdmin: "admin.users.refused.lastAdmin",
+  notBanned: "admin.users.refused.notBanned",
+  self: "admin.users.refused.self",
+  unchanged: "admin.users.refused.unchanged",
+} as const satisfies Record<UserGuardReason, TranslationKey>;
+
+/** The sign-in methods with a label; another provider shows its id. */
+const METHODS: Readonly<Record<string, TranslationKey>> = {
+  apple: "admin.users.methods.apple",
+  credential: "admin.users.methods.credential",
+  google: "admin.users.methods.google",
+  passkey: "admin.users.methods.passkey",
+};
+
 /** What a refused or failed action shows (the guard's reason when it has one). */
 export function userActionError(t: Translate, error: unknown): string {
   const reason = userRefusalOf(error);
   if (reason) {
-    return t(`admin.users.refused.${reason}`);
+    return t(REFUSED[reason]);
   }
   const code = (error as { code?: unknown } | null)?.code;
   if (code === "NOT_FOUND") {
@@ -60,9 +78,8 @@ export function userActionError(t: Translate, error: unknown): string {
 }
 
 function methodLabel(t: Translate, method: string): string {
-  return t(`admin.users.methods.${method}` as TranslationKey, {
-    defaultValue: method,
-  });
+  const key = METHODS[method];
+  return key ? t(key) : method;
 }
 
 function Row({

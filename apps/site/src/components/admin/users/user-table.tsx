@@ -10,6 +10,7 @@ import {
   formatDate,
   isLocale,
   type Translate,
+  type TranslationKey,
 } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
@@ -97,8 +98,13 @@ const ALL = "all";
 /** How long the search waits after the last keystroke before it filters. */
 const SEARCH_DEBOUNCE_MS = 300;
 
+const ROLE_LABELS = {
+  admin: "admin.users.roles.admin",
+  user: "admin.users.roles.user",
+} as const satisfies Record<AdminRole, TranslationKey>;
+
 export function roleLabel(t: Translate, role: AdminRole): string {
-  return t(`admin.users.roles.${role}`);
+  return t(ROLE_LABELS[role]);
 }
 
 /** A day in the page's language (Brussels time). */
