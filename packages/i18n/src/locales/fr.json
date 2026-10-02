@@ -576,6 +576,7 @@
       "sessionNotFresh": "Reconnectez-vous pour supprimer votre compte.",
       "invalidPassword": "Ce mot de passe n'est pas correct.",
       "deleteFailed": "La suppression de votre compte a échoué. Veuillez réessayer.",
+      "lastAdmin": "Vous êtes le seul administrateur. Nommez d’abord un autre compte administrateur avant de supprimer le vôtre.",
       "signInAgain": "Pour votre sécurité, reconnectez-vous pour effectuer cette action."
     },
     "guest": {
@@ -910,7 +911,111 @@
       }
     },
     "users": {
-      "title": "Utilisateurs"
+      "title": "Utilisateurs",
+      "description": "Comptes, rôles et blocages. Chaque modification est journalisée.",
+      "filters": {
+        "label": "Filtres",
+        "search": "Rechercher par nom ou adresse e-mail",
+        "role": "Rôle",
+        "status": "Statut",
+        "all": "Tous",
+        "banned": "Bloqués",
+        "notBanned": "Non bloqués",
+        "clear": "Effacer les filtres"
+      },
+      "roles": {
+        "user": "Utilisateur",
+        "admin": "Administrateur"
+      },
+      "columns": {
+        "name": "Nom",
+        "role": "Rôle",
+        "status": "Statut",
+        "created": "Inscrit le"
+      },
+      "status": {
+        "active": "Actif",
+        "banned": "Bloqué",
+        "unverified": "Adresse e-mail non confirmée"
+      },
+      "you": "Vous",
+      "empty": "Aucun compte trouvé.",
+      "nextPage": "Comptes plus anciens",
+      "firstPage": "Comptes les plus récents",
+      "panel": {
+        "email": "Adresse e-mail",
+        "role": "Rôle",
+        "status": "Statut",
+        "created": "Inscrit le",
+        "methods": "Méthodes de connexion",
+        "noMethods": "Code ou lien par e-mail uniquement",
+        "sessions": "Sessions actives",
+        "favorites": "Favoris",
+        "lists": "Listes",
+        "banReason": "Motif du blocage",
+        "banUntil": "Bloqué jusqu’au",
+        "banForever": "Sans date de fin",
+        "actions": "Actions",
+        "self": "C’est votre propre compte. Un autre administrateur doit en changer le rôle, le bloquer ou le supprimer.",
+        "adminTarget": "Retirez d’abord le rôle d’administrateur avant de bloquer ou de supprimer ce compte.",
+        "bannedTarget": "Levez le blocage avant de nommer ce compte administrateur.",
+        "notFound": "Ce compte n’existe plus."
+      },
+      "methods": {
+        "credential": "Mot de passe",
+        "google": "Google",
+        "apple": "Apple",
+        "passkey": "Clé d’accès"
+      },
+      "promote": {
+        "action": "Nommer administrateur",
+        "title": "Nommer {{name}} administrateur\u202f?",
+        "description": "Les administrateurs peuvent modifier le catalogue, les comptes et les réglages. Cela s’applique dès leur prochaine page.",
+        "done": "{{name}} est maintenant administrateur."
+      },
+      "demote": {
+        "action": "Retirer le rôle d’administrateur",
+        "title": "Retirer le rôle d’administrateur de {{name}}\u202f?",
+        "description": "L’accès à l’administration disparaît immédiatement.",
+        "done": "{{name}} n’est plus administrateur."
+      },
+      "ban": {
+        "action": "Bloquer",
+        "title": "Bloquer {{name}}\u202f?",
+        "description": "Le compte est immédiatement déconnecté sur tous les appareils et ne peut plus se connecter pendant le blocage.",
+        "reason": "Motif",
+        "reasonHint": "Seuls les administrateurs le voient.",
+        "duration": "Durée",
+        "forever": "Sans date de fin",
+        "days_one": "{{count}} jour",
+        "days_many": "{{count}} jours",
+        "days_other": "{{count}} jours",
+        "done": "{{name}} est bloqué."
+      },
+      "unban": {
+        "action": "Lever le blocage",
+        "title": "Lever le blocage de {{name}}\u202f?",
+        "description": "Le compte peut à nouveau se connecter.",
+        "done": "Le blocage de {{name}} est levé."
+      },
+      "delete": {
+        "action": "Supprimer le compte",
+        "title": "Supprimer le compte de {{name}}\u202f?",
+        "description": "Ses favoris, listes et méthodes de connexion sont supprimés définitivement. Le journal d’audit garde ses entrées.",
+        "confirmLabel": "Tapez {{email}} pour confirmer",
+        "done": "Le compte est supprimé."
+      },
+      "refused": {
+        "self": "Vous ne pouvez pas modifier votre propre compte ici.",
+        "lastAdmin": "Le dernier administrateur ne peut pas perdre ce rôle.",
+        "adminTarget": "Retirez d’abord le rôle d’administrateur.",
+        "targetBanned": "Levez d’abord le blocage.",
+        "unchanged": "Le compte a déjà ce rôle.",
+        "alreadyBanned": "Ce compte est déjà bloqué.",
+        "notBanned": "Ce compte n’est pas bloqué.",
+        "notFound": "Ce compte n’existe plus.",
+        "emailMismatch": "L’adresse e-mail ne correspond pas."
+      }
     },
     "settings": {
       "title": "Paramètres"

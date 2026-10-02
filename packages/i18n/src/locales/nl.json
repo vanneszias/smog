@@ -569,6 +569,7 @@
       "sessionNotFresh": "Meld je opnieuw aan om je account te verwijderen.",
       "invalidPassword": "Dat wachtwoord klopt niet.",
       "deleteFailed": "Je account verwijderen is niet gelukt. Probeer het opnieuw.",
+      "lastAdmin": "Je bent de enige beheerder. Maak eerst een ander account beheerder voor je het jouwe verwijdert.",
       "signInAgain": "Meld je voor je veiligheid opnieuw aan om dit te doen."
     },
     "guest": {
@@ -897,7 +898,110 @@
       }
     },
     "users": {
-      "title": "Gebruikers"
+      "title": "Gebruikers",
+      "description": "Accounts, rollen en blokkeringen. Elke wijziging wordt gelogd.",
+      "filters": {
+        "label": "Filters",
+        "search": "Zoek op naam of e-mailadres",
+        "role": "Rol",
+        "status": "Status",
+        "all": "Alle",
+        "banned": "Geblokkeerd",
+        "notBanned": "Niet geblokkeerd",
+        "clear": "Filters wissen"
+      },
+      "roles": {
+        "user": "Gebruiker",
+        "admin": "Beheerder"
+      },
+      "columns": {
+        "name": "Naam",
+        "role": "Rol",
+        "status": "Status",
+        "created": "Lid sinds"
+      },
+      "status": {
+        "active": "Actief",
+        "banned": "Geblokkeerd",
+        "unverified": "E-mailadres niet bevestigd"
+      },
+      "you": "Jij",
+      "empty": "Geen accounts gevonden.",
+      "nextPage": "Oudere accounts",
+      "firstPage": "Nieuwste accounts",
+      "panel": {
+        "email": "E-mailadres",
+        "role": "Rol",
+        "status": "Status",
+        "created": "Lid sinds",
+        "methods": "Aanmeldmethoden",
+        "noMethods": "Alleen code of link per e-mail",
+        "sessions": "Actieve sessies",
+        "favorites": "Favorieten",
+        "lists": "Lijsten",
+        "banReason": "Reden van de blokkering",
+        "banUntil": "Geblokkeerd tot",
+        "banForever": "Geen einddatum",
+        "actions": "Acties",
+        "self": "Dit is je eigen account. Een andere beheerder moet de rol wijzigen, het account blokkeren of verwijderen.",
+        "adminTarget": "Neem eerst de beheerdersrol af voor je dit account blokkeert of verwijdert.",
+        "bannedTarget": "Hef de blokkering op voor je dit account beheerder maakt.",
+        "notFound": "Dit account bestaat niet meer."
+      },
+      "methods": {
+        "credential": "Wachtwoord",
+        "google": "Google",
+        "apple": "Apple",
+        "passkey": "Passkey"
+      },
+      "promote": {
+        "action": "Beheerder maken",
+        "title": "{{name}} beheerder maken?",
+        "description": "Beheerders kunnen de catalogus, de accounts en de instellingen wijzigen. Het geldt vanaf hun volgende pagina.",
+        "done": "{{name}} is nu beheerder."
+      },
+      "demote": {
+        "action": "Beheerdersrol afnemen",
+        "title": "De beheerdersrol van {{name}} afnemen?",
+        "description": "De toegang tot het beheer verdwijnt meteen.",
+        "done": "{{name}} is geen beheerder meer."
+      },
+      "ban": {
+        "action": "Blokkeren",
+        "title": "{{name}} blokkeren?",
+        "description": "Het account wordt meteen op elk toestel afgemeld en kan zich niet aanmelden zolang de blokkering duurt.",
+        "reason": "Reden",
+        "reasonHint": "Alleen beheerders zien dit.",
+        "duration": "Duur",
+        "forever": "Geen einddatum",
+        "days_one": "{{count}} dag",
+        "days_other": "{{count}} dagen",
+        "done": "{{name}} is geblokkeerd."
+      },
+      "unban": {
+        "action": "Blokkering opheffen",
+        "title": "De blokkering van {{name}} opheffen?",
+        "description": "Het account kan zich weer aanmelden.",
+        "done": "De blokkering van {{name}} is opgeheven."
+      },
+      "delete": {
+        "action": "Account verwijderen",
+        "title": "Het account van {{name}} verwijderen?",
+        "description": "De favorieten, lijsten en aanmeldmethoden worden definitief verwijderd. Het auditlogboek houdt zijn regels.",
+        "confirmLabel": "Typ {{email}} om te bevestigen",
+        "done": "Het account is verwijderd."
+      },
+      "refused": {
+        "self": "Je kunt je eigen account hier niet wijzigen.",
+        "lastAdmin": "De laatste beheerder kan de beheerdersrol niet verliezen.",
+        "adminTarget": "Neem eerst de beheerdersrol af.",
+        "targetBanned": "Hef eerst de blokkering op.",
+        "unchanged": "Het account heeft deze rol al.",
+        "alreadyBanned": "Dit account is al geblokkeerd.",
+        "notBanned": "Dit account is niet geblokkeerd.",
+        "notFound": "Dit account bestaat niet meer.",
+        "emailMismatch": "Het e-mailadres klopt niet."
+      }
     },
     "settings": {
       "title": "Instellingen"

@@ -63,6 +63,31 @@ export const CAPTCHA_ENDPOINTS = [
   "/sign-in/magic-link",
 ];
 
+/**
+ * Every endpoint of Better Auth's admin plugin (ruling 6): off over HTTP,
+ * so roles, bans and deletions change only through `@smog/admin`, which
+ * calls `auth.api` (unaffected by `disabledPaths`) and writes the audit
+ * entry. Impersonation is not offered at all. A test enumerates the
+ * configured instance's `/admin/*` endpoints against this list.
+ */
+export const ADMIN_DISABLED_PATHS = [
+  "/admin/ban-user",
+  "/admin/create-user",
+  "/admin/get-user",
+  "/admin/has-permission",
+  "/admin/impersonate-user",
+  "/admin/list-user-sessions",
+  "/admin/list-users",
+  "/admin/remove-user",
+  "/admin/revoke-user-session",
+  "/admin/revoke-user-sessions",
+  "/admin/set-role",
+  "/admin/set-user-password",
+  "/admin/stop-impersonating",
+  "/admin/unban-user",
+  "/admin/update-user",
+] as const;
+
 export interface CreateAuthOptions {
   /** The site origin, e.g. `http://localhost:5173` (`SITE_URL`). */
   baseURL: string;
@@ -308,8 +333,14 @@ export function createAuth(options: CreateAuthOptions) {
     // `disabledPaths` does not affect): it needs the typed DELETE and has
     // its rate limits, which the HTTP route would skip. The profile is
     // written only by `account.updateProfile` (the name bound); Better
-    // Auth's `/update-user` takes any name and photo.
-    disabledPaths: ["/delete-user", "/delete-user/callback", "/update-user"],
+    // Auth's `/update-user` takes any name and photo. The admin plugin's
+    // endpoints are `auth.api` only (`ADMIN_DISABLED_PATHS`, ruling 6).
+    disabledPaths: [
+      "/delete-user",
+      "/delete-user/callback",
+      "/update-user",
+      ...ADMIN_DISABLED_PATHS,
+    ],
     emailAndPassword: {
       disableSignUp: signInOnly,
       enabled: true,

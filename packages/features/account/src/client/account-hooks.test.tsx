@@ -425,6 +425,7 @@ describe("sign-in method rules", () => {
       "account.errors.sessionNotFresh"
     );
     expect(deleteFailureMessage("UNKNOWN")).toBe("account.errors.deleteFailed");
+    expect(deleteFailureMessage("LAST_ADMIN")).toBe("account.errors.lastAdmin");
   });
 });
 
