@@ -22,7 +22,7 @@ export const en: LegalTexts = {
         blocks: [
           {
             list: [
-              "**Account and sign-in:** name, email address and whether it is verified, language, role, a profile picture from Google or Apple if any, sessions (with IP address and browser or app details) and timestamps. A password is only stored as an irreversible hash; for a passkey we only store its public key. If you sign in with Google or Apple, they send us an account ID, your name and your email address.",
+              "**Account and sign-in:** name, email address and whether it is verified, language, role, a profile picture from Google if any (which your browser fetches directly from Google whenever it is shown), sessions (with IP address and browser or app details) and timestamps. A password is only stored as an irreversible hash; for a passkey we only store its public key. If you sign in with Google or Apple, they send us an account ID, your name and your email address.",
               "**Use without an account:** favorites, lists, recent searches, preferences and your analytics choice stay on your device. They do not leave your device unless, after signing in, you choose to import them into your account, except for the optional analytics below (for example which gesture you viewed or saved).",
               "**Learning features:** favorite gestures, lists, list descriptions, share links and their rights (view or edit). Recent search terms stay locally on your device.",
               "**Sponsorship:** contact name, sponsor or company name, email, chosen gestures, display name, optional logo, preview and final videos, status, payment reference and term.",
@@ -60,7 +60,7 @@ export const en: LegalTexts = {
               "**Mux:** storage, processing and streaming of gesture and sponsor videos. [Privacy policy](https://www.mux.com/privacy)",
               "**Mollie:** hosted payment processing and payment status. [Privacy policy](https://www.mollie.com/legal/privacy)",
               "**Expo:** distribution and updates of the mobile app. [Privacy policy](https://expo.dev/privacy)",
-              "**Google and Apple:** only when you choose to sign in with your Google or Apple account. [Google](https://policies.google.com/privacy) · [Apple](https://www.apple.com/legal/privacy/)",
+              "**Google and Apple:** when you choose to sign in with your Google or Apple account. If you have a Google profile picture, your browser fetches it directly from Google each time it is shown, so Google sees your IP address and browser details. [Google](https://policies.google.com/privacy) · [Apple](https://www.apple.com/legal/privacy/)",
               "**OpenPanel:** self-hosted analytics software at analytics.zias.be, only with analytics consent. The OpenPanel cloud is not used for our event data.",
             ],
           },
@@ -87,8 +87,8 @@ export const en: LegalTexts = {
         blocks: [
           {
             list: [
-              "Necessary cookies keep your session active when you are signed in and remember your language and theme.",
-              "Local storage keeps, among other things, favorites and lists without an account, recent searches, preferences, the app cache and your analytics choice.",
+              "Necessary cookies keep your session active when you are signed in and remember your language and theme. We also set a technical cookie for administrators during maintenance, so they can keep using the site.",
+              "Local storage keeps, among other things, favorites and lists without an account, recent searches, preferences, the app cache and your analytics choice. A choice you made while signed in also stays on the device, but it only applies to your account: whoever then uses the device without an account is asked again.",
               "With analytics consent, the app may keep local identification and queue data to deliver events. The website only keeps a temporary marker in your browser's session storage while you sign in, so a completed sign-in is counted once.",
             ],
           },

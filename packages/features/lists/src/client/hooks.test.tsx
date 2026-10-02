@@ -51,8 +51,12 @@ interface Server {
   calls: string[];
   /** Makes the next addItem fail with INVALID_STATE. */
   failNextAdd?: boolean;
-  /** Makes the next reorder wait, then fail with INVALID_STATE. */
-  failNextReorder: boolean;
+  /**
+   * When set, the next reorder waits for it, then fails with INVALID_STATE.
+   * The test resolves it, so the optimistic order is observable for as long
+   * as the test needs, however slow the machine.
+   */
+  failNextReorder?: Promise<void>;
   /** When set, `addItem` waits for it. */
   holdAdd?: Promise<void>;
   /** When set, `containing` waits for it. */
@@ -187,9 +191,10 @@ function fakeApi(server: Server) {
       reorder: os.lists.reorder.handler(async ({ errors, input }) => {
         server.calls.push("reorder");
         const list = find(input.id, errors);
-        if (server.failNextReorder) {
-          server.failNextReorder = false;
-          await delay(100);
+        const hold = server.failNextReorder;
+        if (hold) {
+          server.failNextReorder = undefined;
+          await hold;
           throw errors.INVALID_STATE();
         }
         const byId = new Map(list.items.map((item) => [item.id, item]));
@@ -295,7 +300,6 @@ function setup(session: SessionHookResult = SIGNED_OUT) {
   const server: Server = {
     byIdsCalls: [],
     calls: [],
-    failNextReorder: false,
     lists: new Map(),
     shares: new Map(),
     tokens: 0,
@@ -627,13 +631,17 @@ describe("accounts: the API", () => {
     });
     await waitFor(() => expect(names()).toEqual(["Hond", "Aap", "Beer"]));
 
-    server.failNextReorder = true;
+    let release = (): void => undefined;
+    server.failNextReorder = new Promise((resolve) => {
+      release = resolve;
+    });
     let failure: Promise<void> | undefined;
     act(() => {
       failure = result.current.reorder([BEER.id, HOND.id, AAP.id]);
     });
-    // Optimistic: the new order shows while the call is in flight.
+    // Optimistic: the new order shows while the call is held in flight.
     await waitFor(() => expect(names()).toEqual(["Beer", "Hond", "Aap"]));
+    release();
     await act(async () => {
       await expect(failure).rejects.toMatchObject({ code: "INVALID_STATE" });
     });

@@ -42,6 +42,11 @@ function summary(name: string): GestureSummary {
 const CATALOGUE = ["Aap", "Beer", "Hond", "Kat", "Vogel"].map(summary);
 
 interface Calls {
+  /**
+   * When set, every search waits for it: the test resolves it once it has
+   * seen the in-flight state (the placeholder), however slow the machine.
+   */
+  holdSearch?: Promise<void>;
   list: { category?: string[] | undefined; cursor?: string | undefined }[];
   related: string[];
   search: { category?: string[] | undefined; q: string }[];
@@ -89,9 +94,7 @@ function fakeApi(calls: Calls) {
       }),
       search: os.search.handler(async ({ input }) => {
         calls.search.push({ category: input.category, q: input.q });
-        // Latency well above waitFor's polling, so the placeholder state
-        // (the next search in flight) is observable.
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await calls.holdSearch;
         const items = CATALOGUE.filter((item) =>
           item.name.toLowerCase().startsWith(input.q.toLowerCase())
         ).map((item) => ({
@@ -350,23 +353,26 @@ describe("useGestureSearch", () => {
   });
 
   test("keeps the previous results while the next ones load", async () => {
-    const { wrapper } = setup();
+    const { calls, wrapper } = setup();
     const { rerender, result } = renderHook(
       ({ q }: { q: string }) => useGestureSearch({ category: ["dieren"], q }),
       { initialProps: { q: "hond" }, wrapper }
     );
     await waitFor(() => expect(result.current.data?.items).toHaveLength(1));
 
+    let release = (): void => undefined;
+    calls.holdSearch = new Promise((resolve) => {
+      release = resolve;
+    });
     rerender({ q: "kat" });
     // While debouncing and fetching, the "hond" results stay on screen.
     expect(result.current.data?.items[0]?.name).toBe("Hond");
-    await waitFor(
-      () => {
-        expect(result.current.isPlaceholderData).toBe(true);
-        expect(result.current.data?.items[0]?.name).toBe("Hond");
-      },
-      { interval: 10 }
-    );
+    // Held in flight: the placeholder stays until the test lets it go.
+    await waitFor(() => {
+      expect(result.current.isPlaceholderData).toBe(true);
+      expect(result.current.data?.items[0]?.name).toBe("Hond");
+    });
+    release();
 
     await waitFor(() =>
       expect(result.current.data?.items[0]?.name).toBe("Kat")

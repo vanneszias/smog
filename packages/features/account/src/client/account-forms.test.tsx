@@ -127,12 +127,15 @@ describe("consent on a shared device (re-review N1, M-a, M-b)", () => {
       })
     );
 
-    // A signs out: the device keeps the choice (by design).
+    // A signs out: the device keeps A's copy, but a guest never inherits
+    // it (phase 4 review I7): the guest is asked for their own.
     await act(async () => {
       auth.current = GUEST;
       await auth.refresh();
     });
-    await waitFor(() => expect(result.current.analytics).toBe(true));
+    await waitFor(() => expect(result.current.needsDecision).toBe(true));
+    expect(result.current.analytics).toBeNull();
+    expect(store.getSnapshot().consent.mirroredFrom).toBe("user-anna");
 
     // B signs in; B's account never decided.
     server.consent = UNDECIDED_CONSENT;

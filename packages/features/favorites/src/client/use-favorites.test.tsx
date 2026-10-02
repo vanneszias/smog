@@ -32,7 +32,10 @@ const [AAP, BEER, HOND] = CATALOGUE as [
   GestureSummary,
 ];
 
-/** Lets pending promises and timers run. */
+/**
+ * Lets pending promises and timers run. Only a yield: anything that waits
+ * for a server call or a render asserts with `waitFor` on the condition.
+ */
 function tick(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 10));
 }
@@ -461,9 +464,11 @@ describe("useFavorites when signed in", () => {
     // The second tap saw the first: net state is "not a favorite".
     expect(result.current.isFavorite(HOND.id)).toBe(false);
     // Flips are queued: the remove waits for the add.
-    expect(server.calls.filter((call) => call.includes(HOND.id))).toEqual([
-      `add:${HOND.id}`,
-    ]);
+    await waitFor(() =>
+      expect(server.calls.filter((call) => call.includes(HOND.id))).toEqual([
+        `add:${HOND.id}`,
+      ])
+    );
 
     await act(async () => {
       held.open();
@@ -495,7 +500,7 @@ describe("useFavorites when signed in", () => {
       rerender();
       await tick();
     });
-    expect(userQueries()).toEqual([]);
+    await waitFor(() => expect(userQueries()).toEqual([]));
     // Now a guest: the (empty) local store, not the old account data.
     expect(result.current.isFavorite(AAP.id)).toBe(false);
     expect(store.getSnapshot().favorites).toEqual([]);

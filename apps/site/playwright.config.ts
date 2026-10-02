@@ -33,8 +33,21 @@ const executablePath =
   process.env.PLAYWRIGHT_CHROMIUM_PATH ??
   (existsSync(PREINSTALLED_CHROMIUM) ? PREINSTALLED_CHROMIUM : undefined);
 
+/**
+ * The specs share one Vite dev server (and its local D1), whose first
+ * compiles are slow: two workers locally, one in CI, where the runner has
+ * fewer cores to spare. `E2E_WORKERS` overrides both.
+ */
+const WORKERS = Number(process.env.E2E_WORKERS ?? (process.env.CI ? 1 : 2));
+
 export default defineConfig({
+  // Assertions wait up to 15 s (the default is 5 s): a first compile, or
+  // Vite's "new dependencies optimized, reloading", can land mid-test.
+  expect: { timeout: 15_000 },
   forbidOnly: Boolean(process.env.CI),
+  // Warms the dev server (every route's first compile and the dependency
+  // optimisation) before the first test.
+  globalSetup: "./e2e/global-setup.ts",
   outputDir: "test-results",
   projects: [
     {
@@ -78,4 +91,5 @@ export default defineConfig({
       url: `http://localhost:${PORT}/api/health`,
     },
   ],
+  workers: WORKERS,
 });

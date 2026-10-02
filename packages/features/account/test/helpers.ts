@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { type Auth, createAuth, type SessionWithUser } from "@smog/auth";
 import type { User } from "@smog/db";
 import { createDb, type Db } from "@smog/db/client";
-import { makeGesture, makeUser } from "@smog/db/testing";
+import { insertGestures, makeUser } from "@smog/db/testing";
 import { MemoryEmailSender } from "@smog/email";
 import { makeRpcContext } from "@smog/rpc/testing";
 
@@ -38,20 +38,18 @@ export async function addUser(name = "Anna"): Promise<User> {
   return await makeUser(testDb(), { name });
 }
 
+/** Gestures named `names`, in one D1 batch (the limits tests add 499). */
 export async function addGestures(
   names: readonly string[],
   options: { published?: boolean } = {}
 ): Promise<string[]> {
-  const db = testDb();
-  const rows = await Promise.all(
-    names.map((name) =>
-      makeGesture(db, {
-        name,
-        publishedAt: options.published === false ? null : new Date(),
-      })
-    )
+  return await insertGestures(
+    testDb(),
+    names.map((name) => ({
+      name,
+      publishedAt: options.published === false ? null : new Date(),
+    }))
   );
-  return rows.map((row) => row.id);
 }
 
 /** Inserts a list with its items (positions 0..n-1) straight into D1. */

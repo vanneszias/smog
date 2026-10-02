@@ -2,6 +2,7 @@
 import { createDb, type Db } from "../client";
 
 export {
+  insertGestures,
   makeCategory,
   makeGesture,
   makeUser,

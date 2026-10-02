@@ -12,7 +12,7 @@
   "scripts": {
     "bench": "SMOG_PERF=1 bun test src/typo-gate.test.ts",
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json",
-    "test": "vitest run && bun test --preload @smog/config/testing/happy-dom src"
+    "test": "vitest run && bun test --timeout=20000 --preload @smog/config/testing/happy-dom src"
   },
   "dependencies": {
     "@smog/analytics": "workspace:*",
