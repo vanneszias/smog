@@ -178,9 +178,26 @@ describe("the Mux settings", () => {
     expect(env.MUX_API_URL).toBe("https://api.mux.com");
   });
 
-  test("MUX_API_URL can point at the fake", () => {
+  test("a MUX_API_URL other than the real API is dev only", () => {
+    for (const ENVIRONMENT of ["staging", "production"]) {
+      expect(() =>
+        parseWorkerEnv({
+          ...base,
+          ENVIRONMENT,
+          MUX_API_URL: "http://localhost:4010",
+        })
+      ).toThrow("MUX_API_URL");
+    }
+    expect(
+      parseWorkerEnv({ ...base, MUX_API_URL: "https://api.mux.com" })
+        .MUX_API_URL
+    ).toBe("https://api.mux.com");
+  });
+
+  test("MUX_API_URL can point at the fake in dev", () => {
     const env = parseWorkerEnv({
       ...base,
+      ENVIRONMENT: "dev",
       MUX_API_URL: "http://localhost:4010",
       MUX_TOKEN_ID: "id",
       MUX_TOKEN_SECRET: "secret",

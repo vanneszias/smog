@@ -6,6 +6,8 @@ import type { ZodType } from "zod";
  * `MUX_API_URL` points at the Mux fake in tests and e2e.
  */
 export interface MuxEnv {
+  /** Outside `dev` the client always talks to the real Mux API. */
+  ENVIRONMENT?: string | undefined;
   MUX_API_URL?: string | undefined;
   MUX_TOKEN_ID?: string | undefined;
   MUX_TOKEN_SECRET?: string | undefined;
@@ -37,8 +39,8 @@ export interface Mux {
 export class MuxApiError extends Error {
   readonly status: number;
 
-  constructor(message: string, status: number) {
-    super(message);
+  constructor(message: string, status: number, options?: ErrorOptions) {
+    super(message, options);
     this.name = "MuxApiError";
     this.status = status;
   }
@@ -60,10 +62,12 @@ export function createMux(
   if (!(id && secret)) {
     return null;
   }
-  const apiUrl = (env.MUX_API_URL || MUX_DEFAULT_API_URL).replace(
-    TRAILING_SLASHES,
-    ""
-  );
+  // Defence in depth (the env schema refuses it too): staging and
+  // production never send the token to a URL other than api.mux.com.
+  const deployed = env.ENVIRONMENT !== undefined && env.ENVIRONMENT !== "dev";
+  const apiUrl = (
+    (deployed ? undefined : env.MUX_API_URL) || MUX_DEFAULT_API_URL
+  ).replace(TRAILING_SLASHES, "");
   return {
     apiUrl,
     authorization: `Basic ${btoa(`${id}:${secret}`)}`,
@@ -131,7 +135,18 @@ export async function muxRequest<T>(
     console.error(error.message);
     throw error;
   }
-  const json: unknown = await response.json();
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch (cause) {
+    const error = new MuxApiError(
+      `[video] Mux answered ${method} ${path} with a body that is not JSON`,
+      response.status,
+      { cause }
+    );
+    console.error(error.message);
+    throw error;
+  }
   const parsed = schema.safeParse(
     (json as { data?: unknown } | null)?.data ?? null
   );

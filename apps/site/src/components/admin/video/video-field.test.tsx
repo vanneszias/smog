@@ -130,20 +130,56 @@ describe("VideoField", () => {
     chooseFile();
     await waitFor(() => expect(FakeXhr.last?.url).toBe(UPLOAD_URL));
     const xhr = FakeXhr.last as FakeXhr;
-    xhr.upload.onprogress?.({ lengthComputable: true, loaded: 40, total: 100 });
-    await screen.findByText("Uploading zwaaien.mp4… 40%");
+    const visible = await screen.findByTestId("mux-upload-progress");
+    const announcer = screen.getByTestId("mux-upload-announcer");
+    // The live region is never inside an aria-busy subtree.
+    expect(announcer.getAttribute("role")).toBe("status");
+    expect(announcer.closest('[aria-busy="true"]')).toBeNull();
+    expect(visible.getAttribute("aria-live")).toBe("off");
+
+    const progress = (loaded: number) =>
+      xhr.upload.onprogress?.({ lengthComputable: true, loaded, total: 100 });
+    progress(10);
+    await waitFor(() =>
+      expect(visible.textContent).toBe("Uploading zwaaien.mp4… 10%")
+    );
+    expect(announcer.textContent).toBe("Uploading zwaaien.mp4…");
+    progress(30);
+    await waitFor(() =>
+      expect(visible.textContent).toBe("Uploading zwaaien.mp4… 30%")
+    );
+    expect(announcer.textContent).toBe("Uploading zwaaien.mp4… 25%");
+    progress(40);
+    await waitFor(() =>
+      expect(visible.textContent).toBe("Uploading zwaaien.mp4… 40%")
+    );
+    // Between milestones the announcement does not change.
+    expect(announcer.textContent).toBe("Uploading zwaaien.mp4… 25%");
     expect(
       screen.getByRole("progressbar", { name: "Uploading to Mux" })
     ).toBeDefined();
+    progress(100);
+    await waitFor(() =>
+      expect(announcer.textContent).toBe("Uploading zwaaien.mp4… 100%")
+    );
     xhr.status = 200;
     xhr.onload?.({});
-    await screen.findByText("Mux is processing the video…");
-    await screen.findByText("The video is ready.", {}, { timeout: 6000 });
+    await waitFor(() =>
+      expect(announcer.textContent).toBe("Mux is processing the video…")
+    );
+    await waitFor(
+      () => expect(announcer.textContent).toBe("The video is ready."),
+      { timeout: 6000 }
+    );
     expect(lastValue).toEqual({
       muxAssetId: "as-1",
       playbackId: "pb-new",
     } as never);
     expect(screen.getByText("Playback ID: pb-new")).toBeDefined();
+    // The ready video shows once: in the field's preview, not again in the tab.
+    expect(
+      screen.getAllByRole("region", { name: "Gesture video" })
+    ).toHaveLength(1);
     expect(
       calls.filter((call) => call.path === "admin/mux/uploadStatus").length
     ).toBe(2);
@@ -152,6 +188,70 @@ describe("VideoField", () => {
     );
     await screen.findByText("Drag a video here");
   }, 10_000);
+
+  test("only a ready asset can be chosen", async () => {
+    await renderSite(() => <Harness />, {
+      api: {
+        ...api([{ upload: "waiting" }]),
+        "admin/mux/assets": {
+          hasMore: false,
+          items: [
+            asset("ok"),
+            asset("busy", { status: "preparing" }),
+            asset("broken", { status: "errored" }),
+          ],
+          page: 1,
+        },
+      },
+    });
+    const tab = await screen.findByRole("tab", { name: "Choose existing" });
+    fireEvent.mouseDown(tab);
+    fireEvent.click(tab);
+    await screen.findByText("Processing");
+    const buttons = screen.getAllByRole("button", { name: "Choose" });
+    expect(buttons.map((button) => button.hasAttribute("disabled"))).toEqual([
+      false,
+      true,
+      true,
+    ]);
+    expect(
+      screen.getAllByText("Can be chosen once Mux has finished it.")
+    ).toHaveLength(2);
+  });
+
+  test("a page without public assets still pages on, with no total", async () => {
+    await renderSite(() => <Harness />, {
+      api: {
+        ...api([{ upload: "waiting" }]),
+        "admin/mux/assets": (input: unknown) =>
+          (input as { page?: number }).page === 2
+            ? { hasMore: false, items: [asset("later")], page: 2 }
+            : { hasMore: true, items: [], page: 1 },
+      },
+    });
+    const tab = await screen.findByRole("tab", { name: "Choose existing" });
+    fireEvent.mouseDown(tab);
+    fireEvent.click(tab);
+    const next = await screen.findByRole("button", { name: "Next page" });
+    expect(screen.queryByText("No videos in Mux yet")).toBeNull();
+    expect(screen.getByText("Page 1")).toBeDefined();
+    fireEvent.click(next);
+    await screen.findByText("Page 2");
+    expect(screen.getAllByTestId("mux-asset")).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: "Next page" }).hasAttribute("disabled")
+    ).toBe(true);
+  });
+
+  test("a failed status check is an error with a retry, not 'not configured'", async () => {
+    const routes: Record<string, unknown> = api([{ upload: "waiting" }]);
+    Reflect.deleteProperty(routes, "admin/mux/status");
+    await renderSite(() => <Harness />, { api: routes });
+    await screen.findByText("The video settings could not be loaded.");
+    expect(screen.queryByText("Video uploads are not set up")).toBeNull();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeDefined();
+    expect(screen.getByRole("textbox", { name: "Playback ID" })).toBeDefined();
+  });
 
   test("refuses a file that is not a video", async () => {
     await renderSite(() => <Harness />, { api: api([{ upload: "waiting" }]) });

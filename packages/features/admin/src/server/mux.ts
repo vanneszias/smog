@@ -11,6 +11,7 @@ import {
   isGestureUpload,
   listAssets,
   type Mux,
+  MuxApiError,
   type MuxUploadState,
   readUploadState,
 } from "@smog/video";
@@ -19,6 +20,11 @@ import { asc, or } from "drizzle-orm";
 import type { MuxAssetItem, MuxUploadProgress } from "../schema";
 import { inList } from "./catalog-writes";
 import { type AdminDeps, adminProcedure } from "./procedure";
+
+/** Mux refused for its rate limit: the admin may retry (`RATE_LIMITED`). */
+function muxRateLimited(error: unknown): boolean {
+  return error instanceof MuxApiError && error.status === 429;
+}
 
 /** The Mux client for this request, or `null` when Mux is not configured. */
 function muxFor(context: RpcContext, deps: AdminDeps): Mux | null {
@@ -138,7 +144,7 @@ export function muxRoutes(deps: AdminDeps) {
             };
           } catch (error) {
             console.error("[admin] Failed to list the Mux assets:", error);
-            throw error;
+            throw muxRateLimited(error) ? errors.RATE_LIMITED() : error;
           }
         }
       ),
@@ -155,7 +161,11 @@ export function muxRoutes(deps: AdminDeps) {
               test: context.env.ENVIRONMENT === "dev",
             });
             // The browser may only PUT where the CSP lets it (`*.mux.com`).
-            if (!isAllowedUploadUrl(upload.url, mux.apiUrl)) {
+            if (
+              !isAllowedUploadUrl(upload.url, mux.apiUrl, {
+                allowFake: context.env.ENVIRONMENT === "dev",
+              })
+            ) {
               throw new Error(
                 `[admin] Mux returned an upload URL on ${new URL(upload.url).host}, which the CSP does not allow`
               );
@@ -163,7 +173,7 @@ export function muxRoutes(deps: AdminDeps) {
             return { uploadId: upload.id, url: upload.url };
           } catch (error) {
             console.error("[admin] Failed to create a Mux upload:", error);
-            throw error;
+            throw muxRateLimited(error) ? errors.RATE_LIMITED() : error;
           }
         }
       ),
@@ -192,7 +202,7 @@ export function muxRoutes(deps: AdminDeps) {
               return fromState(state);
             }
             console.error("[admin] Failed to read a Mux upload:", error);
-            throw error;
+            throw muxRateLimited(error) ? errors.RATE_LIMITED() : error;
           }
           if (!progress) {
             throw errors.NOT_FOUND();

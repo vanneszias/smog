@@ -6,7 +6,7 @@ import {
   useMuxUpload,
 } from "@smog/admin/client";
 import { useTranslation } from "@smog/i18n/react";
-import { Button, cn, ProgressBar, Text, VideoPlayer } from "@smog/ui-web";
+import { Button, cn, ProgressBar, Text } from "@smog/ui-web";
 import { CircleAlert, CircleCheck, Upload } from "lucide-react";
 import {
   type ChangeEvent,
@@ -143,6 +143,7 @@ type BusyState = Extract<
   { status: "creating" | "uploading" | "processing" }
 >;
 
+/** The visible line under the bar: every percent (not announced). */
 function BusyMessage({ state }: { state: BusyState }): ReactNode {
   const { t } = useTranslation();
   if (state.status === "creating") {
@@ -157,40 +158,58 @@ function BusyMessage({ state }: { state: BusyState }): ReactNode {
   return t("admin.mux.upload.processing");
 }
 
+/** Announced upload milestones: 25, 50, 75 and 100 %. */
+const MILESTONE = 25;
+
 /**
- * The upload tab of `VideoField`: drag and drop or browse (`video/*`), the
- * PUT straight to Mux with a ProgressBar, the processing wait (polls every
- * 2 s, gives up after 10 minutes with "check again"), then the ready video
- * and "Upload another". Copy is `admin.mux.upload.*`.
+ * What the live region says: the phase, and while uploading only the last
+ * milestone passed, so a screen reader hears a handful of updates instead
+ * of one per progress event. Failures are announced by their alert.
  */
-export function MuxUpload({
-  createXhr,
-  onUploaded,
-}: MuxUploadProps): ReactNode {
+function Announcement({ state }: { state: MuxUploadState }): ReactNode {
   const { t } = useTranslation();
-  const { reset, retry, start, state } = useMuxUpload(
-    createXhr ? { createXhr } : {}
-  );
-  const reported = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (state.status === "ready" && reported.current !== state.uploadId) {
-      reported.current = state.uploadId;
-      onUploaded({ assetId: state.assetId, playbackId: state.playbackId });
+  switch (state.status) {
+    case "creating":
+      return t("admin.mux.upload.creating");
+    case "uploading": {
+      const milestone =
+        Math.floor((state.progress * 100) / MILESTONE) * MILESTONE;
+      return milestone === 0
+        ? t("admin.mux.upload.uploadingStart", { name: state.file.name })
+        : t("admin.mux.upload.uploading", {
+            name: state.file.name,
+            percent: milestone,
+          });
     }
-  }, [onUploaded, state]);
+    case "processing":
+      return t("admin.mux.upload.processing");
+    case "ready":
+      return t("admin.mux.upload.ready");
+    default:
+      return null;
+  }
+}
 
+function UploadState({
+  reset,
+  retry,
+  start,
+  state,
+}: {
+  reset: () => void;
+  retry: () => void;
+  start: (file: File) => void;
+  state: MuxUploadState;
+}): ReactNode {
+  const { t } = useTranslation();
   if (state.status === "idle") {
     return <DropZone onFile={start} />;
   }
-
   if (state.status === "ready") {
+    // The field's preview above already plays the new video.
     return (
       <div className="flex flex-col gap-3">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
-          <VideoPlayer playbackId={state.playbackId} title={state.file.name} />
-        </div>
-        <Text className="flex items-center gap-2" role="status" tone="success">
+        <Text className="flex items-center gap-2" tone="success">
           <CircleCheck aria-hidden="true" className="size-5" />
           {t("admin.mux.upload.ready")}
         </Text>
@@ -202,7 +221,6 @@ export function MuxUpload({
       </div>
     );
   }
-
   if (state.status === "failed") {
     return (
       <div className="flex flex-col gap-3" role="alert">
@@ -228,10 +246,9 @@ export function MuxUpload({
       </div>
     );
   }
-
   return (
-    <div aria-busy="true" className="flex flex-col gap-3">
-      <Text aria-live="polite" role="status" size="body-sm">
+    <div className="flex flex-col gap-3">
+      <Text aria-live="off" data-testid="mux-upload-progress" size="body-sm">
         <BusyMessage state={state} />
       </Text>
       <ProgressBar
@@ -250,6 +267,40 @@ export function MuxUpload({
           {t("admin.mux.upload.cancel")}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The upload tab of `VideoField`: drag and drop or browse (`video/*`), the
+ * PUT straight to Mux with a ProgressBar, the processing wait (polls every
+ * 2 s, gives up after 10 minutes with "check again"), then "Upload
+ * another". One live region, mounted for the whole flow and never inside
+ * an `aria-busy` subtree, announces the phases and the 25 % milestones.
+ * Copy is `admin.mux.upload.*`.
+ */
+export function MuxUpload({
+  createXhr,
+  onUploaded,
+}: MuxUploadProps): ReactNode {
+  const { reset, retry, start, state } = useMuxUpload(
+    createXhr ? { createXhr } : {}
+  );
+  const reported = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (state.status === "ready" && reported.current !== state.uploadId) {
+      reported.current = state.uploadId;
+      onUploaded({ assetId: state.assetId, playbackId: state.playbackId });
+    }
+  }, [onUploaded, state]);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="sr-only" data-testid="mux-upload-announcer" role="status">
+        <Announcement state={state} />
+      </p>
+      <UploadState reset={reset} retry={retry} start={start} state={state} />
     </div>
   );
 }

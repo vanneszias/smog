@@ -99,6 +99,23 @@ export interface MuxUploadController {
   subscribe: (listener: () => void) => () => void;
 }
 
+/** oRPC codes a retry cannot change. */
+const PERMANENT_CODES = new Set([
+  "BAD_REQUEST",
+  "FORBIDDEN",
+  "INVALID_STATE",
+  "NOT_FOUND",
+  "UNAUTHORIZED",
+]);
+
+function permanentCode(error: unknown): string | null {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? error.code
+      : undefined;
+  return typeof code === "string" && PERMANENT_CODES.has(code) ? code : null;
+}
+
 function defaultXhr(): MuxXhr {
   return new XMLHttpRequest() as unknown as MuxXhr;
 }
@@ -193,13 +210,21 @@ export function createMuxUploadController(
     const tick = async (): Promise<void> => {
       timer = null;
       let progress: MuxUploadProgress | null = null;
+      let permanent: string | null = null;
       try {
         progress = await uploadStatus(uploadId);
       } catch (error) {
-        // A failed poll is retried on the next tick, until the deadline.
+        // A network or server error is retried on the next tick, until the
+        // deadline; an answer that cannot change (the upload is unknown,
+        // Mux is off, the session lost its role) stops polling now.
+        permanent = permanentCode(error);
         console.warn("[admin] Failed to read the Mux upload status:", error);
       }
       if (mine !== run) {
+        return;
+      }
+      if (permanent) {
+        fail(file, "processing", { detail: permanent, uploadId });
         return;
       }
       if (progress && isFinalUpload(progress)) {

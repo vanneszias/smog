@@ -3,6 +3,7 @@ import { type MuxAssetItem, playbackIdSchema } from "@smog/admin/schema";
 import { useTranslation } from "@smog/i18n/react";
 import {
   Button,
+  ErrorState,
   Field,
   Input,
   Skeleton,
@@ -131,6 +132,10 @@ export function VideoField({
     [onChange]
   );
   const onTab = useCallback((next: string) => setTab(next as VideoTab), []);
+  const { refetch } = status;
+  const retryStatus = useCallback(() => {
+    refetch().catch(() => undefined);
+  }, [refetch]);
 
   return (
     <fieldset className="flex min-w-0 flex-col gap-4">
@@ -158,7 +163,17 @@ export function VideoField({
         <Skeleton className="h-40 w-full" />
       ) : (
         <>
-          {configured ? null : (
+          {status.isError ? (
+            // Unknown is not "not configured": say so, offer a retry, and
+            // keep the pasted playback id usable below.
+            <ErrorState
+              description={t("admin.mux.statusError")}
+              level={3}
+              onRetry={retryStatus}
+              retrying={status.isFetching}
+            />
+          ) : null}
+          {configured || status.isError ? null : (
             <div
               className="flex items-start gap-3 rounded-lg border border-border-subtle bg-surface-sunken p-3"
               data-testid="mux-not-configured"

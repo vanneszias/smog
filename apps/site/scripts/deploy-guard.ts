@@ -50,28 +50,43 @@ export function checkDeployTarget(
  */
 export const DEV_TOOLS_MARKER = "data-theme-column";
 
+/**
+ * The attribute only the `/admin/dev/video-field` preview emits
+ * (`src/components/admin/video/video-field-preview.tsx`), compiled out of
+ * production the same way.
+ */
+export const DEV_PREVIEW_MARKER = "data-dev-preview";
+
+/** Every dev-only page and the string that proves it is in a build. */
+const DEV_ONLY_PAGES = [
+  { marker: DEV_TOOLS_MARKER, name: "/dev/ui gallery" },
+  { marker: DEV_PREVIEW_MARKER, name: "/admin/dev/video-field preview" },
+] as const;
+
 export interface BuiltFile {
   content: string;
   path: string;
 }
 
-/** Production must not ship the gallery; staging must still have it. */
+/** Production must ship no dev-only page; staging must still have each. */
 export function checkDevTools(
   env: DeployableEnvironment,
   files: readonly BuiltFile[]
 ): void {
-  const found = files
-    .filter((file) => file.content.includes(DEV_TOOLS_MARKER))
-    .map((file) => file.path);
-  if (env === "production" && found.length > 0) {
-    throw new Error(
-      `[deploy-guard] the production build contains the /dev/ui gallery: ${found.join(", ")}. Build with CLOUDFLARE_ENV=production so __SMOG_DEV_TOOLS__ is false.`
-    );
-  }
-  if (env === "staging" && found.length === 0) {
-    throw new Error(
-      "[deploy-guard] the staging build has no /dev/ui gallery (dev and staging keep /dev/*)."
-    );
+  for (const page of DEV_ONLY_PAGES) {
+    const found = files
+      .filter((file) => file.content.includes(page.marker))
+      .map((file) => file.path);
+    if (env === "production" && found.length > 0) {
+      throw new Error(
+        `[deploy-guard] the production build contains the ${page.name}: ${found.join(", ")}. Build with CLOUDFLARE_ENV=production so __SMOG_DEV_TOOLS__ is false.`
+      );
+    }
+    if (env === "staging" && found.length === 0) {
+      throw new Error(
+        `[deploy-guard] the staging build has no ${page.name} (dev and staging keep the dev-only pages).`
+      );
+    }
   }
 }
 

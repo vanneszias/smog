@@ -116,6 +116,13 @@ describe("admin.mux.createUpload", () => {
     expect(await auditRowsSince(mark)).toEqual([]);
   });
 
+  it("answers RATE_LIMITED when Mux does (429), not INTERNAL", async () => {
+    testMux.failNext(429);
+    expect(await failure(callAs(admin, "mux.createUpload"))).toBe(
+      "RATE_LIMITED"
+    );
+  });
+
   it("sends a fresh passthrough each time", async () => {
     await callAs(admin, "mux.createUpload");
     await callAs(admin, "mux.createUpload");

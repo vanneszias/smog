@@ -9,7 +9,11 @@ import { VideoField, type VideoFieldValue } from "./video-field";
 export function VideoFieldPreview(): ReactNode {
   const [value, setValue] = useState<VideoFieldValue | null>(null);
   return (
-    <div className="flex max-w-content flex-col gap-4">
+    // The deploy guard's proof that production compiled this page out.
+    <div
+      className="flex max-w-content flex-col gap-4"
+      data-dev-preview="video-field"
+    >
       <VideoField onChange={setValue} value={value} />
       <Text
         as="div"

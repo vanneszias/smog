@@ -38,6 +38,29 @@ describe("createMux", () => {
   });
 });
 
+describe("createMux outside dev", () => {
+  it("never sends the token anywhere but the real API", async () => {
+    const urls: string[] = [];
+    const mux = createMux(
+      {
+        ENVIRONMENT: "production",
+        MUX_API_URL: "http://evil.test",
+        MUX_TOKEN_ID: "id",
+        MUX_TOKEN_SECRET: "secret",
+      },
+      {
+        fetch: (input) => {
+          urls.push(String(input));
+          return Promise.resolve(Response.json({ data: [] }));
+        },
+      }
+    );
+    expect(mux?.apiUrl).toBe("https://api.mux.com");
+    await listAssets(mux as NonNullable<typeof mux>, { limit: 1, page: 1 });
+    expect(urls[0]).toStartWith("https://api.mux.com/");
+  });
+});
+
 describe("createDirectUpload", () => {
   it("sends the ruling 4 settings and returns the id and URL", async () => {
     const fake = createFakeMux();
@@ -112,6 +135,28 @@ describe("getUpload and getAsset", () => {
     expect(await getAsset(fake.mux, "nope")).toBeNull();
   });
 
+  it("throw MuxApiError on a 2xx that is not JSON", async () => {
+    const mux = createMux(
+      { MUX_TOKEN_ID: "id", MUX_TOKEN_SECRET: "secret" },
+      {
+        fetch: () =>
+          Promise.resolve(
+            new Response("<html>gateway</html>", { status: 200 })
+          ),
+      }
+    );
+    if (!mux) {
+      throw new Error("expected a client");
+    }
+    let caught: unknown;
+    try {
+      await getUpload(mux, "u1");
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(MuxApiError);
+  });
+
   it("throw MuxApiError on a server error", async () => {
     const mux = createMux(
       { MUX_TOKEN_ID: "id", MUX_TOKEN_SECRET: "secret" },
@@ -165,6 +210,17 @@ describe("listAssets", () => {
     expect(first.hasMore).toBe(true);
     expect(last.items).toHaveLength(1);
     expect(last.hasMore).toBe(false);
+  });
+
+  it("skips an asset it cannot read (a new status) instead of failing the page", async () => {
+    const fake = createFakeMux();
+    const good = fake.addAsset({ createdAt: 2000 });
+    fake.addAsset({
+      createdAt: 1000,
+      status: "archived" as unknown as "ready",
+    });
+    const { items } = await listAssets(fake.mux, { limit: 24, page: 1 });
+    expect(items.map((item) => item.id)).toEqual([good.id]);
   });
 
   it(`caps the page at ${MUX_ASSETS_PAGE_MAX}`, async () => {

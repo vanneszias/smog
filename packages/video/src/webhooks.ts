@@ -110,9 +110,28 @@ async function hmacKey(secret: string): Promise<CryptoKey> {
   );
 }
 
+/** The body as received: bytes (the Worker) or a string (tests). */
+type RawBody = string | Uint8Array<ArrayBuffer>;
+
+function bodyBytes(rawBody: RawBody): Uint8Array<ArrayBuffer> {
+  return typeof rawBody === "string" ? encoder.encode(rawBody) : rawBody;
+}
+
+/** `<t>.` and the body's own bytes: what Mux signs (never re-encoded). */
+function signedPayload(
+  timestamp: number,
+  body: Uint8Array<ArrayBuffer>
+): Uint8Array<ArrayBuffer> {
+  const prefix = encoder.encode(`${timestamp}.`);
+  const payload = new Uint8Array(prefix.byteLength + body.byteLength);
+  payload.set(prefix);
+  payload.set(body, prefix.byteLength);
+  return payload;
+}
+
 /** HMAC-SHA256 of `<t>.<body>`, hex: what Mux puts in `v1`. */
 export async function muxSignature(
-  rawBody: string,
+  rawBody: RawBody,
   secret: string,
   timestamp: number
 ): Promise<string> {
@@ -120,7 +139,7 @@ export async function muxSignature(
   const mac = await crypto.subtle.sign(
     "HMAC",
     key,
-    encoder.encode(`${timestamp}.${rawBody}`)
+    signedPayload(timestamp, bodyBytes(rawBody))
   );
   return Array.from(new Uint8Array(mac), (byte) =>
     byte.toString(16).padStart(2, "0")
@@ -130,13 +149,14 @@ export async function muxSignature(
 /**
  * Verifies a Mux webhook and returns its event, or throws
  * `MuxSignatureError`. The comparison is Web Crypto's
- * `subtle.verify("HMAC", …)`, which is constant-time; the body is parsed
- * only after the signature matched, so an unsigned body is never read.
+ * `subtle.verify("HMAC", …)`, which is constant-time, over the raw bytes
+ * received; the body is decoded (strict UTF-8) and parsed only after the
+ * signature matched, so an unsigned body is never read.
  *
  * @param now milliseconds since the epoch (`Date.now()`)
  */
 export async function verifyMuxWebhook(
-  rawBody: string,
+  rawBody: RawBody,
   headers: Headers,
   secret: string | undefined,
   now: number
@@ -157,7 +177,8 @@ export async function verifyMuxWebhook(
     throw new MuxSignatureError("expired");
   }
   const key = await hmacKey(secret);
-  const signed = encoder.encode(`${parsed.timestamp}.${rawBody}`);
+  const body = bodyBytes(rawBody);
+  const signed = signedPayload(parsed.timestamp, body);
   let valid = false;
   for (const signature of parsed.signatures) {
     // Every candidate is checked (no early exit), each in constant time.
@@ -170,7 +191,7 @@ export async function verifyMuxWebhook(
   }
   let json: unknown;
   try {
-    json = JSON.parse(rawBody);
+    json = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body));
   } catch (error) {
     throw new MuxSignatureError("invalid-event", { cause: error });
   }

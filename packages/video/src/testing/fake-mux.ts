@@ -58,6 +58,8 @@ export interface FakeMux {
   completeUpload: (uploadId: string) => FakeAsset;
   errorAsset: (assetId: string, message?: string) => FakeAsset;
   errorUpload: (uploadId: string, message?: string) => FakeUpload;
+  /** The next API request answers `status` (a Mux outage or rate limit). */
+  failNext: (status: number) => void;
   /** Answers like Mux (API requests need the basic auth; uploads do not). */
   fetch: MuxFetch;
   /** A client wired to this fake. */
@@ -160,6 +162,7 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
   const uploads = new Map<string, FakeUpload>();
   const assets = new Map<string, FakeAsset>();
   const requests: FakeRequest[] = [];
+  let nextFailure: number | null = null;
 
   function addAsset(asset: Partial<FakeAsset> = {}): FakeAsset {
     const status = asset.status ?? "ready";
@@ -299,6 +302,14 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
       path,
       ...(body === undefined ? {} : { body }),
     });
+    if (nextFailure !== null) {
+      const status = nextFailure;
+      nextFailure = null;
+      return json(
+        { error: { messages: ["Fake failure"], type: "fake" } },
+        status
+      );
+    }
     if (request.headers.get("authorization") !== AUTHORIZATION) {
       return json(
         { error: { messages: ["Unauthorized"], type: "unauthorized" } },
@@ -367,6 +378,9 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     completeUpload,
     errorAsset,
     errorUpload,
+    failNext: (status) => {
+      nextFailure = status;
+    },
     fetch: handle,
     mux,
     readyAsset,
@@ -380,7 +394,7 @@ export const FAKE_MUX_TOKEN = TOKEN;
 
 /** A `Mux-Signature` header value for `rawBody`, as Mux signs it. */
 export async function signMuxWebhook(
-  rawBody: string,
+  rawBody: string | Uint8Array<ArrayBuffer>,
   secret: string,
   timestamp: number = Math.floor(Date.now() / 1000)
 ): Promise<string> {

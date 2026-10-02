@@ -211,6 +211,20 @@ describe("the Mux upload controller", () => {
     expect(controller.state()).toEqual({ status: "idle" });
   });
 
+  it("stops polling at once on a permanent error (NOT_FOUND, INVALID_STATE)", async () => {
+    const gone = Object.assign(new Error("NOT_FOUND"), { code: "NOT_FOUND" });
+    const { controller, polls } = setup([gone]);
+    controller.start(FILE);
+    await until(() => controller.state().status === "uploading");
+    (FakeXhr.last as FakeXhr).finish(200);
+    await until(() => controller.state().status === "failed");
+    expect(controller.state()).toMatchObject({
+      detail: "NOT_FOUND",
+      reason: "processing",
+    });
+    expect(polls).toHaveLength(1);
+  });
+
   it("reset aborts the PUT and ignores its late answer", async () => {
     const { controller } = setup([READY]);
     controller.start(FILE);

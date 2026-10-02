@@ -11,6 +11,8 @@ export const OPENPANEL_DEFAULT_API_URL = "https://analytics.zias.be/api";
 /** The Mux Video API; `MUX_API_URL` points at the Mux fake in tests and e2e. */
 export const MUX_DEFAULT_API_URL = "https://api.mux.com";
 
+const TRAILING_SLASHES = /\/+$/;
+
 /** An optional value: unset and empty (`KEY=` in `.dev.vars`) both mean "off". */
 export const optionalValue = z.preprocess(
   (value) => (value === "" ? undefined : value),
@@ -65,7 +67,8 @@ export type WorkerSecrets = z.infer<typeof workerSecretsSchema>;
  * Vars and secrets together: the `env` of the rpc context. Outside `dev`
  * `TURNSTILE_SECRET_KEY` is required, so `requireTurnstile` can never fail
  * open in staging or production (Cloudflare's always-pass test secret is
- * fine for a staging without a real widget).
+ * fine for a staging without a real widget), and `MUX_API_URL` must be the
+ * real Mux API (the Basic token goes there).
  */
 export const workerEnvSchema = workerVarsSchema
   .extend(workerSecretsSchema.shape)
@@ -76,6 +79,16 @@ export const workerEnvSchema = workerVarsSchema
       message:
         "is required outside dev (requireTurnstile fails open without it)",
       path: ["TURNSTILE_SECRET_KEY"],
+    }
+  )
+  .refine(
+    (env) =>
+      env.ENVIRONMENT === "dev" ||
+      env.MUX_API_URL.replace(TRAILING_SLASHES, "") === MUX_DEFAULT_API_URL,
+    {
+      message:
+        "must be the real Mux API outside dev (the token is sent there; only the e2e fake changes it)",
+      path: ["MUX_API_URL"],
     }
   );
 

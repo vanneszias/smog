@@ -25,11 +25,17 @@ describe("isAllowedUploadUrl", () => {
     }
   });
 
-  it("allows a fake Mux's own origin, only when MUX_API_URL points at it", () => {
+  it("allows a fake Mux's own origin, only in dev and when MUX_API_URL points at it", () => {
     const fake = "http://localhost:4010";
-    expect(isAllowedUploadUrl(`${fake}/upload/x`, fake)).toBe(true);
-    expect(isAllowedUploadUrl("http://localhost:9999/upload/x", fake)).toBe(
-      false
-    );
+    const dev = { allowFake: true };
+    expect(isAllowedUploadUrl(`${fake}/upload/x`, fake, dev)).toBe(true);
+    expect(
+      isAllowedUploadUrl("http://localhost:9999/upload/x", fake, dev)
+    ).toBe(false);
+    // Outside dev a stray MUX_API_URL never widens what the browser may PUT to.
+    expect(isAllowedUploadUrl(`${fake}/upload/x`, fake)).toBe(false);
+    expect(
+      isAllowedUploadUrl(`${fake}/upload/x`, fake, { allowFake: false })
+    ).toBe(false);
   });
 });

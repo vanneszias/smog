@@ -1,5 +1,6 @@
 import { useMuxAssets } from "@smog/admin/client";
-import type { MuxAssetItem } from "@smog/admin/schema";
+import type { MuxAssetItem, MuxAssetStatus } from "@smog/admin/schema";
+import type { TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
   Badge,
@@ -7,13 +8,12 @@ import {
   cn,
   EmptyState,
   ErrorState,
-  Pagination,
   Skeleton,
   Text,
 } from "@smog/ui-web";
 import { muxThumbnailUrl } from "@smog/utils";
-import { Check, Film } from "lucide-react";
-import { type ReactNode, useCallback, useState } from "react";
+import { Check, ChevronLeft, ChevronRight, Film } from "lucide-react";
+import { type ReactNode, useCallback, useId, useState } from "react";
 
 export interface MuxPickerProps {
   /** Off until the tab is shown, so the list is not fetched for nothing. */
@@ -30,7 +30,14 @@ const STATUS_VARIANT = {
   errored: "danger",
   preparing: "warning",
   ready: "success",
-} as const;
+} as const satisfies Record<MuxAssetStatus, string>;
+
+/** One literal key per status (no template-literal keys; DECISIONS). */
+const STATUS_LABEL_KEYS = {
+  errored: "admin.mux.picker.status.errored",
+  preparing: "admin.mux.picker.status.preparing",
+  ready: "admin.mux.picker.status.ready",
+} as const satisfies Record<MuxAssetStatus, TranslationKey>;
 
 function isSelected(
   asset: MuxAssetItem,
@@ -58,6 +65,10 @@ function AssetCard({
     dateStyle: "medium",
   }).format(asset.createdAt);
   const used = asset.usedBy.length;
+  // Only a ready asset plays: a preparing or errored one would leave the
+  // gesture without a video.
+  const choosable = asset.status === "ready";
+  const reasonId = useId();
   const choose = useCallback(() => onSelect(asset), [asset, onSelect]);
   return (
     <li
@@ -78,7 +89,7 @@ function AssetCard({
       <div className="flex flex-1 flex-col gap-2 p-2">
         <div className="flex flex-wrap items-center gap-1">
           <Badge variant={STATUS_VARIANT[asset.status]}>
-            {t(`admin.mux.picker.status.${asset.status}`)}
+            {t(STATUS_LABEL_KEYS[asset.status])}
           </Badge>
           {asset.duration === null ? null : (
             <Badge>
@@ -103,9 +114,16 @@ function AssetCard({
             ? t("admin.mux.picker.usedBy", { count: used })
             : t("admin.mux.picker.unused")}
         </Text>
+        {choosable ? null : (
+          <Text id={reasonId} size="caption" tone="muted">
+            {t("admin.mux.picker.notReady")}
+          </Text>
+        )}
         <Button
+          aria-describedby={choosable ? undefined : reasonId}
           aria-pressed={chosen}
           className="mt-auto"
+          disabled={!choosable}
           icon={chosen ? <Check /> : undefined}
           onClick={choose}
           size="sm"
@@ -116,6 +134,54 @@ function AssetCard({
         </Button>
       </div>
     </li>
+  );
+}
+
+/**
+ * Previous / next without a total: Mux reports none, and a page can be
+ * empty of public assets while later ones are not.
+ */
+function PickerPager({
+  hasMore,
+  onPage,
+  page,
+}: {
+  hasMore: boolean;
+  onPage: (page: number) => void;
+  page: number;
+}): ReactNode {
+  const { t } = useTranslation();
+  const previous = useCallback(() => onPage(page - 1), [onPage, page]);
+  const next = useCallback(() => onPage(page + 1), [onPage, page]);
+  return (
+    <nav
+      aria-label={t("admin.mux.picker.page", { page })}
+      className="flex items-center justify-between gap-3"
+    >
+      <Button
+        disabled={page <= 1}
+        icon={<ChevronLeft />}
+        onClick={previous}
+        size="sm"
+        type="button"
+        variant="secondary"
+      >
+        {t("admin.mux.picker.previous")}
+      </Button>
+      <Text aria-current="page" size="body-sm" tone="muted">
+        {t("admin.mux.picker.page", { page })}
+      </Text>
+      <Button
+        disabled={!hasMore}
+        onClick={next}
+        size="sm"
+        type="button"
+        variant="secondary"
+      >
+        {t("admin.mux.picker.next")}
+        <ChevronRight aria-hidden="true" className="size-4" />
+      </Button>
+    </nav>
   );
 }
 
@@ -169,7 +235,7 @@ export function MuxPicker({
     );
   }
   const { hasMore, items } = query.data;
-  if (items.length === 0 && page === 1) {
+  if (items.length === 0 && page === 1 && !hasMore) {
     return (
       <EmptyState
         description={t("admin.mux.picker.emptyDescription")}
@@ -192,11 +258,7 @@ export function MuxPicker({
         ))}
       </ul>
       {page > 1 || hasMore ? (
-        <Pagination
-          onPageChange={setPage}
-          page={page}
-          pageCount={hasMore ? page + 1 : page}
-        />
+        <PickerPager hasMore={hasMore} onPage={setPage} page={page} />
       ) : null}
     </div>
   );

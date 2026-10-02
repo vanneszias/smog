@@ -119,11 +119,42 @@ describe("handleMuxWebhook", () => {
     expect(response.status).toBe(503);
   });
 
-  it("answers 429 over the rate limit, before reading the body", async () => {
-    const { response } = await deliver(assetReady("up-4", "as-4"), {
+  it("counts only rejected deliveries against the rate limit (429)", async () => {
+    // Over the limit, a forged delivery is a 429 …
+    const forged = await deliver(assetReady("up-4", "as-4"), {
+      allow: false,
+      signWith: "wrong",
+    });
+    expect(forged.response.status).toBe(429);
+    // … and a genuine one is never limited.
+    const genuine = await deliver(assetReady("up-4", "as-4"), {
       allow: false,
     });
-    expect(response.status).toBe(429);
+    expect(genuine.response.status).toBe(200);
+  });
+
+  it("asks the limiter only for rejected deliveries", async () => {
+    const keys: string[] = [];
+    const limit = (key: string) => {
+      keys.push(key);
+      return Promise.resolve(true);
+    };
+    const body = JSON.stringify(assetReady("up-11", "as-11"));
+    const signed = await signMuxWebhook(body, SECRET);
+    const request = (signature: string) =>
+      new Request(URL_, {
+        body,
+        headers: {
+          "cf-connecting-ip": "203.0.113.7",
+          "mux-signature": signature,
+        },
+        method: "POST",
+      });
+    const kv = createMemoryKv();
+    await handleMuxWebhook(request(signed), { kv, limit, secret: SECRET });
+    expect(keys).toEqual([]);
+    await handleMuxWebhook(request("t=1,v1=00"), { kv, limit, secret: SECRET });
+    expect(keys).toEqual(["mux-webhook:203.0.113.7"]);
   });
 
   it(`answers 413 above ${MUX_WEBHOOK_MAX_BYTES} bytes`, async () => {
@@ -150,6 +181,8 @@ describe("handleMuxWebhook", () => {
     expect((await deliver(other, { kv })).response.status).toBe(200);
     expect((await deliver(render, { kv })).response.status).toBe(200);
     expect(await readUploadState(kv, "up-6")).toBeNull();
+    // Ignored events are idempotent already: no dedupe marker, no KV at all.
+    expect(kv.size()).toBe(0);
   });
 
   it("is idempotent per event id", async () => {

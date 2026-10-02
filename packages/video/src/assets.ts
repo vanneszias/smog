@@ -109,10 +109,21 @@ export async function listAssets(
     page: String(Math.max(1, Math.trunc(page))),
   });
   const data = await muxRequest(mux, `/video/v1/assets?${params}`, {
-    schema: z.array(muxAssetDataSchema),
+    schema: z.array(z.unknown()),
   });
+  // One asset Mux describes in a way we do not know (a new status) must
+  // not hide the whole page: it is skipped.
+  const readable: MuxAssetData[] = [];
+  for (const raw of data) {
+    const parsed = muxAssetDataSchema.safeParse(raw);
+    if (parsed.success) {
+      readable.push(parsed.data);
+    } else {
+      console.warn("[video] Skipped a Mux asset it could not read");
+    }
+  }
   const items: MuxAssetSummary[] = [];
-  for (const asset of data.map(toMuxAsset)) {
+  for (const asset of readable.map(toMuxAsset)) {
     if (asset.playbackId) {
       items.push({
         aspectRatio: asset.aspectRatio,

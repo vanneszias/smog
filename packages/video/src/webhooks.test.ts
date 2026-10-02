@@ -131,6 +131,31 @@ describe("verifyMuxWebhook", () => {
     expect((error as MuxSignatureError).reason).toBe("invalid-event");
   });
 
+  it("verifies the raw bytes as received (a leading BOM is signed too)", async () => {
+    const bytes = new Uint8Array([
+      0xef,
+      0xbb,
+      0xbf,
+      ...new TextEncoder().encode(BODY),
+    ]);
+    const headers = new Headers({
+      "mux-signature": await signMuxWebhook(bytes, SECRET, NOW_SECONDS),
+    });
+    const event = await verifyMuxWebhook(bytes, headers, SECRET, NOW);
+    expect(event.id).toBe("event-1");
+  });
+
+  it("rejects signed bytes that are not UTF-8", async () => {
+    const bytes = new Uint8Array([0x7b, 0xff, 0x7d]);
+    const headers = new Headers({
+      "mux-signature": await signMuxWebhook(bytes, SECRET, NOW_SECONDS),
+    });
+    const error = await rejection(
+      verifyMuxWebhook(bytes, headers, SECRET, NOW)
+    );
+    expect((error as MuxSignatureError).reason).toBe("invalid-event");
+  });
+
   it("refuses to verify without a secret", async () => {
     const error = await rejection(
       verifyMuxWebhook(BODY, await signed(BODY), "", NOW)
