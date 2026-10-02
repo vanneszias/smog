@@ -43,6 +43,13 @@ const WORKERS = Number(process.env.E2E_WORKERS ?? (process.env.CI ? 1 : 2));
 /** The one spec that turns maintenance mode on (`admin-settings.spec.ts`). */
 const MAINTENANCE_SPEC = /admin-settings\.spec\.ts$/;
 
+/**
+ * The catalogue spec publishes 100 gestures of its own for a moment (the
+ * bulk smoke): its own project, after the public specs, so none of them
+ * sees those rows.
+ */
+const CATALOG_SPEC = /admin-catalog\.spec\.ts$/;
+
 export default defineConfig({
   // Assertions wait up to 15 s (the default is 5 s): a first compile, or
   // Vite's "new dependencies optimized, reloading", can land mid-test.
@@ -55,14 +62,24 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      // The maintenance spec flips a site-wide flag: its own project.
-      testIgnore: MAINTENANCE_SPEC,
+      // The maintenance and catalogue specs change what every visitor
+      // sees: their own projects.
+      testIgnore: [MAINTENANCE_SPEC, CATALOG_SPEC],
       use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
+    },
+    {
+      // After the public specs, on one worker. Alone: `--project catalog --no-deps`.
+      dependencies: ["chromium"],
+      fullyParallel: false,
+      name: "catalog",
+      testMatch: CATALOG_SPEC,
+      use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
+      workers: 1,
     },
     {
       // After every other spec, on one worker, so no other test runs while
       // the site is in maintenance. Alone: `--project maintenance --no-deps`.
-      dependencies: ["chromium"],
+      dependencies: ["catalog"],
       fullyParallel: false,
       name: "maintenance",
       testMatch: MAINTENANCE_SPEC,

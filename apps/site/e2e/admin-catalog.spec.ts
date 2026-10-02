@@ -13,6 +13,7 @@ import {
   blockingViolations,
   ORIGIN,
   stubMux,
+  stubMuxStream,
   waitForApp,
   watchErrors,
 } from "./helpers";
@@ -34,8 +35,6 @@ const SAMPLE_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
 const PREINSTALLED_CHROMIUM = "/opt/pw-browsers/chromium";
 const GESTURE_EDITOR_URL = /\/admin\/gestures\/(?!new$)[A-Za-z0-9_-]+$/;
 const HEADERS = { origin: ORIGIN };
-/** The video player is third party; its error dialog opens because HLS is refused. */
-const PLAYER = { exclude: ["mux-player"] };
 const PNG_MAGIC = "89504e470d0a1a0a";
 const EXPECTED_ERRORS = [
   "mux-player",
@@ -49,6 +48,7 @@ interface AdminGesture {
   categories: { id: string }[];
   description: string;
   id: string;
+  keywords: string[];
   name: string;
   publishedAt: number | null;
   slug: string;
@@ -62,12 +62,19 @@ interface AdminCategory {
   publishedAt: number | null;
 }
 
-/** A word no seeded gesture has (lowercase letters only, for FTS). */
-function tag(): string {
+function letters(length: number): string {
   return Array.from(
-    { length: 8 },
+    { length },
     () => "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)]
   ).join("");
+}
+
+/** This run's prefix: every name the spec creates starts its word with it. */
+const RUN = letters(4);
+
+/** A word no seeded gesture has (lowercase letters only, for FTS). */
+function tag(): string {
+  return `${RUN}${letters(6)}`;
 }
 
 async function signInAsAdmin(page: Page): Promise<void> {
@@ -101,14 +108,23 @@ async function categories(
   return await rpc<AdminCategory[]>(request, "admin/categories/list");
 }
 
-async function seededCategoryId(request: APIRequestContext): Promise<string> {
-  const [first] = (await categories(request)).filter(
-    (category) => category.publishedAt !== null
-  );
-  if (!first) {
-    throw new Error("the dev seed has no published category");
-  }
-  return first.id;
+/** The categories this run made, deleted after each test (`afterEach`). */
+const madeCategories: string[] = [];
+
+/**
+ * A hidden category of the test's own, so the test touches no seeded row
+ * (its gestures are counted there, never in the seeded categories).
+ */
+async function ownCategoryId(
+  request: APIRequestContext,
+  word: string
+): Promise<string> {
+  const made = await rpc<AdminCategory>(request, "admin/categories/create", {
+    name: `Zzcat ${word}`,
+    published: false,
+  });
+  madeCategories.push(made.id);
+  return made.id;
 }
 
 async function createGesture(
@@ -160,8 +176,7 @@ async function deleteGestures(
 /** Mux stills and HLS are not reachable offline: stills are stubbed, streams refused. */
 async function stubMuxMedia(page: Page): Promise<void> {
   await stubMux(page);
-  await page.route("https://stream.mux.com/**", (route) => route.abort());
-  await page.route("https://*.litix.io/**", (route) => route.abort());
+  await stubMuxStream(page);
 }
 
 async function open(page: Page, path: string): Promise<void> {
@@ -178,6 +193,14 @@ test.describe("admin catalogue", () => {
   test.beforeEach(async ({ page }) => {
     await stubMuxMedia(page);
     await signInAsAdmin(page);
+  });
+
+  // After the tests' own `finally` deleted their gestures.
+  test.afterEach(async ({ page }) => {
+    for (const id of madeCategories.splice(0)) {
+      // biome-ignore lint/performance/noAwaitInLoops: one at a time.
+      await rpc(page.request, "admin/categories/delete", { id });
+    }
   });
 
   test("creates, renames, conflicts, unpublishes and publishes a gesture", async ({
@@ -211,7 +234,7 @@ test.describe("admin catalogue", () => {
       await expect(
         page.getByRole("switch", { name: "Gepubliceerd" })
       ).toBeChecked();
-      expect(await blockingViolations(page, PLAYER)).toEqual([]);
+      expect(await blockingViolations(page)).toEqual([]);
       await page.getByRole("button", { name: "Gebaar aanmaken" }).click();
       await expect(page).toHaveURL(GESTURE_EDITOR_URL);
       gestureId = new URL(page.url()).pathname.split("/").pop() ?? null;
@@ -243,29 +266,44 @@ test.describe("admin catalogue", () => {
         page.getByRole("link", { name: renamed }).first()
       ).toBeVisible();
 
-      // A stale save: another admin saves first, this editor gets the dialog.
+      // A stale save (C1): another admin changes the keywords and the
+      // description; this editor changes the description too. The keywords
+      // merge in silently, the description is a conflict; Escape changes
+      // nothing, their version is the default.
       await open(page, `/admin/gestures/${gestureId}`);
       const current = await getGesture(page.request, created.id);
       await rpc(page.request, "admin/gestures/update", {
         description: "Uitleg van een andere beheerder",
         expectedUpdatedAt: current.updatedAt,
         id: created.id,
+        keywords: ["van-b"],
       });
       await page.getByLabel("Beschrijving").fill("Mijn eigen uitleg");
       await page.getByRole("button", { name: "Opslaan" }).click();
-      const conflict = page.getByRole("alertdialog", {
+      const conflict = page.getByRole("dialog", {
         name: "Iemand anders wijzigde dit gebaar",
       });
       await expect(conflict).toBeVisible();
-      expect(await blockingViolations(page, PLAYER)).toEqual([]);
-      await conflict
-        .getByRole("button", {
-          name: "Herladen (mijn wijzigingen gaan verloren)",
-        })
+      await expect(
+        conflict.getByRole("table", { name: "Beschrijving" })
+      ).toContainText("Uitleg van een andere beheerder");
+      expect(await blockingViolations(page)).toEqual([]);
+      await page.keyboard.press("Escape");
+      await expect(conflict).toBeHidden();
+      await expect(page.getByLabel("Beschrijving")).toHaveValue(
+        "Mijn eigen uitleg"
+      );
+      await page.getByRole("button", { name: "Opslaan" }).click();
+      await page
+        .getByRole("dialog", { name: "Iemand anders wijzigde dit gebaar" })
+        .getByRole("button", { name: "Hun versie gebruiken" })
         .click();
       await expect(page.getByLabel("Beschrijving")).toHaveValue(
         "Uitleg van een andere beheerder"
       );
+      expect((await getGesture(page.request, created.id)).keywords).toEqual([
+        "van-b",
+      ]);
 
       // Unpublish: the public page 404s, the admin still lists it.
       await page.getByRole("switch", { name: "Gepubliceerd" }).click();
@@ -313,7 +351,7 @@ test.describe("admin catalogue", () => {
 
   test("the table editor saves two rows in one call", async ({ page }) => {
     const word = tag();
-    const categoryId = await seededCategoryId(page.request);
+    const categoryId = await ownCategoryId(page.request, word);
     const one = await createGesture(
       page.request,
       `Zzrij een ${word}`,
@@ -365,12 +403,91 @@ test.describe("admin catalogue", () => {
     }
   });
 
+  test("the table editor merges a stale save and guards unsaved edits", async ({
+    page,
+  }) => {
+    const word = tag();
+    const categoryId = await ownCategoryId(page.request, word);
+    const one = await createGesture(
+      page.request,
+      `Zzbots een ${word}`,
+      categoryId
+    );
+    const two = await createGesture(
+      page.request,
+      `Zzbots twee ${word}`,
+      categoryId
+    );
+    try {
+      await open(page, `/admin/gestures?q=${word}`);
+      await page.getByRole("button", { name: "Tabel bewerken" }).click();
+      await page
+        .getByRole("textbox", { name: `Naam van ${one.name}` })
+        .fill(`Zzbots mijn naam ${word}`);
+      await page
+        .getByRole("textbox", { name: `Beschrijving van ${two.name}` })
+        .fill("Mijn uitleg");
+      // The filters wait for the buffer, and leaving asks first.
+      await expect(page.getByRole("searchbox")).toBeDisabled();
+      await page
+        .getByRole("navigation", { name: "Beheer" })
+        .getByRole("link", { name: "Categorieën" })
+        .click();
+      const leave = page.getByRole("alertdialog", {
+        name: "Weggaan zonder op te slaan?",
+      });
+      await leave.getByRole("button", { name: "Blijven" }).click();
+      await expect(page).toHaveURL(new RegExp(`/admin/gestures\\?q=${word}`));
+      await expect(
+        page.getByRole("button", { name: "Verwerpen (2)" })
+      ).toBeVisible();
+
+      // Another admin renames row one meanwhile: a conflict on its name.
+      await rpc(page.request, "admin/gestures/update", {
+        expectedUpdatedAt: one.updatedAt,
+        id: one.id,
+        name: `Zzbots naam van B ${word}`,
+      });
+      await page.getByRole("button", { name: "Wijzigingen opslaan" }).click();
+      await page
+        .getByRole("dialog", { name: "Je wijzigingen nakijken" })
+        .getByRole("button", { name: "Wijzigingen opslaan" })
+        .click();
+      const banner = page
+        .getByRole("alert")
+        .filter({ hasText: "Een andere beheerder wijzigde dezelfde velden" });
+      await expect(banner).toBeVisible();
+      expect(await blockingViolations(page)).toEqual([]);
+      await banner
+        .getByRole("button", { name: "Hun versie gebruiken" })
+        .click();
+      await expect(
+        page.getByRole("button", { name: "Verwerpen (1)" })
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Wijzigingen opslaan" }).click();
+      await page
+        .getByRole("dialog", { name: "Je wijzigingen nakijken" })
+        .getByRole("button", { name: "Wijzigingen opslaan" })
+        .click();
+      await expect(
+        page.getByText("1 gebaar opgeslagen.", { exact: true })
+      ).toBeVisible();
+      expect((await getGesture(page.request, one.id)).name).toBe(
+        `Zzbots naam van B ${word}`
+      );
+      expect((await getGesture(page.request, two.id)).description).toBe(
+        "Mijn uitleg"
+      );
+    } finally {
+      await deleteGestures(page.request, [one.id, two.id]);
+    }
+  });
   test("bulk-selects and publishes 100 gestures in one call", async ({
     page,
   }) => {
     test.setTimeout(240_000);
     const word = tag();
-    const categoryId = await seededCategoryId(page.request);
+    const categoryId = await ownCategoryId(page.request, word);
     const ids: string[] = [];
     try {
       for (let start = 0; start < 100; start += 10) {
@@ -419,19 +536,27 @@ test.describe("admin catalogue", () => {
   test("reorders categories by keyboard, announcing the move", async ({
     page,
   }) => {
-    test.setTimeout(120_000);
-    const original = (await categories(page.request)).map(
-      (category) => category.id
-    );
+    // Only categories this test owns: two hidden ones, reordered within
+    // the hidden section (the public order never changes).
+    const word = tag();
+    const made: AdminCategory[] = [];
     try {
-      await reorderByKeyboard(page);
+      for (const name of [`Zzorde a ${word}`, `Zzorde b ${word}`]) {
+        // biome-ignore lint/performance/noAwaitInLoops: created in this order.
+        const category = await rpc<AdminCategory>(
+          page.request,
+          "admin/categories/create",
+          { name, published: false }
+        );
+        made.push(category);
+      }
+      await reorderByKeyboard(page, made);
     } finally {
-      // Whatever happened, the seeded order comes back (other specs read it).
-      const now = (await categories(page.request)).map(
-        (category) => category.id
-      );
-      if (now.join() !== original.join()) {
-        await rpc(page.request, "admin/categories/reorder", { ids: original });
+      for (const category of made) {
+        // biome-ignore lint/performance/noAwaitInLoops: one at a time.
+        await rpc(page.request, "admin/categories/delete", {
+          id: category.id,
+        });
       }
     }
   });
@@ -441,20 +566,26 @@ test.describe("admin catalogue", () => {
   });
 });
 
-/** Moves the first published category down and back up, by keyboard. */
-async function reorderByKeyboard(page: Page): Promise<void> {
-  const order = async () =>
-    (await categories(page.request))
-      .filter((category) => category.publishedAt !== null)
-      .map((category) => category.name);
-  const before = await order();
-  const [first, second] = before;
+/** Moves the test's first hidden category below its second, by keyboard. */
+async function reorderByKeyboard(
+  page: Page,
+  made: readonly AdminCategory[]
+): Promise<void> {
+  const [first, second] = made;
   if (!(first && second)) {
-    throw new Error("the dev seed needs two published categories");
+    throw new Error("[e2e] two categories expected");
   }
+  const mine = async () =>
+    (await categories(page.request))
+      .filter((category) => made.some((item) => item.id === category.id))
+      .map((category) => category.name);
+  expect(await mine()).toEqual([first.name, second.name]);
+  const hidden = (await categories(page.request)).filter(
+    (category) => category.publishedAt === null
+  );
   await open(page, "/admin/categories");
   const handle = page.getByRole("button", {
-    name: `Slepen om de volgorde te wijzigen: ${first}`,
+    name: `Slepen om de volgorde te wijzigen: ${first.name}`,
   });
   const saved = page.waitForResponse("**/api/rpc/admin/categories/reorder");
   await handle.focus();
@@ -462,20 +593,14 @@ async function reorderByKeyboard(page: Page): Promise<void> {
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Space");
   expect((await saved).ok()).toBe(true);
+  const position = hidden.findIndex((item) => item.id === second.id) + 1;
   await expect(
-    page.getByText(`${first} neergezet op positie 2 van ${before.length}.`)
+    page.getByText(
+      `${first.name} neergezet op positie ${position} van ${hidden.length}.`
+    )
   ).toBeAttached();
-  expect((await order()).slice(0, 2)).toEqual([second, first]);
+  expect(await mine()).toEqual([second.name, first.name]);
   expect(await blockingViolations(page)).toEqual([]);
-
-  // Back where it was (other specs read the seeded order).
-  const restored = page.waitForResponse("**/api/rpc/admin/categories/reorder");
-  await handle.focus();
-  await page.keyboard.press("Space");
-  await page.keyboard.press("ArrowUp");
-  await page.keyboard.press("Space");
-  expect((await restored).ok()).toBe(true);
-  expect(await order()).toEqual(before);
 }
 
 /** Opens a gesture's QR dialog from the list's row menu and downloads it. */
@@ -484,7 +609,7 @@ async function qrDownload(page: Page): Promise<void> {
   const gesture = await createGesture(
     page.request,
     `Zzqr ${word}`,
-    await seededCategoryId(page.request)
+    await ownCategoryId(page.request, word)
   );
   try {
     await open(page, `/admin/gestures?q=${word}`);

@@ -38,6 +38,7 @@ export default defineConfig(async () => ({
   // Tests run the `dev` environment, which has the /dev pages.
   define: {
     __SMOG_DEV_TOOLS__: "true",
+    __SMOG_E2E_SEED__: "true",
     __SMOG_THEME_SCRIPT_HASH__: THEME_SCRIPT_HASH_DEFINE,
   },
   plugins: [

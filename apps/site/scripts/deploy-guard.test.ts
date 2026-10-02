@@ -1,13 +1,44 @@
 import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
 import {
   CLIENT_SECRET_MARKERS,
   checkClientHasNoMuxSecrets,
   checkDeployTarget,
   checkDevTools,
+  checkNoE2eSeed,
   checkServerHasNoVideoPlayer,
   DEV_TOOLS_MARKER,
+  E2E_SEED_MARKER,
   MUX_PLAYER_MARKERS,
 } from "./deploy-guard";
+
+describe("checkNoE2eSeed", () => {
+  const seed = {
+    content: `Response.json({marker:"${E2E_SEED_MARKER}"})`,
+    path: "dist/server/assets/e2e-seed-handler.js",
+  };
+  const app = { content: "export default {}", path: "dist/server/index.js" };
+
+  it("uses the seed module's own marker", () => {
+    // Read as text: the module is Worker code (D1 types) outside scripts/.
+    const source = readFileSync(
+      new URL("../src/server/e2e-seed.ts", import.meta.url),
+      "utf8"
+    );
+    expect(source).toContain(
+      `export const E2E_SEED_MARKER = "${E2E_SEED_MARKER}";`
+    );
+  });
+
+  it("refuses a staging or production build with the e2e seed endpoint", () => {
+    for (const env of ["staging", "production"] as const) {
+      expect(() => checkNoE2eSeed(env, [app, seed])).toThrow(
+        "dist/server/assets/e2e-seed-handler.js"
+      );
+      expect(() => checkNoE2eSeed(env, [app])).not.toThrow();
+    }
+  });
+});
 
 describe("checkDevTools", () => {
   const gallery = {

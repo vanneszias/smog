@@ -87,6 +87,28 @@ export function checkDevTools(
 }
 
 /**
+ * The string only the e2e seed endpoint has (`src/server/e2e-seed.ts`,
+ * `E2E_SEED_MARKER`). Only a dev build carries it (`__SMOG_E2E_SEED__`):
+ * staging keeps the other dev pages but never this one.
+ */
+export const E2E_SEED_MARKER = "smog-e2e-seed";
+
+/** A staging or production build must not contain the e2e seed endpoint. */
+export function checkNoE2eSeed(
+  env: DeployableEnvironment,
+  files: readonly BuiltFile[]
+): void {
+  const found = files
+    .filter((file) => file.content.includes(E2E_SEED_MARKER))
+    .map((file) => file.path);
+  if (found.length > 0) {
+    throw new Error(
+      `[deploy-guard] the ${env} build contains the /dev/e2e-seed endpoint: ${found.join(", ")}. Build with CLOUDFLARE_ENV=${env} so __SMOG_E2E_SEED__ is false.`
+    );
+  }
+}
+
+/**
  * Strings only Mux Player's bundle contains (its software name and element
  * class). `@smog/ui-web`'s VideoPlayer imports it on the client only, so the
  * Worker bundle must not carry the ~2 MB player.
@@ -183,6 +205,7 @@ if (import.meta.main && process.argv.includes("--bundle")) {
     );
     const files = readBuiltFiles(DIST_DIR);
     checkDevTools(env, files);
+    checkNoE2eSeed(env, files);
     checkServerHasNoVideoPlayer(files);
     checkClientHasNoMuxSecrets(files);
     console.log(`deploy-guard: ok (${env})`);

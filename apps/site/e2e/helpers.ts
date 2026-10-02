@@ -11,6 +11,26 @@ const BLOCKING = new Set(["serious", "critical"]);
 const OTP = /\b(\d{6})\b/;
 const VERIFY_LINK = new RegExp(`${ORIGIN}/api/auth/verify-email\\?\\S+`);
 
+/**
+ * Fixture writes through the dev Worker (`POST /dev/e2e-seed`, dev builds
+ * only), never a second `wrangler d1 execute` on the live SQLite file
+ * (SQLITE_BUSY while other specs write).
+ */
+export async function e2eSeed(
+  request: APIRequestContext,
+  seeds: readonly Record<string, unknown>[]
+): Promise<void> {
+  const response = await request.post("/dev/e2e-seed", {
+    data: seeds,
+    headers: { origin: ORIGIN },
+  });
+  if (!response.ok()) {
+    throw new Error(
+      `[e2e] Seeding failed: ${response.status()} ${await response.text()}`
+    );
+  }
+}
+
 export function uniqueEmail(): string {
   return `e2e-${crypto.randomUUID()}@smog.test`;
 }
@@ -97,20 +117,8 @@ export function watchErrors(page: Page): string[] {
   return errors;
 }
 
-/**
- * Serious and critical axe violations. `exclude` skips third-party
- * subtrees the page does not own (e.g. `mux-player`, whose shadow-DOM
- * error dialog has no name; it only opens because the e2e refuses HLS).
- */
-export async function blockingViolations(
-  page: Page,
-  { exclude = [] }: { exclude?: readonly string[] } = {}
-) {
-  let builder = new AxeBuilder({ page });
-  for (const selector of exclude) {
-    builder = builder.exclude(selector);
-  }
-  const results = await builder.analyze();
+export async function blockingViolations(page: Page) {
+  const results = await new AxeBuilder({ page }).analyze();
   return results.violations
     .filter((violation) => BLOCKING.has(violation.impact ?? ""))
     .map((violation) => ({
@@ -124,6 +132,25 @@ export async function blockingViolations(
  * local 3:4 still, so screenshots are stable and the suite runs offline.
  */
 const STILL = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="640" viewBox="0 0 480 640"><rect width="480" height="640" fill="#9aa8a0"/><circle cx="240" cy="250" r="90" fill="#c9d2cc"/><rect x="120" y="380" width="240" height="200" rx="60" fill="#c9d2cc"/></svg>`;
+
+/** An empty, valid HLS playlist (no segments), so no player error opens. */
+const EMPTY_HLS =
+  "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:1\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-ENDLIST\n";
+
+/**
+ * Mux streams are not reachable offline: every playlist is answered with
+ * an empty valid one (the player shows its poster, no error dialog), and
+ * Mux Data beacons are refused.
+ */
+export async function stubMuxStream(page: Page): Promise<void> {
+  await page.route("https://stream.mux.com/**", (route) =>
+    route.fulfill({
+      body: EMPTY_HLS,
+      contentType: "application/vnd.apple.mpegurl",
+    })
+  );
+  await page.route("https://*.litix.io/**", (route) => route.abort());
+}
 
 export async function stubMux(page: Page): Promise<void> {
   await page.route("https://image.mux.com/**", (route) =>

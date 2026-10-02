@@ -32,6 +32,7 @@ import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as DevE2eSeedRouteImport } from './routes/dev/e2e-seed'
 import { Route as DevMailRouteImport } from './routes/dev/mail'
 import { Route as DevMailDotjsonRouteImport } from './routes/dev/mail[.]json'
 import { Route as DevUiRouteImport } from './routes/dev/ui'
@@ -163,6 +164,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevE2eSeedRoute = DevE2eSeedRouteImport.update({
+  id: '/dev/e2e-seed',
+  path: '/dev/e2e-seed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevMailRoute = DevMailRouteImport.update({
   id: '/dev/mail',
   path: '/dev/mail',
@@ -262,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
@@ -301,6 +308,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
@@ -342,6 +350,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
@@ -384,6 +393,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/analytics'
     | '/api/health'
+    | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
@@ -423,6 +433,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/analytics'
     | '/api/health'
+    | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/analytics'
     | '/api/health'
+    | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
@@ -499,6 +511,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  DevE2eSeedRoute: typeof DevE2eSeedRoute
   DevMailRoute: typeof DevMailRoute
   DevMailDotjsonRoute: typeof DevMailDotjsonRoute
   DevUiRoute: typeof DevUiRoute
@@ -676,6 +689,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/e2e-seed': {
+      id: '/dev/e2e-seed'
+      path: '/dev/e2e-seed'
+      fullPath: '/dev/e2e-seed'
+      preLoaderRoute: typeof DevE2eSeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dev/mail': {
       id: '/dev/mail'
       path: '/dev/mail'
@@ -828,6 +848,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   ApiHealthRoute: ApiHealthRoute,
+  DevE2eSeedRoute: DevE2eSeedRoute,
   DevMailRoute: DevMailRoute,
   DevMailDotjsonRoute: DevMailDotjsonRoute,
   DevUiRoute: DevUiRoute,

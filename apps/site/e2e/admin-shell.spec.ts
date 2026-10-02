@@ -1,10 +1,16 @@
-import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { chromium, expect, type Page, test } from "@playwright/test";
+import {
+  type APIRequestContext,
+  chromium,
+  expect,
+  type Page,
+  request as playwrightRequest,
+  test,
+} from "@playwright/test";
 import {
   blockingViolations,
+  e2eSeed,
   ORIGIN,
   signInWithApi,
   stubMux,
@@ -17,31 +23,16 @@ const ADMIN = { email: "admin@smog.test", password: "smog-dev-admin" };
 const SIGN_IN_BACK_TO_AUDIT = /\/sign-in\?redirect=%2Fadmin%2Faudit$/;
 const FROM_IN_URL = /from=2026-01-01/;
 
-const SITE_DIR = fileURLToPath(new URL("..", import.meta.url));
 /** As playwright.config.ts: the preinstalled Chromium, launched by path. */
 const PREINSTALLED_CHROMIUM = "/opt/pw-browsers/chromium";
 
-/** Runs SQL on the dev server's local D1 (as `admin:grant` does). */
-function d1(command: string): void {
-  execFileSync(
-    "bunx",
-    [
-      "wrangler",
-      "d1",
-      "execute",
-      "DB",
-      "--env",
-      "dev",
-      "--local",
-      "--command",
-      command,
-    ],
-    { cwd: SITE_DIR, stdio: "ignore" }
-  );
-}
-
-function setRole(email: string, role: "admin" | "user"): void {
-  d1(`UPDATE user SET role = '${role}' WHERE email = '${email}'`);
+/** Sets a role through the dev Worker's seed endpoint (as `admin:grant`). */
+async function setRole(
+  request: APIRequestContext,
+  email: string,
+  role: "admin" | "user"
+): Promise<void> {
+  await e2eSeed(request, [{ email, op: "setRole", role }]);
 }
 
 const LONG_TARGET = `gesture-${"x".repeat(60)}`;
@@ -50,16 +41,24 @@ const LONG_TARGET = `gesture-${"x".repeat(60)}`;
  * An audit entry with a long target id and a long payload (no admin
  * mutation exists yet in Task 1), by a deleted actor, dated now.
  */
-function seedAuditEntry(): void {
-  const data = JSON.stringify({
-    legacy: {
-      keywords: Array.from({ length: 40 }, (_, index) => `trefwoord-${index}`),
-      note: "Een lange oude logregel ".repeat(12),
+async function seedAuditEntry(request: APIRequestContext): Promise<void> {
+  await e2eSeed(request, [
+    {
+      data: {
+        legacy: {
+          keywords: Array.from(
+            { length: 40 },
+            (_, index) => `trefwoord-${index}`
+          ),
+          note: "Een lange oude logregel ".repeat(12),
+        },
+      },
+      id: "e2e-long",
+      op: "legacyAuditEntry",
+      targetId: LONG_TARGET,
+      targetType: "gesture",
     },
-  });
-  d1(
-    `INSERT OR REPLACE INTO audit_log (id, actor_id, action, target_type, target_id, data, created_at) VALUES ('e2e-long', NULL, 'legacy', 'gesture', '${LONG_TARGET}', '${data}', CAST(unixepoch('subsec') * 1000 AS INTEGER))`
-  );
+  ]);
 }
 
 /** Client-side navigation (no document request), as a link click does. */
@@ -125,12 +124,12 @@ test.describe("admin shell", () => {
     page,
   }) => {
     const email = await signInWithApi(page);
-    setRole(email, "admin");
+    await setRole(page.request, email, "admin");
     await page.goto("/admin");
     await waitForApp(page);
     const rail = page.getByRole("navigation", { name: "Beheer" });
     await expect(rail).toBeVisible();
-    setRole(email, "user");
+    await setRole(page.request, email, "user");
     await rail.getByRole("link", { name: "Logboek" }).click();
     await expect(
       page.getByRole("heading", { name: "Pagina niet gevonden" })
@@ -164,7 +163,7 @@ test.describe("admin shell", () => {
     );
     expect(await blockingViolations(page)).toEqual([]);
 
-    seedAuditEntry();
+    await seedAuditEntry(page.request);
     await rail.getByRole("link", { name: "Logboek" }).click();
     await expect(page).toHaveURL(`${ORIGIN}/admin/audit`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Logboek");
@@ -227,7 +226,9 @@ test.describe("admin shell screenshots", () => {
         ? { executablePath: PREINSTALLED_CHROMIUM }
         : {}),
     });
-    seedAuditEntry();
+    const seeding = await playwrightRequest.newContext({ baseURL: ORIGIN });
+    await seedAuditEntry(seeding);
+    await seeding.dispose();
     for (const theme of ["light", "dark"] as const) {
       for (const width of [390, 1280]) {
         // biome-ignore lint/performance/noAwaitInLoops: one browser context at a time.

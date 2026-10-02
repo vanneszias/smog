@@ -8,7 +8,13 @@ import {
   type Page,
   test,
 } from "@playwright/test";
-import { blockingViolations, ORIGIN, stubMux, waitForApp } from "./helpers";
+import {
+  blockingViolations,
+  ORIGIN,
+  stubMux,
+  stubMuxStream,
+  waitForApp,
+} from "./helpers";
 
 /*
  * The gesture editor's VideoField against the Mux fake (playwright.config.ts starts
@@ -26,8 +32,6 @@ const GESTURE_EDITOR_URL = /\/admin\/gestures\/(?!new$)[A-Za-z0-9_-]+$/;
 const MUX_FAKE_URL = `http://localhost:${process.env.E2E_MUX_PORT ?? 4010}`;
 const SAMPLE_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
 const PREINSTALLED_CHROMIUM = "/opt/pw-browsers/chromium";
-/** The video player is third party; its error dialog opens because HLS is refused. */
-const PLAYER = { exclude: ["mux-player"] };
 const VIDEO = {
   buffer: Buffer.from("not really a video, the fake does not care"),
   mimeType: "video/mp4",
@@ -55,8 +59,7 @@ async function signInAsAdmin(page: Page): Promise<void> {
 /** Mux stills and HLS are not reachable offline: stills are stubbed, streams refused. */
 async function stubMuxMedia(page: Page): Promise<void> {
   await stubMux(page);
-  await page.route("https://stream.mux.com/**", (route) => route.abort());
-  await page.route("https://*.litix.io/**", (route) => route.abort());
+  await stubMuxStream(page);
 }
 
 async function seedFakeAssets(count: number): Promise<void> {
@@ -96,7 +99,7 @@ test.describe("admin video field", () => {
     });
     await openEditor(page);
     await expect(page.getByText("Sleep een video hierheen")).toBeVisible();
-    expect(await blockingViolations(page, PLAYER)).toEqual([]);
+    expect(await blockingViolations(page)).toEqual([]);
 
     await page.getByTestId("mux-file-input").setInputFiles(VIDEO);
     await expect(page.getByTestId("mux-upload-progress")).toHaveText(
@@ -114,7 +117,7 @@ test.describe("admin video field", () => {
     await expect(
       page.getByText(`Playback-id: ${SAMPLE_PLAYBACK_ID}`)
     ).toBeVisible();
-    expect(await blockingViolations(page, PLAYER)).toEqual([]);
+    expect(await blockingViolations(page)).toEqual([]);
 
     // Saved as a hidden gesture, it keeps the uploaded asset's id.
     const name = `Zzupload ${Date.now()}`;
@@ -145,7 +148,7 @@ test.describe("admin video field", () => {
     await seedFakeAssets(2);
     await page.getByRole("tab", { name: "Bestaande kiezen" }).click();
     await expect(page.getByTestId("mux-asset").first()).toBeVisible();
-    expect(await blockingViolations(page, PLAYER)).toEqual([]);
+    expect(await blockingViolations(page)).toEqual([]);
     await page.getByRole("button", { name: "Kiezen" }).first().click();
     await expect(page.getByRole("button", { name: "Gekozen" })).toBeVisible();
 
@@ -179,7 +182,7 @@ test.describe("admin video field", () => {
     await expect(
       page.getByRole("textbox", { name: "Playback-id" })
     ).toBeVisible();
-    expect(await blockingViolations(page, PLAYER)).toEqual([]);
+    expect(await blockingViolations(page)).toEqual([]);
   });
 });
 

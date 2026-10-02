@@ -26,7 +26,12 @@
     ]
   },
   "javascript": {
-    "globals": ["__DEV__", "__SMOG_DEV_TOOLS__", "__SMOG_THEME_SCRIPT_HASH__"]
+    "globals": [
+      "__DEV__",
+      "__SMOG_DEV_TOOLS__",
+      "__SMOG_E2E_SEED__",
+      "__SMOG_THEME_SCRIPT_HASH__"
+    ]
   },
   "overrides": [
     {
