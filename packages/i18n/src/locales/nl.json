@@ -826,7 +826,69 @@
       "title": "Categorieën"
     },
     "mux": {
-      "title": "Video"
+      "title": "Video",
+      "label": "Video",
+      "none": "Nog geen video gekozen.",
+      "current": "Gekozen video",
+      "playbackIdValue": "Playback-id: {{id}}",
+      "notConfigured": {
+        "title": "Video-uploads zijn niet ingesteld",
+        "description": "Mux is op deze omgeving niet geconfigureerd. Plak de playback-id van een bestaande Mux-video."
+      },
+      "tabs": {
+        "upload": "Uploaden",
+        "choose": "Bestaande kiezen",
+        "playbackId": "Playback-id"
+      },
+      "upload": {
+        "drop": "Sleep een video hierheen",
+        "or": "of",
+        "browse": "Kies een bestand",
+        "hint": "Het bestand gaat rechtstreeks naar Mux, niet via onze server.",
+        "notVideo": "Kies een videobestand.",
+        "creating": "Upload voorbereiden…",
+        "progressLabel": "Uploaden naar Mux",
+        "uploading": "{{name}} uploaden… {{percent}}%",
+        "processing": "Mux verwerkt de video…",
+        "processingHint": "Dit duurt meestal minder dan een minuut. Je mag dit venster open laten.",
+        "ready": "De video is klaar.",
+        "another": "Andere video uploaden",
+        "retry": "Opnieuw proberen",
+        "cancel": "Annuleren",
+        "failed": {
+          "create": "De upload kon niet starten. Probeer het opnieuw.",
+          "transfer": "Het bestand kon niet naar Mux gestuurd worden.",
+          "processing": "Mux kon deze video niet verwerken. Probeer een ander bestand.",
+          "cancelled": "De upload is verlopen of geannuleerd.",
+          "slow": "Mux is na 10 minuten nog bezig. Controleer later opnieuw."
+        },
+        "checkAgain": "Opnieuw controleren"
+      },
+      "picker": {
+        "loading": "Video's laden",
+        "empty": "Nog geen video's in Mux",
+        "emptyDescription": "Upload een video in het tabblad Uploaden.",
+        "error": "De video's konden niet geladen worden.",
+        "choose": "Kiezen",
+        "chosen": "Gekozen",
+        "unused": "Niet gebruikt",
+        "usedBy_one": "Gebruikt door {{count}} gebaar",
+        "usedBy_other": "Gebruikt door {{count}} gebaren",
+        "usedByNames": "Gebruikt door: {{names}}",
+        "thumbnail": "Video van {{date}}",
+        "duration": "{{seconds}} s",
+        "status": {
+          "preparing": "Wordt verwerkt",
+          "ready": "Klaar",
+          "errored": "Mislukt"
+        }
+      },
+      "playback": {
+        "label": "Playback-id",
+        "hint": "Een publieke playback-id uit het Mux-dashboard.",
+        "invalid": "Een playback-id bestaat uit letters, cijfers, _ en -.",
+        "use": "Deze video gebruiken"
+      }
     },
     "users": {
       "title": "Gebruikers"

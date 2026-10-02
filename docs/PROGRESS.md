@@ -42,6 +42,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - Carry into phase 8: a CSP `report-to`/`report-uri` endpoint before launch. Staging sends the CSP `Report-Only` with nowhere to report (phase 4 task 6), so it only shows in each browser's console. Add a small same-origin endpoint, rate-limited, that logs (or relays to OpenPanel), or run the csp e2e against staging.
 - Carry into phase 8 (staging smoke): a stale admin save returns `CONFLICT` (`stale`), not `INTERNAL`. The catalogue's in-batch guards are recognised by the guard name in SQLite's "bad JSON path" error text, which is verified only in workerd (phase 5 task 2, DECISIONS).
 - Carry into phase 8: required secrets and vars checked before deploy, including production `TURNSTILE_SITE_KEY` (var) and `TURNSTILE_SECRET_KEY` (secret); `SITE_URL` per env must be the origin browsers use (the rpc origin check and Better Auth compare against it).
+- Carry into phase 8: the Mux secrets join the required list for production (`MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET`; `wrangler secret put --env production`), and the Mux dashboard webhook points at `<SITE_URL>/api/webhooks/mux` with that signing secret. Staging has none yet: the admin then offers only a pasted playback id (phase 5 task 3).
 
 ## Known gaps
 

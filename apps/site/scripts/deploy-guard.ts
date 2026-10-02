@@ -103,6 +103,35 @@ export function checkServerHasNoVideoPlayer(files: readonly BuiltFile[]): void {
   }
 }
 
+/**
+ * What must never reach the browser bundle (`dist/client`): the Mux
+ * credential names (their values live only in the Worker's env) and the
+ * Mux Node SDK (`@smog/video` is a thin fetch client, Worker only).
+ */
+export const CLIENT_SECRET_MARKERS = [
+  "MUX_TOKEN",
+  "MUX_WEBHOOK_SECRET",
+  "@mux/mux-node",
+] as const;
+
+const CLIENT_DIR = join("dist", "client");
+
+/** The browser build (`dist/client`) must not name a Mux secret or carry the SDK. */
+export function checkClientHasNoMuxSecrets(files: readonly BuiltFile[]): void {
+  const found = files
+    .filter(
+      (file) =>
+        file.path.includes(CLIENT_DIR) &&
+        CLIENT_SECRET_MARKERS.some((marker) => file.content.includes(marker))
+    )
+    .map((file) => file.path);
+  if (found.length > 0) {
+    throw new Error(
+      `[deploy-guard] the browser build names a Mux secret or bundles the Mux SDK: ${found.join(", ")}. Mux calls belong in the Worker (@smog/video).`
+    );
+  }
+}
+
 const DIST_DIR = fileURLToPath(new URL("../dist", import.meta.url));
 
 function readBuiltFiles(dir: string): BuiltFile[] {
@@ -123,7 +152,19 @@ function readBuiltConfig(path: string): unknown {
   }
 }
 
-if (import.meta.main) {
+if (import.meta.main && process.argv.includes("--bundle")) {
+  // After every `vite build` (the site's `build` script, so CI runs it):
+  // the checks that hold for any environment.
+  try {
+    const files = readBuiltFiles(DIST_DIR);
+    checkServerHasNoVideoPlayer(files);
+    checkClientHasNoMuxSecrets(files);
+    console.log("deploy-guard: bundle ok");
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+} else if (import.meta.main) {
   try {
     const env = checkDeployTarget(
       process.env.CLOUDFLARE_ENV,
@@ -132,6 +173,7 @@ if (import.meta.main) {
     const files = readBuiltFiles(DIST_DIR);
     checkDevTools(env, files);
     checkServerHasNoVideoPlayer(files);
+    checkClientHasNoMuxSecrets(files);
     console.log(`deploy-guard: ok (${env})`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

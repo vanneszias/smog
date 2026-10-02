@@ -3,7 +3,7 @@ import handler from "@tanstack/react-start/server-entry";
 import { legacyRedirect } from "@/lib/legacy-redirects";
 import { handleAuthRequest } from "@/server/auth-handler";
 import { loadCategorySlugs } from "@/server/legacy-categories";
-import { respondSecurely } from "@/worker/headers";
+import { devConnectSources, respondSecurely } from "@/worker/headers";
 import {
   BYPASS_PATH,
   handleBypass,
@@ -41,10 +41,13 @@ async function route(request: Request, nonce: string): Promise<Response> {
 export default {
   fetch(request: Request, env: Env): Promise<Response> {
     // Read raw so a broken env still gets a headed 500 (dev: no HSTS).
-    const environment = ENVIRONMENTS.find((name) => name === env.ENVIRONMENT);
-    return respondSecurely(environment ?? "production", (nonce) =>
-      route(request, nonce)
-    );
+    const environment =
+      ENVIRONMENTS.find((name) => name === env.ENVIRONMENT) ?? "production";
+    // The e2e's Mux fake (dev only); `MUX_API_URL` is not in wrangler.jsonc.
+    const muxApiUrl = (env as { MUX_API_URL?: unknown }).MUX_API_URL;
+    return respondSecurely(environment, (nonce) => route(request, nonce), {
+      connectSrc: devConnectSources(environment, muxApiUrl),
+    });
   },
 
   queue(batch: MessageBatch): void {

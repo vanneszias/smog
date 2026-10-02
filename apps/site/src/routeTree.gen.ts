@@ -40,12 +40,14 @@ import { Route as GesturesSlugRouteImport } from './routes/gestures/$slug'
 import { Route as ListsIndexRouteImport } from './routes/lists/index'
 import { Route as ListsShareTokenRouteImport } from './routes/lists/$shareToken'
 import { Route as MagicLinkAppRouteImport } from './routes/magic-link_.app'
+import { Route as AdminDevVideoFieldRouteImport } from './routes/admin/dev/video-field'
 import { Route as AdminGesturesIndexRouteImport } from './routes/admin/gestures/index'
 import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id'
 import { Route as AdminGesturesNewRouteImport } from './routes/admin/gestures/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
+import { Route as ApiWebhooksMuxRouteImport } from './routes/api/webhooks/mux'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -202,6 +204,11 @@ const MagicLinkAppRoute = MagicLinkAppRouteImport.update({
   path: '/magic-link/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDevVideoFieldRoute = AdminDevVideoFieldRouteImport.update({
+  id: '/dev/video-field',
+  path: '/dev/video-field',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminGesturesIndexRoute = AdminGesturesIndexRouteImport.update({
   id: '/gestures/',
   path: '/gestures/',
@@ -230,6 +237,11 @@ const ApiOpenapiSplatRoute = ApiOpenapiSplatRouteImport.update({
 const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   id: '/api/rpc/$',
   path: '/api/rpc/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhooksMuxRoute = ApiWebhooksMuxRouteImport.update({
+  id: '/api/webhooks/mux',
+  path: '/api/webhooks/mux',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -265,11 +277,13 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
+  '/admin/dev/video-field': typeof AdminDevVideoFieldRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -303,11 +317,13 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/gestures': typeof GesturesIndexRoute
   '/lists': typeof ListsIndexRoute
+  '/admin/dev/video-field': typeof AdminDevVideoFieldRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures': typeof AdminGesturesIndexRoute
 }
 export interface FileRoutesById {
@@ -343,11 +359,13 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
+  '/admin/dev/video-field': typeof AdminDevVideoFieldRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
 }
 export interface FileRouteTypes {
@@ -384,11 +402,13 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/gestures/'
     | '/lists/'
+    | '/admin/dev/video-field'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/webhooks/mux'
     | '/admin/gestures/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -422,11 +442,13 @@ export interface FileRouteTypes {
     | '/admin'
     | '/gestures'
     | '/lists'
+    | '/admin/dev/video-field'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/webhooks/mux'
     | '/admin/gestures'
   id:
     | '__root__'
@@ -461,11 +483,13 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/gestures/'
     | '/lists/'
+    | '/admin/dev/video-field'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/webhooks/mux'
     | '/admin/gestures/'
   fileRoutesById: FileRoutesById
 }
@@ -498,6 +522,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
+  ApiWebhooksMuxRoute: typeof ApiWebhooksMuxRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -719,6 +744,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MagicLinkAppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/dev/video-field': {
+      id: '/admin/dev/video-field'
+      path: '/dev/video-field'
+      fullPath: '/admin/dev/video-field'
+      preLoaderRoute: typeof AdminDevVideoFieldRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/gestures/': {
       id: '/admin/gestures/'
       path: '/gestures'
@@ -761,6 +793,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/mux': {
+      id: '/api/webhooks/mux'
+      path: '/api/webhooks/mux'
+      fullPath: '/api/webhooks/mux'
+      preLoaderRoute: typeof ApiWebhooksMuxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -771,6 +810,7 @@ interface AdminRouteChildren {
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminDevVideoFieldRoute: typeof AdminDevVideoFieldRoute
   AdminGesturesIdRoute: typeof AdminGesturesIdRoute
   AdminGesturesNewRoute: typeof AdminGesturesNewRoute
   AdminGesturesIndexRoute: typeof AdminGesturesIndexRoute
@@ -783,6 +823,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSettingsRoute: AdminSettingsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminDevVideoFieldRoute: AdminDevVideoFieldRoute,
   AdminGesturesIdRoute: AdminGesturesIdRoute,
   AdminGesturesNewRoute: AdminGesturesNewRoute,
   AdminGesturesIndexRoute: AdminGesturesIndexRoute,
@@ -819,6 +860,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
+  ApiWebhooksMuxRoute: ApiWebhooksMuxRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

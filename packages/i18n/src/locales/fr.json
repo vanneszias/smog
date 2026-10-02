@@ -838,7 +838,70 @@
       "title": "Catégories"
     },
     "mux": {
-      "title": "Vidéo"
+      "title": "Vidéo",
+      "label": "Vidéo",
+      "none": "Aucune vidéo choisie.",
+      "current": "Vidéo choisie",
+      "playbackIdValue": "ID de lecture\u00a0: {{id}}",
+      "notConfigured": {
+        "title": "L’envoi de vidéos n’est pas configuré",
+        "description": "Mux n’est pas configuré sur cet environnement. Collez l’ID de lecture d’une vidéo Mux existante."
+      },
+      "tabs": {
+        "upload": "Envoyer",
+        "choose": "Choisir une existante",
+        "playbackId": "ID de lecture"
+      },
+      "upload": {
+        "drop": "Glissez une vidéo ici",
+        "or": "ou",
+        "browse": "Choisir un fichier",
+        "hint": "Le fichier part directement chez Mux, sans passer par notre serveur.",
+        "notVideo": "Choisissez un fichier vidéo.",
+        "creating": "Préparation de l’envoi…",
+        "progressLabel": "Envoi vers Mux",
+        "uploading": "Envoi de {{name}}… {{percent}}\u00a0%",
+        "processing": "Mux traite la vidéo…",
+        "processingHint": "Cela prend généralement moins d’une minute. Vous pouvez laisser cette fenêtre ouverte.",
+        "ready": "La vidéo est prête.",
+        "another": "Envoyer une autre vidéo",
+        "retry": "Réessayer",
+        "cancel": "Annuler",
+        "failed": {
+          "create": "L’envoi n’a pas pu démarrer. Réessayez.",
+          "transfer": "Le fichier n’a pas pu être envoyé à Mux.",
+          "processing": "Mux n’a pas pu traiter cette vidéo. Essayez un autre fichier.",
+          "cancelled": "L’envoi a expiré ou a été annulé.",
+          "slow": "Mux travaille encore après 10 minutes. Vérifiez plus tard."
+        },
+        "checkAgain": "Vérifier à nouveau"
+      },
+      "picker": {
+        "loading": "Chargement des vidéos",
+        "empty": "Aucune vidéo dans Mux",
+        "emptyDescription": "Envoyez une vidéo dans l’onglet Envoyer.",
+        "error": "Les vidéos n’ont pas pu être chargées.",
+        "choose": "Choisir",
+        "chosen": "Choisie",
+        "unused": "Non utilisée",
+        "usedBy_one": "Utilisée par {{count}} geste",
+        "usedBy_many": "Utilisée par {{count}} gestes",
+        "usedBy_other": "Utilisée par {{count}} gestes",
+        "usedByNames": "Utilisée par\u00a0: {{names}}",
+        "thumbnail": "Vidéo du {{date}}",
+        "duration": "{{seconds}} s",
+        "status": {
+          "preparing": "En traitement",
+          "ready": "Prête",
+          "errored": "Échec"
+        }
+      },
+      "playback": {
+        "label": "ID de lecture",
+        "hint": "Un ID de lecture public du tableau de bord Mux.",
+        "invalid": "Un ID de lecture contient des lettres, des chiffres, _ et -.",
+        "use": "Utiliser cette vidéo"
+      }
     },
     "users": {
       "title": "Utilisateurs"

@@ -35,8 +35,18 @@ OPENPANEL_CLIENT_SECRET=
 # Dev sign-in: the seeded admin `admin@smog.test` has the DEV-ONLY password
 # `smog-dev-admin` (packages/db/seed/dev.sql). Emails (verification links,
 # codes, magic links) are not sent in dev: read them at /dev/mail.
-#
-# Later phases add, for example:
-# MOLLIE_API_KEY=
+
+# Optional. Mux Video (admin video uploads and the asset picker). Without
+# both token values the admin offers only a pasted playback id, and
+# /api/webhooks/mux answers 503 without the webhook signing secret.
+# Staging/production: `wrangler secret put MUX_TOKEN_ID --env <env>` (and
+# the others); production needs them before launch (phase 8). They stay
+# commented out here on purpose: the e2e points the dev server at the Mux
+# fake through vite.config.ts, and an empty value here would override it.
+# MUX_API_URL (default https://api.mux.com) is a var, not a secret.
 # MUX_TOKEN_ID=
 # MUX_TOKEN_SECRET=
+# MUX_WEBHOOK_SECRET=
+#
+# Phase 6 adds, for example:
+# MOLLIE_API_KEY=

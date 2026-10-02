@@ -14,8 +14,12 @@
   // Secrets for `env.dev` go in `.dev.vars` (see `.dev.vars.example`).
   // SITE_URL for staging/production is a placeholder until the workers.dev
   // subdomain (or a custom domain) is known. KV and D1 ids are placeholders too.
-  // Secrets (BETTER_AUTH_SECRET, optional OAuth/Turnstile/OpenPanel keys) are set with
-  // `wrangler secret put --env <env>`; see `.dev.vars.example`.
+  // Secrets (BETTER_AUTH_SECRET, optional OAuth/Turnstile/OpenPanel keys, and
+  // MUX_TOKEN_ID / MUX_TOKEN_SECRET / MUX_WEBHOOK_SECRET for admin video
+  // uploads) are set with `wrangler secret put --env <env>`; see
+  // `.dev.vars.example`. Without the Mux ones the admin offers only a pasted
+  // playback id. MUX_API_URL (a var) defaults to https://api.mux.com; only
+  // the e2e changes it (the Mux fake, vite.config.ts).
   // Rate limits (Workers Rate Limiting, `ratelimits`): one namespace id per
   // binding and env. The binding only supports 10 s or 60 s periods, so the
   // old 20/3600 s (sponsor) and 30/900 s (auth) limits become 5/60 s in

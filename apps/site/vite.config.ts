@@ -23,6 +23,26 @@ const devSiteUrl =
     ? process.env.SMOG_DEV_SITE_URL
     : undefined;
 
+/**
+ * The Mux fake for the e2e (`@smog/video/testing/server`, started by
+ * playwright.config.ts): its URL, token and webhook secret, as dev vars.
+ * Dev only; a value in `.dev.vars` still wins over them.
+ */
+const devMuxVars: Record<string, string> =
+  process.env.CLOUDFLARE_ENV === "dev" && process.env.SMOG_DEV_MUX_API_URL
+    ? {
+        MUX_API_URL: process.env.SMOG_DEV_MUX_API_URL,
+        MUX_TOKEN_ID: process.env.SMOG_DEV_MUX_TOKEN_ID ?? "",
+        MUX_TOKEN_SECRET: process.env.SMOG_DEV_MUX_TOKEN_SECRET ?? "",
+        MUX_WEBHOOK_SECRET: process.env.SMOG_DEV_MUX_WEBHOOK_SECRET ?? "",
+      }
+    : {};
+
+const devVars: Record<string, string> = {
+  ...(devSiteUrl ? { SITE_URL: devSiteUrl } : {}),
+  ...devMuxVars,
+};
+
 export default defineConfig({
   // `/dev/*` pages are compiled out of production builds (spec §9: dev and
   // staging only); see src/routes/dev/ui.tsx and scripts/deploy-guard.ts.
@@ -35,10 +55,10 @@ export default defineConfig({
   plugins: [
     cloudflare({
       viteEnvironment: { name: "ssr" },
-      ...(devSiteUrl
+      ...(Object.keys(devVars).length > 0
         ? {
             config: (worker) => ({
-              vars: { ...worker.vars, SITE_URL: devSiteUrl },
+              vars: { ...worker.vars, ...devVars },
             }),
           }
         : {}),

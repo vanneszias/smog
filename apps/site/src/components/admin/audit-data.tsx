@@ -3,13 +3,23 @@ import type {
   AuditEntry,
   AuditTargetType,
 } from "@smog/admin/schema";
-import { DEFAULT_LOCALE, formatDate, isLocale } from "@smog/i18n";
+import {
+  type createI18n,
+  DEFAULT_LOCALE,
+  formatDate,
+  isLocale,
+} from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import { Badge, Text, TextLink } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useCallback } from "react";
 
-type Translate = ReturnType<typeof useTranslation>["t"];
+/*
+ * `createI18n`'s `t` (the same function `useTranslation` returns): typed
+ * from `useTranslation`, a call with a `string` result made TS instantiate
+ * i18next's key types too deeply (TS2589) once the catalogue grew.
+ */
+type Translate = ReturnType<typeof createI18n>["t"];
 
 /*
  * The label keys are built from the enums (`admin.audit.actions.gesture.create`).

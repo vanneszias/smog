@@ -154,3 +154,40 @@ describe("publicAuthConfig", () => {
     ).toBeUndefined();
   });
 });
+
+describe("the Mux settings", () => {
+  const base = {
+    BETTER_AUTH_SECRET: "x".repeat(32),
+    EMAIL_FROM: "SMOG <no-reply@example.com>",
+    EMAIL_REPLY_TO: "info@smog.vlaanderen",
+    ENVIRONMENT: "staging",
+    SITE_URL: "https://smog.test",
+    TURNSTILE_SECRET_KEY: "turnstile",
+  };
+
+  test("are optional everywhere (staging runs without Mux)", () => {
+    const env = parseWorkerEnv({
+      ...base,
+      MUX_TOKEN_ID: "",
+      MUX_TOKEN_SECRET: "",
+      MUX_WEBHOOK_SECRET: "",
+    });
+    expect(env.MUX_TOKEN_ID).toBeUndefined();
+    expect(env.MUX_TOKEN_SECRET).toBeUndefined();
+    expect(env.MUX_WEBHOOK_SECRET).toBeUndefined();
+    expect(env.MUX_API_URL).toBe("https://api.mux.com");
+  });
+
+  test("MUX_API_URL can point at the fake", () => {
+    const env = parseWorkerEnv({
+      ...base,
+      MUX_API_URL: "http://localhost:4010",
+      MUX_TOKEN_ID: "id",
+      MUX_TOKEN_SECRET: "secret",
+      MUX_WEBHOOK_SECRET: "whsec",
+    });
+    expect(env.MUX_API_URL).toBe("http://localhost:4010");
+    expect(env.MUX_TOKEN_ID).toBe("id");
+    expect(env.MUX_WEBHOOK_SECRET).toBe("whsec");
+  });
+});

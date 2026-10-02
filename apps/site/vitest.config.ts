@@ -5,6 +5,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vitest/config";
 import { unstable_readConfig } from "wrangler";
 import { THEME_SCRIPT_HASH_DEFINE } from "./build-defines";
+import { MUX_WEBHOOK_TEST_SECRET } from "./test/mux-secret";
 
 const SRC = fileURLToPath(new URL("./src", import.meta.url));
 const MIGRATIONS_DIR = fileURLToPath(
@@ -17,8 +18,8 @@ const MIGRATIONS_DIR = fileURLToPath(
  * (or `.env*`, and with CLOUDFLARE_INCLUDE_PROCESS_ENV the process env)
  * over `env.dev.vars`; only keys set in `miniflare.bindings` win over those.
  * So every var comes from `wrangler.jsonc` `env.dev.vars` and every secret
- * is off (`""`, `optionalValue`) unless set here. `test/env-isolation.test.ts`
- * checks it.
+ * is off (`""`, `optionalValue`) unless set here (the auth secret and the
+ * Mux webhook signing secret). `test/env-isolation.test.ts` checks it.
  */
 process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = "false";
 Reflect.deleteProperty(process.env, "CLOUDFLARE_INCLUDE_PROCESS_ENV");
@@ -46,6 +47,7 @@ export default defineConfig(async () => ({
           ...DEV_VARS,
           ...SECRETS_OFF,
           BETTER_AUTH_SECRET: "site-test-secret-at-least-32-characters",
+          MUX_WEBHOOK_SECRET: MUX_WEBHOOK_TEST_SECRET,
           TEST_MIGRATIONS: await readD1Migrations(MIGRATIONS_DIR),
         },
         // `env.dev` allows 1000/60 s so local use never locks out; the tests
