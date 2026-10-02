@@ -127,7 +127,7 @@ export function BulkBar({
   return (
     <section
       aria-label={t("admin.gestures.bulk.label")}
-      className="sticky top-0 z-20 flex flex-wrap items-center gap-2 rounded-lg border border-primary bg-primary-subtle p-2"
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-primary bg-primary-subtle p-2"
     >
       <Text className="px-2 tabular-nums" size="body-sm" weight="medium">
         {t("admin.gestures.bulk.selected", { count: selected.length })}

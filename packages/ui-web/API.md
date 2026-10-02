@@ -94,7 +94,7 @@ Native mapping: `onClick` → `onPress`, `className` → NativeWind `className`,
 | Component | Props | Notes |
 |---|---|---|
 | `Table` (`containerClassName`), `TableHeader` (`sticky`), `TableBody`, `TableRow`, `TableHead`, `TableCell`, `TableCaption` | HTML table props | Admin only; dense rows are allowed here. |
-| `DataTable<Row>` | `columns: { id, header, cell(row), sortValue?(row), align? ("start" · "end") }[]`, `rows`, `getRowId(row)`, `sort` / `defaultSort` / `onSortChange` (`{ id, direction: "asc" · "desc" } \| null`), `onRowClick(row)`, `stickyHeader`, `empty` | Sort cycles none → ascending → descending; `aria-sort` on the header. Clickable rows take focus and open on Enter/Space. Controlled `sort` is for URL-synced admin filters. Native shows the same data as a list of ListItems. |
+| `DataTable<Row>` | `columns: { id, header, cell(row), sortValue?(row), align? ("start" · "end") }[]`, `rows`, `getRowId(row)`, `sort` / `defaultSort` / `onSortChange` (`{ id, direction: "asc" · "desc" } \| null`), `onRowClick(row)`, `stickyHeader`, `empty`, `selectedRowIds` (`ReadonlySet`, `data-state="selected"`), `rowProps(row)` (`{ className?, data-* }`, `RowExtraProps`) | Sort cycles none → ascending → descending; `aria-sort` on the header. Clickable rows take focus and open on Enter/Space. Controlled `sort` is for URL-synced admin filters. Native shows the same data as a list of ListItems. |
 
 ## Domain (learning)
 

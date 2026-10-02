@@ -97,8 +97,20 @@ export function watchErrors(page: Page): string[] {
   return errors;
 }
 
-export async function blockingViolations(page: Page) {
-  const results = await new AxeBuilder({ page }).analyze();
+/**
+ * Serious and critical axe violations. `exclude` skips third-party
+ * subtrees the page does not own (e.g. `mux-player`, whose shadow-DOM
+ * error dialog has no name; it only opens because the e2e refuses HLS).
+ */
+export async function blockingViolations(
+  page: Page,
+  { exclude = [] }: { exclude?: readonly string[] } = {}
+) {
+  let builder = new AxeBuilder({ page });
+  for (const selector of exclude) {
+    builder = builder.exclude(selector);
+  }
+  const results = await builder.analyze();
   return results.violations
     .filter((violation) => BLOCKING.has(violation.impact ?? ""))
     .map((violation) => ({

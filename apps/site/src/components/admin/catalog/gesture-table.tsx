@@ -263,7 +263,7 @@ export function GestureTable({
         cell: (row) => (
           <img
             alt=""
-            className="h-12 w-9 rounded-sm bg-surface-sunken object-cover"
+            className="h-12 w-9 max-w-none rounded-sm bg-surface-sunken object-cover"
             height={48}
             loading="lazy"
             src={muxThumbnailUrl(row.playbackId, { width: 72 })}

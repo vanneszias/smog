@@ -83,7 +83,7 @@ function TextCell({
         name: row.name,
       })}
       autoComplete="off"
-      className={field === "description" ? "min-w-64" : "min-w-40"}
+      className={field === "description" ? "min-w-[16rem]" : "min-w-[10rem]"}
       data-changed={changed || undefined}
       invalid={invalid}
       onChange={onChange}
@@ -137,7 +137,7 @@ function ListCell({
       <button
         aria-invalid={invalid || undefined}
         aria-label={title}
-        className="flex min-h-touch w-full min-w-40 max-w-64 items-center gap-2 rounded-md border border-border bg-surface px-3 text-left text-body-sm hover:border-foreground-muted focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2 aria-invalid:border-danger"
+        className="flex min-h-touch w-full min-w-[10rem] max-w-[16rem] items-center gap-2 rounded-md border border-border bg-surface px-3 text-left text-body-sm outline-none hover:border-foreground-muted focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background aria-invalid:border-danger"
         data-changed={changed || undefined}
         onClick={openDialog}
         type="button"
@@ -376,7 +376,7 @@ export function GestureTableEditor({
       aria-label={t("admin.gestures.table.label")}
       className="flex flex-col gap-3"
     >
-      <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface-raised p-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface-raised p-2">
         <Text className="px-2" size="body-sm" tone="muted">
           {toolbarHint}
         </Text>

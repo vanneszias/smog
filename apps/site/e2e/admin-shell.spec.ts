@@ -188,7 +188,8 @@ test.describe("admin shell", () => {
     expect(await blockingViolations(page)).toEqual([]);
 
     await rail.getByRole("link", { name: "Gebaren" }).click();
-    await expect(page.getByText("Komt in deze fase")).toBeVisible();
+    // The gestures screen (phase 5 task 4) replaced its placeholder.
+    await expect(page.getByRole("link", { name: "Hond" })).toBeVisible();
     expect(errors).toEqual([]);
   });
 

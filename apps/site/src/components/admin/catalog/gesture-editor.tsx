@@ -543,8 +543,15 @@ export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
             </Button>
           </div>
         </div>
-        <div className="flex flex-col gap-4">
-          <StatusCard draft={draft} gesture={saved} onPublished={onPublished} />
+        {/* Phones: the status first, the danger zone last; lg: a side column. */}
+        <div className="contents lg:flex lg:flex-col lg:gap-4">
+          <div className="order-first lg:order-none">
+            <StatusCard
+              draft={draft}
+              gesture={saved}
+              onPublished={onPublished}
+            />
+          </div>
           {saved ? <DangerZone gesture={saved} /> : null}
         </div>
       </form>
