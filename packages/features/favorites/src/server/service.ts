@@ -5,7 +5,7 @@
  * unpublished (the row stays, so republishing brings it back). Reads are
  * bounded and served by `favorite_user_created_idx`.
  */
-import { favorite, gesture } from "@smog/db";
+import { favorite, gesture, jsonList } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import type { GestureSummary } from "@smog/gestures/schema";
 import { decodeCursorAs, encodeCursor } from "@smog/utils";
@@ -162,7 +162,7 @@ export function insertFavoritesStmt(
   return db
     .insert(favorite)
     .select(
-      sql`SELECT ${userId}, j.value, ${last} - (${count} - 1 - j.key) FROM json_each(${JSON.stringify(gestureIds)}) AS j WHERE EXISTS (SELECT 1 FROM ${gesture} AS g WHERE g.${sql.identifier(gesture.id.name)} = j.value AND g.${sql.identifier(gesture.publishedAt.name)} IS NOT NULL)`
+      sql`SELECT ${userId}, j.value, ${last} - (${count} - 1 - j.key) FROM json_each(${jsonList(gestureIds)}) AS j WHERE EXISTS (SELECT 1 FROM ${gesture} AS g WHERE g.${sql.identifier(gesture.id.name)} = j.value AND g.${sql.identifier(gesture.publishedAt.name)} IS NOT NULL)`
     )
     .onConflictDoNothing()
     .returning({ gestureId: favorite.gestureId });

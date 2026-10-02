@@ -1,4 +1,5 @@
 import { implementRpc, requireAdmin } from "@smog/rpc";
+import type { MuxFetch } from "@smog/video";
 import { ADMIN_PROCEDURE_KINDS, adminContract } from "../contract";
 import { adminGuard } from "./guard";
 
@@ -23,4 +24,10 @@ export const adminProcedure = implementRpc(adminContract)
 export interface AdminDeps {
   /** `@smog/gestures/server`: starts a new catalogue version (Task 2). */
   bumpCatalogVersion: (kv: KVNamespace) => Promise<string>;
+  /**
+   * The `fetch` the Mux client uses (Task 3). Unset in production (the
+   * Worker's `fetch`, to `MUX_API_URL`); the tests inject the in-memory
+   * Mux fake (`@smog/video/testing`).
+   */
+  muxFetch?: MuxFetch;
 }

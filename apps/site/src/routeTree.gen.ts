@@ -32,6 +32,7 @@ import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as DevE2eSeedRouteImport } from './routes/dev/e2e-seed'
 import { Route as DevMailRouteImport } from './routes/dev/mail'
 import { Route as DevMailDotjsonRouteImport } from './routes/dev/mail[.]json'
 import { Route as DevUiRouteImport } from './routes/dev/ui'
@@ -46,6 +47,7 @@ import { Route as AdminGesturesNewRouteImport } from './routes/admin/gestures/ne
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
+import { Route as ApiWebhooksMuxRouteImport } from './routes/api/webhooks/mux'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -162,6 +164,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevE2eSeedRoute = DevE2eSeedRouteImport.update({
+  id: '/dev/e2e-seed',
+  path: '/dev/e2e-seed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevMailRoute = DevMailRouteImport.update({
   id: '/dev/mail',
   path: '/dev/mail',
@@ -232,6 +239,11 @@ const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   path: '/api/rpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhooksMuxRoute = ApiWebhooksMuxRouteImport.update({
+  id: '/api/webhooks/mux',
+  path: '/api/webhooks/mux',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -256,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
@@ -270,6 +283,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -294,6 +308,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
@@ -308,6 +323,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures': typeof AdminGesturesIndexRoute
 }
 export interface FileRoutesById {
@@ -334,6 +350,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
@@ -348,6 +365,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
 }
 export interface FileRouteTypes {
@@ -375,6 +393,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/analytics'
     | '/api/health'
+    | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
@@ -389,6 +408,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/webhooks/mux'
     | '/admin/gestures/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -413,6 +433,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/analytics'
     | '/api/health'
+    | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
@@ -427,6 +448,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/webhooks/mux'
     | '/admin/gestures'
   id:
     | '__root__'
@@ -452,6 +474,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/analytics'
     | '/api/health'
+    | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
@@ -466,6 +489,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/webhooks/mux'
     | '/admin/gestures/'
   fileRoutesById: FileRoutesById
 }
@@ -487,6 +511,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  DevE2eSeedRoute: typeof DevE2eSeedRoute
   DevMailRoute: typeof DevMailRoute
   DevMailDotjsonRoute: typeof DevMailDotjsonRoute
   DevUiRoute: typeof DevUiRoute
@@ -498,6 +523,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
+  ApiWebhooksMuxRoute: typeof ApiWebhooksMuxRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -663,6 +689,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/e2e-seed': {
+      id: '/dev/e2e-seed'
+      path: '/dev/e2e-seed'
+      fullPath: '/dev/e2e-seed'
+      preLoaderRoute: typeof DevE2eSeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dev/mail': {
       id: '/dev/mail'
       path: '/dev/mail'
@@ -761,6 +794,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/mux': {
+      id: '/api/webhooks/mux'
+      path: '/api/webhooks/mux'
+      fullPath: '/api/webhooks/mux'
+      preLoaderRoute: typeof ApiWebhooksMuxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -808,6 +848,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   ApiHealthRoute: ApiHealthRoute,
+  DevE2eSeedRoute: DevE2eSeedRoute,
   DevMailRoute: DevMailRoute,
   DevMailDotjsonRoute: DevMailDotjsonRoute,
   DevUiRoute: DevUiRoute,
@@ -819,6 +860,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
+  ApiWebhooksMuxRoute: ApiWebhooksMuxRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

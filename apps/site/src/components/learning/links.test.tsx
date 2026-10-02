@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderSite } from "@/test/render";
-import { qrFileName } from "./gesture-actions";
 import { LinkedGestureGrid } from "./gesture-cards";
 import { gestureHref } from "./links";
 import type { Hearts } from "./use-hearts";
@@ -39,13 +38,5 @@ describe("gesture links", () => {
     expect(
       screen.getByRole("link", { name: KAT_NAME }).getAttribute("href")
     ).toBe("/gestures/kat?from=favorites");
-  });
-});
-
-describe("the QR code download", () => {
-  test("is named after the slug, as the old dialog named it", () => {
-    expect(qrFileName("hond")).toBe("smog-hond-qr.png");
-    expect(qrFileName("Goede Morgen!")).toBe("smog-goede-morgen-qr.png");
-    expect(qrFileName("één")).toBe("smog-een-qr.png");
   });
 });

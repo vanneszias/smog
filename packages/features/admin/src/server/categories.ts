@@ -2,6 +2,7 @@ import {
   category,
   gesture,
   gestureCategory,
+  jsonList,
   rebuildCategoryGesturesFtsSql,
   ref,
 } from "@smog/db";
@@ -14,7 +15,6 @@ import {
   bumpCatalog,
   failWhen,
   GuardFailedError,
-  jsonList,
   nextUpdatedAt,
   runCatalogBatch,
   type Statement,

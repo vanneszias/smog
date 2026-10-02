@@ -5,9 +5,21 @@ import {
   FEATURE_PACKAGES,
   isAllowedDependency,
   isAllowedImport,
+  ROOT_PACKAGE,
 } from "./boundaries";
 
 describe("BOUNDARIES", () => {
+  test("the root package's scripts may import the config and feature schemas only", () => {
+    expect(isAllowedImport(ROOT_PACKAGE, "@smog/config/maintenance")).toBe(
+      true
+    );
+    expect(isAllowedImport(ROOT_PACKAGE, "@smog/admin/schema")).toBe(true);
+    expect(isAllowedImport(ROOT_PACKAGE, "@smog/admin/server")).toBe(false);
+    expect(isAllowedImport(ROOT_PACKAGE, "@smog/db")).toBe(false);
+    expect(isAllowedDependency(ROOT_PACKAGE, "@smog/admin")).toBe(true);
+    expect(isAllowedDependency(ROOT_PACKAGE, "@smog/site")).toBe(false);
+  });
+
   test("lists every package from the spec graph", () => {
     const expected = [
       "@smog/site",

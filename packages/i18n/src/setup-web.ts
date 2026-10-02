@@ -23,3 +23,12 @@ export function createI18n(locale: Locale): i18n {
   });
   return instance;
 }
+
+/**
+ * The `t` function, for code that passes it around (helpers, templates,
+ * label maps). Never type it from the hook
+ * (`ReturnType<typeof useTranslation>["t"]`): that makes TypeScript
+ * instantiate the whole key union and fails with TS2589 once the catalogue
+ * is large. `translate-type.test.ts` enforces it (DECISIONS, phase 5 task 3).
+ */
+export type Translate = ReturnType<typeof createI18n>["t"];

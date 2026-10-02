@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { workerSecretsSchema } from "@smog/config/env/worker";
 import { describe, expect, it } from "vitest";
+import { MUX_WEBHOOK_TEST_SECRET } from "./mux-secret";
 
 /*
  * The tests' env is the one vitest.config.ts pins: `env.dev.vars` from
@@ -17,13 +18,13 @@ describe("the test env", () => {
     expect(bindings.ENVIRONMENT).toBe("dev");
   });
 
-  it("has every secret off, except the test auth secret", () => {
+  it("has every secret off, except the test auth and Mux webhook secrets", () => {
+    const pinned: Record<string, string> = {
+      BETTER_AUTH_SECRET: "site-test-secret-at-least-32-characters",
+      MUX_WEBHOOK_SECRET: MUX_WEBHOOK_TEST_SECRET,
+    };
     for (const key of Object.keys(workerSecretsSchema.shape)) {
-      expect(bindings[key], key).toBe(
-        key === "BETTER_AUTH_SECRET"
-          ? "site-test-secret-at-least-32-characters"
-          : ""
-      );
+      expect(bindings[key], key).toBe(pinned[key] ?? "");
     }
   });
 });

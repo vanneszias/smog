@@ -18,6 +18,7 @@ import { ADMIN_PROCEDURE_KINDS, adminContract } from "../src/contract";
 import { auditDataSchema, type WritableAuditAction } from "../src/schema";
 import { createAdminRouter } from "../src/server";
 import { adminDeps } from "./deps";
+import { TEST_MUX_ENV } from "./mux-fake";
 
 const SITE_URL = "http://localhost:5173";
 const PASSWORD = "correct horse battery";
@@ -90,12 +91,14 @@ export async function signedUp(
  */
 export async function contextAs(as: Authed | null) {
   if (!as) {
-    return makeRpcContext({ db: testDb(), kv: env.KV });
+    return makeRpcContext({ db: testDb(), env: TEST_MUX_ENV, kv: env.KV });
   }
   const headers = new Headers({ cookie: as.cookie, origin: SITE_URL });
   return makeRpcContext({
     auth: as.auth,
     db: testDb(),
+    // The Mux fake (`test/mux-fake.ts`); `test/deps.ts` injects its fetch.
+    env: TEST_MUX_ENV,
     kv: env.KV,
     request: new Request(`${SITE_URL}/api/rpc/admin`, {
       headers,
@@ -105,7 +108,7 @@ export async function contextAs(as: Authed | null) {
   });
 }
 
-export const adminRouter = createAdminRouter(adminDeps);
+const adminRouter = createAdminRouter(adminDeps);
 
 /** Every procedure path of the admin contract (`"audit.list"`, …), sorted. */
 export function adminProcedurePaths(
@@ -148,9 +151,7 @@ export async function callAs<T = unknown>(
 }
 
 /** The audit actions a mutation is mapped to (throws for reads and exempt ones). */
-export function mappedActions(
-  procedure: string
-): readonly WritableAuditAction[] {
+function mappedActions(procedure: string): readonly WritableAuditAction[] {
   const kind = ADMIN_PROCEDURE_KINDS[procedure];
   if (kind && typeof kind === "object" && "audit" in kind) {
     return typeof kind.audit === "string" ? [kind.audit] : kind.audit;

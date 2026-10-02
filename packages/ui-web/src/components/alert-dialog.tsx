@@ -3,6 +3,7 @@ import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 import type { ReactNode } from "react";
 import { cn } from "../lib/cn";
 import { usePortalContainer } from "../lib/portal";
+import { useReturnFocus } from "../lib/return-focus";
 import { Button } from "./button";
 import { overlayClasses } from "./dialog";
 
@@ -49,6 +50,7 @@ export function AlertDialog({
 }: AlertDialogProps): ReactNode {
   const { t } = useTranslation();
   const container = usePortalContainer();
+  const focus = useReturnFocus({});
   return (
     <AlertDialogPrimitive.Root
       defaultOpen={defaultOpen}
@@ -69,6 +71,7 @@ export function AlertDialog({
             className
           )}
           {...(description ? {} : { "aria-describedby": undefined })}
+          {...focus}
         >
           <div className="flex flex-col gap-1">
             <AlertDialogPrimitive.Title className="font-semibold text-title-2">

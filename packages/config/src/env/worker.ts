@@ -8,6 +8,11 @@ export type Environment = (typeof ENVIRONMENTS)[number];
 /** The self-hosted OpenPanel (spec §12), for the relay and the native client. */
 export const OPENPANEL_DEFAULT_API_URL = "https://analytics.zias.be/api";
 
+/** The Mux Video API; `MUX_API_URL` points at the Mux fake in tests and e2e. */
+export const MUX_DEFAULT_API_URL = "https://api.mux.com";
+
+const TRAILING_SLASHES = /\/+$/;
+
 /** An optional value: unset and empty (`KEY=` in `.dev.vars`) both mean "off". */
 export const optionalValue = z.preprocess(
   (value) => (value === "" ? undefined : value),
@@ -19,6 +24,8 @@ export const workerVarsSchema = z.object({
   EMAIL_FROM: z.string().min(1),
   EMAIL_REPLY_TO: z.email(),
   ENVIRONMENT: z.enum(ENVIRONMENTS),
+  /** The Mux API base (`@smog/video`); only tests and e2e change it (the fake). */
+  MUX_API_URL: z.url().default(MUX_DEFAULT_API_URL),
   OPENPANEL_API_URL: z.url().default(OPENPANEL_DEFAULT_API_URL),
   RENDER_MODE: z.enum(RENDER_MODES).default("container"),
   SITE_URL: z.url(),
@@ -30,7 +37,7 @@ export type WorkerVars = z.infer<typeof workerVarsSchema>;
 
 /**
  * Secrets of the site Worker (`.dev.vars` locally, `wrangler secret put`
- * in staging/production). Later phases add Mollie and Mux.
+ * in staging/production). Phase 6 adds Mollie.
  */
 export const workerSecretsSchema = z.object({
   APPLE_APP_BUNDLE_IDENTIFIER: optionalValue,
@@ -39,6 +46,15 @@ export const workerSecretsSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: optionalValue,
   GOOGLE_CLIENT_SECRET: optionalValue,
+  /**
+   * The Mux access token (`@smog/video`). Optional: without both, admin
+   * video uploads and the asset picker are off (`INVALID_STATE`) and only a
+   * pasted playback id works. Phase 8 makes them required in production.
+   */
+  MUX_TOKEN_ID: optionalValue,
+  MUX_TOKEN_SECRET: optionalValue,
+  /** The Mux webhook signing secret; `/api/webhooks/mux` answers 503 without it. */
+  MUX_WEBHOOK_SECRET: optionalValue,
   /** The OpenPanel relay (`/api/analytics`); events are dropped without them. */
   OPENPANEL_CLIENT_ID: optionalValue,
   OPENPANEL_CLIENT_SECRET: optionalValue,
@@ -51,7 +67,8 @@ export type WorkerSecrets = z.infer<typeof workerSecretsSchema>;
  * Vars and secrets together: the `env` of the rpc context. Outside `dev`
  * `TURNSTILE_SECRET_KEY` is required, so `requireTurnstile` can never fail
  * open in staging or production (Cloudflare's always-pass test secret is
- * fine for a staging without a real widget).
+ * fine for a staging without a real widget), and `MUX_API_URL` must be the
+ * real Mux API (the Basic token goes there).
  */
 export const workerEnvSchema = workerVarsSchema
   .extend(workerSecretsSchema.shape)
@@ -62,6 +79,16 @@ export const workerEnvSchema = workerVarsSchema
       message:
         "is required outside dev (requireTurnstile fails open without it)",
       path: ["TURNSTILE_SECRET_KEY"],
+    }
+  )
+  .refine(
+    (env) =>
+      env.ENVIRONMENT === "dev" ||
+      env.MUX_API_URL.replace(TRAILING_SLASHES, "") === MUX_DEFAULT_API_URL,
+    {
+      message:
+        "must be the real Mux API outside dev (the token is sent there; only the e2e fake changes it)",
+      path: ["MUX_API_URL"],
     }
   );
 

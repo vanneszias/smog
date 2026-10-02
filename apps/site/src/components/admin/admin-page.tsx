@@ -1,6 +1,4 @@
-import { useTranslation } from "@smog/i18n/react";
-import { cn, EmptyState, Heading, Text } from "@smog/ui-web";
-import { Construction } from "lucide-react";
+import { cn, Heading, Text } from "@smog/ui-web";
 import type { ReactNode } from "react";
 
 export interface AdminPageProps {
@@ -46,20 +44,5 @@ export function AdminPage({
       </div>
       {children}
     </div>
-  );
-}
-
-/** The placeholder of an admin screen that a later task of this phase builds. */
-export function AdminComingSoon({ title }: { title: ReactNode }): ReactNode {
-  const { t } = useTranslation();
-  return (
-    <AdminPage title={title}>
-      <EmptyState
-        description={t("admin.comingSoon.description")}
-        icon={<Construction />}
-        level={2}
-        title={t("admin.comingSoon.title")}
-      />
-    </AdminPage>
   );
 }

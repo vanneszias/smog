@@ -233,6 +233,7 @@ describe("admin.gestures.update", () => {
     expect(await search("ande nieuwe")).toContain(row.id);
     expect(await search("oude naam")).not.toContain(row.id);
     await expectAudit("gestures.update", {
+      action: "gesture.update",
       actorId: admin.user.id,
       data: {
         fields: ["keywords", "name"],
@@ -337,6 +338,12 @@ describe("admin.gestures.saveMany", () => {
       [one.id, "Rij één"],
       [two.id, "Rij twee"],
     ]);
+    // The table editor's rows carry the description (it edits it inline).
+    expect(
+      (saved.items as { description?: string }[]).map(
+        (item) => item.description
+      )
+    ).toEqual(["", "Nieuwe uitleg"]);
     expect(await ftsOutOfStep([one.id, two.id])).toEqual([]);
     await expectAudit("gestures.saveMany", {
       actorId: admin.user.id,
@@ -351,6 +358,21 @@ describe("admin.gestures.saveMany", () => {
       targetId: two.id,
       targetType: "gesture",
     });
+  });
+
+  it("a description-only save makes its new words searchable at once", async () => {
+    const row = await addGesture({ name: "Muziek maken" });
+    expect(await search("xylofoon")).not.toContain(row.id);
+    await callAs(admin, "gestures.saveMany", {
+      items: [
+        {
+          expectedUpdatedAt: row.updatedAt.getTime(),
+          id: row.id,
+          patch: { description: "Speel op een xylofoon." },
+        },
+      ],
+    });
+    expect(await search("xylofoon")).toContain(row.id);
   });
 
   it("is all or nothing: one stale row is CONFLICT with its id, and nothing is written", async () => {
@@ -719,6 +741,11 @@ describe("admin.gestures reads", () => {
     const all = await list({ category: [category.id] });
     expect(all.items.map((item) => item.id)).toEqual([a.id, b.id, c.id]);
     expect(all.counts).toEqual({ published: 2, total: 3, unpublished: 1 });
+    expect(all.items.map((item) => typeof item.description)).toEqual([
+      "string",
+      "string",
+      "string",
+    ]);
 
     const hidden = await list({
       category: [category.id],

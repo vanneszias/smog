@@ -9,6 +9,7 @@ import {
   gesture,
   gestureCategory,
   gestureKeyword,
+  inList,
   ref,
   sponsorship,
 } from "@smog/db";
@@ -99,7 +100,7 @@ export function inCategories(
   if (!slugs || slugs.length === 0) {
     return;
   }
-  return sql`${ref(G, gesture.id)} IN (SELECT ${ref("gc", gestureCategory.gestureId)} FROM ${gestureCategory} AS gc JOIN ${category} AS c ON ${ref("c", category.id)} = ${ref("gc", gestureCategory.categoryId)} WHERE ${ref("c", category.publishedAt)} IS NOT NULL AND ${ref("c", category.slug)} IN (SELECT value FROM json_each(${JSON.stringify(slugs)})))`;
+  return sql`${ref(G, gesture.id)} IN (SELECT ${ref("gc", gestureCategory.gestureId)} FROM ${gestureCategory} AS gc JOIN ${category} AS c ON ${ref("c", category.id)} = ${ref("gc", gestureCategory.categoryId)} WHERE ${ref("c", category.publishedAt)} IS NOT NULL AND ${inList(ref("c", category.slug), slugs)})`;
 }
 
 export function toSummary(row: GestureSummary): GestureSummary {
@@ -265,12 +266,7 @@ export function gesturesByIdsQuery(db: Db, ids: readonly string[]) {
   return db
     .select(summaryColumns)
     .from(gesture)
-    .where(
-      and(
-        isPublished,
-        sql`${gesture.id} IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`
-      )
-    );
+    .where(and(isPublished, inList(gesture.id, ids)));
 }
 
 /** Published gestures by id, in the order given (duplicates and unknown ids dropped). */

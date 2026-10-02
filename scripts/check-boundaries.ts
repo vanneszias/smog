@@ -29,10 +29,18 @@ interface PackageJson {
 interface Workspace {
   dir: string;
   manifest: PackageJson & { name: string };
+  /** The root package: only `scripts/` and its top-level files. */
+  root?: boolean;
 }
 
 const SCOPE = "@smog/";
-const SOURCE_GLOB = new Bun.Glob("**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}");
+const SOURCE_EXTENSIONS = "{ts,tsx,mts,cts,js,jsx,mjs,cjs}";
+const SOURCE_GLOB = new Bun.Glob(`**/*.${SOURCE_EXTENSIONS}`);
+/** The root package's sources: its scripts and top-level config files. */
+const ROOT_SOURCE_GLOBS = [
+  new Bun.Glob(`scripts/**/*.${SOURCE_EXTENSIONS}`),
+  new Bun.Glob(`*.${SOURCE_EXTENSIONS}`),
+];
 const SKIPPED_DIRS =
   /(^|\/)(node_modules|dist|build|\.wrangler|\.expo|\.output|\.tanstack|\.turbo|__fixtures__)\//;
 /** `from`, `import`, `import()`, `require()` and `vi.mock()` / `jest.mock()`. */
@@ -53,9 +61,8 @@ function workspacePatterns(manifest: PackageJson): string[] {
 
 function listWorkspaces(root: string): Workspace[] {
   const workspaces: Workspace[] = [];
-  for (const pattern of workspacePatterns(
-    readJson(join(root, "package.json"))
-  )) {
+  const rootManifest = readJson(join(root, "package.json"));
+  for (const pattern of workspacePatterns(rootManifest)) {
     const glob = new Bun.Glob(`${pattern}/package.json`);
     for (const path of glob.scanSync({ cwd: root, onlyFiles: true })) {
       const manifest = readJson(join(root, path));
@@ -67,7 +74,15 @@ function listWorkspaces(root: string): Workspace[] {
       }
     }
   }
-  return workspaces.sort((a, b) => a.dir.localeCompare(b.dir));
+  workspaces.sort((a, b) => a.dir.localeCompare(b.dir));
+  if (rootManifest.name) {
+    workspaces.unshift({
+      dir: ".",
+      manifest: { ...rootManifest, name: rootManifest.name },
+      root: true,
+    });
+  }
+  return workspaces;
 }
 
 function declaredDependencies(manifest: PackageJson): string[] {
@@ -86,7 +101,9 @@ function importedSpecifiers(
 ): { file: string; specifier: string }[] {
   const found: { file: string; specifier: string }[] = [];
   const cwd = join(root, workspace.dir);
-  const files = [...SOURCE_GLOB.scanSync({ cwd, onlyFiles: true })]
+  const globs = workspace.root ? ROOT_SOURCE_GLOBS : [SOURCE_GLOB];
+  const files = globs
+    .flatMap((glob) => [...glob.scanSync({ cwd, onlyFiles: true })])
     .filter((path) => !SKIPPED_DIRS.test(path))
     .sort();
   for (const path of files) {
@@ -104,7 +121,10 @@ function importedSpecifiers(
   return found;
 }
 
-/** Checks every `@smog/*` workspace under `root` against `BOUNDARIES`. */
+/**
+ * Checks the root package (its `scripts/` and top-level files) and every
+ * `@smog/*` workspace under `root` against `BOUNDARIES`.
+ */
 export function checkBoundaries(root: string): Violation[] {
   const violations: Violation[] = [];
   for (const workspace of listWorkspaces(root)) {

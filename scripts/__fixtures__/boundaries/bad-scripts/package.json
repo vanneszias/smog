@@ -1,0 +1,13 @@
+{
+  "name": "smog",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "packages/features/*"
+  ],
+  "devDependencies": {
+    "@smog/admin": "workspace:*",
+    "@smog/config": "workspace:*",
+    "@smog/ui-web": "workspace:*"
+  }
+}

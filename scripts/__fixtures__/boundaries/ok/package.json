@@ -1,8 +1,12 @@
 {
-  "name": "fixture",
+  "name": "smog",
   "private": true,
   "workspaces": [
     "packages/*",
     "packages/features/*"
-  ]
+  ],
+  "devDependencies": {
+    "@smog/config": "workspace:*",
+    "@smog/gestures": "workspace:*"
+  }
 }

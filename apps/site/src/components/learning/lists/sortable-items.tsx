@@ -1,22 +1,4 @@
-import {
-  type Announcements,
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  type UniqueIdentifier,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import type { TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import type { ListItem } from "@smog/lists/schema";
 import {
@@ -29,20 +11,14 @@ import {
   MenuTrigger,
   useToast,
 } from "@smog/ui-web";
+import { ArrowDown, ArrowUp, Ellipsis, Trash2 } from "lucide-react";
+import { type ReactNode, useCallback } from "react";
 import {
-  ArrowDown,
-  ArrowUp,
-  Ellipsis,
-  GripVertical,
-  Trash2,
-} from "lucide-react";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+  type ReorderEvent,
+  type ReorderPosition,
+  SortableList,
+  type SortableRowArgs,
+} from "@/components/sortable-list";
 import { gestureHref, RouterLink } from "../links";
 import { type Hearts, useHeart } from "../use-hearts";
 
@@ -54,103 +30,77 @@ interface SortableItemsProps {
   onReorder: (gestureIds: readonly string[]) => Promise<void>;
 }
 
-function SortableRow({
+const REORDER_KEYS = {
+  cancelled: "lists.reorder.cancelled",
+  dropped: "lists.reorder.dropped",
+  moved: "lists.reorder.moved",
+  picked: "lists.reorder.picked",
+} as const satisfies Record<ReorderEvent, TranslationKey>;
+
+function ItemRow({
+  dragHandle,
   hearts,
-  index,
+  isDragging,
   item,
-  onMove,
+  moveDown,
+  moveUp,
   onRemove,
-  total,
-}: {
+}: SortableRowArgs<ListItem> & {
   hearts: Hearts;
-  index: number;
-  item: ListItem;
-  onMove: (from: number, to: number) => void;
   onRemove: (gestureId: string) => void;
-  total: number;
 }): ReactNode {
   const { t } = useTranslation();
-  const {
-    attributes,
-    isDragging,
-    listeners,
-    setActivatorNodeRef,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: item.id });
   const heart = useHeart(hearts, item.id);
-  const moveUp = useCallback(() => onMove(index, index - 1), [index, onMove]);
-  const moveDown = useCallback(() => onMove(index, index + 1), [index, onMove]);
   const remove = useCallback(() => onRemove(item.id), [item.id, onRemove]);
-  const style = useMemo(
-    () => ({ transform: CSS.Transform.toString(transform), transition }),
-    [transform, transition]
-  );
   return (
-    <li
-      className={isDragging ? "relative z-10" : undefined}
-      ref={setNodeRef}
-      // dnd-kit moves the row with a transform while it is dragged.
-      style={style}
-    >
-      <GestureRow
-        className={isDragging ? "bg-surface-raised shadow-2" : undefined}
-        dragHandle={
-          <IconButton
-            {...attributes}
-            {...listeners}
-            className="cursor-grab touch-none active:cursor-grabbing"
-            icon={<GripVertical />}
-            label={`${t("a11y.dragHandle")}: ${item.name}`}
-            ref={setActivatorNodeRef}
-          />
-        }
-        favorite={heart.active}
-        gesture={item}
-        href={gestureHref(item.slug)}
-        linkComponent={RouterLink}
-        onFavoriteToggle={heart.onToggle}
-        trailing={
-          <Menu>
-            <MenuTrigger asChild>
-              <IconButton
-                icon={<Ellipsis />}
-                label={t("lists.itemActions", { name: item.name })}
-              />
-            </MenuTrigger>
-            <MenuContent align="end">
-              <MenuItem
-                disabled={index === 0}
-                icon={<ArrowUp />}
-                onSelect={moveUp}
-              >
-                {t("lists.moveUp")}
-              </MenuItem>
-              <MenuItem
-                disabled={index === total - 1}
-                icon={<ArrowDown />}
-                onSelect={moveDown}
-              >
-                {t("lists.moveDown")}
-              </MenuItem>
-              <MenuSeparator />
-              <MenuItem icon={<Trash2 />} onSelect={remove} variant="danger">
-                {t("lists.removeItem")}
-              </MenuItem>
-            </MenuContent>
-          </Menu>
-        }
-      />
-    </li>
+    <GestureRow
+      className={isDragging ? "bg-surface-raised shadow-2" : undefined}
+      dragHandle={dragHandle}
+      favorite={heart.active}
+      gesture={item}
+      href={gestureHref(item.slug)}
+      linkComponent={RouterLink}
+      onFavoriteToggle={heart.onToggle}
+      trailing={
+        <Menu>
+          <MenuTrigger asChild>
+            <IconButton
+              icon={<Ellipsis />}
+              label={t("lists.itemActions", { name: item.name })}
+            />
+          </MenuTrigger>
+          <MenuContent align="end">
+            <MenuItem
+              disabled={!moveUp}
+              icon={<ArrowUp />}
+              onSelect={moveUp ?? undefined}
+            >
+              {t("lists.moveUp")}
+            </MenuItem>
+            <MenuItem
+              disabled={!moveDown}
+              icon={<ArrowDown />}
+              onSelect={moveDown ?? undefined}
+            >
+              {t("lists.moveDown")}
+            </MenuItem>
+            <MenuSeparator />
+            <MenuItem icon={<Trash2 />} onSelect={remove} variant="danger">
+              {t("lists.removeItem")}
+            </MenuItem>
+          </MenuContent>
+        </Menu>
+      }
+    />
   );
 }
 
 /**
  * A list's gestures in order, reordered by dragging the handle (pointer or
  * keyboard: space, the arrows, space) or with "move up/down" in the row
- * menu (spec §16 flow 2). The new order shows at once and rolls back if the
- * hook rejects it (a stale list gets `INVALID_STATE`).
+ * menu (spec §16 flow 2), through the shared `SortableList`. The new order
+ * shows at once and rolls back if the hook rejects it (a stale list gets
+ * `INVALID_STATE`).
  */
 export function SortableItems({
   hearts,
@@ -160,57 +110,6 @@ export function SortableItems({
 }: SortableItemsProps): ReactNode {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-  // The order just asked for, until the list's data catches up.
-  const [order, setOrder] = useState<string[] | null>(null);
-  const itemsKey = items.map((item) => item.id).join(",");
-  useEffect(() => {
-    if (itemsKey) {
-      setOrder(null);
-    }
-  }, [itemsKey]);
-
-  const byId = useMemo(
-    () => new Map(items.map((item) => [item.id, item])),
-    [items]
-  );
-  const shown = useMemo(
-    () =>
-      order
-        ? order.flatMap((id) => {
-            const item = byId.get(id);
-            return item ? [item] : [];
-          })
-        : [...items],
-    [byId, items, order]
-  );
-  const ids = useMemo(() => shown.map((item) => item.id), [shown]);
-
-  const commit = useCallback(
-    (next: string[]): void => {
-      setOrder(next);
-      onReorder(next).catch((error: unknown) => {
-        console.error("[lists] Failed to reorder the list:", error);
-        setOrder(null);
-        toast({ title: t("lists.reorder.failed"), variant: "danger" });
-      });
-    },
-    [onReorder, t, toast]
-  );
-  const move = useCallback(
-    (from: number, to: number): void => {
-      if (to < 0 || to >= ids.length || from === to) {
-        return;
-      }
-      commit(arrayMove(ids, from, to));
-    },
-    [commit, ids]
-  );
   const remove = useCallback(
     (gestureId: string): void => {
       onRemove(gestureId).catch((error: unknown) => {
@@ -220,65 +119,25 @@ export function SortableItems({
     },
     [onRemove, t, toast]
   );
-  const end = useCallback(
-    ({ active, over }: DragEndEvent): void => {
-      if (over && active.id !== over.id) {
-        move(ids.indexOf(String(active.id)), ids.indexOf(String(over.id)));
-      }
-    },
-    [ids, move]
+  const announce = useCallback(
+    (event: ReorderEvent, position: ReorderPosition) =>
+      t(REORDER_KEYS[event], { ...position }),
+    [t]
   );
-
-  const accessibility = useMemo(() => {
-    const describe = (id: UniqueIdentifier | undefined) => ({
-      name: byId.get(String(id))?.name ?? "",
-      position: ids.indexOf(String(id)) + 1,
-      total: ids.length,
-    });
-    const announcements: Announcements = {
-      onDragCancel: ({ active }) =>
-        t("lists.reorder.cancelled", describe(active.id)),
-      onDragEnd: ({ active, over }) =>
-        t("lists.reorder.dropped", {
-          ...describe(active.id),
-          position: describe(over?.id ?? active.id).position,
-        }),
-      onDragOver: ({ active, over }) =>
-        t("lists.reorder.moved", {
-          ...describe(active.id),
-          position: describe(over?.id ?? active.id).position,
-        }),
-      onDragStart: ({ active }) =>
-        t("lists.reorder.picked", describe(active.id)),
-    };
-    return {
-      announcements,
-      screenReaderInstructions: { draggable: t("lists.reorder.instructions") },
-    };
-  }, [byId, ids, t]);
-
+  const renderRow = useCallback(
+    (args: SortableRowArgs<ListItem>) => (
+      <ItemRow {...args} hearts={hearts} onRemove={remove} />
+    ),
+    [hearts, remove]
+  );
   return (
-    <DndContext
-      accessibility={accessibility}
-      collisionDetection={closestCenter}
-      onDragEnd={end}
-      sensors={sensors}
-    >
-      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-        <ol className="flex flex-col gap-1">
-          {shown.map((item, index) => (
-            <SortableRow
-              hearts={hearts}
-              index={index}
-              item={item}
-              key={item.id}
-              onMove={move}
-              onRemove={remove}
-              total={shown.length}
-            />
-          ))}
-        </ol>
-      </SortableContext>
-    </DndContext>
+    <SortableList
+      announce={announce}
+      failedMessage={t("lists.reorder.failed")}
+      instructions={t("lists.reorder.instructions")}
+      items={items}
+      onReorder={onReorder}
+      renderRow={renderRow}
+    />
   );
 }

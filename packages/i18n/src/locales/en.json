@@ -64,7 +64,8 @@
     "otpDigit": "Digit {{index}} of {{length}}",
     "userMenu": "Account menu",
     "favorite": "Favorite",
-    "gestureVideo": "Gesture video"
+    "gestureVideo": "Gesture video",
+    "dragHandleFor": "Drag to reorder: {{name}}"
   },
   "nav": {
     "home": "Home",
@@ -569,6 +570,7 @@
       "sessionNotFresh": "Sign in again to delete your account.",
       "invalidPassword": "That password is not correct.",
       "deleteFailed": "Your account could not be deleted. Please try again.",
+      "lastAdmin": "You are the only admin. Make another account an admin before you delete yours.",
       "signInAgain": "For your security, sign in again to do this."
     },
     "guest": {
@@ -820,22 +822,506 @@
       }
     },
     "gestures": {
-      "title": "Gestures"
+      "title": "Gestures",
+      "description": "Every gesture, published or hidden. Changes show on the site at once.",
+      "new": "New gesture",
+      "editTable": "Edit table",
+      "stats": {
+        "label": "Gesture counts",
+        "total": "Total",
+        "published": "Published",
+        "hidden": "Hidden"
+      },
+      "filters": {
+        "label": "Filters",
+        "search": "Search",
+        "searchPlaceholder": "Name or keyword",
+        "status": "Status",
+        "all": "All",
+        "published": "Published",
+        "hidden": "Hidden",
+        "category": "Category",
+        "allCategories": "All categories",
+        "clear": "Clear filters"
+      },
+      "columns": {
+        "select": "Select",
+        "selectAll": "Select every gesture on this page",
+        "selectRow": "Select {{name}}",
+        "video": "Video",
+        "name": "Name",
+        "categories": "Categories",
+        "keywords": "Keywords",
+        "published": "Published",
+        "updated": "Updated",
+        "actions": "Actions"
+      },
+      "moreCategories": "+{{count}}",
+      "noCategory": "None",
+      "keywordCount_one": "{{count}} keyword",
+      "keywordCount_other": "{{count}} keywords",
+      "empty": {
+        "title": "No gestures found",
+        "description": "Change the filters, or add a gesture."
+      },
+      "firstPage": "First page",
+      "nextPage": "Next page",
+      "rowActions": "Actions for {{name}}",
+      "edit": "Edit",
+      "qr": "QR code",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "publishToggle": "{{name}} published",
+      "publishedToast": "{{name}} is published.",
+      "unpublishedToast": "{{name}} is hidden.",
+      "hiddenBadge": "Hidden",
+      "publishedBadge": "Published",
+      "bulk": {
+        "label": "Selected gestures",
+        "selected_one": "{{count}} selected",
+        "selected_other": "{{count}} selected",
+        "publish": "Publish",
+        "unpublish": "Unpublish",
+        "addCategory": "Add to category",
+        "removeCategory": "Remove from category",
+        "clear": "Clear selection",
+        "done_one": "{{count}} gesture updated.",
+        "done_other": "{{count}} gestures updated.",
+        "noCategoryLeft": "A gesture would be left without a category. Nothing was changed.",
+        "actions": "Actions"
+      },
+      "table": {
+        "label": "Table editor",
+        "hint": "Edits are kept until you save them together.",
+        "discard": "Discard ({{count}})",
+        "save": "Save changes",
+        "stop": "Stop editing",
+        "stopConfirmTitle": "Discard your changes?",
+        "stopConfirmDescription": "The changes to {{count}} gestures are not saved yet.",
+        "stopConfirm": "Discard",
+        "editCategories": "Categories of {{name}}",
+        "editKeywords": "Keywords of {{name}}",
+        "invalid": "Fix the marked cells before saving.",
+        "tooMany": "Save at most {{max}} gestures at once.",
+        "staleRow": "Changed by another admin",
+        "saved_one": "{{count}} gesture saved.",
+        "saved_other": "{{count}} gestures saved.",
+        "cell": "{{field}} of {{name}}",
+        "keywordsInvalid": "Check the keywords: at most 30, each at most 60 characters.",
+        "changedCell": "Changed, not saved yet",
+        "merged": "Merged with newer versions. Check the changes and save again.",
+        "conflict_one": "Another admin changed the same fields of {{count}} gesture. Use their version, or overwrite it with yours.",
+        "conflict_other": "Another admin changed the same fields of {{count}} gestures. Use their version, or overwrite it with yours.",
+        "overwriteItem": "{{name}}: {{fields}}",
+        "overwriteDescription": "This replaces the other admin's changes to {{items}} with yours.",
+        "discardTitle": "Discard {{count}} changes?",
+        "discardDescription": "The edits in these rows are lost.",
+        "locked": "Save or discard your table edits to change the filters or the page."
+      },
+      "changes": {
+        "title": "Review your changes",
+        "description_one": "{{count}} gesture is saved in one go.",
+        "description_other": "{{count}} gestures are saved in one go.",
+        "field": "Field",
+        "before": "Before",
+        "after": "After",
+        "empty": "(empty)",
+        "confirm": "Save changes"
+      },
+      "fields": {
+        "name": "Name",
+        "description": "Description",
+        "playbackId": "Playback ID",
+        "categoryIds": "Categories",
+        "keywords": "Keywords"
+      },
+      "keywords": {
+        "placeholder": "Type a keyword",
+        "add": "Add",
+        "hint": "Press Enter or Add. Click a keyword to remove it.",
+        "remove": "Remove {{keyword}}",
+        "list_one": "{{count}} keyword",
+        "list_other": "{{count}} keywords",
+        "none": "No keywords yet.",
+        "duplicate": "“{{keyword}}” is already a keyword.",
+        "tooLong": "A keyword has at most {{max}} characters.",
+        "max": "At most {{max}} keywords."
+      },
+      "editor": {
+        "newTitle": "New gesture",
+        "back": "All gestures",
+        "status": "Status",
+        "published": "Published",
+        "publishedHint": "Shown on the site and in the app.",
+        "slug": "Slug",
+        "slugHint": "Set when the gesture is created and never changed, so printed QR codes and shared links keep working.",
+        "viewOnSite": "View on site",
+        "save": "Save",
+        "create": "Create gesture",
+        "saved": "The gesture is saved.",
+        "created": "{{name}} is created.",
+        "duplicateTitle": "Possible duplicate",
+        "duplicate_one": "Another gesture has this name:",
+        "duplicate_other": "Other gestures have this name:",
+        "categoriesHint": "At least one. Hidden categories are marked.",
+        "nameRequired": "Enter a name.",
+        "descriptionTooLong": "The description is too long.",
+        "videoRequired": "Choose a video.",
+        "categoriesRequired": "Choose at least one category.",
+        "notFound": {
+          "title": "Gesture not found",
+          "description": "It may have been deleted."
+        }
+      },
+      "conflict": {
+        "title": "Someone else changed this gesture",
+        "description": "Another admin saved this gesture at {{time}}. Their changes to the other fields are kept. These fields were changed on both sides:",
+        "theirs": "Their version",
+        "mine": "Your version",
+        "useTheirs": "Use their version",
+        "overwrite": "Overwrite with mine",
+        "overwriteTitle": "Overwrite their changes?",
+        "overwriteDescription": "This replaces the other admin's {{fields}} with yours.",
+        "overwriteConfirm": "Overwrite",
+        "merged": "Merged with a newer version and saved.",
+        "fieldNames": {
+          "video": "video",
+          "name": "name",
+          "description": "description",
+          "keywords": "keywords",
+          "categoryIds": "categories",
+          "published": "published state"
+        }
+      },
+      "danger": {
+        "title": "Danger zone",
+        "description": "Deleting removes the gesture for good. Only a hidden gesture without sponsorships can be deleted.",
+        "publishedNote": "Unpublish the gesture first to delete it.",
+        "delete": "Delete gesture",
+        "confirmTitle": "Delete {{name}}?",
+        "confirmDescription": "This cannot be undone. Type “{{name}}” to confirm.",
+        "confirmLabel": "Gesture name",
+        "confirm": "Delete",
+        "deleted": "{{name}} is deleted.",
+        "sponsored": "This gesture has sponsorships, so it cannot be deleted."
+      },
+      "errors": {
+        "saveFailed": "The changes could not be saved."
+      },
+      "leave": {
+        "title": "Leave without saving?",
+        "description": "Your changes are not saved yet. They are lost if you leave.",
+        "leave": "Leave",
+        "stay": "Stay"
+      },
+      "listHeading": "Gesture list",
+      "qrHiddenNote": "This gesture is hidden: the link only works once it is published."
     },
     "categories": {
-      "title": "Categories"
+      "title": "Categories",
+      "description": "The order here is the order on the site and in the app.",
+      "new": "New category",
+      "hiddenMark": "hidden",
+      "sections": {
+        "published": "Published",
+        "hidden": "Hidden",
+        "hiddenEmpty": "No hidden categories.",
+        "publishedEmpty": "No published categories."
+      },
+      "count_one": "{{count}} gesture",
+      "count_other": "{{count}} gestures",
+      "rowActions": "Actions for {{name}}",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "rename": "Rename",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "delete": "Delete",
+      "inUse": "In use: unpublish instead",
+      "publishToggle": "{{name}} published",
+      "publishedToast": "{{name}} is published.",
+      "unpublishedToast": "{{name}} is hidden.",
+      "form": {
+        "createTitle": "New category",
+        "renameTitle": "Rename {{name}}",
+        "name": "Name",
+        "published": "Published",
+        "create": "Create",
+        "save": "Save",
+        "slugNote": "The slug stays the same, so links keep working.",
+        "duplicate": "A category with this name already exists.",
+        "stale": "Another admin changed this category. Its new name is shown; try again.",
+        "created": "{{name}} is created.",
+        "renamed": "The category is renamed.",
+        "nameInvalid": "Enter a name of at most {{max}} characters."
+      },
+      "deleteConfirm": {
+        "title": "Delete {{name}}?",
+        "description": "No gesture uses this category. This cannot be undone.",
+        "confirm": "Delete",
+        "deleted": "{{name}} is deleted.",
+        "inUse": "Gestures use this category. Unpublish it instead."
+      },
+      "empty": {
+        "title": "No categories yet",
+        "description": "Create the first category."
+      },
+      "reorder": {
+        "instructions": "Press space or Enter to pick up a category. Move it with the arrow keys and press space or Enter again to drop it. Escape cancels.",
+        "picked": "Picked up {{name}}, position {{position}} of {{total}}.",
+        "moved": "Moved {{name}} to position {{position}} of {{total}}.",
+        "dropped": "Dropped {{name}} at position {{position}} of {{total}}.",
+        "cancelled": "Move cancelled. {{name}} is back at position {{position}}.",
+        "failed": "The new order could not be saved."
+      },
+      "errors": {
+        "saveFailed": "The change could not be saved."
+      },
+      "hiddenName": "{{name}} (hidden)",
+      "countWithPublished_one": "{{count}} gesture · {{published}} published",
+      "countWithPublished_other": "{{count}} gestures · {{published}} published"
     },
     "mux": {
-      "title": "Video"
+      "title": "Video",
+      "label": "Video",
+      "none": "No video chosen yet.",
+      "statusError": "The video settings could not be loaded.",
+      "current": "Chosen video",
+      "playbackIdValue": "Playback ID: {{id}}",
+      "notConfigured": {
+        "title": "Video uploads are not set up",
+        "description": "Mux is not configured on this environment. Paste the playback ID of an existing Mux video."
+      },
+      "tabs": {
+        "upload": "Upload",
+        "choose": "Choose existing",
+        "playbackId": "Playback ID"
+      },
+      "upload": {
+        "drop": "Drag a video here",
+        "or": "or",
+        "browse": "Choose a file",
+        "hint": "The file goes straight to Mux, not through our server.",
+        "notVideo": "Choose a video file.",
+        "creating": "Preparing the upload…",
+        "progressLabel": "Uploading to Mux",
+        "uploadingStart": "Uploading {{name}}…",
+        "uploading": "Uploading {{name}}… {{percent}}%",
+        "processing": "Mux is processing the video…",
+        "processingHint": "This usually takes less than a minute. You can keep this window open.",
+        "ready": "The video is ready.",
+        "another": "Upload another video",
+        "retry": "Try again",
+        "cancel": "Cancel",
+        "failed": {
+          "create": "The upload could not start. Try again.",
+          "transfer": "The file could not be sent to Mux.",
+          "processing": "Mux could not process this video. Try another file.",
+          "cancelled": "The upload expired or was cancelled.",
+          "slow": "Mux is still busy after 10 minutes. Check again later."
+        },
+        "checkAgain": "Check again"
+      },
+      "picker": {
+        "loading": "Loading videos",
+        "empty": "No videos in Mux yet",
+        "emptyDescription": "Upload a video in the Upload tab.",
+        "error": "The videos could not be loaded.",
+        "choose": "Choose",
+        "chosen": "Chosen",
+        "notReady": "Can be chosen once Mux has finished it.",
+        "previous": "Previous page",
+        "next": "Next page",
+        "page": "Page {{page}}",
+        "unused": "Not used",
+        "usedBy_one": "Used by {{count}} gesture",
+        "usedBy_other": "Used by {{count}} gestures",
+        "usedByNames": "Used by: {{names}}",
+        "thumbnail": "Video from {{date}}",
+        "duration": "{{seconds}} s",
+        "status": {
+          "preparing": "Processing",
+          "ready": "Ready",
+          "errored": "Failed"
+        }
+      },
+      "playback": {
+        "label": "Playback ID",
+        "hint": "A public playback ID from the Mux dashboard.",
+        "invalid": "A playback ID consists of letters, digits, _ and -.",
+        "use": "Use this video"
+      }
     },
     "users": {
-      "title": "Users"
+      "title": "Users",
+      "description": "Accounts, roles and bans. Every change is logged.",
+      "filters": {
+        "label": "Filters",
+        "search": "Search by name or email",
+        "role": "Role",
+        "status": "Status",
+        "all": "All",
+        "banned": "Banned",
+        "notBanned": "Not banned",
+        "clear": "Clear filters"
+      },
+      "roles": {
+        "user": "User",
+        "admin": "Admin"
+      },
+      "columns": {
+        "name": "Name",
+        "role": "Role",
+        "status": "Status",
+        "created": "Joined"
+      },
+      "status": {
+        "active": "Active",
+        "banned": "Banned",
+        "unverified": "Email not confirmed"
+      },
+      "you": "You",
+      "empty": "No accounts found.",
+      "nextPage": "Older accounts",
+      "firstPage": "Newest accounts",
+      "panel": {
+        "email": "Email",
+        "role": "Role",
+        "status": "Status",
+        "created": "Joined",
+        "methods": "Sign-in methods",
+        "noMethods": "Email code or link only",
+        "sessions": "Active sessions",
+        "favorites": "Favorites",
+        "lists": "Lists",
+        "banReason": "Ban reason",
+        "banUntil": "Banned until",
+        "banForever": "No end date",
+        "actions": "Actions",
+        "self": "This is your own account. Another admin has to change its role, ban it or delete it.",
+        "adminTarget": "Remove the admin role before you ban or delete this account.",
+        "bannedTarget": "Lift the ban before you make this account an admin.",
+        "notFound": "This account no longer exists."
+      },
+      "methods": {
+        "credential": "Password",
+        "google": "Google",
+        "apple": "Apple",
+        "passkey": "Passkey"
+      },
+      "promote": {
+        "action": "Make admin",
+        "title": "Make {{name}} an admin?",
+        "description": "Admins can change the catalogue, the accounts and the settings. It applies from their next page.",
+        "done": "{{name}} is now an admin."
+      },
+      "demote": {
+        "action": "Remove admin role",
+        "title": "Remove the admin role of {{name}}?",
+        "description": "They lose access to the admin at once.",
+        "done": "{{name}} is no longer an admin."
+      },
+      "ban": {
+        "action": "Ban",
+        "title": "Ban {{name}}?",
+        "description": "They are signed out on every device at once and cannot sign in while the ban lasts.",
+        "reason": "Reason",
+        "reasonHint": "Only admins see this.",
+        "duration": "Duration",
+        "forever": "No end date",
+        "days_one": "{{count}} day",
+        "days_other": "{{count}} days",
+        "done": "{{name}} is banned."
+      },
+      "unban": {
+        "action": "Lift ban",
+        "title": "Lift the ban on {{name}}?",
+        "description": "They can sign in again.",
+        "done": "The ban on {{name}} is lifted."
+      },
+      "delete": {
+        "action": "Delete account",
+        "title": "Delete the account of {{name}}?",
+        "description": "Their favorites, lists and sign-in methods are deleted for good. The audit log keeps its entries.",
+        "confirmLabel": "Type {{email}} to confirm",
+        "done": "The account is deleted."
+      },
+      "refused": {
+        "self": "You cannot change your own account here.",
+        "lastAdmin": "The last admin cannot lose the admin role.",
+        "adminTarget": "Remove the admin role first.",
+        "targetBanned": "Lift the ban first.",
+        "unchanged": "The account already has this role.",
+        "alreadyBanned": "This account is already banned.",
+        "notBanned": "This account is not banned.",
+        "notFound": "This account no longer exists.",
+        "emailMismatch": "The email address does not match."
+      }
     },
     "settings": {
-      "title": "Settings"
+      "title": "Settings",
+      "description": "Maintenance mode and the bypass for this browser.",
+      "maintenance": {
+        "title": "Maintenance mode",
+        "description": "While it is on, visitors and the app get a maintenance page. Webhooks, the health check and the admin sign-in keep working, and admins with a bypass cookie keep the whole site.",
+        "status": "Status",
+        "on": "On",
+        "off": "Off",
+        "message": "Message",
+        "messageHint": "Shown on the maintenance page, at most {{max}} characters. Optional.",
+        "noMessage": "No message",
+        "until": "Expected end",
+        "untilHint": "Optional, at most 7 days ahead. Shown on the page and sent as Retry-After.",
+        "noUntil": "Not set",
+        "untilInvalid": "Pick a time in the future, at most 7 days ahead.",
+        "propagation": "Other visitors follow within up to about 2 minutes: each server and each Cloudflare location keeps the setting for up to 30 seconds, and KV needs up to a minute to reach every region.",
+        "enable": "Enable maintenance",
+        "enableNote": "You get a bypass cookie for this browser first, so you keep access.",
+        "enabled": "Maintenance is on",
+        "disable": "Disable maintenance",
+        "disableTitle": "Disable maintenance?",
+        "disableDescription": "The site opens for everyone. Every bypass cookie is revoked: admins need a new one for the next window.",
+        "disabled": "Maintenance is off. Every bypass cookie is revoked.",
+        "bypassFailed": "No bypass cookie for this browser, so maintenance stays off.",
+        "failed": "The setting was not changed.",
+        "loadError": "The maintenance setting could not be loaded.",
+        "staleCookie": "Maintenance is on, but your bypass cookie is for an older window. Press “Bypass for this browser” in a minute."
+      },
+      "bypass": {
+        "title": "Bypass for this browser",
+        "description": "A signed cookie that gets this browser past maintenance for 12 hours. Turning maintenance off revokes it.",
+        "active": "Active until {{time}}",
+        "inactive": "Not active",
+        "action": "Bypass for this browser (12 h)",
+        "done": "This browser can bypass maintenance until {{time}}.",
+        "failed": "No bypass cookie: sign in again and retry.",
+        "loadError": "The bypass status could not be loaded.",
+        "rateLimited": "Too many attempts. Try again in a minute."
+      }
     },
     "emails": {
-      "title": "Emails"
+      "title": "Emails",
+      "description": "The real templates with sample data. A preview is never sent.",
+      "templates": "Templates",
+      "template": {
+        "magicLink": "Sign-in link",
+        "otp": "Sign-in code",
+        "resetPassword": "Password reset",
+        "verifyEmail": "Confirm email address"
+      },
+      "locale": "Language",
+      "width": "Width",
+      "desktop": "Desktop (780 px)",
+      "mobile": "Mobile (390 px)",
+      "subject": "Subject",
+      "view": "View",
+      "html": "Email",
+      "text": "Plain text",
+      "frameTitle": "Preview: {{name}}",
+      "loadError": "The email templates could not be loaded.",
+      "previewError": "This preview could not be rendered.",
+      "empty": "No email templates yet.",
+      "sandboxed": "Shown in a sandbox: no scripts, links do not open."
     }
   }
 }

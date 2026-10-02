@@ -7,5 +7,10 @@
  */
 import { bumpCatalogVersion } from "../../gestures/src/server/catalog-cache";
 import type { AdminDeps } from "../src/server";
+import { testMux } from "./mux-fake";
 
-export const adminDeps: AdminDeps = { bumpCatalogVersion };
+export const adminDeps: AdminDeps = {
+  bumpCatalogVersion,
+  // Production leaves it unset (the Worker's fetch, to MUX_API_URL).
+  muxFetch: testMux.fetch,
+};

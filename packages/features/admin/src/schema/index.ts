@@ -39,4 +39,5 @@ export {
   dashboardSchema,
 } from "./dashboard";
 export * from "./maintenance";
+export * from "./mux";
 export * from "./users";

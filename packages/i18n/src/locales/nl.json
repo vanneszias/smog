@@ -64,7 +64,8 @@
     "otpDigit": "Cijfer {{index}} van {{length}}",
     "userMenu": "Accountmenu",
     "favorite": "Favoriet",
-    "gestureVideo": "Video van het gebaar"
+    "gestureVideo": "Video van het gebaar",
+    "dragHandleFor": "Slepen om de volgorde te wijzigen: {{name}}"
   },
   "nav": {
     "home": "Home",
@@ -569,6 +570,7 @@
       "sessionNotFresh": "Meld je opnieuw aan om je account te verwijderen.",
       "invalidPassword": "Dat wachtwoord klopt niet.",
       "deleteFailed": "Je account verwijderen is niet gelukt. Probeer het opnieuw.",
+      "lastAdmin": "Je bent de enige beheerder. Maak eerst een ander account beheerder voor je het jouwe verwijdert.",
       "signInAgain": "Meld je voor je veiligheid opnieuw aan om dit te doen."
     },
     "guest": {
@@ -820,22 +822,506 @@
       }
     },
     "gestures": {
-      "title": "Gebaren"
+      "title": "Gebaren",
+      "description": "Alle gebaren, gepubliceerd of verborgen. Wijzigingen staan meteen op de site.",
+      "new": "Nieuw gebaar",
+      "editTable": "Tabel bewerken",
+      "stats": {
+        "label": "Aantallen gebaren",
+        "total": "Totaal",
+        "published": "Gepubliceerd",
+        "hidden": "Verborgen"
+      },
+      "filters": {
+        "label": "Filters",
+        "search": "Zoeken",
+        "searchPlaceholder": "Naam of trefwoord",
+        "status": "Status",
+        "all": "Alle",
+        "published": "Gepubliceerd",
+        "hidden": "Verborgen",
+        "category": "Categorie",
+        "allCategories": "Alle categorieën",
+        "clear": "Filters wissen"
+      },
+      "columns": {
+        "select": "Selecteren",
+        "selectAll": "Alle gebaren op deze pagina selecteren",
+        "selectRow": "{{name}} selecteren",
+        "video": "Video",
+        "name": "Naam",
+        "categories": "Categorieën",
+        "keywords": "Trefwoorden",
+        "published": "Gepubliceerd",
+        "updated": "Gewijzigd",
+        "actions": "Acties"
+      },
+      "moreCategories": "+{{count}}",
+      "noCategory": "Geen",
+      "keywordCount_one": "{{count}} trefwoord",
+      "keywordCount_other": "{{count}} trefwoorden",
+      "empty": {
+        "title": "Geen gebaren gevonden",
+        "description": "Pas de filters aan of voeg een gebaar toe."
+      },
+      "firstPage": "Eerste pagina",
+      "nextPage": "Volgende pagina",
+      "rowActions": "Acties voor {{name}}",
+      "edit": "Bewerken",
+      "qr": "QR-code",
+      "publish": "Publiceren",
+      "unpublish": "Verbergen",
+      "publishToggle": "{{name}} gepubliceerd",
+      "publishedToast": "{{name}} is gepubliceerd.",
+      "unpublishedToast": "{{name}} is verborgen.",
+      "hiddenBadge": "Verborgen",
+      "publishedBadge": "Gepubliceerd",
+      "bulk": {
+        "label": "Geselecteerde gebaren",
+        "selected_one": "{{count}} geselecteerd",
+        "selected_other": "{{count}} geselecteerd",
+        "publish": "Publiceren",
+        "unpublish": "Verbergen",
+        "addCategory": "Aan categorie toevoegen",
+        "removeCategory": "Uit categorie halen",
+        "clear": "Selectie wissen",
+        "done_one": "{{count}} gebaar bijgewerkt.",
+        "done_other": "{{count}} gebaren bijgewerkt.",
+        "noCategoryLeft": "Een gebaar zou zonder categorie blijven. Er is niets gewijzigd.",
+        "actions": "Acties"
+      },
+      "table": {
+        "label": "Tabeleditor",
+        "hint": "Wijzigingen blijven bewaard tot je ze samen opslaat.",
+        "discard": "Verwerpen ({{count}})",
+        "save": "Wijzigingen opslaan",
+        "stop": "Stoppen met bewerken",
+        "stopConfirmTitle": "Je wijzigingen verwerpen?",
+        "stopConfirmDescription": "De wijzigingen aan {{count}} gebaren zijn nog niet opgeslagen.",
+        "stopConfirm": "Verwerpen",
+        "editCategories": "Categorieën van {{name}}",
+        "editKeywords": "Trefwoorden van {{name}}",
+        "invalid": "Verbeter eerst de gemarkeerde cellen.",
+        "tooMany": "Sla hoogstens {{max}} gebaren tegelijk op.",
+        "staleRow": "Gewijzigd door een andere beheerder",
+        "saved_one": "{{count}} gebaar opgeslagen.",
+        "saved_other": "{{count}} gebaren opgeslagen.",
+        "cell": "{{field}} van {{name}}",
+        "keywordsInvalid": "Controleer de trefwoorden: hoogstens 30, elk hoogstens 60 tekens.",
+        "changedCell": "Gewijzigd, nog niet opgeslagen",
+        "merged": "Samengevoegd met nieuwere versies. Kijk de wijzigingen na en sla opnieuw op.",
+        "conflict_one": "Een andere beheerder wijzigde dezelfde velden van {{count}} gebaar. Gebruik hun versie, of overschrijf ze met de jouwe.",
+        "conflict_other": "Een andere beheerder wijzigde dezelfde velden van {{count}} gebaren. Gebruik hun versie, of overschrijf ze met de jouwe.",
+        "overwriteItem": "{{name}}: {{fields}}",
+        "overwriteDescription": "Dit vervangt de wijzigingen van de andere beheerder aan {{items}} door de jouwe.",
+        "discardTitle": "{{count}} wijzigingen verwerpen?",
+        "discardDescription": "De wijzigingen in deze rijen gaan verloren.",
+        "locked": "Sla je tabelwijzigingen op of verwerp ze om de filters of de pagina te wijzigen."
+      },
+      "changes": {
+        "title": "Je wijzigingen nakijken",
+        "description_one": "{{count}} gebaar wordt in één keer opgeslagen.",
+        "description_other": "{{count}} gebaren worden in één keer opgeslagen.",
+        "field": "Veld",
+        "before": "Voor",
+        "after": "Na",
+        "empty": "(leeg)",
+        "confirm": "Wijzigingen opslaan"
+      },
+      "fields": {
+        "name": "Naam",
+        "description": "Beschrijving",
+        "playbackId": "Playback-id",
+        "categoryIds": "Categorieën",
+        "keywords": "Trefwoorden"
+      },
+      "keywords": {
+        "placeholder": "Typ een trefwoord",
+        "add": "Toevoegen",
+        "hint": "Druk op Enter of Toevoegen. Klik op een trefwoord om het te verwijderen.",
+        "remove": "{{keyword}} verwijderen",
+        "list_one": "{{count}} trefwoord",
+        "list_other": "{{count}} trefwoorden",
+        "none": "Nog geen trefwoorden.",
+        "duplicate": "“{{keyword}}” is al een trefwoord.",
+        "tooLong": "Een trefwoord heeft hoogstens {{max}} tekens.",
+        "max": "Hoogstens {{max}} trefwoorden."
+      },
+      "editor": {
+        "newTitle": "Nieuw gebaar",
+        "back": "Alle gebaren",
+        "status": "Status",
+        "published": "Gepubliceerd",
+        "publishedHint": "Zichtbaar op de site en in de app.",
+        "slug": "Slug",
+        "slugHint": "Vastgelegd bij het aanmaken en nooit gewijzigd, zodat geprinte QR-codes en gedeelde links blijven werken.",
+        "viewOnSite": "Bekijken op de site",
+        "save": "Opslaan",
+        "create": "Gebaar aanmaken",
+        "saved": "Het gebaar is opgeslagen.",
+        "created": "{{name}} is aangemaakt.",
+        "duplicateTitle": "Mogelijk dubbel",
+        "duplicate_one": "Een ander gebaar heeft deze naam:",
+        "duplicate_other": "Andere gebaren hebben deze naam:",
+        "categoriesHint": "Minstens één. Verborgen categorieën zijn gemarkeerd.",
+        "nameRequired": "Vul een naam in.",
+        "descriptionTooLong": "De beschrijving is te lang.",
+        "videoRequired": "Kies een video.",
+        "categoriesRequired": "Kies minstens één categorie.",
+        "notFound": {
+          "title": "Gebaar niet gevonden",
+          "description": "Misschien is het verwijderd."
+        }
+      },
+      "conflict": {
+        "title": "Iemand anders wijzigde dit gebaar",
+        "description": "Een andere beheerder sloeg dit gebaar op om {{time}}. Hun wijzigingen aan de andere velden blijven behouden. Deze velden werden aan beide kanten gewijzigd:",
+        "theirs": "Hun versie",
+        "mine": "Jouw versie",
+        "useTheirs": "Hun versie gebruiken",
+        "overwrite": "Overschrijven met de mijne",
+        "overwriteTitle": "Hun wijzigingen overschrijven?",
+        "overwriteDescription": "Dit vervangt {{fields}} van de andere beheerder door de jouwe.",
+        "overwriteConfirm": "Overschrijven",
+        "merged": "Samengevoegd met een nieuwere versie en opgeslagen.",
+        "fieldNames": {
+          "video": "de video",
+          "name": "de naam",
+          "description": "de beschrijving",
+          "keywords": "de trefwoorden",
+          "categoryIds": "de categorieën",
+          "published": "de publicatiestatus"
+        }
+      },
+      "danger": {
+        "title": "Gevarenzone",
+        "description": "Verwijderen haalt het gebaar voorgoed weg. Alleen een verborgen gebaar zonder sponsoring kan verwijderd worden.",
+        "publishedNote": "Verberg het gebaar eerst om het te verwijderen.",
+        "delete": "Gebaar verwijderen",
+        "confirmTitle": "{{name}} verwijderen?",
+        "confirmDescription": "Dit kan niet ongedaan gemaakt worden. Typ “{{name}}” om te bevestigen.",
+        "confirmLabel": "Naam van het gebaar",
+        "confirm": "Verwijderen",
+        "deleted": "{{name}} is verwijderd.",
+        "sponsored": "Dit gebaar heeft sponsoring en kan dus niet verwijderd worden."
+      },
+      "errors": {
+        "saveFailed": "De wijzigingen konden niet opgeslagen worden."
+      },
+      "leave": {
+        "title": "Weggaan zonder op te slaan?",
+        "description": "Je wijzigingen zijn nog niet opgeslagen. Ze gaan verloren als je weggaat.",
+        "leave": "Weggaan",
+        "stay": "Blijven"
+      },
+      "listHeading": "Lijst met gebaren",
+      "qrHiddenNote": "Dit gebaar is verborgen: de link werkt pas als het gepubliceerd is."
     },
     "categories": {
-      "title": "Categorieën"
+      "title": "Categorieën",
+      "description": "De volgorde hier is de volgorde op de site en in de app.",
+      "new": "Nieuwe categorie",
+      "hiddenMark": "verborgen",
+      "sections": {
+        "published": "Gepubliceerd",
+        "hidden": "Verborgen",
+        "hiddenEmpty": "Geen verborgen categorieën.",
+        "publishedEmpty": "Geen gepubliceerde categorieën."
+      },
+      "count_one": "{{count}} gebaar",
+      "count_other": "{{count}} gebaren",
+      "rowActions": "Acties voor {{name}}",
+      "moveUp": "Omhoog",
+      "moveDown": "Omlaag",
+      "rename": "Hernoemen",
+      "publish": "Publiceren",
+      "unpublish": "Verbergen",
+      "delete": "Verwijderen",
+      "inUse": "In gebruik: verberg ze in plaats daarvan",
+      "publishToggle": "{{name}} gepubliceerd",
+      "publishedToast": "{{name}} is gepubliceerd.",
+      "unpublishedToast": "{{name}} is verborgen.",
+      "form": {
+        "createTitle": "Nieuwe categorie",
+        "renameTitle": "{{name}} hernoemen",
+        "name": "Naam",
+        "published": "Gepubliceerd",
+        "create": "Aanmaken",
+        "save": "Opslaan",
+        "slugNote": "De slug blijft dezelfde, zodat links blijven werken.",
+        "duplicate": "Er bestaat al een categorie met deze naam.",
+        "stale": "Een andere beheerder wijzigde deze categorie. De nieuwe naam staat er nu; probeer opnieuw.",
+        "created": "{{name}} is aangemaakt.",
+        "renamed": "De categorie is hernoemd.",
+        "nameInvalid": "Vul een naam van hoogstens {{max}} tekens in."
+      },
+      "deleteConfirm": {
+        "title": "{{name}} verwijderen?",
+        "description": "Geen enkel gebaar gebruikt deze categorie. Dit kan niet ongedaan gemaakt worden.",
+        "confirm": "Verwijderen",
+        "deleted": "{{name}} is verwijderd.",
+        "inUse": "Gebaren gebruiken deze categorie. Verberg ze in plaats daarvan."
+      },
+      "empty": {
+        "title": "Nog geen categorieën",
+        "description": "Maak de eerste categorie aan."
+      },
+      "reorder": {
+        "instructions": "Druk op spatie of Enter om een categorie op te pakken. Verplaats ze met de pijltjestoetsen en druk opnieuw op spatie of Enter om ze neer te zetten. Escape annuleert.",
+        "picked": "{{name}} opgepakt, positie {{position}} van {{total}}.",
+        "moved": "{{name}} verplaatst naar positie {{position}} van {{total}}.",
+        "dropped": "{{name}} neergezet op positie {{position}} van {{total}}.",
+        "cancelled": "Verplaatsen geannuleerd. {{name}} staat terug op positie {{position}}.",
+        "failed": "De nieuwe volgorde kon niet worden bewaard."
+      },
+      "errors": {
+        "saveFailed": "De wijziging kon niet opgeslagen worden."
+      },
+      "hiddenName": "{{name}} (verborgen)",
+      "countWithPublished_one": "{{count}} gebaar · {{published}} gepubliceerd",
+      "countWithPublished_other": "{{count}} gebaren · {{published}} gepubliceerd"
     },
     "mux": {
-      "title": "Video"
+      "title": "Video",
+      "label": "Video",
+      "none": "Nog geen video gekozen.",
+      "statusError": "De video-instellingen konden niet geladen worden.",
+      "current": "Gekozen video",
+      "playbackIdValue": "Playback-id: {{id}}",
+      "notConfigured": {
+        "title": "Video-uploads zijn niet ingesteld",
+        "description": "Mux is op deze omgeving niet geconfigureerd. Plak de playback-id van een bestaande Mux-video."
+      },
+      "tabs": {
+        "upload": "Uploaden",
+        "choose": "Bestaande kiezen",
+        "playbackId": "Playback-id"
+      },
+      "upload": {
+        "drop": "Sleep een video hierheen",
+        "or": "of",
+        "browse": "Kies een bestand",
+        "hint": "Het bestand gaat rechtstreeks naar Mux, niet via onze server.",
+        "notVideo": "Kies een videobestand.",
+        "creating": "Upload voorbereiden…",
+        "progressLabel": "Uploaden naar Mux",
+        "uploadingStart": "{{name}} uploaden…",
+        "uploading": "{{name}} uploaden… {{percent}}%",
+        "processing": "Mux verwerkt de video…",
+        "processingHint": "Dit duurt meestal minder dan een minuut. Je mag dit venster open laten.",
+        "ready": "De video is klaar.",
+        "another": "Andere video uploaden",
+        "retry": "Opnieuw proberen",
+        "cancel": "Annuleren",
+        "failed": {
+          "create": "De upload kon niet starten. Probeer het opnieuw.",
+          "transfer": "Het bestand kon niet naar Mux gestuurd worden.",
+          "processing": "Mux kon deze video niet verwerken. Probeer een ander bestand.",
+          "cancelled": "De upload is verlopen of geannuleerd.",
+          "slow": "Mux is na 10 minuten nog bezig. Controleer later opnieuw."
+        },
+        "checkAgain": "Opnieuw controleren"
+      },
+      "picker": {
+        "loading": "Video's laden",
+        "empty": "Nog geen video's in Mux",
+        "emptyDescription": "Upload een video in het tabblad Uploaden.",
+        "error": "De video's konden niet geladen worden.",
+        "choose": "Kiezen",
+        "chosen": "Gekozen",
+        "notReady": "Kan pas gekozen worden als Mux klaar is.",
+        "previous": "Vorige pagina",
+        "next": "Volgende pagina",
+        "page": "Pagina {{page}}",
+        "unused": "Niet gebruikt",
+        "usedBy_one": "Gebruikt door {{count}} gebaar",
+        "usedBy_other": "Gebruikt door {{count}} gebaren",
+        "usedByNames": "Gebruikt door: {{names}}",
+        "thumbnail": "Video van {{date}}",
+        "duration": "{{seconds}} s",
+        "status": {
+          "preparing": "Wordt verwerkt",
+          "ready": "Klaar",
+          "errored": "Mislukt"
+        }
+      },
+      "playback": {
+        "label": "Playback-id",
+        "hint": "Een publieke playback-id uit het Mux-dashboard.",
+        "invalid": "Een playback-id bestaat uit letters, cijfers, _ en -.",
+        "use": "Deze video gebruiken"
+      }
     },
     "users": {
-      "title": "Gebruikers"
+      "title": "Gebruikers",
+      "description": "Accounts, rollen en blokkeringen. Elke wijziging wordt gelogd.",
+      "filters": {
+        "label": "Filters",
+        "search": "Zoek op naam of e-mailadres",
+        "role": "Rol",
+        "status": "Status",
+        "all": "Alle",
+        "banned": "Geblokkeerd",
+        "notBanned": "Niet geblokkeerd",
+        "clear": "Filters wissen"
+      },
+      "roles": {
+        "user": "Gebruiker",
+        "admin": "Beheerder"
+      },
+      "columns": {
+        "name": "Naam",
+        "role": "Rol",
+        "status": "Status",
+        "created": "Lid sinds"
+      },
+      "status": {
+        "active": "Actief",
+        "banned": "Geblokkeerd",
+        "unverified": "E-mailadres niet bevestigd"
+      },
+      "you": "Jij",
+      "empty": "Geen accounts gevonden.",
+      "nextPage": "Oudere accounts",
+      "firstPage": "Nieuwste accounts",
+      "panel": {
+        "email": "E-mailadres",
+        "role": "Rol",
+        "status": "Status",
+        "created": "Lid sinds",
+        "methods": "Aanmeldmethoden",
+        "noMethods": "Alleen code of link per e-mail",
+        "sessions": "Actieve sessies",
+        "favorites": "Favorieten",
+        "lists": "Lijsten",
+        "banReason": "Reden van de blokkering",
+        "banUntil": "Geblokkeerd tot",
+        "banForever": "Geen einddatum",
+        "actions": "Acties",
+        "self": "Dit is je eigen account. Een andere beheerder moet de rol wijzigen, het account blokkeren of verwijderen.",
+        "adminTarget": "Neem eerst de beheerdersrol af voor je dit account blokkeert of verwijdert.",
+        "bannedTarget": "Hef de blokkering op voor je dit account beheerder maakt.",
+        "notFound": "Dit account bestaat niet meer."
+      },
+      "methods": {
+        "credential": "Wachtwoord",
+        "google": "Google",
+        "apple": "Apple",
+        "passkey": "Passkey"
+      },
+      "promote": {
+        "action": "Beheerder maken",
+        "title": "{{name}} beheerder maken?",
+        "description": "Beheerders kunnen de catalogus, de accounts en de instellingen wijzigen. Het geldt vanaf hun volgende pagina.",
+        "done": "{{name}} is nu beheerder."
+      },
+      "demote": {
+        "action": "Beheerdersrol afnemen",
+        "title": "De beheerdersrol van {{name}} afnemen?",
+        "description": "De toegang tot het beheer verdwijnt meteen.",
+        "done": "{{name}} is geen beheerder meer."
+      },
+      "ban": {
+        "action": "Blokkeren",
+        "title": "{{name}} blokkeren?",
+        "description": "Het account wordt meteen op elk toestel afgemeld en kan zich niet aanmelden zolang de blokkering duurt.",
+        "reason": "Reden",
+        "reasonHint": "Alleen beheerders zien dit.",
+        "duration": "Duur",
+        "forever": "Geen einddatum",
+        "days_one": "{{count}} dag",
+        "days_other": "{{count}} dagen",
+        "done": "{{name}} is geblokkeerd."
+      },
+      "unban": {
+        "action": "Blokkering opheffen",
+        "title": "De blokkering van {{name}} opheffen?",
+        "description": "Het account kan zich weer aanmelden.",
+        "done": "De blokkering van {{name}} is opgeheven."
+      },
+      "delete": {
+        "action": "Account verwijderen",
+        "title": "Het account van {{name}} verwijderen?",
+        "description": "De favorieten, lijsten en aanmeldmethoden worden definitief verwijderd. Het auditlogboek houdt zijn regels.",
+        "confirmLabel": "Typ {{email}} om te bevestigen",
+        "done": "Het account is verwijderd."
+      },
+      "refused": {
+        "self": "Je kunt je eigen account hier niet wijzigen.",
+        "lastAdmin": "De laatste beheerder kan de beheerdersrol niet verliezen.",
+        "adminTarget": "Neem eerst de beheerdersrol af.",
+        "targetBanned": "Hef eerst de blokkering op.",
+        "unchanged": "Het account heeft deze rol al.",
+        "alreadyBanned": "Dit account is al geblokkeerd.",
+        "notBanned": "Dit account is niet geblokkeerd.",
+        "notFound": "Dit account bestaat niet meer.",
+        "emailMismatch": "Het e-mailadres klopt niet."
+      }
     },
     "settings": {
-      "title": "Instellingen"
+      "title": "Instellingen",
+      "description": "Onderhoudsmodus en de omzeiling voor deze browser.",
+      "maintenance": {
+        "title": "Onderhoudsmodus",
+        "description": "Zolang hij aan staat, krijgen bezoekers en de app een onderhoudspagina. Webhooks, de statuscheck en het aanmelden van beheerders blijven werken, en beheerders met een omzeilcookie houden de hele site.",
+        "status": "Status",
+        "on": "Aan",
+        "off": "Uit",
+        "message": "Bericht",
+        "messageHint": "Staat op de onderhoudspagina, hoogstens {{max}} tekens. Optioneel.",
+        "noMessage": "Geen bericht",
+        "until": "Verwacht einde",
+        "untilHint": "Optioneel, hoogstens 7 dagen vooruit. Staat op de pagina en gaat mee als Retry-After.",
+        "noUntil": "Niet ingesteld",
+        "untilInvalid": "Kies een moment in de toekomst, hoogstens 7 dagen vooruit.",
+        "propagation": "Andere bezoekers volgen binnen ongeveer 2 minuten: elke server en elke Cloudflare-locatie onthoudt de instelling tot 30 seconden, en KV heeft tot een minuut nodig om elke regio te bereiken.",
+        "enable": "Onderhoud aanzetten",
+        "enableNote": "Je krijgt eerst een omzeilcookie voor deze browser, zodat je toegang houdt.",
+        "enabled": "Onderhoud staat aan",
+        "disable": "Onderhoud uitzetten",
+        "disableTitle": "Onderhoud uitzetten?",
+        "disableDescription": "De site gaat voor iedereen open. Elke omzeilcookie vervalt: beheerders hebben een nieuwe nodig voor het volgende onderhoud.",
+        "disabled": "Onderhoud staat uit. Elke omzeilcookie is vervallen.",
+        "bypassFailed": "Geen omzeilcookie voor deze browser, dus onderhoud blijft uit.",
+        "failed": "De instelling is niet gewijzigd.",
+        "loadError": "De onderhoudsinstelling kon niet geladen worden.",
+        "staleCookie": "Onderhoud staat aan, maar je omzeilcookie hoort bij een ouder onderhoud. Druk over een minuut op “Omzeilen voor deze browser”."
+      },
+      "bypass": {
+        "title": "Omzeiling voor deze browser",
+        "description": "Een ondertekende cookie die deze browser 12 uur langs het onderhoud laat. Onderhoud uitzetten trekt hem in.",
+        "active": "Actief tot {{time}}",
+        "inactive": "Niet actief",
+        "action": "Omzeilen voor deze browser (12 u)",
+        "done": "Deze browser kan het onderhoud omzeilen tot {{time}}.",
+        "failed": "Geen omzeilcookie: meld je opnieuw aan en probeer nog eens.",
+        "loadError": "De omzeilstatus kon niet geladen worden.",
+        "rateLimited": "Te veel pogingen. Probeer het over een minuut opnieuw."
+      }
     },
     "emails": {
-      "title": "E-mails"
+      "title": "E-mails",
+      "description": "De echte sjablonen met voorbeeldgegevens. Een voorbeeld wordt nooit verstuurd.",
+      "templates": "Sjablonen",
+      "template": {
+        "magicLink": "Aanmeldlink",
+        "otp": "Aanmeldcode",
+        "resetPassword": "Wachtwoord opnieuw instellen",
+        "verifyEmail": "E-mailadres bevestigen"
+      },
+      "locale": "Taal",
+      "width": "Breedte",
+      "desktop": "Desktop (780 px)",
+      "mobile": "Mobiel (390 px)",
+      "subject": "Onderwerp",
+      "view": "Weergave",
+      "html": "E-mail",
+      "text": "Platte tekst",
+      "frameTitle": "Voorbeeld: {{name}}",
+      "loadError": "De e-mailsjablonen konden niet geladen worden.",
+      "previewError": "Dit voorbeeld kon niet getoond worden.",
+      "empty": "Nog geen e-mailsjablonen.",
+      "sandboxed": "Getoond in een sandbox: geen scripts, links openen niet."
     }
   }
 }

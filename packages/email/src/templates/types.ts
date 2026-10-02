@@ -1,8 +1,8 @@
-import type { createI18n, Locale } from "@smog/i18n";
+import type { Locale, Translate } from "@smog/i18n";
 import type { ReactNode } from "react";
 
-/** A `t` bound to one locale (from `createI18n`). */
-export type Translate = ReturnType<typeof createI18n>["t"];
+/** A `t` bound to one locale (from `createI18n`): `@smog/i18n`'s `Translate`. */
+export type { Translate } from "@smog/i18n";
 
 interface TemplateContext {
   locale: Locale;

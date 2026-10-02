@@ -22,6 +22,13 @@ export interface AuditWrite {
   audit:
     | WritableAuditAction
     | readonly [WritableAuditAction, ...WritableAuditAction[]];
+  /**
+   * Set (with the reason) when a call may find nothing to change: it then
+   * calls `markUnchanged(context.db)` before writing anything and builds no
+   * entry; the rest of that call is read-only. Without it, `markUnchanged`
+   * fails the call.
+   */
+  noop?: string;
 }
 
 /**

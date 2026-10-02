@@ -3,9 +3,81 @@
 The oRPC procedures of `appContract` (`@smog/api`), served at `/api/rpc`.
 Every procedure declares the
 shared error map (`@smog/rpc/contract` `ERRORS`); the codes each one adds are
-listed with it. The public, account, favorites and lists procedures are
-documented in their contracts (`packages/features/*/src/contract.ts`); phase 5
-task 7 backfills them here.
+listed with it. The contracts (`packages/features/*/src/contract.ts` and
+`packages/api/src/contract.ts`) are the source of truth: their doc comments
+hold the full rules, and this page is the index. The OpenAPI reference is
+served at `/api/openapi`.
+
+## `system.*` (`@smog/api`)
+
+| Procedure | Auth | Input | Output |
+|---|---|---|---|
+| `system.health` | public | none | `{ ok: true, environment }` |
+| `system.whoami` | public | none | `{ user: { id, email, name, image, role } \| null }` |
+| `system.authConfig` | public | none | `{ google, apple, turnstileSiteKey }` (which sign-in methods and captcha to show; no secrets) |
+
+## `gestures.*` (`@smog/gestures`)
+
+Public reads. Unpublished gestures and categories never appear; the reads
+come from the catalog snapshot (spec §7.1), which every admin write bumps.
+
+| Procedure | Input | Output |
+|---|---|---|
+| `gestures.categories` | none | published categories (`sort_order`, then name; ≤ 100) |
+| `gestures.list` | `{ category?: slug[] (≤ 20, any of), cursor?, limit? (1..100, = 50) }` | `{ items: GestureSummary[], nextCursor }` (name order, keyset) |
+| `gestures.search` | `{ q (≤ 100), category?, limit? (1..50, = 20) }` | `{ items: SearchResult[], total }` (FTS5 candidates ≤ 200, the TS ranking, then the typo tier; an empty `q` is the browse list) |
+| `gestures.bySlug` | `{ slug }` | the gesture, also by its legacy id (`canonicalSlug` then differs); `NOT_FOUND` otherwise |
+| `gestures.byIds` | `{ ids (≤ 100) }` | `GestureSummary[]` in the order asked; unknown ids are skipped |
+| `gestures.related` | `{ slug, limit? (1..20, = 5) }` | gestures sharing a category, most shared first |
+| `gestures.sitemap` | none | every published gesture's sitemap entry |
+
+## `favorites.*` (`@smog/favorites`)
+
+Every procedure needs a session (`UNAUTHORIZED`); guests keep theirs on the
+device (`@smog/local-store`).
+
+| Procedure | Input | Output |
+|---|---|---|
+| `favorites.ids` | none | favorite gesture ids, newest first |
+| `favorites.list` | `{ cursor?, limit? }` | a keyset page of favorite gestures, newest first |
+| `favorites.add` | `{ gestureId }` | `{ favorite: true }`, idempotent; `NOT_FOUND` for an unknown or unpublished gesture |
+| `favorites.remove` | `{ gestureId }` | `{ favorite: false }`, idempotent, whatever the gesture's state |
+| `favorites.toggle` | `{ gestureId }` | `{ favorite }`: adds when missing, removes when present |
+
+## `lists.*` (`@smog/lists`)
+
+Owner procedures need a session; `lists.shared.get` is public;
+`lists.shared.addItem/removeItem` need a session and an edit link.
+
+| Procedure | Input | Output |
+|---|---|---|
+| `lists.mine` | none | the owner's lists, most recently changed first |
+| `lists.get` | `{ id }` | the list with its published gestures in order; `NOT_FOUND` otherwise |
+| `lists.containing` | `{ gestureId }` | the ids of the owner's lists holding it |
+| `lists.create` | `{ name, description? }` | the list; `INVALID_STATE` at `LISTS_MAX` |
+| `lists.update` | `{ id, name?, description? }` | the list (an empty or `null` description clears it) |
+| `lists.delete` | `{ id }` | nothing; items and share links go with it |
+| `lists.addItem` / `lists.removeItem` | `{ id, gestureId }` | `{ added }` / `{ removed }`; a no-op when already so |
+| `lists.reorder` | `{ id, gestureIds }` | nothing; exactly the current gestures, else `INVALID_STATE` |
+| `lists.share.get` | `{ id }` | the active view and edit links (`null` where none) |
+| `lists.share.create` | `{ id, role }` | the role's active link, created when none |
+| `lists.share.revoke` | `{ id, role }` | nothing; the link 404s at once |
+| `lists.shared.get` | `{ token }` | public: the list behind an active link |
+| `lists.shared.addItem` / `lists.shared.removeItem` | `{ token, gestureId }` | edit link and a session (`FORBIDDEN` for a view link) |
+
+## `account.*` (`@smog/account`)
+
+Every procedure needs a session (`UNAUTHORIZED`).
+
+| Procedure | Input | Output |
+|---|---|---|
+| `account.me` | none | the profile and the sign-in methods |
+| `account.updateProfile` | `{ name?, locale? }` | the new profile |
+| `account.consent.get` | none | the current analytics decision |
+| `account.consent.set` | `{ analytics, source? (= "web") }` | appends to the consent log; the new state |
+| `account.export` | none | everything stored about the user, as versioned JSON (holds live share links) |
+| `account.importGuestData` | the guest's favorites, lists and consent | counts of what was merged and skipped; all or nothing, idempotent |
+| `account.delete` | `{ confirm, password? }` | `{ deleted: true }`; adds `INVALID_PASSWORD`, `PASSWORD_REQUIRED`, `SESSION_NOT_FRESH`, and `INVALID_STATE` for the last admin whose ban is not in force |
 
 ## `admin.*` (`@smog/admin`)
 
@@ -53,7 +125,7 @@ accounts created in the last 30 days. Phase 6 adds the sponsorship stats.
 | `admin.gestures.bulkUpdate` | `{ ids (1..100), published?, addCategoryIds?, removeCategoryIds? }` | `{ updated }` | one `gesture.bulk_update` (`target_id` NULL) |
 | `admin.gestures.delete` | `{ id, confirmName }` | `{ id }` | `gesture.delete` |
 
-- `AdminGestureRow` is `{ id, slug, name, playbackId, muxAssetId, publishedAt, updatedAt, categories: { id, name, slug, published }[], keywords: string[] }` (epoch milliseconds; every category, published or not, in category order). `AdminGestureDetail` adds `description` and `createdAt`. Reads come from D1, never the catalog snapshot.
+- `AdminGestureRow` is `{ id, slug, name, description, playbackId, muxAssetId, publishedAt, updatedAt, categories: { id, name, slug, published }[], keywords: string[] }` (epoch milliseconds; every category, published or not, in category order; `description` since phase 5 task 4, for the table editor). `AdminGestureDetail` adds `createdAt`. Reads come from D1, never the catalog snapshot.
 - `list` is `sort_name, id` order, a keyset page at a time (index `gesture_sort_name_idx`, migration 0006). `q` matches a `normalizeText` substring of the name or of a keyword; `counts` apply `q` and `category` but not `status`. A foreign cursor is `VALIDATION`.
 - Limits (ruling 8): the name 1..120 characters after trimming, the description ≤ 2000, ≤ 30 keywords of 1..60 characters (de-duplicated by `normalizeText`), 1..20 categories. Unknown categories are `VALIDATION`; an unknown gesture is `NOT_FOUND`. The slug is set at create (`-2`, `-3`, … on a collision) and never changes.
 - Every write is one D1 batch (the change, the gesture's `gesture_fts` rows and the audit entry), then bumps `catalog:version`; a KV failure is logged, and the call still succeeds.
@@ -78,16 +150,61 @@ accounts created in the last 30 days. Phase 6 adds the sponsorship stats.
 
 ### Mux
 
-Task 3.
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.mux.status` | none | `{ configured: boolean }` | read |
+| `admin.mux.createUpload` | none | `{ uploadId, url }` | exempt (stores nothing; ruling 4) |
+| `admin.mux.uploadStatus` | `{ uploadId }` | `{ upload: "waiting" \| "asset_created" \| "errored" \| "cancelled" \| "timed_out", asset?: { id, status: "preparing" \| "ready" \| "errored", playbackId? }, error? }` | read |
+| `admin.mux.assets` | `{ page? (≥ 1, = 1), limit? (1..24, = 12) }` | `{ items: { id, playbackId, status, duration, aspectRatio, createdAt, usedBy: { id, name }[] }[], hasMore, page }` | read |
+
+- Without `MUX_TOKEN_ID` and `MUX_TOKEN_SECRET` every procedure but `status` is `INVALID_STATE`; the UI then offers only a pasted playback id. A Mux 429 is `RATE_LIMITED`.
+- `createUpload` asks Mux for a direct upload: `cors_origin` the `SITE_URL` origin, `new_asset_settings: { playback_policies: ["public"], static_renditions: [{ resolution: "highest" }], passthrough: "gesture-upload:<uuid>" }`, `timeout` 3600, `test: true` in dev. The browser PUTs the file to `url` (a `*.mux.com` host, which the CSP `connect-src` allows); no video byte passes through the Worker.
+- `uploadStatus` answers from the webhook's KV record (`mux:upload:<id>`, 24 h) when it is final, and from the Mux API otherwise (the KV record when Mux is unreachable). An upload Mux does not know, or that is not a `gesture-upload:`, is `NOT_FOUND`.
+- `assets` lists only assets with a public playback id, newest first; `hasMore` is true when Mux filled the page. `usedBy` are the gestures whose `mux_asset_id` or `playback_id` matches.
+
+### `POST /api/webhooks/mux`
+
+- Mux's webhook. Not cookie-authenticated, so no origin check: the `Mux-Signature` header (`t=<unix seconds>,v1=<hex HMAC-SHA256 of "<t>.<raw body>">`, signed with `MUX_WEBHOOK_SECRET`) is verified with Web Crypto (constant time) and a 300 s window both ways.
+- `400` for a missing, malformed, wrong or expired signature (logged without the body), `413` above 1 MiB, `429` when such rejected deliveries from one IP pass `RL_API` (a verified delivery is never limited), `503` without `MUX_WEBHOOK_SECRET`, `200` otherwise.
+- Once per event id (`mux:event:<id>`, 24 h): `video.upload.asset_created`, `video.upload.errored`, `video.upload.cancelled`, `video.asset.ready` and `video.asset.errored` for `gesture-upload:` passthroughs update `mux:upload:<uploadId>`; a settled asset never goes back to preparing. Every other event is a `200`, ignored without touching KV (phase 7 adds the render passthroughs). Exempt from maintenance (`/api/webhooks/*`).
 
 ### Users
 
-Task 5.
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.users.list` | `{ q?, role?: "user" \| "admin", banned?: boolean, cursor?, limit? (1..100, = 50) }` | `{ items: AdminUser[], nextCursor: string \| null }` | read |
+| `admin.users.get` | `{ id }` | `AdminUser & { methods: string[], sessions, favorites, lists }` | read |
+| `admin.users.setRole` | `{ userId, role }` | `{ user: AdminUser }` | `user.role_change` `{ from, to }` |
+| `admin.users.ban` | `{ userId, reason (1..200, trimmed), expiresInDays? (1..365) }` | `{ user: AdminUser }` | `user.ban` `{ reason, expiresAt }` |
+| `admin.users.unban` | `{ userId }` | `{ user: AdminUser }` | `user.unban` `{}` |
+| `admin.users.delete` | `{ userId, confirmEmail }` | `{ id }` | `user.delete` `{ hadSessions }` |
+
+- `AdminUser` is `{ id, name, email, emailVerified, role, banned, banReason, banExpires, createdAt }` (epoch ms). `banned` means a ban in force now (an expired ban reads `false`, with `banReason`/`banExpires` `null`); the `banned` filter means the same.
+- `list` reads D1 newest first with a `(created_at, id)` keyset. `q` is a literal substring of the email or the name (`instr`, so `%` and `_` are plain characters and a long email works; D1 refuses `LIKE` patterns over 50 bytes), case-insensitive for ASCII; a name is also matched as typed (`Émile`), not case-folded beyond ASCII.
+- `methods` are the account providers (`credential`, `google`, `apple`) plus `passkey`; `sessions` counts unexpired sessions; `favorites` and `lists` (owned) are counts. Phase 6 adds sponsorships by email.
+- The writes call Better Auth's `auth.api` (`setRole`, `banUser`, `unbanUser`, `removeUser`) with the request's headers, then write the audit entry (the change first; a failed entry is logged and rethrown, so the call fails after the change). Better Auth's `/api/auth/admin/*` HTTP endpoints are all 404 (`ADMIN_DISABLED_PATHS`).
+- A ban revokes every session of the account at once. A delete cascades the account's data; audit entries it wrote keep a `null` actor, and its `user.ban` entries lose their free-text reason (`reasonRemoved: true`) in the same batch as the `user.delete` entry. The audit data holds no email or name.
+- Guards, before any change: `INVALID_STATE` with `data.reason`: `self` (own role, ban or delete), `unchanged` (the role it has), `lastAdmin` (demoting the last admin whose ban is not in force; also enforced atomically by migration 0007's trigger), `targetBanned` (promoting an account whose ban is in force), `adminTarget` (ban or delete an admin: demote first), `alreadyBanned`, `notBanned`. A Better Auth refusal is typed: `FORBIDDEN` (the actor lost the role), `NOT_FOUND`, `BAD_REQUEST`. `NOT_FOUND` for an unknown account; `VALIDATION` when `confirmEmail` differs from the email (case-insensitive).
+- `bun run admin:grant` stays the way to make the first admin (spec §6); it also lifts a ban.
+- `account.delete` is `INVALID_STATE` for the last admin whose ban is not in force.
 
 ### Maintenance
 
-Task 6.
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.maintenance.get` | none | `MaintenanceSetting` | read |
+| `admin.maintenance.set` | `{ enabled, message? (1..280, trimmed), until? (ISO 8601, future, at most 7 days ahead) }` | `MaintenanceSetting` | `maintenance.enable` or `maintenance.disable` `{ message, until }` |
+
+- `MaintenanceSetting` is the KV value `maintenance`: `{ bypassVersion, enabled, message?, until? }` (`@smog/config/maintenance`, re-exported by `@smog/admin/schema`, shared with the site's gate and `bun run maintenance`). Nothing stored reads as `{ bypassVersion: 0, enabled: false }`.
+- `get` reads KV past the isolate cache with `cacheTtl: 30` (KV is eventually consistent: the value may be up to 30 s old at that location, and a change made elsewhere needs up to about a minute more). `set` writes KV first, then the audit entry (`target_type` `setting`, `target_id` `maintenance`); a failed entry is logged, the previous KV value is put back (best effort, logged when it fails), and the error rethrown. Turning on keeps `bypassVersion`; turning off writes a new one, which revokes every bypass cookie. Asking for the stored state changes nothing and writes no entry. `message` and `until` only go with `enabled: true` (`VALIDATION`).
+- Visitors follow within about 2 minutes (the gate's 30 s isolate cache, KV's 30 s edge cache and up to a minute of KV propagation).
+- `POST /api/maintenance/bypass` (site, same-origin, `RL_AUTH`, admin session) sets the 12 h HttpOnly `smog_mx` cookie and answers `{ expiresAt, bypassVersion }` (the version it signed); it is open during a window. The settings page calls it before `set({ enabled: true })`, compares `bypassVersion` with the one `set` answered, asks again once on a mismatch and warns if it still differs. The site server function `getMaintenanceBypassStatus()` answers `{ active, expiresAt? }` for the request's own cookie, to an admin session only (anyone else: `{ active: false }`).
 
 ### Emails
 
-Task 6.
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.emails.list` | none | `{ id, subject: Record<"nl" \| "en" \| "fr", string> }[]` | read |
+| `admin.emails.preview` | `{ template, locale: "nl" \| "en" \| "fr" }` | `{ subject, html, text }` | read |
+
+- Every template registered in `@smog/email` with its sample (`EMAIL_SAMPLES` in `@smog/email/samples`), rendered with `renderEmail`. Nothing is sent. An unknown `template` or `locale` is `VALIDATION`.

@@ -64,7 +64,8 @@
     "otpDigit": "Chiffre {{index}} sur {{length}}",
     "userMenu": "Menu du compte",
     "favorite": "Favori",
-    "gestureVideo": "Vidéo du geste"
+    "gestureVideo": "Vidéo du geste",
+    "dragHandleFor": "Faire glisser pour réordonner\u00a0: {{name}}"
   },
   "nav": {
     "home": "Accueil",
@@ -576,6 +577,7 @@
       "sessionNotFresh": "Reconnectez-vous pour supprimer votre compte.",
       "invalidPassword": "Ce mot de passe n'est pas correct.",
       "deleteFailed": "La suppression de votre compte a échoué. Veuillez réessayer.",
+      "lastAdmin": "Vous êtes le seul administrateur. Nommez d’abord un autre compte administrateur avant de supprimer le vôtre.",
       "signInAgain": "Pour votre sécurité, reconnectez-vous pour effectuer cette action."
     },
     "guest": {
@@ -832,22 +834,518 @@
       }
     },
     "gestures": {
-      "title": "Gestes"
+      "title": "Gestes",
+      "description": "Tous les gestes, publiés ou masqués. Les modifications apparaissent tout de suite sur le site.",
+      "new": "Nouveau geste",
+      "editTable": "Modifier le tableau",
+      "stats": {
+        "label": "Nombre de gestes",
+        "total": "Total",
+        "published": "Publiés",
+        "hidden": "Masqués"
+      },
+      "filters": {
+        "label": "Filtres",
+        "search": "Rechercher",
+        "searchPlaceholder": "Nom ou mot-clé",
+        "status": "Statut",
+        "all": "Tous",
+        "published": "Publiés",
+        "hidden": "Masqués",
+        "category": "Catégorie",
+        "allCategories": "Toutes les catégories",
+        "clear": "Effacer les filtres"
+      },
+      "columns": {
+        "select": "Sélectionner",
+        "selectAll": "Sélectionner tous les gestes de cette page",
+        "selectRow": "Sélectionner {{name}}",
+        "video": "Vidéo",
+        "name": "Nom",
+        "categories": "Catégories",
+        "keywords": "Mots-clés",
+        "published": "Publié",
+        "updated": "Modifié",
+        "actions": "Actions"
+      },
+      "moreCategories": "+{{count}}",
+      "noCategory": "Aucune",
+      "keywordCount_one": "{{count}} mot-clé",
+      "keywordCount_many": "{{count}} mots-clés",
+      "keywordCount_other": "{{count}} mots-clés",
+      "empty": {
+        "title": "Aucun geste trouvé",
+        "description": "Modifiez les filtres ou ajoutez un geste."
+      },
+      "firstPage": "Première page",
+      "nextPage": "Page suivante",
+      "rowActions": "Actions pour {{name}}",
+      "edit": "Modifier",
+      "qr": "Code QR",
+      "publish": "Publier",
+      "unpublish": "Masquer",
+      "publishToggle": "{{name}} publié",
+      "publishedToast": "{{name}} est publié.",
+      "unpublishedToast": "{{name}} est masqué.",
+      "hiddenBadge": "Masqué",
+      "publishedBadge": "Publié",
+      "bulk": {
+        "label": "Gestes sélectionnés",
+        "selected_one": "{{count}} sélectionné",
+        "selected_many": "{{count}} sélectionnés",
+        "selected_other": "{{count}} sélectionnés",
+        "publish": "Publier",
+        "unpublish": "Masquer",
+        "addCategory": "Ajouter à une catégorie",
+        "removeCategory": "Retirer d’une catégorie",
+        "clear": "Effacer la sélection",
+        "done_one": "{{count}} geste mis à jour.",
+        "done_many": "{{count}} gestes mis à jour.",
+        "done_other": "{{count}} gestes mis à jour.",
+        "noCategoryLeft": "Un geste resterait sans catégorie. Rien n’a été modifié.",
+        "actions": "Actions"
+      },
+      "table": {
+        "label": "Éditeur de tableau",
+        "hint": "Les modifications sont gardées jusqu’à ce que vous les enregistriez ensemble.",
+        "discard": "Annuler ({{count}})",
+        "save": "Enregistrer les modifications",
+        "stop": "Arrêter la modification",
+        "stopConfirmTitle": "Abandonner vos modifications\u00a0?",
+        "stopConfirmDescription": "Les modifications de {{count}} gestes ne sont pas encore enregistrées.",
+        "stopConfirm": "Abandonner",
+        "editCategories": "Catégories de {{name}}",
+        "editKeywords": "Mots-clés de {{name}}",
+        "invalid": "Corrigez d’abord les cellules signalées.",
+        "tooMany": "Enregistrez au plus {{max}} gestes à la fois.",
+        "staleRow": "Modifié par un autre administrateur",
+        "saved_one": "{{count}} geste enregistré.",
+        "saved_many": "{{count}} gestes enregistrés.",
+        "saved_other": "{{count}} gestes enregistrés.",
+        "cell": "{{field}} de {{name}}",
+        "keywordsInvalid": "Vérifiez les mots-clés\u00a0: au plus 30, chacun d’au plus 60 caractères.",
+        "changedCell": "Modifié, pas encore enregistré",
+        "merged": "Fusionné avec des versions plus récentes. Vérifiez les modifications et enregistrez à nouveau.",
+        "conflict_one": "Un autre administrateur a modifié les mêmes champs de {{count}} geste. Utilisez sa version, ou remplacez-la par la vôtre.",
+        "conflict_other": "Un autre administrateur a modifié les mêmes champs de {{count}} gestes. Utilisez sa version, ou remplacez-la par la vôtre.",
+        "conflict_many": "Un autre administrateur a modifié les mêmes champs de {{count}} gestes. Utilisez sa version, ou remplacez-la par la vôtre.",
+        "overwriteItem": "{{name}}\u00a0: {{fields}}",
+        "overwriteDescription": "Cela remplace les modifications de l’autre administrateur ({{items}}) par les vôtres.",
+        "discardTitle": "Abandonner {{count}} modifications\u00a0?",
+        "discardDescription": "Les modifications de ces lignes seront perdues.",
+        "locked": "Enregistrez ou abandonnez vos modifications du tableau pour changer les filtres ou la page."
+      },
+      "changes": {
+        "title": "Vérifiez vos modifications",
+        "description_one": "{{count}} geste est enregistré en une fois.",
+        "description_many": "{{count}} gestes sont enregistrés en une fois.",
+        "description_other": "{{count}} gestes sont enregistrés en une fois.",
+        "field": "Champ",
+        "before": "Avant",
+        "after": "Après",
+        "empty": "(vide)",
+        "confirm": "Enregistrer les modifications"
+      },
+      "fields": {
+        "name": "Nom",
+        "description": "Description",
+        "playbackId": "Identifiant de lecture",
+        "categoryIds": "Catégories",
+        "keywords": "Mots-clés"
+      },
+      "keywords": {
+        "placeholder": "Tapez un mot-clé",
+        "add": "Ajouter",
+        "hint": "Appuyez sur Entrée ou Ajouter. Cliquez sur un mot-clé pour le retirer.",
+        "remove": "Retirer {{keyword}}",
+        "list_one": "{{count}} mot-clé",
+        "list_many": "{{count}} mots-clés",
+        "list_other": "{{count}} mots-clés",
+        "none": "Pas encore de mots-clés.",
+        "duplicate": "«\u00a0{{keyword}}\u00a0» est déjà un mot-clé.",
+        "tooLong": "Un mot-clé compte au plus {{max}} caractères.",
+        "max": "Au plus {{max}} mots-clés."
+      },
+      "editor": {
+        "newTitle": "Nouveau geste",
+        "back": "Tous les gestes",
+        "status": "Statut",
+        "published": "Publié",
+        "publishedHint": "Visible sur le site et dans l’app.",
+        "slug": "Slug",
+        "slugHint": "Fixé à la création et jamais modifié, pour que les codes QR imprimés et les liens partagés restent valables.",
+        "viewOnSite": "Voir sur le site",
+        "save": "Enregistrer",
+        "create": "Créer le geste",
+        "saved": "Le geste est enregistré.",
+        "created": "{{name}} est créé.",
+        "duplicateTitle": "Doublon possible",
+        "duplicate_one": "Un autre geste porte ce nom\u00a0:",
+        "duplicate_many": "D’autres gestes portent ce nom\u00a0:",
+        "duplicate_other": "D’autres gestes portent ce nom\u00a0:",
+        "categoriesHint": "Au moins une. Les catégories masquées sont signalées.",
+        "nameRequired": "Indiquez un nom.",
+        "descriptionTooLong": "La description est trop longue.",
+        "videoRequired": "Choisissez une vidéo.",
+        "categoriesRequired": "Choisissez au moins une catégorie.",
+        "notFound": {
+          "title": "Geste introuvable",
+          "description": "Il a peut-être été supprimé."
+        }
+      },
+      "conflict": {
+        "title": "Quelqu’un d’autre a modifié ce geste",
+        "description": "Un autre administrateur a enregistré ce geste à {{time}}. Ses modifications des autres champs sont conservées. Ces champs ont été modifiés des deux côtés\u00a0:",
+        "theirs": "Sa version",
+        "mine": "Votre version",
+        "useTheirs": "Utiliser sa version",
+        "overwrite": "Remplacer par la mienne",
+        "overwriteTitle": "Remplacer ses modifications\u00a0?",
+        "overwriteDescription": "Cela remplace {{fields}} de l’autre administrateur par les vôtres.",
+        "overwriteConfirm": "Remplacer",
+        "merged": "Fusionné avec une version plus récente et enregistré.",
+        "fieldNames": {
+          "video": "la vidéo",
+          "name": "le nom",
+          "description": "la description",
+          "keywords": "les mots-clés",
+          "categoryIds": "les catégories",
+          "published": "l’état de publication"
+        }
+      },
+      "danger": {
+        "title": "Zone de danger",
+        "description": "La suppression retire le geste définitivement. Seul un geste masqué sans parrainage peut être supprimé.",
+        "publishedNote": "Masquez d’abord le geste pour le supprimer.",
+        "delete": "Supprimer le geste",
+        "confirmTitle": "Supprimer {{name}}\u00a0?",
+        "confirmDescription": "Cette action est irréversible. Tapez «\u00a0{{name}}\u00a0» pour confirmer.",
+        "confirmLabel": "Nom du geste",
+        "confirm": "Supprimer",
+        "deleted": "{{name}} est supprimé.",
+        "sponsored": "Ce geste a des parrainages et ne peut donc pas être supprimé."
+      },
+      "errors": {
+        "saveFailed": "Les modifications n’ont pas pu être enregistrées."
+      },
+      "leave": {
+        "title": "Partir sans enregistrer\u00a0?",
+        "description": "Vos modifications ne sont pas encore enregistrées. Elles seront perdues si vous partez.",
+        "leave": "Partir",
+        "stay": "Rester"
+      },
+      "listHeading": "Liste des gestes",
+      "qrHiddenNote": "Ce geste est masqué\u00a0: le lien ne fonctionnera qu’une fois publié."
     },
     "categories": {
-      "title": "Catégories"
+      "title": "Catégories",
+      "description": "L’ordre ici est l’ordre sur le site et dans l’app.",
+      "new": "Nouvelle catégorie",
+      "hiddenMark": "masquée",
+      "sections": {
+        "published": "Publiées",
+        "hidden": "Masquées",
+        "hiddenEmpty": "Aucune catégorie masquée.",
+        "publishedEmpty": "Aucune catégorie publiée."
+      },
+      "count_one": "{{count}} geste",
+      "count_many": "{{count}} gestes",
+      "count_other": "{{count}} gestes",
+      "rowActions": "Actions pour {{name}}",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "rename": "Renommer",
+      "publish": "Publier",
+      "unpublish": "Masquer",
+      "delete": "Supprimer",
+      "inUse": "Utilisée\u00a0: masquez-la plutôt",
+      "publishToggle": "{{name}} publiée",
+      "publishedToast": "{{name}} est publiée.",
+      "unpublishedToast": "{{name}} est masquée.",
+      "form": {
+        "createTitle": "Nouvelle catégorie",
+        "renameTitle": "Renommer {{name}}",
+        "name": "Nom",
+        "published": "Publiée",
+        "create": "Créer",
+        "save": "Enregistrer",
+        "slugNote": "Le slug ne change pas, pour que les liens restent valables.",
+        "duplicate": "Une catégorie porte déjà ce nom.",
+        "stale": "Un autre administrateur a modifié cette catégorie. Son nouveau nom est affiché\u00a0; réessayez.",
+        "created": "{{name}} est créée.",
+        "renamed": "La catégorie est renommée.",
+        "nameInvalid": "Indiquez un nom d’au plus {{max}} caractères."
+      },
+      "deleteConfirm": {
+        "title": "Supprimer {{name}}\u00a0?",
+        "description": "Aucun geste n’utilise cette catégorie. Cette action est irréversible.",
+        "confirm": "Supprimer",
+        "deleted": "{{name}} est supprimée.",
+        "inUse": "Des gestes utilisent cette catégorie. Masquez-la plutôt."
+      },
+      "empty": {
+        "title": "Pas encore de catégories",
+        "description": "Créez la première catégorie."
+      },
+      "reorder": {
+        "instructions": "Appuyez sur Espace ou Entrée pour prendre une catégorie. Déplacez-la avec les flèches et appuyez de nouveau sur Espace ou Entrée pour la déposer. Échap annule.",
+        "picked": "{{name}} pris, position {{position}} sur {{total}}.",
+        "moved": "{{name}} déplacé en position {{position}} sur {{total}}.",
+        "dropped": "{{name}} déposé en position {{position}} sur {{total}}.",
+        "cancelled": "Déplacement annulé. {{name}} est revenu en position {{position}}.",
+        "failed": "Le nouvel ordre n’a pas pu être enregistré."
+      },
+      "errors": {
+        "saveFailed": "La modification n’a pas pu être enregistrée."
+      },
+      "hiddenName": "{{name}} (masquée)",
+      "countWithPublished_one": "{{count}} geste · {{published}} publiés",
+      "countWithPublished_many": "{{count}} gestes · {{published}} publiés",
+      "countWithPublished_other": "{{count}} gestes · {{published}} publiés"
     },
     "mux": {
-      "title": "Vidéo"
+      "title": "Vidéo",
+      "label": "Vidéo",
+      "none": "Aucune vidéo choisie.",
+      "statusError": "Les réglages vidéo n’ont pas pu être chargés.",
+      "current": "Vidéo choisie",
+      "playbackIdValue": "ID de lecture\u00a0: {{id}}",
+      "notConfigured": {
+        "title": "L’envoi de vidéos n’est pas configuré",
+        "description": "Mux n’est pas configuré sur cet environnement. Collez l’ID de lecture d’une vidéo Mux existante."
+      },
+      "tabs": {
+        "upload": "Envoyer",
+        "choose": "Choisir une existante",
+        "playbackId": "ID de lecture"
+      },
+      "upload": {
+        "drop": "Glissez une vidéo ici",
+        "or": "ou",
+        "browse": "Choisir un fichier",
+        "hint": "Le fichier part directement chez Mux, sans passer par notre serveur.",
+        "notVideo": "Choisissez un fichier vidéo.",
+        "creating": "Préparation de l’envoi…",
+        "progressLabel": "Envoi vers Mux",
+        "uploadingStart": "Envoi de {{name}}…",
+        "uploading": "Envoi de {{name}}… {{percent}}\u00a0%",
+        "processing": "Mux traite la vidéo…",
+        "processingHint": "Cela prend généralement moins d’une minute. Vous pouvez laisser cette fenêtre ouverte.",
+        "ready": "La vidéo est prête.",
+        "another": "Envoyer une autre vidéo",
+        "retry": "Réessayer",
+        "cancel": "Annuler",
+        "failed": {
+          "create": "L’envoi n’a pas pu démarrer. Réessayez.",
+          "transfer": "Le fichier n’a pas pu être envoyé à Mux.",
+          "processing": "Mux n’a pas pu traiter cette vidéo. Essayez un autre fichier.",
+          "cancelled": "L’envoi a expiré ou a été annulé.",
+          "slow": "Mux travaille encore après 10 minutes. Vérifiez plus tard."
+        },
+        "checkAgain": "Vérifier à nouveau"
+      },
+      "picker": {
+        "loading": "Chargement des vidéos",
+        "empty": "Aucune vidéo dans Mux",
+        "emptyDescription": "Envoyez une vidéo dans l’onglet Envoyer.",
+        "error": "Les vidéos n’ont pas pu être chargées.",
+        "choose": "Choisir",
+        "chosen": "Choisie",
+        "notReady": "Pourra être choisie quand Mux aura terminé.",
+        "previous": "Page précédente",
+        "next": "Page suivante",
+        "page": "Page {{page}}",
+        "unused": "Non utilisée",
+        "usedBy_one": "Utilisée par {{count}} geste",
+        "usedBy_many": "Utilisée par {{count}} gestes",
+        "usedBy_other": "Utilisée par {{count}} gestes",
+        "usedByNames": "Utilisée par\u00a0: {{names}}",
+        "thumbnail": "Vidéo du {{date}}",
+        "duration": "{{seconds}} s",
+        "status": {
+          "preparing": "En traitement",
+          "ready": "Prête",
+          "errored": "Échec"
+        }
+      },
+      "playback": {
+        "label": "ID de lecture",
+        "hint": "Un ID de lecture public du tableau de bord Mux.",
+        "invalid": "Un ID de lecture contient des lettres, des chiffres, _ et -.",
+        "use": "Utiliser cette vidéo"
+      }
     },
     "users": {
-      "title": "Utilisateurs"
+      "title": "Utilisateurs",
+      "description": "Comptes, rôles et blocages. Chaque modification est journalisée.",
+      "filters": {
+        "label": "Filtres",
+        "search": "Rechercher par nom ou adresse e-mail",
+        "role": "Rôle",
+        "status": "Statut",
+        "all": "Tous",
+        "banned": "Bloqués",
+        "notBanned": "Non bloqués",
+        "clear": "Effacer les filtres"
+      },
+      "roles": {
+        "user": "Utilisateur",
+        "admin": "Administrateur"
+      },
+      "columns": {
+        "name": "Nom",
+        "role": "Rôle",
+        "status": "Statut",
+        "created": "Inscrit le"
+      },
+      "status": {
+        "active": "Actif",
+        "banned": "Bloqué",
+        "unverified": "Adresse e-mail non confirmée"
+      },
+      "you": "Vous",
+      "empty": "Aucun compte trouvé.",
+      "nextPage": "Comptes plus anciens",
+      "firstPage": "Comptes les plus récents",
+      "panel": {
+        "email": "Adresse e-mail",
+        "role": "Rôle",
+        "status": "Statut",
+        "created": "Inscrit le",
+        "methods": "Méthodes de connexion",
+        "noMethods": "Code ou lien par e-mail uniquement",
+        "sessions": "Sessions actives",
+        "favorites": "Favoris",
+        "lists": "Listes",
+        "banReason": "Motif du blocage",
+        "banUntil": "Bloqué jusqu’au",
+        "banForever": "Sans date de fin",
+        "actions": "Actions",
+        "self": "C’est votre propre compte. Un autre administrateur doit en changer le rôle, le bloquer ou le supprimer.",
+        "adminTarget": "Retirez d’abord le rôle d’administrateur avant de bloquer ou de supprimer ce compte.",
+        "bannedTarget": "Levez le blocage avant de nommer ce compte administrateur.",
+        "notFound": "Ce compte n’existe plus."
+      },
+      "methods": {
+        "credential": "Mot de passe",
+        "google": "Google",
+        "apple": "Apple",
+        "passkey": "Clé d’accès"
+      },
+      "promote": {
+        "action": "Nommer administrateur",
+        "title": "Nommer {{name}} administrateur\u202f?",
+        "description": "Les administrateurs peuvent modifier le catalogue, les comptes et les réglages. Cela s’applique dès leur prochaine page.",
+        "done": "{{name}} est maintenant administrateur."
+      },
+      "demote": {
+        "action": "Retirer le rôle d’administrateur",
+        "title": "Retirer le rôle d’administrateur de {{name}}\u202f?",
+        "description": "L’accès à l’administration disparaît immédiatement.",
+        "done": "{{name}} n’est plus administrateur."
+      },
+      "ban": {
+        "action": "Bloquer",
+        "title": "Bloquer {{name}}\u202f?",
+        "description": "Le compte est immédiatement déconnecté sur tous les appareils et ne peut plus se connecter pendant le blocage.",
+        "reason": "Motif",
+        "reasonHint": "Seuls les administrateurs le voient.",
+        "duration": "Durée",
+        "forever": "Sans date de fin",
+        "days_one": "{{count}} jour",
+        "days_many": "{{count}} jours",
+        "days_other": "{{count}} jours",
+        "done": "{{name}} est bloqué."
+      },
+      "unban": {
+        "action": "Lever le blocage",
+        "title": "Lever le blocage de {{name}}\u202f?",
+        "description": "Le compte peut à nouveau se connecter.",
+        "done": "Le blocage de {{name}} est levé."
+      },
+      "delete": {
+        "action": "Supprimer le compte",
+        "title": "Supprimer le compte de {{name}}\u202f?",
+        "description": "Ses favoris, listes et méthodes de connexion sont supprimés définitivement. Le journal d’audit garde ses entrées.",
+        "confirmLabel": "Tapez {{email}} pour confirmer",
+        "done": "Le compte est supprimé."
+      },
+      "refused": {
+        "self": "Vous ne pouvez pas modifier votre propre compte ici.",
+        "lastAdmin": "Le dernier administrateur ne peut pas perdre ce rôle.",
+        "adminTarget": "Retirez d’abord le rôle d’administrateur.",
+        "targetBanned": "Levez d’abord le blocage.",
+        "unchanged": "Le compte a déjà ce rôle.",
+        "alreadyBanned": "Ce compte est déjà bloqué.",
+        "notBanned": "Ce compte n’est pas bloqué.",
+        "notFound": "Ce compte n’existe plus.",
+        "emailMismatch": "L’adresse e-mail ne correspond pas."
+      }
     },
     "settings": {
-      "title": "Paramètres"
+      "title": "Paramètres",
+      "description": "Le mode maintenance et le contournement pour ce navigateur.",
+      "maintenance": {
+        "title": "Mode maintenance",
+        "description": "Tant qu’il est actif, les visiteurs et l’app voient une page de maintenance. Les webhooks, le contrôle d’état et la connexion des admins continuent de fonctionner, et les admins munis d’un cookie de contournement gardent tout le site.",
+        "status": "État",
+        "on": "Actif",
+        "off": "Inactif",
+        "message": "Message",
+        "messageHint": "Affiché sur la page de maintenance, {{max}} caractères au plus. Facultatif.",
+        "noMessage": "Aucun message",
+        "until": "Fin prévue",
+        "untilHint": "Facultatif, 7 jours à l’avance au plus. Affichée sur la page et envoyée comme Retry-After.",
+        "noUntil": "Non définie",
+        "untilInvalid": "Choisissez un moment futur, 7 jours à l’avance au plus.",
+        "propagation": "Les autres visiteurs suivent en 2 minutes environ\u00a0: chaque serveur et chaque site Cloudflare garde le réglage jusqu’à 30 secondes, et KV met jusqu’à une minute pour atteindre chaque région.",
+        "enable": "Activer la maintenance",
+        "enableNote": "Vous recevez d’abord un cookie de contournement pour ce navigateur, pour garder l’accès.",
+        "enabled": "La maintenance est active",
+        "disable": "Désactiver la maintenance",
+        "disableTitle": "Désactiver la maintenance\u202f?",
+        "disableDescription": "Le site s’ouvre à tous. Chaque cookie de contournement est révoqué\u00a0: les admins en auront besoin d’un nouveau pour la prochaine maintenance.",
+        "disabled": "La maintenance est inactive. Chaque cookie de contournement est révoqué.",
+        "bypassFailed": "Pas de cookie de contournement pour ce navigateur\u00a0: la maintenance reste inactive.",
+        "failed": "Le réglage n’a pas été modifié.",
+        "loadError": "Le réglage de maintenance n’a pas pu être chargé.",
+        "staleCookie": "La maintenance est active, mais votre cookie de contournement date d’une maintenance précédente. Appuyez sur «\u00a0Contourner pour ce navigateur\u00a0» dans une minute."
+      },
+      "bypass": {
+        "title": "Contournement pour ce navigateur",
+        "description": "Un cookie signé qui laisse passer ce navigateur pendant 12 heures. Désactiver la maintenance le révoque.",
+        "active": "Actif jusqu’au {{time}}",
+        "inactive": "Inactif",
+        "action": "Contourner pour ce navigateur (12 h)",
+        "done": "Ce navigateur peut contourner la maintenance jusqu’au {{time}}.",
+        "failed": "Pas de cookie de contournement\u00a0: reconnectez-vous et réessayez.",
+        "loadError": "L’état du contournement n’a pas pu être chargé.",
+        "rateLimited": "Trop de tentatives. Réessayez dans une minute."
+      }
     },
     "emails": {
-      "title": "E-mails"
+      "title": "E-mails",
+      "description": "Les vrais modèles avec des données d’exemple. Un aperçu n’est jamais envoyé.",
+      "templates": "Modèles",
+      "template": {
+        "magicLink": "Lien de connexion",
+        "otp": "Code de connexion",
+        "resetPassword": "Réinitialisation du mot de passe",
+        "verifyEmail": "Confirmation de l’adresse e-mail"
+      },
+      "locale": "Langue",
+      "width": "Largeur",
+      "desktop": "Ordinateur (780 px)",
+      "mobile": "Mobile (390 px)",
+      "subject": "Objet",
+      "view": "Affichage",
+      "html": "E-mail",
+      "text": "Texte brut",
+      "frameTitle": "Aperçu\u00a0: {{name}}",
+      "loadError": "Les modèles d’e-mail n’ont pas pu être chargés.",
+      "previewError": "Cet aperçu n’a pas pu être affiché.",
+      "empty": "Pas encore de modèles d’e-mail.",
+      "sandboxed": "Affiché dans un bac à sable\u00a0: pas de scripts, les liens ne s’ouvrent pas."
     }
   }
 }

@@ -802,6 +802,52 @@ describe("account.delete", () => {
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 
+  describe("the last admin (ruling 7)", () => {
+    async function asAdmin(authed: AuthedUser): Promise<AuthedUser> {
+      await env.DB.prepare("UPDATE user SET role = 'admin' WHERE id = ?")
+        .bind(authed.user.id)
+        .run();
+      return authed;
+    }
+
+    it("refuses the only admin not under a ban (INVALID_STATE), and keeps the account", async () => {
+      const only = await asAdmin(await signedUpUser("Ada"));
+      // Another admin whose ban is in force does not count.
+      const banned = await asAdmin(await signedUpUser("Bea"));
+      await env.DB.prepare(
+        "UPDATE user SET banned = 1, ban_reason = 'x' WHERE id = ?"
+      )
+        .bind(banned.user.id)
+        .run();
+      await expect(
+        call(
+          accountRouter.delete,
+          { confirm: "DELETE", password: PASSWORD },
+          await authedContext(only)
+        )
+      ).rejects.toMatchObject({ code: "INVALID_STATE", status: 409 });
+      expect(
+        await count("SELECT count(*) AS n FROM user WHERE id = ?", only.user.id)
+      ).toBe(1);
+
+      // With a second admin in good standing, the first one can leave.
+      const second = await asAdmin(await signedUpUser("Cas"));
+      expect(
+        await call(
+          accountRouter.delete,
+          { confirm: "DELETE", password: PASSWORD },
+          await authedContext(only)
+        )
+      ).toEqual({ deleted: true });
+      expect(
+        await count(
+          "SELECT count(*) AS n FROM user WHERE id = ?",
+          second.user.id
+        )
+      ).toBe(1);
+    });
+  });
+
   describe("with a session older than freshAge", () => {
     async function makeStale(authed: AuthedUser): Promise<AuthedUser> {
       await env.DB.prepare(

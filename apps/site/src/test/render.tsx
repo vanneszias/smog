@@ -31,6 +31,27 @@ function useGuestSession(): SessionHookResult {
   return GUEST;
 }
 
+/** A procedure's error answer: return `rpcError(…)` from an `api` route. */
+class RpcErrorAnswer {
+  readonly code: string;
+  readonly data: unknown;
+  readonly status: number;
+  constructor(code: string, status: number, data: unknown) {
+    this.code = code;
+    this.data = data;
+    this.status = status;
+  }
+}
+
+/** An oRPC error answer (a defined error with its `data`), e.g. `CONFLICT` 409. */
+export function rpcError(
+  code: string,
+  status: number,
+  data?: unknown
+): RpcErrorAnswer {
+  return new RpcErrorAnswer(code, status, data);
+}
+
 /** A procedure's answer (`gestures/search` → its output, or from its input). */
 type ApiRoutes = Record<string, unknown>;
 
@@ -66,6 +87,20 @@ function fakeFetch(
       typeof route === "function"
         ? (route as (input: unknown) => unknown)(input)
         : route;
+    if (value instanceof RpcErrorAnswer) {
+      return Response.json(
+        {
+          json: {
+            code: value.code,
+            data: value.data,
+            defined: true,
+            message: value.code,
+            status: value.status,
+          },
+        },
+        { status: value.status }
+      );
+    }
     return Response.json({ json: value ?? null, meta: [] });
   };
 }

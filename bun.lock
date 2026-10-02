@@ -115,6 +115,7 @@
         "@smog/styles": "workspace:*",
         "@smog/ui-web": "workspace:*",
         "@smog/utils": "workspace:*",
+        "@smog/video": "workspace:*",
         "@tanstack/react-query": "catalog:",
         "@tanstack/react-router": "1.170.40",
         "@tanstack/react-router-ssr-query": "1.167.3",
@@ -134,6 +135,7 @@
         "@tailwindcss/vite": "4.3.3",
         "@testing-library/dom": "10.4.2",
         "@testing-library/react": "16.3.3",
+        "@testing-library/user-event": "14.6.7",
         "@types/bun": "catalog:",
         "@types/react": "catalog:",
         "@types/react-dom": "19.2.7",
@@ -338,15 +340,16 @@
         "@smog/auth": "workspace:*",
         "@smog/config": "workspace:*",
         "@smog/db": "workspace:*",
+        "@smog/email": "workspace:*",
         "@smog/gestures": "workspace:*",
         "@smog/rpc": "workspace:*",
         "@smog/utils": "workspace:*",
+        "@smog/video": "workspace:*",
         "drizzle-orm": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {
         "@cloudflare/vitest-plugin": "catalog:",
-        "@smog/email": "workspace:*",
         "@tanstack/react-query": "catalog:",
         "@types/react": "catalog:",
         "react": "catalog:",
@@ -652,6 +655,18 @@
       "version": "0.0.0",
       "devDependencies": {
         "@smog/config": "workspace:*",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/video": {
+      "name": "@smog/video",
+      "version": "0.0.0",
+      "dependencies": {
+        "@smog/config": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
         "@types/bun": "catalog:",
         "typescript": "catalog:",
       },
@@ -1632,6 +1647,8 @@
     "@smog/ui-web": ["@smog/ui-web@workspace:packages/ui-web"],
 
     "@smog/utils": ["@smog/utils@workspace:packages/utils"],
+
+    "@smog/video": ["@smog/video@workspace:packages/video"],
 
     "@socket.io/component-emitter": ["@socket.io/component-emitter@3.1.2", "", {}, "sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA=="],
 

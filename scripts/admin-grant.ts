@@ -4,8 +4,9 @@ import { join } from "node:path";
  * `bun run admin:grant --env <dev|staging|production> [--dry-run] <email>`:
  * gives an existing account the `admin` role (spec §6). It runs
  * `wrangler d1 execute DB` from `apps/site` (`--local` in dev, `--remote`
- * otherwise); `--dry-run` prints the command instead. The account signs
- * in again (or its session refreshes) to pick up the role.
+ * otherwise); `--dry-run` prints the command instead. It also lifts any
+ * ban, so a banned account it recovers can sign in. The role applies on
+ * the account's next request (it is read from D1 each time).
  */
 
 const ENVS = ["dev", "staging", "production"] as const;
@@ -22,6 +23,10 @@ function quote(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
+/** Printed with the command: the grant is also an unban. */
+const UNBAN_NOTE =
+  "[adminGrant] This also lifts any ban on the account (banned, ban_reason and ban_expires are cleared).";
+
 /** The UPDATE for `email` (lower-cased, as Better Auth stores it). */
 export function buildGrantSql(email: string): string {
   const normalized = email.trim().toLowerCase();
@@ -30,7 +35,7 @@ export function buildGrantSql(email: string): string {
       `[adminGrant] Not an email address: ${JSON.stringify(email)}`
     );
   }
-  return `UPDATE user SET role = 'admin', updated_at = CAST(unixepoch('subsec') * 1000 AS INTEGER) WHERE email = ${quote(normalized)} RETURNING id, email, role;`;
+  return `UPDATE user SET role = 'admin', banned = 0, ban_reason = NULL, ban_expires = NULL, updated_at = CAST(unixepoch('subsec') * 1000 AS INTEGER) WHERE email = ${quote(normalized)} RETURNING id, email, role, banned;`;
 }
 
 /** The wrangler argv (no shell, so the SQL is one argument). */
@@ -88,13 +93,23 @@ export function parseGrantArgs(argv: readonly string[]): GrantArgs {
   return { dryRun, email, env };
 }
 
+/** What `--dry-run` prints: the command, then what it does besides. */
+export function dryRunLines(args: GrantArgs): string[] {
+  const shown = buildGrantCommand(args.env, args.email)
+    .map((arg) => JSON.stringify(arg))
+    .join(" ");
+  return [`(cd apps/site && bunx ${shown})`, UNBAN_NOTE];
+}
+
 function run(args: GrantArgs): void {
   const command = buildGrantCommand(args.env, args.email);
   if (args.dryRun) {
-    const shown = command.map((arg) => JSON.stringify(arg)).join(" ");
-    console.log(`(cd apps/site && bunx ${shown})`);
+    for (const line of dryRunLines(args)) {
+      console.log(line);
+    }
     return;
   }
+  console.log(UNBAN_NOTE);
   const proc = Bun.spawnSync(["bunx", ...command], {
     cwd: join(import.meta.dir, "..", "apps", "site"),
     stdio: ["inherit", "inherit", "inherit"],

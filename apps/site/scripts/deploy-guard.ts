@@ -50,27 +50,60 @@ export function checkDeployTarget(
  */
 export const DEV_TOOLS_MARKER = "data-theme-column";
 
+/**
+ * Every dev-only page and the string that proves it is in a build. (The
+ * `/admin/dev/video-field` preview of phase 5 task 3 is gone: the gesture
+ * editor mounts `VideoField` itself.)
+ */
+const DEV_ONLY_PAGES = [
+  { marker: DEV_TOOLS_MARKER, name: "/dev/ui gallery" },
+] as const;
+
 export interface BuiltFile {
   content: string;
   path: string;
 }
 
-/** Production must not ship the gallery; staging must still have it. */
+/** Production must ship no dev-only page; staging must still have each. */
 export function checkDevTools(
   env: DeployableEnvironment,
   files: readonly BuiltFile[]
 ): void {
-  const found = files
-    .filter((file) => file.content.includes(DEV_TOOLS_MARKER))
-    .map((file) => file.path);
-  if (env === "production" && found.length > 0) {
-    throw new Error(
-      `[deploy-guard] the production build contains the /dev/ui gallery: ${found.join(", ")}. Build with CLOUDFLARE_ENV=production so __SMOG_DEV_TOOLS__ is false.`
-    );
+  for (const page of DEV_ONLY_PAGES) {
+    const found = files
+      .filter((file) => file.content.includes(page.marker))
+      .map((file) => file.path);
+    if (env === "production" && found.length > 0) {
+      throw new Error(
+        `[deploy-guard] the production build contains the ${page.name}: ${found.join(", ")}. Build with CLOUDFLARE_ENV=production so __SMOG_DEV_TOOLS__ is false.`
+      );
+    }
+    if (env === "staging" && found.length === 0) {
+      throw new Error(
+        `[deploy-guard] the staging build has no ${page.name} (dev and staging keep the dev-only pages).`
+      );
+    }
   }
-  if (env === "staging" && found.length === 0) {
+}
+
+/**
+ * The string only the e2e seed endpoint has (`src/server/e2e-seed.ts`,
+ * `E2E_SEED_MARKER`). Only a dev build carries it (`__SMOG_E2E_SEED__`):
+ * staging keeps the other dev pages but never this one.
+ */
+export const E2E_SEED_MARKER = "smog-e2e-seed";
+
+/** A staging or production build must not contain the e2e seed endpoint. */
+export function checkNoE2eSeed(
+  env: DeployableEnvironment,
+  files: readonly BuiltFile[]
+): void {
+  const found = files
+    .filter((file) => file.content.includes(E2E_SEED_MARKER))
+    .map((file) => file.path);
+  if (found.length > 0) {
     throw new Error(
-      "[deploy-guard] the staging build has no /dev/ui gallery (dev and staging keep /dev/*)."
+      `[deploy-guard] the ${env} build contains the /dev/e2e-seed endpoint: ${found.join(", ")}. Build with CLOUDFLARE_ENV=${env} so __SMOG_E2E_SEED__ is false.`
     );
   }
 }
@@ -103,6 +136,35 @@ export function checkServerHasNoVideoPlayer(files: readonly BuiltFile[]): void {
   }
 }
 
+/**
+ * What must never reach the browser bundle (`dist/client`): the Mux
+ * credential names (their values live only in the Worker's env) and the
+ * Mux Node SDK (`@smog/video` is a thin fetch client, Worker only).
+ */
+export const CLIENT_SECRET_MARKERS = [
+  "MUX_TOKEN",
+  "MUX_WEBHOOK_SECRET",
+  "@mux/mux-node",
+] as const;
+
+const CLIENT_DIR = join("dist", "client");
+
+/** The browser build (`dist/client`) must not name a Mux secret or carry the SDK. */
+export function checkClientHasNoMuxSecrets(files: readonly BuiltFile[]): void {
+  const found = files
+    .filter(
+      (file) =>
+        file.path.includes(CLIENT_DIR) &&
+        CLIENT_SECRET_MARKERS.some((marker) => file.content.includes(marker))
+    )
+    .map((file) => file.path);
+  if (found.length > 0) {
+    throw new Error(
+      `[deploy-guard] the browser build names a Mux secret or bundles the Mux SDK: ${found.join(", ")}. Mux calls belong in the Worker (@smog/video).`
+    );
+  }
+}
+
 const DIST_DIR = fileURLToPath(new URL("../dist", import.meta.url));
 
 function readBuiltFiles(dir: string): BuiltFile[] {
@@ -123,7 +185,19 @@ function readBuiltConfig(path: string): unknown {
   }
 }
 
-if (import.meta.main) {
+if (import.meta.main && process.argv.includes("--bundle")) {
+  // After every `vite build` (the site's `build` script, so CI runs it):
+  // the checks that hold for any environment.
+  try {
+    const files = readBuiltFiles(DIST_DIR);
+    checkServerHasNoVideoPlayer(files);
+    checkClientHasNoMuxSecrets(files);
+    console.log("deploy-guard: bundle ok");
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+} else if (import.meta.main) {
   try {
     const env = checkDeployTarget(
       process.env.CLOUDFLARE_ENV,
@@ -131,7 +205,9 @@ if (import.meta.main) {
     );
     const files = readBuiltFiles(DIST_DIR);
     checkDevTools(env, files);
+    checkNoE2eSeed(env, files);
     checkServerHasNoVideoPlayer(files);
+    checkClientHasNoMuxSecrets(files);
     console.log(`deploy-guard: ok (${env})`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

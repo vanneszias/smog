@@ -1,15 +1,13 @@
-import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import {
   blockingViolations,
+  e2eSeed,
   ORIGIN,
   stubMux,
   waitForApp,
   watchErrors,
 } from "./helpers";
 
-const SITE_DIR = fileURLToPath(new URL("..", import.meta.url));
 /** A Convex id as printed on old QR codes (the seed has no legacy ids). */
 const LEGACY_ID = "j57e2elegacyhond000000000000";
 const STREAM_ERROR = /mux|media|Failed to load resource/i;
@@ -50,21 +48,9 @@ test("opens a gesture: the video, the related gestures and the SEO head", async 
 });
 
 test("answers a legacy id with a 301 to the slug", async ({ request }) => {
-  execFileSync(
-    "bunx",
-    [
-      "wrangler",
-      "d1",
-      "execute",
-      "DB",
-      "--env",
-      "dev",
-      "--local",
-      "--command",
-      `UPDATE gesture SET legacy_id = '${LEGACY_ID}' WHERE slug = 'hond'`,
-    ],
-    { cwd: SITE_DIR, stdio: "ignore" }
-  );
+  await e2eSeed(request, [
+    { legacyId: LEGACY_ID, op: "legacyId", slug: "hond" },
+  ]);
   const response = await request.get(`/gestures/${LEGACY_ID}`, {
     maxRedirects: 0,
   });

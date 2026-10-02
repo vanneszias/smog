@@ -18,6 +18,17 @@ import {
 import { LOCALES, ROLES } from "../enums";
 import { createdAt, inValues, timestamp, updatedAt } from "./columns";
 
+/**
+ * Migration 0007 adds the `user_keep_one_admin` trigger to this table
+ * (`BEFORE UPDATE OF role`: a role change never leaves the site without an
+ * admin whose ban is not in force). drizzle-kit does not model triggers,
+ * so a generated migration that rebuilds `user` (`__new_user`, `DROP
+ * TABLE`, `RENAME`, e.g. for a changed CHECK or column type) silently drops
+ * it: such a migration must re-create the trigger in the same file (copy
+ * 0007's statement), never by editing 0007. `last-admin.test.ts` in
+ * `@smog/admin` applies every migration and fails without it. The Convex
+ * import must not demote through an upsert either (PROGRESS, phase 8).
+ */
 export const user = sqliteTable(
   "user",
   {

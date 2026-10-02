@@ -13,7 +13,7 @@
  * planning, and the consent statement.
  */
 import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
-import { consentEvent, gesture, guestImport, list } from "@smog/db";
+import { consentEvent, gesture, guestImport, inList, list } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { LISTS_MAX } from "@smog/lists/schema";
 import { newId } from "@smog/utils";
@@ -255,10 +255,7 @@ async function importOnce(
       .select({ id: gesture.id })
       .from(gesture)
       .where(
-        and(
-          isNotNull(gesture.publishedAt),
-          sql`${gesture.id} IN (SELECT value FROM json_each(${JSON.stringify(requested)}))`
-        )
+        and(isNotNull(gesture.publishedAt), inList(gesture.id, requested))
       ),
     db
       .select({ id: list.id, name: list.name })

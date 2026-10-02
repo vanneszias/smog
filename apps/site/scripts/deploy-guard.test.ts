@@ -1,11 +1,44 @@
 import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
 import {
+  CLIENT_SECRET_MARKERS,
+  checkClientHasNoMuxSecrets,
   checkDeployTarget,
   checkDevTools,
+  checkNoE2eSeed,
   checkServerHasNoVideoPlayer,
   DEV_TOOLS_MARKER,
+  E2E_SEED_MARKER,
   MUX_PLAYER_MARKERS,
 } from "./deploy-guard";
+
+describe("checkNoE2eSeed", () => {
+  const seed = {
+    content: `Response.json({marker:"${E2E_SEED_MARKER}"})`,
+    path: "dist/server/assets/e2e-seed-handler.js",
+  };
+  const app = { content: "export default {}", path: "dist/server/index.js" };
+
+  it("uses the seed module's own marker", () => {
+    // Read as text: the module is Worker code (D1 types) outside scripts/.
+    const source = readFileSync(
+      new URL("../src/server/e2e-seed.ts", import.meta.url),
+      "utf8"
+    );
+    expect(source).toContain(
+      `export const E2E_SEED_MARKER = "${E2E_SEED_MARKER}";`
+    );
+  });
+
+  it("refuses a staging or production build with the e2e seed endpoint", () => {
+    for (const env of ["staging", "production"] as const) {
+      expect(() => checkNoE2eSeed(env, [app, seed])).toThrow(
+        "dist/server/assets/e2e-seed-handler.js"
+      );
+      expect(() => checkNoE2eSeed(env, [app])).not.toThrow();
+    }
+  });
+});
 
 describe("checkDevTools", () => {
   const gallery = {
@@ -24,7 +57,7 @@ describe("checkDevTools", () => {
     expect(() => checkDevTools("production", [app])).not.toThrow();
   });
 
-  it("requires the gallery in a staging build (dev and staging keep /dev/ui)", () => {
+  it("requires the gallery in a staging build, and nothing else (the video-field preview is gone)", () => {
     expect(() => checkDevTools("staging", [app, gallery])).not.toThrow();
     expect(() => checkDevTools("staging", [app])).toThrow(
       "staging build has no /dev/ui gallery"
@@ -94,5 +127,38 @@ describe("checkDeployTarget", () => {
     expect(() => checkDeployTarget("staging", null)).toThrow(
       "dist/ was built for null"
     );
+  });
+});
+
+describe("checkClientHasNoMuxSecrets", () => {
+  it("passes a client bundle without Mux credentials or the Mux SDK", () => {
+    expect(() =>
+      checkClientHasNoMuxSecrets([
+        {
+          content: 'fetch("https://direct.production.mux.com/upload/x")',
+          path: "dist/client/assets/admin.js",
+        },
+        // The Worker reads the token; only the browser bundle matters.
+        {
+          content: "env.MUX_TOKEN_ID",
+          path: "dist/server/index.js",
+        },
+      ])
+    ).not.toThrow();
+  });
+
+  it("fails on any Mux credential name or the Mux SDK in dist/client", () => {
+    for (const marker of CLIENT_SECRET_MARKERS) {
+      expect(() =>
+        checkClientHasNoMuxSecrets([
+          { content: `x.${marker}`, path: "dist/client/assets/a.js" },
+        ])
+      ).toThrow("dist/client/assets/a.js");
+    }
+    expect(CLIENT_SECRET_MARKERS).toEqual([
+      "MUX_TOKEN",
+      "MUX_WEBHOOK_SECRET",
+      "@mux/mux-node",
+    ]);
   });
 });

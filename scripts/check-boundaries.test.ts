@@ -53,6 +53,24 @@ describe("checkBoundaries", () => {
     ]);
   });
 
+  test("checks the root package: its scripts and top-level files", () => {
+    expect(checkBoundaries(join(FIXTURES, "bad-scripts"))).toEqual([
+      { from: "smog", to: "@smog/ui-web" },
+      {
+        file: "scripts/grant.ts",
+        from: "smog",
+        to: "@smog/admin/server",
+      },
+      {
+        file: "scripts/grant.ts",
+        from: "smog",
+        reason: "undeclared",
+        to: "@smog/gestures/schema",
+      },
+      { file: "vite.config.ts", from: "smog", to: "@smog/db" },
+    ]);
+  });
+
   test("passes on the real repository", () => {
     expect(checkBoundaries(join(import.meta.dir, ".."))).toEqual([]);
   });

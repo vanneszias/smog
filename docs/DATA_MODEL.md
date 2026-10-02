@@ -348,6 +348,8 @@ Statuses (`SPONSORSHIP_STATUSES`): `awaiting_payment → rendering → in_review
 Indexes: `user_created_at_idx` (created_at).
 
 CHECK: `user_role_check`, `user_locale_check`.
+
+Trigger: `user_keep_one_admin` (migration 0007, hand-written): `BEFORE UPDATE OF role` aborts with `last_admin` when an admin is demoted and no other admin without a ban in force remains (ruling 7, atomic). Deleting the last admin is refused by `account.delete` in code; admins cannot delete admins.
 #### `session`
 
 | Column | TS | Type | Null | Notes |

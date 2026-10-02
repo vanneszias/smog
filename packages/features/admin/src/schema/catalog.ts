@@ -123,6 +123,8 @@ export const adminGestureCategorySchema = z.object({
 export const adminGestureRowSchema = z.object({
   /** Every category, published or not, in category order. */
   categories: z.array(adminGestureCategorySchema),
+  /** The table editor edits it inline. */
+  description: z.string(),
   id: z.string(),
   /** In the editor's order. */
   keywords: z.array(z.string()),
@@ -139,7 +141,6 @@ export const adminGestureRowSchema = z.object({
 export const adminGestureDetailSchema = adminGestureRowSchema.extend({
   /** Epoch milliseconds. */
   createdAt: z.number().int(),
-  description: z.string(),
 });
 
 export type AdminGestureCategory = z.infer<typeof adminGestureCategorySchema>;

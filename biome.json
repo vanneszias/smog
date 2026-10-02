@@ -26,13 +26,38 @@
     ]
   },
   "javascript": {
-    "globals": ["__DEV__", "__SMOG_DEV_TOOLS__", "__SMOG_THEME_SCRIPT_HASH__"]
+    "globals": [
+      "__DEV__",
+      "__SMOG_DEV_TOOLS__",
+      "__SMOG_E2E_SEED__",
+      "__SMOG_THEME_SCRIPT_HASH__"
+    ]
   },
   "overrides": [
     {
       "includes": ["scripts/**", "**/*.test.ts", "**/*.test.tsx"],
       "javascript": {
         "globals": ["Bun"]
+      }
+    },
+    {
+      "includes": ["packages/**/src/**", "apps/site/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "drizzle-orm": {
+                    "importNames": ["inArray", "notInArray"],
+                    "message": "D1 binds at most 100 parameters per statement: use inList or jsonList from @smog/db (one json_each parameter), or a subquery in sql``."
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     {

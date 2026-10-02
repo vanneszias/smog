@@ -13,7 +13,12 @@
  * - A package may always import itself.
  * - Packages in `TOOLING_DEV_DEPENDENCIES` may be a devDependency of any
  *   package (tsconfig bases); importing them is still checked.
+ * - `ROOT_PACKAGE` is the repository root: its `scripts/` and top-level
+ *   files (Bun scripts and tooling config).
  */
+
+/** The root `package.json` name; its scripts are checked under this key. */
+export const ROOT_PACKAGE = "smog";
 
 export const FEATURE_PATTERN = "@smog/feature:*";
 
@@ -27,6 +32,9 @@ export const FEATURE_PACKAGES = [
 ] as const;
 
 export const BOUNDARIES: Record<string, readonly string[]> = {
+  // Scripts read the env schemas and the client-safe feature schemas
+  // (`admin:grant`, `maintenance`); they never import feature servers.
+  [ROOT_PACKAGE]: ["@smog/config", `${FEATURE_PATTERN}/schema`],
   "@smog/api": ["@smog/rpc", FEATURE_PATTERN, "@smog/config"],
   "@smog/mobile": [
     "@smog/api/client",

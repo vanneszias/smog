@@ -13,10 +13,12 @@ export type DeleteAccountStatus = "idle" | "deleting" | "deleted" | "error";
 /**
  * Why a deletion failed: `PASSWORD_REQUIRED` (the account has a password:
  * ask for it), `INVALID_PASSWORD`, `SESSION_NOT_FRESH` (no password: sign
- * in again), `RATE_LIMITED`, or `UNKNOWN`.
+ * in again), `LAST_ADMIN` (the only admin: make another admin first, the
+ * server's `INVALID_STATE`), `RATE_LIMITED`, or `UNKNOWN`.
  */
 export type DeleteAccountFailure =
   | "INVALID_PASSWORD"
+  | "LAST_ADMIN"
   | "PASSWORD_REQUIRED"
   | "RATE_LIMITED"
   | "SESSION_NOT_FRESH"
@@ -44,6 +46,7 @@ const SIGNED_OUT_WAIT_MS = 1000;
 
 const FAILURE_MESSAGES = {
   INVALID_PASSWORD: "account.errors.invalidPassword",
+  LAST_ADMIN: "account.errors.lastAdmin",
   PASSWORD_REQUIRED: "account.errors.passwordRequired",
   RATE_LIMITED: "auth.errors.rateLimited",
   SESSION_NOT_FRESH: "account.errors.sessionNotFresh",
@@ -65,6 +68,13 @@ const KNOWN_FAILURES: readonly string[] = [
 ] satisfies DeleteAccountFailure[];
 
 function failureOf(error: unknown): DeleteAccountFailure {
+  if (
+    error instanceof ORPCError &&
+    error.defined &&
+    error.code === "INVALID_STATE"
+  ) {
+    return "LAST_ADMIN";
+  }
   if (
     error instanceof ORPCError &&
     error.defined &&

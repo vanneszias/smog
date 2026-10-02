@@ -1,4 +1,4 @@
-import { type SQL, sql } from "drizzle-orm";
+import { type SQL, type SQLWrapper, sql } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 /**
@@ -10,4 +10,38 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
  */
 export function ref(alias: string, column: SQLiteColumn): SQL {
   return sql`${sql.raw(alias)}.${sql.identifier(column.name)}`;
+}
+
+/**
+ * A JSON array parameter, for `json_each(?)`: one bound value for any list.
+ * D1 allows at most 100 bound parameters per statement (also in a batch),
+ * so a list of values is never bound one parameter per value (`inArray`,
+ * which biome refuses in package source).
+ */
+export function jsonList(values: readonly unknown[]): string {
+  return JSON.stringify(values);
+}
+
+/** `column IN (the values)`, bound as one parameter (see `jsonList`). */
+export function inList(column: SQLWrapper, values: readonly unknown[]): SQL {
+  return sql`${column} IN (SELECT value FROM json_each(${jsonList(values)}))`;
+}
+
+/**
+ * A ban in force on the `user` row named `alias`: `banned` and an end that
+ * is unset or still ahead (the admin users list and the last-admin guards;
+ * migration 0007's trigger states the same in SQL).
+ */
+export function userBanInForce(now: Date, alias = "user"): SQL {
+  const banned = sql`${sql.identifier(alias)}.${sql.identifier("banned")}`;
+  const ends = sql`${sql.identifier(alias)}.${sql.identifier("ban_expires")}`;
+  return sql`(coalesce(${banned}, 0) = 1 AND (${ends} IS NULL OR ${ends} > ${now.getTime()}))`;
+}
+
+/**
+ * Whether an admin other than `userId` has no ban in force: the last-admin
+ * rule (ruling 7) for a demotion or a deletion of `userId`.
+ */
+export function otherActiveAdminExists(userId: string, now: Date): SQL {
+  return sql`EXISTS (SELECT 1 FROM ${sql.identifier("user")} AS ${sql.identifier("other")} WHERE ${sql.identifier("other")}.${sql.identifier("role")} = 'admin' AND ${sql.identifier("other")}.${sql.identifier("id")} <> ${userId} AND NOT ${userBanInForce(now, "other")})`;
 }
