@@ -51,16 +51,12 @@ export function checkDeployTarget(
 export const DEV_TOOLS_MARKER = "data-theme-column";
 
 /**
- * The attribute only the `/admin/dev/video-field` preview emits
- * (`src/components/admin/video/video-field-preview.tsx`), compiled out of
- * production the same way.
+ * Every dev-only page and the string that proves it is in a build. (The
+ * `/admin/dev/video-field` preview of phase 5 task 3 is gone: the gesture
+ * editor mounts `VideoField` itself.)
  */
-export const DEV_PREVIEW_MARKER = "data-dev-preview";
-
-/** Every dev-only page and the string that proves it is in a build. */
 const DEV_ONLY_PAGES = [
   { marker: DEV_TOOLS_MARKER, name: "/dev/ui gallery" },
-  { marker: DEV_PREVIEW_MARKER, name: "/admin/dev/video-field preview" },
 ] as const;
 
 export interface BuiltFile {

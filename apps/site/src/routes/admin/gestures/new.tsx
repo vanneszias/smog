@@ -1,16 +1,14 @@
-import { useTranslation } from "@smog/i18n/react";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { AdminComingSoon } from "@/components/admin/admin-page";
+import { GestureEditor } from "@/components/admin/catalog/gesture-editor";
 import { pageMeta } from "@/lib/head";
 
 export const Route = createFileRoute("/admin/gestures/new")({
   component: AdminNewGesture,
-  head: ({ matches }) => pageMeta(matches, "admin.gestures.title"),
+  head: ({ matches }) => pageMeta(matches, "admin.gestures.editor.newTitle"),
 });
 
-/** A placeholder: Task 4 (the new-gesture editor) replaces this file. */
+/** `/admin/gestures/new` (A-16): the editor for a new gesture. */
 function AdminNewGesture(): ReactNode {
-  const { t } = useTranslation();
-  return <AdminComingSoon title={t("admin.gestures.title")} />;
+  return <GestureEditor gesture={null} />;
 }

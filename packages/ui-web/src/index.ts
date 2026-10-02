@@ -90,6 +90,7 @@ export {
   DataTable,
   type DataTableColumn,
   type DataTableProps,
+  type RowExtraProps,
   type SortState,
   Table,
   TableBody,

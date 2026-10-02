@@ -77,6 +77,7 @@ const keywordsColumn =
 
 const rowColumns = {
   categories: categoriesColumn,
+  description: gesture.description,
   id: gesture.id,
   keywords: keywordsColumn,
   muxAssetId: gesture.muxAssetId,
@@ -90,11 +91,11 @@ const rowColumns = {
 const detailColumns = {
   ...rowColumns,
   createdAt: gesture.createdAt,
-  description: gesture.description,
 };
 
 interface StoredRow {
   categories: AdminGestureCategory[];
+  description: string;
   id: string;
   keywords: string[];
   muxAssetId: string | null;
@@ -108,6 +109,7 @@ interface StoredRow {
 function toRow(row: StoredRow): AdminGestureRow {
   return {
     categories: row.categories,
+    description: row.description,
     id: row.id,
     keywords: row.keywords,
     muxAssetId: row.muxAssetId,
@@ -119,14 +121,8 @@ function toRow(row: StoredRow): AdminGestureRow {
   };
 }
 
-function toDetail(
-  row: StoredRow & { createdAt: Date; description: string }
-): AdminGestureDetail {
-  return {
-    ...toRow(row),
-    createdAt: row.createdAt.getTime(),
-    description: row.description,
-  };
+function toDetail(row: StoredRow & { createdAt: Date }): AdminGestureDetail {
+  return { ...toRow(row), createdAt: row.createdAt.getTime() };
 }
 
 /** The keyset position of a page's last row. */

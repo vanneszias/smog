@@ -141,6 +141,11 @@ export interface DataTableColumn<Row> {
   sortValue?: (row: Row) => string | number;
 }
 
+/** What `rowProps` may add to a row: a class and `data-*` attributes. */
+export type RowExtraProps = { className?: string | undefined } & {
+  [key: `data-${string}`]: string | undefined;
+};
+
 export interface DataTableProps<Row>
   extends Omit<ComponentProps<"table">, "children"> {
   columns: readonly DataTableColumn<Row>[];
@@ -151,7 +156,14 @@ export interface DataTableProps<Row>
   /** Makes rows clickable (mouse, Enter and Space). */
   onRowClick?: (row: Row) => void;
   onSortChange?: (sort: SortState | null) => void;
+  /**
+   * Extra props for a row's `<tr>` (a highlight class, a `data-*` marker),
+   * e.g. the admin table editor's stale rows.
+   */
+  rowProps?: (row: Row) => RowExtraProps;
   rows: readonly Row[];
+  /** Rows shown as selected (`data-state="selected"`); the page owns the checkboxes. */
+  selectedRowIds?: ReadonlySet<string>;
   /** Controlled sort (for URL-synced admin filters). */
   sort?: SortState | null;
   stickyHeader?: boolean;
@@ -187,7 +199,9 @@ export function DataTable<Row>({
   getRowId,
   onRowClick,
   onSortChange,
+  rowProps,
   rows,
+  selectedRowIds,
   sort: controlledSort,
   stickyHeader = false,
   ...props
@@ -241,14 +255,19 @@ export function DataTable<Row>({
             </TableCell>
           </TableRow>
         ) : null}
-        {sorted.map((row) => (
-          <DataRow
-            columns={columns}
-            key={getRowId(row)}
-            onRowClick={onRowClick}
-            row={row}
-          />
-        ))}
+        {sorted.map((row) => {
+          const id = getRowId(row);
+          return (
+            <DataRow
+              columns={columns}
+              extra={rowProps?.(row)}
+              key={id}
+              onRowClick={onRowClick}
+              row={row}
+              selected={selectedRowIds?.has(id) ?? false}
+            />
+          );
+        })}
       </TableBody>
     </Table>
   );
@@ -308,13 +327,19 @@ function SortableHead<Row>({
 
 function DataRow<Row>({
   columns,
+  extra,
   onRowClick,
   row,
+  selected,
 }: {
   columns: readonly DataTableColumn<Row>[];
+  extra: RowExtraProps | undefined;
   onRowClick: ((row: Row) => void) | undefined;
   row: Row;
+  selected: boolean;
 }): ReactNode {
+  const { className: extraClassName, ...extraAttributes } = extra ?? {};
+  const state = selected ? "selected" : undefined;
   const cells = columns.map((column) => (
     <TableCell
       className={cn(column.align === "end" && "text-right tabular-nums")}
@@ -334,17 +359,28 @@ function DataRow<Row>({
     [onRowClick, row]
   );
   if (!onRowClick) {
-    return <TableRow>{cells}</TableRow>;
+    return (
+      <TableRow
+        {...extraAttributes}
+        className={extraClassName}
+        data-state={state}
+      >
+        {cells}
+      </TableRow>
+    );
   }
   // A row is not a button (it holds cells), so it takes focus and keys itself;
   // the cells stay readable as a table.
   return (
     <TableRow
+      {...extraAttributes}
       className={cn(
         "cursor-pointer hover:bg-surface-sunken",
         focusRing,
-        "focus-visible:ring-inset"
+        "focus-visible:ring-inset",
+        extraClassName
       )}
+      data-state={state}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}

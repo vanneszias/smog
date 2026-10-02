@@ -44,6 +44,12 @@ interface Row {
 }
 
 const rowId = (row: Row): string => row.id;
+
+function staleFirst(row: Row) {
+  return row === ROWS[0]
+    ? { className: "bg-warning-subtle", "data-stale": "true" }
+    : {};
+}
 const GESTURES = /Gestures/;
 
 const ROWS: Row[] = [
@@ -133,5 +139,23 @@ describe("DataTable", () => {
       />
     );
     expect(screen.getByRole("cell", { name: "No rows" })).toBeDefined();
+  });
+
+  test("marks selected rows and adds per-row classes and attributes", () => {
+    renderKit(
+      <DataTable
+        aria-label="Categories"
+        columns={COLUMNS}
+        getRowId={rowId}
+        rowProps={staleFirst}
+        rows={ROWS}
+        selectedRowIds={new Set(["b"])}
+      />
+    );
+    const [, first, second] = screen.getAllByRole("row");
+    expect(first?.getAttribute("data-state")).toBeNull();
+    expect(first?.getAttribute("data-stale")).toBe("true");
+    expect(classesOf(first ?? null)).toContain("bg-warning-subtle");
+    expect(second?.getAttribute("data-state")).toBe("selected");
   });
 });

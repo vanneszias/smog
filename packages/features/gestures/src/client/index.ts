@@ -41,6 +41,7 @@ export {
   useVideoCompleted,
 } from "./tracking";
 export { useCategories } from "./use-categories";
+export { useDebouncedValue } from "./use-debounced-value";
 export {
   FEATURED_LIMIT,
   useFeaturedGestures,

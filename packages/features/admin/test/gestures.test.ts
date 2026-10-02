@@ -337,6 +337,12 @@ describe("admin.gestures.saveMany", () => {
       [one.id, "Rij één"],
       [two.id, "Rij twee"],
     ]);
+    // The table editor's rows carry the description (it edits it inline).
+    expect(
+      (saved.items as { description?: string }[]).map(
+        (item) => item.description
+      )
+    ).toEqual(["", "Nieuwe uitleg"]);
     expect(await ftsOutOfStep([one.id, two.id])).toEqual([]);
     await expectAudit("gestures.saveMany", {
       actorId: admin.user.id,
@@ -719,6 +725,11 @@ describe("admin.gestures reads", () => {
     const all = await list({ category: [category.id] });
     expect(all.items.map((item) => item.id)).toEqual([a.id, b.id, c.id]);
     expect(all.counts).toEqual({ published: 2, total: 3, unpublished: 1 });
+    expect(all.items.map((item) => typeof item.description)).toEqual([
+      "string",
+      "string",
+      "string",
+    ]);
 
     const hidden = await list({
       category: [category.id],

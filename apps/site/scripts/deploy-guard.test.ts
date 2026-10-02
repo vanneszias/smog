@@ -5,7 +5,6 @@ import {
   checkDeployTarget,
   checkDevTools,
   checkServerHasNoVideoPlayer,
-  DEV_PREVIEW_MARKER,
   DEV_TOOLS_MARKER,
   MUX_PLAYER_MARKERS,
 } from "./deploy-guard";
@@ -27,26 +26,10 @@ describe("checkDevTools", () => {
     expect(() => checkDevTools("production", [app])).not.toThrow();
   });
 
-  const preview = {
-    content: `jsx("div",{"${DEV_PREVIEW_MARKER}":"video-field"})`,
-    path: "dist/client/assets/video-field-preview.js",
-  };
-
-  it("requires the gallery and the admin preview in a staging build (dev and staging keep them)", () => {
-    expect(() =>
-      checkDevTools("staging", [app, gallery, preview])
-    ).not.toThrow();
-    expect(() => checkDevTools("staging", [app, preview])).toThrow(
+  it("requires the gallery in a staging build, and nothing else (the video-field preview is gone)", () => {
+    expect(() => checkDevTools("staging", [app, gallery])).not.toThrow();
+    expect(() => checkDevTools("staging", [app])).toThrow(
       "staging build has no /dev/ui gallery"
-    );
-    expect(() => checkDevTools("staging", [app, gallery])).toThrow(
-      "staging build has no /admin/dev/video-field preview"
-    );
-  });
-
-  it("refuses a production build that contains the /admin/dev/video-field preview", () => {
-    expect(() => checkDevTools("production", [app, preview])).toThrow(
-      "dist/client/assets/video-field-preview.js"
     );
   });
 });

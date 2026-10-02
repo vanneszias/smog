@@ -832,10 +832,240 @@
       }
     },
     "gestures": {
-      "title": "Gestes"
+      "title": "Gestes",
+      "description": "Tous les gestes, publiés ou masqués. Les modifications apparaissent tout de suite sur le site.",
+      "new": "Nouveau geste",
+      "editTable": "Modifier le tableau",
+      "stats": {
+        "label": "Nombre de gestes",
+        "total": "Total",
+        "published": "Publiés",
+        "hidden": "Masqués"
+      },
+      "filters": {
+        "label": "Filtres",
+        "search": "Rechercher",
+        "searchPlaceholder": "Nom ou mot-clé",
+        "status": "Statut",
+        "all": "Tous",
+        "published": "Publiés",
+        "hidden": "Masqués",
+        "category": "Catégorie",
+        "allCategories": "Toutes les catégories",
+        "clear": "Effacer les filtres"
+      },
+      "columns": {
+        "select": "Sélectionner",
+        "selectAll": "Sélectionner tous les gestes de cette page",
+        "selectRow": "Sélectionner {{name}}",
+        "video": "Vidéo",
+        "name": "Nom",
+        "categories": "Catégories",
+        "keywords": "Mots-clés",
+        "published": "Publié",
+        "updated": "Modifié",
+        "actions": "Actions"
+      },
+      "moreCategories": "+{{count}}",
+      "noCategory": "Aucune",
+      "keywordCount_one": "{{count}} mot-clé",
+      "keywordCount_many": "{{count}} mots-clés",
+      "keywordCount_other": "{{count}} mots-clés",
+      "empty": {
+        "title": "Aucun geste trouvé",
+        "description": "Modifiez les filtres ou ajoutez un geste."
+      },
+      "firstPage": "Première page",
+      "nextPage": "Page suivante",
+      "rowActions": "Actions pour {{name}}",
+      "edit": "Modifier",
+      "qr": "Code QR",
+      "publish": "Publier",
+      "unpublish": "Masquer",
+      "publishToggle": "{{name}} publié",
+      "publishedToast": "{{name}} est publié.",
+      "unpublishedToast": "{{name}} est masqué.",
+      "hiddenBadge": "Masqué",
+      "publishedBadge": "Publié",
+      "bulk": {
+        "label": "Gestes sélectionnés",
+        "selected_one": "{{count}} sélectionné",
+        "selected_many": "{{count}} sélectionnés",
+        "selected_other": "{{count}} sélectionnés",
+        "publish": "Publier",
+        "unpublish": "Masquer",
+        "addCategory": "Ajouter à une catégorie",
+        "removeCategory": "Retirer d’une catégorie",
+        "clear": "Effacer la sélection",
+        "done_one": "{{count}} geste mis à jour.",
+        "done_many": "{{count}} gestes mis à jour.",
+        "done_other": "{{count}} gestes mis à jour.",
+        "noCategoryLeft": "Un geste resterait sans catégorie. Rien n’a été modifié."
+      },
+      "table": {
+        "label": "Éditeur de tableau",
+        "hint": "Les modifications sont gardées jusqu’à ce que vous les enregistriez ensemble.",
+        "discard": "Annuler ({{count}})",
+        "save": "Enregistrer les modifications",
+        "stop": "Arrêter la modification",
+        "stopConfirmTitle": "Abandonner vos modifications\u00a0?",
+        "stopConfirmDescription": "Les modifications de {{count}} gestes ne sont pas encore enregistrées.",
+        "stopConfirm": "Abandonner",
+        "editCategories": "Catégories de {{name}}",
+        "editKeywords": "Mots-clés de {{name}}",
+        "invalid": "Corrigez d’abord les cellules signalées.",
+        "tooMany": "Enregistrez au plus {{max}} gestes à la fois.",
+        "stale_one": "Un autre administrateur a modifié {{count}} de ces gestes. Rechargez-le pour voir la modification\u00a0; vos modifications de ce geste sont perdues. Vos autres modifications restent.",
+        "stale_many": "Un autre administrateur a modifié {{count}} de ces gestes. Rechargez-les pour voir les modifications\u00a0; vos modifications de ces gestes sont perdues. Vos autres modifications restent.",
+        "stale_other": "Un autre administrateur a modifié {{count}} de ces gestes. Rechargez-les pour voir les modifications\u00a0; vos modifications de ces gestes sont perdues. Vos autres modifications restent.",
+        "reloadRows": "Recharger ces lignes",
+        "staleRow": "Modifié par un autre administrateur",
+        "saved_one": "{{count}} geste enregistré.",
+        "saved_many": "{{count}} gestes enregistrés.",
+        "saved_other": "{{count}} gestes enregistrés.",
+        "cell": "{{field}} de {{name}}"
+      },
+      "changes": {
+        "title": "Vérifiez vos modifications",
+        "description_one": "{{count}} geste est enregistré en une fois.",
+        "description_many": "{{count}} gestes sont enregistrés en une fois.",
+        "description_other": "{{count}} gestes sont enregistrés en une fois.",
+        "field": "Champ",
+        "before": "Avant",
+        "after": "Après",
+        "empty": "(vide)",
+        "confirm": "Enregistrer les modifications"
+      },
+      "fields": {
+        "name": "Nom",
+        "description": "Description",
+        "playbackId": "Identifiant de lecture",
+        "categoryIds": "Catégories",
+        "keywords": "Mots-clés"
+      },
+      "keywords": {
+        "placeholder": "Tapez un mot-clé",
+        "add": "Ajouter",
+        "hint": "Appuyez sur Entrée ou Ajouter. Cliquez sur un mot-clé pour le retirer.",
+        "remove": "Retirer {{keyword}}",
+        "list_one": "{{count}} mot-clé",
+        "list_many": "{{count}} mots-clés",
+        "list_other": "{{count}} mots-clés",
+        "none": "Pas encore de mots-clés.",
+        "duplicate": "«\u00a0{{keyword}}\u00a0» est déjà un mot-clé.",
+        "tooLong": "Un mot-clé compte au plus {{max}} caractères.",
+        "max": "Au plus {{max}} mots-clés."
+      },
+      "editor": {
+        "newTitle": "Nouveau geste",
+        "back": "Tous les gestes",
+        "status": "Statut",
+        "published": "Publié",
+        "publishedHint": "Visible sur le site et dans l’app.",
+        "slug": "Slug",
+        "slugHint": "Fixé à la création et jamais modifié, pour que les codes QR imprimés et les liens partagés restent valables.",
+        "viewOnSite": "Voir sur le site",
+        "save": "Enregistrer",
+        "create": "Créer le geste",
+        "saved": "Le geste est enregistré.",
+        "created": "{{name}} est créé.",
+        "duplicateTitle": "Doublon possible",
+        "duplicate_one": "Un autre geste porte ce nom\u00a0:",
+        "duplicate_many": "D’autres gestes portent ce nom\u00a0:",
+        "duplicate_other": "D’autres gestes portent ce nom\u00a0:",
+        "categoriesHint": "Au moins une. Les catégories masquées sont signalées.",
+        "nameRequired": "Indiquez un nom.",
+        "descriptionTooLong": "La description est trop longue.",
+        "videoRequired": "Choisissez une vidéo.",
+        "categoriesRequired": "Choisissez au moins une catégorie.",
+        "notFound": {
+          "title": "Geste introuvable",
+          "description": "Il a peut-être été supprimé."
+        }
+      },
+      "conflict": {
+        "title": "Quelqu’un d’autre a modifié ce geste",
+        "description": "Un autre administrateur a enregistré ce geste après que vous l’avez ouvert. Rechargez pour voir sa version, ou continuez\u00a0: enregistrer à nouveau remplace alors ses modifications des champs que vous avez changés.",
+        "reload": "Recharger (mes modifications sont perdues)",
+        "keep": "Continuer à modifier"
+      },
+      "danger": {
+        "title": "Zone de danger",
+        "description": "La suppression retire le geste définitivement. Seul un geste masqué sans parrainage peut être supprimé.",
+        "publishedNote": "Masquez d’abord le geste pour le supprimer.",
+        "delete": "Supprimer le geste",
+        "confirmTitle": "Supprimer {{name}}\u00a0?",
+        "confirmDescription": "Cette action est irréversible. Tapez «\u00a0{{name}}\u00a0» pour confirmer.",
+        "confirmLabel": "Nom du geste",
+        "confirm": "Supprimer",
+        "deleted": "{{name}} est supprimé.",
+        "sponsored": "Ce geste a des parrainages et ne peut donc pas être supprimé."
+      },
+      "errors": {
+        "saveFailed": "Les modifications n’ont pas pu être enregistrées."
+      }
     },
     "categories": {
-      "title": "Catégories"
+      "title": "Catégories",
+      "description": "L’ordre ici est l’ordre sur le site et dans l’app.",
+      "new": "Nouvelle catégorie",
+      "hiddenMark": "masquée",
+      "sections": {
+        "published": "Publiées",
+        "hidden": "Masquées",
+        "hiddenEmpty": "Aucune catégorie masquée.",
+        "publishedEmpty": "Aucune catégorie publiée."
+      },
+      "count_one": "{{count}} geste",
+      "count_many": "{{count}} gestes",
+      "count_other": "{{count}} gestes",
+      "publishedCount": "{{count}} publiés",
+      "rowActions": "Actions pour {{name}}",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "rename": "Renommer",
+      "publish": "Publier",
+      "unpublish": "Masquer",
+      "delete": "Supprimer",
+      "inUse": "Utilisée\u00a0: masquez-la plutôt",
+      "publishToggle": "{{name}} publiée",
+      "publishedToast": "{{name}} est publiée.",
+      "unpublishedToast": "{{name}} est masquée.",
+      "form": {
+        "createTitle": "Nouvelle catégorie",
+        "renameTitle": "Renommer {{name}}",
+        "name": "Nom",
+        "published": "Publiée",
+        "create": "Créer",
+        "save": "Enregistrer",
+        "slugNote": "Le slug ne change pas, pour que les liens restent valables.",
+        "duplicate": "Une catégorie porte déjà ce nom.",
+        "stale": "Un autre administrateur a modifié cette catégorie. Son nouveau nom est affiché\u00a0; réessayez.",
+        "created": "{{name}} est créée.",
+        "renamed": "La catégorie est renommée."
+      },
+      "deleteConfirm": {
+        "title": "Supprimer {{name}}\u00a0?",
+        "description": "Aucun geste n’utilise cette catégorie. Cette action est irréversible.",
+        "confirm": "Supprimer",
+        "deleted": "{{name}} est supprimée.",
+        "inUse": "Des gestes utilisent cette catégorie. Masquez-la plutôt."
+      },
+      "empty": {
+        "title": "Pas encore de catégories",
+        "description": "Créez la première catégorie."
+      },
+      "reorder": {
+        "instructions": "Appuyez sur Espace ou Entrée pour prendre une catégorie. Déplacez-la avec les flèches et appuyez de nouveau sur Espace ou Entrée pour la déposer. Échap annule.",
+        "picked": "{{name}} pris, position {{position}} sur {{total}}.",
+        "moved": "{{name}} déplacé en position {{position}} sur {{total}}.",
+        "dropped": "{{name}} déposé en position {{position}} sur {{total}}.",
+        "cancelled": "Déplacement annulé. {{name}} est revenu en position {{position}}.",
+        "failed": "Le nouvel ordre n’a pas pu être enregistré."
+      },
+      "errors": {
+        "saveFailed": "La modification n’a pas pu être enregistrée."
+      }
     },
     "mux": {
       "title": "Vidéo",
