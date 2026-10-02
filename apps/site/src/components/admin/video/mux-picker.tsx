@@ -166,9 +166,17 @@ function PickerPager({
         type="button"
         variant="secondary"
       >
-        {t("admin.mux.picker.previous")}
+        {/* Icon only on a phone: the bar must fit 390 px. */}
+        <span className="sr-only sm:not-sr-only">
+          {t("admin.mux.picker.previous")}
+        </span>
       </Button>
-      <Text aria-current="page" size="body-sm" tone="muted">
+      <Text
+        aria-current="page"
+        className="whitespace-nowrap"
+        size="body-sm"
+        tone="muted"
+      >
         {t("admin.mux.picker.page", { page })}
       </Text>
       <Button
@@ -178,7 +186,9 @@ function PickerPager({
         type="button"
         variant="secondary"
       >
-        {t("admin.mux.picker.next")}
+        <span className="sr-only sm:not-sr-only">
+          {t("admin.mux.picker.next")}
+        </span>
         <ChevronRight aria-hidden="true" className="size-4" />
       </Button>
     </nav>

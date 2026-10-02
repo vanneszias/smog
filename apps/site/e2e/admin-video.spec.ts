@@ -85,10 +85,15 @@ test.describe("admin video field", () => {
     expect(await blockingViolations(page)).toEqual([]);
 
     await page.getByTestId("mux-file-input").setInputFiles(VIDEO);
-    await expect(page.getByText("Mux verwerkt de video…")).toBeVisible();
-    await expect(page.getByText("De video is klaar.")).toBeVisible({
-      timeout: 20_000,
-    });
+    await expect(page.getByTestId("mux-upload-progress")).toHaveText(
+      "Mux verwerkt de video…"
+    );
+    await expect(page.getByTestId("mux-upload-announcer")).toHaveText(
+      "De video is klaar.",
+      {
+        timeout: 20_000,
+      }
+    );
     // The PUT went to the (fake) Mux upload URL, not the site.
     expect(puts).toEqual([MUX_FAKE_URL]);
     expect(csp).toEqual([]);
@@ -186,11 +191,16 @@ test.describe("admin video field screenshots", () => {
         await expect(page.getByText("Sleep een video hierheen")).toBeVisible();
         await shot("idle");
         await page.getByTestId("mux-file-input").setInputFiles(VIDEO);
-        await expect(page.getByText("Mux verwerkt de video…")).toBeVisible();
+        await expect(page.getByTestId("mux-upload-progress")).toHaveText(
+          "Mux verwerkt de video…"
+        );
         await shot("processing");
-        await expect(page.getByText("De video is klaar.")).toBeVisible({
-          timeout: 20_000,
-        });
+        await expect(page.getByTestId("mux-upload-announcer")).toHaveText(
+          "De video is klaar.",
+          {
+            timeout: 20_000,
+          }
+        );
         await shot("ready");
         await page.getByRole("tab", { name: "Bestaande kiezen" }).click();
         await expect(page.getByTestId("mux-asset").first()).toBeVisible();
