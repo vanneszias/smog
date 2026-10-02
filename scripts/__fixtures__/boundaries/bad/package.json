@@ -1,5 +1,5 @@
 {
-  "name": "fixture",
+  "name": "smog",
   "private": true,
   "workspaces": [
     "packages/*",

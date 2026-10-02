@@ -6,7 +6,8 @@
     "packages/features/*"
   ],
   "devDependencies": {
+    "@smog/admin": "workspace:*",
     "@smog/config": "workspace:*",
-    "@smog/gestures": "workspace:*"
+    "@smog/ui-web": "workspace:*"
   }
 }

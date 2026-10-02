@@ -108,7 +108,7 @@ export async function contextAs(as: Authed | null) {
   });
 }
 
-export const adminRouter = createAdminRouter(adminDeps);
+const adminRouter = createAdminRouter(adminDeps);
 
 /** Every procedure path of the admin contract (`"audit.list"`, …), sorted. */
 export function adminProcedurePaths(
@@ -151,9 +151,7 @@ export async function callAs<T = unknown>(
 }
 
 /** The audit actions a mutation is mapped to (throws for reads and exempt ones). */
-export function mappedActions(
-  procedure: string
-): readonly WritableAuditAction[] {
+function mappedActions(procedure: string): readonly WritableAuditAction[] {
   const kind = ADMIN_PROCEDURE_KINDS[procedure];
   if (kind && typeof kind === "object" && "audit" in kind) {
     return typeof kind.audit === "string" ? [kind.audit] : kind.audit;
