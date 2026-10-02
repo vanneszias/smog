@@ -11,7 +11,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - [x] 2. Foundations (db, auth, rpc/api, local-store + guest import, styles/brand/i18n, ui-web/ui-native, /dev/ui)
 - [x] 3. Learning (gestures, categories, FTS search, favorites, lists, share links; site + mobile)
 - [x] 4. Account, consent, analytics, legal pages, deep links, legacy redirects, maintenance mode
-- [ ] 5. Admin panel
+- [ ] 5. Admin panel (tasks 1–7 in; the phase review is next)
 - [ ] 6. Payments, sponsorships, jobs, emails
 - [ ] 7. Render (Remotion, Container, Workflow, Mux upload, wizard preview)
 - [ ] 8. Environments (wrangler envs, EAS profiles, deploy workflow) + Convex → D1 migration script
@@ -30,14 +30,20 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - 2026-09-30: Phase 4 tasks 4 (legal pages, app links, open in app, legacy 301s, AppBanner), 5 (Turnstile bridge for the app, app magic link) and 6 (maintenance, security headers, CSP) merged. Phase 4 review: pass with a fix wave (I1–I7, two groups). Phase 5 task 1 (admin package, audit log, admin shell) merged.
 - 2026-09-30: CI split into three lanes (`release:check:core`, `:tests`, `:mobile`); every push to `develop` now deploys to staging once the lanes pass.
 - 2026-10-02: Phase 4 done: fix wave B merged (fdcd6cd); release:check green. Phase 5 task 2 (catalogue API, migration 0006) merged and deployed to staging; `bun audit` ignores GHSA-86w9-cpqp-85rv (node-forge, Expo tooling only, DECISIONS).
+- 2026-10-02: Phase 5 tasks 3 (`@smog/video`, Mux direct uploads, picker, webhook), 5 (users and roles, migration 0007's last-admin trigger), 6 (maintenance toggle, bypass card, email previews) and 4 (catalogue screens, table editor, QR dialog) merged; every develop push deploys staging.
+- 2026-10-02: Phase 5 task 7 (hardening): axe on every admin screen and overlay (light/dark × 390/1280) and keyboard-only runs with focus return (the kit's dialogs and sheets now return the focus to their opener); one admin screenshot spec (`e2e/admin-screenshots.spec.ts`); the admin pages, a `*.mux.com` upload and the email frame under the CSP; the parity walk (inventory ticks, phase 6/7 notes); `docs/API.md` covers every procedure; the boundaries check covers `scripts/`.
 - 2026-09-30: Phase 4 fix wave B: load-robust tests (route warm-up, RNTL and Testing Library timeouts, deferred gates, batched seeds, Workers-pool `testTimeout`, Playwright workers and warm-up, turbo `--concurrency=3`), a guest never inherits a mirrored consent (I7), the legal additions (Google photo, `smog_mx`, a shared device) and LEGAL-SIGNOFF P29–P32, inventory ticks.
 
 ## Next
 
 - Phases 2, 3 and 4: done.
-- Phase 5: tasks 1 (admin package, audit log, admin shell) and 2 (catalogue API) merged; task 3 (`@smog/video` + Mux) in progress; then 5 (users and roles), 6 (settings and emails), 4 (catalogue screens) and 7 (hardening).
-- Carry into phase 5: admin gesture and category writes must set `sort_name`, reindex FTS and call `bumpCatalogVersion` (the catalog snapshot also serves `gestures.categories`); gesture name ≤ 120. The admin gestures tab gets the QR dialog (inventory L-14's admin half). The admin screens read categories (and gestures) from D1, not through the cached `gestures.categories`, so an admin sees their own edit at once. The maintenance toggle sets the admin's bypass cookie in the same response.
-- Carry into phase 5 task 7: `scripts/check-boundaries.ts` scans only the workspaces, not the root package or `scripts/*`, so a script may import any workspace package unchecked. Add the root (`smog`) to `BOUNDARIES` (scripts may import `@smog/config` and the `@smog/*/schema` subpaths) and scan `scripts/`. Today the scripts import only `@smog/config` (phase 5 task 6, fix round 1).
+- Phase 5: all seven tasks are in (task 7 awaits its review); then the phase review. The phase 5 carries are done: the catalogue writes set `sort_name`, reindex FTS and bump the catalog version; the admin reads come from D1; the QR dialog is in the gestures list and editor; the maintenance toggle gets the bypass cookie first; the boundaries check covers `scripts/` (task 7).
+- Carry into phase 6 (moved by phase 5 ruling 1): the sponsorship admin: the moderation queue with approve / request changes / reject (A-04–A-07), the sponsorships list and detail with the `sponsorship_event` trail (A-08, A-15, A-29), mark paid, cancel and force expire (A-10–A-12), the admin notification recipients (A-14) and the CSV export (A-09, `admin.export.sponsorshipsCsv`), as `admin.sponsorships.*` slices with their `ADMIN_AUDIT_MAP` entries; the rail's "Sponsorships" entry; the dashboard's sponsorship stats and the user panel's sponsorships; `docs/API.md` sections for them.
+- Carry into phase 6: the audit data schemas for the actions phase 6 writes (`sponsorship.*`, `payment.refund`, `export.sponsorships_csv` in `AUDIT_DATA_SCHEMAS`; the writer refuses an action without one).
+- Carry into phase 6: a sample (`EMAIL_SAMPLES` in `@smog/email/samples`) and an admin label for every new email template, so `/admin/emails` previews it (check-types and the samples test fail without them, on purpose).
+- Carry into phase 6 (ruling 2): R-11, `/sponsors?gestureId=<old id>`. Today it 301s to `/sponsor?gestureId=<old id>` with the query kept; the wizard must resolve a gesture id, slug or `legacy_id` there, or the redirect must map it.
+- Carry into phase 6 (ruling 3): the sponsor logo upload through an R2 presigned PUT (S3 API endpoint and an R2 token, 1 s–7 d expiry, signed `Content-Type`, bucket CORS, no custom domain).
+- Carry into phase 7: A-27, the render job view and retry per sponsorship (`render_failed` → `rendering`, a new `render_job` row), and the `/api/webhooks/mux` render passthroughs (Workflow events for `video.asset.master.ready` / `video.asset.ready`; inventory W-02 is partial until then).
 - Carry into phase 6: the sponsor call-to-action on the gesture detail (inventory L-17), from `sponsorships.availability`, on the site and mobile, and the `sponsorship_checkout_started` event.
 - Carry into phase 6 (required before cutover, the privacy text promises it): a scheduled purge that deletes `audit_log` rows older than 3 years and expired `session` and `verification` rows within 30 days of their expiry.
 - Carry into phase 8: the Convex → D1 data import must call `bumpCatalogVersion` (and rebuild FTS) when it finishes; otherwise isolates keep serving the old catalog snapshot until they are recycled.
@@ -55,10 +61,13 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 2. The retention purges the privacy text promises: `audit_log` older than 3 years, and expired `session`/`verification` rows within 30 days (phase 6 carry).
 3. Production `TURNSTILE_SITE_KEY` (var) and `TURNSTILE_SECRET_KEY` (secret), and a production `SITE_URL` equal to the browser origin (phase 8 carry).
 4. Device checks no test covers: Turnstile in the iOS simulator and on an Android device with the always-pass key; open in app and universal links (including `/magic-link/app`) on a real iPhone.
-5. The phase 4 fix wave merged (group A is; group B next), with release:check, the site e2e and two forced test runs green.
+5. The phase 5 review passed, with release:check and the full site e2e green (phase 4 and its fix waves are done).
+6. The Mux production setup: a production Mux environment of its own with `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET` and `MUX_WEBHOOK_SECRET` set, and its webhook at `<SITE_URL>/api/webhooks/mux` (phase 8 carry). Without them the admin can only paste a playback id.
+7. A first admin on production through `bun run admin:grant --env production <email>`, since no admin can be made in the UI without one.
 
 ## Known gaps
 
+- The admin e2e uses the local dev D1 and the Mux fake; the maintenance spec runs last on its own (`--project maintenance`). Screenshots: `ADMIN_SHOTS_DIR=<dir> bunx playwright test admin-screenshots` (and the maintenance project for the settings with maintenance on).
 - The legal texts (`/privacy`, `/terms`) need the owner's sign-off before any develop → master merge (see "Pending before develop → master").
 - Bun is pinned at 1.3.11 (`packageManager`); upgrade when possible (see DECISIONS).
 - `SMOG_OFFLINE=1 bun run release:check` (local, no network) degrades three expo-doctor checks; CI runs them online and is the authority.
