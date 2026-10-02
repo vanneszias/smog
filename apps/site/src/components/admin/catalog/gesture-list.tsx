@@ -77,9 +77,7 @@ export function validateGestureListSearch(
  * The list input for the URL's filters. A page holds 100 rows (the
  * contract's maximum, also `bulkUpdate`'s), so "select all" covers it.
  */
-function gestureListInput(
-  search: GestureListSearch
-): AdminGestureListInput {
+function gestureListInput(search: GestureListSearch): AdminGestureListInput {
   return {
     category: search.category ? [search.category] : undefined,
     cursor: search.cursor,
