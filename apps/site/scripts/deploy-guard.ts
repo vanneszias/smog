@@ -51,16 +51,12 @@ export function checkDeployTarget(
 export const DEV_TOOLS_MARKER = "data-theme-column";
 
 /**
- * The attribute only the `/admin/dev/video-field` preview emits
- * (`src/components/admin/video/video-field-preview.tsx`), compiled out of
- * production the same way.
+ * Every dev-only page and the string that proves it is in a build. (The
+ * `/admin/dev/video-field` preview of phase 5 task 3 is gone: the gesture
+ * editor mounts `VideoField` itself.)
  */
-export const DEV_PREVIEW_MARKER = "data-dev-preview";
-
-/** Every dev-only page and the string that proves it is in a build. */
 const DEV_ONLY_PAGES = [
   { marker: DEV_TOOLS_MARKER, name: "/dev/ui gallery" },
-  { marker: DEV_PREVIEW_MARKER, name: "/admin/dev/video-field preview" },
 ] as const;
 
 export interface BuiltFile {
@@ -87,6 +83,28 @@ export function checkDevTools(
         `[deploy-guard] the staging build has no ${page.name} (dev and staging keep the dev-only pages).`
       );
     }
+  }
+}
+
+/**
+ * The string only the e2e seed endpoint has (`src/server/e2e-seed.ts`,
+ * `E2E_SEED_MARKER`). Only a dev build carries it (`__SMOG_E2E_SEED__`):
+ * staging keeps the other dev pages but never this one.
+ */
+export const E2E_SEED_MARKER = "smog-e2e-seed";
+
+/** A staging or production build must not contain the e2e seed endpoint. */
+export function checkNoE2eSeed(
+  env: DeployableEnvironment,
+  files: readonly BuiltFile[]
+): void {
+  const found = files
+    .filter((file) => file.content.includes(E2E_SEED_MARKER))
+    .map((file) => file.path);
+  if (found.length > 0) {
+    throw new Error(
+      `[deploy-guard] the ${env} build contains the /dev/e2e-seed endpoint: ${found.join(", ")}. Build with CLOUDFLARE_ENV=${env} so __SMOG_E2E_SEED__ is false.`
+    );
   }
 }
 
@@ -187,6 +205,7 @@ if (import.meta.main && process.argv.includes("--bundle")) {
     );
     const files = readBuiltFiles(DIST_DIR);
     checkDevTools(env, files);
+    checkNoE2eSeed(env, files);
     checkServerHasNoVideoPlayer(files);
     checkClientHasNoMuxSecrets(files);
     console.log(`deploy-guard: ok (${env})`);

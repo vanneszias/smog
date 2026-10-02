@@ -8,10 +8,16 @@ import {
   type Page,
   test,
 } from "@playwright/test";
-import { blockingViolations, ORIGIN, stubMux, waitForApp } from "./helpers";
+import {
+  blockingViolations,
+  ORIGIN,
+  stubMux,
+  stubMuxStream,
+  waitForApp,
+} from "./helpers";
 
 /*
- * The admin VideoField against the Mux fake (playwright.config.ts starts
+ * The gesture editor's VideoField against the Mux fake (playwright.config.ts starts
  * it and points the dev server at it): the file goes from the browser
  * straight to the fake's upload URL (never through the Worker), the fake
  * readies the asset and signs the webhooks, the field shows the video.
@@ -20,7 +26,9 @@ import { blockingViolations, ORIGIN, stubMux, waitForApp } from "./helpers";
  */
 
 const ADMIN = { email: "admin@smog.test", password: "smog-dev-admin" };
-const PREVIEW = "/admin/dev/video-field";
+/** The editor that mounts VideoField (the old dev preview is gone). */
+const EDITOR = "/admin/gestures/new";
+const GESTURE_EDITOR_URL = /\/admin\/gestures\/(?!new$)[A-Za-z0-9_-]+$/;
 const MUX_FAKE_URL = `http://localhost:${process.env.E2E_MUX_PORT ?? 4010}`;
 const SAMPLE_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
 const PREINSTALLED_CHROMIUM = "/opt/pw-browsers/chromium";
@@ -29,6 +37,16 @@ const VIDEO = {
   mimeType: "video/mp4",
   name: "zwaaien.mp4",
 };
+
+/** One oRPC call over HTTP, as the admin client makes it. */
+async function rpc<T>(page: Page, path: string, input: unknown): Promise<T> {
+  const response = await page.request.post(`/api/rpc/${path}`, {
+    data: { json: input },
+    headers: { origin: ORIGIN },
+  });
+  expect(response.ok()).toBe(true);
+  return ((await response.json()) as { json: T }).json;
+}
 
 async function signInAsAdmin(page: Page): Promise<void> {
   const response = await page.request.post("/api/auth/sign-in/email", {
@@ -41,8 +59,7 @@ async function signInAsAdmin(page: Page): Promise<void> {
 /** Mux stills and HLS are not reachable offline: stills are stubbed, streams refused. */
 async function stubMuxMedia(page: Page): Promise<void> {
   await stubMux(page);
-  await page.route("https://stream.mux.com/**", (route) => route.abort());
-  await page.route("https://*.litix.io/**", (route) => route.abort());
+  await stubMuxStream(page);
 }
 
 async function seedFakeAssets(count: number): Promise<void> {
@@ -54,8 +71,8 @@ async function seedFakeAssets(count: number): Promise<void> {
   expect(response.ok).toBe(true);
 }
 
-async function openPreview(page: Page): Promise<void> {
-  await page.goto(PREVIEW);
+async function openEditor(page: Page): Promise<void> {
+  await page.goto(EDITOR);
   await waitForApp(page);
   // The consent banner shows after hydration; answer it so it covers nothing.
   await page
@@ -80,7 +97,7 @@ test.describe("admin video field", () => {
         csp.push(message.text());
       }
     });
-    await openPreview(page);
+    await openEditor(page);
     await expect(page.getByText("Sleep een video hierheen")).toBeVisible();
     expect(await blockingViolations(page)).toEqual([]);
 
@@ -97,10 +114,33 @@ test.describe("admin video field", () => {
     // The PUT went to the (fake) Mux upload URL, not the site.
     expect(puts).toEqual([MUX_FAKE_URL]);
     expect(csp).toEqual([]);
-    const value = page.getByTestId("video-field-value");
-    await expect(value).toContainText(SAMPLE_PLAYBACK_ID);
-    await expect(value).toContainText("muxAssetId");
+    await expect(
+      page.getByText(`Playback-id: ${SAMPLE_PLAYBACK_ID}`)
+    ).toBeVisible();
     expect(await blockingViolations(page)).toEqual([]);
+
+    // Saved as a hidden gesture, it keeps the uploaded asset's id.
+    const name = `Zzupload ${Date.now()}`;
+    await page.getByRole("textbox", { name: "Naam" }).fill(name);
+    await page.getByRole("button", { name: "Begroeten" }).click();
+    await page.getByRole("switch", { name: "Gepubliceerd" }).click();
+    await page.getByRole("button", { name: "Gebaar aanmaken" }).click();
+    await expect(page).toHaveURL(GESTURE_EDITOR_URL);
+    const id = new URL(page.url()).pathname.split("/").pop() ?? "";
+    const saved = await rpc<{ muxAssetId: string | null; playbackId: string }>(
+      page,
+      "admin/gestures/get",
+      { id }
+    );
+    expect(saved.playbackId).toBe(SAMPLE_PLAYBACK_ID);
+    expect(saved.muxAssetId).not.toBeNull();
+    await rpc(page, "admin/gestures/delete", { confirmName: name, id });
+    await openEditor(page);
+    await page.getByTestId("mux-file-input").setInputFiles(VIDEO);
+    await expect(page.getByTestId("mux-upload-announcer")).toHaveText(
+      "De video is klaar.",
+      { timeout: 20_000 }
+    );
 
     await page.getByRole("button", { name: "Andere video uploaden" }).click();
     await expect(page.getByText("Sleep een video hierheen")).toBeVisible();
@@ -121,7 +161,7 @@ test.describe("admin video field", () => {
     ).toBeVisible();
     await input.fill("plak_hier-123");
     await page.getByRole("button", { name: "Deze video gebruiken" }).click();
-    await expect(value).toHaveText('{"playbackId":"plak_hier-123"}');
+    await expect(page.getByText("Playback-id: plak_hier-123")).toBeVisible();
   });
 
   test("without Mux it offers the playback id only", async ({ page }) => {
@@ -134,7 +174,7 @@ test.describe("admin video field", () => {
         json: { json: { configured: false }, meta: [] },
       })
     );
-    await openPreview(page);
+    await openEditor(page);
     await expect(
       page.getByText("Video-uploads zijn niet ingesteld")
     ).toBeVisible();
@@ -187,7 +227,7 @@ test.describe("admin video field screenshots", () => {
             path: join(dir ?? "", `video-${name}-${theme}-${width}.png`),
           });
         };
-        await openPreview(page);
+        await openEditor(page);
         await expect(page.getByText("Sleep een video hierheen")).toBeVisible();
         await shot("idle");
         await page.getByTestId("mux-file-input").setInputFiles(VIDEO);
@@ -226,7 +266,7 @@ test.describe("admin video field screenshots", () => {
             json: { json: { configured: false }, meta: [] },
           })
         );
-        await openPreview(page);
+        await openEditor(page);
         await expect(
           page.getByText("Video-uploads zijn niet ingesteld")
         ).toBeVisible();

@@ -32,6 +32,7 @@ import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as DevE2eSeedRouteImport } from './routes/dev/e2e-seed'
 import { Route as DevMailRouteImport } from './routes/dev/mail'
 import { Route as DevMailDotjsonRouteImport } from './routes/dev/mail[.]json'
 import { Route as DevUiRouteImport } from './routes/dev/ui'
@@ -40,7 +41,6 @@ import { Route as GesturesSlugRouteImport } from './routes/gestures/$slug'
 import { Route as ListsIndexRouteImport } from './routes/lists/index'
 import { Route as ListsShareTokenRouteImport } from './routes/lists/$shareToken'
 import { Route as MagicLinkAppRouteImport } from './routes/magic-link_.app'
-import { Route as AdminDevVideoFieldRouteImport } from './routes/admin/dev/video-field'
 import { Route as AdminGesturesIndexRouteImport } from './routes/admin/gestures/index'
 import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id'
 import { Route as AdminGesturesNewRouteImport } from './routes/admin/gestures/new'
@@ -164,6 +164,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevE2eSeedRoute = DevE2eSeedRouteImport.update({
+  id: '/dev/e2e-seed',
+  path: '/dev/e2e-seed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevMailRoute = DevMailRouteImport.update({
   id: '/dev/mail',
   path: '/dev/mail',
@@ -203,11 +208,6 @@ const MagicLinkAppRoute = MagicLinkAppRouteImport.update({
   id: '/magic-link_/app',
   path: '/magic-link/app',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AdminDevVideoFieldRoute = AdminDevVideoFieldRouteImport.update({
-  id: '/dev/video-field',
-  path: '/dev/video-field',
-  getParentRoute: () => AdminRoute,
 } as any)
 const AdminGesturesIndexRoute = AdminGesturesIndexRouteImport.update({
   id: '/gestures/',
@@ -268,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
@@ -277,7 +278,6 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
-  '/admin/dev/video-field': typeof AdminDevVideoFieldRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -308,6 +308,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
@@ -317,7 +318,6 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/gestures': typeof GesturesIndexRoute
   '/lists': typeof ListsIndexRoute
-  '/admin/dev/video-field': typeof AdminDevVideoFieldRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -350,6 +350,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/health': typeof ApiHealthRoute
+  '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
   '/dev/ui': typeof DevUiRoute
@@ -359,7 +360,6 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
-  '/admin/dev/video-field': typeof AdminDevVideoFieldRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -393,6 +393,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/analytics'
     | '/api/health'
+    | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
@@ -402,7 +403,6 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/gestures/'
     | '/lists/'
-    | '/admin/dev/video-field'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/api/auth/$'
@@ -433,6 +433,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/analytics'
     | '/api/health'
+    | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
@@ -442,7 +443,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/gestures'
     | '/lists'
-    | '/admin/dev/video-field'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/api/auth/$'
@@ -474,6 +474,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/analytics'
     | '/api/health'
+    | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
     | '/dev/ui'
@@ -483,7 +484,6 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/gestures/'
     | '/lists/'
-    | '/admin/dev/video-field'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/api/auth/$'
@@ -511,6 +511,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  DevE2eSeedRoute: typeof DevE2eSeedRoute
   DevMailRoute: typeof DevMailRoute
   DevMailDotjsonRoute: typeof DevMailDotjsonRoute
   DevUiRoute: typeof DevUiRoute
@@ -688,6 +689,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/e2e-seed': {
+      id: '/dev/e2e-seed'
+      path: '/dev/e2e-seed'
+      fullPath: '/dev/e2e-seed'
+      preLoaderRoute: typeof DevE2eSeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dev/mail': {
       id: '/dev/mail'
       path: '/dev/mail'
@@ -743,13 +751,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/magic-link/app'
       preLoaderRoute: typeof MagicLinkAppRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/admin/dev/video-field': {
-      id: '/admin/dev/video-field'
-      path: '/dev/video-field'
-      fullPath: '/admin/dev/video-field'
-      preLoaderRoute: typeof AdminDevVideoFieldRouteImport
-      parentRoute: typeof AdminRoute
     }
     '/admin/gestures/': {
       id: '/admin/gestures/'
@@ -810,7 +811,6 @@ interface AdminRouteChildren {
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
-  AdminDevVideoFieldRoute: typeof AdminDevVideoFieldRoute
   AdminGesturesIdRoute: typeof AdminGesturesIdRoute
   AdminGesturesNewRoute: typeof AdminGesturesNewRoute
   AdminGesturesIndexRoute: typeof AdminGesturesIndexRoute
@@ -823,7 +823,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSettingsRoute: AdminSettingsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
-  AdminDevVideoFieldRoute: AdminDevVideoFieldRoute,
   AdminGesturesIdRoute: AdminGesturesIdRoute,
   AdminGesturesNewRoute: AdminGesturesNewRoute,
   AdminGesturesIndexRoute: AdminGesturesIndexRoute,
@@ -849,6 +848,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   ApiHealthRoute: ApiHealthRoute,
+  DevE2eSeedRoute: DevE2eSeedRoute,
   DevMailRoute: DevMailRoute,
   DevMailDotjsonRoute: DevMailDotjsonRoute,
   DevUiRoute: DevUiRoute,

@@ -64,7 +64,8 @@
     "otpDigit": "Digit {{index}} of {{length}}",
     "userMenu": "Account menu",
     "favorite": "Favorite",
-    "gestureVideo": "Gesture video"
+    "gestureVideo": "Gesture video",
+    "dragHandleFor": "Drag to reorder: {{name}}"
   },
   "nav": {
     "home": "Home",
@@ -821,10 +822,264 @@
       }
     },
     "gestures": {
-      "title": "Gestures"
+      "title": "Gestures",
+      "description": "Every gesture, published or hidden. Changes show on the site at once.",
+      "new": "New gesture",
+      "editTable": "Edit table",
+      "stats": {
+        "label": "Gesture counts",
+        "total": "Total",
+        "published": "Published",
+        "hidden": "Hidden"
+      },
+      "filters": {
+        "label": "Filters",
+        "search": "Search",
+        "searchPlaceholder": "Name or keyword",
+        "status": "Status",
+        "all": "All",
+        "published": "Published",
+        "hidden": "Hidden",
+        "category": "Category",
+        "allCategories": "All categories",
+        "clear": "Clear filters"
+      },
+      "columns": {
+        "select": "Select",
+        "selectAll": "Select every gesture on this page",
+        "selectRow": "Select {{name}}",
+        "video": "Video",
+        "name": "Name",
+        "categories": "Categories",
+        "keywords": "Keywords",
+        "published": "Published",
+        "updated": "Updated",
+        "actions": "Actions"
+      },
+      "moreCategories": "+{{count}}",
+      "noCategory": "None",
+      "keywordCount_one": "{{count}} keyword",
+      "keywordCount_other": "{{count}} keywords",
+      "empty": {
+        "title": "No gestures found",
+        "description": "Change the filters, or add a gesture."
+      },
+      "firstPage": "First page",
+      "nextPage": "Next page",
+      "rowActions": "Actions for {{name}}",
+      "edit": "Edit",
+      "qr": "QR code",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "publishToggle": "{{name}} published",
+      "publishedToast": "{{name}} is published.",
+      "unpublishedToast": "{{name}} is hidden.",
+      "hiddenBadge": "Hidden",
+      "publishedBadge": "Published",
+      "bulk": {
+        "label": "Selected gestures",
+        "selected_one": "{{count}} selected",
+        "selected_other": "{{count}} selected",
+        "publish": "Publish",
+        "unpublish": "Unpublish",
+        "addCategory": "Add to category",
+        "removeCategory": "Remove from category",
+        "clear": "Clear selection",
+        "done_one": "{{count}} gesture updated.",
+        "done_other": "{{count}} gestures updated.",
+        "noCategoryLeft": "A gesture would be left without a category. Nothing was changed.",
+        "actions": "Actions"
+      },
+      "table": {
+        "label": "Table editor",
+        "hint": "Edits are kept until you save them together.",
+        "discard": "Discard ({{count}})",
+        "save": "Save changes",
+        "stop": "Stop editing",
+        "stopConfirmTitle": "Discard your changes?",
+        "stopConfirmDescription": "The changes to {{count}} gestures are not saved yet.",
+        "stopConfirm": "Discard",
+        "editCategories": "Categories of {{name}}",
+        "editKeywords": "Keywords of {{name}}",
+        "invalid": "Fix the marked cells before saving.",
+        "tooMany": "Save at most {{max}} gestures at once.",
+        "staleRow": "Changed by another admin",
+        "saved_one": "{{count}} gesture saved.",
+        "saved_other": "{{count}} gestures saved.",
+        "cell": "{{field}} of {{name}}",
+        "keywordsInvalid": "Check the keywords: at most 30, each at most 60 characters.",
+        "changedCell": "Changed, not saved yet",
+        "merged": "Merged with newer versions. Check the changes and save again.",
+        "conflict_one": "Another admin changed the same fields of {{count}} gesture. Use their version, or overwrite it with yours.",
+        "conflict_other": "Another admin changed the same fields of {{count}} gestures. Use their version, or overwrite it with yours.",
+        "overwriteItem": "{{name}}: {{fields}}",
+        "overwriteDescription": "This replaces the other admin's changes to {{items}} with yours.",
+        "discardTitle": "Discard {{count}} changes?",
+        "discardDescription": "The edits in these rows are lost.",
+        "locked": "Save or discard your table edits to change the filters or the page."
+      },
+      "changes": {
+        "title": "Review your changes",
+        "description_one": "{{count}} gesture is saved in one go.",
+        "description_other": "{{count}} gestures are saved in one go.",
+        "field": "Field",
+        "before": "Before",
+        "after": "After",
+        "empty": "(empty)",
+        "confirm": "Save changes"
+      },
+      "fields": {
+        "name": "Name",
+        "description": "Description",
+        "playbackId": "Playback ID",
+        "categoryIds": "Categories",
+        "keywords": "Keywords"
+      },
+      "keywords": {
+        "placeholder": "Type a keyword",
+        "add": "Add",
+        "hint": "Press Enter or Add. Click a keyword to remove it.",
+        "remove": "Remove {{keyword}}",
+        "list_one": "{{count}} keyword",
+        "list_other": "{{count}} keywords",
+        "none": "No keywords yet.",
+        "duplicate": "“{{keyword}}” is already a keyword.",
+        "tooLong": "A keyword has at most {{max}} characters.",
+        "max": "At most {{max}} keywords."
+      },
+      "editor": {
+        "newTitle": "New gesture",
+        "back": "All gestures",
+        "status": "Status",
+        "published": "Published",
+        "publishedHint": "Shown on the site and in the app.",
+        "slug": "Slug",
+        "slugHint": "Set when the gesture is created and never changed, so printed QR codes and shared links keep working.",
+        "viewOnSite": "View on site",
+        "save": "Save",
+        "create": "Create gesture",
+        "saved": "The gesture is saved.",
+        "created": "{{name}} is created.",
+        "duplicateTitle": "Possible duplicate",
+        "duplicate_one": "Another gesture has this name:",
+        "duplicate_other": "Other gestures have this name:",
+        "categoriesHint": "At least one. Hidden categories are marked.",
+        "nameRequired": "Enter a name.",
+        "descriptionTooLong": "The description is too long.",
+        "videoRequired": "Choose a video.",
+        "categoriesRequired": "Choose at least one category.",
+        "notFound": {
+          "title": "Gesture not found",
+          "description": "It may have been deleted."
+        }
+      },
+      "conflict": {
+        "title": "Someone else changed this gesture",
+        "description": "Another admin saved this gesture at {{time}}. Their changes to the other fields are kept. These fields were changed on both sides:",
+        "theirs": "Their version",
+        "mine": "Your version",
+        "useTheirs": "Use their version",
+        "overwrite": "Overwrite with mine",
+        "overwriteTitle": "Overwrite their changes?",
+        "overwriteDescription": "This replaces the other admin's {{fields}} with yours.",
+        "overwriteConfirm": "Overwrite",
+        "merged": "Merged with a newer version and saved.",
+        "fieldNames": {
+          "video": "video",
+          "name": "name",
+          "description": "description",
+          "keywords": "keywords",
+          "categoryIds": "categories",
+          "published": "published state"
+        }
+      },
+      "danger": {
+        "title": "Danger zone",
+        "description": "Deleting removes the gesture for good. Only a hidden gesture without sponsorships can be deleted.",
+        "publishedNote": "Unpublish the gesture first to delete it.",
+        "delete": "Delete gesture",
+        "confirmTitle": "Delete {{name}}?",
+        "confirmDescription": "This cannot be undone. Type “{{name}}” to confirm.",
+        "confirmLabel": "Gesture name",
+        "confirm": "Delete",
+        "deleted": "{{name}} is deleted.",
+        "sponsored": "This gesture has sponsorships, so it cannot be deleted."
+      },
+      "errors": {
+        "saveFailed": "The changes could not be saved."
+      },
+      "leave": {
+        "title": "Leave without saving?",
+        "description": "Your changes are not saved yet. They are lost if you leave.",
+        "leave": "Leave",
+        "stay": "Stay"
+      },
+      "listHeading": "Gesture list",
+      "qrHiddenNote": "This gesture is hidden: the link only works once it is published."
     },
     "categories": {
-      "title": "Categories"
+      "title": "Categories",
+      "description": "The order here is the order on the site and in the app.",
+      "new": "New category",
+      "hiddenMark": "hidden",
+      "sections": {
+        "published": "Published",
+        "hidden": "Hidden",
+        "hiddenEmpty": "No hidden categories.",
+        "publishedEmpty": "No published categories."
+      },
+      "count_one": "{{count}} gesture",
+      "count_other": "{{count}} gestures",
+      "rowActions": "Actions for {{name}}",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "rename": "Rename",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "delete": "Delete",
+      "inUse": "In use: unpublish instead",
+      "publishToggle": "{{name}} published",
+      "publishedToast": "{{name}} is published.",
+      "unpublishedToast": "{{name}} is hidden.",
+      "form": {
+        "createTitle": "New category",
+        "renameTitle": "Rename {{name}}",
+        "name": "Name",
+        "published": "Published",
+        "create": "Create",
+        "save": "Save",
+        "slugNote": "The slug stays the same, so links keep working.",
+        "duplicate": "A category with this name already exists.",
+        "stale": "Another admin changed this category. Its new name is shown; try again.",
+        "created": "{{name}} is created.",
+        "renamed": "The category is renamed.",
+        "nameInvalid": "Enter a name of at most {{max}} characters."
+      },
+      "deleteConfirm": {
+        "title": "Delete {{name}}?",
+        "description": "No gesture uses this category. This cannot be undone.",
+        "confirm": "Delete",
+        "deleted": "{{name}} is deleted.",
+        "inUse": "Gestures use this category. Unpublish it instead."
+      },
+      "empty": {
+        "title": "No categories yet",
+        "description": "Create the first category."
+      },
+      "reorder": {
+        "instructions": "Press space or Enter to pick up a category. Move it with the arrow keys and press space or Enter again to drop it. Escape cancels.",
+        "picked": "Picked up {{name}}, position {{position}} of {{total}}.",
+        "moved": "Moved {{name}} to position {{position}} of {{total}}.",
+        "dropped": "Dropped {{name}} at position {{position}} of {{total}}.",
+        "cancelled": "Move cancelled. {{name}} is back at position {{position}}.",
+        "failed": "The new order could not be saved."
+      },
+      "errors": {
+        "saveFailed": "The change could not be saved."
+      },
+      "hiddenName": "{{name}} (hidden)",
+      "countWithPublished_one": "{{count}} gesture · {{published}} published",
+      "countWithPublished_other": "{{count}} gestures · {{published}} published"
     },
     "mux": {
       "title": "Video",

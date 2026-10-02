@@ -64,7 +64,8 @@
     "otpDigit": "Cijfer {{index}} van {{length}}",
     "userMenu": "Accountmenu",
     "favorite": "Favoriet",
-    "gestureVideo": "Video van het gebaar"
+    "gestureVideo": "Video van het gebaar",
+    "dragHandleFor": "Slepen om de volgorde te wijzigen: {{name}}"
   },
   "nav": {
     "home": "Home",
@@ -821,10 +822,264 @@
       }
     },
     "gestures": {
-      "title": "Gebaren"
+      "title": "Gebaren",
+      "description": "Alle gebaren, gepubliceerd of verborgen. Wijzigingen staan meteen op de site.",
+      "new": "Nieuw gebaar",
+      "editTable": "Tabel bewerken",
+      "stats": {
+        "label": "Aantallen gebaren",
+        "total": "Totaal",
+        "published": "Gepubliceerd",
+        "hidden": "Verborgen"
+      },
+      "filters": {
+        "label": "Filters",
+        "search": "Zoeken",
+        "searchPlaceholder": "Naam of trefwoord",
+        "status": "Status",
+        "all": "Alle",
+        "published": "Gepubliceerd",
+        "hidden": "Verborgen",
+        "category": "Categorie",
+        "allCategories": "Alle categorieën",
+        "clear": "Filters wissen"
+      },
+      "columns": {
+        "select": "Selecteren",
+        "selectAll": "Alle gebaren op deze pagina selecteren",
+        "selectRow": "{{name}} selecteren",
+        "video": "Video",
+        "name": "Naam",
+        "categories": "Categorieën",
+        "keywords": "Trefwoorden",
+        "published": "Gepubliceerd",
+        "updated": "Gewijzigd",
+        "actions": "Acties"
+      },
+      "moreCategories": "+{{count}}",
+      "noCategory": "Geen",
+      "keywordCount_one": "{{count}} trefwoord",
+      "keywordCount_other": "{{count}} trefwoorden",
+      "empty": {
+        "title": "Geen gebaren gevonden",
+        "description": "Pas de filters aan of voeg een gebaar toe."
+      },
+      "firstPage": "Eerste pagina",
+      "nextPage": "Volgende pagina",
+      "rowActions": "Acties voor {{name}}",
+      "edit": "Bewerken",
+      "qr": "QR-code",
+      "publish": "Publiceren",
+      "unpublish": "Verbergen",
+      "publishToggle": "{{name}} gepubliceerd",
+      "publishedToast": "{{name}} is gepubliceerd.",
+      "unpublishedToast": "{{name}} is verborgen.",
+      "hiddenBadge": "Verborgen",
+      "publishedBadge": "Gepubliceerd",
+      "bulk": {
+        "label": "Geselecteerde gebaren",
+        "selected_one": "{{count}} geselecteerd",
+        "selected_other": "{{count}} geselecteerd",
+        "publish": "Publiceren",
+        "unpublish": "Verbergen",
+        "addCategory": "Aan categorie toevoegen",
+        "removeCategory": "Uit categorie halen",
+        "clear": "Selectie wissen",
+        "done_one": "{{count}} gebaar bijgewerkt.",
+        "done_other": "{{count}} gebaren bijgewerkt.",
+        "noCategoryLeft": "Een gebaar zou zonder categorie blijven. Er is niets gewijzigd.",
+        "actions": "Acties"
+      },
+      "table": {
+        "label": "Tabeleditor",
+        "hint": "Wijzigingen blijven bewaard tot je ze samen opslaat.",
+        "discard": "Verwerpen ({{count}})",
+        "save": "Wijzigingen opslaan",
+        "stop": "Stoppen met bewerken",
+        "stopConfirmTitle": "Je wijzigingen verwerpen?",
+        "stopConfirmDescription": "De wijzigingen aan {{count}} gebaren zijn nog niet opgeslagen.",
+        "stopConfirm": "Verwerpen",
+        "editCategories": "Categorieën van {{name}}",
+        "editKeywords": "Trefwoorden van {{name}}",
+        "invalid": "Verbeter eerst de gemarkeerde cellen.",
+        "tooMany": "Sla hoogstens {{max}} gebaren tegelijk op.",
+        "staleRow": "Gewijzigd door een andere beheerder",
+        "saved_one": "{{count}} gebaar opgeslagen.",
+        "saved_other": "{{count}} gebaren opgeslagen.",
+        "cell": "{{field}} van {{name}}",
+        "keywordsInvalid": "Controleer de trefwoorden: hoogstens 30, elk hoogstens 60 tekens.",
+        "changedCell": "Gewijzigd, nog niet opgeslagen",
+        "merged": "Samengevoegd met nieuwere versies. Kijk de wijzigingen na en sla opnieuw op.",
+        "conflict_one": "Een andere beheerder wijzigde dezelfde velden van {{count}} gebaar. Gebruik hun versie, of overschrijf ze met de jouwe.",
+        "conflict_other": "Een andere beheerder wijzigde dezelfde velden van {{count}} gebaren. Gebruik hun versie, of overschrijf ze met de jouwe.",
+        "overwriteItem": "{{name}}: {{fields}}",
+        "overwriteDescription": "Dit vervangt de wijzigingen van de andere beheerder aan {{items}} door de jouwe.",
+        "discardTitle": "{{count}} wijzigingen verwerpen?",
+        "discardDescription": "De wijzigingen in deze rijen gaan verloren.",
+        "locked": "Sla je tabelwijzigingen op of verwerp ze om de filters of de pagina te wijzigen."
+      },
+      "changes": {
+        "title": "Je wijzigingen nakijken",
+        "description_one": "{{count}} gebaar wordt in één keer opgeslagen.",
+        "description_other": "{{count}} gebaren worden in één keer opgeslagen.",
+        "field": "Veld",
+        "before": "Voor",
+        "after": "Na",
+        "empty": "(leeg)",
+        "confirm": "Wijzigingen opslaan"
+      },
+      "fields": {
+        "name": "Naam",
+        "description": "Beschrijving",
+        "playbackId": "Playback-id",
+        "categoryIds": "Categorieën",
+        "keywords": "Trefwoorden"
+      },
+      "keywords": {
+        "placeholder": "Typ een trefwoord",
+        "add": "Toevoegen",
+        "hint": "Druk op Enter of Toevoegen. Klik op een trefwoord om het te verwijderen.",
+        "remove": "{{keyword}} verwijderen",
+        "list_one": "{{count}} trefwoord",
+        "list_other": "{{count}} trefwoorden",
+        "none": "Nog geen trefwoorden.",
+        "duplicate": "“{{keyword}}” is al een trefwoord.",
+        "tooLong": "Een trefwoord heeft hoogstens {{max}} tekens.",
+        "max": "Hoogstens {{max}} trefwoorden."
+      },
+      "editor": {
+        "newTitle": "Nieuw gebaar",
+        "back": "Alle gebaren",
+        "status": "Status",
+        "published": "Gepubliceerd",
+        "publishedHint": "Zichtbaar op de site en in de app.",
+        "slug": "Slug",
+        "slugHint": "Vastgelegd bij het aanmaken en nooit gewijzigd, zodat geprinte QR-codes en gedeelde links blijven werken.",
+        "viewOnSite": "Bekijken op de site",
+        "save": "Opslaan",
+        "create": "Gebaar aanmaken",
+        "saved": "Het gebaar is opgeslagen.",
+        "created": "{{name}} is aangemaakt.",
+        "duplicateTitle": "Mogelijk dubbel",
+        "duplicate_one": "Een ander gebaar heeft deze naam:",
+        "duplicate_other": "Andere gebaren hebben deze naam:",
+        "categoriesHint": "Minstens één. Verborgen categorieën zijn gemarkeerd.",
+        "nameRequired": "Vul een naam in.",
+        "descriptionTooLong": "De beschrijving is te lang.",
+        "videoRequired": "Kies een video.",
+        "categoriesRequired": "Kies minstens één categorie.",
+        "notFound": {
+          "title": "Gebaar niet gevonden",
+          "description": "Misschien is het verwijderd."
+        }
+      },
+      "conflict": {
+        "title": "Iemand anders wijzigde dit gebaar",
+        "description": "Een andere beheerder sloeg dit gebaar op om {{time}}. Hun wijzigingen aan de andere velden blijven behouden. Deze velden werden aan beide kanten gewijzigd:",
+        "theirs": "Hun versie",
+        "mine": "Jouw versie",
+        "useTheirs": "Hun versie gebruiken",
+        "overwrite": "Overschrijven met de mijne",
+        "overwriteTitle": "Hun wijzigingen overschrijven?",
+        "overwriteDescription": "Dit vervangt {{fields}} van de andere beheerder door de jouwe.",
+        "overwriteConfirm": "Overschrijven",
+        "merged": "Samengevoegd met een nieuwere versie en opgeslagen.",
+        "fieldNames": {
+          "video": "de video",
+          "name": "de naam",
+          "description": "de beschrijving",
+          "keywords": "de trefwoorden",
+          "categoryIds": "de categorieën",
+          "published": "de publicatiestatus"
+        }
+      },
+      "danger": {
+        "title": "Gevarenzone",
+        "description": "Verwijderen haalt het gebaar voorgoed weg. Alleen een verborgen gebaar zonder sponsoring kan verwijderd worden.",
+        "publishedNote": "Verberg het gebaar eerst om het te verwijderen.",
+        "delete": "Gebaar verwijderen",
+        "confirmTitle": "{{name}} verwijderen?",
+        "confirmDescription": "Dit kan niet ongedaan gemaakt worden. Typ “{{name}}” om te bevestigen.",
+        "confirmLabel": "Naam van het gebaar",
+        "confirm": "Verwijderen",
+        "deleted": "{{name}} is verwijderd.",
+        "sponsored": "Dit gebaar heeft sponsoring en kan dus niet verwijderd worden."
+      },
+      "errors": {
+        "saveFailed": "De wijzigingen konden niet opgeslagen worden."
+      },
+      "leave": {
+        "title": "Weggaan zonder op te slaan?",
+        "description": "Je wijzigingen zijn nog niet opgeslagen. Ze gaan verloren als je weggaat.",
+        "leave": "Weggaan",
+        "stay": "Blijven"
+      },
+      "listHeading": "Lijst met gebaren",
+      "qrHiddenNote": "Dit gebaar is verborgen: de link werkt pas als het gepubliceerd is."
     },
     "categories": {
-      "title": "Categorieën"
+      "title": "Categorieën",
+      "description": "De volgorde hier is de volgorde op de site en in de app.",
+      "new": "Nieuwe categorie",
+      "hiddenMark": "verborgen",
+      "sections": {
+        "published": "Gepubliceerd",
+        "hidden": "Verborgen",
+        "hiddenEmpty": "Geen verborgen categorieën.",
+        "publishedEmpty": "Geen gepubliceerde categorieën."
+      },
+      "count_one": "{{count}} gebaar",
+      "count_other": "{{count}} gebaren",
+      "rowActions": "Acties voor {{name}}",
+      "moveUp": "Omhoog",
+      "moveDown": "Omlaag",
+      "rename": "Hernoemen",
+      "publish": "Publiceren",
+      "unpublish": "Verbergen",
+      "delete": "Verwijderen",
+      "inUse": "In gebruik: verberg ze in plaats daarvan",
+      "publishToggle": "{{name}} gepubliceerd",
+      "publishedToast": "{{name}} is gepubliceerd.",
+      "unpublishedToast": "{{name}} is verborgen.",
+      "form": {
+        "createTitle": "Nieuwe categorie",
+        "renameTitle": "{{name}} hernoemen",
+        "name": "Naam",
+        "published": "Gepubliceerd",
+        "create": "Aanmaken",
+        "save": "Opslaan",
+        "slugNote": "De slug blijft dezelfde, zodat links blijven werken.",
+        "duplicate": "Er bestaat al een categorie met deze naam.",
+        "stale": "Een andere beheerder wijzigde deze categorie. De nieuwe naam staat er nu; probeer opnieuw.",
+        "created": "{{name}} is aangemaakt.",
+        "renamed": "De categorie is hernoemd.",
+        "nameInvalid": "Vul een naam van hoogstens {{max}} tekens in."
+      },
+      "deleteConfirm": {
+        "title": "{{name}} verwijderen?",
+        "description": "Geen enkel gebaar gebruikt deze categorie. Dit kan niet ongedaan gemaakt worden.",
+        "confirm": "Verwijderen",
+        "deleted": "{{name}} is verwijderd.",
+        "inUse": "Gebaren gebruiken deze categorie. Verberg ze in plaats daarvan."
+      },
+      "empty": {
+        "title": "Nog geen categorieën",
+        "description": "Maak de eerste categorie aan."
+      },
+      "reorder": {
+        "instructions": "Druk op spatie of Enter om een categorie op te pakken. Verplaats ze met de pijltjestoetsen en druk opnieuw op spatie of Enter om ze neer te zetten. Escape annuleert.",
+        "picked": "{{name}} opgepakt, positie {{position}} van {{total}}.",
+        "moved": "{{name}} verplaatst naar positie {{position}} van {{total}}.",
+        "dropped": "{{name}} neergezet op positie {{position}} van {{total}}.",
+        "cancelled": "Verplaatsen geannuleerd. {{name}} staat terug op positie {{position}}.",
+        "failed": "De nieuwe volgorde kon niet worden bewaard."
+      },
+      "errors": {
+        "saveFailed": "De wijziging kon niet opgeslagen worden."
+      },
+      "hiddenName": "{{name}} (verborgen)",
+      "countWithPublished_one": "{{count}} gebaar · {{published}} gepubliceerd",
+      "countWithPublished_other": "{{count}} gebaren · {{published}} gepubliceerd"
     },
     "mux": {
       "title": "Video",

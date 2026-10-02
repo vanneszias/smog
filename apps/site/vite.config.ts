@@ -50,6 +50,10 @@ export default defineConfig({
     __SMOG_DEV_TOOLS__: JSON.stringify(
       process.env.CLOUDFLARE_ENV !== "production"
     ),
+    // The e2e seed endpoint exists in dev builds only (src/server/e2e-seed.ts).
+    __SMOG_E2E_SEED__: JSON.stringify(
+      (process.env.CLOUDFLARE_ENV ?? "dev") === "dev"
+    ),
     __SMOG_THEME_SCRIPT_HASH__: THEME_SCRIPT_HASH_DEFINE,
   },
   plugins: [
