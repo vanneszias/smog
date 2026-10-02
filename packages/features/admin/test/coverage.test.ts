@@ -26,9 +26,11 @@ function kindProblems(path: string, kind: AdminProcedureKind | undefined) {
     return [];
   }
   if ("audit" in kind) {
-    return isWritableAuditAction(kind.audit)
-      ? []
-      : [`${path}: ${kind.audit} is not writable`];
+    const actions: readonly string[] =
+      typeof kind.audit === "string" ? [kind.audit] : kind.audit;
+    return actions
+      .filter((action) => !isWritableAuditAction(action))
+      .map((action) => `${path}: ${action} is not writable`);
   }
   return kind.exempt.trim().length >= 10
     ? []
@@ -64,6 +66,11 @@ describe("admin procedure kinds", () => {
     expect(
       kindProblems("things.create", { audit: "gesture.nope" as never })
     ).toEqual(["things.create: gesture.nope is not writable"]);
+    expect(
+      kindProblems("things.set", {
+        audit: ["gesture.publish", "legacy" as never],
+      })
+    ).toEqual(["things.set: legacy is not writable"]);
     expect(kindProblems("things.upload", { exempt: " " })).toEqual([
       "things.upload: exempt without a reason",
     ]);

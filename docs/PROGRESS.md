@@ -40,6 +40,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 - Carry into the phase 6 plan (required before cutover, the privacy text promises it): a scheduled purge that deletes `audit_log` rows older than 3 years and expired `session` and `verification` rows within 30 days of their expiry.
 - Carry into phase 8: the Convex → D1 data import must call `bumpCatalogVersion` (and rebuild FTS) when it finishes; otherwise isolates keep serving the old catalog snapshot until they are recycled.
 - Carry into phase 8: a CSP `report-to`/`report-uri` endpoint before launch. Staging sends the CSP `Report-Only` with nowhere to report (phase 4 task 6), so it only shows in each browser's console. Add a small same-origin endpoint, rate-limited, that logs (or relays to OpenPanel), or run the csp e2e against staging.
+- Carry into phase 8 (staging smoke): a stale admin save returns `CONFLICT` (`stale`), not `INTERNAL`. The catalogue's in-batch guards are recognised by the guard name in SQLite's "bad JSON path" error text, which is verified only in workerd (phase 5 task 2, DECISIONS).
 - Carry into phase 8: required secrets and vars checked before deploy, including production `TURNSTILE_SITE_KEY` (var) and `TURNSTILE_SECRET_KEY` (secret); `SITE_URL` per env must be the origin browsers use (the rpc origin check and Better Auth compare against it).
 
 ## Known gaps

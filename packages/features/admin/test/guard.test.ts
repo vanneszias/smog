@@ -34,7 +34,10 @@ const ok = baseContract.output(z.string());
 const testContract = {
   things: {
     create: ok,
+    createMixedOneOf: ok,
     createNothing: ok,
+    createOneOf: ok,
+    createOutsideOneOf: ok,
     createTwoKinds: ok,
     createWrong: ok,
     exempt: ok,
@@ -53,7 +56,10 @@ const testContract = {
 
 const KINDS: Record<string, GuardKind> = {
   "things.create": { audit: "gesture.create" },
+  "things.createMixedOneOf": { audit: ["gesture.create", "gesture.delete"] },
   "things.createNothing": { audit: "gesture.create" },
+  "things.createOneOf": { audit: ["gesture.create", "gesture.delete"] },
+  "things.createOutsideOneOf": { audit: ["gesture.delete"] },
   "things.createTwoKinds": { audit: "gesture.create" },
   "things.createWrong": { audit: "gesture.create" },
   "things.exempt": { exempt: "changes no stored state" },
@@ -94,10 +100,49 @@ const router = os.router({
       ]);
       return "created";
     }),
+    createMixedOneOf: os.things.createMixedOneOf.handler(
+      async ({ context }) => {
+        await context.db.batch([
+          buildAuditStatement(
+            context.db,
+            SCHEMAS,
+            entry(context.user.id, "gesture.create", "t-mixed")
+          ),
+          buildAuditStatement(
+            context.db,
+            SCHEMAS,
+            entry(context.user.id, "gesture.delete", "t-mixed")
+          ),
+        ]);
+        return "mixed";
+      }
+    ),
     createNothing: os.things.createNothing.handler(async ({ context }) => {
       await context.db.run(sql.raw("UPDATE category SET name = name WHERE 0"));
       return "no audit";
     }),
+    createOneOf: os.things.createOneOf.handler(async ({ context }) => {
+      await context.db.batch([
+        buildAuditStatement(
+          context.db,
+          SCHEMAS,
+          entry(context.user.id, "gesture.delete", "t-one-of")
+        ),
+      ]);
+      return "one of";
+    }),
+    createOutsideOneOf: os.things.createOutsideOneOf.handler(
+      async ({ context }) => {
+        await context.db.batch([
+          buildAuditStatement(
+            context.db,
+            SCHEMAS,
+            entry(context.user.id, "gesture.create", "t-outside")
+          ),
+        ]);
+        return "outside";
+      }
+    ),
     createTwoKinds: os.things.createTwoKinds.handler(async ({ context }) => {
       await context.db.batch([
         buildAuditStatement(
@@ -272,6 +317,19 @@ describe("the admin guard: mutations", () => {
     quiet();
     await expect(run("createWrong")).rejects.toMatchObject(INTERNAL);
     await expect(run("createTwoKinds")).rejects.toMatchObject(INTERNAL);
+  });
+
+  it("passes a one-of kind for any of its actions, and fails another", async () => {
+    const logged = quiet();
+    await expect(run("createOneOf")).resolves.toBe("one of");
+    await expect(run("createOutsideOneOf")).rejects.toMatchObject(INTERNAL);
+    await expect(run("createMixedOneOf")).rejects.toMatchObject(INTERNAL);
+    expect(logged).toHaveBeenCalledWith(
+      "[admin] things.createMixedOneOf built gesture.create, gesture.delete: a one-of kind writes one of its actions"
+    );
+    expect(logged).toHaveBeenCalledWith(
+      "[admin] things.createOutsideOneOf built gesture.create, not only gesture.delete"
+    );
   });
 
   it("passes an exempt mutation, and fails one that audits", async () => {

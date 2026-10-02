@@ -9,7 +9,7 @@
  * one until the list's next write; readers sort on `position` and never
  * index by it.
  */
-import { gesture, list, listItem, listShare } from "@smog/db";
+import { gesture, list, listItem, listShare, ref } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import type { GestureSummary } from "@smog/gestures/schema";
 import { newId } from "@smog/utils";
@@ -22,7 +22,6 @@ import {
   type SQLWrapper,
   sql,
 } from "drizzle-orm";
-import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
   isExactSet,
   LIST_ITEMS_MAX,
@@ -58,14 +57,6 @@ export class ListsError extends Error {
     this.code = code;
     this.name = "ListsError";
   }
-}
-
-/**
- * `alias."column"`. Drizzle renders columns unqualified in single-table
- * statements, so a correlated subquery names both sides itself.
- */
-function ref(alias: string, column: SQLiteColumn): SQL {
-  return sql`${sql.raw(alias)}.${sql.identifier(column.name)}`;
 }
 
 /** The outer row's name in the list queries (the `list` table). */

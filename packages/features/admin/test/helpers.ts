@@ -147,11 +147,13 @@ export async function callAs<T = unknown>(
   })) as T;
 }
 
-/** The audit action a mutation is mapped to (throws for reads and exempt ones). */
-export function mappedAction(procedure: string): WritableAuditAction {
+/** The audit actions a mutation is mapped to (throws for reads and exempt ones). */
+export function mappedActions(
+  procedure: string
+): readonly WritableAuditAction[] {
   const kind = ADMIN_PROCEDURE_KINDS[procedure];
   if (kind && typeof kind === "object" && "audit" in kind) {
-    return kind.audit;
+    return typeof kind.audit === "string" ? [kind.audit] : kind.audit;
   }
   throw new Error(`[test] ${procedure} is not a mapped admin mutation`);
 }
@@ -205,6 +207,8 @@ export async function auditRowsSince(mark: number): Promise<StoredAudit[]> {
 }
 
 export interface ExpectedAudit {
+  /** Required for a one-of kind: the action this call wrote. */
+  action?: WritableAuditAction;
   actorId: string;
   /** When given, the stored `data` must equal it. */
   data?: unknown;
@@ -216,7 +220,8 @@ export interface ExpectedAudit {
 
 /**
  * Asserts that `procedure` (an `admin.*` path) wrote exactly one audit
- * entry for the target since `mark`: its mapped action, the actor, and
+ * entry for the target since `mark`: its mapped action (`expected.action`
+ * for a one-of kind), the actor, and
  * `data` that its action's schema accepts (and equal to `data` when
  * given). `adminProcedure` already fails a mutation that built no entry;
  * this checks what was stored.
@@ -225,7 +230,12 @@ export async function expectAudit(
   procedure: string,
   expected: ExpectedAudit
 ): Promise<void> {
-  const action = mappedAction(procedure);
+  const actions = mappedActions(procedure);
+  const [only] = actions;
+  const action = expected.action ?? (actions.length === 1 ? only : undefined);
+  if (!(action && actions.includes(action))) {
+    throw new Error(`[test] ${procedure}: pass one of ${actions.join(", ")}`);
+  }
   const rows = (await auditRowsSince(expected.mark)).filter(
     (stored) =>
       stored.targetType === expected.targetType &&

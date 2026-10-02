@@ -9,12 +9,12 @@ import {
   gesture,
   gestureCategory,
   gestureKeyword,
+  ref,
   sponsorship,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { decodeCursorAs, encodeCursor } from "@smog/utils";
 import { and, eq, isNotNull, type SQL, sql } from "drizzle-orm";
-import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import type {
   Category,
   CategoryRef,
@@ -29,15 +29,6 @@ const CATEGORY_LIMIT = 100;
 const SITEMAP_LIMIT = 50_000;
 /** Sponsorships whose video and credit are shown (spec §5.4). */
 const RUNNING_STATUSES = sql.raw("'live', 'expiring'");
-
-/**
- * `alias."column"`. Drizzle renders columns unqualified in single-table
- * selects, so a correlated subquery must name both sides itself: the outer
- * row is always `gesture` (`G`), inner tables get their own alias.
- */
-export function ref(alias: string, column: SQLiteColumn): SQL {
-  return sql`${sql.raw(alias)}.${sql.identifier(column.name)}`;
-}
 
 /** The outer row's name in every catalogue query (the `gesture` table). */
 export const G = "gesture";

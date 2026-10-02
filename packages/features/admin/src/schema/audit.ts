@@ -9,6 +9,7 @@ import {
   type AuditAction,
 } from "@smog/db/enums";
 import { z } from "zod";
+import { GESTURE_PATCH_FIELDS } from "./catalog";
 
 // biome-ignore lint/performance/noBarrelFile: the audit enums belong to this schema's public surface (client-safe).
 export {
@@ -35,8 +36,40 @@ const LEGACY_AUDIT_SCHEMAS = {
   legacy: z.object({ legacy: z.unknown() }),
 } satisfies AuditSchemaBlock;
 
-/** Task 2: `gesture.*` and `category.*`. */
-const CATALOG_AUDIT_SCHEMAS = {} satisfies AuditSchemaBlock;
+/** A catalogue row's name and slug when the entry was written. */
+const catalogTarget = z.object({ name: z.string(), slug: z.string() });
+
+/**
+ * Task 2: `gesture.*` and `category.*`. One entry per target, except the
+ * set actions (`gesture.bulk_update`, `category.reorder`): one entry with
+ * `target_id` NULL and the ids in `data`.
+ */
+const CATALOG_AUDIT_SCHEMAS = {
+  "category.create": catalogTarget.extend({ published: z.boolean() }),
+  "category.delete": catalogTarget,
+  "category.publish": catalogTarget,
+  "category.reorder": z.object({ ids: z.array(z.string()) }),
+  "category.unpublish": catalogTarget,
+  "category.update": catalogTarget.extend({ previousName: z.string() }),
+  "gesture.bulk_update": z.object({
+    ids: z.array(z.string()).min(1),
+    patch: z.object({
+      addCategoryIds: z.array(z.string()).optional(),
+      published: z.boolean().optional(),
+      removeCategoryIds: z.array(z.string()).optional(),
+    }),
+  }),
+  "gesture.create": catalogTarget.extend({ published: z.boolean() }),
+  "gesture.delete": catalogTarget,
+  "gesture.publish": catalogTarget,
+  "gesture.unpublish": catalogTarget,
+  "gesture.update": catalogTarget.extend({
+    /** The fields the update changed. */
+    fields: z.array(z.enum(GESTURE_PATCH_FIELDS)).min(1),
+    /** Set when the name changed. */
+    previousName: z.string().optional(),
+  }),
+} satisfies AuditSchemaBlock;
 
 /** Task 5: `user.*`. */
 const USER_AUDIT_SCHEMAS = {} satisfies AuditSchemaBlock;
