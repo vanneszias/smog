@@ -28,9 +28,13 @@ function kindProblems(path: string, kind: AdminProcedureKind | undefined) {
   if ("audit" in kind) {
     const actions: readonly string[] =
       typeof kind.audit === "string" ? [kind.audit] : kind.audit;
-    return actions
+    const problems = actions
       .filter((action) => !isWritableAuditAction(action))
       .map((action) => `${path}: ${action} is not writable`);
+    if (kind.noop !== undefined && kind.noop.trim().length < 10) {
+      problems.push(`${path}: noop without a reason`);
+    }
+    return problems;
   }
   return kind.exempt.trim().length >= 10
     ? []
@@ -78,6 +82,9 @@ describe("admin procedure kinds", () => {
       "things.gone: no procedure kind",
     ]);
     expect(kindProblems("things.list", "read")).toEqual([]);
+    expect(
+      kindProblems("things.toggle", { audit: "gesture.publish", noop: "" })
+    ).toEqual(["things.toggle: noop without a reason"]);
   });
 });
 

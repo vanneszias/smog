@@ -340,6 +340,7 @@
         "@smog/auth": "workspace:*",
         "@smog/config": "workspace:*",
         "@smog/db": "workspace:*",
+        "@smog/email": "workspace:*",
         "@smog/gestures": "workspace:*",
         "@smog/rpc": "workspace:*",
         "@smog/utils": "workspace:*",
@@ -349,7 +350,6 @@
       },
       "devDependencies": {
         "@cloudflare/vitest-plugin": "catalog:",
-        "@smog/email": "workspace:*",
         "@tanstack/react-query": "catalog:",
         "@types/react": "catalog:",
         "react": "catalog:",

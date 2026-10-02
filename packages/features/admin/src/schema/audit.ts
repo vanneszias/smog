@@ -98,8 +98,24 @@ const USER_AUDIT_SCHEMAS = {
   "user.unban": z.object({}),
 } satisfies AuditSchemaBlock;
 
-/** Task 6: `maintenance.*`. */
-const MAINTENANCE_AUDIT_SCHEMAS = {} satisfies AuditSchemaBlock;
+/**
+ * The window's note and expected end (`null` when it had none): those set
+ * for `maintenance.enable`, those of the window it ended for
+ * `maintenance.disable`.
+ */
+const maintenanceWindow = z.object({
+  message: z.string().nullable(),
+  until: z.string().nullable(),
+});
+
+/**
+ * Task 6: `maintenance.*`, one entry per change of the KV setting
+ * (`target_type` `setting`, `target_id` the key `maintenance`).
+ */
+const MAINTENANCE_AUDIT_SCHEMAS = {
+  "maintenance.disable": maintenanceWindow,
+  "maintenance.enable": maintenanceWindow,
+} satisfies AuditSchemaBlock;
 
 /**
  * `audit_log.data` per action. The writer validates `data` with it before

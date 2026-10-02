@@ -1,13 +1,15 @@
 import { env, exports } from "cloudflare:workers";
+import {
+  MAINTENANCE_KV_KEY,
+  type MaintenanceSetting,
+  parseMaintenanceSetting,
+} from "@smog/config/maintenance";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   AUTH_SIGN_IN_ROUTES,
   BYPASS_COOKIE,
   bypassCookieHeader,
   clearMaintenanceCache,
-  MAINTENANCE_KEY,
-  type MaintenanceState,
-  parseMaintenanceState,
   retryAfterSeconds,
   signBypassCookie,
 } from "../src/worker/maintenance";
@@ -33,8 +35,8 @@ const kv = binding(env.KV, "KV");
 const db = binding(env.DB, "DB");
 
 /** Writes KV without clearing the isolate cache (a change another isolate made). */
-async function writeKvOnly(state: MaintenanceState): Promise<void> {
-  await kv.put(MAINTENANCE_KEY, JSON.stringify(state));
+async function writeKvOnly(state: MaintenanceSetting): Promise<void> {
+  await kv.put(MAINTENANCE_KV_KEY, JSON.stringify(state));
 }
 
 /** A fresh client IP, so `RL_AUTH` never carries over between tests. */
@@ -42,11 +44,11 @@ function ip(): string {
   return `203.0.113.${Math.floor(Math.random() * 250) + 1}-${crypto.randomUUID()}`;
 }
 
-async function setMaintenance(state: MaintenanceState | null): Promise<void> {
+async function setMaintenance(state: MaintenanceSetting | null): Promise<void> {
   if (state) {
-    await kv.put(MAINTENANCE_KEY, JSON.stringify(state));
+    await kv.put(MAINTENANCE_KV_KEY, JSON.stringify(state));
   } else {
-    await kv.delete(MAINTENANCE_KEY);
+    await kv.delete(MAINTENANCE_KV_KEY);
   }
   clearMaintenanceCache();
 }
@@ -68,17 +70,17 @@ afterEach(async () => {
 describe("maintenance state", () => {
   it("parses the KV value and ignores a malformed one", () => {
     expect(
-      parseMaintenanceState(
+      parseMaintenanceSetting(
         JSON.stringify({ bypassVersion: 3, enabled: true, message: "x" })
       )
     ).toEqual({ bypassVersion: 3, enabled: true, message: "x" });
-    expect(parseMaintenanceState(null)).toBeNull();
-    expect(parseMaintenanceState("{nope")).toBeNull();
+    expect(parseMaintenanceSetting(null)).toBeNull();
+    expect(parseMaintenanceSetting("{nope")).toBeNull();
     expect(
-      parseMaintenanceState(JSON.stringify({ enabled: "yes" }))
+      parseMaintenanceSetting(JSON.stringify({ enabled: "yes" }))
     ).toBeNull();
     expect(
-      parseMaintenanceState(
+      parseMaintenanceSetting(
         JSON.stringify({ bypassVersion: 1, enabled: true, until: "soon" })
       )
     ).toBeNull();

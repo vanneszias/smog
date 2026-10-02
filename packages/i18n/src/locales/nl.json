@@ -1259,10 +1259,69 @@
       }
     },
     "settings": {
-      "title": "Instellingen"
+      "title": "Instellingen",
+      "description": "Onderhoudsmodus en de omzeiling voor deze browser.",
+      "maintenance": {
+        "title": "Onderhoudsmodus",
+        "description": "Zolang hij aan staat, krijgen bezoekers en de app een onderhoudspagina. Webhooks, de statuscheck en het aanmelden van beheerders blijven werken, en beheerders met een omzeilcookie houden de hele site.",
+        "status": "Status",
+        "on": "Aan",
+        "off": "Uit",
+        "message": "Bericht",
+        "messageHint": "Staat op de onderhoudspagina, hoogstens {{max}} tekens. Optioneel.",
+        "noMessage": "Geen bericht",
+        "until": "Verwacht einde",
+        "untilHint": "Optioneel, hoogstens 7 dagen vooruit. Staat op de pagina en gaat mee als Retry-After.",
+        "noUntil": "Niet ingesteld",
+        "untilInvalid": "Kies een moment in de toekomst, hoogstens 7 dagen vooruit.",
+        "propagation": "Andere bezoekers volgen binnen ongeveer 2 minuten: elke server en elke Cloudflare-locatie onthoudt de instelling tot 30 seconden, en KV heeft tot een minuut nodig om elke regio te bereiken.",
+        "enable": "Onderhoud aanzetten",
+        "enableNote": "Je krijgt eerst een omzeilcookie voor deze browser, zodat je toegang houdt.",
+        "enabled": "Onderhoud staat aan",
+        "disable": "Onderhoud uitzetten",
+        "disableTitle": "Onderhoud uitzetten?",
+        "disableDescription": "De site gaat voor iedereen open. Elke omzeilcookie vervalt: beheerders hebben een nieuwe nodig voor het volgende onderhoud.",
+        "disabled": "Onderhoud staat uit. Elke omzeilcookie is vervallen.",
+        "bypassFailed": "Geen omzeilcookie voor deze browser, dus onderhoud blijft uit.",
+        "failed": "De instelling is niet gewijzigd.",
+        "loadError": "De onderhoudsinstelling kon niet geladen worden.",
+        "staleCookie": "Onderhoud staat aan, maar je omzeilcookie hoort bij een ouder onderhoud. Druk over een minuut op “Omzeilen voor deze browser”."
+      },
+      "bypass": {
+        "title": "Omzeiling voor deze browser",
+        "description": "Een ondertekende cookie die deze browser 12 uur langs het onderhoud laat. Onderhoud uitzetten trekt hem in.",
+        "active": "Actief tot {{time}}",
+        "inactive": "Niet actief",
+        "action": "Omzeilen voor deze browser (12 u)",
+        "done": "Deze browser kan het onderhoud omzeilen tot {{time}}.",
+        "failed": "Geen omzeilcookie: meld je opnieuw aan en probeer nog eens.",
+        "loadError": "De omzeilstatus kon niet geladen worden.",
+        "rateLimited": "Te veel pogingen. Probeer het over een minuut opnieuw."
+      }
     },
     "emails": {
-      "title": "E-mails"
+      "title": "E-mails",
+      "description": "De echte sjablonen met voorbeeldgegevens. Een voorbeeld wordt nooit verstuurd.",
+      "templates": "Sjablonen",
+      "template": {
+        "magicLink": "Aanmeldlink",
+        "otp": "Aanmeldcode",
+        "resetPassword": "Wachtwoord opnieuw instellen",
+        "verifyEmail": "E-mailadres bevestigen"
+      },
+      "locale": "Taal",
+      "width": "Breedte",
+      "desktop": "Desktop (780 px)",
+      "mobile": "Mobiel (390 px)",
+      "subject": "Onderwerp",
+      "view": "Weergave",
+      "html": "E-mail",
+      "text": "Platte tekst",
+      "frameTitle": "Voorbeeld: {{name}}",
+      "loadError": "De e-mailsjablonen konden niet geladen worden.",
+      "previewError": "Dit voorbeeld kon niet getoond worden.",
+      "empty": "Nog geen e-mailsjablonen.",
+      "sandboxed": "Getoond in een sandbox: geen scripts, links openen niet."
     }
   }
 }

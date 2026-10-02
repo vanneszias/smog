@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./samples": "./src/samples.ts"
   },
   "scripts": {
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",

@@ -1283,10 +1283,69 @@
       }
     },
     "settings": {
-      "title": "Paramètres"
+      "title": "Paramètres",
+      "description": "Le mode maintenance et le contournement pour ce navigateur.",
+      "maintenance": {
+        "title": "Mode maintenance",
+        "description": "Tant qu’il est actif, les visiteurs et l’app voient une page de maintenance. Les webhooks, le contrôle d’état et la connexion des admins continuent de fonctionner, et les admins munis d’un cookie de contournement gardent tout le site.",
+        "status": "État",
+        "on": "Actif",
+        "off": "Inactif",
+        "message": "Message",
+        "messageHint": "Affiché sur la page de maintenance, {{max}} caractères au plus. Facultatif.",
+        "noMessage": "Aucun message",
+        "until": "Fin prévue",
+        "untilHint": "Facultatif, 7 jours à l’avance au plus. Affichée sur la page et envoyée comme Retry-After.",
+        "noUntil": "Non définie",
+        "untilInvalid": "Choisissez un moment futur, 7 jours à l’avance au plus.",
+        "propagation": "Les autres visiteurs suivent en 2 minutes environ\u00a0: chaque serveur et chaque site Cloudflare garde le réglage jusqu’à 30 secondes, et KV met jusqu’à une minute pour atteindre chaque région.",
+        "enable": "Activer la maintenance",
+        "enableNote": "Vous recevez d’abord un cookie de contournement pour ce navigateur, pour garder l’accès.",
+        "enabled": "La maintenance est active",
+        "disable": "Désactiver la maintenance",
+        "disableTitle": "Désactiver la maintenance\u202f?",
+        "disableDescription": "Le site s’ouvre à tous. Chaque cookie de contournement est révoqué\u00a0: les admins en auront besoin d’un nouveau pour la prochaine maintenance.",
+        "disabled": "La maintenance est inactive. Chaque cookie de contournement est révoqué.",
+        "bypassFailed": "Pas de cookie de contournement pour ce navigateur\u00a0: la maintenance reste inactive.",
+        "failed": "Le réglage n’a pas été modifié.",
+        "loadError": "Le réglage de maintenance n’a pas pu être chargé.",
+        "staleCookie": "La maintenance est active, mais votre cookie de contournement date d’une maintenance précédente. Appuyez sur «\u00a0Contourner pour ce navigateur\u00a0» dans une minute."
+      },
+      "bypass": {
+        "title": "Contournement pour ce navigateur",
+        "description": "Un cookie signé qui laisse passer ce navigateur pendant 12 heures. Désactiver la maintenance le révoque.",
+        "active": "Actif jusqu’au {{time}}",
+        "inactive": "Inactif",
+        "action": "Contourner pour ce navigateur (12 h)",
+        "done": "Ce navigateur peut contourner la maintenance jusqu’au {{time}}.",
+        "failed": "Pas de cookie de contournement\u00a0: reconnectez-vous et réessayez.",
+        "loadError": "L’état du contournement n’a pas pu être chargé.",
+        "rateLimited": "Trop de tentatives. Réessayez dans une minute."
+      }
     },
     "emails": {
-      "title": "E-mails"
+      "title": "E-mails",
+      "description": "Les vrais modèles avec des données d’exemple. Un aperçu n’est jamais envoyé.",
+      "templates": "Modèles",
+      "template": {
+        "magicLink": "Lien de connexion",
+        "otp": "Code de connexion",
+        "resetPassword": "Réinitialisation du mot de passe",
+        "verifyEmail": "Confirmation de l’adresse e-mail"
+      },
+      "locale": "Langue",
+      "width": "Largeur",
+      "desktop": "Ordinateur (780 px)",
+      "mobile": "Mobile (390 px)",
+      "subject": "Objet",
+      "view": "Affichage",
+      "html": "E-mail",
+      "text": "Texte brut",
+      "frameTitle": "Aperçu\u00a0: {{name}}",
+      "loadError": "Les modèles d’e-mail n’ont pas pu être chargés.",
+      "previewError": "Cet aperçu n’a pas pu être affiché.",
+      "empty": "Pas encore de modèles d’e-mail.",
+      "sandboxed": "Affiché dans un bac à sable\u00a0: pas de scripts, les liens ne s’ouvrent pas."
     }
   }
 }
