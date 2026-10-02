@@ -1,8 +1,9 @@
 import type { Environment } from "@smog/config/env/worker";
+import { AUDIT_TARGET_TYPES } from "@smog/db/enums";
 import { z } from "zod";
 
 /**
- * `POST /dev/e2e/seed`: the e2e's fixture writes, through the running
+ * `POST /dev/e2e-seed`: the e2e's fixture writes, through the running
  * Worker (and its one D1), instead of a second `wrangler d1 execute`
  * process on the live SQLite file, which hits `SQLITE_BUSY` while the
  * specs write (review I7). A fixed list of operations with bound values,
@@ -29,7 +30,8 @@ export const e2eSeedSchema = z.discriminatedUnion("op", [
     id: z.string().regex(/^e2e-[A-Za-z0-9_-]{1,60}$/),
     op: z.literal("legacyAuditEntry"),
     targetId: z.string().min(1).max(200),
-    targetType: z.enum(["gesture", "category", "user", "settings"]),
+    /** The `audit_log` CHECK's list (`settings` would fail with a 500). */
+    targetType: z.enum(AUDIT_TARGET_TYPES),
   }),
   /** Gives a gesture a legacy (Convex) id, for the 301 test. */
   z.object({
