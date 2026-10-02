@@ -10,7 +10,7 @@ import { ORIGIN } from "./helpers";
  */
 
 /** The dev seed's admin (packages/db/seed/dev.sql); a dev-only password. */
-export const SEED_ADMIN = {
+const SEED_ADMIN = {
   email: "admin@smog.test",
   password: "smog-dev-admin",
 } as const;
