@@ -569,6 +569,7 @@
       "sessionNotFresh": "Meld je opnieuw aan om je account te verwijderen.",
       "invalidPassword": "Dat wachtwoord klopt niet.",
       "deleteFailed": "Je account verwijderen is niet gelukt. Probeer het opnieuw.",
+      "lastAdmin": "Je bent de enige beheerder. Maak eerst een ander account beheerder voor je het jouwe verwijdert.",
       "signInAgain": "Meld je voor je veiligheid opnieuw aan om dit te doen."
     },
     "guest": {
@@ -876,6 +877,7 @@
         "actions": "Acties",
         "self": "Dit is je eigen account. Een andere beheerder moet de rol wijzigen, het account blokkeren of verwijderen.",
         "adminTarget": "Neem eerst de beheerdersrol af voor je dit account blokkeert of verwijdert.",
+        "bannedTarget": "Hef de blokkering op voor je dit account beheerder maakt.",
         "notFound": "Dit account bestaat niet meer."
       },
       "methods": {
@@ -925,6 +927,7 @@
         "self": "Je kunt je eigen account hier niet wijzigen.",
         "lastAdmin": "De laatste beheerder kan de beheerdersrol niet verliezen.",
         "adminTarget": "Neem eerst de beheerdersrol af.",
+        "targetBanned": "Hef eerst de blokkering op.",
         "unchanged": "Het account heeft deze rol al.",
         "alreadyBanned": "Dit account is al geblokkeerd.",
         "notBanned": "Dit account is niet geblokkeerd.",

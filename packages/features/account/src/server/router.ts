@@ -88,6 +88,8 @@ export function createAccountRouter(deps: AccountRouterDeps) {
           throw error;
         }
         switch (error.code) {
+          case "INVALID_STATE":
+            throw errors.INVALID_STATE({ cause: error });
           case "INVALID_PASSWORD":
             throw errors.INVALID_PASSWORD({ cause: error });
           case "PASSWORD_REQUIRED":

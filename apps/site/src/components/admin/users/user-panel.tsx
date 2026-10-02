@@ -36,7 +36,13 @@ import {
   Undo2,
   UserX,
 } from "lucide-react";
-import { type ChangeEvent, type ReactNode, useCallback, useState } from "react";
+import {
+  type ChangeEvent,
+  type ReactNode,
+  useCallback,
+  useId,
+  useState,
+} from "react";
 import { useAuditTime } from "../audit-data";
 import { RoleBadge, StatusBadge, useUserDate } from "./user-table";
 
@@ -50,6 +56,7 @@ const REFUSED = {
   lastAdmin: "admin.users.refused.lastAdmin",
   notBanned: "admin.users.refused.notBanned",
   self: "admin.users.refused.self",
+  targetBanned: "admin.users.refused.targetBanned",
   unchanged: "admin.users.refused.unchanged",
 } as const satisfies Record<UserGuardReason, TranslationKey>;
 
@@ -154,6 +161,29 @@ function UserFacts({ user }: { user: AdminUserDetail }): ReactNode {
 }
 
 type DialogKind = "ban" | "delete" | "role" | "unban";
+
+/**
+ * Why some actions are off (the admin's own account, an admin, a ban) and
+ * which buttons the note describes (M-6).
+ */
+function actionNotes(isSelf: boolean, user: AdminUserDetail) {
+  const isAdmin = user.role === "admin";
+  const promoteBlocked = !(isAdmin || isSelf) && user.banned;
+  let key: TranslationKey | null = null;
+  if (isSelf) {
+    key = "admin.users.panel.self";
+  } else if (isAdmin) {
+    key = "admin.users.panel.adminTarget";
+  } else if (promoteBlocked) {
+    key = "admin.users.panel.bannedTarget";
+  }
+  return {
+    banDescribed: isSelf || isAdmin,
+    key,
+    promoteBlocked,
+    roleDescribed: isSelf || promoteBlocked,
+  };
+}
 
 interface ActionsProps {
   isSelf: boolean;
@@ -262,12 +292,21 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
   );
   const emailMatches =
     confirmEmail.trim().toLowerCase() === user.email.toLowerCase();
-  const busy =
-    actions.setRole.isPending ||
-    actions.ban.isPending ||
-    actions.unban.isPending ||
-    actions.remove.isPending;
+  const busy = [
+    actions.setRole,
+    actions.ban,
+    actions.unban,
+    actions.remove,
+  ].some((action) => action.isPending);
   const locked = isSelf || busy;
+  // The reason an action is off, tied to its buttons (M-6): a disabled
+  // button is skipped by Tab, so a screen reader needs the description.
+  const noteId = useId();
+  const notes = actionNotes(isSelf, user);
+  const { promoteBlocked } = notes;
+  const note = notes.key ? t(notes.key) : null;
+  const roleNote = notes.roleDescribed ? noteId : undefined;
+  const banNote = notes.banDescribed ? noteId : undefined;
   const durationOptions = [
     { label: t("admin.users.ban.forever"), value: FOREVER },
     ...BAN_DAYS.map((count) => ({
@@ -284,19 +323,15 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
       <Heading id="user-actions-heading" level={3}>
         {t("admin.users.panel.actions")}
       </Heading>
-      {isSelf ? (
-        <Text size="body-sm" tone="muted">
-          {t("admin.users.panel.self")}
-        </Text>
-      ) : null}
-      {!isSelf && isAdmin ? (
-        <Text size="body-sm" tone="muted">
-          {t("admin.users.panel.adminTarget")}
+      {note ? (
+        <Text id={noteId} size="body-sm" tone="muted">
+          {note}
         </Text>
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Button
-          disabled={locked}
+          aria-describedby={roleNote}
+          disabled={locked || promoteBlocked}
           icon={isAdmin ? <ShieldOff /> : <ShieldCheck />}
           loading={actions.setRole.isPending}
           onClick={openRole}
@@ -309,6 +344,7 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
         </Button>
         {user.banned ? (
           <Button
+            aria-describedby={isSelf ? noteId : undefined}
             disabled={locked}
             icon={<Undo2 />}
             loading={actions.unban.isPending}
@@ -320,6 +356,7 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
           </Button>
         ) : (
           <Button
+            aria-describedby={banNote}
             disabled={locked || isAdmin}
             icon={<Ban />}
             loading={actions.ban.isPending}
@@ -331,6 +368,7 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
           </Button>
         )}
         <Button
+          aria-describedby={banNote}
           disabled={locked || isAdmin}
           icon={<Trash2 />}
           loading={actions.remove.isPending}
@@ -343,6 +381,7 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
       </div>
 
       <AlertDialog
+        className="wrap-anywhere"
         confirmLabel={t(
           isAdmin ? "admin.users.demote.action" : "admin.users.promote.action"
         )}
@@ -384,6 +423,7 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
             </Field>
           </>
         }
+        className="wrap-anywhere"
         confirmDisabled={reason.trim().length === 0}
         confirmLabel={t("admin.users.ban.action")}
         description={t("admin.users.ban.description")}
@@ -394,6 +434,7 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
         tone="danger"
       />
       <AlertDialog
+        className="wrap-anywhere"
         confirmLabel={t("admin.users.unban.action")}
         description={t("admin.users.unban.description")}
         onConfirm={confirmUnban}
@@ -416,6 +457,7 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
             />
           </Field>
         }
+        className="wrap-anywhere"
         confirmDisabled={!emailMatches}
         confirmLabel={t("admin.users.delete.action")}
         description={t("admin.users.delete.description")}
@@ -516,7 +558,11 @@ export function UserPanel({
   return (
     <Sheet onOpenChange={onOpenChange} open={userId !== null}>
       {userId ? (
-        <SheetContent side="right" title={title ?? t("admin.users.title")}>
+        <SheetContent
+          className="wrap-anywhere"
+          side="right"
+          title={title ?? t("admin.users.title")}
+        >
           <PanelBody actorId={actorId} onClose={onClose} userId={userId} />
         </SheetContent>
       ) : null}

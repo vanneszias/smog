@@ -118,6 +118,7 @@ export const deleteUserInputSchema = z.object({
  * - `self`: an admin cannot change their own role, ban or delete themselves;
  * - `lastAdmin`: the last admin cannot be demoted;
  * - `adminTarget`: an admin must be demoted before a ban or a delete;
+ * - `targetBanned`: an account whose ban is in force is not promoted;
  * - `unchanged`: the account already has that role;
  * - `alreadyBanned` / `notBanned`: the ban is already (not) in force.
  */
@@ -125,6 +126,7 @@ export const USER_GUARD_REASONS = [
   "self",
   "lastAdmin",
   "adminTarget",
+  "targetBanned",
   "unchanged",
   "alreadyBanned",
   "notBanned",

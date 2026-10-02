@@ -301,6 +301,12 @@ export function UserTable({
               {row.id === actorId ? (
                 <Badge variant="accent">{t("admin.users.you")}</Badge>
               ) : null}
+              {row.banned ? (
+                // The status column is scrolled out of view on a phone.
+                <Badge className="md:hidden" variant="danger">
+                  {t("admin.users.status.banned")}
+                </Badge>
+              ) : null}
             </span>
             {row.name ? (
               <Text as="span" className="truncate" size="caption" tone="muted">

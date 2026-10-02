@@ -26,6 +26,15 @@ const MEMBER: AdminUserDetail = {
 
 const ADMIN_ID = "u-admin";
 
+/** The text of the elements an element's `aria-describedby` names. */
+function describedBy(element: Element): string {
+  return (element.getAttribute("aria-describedby") ?? "")
+    .split(" ")
+    .filter(Boolean)
+    .map((id) => document.getElementById(id)?.textContent ?? "")
+    .join(" ");
+}
+
 function noop(): void {
   // The panel stays open in these tests.
 }
@@ -125,9 +134,10 @@ describe("UserPanel", () => {
     });
     expect(dialog.textContent).toContain("This is your own account.");
     for (const name of ["Remove admin role", "Ban", "Delete account"]) {
-      expect(
-        (screen.getByRole("button", { name }) as HTMLButtonElement).disabled
-      ).toBe(true);
+      const button = screen.getByRole("button", { name }) as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+      // The reason is tied to the button, for screen readers (M-6).
+      expect(describedBy(button)).toContain("This is your own account.");
     }
   });
 
@@ -147,10 +157,32 @@ describe("UserPanel", () => {
         }) as HTMLButtonElement
       ).disabled
     ).toBe(false);
+    const ban = screen.getByRole("button", {
+      name: "Ban",
+    }) as HTMLButtonElement;
+    expect(ban.disabled).toBe(true);
+    expect(describedBy(ban)).toContain("Remove the admin role before");
+    const remove = screen.getByRole("button", {
+      name: "Delete account",
+    }) as HTMLButtonElement;
+    expect(describedBy(remove)).toContain("Remove the admin role before");
+  });
+
+  test("a banned account cannot be made an admin, and says why", async () => {
+    await renderSite(panelPage(MEMBER.id), {
+      api: {
+        "admin/users/get": { ...MEMBER, banned: true, banReason: "Spam" },
+      },
+    });
+    const promote = (await screen.findByRole("button", {
+      name: "Make admin",
+    })) as HTMLButtonElement;
+    expect(promote.disabled).toBe(true);
+    expect(describedBy(promote)).toContain("Lift the ban before");
     expect(
-      (screen.getByRole("button", { name: "Ban" }) as HTMLButtonElement)
+      (screen.getByRole("button", { name: "Lift ban" }) as HTMLButtonElement)
         .disabled
-    ).toBe(true);
+    ).toBe(false);
   });
 
   test("bans with a reason and a length, behind an AlertDialog", async () => {

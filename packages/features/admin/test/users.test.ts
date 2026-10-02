@@ -60,6 +60,82 @@ async function expectRefused(
   });
 }
 
+/** The rpc context of `admin`, whose D1 refuses the `audit_log` insert. */
+async function contextWithFailingAudit() {
+  const context = await contextAs(admin);
+  const failing = new Proxy(env.DB, {
+    get(d1, key) {
+      if (key === "prepare") {
+        return (query: string) => {
+          if (AUDIT_INSERT.test(query)) {
+            throw new Error("audit_log is down");
+          }
+          return d1.prepare(query);
+        };
+      }
+      const value: unknown = Reflect.get(d1, key, d1);
+      return typeof value === "function" ? value.bind(d1) : value;
+    },
+  });
+  return { ...context, db: createDb(failing) };
+}
+
+/**
+ * Runs `admin.<path>` with an audit insert that fails, and asserts the
+ * call failed and the writer logged the entry it could not write.
+ */
+async function expectAuditFailure(
+  path: string,
+  action: string,
+  targetId: string,
+  input: unknown
+): Promise<void> {
+  const context = await contextWithFailingAudit();
+  const logged = vi.spyOn(console, "error").mockImplementation(() => {
+    // Silenced: asserted below.
+  });
+  try {
+    await expect(
+      call(procedureAt(path), input, {
+        context,
+        path: ["admin", ...path.split(".")],
+      })
+    ).rejects.toThrow();
+    expect(
+      logged.mock.calls.some(
+        ([message]) =>
+          typeof message === "string" &&
+          message.startsWith(
+            `[admin] Failed to write the audit entry ${action} for user:${targetId}`
+          )
+      )
+    ).toBe(true);
+  } finally {
+    logged.mockRestore();
+  }
+}
+
+/** The rpc context of `admin` with `auth.api.<method>` replaced. */
+async function contextWithAuthApi(method: string, run: () => Promise<never>) {
+  const context = await contextAs(admin);
+  const api = new Proxy(context.auth.api, {
+    get(target, key) {
+      return key === method ? run : Reflect.get(target, key, target);
+    },
+  });
+  return { ...context, auth: { ...context.auth, api } as typeof context.auth };
+}
+
+/** An error shaped like Better Auth's `APIError` (better-call). */
+function apiError(statusCode: number, code: string): Error {
+  return Object.assign(new Error(code), {
+    body: { code, message: code },
+    name: "APIError",
+    status: code,
+    statusCode,
+  });
+}
+
 async function userRow(id: string) {
   return await env.DB.prepare(
     "SELECT role, banned, ban_reason AS banReason, ban_expires AS banExpires FROM user WHERE id = ?"
@@ -328,51 +404,33 @@ describe("admin.users.setRole", () => {
 
   it("logs and rethrows a failed audit write after the role changed", async () => {
     const target = await makeUser(testDb());
-    const context = await contextAs(admin);
-    // The same D1, except that the audit insert fails.
-    const failing = new Proxy(env.DB, {
-      get(d1, key) {
-        if (key === "prepare") {
-          return (query: string) => {
-            if (AUDIT_INSERT.test(query)) {
-              throw new Error("audit_log is down");
-            }
-            return d1.prepare(query);
-          };
-        }
-        const value: unknown = Reflect.get(d1, key, d1);
-        return typeof value === "function" ? value.bind(d1) : value;
-      },
-    });
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {
-      // Silenced: asserted below.
-    });
     const mark = await auditMark();
-    try {
-      const run = call(
-        procedureAt("users.setRole"),
-        { role: "admin", userId: target.id },
-        {
-          context: { ...context, db: createDb(failing) },
-          path: ["admin", "users", "setRole"],
-        }
-      );
-      await expect(run).rejects.toThrow();
-      expect(
-        logged.mock.calls.some(
-          ([message]) =>
-            typeof message === "string" &&
-            message.startsWith(
-              `[admin] Failed to write the audit entry user.role_change for user:${target.id}`
-            )
-        )
-      ).toBe(true);
-    } finally {
-      logged.mockRestore();
-    }
+    await expectAuditFailure("users.setRole", "user.role_change", target.id, {
+      role: "admin",
+      userId: target.id,
+    });
     // The change came first (ruling 5): it happened, and the admin saw an error.
     expect((await userRow(target.id))?.role).toBe("admin");
     expect(await auditRowsSince(mark)).toEqual([]);
+  });
+
+  it("refuses to promote an account whose ban is in force", async () => {
+    const target = await makeUser(testDb(), { banned: true, banReason: "x" });
+    await expectRefused(
+      callAs(admin, "users.setRole", { role: "admin", userId: target.id }),
+      "targetBanned"
+    );
+    expect((await userRow(target.id))?.role).toBe("user");
+  });
+
+  it("demotes an admin whose ban is in force", async () => {
+    const target = await makeUser(testDb(), {
+      banned: true,
+      banReason: "x",
+      role: "admin",
+    });
+    await callAs(admin, "users.setRole", { role: "user", userId: target.id });
+    expect((await userRow(target.id))?.role).toBe("user");
   });
 });
 
@@ -404,8 +462,17 @@ describe("the guards (ruling 7)", () => {
     ],
     [
       "last admin",
-      { action: "setRole", adminCount: 1, role: "user", target: otherAdmin },
+      { action: "setRole", otherAdmins: 0, role: "user", target: otherAdmin },
       "lastAdmin",
+    ],
+    [
+      "promote a banned account",
+      {
+        action: "setRole",
+        role: "admin",
+        target: { ...plain, bannedNow: true },
+      },
+      "targetBanned",
     ],
     ["ban an admin", { action: "ban", target: otherAdmin }, "adminTarget"],
     [
@@ -421,7 +488,7 @@ describe("the guards (ruling 7)", () => {
     ["unban without a ban", { action: "unban", target: plain }, "notBanned"],
   ] as const)("refuses %s", (_name, check, reason) => {
     expect(
-      userActionRefusal({ actorId, adminCount: 2, ...check } as Parameters<
+      userActionRefusal({ actorId, otherAdmins: 1, ...check } as Parameters<
         typeof userActionRefusal
       >[0])
     ).toBe(reason);
@@ -431,14 +498,23 @@ describe("the guards (ruling 7)", () => {
     ["promote", { action: "setRole", role: "admin", target: plain }],
     [
       "demote with another admin",
-      { action: "setRole", adminCount: 2, role: "user", target: otherAdmin },
+      { action: "setRole", otherAdmins: 1, role: "user", target: otherAdmin },
     ],
     ["ban", { action: "ban", target: plain }],
+    [
+      "demote a banned admin",
+      {
+        action: "setRole",
+        otherAdmins: 1,
+        role: "user",
+        target: { ...otherAdmin, bannedNow: true },
+      },
+    ],
     ["unban", { action: "unban", target: { ...plain, bannedNow: true } }],
     ["delete", { action: "delete", target: plain }],
   ] as const)("allows %s", (_name, check) => {
     expect(
-      userActionRefusal({ actorId, adminCount: 2, ...check } as Parameters<
+      userActionRefusal({ actorId, otherAdmins: 1, ...check } as Parameters<
         typeof userActionRefusal
       >[0])
     ).toBeNull();
@@ -649,5 +725,140 @@ describe("admin.users.delete", () => {
         })
       )
     ).toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("audit-write failures after the change (ruling 5)", () => {
+  it("ban: the ban stands, the failure is logged and rethrown", async () => {
+    const target = await makeUser(testDb());
+    const mark = await auditMark();
+    await expectAuditFailure("users.ban", "user.ban", target.id, {
+      reason: "Spam",
+      userId: target.id,
+    });
+    expect((await userRow(target.id))?.banned).toBe(1);
+    expect(await auditRowsSince(mark)).toEqual([]);
+  });
+
+  it("unban: the ban is lifted, the failure is logged and rethrown", async () => {
+    const target = await makeUser(testDb(), { banned: true, banReason: "x" });
+    const mark = await auditMark();
+    await expectAuditFailure("users.unban", "user.unban", target.id, {
+      userId: target.id,
+    });
+    expect((await userRow(target.id))?.banned).toBe(0);
+    expect(await auditRowsSince(mark)).toEqual([]);
+  });
+
+  it("delete: the account is gone, the failure is logged and rethrown", async () => {
+    const target = await makeUser(testDb());
+    const mark = await auditMark();
+    await expectAuditFailure("users.delete", "user.delete", target.id, {
+      confirmEmail: target.email,
+      userId: target.id,
+    });
+    expect(await userRow(target.id)).toBeNull();
+    expect(await auditRowsSince(mark)).toEqual([]);
+  });
+});
+
+describe("Better Auth's refusals are typed, not a 500", () => {
+  it.each([
+    [403, "YOU_ARE_NOT_ALLOWED_TO_CHANGE_USERS_ROLE", { code: "FORBIDDEN" }],
+    [404, "USER_NOT_FOUND", { code: "NOT_FOUND" }],
+    [
+      400,
+      "YOU_CANNOT_BAN_YOURSELF",
+      { code: "INVALID_STATE", data: { reason: "self" } },
+    ],
+    [400, "SOMETHING_ELSE", { code: "BAD_REQUEST" }],
+  ] as const)("an APIError %i %s", async (status, code, expected) => {
+    const target = await makeUser(testDb());
+    const mark = await auditMark();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {
+      // Silenced: the refusal is logged.
+    });
+    try {
+      const context = await contextWithAuthApi("setRole", () =>
+        Promise.reject(apiError(status, code))
+      );
+      await expect(
+        call(
+          procedureAt("users.setRole"),
+          { role: "admin", userId: target.id },
+          { context, path: ["admin", "users", "setRole"] }
+        )
+      ).rejects.toMatchObject(expected);
+    } finally {
+      logged.mockRestore();
+    }
+    expect(await auditRowsSince(mark)).toEqual([]);
+  });
+
+  it("the last-admin trigger's abort is INVALID_STATE lastAdmin", async () => {
+    const target = await makeUser(testDb());
+    // What D1 raises when migration 0007's trigger aborts the update.
+    const context = await contextWithAuthApi("setRole", () =>
+      Promise.reject(
+        new Error("D1_ERROR: last_admin: SQLITE_CONSTRAINT", {
+          cause: new Error("last_admin"),
+        })
+      )
+    );
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {
+      // Silenced.
+    });
+    try {
+      await expect(
+        call(
+          procedureAt("users.setRole"),
+          { role: "admin", userId: target.id },
+          { context, path: ["admin", "users", "setRole"] }
+        )
+      ).rejects.toMatchObject({
+        code: "INVALID_STATE",
+        data: { reason: "lastAdmin" },
+      });
+    } finally {
+      logged.mockRestore();
+    }
+  });
+});
+
+describe("privacy of the ban reason", () => {
+  it("deleting the account removes the reason from its ban entries", async () => {
+    const target = await makeUser(testDb());
+    await callAs(admin, "users.ban", {
+      reason: "Stuurde berichten naar jan@example.com",
+      userId: target.id,
+    });
+    await callAs(admin, "users.unban", { userId: target.id });
+    await callAs(admin, "users.delete", {
+      confirmEmail: target.email,
+      userId: target.id,
+    });
+    const { results } = await env.DB.prepare(
+      "SELECT data FROM audit_log WHERE action = 'user.ban' AND target_id = ?"
+    )
+      .bind(target.id)
+      .all<{ data: string }>();
+    expect(results.map((row) => JSON.parse(row.data))).toEqual([
+      { expiresAt: null, reasonRemoved: true },
+    ]);
+  });
+});
+
+describe("search beyond ASCII (documented behaviour)", () => {
+  it("matches non-ASCII letters as typed, and folds case for ASCII only", async () => {
+    const word = tag();
+    const emile = await makeUser(testDb(), { name: `Émile ${word}` });
+    const ids = async (q: string) =>
+      (await callAs<AdminUserPage>(admin, "users.list", { q })).items.map(
+        (row) => row.id
+      );
+    expect(await ids(`Émile ${word}`)).toEqual([emile.id]);
+    expect(await ids(`émile ${word.toUpperCase()}`)).toEqual([]);
+    expect(await ids(`ÉMILE ${word}`)).toEqual([]);
+    expect(await ids(`mile ${word.toUpperCase()}`)).toEqual([emile.id]);
   });
 });

@@ -19,6 +19,7 @@ import {
 const ADMIN = { email: "admin@smog.test", password: "smog-dev-admin" };
 /** As playwright.config.ts: the preinstalled Chromium, launched by path. */
 const PREINSTALLED_CHROMIUM = "/opt/pw-browsers/chromium";
+const PANEL_IN_URL = /user=/;
 
 async function signInAsAdmin(page: Page): Promise<void> {
   const response = await page.request.post("/api/auth/sign-in/email", {
@@ -145,6 +146,32 @@ test.describe("admin users", () => {
     await expect(
       toastText(page, `De blokkering van ${member.email} is opgeheven.`)
     ).toBeVisible();
+  });
+
+  test("delete through the panel: type the email, the panel closes, the session ends", async ({
+    browser,
+    page,
+  }) => {
+    await signInAsAdmin(page);
+    const member = await memberPage(browser);
+    await openPanel(page, member.email);
+    const panel = page.getByRole("dialog", { name: member.email });
+    await panel.getByRole("button", { name: "Account verwijderen" }).click();
+    const alert = page.getByRole("alertdialog");
+    const confirm = alert.getByRole("button", { name: "Account verwijderen" });
+    await expect(confirm).toBeDisabled();
+    await alert.getByRole("textbox").fill("iemand-anders@smog.test");
+    await expect(confirm).toBeDisabled();
+    await alert.getByRole("textbox").fill(member.email.toUpperCase());
+    await confirmIn(page, "Account verwijderen");
+    await expect(toastText(page, "Het account is verwijderd.")).toBeVisible();
+    await expect(panel).toBeHidden();
+    await expect(page).not.toHaveURL(PANEL_IN_URL);
+    await expect(
+      page.getByRole("table", { name: "Gebruikers" }).getByText(member.email)
+    ).toHaveCount(0);
+    const session = await member.page.request.get("/api/auth/get-session");
+    expect(await session.json()).toBeNull();
   });
 
   test("the admin's own row has its actions disabled, with the reason", async ({

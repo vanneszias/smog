@@ -50,6 +50,13 @@
       "when": 1790768221048,
       "tag": "0006_admin_gesture_order",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790947035421,
+      "tag": "0007_user_keep_one_admin",
+      "breakpoints": true
     }
   ]
 }

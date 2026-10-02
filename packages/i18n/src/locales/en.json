@@ -569,6 +569,7 @@
       "sessionNotFresh": "Sign in again to delete your account.",
       "invalidPassword": "That password is not correct.",
       "deleteFailed": "Your account could not be deleted. Please try again.",
+      "lastAdmin": "You are the only admin. Make another account an admin before you delete yours.",
       "signInAgain": "For your security, sign in again to do this."
     },
     "guest": {
@@ -876,6 +877,7 @@
         "actions": "Actions",
         "self": "This is your own account. Another admin has to change its role, ban it or delete it.",
         "adminTarget": "Remove the admin role before you ban or delete this account.",
+        "bannedTarget": "Lift the ban before you make this account an admin.",
         "notFound": "This account no longer exists."
       },
       "methods": {
@@ -925,6 +927,7 @@
         "self": "You cannot change your own account here.",
         "lastAdmin": "The last admin cannot lose the admin role.",
         "adminTarget": "Remove the admin role first.",
+        "targetBanned": "Lift the ban first.",
         "unchanged": "The account already has this role.",
         "alreadyBanned": "This account is already banned.",
         "notBanned": "This account is not banned.",

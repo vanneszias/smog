@@ -576,6 +576,7 @@
       "sessionNotFresh": "Reconnectez-vous pour supprimer votre compte.",
       "invalidPassword": "Ce mot de passe n'est pas correct.",
       "deleteFailed": "La suppression de votre compte a échoué. Veuillez réessayer.",
+      "lastAdmin": "Vous êtes le seul administrateur. Nommez d’abord un autre compte administrateur avant de supprimer le vôtre.",
       "signInAgain": "Pour votre sécurité, reconnectez-vous pour effectuer cette action."
     },
     "guest": {
@@ -888,6 +889,7 @@
         "actions": "Actions",
         "self": "C’est votre propre compte. Un autre administrateur doit en changer le rôle, le bloquer ou le supprimer.",
         "adminTarget": "Retirez d’abord le rôle d’administrateur avant de bloquer ou de supprimer ce compte.",
+        "bannedTarget": "Levez le blocage avant de nommer ce compte administrateur.",
         "notFound": "Ce compte n’existe plus."
       },
       "methods": {
@@ -938,6 +940,7 @@
         "self": "Vous ne pouvez pas modifier votre propre compte ici.",
         "lastAdmin": "Le dernier administrateur ne peut pas perdre ce rôle.",
         "adminTarget": "Retirez d’abord le rôle d’administrateur.",
+        "targetBanned": "Levez d’abord le blocage.",
         "unchanged": "Le compte a déjà ce rôle.",
         "alreadyBanned": "Ce compte est déjà bloqué.",
         "notBanned": "Ce compte n’est pas bloqué.",

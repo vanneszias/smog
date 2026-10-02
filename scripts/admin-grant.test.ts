@@ -2,13 +2,14 @@ import { describe, expect, test } from "bun:test";
 import {
   buildGrantCommand,
   buildGrantSql,
+  dryRunLines,
   parseGrantArgs,
 } from "./admin-grant";
 
 describe("buildGrantSql", () => {
-  test("updates the role by the lower-cased email and returns the row", () => {
+  test("grants the role and lifts any ban, by the lower-cased email", () => {
     expect(buildGrantSql("Anna@Smog.test")).toBe(
-      "UPDATE user SET role = 'admin', updated_at = CAST(unixepoch('subsec') * 1000 AS INTEGER) WHERE email = 'anna@smog.test' RETURNING id, email, role;"
+      "UPDATE user SET role = 'admin', banned = 0, ban_reason = NULL, ban_expires = NULL, updated_at = CAST(unixepoch('subsec') * 1000 AS INTEGER) WHERE email = 'anna@smog.test' RETURNING id, email, role, banned;"
     );
   });
 
@@ -79,5 +80,19 @@ describe("parseGrantArgs", () => {
     expect(() =>
       parseGrantArgs(["--env", "dev", "a@smog.test", "b@smog.test"])
     ).toThrow("one email");
+  });
+});
+
+describe("dryRunLines", () => {
+  test("prints the command and says the ban is lifted too", () => {
+    const lines = dryRunLines({
+      dryRun: true,
+      email: "a@smog.test",
+      env: "staging",
+    });
+    expect(lines[0]).toStartWith('(cd apps/site && bunx "wrangler"');
+    expect(lines[1]).toBe(
+      "[adminGrant] This also lifts any ban on the account (banned, ban_reason and ban_expires are cleared)."
+    );
   });
 });
