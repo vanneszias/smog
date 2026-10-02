@@ -18,6 +18,7 @@ import { ADMIN_PROCEDURE_KINDS, adminContract } from "../src/contract";
 import { auditDataSchema, type WritableAuditAction } from "../src/schema";
 import { createAdminRouter } from "../src/server";
 import { adminDeps } from "./deps";
+import { TEST_MUX_ENV } from "./mux-fake";
 
 const SITE_URL = "http://localhost:5173";
 const PASSWORD = "correct horse battery";
@@ -90,12 +91,14 @@ export async function signedUp(
  */
 export async function contextAs(as: Authed | null) {
   if (!as) {
-    return makeRpcContext({ db: testDb(), kv: env.KV });
+    return makeRpcContext({ db: testDb(), env: TEST_MUX_ENV, kv: env.KV });
   }
   const headers = new Headers({ cookie: as.cookie, origin: SITE_URL });
   return makeRpcContext({
     auth: as.auth,
     db: testDb(),
+    // The Mux fake (`test/mux-fake.ts`); `test/deps.ts` injects its fetch.
+    env: TEST_MUX_ENV,
     kv: env.KV,
     request: new Request(`${SITE_URL}/api/rpc/admin`, {
       headers,

@@ -332,7 +332,7 @@ All handlers are idempotent, process records one at a time, and can safely be re
    5. Step `ready` waits for the `video.asset.ready` webhook with that passthrough (1 h timeout, then polling).
    6. Step `commit` stores the playback id on the job and on the sponsorship and transitions `rendering → in_review`.
    7. Any failure after the retries leads to `render_failed` plus an admin email.
-4. **Mux webhooks** arrive at `POST /api/webhooks/mux`, verified with the Mux signing secret (Web Crypto HMAC via `@mux/mux-node` `webhooks.unwrap`). They are routed to Workflow events and to admin upload status.
+4. **Mux webhooks** arrive at `POST /api/webhooks/mux`, verified with the Mux signing secret (Web Crypto HMAC in `@smog/video`, a thin `fetch` client with no `@mux/mux-node`; DECISIONS, phase 5 task 3). They are routed to Workflow events and to admin upload status.
 5. **Mux asset lifecycle:**
    - On expiry, the sponsored asset is deleted (old behaviour; failures are logged and swallowed).
    - Admin gesture uploads use direct uploads with `playback_policy: ["public"]`, `static_renditions: [{ resolution: "highest" }]`, and `passthrough = gesture draft id`.

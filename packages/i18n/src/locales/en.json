@@ -827,7 +827,75 @@
       "title": "Categories"
     },
     "mux": {
-      "title": "Video"
+      "title": "Video",
+      "label": "Video",
+      "none": "No video chosen yet.",
+      "statusError": "The video settings could not be loaded.",
+      "current": "Chosen video",
+      "playbackIdValue": "Playback ID: {{id}}",
+      "notConfigured": {
+        "title": "Video uploads are not set up",
+        "description": "Mux is not configured on this environment. Paste the playback ID of an existing Mux video."
+      },
+      "tabs": {
+        "upload": "Upload",
+        "choose": "Choose existing",
+        "playbackId": "Playback ID"
+      },
+      "upload": {
+        "drop": "Drag a video here",
+        "or": "or",
+        "browse": "Choose a file",
+        "hint": "The file goes straight to Mux, not through our server.",
+        "notVideo": "Choose a video file.",
+        "creating": "Preparing the upload…",
+        "progressLabel": "Uploading to Mux",
+        "uploadingStart": "Uploading {{name}}…",
+        "uploading": "Uploading {{name}}… {{percent}}%",
+        "processing": "Mux is processing the video…",
+        "processingHint": "This usually takes less than a minute. You can keep this window open.",
+        "ready": "The video is ready.",
+        "another": "Upload another video",
+        "retry": "Try again",
+        "cancel": "Cancel",
+        "failed": {
+          "create": "The upload could not start. Try again.",
+          "transfer": "The file could not be sent to Mux.",
+          "processing": "Mux could not process this video. Try another file.",
+          "cancelled": "The upload expired or was cancelled.",
+          "slow": "Mux is still busy after 10 minutes. Check again later."
+        },
+        "checkAgain": "Check again"
+      },
+      "picker": {
+        "loading": "Loading videos",
+        "empty": "No videos in Mux yet",
+        "emptyDescription": "Upload a video in the Upload tab.",
+        "error": "The videos could not be loaded.",
+        "choose": "Choose",
+        "chosen": "Chosen",
+        "notReady": "Can be chosen once Mux has finished it.",
+        "previous": "Previous page",
+        "next": "Next page",
+        "page": "Page {{page}}",
+        "unused": "Not used",
+        "usedBy_one": "Used by {{count}} gesture",
+        "usedBy_other": "Used by {{count}} gestures",
+        "usedByNames": "Used by: {{names}}",
+        "thumbnail": "Video from {{date}}",
+        "duration": "{{seconds}} s",
+        "status": {
+          "preparing": "Processing",
+          "ready": "Ready",
+          "errored": "Failed"
+        }
+      },
+      "playback": {
+        "label": "Playback ID",
+        "hint": "A public playback ID from the Mux dashboard.",
+        "invalid": "A playback ID consists of letters, digits, _ and -.",
+        "use": "Use this video"
+      }
     },
     "users": {
       "title": "Users",

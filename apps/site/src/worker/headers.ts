@@ -1,4 +1,4 @@
-import type { Environment } from "@smog/config/env/worker";
+import { type Environment, MUX_DEFAULT_API_URL } from "@smog/config/env/worker";
 
 /**
  * The site's security headers (spec §9, the old Caddy set), added to every
@@ -41,18 +41,28 @@ const DOCUMENT_HEADERS: Readonly<Record<string, string>> = {
  * theme pre-paint script is allowed by its hash. Turnstile loads from
  * challenges.cloudflare.com (script + frame); Mux Player is bundled and
  * fetches posters, storyboards and HLS from *.mux.com (hls.js runs in a
- * blob: worker). Google profile pictures come from lh3.googleusercontent.com.
+ * blob: worker). The admin video upload PUTs the file straight to the Mux
+ * direct-upload URL, on a `*.mux.com` host since 2025 (`@smog/video`
+ * `isAllowedUploadUrl` refuses any other), so `connect-src` already covers
+ * it. Google profile pictures come from lh3.googleusercontent.com.
  * The OpenPanel relay is same-origin (`/api/analytics`). The site loads no
  * web fonts, so `font-src` is the brief's minus fonts.gstatic.com.
+ * `connectSrc` adds sources to `connect-src` (dev: the Mux fake).
  */
-export function buildCsp(nonce: string): string {
+export function buildCsp(
+  nonce: string,
+  { connectSrc = [] }: CspOptions = {}
+): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'sha256-${THEME_SCRIPT_HASH}' https://challenges.cloudflare.com`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://image.mux.com https://lh3.googleusercontent.com",
     "media-src 'self' blob: https://stream.mux.com https://*.mux.com",
-    "connect-src 'self' https://*.mux.com https://inferred.litix.io",
+    [
+      "connect-src 'self' https://*.mux.com https://inferred.litix.io",
+      ...connectSrc,
+    ].join(" "),
     "frame-src https://challenges.cloudflare.com",
     "worker-src 'self' blob:",
     "font-src 'self' data:",
@@ -63,6 +73,31 @@ export function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
+export interface CspOptions {
+  /** Extra `connect-src` sources (`devConnectSources`). */
+  connectSrc?: readonly string[];
+}
+
+/**
+ * The extra `connect-src` of a dev server whose `MUX_API_URL` points at the
+ * Mux fake (the e2e): its origin, where the fake's upload URLs live. Never
+ * outside dev, and nothing for the real Mux API.
+ */
+export function devConnectSources(
+  environment: Environment,
+  muxApiUrl: unknown
+): string[] {
+  if (environment !== "dev" || typeof muxApiUrl !== "string") {
+    return [];
+  }
+  try {
+    const { origin } = new URL(muxApiUrl);
+    return origin === MUX_DEFAULT_API_URL || origin === "null" ? [] : [origin];
+  } catch {
+    return [];
+  }
+}
+
 /** A fresh CSP nonce: 128 random bits, base64. */
 export function createNonce(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -70,6 +105,8 @@ export function createNonce(): string {
 }
 
 export interface SecurityHeaderOptions {
+  /** Extra `connect-src` sources (dev only: `devConnectSources`). */
+  connectSrc?: readonly string[];
   environment: Environment;
   nonce: string;
 }
@@ -124,7 +161,9 @@ export function withSecurityHeaders(
   if (!(headers.has(CSP) || headers.has(CSP_REPORT_ONLY))) {
     headers.set(
       options.environment === "staging" ? CSP_REPORT_ONLY : CSP,
-      buildCsp(options.nonce)
+      buildCsp(options.nonce, {
+        connectSrc: options.connectSrc ?? [],
+      })
     );
   }
   return secured;
@@ -137,7 +176,8 @@ export function withSecurityHeaders(
  */
 export async function respondSecurely(
   environment: Environment,
-  handle: (nonce: string) => Promise<Response> | Response
+  handle: (nonce: string) => Promise<Response> | Response,
+  { connectSrc = [] }: CspOptions = {}
 ): Promise<Response> {
   const nonce = createNonce();
   let response: Response;
@@ -153,5 +193,5 @@ export async function respondSecurely(
       status: 500,
     });
   }
-  return withSecurityHeaders(response, { environment, nonce });
+  return withSecurityHeaders(response, { connectSrc, environment, nonce });
 }

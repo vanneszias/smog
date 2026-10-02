@@ -11,6 +11,7 @@ const ENV: RpcEnv = {
   EMAIL_FROM: "SMOG & Co <noreply@smog.vlaanderen>",
   EMAIL_REPLY_TO: "info@smog.vlaanderen",
   ENVIRONMENT: "dev",
+  MUX_API_URL: "https://api.mux.com",
   OPENPANEL_API_URL: "https://analytics.zias.be/api",
   RENDER_MODE: "fake",
   RL_ANALYTICS: allow,

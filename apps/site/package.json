@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && bun scripts/deploy-guard.ts --bundle",
     "cf-typegen": "wrangler types",
     "check-types": "wrangler types && tsc -b && tsc -p scripts && tsc -p e2e",
     "deploy": "vite build && bun scripts/deploy-guard.ts && wrangler deploy --env $CLOUDFLARE_ENV",
@@ -40,6 +40,7 @@
     "@smog/styles": "workspace:*",
     "@smog/ui-web": "workspace:*",
     "@smog/utils": "workspace:*",
+    "@smog/video": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "1.170.40",
     "@tanstack/react-router-ssr-query": "1.167.3",

@@ -115,6 +115,7 @@
         "@smog/styles": "workspace:*",
         "@smog/ui-web": "workspace:*",
         "@smog/utils": "workspace:*",
+        "@smog/video": "workspace:*",
         "@tanstack/react-query": "catalog:",
         "@tanstack/react-router": "1.170.40",
         "@tanstack/react-router-ssr-query": "1.167.3",
@@ -341,6 +342,7 @@
         "@smog/gestures": "workspace:*",
         "@smog/rpc": "workspace:*",
         "@smog/utils": "workspace:*",
+        "@smog/video": "workspace:*",
         "drizzle-orm": "catalog:",
         "zod": "catalog:",
       },
@@ -652,6 +654,18 @@
       "version": "0.0.0",
       "devDependencies": {
         "@smog/config": "workspace:*",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/video": {
+      "name": "@smog/video",
+      "version": "0.0.0",
+      "dependencies": {
+        "@smog/config": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
         "@types/bun": "catalog:",
         "typescript": "catalog:",
       },
@@ -1632,6 +1646,8 @@
     "@smog/ui-web": ["@smog/ui-web@workspace:packages/ui-web"],
 
     "@smog/utils": ["@smog/utils@workspace:packages/utils"],
+
+    "@smog/video": ["@smog/video@workspace:packages/video"],
 
     "@socket.io/component-emitter": ["@socket.io/component-emitter@3.1.2", "", {}, "sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA=="],
 
