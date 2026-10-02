@@ -1,12 +1,15 @@
 /**
  * The owner's lists and their items. Every function takes the signed-in
  * user's id and answers `NOT_FOUND` for a list it does not own, so another
- * user's list is indistinguishable from a missing one. Positions are dense
- * (`0..n-1`): an add appends at `max + 1` in one statement, a remove shifts
- * the rows after it down in the same D1 batch, and a reorder rewrites them
- * all.
+ * user's list is indistinguishable from a missing one. Positions order the
+ * items and are dense (`0..n-1`) after every list write: an add appends at
+ * `max + 1` in one statement, and a remove or a reorder renumbers the rows
+ * that exist at write time (`renumberItemsStmt`), so a write racing it
+ * cannot leave a gap. A gesture delete (its `ON DELETE CASCADE`) can leave
+ * one until the list's next write; readers sort on `position` and never
+ * index by it.
  */
-import { gesture, list, listItem, listShare } from "@smog/db";
+import { gesture, list, listItem, listShare, ref } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import type { GestureSummary } from "@smog/gestures/schema";
 import { newId } from "@smog/utils";
@@ -19,7 +22,6 @@ import {
   type SQLWrapper,
   sql,
 } from "drizzle-orm";
-import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
   isExactSet,
   LIST_ITEMS_MAX,
@@ -55,14 +57,6 @@ export class ListsError extends Error {
     this.code = code;
     this.name = "ListsError";
   }
-}
-
-/**
- * `alias."column"`. Drizzle renders columns unqualified in single-table
- * statements, so a correlated subquery names both sides itself.
- */
-function ref(alias: string, column: SQLiteColumn): SQL {
-  return sql`${sql.raw(alias)}.${sql.identifier(column.name)}`;
 }
 
 /** The outer row's name in the list queries (the `list` table). */
@@ -166,6 +160,34 @@ export async function hydrateItems(
     ...summary,
     position: positions.get(summary.id) ?? 0,
   }));
+}
+
+/**
+ * The owner's list ids holding `gestureId`: `list_owner_updated_idx` finds
+ * the owner's lists (at most `LISTS_MAX`), the `list_item` key each pair.
+ */
+export function containingQuery(db: Db, ownerId: string, gestureId: string) {
+  return db
+    .select({ id: listItem.listId })
+    .from(listItem)
+    .innerJoin(list, eq(list.id, listItem.listId))
+    .where(and(eq(list.ownerId, ownerId), eq(listItem.gestureId, gestureId)))
+    .limit(LISTS_MAX);
+}
+
+/** Which of the owner's lists hold the gesture (the "Save to list" picker). */
+export async function listsContaining(
+  db: Db,
+  ownerId: string,
+  gestureId: string
+): Promise<string[]> {
+  try {
+    const rows = await containingQuery(db, ownerId, gestureId);
+    return rows.map((row) => row.id);
+  } catch (error) {
+    console.error("[lists] Failed to find the lists holding a gesture:", error);
+    throw error;
+  }
 }
 
 /** The owner's lists, most recently changed first (`list_owner_updated_idx`). */
@@ -447,16 +469,43 @@ export async function addItemToList(
 }
 
 /**
- * Removes the gesture and shifts the rows after it down by one, in one
- * batch (the shift reads the removed row's position before the delete).
+ * Renumbers the list's rows `0..n-1` as they are when it runs: first the
+ * gestures of `order` (a reorder payload) in its order, then every other
+ * row by its current position (an add that landed after the payload was
+ * read). Rows of `order` that are gone (removed meanwhile) take no place.
+ * A statement, not run.
+ */
+function renumberItemsStmt(
+  db: Db,
+  listId: string,
+  order: readonly string[] = []
+) {
+  // `UPDATE … FROM`: the ranks are computed once, before any row changes
+  // (a correlated subquery per row would see the rows already renumbered).
+  const ranked = sql`(SELECT r.gesture_id AS gesture_id, row_number() OVER (ORDER BY o.key IS NULL, o.key, r.position, r.gesture_id) - 1 AS rank FROM ${listItem} AS r LEFT JOIN json_each(${JSON.stringify(order)}) AS o ON o.value = r.gesture_id WHERE r.list_id = ${listId}) AS n`;
+  return db
+    .update(listItem)
+    .set({ position: sql`n.rank` })
+    .from(ranked)
+    .where(
+      and(
+        eq(listItem.listId, listId),
+        sql`n.gesture_id = ${ref("list_item", listItem.gestureId)}`,
+        sql`${listItem.position} IS NOT n.rank`
+      )
+    );
+}
+
+/**
+ * Removes the gesture and renumbers the rest, in one batch (so a gap left
+ * earlier, by a gesture delete, closes too).
  */
 export async function removeItemFromList(
   db: Db,
   target: Omit<ItemTarget, "actorId">
 ): Promise<{ removed: boolean }> {
   const { gestureId, listId } = target;
-  const removedPosition = sql`(SELECT ${ref("r", listItem.position)} FROM ${listItem} AS r WHERE ${ref("r", listItem.listId)} = ${listId} AND ${ref("r", listItem.gestureId)} = ${gestureId})`;
-  const [, , deleted] = await db.batch([
+  const [, deleted] = await db.batch([
     db
       .update(list)
       .set({ updatedAt: new Date() })
@@ -467,20 +516,12 @@ export async function removeItemFromList(
         )
       ),
     db
-      .update(listItem)
-      .set({ position: sql`${listItem.position} - 1` })
-      .where(
-        and(
-          eq(listItem.listId, listId),
-          sql`${listItem.position} > ${removedPosition}`
-        )
-      ),
-    db
       .delete(listItem)
       .where(
         and(eq(listItem.listId, listId), eq(listItem.gestureId, gestureId))
       )
       .returning({ gestureId: listItem.gestureId }),
+    renumberItemsStmt(db, listId),
   ]);
   return { removed: deleted.length > 0 };
 }
@@ -513,9 +554,10 @@ export async function removeItem(
 /**
  * Sets the order. `gestureIds` must be exactly the list's published
  * gestures (what the owner sees), else `INVALID_STATE`; unpublished ones
- * keep their relative order after them. Only the payload's rows (and the
- * hidden ones) are rewritten, so an add that lands between the read and
- * the write keeps its `max + 1` place.
+ * keep their relative order after them. The positions are computed in the
+ * write from the rows that exist then (`renumberItemsStmt`): an add that
+ * lands between the read and the write goes after the rest, and a remove
+ * leaves no gap.
  */
 export async function reorderList(
   db: Db,
@@ -549,19 +591,8 @@ export async function reorderList(
   const hidden = rows
     .filter((row) => !row.published)
     .map((row) => row.gestureId);
-  const order = JSON.stringify([...input.gestureIds, ...hidden]);
   await db.batch([
-    db
-      .update(listItem)
-      .set({
-        position: sql`(SELECT j.key FROM json_each(${order}) AS j WHERE j.value = ${ref("list_item", listItem.gestureId)})`,
-      })
-      .where(
-        and(
-          eq(listItem.listId, input.id),
-          sql`${listItem.gestureId} IN (SELECT value FROM json_each(${order}))`
-        )
-      ),
+    renumberItemsStmt(db, input.id, [...input.gestureIds, ...hidden]),
     db.update(list).set({ updatedAt: new Date() }).where(eq(list.id, input.id)),
   ]);
 }

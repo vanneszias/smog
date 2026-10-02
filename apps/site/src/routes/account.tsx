@@ -1,3 +1,4 @@
+import { useAccount } from "@smog/account/client";
 import { useAuthState } from "@smog/auth/react";
 import { useTranslation } from "@smog/i18n/react";
 import {
@@ -5,105 +6,143 @@ import {
   Button,
   Card,
   CardContent,
+  CardDescription,
   CardFooter,
+  CardTitle,
+  ErrorState,
   Heading,
+  Skeleton,
   Text,
   useToast,
 } from "@smog/ui-web";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { Fingerprint, LogOut } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { LogIn, LogOut } from "lucide-react";
+import { type ReactNode, useEffect } from "react";
+import { PreferencesSection } from "@/components/account/preferences-section";
+import {
+  DeleteAccountSection,
+  PrivacySection,
+} from "@/components/account/privacy-section";
+import { ProfileSection } from "@/components/account/profile-section";
+import { SignInMethodsSection } from "@/components/account/sign-in-methods-section";
 import { useSignOut } from "@/components/app-shell/user-menu";
-import { useAuthClient } from "@/lib/auth-client";
 import { pageMeta } from "@/lib/head";
-import { usePasskeySupport } from "@/lib/passkeys";
-import { getSessionUser } from "@/server/shell.functions";
+
+export interface AccountSearch {
+  /** Set by Better Auth when linking Google or Apple failed. */
+  error?: string;
+}
 
 export const Route = createFileRoute("/account")({
-  beforeLoad: async () => {
-    const user = await getSessionUser();
-    if (!user) {
-      throw redirect({ search: { redirect: "/account" }, to: "/sign-in" });
-    }
-  },
-  component: Account,
+  component: AccountPage,
   head: ({ matches }) => pageMeta(matches, "account.title"),
+  validateSearch: (search: Record<string, unknown>): AccountSearch =>
+    typeof search.error === "string" ? { error: search.error } : {},
 });
 
-/** The account placeholder: who you are, add a passkey, sign out (phase 4 adds the rest). */
-function Account(): ReactNode {
+/** A failed provider link comes back as `?error=`: say so once. */
+function useLinkError(): void {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const { error } = Route.useSearch();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    toast({ title: t("auth.errors.generic"), variant: "danger" });
+    navigate({ replace: true, search: {}, to: "/account" });
+  }, [error, navigate, t, toast]);
+}
+
+/** A guest: what an account adds, and the device's own preferences. */
+function GuestAccount(): ReactNode {
+  const { t } = useTranslation();
+  return (
+    <>
+      <Card variant="raised">
+        <CardContent>
+          <CardTitle level={2}>{t("account.guest.title")}</CardTitle>
+          <CardDescription className="max-w-reading text-body">
+            {t("account.guest.description")}
+          </CardDescription>
+        </CardContent>
+        <CardFooter>
+          <Button asChild icon={<LogIn />}>
+            <Link search={{ redirect: "/account" }} to="/sign-in">
+              {t("nav.signIn")}
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
+      <PreferencesSection />
+      <PrivacySection signedIn={false} />
+    </>
+  );
+}
+
+function SignedInAccount(): ReactNode {
   const { t } = useTranslation();
   const auth = useAuthState();
-  const client = useAuthClient();
-  const navigate = useNavigate();
+  const account = useAccount();
   const signOut = useSignOut();
-  const { toast } = useToast();
-  const passkeys = usePasskeySupport();
-  const [adding, setAdding] = useState(false);
-
-  useEffect(() => {
-    if (auth.status === "signedOut") {
-      navigate({ replace: true, to: "/" });
-    }
-  }, [auth.status, navigate]);
-
-  const addPasskey = useCallback(async (): Promise<void> => {
-    setAdding(true);
-    try {
-      const result = await client.passkey.addPasskey();
-      toast(
-        result?.error
-          ? { title: t("auth.errors.passkeyFailed"), variant: "danger" }
-          : { title: t("auth.passkey.added"), variant: "success" }
-      );
-    } catch (error) {
-      console.error("[account] Failed to add a passkey:", error);
-      toast({ title: t("auth.errors.passkeyFailed"), variant: "danger" });
-    } finally {
-      setAdding(false);
-    }
-  }, [client, t, toast]);
-
+  useLinkError();
   const { user } = auth;
+  if (!user) {
+    return null;
+  }
   return (
-    <section className="mx-auto flex w-full max-w-content flex-col gap-6 px-4 py-10 md:px-6 lg:px-8">
-      <Heading level={1}>{t("account.title")}</Heading>
-      {user ? (
-        <Card className="max-w-reading" variant="raised">
-          <CardContent className="min-w-0 flex-row items-center gap-4">
-            <Avatar name={user.name} size="lg" src={user.image ?? undefined} />
-            <div className="flex min-w-0 flex-1 flex-col">
-              {/* A nameless user's name is their email: say it once. */}
-              {user.name === user.email ? null : (
-                <Text className="truncate" weight="semibold">
-                  {user.name}
-                </Text>
-              )}
-              <Text className="truncate" size="body-sm" tone="muted">
-                {t("account.signedInAs", { email: user.email })}
-              </Text>
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-wrap gap-2">
-            {passkeys ? (
-              <Button
-                icon={<Fingerprint />}
-                loading={adding}
-                onClick={addPasskey}
-                variant="secondary"
-              >
-                {t("auth.passkey.add")}
-              </Button>
-            ) : null}
-            <Button icon={<LogOut />} onClick={signOut} variant="ghost">
-              {t("nav.signOut")}
-            </Button>
-          </CardFooter>
-        </Card>
+    <>
+      <div className="flex min-w-0 flex-wrap items-center gap-4">
+        <Avatar name={user.name} size="lg" src={user.image ?? undefined} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* A nameless user's name is their email: say it once. */}
+          {user.name === user.email ? null : (
+            <Text className="truncate" weight="semibold">
+              {user.name}
+            </Text>
+          )}
+          <Text className="truncate" size="body-sm" tone="muted">
+            {t("account.signedInAs", { email: user.email })}
+          </Text>
+        </div>
+        <Button icon={<LogOut />} onClick={signOut} variant="ghost">
+          {t("nav.signOut")}
+        </Button>
+      </div>
+      {account.status === "error" ? (
+        <ErrorState level={2} onRetry={account.refetch} />
       ) : null}
-      <Text className="max-w-reading" tone="muted">
-        {t("account.comingSoon")}
-      </Text>
+      {account.status === "loading" ? (
+        <Skeleton className="h-64 w-full" />
+      ) : null}
+      {account.status === "ready" ? (
+        <>
+          <ProfileSection account={account} />
+          <SignInMethodsSection account={account} />
+          <PrivacySection signedIn />
+          <PreferencesSection />
+          <DeleteAccountSection account={account} />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * `/account` (spec §9, §16 flow 3): profile, sign-in methods, privacy
+ * (consent, export), preferences and deletion. Guests get a sign-in
+ * prompt and their device preferences.
+ */
+function AccountPage(): ReactNode {
+  const { t } = useTranslation();
+  const auth = useAuthState();
+  return (
+    <section className="mx-auto flex w-full max-w-reading flex-col gap-6 px-4 py-10 md:px-6 lg:px-8">
+      <Heading level={1}>{t("account.title")}</Heading>
+      {auth.status === "signedIn" ? <SignedInAccount /> : null}
+      {auth.status === "signedOut" ? <GuestAccount /> : null}
+      {auth.status === "loading" ? <Skeleton className="h-64 w-full" /> : null}
     </section>
   );
 }

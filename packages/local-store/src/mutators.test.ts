@@ -6,6 +6,7 @@ import {
   clearRecentSearches,
   createList,
   deleteList,
+  dismissAppBanner,
   dismissImportFor,
   IMPORT_DISMISSED_MAX,
   isFavorite,
@@ -17,7 +18,7 @@ import {
   setPreferences,
   toggleFavorite,
 } from "./mutators";
-import { defaultGuestData, type GuestData } from "./schema";
+import { defaultGuestData, type GuestData, guestDataSchema } from "./schema";
 
 function withList(ids: string[]): GuestData {
   return {
@@ -134,6 +135,22 @@ describe("consent and preferences", () => {
     expect(setConsent(false, 43)(data).consent.analytics).toBe(false);
   });
 
+  test("setConsent marks a copy of an account's decision, and a guest's own choice drops the mark", () => {
+    const mirrored = setConsent(true, 42, "user-anna")(defaultGuestData());
+    expect(mirrored.consent).toEqual({
+      analytics: true,
+      decidedAt: 42,
+      mirroredFrom: "user-anna",
+    });
+    expect(setConsent(false, 43)(mirrored).consent).toEqual({
+      analytics: false,
+      decidedAt: 43,
+    });
+    expect(guestDataSchema.parse(mirrored).consent.mirroredFrom).toBe(
+      "user-anna"
+    );
+  });
+
   test("setPreferences merges", () => {
     const data = setPreferences({ theme: "dark" })(defaultGuestData());
     expect(data.preferences).toEqual({
@@ -159,5 +176,17 @@ describe("consent and preferences", () => {
     expect(ids).toHaveLength(IMPORT_DISMISSED_MAX);
     expect(ids.at(-1)).toBe(`u${IMPORT_DISMISSED_MAX + 2}`);
     expect(ids).not.toContain("u0");
+  });
+
+  test("dismissAppBanner remembers when, once; stored v2 data without it parses", () => {
+    const fresh = defaultGuestData();
+    expect(fresh.preferences.appBannerDismissedAt).toBeUndefined();
+    const dismissed = dismissAppBanner(42)(fresh);
+    expect(dismissed.preferences.appBannerDismissedAt).toBe(42);
+    expect(dismissAppBanner(43)(dismissed)).toBe(dismissed);
+    expect(
+      guestDataSchema.parse(dismissed).preferences.appBannerDismissedAt
+    ).toBe(42);
+    expect(guestDataSchema.safeParse(fresh).success).toBe(true);
   });
 });

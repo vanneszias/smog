@@ -70,6 +70,7 @@ export type AuthFlowEvent =
   | { error: AuthErrorKey; type: "failed" }
   | { step: AuthStep; type: "succeeded"; notice?: AuthNotice }
   | { type: "redirecting" }
+  | { type: "cancelled" }
   | { type: "back" }
   | { type: "changeEmail" };
 
@@ -79,25 +80,60 @@ export type AuthFlowEvent =
  */
 export type AuthResult =
   | { ok: true; redirected?: boolean }
-  | { error: AuthErrorKey; ok: false };
+  | {
+      /**
+       * The captcha plugin said a token is required and none was sent
+       * (`MISSING_RESPONSE`): the flow can run the challenge and retry.
+       */
+      captchaMissing?: true;
+      error: AuthErrorKey;
+      ok: false;
+    };
 
 export type SocialProvider = "google" | "apple";
 
-/** The platform's auth calls (web or Expo client), with errors mapped. */
+/**
+ * The platform's auth calls (web or Expo client), with errors mapped. The
+ * captcha-guarded ones take the Turnstile token the flow asked for
+ * (`AuthFlowCaptcha`); without one they use the platform's own widget.
+ */
 export interface AuthFlowActions {
-  requestPasswordReset: (email: string) => Promise<AuthResult>;
-  sendCode: (email: string) => Promise<AuthResult>;
-  sendMagicLink: (email: string) => Promise<AuthResult>;
-  sendVerificationEmail: (email: string) => Promise<AuthResult>;
+  requestPasswordReset: (
+    email: string,
+    captchaToken?: string
+  ) => Promise<AuthResult>;
+  sendCode: (email: string, captchaToken?: string) => Promise<AuthResult>;
+  sendMagicLink: (email: string, captchaToken?: string) => Promise<AuthResult>;
+  sendVerificationEmail: (
+    email: string,
+    captchaToken?: string
+  ) => Promise<AuthResult>;
   signInCode: (email: string, code: string) => Promise<AuthResult>;
   signInPasskey: () => Promise<AuthResult>;
-  signInPassword: (email: string, password: string) => Promise<AuthResult>;
+  signInPassword: (
+    email: string,
+    password: string,
+    captchaToken?: string
+  ) => Promise<AuthResult>;
   signInSocial: (provider: SocialProvider) => Promise<AuthResult>;
   signUpPassword: (
     email: string,
     password: string,
-    name: string
+    name: string,
+    captchaToken?: string
   ) => Promise<AuthResult>;
+}
+
+/**
+ * A Turnstile challenge on demand (the app's WebView sheet). When the
+ * server requires a captcha (`required()`: a site key is configured), the
+ * flow asks `request()` for a fresh token before every guarded call; tokens
+ * are single-use, so none is kept. `null` means the user closed the
+ * challenge.
+ */
+export interface AuthFlowCaptcha {
+  request: () => Promise<string | null>;
+  required: () => boolean;
 }
 
 export function initialAuthFlowState(
@@ -155,6 +191,8 @@ export function authFlowReducer(
       };
     case "redirecting":
       return state;
+    case "cancelled":
+      return { ...state, pending: null };
     case "back":
       return {
         ...state,
@@ -238,9 +276,13 @@ export function authErrorField(
 export function toAuthResult(response: {
   error?: AuthClientError | null;
 }): AuthResult {
-  return response.error
-    ? { error: authErrorKey(response.error), ok: false }
-    : { ok: true };
+  if (!response.error) {
+    return { ok: true };
+  }
+  const error = authErrorKey(response.error);
+  return response.error.code === "MISSING_RESPONSE"
+    ? { captchaMissing: true, error, ok: false }
+    : { error, ok: false };
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -299,6 +341,7 @@ export interface AuthFlowCommands {
 
 interface CommandOptions {
   actions: AuthFlowActions;
+  captcha?: AuthFlowCaptcha;
   dispatch: (event: AuthFlowEvent) => void;
   getState: () => AuthFlowState;
 }
@@ -310,24 +353,83 @@ interface CommandOptions {
  */
 export function authFlowCommands({
   actions,
+  captcha,
   dispatch,
   getState,
 }: CommandOptions): AuthFlowCommands {
+  type Challenge = { token: string } | "cancelled" | "failed";
+
+  /** Runs the challenge; the flow's outcome when it does not give a token. */
+  async function challenge(action: AuthPending): Promise<Challenge> {
+    let token: string | null;
+    try {
+      token = captcha ? await captcha.request() : null;
+    } catch (error) {
+      console.error(`[auth] Failed to run the captcha for ${action}:`, error);
+      dispatch({ error: "captchaFailed", type: "failed" });
+      return "failed";
+    }
+    if (token === null) {
+      dispatch({ type: "cancelled" });
+      return "cancelled";
+    }
+    return { token };
+  }
+
+  async function attempt(
+    action: AuthPending,
+    call: (token?: string) => Promise<AuthResult>,
+    token: string | undefined
+  ): Promise<AuthResult> {
+    try {
+      return await call(token);
+    } catch (error) {
+      console.error(`[auth] Failed to run ${action}:`, error);
+      return { error: "generic", ok: false };
+    }
+  }
+
+  /**
+   * A guarded call: with a token first when the server is known to
+   * require one; otherwise without, and when the server then answers
+   * "captcha required" (config not loaded yet, or its fetch failed), once
+   * more with a fresh token. `null` means the flow already dispatched.
+   */
+  async function guardedCall(
+    action: AuthPending,
+    call: (token?: string) => Promise<AuthResult>
+  ): Promise<AuthResult | null> {
+    if (captcha?.required()) {
+      const first = await challenge(action);
+      return typeof first === "object"
+        ? await attempt(action, call, first.token)
+        : null;
+    }
+    const result = await attempt(action, call, undefined);
+    if (result.ok || !result.captchaMissing || !captcha) {
+      return result;
+    }
+    const retry = await challenge(action);
+    return typeof retry === "object"
+      ? await attempt(action, call, retry.token)
+      : null;
+  }
+
   async function run(
     action: AuthPending,
-    call: () => Promise<AuthResult>,
-    onSuccess: AuthFlowEvent & { type: "succeeded" }
+    call: (token?: string) => Promise<AuthResult>,
+    onSuccess: AuthFlowEvent & { type: "succeeded" },
+    guarded = false
   ): Promise<void> {
     if (getState().pending) {
       return;
     }
     dispatch({ action, type: "started" });
-    let result: AuthResult;
-    try {
-      result = await call();
-    } catch (error) {
-      console.error(`[auth] Failed to run ${action}:`, error);
-      result = { error: "generic", ok: false };
+    const result = guarded
+      ? await guardedCall(action, call)
+      : await attempt(action, call, undefined);
+    if (!result) {
+      return;
     }
     if (!result.ok) {
       dispatch({ error: result.error, type: "failed" });
@@ -353,16 +455,20 @@ export function authFlowCommands({
           dispatch({ method, type: "choose" });
           return;
         case "emailCode":
-          await run(method, () => actions.sendCode(email), {
-            step: "code",
-            type: "succeeded",
-          });
+          await run(
+            method,
+            (token) => actions.sendCode(email, token),
+            { step: "code", type: "succeeded" },
+            true
+          );
           return;
         case "magicLink":
-          await run(method, () => actions.sendMagicLink(email), {
-            step: "magicLinkSent",
-            type: "succeeded",
-          });
+          await run(
+            method,
+            (token) => actions.sendMagicLink(email, token),
+            { step: "magicLinkSent", type: "succeeded" },
+            true
+          );
           return;
         case "passkey":
           await run(method, () => actions.signInPasskey(), {
@@ -381,23 +487,26 @@ export function authFlowCommands({
     resend: async () => {
       const { email, step } = getState();
       if (step === "code") {
-        await run("resend", () => actions.sendCode(email), {
-          notice: "codeResent",
-          step,
-          type: "succeeded",
-        });
+        await run(
+          "resend",
+          (token) => actions.sendCode(email, token),
+          { notice: "codeResent", step, type: "succeeded" },
+          true
+        );
       } else if (step === "magicLinkSent") {
-        await run("resend", () => actions.sendMagicLink(email), {
-          notice: "linkResent",
-          step,
-          type: "succeeded",
-        });
+        await run(
+          "resend",
+          (token) => actions.sendMagicLink(email, token),
+          { notice: "linkResent", step, type: "succeeded" },
+          true
+        );
       } else if (step === "verifyEmailSent") {
-        await run("resend", () => actions.sendVerificationEmail(email), {
-          notice: "verificationResent",
-          step,
-          type: "succeeded",
-        });
+        await run(
+          "resend",
+          (token) => actions.sendVerificationEmail(email, token),
+          { notice: "verificationResent", step, type: "succeeded" },
+          true
+        );
       }
     },
 
@@ -427,10 +536,12 @@ export function authFlowCommands({
       }
       dispatch({ email, type: "emailAccepted" });
       if (getState().mode === "forgotPassword") {
-        await run("email", () => actions.requestPasswordReset(email), {
-          step: "resetSent",
-          type: "succeeded",
-        });
+        await run(
+          "email",
+          (token) => actions.requestPasswordReset(email, token),
+          { step: "resetSent", type: "succeeded" },
+          true
+        );
       }
     },
 
@@ -445,8 +556,9 @@ export function authFlowCommands({
         const name = input.name?.trim() ?? "";
         await run(
           "password",
-          () => actions.signUpPassword(email, input.password, name),
-          { step: "verifyEmailSent", type: "succeeded" }
+          (token) => actions.signUpPassword(email, input.password, name, token),
+          { step: "verifyEmailSent", type: "succeeded" },
+          true
         );
         return;
       }
@@ -456,8 +568,9 @@ export function authFlowCommands({
       }
       await run(
         "password",
-        () => actions.signInPassword(email, input.password),
-        { step: "done", type: "succeeded" }
+        (token) => actions.signInPassword(email, input.password, token),
+        { step: "done", type: "succeeded" },
+        true
       );
     },
   };
@@ -476,10 +589,19 @@ export function useAuthFlow({
   actions,
   initialEmail,
   mode,
+  requestCaptcha,
+  requiresCaptcha = false,
 }: {
   actions: AuthFlowActions;
   initialEmail?: string;
   mode: AuthMode;
+  /** Runs a Turnstile challenge and resolves its token (the app's sheet). */
+  requestCaptcha?: () => Promise<string | null>;
+  /**
+   * The server requires a captcha (a site key is configured): the flow
+   * asks `requestCaptcha` for a token before each guarded call.
+   */
+  requiresCaptcha?: boolean;
 }): AuthFlow {
   const [state, dispatch] = useReducer(
     authFlowReducer,
@@ -489,25 +611,44 @@ export function useAuthFlow({
   stateRef.current = state;
   const actionsRef = useRef(actions);
   actionsRef.current = actions;
+  const captchaRef = useRef({ request: requestCaptcha, requiresCaptcha });
+  captchaRef.current = { request: requestCaptcha, requiresCaptcha };
 
   const commands = useMemo(() => {
     const latest: AuthFlowActions = {
-      requestPasswordReset: (email) =>
-        actionsRef.current.requestPasswordReset(email),
-      sendCode: (email) => actionsRef.current.sendCode(email),
-      sendMagicLink: (email) => actionsRef.current.sendMagicLink(email),
-      sendVerificationEmail: (email) =>
-        actionsRef.current.sendVerificationEmail(email),
+      requestPasswordReset: (email, token) =>
+        actionsRef.current.requestPasswordReset(email, token),
+      sendCode: (email, token) => actionsRef.current.sendCode(email, token),
+      sendMagicLink: (email, token) =>
+        actionsRef.current.sendMagicLink(email, token),
+      sendVerificationEmail: (email, token) =>
+        actionsRef.current.sendVerificationEmail(email, token),
       signInCode: (email, code) => actionsRef.current.signInCode(email, code),
       signInPasskey: () => actionsRef.current.signInPasskey(),
-      signInPassword: (email, password) =>
-        actionsRef.current.signInPassword(email, password),
+      signInPassword: (email, password, token) =>
+        actionsRef.current.signInPassword(email, password, token),
       signInSocial: (provider) => actionsRef.current.signInSocial(provider),
-      signUpPassword: (email, password, name) =>
-        actionsRef.current.signUpPassword(email, password, name),
+      signUpPassword: (email, password, name, token) =>
+        actionsRef.current.signUpPassword(email, password, name, token),
     };
     return authFlowCommands({
       actions: latest,
+      // Only a platform with an on-demand challenge (the app) gets one;
+      // the web's inline widget supplies its token through the actions.
+      ...(captchaRef.current.request
+        ? {
+            captcha: {
+              request: async () => {
+                const { request } = captchaRef.current;
+                if (!request) {
+                  throw new Error("[auth] requestCaptcha went away");
+                }
+                return await request();
+              },
+              required: () => captchaRef.current.requiresCaptcha,
+            },
+          }
+        : {}),
       // The ref follows every dispatch, so a command reads the state it
       // just produced (validation → request in one call).
       dispatch: (event) => {

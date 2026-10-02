@@ -3,6 +3,7 @@ import {
   check,
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
 } from "drizzle-orm/sqlite-core";
@@ -61,9 +62,38 @@ export const auditLog = sqliteTable(
       "audit_log_target_type_check",
       inValues(t.targetType, AUDIT_TARGET_TYPES)
     ),
+    // Every audit list filter seeks its index in `created_at` order (the
+    // admin viewer's keyset), so no page sorts the matching rows.
     index("audit_log_created_at_idx").on(t.createdAt),
-    index("audit_log_target_idx").on(t.targetType, t.targetId),
     index("audit_log_action_created_idx").on(t.action, t.createdAt),
-    index("audit_log_actor_id_idx").on(t.actorId),
+    index("audit_log_type_created_idx").on(t.targetType, t.createdAt),
+    index("audit_log_target_created_idx").on(
+      t.targetType,
+      t.targetId,
+      t.createdAt
+    ),
+    // Leads with `actor_id`, so it also serves the `ON DELETE SET NULL` lookup.
+    index("audit_log_actor_created_idx").on(t.actorId, t.createdAt),
   ]
+);
+
+/**
+ * The guest import's write guard: each import's write batch first inserts
+ * `(user_id, seq + 1)`, where `seq` is what its read batch saw. Two
+ * imports planned from the same read cannot both insert it (the primary
+ * key aborts the second batch, which re-reads and plans again), so a
+ * concurrent import never creates a second same-name list. Every row is
+ * kept (one per import, gone with the account): deleting older ones would
+ * let a stale import insert a freed `seq`. Nothing here is personal data
+ * beyond the user id.
+ */
+export const guestImport = sqliteTable(
+  "guest_import",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    seq: integer("seq").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.seq] })]
 );

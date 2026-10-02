@@ -22,11 +22,13 @@
     "search": "Rechercher",
     "send": "Envoyer",
     "share": "Partager",
-    "yes": "Oui"
+    "yes": "Oui",
+    "exploreGestures": "Découvrir les gestes"
   },
   "a11y": {
     "skipToContent": "Aller au contenu",
     "skipToNavigation": "Aller à la navigation",
+    "noscript": "Activez JavaScript pour rechercher et pour utiliser les favoris, les listes et votre compte.",
     "mainNavigation": "Navigation principale",
     "openMenu": "Ouvrir le menu",
     "closeMenu": "Fermer le menu",
@@ -60,7 +62,9 @@
     "pauseVideo": "Mettre la vidéo en pause",
     "dragHandle": "Faire glisser pour réordonner",
     "otpDigit": "Chiffre {{index}} sur {{length}}",
-    "userMenu": "Menu du compte"
+    "userMenu": "Menu du compte",
+    "favorite": "Favori",
+    "gestureVideo": "Vidéo du geste"
   },
   "nav": {
     "home": "Accueil",
@@ -150,7 +154,17 @@
       "title": "Consultez votre boîte mail",
       "description": "Nous avons envoyé un lien de connexion à {{email}}. Ouvrez-le pour vous connecter.",
       "resend": "Renvoyer le lien",
-      "resent": "Nous vous avons envoyé un nouveau lien."
+      "resent": "Nous vous avons envoyé un nouveau lien.",
+      "appTitle": "Se connecter dans l'app",
+      "appDescription": "Ce lien vous connecte à l'app SMOG & Co. Ouvrez-le sur le téléphone où l'app est installée.",
+      "continueInBrowser": "Se connecter dans ce navigateur",
+      "confirmTitle": "Se connecter avec le lien de votre e-mail\u202f?",
+      "confirmDescription": "Ne continuez que si vous avez demandé ce lien vous-même. Vous verrez à quel compte vous êtes connecté.",
+      "confirm": "Se connecter",
+      "switchTitle": "Changer de compte\u202f?",
+      "switchDescription": "Vous êtes connecté en tant que {{current}}. Ce lien peut vous connecter à un autre compte.",
+      "switch": "Changer de compte",
+      "wrongAccount": "Ce lien connecte à un autre compte."
     },
     "checkInbox": {
       "openMail": "Ouvrir votre application de messagerie",
@@ -185,9 +199,14 @@
       "unsupported": "Votre appareil ou votre navigateur ne prend pas en charge les clés d'accès."
     },
     "captcha": {
-      "label": "Contrôle de sécurité"
+      "label": "Contrôle de sécurité",
+      "description": "Nous vérifions que vous n'êtes pas un robot. Cela prend quelques secondes.",
+      "appOnly": "Cette page ne fonctionne que dans l'app SMOG & Co.",
+      "failed": "Le contrôle de sécurité a échoué. Veuillez réessayer.",
+      "retry": "Réessayer"
     },
     "signedIn": "Vous êtes connecté.",
+    "signedInAs": "Vous êtes connecté en tant que {{email}}.",
     "signingIn": "Connexion en cours…",
     "signedOut": "Vous êtes déconnecté.",
     "errors": {
@@ -255,10 +274,172 @@
       "title": "Page introuvable",
       "description": "Cette page n'existe pas (ou plus).",
       "action": "Aller à l'accueil"
-    }
+    },
+    "actionFailed": "Cela n'a pas fonctionné. Réessayez."
   },
   "lists": {
-    "ownerFallback": "un utilisateur de SMOG"
+    "ownerFallback": "un utilisateur de SMOG",
+    "addToList": "Enregistrer dans une liste",
+    "noLists": "Vous n'avez pas encore de listes.",
+    "newList": "Nouvelle liste",
+    "newListPlaceholder": "Nom de la liste",
+    "create": "Créer",
+    "empty": {
+      "title": "Pas encore de listes",
+      "description": "Regroupez des gestes dans des listes, pour une leçon ou un thème."
+    },
+    "emptyList": {
+      "title": "Cette liste est vide",
+      "description": "Ajoutez des gestes depuis leur page avec « Enregistrer dans une liste »."
+    },
+    "share": {
+      "viewTitle": "Lien de consultation",
+      "viewDescription": "Toute personne ayant ce lien peut consulter la liste.",
+      "editTitle": "Lien de modification",
+      "editDescription": "Toute personne ayant ce lien peut modifier la liste après s'être connectée.",
+      "linkLabel": "Lien",
+      "copyLink": "Copier le lien",
+      "revoke": "Révoquer le lien",
+      "revokeTitle": "Révoquer ce lien\u00a0?",
+      "revokeDescription": "Les personnes qui ont le lien perdent l'accès immédiatement. Vous pourrez créer un nouveau lien plus tard.",
+      "revokeConfirm": "Révoquer",
+      "title": "Partager la liste",
+      "description": "Créez un lien pour envoyer cette liste à d'autres.",
+      "createView": "Créer un lien de consultation",
+      "createEdit": "Créer un lien de modification",
+      "send": "Envoyer le lien",
+      "message": "{{name}}\u00a0: {{url}}",
+      "signInTitle": "Connectez-vous pour partager",
+      "signInDescription": "Partager une liste nécessite un compte. Vos listes vous suivent lorsque vous vous connectez.",
+      "copied": "Lien copié",
+      "copyFailed": "La copie n'a pas fonctionné. Le lien est {{url}}"
+    },
+    "itemCount_one": "{{count}} geste",
+    "itemCount_other": "{{count}} gestes",
+    "itemCount_many": "{{count}} gestes",
+    "shared": "Partagée",
+    "actions": "Actions de la liste",
+    "rename": "Renommer",
+    "nameLabel": "Nom",
+    "delete": "Supprimer la liste",
+    "deleteTitle": "Supprimer cette liste\u202f?",
+    "deleteDescription": "«\u00a0{{name}}\u00a0» sera supprimée. Les gestes eux-mêmes restent.",
+    "deleted": "Liste supprimée",
+    "addedTo": "Ajouté à « {{name}} »",
+    "removedFrom": "Retiré de « {{name}} »",
+    "itemActions": "Actions pour {{name}}",
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "removeItem": "Retirer de la liste",
+    "reorderFailed": "L'ordre n'a pas pu être enregistré.",
+    "notFound": {
+      "title": "Liste introuvable",
+      "description": "Ce lien ne fonctionne pas (ou plus), ou la liste est privée."
+    },
+    "sharedCanEdit": "Vous pouvez modifier cette liste.",
+    "description": "Regroupez des gestes pour un cours, un thème ou à la maison.",
+    "all": "Toutes les listes",
+    "descriptionLabel": "Description",
+    "renameTitle": "Modifier la liste",
+    "select": {
+      "title": "Choisissez une liste",
+      "description": "Sélectionnez une liste pour voir ses gestes."
+    },
+    "reorder": {
+      "instructions": "Appuyez sur espace ou Entrée pour saisir un geste. Déplacez-le avec les flèches et appuyez de nouveau sur espace ou Entrée pour le déposer. Échap annule.",
+      "picked": "{{name}} saisi, position {{position}} sur {{total}}.",
+      "moved": "{{name}} déplacé en position {{position}} sur {{total}}.",
+      "dropped": "{{name}} déposé en position {{position}} sur {{total}}.",
+      "cancelled": "Déplacement annulé. {{name}} est revenu en position {{position}}.",
+      "failed": "Le nouvel ordre n'a pas pu être enregistré."
+    },
+    "sharedView": {
+      "by": "Partagée par {{owner}}",
+      "viewOnly": "Consultation seule",
+      "editable": "Modifiable",
+      "signInToEdit": "Connectez-vous pour ajouter ou retirer des gestes.",
+      "add": "Ajouter des gestes",
+      "addTitle": "Ajouter des gestes à « {{name}} »",
+      "addOne": "Ajouter {{name}}",
+      "inList": "Dans la liste"
+    }
+  },
+  "gesture": {
+    "sponsored": "Sponsorisé",
+    "disclaimer": {
+      "title": "Avis important"
+    },
+    "videoComplete": {
+      "1": "Ces vidéos sont un support, pas un remplacement pour un cours ou une initiation. <course>Cliquez ici</course> pour plus d'informations.",
+      "2": "Si vous souhaitez suivre un cours après avoir regardé ces vidéos, <course>cliquez ici</course>.",
+      "3": "Pour en savoir plus sur la théorie derrière SMOG, suivez un cours. <course>Cliquez ici</course>.",
+      "4": "Les gestes sont protégés. N'en inventez pas d'autres.",
+      "5": "N'apprenez jamais les gestes uniquement à partir de ces vidéos, mais suivez un cours ou une initiation.",
+      "6": "Pour en savoir plus sur SMOG et son origine, <course>cliquez ici</course>.",
+      "7": "Pour en savoir plus sur SMOG, envoyez un e-mail à info@smog.vlaanderen"
+    },
+    "about": "À propos de ce geste",
+    "keywords": "Concepts liés",
+    "related": "Gestes liés",
+    "sponsoredBy": "Sponsorisé par {{name}}",
+    "share": "Partager le geste",
+    "shareMessage": "{{name}} en SMOG\u00a0: {{url}}",
+    "notFound": {
+      "title": "Geste introuvable",
+      "description": "Ce geste n'existe pas (ou plus)."
+    },
+    "screenshot": {
+      "title": "Partager ce geste\u202f?",
+      "message": "Vous avez fait une capture d'écran. Envoyez plutôt un lien\u00a0: la vidéo suivra.",
+      "share": "Partager le lien",
+      "dismiss": "Pas maintenant"
+    },
+    "metaDescription": "Regardez le geste SMOG pour « {{name}} » en vidéo.",
+    "description": "Description",
+    "actions": "Actions pour {{name}}",
+    "linkCopied": "Lien copié",
+    "copyFailed": "La copie n'a pas fonctionné. Le lien est {{url}}",
+    "qr": {
+      "open": "Code QR",
+      "title": "Code QR pour {{name}}",
+      "description": "Scannez le code pour ouvrir ce geste.",
+      "download": "Télécharger le code QR"
+    }
+  },
+  "search": {
+    "categories": "Catégories",
+    "allCategories": "Tous",
+    "searching": "Recherche…",
+    "resultCount_one": "{{count}} geste",
+    "resultCount_many": "{{count}} gestes",
+    "resultCount_other": "{{count}} gestes",
+    "idle": {
+      "title": "Cherchez un geste",
+      "description": "Tapez un mot ou choisissez une catégorie."
+    },
+    "noResults": {
+      "title": "Aucun geste trouvé",
+      "description": "Essayez un autre mot ou moins de catégories."
+    },
+    "placeholder": "Rechercher un geste",
+    "filter": "Filtrer par catégorie",
+    "filterActive_one": "Filtrer par catégorie, {{count}} choisie",
+    "filterActive_other": "Filtrer par catégorie, {{count}} choisies",
+    "filterActive_many": "Filtrer par catégorie, {{count}} choisies",
+    "clearFilter": "Effacer les catégories",
+    "showResults": "Afficher les résultats",
+    "recent": "Recherches récentes",
+    "clearRecent": "Effacer les recherches récentes",
+    "refine": "Affinez votre recherche pour voir plus de gestes.",
+    "clearFilters": "Effacer les filtres",
+    "browse": "Découvrir des gestes"
+  },
+  "favorites": {
+    "empty": {
+      "title": "Pas encore de favoris",
+      "description": "Touchez le cœur d'un geste pour le retrouver vite ici."
+    },
+    "description": "Les gestes que vous avez gardés avec un cœur."
   },
   "kit": {
     "close": "Fermer",
@@ -357,7 +538,15 @@
       "progressLabel": "Envoi de la vidéo",
       "showToast": "Afficher une notification",
       "openDialog": "Ouvrir la boîte de dialogue",
-      "openSheet": "Ouvrir le panneau"
+      "openSheet": "Ouvrir le panneau",
+      "gestureHello": "Bonjour",
+      "gestureThankYou": "Merci",
+      "gestureEat": "Manger",
+      "gestureDrink": "Boire",
+      "gestureHappy": "Content",
+      "gestureSad": "Triste",
+      "listSchool": "À l'école",
+      "listHome": "À la maison"
     },
     "unlockHint_one": "Encore {{count}} appui pour ouvrir les outils de développement.",
     "unlockHint_many": "Encore {{count}} appuis pour ouvrir les outils de développement.",
@@ -365,7 +554,13 @@
     "unlocked": "Les outils de développement sont activés."
   },
   "home": {
-    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient."
+    "tagline": "Apprenez des signes en langue des signes flamande, quand cela vous convient.",
+    "featured": "Découvrez des gestes",
+    "browseAll": "Tous les gestes",
+    "title": "Des gestes qui soutiennent la parole",
+    "description": "Apprenez les gestes SMOG avec de courtes vidéos. Cherchez un geste, gardez vos favoris et créez des listes pour vos cours.",
+    "searchLabel": "Chercher un geste",
+    "searchPlaceholder": "Cherchez un geste, par exemple chien"
   },
   "footer": {
     "madeBy": "Fait avec ♡ par zias.be"
@@ -373,11 +568,286 @@
   "account": {
     "title": "Votre compte",
     "signedInAs": "Connecté en tant que {{email}}",
-    "comingSoon": "Bientôt, vous gérerez aussi ici vos méthodes de connexion, votre confidentialité et vos préférences."
+    "export": {
+      "sensitive": "Ce fichier contient vos données personnelles et les liens de partage actifs de vos listes\u00a0: toute personne disposant d'un lien peut ouvrir la liste. Conservez-le en lieu sûr et ne le partagez pas."
+    },
+    "errors": {
+      "passwordRequired": "Saisissez votre mot de passe pour supprimer votre compte.",
+      "sessionNotFresh": "Reconnectez-vous pour supprimer votre compte.",
+      "invalidPassword": "Ce mot de passe n'est pas correct.",
+      "deleteFailed": "La suppression de votre compte a échoué. Veuillez réessayer.",
+      "signInAgain": "Pour votre sécurité, reconnectez-vous pour effectuer cette action."
+    },
+    "guest": {
+      "title": "Connectez-vous pour gérer votre compte",
+      "description": "Vos favoris, listes et préférences sont sur cet appareil. Connectez-vous pour les conserver dans votre compte, partager des listes et gérer vos données."
+    },
+    "profile": {
+      "title": "Profil",
+      "name": "Nom",
+      "email": "Adresse e-mail",
+      "emailHint": "Votre adresse e-mail ne peut pas être modifiée.",
+      "saved": "Votre profil a été enregistré."
+    },
+    "methods": {
+      "title": "Méthodes de connexion",
+      "description": "Vous pouvez toujours vous connecter avec un code ou un lien envoyé par e-mail.",
+      "password": "Mot de passe",
+      "passwordSet": "Vous vous connectez avec votre adresse e-mail et votre mot de passe.",
+      "passwordNone": "Vous n'avez pas encore de mot de passe.",
+      "changePassword": "Modifier le mot de passe",
+      "setPassword": "Définir un mot de passe",
+      "setPasswordHint": "Nous vous enverrons un lien par e-mail pour choisir un mot de passe. Vous vous reconnecterez ensuite partout.",
+      "currentPassword": "Mot de passe actuel",
+      "passwordChanged": "Votre mot de passe a été modifié. Vos autres appareils ont été déconnectés.",
+      "passkeys": "Clés d'accès",
+      "passkeysDescription": "Connectez-vous avec votre empreinte, votre visage ou le code de votre appareil.",
+      "noPasskeys": "Vous n'avez pas encore ajouté de clé d'accès.",
+      "passkeyName": "Clé d'accès",
+      "addedOn": "Ajoutée le {{date}}",
+      "removePasskey": "Supprimer la clé d'accès",
+      "removePasskeyTitle": "Supprimer cette clé d'accès\u202f?",
+      "removePasskeyDescription": "Vous ne pourrez plus vous connecter avec elle.",
+      "passkeyRemoved": "La clé d'accès a été supprimée.",
+      "linked": "Associé",
+      "notLinked": "Non associé",
+      "link": "Associer",
+      "unlink": "Dissocier",
+      "linkedToast": "{{provider}} a été associé.",
+      "unlinkTitle": "Dissocier {{provider}}\u202f?",
+      "unlinkDescription": "Vous ne pourrez plus vous connecter avec {{provider}}. Vous pourrez l'associer à nouveau plus tard.",
+      "unlinked": "{{provider}} a été dissocié.",
+      "lastMethod": "C'est votre seule méthode de connexion. Ajoutez-en d'abord une autre.",
+      "google": "Google",
+      "apple": "Apple"
+    },
+    "privacy": {
+      "title": "Confidentialité",
+      "export": "Télécharger mes données",
+      "exportDescription": "Un fichier JSON avec votre profil, vos favoris, vos listes, l'historique de vos consentements et vos parrainages.",
+      "exported": "Vos données ont été téléchargées.",
+      "exportFailed": "Vos données n'ont pas pu être téléchargées. Veuillez réessayer.",
+      "shareTitle": "Vos données SMOG",
+      "policy": "Politique de confidentialité"
+    },
+    "delete": {
+      "title": "Supprimer le compte",
+      "description": "Cela supprime définitivement votre compte, vos favoris, vos listes et vos liens de partage. Les parrainages sont conservés, comme la loi l'exige.",
+      "action": "Supprimer mon compte",
+      "dialogTitle": "Supprimer définitivement votre compte\u202f?",
+      "dialogDescription": "Cette action est irréversible.",
+      "confirmLabel": "Tapez {{word}} pour confirmer",
+      "password": "Votre mot de passe",
+      "deleted": "Votre compte a été définitivement supprimé.",
+      "signInAgain": "Se reconnecter"
+    },
+    "preferences": {
+      "languageHint": "Si vous êtes connecté, c'est aussi la langue des e-mails que nous vous envoyons."
+    }
   },
   "settings": {
     "title": "Paramètres",
     "preferences": "Préférences",
     "about": "À propos de l'app"
+  },
+  "consent": {
+    "title": "Aidez-nous à améliorer SMOG",
+    "description": "Avec votre accord, nous collectons des statistiques d'utilisation limitées pour améliorer SMOG. Nous ne les utilisons pas pour la publicité et ne vous suivons pas dans d'autres applications ni sur d'autres sites.",
+    "privacyLink": "Lire la politique de confidentialité",
+    "allow": "Autoriser les statistiques",
+    "decline": "Uniquement le nécessaire",
+    "toggle": "Statistiques d'utilisation",
+    "toggleDescription": "Partagez des statistiques d'utilisation limitées pour aider à améliorer SMOG.",
+    "saved": "Votre choix a été enregistré.",
+    "saveFailed": "Votre choix n'a pas pu être enregistré. Veuillez réessayer."
+  },
+  "appBanner": {
+    "badge": "Nouveau",
+    "title": "SMOG est maintenant disponible sur votre téléphone\u202f!",
+    "description": "Téléchargez l'application et apprenez les gestes où que vous soyez.",
+    "appStorePrefix": "Télécharger dans l'",
+    "googlePlayPrefix": "Disponible sur",
+    "dismiss": "Fermer la bannière de l'application"
+  },
+  "openInApp": {
+    "title": "Vous avez l'application SMOG\u202f?",
+    "description": "Regardez ce geste dans l'application.",
+    "action": "Ouvrir dans l'application",
+    "getApp": "Obtenir l'application"
+  },
+  "legal": {
+    "lastUpdated": "Dernière mise à jour le {{date}}",
+    "contents": "Sommaire",
+    "translationNotice": "Cette traduction est fournie pour votre commodité\u202f; la version néerlandaise prévaut.",
+    "readDutch": "Lire la version néerlandaise",
+    "consentControl": "Votre choix pour les statistiques",
+    "readingDutch": "Vous lisez la version néerlandaise, qui prévaut.",
+    "showTranslation": "Afficher la traduction française"
+  },
+  "gestures": {
+    "description": "Cherchez les gestes SMOG par mot ou par catégorie et regardez-les en vidéo.",
+    "select": {
+      "title": "Choisissez un geste",
+      "description": "Sélectionnez un geste dans la liste pour voir sa vidéo et ses détails."
+    }
+  },
+  "maintenance": {
+    "documentTitle": "SMOG — Merci de votre patience",
+    "badge": "Maintenance en cours",
+    "title": "Nous revenons bientôt",
+    "description": "SMOG est momentanément indisponible en raison d'une maintenance planifiée. Nous y travaillons et serons bientôt de retour en ligne.",
+    "until": "Nous prévoyons d'être de retour le {{time}}."
+  },
+  "admin": {
+    "title": "Administration",
+    "rail": {
+      "label": "Administration",
+      "open": "Ouvrir le menu d’administration",
+      "dashboard": "Tableau de bord",
+      "gestures": "Gestes",
+      "categories": "Catégories",
+      "users": "Utilisateurs",
+      "audit": "Journal",
+      "emails": "E-mails",
+      "settings": "Paramètres"
+    },
+    "comingSoon": {
+      "title": "Prévu dans cette phase",
+      "description": "Cette partie de l’administration est encore en construction."
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "description": "L’état du catalogue et des comptes.",
+      "gestures": "Gestes",
+      "categories": "Catégories",
+      "users": "Utilisateurs",
+      "published_one": "{{count}} publié",
+      "published_many": "{{count}} publiés",
+      "published_other": "{{count}} publiés",
+      "unpublished_one": "{{count}} masqué",
+      "unpublished_many": "{{count}} masqués",
+      "unpublished_other": "{{count}} masqués",
+      "admins_one": "{{count}} administrateur",
+      "admins_many": "{{count}} administrateurs",
+      "admins_other": "{{count}} administrateurs",
+      "banned_one": "{{count}} bloqué",
+      "banned_many": "{{count}} bloqués",
+      "banned_other": "{{count}} bloqués",
+      "newUsers_one": "{{count}} nouveau en 30 jours",
+      "newUsers_many": "{{count}} nouveaux en 30 jours",
+      "newUsers_other": "{{count}} nouveaux en 30 jours",
+      "recentAudit": "Actions récentes",
+      "allAudit": "Journal complet",
+      "noAudit": "Aucune action enregistrée pour l’instant.",
+      "quickLinks": "Accès rapide",
+      "newGesture": "Nouveau geste",
+      "manageCategories": "Gérer les catégories"
+    },
+    "audit": {
+      "title": "Journal",
+      "description": "Chaque modification faite par un administrateur, la plus récente d’abord.",
+      "filters": {
+        "label": "Filtres",
+        "action": "Action",
+        "targetType": "Type",
+        "actor": "Par",
+        "from": "Du",
+        "to": "Au",
+        "all": "Tout",
+        "clear": "Effacer les filtres"
+      },
+      "columns": {
+        "when": "Quand",
+        "action": "Action",
+        "target": "Cible",
+        "actor": "Par"
+      },
+      "empty": "Aucune action trouvée.",
+      "deletedActor": "Compte supprimé",
+      "noTarget": "Aucune",
+      "detail": {
+        "data": "Données",
+        "target": "Cible",
+        "actor": "Par",
+        "when": "Quand",
+        "open": "Ouvrir"
+      },
+      "nextPage": "Actions plus anciennes",
+      "firstPage": "Actions les plus récentes",
+      "actions": {
+        "gesture": {
+          "create": "Geste créé",
+          "update": "Geste modifié",
+          "publish": "Geste publié",
+          "unpublish": "Geste masqué",
+          "delete": "Geste supprimé",
+          "bulk_update": "Gestes modifiés en masse"
+        },
+        "category": {
+          "create": "Catégorie créée",
+          "update": "Catégorie modifiée",
+          "publish": "Catégorie publiée",
+          "unpublish": "Catégorie masquée",
+          "delete": "Catégorie supprimée",
+          "reorder": "Catégories réordonnées"
+        },
+        "user": {
+          "role_change": "Rôle modifié",
+          "ban": "Utilisateur bloqué",
+          "unban": "Blocage levé",
+          "delete": "Utilisateur supprimé",
+          "impersonate": "Connecté en tant qu’utilisateur"
+        },
+        "sponsorship": {
+          "approve": "Parrainage approuvé",
+          "reject": "Parrainage refusé",
+          "request_changes": "Modifications demandées",
+          "mark_paid": "Marqué comme payé manuellement",
+          "cancel": "Parrainage annulé",
+          "retry_render": "Vidéo relancée",
+          "force_expire": "Parrainage terminé",
+          "regenerate_token": "Nouveau lien de modification créé"
+        },
+        "payment": {
+          "refund": "Paiement remboursé"
+        },
+        "maintenance": {
+          "enable": "Mode maintenance activé",
+          "disable": "Mode maintenance désactivé"
+        },
+        "export": {
+          "sponsorships_csv": "Parrainages exportés (CSV)"
+        },
+        "legacy": "Ancienne entrée du journal"
+      },
+      "targetTypes": {
+        "gesture": "Geste",
+        "category": "Catégorie",
+        "user": "Utilisateur",
+        "sponsorship": "Parrainage",
+        "payment": "Paiement",
+        "list": "Liste",
+        "setting": "Paramètre",
+        "system": "Système"
+      }
+    },
+    "gestures": {
+      "title": "Gestes"
+    },
+    "categories": {
+      "title": "Catégories"
+    },
+    "mux": {
+      "title": "Vidéo"
+    },
+    "users": {
+      "title": "Utilisateurs"
+    },
+    "settings": {
+      "title": "Paramètres"
+    },
+    "emails": {
+      "title": "E-mails"
+    }
   }
 }

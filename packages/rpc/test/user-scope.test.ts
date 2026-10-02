@@ -15,14 +15,19 @@ describe("userScopedKey", () => {
 });
 
 describe("isOtherUsersKey", () => {
-  it("is true only for a key scoped to another user", () => {
+  it("is true only for a key scoped to another user (the guest included)", () => {
     const key = userScopedKey(["lists"], "user-1");
     expect(isOtherUsersKey(key, "user-2")).toBe(true);
     expect(isOtherUsersKey(key, undefined)).toBe(true);
     expect(isOtherUsersKey(key, "user-1")).toBe(false);
+    // A guest's queries are dropped once a user signs in, and kept while
+    // signed out.
     expect(isOtherUsersKey(userScopedKey(["lists"], undefined), "u")).toBe(
-      false
+      true
     );
+    expect(
+      isOtherUsersKey(userScopedKey(["lists"], undefined), undefined)
+    ).toBe(false);
     expect(isOtherUsersKey(["gestures", { type: "query" }], "u")).toBe(false);
   });
 });

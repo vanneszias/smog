@@ -9,6 +9,7 @@ import { z } from "zod";
 import {
   gestureIdSchema,
   LIST_ITEMS_MAX,
+  LISTS_MAX,
   listDescriptionSchema,
   listDetailSchema,
   listIdSchema,
@@ -32,6 +33,14 @@ const sharedItem = z.object({
 export const listsContract = {
   /** Appends a published gesture (`NOT_FOUND` otherwise); a no-op when present. */
   addItem: baseContract.input(item).output(z.object({ added: z.boolean() })),
+
+  /**
+   * The ids of the owner's lists that hold the gesture (any order, at most
+   * `LISTS_MAX`): one query for the "Save to list" picker.
+   */
+  containing: baseContract
+    .input(z.object({ gestureId: gestureIdSchema }))
+    .output(z.array(listIdSchema).max(LISTS_MAX)),
 
   /** `INVALID_STATE` at `LISTS_MAX` lists. */
   create: baseContract

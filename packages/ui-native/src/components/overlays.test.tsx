@@ -80,6 +80,24 @@ describe("Dialog", () => {
 });
 
 describe("AlertDialog", () => {
+  it("shows a body and confirmDisabled blocks confirm", async () => {
+    const onConfirm = jest.fn();
+    await renderKit(
+      <AlertDialog
+        body={<Text>Type DELETE</Text>}
+        confirmDisabled
+        onConfirm={onConfirm}
+        open
+        title="Delete account?"
+      />
+    );
+    expect(screen.getByText("Type DELETE")).toBeOnTheScreen();
+    const confirm = screen.getByRole("button", { name: t("kit.confirm") });
+    expect(confirm).toBeDisabled();
+    await fireEvent.press(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
   it("confirms a danger action with the warning haptic", async () => {
     const onConfirm = jest.fn();
     await renderKit(

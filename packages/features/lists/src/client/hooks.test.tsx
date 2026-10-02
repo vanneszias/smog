@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createRouterClient, implement } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { AnalyticsProvider } from "@smog/analytics/react";
+import { createRecordingAnalytics } from "@smog/analytics/testing";
 import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
 import { gesturesContract } from "@smog/gestures/contract";
 import type { GestureSummary } from "@smog/gestures/schema";
@@ -22,7 +24,14 @@ import {
   type ListDetail,
   type ShareRole,
 } from "../schema";
-import { useList, useLists, useSharedList, useShareLinks } from "./index";
+import {
+  sharedListOptions,
+  useList,
+  useListMembership,
+  useLists,
+  useSharedList,
+  useShareLinks,
+} from "./index";
 
 function summary(name: string): GestureSummary {
   const slug = name.toLowerCase();
@@ -40,9 +49,21 @@ const [AAP, BEER, HOND, KAT] = CATALOGUE as [
 interface Server {
   byIdsCalls: string[][];
   calls: string[];
-  /** Makes the next reorder wait, then fail with INVALID_STATE. */
-  failNextReorder: boolean;
+  /** Makes the next addItem fail with INVALID_STATE. */
+  failNextAdd?: boolean;
+  /**
+   * When set, the next reorder waits for it, then fails with INVALID_STATE.
+   * The test resolves it, so the optimistic order is observable for as long
+   * as the test needs, however slow the machine.
+   */
+  failNextReorder?: Promise<void>;
+  /** When set, `addItem` waits for it. */
+  holdAdd?: Promise<void>;
+  /** When set, `containing` waits for it. */
+  holdContaining?: Promise<void>;
   lists: Map<string, ListDetail>;
+  /** Gestures `shared.addItem` finds already in the list (`added: false`). */
+  sharedPresent?: Set<string>;
   shares: Map<string, { role: ShareRole; token: string }[]>;
   tokens: number;
   /** Who calls (`mine` answers that user's lists); lists default to user-1. */
@@ -93,8 +114,13 @@ function fakeApi(server: Server) {
       }),
     },
     lists: os.lists.router({
-      addItem: os.lists.addItem.handler(({ errors, input }) => {
+      addItem: os.lists.addItem.handler(async ({ errors, input }) => {
         server.calls.push("addItem");
+        await server.holdAdd;
+        if (server.failNextAdd) {
+          server.failNextAdd = false;
+          throw errors.INVALID_STATE();
+        }
         const list = find(input.id, errors);
         const gesture = CATALOGUE.find((item) => item.id === input.gestureId);
         if (!gesture) {
@@ -105,6 +131,17 @@ function fakeApi(server: Server) {
           detail(list.id, list.name, [...list.items, gesture])
         );
         return { added: true };
+      }),
+      containing: os.lists.containing.handler(async ({ input }) => {
+        server.calls.push("containing");
+        await server.holdContaining;
+        return [...server.lists.values()]
+          .filter(
+            (list) =>
+              (server.userOf.get(list.id) ?? "user-1") === server.user &&
+              list.items.some((item) => item.id === input.gestureId)
+          )
+          .map((list) => list.id);
       }),
       create: os.lists.create.handler(({ input }) => {
         server.calls.push("create");
@@ -139,6 +176,7 @@ function fakeApi(server: Server) {
         }));
       }),
       removeItem: os.lists.removeItem.handler(({ errors, input }) => {
+        server.calls.push("removeItem");
         const list = find(input.id, errors);
         server.lists.set(
           input.id,
@@ -153,9 +191,10 @@ function fakeApi(server: Server) {
       reorder: os.lists.reorder.handler(async ({ errors, input }) => {
         server.calls.push("reorder");
         const list = find(input.id, errors);
-        if (server.failNextReorder) {
-          server.failNextReorder = false;
-          await delay(100);
+        const hold = server.failNextReorder;
+        if (hold) {
+          server.failNextReorder = undefined;
+          await hold;
           throw errors.INVALID_STATE();
         }
         const byId = new Map(list.items.map((item) => [item.id, item]));
@@ -201,11 +240,13 @@ function fakeApi(server: Server) {
         }),
       },
       shared: {
-        addItem: os.lists.shared.addItem.handler(({ input }) => {
+        addItem: os.lists.shared.addItem.handler(async ({ input }) => {
           server.calls.push(`shared.addItem:${input.gestureId}`);
-          return { added: true };
+          await delay(10);
+          return { added: !server.sharedPresent?.has(input.gestureId) };
         }),
         get: os.lists.shared.get.handler(({ errors, input }) => {
+          server.calls.push("shared.get");
           for (const [listId, shares] of server.shares) {
             const share = shares.find((item) => item.token === input.token);
             const list = server.lists.get(listId);
@@ -259,7 +300,6 @@ function setup(session: SessionHookResult = SIGNED_OUT) {
   const server: Server = {
     byIdsCalls: [],
     calls: [],
-    failNextReorder: false,
     lists: new Map(),
     shares: new Map(),
     tokens: 0,
@@ -273,21 +313,43 @@ function setup(session: SessionHookResult = SIGNED_OUT) {
   const api = fakeApi(server);
   const auth = { current: session };
   const useSession = () => auth.current;
+  const recorder = createRecordingAnalytics();
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <RpcProvider client={api.client} queryUtils={api.queryUtils}>
-          <LocalStoreProvider store={store}>
-            {/* biome-ignore lint/performance/noJsxPropsBind: a stable test hook, defined once per setup. */}
-            <AuthStateProvider useSession={useSession}>
-              {children}
-            </AuthStateProvider>
-          </LocalStoreProvider>
+          <AnalyticsProvider analytics={recorder.analytics}>
+            <LocalStoreProvider store={store}>
+              {/* biome-ignore lint/performance/noJsxPropsBind: a stable test hook, defined once per setup. */}
+              <AuthStateProvider useSession={useSession}>
+                {children}
+              </AuthStateProvider>
+            </LocalStoreProvider>
+          </AnalyticsProvider>
         </RpcProvider>
       </QueryClientProvider>
     );
   }
-  return { auth, queryClient, server, store, wrapper };
+  return {
+    auth,
+    events: recorder.events,
+    queryClient,
+    server,
+    store,
+    utils: api.queryUtils,
+    wrapper,
+  };
+}
+
+function listChanged(
+  action: "added" | "removed",
+  gestureId: string,
+  source: "gesture_detail" | "gesture_list" = "gesture_list"
+) {
+  return {
+    name: "gesture_collection_changed",
+    properties: { action, collection: "list", gesture_id: gestureId, source },
+  } as const;
 }
 
 async function addLocalList(
@@ -569,13 +631,17 @@ describe("accounts: the API", () => {
     });
     await waitFor(() => expect(names()).toEqual(["Hond", "Aap", "Beer"]));
 
-    server.failNextReorder = true;
+    let release = (): void => undefined;
+    server.failNextReorder = new Promise((resolve) => {
+      release = resolve;
+    });
     let failure: Promise<void> | undefined;
     act(() => {
       failure = result.current.reorder([BEER.id, HOND.id, AAP.id]);
     });
-    // Optimistic: the new order shows while the call is in flight.
+    // Optimistic: the new order shows while the call is held in flight.
     await waitFor(() => expect(names()).toEqual(["Beer", "Hond", "Aap"]));
+    release();
     await act(async () => {
       await expect(failure).rejects.toMatchObject({ code: "INVALID_STATE" });
     });
@@ -637,6 +703,273 @@ describe("accounts: the API", () => {
   });
 });
 
+describe("lists analytics", () => {
+  test("a device list sends gesture_collection_changed with the hook's source", async () => {
+    const { events, store, wrapper } = setup();
+    await addLocalList(store, "loc_1", "Dieren", [KAT.id]);
+    const { result } = renderHook(
+      () => useList("loc_1", { source: "gesture_detail" }),
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.list?.items).toHaveLength(1));
+    await act(async () => {
+      await result.current.addItem(BEER.id);
+      await result.current.removeItem(KAT.id);
+    });
+    expect(events).toEqual([
+      listChanged("added", BEER.id, "gesture_detail"),
+      listChanged("removed", KAT.id, "gesture_detail"),
+    ]);
+  });
+
+  test("a rejected add is not sent", async () => {
+    const { events, store, wrapper } = setup();
+    await addLocalList(
+      store,
+      "loc_1",
+      "Vol",
+      Array.from({ length: LIST_ITEMS_MAX }, (_, item) => `g-${item}`)
+    );
+    const { result } = renderHook(() => useList("loc_1"), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await expect(result.current.addItem(HOND.id)).rejects.toMatchObject({
+      code: "INVALID_STATE",
+    });
+    expect(events).toEqual([]);
+  });
+
+  test("an account list and a shared edit link send it too", async () => {
+    const { events, server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    server.userOf.set("srv-1", "user-1");
+    server.shares.set("srv-1", [{ role: "edit", token: "edit-token" }]);
+    const own = renderHook(() => useList("srv-1"), { wrapper });
+    await waitFor(() => expect(own.result.current.status).toBe("ready"));
+    await act(async () => {
+      await own.result.current.addItem(KAT.id);
+    });
+    own.unmount();
+    const shared = renderHook(() => useSharedList("edit-token"), { wrapper });
+    await waitFor(() => expect(shared.result.current.canEdit).toBe(true));
+    await act(async () => {
+      await shared.result.current.removeItem(HOND.id);
+    });
+    expect(events).toEqual([
+      listChanged("added", KAT.id),
+      listChanged("removed", HOND.id),
+    ]);
+    await waitFor(() => expect(shared.result.current.status).toBe("ready"));
+    shared.unmount();
+  });
+});
+
+describe("useListMembership", () => {
+  const byName = (
+    lists: readonly { contains: boolean; name: string }[]
+  ): Record<string, boolean> =>
+    Object.fromEntries(lists.map((list) => [list.name, list.contains]));
+
+  test("a guest's lists come from the device, toggled and created there", async () => {
+    const { events, server, store, wrapper } = setup();
+    await addLocalList(store, "loc_1", "Dieren", [HOND.id]);
+    await addLocalList(store, "loc_2", "Thuis", []);
+    const { result } = renderHook(
+      () => useListMembership(HOND.id, { source: "gesture_detail" }),
+      { wrapper }
+    );
+    expect(result.current.status).toBe("ready");
+    expect(byName(result.current.lists)).toEqual({
+      Dieren: true,
+      Thuis: false,
+    });
+
+    await act(async () => {
+      expect(await result.current.toggle("loc_2")).toEqual({
+        action: "added",
+        name: "Thuis",
+      });
+      expect(await result.current.toggle("loc_1")).toEqual({
+        action: "removed",
+        name: "Dieren",
+      });
+    });
+    expect(byName(result.current.lists)).toEqual({
+      Dieren: false,
+      Thuis: true,
+    });
+
+    await act(async () => {
+      expect(await result.current.createWith("  Familie ")).toEqual({
+        action: "added",
+        name: "Familie",
+      });
+    });
+    expect(byName(result.current.lists)).toMatchObject({ Familie: true });
+    expect(
+      store.getSnapshot().lists.find((list) => list.name === "Familie")
+        ?.gestureIds
+    ).toEqual([HOND.id]);
+    expect(events).toEqual([
+      listChanged("added", HOND.id, "gesture_detail"),
+      listChanged("removed", HOND.id, "gesture_detail"),
+      listChanged("added", HOND.id, "gesture_detail"),
+    ]);
+    expect(server.calls).toEqual([]);
+  });
+
+  test("signed in, one `containing` call answers every list (no list details)", async () => {
+    const { server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    server.lists.set("srv-2", detail("srv-2", "Thuis", [KAT]));
+    server.lists.set("srv-3", detail("srv-3", "Werk", [HOND, KAT]));
+    const { result } = renderHook(
+      () => useListMembership(HOND.id, { source: "gesture_detail" }),
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(byName(result.current.lists)).toEqual({
+      Dieren: true,
+      Thuis: false,
+      Werk: true,
+    });
+    expect(server.calls.filter((call) => call === "containing")).toHaveLength(
+      1
+    );
+    expect(server.calls).not.toContain("get");
+  });
+
+  test("signed in, a toggle shows at once and settles from the server", async () => {
+    const { events, server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", []));
+    const { result } = renderHook(
+      () => useListMembership(HOND.id, { source: "gesture_detail" }),
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    let release = (): void => undefined;
+    server.holdAdd = new Promise((resolve) => {
+      release = resolve;
+    });
+    let adding: Promise<unknown> | undefined;
+    act(() => {
+      adding = result.current.toggle("srv-1");
+    });
+    // Optimistic: checked while the call is in flight, and busy.
+    await waitFor(() =>
+      expect(result.current.lists[0]).toMatchObject({
+        contains: true,
+        pending: true,
+      })
+    );
+    // A second tap while busy is ignored.
+    await act(async () => {
+      expect(await result.current.toggle("srv-1")).toBeNull();
+    });
+    release();
+    await act(async () => {
+      await adding;
+    });
+    expect(server.lists.get("srv-1")?.items.map((item) => item.id)).toEqual([
+      HOND.id,
+    ]);
+    await waitFor(() =>
+      expect(result.current.lists[0]).toMatchObject({
+        contains: true,
+        pending: false,
+      })
+    );
+    expect(events).toEqual([listChanged("added", HOND.id, "gesture_detail")]);
+
+    await act(async () => {
+      await result.current.toggle("srv-1");
+    });
+    await waitFor(() => expect(result.current.lists[0]?.contains).toBe(false));
+    expect(server.lists.get("srv-1")?.items).toEqual([]);
+  });
+
+  test("signed in, a tap before the lists loaded waits for them (never lost)", async () => {
+    const { server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    let release = (): void => undefined;
+    server.holdContaining = new Promise((resolve) => {
+      release = resolve;
+    });
+    const { result } = renderHook(() => useListMembership(HOND.id), {
+      wrapper,
+    });
+    // The picker shows the lists (from `mine`) before `containing` answers.
+    await waitFor(() => expect(result.current.lists).toHaveLength(1));
+    expect(result.current.status).toBe("loading");
+    // Not a guessed "unchecked": busy until `containing` says.
+    expect(result.current.lists[0]).toMatchObject({ pending: true });
+
+    let tap: Promise<unknown> | undefined;
+    act(() => {
+      tap = result.current.toggle("srv-1");
+    });
+    release();
+    await act(async () => {
+      // It holds the gesture, so the tap takes it out.
+      expect(await tap).toEqual({ action: "removed", name: "Dieren" });
+    });
+    expect(server.lists.get("srv-1")?.items).toEqual([]);
+  });
+
+  test("signed in, a failed toggle rolls back and rejects", async () => {
+    const { events, server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", []));
+    const { result } = renderHook(() => useListMembership(HOND.id), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    server.failNextAdd = true;
+    await act(async () => {
+      await expect(result.current.toggle("srv-1")).rejects.toMatchObject({
+        code: "INVALID_STATE",
+      });
+    });
+    expect(result.current.lists[0]).toMatchObject({
+      contains: false,
+      pending: false,
+    });
+    expect(events).toEqual([]);
+  });
+
+  test("signed in, createWith makes the list with the gesture in it", async () => {
+    const { server, wrapper } = setup(SIGNED_IN);
+    const { result } = renderHook(() => useListMembership(HOND.id), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await act(async () => {
+      expect(await result.current.createWith("Familie")).toEqual({
+        action: "added",
+        name: "Familie",
+      });
+    });
+    await waitFor(() =>
+      expect(byName(result.current.lists)).toEqual({ Familie: true })
+    );
+    expect(server.lists.get("srv-1")?.items.map((item) => item.id)).toEqual([
+      HOND.id,
+    ]);
+  });
+
+  test("asks nothing about the gesture while disabled (a closed picker)", async () => {
+    const { server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    const { result } = renderHook(
+      () => useListMembership(HOND.id, { enabled: false }),
+      { wrapper }
+    );
+    await act(() => delay(20));
+    expect(server.calls).not.toContain("containing");
+    expect(result.current.status).toBe("loading");
+  });
+});
+
 describe("useSharedList", () => {
   test("anyone can view; an edit link needs sign-in to edit", async () => {
     const guest = setup();
@@ -680,6 +1013,51 @@ describe("useSharedList", () => {
     // The invalidation refetches the shared list; let it settle.
     await waitFor(() => expect(edit.result.current.status).toBe("ready"));
     edit.unmount();
+  });
+
+  test("addItem reports and tracks only a real add, once per tap burst", async () => {
+    const { events, server, wrapper } = setup(SIGNED_IN);
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    server.shares.set("srv-1", [{ role: "edit", token: "edit-token" }]);
+    server.sharedPresent = new Set([HOND.id]);
+    const { result } = renderHook(() => useSharedList("edit-token"), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.canEdit).toBe(true));
+
+    let first: Promise<boolean> | undefined;
+    let second: Promise<boolean> | undefined;
+    await act(async () => {
+      // A double tap: the second is ignored while the first is in flight.
+      first = result.current.addItem(KAT.id);
+      second = result.current.addItem(KAT.id);
+      expect(await first).toBe(true);
+      expect(await second).toBe(false);
+      // Already in the list (someone else added it): no event, `false`.
+      expect(await result.current.addItem(HOND.id)).toBe(false);
+    });
+    expect(
+      server.calls.filter((call) => call.startsWith("shared.addItem"))
+    ).toEqual([`shared.addItem:${KAT.id}`, `shared.addItem:${HOND.id}`]);
+    expect(events).toEqual([listChanged("added", KAT.id)]);
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+  });
+
+  test("a prefetch with sharedListOptions is what the hook reads (SSR)", async () => {
+    const { queryClient, server, utils, wrapper } = setup();
+    server.lists.set("srv-1", detail("srv-1", "Dieren", [HOND]));
+    server.shares.set("srv-1", [{ role: "view", token: "view-token" }]);
+    await queryClient.prefetchQuery(
+      sharedListOptions(utils.lists, "view-token")
+    );
+    expect(server.calls).toEqual(["shared.get"]);
+
+    const { result } = renderHook(() => useSharedList("view-token"), {
+      wrapper,
+    });
+    expect(result.current.data?.list.name).toBe("Dieren");
+    expect(result.current.status).toBe("ready");
+    expect(server.calls).toEqual(["shared.get"]);
   });
 
   test("an unknown or revoked link is notFound", async () => {

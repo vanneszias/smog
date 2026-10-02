@@ -12,7 +12,8 @@ import {
   touchListsWithNewItemsStmt,
   unplacedItemsStmt,
 } from "../../lists/src/server/service";
-import type { ImportDeps } from "../src/server";
+import { shareUrl } from "../../lists/src/server/sharing";
+import type { AccountRouterDeps, ImportDeps } from "../src/server";
 
 export const importDeps: ImportDeps = {
   appendItems: appendItemsStmt,
@@ -20,4 +21,10 @@ export const importDeps: ImportDeps = {
   insertLists: insertListsStmt,
   touchLists: touchListsWithNewItemsStmt,
   unplacedItems: unplacedItemsStmt,
+};
+
+/** Everything `@smog/api` wires into `createAccountRouter`. */
+export const accountDeps: AccountRouterDeps = {
+  ...importDeps,
+  shareUrl,
 };

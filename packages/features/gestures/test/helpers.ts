@@ -175,9 +175,12 @@ export function countingD1(d1: D1Database): {
 /** Wraps a KV binding and counts its writes (`put`, `delete`). */
 export function spyKv(kv: KVNamespace): {
   binding: KVNamespace;
+  /** The arguments of every `get`. */
+  readonly gets: unknown[][];
   readonly writes: number;
 } {
   let writes = 0;
+  const gets: unknown[][] = [];
   const binding = new Proxy(kv, {
     get(target, key) {
       const value: unknown = Reflect.get(target, key);
@@ -190,11 +193,18 @@ export function spyKv(kv: KVNamespace): {
           return value.apply(target, args);
         };
       }
+      if (key === "get") {
+        return (...args: unknown[]) => {
+          gets.push(args);
+          return value.apply(target, args);
+        };
+      }
       return value.bind(target);
     },
   });
   return {
     binding,
+    gets,
     get writes() {
       return writes;
     },

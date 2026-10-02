@@ -63,21 +63,18 @@ describe("limits are enforced by the write, not only a pre-check", () => {
       contextFor(owner)
     );
     const extra = await addGestures(["A", "B", "C", "D"]);
-    // 499 published gestures and their rows, in one batch.
+    // 499 published gestures, then their list rows: one batch each.
     const now = Date.now();
-    const fillerIds = Array.from({ length: LIST_ITEMS_MAX - 1 }, () => newId());
-    await env.DB.batch([
-      ...fillerIds.map((id) =>
-        env.DB.prepare(
-          "INSERT INTO gesture (id, slug, name, sort_name, playback_id, published_at, created_at, updated_at) VALUES (?, ?, ?, ?, 'p', ?, ?, ?)"
-        ).bind(id, `filler-${id}`, "Filler", "filler", now, now, now)
-      ),
-      ...fillerIds.map((id, position) =>
+    const fillerIds = await addGestures(
+      Array.from({ length: LIST_ITEMS_MAX - 1 }, () => "Filler")
+    );
+    await env.DB.batch(
+      fillerIds.map((id, position) =>
         env.DB.prepare(
           "INSERT INTO list_item (list_id, gesture_id, position, created_at) VALUES (?, ?, ?, ?)"
         ).bind(created.id, id, position, now)
-      ),
-    ]);
+      )
+    );
 
     const results = await Promise.allSettled(
       extra.map((gestureId) =>

@@ -87,9 +87,9 @@ Package names: `@smog/<dir>` (`@smog/gestures`, not `@smog/features-gestures`).
 
 ```text
 apps/site    → api, auth, rpc, db, jobs, render, analytics, email, payments, video, features/*, local-store, i18n, styles, brand, ui-web, config, utils
-apps/mobile  → api (client only), auth (./expo, ./react), rpc (./react), features/* (./client, ./schema), local-store, analytics (./native), i18n, styles, brand, ui-native, config, utils
+apps/mobile  → api (client only), auth (./expo, ./react), rpc (./react), features/* (./client, ./schema), local-store, analytics (./native, ./react), i18n, styles, brand, ui-native, config, utils
 api          → rpc, features/*, config
-features/*   → rpc, db, auth, local-store, payments, video, email, jobs, render (./contract only), analytics (./server), i18n, config, utils
+features/*   → rpc, db, auth, local-store, payments, video, email, jobs, render (./contract only), analytics (./server, ./react, ./schema), i18n, config, utils
                (a feature may import another feature's ./schema and ./contract (both client-safe); never its ./server or ./client)
 jobs         → db, email, payments, video, render (./contract), config, utils
 payments     → config, utils
@@ -248,7 +248,8 @@ live | expiring ──force expire (admin)──▶ expired
   - `@better-auth/passkey`.
   - `admin` plugin: roles, bans, user list.
   - `@better-auth/expo` on the server for the mobile app.
-  - `captcha` plugin with Cloudflare Turnstile on sign-up, sign-in and password-reset endpoints.
+  - `captcha` plugin with Cloudflare Turnstile on sign-up, sign-in, password-reset, and every other endpoint that sends an email (the verification email, email codes and magic links).
+  - The profile (name, language) is written only by `account.updateProfile`; Better Auth's `/update-user` is disabled. Sign-up bounds the name the same way (trimmed, at most 80 characters).
 - Account linking: `accountLinking: { enabled: true, trustedProviders: ["google", "apple", "email-password"] }`. Accounts are linked by verified email.
 - Migrated users have `email_verified = true` and no credential. They sign in with OTP, magic link, Google or Apple, or set a password via "forgot password". The password-reset flow must create a credential account when none exists; this is verified by a test.
 - Mobile uses `@better-auth/expo` with `expo-secure-store` storage and the `smog://` scheme. Sign in with Apple on iOS uses `expo-apple-authentication` (idToken sign-in); Google uses the browser flow. Passkeys on mobile are a known gap at first (web only), unless a maintained Expo passkey module works with SDK 57 (see DECISIONS).
@@ -281,7 +282,9 @@ live | expiring ──force expire (admin)──▶ expired
 
 ### 7.1 Search (`@smog/gestures`, replaces fuse.js)
 
-The old rules in `SEARCH_ALGORITHM.md` are kept. Ranking is one pure TypeScript function (`rankGestures`) that runs on the server, and on the device for the mobile offline cache.
+The old rules in `SEARCH_ALGORITHM.md` are kept. Ranking is one pure TypeScript function (`rankGestures`) that runs on the server. Search needs a connection: the apps do not rank on the device, and mobile's offline cache keeps the catalogue, not searches (§10; see DECISIONS, 2026-09-30 "Offline search").
+
+`gestures.search` reads D1 at most twice (the catalog snapshot when this isolate's copy is stale, then one batch with the FTS candidates and the typo matches' summaries), so the search page's SSR stays within 3 D1 reads with the session and the categories (which come from the same snapshot).
 
 1. **Normalise:** the query and every field go through `normalizeText`, which lowercases, strips diacritics and collapses whitespace. An empty query returns the browse list, sorted by name (or by the first category when asked).
 2. **Candidates:** candidates come from FTS5, which tokenises and prefix-matches every query token (`"tok"*`) with the category filter applied. The filter uses OR semantics across the selected category slugs.
@@ -290,7 +293,7 @@ The old rules in `SEARCH_ALGORITHM.md` are kept. Ranking is one pure TypeScript 
    - Match multipliers: exact 1000, startsWith 500, word boundary 250.
    - The score is `multiplier × weight`, and the best field wins. Ties sort by `name` using `localeCompare("nl")`.
 4. **Typo tier:** this runs when steps 2–3 return fewer than 5 results and the query is at least 3 characters.
-   - It takes a cached projection of all published gestures (`id`, normalised name, keywords, categories), kept in isolate memory and invalidated through a KV version key that every gesture write bumps.
+   - It takes a cached projection of all published gestures (`id`, normalised name, keywords, categories), kept in isolate memory with the published categories (one "catalog snapshot") and invalidated through a KV version key that every gesture or category write bumps. The key is read with a 30 s KV `cacheTtl` (the minimum). The typo scoring is skipped when the snapshot alone has 5 or more direct matches (the tier cannot apply).
    - Each value is scored by similarity = 1 − (Damerau–Levenshtein distance / max length), against the whole value and each of its words. The old Fuse threshold was 0.4; the equivalent here is similarity ≥ 0.6.
    - The score is `150 × weight × similarity`. These results are appended after the direct matches, without duplicates.
 5. **Analytics:** only the query length and the result counts are sent (never the text).
@@ -394,8 +397,11 @@ Local dev: the Container needs Docker. When Docker is missing, `RENDER_MODE=loca
   - `/gestures/<convexId>` → `/gestures/<slug>`.
   - `/lists/<token>` stays valid: migrated share tokens keep their value.
 - Maintenance mode:
-  - The KV key `maintenance` holds `{ enabled, message?, until? }` and is read with a 30 s in-isolate cache.
-  - When it is enabled, every HTML request gets a 503 static page (a port of the old maintenance page, nl/en/fr, `Retry-After`), except `/api/webhooks/*`, `/api/health`, `/.well-known/*`, and admins holding a bypass cookie.
+  - The KV key `maintenance` holds `{ enabled, bypassVersion, message?, until? }` and is read with a 30 s in-isolate cache.
+  - When it is enabled, every page request gets a 503 static page (a port of the old maintenance page, nl/en/fr, `Retry-After`) and every other request a JSON 503 (`{ code: "MAINTENANCE", until }`), except:
+    - `/api/webhooks/*`, `/api/health`, `/.well-known/*` and `/api/analytics`;
+    - `POST /api/maintenance/bypass`, where a signed-in admin gets the bypass cookie (HMAC-signed for the current `bypassVersion`, 12 h), and every request that carries a valid one;
+    - the `/sign-in` page and the `/api/auth` routes an existing admin needs to sign in (password, Google/Apple and their callbacks, email code and magic-link sign-in, passkey sign-in, session, sign-out). They are served by a sign-in-only Better Auth: no sign-up, no user created, no email to an unknown address, sign-in codes only. Everything else under `/api/auth` gets the JSON 503.
   - It is toggled from `/admin/settings` or `wrangler kv key put`.
 - Security headers equivalent to the old Caddy set (CSP including Mux, Turnstile and the OpenPanel relay being same-origin; HSTS; `X-Frame-Options DENY`; Permissions-Policy), set by a response middleware. `robots.txt` and a dynamic `sitemap.xml` with every published gesture.
 
@@ -417,7 +423,8 @@ Local dev: the Container needs Docker. When Docker is missing, `RENDER_MODE=loca
   - anything unknown → `/`, without ever throwing
   - the reference branch's go-back fixes (`initialRouteName`) are kept
 - Offline cache: TanStack Query persisted to AsyncStorage for the gestures catalogue, categories and favorites (24 h `maxAge`, buster = app version). An offline banner comes from `@react-native-community/netinfo` (see DECISIONS).
-- Video: `expo-video` with the Mux HLS URL, the disclaimer banner after 7 completed videos (VIDEO_COMPLETE_COUNT), and a screenshot share prompt via `expo-screen-capture`. The permission-stripping config plugin is kept.
+- Offline, search is not available: the Search tab shows the offline banner and a search waits for the connection (TanStack Query pauses it while `onlineManager` is offline), while Home, the gesture pages, favorites and lists work from the cache. There is no on-device ranking (§7.1).
+- Video: `expo-video` with the Mux HLS URL, the disclaimer banner after 7 completed videos (VIDEO_COMPLETE_COUNT; one rule for both apps, `useCourseBanner` in `@smog/gestures/client`, counting a looping video once per visit), and a screenshot share prompt via `expo-screen-capture`. The permission-stripping config plugin is kept.
 - EAS: profiles `development`, `staging` (channel `staging`, `EXPO_PUBLIC_API_URL` = staging workers.dev URL) and `production` (channel `production`, store, `autoIncrement`).
 
 ## 11. Guests (on-device only)

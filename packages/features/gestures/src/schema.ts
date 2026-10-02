@@ -47,6 +47,10 @@ export const gestureDetailSchema = gestureSummarySchema.extend({
 /** `bySlug`: the detail plus the slug to redirect to (a legacy id or old slug). */
 export const gestureBySlugSchema = gestureDetailSchema.extend({
   canonicalSlug: z.string(),
+  /** First published (epoch ms): the page's `VideoObject.uploadDate`. */
+  publishedAt: z.number().int(),
+  /** Last edited (epoch ms): `dateModified`. */
+  updatedAt: z.number().int(),
 });
 
 export const categorySchema = z.object({

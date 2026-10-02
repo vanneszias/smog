@@ -19,9 +19,10 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { LogIn, LogOut, UserRound } from "lucide-react";
+import { LogIn, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { type ReactNode, useCallback } from "react";
 import { useAuthClient } from "@/lib/auth-client";
+import { signInReturnPath } from "@/lib/redirect";
 
 /** Signs out, refreshes the route data and says so. */
 export function useSignOut(): () => Promise<void> {
@@ -54,12 +55,15 @@ export function UserMenu(): ReactNode {
   const openAccount = useCallback(() => {
     navigate({ to: "/account" });
   }, [navigate]);
+  const openAdmin = useCallback(() => {
+    navigate({ to: "/admin" });
+  }, [navigate]);
 
   if (auth.status === "loading") {
     return <Skeleton className="size-10" shape="circle" />;
   }
   if (!auth.user) {
-    const redirect = href.startsWith("/sign-") ? undefined : href;
+    const redirect = signInReturnPath(href);
     return (
       <Button asChild icon={<LogIn />} variant="secondary">
         <Link search={redirect ? { redirect } : {}} to="/sign-in">
@@ -93,6 +97,12 @@ export function UserMenu(): ReactNode {
         <MenuItem icon={<UserRound />} onSelect={openAccount}>
           {t("nav.account")}
         </MenuItem>
+        {/* Admins only; the admin pages check the role on the server. */}
+        {user.role === "admin" ? (
+          <MenuItem icon={<ShieldCheck />} onSelect={openAdmin}>
+            {t("nav.admin")}
+          </MenuItem>
+        ) : null}
         <MenuItem icon={<LogOut />} onSelect={signOut}>
           {t("nav.signOut")}
         </MenuItem>

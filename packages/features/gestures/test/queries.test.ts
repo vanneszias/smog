@@ -226,8 +226,11 @@ describe("gestures.bySlug", () => {
       keywords: ["hondje", "huisdier", "blaffen"],
       name: "Hond",
       playbackId: row.playbackId,
+      // The VideoObject `uploadDate` and `dateModified` (epoch ms).
+      publishedAt: row.publishedAt?.getTime(),
       slug: "hond",
       sponsor: null,
+      updatedAt: row.updatedAt.getTime(),
     });
   });
 

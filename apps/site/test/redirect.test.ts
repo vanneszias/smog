@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { safeRedirect, validateAuthSearch } from "../src/lib/redirect";
+import {
+  safeRedirect,
+  signInReturnPath,
+  validateAuthSearch,
+  validateResetSearch,
+} from "../src/lib/redirect";
 
 describe("safeRedirect", () => {
   it("keeps same-site paths with their query and hash", () => {
@@ -62,5 +67,47 @@ describe("validateAuthSearch", () => {
 
   it("drops an unsafe redirect", () => {
     expect(validateAuthSearch({ redirect: "/.//evil.com" })).toEqual({});
+  });
+});
+
+describe("signInReturnPath (the header's Sign in link)", () => {
+  it("returns to the page, without any token in its query", () => {
+    expect(signInReturnPath("/gestures/hond?ref=qr")).toBe(
+      "/gestures/hond?ref=qr"
+    );
+    expect(signInReturnPath("/lists?token=abc&id=1")).toBe("/lists?id=1");
+    expect(signInReturnPath("/reset-password?token=abc")).toBe(
+      "/reset-password"
+    );
+  });
+
+  it("never returns to an auth page or a magic link", () => {
+    for (const href of [
+      "/sign-in",
+      "/sign-up?redirect=%2Faccount",
+      "/magic-link?error=INVALID_TOKEN",
+      "/magic-link/app?token=abcdefghijklmnopqrstuvwxyzABCDEF&email=a%40b.c",
+    ]) {
+      expect(signInReturnPath(href)).toBeUndefined();
+    }
+  });
+});
+
+describe("validateResetSearch", () => {
+  it("sets both keys, strings only (the router JSON-parses `?token=123`)", () => {
+    expect(validateResetSearch({ token: "abc" })).toStrictEqual({
+      error: undefined,
+      token: "abc",
+    });
+    expect(
+      validateResetSearch({ error: "INVALID_TOKEN", token: 123 })
+    ).toStrictEqual({
+      error: "INVALID_TOKEN",
+      token: undefined,
+    });
+    expect(validateResetSearch({})).toStrictEqual({
+      error: undefined,
+      token: undefined,
+    });
   });
 });

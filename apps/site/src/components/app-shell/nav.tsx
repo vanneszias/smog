@@ -1,6 +1,7 @@
 import type { TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import { Button, cn, ListItem } from "@smog/ui-web";
+import { Link } from "@tanstack/react-router";
 import { Hand, Heart, HeartHandshake, List } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -11,8 +12,8 @@ interface NavItem {
 }
 
 /**
- * The main sections. Their pages arrive in phase 3 (gestures, favorites,
- * lists) and phase 5 (sponsor), so these are plain links for now.
+ * The main sections, as router links. Sponsor arrives in phase 5 (until
+ * then it is the not-found page).
  */
 const NAV_ITEMS: readonly NavItem[] = [
   { href: "/gestures", icon: <Hand />, label: "nav.gestures" },
@@ -30,7 +31,7 @@ export function MainNav({ className }: { className?: string }): ReactNode {
         {NAV_ITEMS.map((item) => (
           <li key={item.href}>
             <Button asChild variant="ghost">
-              <a href={item.href}>{t(item.label)}</a>
+              <Link to={item.href}>{t(item.label)}</Link>
             </Button>
           </li>
         ))}
@@ -51,7 +52,7 @@ export function MainNavList({ className }: { className?: string }): ReactNode {
         {NAV_ITEMS.map((item) => (
           <li key={item.href}>
             <ListItem asChild leading={item.icon} title={t(item.label)}>
-              <a href={item.href}>{t(item.label)}</a>
+              <Link to={item.href}>{t(item.label)}</Link>
             </ListItem>
           </li>
         ))}

@@ -25,6 +25,13 @@ TURNSTILE_SECRET_KEY=
 # without the site key the web shows no widget and the guarded auth calls
 # fail. Staging uses Cloudflare's always-pass test keys.
 
+# Optional. The OpenPanel client the analytics relay (`/api/analytics`)
+# forwards with; without both, consented events are accepted and dropped
+# with a warning. OPENPANEL_API_URL is a var (default
+# https://analytics.zias.be/api), not a secret.
+OPENPANEL_CLIENT_ID=
+OPENPANEL_CLIENT_SECRET=
+
 # Dev sign-in: the seeded admin `admin@smog.test` has the DEV-ONLY password
 # `smog-dev-admin` (packages/db/seed/dev.sql). Emails (verification links,
 # codes, magic links) are not sent in dev: read them at /dev/mail.

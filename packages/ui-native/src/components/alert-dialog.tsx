@@ -8,11 +8,15 @@ import { ModalCard } from "./dialog";
 import { Heading, Text } from "./text";
 
 export interface AlertDialogProps {
+  /** Content between the description and the actions (e.g. a confirmation field). */
+  body?: ReactNode;
   /** Cancel label (`kit.cancel` by default). */
   cancelLabel?: string;
   /** The trigger element (optional when controlled with `open`). */
   children?: ReactElement;
   className?: string;
+  /** Disables confirm (until the body's field is filled in). */
+  confirmDisabled?: boolean;
   /** Confirm label (`kit.confirm` by default). */
   confirmLabel?: string;
   defaultOpen?: boolean;
@@ -33,9 +37,11 @@ export interface AlertDialogProps {
  * in a native modal with the `alert` role. The backdrop does not close it.
  */
 export function AlertDialog({
+  body,
   cancelLabel,
   children,
   className,
+  confirmDisabled = false,
   confirmLabel,
   defaultOpen = false,
   description,
@@ -80,8 +86,10 @@ export function AlertDialog({
           <Heading size="title-2">{title}</Heading>
           {description ? <Text tone="muted">{description}</Text> : null}
         </View>
+        {body ? <View className="flex-col gap-4">{body}</View> : null}
         <View className="mt-2 flex-col gap-2">
           <Button
+            disabled={confirmDisabled}
             loading={loading}
             onPress={confirm}
             variant={tone === "danger" ? "danger" : "primary"}

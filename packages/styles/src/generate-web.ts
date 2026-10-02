@@ -96,6 +96,7 @@ function themeBlock(): string[] {
     "  --ease-*: initial;",
     `  --ease-standard: cubic-bezier(${easing});`,
     ...declarations(durations()),
+    `  --motion-pop-scale: ${tokens.motion.popScale};`,
     "  --default-transition-duration: var(--duration-normal);",
     "  --default-transition-timing-function: var(--ease-standard);",
     "",

@@ -20,9 +20,10 @@ bun run mobile:release-check # expo-doctor + expo export (iOS + Android) + bundl
 bun run release:check        # Everything CI runs, in order
 SMOG_OFFLINE=1 bun run release:check  # Same, on a machine without internet access
 bun run admin:grant --env <dev|staging|production> [--dry-run] <email>  # Give an account the admin role (dev: local D1, else remote)
+bun run maintenance --env <dev|staging|production> on|off [--message …] [--until ISO] [--dry-run] [--yes]  # Maintenance mode (KV; production needs --yes)
 ```
 
-`release:check` = `check:ci` → `boundaries` → `scripts/release-config-check.ts` (workflows + wrangler envs) → `check-types` → `test` → `build` → `knip` → `audit` → `scripts/mobile-release-check.ts`. CI (`.github/workflows/ci.yml`) runs exactly this.
+`release:check` runs three scripts sequentially locally; CI (`.github/workflows/ci.yml`) runs the same scripts on separate runners with `fail-fast: false`: `release:check:core` (`check:ci` → `boundaries` → `scripts/release-config-check.ts` → `check-types` → `build` → `knip` → `audit`), `release:check:tests` (all tests), and `release:check:mobile` (online expo-doctor, both iOS/Android exports, bundle sizes and gallery checks). Deploy waits for every lane. Pushes to `develop`/`master` run the gate through Deploy only; other branch pushes and pull requests run CI directly.
 
 `SMOG_OFFLINE=1` only affects expo-doctor, and the result is **not equivalent to CI**. Offline, three doctor checks are degraded (the script prints this list every time): the config schema check is tolerated when the schema fetch crashes; the SDK dependency-version check only compares against the bundled native-module list, so the api.expo.dev pins (react, react-native, typescript, jest-expo, …) go unchecked; and the React Native Directory check is off. Fetch failures are warnings (`EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS=1`). Every other doctor failure still fails. Never set it in CI; CI is the authority.
 
@@ -44,6 +45,8 @@ bun -F @smog/site cf-typegen # Generate worker-configuration.d.ts (gitignored; c
 Local auth (dev only): copy `apps/site/.dev.vars.example` to `.dev.vars` (it has a dev `BETTER_AUTH_SECRET`), then `bun -F @smog/db migrate:dev && bun -F @smog/db seed:dev`. The seeded admin is `admin@smog.test` with the **dev-only** password `smog-dev-admin`. Emails are not sent in dev: read them at `http://localhost:5173/dev/mail` (or `/dev/mail.json`). Migrations are append-only from now on: never edit an existing migration; add a new one (`bun -F @smog/db db:generate`). To start the local D1 from scratch, `rm -rf apps/site/.wrangler/state/v3/d1` first.
 
 Turnstile: `TURNSTILE_SITE_KEY` is a public var in `wrangler.jsonc` (`env.<env>.vars`) and `TURNSTILE_SECRET_KEY` a secret (`wrangler secret put`). Both are required in production before launch: without the site key the web shows no widget and email sign-up, sign-in, reset, code and magic-link requests fail. Staging uses Cloudflare's always-pass test keys; dev needs neither.
+
+Security headers and the CSP come from `apps/site/src/worker/headers.ts`, on every Worker response. The CSP is enforced in dev and production and `Report-Only` in staging. Inline scripts need Start's per-request nonce (automatic for anything Start renders) or a build-time hash (the theme script). A route that sets its own `Content-Security-Policy` keeps it; any other header the route set is kept too. Maintenance mode is the KV key `maintenance` (`bun run maintenance`; `on` keeps the bypass version, `off` starts a new one). During a window `/sign-in` and only the admin sign-in routes of `/api/auth` (`AUTH_SIGN_IN_ROUTES` in `apps/site/src/worker/maintenance.ts`, served by a sign-in-only Better Auth that creates no user) stay open; a signed-in admin gets past the rest with `POST /api/maintenance/bypass` (12 h cookie, valid until the window ends).
 
 ### Mobile (Expo + Expo Router + NativeWind)
 ```bash

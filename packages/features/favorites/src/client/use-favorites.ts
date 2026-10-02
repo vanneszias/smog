@@ -1,3 +1,5 @@
+import { type Analytics, useAnalytics } from "@smog/analytics/react";
+import type { CollectionSource } from "@smog/analytics/schema";
 import { useAuthState } from "@smog/auth/react";
 import type { GesturesContract } from "@smog/gestures/contract";
 import type { GestureSummary } from "@smog/gestures/schema";
@@ -14,8 +16,10 @@ import {
   userScopedKey,
 } from "@smog/rpc/react";
 import {
+  hashKey,
   keepPreviousData,
   type Mutation,
+  type QueryKey,
   type QueryStatus,
   useInfiniteQuery,
   useMutation,
@@ -49,6 +53,8 @@ export interface UseFavoritesOptions {
    * stays empty.
    */
   items?: boolean;
+  /** Where the toggles happen, for `gesture_collection_changed` (default `gesture_list`). */
+  source?: CollectionSource;
 }
 
 export interface Favorites {
@@ -159,11 +165,31 @@ function withFlips(ids: readonly string[], flips: readonly Flip[]): string[] {
 }
 
 /** The signed-in path; `userId` is `undefined` unless signed in. */
+/** `gesture_collection_changed` for a favorite that changed. */
+function trackFavorite(
+  analytics: Analytics,
+  favorite: boolean,
+  gestureId: string,
+  source: CollectionSource
+): void {
+  analytics.track({
+    name: "gesture_collection_changed",
+    properties: {
+      action: favorite ? "added" : "removed",
+      collection: "favorites",
+      gesture_id: gestureId,
+      source,
+    },
+  });
+}
+
 function useAccountFavorites(
   userId: string | undefined,
-  withItems: boolean
+  withItems: boolean,
+  source: CollectionSource
 ): Favorites {
   const enabled = userId !== undefined;
+  const analytics = useAnalytics();
   const client = useRpcClient<FavoritesSlice>();
   const rpc = useRpcQuery<FavoritesSlice>().favorites;
   const queryClient = useQueryClient();
@@ -253,10 +279,11 @@ function useAccountFavorites(
         )
       );
       const favorite = !current.includes(gestureId);
-      // analytics: gesture_collection_changed {action: favorite ? "added" : "removed", collection: "favorites", gesture_id}
       await mutateAsync({ favorite, gestureId, userId });
+      // Only a flip the server confirmed (a failed one rejected above).
+      trackFavorite(analytics, favorite, gestureId, source);
     },
-    [idsKey, mutateAsync, queryClient, userId]
+    [analytics, idsKey, mutateAsync, queryClient, source, userId]
   );
   const { fetchNextPage } = list;
   const loadMoreItems = useCallback(async () => {
@@ -276,6 +303,17 @@ function useAccountFavorites(
     status: toStatus(ids.status),
     toggle,
   };
+}
+
+/** A guest favorites key: `gestures.byIds` pages scoped to the guest. */
+function isGuestPagesKey(queryKey: QueryKey): boolean {
+  const scope = queryKey.at(-1);
+  return (
+    typeof scope === "object" &&
+    scope !== null &&
+    "user" in scope &&
+    (scope as { user: unknown }).user === null
+  );
 }
 
 function selectFavorites(data: GuestData): string[] {
@@ -299,8 +337,13 @@ function useStoreReady(store: LocalStore): boolean {
   return ready;
 }
 
-function useGuestFavorites(enabled: boolean, withItems: boolean): Favorites {
+function useGuestFavorites(
+  enabled: boolean,
+  withItems: boolean,
+  source: CollectionSource
+): Favorites {
   const store = useLocalStoreInstance();
+  const analytics = useAnalytics();
   const stored = useLocalStore(selectFavorites);
   const ready = useStoreReady(store);
   const client = useRpcClient<FavoritesSlice>();
@@ -309,6 +352,16 @@ function useGuestFavorites(enabled: boolean, withItems: boolean): Favorites {
   const order = useMemo(() => [...stored].reverse(), [stored]);
   const idSet = useMemo(() => new Set(order), [order]);
   const hasFavorites = order.length > 0;
+  const queryClient = useQueryClient();
+  // Scoped to the guest (`null`), so a sign-in drops it (`purgeOtherUsers`).
+  const queryKey = useMemo(
+    () =>
+      userScopedKey(
+        [...rpc.byIds.key({ type: "infinite" }), { ids: order }],
+        undefined
+      ),
+    [order, rpc]
+  );
 
   const list = useInfiniteQuery({
     enabled: enabled && withItems && ready && hasFavorites,
@@ -324,14 +377,34 @@ function useGuestFavorites(enabled: boolean, withItems: boolean): Favorites {
         { ids: order.slice(pageParam, pageParam + GUEST_PAGE_SIZE) },
         { signal }
       ),
-    queryKey: [...rpc.byIds.key({ type: "infinite" }), { ids: order }],
+    queryKey,
     staleTime: FAVORITES_STALE_TIME,
   });
 
+  // Each change of the favorites is a new key: once it loaded, the earlier
+  // variants go, so they do not pile up in memory (or the mobile cache).
+  const loadedHash =
+    list.isSuccess && !list.isPlaceholderData ? hashKey(queryKey) : undefined;
+  useEffect(() => {
+    if (loadedHash !== undefined) {
+      queryClient.removeQueries({
+        predicate: (query) =>
+          query.queryHash !== loadedHash && isGuestPagesKey(query.queryKey),
+        queryKey: rpc.byIds.key({ type: "infinite" }),
+      });
+    }
+  }, [loadedHash, queryClient, rpc]);
+
   const toggle = useCallback(
-    // analytics: gesture_collection_changed {action, collection: "favorites", gesture_id}
-    (gestureId: string) => store.update(toggleFavorite(gestureId)),
-    [store]
+    async (gestureId: string) => {
+      let favorite = false;
+      await store.update((data) => {
+        favorite = !data.favorites.includes(gestureId);
+        return toggleFavorite(gestureId)(data);
+      });
+      trackFavorite(analytics, favorite, gestureId, source);
+    },
+    [analytics, source, store]
   );
   const { fetchNextPage } = list;
   const loadMoreItems = useCallback(async () => {
@@ -367,14 +440,16 @@ function useGuestFavorites(enabled: boolean, withItems: boolean): Favorites {
  */
 export function useFavorites({
   items = true,
+  source = "gesture_list",
 }: UseFavoritesOptions = {}): Favorites {
   const auth = useAuthState();
   const signedIn = auth.status === "signedIn";
   const account = useAccountFavorites(
     signedIn ? auth.user?.id : undefined,
-    items
+    items,
+    source
   );
-  const guest = useGuestFavorites(auth.status === "signedOut", items);
+  const guest = useGuestFavorites(auth.status === "signedOut", items, source);
   if (auth.status === "loading") {
     return LOADING;
   }

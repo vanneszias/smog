@@ -64,6 +64,9 @@ export const gesture = sqliteTable(
     index("gesture_published_sort_name_idx")
       .on(t.sortName, t.id)
       .where(sql`${col(t.publishedAt)} IS NOT NULL`),
+    // The admin list (`@smog/admin`): every gesture, published or not, in
+    // the same `sort_name, id` keyset order (migration 0006).
+    index("gesture_sort_name_idx").on(t.sortName, t.id),
     index("gesture_mux_asset_id_idx").on(t.muxAssetId),
   ]
 );

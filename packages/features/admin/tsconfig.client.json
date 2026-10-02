@@ -1,0 +1,12 @@
+{
+  // The entries the site bundles (./schema, ./contract, ./client), as it
+  // compiles them: DOM lib, no Workers types (no worker-configuration.d.ts).
+  // A server import (D1Database, KVNamespace, …) in client code fails here.
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true
+  },
+  "include": ["src/schema", "src/contract", "src/client"]
+}

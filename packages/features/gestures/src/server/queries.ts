@@ -9,12 +9,12 @@ import {
   gesture,
   gestureCategory,
   gestureKeyword,
+  ref,
   sponsorship,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { decodeCursorAs, encodeCursor } from "@smog/utils";
 import { and, eq, isNotNull, type SQL, sql } from "drizzle-orm";
-import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import type {
   Category,
   CategoryRef,
@@ -29,15 +29,6 @@ const CATEGORY_LIMIT = 100;
 const SITEMAP_LIMIT = 50_000;
 /** Sponsorships whose video and credit are shown (spec §5.4). */
 const RUNNING_STATUSES = sql.raw("'live', 'expiring'");
-
-/**
- * `alias."column"`. Drizzle renders columns unqualified in single-table
- * selects, so a correlated subquery must name both sides itself: the outer
- * row is always `gesture` (`G`), inner tables get their own alias.
- */
-export function ref(alias: string, column: SQLiteColumn): SQL {
-  return sql`${sql.raw(alias)}.${sql.identifier(column.name)}`;
-}
 
 /** The outer row's name in every catalogue query (the `gesture` table). */
 export const G = "gesture";
@@ -226,8 +217,10 @@ export async function findGestureBySlug(
     const [row] = await db
       .select({
         ...searchableColumns,
+        publishedAt: gesture.publishedAt,
         sponsorName: sponsorship.displayName,
         sponsorUntil: sponsorship.endsAt,
+        updatedAt: gesture.updatedAt,
       })
       .from(gesture)
       .leftJoin(
@@ -248,19 +241,36 @@ export async function findGestureBySlug(
     if (!row) {
       return null;
     }
-    const { sponsorName, sponsorUntil, ...detail } = row;
+    const { publishedAt, sponsorName, sponsorUntil, updatedAt, ...detail } =
+      row;
     return {
       ...detail,
       canonicalSlug: detail.slug,
+      // `isPublished` guarantees the date; the fallback only satisfies the type.
+      publishedAt: (publishedAt ?? updatedAt).getTime(),
       sponsor:
         sponsorName !== null && sponsorUntil !== null
           ? { name: sponsorName, until: sponsorUntil.getTime() }
           : null,
+      updatedAt: updatedAt.getTime(),
     };
   } catch (error) {
     console.error("[gestures] Failed to find a gesture by slug:", error);
     throw error;
   }
+}
+
+/** The published gestures among `ids` as summaries, in no order (one read). */
+export function gesturesByIdsQuery(db: Db, ids: readonly string[]) {
+  return db
+    .select(summaryColumns)
+    .from(gesture)
+    .where(
+      and(
+        isPublished,
+        sql`${gesture.id} IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`
+      )
+    );
 }
 
 /** Published gestures by id, in the order given (duplicates and unknown ids dropped). */
@@ -272,15 +282,7 @@ export async function findGesturesByIds(
     return [];
   }
   try {
-    const rows = await db
-      .select(summaryColumns)
-      .from(gesture)
-      .where(
-        and(
-          isPublished,
-          sql`${gesture.id} IN (SELECT value FROM json_each(${JSON.stringify(ids)}))`
-        )
-      );
+    const rows = await gesturesByIdsQuery(db, ids);
     const byId = new Map(rows.map((row) => [row.id, row]));
     return [...new Set(ids)].flatMap((id) => {
       const row = byId.get(id);
@@ -326,18 +328,26 @@ export async function findRelatedGestures(
 }
 
 /** Published categories (`sort_order`, name) with their published gesture counts. */
+export function categoriesQuery(db: Db) {
+  return db
+    .select({
+      gestureCount: sql<number>`(SELECT count(*) FROM ${gestureCategory} AS gc JOIN ${gesture} AS g ON ${ref("g", gesture.id)} = ${ref("gc", gestureCategory.gestureId)} WHERE ${ref("gc", gestureCategory.categoryId)} = ${ref("category", category.id)} AND ${ref("g", gesture.publishedAt)} IS NOT NULL)`,
+      name: category.name,
+      slug: category.slug,
+    })
+    .from(category)
+    .where(isNotNull(category.publishedAt))
+    .orderBy(category.sortOrder, sql`${category.name} COLLATE NOCASE`)
+    .limit(CATEGORY_LIMIT);
+}
+
+/**
+ * The categories straight from D1. `gestures.categories` serves them from
+ * the catalog snapshot (`getCatalogCategories`) and falls back to this.
+ */
 export async function listCategories(db: Db): Promise<Category[]> {
   try {
-    return await db
-      .select({
-        gestureCount: sql<number>`(SELECT count(*) FROM ${gestureCategory} AS gc JOIN ${gesture} AS g ON ${ref("g", gesture.id)} = ${ref("gc", gestureCategory.gestureId)} WHERE ${ref("gc", gestureCategory.categoryId)} = ${ref("category", category.id)} AND ${ref("g", gesture.publishedAt)} IS NOT NULL)`,
-        name: category.name,
-        slug: category.slug,
-      })
-      .from(category)
-      .where(isNotNull(category.publishedAt))
-      .orderBy(category.sortOrder, sql`${category.name} COLLATE NOCASE`)
-      .limit(CATEGORY_LIMIT);
+    return await categoriesQuery(db);
   } catch (error) {
     console.error("[gestures] Failed to list categories:", error);
     throw error;

@@ -1,9 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import {
-  CATALOG_STALE_TIME,
-  normalizeCategoryFilter,
-  useGesturesRpc,
-} from "./slice";
+import { gesturesBrowseOptions } from "./options";
+import { useGesturesRpc } from "./slice";
 
 export interface UseGesturesOptions {
   /** Category slugs, OR semantics. */
@@ -15,15 +12,8 @@ export interface UseGesturesOptions {
  * `hasNextPage`); `data` is every loaded gesture, pages flattened.
  */
 export function useGestures({ category }: UseGesturesOptions = {}) {
-  const gestures = useGesturesRpc();
-  const filter = normalizeCategoryFilter(category);
-  return useInfiniteQuery(
-    gestures.list.infiniteOptions({
-      getNextPageParam: (page) => page.nextCursor ?? undefined,
-      initialPageParam: undefined as string | undefined,
-      input: (cursor: string | undefined) => ({ category: filter, cursor }),
-      select: (data) => data.pages.flatMap((page) => page.items),
-      staleTime: CATALOG_STALE_TIME,
-    })
-  );
+  return useInfiniteQuery({
+    ...gesturesBrowseOptions(useGesturesRpc(), { category }),
+    select: (data) => data.pages.flatMap((page) => page.items),
+  });
 }

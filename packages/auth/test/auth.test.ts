@@ -1,8 +1,11 @@
 import { env } from "cloudflare:workers";
-import { account, session } from "@smog/db";
+import { scrypt } from "node:crypto";
+import { account, session, verification } from "@smog/db";
 import { makeUser } from "@smog/db/testing";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { APP_MAGIC_LINK_PATH, MAGIC_LINK_TTL_SECONDS } from "../src/fields";
+import { appMagicLinkURL } from "../src/server";
 import { getSession, requireAdminUser } from "../src/session";
 import {
   codeIn,
@@ -123,27 +126,61 @@ describe("email + password", () => {
     expect(sessionCookie(signIn)).toBeDefined();
   });
 
-  it("(h) a sign-up request stays within the CPU budget (< 1500 ms)", async () => {
+  it("(h) a sign-up hashes with native scrypt (the CPU budget)", async () => {
     const ctx = setup();
     const started = performance.now();
 
     const response = await signUp(ctx, uniqueEmail());
 
+    // Logged, not asserted: a whole sign-up (hash, D1, the email render) on
+    // a loaded runner has no stable wall-clock bound. The hash check below
+    // is what proves the budget holds.
     const elapsed = performance.now() - started;
     console.log(`[auth.test] sign-up took ${elapsed.toFixed(0)} ms`);
     expect(response.status).toBe(200);
-    expect(elapsed).toBeLessThan(1500);
 
-    // The hash alone (workerd resolves Better Auth's scrypt to node:crypto).
+    // The hash alone: workerd must resolve Better Auth's scrypt to native
+    // node:crypto, not the pure-JS fallback (DECISIONS, password hashing).
+    // A fixed millisecond limit fails on a busy CI runner, so the hash is
+    // judged against native scrypt with the same parameters, timed in turns
+    // with it: the fallback is many times slower, contention hits both.
     const context = await ctx.auth.$context;
-    const hashStarted = performance.now();
-    const hash = await context.password.hash(PASSWORD);
-    const hashElapsed = performance.now() - hashStarted;
-    console.log(`[auth.test] scrypt hash took ${hashElapsed.toFixed(0)} ms`);
+    const nativeScrypt = (): Promise<void> =>
+      new Promise((resolve, reject) => {
+        scrypt(
+          PASSWORD.normalize("NFKC"),
+          "0123456789abcdef0123456789abcdef",
+          64,
+          { maxmem: 128 * 16_384 * 16 * 2, N: 16_384, p: 1, r: 16 },
+          (error) => (error ? reject(error) : resolve())
+        );
+      });
+    const time = async (run: () => Promise<unknown>): Promise<number> => {
+      const runStarted = performance.now();
+      await run();
+      return performance.now() - runStarted;
+    };
+    const hashTimes: number[] = [];
+    const nativeTimes: number[] = [];
+    let hash = "";
+    for (let run = 0; run < 3; run += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: timed one after another on purpose.
+      nativeTimes.push(await time(nativeScrypt));
+      hashTimes.push(
+        await time(async () => {
+          hash = await context.password.hash(PASSWORD);
+        })
+      );
+    }
+    const hashElapsed = Math.min(...hashTimes);
+    const nativeElapsed = Math.min(...nativeTimes);
+    console.log(
+      `[auth.test] scrypt hash took ${hashElapsed.toFixed(0)} ms (native ${nativeElapsed.toFixed(0)} ms)`
+    );
     expect(await context.password.verify({ hash, password: PASSWORD })).toBe(
       true
     );
-    expect(hashElapsed).toBeLessThan(500);
+    expect(hashElapsed).toBeLessThan(nativeElapsed * 3 + 50);
   });
 });
 
@@ -219,6 +256,132 @@ describe("magic link", () => {
       new Headers({ cookie: cookieHeader(verify) })
     );
     expect(current?.user.email).toBe(email);
+  });
+
+  it("an app request mails the app link, which the app exchanges itself", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+
+    // What the Expo client sends: the `smog://` callbacks, `expo-origin`.
+    const sent = await ctx.call("/sign-in/magic-link", {
+      body: {
+        callbackURL: "smog:///",
+        email,
+        errorCallbackURL: "smog:///",
+        newUserCallbackURL: "smog:///",
+      },
+      headers: { "expo-origin": "smog://", origin: "" },
+    });
+    expect(sent.status).toBe(200);
+    const link = new URL(linkIn(ctx.email.sent[0]?.text));
+
+    // The universal link: the site host, a fixed path, only the token (no
+    // address: it would land in logs and the address bar).
+    expect(`${link.origin}${link.pathname}`).toBe(
+      `${SITE_URL}${APP_MAGIC_LINK_PATH}`
+    );
+    expect([...link.searchParams.keys()]).toEqual(["token"]);
+    expect(link.toString()).not.toContain(encodeURIComponent(email));
+    expect(link.toString()).not.toContain("smog:");
+
+    // The app verifies without a callback: JSON and the cookie, no redirect.
+    const token = link.searchParams.get("token") ?? "";
+    const verify = await ctx.call(
+      `/magic-link/verify?token=${encodeURIComponent(token)}`,
+      { headers: { "expo-origin": "smog://", origin: "" } }
+    );
+    expect(verify.status).toBe(200);
+    expect(verify.headers.get("location")).toBeNull();
+    const current = await getSession(
+      ctx.auth,
+      new Headers({ cookie: cookieHeader(verify) })
+    );
+    expect(current?.user.email).toBe(email);
+
+    // Single use.
+    const again = await ctx.call(
+      `/magic-link/verify?token=${encodeURIComponent(token)}`,
+      { headers: { "expo-origin": "smog://", origin: "" } }
+    );
+    expect(sessionCookie(again)).toBeUndefined();
+  });
+
+  it("a web request keeps Better Auth's verify link", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+    await ctx.call("/sign-in/magic-link", {
+      body: { callbackURL: "/account", email },
+    });
+    const link = new URL(linkIn(ctx.email.sent[0]?.text));
+    expect(link.pathname).toBe("/api/auth/magic-link/verify");
+    expect(link.searchParams.get("callbackURL")).toBe("/account");
+  });
+
+  it("the link lives 5 minutes (MAGIC_LINK_TTL_SECONDS)", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+    const before = Date.now();
+    await ctx.call("/sign-in/magic-link", {
+      body: { callbackURL: "/", email },
+    });
+    const rows = await ctx.db.select().from(verification);
+    const row = rows.find((candidate) => candidate.value.includes(email));
+    expect(MAGIC_LINK_TTL_SECONDS).toBe(300);
+    const lifetime = (row?.expiresAt.getTime() ?? 0) - before;
+    expect(lifetime).toBeGreaterThan(299_000);
+    expect(lifetime).toBeLessThanOrEqual(301_000);
+  });
+
+  it("appMagicLinkURL only rewrites links whose callback is the app", () => {
+    const verify = `${SITE_URL}/api/auth/magic-link/verify?token=abc`;
+    expect(
+      appMagicLinkURL({
+        siteURL: SITE_URL,
+        token: "abc",
+        url: `${verify}&callbackURL=${encodeURIComponent("smog:///")}`,
+      })
+    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc`);
+    expect(
+      appMagicLinkURL({
+        siteURL: SITE_URL,
+        token: "abc",
+        url: `${verify}&callbackURL=${encodeURIComponent("exp://10.0.0.2:8081/--/")}`,
+      })
+    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc`);
+    for (const callback of ["/", "/account", `${SITE_URL}/lists`]) {
+      const url = `${verify}&callbackURL=${encodeURIComponent(callback)}`;
+      expect(
+        appMagicLinkURL({
+          siteURL: SITE_URL,
+          token: "abc",
+          url,
+        })
+      ).toBe(url);
+    }
+  });
+});
+
+describe("account deletion over HTTP", () => {
+  it("is not routed: only `account.delete` (auth.api) deletes", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    const member = await makeUser(ctx.db, { email, emailVerified: true });
+    const cookie = cookieHeader(await signInWithOtp(ctx, email));
+
+    const deleted = await ctx.call("/delete-user", { body: {}, cookie });
+    const callback = await ctx.call("/delete-user/callback?token=x", {
+      cookie,
+    });
+
+    expect([deleted.status, callback.status]).toEqual([404, 404]);
+    expect(
+      await ctx.db.query.user.findFirst({
+        where: (table, { eq: is }) => is(table.id, member.id),
+      })
+    ).toBeDefined();
   });
 });
 

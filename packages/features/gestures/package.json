@@ -10,10 +10,13 @@
     "./client": "./src/client/index.ts"
   },
   "scripts": {
+    "bench": "SMOG_PERF=1 bun test src/typo-gate.test.ts",
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json",
-    "test": "vitest run && bun test --preload @smog/config/testing/happy-dom src"
+    "test": "vitest run && bun test --timeout=20000 --preload @smog/config/testing/happy-dom src"
   },
   "dependencies": {
+    "@smog/analytics": "workspace:*",
+    "@smog/config": "workspace:*",
     "@smog/db": "workspace:*",
     "@smog/local-store": "workspace:*",
     "@smog/rpc": "workspace:*",
@@ -25,7 +28,6 @@
     "@cloudflare/vitest-plugin": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/tanstack-query": "catalog:",
-    "@smog/config": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",

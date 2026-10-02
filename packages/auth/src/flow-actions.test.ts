@@ -88,6 +88,39 @@ describe("createFlowActions", () => {
     expect(used).toBe(2);
   });
 
+  test("a token handed to the call wins over the widget's", async () => {
+    const { calls, client } = fakeClient();
+    let used = 0;
+    const actions = createFlowActions(client, {
+      ...OPTIONS,
+      onCaptchaUsed: () => {
+        used += 1;
+      },
+    });
+    await actions.sendCode("a@smog.test", "sheet-token");
+    await actions.requestPasswordReset("a@smog.test", "sheet-token-2");
+    expect(calls).toEqual([
+      [
+        "sendVerificationOtp",
+        {
+          email: "a@smog.test",
+          fetchOptions: { headers: { [CAPTCHA_HEADER]: "sheet-token" } },
+          type: "sign-in",
+        },
+      ],
+      [
+        "requestPasswordReset",
+        {
+          email: "a@smog.test",
+          fetchOptions: { headers: { [CAPTCHA_HEADER]: "sheet-token-2" } },
+          redirectTo: "/reset-password",
+        },
+      ],
+    ]);
+    // The widget's token was not used, so it needs no reset.
+    expect(used).toBe(0);
+  });
+
   test("sends no header without a token", async () => {
     const { calls, client } = fakeClient();
     await createFlowActions(client, {

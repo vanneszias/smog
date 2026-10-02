@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createRouterClient, implement } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { AnalyticsProvider } from "@smog/analytics/react";
+import { createRecordingAnalytics } from "@smog/analytics/testing";
 import {
   createLocalStore,
   createMemoryAdapter,
@@ -16,8 +18,15 @@ import type { GestureSummary } from "../schema";
 import {
   CATALOG_STALE_TIME,
   CATEGORIES_STALE_TIME,
+  categoriesOptions,
+  gestureOptions,
+  gestureSearchOptions,
+  gesturesBrowseOptions,
+  gesturesPageOptions,
+  relatedOptions,
   SEARCH_DEBOUNCE_MS,
   useCategories,
+  useFeaturedGestures,
   useGesture,
   useGestureSearch,
   useGestures,
@@ -33,6 +42,11 @@ function summary(name: string): GestureSummary {
 const CATALOGUE = ["Aap", "Beer", "Hond", "Kat", "Vogel"].map(summary);
 
 interface Calls {
+  /**
+   * When set, every search waits for it: the test resolves it once it has
+   * seen the in-flight state (the placeholder), however slow the machine.
+   */
+  holdSearch?: Promise<void>;
   list: { category?: string[] | undefined; cursor?: string | undefined }[];
   related: string[];
   search: { category?: string[] | undefined; q: string }[];
@@ -54,7 +68,9 @@ function fakeApi(calls: Calls) {
           canonicalSlug: found.slug,
           description: "",
           keywords: [],
+          publishedAt: 0,
           sponsor: null,
+          updatedAt: 0,
         };
       }),
       categories: os.categories.handler(() => [
@@ -78,9 +94,7 @@ function fakeApi(calls: Calls) {
       }),
       search: os.search.handler(async ({ input }) => {
         calls.search.push({ category: input.category, q: input.q });
-        // Latency well above waitFor's polling, so the placeholder state
-        // (the next search in flight) is observable.
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await calls.holdSearch;
         const items = CATALOGUE.filter((item) =>
           item.name.toLowerCase().startsWith(input.q.toLowerCase())
         ).map((item) => ({
@@ -105,16 +119,26 @@ function setup() {
   });
   const store: LocalStore = createLocalStore(createMemoryAdapter());
   const api = fakeApi(calls);
+  const recorder = createRecordingAnalytics();
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <RpcProvider client={api.client} queryUtils={api.queryUtils}>
-          <LocalStoreProvider store={store}>{children}</LocalStoreProvider>
+          <AnalyticsProvider analytics={recorder.analytics}>
+            <LocalStoreProvider store={store}>{children}</LocalStoreProvider>
+          </AnalyticsProvider>
         </RpcProvider>
       </QueryClientProvider>
     );
   }
-  return { calls, queryClient, store, wrapper };
+  return {
+    calls,
+    events: recorder.events,
+    queryClient,
+    store,
+    utils: api.queryUtils,
+    wrapper,
+  };
 }
 
 function staleTimeOf(queryClient: QueryClient, procedure: string): unknown {
@@ -205,6 +229,103 @@ describe("useRelated", () => {
 });
 
 describe("useGestureSearch", () => {
+  test("sends search_performed once per settled search, never the text", async () => {
+    const { events, wrapper } = setup();
+    const { rerender, result } = renderHook(
+      ({ q }: { q: string }) =>
+        useGestureSearch({ category: ["dieren"], q, source: "submit" }),
+      { initialProps: { q: "" }, wrapper }
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    rerender({ q: "ho" });
+    rerender({ q: " hond " });
+    await waitFor(() =>
+      expect(result.current.data?.items.map((item) => item.name)).toEqual([
+        "Hond",
+      ])
+    );
+    rerender({ q: " hond " });
+    await waitFor(() => expect(events.length).toBeGreaterThan(1));
+    expect(events).toEqual([
+      {
+        name: "search_performed",
+        properties: {
+          category_count: 1,
+          has_results: true,
+          query_length: 0,
+          result_count: 5,
+          source: "submit",
+        },
+      },
+      {
+        name: "search_performed",
+        properties: {
+          category_count: 1,
+          has_results: true,
+          query_length: 4,
+          result_count: 1,
+          source: "submit",
+        },
+      },
+    ]);
+    expect(JSON.stringify(events)).not.toContain("hond");
+  });
+
+  test("a new source for the settled search counts again; a pending one waits", async () => {
+    const { events, wrapper } = setup();
+    interface Props {
+      q: string;
+      source: "filter_change" | "submit" | "recent_search";
+    }
+    const { rerender, result } = renderHook(
+      ({ q, source }: Props) => useGestureSearch({ q, source }),
+      {
+        initialProps: { q: "hond", source: "filter_change" } as Props,
+        wrapper,
+      }
+    );
+    await waitFor(() => expect(events).toHaveLength(1));
+    // Submit of the same, settled text.
+    rerender({ q: "hond", source: "submit" });
+    await waitFor(() => expect(events).toHaveLength(2));
+    // A recent search: the new source must not be pinned on the old text.
+    rerender({ q: "kat", source: "recent_search" });
+    await waitFor(() =>
+      expect(result.current.data?.items[0]?.name).toBe("Kat")
+    );
+    await waitFor(() => expect(events).toHaveLength(3));
+    expect(events.map((event) => [event.properties])).toEqual([
+      [expect.objectContaining({ query_length: 4, source: "filter_change" })],
+      [expect.objectContaining({ query_length: 4, source: "submit" })],
+      [expect.objectContaining({ query_length: 3, source: "recent_search" })],
+    ]);
+  });
+
+  test("track: false searches without search_performed (the shared-list add sheet)", async () => {
+    const { events, wrapper } = setup();
+    const { result } = renderHook(
+      () => useGestureSearch({ q: "hond", track: false }),
+      { wrapper }
+    );
+    await waitFor(() =>
+      expect(result.current.data?.items.map((item) => item.name)).toEqual([
+        "Hond",
+      ])
+    );
+    // Past the debounce and the fetch: still nothing.
+    await new Promise((resolve) => setTimeout(resolve, SEARCH_DEBOUNCE_MS));
+    expect(events).toEqual([]);
+  });
+
+  test("the browse list (no text, no category) is not a search", async () => {
+    const { events, wrapper } = setup();
+    const { result } = renderHook(() => useGestureSearch({ q: "" }), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(events).toEqual([]);
+  });
+
   test("debounces the query by 250 ms and sends only the settled text", async () => {
     expect(SEARCH_DEBOUNCE_MS).toBe(250);
     const { calls, wrapper } = setup();
@@ -232,28 +353,48 @@ describe("useGestureSearch", () => {
   });
 
   test("keeps the previous results while the next ones load", async () => {
-    const { wrapper } = setup();
+    const { calls, wrapper } = setup();
     const { rerender, result } = renderHook(
       ({ q }: { q: string }) => useGestureSearch({ category: ["dieren"], q }),
       { initialProps: { q: "hond" }, wrapper }
     );
     await waitFor(() => expect(result.current.data?.items).toHaveLength(1));
 
+    let release = (): void => undefined;
+    calls.holdSearch = new Promise((resolve) => {
+      release = resolve;
+    });
     rerender({ q: "kat" });
     // While debouncing and fetching, the "hond" results stay on screen.
     expect(result.current.data?.items[0]?.name).toBe("Hond");
-    await waitFor(
-      () => {
-        expect(result.current.isPlaceholderData).toBe(true);
-        expect(result.current.data?.items[0]?.name).toBe("Hond");
-      },
-      { interval: 10 }
-    );
+    // Held in flight: the placeholder stays until the test lets it go.
+    await waitFor(() => {
+      expect(result.current.isPlaceholderData).toBe(true);
+      expect(result.current.data?.items[0]?.name).toBe("Hond");
+    });
+    release();
 
     await waitFor(() =>
       expect(result.current.data?.items[0]?.name).toBe("Kat")
     );
     expect(result.current.isPlaceholderData).toBe(false);
+  });
+});
+
+describe("useFeaturedGestures", () => {
+  test("is the first gestures of the catalogue, one page, read from the SSR prefetch", async () => {
+    const { calls, queryClient, utils, wrapper } = setup();
+    await queryClient.prefetchQuery(gesturesPageOptions(utils.gestures, 3));
+    const before = calls.list.length;
+    const { result } = renderHook(() => useFeaturedGestures(3), { wrapper });
+    expect(result.current.data?.map((item) => item.name)).toEqual([
+      "Aap",
+      "Beer",
+      "Hond",
+    ]);
+    expect(result.current.isSuccess).toBe(true);
+    expect(calls.list).toHaveLength(before);
+    expect(staleTimeOf(queryClient, "list")).toBe(CATALOG_STALE_TIME);
   });
 });
 
@@ -275,5 +416,61 @@ describe("useRecentSearches", () => {
       await result.current.clear();
     });
     expect(result.current.items).toEqual([]);
+  });
+});
+
+describe("query option factories (SSR prefetch)", () => {
+  test("a prefetch with the factories is what the hooks read: no second fetch", async () => {
+    const { calls, queryClient, utils, wrapper } = setup();
+    await Promise.all([
+      queryClient.prefetchQuery(
+        gestureSearchOptions(utils.gestures, {
+          category: ["familie", "dieren"],
+          limit: 3,
+          q: " hond ",
+        })
+      ),
+      queryClient.prefetchInfiniteQuery(
+        gesturesBrowseOptions(utils.gestures, { category: ["dieren"] })
+      ),
+      queryClient.prefetchQuery(gestureOptions(utils.gestures, "hond")),
+      queryClient.prefetchQuery(relatedOptions(utils.gestures, "hond", 2)),
+      queryClient.prefetchQuery(categoriesOptions(utils.gestures)),
+    ]);
+    const before = {
+      list: calls.list.length,
+      related: calls.related.length,
+      search: calls.search.length,
+    };
+
+    const { result } = renderHook(
+      () => ({
+        browse: useGestures({ category: ["dieren"] }),
+        categories: useCategories(),
+        gesture: useGesture("hond"),
+        related: useRelated("hond", 2),
+        search: useGestureSearch({
+          category: ["dieren", "familie"],
+          limit: 3,
+          q: "hond",
+        }),
+      }),
+      { wrapper }
+    );
+
+    // Everything is there on the first render.
+    expect(result.current.search.data?.items.length).toBeGreaterThan(0);
+    expect(result.current.browse.data?.length).toBeGreaterThan(0);
+    expect(result.current.gesture.data?.name).toBe("Hond");
+    expect(result.current.related.data?.length).toBe(2);
+    expect(result.current.categories.data?.length).toBe(1);
+    await new Promise((resolve) => {
+      setTimeout(resolve, SEARCH_DEBOUNCE_MS + 50);
+    });
+    expect({
+      list: calls.list.length,
+      related: calls.related.length,
+      search: calls.search.length,
+    }).toEqual(before);
   });
 });

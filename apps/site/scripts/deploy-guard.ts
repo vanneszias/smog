@@ -75,6 +75,34 @@ export function checkDevTools(
   }
 }
 
+/**
+ * Strings only Mux Player's bundle contains (its software name and element
+ * class). `@smog/ui-web`'s VideoPlayer imports it on the client only, so the
+ * Worker bundle must not carry the ~2 MB player.
+ */
+export const MUX_PLAYER_MARKERS = [
+  '"mux-player-react"',
+  "MuxPlayerElement",
+] as const;
+
+const SERVER_DIR = join("dist", "server");
+
+/** The Worker build (`dist/server`) must not contain Mux Player. */
+export function checkServerHasNoVideoPlayer(files: readonly BuiltFile[]): void {
+  const found = files
+    .filter(
+      (file) =>
+        file.path.includes(SERVER_DIR) &&
+        MUX_PLAYER_MARKERS.some((marker) => file.content.includes(marker))
+    )
+    .map((file) => file.path);
+  if (found.length > 0) {
+    throw new Error(
+      `[deploy-guard] the Worker build bundles Mux Player: ${found.join(", ")}. VideoPlayer must load it on the client only.`
+    );
+  }
+}
+
 const DIST_DIR = fileURLToPath(new URL("../dist", import.meta.url));
 
 function readBuiltFiles(dir: string): BuiltFile[] {
@@ -101,7 +129,9 @@ if (import.meta.main) {
       process.env.CLOUDFLARE_ENV,
       readBuiltConfig(BUILT_CONFIG_PATH)
     );
-    checkDevTools(env, readBuiltFiles(DIST_DIR));
+    const files = readBuiltFiles(DIST_DIR);
+    checkDevTools(env, files);
+    checkServerHasNoVideoPlayer(files);
     console.log(`deploy-guard: ok (${env})`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

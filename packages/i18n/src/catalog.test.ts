@@ -72,6 +72,41 @@ describe("catalogues", () => {
     }
   });
 
+  test("the lists messages say each thing once (one key per message)", () => {
+    // Quotes and placeholder names aside, two keys with one text are one message.
+    const normalize = (text: string) =>
+      text
+        .replace(PLACEHOLDER, "{}")
+        .replace(/[“”«»"\u00A0]/g, "")
+        .trim()
+        .toLowerCase();
+    const seen = new Map<string, string>();
+    const duplicates: string[] = [];
+    for (const [key, forms] of canonical) {
+      if (!key.startsWith("lists.")) {
+        continue;
+      }
+      for (const text of forms.values()) {
+        const other = seen.get(normalize(text));
+        if (other && other !== key) {
+          duplicates.push(`${other} = ${key}`);
+        }
+        seen.set(normalize(text), key);
+      }
+    }
+    expect(duplicates).toEqual([]);
+    // Retired duplicates: `lists.addedTo`, `lists.removedFrom` and
+    // `lists.sharedView.*` are the ones both apps use.
+    for (const retired of [
+      "lists.added",
+      "lists.removed",
+      "lists.sharedBy",
+      "lists.sharedSignIn",
+    ]) {
+      expect(canonical.has(retired)).toBe(false);
+    }
+  });
+
   for (const locale of LOCALES) {
     describe(locale, () => {
       const groups = byBaseKey(locale);

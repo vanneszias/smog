@@ -173,11 +173,23 @@ export function reorderList(
 
 // Consent and preferences
 
+/**
+ * Records the analytics decision. `mirroredFrom` marks a copy of a
+ * signed-in account's decision (its user id); a guest's own choice has none.
+ */
 export function setConsent(
   analytics: boolean,
-  now: number = Date.now()
+  now: number = Date.now(),
+  mirroredFrom?: string
 ): Mutator {
-  return (data) => ({ ...data, consent: { analytics, decidedAt: now } });
+  return (data) => ({
+    ...data,
+    consent: {
+      analytics,
+      decidedAt: now,
+      ...(mirroredFrom ? { mirroredFrom } : {}),
+    },
+  });
 }
 
 export function setPreferences(
@@ -210,4 +222,15 @@ export function dismissImportFor(userId: string): Mutator {
       },
     };
   };
+}
+
+/** Hides the app banner on this device for good (the first dismissal wins). */
+export function dismissAppBanner(at: number = Date.now()): Mutator {
+  return (data) =>
+    data.preferences.appBannerDismissedAt === undefined
+      ? {
+          ...data,
+          preferences: { ...data.preferences, appBannerDismissedAt: at },
+        }
+      : data;
 }

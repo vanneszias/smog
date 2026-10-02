@@ -3,6 +3,7 @@ import {
   blockingViolations,
   ORIGIN,
   signInWithApi,
+  stubMux,
   watchErrors,
 } from "./helpers";
 
@@ -12,7 +13,12 @@ const THEMES = ["light", "dark"] as const;
 const DARK = /\bdark\b/;
 
 const PAGES = [
-  { heading: "SMOG & Co", name: "home", path: "/", signedIn: false },
+  {
+    heading: "Gebaren die je spraak ondersteunen",
+    name: "home",
+    path: "/",
+    signedIn: false,
+  },
   {
     heading: "Aanmelden of registreren",
     name: "sign-in",
@@ -29,6 +35,11 @@ async function setTheme(page: Page, theme: string): Promise<void> {
 }
 
 test.describe("app shell", () => {
+  // The home page shows featured gestures: answer their Mux stills locally.
+  test.beforeEach(async ({ page }) => {
+    await stubMux(page);
+  });
+
   for (const { heading, name, path, signedIn } of PAGES) {
     for (const width of WIDTHS) {
       test(`${name} at ${width}px in light and dark`, async ({ page }) => {
@@ -100,6 +111,40 @@ test.describe("app shell", () => {
     const theme = cookies.find((cookie) => cookie.name === "theme");
     expect(theme?.value).toBe("dark");
     expect(theme?.sameSite).toBe("Lax");
+    expect(errors).toEqual([]);
+  });
+
+  test("signed in, the language menu also saves the account's language (account.updateProfile)", async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    await signInWithApi(page);
+    await page.setViewportSize({ height: 900, width: 1280 });
+    const calls: string[] = [];
+    page.on("request", (request) => {
+      const { pathname } = new URL(request.url());
+      if (pathname.startsWith("/api/")) {
+        calls.push(pathname);
+      }
+    });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const saved = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/rpc/account/updateProfile") &&
+        response.ok()
+    );
+    await page.getByRole("button", { name: "Taal wijzigen" }).click();
+    await page.getByRole("menuitemradio", { name: "Français" }).click();
+    await saved;
+    await expect(page.locator("html")).toHaveAttribute("lang", "fr");
+    expect(calls).not.toContain("/api/auth/update-user");
+
+    // Another browser of this account, with no locale cookie: French.
+    await page.context().clearCookies({ name: "locale" });
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("lang", "fr");
     expect(errors).toEqual([]);
   });
 

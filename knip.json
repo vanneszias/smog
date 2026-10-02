@@ -31,6 +31,10 @@
       "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}", "guard/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },
+    "packages/analytics": {
+      "entry": ["src/**/*.test.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
     "packages/rpc": {
       "entry": ["test/**/*.test.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"]
@@ -38,6 +42,11 @@
     "packages/features/*": {
       "entry": ["test/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["cloudflare"]
+    },
+    "packages/features/admin": {
+      "entry": ["test/**/*.test.ts", "test/helpers.ts"],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },
     "packages/api": {
@@ -55,6 +64,7 @@
       "entry": [
         "src/routes/**/*.{ts,tsx}",
         "test/**/*.test.ts",
+        "src/**/*.test.{ts,tsx}",
         "scripts/*.ts",
         "e2e/**/*.spec.ts"
       ],

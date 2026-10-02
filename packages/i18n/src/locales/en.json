@@ -22,11 +22,13 @@
     "search": "Search",
     "send": "Send",
     "share": "Share",
-    "yes": "Yes"
+    "yes": "Yes",
+    "exploreGestures": "Explore gestures"
   },
   "a11y": {
     "skipToContent": "Skip to content",
     "skipToNavigation": "Skip to navigation",
+    "noscript": "Turn on JavaScript to search and to use favorites, lists and your account.",
     "mainNavigation": "Main navigation",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
@@ -60,7 +62,9 @@
     "pauseVideo": "Pause video",
     "dragHandle": "Drag to reorder",
     "otpDigit": "Digit {{index}} of {{length}}",
-    "userMenu": "Account menu"
+    "userMenu": "Account menu",
+    "favorite": "Favorite",
+    "gestureVideo": "Gesture video"
   },
   "nav": {
     "home": "Home",
@@ -150,7 +154,17 @@
       "title": "Check your inbox",
       "description": "We sent a sign-in link to {{email}}. Open it to sign in.",
       "resend": "Send the link again",
-      "resent": "We sent you a new link."
+      "resent": "We sent you a new link.",
+      "appTitle": "Sign in to the app",
+      "appDescription": "This link signs you in to the SMOG & Co app. Open it on the phone that has the app.",
+      "continueInBrowser": "Sign in in this browser",
+      "confirmTitle": "Sign in with the link from your email?",
+      "confirmDescription": "Only continue if you asked for this link yourself. You'll see which account you're signed in to.",
+      "confirm": "Sign in",
+      "switchTitle": "Switch account?",
+      "switchDescription": "You're signed in as {{current}}. This link may sign you in to a different account.",
+      "switch": "Switch account",
+      "wrongAccount": "This link signs in to another account."
     },
     "checkInbox": {
       "openMail": "Open your mail app",
@@ -185,9 +199,14 @@
       "unsupported": "Your device or browser doesn't support passkeys."
     },
     "captcha": {
-      "label": "Security check"
+      "label": "Security check",
+      "description": "Just checking that you're not a robot. This takes a few seconds.",
+      "appOnly": "This page only works in the SMOG & Co app.",
+      "failed": "The security check didn't work. Please try again.",
+      "retry": "Try again"
     },
     "signedIn": "You're signed in.",
+    "signedInAs": "You're signed in as {{email}}.",
     "signingIn": "Signing you in…",
     "signedOut": "You're signed out.",
     "errors": {
@@ -252,10 +271,169 @@
       "title": "Page not found",
       "description": "This page doesn't exist (anymore).",
       "action": "Go to the home page"
-    }
+    },
+    "actionFailed": "That didn't work. Please try again."
   },
   "lists": {
-    "ownerFallback": "a SMOG user"
+    "ownerFallback": "a SMOG user",
+    "addToList": "Save to list",
+    "noLists": "You don't have any lists yet.",
+    "newList": "New list",
+    "newListPlaceholder": "Name of the list",
+    "create": "Create",
+    "empty": {
+      "title": "No lists yet",
+      "description": "Group gestures in lists, for a lesson or a theme."
+    },
+    "emptyList": {
+      "title": "This list is empty",
+      "description": "Add gestures from their page with “Save to list”."
+    },
+    "share": {
+      "viewTitle": "View link",
+      "viewDescription": "Anyone with this link can view the list.",
+      "editTitle": "Edit link",
+      "editDescription": "Anyone with this link can edit the list after signing in.",
+      "linkLabel": "Link",
+      "copyLink": "Copy link",
+      "revoke": "Revoke link",
+      "revokeTitle": "Revoke this link?",
+      "revokeDescription": "People who have the link lose access right away. You can create a new link later.",
+      "revokeConfirm": "Revoke",
+      "title": "Share list",
+      "description": "Create a link to send this list to others.",
+      "createView": "Create a view link",
+      "createEdit": "Create an edit link",
+      "send": "Send link",
+      "message": "{{name}}: {{url}}",
+      "signInTitle": "Sign in to share",
+      "signInDescription": "Sharing a list needs an account. Your lists come along when you sign in.",
+      "copied": "Link copied",
+      "copyFailed": "Copying didn't work. The link is {{url}}"
+    },
+    "itemCount_one": "{{count}} gesture",
+    "itemCount_other": "{{count}} gestures",
+    "shared": "Shared",
+    "actions": "List actions",
+    "rename": "Rename",
+    "nameLabel": "Name",
+    "delete": "Delete list",
+    "deleteTitle": "Delete this list?",
+    "deleteDescription": "“{{name}}” will be deleted. The gestures themselves stay.",
+    "deleted": "List deleted",
+    "addedTo": "Added to “{{name}}”",
+    "removedFrom": "Removed from “{{name}}”",
+    "itemActions": "Actions for {{name}}",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "removeItem": "Remove from list",
+    "reorderFailed": "The order couldn't be saved.",
+    "notFound": {
+      "title": "List not found",
+      "description": "This link doesn't work (anymore), or the list is private."
+    },
+    "sharedCanEdit": "You can edit this list.",
+    "description": "Group gestures for a lesson, a theme or at home.",
+    "all": "All lists",
+    "descriptionLabel": "Description",
+    "renameTitle": "Edit list",
+    "select": {
+      "title": "Choose a list",
+      "description": "Select a list to see the gestures in it."
+    },
+    "reorder": {
+      "instructions": "Press space or Enter to pick up a gesture. Move it with the arrow keys and press space or Enter again to drop it. Escape cancels.",
+      "picked": "Picked up {{name}}, position {{position}} of {{total}}.",
+      "moved": "Moved {{name}} to position {{position}} of {{total}}.",
+      "dropped": "Dropped {{name}} at position {{position}} of {{total}}.",
+      "cancelled": "Move cancelled. {{name}} is back at position {{position}}.",
+      "failed": "The new order couldn't be saved."
+    },
+    "sharedView": {
+      "by": "Shared by {{owner}}",
+      "viewOnly": "View only",
+      "editable": "Editable",
+      "signInToEdit": "Sign in to add or remove gestures.",
+      "add": "Add gestures",
+      "addTitle": "Add gestures to “{{name}}”",
+      "addOne": "Add {{name}}",
+      "inList": "In the list"
+    }
+  },
+  "gesture": {
+    "sponsored": "Sponsored",
+    "disclaimer": {
+      "title": "Important notice"
+    },
+    "videoComplete": {
+      "1": "These videos are support, not a replacement for a course or initiation. <course>Click here</course> for more info.",
+      "2": "If you want to take a course after watching these videos, <course>click here</course>.",
+      "3": "If you want more info about the underlying theory of SMOG, take a course. <course>Click here</course>.",
+      "4": "The gestures are protected. Don't invent others.",
+      "5": "Never learn the gestures only from these videos, but take a course or initiation.",
+      "6": "Want to know more about SMOG and its origin? <course>Click here</course>.",
+      "7": "Want to know more about SMOG? Send an email to info@smog.vlaanderen"
+    },
+    "about": "About this gesture",
+    "keywords": "Related concepts",
+    "related": "Related gestures",
+    "sponsoredBy": "Sponsored by {{name}}",
+    "share": "Share gesture",
+    "shareMessage": "{{name}} in SMOG: {{url}}",
+    "notFound": {
+      "title": "Gesture not found",
+      "description": "This gesture doesn't exist (anymore)."
+    },
+    "screenshot": {
+      "title": "Share this gesture?",
+      "message": "You took a screenshot. Send a link instead, so the video comes along.",
+      "share": "Share link",
+      "dismiss": "Not now"
+    },
+    "metaDescription": "Watch the SMOG gesture for “{{name}}” on video.",
+    "description": "Description",
+    "actions": "Actions for {{name}}",
+    "linkCopied": "Link copied",
+    "copyFailed": "Copying didn't work. The link is {{url}}",
+    "qr": {
+      "open": "QR code",
+      "title": "QR code for {{name}}",
+      "description": "Scan the code to open this gesture.",
+      "download": "Download QR code"
+    }
+  },
+  "search": {
+    "categories": "Categories",
+    "allCategories": "All",
+    "searching": "Searching…",
+    "resultCount_one": "{{count}} gesture",
+    "resultCount_other": "{{count}} gestures",
+    "idle": {
+      "title": "Look up a gesture",
+      "description": "Type a word, or choose a category."
+    },
+    "noResults": {
+      "title": "No gestures found",
+      "description": "Try another word or fewer categories."
+    },
+    "placeholder": "Search for a gesture",
+    "filter": "Filter by category",
+    "filterActive_one": "Filter by category, {{count}} selected",
+    "filterActive_other": "Filter by category, {{count}} selected",
+    "clearFilter": "Clear categories",
+    "showResults": "Show results",
+    "recent": "Recent searches",
+    "clearRecent": "Clear recent searches",
+    "refine": "Refine your search to see more gestures.",
+    "clearFilters": "Clear filters",
+    "browse": "Discover gestures"
+  },
+  "favorites": {
+    "empty": {
+      "title": "No favorites yet",
+      "description": "Tap the heart on a gesture to find it here quickly."
+    },
+    "description": "The gestures you saved with a heart."
   },
   "kit": {
     "close": "Close",
@@ -354,14 +532,28 @@
       "progressLabel": "Uploading video",
       "showToast": "Show notification",
       "openDialog": "Open dialog",
-      "openSheet": "Open panel"
+      "openSheet": "Open panel",
+      "gestureHello": "Hello",
+      "gestureThankYou": "Thank you",
+      "gestureEat": "Eat",
+      "gestureDrink": "Drink",
+      "gestureHappy": "Happy",
+      "gestureSad": "Sad",
+      "listSchool": "At school",
+      "listHome": "At home"
     },
     "unlockHint_one": "Tap {{count}} more time to open the developer tools.",
     "unlockHint_other": "Tap {{count}} more times to open the developer tools.",
     "unlocked": "Developer tools are on."
   },
   "home": {
-    "tagline": "Learn Flemish Sign Language gestures, whenever it suits you."
+    "tagline": "Learn Flemish Sign Language gestures, whenever it suits you.",
+    "featured": "Discover gestures",
+    "browseAll": "All gestures",
+    "title": "Gestures that support your speech",
+    "description": "Learn SMOG gestures with short videos. Look up a gesture, keep your favorites and make lists for your lesson.",
+    "searchLabel": "Look up a gesture",
+    "searchPlaceholder": "Look up a gesture, for example dog"
   },
   "footer": {
     "madeBy": "Made with ♡ by zias.be"
@@ -369,11 +561,281 @@
   "account": {
     "title": "Your account",
     "signedInAs": "Signed in as {{email}}",
-    "comingSoon": "Soon you will also manage your sign-in methods, privacy and preferences here."
+    "export": {
+      "sensitive": "This file holds your personal data and the active share links of your lists: anyone with a link can open that list. Keep it safe and do not share it."
+    },
+    "errors": {
+      "passwordRequired": "Enter your password to delete your account.",
+      "sessionNotFresh": "Sign in again to delete your account.",
+      "invalidPassword": "That password is not correct.",
+      "deleteFailed": "Your account could not be deleted. Please try again.",
+      "signInAgain": "For your security, sign in again to do this."
+    },
+    "guest": {
+      "title": "Sign in to manage your account",
+      "description": "Your favorites, lists and preferences are on this device. Sign in to keep them in your account, share lists and manage your data."
+    },
+    "profile": {
+      "title": "Profile",
+      "name": "Name",
+      "email": "Email address",
+      "emailHint": "Your email address can't be changed.",
+      "saved": "Your profile has been saved."
+    },
+    "methods": {
+      "title": "Sign-in methods",
+      "description": "You can always sign in with a code or a link sent by email.",
+      "password": "Password",
+      "passwordSet": "You sign in with your email address and password.",
+      "passwordNone": "You don't have a password yet.",
+      "changePassword": "Change password",
+      "setPassword": "Set a password",
+      "setPasswordHint": "We'll email you a link to choose a password. After that you sign in again everywhere.",
+      "currentPassword": "Current password",
+      "passwordChanged": "Your password has been changed. Your other devices were signed out.",
+      "passkeys": "Passkeys",
+      "passkeysDescription": "Sign in with your fingerprint, face or device PIN.",
+      "noPasskeys": "You haven't added a passkey yet.",
+      "passkeyName": "Passkey",
+      "addedOn": "Added on {{date}}",
+      "removePasskey": "Remove passkey",
+      "removePasskeyTitle": "Remove this passkey?",
+      "removePasskeyDescription": "You will no longer be able to sign in with it.",
+      "passkeyRemoved": "The passkey has been removed.",
+      "linked": "Linked",
+      "notLinked": "Not linked",
+      "link": "Link",
+      "unlink": "Unlink",
+      "linkedToast": "{{provider}} has been linked.",
+      "unlinkTitle": "Unlink {{provider}}?",
+      "unlinkDescription": "You will no longer be able to sign in with {{provider}}. You can link it again later.",
+      "unlinked": "{{provider}} has been unlinked.",
+      "lastMethod": "This is your only sign-in method. Add another one first.",
+      "google": "Google",
+      "apple": "Apple"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "export": "Download my data",
+      "exportDescription": "A JSON file with your profile, favorites, lists, consent history and sponsorships.",
+      "exported": "Your data has been downloaded.",
+      "exportFailed": "Your data could not be downloaded. Please try again.",
+      "shareTitle": "Your SMOG data",
+      "policy": "Privacy policy"
+    },
+    "delete": {
+      "title": "Delete account",
+      "description": "This permanently deletes your account, favorites, lists and share links. Sponsorships are kept, as the law requires.",
+      "action": "Delete my account",
+      "dialogTitle": "Delete your account for good?",
+      "dialogDescription": "This can't be undone.",
+      "confirmLabel": "Type {{word}} to confirm",
+      "password": "Your password",
+      "deleted": "Your account has been permanently deleted.",
+      "signInAgain": "Sign in again"
+    },
+    "preferences": {
+      "languageHint": "When you're signed in, this is also the language of the emails we send you."
+    }
   },
   "settings": {
     "title": "Settings",
     "preferences": "Preferences",
     "about": "About the app"
+  },
+  "consent": {
+    "title": "Help improve SMOG",
+    "description": "With your permission we collect limited usage statistics to improve SMOG. We don't use them for advertising and don't follow you in other apps or on other websites.",
+    "privacyLink": "Read the privacy policy",
+    "allow": "Allow statistics",
+    "decline": "Only necessary",
+    "toggle": "Usage statistics",
+    "toggleDescription": "Share limited usage statistics to help improve SMOG.",
+    "saved": "Your choice has been saved.",
+    "saveFailed": "Your choice could not be saved. Please try again."
+  },
+  "appBanner": {
+    "badge": "New",
+    "title": "SMOG is now available on your phone!",
+    "description": "Download the app and learn gestures wherever you are.",
+    "appStorePrefix": "Download on the",
+    "googlePlayPrefix": "Get it on",
+    "dismiss": "Close the app banner"
+  },
+  "openInApp": {
+    "title": "Have the SMOG app?",
+    "description": "View this gesture in the app.",
+    "action": "Open in the app",
+    "getApp": "Get the app"
+  },
+  "legal": {
+    "lastUpdated": "Last updated on {{date}}",
+    "contents": "Contents",
+    "translationNotice": "This translation is provided for convenience; the Dutch version prevails.",
+    "readDutch": "Read the Dutch version",
+    "consentControl": "Your statistics choice",
+    "readingDutch": "You are reading the Dutch version, which prevails.",
+    "showTranslation": "Show the English translation"
+  },
+  "gestures": {
+    "description": "Look up SMOG gestures by word or category and watch them on video.",
+    "select": {
+      "title": "Choose a gesture",
+      "description": "Select a gesture in the list to see its video and details."
+    }
+  },
+  "maintenance": {
+    "documentTitle": "SMOG — Please bear with us",
+    "badge": "Maintenance in progress",
+    "title": "We'll be back soon",
+    "description": "SMOG is currently unavailable because of planned maintenance. We're hard at work and will be back online soon.",
+    "until": "We expect to be back by {{time}}."
+  },
+  "admin": {
+    "title": "Admin",
+    "rail": {
+      "label": "Admin",
+      "open": "Open the admin menu",
+      "dashboard": "Dashboard",
+      "gestures": "Gestures",
+      "categories": "Categories",
+      "users": "Users",
+      "audit": "Audit log",
+      "emails": "Emails",
+      "settings": "Settings"
+    },
+    "comingSoon": {
+      "title": "Coming in this phase",
+      "description": "This part of the admin is still being built."
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "description": "Where the catalogue and the accounts stand.",
+      "gestures": "Gestures",
+      "categories": "Categories",
+      "users": "Users",
+      "published_one": "{{count}} published",
+      "published_other": "{{count}} published",
+      "unpublished_one": "{{count}} hidden",
+      "unpublished_other": "{{count}} hidden",
+      "admins_one": "{{count}} admin",
+      "admins_other": "{{count}} admins",
+      "banned_one": "{{count}} banned",
+      "banned_other": "{{count}} banned",
+      "newUsers_one": "{{count}} new in 30 days",
+      "newUsers_other": "{{count}} new in 30 days",
+      "recentAudit": "Recent actions",
+      "allAudit": "Full audit log",
+      "noAudit": "No actions logged yet.",
+      "quickLinks": "Go to",
+      "newGesture": "New gesture",
+      "manageCategories": "Manage categories"
+    },
+    "audit": {
+      "title": "Audit log",
+      "description": "Every change made by an admin, newest first.",
+      "filters": {
+        "label": "Filters",
+        "action": "Action",
+        "targetType": "Type",
+        "actor": "By",
+        "from": "From",
+        "to": "Up to",
+        "all": "All",
+        "clear": "Clear filters"
+      },
+      "columns": {
+        "when": "When",
+        "action": "Action",
+        "target": "Target",
+        "actor": "By"
+      },
+      "empty": "No actions found.",
+      "deletedActor": "Deleted account",
+      "noTarget": "None",
+      "detail": {
+        "data": "Data",
+        "target": "Target",
+        "actor": "By",
+        "when": "When",
+        "open": "Open"
+      },
+      "nextPage": "Older actions",
+      "firstPage": "Newest actions",
+      "actions": {
+        "gesture": {
+          "create": "Gesture created",
+          "update": "Gesture edited",
+          "publish": "Gesture published",
+          "unpublish": "Gesture hidden",
+          "delete": "Gesture deleted",
+          "bulk_update": "Gestures bulk-edited"
+        },
+        "category": {
+          "create": "Category created",
+          "update": "Category edited",
+          "publish": "Category published",
+          "unpublish": "Category hidden",
+          "delete": "Category deleted",
+          "reorder": "Categories reordered"
+        },
+        "user": {
+          "role_change": "Role changed",
+          "ban": "User banned",
+          "unban": "User unbanned",
+          "delete": "User deleted",
+          "impersonate": "Signed in as user"
+        },
+        "sponsorship": {
+          "approve": "Sponsorship approved",
+          "reject": "Sponsorship rejected",
+          "request_changes": "Changes requested",
+          "mark_paid": "Marked as paid manually",
+          "cancel": "Sponsorship cancelled",
+          "retry_render": "Video render retried",
+          "force_expire": "Sponsorship ended",
+          "regenerate_token": "New edit link created"
+        },
+        "payment": {
+          "refund": "Payment refunded"
+        },
+        "maintenance": {
+          "enable": "Maintenance mode on",
+          "disable": "Maintenance mode off"
+        },
+        "export": {
+          "sponsorships_csv": "Sponsorships exported (CSV)"
+        },
+        "legacy": "Old log entry"
+      },
+      "targetTypes": {
+        "gesture": "Gesture",
+        "category": "Category",
+        "user": "User",
+        "sponsorship": "Sponsorship",
+        "payment": "Payment",
+        "list": "List",
+        "setting": "Setting",
+        "system": "System"
+      }
+    },
+    "gestures": {
+      "title": "Gestures"
+    },
+    "categories": {
+      "title": "Categories"
+    },
+    "mux": {
+      "title": "Video"
+    },
+    "users": {
+      "title": "Users"
+    },
+    "settings": {
+      "title": "Settings"
+    },
+    "emails": {
+      "title": "Emails"
+    }
   }
 }

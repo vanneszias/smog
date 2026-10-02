@@ -1,0 +1,1 @@
+CREATE INDEX `gesture_sort_name_idx` ON `gesture` (`sort_name`,`id`);

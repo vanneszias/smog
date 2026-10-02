@@ -22,11 +22,13 @@
     "search": "Zoeken",
     "send": "Versturen",
     "share": "Delen",
-    "yes": "Ja"
+    "yes": "Ja",
+    "exploreGestures": "Gebaren ontdekken"
   },
   "a11y": {
     "skipToContent": "Naar de inhoud",
     "skipToNavigation": "Naar de navigatie",
+    "noscript": "Zet JavaScript aan om te zoeken en om favorieten, lijsten en je account te gebruiken.",
     "mainNavigation": "Hoofdnavigatie",
     "openMenu": "Menu openen",
     "closeMenu": "Menu sluiten",
@@ -60,7 +62,9 @@
     "pauseVideo": "Video pauzeren",
     "dragHandle": "Slepen om de volgorde te wijzigen",
     "otpDigit": "Cijfer {{index}} van {{length}}",
-    "userMenu": "Accountmenu"
+    "userMenu": "Accountmenu",
+    "favorite": "Favoriet",
+    "gestureVideo": "Video van het gebaar"
   },
   "nav": {
     "home": "Home",
@@ -150,7 +154,17 @@
       "title": "Kijk in je mailbox",
       "description": "We stuurden een aanmeldlink naar {{email}}. Open die link om je aan te melden.",
       "resend": "Stuur de link opnieuw",
-      "resent": "We stuurden je een nieuwe link."
+      "resent": "We stuurden je een nieuwe link.",
+      "appTitle": "Aanmelden in de app",
+      "appDescription": "Deze link meldt je aan in de SMOG & Co-app. Open hem op de telefoon waarop de app staat.",
+      "continueInBrowser": "Aanmelden in deze browser",
+      "confirmTitle": "Aanmelden met de link uit je e-mail?",
+      "confirmDescription": "Open deze link alleen als je hem zelf hebt aangevraagd. Na het aanmelden zie je met welk account.",
+      "confirm": "Aanmelden",
+      "switchTitle": "Ander account gebruiken?",
+      "switchDescription": "Je bent aangemeld als {{current}}. Deze link kan je aanmelden met een ander account.",
+      "switch": "Ander account gebruiken",
+      "wrongAccount": "Deze link meldt je aan bij een ander account."
     },
     "checkInbox": {
       "openMail": "Open je mailapp",
@@ -185,9 +199,14 @@
       "unsupported": "Je toestel of browser ondersteunt geen passkeys."
     },
     "captcha": {
-      "label": "Beveiligingscontrole"
+      "label": "Beveiligingscontrole",
+      "description": "Even controleren of je geen robot bent. Dat duurt maar een paar seconden.",
+      "appOnly": "Deze pagina werkt alleen in de SMOG & Co-app.",
+      "failed": "De beveiligingscontrole is niet gelukt. Probeer het opnieuw.",
+      "retry": "Opnieuw proberen"
     },
     "signedIn": "Je bent aangemeld.",
+    "signedInAs": "Je bent aangemeld als {{email}}.",
     "signingIn": "Bezig met aanmelden…",
     "signedOut": "Je bent afgemeld.",
     "errors": {
@@ -252,10 +271,169 @@
       "title": "Pagina niet gevonden",
       "description": "Deze pagina bestaat niet (meer).",
       "action": "Naar de startpagina"
-    }
+    },
+    "actionFailed": "Dat lukte niet. Probeer het opnieuw."
   },
   "lists": {
-    "ownerFallback": "een SMOG-gebruiker"
+    "ownerFallback": "een SMOG-gebruiker",
+    "addToList": "Opslaan in lijst",
+    "noLists": "Je hebt nog geen lijsten.",
+    "newList": "Nieuwe lijst",
+    "newListPlaceholder": "Naam van de lijst",
+    "create": "Aanmaken",
+    "empty": {
+      "title": "Nog geen lijsten",
+      "description": "Groepeer gebaren in lijsten, voor een les of een thema."
+    },
+    "emptyList": {
+      "title": "Deze lijst is leeg",
+      "description": "Voeg gebaren toe vanaf hun pagina met “Opslaan in lijst”."
+    },
+    "share": {
+      "viewTitle": "Link om te bekijken",
+      "viewDescription": "Iedereen met deze link kan de lijst bekijken.",
+      "editTitle": "Link om te bewerken",
+      "editDescription": "Iedereen met deze link kan de lijst bewerken na het aanmelden.",
+      "linkLabel": "Link",
+      "copyLink": "Link kopiëren",
+      "revoke": "Link intrekken",
+      "revokeTitle": "Deze link intrekken?",
+      "revokeDescription": "Wie de link heeft, verliest meteen de toegang. Je kunt later een nieuwe link maken.",
+      "revokeConfirm": "Intrekken",
+      "title": "Lijst delen",
+      "description": "Maak een link om deze lijst naar anderen te sturen.",
+      "createView": "Link om te bekijken maken",
+      "createEdit": "Link om te bewerken maken",
+      "send": "Link versturen",
+      "message": "{{name}}: {{url}}",
+      "signInTitle": "Meld je aan om te delen",
+      "signInDescription": "Een lijst delen kan met een account. Je lijsten gaan mee als je je aanmeldt.",
+      "copied": "Link gekopieerd",
+      "copyFailed": "Kopiëren lukte niet. De link is {{url}}"
+    },
+    "itemCount_one": "{{count}} gebaar",
+    "itemCount_other": "{{count}} gebaren",
+    "shared": "Gedeeld",
+    "actions": "Acties voor de lijst",
+    "rename": "Naam wijzigen",
+    "nameLabel": "Naam",
+    "delete": "Lijst verwijderen",
+    "deleteTitle": "Deze lijst verwijderen?",
+    "deleteDescription": "“{{name}}” wordt verwijderd. De gebaren zelf blijven bestaan.",
+    "deleted": "Lijst verwijderd",
+    "addedTo": "Toegevoegd aan “{{name}}”",
+    "removedFrom": "Verwijderd uit “{{name}}”",
+    "itemActions": "Acties voor {{name}}",
+    "moveUp": "Naar boven",
+    "moveDown": "Naar beneden",
+    "removeItem": "Uit de lijst halen",
+    "reorderFailed": "De volgorde kon niet bewaard worden.",
+    "notFound": {
+      "title": "Lijst niet gevonden",
+      "description": "Deze link werkt niet (meer), of de lijst is privé."
+    },
+    "sharedCanEdit": "Je kunt deze lijst bewerken.",
+    "description": "Groepeer gebaren voor een les, een thema of thuis.",
+    "all": "Alle lijsten",
+    "descriptionLabel": "Beschrijving",
+    "renameTitle": "Lijst bewerken",
+    "select": {
+      "title": "Kies een lijst",
+      "description": "Selecteer een lijst om de gebaren erin te zien."
+    },
+    "reorder": {
+      "instructions": "Druk op spatie of Enter om een gebaar op te pakken. Verplaats het met de pijltjestoetsen en druk opnieuw op spatie of Enter om het neer te zetten. Escape annuleert.",
+      "picked": "{{name}} opgepakt, positie {{position}} van {{total}}.",
+      "moved": "{{name}} verplaatst naar positie {{position}} van {{total}}.",
+      "dropped": "{{name}} neergezet op positie {{position}} van {{total}}.",
+      "cancelled": "Verplaatsen geannuleerd. {{name}} staat terug op positie {{position}}.",
+      "failed": "De nieuwe volgorde kon niet worden bewaard."
+    },
+    "sharedView": {
+      "by": "Gedeeld door {{owner}}",
+      "viewOnly": "Alleen bekijken",
+      "editable": "Bewerkbaar",
+      "signInToEdit": "Meld je aan om gebaren toe te voegen of te verwijderen.",
+      "add": "Gebaren toevoegen",
+      "addTitle": "Gebaren toevoegen aan “{{name}}”",
+      "addOne": "{{name}} toevoegen",
+      "inList": "In de lijst"
+    }
+  },
+  "gesture": {
+    "sponsored": "Gesponsord",
+    "disclaimer": {
+      "title": "Belangrijke mededeling"
+    },
+    "videoComplete": {
+      "1": "Deze filmpjes zijn een ondersteuning, geen vervanging voor een cursus of initiatie. <course>Klik hier</course> voor meer info.",
+      "2": "Wil je na het bekijken van deze filmpjes een cursus volgen, <course>klik dan hier</course>.",
+      "3": "Wil je meer info over de achterliggende theorie van SMOG, volg dan een cursus. <course>Klik hier</course>.",
+      "4": "De gebaren zijn beschermd. Vind er geen anderen uit.",
+      "5": "Leer nooit de gebaren enkel vanuit deze filmpjes, maar volg een cursus of een initiatie.",
+      "6": "Wil je meer weten over SMOG en het ontstaan? <course>Klik hier</course>.",
+      "7": "Wil je meer weten over SMOG? Stuur een mail naar info@smog.vlaanderen"
+    },
+    "about": "Over dit gebaar",
+    "keywords": "Verwante begrippen",
+    "related": "Verwante gebaren",
+    "sponsoredBy": "Gesponsord door {{name}}",
+    "share": "Gebaar delen",
+    "shareMessage": "{{name}} in SMOG: {{url}}",
+    "notFound": {
+      "title": "Gebaar niet gevonden",
+      "description": "Dit gebaar bestaat niet (meer)."
+    },
+    "screenshot": {
+      "title": "Dit gebaar delen?",
+      "message": "Je nam een screenshot. Stuur liever een link, dan gaat de video mee.",
+      "share": "Link delen",
+      "dismiss": "Niet nu"
+    },
+    "metaDescription": "Bekijk het SMOG-gebaar voor “{{name}}” in video.",
+    "description": "Beschrijving",
+    "actions": "Acties voor {{name}}",
+    "linkCopied": "Link gekopieerd",
+    "copyFailed": "Kopiëren lukte niet. De link is {{url}}",
+    "qr": {
+      "open": "QR-code",
+      "title": "QR-code voor {{name}}",
+      "description": "Scan de code om dit gebaar te openen.",
+      "download": "QR-code downloaden"
+    }
+  },
+  "search": {
+    "categories": "Categorieën",
+    "allCategories": "Alle",
+    "searching": "Zoeken…",
+    "resultCount_one": "{{count}} gebaar",
+    "resultCount_other": "{{count}} gebaren",
+    "idle": {
+      "title": "Zoek een gebaar",
+      "description": "Typ een woord of kies een categorie."
+    },
+    "noResults": {
+      "title": "Geen gebaren gevonden",
+      "description": "Probeer een ander woord of minder categorieën."
+    },
+    "placeholder": "Zoek een gebaar",
+    "filter": "Filteren op categorie",
+    "filterActive_one": "Filteren op categorie, {{count}} gekozen",
+    "filterActive_other": "Filteren op categorie, {{count}} gekozen",
+    "clearFilter": "Categorieën wissen",
+    "showResults": "Resultaten tonen",
+    "recent": "Recente zoekopdrachten",
+    "clearRecent": "Recente zoekopdrachten wissen",
+    "refine": "Verfijn je zoekopdracht om meer gebaren te zien.",
+    "clearFilters": "Filters wissen",
+    "browse": "Gebaren ontdekken"
+  },
+  "favorites": {
+    "empty": {
+      "title": "Nog geen favorieten",
+      "description": "Tik op het hartje bij een gebaar om het hier snel terug te vinden."
+    },
+    "description": "De gebaren die je met een hartje hebt bewaard."
   },
   "kit": {
     "close": "Sluiten",
@@ -354,14 +532,28 @@
       "progressLabel": "Video uploaden",
       "showToast": "Melding tonen",
       "openDialog": "Dialoog openen",
-      "openSheet": "Paneel openen"
+      "openSheet": "Paneel openen",
+      "gestureHello": "Hallo",
+      "gestureThankYou": "Dank je",
+      "gestureEat": "Eten",
+      "gestureDrink": "Drinken",
+      "gestureHappy": "Blij",
+      "gestureSad": "Verdrietig",
+      "listSchool": "Op school",
+      "listHome": "Thuis"
     },
     "unlockHint_one": "Nog {{count}} keer tikken om de ontwikkelaarstools te openen.",
     "unlockHint_other": "Nog {{count}} keer tikken om de ontwikkelaarstools te openen.",
     "unlocked": "De ontwikkelaarstools staan aan."
   },
   "home": {
-    "tagline": "Leer gebaren in Vlaamse Gebarentaal, wanneer het jou past."
+    "tagline": "Leer gebaren in Vlaamse Gebarentaal, wanneer het jou past.",
+    "featured": "Ontdek gebaren",
+    "browseAll": "Alle gebaren",
+    "title": "Gebaren die je spraak ondersteunen",
+    "description": "Leer SMOG-gebaren met korte video's. Zoek een gebaar, bewaar je favorieten en maak lijsten voor je les.",
+    "searchLabel": "Zoek een gebaar",
+    "searchPlaceholder": "Zoek een gebaar, bijvoorbeeld hond"
   },
   "footer": {
     "madeBy": "Gemaakt met ♡ door zias.be"
@@ -369,11 +561,281 @@
   "account": {
     "title": "Je account",
     "signedInAs": "Aangemeld als {{email}}",
-    "comingSoon": "Binnenkort beheer je hier ook je aanmeldmethodes, privacy en voorkeuren."
+    "export": {
+      "sensitive": "Dit bestand bevat je persoonsgegevens en de actieve deellinks van je lijsten: wie een link heeft, kan die lijst openen. Bewaar het veilig en deel het niet."
+    },
+    "errors": {
+      "passwordRequired": "Vul je wachtwoord in om je account te verwijderen.",
+      "sessionNotFresh": "Meld je opnieuw aan om je account te verwijderen.",
+      "invalidPassword": "Dat wachtwoord klopt niet.",
+      "deleteFailed": "Je account verwijderen is niet gelukt. Probeer het opnieuw.",
+      "signInAgain": "Meld je voor je veiligheid opnieuw aan om dit te doen."
+    },
+    "guest": {
+      "title": "Meld je aan om je account te beheren",
+      "description": "Je favorieten, lijsten en voorkeuren staan nu op dit toestel. Meld je aan om ze in je account te bewaren, lijsten te delen en je gegevens te beheren."
+    },
+    "profile": {
+      "title": "Profiel",
+      "name": "Naam",
+      "email": "E-mailadres",
+      "emailHint": "Je e-mailadres kun je niet wijzigen.",
+      "saved": "Je profiel is bewaard."
+    },
+    "methods": {
+      "title": "Aanmeldmethodes",
+      "description": "Je kunt je altijd aanmelden met een code of een link per e-mail.",
+      "password": "Wachtwoord",
+      "passwordSet": "Je meldt je aan met je e-mailadres en wachtwoord.",
+      "passwordNone": "Je hebt nog geen wachtwoord.",
+      "changePassword": "Wachtwoord wijzigen",
+      "setPassword": "Wachtwoord instellen",
+      "setPasswordHint": "We sturen je een link om een wachtwoord te kiezen. Daarna meld je je overal opnieuw aan.",
+      "currentPassword": "Huidig wachtwoord",
+      "passwordChanged": "Je wachtwoord is gewijzigd. Je andere toestellen zijn afgemeld.",
+      "passkeys": "Passkeys",
+      "passkeysDescription": "Meld je aan met je vingerafdruk, gezicht of de pincode van je toestel.",
+      "noPasskeys": "Je hebt nog geen passkey toegevoegd.",
+      "passkeyName": "Passkey",
+      "addedOn": "Toegevoegd op {{date}}",
+      "removePasskey": "Passkey verwijderen",
+      "removePasskeyTitle": "Deze passkey verwijderen?",
+      "removePasskeyDescription": "Je kunt je er daarna niet meer mee aanmelden.",
+      "passkeyRemoved": "De passkey is verwijderd.",
+      "linked": "Gekoppeld",
+      "notLinked": "Niet gekoppeld",
+      "link": "Koppelen",
+      "unlink": "Ontkoppelen",
+      "linkedToast": "{{provider}} is gekoppeld.",
+      "unlinkTitle": "{{provider}} ontkoppelen?",
+      "unlinkDescription": "Je kunt je dan niet meer aanmelden met {{provider}}. Je kunt het later opnieuw koppelen.",
+      "unlinked": "{{provider}} is ontkoppeld.",
+      "lastMethod": "Dit is je enige aanmeldmethode. Voeg eerst een andere toe.",
+      "google": "Google",
+      "apple": "Apple"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "export": "Mijn gegevens downloaden",
+      "exportDescription": "Een JSON-bestand met je profiel, favorieten, lijsten, toestemmingen en sponsoringen.",
+      "exported": "Je gegevens zijn gedownload.",
+      "exportFailed": "Je gegevens downloaden is niet gelukt. Probeer het opnieuw.",
+      "shareTitle": "Je SMOG-gegevens",
+      "policy": "Privacybeleid"
+    },
+    "delete": {
+      "title": "Account verwijderen",
+      "description": "Dit verwijdert je account, favorieten, lijsten en deellinks definitief. Sponsoringen blijven bewaard, zoals de wet vraagt.",
+      "action": "Mijn account verwijderen",
+      "dialogTitle": "Je account definitief verwijderen?",
+      "dialogDescription": "Dit kun je niet ongedaan maken.",
+      "confirmLabel": "Typ {{word}} om te bevestigen",
+      "password": "Je wachtwoord",
+      "deleted": "Je account is definitief verwijderd.",
+      "signInAgain": "Opnieuw aanmelden"
+    },
+    "preferences": {
+      "languageHint": "Als je aangemeld bent, is dit ook de taal van de e-mails die we je sturen."
+    }
   },
   "settings": {
     "title": "Instellingen",
     "preferences": "Voorkeuren",
     "about": "Over de app"
+  },
+  "consent": {
+    "title": "Help SMOG verbeteren",
+    "description": "Met je toestemming verzamelen we beperkte gebruiksstatistieken om SMOG te verbeteren. We gebruiken ze niet voor advertenties en volgen je niet in andere apps of op andere websites.",
+    "privacyLink": "Lees het privacybeleid",
+    "allow": "Statistieken toestaan",
+    "decline": "Alleen noodzakelijke",
+    "toggle": "Gebruiksstatistieken",
+    "toggleDescription": "Deel beperkte gebruiksstatistieken om SMOG te helpen verbeteren.",
+    "saved": "Je keuze is bewaard.",
+    "saveFailed": "Je keuze bewaren is niet gelukt. Probeer het opnieuw."
+  },
+  "appBanner": {
+    "badge": "Nieuw",
+    "title": "SMOG is nu beschikbaar op je telefoon!",
+    "description": "Download de app en leer gebaren waar je ook bent.",
+    "appStorePrefix": "Download in de",
+    "googlePlayPrefix": "Beschikbaar op",
+    "dismiss": "Sluit de app-banner"
+  },
+  "openInApp": {
+    "title": "Heb je de SMOG-app?",
+    "description": "Bekijk dit gebaar in de app.",
+    "action": "Open in de app",
+    "getApp": "Nog geen app? Download hem"
+  },
+  "legal": {
+    "lastUpdated": "Laatst bijgewerkt op {{date}}",
+    "contents": "Inhoud",
+    "translationNotice": "Deze vertaling is er voor je gemak; de Nederlandse versie heeft voorrang.",
+    "readDutch": "Lees de Nederlandse versie",
+    "consentControl": "Je keuze voor statistieken",
+    "readingDutch": "Je leest de Nederlandse versie, die voorrang heeft.",
+    "showTranslation": "Toon de vertaling"
+  },
+  "gestures": {
+    "description": "Zoek SMOG-gebaren op woord of categorie en bekijk ze in video.",
+    "select": {
+      "title": "Kies een gebaar",
+      "description": "Selecteer een gebaar in de lijst om de video en de details te bekijken."
+    }
+  },
+  "maintenance": {
+    "documentTitle": "SMOG — Even geduld",
+    "badge": "Onderhoud bezig",
+    "title": "We zijn zo terug",
+    "description": "SMOG is momenteel niet beschikbaar vanwege gepland onderhoud. We zijn hard aan het werk en zijn binnenkort weer online.",
+    "until": "We verwachten terug te zijn op {{time}}."
+  },
+  "admin": {
+    "title": "Beheer",
+    "rail": {
+      "label": "Beheer",
+      "open": "Beheermenu openen",
+      "dashboard": "Overzicht",
+      "gestures": "Gebaren",
+      "categories": "Categorieën",
+      "users": "Gebruikers",
+      "audit": "Logboek",
+      "emails": "E-mails",
+      "settings": "Instellingen"
+    },
+    "comingSoon": {
+      "title": "Komt in deze fase",
+      "description": "Dit deel van het beheer wordt nog gebouwd."
+    },
+    "dashboard": {
+      "title": "Overzicht",
+      "description": "De stand van de catalogus en de accounts.",
+      "gestures": "Gebaren",
+      "categories": "Categorieën",
+      "users": "Gebruikers",
+      "published_one": "{{count}} gepubliceerd",
+      "published_other": "{{count}} gepubliceerd",
+      "unpublished_one": "{{count}} verborgen",
+      "unpublished_other": "{{count}} verborgen",
+      "admins_one": "{{count}} beheerder",
+      "admins_other": "{{count}} beheerders",
+      "banned_one": "{{count}} geblokkeerd",
+      "banned_other": "{{count}} geblokkeerd",
+      "newUsers_one": "{{count}} nieuw in 30 dagen",
+      "newUsers_other": "{{count}} nieuw in 30 dagen",
+      "recentAudit": "Recente acties",
+      "allAudit": "Volledig logboek",
+      "noAudit": "Nog geen acties gelogd.",
+      "quickLinks": "Snel naar",
+      "newGesture": "Nieuw gebaar",
+      "manageCategories": "Categorieën beheren"
+    },
+    "audit": {
+      "title": "Logboek",
+      "description": "Elke wijziging door een beheerder, nieuwste eerst.",
+      "filters": {
+        "label": "Filters",
+        "action": "Actie",
+        "targetType": "Soort",
+        "actor": "Door",
+        "from": "Van",
+        "to": "Tot en met",
+        "all": "Alles",
+        "clear": "Filters wissen"
+      },
+      "columns": {
+        "when": "Wanneer",
+        "action": "Actie",
+        "target": "Doel",
+        "actor": "Door"
+      },
+      "empty": "Geen acties gevonden.",
+      "deletedActor": "Verwijderd account",
+      "noTarget": "Geen",
+      "detail": {
+        "data": "Gegevens",
+        "target": "Doel",
+        "actor": "Door",
+        "when": "Wanneer",
+        "open": "Openen"
+      },
+      "nextPage": "Oudere acties",
+      "firstPage": "Nieuwste acties",
+      "actions": {
+        "gesture": {
+          "create": "Gebaar aangemaakt",
+          "update": "Gebaar bewerkt",
+          "publish": "Gebaar gepubliceerd",
+          "unpublish": "Gebaar verborgen",
+          "delete": "Gebaar verwijderd",
+          "bulk_update": "Gebaren in bulk bewerkt"
+        },
+        "category": {
+          "create": "Categorie aangemaakt",
+          "update": "Categorie bewerkt",
+          "publish": "Categorie gepubliceerd",
+          "unpublish": "Categorie verborgen",
+          "delete": "Categorie verwijderd",
+          "reorder": "Categorieën herschikt"
+        },
+        "user": {
+          "role_change": "Rol gewijzigd",
+          "ban": "Gebruiker geblokkeerd",
+          "unban": "Blokkering opgeheven",
+          "delete": "Gebruiker verwijderd",
+          "impersonate": "Aangemeld als gebruiker"
+        },
+        "sponsorship": {
+          "approve": "Sponsoring goedgekeurd",
+          "reject": "Sponsoring afgewezen",
+          "request_changes": "Wijzigingen gevraagd",
+          "mark_paid": "Handmatig als betaald gemarkeerd",
+          "cancel": "Sponsoring geannuleerd",
+          "retry_render": "Video opnieuw gemaakt",
+          "force_expire": "Sponsoring beëindigd",
+          "regenerate_token": "Nieuwe bewerklink gemaakt"
+        },
+        "payment": {
+          "refund": "Betaling terugbetaald"
+        },
+        "maintenance": {
+          "enable": "Onderhoudsmodus aan",
+          "disable": "Onderhoudsmodus uit"
+        },
+        "export": {
+          "sponsorships_csv": "Sponsorings geëxporteerd (CSV)"
+        },
+        "legacy": "Oude logregel"
+      },
+      "targetTypes": {
+        "gesture": "Gebaar",
+        "category": "Categorie",
+        "user": "Gebruiker",
+        "sponsorship": "Sponsoring",
+        "payment": "Betaling",
+        "list": "Lijst",
+        "setting": "Instelling",
+        "system": "Systeem"
+      }
+    },
+    "gestures": {
+      "title": "Gebaren"
+    },
+    "categories": {
+      "title": "Categorieën"
+    },
+    "mux": {
+      "title": "Video"
+    },
+    "users": {
+      "title": "Gebruikers"
+    },
+    "settings": {
+      "title": "Instellingen"
+    },
+    "emails": {
+      "title": "E-mails"
+    }
   }
 }

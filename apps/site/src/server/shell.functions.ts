@@ -1,4 +1,3 @@
-import { getSession } from "@smog/auth";
 import { type AuthUser, toAuthState } from "@smog/auth/react";
 import {
   type PublicAuthConfig,
@@ -20,7 +19,8 @@ import {
   THEME_COOKIE,
   type Theme,
 } from "../lib/preferences";
-import { getAuth, siteEnv } from "./auth";
+import { siteEnv } from "./auth";
+import { requestSession } from "./session";
 
 /** What every page needs before it renders (the root route's loader). */
 export interface Shell {
@@ -32,24 +32,24 @@ export interface Shell {
   user: AuthUser | null;
 }
 
-/** The request's signed-in user (one D1 read), or null. */
-async function requestUser(): Promise<AuthUser | null> {
-  const session = await getSession(getAuth(), getRequest().headers);
-  return toAuthState({ data: session, isPending: false }).user ?? null;
-}
-
 export const getShell = createServerFn().handler(async (): Promise<Shell> => {
   try {
     const { vars, worker } = siteEnv();
+    // The signed-in user (one D1 read), or null.
+    const session = await requestSession(getRequest());
+    const cookie = getCookie(LOCALE_COOKIE) ?? null;
     return {
       auth: publicAuthConfig(worker),
+      // This browser's choice (the cookie) first; signed in without one,
+      // the account's language (set in the app, say), then the browser's.
       locale: resolveLocale({
         acceptLanguage: getRequestHeader("accept-language") ?? null,
-        cookie: getCookie(LOCALE_COOKIE) ?? null,
+        cookie,
+        preference: cookie ? null : (session?.user.locale ?? null),
       }),
       siteUrl: vars.SITE_URL,
       theme: parseTheme(getCookie(THEME_COOKIE)),
-      user: await requestUser(),
+      user: toAuthState({ data: session, isPending: false }).user ?? null,
     };
   } catch (error) {
     console.error("[shell] Failed to load the shell:", error);
@@ -82,8 +82,3 @@ export const setLocale = createServerFn({ method: "POST" })
   .handler(({ data }): void => {
     setCookie(LOCALE_COOKIE, data, preferenceCookie(secureCookies()));
   });
-
-/** For guarded pages (`/account`): the signed-in user, or null. */
-export const getSessionUser = createServerFn().handler(
-  (): Promise<AuthUser | null> => requestUser()
-);

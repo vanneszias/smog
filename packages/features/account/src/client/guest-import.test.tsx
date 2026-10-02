@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { createRouterClient, implement } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { AnalyticsProvider } from "@smog/analytics/react";
+import { createRecordingAnalytics } from "@smog/analytics/testing";
 import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
 import { favoritesContract } from "@smog/favorites/contract";
 import { createI18n } from "@smog/i18n";
@@ -32,6 +34,7 @@ import {
   EMPTY_IMPORT_RESULT,
   type ImportGuestDataInput,
   type ImportResult,
+  UNDECIDED_CONSENT,
 } from "../schema";
 import { importGuestData, useGuestImport } from "./index";
 
@@ -44,6 +47,7 @@ const RESULT: ImportResult = {
 
 interface Server {
   calls: ImportGuestDataInput[];
+  consentReads: number;
   fail: boolean;
   /** Resolves when the call may answer (lets a test act in between). */
   gate?: Promise<void>;
@@ -53,18 +57,27 @@ interface Server {
 }
 
 function newServer(): Server {
-  return { calls: [], fail: false, idsCalls: 0 };
+  return { calls: [], consentReads: 0, fail: false, idsCalls: 0 };
 }
 
 /** The account contract (plus the reads the hook refreshes) as a real oRPC client. */
 function fakeApi(server: Server) {
   const os = implement({
-    account: accountContract,
+    account: {
+      consent: { get: accountContract.consent.get },
+      importGuestData: accountContract.importGuestData,
+    },
     favorites: { ids: favoritesContract.ids },
     lists: { mine: listsContract.mine },
   });
   const router = {
     account: os.account.router({
+      consent: {
+        get: os.account.consent.get.handler(() => {
+          server.consentReads += 1;
+          return UNDECIDED_CONSENT;
+        }),
+      },
       importGuestData: os.account.importGuestData.handler(async ({ input }) => {
         server.calls.push(input);
         await server.gate;
@@ -294,23 +307,26 @@ function setup(store: LocalStore, session: SessionHookResult) {
   });
   const auth = { current: session };
   const useSession = () => auth.current;
+  const recorder = createRecordingAnalytics();
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <I18nextProvider i18n={i18n}>
         <QueryClientProvider client={queryClient}>
           <RpcProvider client={api.client} queryUtils={api.queryUtils}>
-            <LocalStoreProvider store={store}>
-              {/* biome-ignore lint/performance/noJsxPropsBind: a stable test hook, defined once per setup. */}
-              <AuthStateProvider useSession={useSession}>
-                {children}
-              </AuthStateProvider>
-            </LocalStoreProvider>
+            <AnalyticsProvider analytics={recorder.analytics}>
+              <LocalStoreProvider store={store}>
+                {/* biome-ignore lint/performance/noJsxPropsBind: a stable test hook, defined once per setup. */}
+                <AuthStateProvider useSession={useSession}>
+                  {children}
+                </AuthStateProvider>
+              </LocalStoreProvider>
+            </AnalyticsProvider>
           </RpcProvider>
         </QueryClientProvider>
       </I18nextProvider>
     );
   }
-  return { auth, server, wrapper };
+  return { auth, events: recorder.events, server, wrapper };
 }
 
 /** Lets the hook see the loaded store (its `ready` state update). */
@@ -389,6 +405,54 @@ describe("useGuestImport", () => {
     expect(result.current.guestImport.pending).toBeNull();
     expect(store.getSnapshot().favorites).toEqual([]);
     await waitFor(() => expect(server.idsCalls).toBe(2));
+  });
+
+  test("accept reads the consent again: the device choice went too (review I1)", async () => {
+    const store = await guestStore();
+    const { server, wrapper } = setup(store, ANNA);
+    const { result } = renderHook(
+      () => {
+        const rpc = useRpcQuery<{
+          account: { consent: { get: typeof accountContract.consent.get } };
+        }>();
+        const consent = useQuery(rpc.account.consent.get.queryOptions());
+        return { consent, guestImport: useGuestImport() };
+      },
+      { wrapper }
+    );
+    await waitFor(() => expect(server.consentReads).toBe(1));
+    await act(async () => {
+      await result.current.guestImport.accept();
+    });
+    await waitFor(() => expect(server.consentReads).toBe(2));
+  });
+
+  test("a successful accept sends guest_data_imported with the counts only", async () => {
+    const store = await guestStore();
+    const { events, server, wrapper } = setup(store, ANNA);
+    server.result = { ...RESULT, listsMerged: 2 };
+    const { result } = renderHook(() => useGuestImport(), { wrapper });
+    await waitFor(() => expect(result.current.pending).not.toBeNull());
+    await act(async () => {
+      await result.current.accept();
+    });
+    expect(events).toEqual([
+      { name: "guest_data_imported", properties: { favorites: 2, lists: 3 } },
+    ]);
+  });
+
+  test("a failed accept sends nothing", async () => {
+    const store = await guestStore();
+    const { events, server, wrapper } = setup(store, ANNA);
+    server.fail = true;
+    const error = spyOn(console, "error").mockImplementation(() => undefined);
+    const { result } = renderHook(() => useGuestImport(), { wrapper });
+    await waitFor(() => expect(result.current.pending).not.toBeNull());
+    await act(async () => {
+      await result.current.accept();
+    });
+    expect(events).toEqual([]);
+    error.mockRestore();
   });
 
   test("a failed accept keeps the data and the prompt", async () => {

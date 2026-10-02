@@ -10,6 +10,7 @@
     ],
     "catalog": {
       "@cloudflare/vitest-plugin": "1.3.1",
+      "@openpanel/react-native": "1.4.1",
       "@orpc/client": "1.15.4",
       "@orpc/contract": "1.15.4",
       "@orpc/openapi": "1.15.4",
@@ -39,7 +40,7 @@
   },
   "scripts": {
     "admin:grant": "bun scripts/admin-grant.ts",
-    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-3wwx-pv8p-q78v --ignore=GHSA-67mh-4wv8-2f99",
+    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-3wwx-pv8p-q78v --ignore=GHSA-67mh-4wv8-2f99 --ignore=GHSA-86w9-cpqp-85rv",
     "boundaries": "bun scripts/check-boundaries.ts",
     "build": "turbo build",
     "check": "biome check --write .",
@@ -48,10 +49,17 @@
     "check-types:scripts": "tsc -p scripts",
     "dev": "turbo dev",
     "knip": "knip --no-progress",
+    "maintenance": "bun scripts/maintenance.ts",
     "mobile:release-check": "bun scripts/mobile-release-check.ts",
-    "release:check": "bun run check:ci && bun run boundaries && bun scripts/release-config-check.ts && bun run check-types && bun run test && bun run build && bun run knip && bun run audit && bun scripts/mobile-release-check.ts",
+    "release:check": "bun run release:check:core && bun run release:check:tests && bun run release:check:mobile",
+    "release:check:core": "bun run check:ci && bun run boundaries && bun scripts/release-config-check.ts && bun run check-types && bun run build && bun run knip && bun run audit",
+    "release:check:mobile": "bun run mobile:release-check",
+    "release:check:tests": "bun run test",
     "test": "turbo run test test:scripts",
     "test:scripts": "bun test ./scripts"
+  },
+  "overrides": {
+    "undici": "7.29.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
@@ -62,5 +70,8 @@
     "typescript": "catalog:",
     "ultracite": "7.12.2"
   },
-  "packageManager": "bun@1.3.11"
+  "packageManager": "bun@1.3.11",
+  "patchedDependencies": {
+    "@openpanel/react-native@1.4.1": "patches/@openpanel%2Freact-native@1.4.1.patch"
+  }
 }

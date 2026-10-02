@@ -1,3 +1,4 @@
+import { useAnalytics } from "@smog/analytics/react";
 import { useAuthState } from "@smog/auth/react";
 import type { FavoritesContract } from "@smog/favorites/contract";
 import { useTranslation } from "@smog/i18n/react";
@@ -6,16 +7,17 @@ import { dismissImportFor, type GuestData } from "@smog/local-store";
 import { useLocalStore, useLocalStoreInstance } from "@smog/local-store/react";
 import { useRpcClient, useRpcQuery } from "@smog/rpc/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { ImportResult } from "../schema";
 import {
   type AccountSlice,
   countGuestData,
   importGuestData,
 } from "./import-guest-data";
+import { useStoreReady } from "./store-ready";
 
 /** The reads an import changes, refetched once it succeeds. */
-interface ImportedSlice {
+interface ImportedSlice extends AccountSlice {
   favorites: FavoritesContract;
   lists: ListsContract;
 }
@@ -60,40 +62,18 @@ function selectSnapshot(data: GuestData): Snapshot {
   };
 }
 
-/** Whether the store has read its adapter (before that it holds defaults). */
-function useStoreReady(): boolean {
-  const store = useLocalStoreInstance();
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let active = true;
-    store.ready.then(
-      () => {
-        if (active) {
-          setReady(true);
-        }
-      },
-      (error: unknown) => {
-        // `ready` is documented never to reject; without it nothing is offered.
-        console.error("[account] Failed to load the local store:", error);
-      }
-    );
-    return () => {
-      active = false;
-    };
-  }, [store]);
-  return ready;
-}
-
 /**
  * The guest import prompt after sign-in or sign-up (spec §11), for both
  * apps; the apps render the sheet. `accept` runs `importGuestData`, then
- * refetches the account's favorites and lists so the API data shows.
+ * refetches the account's favorites, lists and consent so the API data
+ * shows.
  * Nothing is pending while the session loads, for a guest, or before the
  * local store has loaded.
  */
 export function useGuestImport(): GuestImport {
   const auth = useAuthState();
   const { t } = useTranslation();
+  const analytics = useAnalytics();
   const store = useLocalStoreInstance();
   const ready = useStoreReady();
   const snapshot = useLocalStore(selectSnapshot);
@@ -131,15 +111,25 @@ export function useGuestImport(): GuestImport {
     setState({ result: null, status: "importing", userId });
     const promise = (async () => {
       try {
-        // analytics: guest_data_imported {favorites_added, lists_created, lists_merged}
         const result = await importGuestData({
           client,
           store,
           untitledListName,
         });
+        analytics.track({
+          name: "guest_data_imported",
+          properties: {
+            favorites: result.favoritesAdded,
+            lists: result.listsCreated + result.listsMerged,
+          },
+        });
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: rpc.favorites.key() }),
           queryClient.invalidateQueries({ queryKey: rpc.lists.key() }),
+          // The device's consent choice went too (source `import`).
+          queryClient.invalidateQueries({
+            queryKey: rpc.account.consent.key(),
+          }),
         ]);
         setState({ result, status: "done", userId });
         return result;
@@ -153,7 +143,7 @@ export function useGuestImport(): GuestImport {
     })();
     running.current = { promise, userId };
     return promise;
-  }, [client, queryClient, rpc, store, untitledListName, userId]);
+  }, [analytics, client, queryClient, rpc, store, untitledListName, userId]);
 
   const dismiss = useCallback(async (): Promise<void> => {
     if (!userId) {

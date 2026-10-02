@@ -219,15 +219,58 @@ describe("gestures.search", () => {
     expect(result.total).toBe(4);
   });
 
-  it("uses at most 3 D1 round trips, typo tier included", async () => {
+  it("uses at most 2 D1 round trips on a cold isolate, typo tier included", async () => {
     await bumpCatalogVersion(env.KV);
+    const counted = countingD1(env.DB);
+    const result = await call(
+      gesturesRouter.search,
+      { q: "hnd" },
+      { context: context(createDb(counted.d1)) }
+    );
+    expect(result.items[0]).toMatchObject({ matchType: "fuzzy", name: "Hond" });
+    expect(counted.count()).toBeLessThanOrEqual(2);
+  });
+
+  it("uses 1 D1 round trip once the snapshot is warm", async () => {
+    await search("hnd");
     const counted = countingD1(env.DB);
     await call(
       gesturesRouter.search,
       { q: "hnd" },
       { context: context(createDb(counted.d1)) }
     );
-    expect(counted.count()).toBeLessThanOrEqual(3);
+    expect(counted.count()).toBe(1);
+  });
+
+  it("keeps the search page's SSR at 3 D1 reads: the session, the search, then categories from the same snapshot", async () => {
+    await bumpCatalogVersion(env.KV);
+    const counted = countingD1(env.DB);
+    const cold = context(createDb(counted.d1));
+    // The order of `prefetchBrowse` for a query.
+    await call(gesturesRouter.search, { q: "hond" }, { context: cold });
+    const categories = await call(gesturesRouter.categories, undefined, {
+      context: cold,
+    });
+    expect(categories.map((item) => item.name)).toEqual([
+      "Begroeten",
+      "Dieren",
+      "Eten en drinken",
+    ]);
+    // The session read is the third.
+    expect(counted.count()).toBe(2);
+  });
+
+  it("drops a typo match unpublished after this isolate loaded the snapshot", async () => {
+    // Warm the snapshot with Hond published, then unpublish it without a
+    // bump (a stale isolate within KV's propagation delay).
+    await search("hnd");
+    await db
+      .update(gesture)
+      .set({ publishedAt: null })
+      .where(eq(gesture.name, "Hond"));
+    const result = await search("hnd");
+    expect(names(result)).not.toContain("Hond");
+    expect(result.total).toBe(result.items.length);
   });
 });
 
@@ -318,6 +361,27 @@ describe("catalog projection", () => {
     const warm = await getCatalogProjection(countedDb, env.KV);
     expect(counted.count()).toBe(2);
     expect(cold).toContain(warm);
+  });
+
+  it("reads the version key with a 30 s KV cacheTtl (the minimum; the default is 60 s)", async () => {
+    const kv = spyKv(env.KV);
+    await getCatalogProjection(db, kv.binding);
+    expect(kv.gets).toEqual([[CATALOG_VERSION_KEY, { cacheTtl: 30 }]]);
+  });
+
+  it("serves categories from the snapshot until the version changes", async () => {
+    const before = await call(gesturesRouter.categories, undefined, {
+      context: context(),
+    });
+    await addCategory(db, "Familie");
+    expect(
+      await call(gesturesRouter.categories, undefined, { context: context() })
+    ).toEqual(before);
+    await bumpCatalogVersion(env.KV);
+    const after = await call(gesturesRouter.categories, undefined, {
+      context: context(),
+    });
+    expect(after.map((item) => item.name)).toContain("Familie");
   });
 
   it("holds normalised names, keywords, category names and slugs", async () => {

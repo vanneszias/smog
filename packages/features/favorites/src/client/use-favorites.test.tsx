@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createRouterClient, implement } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import { AnalyticsProvider } from "@smog/analytics/react";
+import { createRecordingAnalytics } from "@smog/analytics/testing";
 import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
 import { gesturesContract } from "@smog/gestures/contract";
 import type { GestureSummary } from "@smog/gestures/schema";
@@ -30,7 +32,10 @@ const [AAP, BEER, HOND] = CATALOGUE as [
   GestureSummary,
 ];
 
-/** Lets pending promises and timers run. */
+/**
+ * Lets pending promises and timers run. Only a yield: anything that waits
+ * for a server call or a render asserts with `waitFor` on the condition.
+ */
 function tick(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 10));
 }
@@ -152,15 +157,18 @@ function setup(mode: AuthMode, favorites: string[] = []) {
   const store: LocalStore = createLocalStore(createMemoryAdapter());
   const api = fakeApi(server);
   authMode = mode;
+  const recorder = createRecordingAnalytics();
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <RpcProvider client={api.client} queryUtils={api.queryUtils}>
-          <LocalStoreProvider store={store}>
-            <AuthStateProvider useSession={useFakeSession}>
-              {children}
-            </AuthStateProvider>
-          </LocalStoreProvider>
+          <AnalyticsProvider analytics={recorder.analytics}>
+            <LocalStoreProvider store={store}>
+              <AuthStateProvider useSession={useFakeSession}>
+                {children}
+              </AuthStateProvider>
+            </LocalStoreProvider>
+          </AnalyticsProvider>
         </RpcProvider>
       </QueryClientProvider>
     );
@@ -171,7 +179,23 @@ function setup(mode: AuthMode, favorites: string[] = []) {
     await act(() => store.ready);
     return hook;
   }
-  return { queryClient, render, server, store };
+  return { events: recorder.events, queryClient, render, server, store };
+}
+
+function collectionChanged(
+  action: "added" | "removed",
+  gestureId: string,
+  source: "gesture_detail" | "gesture_list" = "gesture_list"
+) {
+  return {
+    name: "gesture_collection_changed",
+    properties: {
+      action,
+      collection: "favorites",
+      gesture_id: gestureId,
+      source,
+    },
+  } as const;
 }
 
 afterEach(() => {
@@ -240,6 +264,30 @@ describe("useFavorites for a guest", () => {
     expect(server.calls).toEqual([]);
   });
 
+  test("keeps one catalogue query for the guest's favorites, scoped to the guest", async () => {
+    const { queryClient, render, store } = setup("signedOut");
+    await store.update(toggleFavorite(AAP.id));
+    const { result } = await render();
+    await waitFor(() => expect(result.current.items).toHaveLength(1));
+
+    for (const gesture of [BEER, HOND]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one tap after another
+      await act(async () => {
+        await result.current.toggle(gesture.id);
+        await tick();
+      });
+    }
+    await waitFor(() => expect(result.current.items).toHaveLength(3));
+
+    const byIds = queryClient
+      .getQueryCache()
+      .findAll({ queryKey: [["gestures", "byIds"]] });
+    // Every tap made a new variant; only the one shown is kept.
+    expect(byIds).toHaveLength(1);
+    // Scoped to the guest, so a sign-in drops it (`purgeOtherUsers`).
+    expect(byIds[0]?.queryKey.at(-1)).toEqual({ user: null });
+  });
+
   test("with no favorites, has no items and calls nothing", async () => {
     const { server, render } = setup("signedOut");
     const { result } = await render();
@@ -248,6 +296,39 @@ describe("useFavorites for a guest", () => {
     expect(result.current.items).toEqual([]);
     expect(result.current.hasMoreItems).toBe(false);
     expect(server.byIds).toEqual([]);
+  });
+});
+
+describe("useFavorites analytics", () => {
+  test("a guest toggle sends gesture_collection_changed with the hook's source", async () => {
+    const { events, render, store } = setup("signedOut");
+    await store.update(toggleFavorite(HOND.id));
+    const { result } = await render({ items: false, source: "gesture_detail" });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await act(async () => {
+      await result.current.toggle(BEER.id);
+      await result.current.toggle(HOND.id);
+    });
+    expect(events).toEqual([
+      collectionChanged("added", BEER.id, "gesture_detail"),
+      collectionChanged("removed", HOND.id, "gesture_detail"),
+    ]);
+  });
+
+  test("signed in, only a flip the server confirmed is sent", async () => {
+    const { events, render, server } = setup("signedIn", [AAP.id]);
+    const { result } = await render({ items: false });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await act(async () => {
+      await result.current.toggle(HOND.id);
+    });
+    expect(events).toEqual([collectionChanged("added", HOND.id)]);
+
+    server.fail = true;
+    await act(async () => {
+      await result.current.toggle(AAP.id).catch(() => undefined);
+    });
+    expect(events).toHaveLength(1);
   });
 });
 
@@ -383,9 +464,11 @@ describe("useFavorites when signed in", () => {
     // The second tap saw the first: net state is "not a favorite".
     expect(result.current.isFavorite(HOND.id)).toBe(false);
     // Flips are queued: the remove waits for the add.
-    expect(server.calls.filter((call) => call.includes(HOND.id))).toEqual([
-      `add:${HOND.id}`,
-    ]);
+    await waitFor(() =>
+      expect(server.calls.filter((call) => call.includes(HOND.id))).toEqual([
+        `add:${HOND.id}`,
+      ])
+    );
 
     await act(async () => {
       held.open();
@@ -417,7 +500,7 @@ describe("useFavorites when signed in", () => {
       rerender();
       await tick();
     });
-    expect(userQueries()).toEqual([]);
+    await waitFor(() => expect(userQueries()).toEqual([]));
     // Now a guest: the (empty) local store, not the old account data.
     expect(result.current.isFavorite(AAP.id)).toBe(false);
     expect(store.getSnapshot().favorites).toEqual([]);

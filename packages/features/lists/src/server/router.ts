@@ -9,6 +9,7 @@ import {
   ListsError,
   type ListsErrorCode,
   listMine,
+  listsContaining,
   removeItem,
   reorderList,
   updateList,
@@ -58,11 +59,17 @@ export function createListsRouter(deps: ListsRouterDeps) {
   });
 
   return os.router({
-    // analytics: gesture_collection_changed is sent by the client.
+    // Analytics: gesture_collection_changed is sent by the client (useList, useSharedList).
     addItem: os.addItem
       .use(requireUser)
       .handler(({ context, errors, input }) =>
         mapped(errors, () => addItem(context.db, context.user.id, input))
+      ),
+
+    containing: os.containing
+      .use(requireUser)
+      .handler(({ context, input }) =>
+        listsContaining(context.db, context.user.id, input.gestureId)
       ),
 
     create: os.create

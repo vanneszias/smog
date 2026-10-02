@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
+    "./fields": "./src/fields.ts",
     "./env": "./src/env.ts",
     "./web": "./src/web.ts",
     "./expo": "./src/expo.ts",

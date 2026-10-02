@@ -8,5 +8,11 @@
     },
     "types": ["vite/client", "@cloudflare/vitest-plugin/types"]
   },
-  "include": ["src", "test", "vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "src",
+    "test",
+    "build-defines.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
 }

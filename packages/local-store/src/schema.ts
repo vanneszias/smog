@@ -20,10 +20,22 @@ export const guestDataSchema = z.object({
     /** `null` while the guest has not decided. */
     analytics: z.boolean().nullable(),
     decidedAt: z.number().int().optional(),
+    /**
+     * Set when this is a copy of a signed-in account's decision (its user
+     * id), not a guest's own choice. Only a guest's own choice is ever
+     * sent to an account (a shared device must never pass one user's
+     * consent to another).
+     */
+    mirroredFrom: z.string().min(1).optional(),
   }),
   favorites: z.array(z.string()),
   lists: z.array(localListSchema),
   preferences: z.object({
+    /**
+     * When the web app banner (spec §9, inventory L-16) was dismissed on
+     * this device. Optional and additive, so stored v2 data still parses.
+     */
+    appBannerDismissedAt: z.number().int().optional(),
     /**
      * Signed-in user ids that dismissed the guest import prompt on this
      * device, oldest first (at most `IMPORT_DISMISSED_MAX`).

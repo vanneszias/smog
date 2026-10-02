@@ -1,0 +1,43 @@
+import { checkRateLimit } from "@smog/rpc";
+import { getAuth, siteEnv } from "./auth";
+import { clientIp } from "./context";
+
+/**
+ * POSTs that never need a limit: signing out and reading the session only
+ * act on the caller's own cookie.
+ */
+const UNLIMITED_POSTS = new Set([
+  "/api/auth/sign-out",
+  "/api/auth/get-session",
+]);
+
+/**
+ * `/api/auth/*`: Better Auth. Other POSTs (sign-in, sign-up, codes, resets,
+ * account changes) go through `RL_AUTH` per IP first: Better Auth's own
+ * limiter is a memory counter per isolate, so it is not a real limit on
+ * Workers. The route serves it, and so does the maintenance gate for the
+ * admin sign-in routes (`signInOnly`).
+ */
+export async function handleAuthRequest(
+  request: Request,
+  { signInOnly = false }: { signInOnly?: boolean } = {}
+): Promise<Response> {
+  if (
+    request.method === "POST" &&
+    !UNLIMITED_POSTS.has(new URL(request.url).pathname)
+  ) {
+    const { RL_AUTH } = siteEnv().rateLimits;
+    if (!(await checkRateLimit(RL_AUTH, `auth:${clientIp(request)}`))) {
+      return Response.json(
+        { code: "RATE_LIMITED" },
+        { headers: { "retry-after": "60" }, status: 429 }
+      );
+    }
+  }
+  try {
+    return await getAuth({ signInOnly }).handler(request);
+  } catch (error) {
+    console.error("[auth] Failed to handle an auth request:", error);
+    throw error;
+  }
+}

@@ -108,9 +108,12 @@ export function createFlowActions(
    * `onCaptchaUsed` runs afterwards (tokens are single-use).
    */
   const guarded = async (
+    given: string | undefined,
     call: (captcha: FetchOptions) => Response
   ): Promise<AuthResult> => {
-    const token = options.captchaToken?.();
+    // A token the flow asked for (the app's sheet) wins over the widget's.
+    const widget = given ? null : options.captchaToken?.();
+    const token = given ?? widget;
     try {
       return toAuthResult(
         await call(
@@ -120,31 +123,31 @@ export function createFlowActions(
         )
       );
     } finally {
-      if (token) {
+      if (widget) {
         options.onCaptchaUsed?.();
       }
     }
   };
   const { callbackURL, errorCallbackURL } = options;
   return {
-    requestPasswordReset: (email) =>
-      guarded((captcha) =>
+    requestPasswordReset: (email, token) =>
+      guarded(token, (captcha) =>
         client.requestPasswordReset({
           email,
           redirectTo: options.resetPasswordURL,
           ...captcha,
         })
       ),
-    sendCode: (email) =>
-      guarded((captcha) =>
+    sendCode: (email, token) =>
+      guarded(token, (captcha) =>
         client.emailOtp.sendVerificationOtp({
           email,
           type: "sign-in",
           ...captcha,
         })
       ),
-    sendMagicLink: (email) =>
-      guarded((captcha) =>
+    sendMagicLink: (email, token) =>
+      guarded(token, (captcha) =>
         client.signIn.magicLink({
           callbackURL,
           email,
@@ -153,8 +156,8 @@ export function createFlowActions(
           ...captcha,
         })
       ),
-    sendVerificationEmail: (email) =>
-      guarded((captcha) =>
+    sendVerificationEmail: (email, token) =>
+      guarded(token, (captcha) =>
         client.sendVerificationEmail({
           callbackURL: options.verifyEmailURL,
           email,
@@ -170,8 +173,8 @@ export function createFlowActions(
       const result = toAuthResult(await options.passkey());
       return result.ok ? result : { error: "passkeyFailed", ok: false };
     },
-    signInPassword: (email, password) =>
-      guarded((captcha) =>
+    signInPassword: (email, password, token) =>
+      guarded(token, (captcha) =>
         client.signIn.email({ callbackURL, email, password, ...captcha })
       ),
     signInSocial: async (provider) => {
@@ -195,8 +198,8 @@ export function createFlowActions(
         ? { ok: true }
         : { error: "socialFailed", ok: false };
     },
-    signUpPassword: (email, password, name) =>
-      guarded((captcha) =>
+    signUpPassword: (email, password, name, token) =>
+      guarded(token, (captcha) =>
         client.signUp.email({
           callbackURL: options.verifyEmailURL,
           email,

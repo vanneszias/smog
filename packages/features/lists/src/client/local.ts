@@ -4,9 +4,15 @@
  */
 import { ORPCError } from "@orpc/client";
 import type { GestureSummary } from "@smog/gestures/schema";
-import type { GuestData, LocalList, Mutator } from "@smog/local-store";
+import {
+  addToList,
+  type GuestData,
+  type LocalList,
+  type Mutator,
+  selectList,
+} from "@smog/local-store";
 import type { RpcClient } from "@smog/rpc/react";
-import type { ListItem, ListSummary } from "../schema";
+import { LIST_ITEMS_MAX, type ListItem, type ListSummary } from "../schema";
 import { BY_IDS_CHUNK, type ListsSlice } from "./slice";
 
 /**
@@ -39,6 +45,24 @@ export function selectLocalSummaries(data: GuestData): ListSummary[] {
   return data.lists
     .map(toLocalSummary)
     .sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
+}
+
+/**
+ * Appends the gesture to a device list (a no-op when present), under the
+ * account's `LIST_ITEMS_MAX` (`INVALID_STATE` beyond it, as on the server).
+ */
+export function addLocalItem(listId: string, gestureId: string): Mutator {
+  return (data) => {
+    const current = selectList(data, listId);
+    if (
+      current &&
+      !current.gestureIds.includes(gestureId) &&
+      current.gestureIds.length >= LIST_ITEMS_MAX
+    ) {
+      throw invalidState(`At most ${LIST_ITEMS_MAX} items`);
+    }
+    return addToList(listId, gestureId)(data);
+  };
 }
 
 /** Sets the name and/or the description (`null` clears it). */

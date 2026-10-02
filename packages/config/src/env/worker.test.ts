@@ -51,6 +51,16 @@ describe("workerSecretsSchema", () => {
     ).toBe(secret);
   });
 
+  test("the OpenPanel relay credentials are optional", () => {
+    const secrets = workerSecretsSchema.parse({
+      BETTER_AUTH_SECRET: secret,
+      OPENPANEL_CLIENT_ID: "id",
+      OPENPANEL_CLIENT_SECRET: "",
+    });
+    expect(secrets.OPENPANEL_CLIENT_ID).toBe("id");
+    expect(secrets.OPENPANEL_CLIENT_SECRET).toBeUndefined();
+  });
+
   test("treats an empty optional secret as unset", () => {
     const secrets = workerSecretsSchema.parse({
       BETTER_AUTH_SECRET: secret,

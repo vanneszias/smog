@@ -1,49 +1,6 @@
 import { exports } from "cloudflare:workers";
 import { beforeAll, describe, expect, it } from "vitest";
-
-const ORIGIN = "http://localhost:5173";
-const TOKEN_LINK =
-  /http:\/\/localhost:5173\/api\/auth\/verify-email\?token=\S+/;
-
-interface DevMail {
-  messages: { text: string; to: string }[];
-}
-
-/** Signs up, follows the verification link and returns the session cookie. */
-async function signedInCookie(): Promise<string> {
-  const email = `${crypto.randomUUID()}@smog.test`;
-  const signUp = await exports.default.fetch(
-    `${ORIGIN}/api/auth/sign-up/email`,
-    {
-      body: JSON.stringify({
-        email,
-        name: "A",
-        password: "correct horse battery",
-      }),
-      headers: { "content-type": "application/json", origin: ORIGIN },
-      method: "POST",
-    }
-  );
-  expect(signUp.status).toBe(200);
-  let link: string | undefined;
-  for (let attempt = 0; attempt < 50 && !link; attempt += 1) {
-    // biome-ignore lint/performance/noAwaitInLoops: polling until the background send lands.
-    const response = await exports.default.fetch(`${ORIGIN}/dev/mail.json`);
-    const { messages } = (await response.json()) as DevMail;
-    link = messages.find((m) => m.to === email)?.text.match(TOKEN_LINK)?.[0];
-    if (!link) {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
-  }
-  if (!link) {
-    throw new Error("no verification email");
-  }
-  const verified = await exports.default.fetch(link, { redirect: "manual" });
-  return verified.headers
-    .getSetCookie()
-    .map((cookie) => cookie.split(";")[0])
-    .join("; ");
-}
+import { ORIGIN, signedUp } from "./helpers";
 
 function multipart(): FormData {
   // A plain HTML <form enctype=multipart/form-data> body oRPC would accept.
@@ -56,7 +13,7 @@ describe("CSRF defence on /api/rpc", () => {
   let cookie = "";
 
   beforeAll(async () => {
-    cookie = await signedInCookie();
+    ({ cookie } = await signedUp());
   });
 
   async function myLists(): Promise<unknown[]> {

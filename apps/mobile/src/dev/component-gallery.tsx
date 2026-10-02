@@ -75,6 +75,7 @@ import {
   useState,
 } from "react";
 import { ScrollView, View } from "react-native";
+import { DomainGallery } from "./gallery-domain";
 
 /*
  * Settings → Developer tools → Component gallery: every kit component in
@@ -132,6 +133,7 @@ export function ComponentGallery(): ReactElement {
       <StatesSection />
       <ProgressSection />
       <BrandSection />
+      <DomainGallery />
     </ScrollView>
   );
 }

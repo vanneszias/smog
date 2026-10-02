@@ -3,6 +3,7 @@ export {
   bumpCatalogVersion,
   CATALOG_VERSION_KEY,
   type CatalogEntry,
+  getCatalogCategories,
   getCatalogProjection,
   INITIAL_CATALOG_VERSION,
 } from "./catalog-cache";
