@@ -98,7 +98,23 @@ accounts created in the last 30 days. Phase 6 adds the sponsorship stats.
 
 ### Users
 
-Task 5.
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.users.list` | `{ q?, role?: "user" \| "admin", banned?: boolean, cursor?, limit? (1..100, = 50) }` | `{ items: AdminUser[], nextCursor: string \| null }` | read |
+| `admin.users.get` | `{ id }` | `AdminUser & { methods: string[], sessions, favorites, lists }` | read |
+| `admin.users.setRole` | `{ userId, role }` | `{ user: AdminUser }` | `user.role_change` `{ from, to }` |
+| `admin.users.ban` | `{ userId, reason (1..200, trimmed), expiresInDays? (1..365) }` | `{ user: AdminUser }` | `user.ban` `{ reason, expiresAt }` |
+| `admin.users.unban` | `{ userId }` | `{ user: AdminUser }` | `user.unban` `{}` |
+| `admin.users.delete` | `{ userId, confirmEmail }` | `{ id }` | `user.delete` `{ hadSessions }` |
+
+- `AdminUser` is `{ id, name, email, emailVerified, role, banned, banReason, banExpires, createdAt }` (epoch ms). `banned` means a ban in force now (an expired ban reads `false`, with `banReason`/`banExpires` `null`); the `banned` filter means the same.
+- `list` reads D1 newest first with a `(created_at, id)` keyset. `q` is a literal substring of the email or the name (`instr`, so `%` and `_` are plain characters and a long email works; D1 refuses `LIKE` patterns over 50 bytes), case-insensitive for ASCII; a name is also matched as typed (`Émile`), not case-folded beyond ASCII.
+- `methods` are the account providers (`credential`, `google`, `apple`) plus `passkey`; `sessions` counts unexpired sessions; `favorites` and `lists` (owned) are counts. Phase 6 adds sponsorships by email.
+- The writes call Better Auth's `auth.api` (`setRole`, `banUser`, `unbanUser`, `removeUser`) with the request's headers, then write the audit entry (the change first; a failed entry is logged and rethrown, so the call fails after the change). Better Auth's `/api/auth/admin/*` HTTP endpoints are all 404 (`ADMIN_DISABLED_PATHS`).
+- A ban revokes every session of the account at once. A delete cascades the account's data; audit entries it wrote keep a `null` actor, and its `user.ban` entries lose their free-text reason (`reasonRemoved: true`) in the same batch as the `user.delete` entry. The audit data holds no email or name.
+- Guards, before any change: `INVALID_STATE` with `data.reason`: `self` (own role, ban or delete), `unchanged` (the role it has), `lastAdmin` (demoting the last admin whose ban is not in force; also enforced atomically by migration 0007's trigger), `targetBanned` (promoting an account whose ban is in force), `adminTarget` (ban or delete an admin: demote first), `alreadyBanned`, `notBanned`. A Better Auth refusal is typed: `FORBIDDEN` (the actor lost the role), `NOT_FOUND`, `BAD_REQUEST`. `NOT_FOUND` for an unknown account; `VALIDATION` when `confirmEmail` differs from the email (case-insensitive).
+- `bun run admin:grant` stays the way to make the first admin (spec §6); it also lifts a ban.
+- `account.delete` is `INVALID_STATE` for the last admin whose ban is not in force.
 
 ### Maintenance
 

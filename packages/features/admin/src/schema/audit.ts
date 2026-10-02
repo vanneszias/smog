@@ -7,6 +7,7 @@ import {
   AUDIT_ACTIONS,
   AUDIT_TARGET_TYPES,
   type AuditAction,
+  ROLES,
 } from "@smog/db/enums";
 import { z } from "zod";
 import { GESTURE_PATCH_FIELDS } from "./catalog";
@@ -71,8 +72,31 @@ const CATALOG_AUDIT_SCHEMAS = {
   }),
 } satisfies AuditSchemaBlock;
 
-/** Task 5: `user.*`. */
-const USER_AUDIT_SCHEMAS = {} satisfies AuditSchemaBlock;
+const auditRole = z.enum(ROLES);
+
+/**
+ * Task 5: `user.*`, one entry per target user (`target_type` `user`). No
+ * email or name: the entry outlives a deleted account (ruling 7, data
+ * minimisation); the target id links to the account while it exists.
+ */
+const USER_AUDIT_SCHEMAS = {
+  "user.ban": z.union([
+    z.object({
+      /** Epoch milliseconds; `null` for a ban without end. */
+      expiresAt: z.number().int().nullable(),
+      /** The admin's own words; dropped when the account is deleted. */
+      reason: z.string().min(1),
+    }),
+    // After `user.delete`: the free-text reason is gone (data minimisation).
+    z.object({
+      expiresAt: z.number().int().nullable(),
+      reasonRemoved: z.literal(true),
+    }),
+  ]),
+  "user.delete": z.object({ hadSessions: z.boolean() }),
+  "user.role_change": z.object({ from: auditRole, to: auditRole }),
+  "user.unban": z.object({}),
+} satisfies AuditSchemaBlock;
 
 /** Task 6: `maintenance.*`. */
 const MAINTENANCE_AUDIT_SCHEMAS = {} satisfies AuditSchemaBlock;

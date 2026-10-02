@@ -569,6 +569,7 @@
       "sessionNotFresh": "Sign in again to delete your account.",
       "invalidPassword": "That password is not correct.",
       "deleteFailed": "Your account could not be deleted. Please try again.",
+      "lastAdmin": "You are the only admin. Make another account an admin before you delete yours.",
       "signInAgain": "For your security, sign in again to do this."
     },
     "guest": {
@@ -1118,7 +1119,110 @@
       }
     },
     "users": {
-      "title": "Users"
+      "title": "Users",
+      "description": "Accounts, roles and bans. Every change is logged.",
+      "filters": {
+        "label": "Filters",
+        "search": "Search by name or email",
+        "role": "Role",
+        "status": "Status",
+        "all": "All",
+        "banned": "Banned",
+        "notBanned": "Not banned",
+        "clear": "Clear filters"
+      },
+      "roles": {
+        "user": "User",
+        "admin": "Admin"
+      },
+      "columns": {
+        "name": "Name",
+        "role": "Role",
+        "status": "Status",
+        "created": "Joined"
+      },
+      "status": {
+        "active": "Active",
+        "banned": "Banned",
+        "unverified": "Email not confirmed"
+      },
+      "you": "You",
+      "empty": "No accounts found.",
+      "nextPage": "Older accounts",
+      "firstPage": "Newest accounts",
+      "panel": {
+        "email": "Email",
+        "role": "Role",
+        "status": "Status",
+        "created": "Joined",
+        "methods": "Sign-in methods",
+        "noMethods": "Email code or link only",
+        "sessions": "Active sessions",
+        "favorites": "Favorites",
+        "lists": "Lists",
+        "banReason": "Ban reason",
+        "banUntil": "Banned until",
+        "banForever": "No end date",
+        "actions": "Actions",
+        "self": "This is your own account. Another admin has to change its role, ban it or delete it.",
+        "adminTarget": "Remove the admin role before you ban or delete this account.",
+        "bannedTarget": "Lift the ban before you make this account an admin.",
+        "notFound": "This account no longer exists."
+      },
+      "methods": {
+        "credential": "Password",
+        "google": "Google",
+        "apple": "Apple",
+        "passkey": "Passkey"
+      },
+      "promote": {
+        "action": "Make admin",
+        "title": "Make {{name}} an admin?",
+        "description": "Admins can change the catalogue, the accounts and the settings. It applies from their next page.",
+        "done": "{{name}} is now an admin."
+      },
+      "demote": {
+        "action": "Remove admin role",
+        "title": "Remove the admin role of {{name}}?",
+        "description": "They lose access to the admin at once.",
+        "done": "{{name}} is no longer an admin."
+      },
+      "ban": {
+        "action": "Ban",
+        "title": "Ban {{name}}?",
+        "description": "They are signed out on every device at once and cannot sign in while the ban lasts.",
+        "reason": "Reason",
+        "reasonHint": "Only admins see this.",
+        "duration": "Duration",
+        "forever": "No end date",
+        "days_one": "{{count}} day",
+        "days_other": "{{count}} days",
+        "done": "{{name}} is banned."
+      },
+      "unban": {
+        "action": "Lift ban",
+        "title": "Lift the ban on {{name}}?",
+        "description": "They can sign in again.",
+        "done": "The ban on {{name}} is lifted."
+      },
+      "delete": {
+        "action": "Delete account",
+        "title": "Delete the account of {{name}}?",
+        "description": "Their favorites, lists and sign-in methods are deleted for good. The audit log keeps its entries.",
+        "confirmLabel": "Type {{email}} to confirm",
+        "done": "The account is deleted."
+      },
+      "refused": {
+        "self": "You cannot change your own account here.",
+        "lastAdmin": "The last admin cannot lose the admin role.",
+        "adminTarget": "Remove the admin role first.",
+        "targetBanned": "Lift the ban first.",
+        "unchanged": "The account already has this role.",
+        "alreadyBanned": "This account is already banned.",
+        "notBanned": "This account is not banned.",
+        "notFound": "This account no longer exists.",
+        "emailMismatch": "The email address does not match."
+      }
     },
     "settings": {
       "title": "Settings"

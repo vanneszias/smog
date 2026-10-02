@@ -19,7 +19,7 @@ bun run audit                # bun audit --production (ignored advisories: docs/
 bun run mobile:release-check # expo-doctor + expo export (iOS + Android) + bundle size
 bun run release:check        # Everything CI runs, in order
 SMOG_OFFLINE=1 bun run release:check  # Same, on a machine without internet access
-bun run admin:grant --env <dev|staging|production> [--dry-run] <email>  # Give an account the admin role (dev: local D1, else remote)
+bun run admin:grant --env <dev|staging|production> [--dry-run] <email>  # Give an account the admin role and lift any ban (dev: local D1, else remote)
 bun run maintenance --env <dev|staging|production> on|off [--message …] [--until ISO] [--dry-run] [--yes]  # Maintenance mode (KV; production needs --yes)
 ```
 
