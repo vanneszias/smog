@@ -234,6 +234,7 @@ These are recorded here and go into `docs/DECISIONS.md` with the task that imple
       - the queues and their DLQs (`wrangler queues list` / `create`)
       - the R2 bucket, and its CORS (`wrangler r2 bucket cors set`)
       - It changes nothing that exists.
+      - **Staging creates, production checks.** `deploy.yml` runs it with `--create` for staging. For production it runs with `--check` and fails, printing the exact `wrangler` commands to run, unless the repository variable `SMOG_PROVISION_PRODUCTION` is `1` (the owner opts in). It never deletes or modifies an existing resource, in any env.
     - `deploy.yml` runs that script before the D1 migrations, and `release-config-check` asserts both that it does and the naming: `smog-<env>-email`, `-email-dlq`, `-sponsorship-events`, `-sponsorship-events-dlq`, `-media`, where every consumer has a DLQ.
 13. **Wizard URLs, R-11 and L-17.**
     - The wizard's preselect parameter is `?gesture=<slug>`. It applies only when the selection is empty and the gesture is available (S-03).
@@ -351,7 +352,7 @@ These are recorded here and go into `docs/DECISIONS.md` with the task that imple
 - `packages/render/{package.json,tsconfig*.json,src/contract.ts}` (only the `./contract` export: `renderInputSchema` v1 and the overlay layout constants of ruling 7), with tests.
 - `packages/email/src/templates/transactional/*.tsx`: the eight templates as **minimal stubs** (subject + one paragraph from `email.<id>.*` keys) with typed props, registered in `render.ts`, with samples in `samples.ts` and admin labels, so every later task type-checks. Task 2 designs them.
 - `packages/db`:
-  - `src/sql.ts`: move `failWhen` / `GuardFailedError` / `inList` from `packages/features/admin/src/server/catalog-writes.ts`, which then imports them (the behaviour and the tests stay). Add `src/retention.ts` (statement builders for ruling 9's D1 purges, chunked), with tests.
+  - `src/sql.ts`: (the phase 5 fix wave may already have moved `inList`/`jsonList` here; reuse them) move `failWhen` / `GuardFailedError` / `inList` from `packages/features/admin/src/server/catalog-writes.ts`, which then imports them (the behaviour and the tests stay). Add `src/retention.ts` (statement builders for ruling 9's D1 purges, chunked), with tests.
   - `migrations/0008_payment_refunds.sql` (`db:generate`): `payment.refunded_cents`, `payment.refunded_at`, `session_expires_at_idx`, `verification_expires_at_idx`. Update the schema files and `docs/DATA_MODEL.md`.
 - `packages/config/src/env/worker.ts`: the secrets, vars and refines of rulings 2, 10 and 12, and `REQUIRED_WORKER_CONFIG`, with tests.
 - `apps/site/wrangler.jsonc`, per env:
