@@ -18,7 +18,7 @@ import type { AdminProcedures } from "./audit-map";
  * A refused user action's `INVALID_STATE`, with its reason
  * (`userInvalidStateDataSchema`: `self`, `lastAdmin`, `adminTarget`, …).
  */
-export const USERS_ERRORS = {
+const USERS_ERRORS = {
   INVALID_STATE: { data: userInvalidStateDataSchema, status: 409 },
 } as const;
 

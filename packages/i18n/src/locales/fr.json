@@ -917,6 +917,7 @@
         "duration": "Durée",
         "forever": "Sans date de fin",
         "days_one": "{{count}} jour",
+        "days_many": "{{count}} jours",
         "days_other": "{{count}} jours",
         "done": "{{name}} est bloqué."
       },
