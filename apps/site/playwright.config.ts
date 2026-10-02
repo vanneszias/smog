@@ -40,6 +40,9 @@ const executablePath =
  */
 const WORKERS = Number(process.env.E2E_WORKERS ?? (process.env.CI ? 1 : 2));
 
+/** The one spec that turns maintenance mode on (`admin-settings.spec.ts`). */
+const MAINTENANCE_SPEC = /admin-settings\.spec\.ts$/;
+
 export default defineConfig({
   // Assertions wait up to 15 s (the default is 5 s): a first compile, or
   // Vite's "new dependencies optimized, reloading", can land mid-test.
@@ -52,7 +55,19 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      // The maintenance spec flips a site-wide flag: its own project.
+      testIgnore: MAINTENANCE_SPEC,
       use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
+    },
+    {
+      // After every other spec, on one worker, so no other test runs while
+      // the site is in maintenance. Alone: `--project maintenance --no-deps`.
+      dependencies: ["chromium"],
+      fullyParallel: false,
+      name: "maintenance",
+      testMatch: MAINTENANCE_SPEC,
+      use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
+      workers: 1,
     },
   ],
   reporter: "list",

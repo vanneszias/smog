@@ -10,7 +10,7 @@ import {
   buildAuditStatement,
   writeAuditWith,
 } from "../src/server/audit-writer";
-import { adminGuard, type GuardKind } from "../src/server/guard";
+import { adminGuard, type GuardKind, markUnchanged } from "../src/server/guard";
 import {
   type Authed,
   auditMark,
@@ -39,6 +39,8 @@ const testContract = {
     createOneOf: ok,
     createOutsideOneOf: ok,
     createTwoKinds: ok,
+    createUnchanged: ok,
+    createUnchangedAudited: ok,
     createWrong: ok,
     exempt: ok,
     exemptAudited: ok,
@@ -49,10 +51,17 @@ const testContract = {
     listKvPut: ok,
     listWithInsert: ok,
     listWrites: ok,
+    unchangedAfterKvPut: ok,
+    unchangedThenD1Update: ok,
+    unchangedThenKvPut: ok,
+    unchangedWithoutNoop: ok,
     unclassified: ok,
     writeAfterExternal: ok,
   },
 };
+
+const NOOP = "asking for the stored state changes nothing";
+const KV_KEY = "guard:noop";
 
 const KINDS: Record<string, GuardKind> = {
   "things.create": { audit: "gesture.create" },
@@ -61,6 +70,8 @@ const KINDS: Record<string, GuardKind> = {
   "things.createOneOf": { audit: ["gesture.create", "gesture.delete"] },
   "things.createOutsideOneOf": { audit: ["gesture.delete"] },
   "things.createTwoKinds": { audit: "gesture.create" },
+  "things.createUnchanged": { audit: "gesture.create", noop: NOOP },
+  "things.createUnchangedAudited": { audit: "gesture.create", noop: NOOP },
   "things.createWrong": { audit: "gesture.create" },
   "things.exempt": { exempt: "changes no stored state" },
   "things.exemptAudited": { exempt: "changes no stored state" },
@@ -71,6 +82,10 @@ const KINDS: Record<string, GuardKind> = {
   "things.listKvPut": "read",
   "things.listWithInsert": "read",
   "things.listWrites": "read",
+  "things.unchangedAfterKvPut": { audit: "gesture.create", noop: NOOP },
+  "things.unchangedThenD1Update": { audit: "gesture.create", noop: NOOP },
+  "things.unchangedThenKvPut": { audit: "gesture.create", noop: NOOP },
+  "things.unchangedWithoutNoop": { audit: "gesture.create" },
   "things.writeAfterExternal": { audit: "gesture.create" },
 };
 
@@ -158,6 +173,21 @@ const router = os.router({
       ]);
       return "two";
     }),
+    createUnchanged: os.things.createUnchanged.handler(({ context }) => {
+      markUnchanged(context.db);
+      return "unchanged";
+    }),
+    createUnchangedAudited: os.things.createUnchangedAudited.handler(
+      async ({ context }) => {
+        markUnchanged(context.db);
+        await writeAuditWith(
+          context.db,
+          SCHEMAS,
+          entry(context.user.id, "gesture.create", "t-unchanged")
+        );
+        return "unchanged, audited";
+      }
+    ),
     createWrong: os.things.createWrong.handler(async ({ context }) => {
       await context.db.batch([
         buildAuditStatement(
@@ -220,6 +250,35 @@ const router = os.router({
       ]);
       return "wrote";
     }),
+    unchangedAfterKvPut: os.things.unchangedAfterKvPut.handler(
+      async ({ context }) => {
+        await context.kv.put(KV_KEY, "written before the mark");
+        markUnchanged(context.db);
+        return "marked after a write";
+      }
+    ),
+    unchangedThenD1Update: os.things.unchangedThenD1Update.handler(
+      async ({ context }) => {
+        markUnchanged(context.db);
+        await context.db.run(
+          sql`UPDATE user SET name = 'Changed' WHERE id = ${context.user.id}`
+        );
+        return "updated after the mark";
+      }
+    ),
+    unchangedThenKvPut: os.things.unchangedThenKvPut.handler(
+      async ({ context }) => {
+        markUnchanged(context.db);
+        await context.kv.put(KV_KEY, "written after the mark");
+        return "put after the mark";
+      }
+    ),
+    unchangedWithoutNoop: os.things.unchangedWithoutNoop.handler(
+      ({ context }) => {
+        markUnchanged(context.db);
+        return "no noop kind";
+      }
+    ),
     unclassified: os.things.unclassified.handler(() => "unclassified"),
     writeAfterExternal: os.things.writeAfterExternal.handler(
       async ({ context }) => {
@@ -329,6 +388,41 @@ describe("the admin guard: mutations", () => {
     );
     expect(logged).toHaveBeenCalledWith(
       "[admin] things.createOutsideOneOf built gesture.create, not only gesture.delete"
+    );
+  });
+
+  it("passes a noop kind that marks itself unchanged, without an entry", async () => {
+    const mark = await auditMark();
+    await expect(run("createUnchanged")).resolves.toBe("unchanged");
+    expect(await auditRowsSince(mark)).toEqual([]);
+  });
+
+  it("refuses any write after markUnchanged, before it lands", async () => {
+    quiet();
+    const mark = await auditMark();
+    await expect(run("createUnchangedAudited")).rejects.toMatchObject(INTERNAL);
+    expect(await auditRowsSince(mark)).toEqual([]);
+
+    await env.KV.put(KV_KEY, "before");
+    await expect(run("unchangedThenKvPut")).rejects.toMatchObject(INTERNAL);
+    expect(await env.KV.get(KV_KEY)).toBe("before");
+
+    await expect(run("unchangedThenD1Update")).rejects.toMatchObject(INTERNAL);
+    const row = await env.DB.prepare("SELECT name FROM user WHERE id = ?")
+      .bind(admin.user.id)
+      .first<{ name: string }>();
+    expect(row?.name).toBe(admin.user.name);
+  });
+
+  it("fails markUnchanged after a write, or on a kind without noop", async () => {
+    const logged = quiet();
+    await expect(run("unchangedAfterKvPut")).rejects.toMatchObject(INTERNAL);
+    expect(logged).toHaveBeenCalledWith(
+      "[admin] things.unchangedAfterKvPut marked itself unchanged after writing"
+    );
+    await expect(run("unchangedWithoutNoop")).rejects.toMatchObject(INTERNAL);
+    expect(logged).toHaveBeenCalledWith(
+      "[admin] things.unchangedWithoutNoop has no noop kind, so it cannot be unchanged"
     );
   });
 

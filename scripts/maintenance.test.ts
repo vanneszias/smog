@@ -4,13 +4,11 @@ import {
   buildMaintenanceCommand,
   buildMaintenanceValue,
   buildReadCommand,
-  nextBypassVersion,
   parseCurrentVersion,
   parseMaintenanceArgs,
 } from "./maintenance";
 
 const NOW = Date.parse("2026-10-01T08:00:00Z");
-const NOW_S = NOW / 1000;
 const SCRIPT = join(import.meta.dir, "maintenance.ts");
 
 describe("parseMaintenanceArgs", () => {
@@ -63,26 +61,12 @@ describe("parseMaintenanceArgs", () => {
       ["--env", "dev", "on", "--message"],
       ["--env", "dev", "off", "--message", "x"],
       ["--env", "dev", "on", "--nope"],
+      // Longer than the 503 page takes (MAINTENANCE_MESSAGE_MAX, as the admin).
+      ["--env", "dev", "on", "--message", "x".repeat(281)],
     ];
     for (const argv of cases) {
       expect(() => parseMaintenanceArgs(argv, NOW)).toThrow("[maintenance]");
     }
-  });
-});
-
-describe("nextBypassVersion", () => {
-  test("on keeps the current version, so cookies fetched before still work", () => {
-    expect(nextBypassVersion("on", 1234, NOW)).toBe(1234);
-    // No key yet: a first version.
-    expect(nextBypassVersion("on", null, NOW)).toBe(NOW_S);
-  });
-
-  test("off starts a new version, which voids the window's cookies", () => {
-    expect(nextBypassVersion("off", 1234, NOW)).toBe(NOW_S);
-    // Always greater, even within the same second or with a clock behind.
-    expect(nextBypassVersion("off", NOW_S, NOW)).toBe(NOW_S + 1);
-    expect(nextBypassVersion("off", NOW_S + 50, NOW)).toBe(NOW_S + 51);
-    expect(nextBypassVersion("off", null, NOW)).toBe(NOW_S);
   });
 });
 

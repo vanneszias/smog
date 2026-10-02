@@ -118,8 +118,21 @@ accounts created in the last 30 days. Phase 6 adds the sponsorship stats.
 
 ### Maintenance
 
-Task 6.
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.maintenance.get` | none | `MaintenanceSetting` | read |
+| `admin.maintenance.set` | `{ enabled, message? (1..280, trimmed), until? (ISO 8601, future, at most 7 days ahead) }` | `MaintenanceSetting` | `maintenance.enable` or `maintenance.disable` `{ message, until }` |
+
+- `MaintenanceSetting` is the KV value `maintenance`: `{ bypassVersion, enabled, message?, until? }` (`@smog/config/maintenance`, re-exported by `@smog/admin/schema`, shared with the site's gate and `bun run maintenance`). Nothing stored reads as `{ bypassVersion: 0, enabled: false }`.
+- `get` reads KV past the isolate cache with `cacheTtl: 30` (KV is eventually consistent: the value may be up to 30 s old at that location, and a change made elsewhere needs up to about a minute more). `set` writes KV first, then the audit entry (`target_type` `setting`, `target_id` `maintenance`); a failed entry is logged, the previous KV value is put back (best effort, logged when it fails), and the error rethrown. Turning on keeps `bypassVersion`; turning off writes a new one, which revokes every bypass cookie. Asking for the stored state changes nothing and writes no entry. `message` and `until` only go with `enabled: true` (`VALIDATION`).
+- Visitors follow within about 2 minutes (the gate's 30 s isolate cache, KV's 30 s edge cache and up to a minute of KV propagation).
+- `POST /api/maintenance/bypass` (site, same-origin, `RL_AUTH`, admin session) sets the 12 h HttpOnly `smog_mx` cookie and answers `{ expiresAt, bypassVersion }` (the version it signed); it is open during a window. The settings page calls it before `set({ enabled: true })`, compares `bypassVersion` with the one `set` answered, asks again once on a mismatch and warns if it still differs. The site server function `getMaintenanceBypassStatus()` answers `{ active, expiresAt? }` for the request's own cookie, to an admin session only (anyone else: `{ active: false }`).
 
 ### Emails
 
-Task 6.
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.emails.list` | none | `{ id, subject: Record<"nl" \| "en" \| "fr", string> }[]` | read |
+| `admin.emails.preview` | `{ template, locale: "nl" \| "en" \| "fr" }` | `{ subject, html, text }` | read |
+
+- Every template registered in `@smog/email` with its sample (`EMAIL_SAMPLES` in `@smog/email/samples`), rendered with `renderEmail`. Nothing is sent. An unknown `template` or `locale` is `VALIDATION`.
