@@ -31,6 +31,8 @@ const PLAYER_NOISE = /mux-player|getErrorFromHlsErrorData|net::ERR_FAILED/;
 const SANDBOX_BLOCKED =
   /^Blocked script execution in 'about:srcdoc' because the document's frame is sandboxed/;
 
+const SANDBOXED_FRAME = "iframe[sandbox]";
+
 interface Violation {
   id: string;
   nodes: string[];
@@ -39,7 +41,10 @@ interface Violation {
 
 /** Runs axe and labels each violation with the screen it was found on. */
 async function axe(page: Page, where: string): Promise<Violation[]> {
-  return (await blockingViolations(page)).map((violation) => ({
+  // The email preview is the template's own document in a sandboxed frame
+  // (no scripts): its scroller is checked, not the email inside.
+  const exclude = where.startsWith("emails") ? [SANDBOXED_FRAME] : [];
+  return (await blockingViolations(page, { exclude })).map((violation) => ({
     ...violation,
     where,
   }));
@@ -152,7 +157,8 @@ test.describe("admin accessibility", () => {
       test(`axe: every admin screen, ${theme} at ${width} px`, async ({
         browser,
       }) => {
-        test.setTimeout(240_000);
+        // About 3 minutes alone; more while other specs share the dev server.
+        test.setTimeout(600_000);
         const context = await themedContext(browser, theme, width);
         try {
           const page = await context.newPage();

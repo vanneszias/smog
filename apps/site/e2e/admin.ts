@@ -74,13 +74,23 @@ export async function stubMuxMedia(page: Page): Promise<void> {
   await stubMuxStream(page);
 }
 
-/** Opens an admin path, waits for hydration and answers the consent banner. */
+/** Pages whose consent banner was answered (it does not come back). */
+const consented = new WeakSet<Page>();
+
+/**
+ * Opens an admin path, waits for hydration and answers the consent banner
+ * (it shows just after hydration, once per context).
+ */
 export async function openAdmin(page: Page, path: string): Promise<void> {
   await page.goto(path);
   await waitForApp(page);
+  if (consented.has(page)) {
+    return;
+  }
   await page
     .getByRole("button", { name: "Alleen noodzakelijke" })
     .click({ timeout: 5000 })
+    .then(() => consented.add(page))
     .catch(() => undefined);
 }
 
