@@ -1,5 +1,5 @@
-import type { MaintenanceSetting } from "@smog/admin/schema";
 import { handSvgs, logoSvg } from "@smog/brand/svg";
+import type { MaintenanceSetting } from "@smog/config/maintenance";
 import { createI18n, formatDate, type Locale, resolveLocale } from "@smog/i18n";
 import { tokens } from "@smog/styles/tokens";
 import { escapeHtml } from "@smog/utils";

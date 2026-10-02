@@ -14,14 +14,18 @@ import {
 } from "@smog/ui-web";
 import { KeyRound } from "lucide-react";
 import { type ReactNode, useCallback, useId, useState } from "react";
+import {
+  type IssuedBypass,
+  isBypassRateLimited,
+} from "@/lib/maintenance-bypass";
 import type { BypassStatus } from "@/worker/maintenance";
 import { useAuditTime } from "./audit-data";
 
 export interface BypassCardProps {
   isError: boolean;
   onRetry: () => void;
-  /** Gets this browser's bypass cookie; resolves with its expiry. */
-  requestBypass: () => Promise<string>;
+  /** Gets this browser's bypass cookie; resolves with what was issued. */
+  requestBypass: () => Promise<IssuedBypass>;
   /** This browser's cookie (`getMaintenanceBypassStatus`); loading while undefined. */
   status: BypassStatus | undefined;
 }
@@ -46,7 +50,7 @@ export function BypassCard({
   const bypass = useCallback(async () => {
     setBusy(true);
     try {
-      const expiresAt = await requestBypass();
+      const { expiresAt } = await requestBypass();
       toast({
         title: t("admin.settings.bypass.done", {
           time: time(Date.parse(expiresAt)),
@@ -55,7 +59,14 @@ export function BypassCard({
       });
     } catch (error) {
       console.error("[admin] Failed to get the bypass cookie:", error);
-      toast({ title: t("admin.settings.bypass.failed"), variant: "danger" });
+      toast({
+        title: t(
+          isBypassRateLimited(error)
+            ? "admin.settings.bypass.rateLimited"
+            : "admin.settings.bypass.failed"
+        ),
+        variant: "danger",
+      });
     } finally {
       setBusy(false);
     }

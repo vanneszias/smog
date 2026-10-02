@@ -57,27 +57,6 @@ export function trackAudits(db: Db): readonly AuditAction[] {
   return actions;
 }
 
-/*
- * The requests whose mutation found nothing to change (a no-op), so it
- * writes no audit entry; per request-scoped Drizzle client, as `built`.
- */
-const unchanged = new WeakSet<Db>();
-
-/**
- * Records that this request's mutation changed nothing (it asked for the
- * state that is already stored, as `maintenance.set` may), so the guard
- * lets it finish without its audit entry: nothing happened that needs
- * one. A mutation that marks itself unchanged must build no entry.
- */
-export function markUnchanged(db: Db): void {
-  unchanged.add(db);
-}
-
-/** Whether `markUnchanged(db)` was called (the guard reads it). */
-export function isUnchanged(db: Db): boolean {
-  return unchanged.has(db);
-}
-
 /** The writer's schemas: every action with a schema except the read-only ones. */
 const WRITABLE_SCHEMAS: AuditSchemas = Object.fromEntries(
   Object.entries(AUDIT_DATA_SCHEMAS).filter(([action]) =>

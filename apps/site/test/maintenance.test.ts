@@ -3,7 +3,7 @@ import {
   MAINTENANCE_KV_KEY,
   type MaintenanceSetting,
   parseMaintenanceSetting,
-} from "@smog/admin/schema";
+} from "@smog/config/maintenance";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   AUTH_SIGN_IN_ROUTES,

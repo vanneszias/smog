@@ -1019,7 +1019,7 @@
         "untilHint": "Optional, at most 7 days ahead. Shown on the page and sent as Retry-After.",
         "noUntil": "Not set",
         "untilInvalid": "Pick a time in the future, at most 7 days ahead.",
-        "propagation": "Other visitors see a change within about a minute: each server keeps the setting for up to 30 seconds, and KV takes a little longer to reach every location.",
+        "propagation": "Other visitors follow within up to about 2 minutes: each server and each Cloudflare location keeps the setting for up to 30 seconds, and KV needs up to a minute to reach every region.",
         "enable": "Enable maintenance",
         "enableNote": "You get a bypass cookie for this browser first, so you keep access.",
         "enabled": "Maintenance is on",
@@ -1029,7 +1029,8 @@
         "disabled": "Maintenance is off. Every bypass cookie is revoked.",
         "bypassFailed": "No bypass cookie for this browser, so maintenance stays off.",
         "failed": "The setting was not changed.",
-        "loadError": "The maintenance setting could not be loaded."
+        "loadError": "The maintenance setting could not be loaded.",
+        "staleCookie": "Maintenance is on, but your bypass cookie is for an older window. Press “Bypass for this browser” in a minute."
       },
       "bypass": {
         "title": "Bypass for this browser",
@@ -1039,7 +1040,8 @@
         "action": "Bypass for this browser (12 h)",
         "done": "This browser can bypass maintenance until {{time}}.",
         "failed": "No bypass cookie: sign in again and retry.",
-        "loadError": "The bypass status could not be loaded."
+        "loadError": "The bypass status could not be loaded.",
+        "rateLimited": "Too many attempts. Try again in a minute."
       }
     },
     "emails": {

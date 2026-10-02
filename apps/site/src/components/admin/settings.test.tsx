@@ -3,6 +3,10 @@ import type { MaintenanceSetting } from "@smog/admin/schema";
 import { createI18n, LOCALES } from "@smog/i18n";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import {
+  BypassRequestError,
+  type IssuedBypass,
+} from "@/lib/maintenance-bypass";
 import { renderSite } from "@/test/render";
 import { BypassCard } from "./bypass-card";
 import {
@@ -22,17 +26,24 @@ const ON: MaintenanceSetting = {
   message: "Nieuwe video's",
 };
 
-const PROPAGATION = /within about a minute/;
+const PROPAGATION = /up to about 2 minutes/;
 const MESSAGE_LABEL = /Message/;
 const UNTIL_LABEL = /Expected end/;
 const ACTIVE_UNTIL = /^Active until /;
+const STALE_COOKIE = /bypass cookie is for an older window/;
 
 function noop(): void {
   // Nothing to do in these tests.
 }
 
-function bypassed(): Promise<string> {
-  return Promise.resolve("2026-10-02T23:00:00.000Z");
+const EXPIRES = "2026-10-02T23:00:00.000Z";
+
+function issued(bypassVersion: number): IssuedBypass {
+  return { bypassVersion, expiresAt: EXPIRES };
+}
+
+function bypassed(): Promise<IssuedBypass> {
+  return Promise.resolve(issued(OFF.bypassVersion));
 }
 
 function page(ui: ReactNode): () => ReactNode {
@@ -46,7 +57,7 @@ describe("MaintenanceCard", () => {
     const order: string[] = [];
     const requestBypass = mock(() => {
       order.push("bypass");
-      return Promise.resolve("2026-10-02T23:00:00.000Z");
+      return Promise.resolve(issued(OFF.bypassVersion));
     });
     const site = await renderSite(
       page(<MaintenanceCard requestBypass={requestBypass} />),
@@ -73,6 +84,39 @@ describe("MaintenanceCard", () => {
     ).toEqual({ enabled: true, message: "Update" });
   });
 
+  test("asks again when the cookie's version is not the one set wrote, and warns if it still differs", async () => {
+    // A stale KV read: the cookie is signed for 3, `set` wrote 4.
+    const requestBypass = mock(() => Promise.resolve(issued(3)));
+    await renderSite(page(<MaintenanceCard requestBypass={requestBypass} />), {
+      api: {
+        "admin/maintenance/get": OFF,
+        "admin/maintenance/set": { ...OFF, enabled: true },
+      },
+    });
+    await screen.findByText("Off");
+    fireEvent.click(screen.getByRole("button", { name: "Enable maintenance" }));
+    await screen.findByText(STALE_COOKIE);
+    expect(requestBypass).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("Maintenance is on")).toBeNull();
+  });
+
+  test("a second cookie of the right version is a plain success", async () => {
+    const versions = [3, 4];
+    const requestBypass = mock(() =>
+      Promise.resolve(issued(versions.shift() ?? 4))
+    );
+    await renderSite(page(<MaintenanceCard requestBypass={requestBypass} />), {
+      api: {
+        "admin/maintenance/get": OFF,
+        "admin/maintenance/set": { ...OFF, enabled: true },
+      },
+    });
+    await screen.findByText("Off");
+    fireEvent.click(screen.getByRole("button", { name: "Enable maintenance" }));
+    await screen.findByText("Maintenance is on");
+    expect(requestBypass).toHaveBeenCalledTimes(2);
+  });
+
   test("stays off when the bypass cookie is refused", async () => {
     const logged = spyOn(console, "error").mockImplementation(() => {
       // The card logs the refusal; asserted below.
@@ -95,7 +139,7 @@ describe("MaintenanceCard", () => {
   });
 
   test("refuses an end in the past before asking anything", async () => {
-    const requestBypass = mock(() => Promise.resolve("x"));
+    const requestBypass = mock(bypassed);
     await renderSite(page(<MaintenanceCard requestBypass={requestBypass} />), {
       api: { "admin/maintenance/get": OFF },
     });
@@ -141,7 +185,7 @@ describe("MaintenanceCard", () => {
 
 describe("BypassCard", () => {
   test("shows the expiry, or that it is not active, and asks for a cookie", async () => {
-    const requestBypass = mock(() => Promise.resolve("2026-10-02T23:00:00Z"));
+    const requestBypass = mock(bypassed);
     await renderSite(
       page(
         <>
@@ -171,6 +215,28 @@ describe("BypassCard", () => {
   });
 });
 
+test("BypassCard says when it was rate limited", async () => {
+  const logged = spyOn(console, "error").mockImplementation(() => {
+    // Logged by the card.
+  });
+  const requestBypass = mock(() => Promise.reject(new BypassRequestError(429)));
+  await renderSite(
+    page(
+      <BypassCard
+        isError={false}
+        onRetry={noop}
+        requestBypass={requestBypass}
+        status={{ active: false }}
+      />
+    )
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Bypass for this browser (12 h)" })
+  );
+  await screen.findByText("Too many attempts. Try again in a minute.");
+  logged.mockRestore();
+});
+
 describe("email previews", () => {
   test("every template has a label in every locale", () => {
     for (const locale of LOCALES) {
@@ -196,6 +262,8 @@ describe("email previews", () => {
       `<head><meta http-equiv="Content-Security-Policy" content="${EMAIL_PREVIEW_CSP}">`
     );
     expect(document).toContain("<body>Hoi</body>");
+    // A click on a link would be a popup, which the sandbox blocks.
+    expect(document).toContain('<base target="_blank">');
     // Without a head, the policy goes first.
     expect(sandboxedEmailDocument("<p>x</p>").startsWith("<meta")).toBe(true);
   });

@@ -1,11 +1,11 @@
+import { AuthError, getSession, requireAdminUser } from "@smog/auth";
+import type { Environment } from "@smog/config/env/worker";
 import {
   BYPASS_VERSION_INITIAL,
   MAINTENANCE_KV_KEY,
   type MaintenanceSetting,
   parseMaintenanceSetting,
-} from "@smog/admin/schema";
-import { AuthError, getSession, requireAdminUser } from "@smog/auth";
-import type { Environment } from "@smog/config/env/worker";
+} from "@smog/config/maintenance";
 import { checkRateLimit, isForeignRequest } from "@smog/rpc";
 import { parseCookie } from "cookie-es";
 import { getAuth, siteEnv } from "@/server/auth";
@@ -14,7 +14,7 @@ import { maintenanceResponse } from "./maintenance-page";
 
 /**
  * Maintenance mode (spec §9). The KV key `maintenance` holds a
- * `MaintenanceSetting` (`@smog/admin/schema`, the one definition);
+ * `MaintenanceSetting` (`@smog/config/maintenance`, the one definition);
  * `admin.maintenance.set` (the admin settings page) and `bun run
  * maintenance` write it. While it is enabled,
  * the Worker answers every request with a 503, except:
@@ -29,7 +29,10 @@ import { maintenanceResponse } from "./maintenance-page";
  * `bypassVersion` changes only when maintenance is turned off
  * (`nextBypassVersion`), so a cookie fetched before or during a
  * window lasts for that window and dies with it. Cookies are signed and
- * checked against a fresh KV read, never the isolate cache.
+ * checked against a KV read that skips the isolate cache. KV itself is
+ * eventually consistent: that read may be up to 30 s old at this location
+ * (`cacheTtl`), and a write made elsewhere takes up to about a minute to
+ * arrive, so a change reaches every visitor within about 2 minutes.
  */
 
 export const BYPASS_COOKIE = "smog_mx";
@@ -52,16 +55,16 @@ export function clearMaintenanceCache(): void {
 }
 
 /**
- * The current state, cached for 30 s per isolate (`fresh` skips that cache
- * and refreshes it). A KV failure keeps the site up: it is logged, and the
+ * The current state, cached for 30 s per isolate (`skipIsolateCache` skips
+ * that cache and refreshes it; KV's own edge cache still applies). A KV failure keeps the site up: it is logged, and the
  * last known state (or "off") stands until the next read.
  */
 async function readMaintenance(
   kv: KVNamespace,
-  { fresh = false }: { fresh?: boolean } = {}
+  { skipIsolateCache = false }: { skipIsolateCache?: boolean } = {}
 ): Promise<MaintenanceSetting | null> {
   const now = Date.now();
-  if (!fresh && cache && cache.expiresAt > now) {
+  if (!skipIsolateCache && cache && cache.expiresAt > now) {
     return cache.state;
   }
   let state: MaintenanceSetting | null;
@@ -208,6 +211,12 @@ export async function signBypassCookie(
   return `${exp}.${base64Url(signature)}`;
 }
 
+/** Whether a cookie value has the `<exp>.<hmac>` shape (not whether it is valid). */
+function isBypassCookieShape(value: string): boolean {
+  const [exp = "", signature = "", ...rest] = value.split(".");
+  return rest.length === 0 && EXP_DIGITS.test(exp) && SIGNATURE.test(signature);
+}
+
 /**
  * A cookie value's expiry (Unix seconds) when it is unexpired and signed
  * for this version, else null.
@@ -245,7 +254,7 @@ export interface BypassStatus {
 
 /**
  * Whether a bypass cookie value would get this browser past the gate:
- * signed for the current `bypassVersion` (read fresh from KV; nothing
+ * signed for the current `bypassVersion` (read past the isolate cache; nothing
  * stored = the first version) and unexpired, with its expiry. Whether
  * maintenance is on does not matter (a cookie can be fetched before a
  * window). The settings page's bypass card shows it (the cookie is
@@ -254,11 +263,12 @@ export interface BypassStatus {
 export async function bypassCookieStatus(
   value: string | undefined
 ): Promise<BypassStatus> {
-  if (!value) {
+  // The format first: a malformed value costs no KV read.
+  if (!(value && isBypassCookieShape(value))) {
     return { active: false };
   }
   const { auth, kv } = siteEnv();
-  const state = await readMaintenance(kv, { fresh: true });
+  const state = await readMaintenance(kv, { skipIsolateCache: true });
   const exp = await verifyBypassCookie(
     value,
     auth.BETTER_AUTH_SECRET,
@@ -268,6 +278,28 @@ export async function bypassCookieStatus(
   return exp === null
     ? { active: false }
     : { active: true, expiresAt: new Date(exp * 1000).toISOString() };
+}
+
+/**
+ * The bypass status of a request's own cookie, for an admin session only:
+ * anyone else gets `{ active: false }` before the cookie is looked at, so
+ * the check is no free KV read and HMAC for strangers (one D1 session read
+ * instead, as every signed-in page does).
+ */
+export async function bypassStatusFor(request: Request): Promise<BypassStatus> {
+  try {
+    requireAdminUser(await getSession(getAuth(), request.headers));
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return { active: false };
+    }
+    console.error("[maintenance] Failed to check the admin session:", error);
+    throw error;
+  }
+  const cookie = parseCookie(request.headers.get("cookie") ?? "")[
+    BYPASS_COOKIE
+  ];
+  return bypassCookieStatus(cookie);
 }
 
 /** `Secure` outside dev only: dev runs on http://localhost or a LAN address. */
@@ -286,7 +318,7 @@ export const SIGN_IN_ONLY = "sign-in-only";
  * The 503 for this request while maintenance is on; `SIGN_IN_ONLY` for an
  * `AUTH_SIGN_IN_ROUTES` request then (serve it with the sign-in-only
  * auth); or null to let it through. It reads KV at most once per 30 s per
- * isolate, plus one fresh read for a request that carries a bypass cookie
+ * isolate, plus one read past that cache for a request that carries a bypass cookie
  * while the cache says "on". The session is never read: the cookie is
  * checked by its signature. A valid cookie gets the whole site, all of
  * `/api/auth` included.
@@ -306,7 +338,9 @@ export async function maintenanceGate(
   const cookie = parseCookie(request.headers.get("cookie") ?? "")[
     BYPASS_COOKIE
   ];
-  const state = cookie ? await readMaintenance(kv, { fresh: true }) : cached;
+  const state = cookie
+    ? await readMaintenance(kv, { skipIsolateCache: true })
+    : cached;
   if (!state?.enabled) {
     return null;
   }
@@ -336,7 +370,9 @@ function json(status: number, body: unknown, init: HeadersInit = {}): Response {
 
 /**
  * `POST /api/maintenance/bypass`: an admin session gets the 12 h bypass
- * cookie for the current `bypassVersion`, read fresh from KV. It also works
+ * cookie for the current `bypassVersion` (read past the isolate cache), and
+ * answers `{ expiresAt, bypassVersion }` so the caller can compare the
+ * version with the one it just wrote. It also works
  * while maintenance is off, so it can be fetched just before a window.
  * Same-origin only (`isForeignRequest`, the rpc CSRF rule), then `RL_AUTH`
  * per IP, then the session (one D1 read). The admin settings page calls it
@@ -365,16 +401,20 @@ export async function handleBypass(request: Request): Promise<Response> {
     console.error("[maintenance] Failed to check the admin session:", error);
     throw error;
   }
-  const state = await readMaintenance(kv, { fresh: true });
+  const state = await readMaintenance(kv, { skipIsolateCache: true });
   const nowS = Math.floor(Date.now() / 1000);
+  const bypassVersion = state?.bypassVersion ?? BYPASS_VERSION_INITIAL;
   const value = await signBypassCookie(
     auth.BETTER_AUTH_SECRET,
-    state?.bypassVersion ?? BYPASS_VERSION_INITIAL,
+    bypassVersion,
     nowS
   );
   return json(
     200,
-    { expiresAt: new Date((nowS + BYPASS_TTL_S) * 1000).toISOString() },
+    {
+      bypassVersion,
+      expiresAt: new Date((nowS + BYPASS_TTL_S) * 1000).toISOString(),
+    },
     { "set-cookie": bypassCookieHeader(value, vars.ENVIRONMENT) }
   );
 }

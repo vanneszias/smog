@@ -2,11 +2,12 @@ import { env, exports } from "cloudflare:workers";
 import {
   MAINTENANCE_KV_KEY,
   type MaintenanceSetting,
-} from "@smog/admin/schema";
+} from "@smog/config/maintenance";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   BYPASS_COOKIE,
   bypassCookieStatus,
+  bypassStatusFor,
   clearMaintenanceCache,
   signBypassCookie,
 } from "../src/worker/maintenance";
@@ -125,6 +126,48 @@ describe("the admin maintenance toggle through the Worker", () => {
     expect(response.status).toBe(422);
     const body = (await response.json()) as { json: { code: string } };
     expect(body.json.code).toBe("VALIDATION");
+  });
+});
+
+describe("POST /api/maintenance/bypass answers the version it signed", () => {
+  it("is the stored version, or the first one when nothing is stored", async () => {
+    const issue = () =>
+      fetchSite("/api/maintenance/bypass", {
+        headers: { "cf-connecting-ip": ip(), cookie: admin, origin: ORIGIN },
+        method: "POST",
+      });
+    const first = (await (await issue()).json()) as {
+      bypassVersion: number;
+      expiresAt: string;
+    };
+    expect(first.bypassVersion).toBe(0);
+    await kv.put(
+      MAINTENANCE_KV_KEY,
+      JSON.stringify({ bypassVersion: 77, enabled: false })
+    );
+    const second = (await (await issue()).json()) as { bypassVersion: number };
+    expect(second.bypassVersion).toBe(77);
+  });
+});
+
+describe("bypassStatusFor (the settings page's server function)", () => {
+  it("answers only an admin session; anyone else gets inactive without a check", async () => {
+    const value = await signBypassCookie(SECRET, 0, nowS());
+    const request = (cookie: string) =>
+      new Request(`${ORIGIN}/_serverFn/x`, { headers: { cookie } });
+    expect(await bypassStatusFor(request(`${BYPASS_COOKIE}=${value}`))).toEqual(
+      { active: false }
+    );
+    const member = await signedUp({ password: "correct horse battery" });
+    expect(
+      await bypassStatusFor(
+        request(`${member.cookie}; ${BYPASS_COOKIE}=${value}`)
+      )
+    ).toEqual({ active: false });
+    expect(
+      (await bypassStatusFor(request(`${admin}; ${BYPASS_COOKIE}=${value}`)))
+        .active
+    ).toBe(true);
   });
 });
 

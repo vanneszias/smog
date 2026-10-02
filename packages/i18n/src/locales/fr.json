@@ -1033,7 +1033,7 @@
         "untilHint": "Facultatif, 7 jours à l’avance au plus. Affichée sur la page et envoyée comme Retry-After.",
         "noUntil": "Non définie",
         "untilInvalid": "Choisissez un moment futur, 7 jours à l’avance au plus.",
-        "propagation": "Les autres visiteurs voient un changement en une minute environ\u00a0: chaque serveur garde le réglage jusqu’à 30 secondes, et KV met un peu plus de temps à atteindre chaque région.",
+        "propagation": "Les autres visiteurs suivent en 2 minutes environ\u00a0: chaque serveur et chaque site Cloudflare garde le réglage jusqu’à 30 secondes, et KV met jusqu’à une minute pour atteindre chaque région.",
         "enable": "Activer la maintenance",
         "enableNote": "Vous recevez d’abord un cookie de contournement pour ce navigateur, pour garder l’accès.",
         "enabled": "La maintenance est active",
@@ -1043,7 +1043,8 @@
         "disabled": "La maintenance est inactive. Chaque cookie de contournement est révoqué.",
         "bypassFailed": "Pas de cookie de contournement pour ce navigateur\u00a0: la maintenance reste inactive.",
         "failed": "Le réglage n’a pas été modifié.",
-        "loadError": "Le réglage de maintenance n’a pas pu être chargé."
+        "loadError": "Le réglage de maintenance n’a pas pu être chargé.",
+        "staleCookie": "La maintenance est active, mais votre cookie de contournement date d’une maintenance précédente. Appuyez sur «\u00a0Contourner pour ce navigateur\u00a0» dans une minute."
       },
       "bypass": {
         "title": "Contournement pour ce navigateur",
@@ -1053,7 +1054,8 @@
         "action": "Contourner pour ce navigateur (12 h)",
         "done": "Ce navigateur peut contourner la maintenance jusqu’au {{time}}.",
         "failed": "Pas de cookie de contournement\u00a0: reconnectez-vous et réessayez.",
-        "loadError": "L’état du contournement n’a pas pu être chargé."
+        "loadError": "L’état du contournement n’a pas pu être chargé.",
+        "rateLimited": "Trop de tentatives. Réessayez dans une minute."
       }
     },
     "emails": {

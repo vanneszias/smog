@@ -18,7 +18,12 @@ import {
   Text,
 } from "@smog/ui-web";
 import { Mail, Monitor, Smartphone } from "lucide-react";
-import { type ReactNode, useCallback, useMemo } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 
 /**
  * Each template's name. The key map makes `check-types` fail when a
@@ -47,21 +52,50 @@ export function emailTemplateLabel(t: Translate, id: EmailTemplateId): string {
 
 /**
  * The preview document's own policy: nothing loads and nothing runs, only
- * the template's inline styles and inline images. The iframe's empty
- * `sandbox` already blocks scripts, forms, popups and navigation; this is
- * the second wall (a `srcdoc` document also inherits the page's CSP).
+ * the template's inline styles and inline images. The walls, in order:
+ * - the iframe's empty `sandbox` blocks scripts, forms, popups and top
+ *   navigation (the frame could still navigate itself);
+ * - `<base target="_blank">` turns every link click into a popup, which
+ *   the sandbox blocks, so a sample link never opens;
+ * - this policy, and the page's own CSP, which a `srcdoc` document
+ *   inherits (its `frame-src` would also stop the frame loading a link).
  */
 export const EMAIL_PREVIEW_CSP =
   "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'";
 
 const HEAD = /<head(\s[^>]*)?>/i;
 
-/** The rendered email with `EMAIL_PREVIEW_CSP` as the first thing in its head. */
+/**
+ * The rendered email with `EMAIL_PREVIEW_CSP` and `<base target="_blank">`
+ * first in its head.
+ */
 export function sandboxedEmailDocument(html: string): string {
-  const meta = `<meta http-equiv="Content-Security-Policy" content="${EMAIL_PREVIEW_CSP}">`;
+  const meta = `<meta http-equiv="Content-Security-Policy" content="${EMAIL_PREVIEW_CSP}"><base target="_blank">`;
   return HEAD.test(html)
     ? html.replace(HEAD, (tag) => `${tag}${meta}`)
     : `${meta}${html}`;
+}
+
+/** Below Tailwind's `sm`. */
+const NARROW = "(max-width: 639px)";
+
+function subscribeNarrow(onChange: () => void): () => void {
+  const query = window.matchMedia(NARROW);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function isNarrow(): boolean {
+  return window.matchMedia(NARROW).matches;
+}
+
+function notNarrowOnServer(): boolean {
+  return false;
+}
+
+/** Whether the screen is phone-sized (false while rendering on the server). */
+function useNarrowScreen(): boolean {
+  return useSyncExternalStore(subscribeNarrow, isNarrow, notNarrowOnServer);
 }
 
 export interface EmailPreviewSearch {
@@ -228,7 +262,7 @@ function PreviewPane({ locale, template, width }: PreviewPaneProps): ReactNode {
           <div className="flex flex-col gap-2">
             <div className="overflow-x-auto rounded-md border border-border-subtle bg-surface-sunken p-2">
               <iframe
-                className="mx-auto block h-[48rem] max-w-none rounded-sm bg-surface"
+                className="mx-auto block h-[40rem] max-w-none rounded-sm bg-surface"
                 sandbox=""
                 srcDoc={document}
                 style={{ width: `${WIDTHS[width]}px` }}
@@ -241,7 +275,7 @@ function PreviewPane({ locale, template, width }: PreviewPaneProps): ReactNode {
           </div>
         </TabsContent>
         <TabsContent value="text">
-          <pre className="max-h-[48rem] overflow-auto whitespace-pre-wrap break-words rounded-md border border-border-subtle bg-surface-sunken p-4 font-mono text-body-sm">
+          <pre className="max-h-[40rem] overflow-auto whitespace-pre-wrap break-words rounded-md border border-border-subtle bg-surface-sunken p-4 font-mono text-body-sm">
             {preview.data.text}
           </pre>
         </TabsContent>
@@ -268,7 +302,9 @@ export function EmailPreview({
   const { t } = useTranslation();
   const templates = useEmailTemplates();
   const locale = search.locale ?? DEFAULT_LOCALE;
-  const width = search.width ?? "desktop";
+  // Without a choice in the URL: the phone width on a phone.
+  const narrow = useNarrowScreen();
+  const width = search.width ?? (narrow ? "mobile" : "desktop");
   const localeOptions = useMemo(
     () => LOCALES.map((value) => ({ label: t(LOCALE_LABELS[value]), value })),
     [t]
@@ -321,7 +357,7 @@ export function EmailPreview({
   }
   if (templates.isPending) {
     return (
-      <div aria-busy="true" className="grid gap-4 lg:grid-cols-[16rem_1fr]">
+      <div aria-busy="true" className="grid gap-4 lg:grid-cols-[14rem_1fr]">
         <Skeleton className="h-64 w-full" />
         <Skeleton className="h-96 w-full" />
       </div>
@@ -338,7 +374,7 @@ export function EmailPreview({
     );
   }
   return (
-    <div className="grid min-w-0 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+    <div className="grid min-w-0 gap-4 lg:grid-cols-[14rem_minmax(0,1fr)]">
       <Card className="gap-2 p-2 sm:p-2 lg:self-start" variant="default">
         <Heading className="px-3 pt-2" level={2} size="title-3">
           {t("admin.emails.templates")}

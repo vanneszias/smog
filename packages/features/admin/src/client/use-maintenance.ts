@@ -11,7 +11,7 @@ import {
   useInvalidateAfterAdminWrite,
 } from "./slice";
 
-/** The stored maintenance setting (read from KV with no cache). */
+/** The stored maintenance setting (read past the isolate cache). */
 export function useMaintenance() {
   const rpc = useAdminRpc();
   const scoped = useAdminKey();

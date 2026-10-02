@@ -1019,7 +1019,7 @@
         "untilHint": "Optioneel, hoogstens 7 dagen vooruit. Staat op de pagina en gaat mee als Retry-After.",
         "noUntil": "Niet ingesteld",
         "untilInvalid": "Kies een moment in de toekomst, hoogstens 7 dagen vooruit.",
-        "propagation": "Andere bezoekers zien een wijziging binnen ongeveer een minuut: elke server onthoudt de instelling tot 30 seconden, en KV heeft iets langer nodig om overal te zijn.",
+        "propagation": "Andere bezoekers volgen binnen ongeveer 2 minuten: elke server en elke Cloudflare-locatie onthoudt de instelling tot 30 seconden, en KV heeft tot een minuut nodig om elke regio te bereiken.",
         "enable": "Onderhoud aanzetten",
         "enableNote": "Je krijgt eerst een omzeilcookie voor deze browser, zodat je toegang houdt.",
         "enabled": "Onderhoud staat aan",
@@ -1029,7 +1029,8 @@
         "disabled": "Onderhoud staat uit. Elke omzeilcookie is vervallen.",
         "bypassFailed": "Geen omzeilcookie voor deze browser, dus onderhoud blijft uit.",
         "failed": "De instelling is niet gewijzigd.",
-        "loadError": "De onderhoudsinstelling kon niet geladen worden."
+        "loadError": "De onderhoudsinstelling kon niet geladen worden.",
+        "staleCookie": "Onderhoud staat aan, maar je omzeilcookie hoort bij een ouder onderhoud. Druk over een minuut op “Omzeilen voor deze browser”."
       },
       "bypass": {
         "title": "Omzeiling voor deze browser",
@@ -1039,7 +1040,8 @@
         "action": "Omzeilen voor deze browser (12 u)",
         "done": "Deze browser kan het onderhoud omzeilen tot {{time}}.",
         "failed": "Geen omzeilcookie: meld je opnieuw aan en probeer nog eens.",
-        "loadError": "De omzeilstatus kon niet geladen worden."
+        "loadError": "De omzeilstatus kon niet geladen worden.",
+        "rateLimited": "Te veel pogingen. Probeer het over een minuut opnieuw."
       }
     },
     "emails": {

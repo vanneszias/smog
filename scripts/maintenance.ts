@@ -5,23 +5,23 @@ import {
   maintenanceSettingSchema,
   nextBypassVersion,
   parseMaintenanceSetting,
-} from "@smog/admin/schema";
+} from "@smog/config/maintenance";
 
 /**
  * `bun run maintenance --env <dev|staging|production> on|off
  *   [--message <text>] [--until <ISO 8601>] [--dry-run] [--yes]`
  *
  * Writes the site's KV key `maintenance` (`MAINTENANCE_KV_KEY`, the
- * `MaintenanceSetting` of `@smog/admin/schema`, shared with the Worker
+ * `MaintenanceSetting` of `@smog/config/maintenance`, shared with the Worker
  * and the admin settings page) with
  * `wrangler kv key put --binding KV` from `apps/site` (`--local` in dev,
  * `--remote` otherwise; spec §9, apps/site/src/worker/maintenance.ts).
  * It reads the current value first (`wrangler kv key get`): `on` keeps its
  * `bypassVersion`, `off` writes a new one (`nextBypassVersion`), so bypass
  * cookies last one window. Production needs `--yes`. `--dry-run` prints both commands
- * instead of running them (the version as a placeholder). Isolates
- * pick the change up within about a minute (30 s isolate cache + 30 s KV
- * `cacheTtl`).
+ * instead of running them (the version as a placeholder). Visitors
+ * follow within about 2 minutes (30 s isolate cache, 30 s KV `cacheTtl`
+ * and up to a minute of KV propagation).
  */
 
 const ENVS = ["dev", "staging", "production"] as const;
@@ -275,7 +275,7 @@ function run(args: MaintenanceArgs): void {
     throw new Error(`[maintenance] wrangler exited with ${proc.exitCode}`);
   }
   console.log(
-    `[maintenance] ${args.env}: maintenance ${args.action} (bypassVersion ${version}). Isolates follow within about a minute.`
+    `[maintenance] ${args.env}: maintenance ${args.action} (bypassVersion ${version}). Visitors follow within about 2 minutes.`
   );
 }
 

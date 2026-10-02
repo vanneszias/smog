@@ -287,7 +287,11 @@ describe("admin.maintenance.set", () => {
     expect(await auditRowsSince(mark)).toEqual([]);
   });
 
-  it("logs and rethrows a failed audit write; the KV change stands", async () => {
+  /** Runs `set` with a D1 that refuses the audit insert (and `kv`, when given). */
+  async function setWithFailingAudit(
+    input: unknown,
+    kv?: KVNamespace
+  ): Promise<string[]> {
     const context = await contextAs(admin);
     const failing = new Proxy(env.DB, {
       get(d1, key) {
@@ -304,26 +308,67 @@ describe("admin.maintenance.set", () => {
       },
     });
     const logged = vi.spyOn(console, "error").mockImplementation(() => {
-      // Asserted below.
+      // Asserted by the callers.
     });
     await expect(
-      call(
-        procedureAt("maintenance.set"),
-        { enabled: true },
-        {
-          context: { ...context, db: createDb(failing) },
-          path: ["admin", "maintenance", "set"],
-        }
-      )
-    ).rejects.toThrow();
-    expect(await stored()).toMatchObject({ enabled: true });
+      call(procedureAt("maintenance.set"), input, {
+        context: { ...context, db: createDb(failing), kv: kv ?? context.kv },
+        path: ["admin", "maintenance", "set"],
+      })
+    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
+    const messages = logged.mock.calls.map(([message]) => String(message));
+    logged.mockRestore();
+    return messages;
+  }
+
+  it("logs and rethrows a failed audit write, and puts the previous setting back", async () => {
+    // Nothing stored before: the key is removed again.
+    const messages = await setWithFailingAudit({ enabled: true });
+    expect(await env.KV.get(MAINTENANCE_KV_KEY)).toBeNull();
     expect(
-      logged.mock.calls.some(
-        ([message]) =>
-          typeof message === "string" &&
-          message.startsWith(
-            `[admin] Failed to write the audit entry maintenance.enable for setting:${MAINTENANCE_KV_KEY}`
-          )
+      messages.some((message) =>
+        message.startsWith(
+          `[admin] Failed to write the audit entry maintenance.enable for setting:${MAINTENANCE_KV_KEY}`
+        )
+      )
+    ).toBe(true);
+
+    // A stored window: exactly that value comes back, version included.
+    const window = { bypassVersion: 41, enabled: true, message: "Bezig" };
+    await store(window);
+    await setWithFailingAudit({ enabled: false });
+    expect(await stored()).toEqual(window);
+    // So a retry is a real change, and is audited.
+    const mark = await auditMark();
+    await set({ enabled: false });
+    expect((await auditRowsSince(mark)).map((row) => row.action)).toEqual([
+      "maintenance.disable",
+    ]);
+  });
+
+  it("logs a failed restore and still rethrows the audit error", async () => {
+    let puts = 0;
+    const flaky = new Proxy(env.KV, {
+      get(kv, key) {
+        if (key === "put" || key === "delete") {
+          return (...args: unknown[]) => {
+            puts += 1;
+            if (puts > 1) {
+              return Promise.reject(new Error("KV is down"));
+            }
+            return (kv[key] as (...a: unknown[]) => Promise<unknown>)(...args);
+          };
+        }
+        const value: unknown = Reflect.get(kv, key, kv);
+        return typeof value === "function" ? value.bind(kv) : value;
+      },
+    });
+    const messages = await setWithFailingAudit({ enabled: true }, flaky);
+    expect(
+      messages.some((message) =>
+        message.startsWith(
+          "[admin] Failed to restore the maintenance setting after a failed audit write"
+        )
       )
     ).toBe(true);
   });

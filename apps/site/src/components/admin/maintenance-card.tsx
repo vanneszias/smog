@@ -33,6 +33,10 @@ import {
   useId,
   useState,
 } from "react";
+import {
+  type IssuedBypass,
+  isBypassRateLimited,
+} from "@/lib/maintenance-bypass";
 import { useAuditTime } from "./audit-data";
 
 /**
@@ -101,10 +105,10 @@ export interface MaintenanceCardProps {
   onChanged?: () => void;
   /**
    * Gets this browser's bypass cookie (`POST /api/maintenance/bypass`);
-   * resolves with its expiry. Enabling waits for it, so the acting admin
-   * is never locked out.
+   * resolves with its expiry and the version it was signed for. Enabling
+   * waits for it, so the acting admin is never locked out.
    */
-  requestBypass: () => Promise<string>;
+  requestBypass: () => Promise<IssuedBypass>;
 }
 
 /**
@@ -112,8 +116,13 @@ export interface MaintenanceCardProps {
  * expected end, then "Enable", which first gets the acting admin's bypass
  * cookie and only then turns maintenance on. On: the window, and
  * "Disable" behind an AlertDialog that says every bypass cookie is
- * revoked. The note on propagation is always shown: other isolates follow
- * within about a minute.
+ * revoked. The note on propagation is always shown: other visitors follow
+ * within about 2 minutes.
+ *
+ * KV is eventually consistent, so the cookie may have been signed for an
+ * older version than the one `set` wrote (a change made elsewhere moments
+ * before). The card compares the two, asks for a new cookie once on a
+ * mismatch, and warns instead of reporting success if they still differ.
  */
 export function MaintenanceCard({
   onChanged,
@@ -130,24 +139,39 @@ export function MaintenanceCard({
   const [enabling, setEnabling] = useState(false);
   const titleId = useId();
 
+  /** `set`; the stored setting it answered, or null after a failure toast. */
   const change = useCallback(
-    async (input: MaintenanceSetInput, done: string): Promise<boolean> => {
+    async (input: MaintenanceSetInput): Promise<MaintenanceSetting | null> => {
       try {
-        await setMaintenance.mutateAsync(input);
-        toast({ title: done, variant: "success" });
-        return true;
+        return await setMaintenance.mutateAsync(input);
       } catch (error) {
         console.error("[admin] Failed to change maintenance mode:", error);
         toast({
           title: t("admin.settings.maintenance.failed"),
           variant: "danger",
         });
-        return false;
+        return null;
       } finally {
         onChanged?.();
       }
     },
     [onChanged, setMaintenance, t, toast]
+  );
+
+  /** A cookie for `version`: the one issued, else one more request. */
+  const ensureCookieFor = useCallback(
+    async (issued: IssuedBypass, version: number): Promise<boolean> => {
+      if (issued.bypassVersion === version) {
+        return true;
+      }
+      try {
+        return (await requestBypass()).bypassVersion === version;
+      } catch (error) {
+        console.error("[admin] Failed to renew the bypass cookie:", error);
+        return false;
+      }
+    },
+    [requestBypass]
   );
 
   const enable = useCallback(async () => {
@@ -168,33 +192,64 @@ export function MaintenanceCard({
     }
     setEnabling(true);
     try {
+      let issued: IssuedBypass;
       try {
-        await requestBypass();
+        issued = await requestBypass();
       } catch (error) {
         console.error("[admin] Failed to get the bypass cookie:", error);
         toast({
-          title: t("admin.settings.maintenance.bypassFailed"),
+          title: t(
+            isBypassRateLimited(error)
+              ? "admin.settings.bypass.rateLimited"
+              : "admin.settings.maintenance.bypassFailed"
+          ),
           variant: "danger",
         });
         onChanged?.();
         return;
       }
-      if (await change(parsed.data, t("admin.settings.maintenance.enabled"))) {
-        setMessage("");
-        setUntil("");
+      const stored = await change(parsed.data);
+      if (!stored) {
+        return;
       }
+      setMessage("");
+      setUntil("");
+      const covered = await ensureCookieFor(issued, stored.bypassVersion);
+      onChanged?.();
+      toast(
+        covered
+          ? {
+              title: t("admin.settings.maintenance.enabled"),
+              variant: "success",
+            }
+          : {
+              title: t("admin.settings.maintenance.staleCookie"),
+              variant: "warning",
+            }
+      );
     } finally {
       setEnabling(false);
     }
-  }, [change, message, onChanged, requestBypass, t, toast, until]);
+  }, [
+    change,
+    ensureCookieFor,
+    message,
+    onChanged,
+    requestBypass,
+    t,
+    toast,
+    until,
+  ]);
 
   const disable = useCallback(async () => {
-    if (
-      await change({ enabled: false }, t("admin.settings.maintenance.disabled"))
-    ) {
+    if (await change({ enabled: false })) {
+      toast({
+        title: t("admin.settings.maintenance.disabled"),
+        variant: "success",
+      });
       setConfirmOff(false);
     }
-  }, [change, t]);
+  }, [change, t, toast]);
 
   const onMessage = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(event.target.value);
