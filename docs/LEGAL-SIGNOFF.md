@@ -9,6 +9,7 @@ The privacy policy (`/privacy`) and the terms (`/terms`) were rewritten for the 
 1. **Effective date.** `LEGAL_EFFECTIVE_DATE` (`packages/i18n/src/legal/index.ts`) is the "Laatst bijgewerkt" date of both pages. It is set to 2026-09-30 for now; set the real date at cutover. It no longer depends on the consent version, so changing it never asks anyone for consent again.
 2. **Consent history on account deletion.** Deleting an account also deletes its consent history (the log of analytics yes/no decisions), so nothing proves a past consent afterwards. Confirm that this is intended, or keep the log after deletion (a data-model change).
 3. **Renewal price wording (terms, sponsoring).** The text says a renewal costs "the price then shown". DECISIONS (D-RENEW) says renewals cost the same price (€50 per gesture, +€10 with a logo). Choose which of the two the text should say.
+4. **Google profile photos (P29).** The website shows a Google user's photo straight from `lh3.googleusercontent.com`, so Google receives that user's IP address and browser details on every page that shows it. The text now says so. The alternative is to copy the photo to R2 at sign-in and drop `lh3` from the CSP `img-src`; then nothing goes to Google after sign-in, and the sentence can go. Choose one.
 
 Also for the owner:
 - **Consent version:** `CONSENT_POLICY_VERSION` was **not** bumped, so existing "yes" answers stay valid. What analytics measures did not widen, and less is sent (user id only, no name or email). Confirm this, or bump it (everyone who said yes is asked again).
@@ -30,7 +31,7 @@ The text states retention periods that must be true on day one (PROGRESS carries
 - **P2. Account.** Was "WorkOS-gebruikers-ID, e-mailadres, naam, rol, sessie- en accounttijdstippen". Now "Account en aanmelding" covers:
   - name, email address and whether it is verified;
   - language and role;
-  - optionally a profile photo from Google or Apple;
+  - optionally a profile photo from Google, which the browser fetches directly from Google whenever it is shown (P29; Apple sends no photo);
   - sessions, with IP address and browser or app details, and timestamps;
   - passwords, stored only as an irreversible hash, and passkeys, stored only as their public key;
   - with Google or Apple sign-in, the account ID, name and email address they send us.
@@ -50,7 +51,7 @@ The text states retention periods that must be true on day one (PROGRESS carries
 - **P12.** Added:
   - **Cloudflare:** Workers, D1, R2 (sponsor logos), KV, Queues, rendering sponsor videos with the name and logo (Workflows, Containers), Email and Turnstile. Links to Cloudflare's privacy policy.
   - **Better Auth:** self-hosted open-source software; no data goes to a separate provider for it.
-  - **Google and Apple:** only if you choose to sign in with them.
+  - **Google and Apple:** when you choose to sign in with them; a Google photo is fetched from Google on every view (P29).
 - **P13.** Mux, Mollie, Expo and OpenPanel (self-hosted at analytics.zias.be) are unchanged.
 
 **Section 6: Analytics en identificatie (rewritten)**
@@ -110,6 +111,12 @@ The text states retention periods that must be true on day one (PROGRESS carries
 
 **Consent version**
 - **P28.** `CONSENT_POLICY_VERSION` was not bumped (confirm; see above).
+
+**Added after phase 4 tasks 5 and 6 (phase 4 fix wave)**
+- **P29. Google profile photos (sections 3 and 5).** Section 3 said we store "eventueel een profielfoto van Google of Apple". Apple never sends a photo, so "of Apple" is gone. The website loads the photo from `lh3.googleusercontent.com` (allowed in the CSP `img-src`) on every page that shows it, in the user menu and on the account page. The text now says "een profielfoto van Google (die uw browser rechtstreeks bij Google ophaalt wanneer ze getoond wordt)". The Google recipient bullet in section 5 no longer says "alleen wanneer u kiest om u … aan te melden": it adds that Google then sees the IP address and browser details. The app shows initials only. See open decision 4.
+- **P30. The maintenance cookie (section 8).** During a maintenance window an administrator gets `smog_mx`, a signed, HttpOnly, strictly necessary cookie that lets them through the maintenance page. The cookies bullet now adds "tijdens onderhoud een technische cookie voor beheerders".
+- **P31. A shared device (section 8).** A signed-in user's analytics choice is also kept on the device (a copy, marked as that account's). It only applies to that account: a guest on the same device is asked for their own choice, and a copy is never carried to another account. The local storage bullet now says so.
+- **P32. Turnstile in the app (section 3, no text change).** The app shows Cloudflare's challenge in a web view (`apps/mobile/src/components/turnstile-sheet.tsx`) for the same forms as the website. The existing Turnstile sentence covers it. The **App Store privacy label** ("data collected by third parties": device signals for fraud prevention) and the **Google Play data safety form** must say so too. This is for the store submission in phase 8.
 
 ## Terms
 

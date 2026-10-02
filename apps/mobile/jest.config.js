@@ -12,10 +12,11 @@ module.exports = {
   ],
   setupFilesAfterEnv: ["<rootDir>/jest.setup-after-env.ts"],
   testMatch: ["<rootDir>/src/**/*.test.{ts,tsx}"],
-  // The first test of a route-rendering suite pays the cold require of every
-  // route module (under 1 s alone); with the whole turbo test run in
-  // parallel on a loaded machine that passed Jest's 5 s default.
-  testTimeout: 10_000,
+  // The route modules' cold require is paid in the harness's `beforeAll`.
+  // A test then renders and waits with `findBy*` (up to 5 s each, see
+  // jest.setup-after-env.ts); under the whole turbo test run on 4 cores one
+  // render can take seconds, so 10 s was passed by a test with two waits.
+  testTimeout: 30_000,
   // oRPC and lucide ship ES modules only (`.mjs`), which jest-expo's
   // `\.[jt]sx?$` transform does not cover. Merged with the preset's transforms.
   transform: {

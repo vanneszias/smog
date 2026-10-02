@@ -125,9 +125,7 @@ test.describe("screenshots", () => {
         // biome-ignore lint/performance/noAwaitInLoops: one theme after the other on the same page.
         await setTheme(page, theme);
         await page.goto("/account");
-        await expect(page.getByRole("region", { name: BANNER })).toBeVisible({
-          timeout: 15_000,
-        });
+        await expect(page.getByRole("region", { name: BANNER })).toBeVisible();
         await page.waitForLoadState("networkidle");
         await page.screenshot({
           animations: "disabled",
@@ -156,11 +154,9 @@ test.describe("screenshots", () => {
         // biome-ignore lint/performance/noAwaitInLoops: one theme after the other on the same page.
         await setTheme(page, theme);
         await page.goto("/account");
-        await expect(page.getByRole("region", { name: "Profiel" })).toBeVisible(
-          {
-            timeout: 15_000,
-          }
-        );
+        await expect(
+          page.getByRole("region", { name: "Profiel" })
+        ).toBeVisible();
         await page.waitForLoadState("networkidle");
         await page.screenshot({
           animations: "disabled",
@@ -203,9 +199,7 @@ test.describe("consent banner", () => {
   }) => {
     await page.setViewportSize({ height: 800, width: 390 });
     await page.goto("/");
-    await expect(page.getByRole("region", { name: BANNER })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(page.getByRole("region", { name: BANNER })).toBeVisible();
     await page.evaluate(() =>
       window.scrollTo(0, document.documentElement.scrollHeight)
     );
@@ -229,9 +223,7 @@ test.describe("consent banner", () => {
       .click();
     await signUpWithPassword(page);
     await page.goto("/account");
-    await expect(page.getByRole("region", { name: "Profiel" })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(page.getByRole("region", { name: "Profiel" })).toBeVisible();
     await page.waitForLoadState("networkidle");
     await expect(page.getByRole("region", { name: BANNER })).toHaveCount(0);
     await expect(
@@ -248,7 +240,7 @@ test.describe("consent banner", () => {
     const relay = recordRelay(page);
     await page.goto("/");
     const banner = page.getByRole("region", { name: BANNER });
-    await expect(banner).toBeVisible({ timeout: 15_000 });
+    await expect(banner).toBeVisible();
     await expect(
       banner.getByRole("link", { name: "Lees het privacybeleid" })
     ).toHaveAttribute("href", "/privacy");
@@ -338,9 +330,7 @@ test("the export downloads valid JSON (version 2)", async ({ page }) => {
   await decideConsent(page);
   const email = await signUpWithPassword(page);
   await page.goto("/account");
-  await expect(page.getByRole("region", { name: "Profiel" })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(page.getByRole("region", { name: "Profiel" })).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
 
   const downloading = page.waitForEvent("download");
@@ -520,7 +510,7 @@ test("passkeys: add one with a virtual authenticator, then remove it", async ({
   await page.goto("/account");
   await expect(
     page.getByText("Je hebt nog geen passkey toegevoegd.")
-  ).toBeVisible({ timeout: 15_000 });
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Passkey toevoegen" }).click();
   await expect(

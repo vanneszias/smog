@@ -183,6 +183,40 @@ describe("the legal texts (spec §9, inventory P-07, P-08)", () => {
     }
   });
 
+  test("the Google photo is fetched from Google, Apple has none, and the maintenance cookie is listed (phase 4 review I6)", () => {
+    const expected = {
+      en: {
+        cookie: "a technical cookie for administrators during maintenance",
+        fetched: "which your browser fetches directly from Google",
+        recipient: "Google sees your IP address",
+        wrong: "profile picture from Google or Apple",
+      },
+      fr: {
+        cookie:
+          "un cookie technique pour les administrateurs pendant une maintenance",
+        fetched: "que votre navigateur récupère directement auprès de Google",
+        recipient: "Google voit votre adresse IP",
+        wrong: "photo de profil de Google ou d'Apple",
+      },
+      nl: {
+        cookie: "tijdens onderhoud een technische cookie voor beheerders",
+        fetched: "die uw browser rechtstreeks bij Google ophaalt",
+        recipient: "Google ziet dan uw IP-adres",
+        wrong: "profielfoto van Google of Apple",
+      },
+    } as const;
+    for (const locale of LOCALES) {
+      const { sections } = legalDocument(locale, "privacy");
+      const section = (id: string): string =>
+        JSON.stringify(sections.find((s) => s.id === id));
+      const phrases = expected[locale];
+      expect(section("data"), locale).toContain(phrases.fetched);
+      expect(section("data"), locale).not.toContain(phrases.wrong);
+      expect(section("recipients"), locale).toContain(phrases.recipient);
+      expect(section("cookies"), locale).toContain(phrases.cookie);
+    }
+  });
+
   test("the privacy policy has the consent switch in its cookies section", () => {
     for (const locale of LOCALES) {
       const cookies = legalDocument(locale, "privacy").sections.find(

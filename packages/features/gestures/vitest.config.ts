@@ -27,5 +27,9 @@ export default defineConfig(async () => ({
     // (ranking, query parsing, hooks) run on Bun (`bun test src`).
     include: ["test/**/*.test.ts"],
     setupFiles: ["@smog/db/testing/apply-migrations"],
+    // Vitest's 5 s default is passed by D1-heavy tests (scrypt, 500-row
+    // seeds) when the whole turbo test run shares the cores; a hung test
+    // still fails, after 30 s.
+    testTimeout: 30_000,
   },
 }));

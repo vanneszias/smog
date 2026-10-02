@@ -121,8 +121,14 @@ describe("lists: create, update, mine", () => {
     const first = await newList("Eerste");
     const second = await newList("Tweede");
     await newList("Van iemand anders", await addUser("Bert"));
-    // Adding bumps `updated_at`, so the first list moves to the top.
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    // Adding bumps `updated_at`, so the first list moves to the top. Both
+    // lists are dated a minute back first, so the bump is later than either
+    // whatever the clock did in between (no sleep).
+    await env.DB.prepare(
+      "UPDATE list SET updated_at = updated_at - 60000 WHERE id IN (?, ?)"
+    )
+      .bind(first.id, second.id)
+      .run();
     await call(
       router.addItem,
       { gestureId: hond as string, id: first.id },

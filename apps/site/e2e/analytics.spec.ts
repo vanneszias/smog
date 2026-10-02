@@ -17,13 +17,18 @@ function recordRelay(page: Page): { bodies: unknown[]; requests: Request[] } {
   return { bodies, requests };
 }
 
-/** Writes the analytics decision into the local store (the banner comes later). */
+/**
+ * Writes the analytics decision into the local store (the banner comes
+ * later). `mirroredFrom`: a copy of that account's decision, as a sign-out
+ * leaves it on the device.
+ */
 async function setConsent(
   page: Page,
-  analytics: boolean | null
+  analytics: boolean | null,
+  mirroredFrom?: string
 ): Promise<void> {
   await page.evaluate(
-    ({ key, value }) => {
+    ({ from, key, value }) => {
       const raw = localStorage.getItem(key);
       const data = raw
         ? JSON.parse(raw)
@@ -38,10 +43,14 @@ async function setConsent(
             recentSearches: [],
             version: 2,
           };
-      data.consent = { analytics: value, decidedAt: Date.now() };
+      data.consent = {
+        analytics: value,
+        decidedAt: Date.now(),
+        ...(from ? { mirroredFrom: from } : {}),
+      };
       localStorage.setItem(key, JSON.stringify(data));
     },
-    { key: STORE_KEY, value: analytics }
+    { from: mirroredFrom, key: STORE_KEY, value: analytics }
   );
 }
 
@@ -108,5 +117,25 @@ test("no /api/analytics request before consent, or after withdraw", async ({
   const before = relay.requests.length;
   await browse(page);
   expect(relay.requests).toHaveLength(before);
+  expect(errors).toEqual([]);
+});
+
+test("a guest never inherits the yes an account left on the device", async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  const relay = recordRelay(page);
+  await stubMux(page);
+
+  // Anna allowed analytics on this device and signed out (phase 4 review I7).
+  await page.goto("/");
+  await setConsent(page, true, "user-anna");
+  await page.reload();
+  // The guest is asked for their own decision, and nothing is sent.
+  await expect(
+    page.getByRole("region", { name: "Help SMOG verbeteren" })
+  ).toBeVisible();
+  await browse(page);
+  expect(relay.requests).toHaveLength(0);
   expect(errors).toEqual([]);
 });

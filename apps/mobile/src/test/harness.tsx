@@ -1,4 +1,4 @@
-import { jest } from "@jest/globals";
+import { beforeAll, jest } from "@jest/globals";
 import { createApiClient } from "@smog/api/client";
 import type { ExpoAuthClient } from "@smog/auth/expo";
 import type { SessionHookResult } from "@smog/auth/react";
@@ -231,6 +231,17 @@ function appRoutes(
     "shared/[token]": require("../../app/shared/[token]"),
   };
 }
+
+/*
+ * The first test of a route-rendering suite used to pay the cold require of
+ * expo-router and every route module inside its own 10 s timeout, which a
+ * loaded machine (the whole turbo test run on 4 cores) passed. Every suite
+ * that imports this harness requires the routes once here, under a hook
+ * timeout of its own, so no test is charged for the cold load.
+ */
+beforeAll(() => {
+  appRoutes(SignInStub, true);
+}, 120_000);
 
 export interface RenderedApp {
   clients: AppClients;

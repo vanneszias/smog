@@ -58,6 +58,32 @@ describe("useConsent: guest", () => {
     expect(server.consentCalls).toEqual([]);
   });
 
+  test("never inherits an account's yes mirrored to the device (a shared device)", async () => {
+    const store = await newStore();
+    // Anna said yes on this device and signed out: her copy stays.
+    await store.update(setConsent(true, 1, "user-anna"));
+    const { server, wrapper } = setup(store, GUEST);
+    const { result } = renderHook(() => useConsent(), { wrapper });
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    // The guest is asked; Anna's yes does not count for them.
+    expect(result.current).toMatchObject({
+      analytics: null,
+      needsDecision: true,
+    });
+
+    // The guest's own choice replaces the copy and then applies.
+    await act(async () => {
+      await result.current.set(false);
+    });
+    expect(result.current).toMatchObject({
+      analytics: false,
+      needsDecision: false,
+    });
+    expect(store.getSnapshot().consent.mirroredFrom).toBeUndefined();
+    expect(server.consentCalls).toEqual([]);
+  });
+
   test("is loading while the session loads", async () => {
     const store = await newStore();
     await store.update(setConsent(true, 1));
