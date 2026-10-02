@@ -22,9 +22,14 @@ import { Ellipsis, Eye, EyeOff, Pencil, QrCode } from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useAuditTime } from "@/components/admin/audit-data";
 import { GestureQrDialog } from "@/components/gesture-qr-dialog";
+import { useListFormat } from "./labels";
 
 /** Chips shown per row before "+N". */
 const SHOWN_CATEGORIES = 2;
+
+/** The last column stays in view while the table scrolls sideways. */
+const STICKY_END =
+  "sticky right-0 z-[1] bg-surface in-data-[state=selected]:bg-primary-subtle [thead_&]:bg-surface-sunken";
 
 export interface GestureTableProps {
   onSelectedChange: (selected: ReadonlySet<string>) => void;
@@ -60,53 +65,43 @@ function SelectCell({
   );
 }
 
-function PublishedCell({ row }: { row: AdminGestureRow }): ReactNode {
+type OnPublish = (row: AdminGestureRow, published: boolean) => void;
+
+function PublishedCell({
+  onPublish,
+  pending,
+  row,
+}: {
+  onPublish: OnPublish;
+  pending: boolean;
+  row: AdminGestureRow;
+}): ReactNode {
   const { t } = useTranslation();
-  const { toast } = useToast();
-  const { setPublished } = useAdminGestureMutations();
   const toggle = useCallback(
-    (published: boolean) => {
-      setPublished
-        .mutateAsync({ id: row.id, published })
-        .then(() =>
-          toast({
-            title: published
-              ? t("admin.gestures.publishedToast", { name: row.name })
-              : t("admin.gestures.unpublishedToast", { name: row.name }),
-            variant: "success",
-          })
-        )
-        .catch((error: unknown) => {
-          console.error("[admin] Failed to publish the gesture:", error);
-          toast({
-            title: t("admin.gestures.errors.saveFailed"),
-            variant: "danger",
-          });
-        });
-    },
-    [row.id, row.name, setPublished, t, toast]
+    (published: boolean) => onPublish(row, published),
+    [onPublish, row]
   );
   return (
     <Switch
       aria-label={t("admin.gestures.publishToggle", { name: row.name })}
       checked={row.publishedAt !== null}
-      disabled={setPublished.isPending}
+      disabled={pending}
       onCheckedChange={toggle}
     />
   );
 }
 
 function RowMenu({
+  onPublish,
   onQr,
   row,
 }: {
+  onPublish: OnPublish;
   onQr: (row: AdminGestureRow) => void;
   row: AdminGestureRow;
 }): ReactNode {
   const { t } = useTranslation();
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const { setPublished } = useAdminGestureMutations();
   const published = row.publishedAt !== null;
   const edit = useCallback(() => {
     navigate({ params: { id: row.id }, to: "/admin/gestures/$id" }).catch(
@@ -116,17 +111,10 @@ function RowMenu({
     );
   }, [navigate, row.id]);
   const qr = useCallback(() => onQr(row), [onQr, row]);
-  const toggle = useCallback(() => {
-    setPublished
-      .mutateAsync({ id: row.id, published: !published })
-      .catch((error: unknown) => {
-        console.error("[admin] Failed to publish the gesture:", error);
-        toast({
-          title: t("admin.gestures.errors.saveFailed"),
-          variant: "danger",
-        });
-      });
-  }, [published, row.id, setPublished, t, toast]);
+  const toggle = useCallback(
+    () => onPublish(row, !published),
+    [onPublish, published, row]
+  );
   return (
     <Menu>
       <MenuTrigger asChild>
@@ -154,6 +142,7 @@ function RowMenu({
 
 function CategoriesCell({ row }: { row: AdminGestureRow }): ReactNode {
   const { t } = useTranslation();
+  const list = useListFormat();
   if (row.categories.length === 0) {
     return (
       <Text as="span" size="body-sm" tone="muted">
@@ -166,7 +155,7 @@ function CategoriesCell({ row }: { row: AdminGestureRow }): ReactNode {
   return (
     <span
       className="flex flex-wrap items-center gap-1"
-      title={row.categories.map((category) => category.name).join(", ")}
+      title={list(row.categories.map((category) => category.name))}
     >
       {shown.map((category) => (
         <Badge
@@ -204,8 +193,34 @@ export function GestureTable({
   selected,
 }: GestureTableProps): ReactNode {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const time = useAuditTime();
+  // One mutation for every row's switch and menu (not one per row).
+  const { setPublished } = useAdminGestureMutations();
   const [qrRow, setQrRow] = useState<AdminGestureRow | null>(null);
+  const publish = useCallback<OnPublish>(
+    (row, published) => {
+      setPublished
+        .mutateAsync({ id: row.id, published })
+        .then(() =>
+          toast({
+            title: published
+              ? t("admin.gestures.publishedToast", { name: row.name })
+              : t("admin.gestures.unpublishedToast", { name: row.name }),
+            variant: "success",
+          })
+        )
+        .catch((error: unknown) => {
+          console.error("[admin] Failed to publish the gesture:", error);
+          toast({
+            title: t("admin.gestures.errors.saveFailed"),
+            variant: "danger",
+          });
+        });
+    },
+    [setPublished, t, toast]
+  );
+  const publishing = setPublished.isPending;
   const closeQr = useCallback((open: boolean) => {
     if (!open) {
       setQrRow(null);
@@ -285,7 +300,6 @@ export function GestureTable({
         ),
         header: t("admin.gestures.columns.name"),
         id: "name",
-        sortValue: (row) => row.name,
       },
       {
         cell: (row) => <CategoriesCell row={row} />,
@@ -298,13 +312,6 @@ export function GestureTable({
           t("admin.gestures.keywordCount", { count: row.keywords.length }),
         header: t("admin.gestures.columns.keywords"),
         id: "keywords",
-        sortValue: (row) => row.keywords.length,
-      },
-      {
-        cell: (row) => <PublishedCell row={row} />,
-        header: t("admin.gestures.columns.published"),
-        id: "published",
-        sortValue: (row) => (row.publishedAt === null ? 0 : 1),
       },
       {
         cell: (row) => (
@@ -317,18 +324,31 @@ export function GestureTable({
         ),
         header: t("admin.gestures.columns.updated"),
         id: "updated",
-        sortValue: (row) => row.updatedAt,
       },
       {
-        align: "end",
-        cell: (row) => <RowMenu onQr={setQrRow} row={row} />,
-        header: (
-          <span className="sr-only">{t("admin.gestures.columns.actions")}</span>
+        // Pinned to the right, so a phone keeps the switch and the menu.
+        cell: (row) => (
+          <span className="flex items-center justify-end gap-1">
+            <PublishedCell onPublish={publish} pending={publishing} row={row} />
+            <RowMenu onPublish={publish} onQr={setQrRow} row={row} />
+          </span>
         ),
+        className: STICKY_END,
+        header: t("admin.gestures.columns.published"),
         id: "actions",
       },
     ],
-    [headerChecked, rows.length, selected, t, time, toggleAll, toggleRow]
+    [
+      headerChecked,
+      publish,
+      publishing,
+      rows.length,
+      selected,
+      t,
+      time,
+      toggleAll,
+      toggleRow,
+    ]
   );
   return (
     <>
@@ -341,7 +361,16 @@ export function GestureTable({
         stickyHeader
       />
       {qrRow ? (
-        <GestureQrDialog gesture={qrRow} onOpenChange={closeQr} open />
+        <GestureQrDialog
+          gesture={qrRow}
+          note={
+            qrRow.publishedAt === null
+              ? t("admin.gestures.qrHiddenNote")
+              : undefined
+          }
+          onOpenChange={closeQr}
+          open
+        />
       ) : null}
     </>
   );

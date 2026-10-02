@@ -60,6 +60,7 @@ function nameInput(): HTMLInputElement {
 }
 
 const DIEREN = /Dieren/;
+const DESCRIPTION = /Description/;
 
 const BASE_API = {
   "admin/categories/list": CATEGORIES,
@@ -173,54 +174,207 @@ describe("GestureEditor", () => {
     await waitFor(() => expect(save.hasAttribute("disabled")).toBe(true));
   });
 
-  test("a stale save offers to reload or keep editing", async () => {
-    let fresh = detail();
-    const { calls } = await renderSite(
+  /** A fake `update`: stale for the old version, else the saved row. */
+  function staleThenSaved(fresh: () => AdminGestureDetail) {
+    return (input: unknown) => {
+      const {
+        expectedUpdatedAt,
+        id: _id,
+        ...patch
+      } = input as {
+        expectedUpdatedAt: number;
+        id: string;
+      };
+      return expectedUpdatedAt === 1000
+        ? rpcError("CONFLICT", 409, { ids: ["g1"], reason: "stale" })
+        : { ...fresh(), ...patch, updatedAt: 2000 };
+    };
+  }
+
+  function updates(calls: { input: unknown; path: string }[]): unknown[] {
+    return calls
+      .filter((call) => call.path === "admin/gestures/update")
+      .map((call) => call.input);
+  }
+
+  function renderEditor(api: Record<string, unknown>) {
+    return renderSite(
       () => (
         <div data-testid="page">
           <GestureEditor gesture={detail()} />
         </div>
       ),
-      {
-        api: {
-          ...BASE_API,
-          "admin/gestures/get": () => fresh,
-          "admin/gestures/update": () =>
-            rpcError("CONFLICT", 409, { ids: ["g1"], reason: "stale" }),
-        },
-      }
+      { api: { ...BASE_API, ...api } }
     );
-    // Another admin renames it meanwhile.
-    fresh = detail({ name: "Zwaaien (nieuw)", updatedAt: 1500 });
+  }
+
+  test("a stale save keeps their other fields: only my rename goes out (the review's probe)", async () => {
+    // B changed the description and the keywords meanwhile.
+    const fresh = () =>
+      detail({
+        description: "Van B",
+        keywords: ["hallo", "dag"],
+        updatedAt: 1500,
+      });
+    const { calls } = await renderEditor({
+      "admin/gestures/get": fresh,
+      "admin/gestures/update": staleThenSaved(fresh),
+    });
     fireEvent.change(nameInput(), { target: { value: "Mijn naam" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    const dialog = await screen.findByRole("alertdialog", {
-      name: "Someone else changed this gesture",
+    await waitFor(() => expect(updates(calls)).toHaveLength(2));
+    expect(updates(calls)[1]).toEqual({
+      expectedUpdatedAt: 1500,
+      id: "g1",
+      name: "Mijn naam",
     });
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "Keep editing" })
-    );
-    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
-    expect(nameInput().value).toBe("Mijn naam");
-
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    const again = await screen.findByRole("alertdialog", {
-      name: "Someone else changed this gesture",
-    });
-    fireEvent.click(
-      within(again).getByRole("button", { name: "Reload (lose my edits)" })
-    );
-    await waitFor(() => expect(nameInput().value).toBe("Zwaaien (nieuw)"));
-    const updates = calls.filter(
-      (call) => call.path === "admin/gestures/update"
-    );
-    // "Keep editing" saves against the version it was shown.
     expect(
-      updates.map(
-        (call) =>
-          (call.input as { expectedUpdatedAt: number }).expectedUpdatedAt
-      )
-    ).toEqual([1000, 1500]);
+      await screen.findByText("Merged with a newer version and saved.")
+    ).toBeDefined();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      (screen.getByRole("textbox", { name: DESCRIPTION }) as HTMLElement)
+        .textContent
+    ).toBe("Van B");
+  });
+
+  test("a stale save never republishes what they unpublished", async () => {
+    const fresh = () => detail({ publishedAt: null, updatedAt: 1500 });
+    const { calls } = await renderEditor({
+      "admin/gestures/get": fresh,
+      "admin/gestures/setPublished": detail(),
+      "admin/gestures/update": staleThenSaved(fresh),
+    });
+    fireEvent.change(nameInput(), { target: { value: "Mijn naam" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(updates(calls)).toHaveLength(2));
+    expect(updates(calls)[1]).toEqual({
+      expectedUpdatedAt: 1500,
+      id: "g1",
+      name: "Mijn naam",
+    });
+    expect(
+      calls.some((call) => call.path === "admin/gestures/setPublished")
+    ).toBe(false);
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("switch", { name: "Published" })
+          .getAttribute("aria-checked")
+      ).toBe("false")
+    );
+  });
+
+  test("both renamed: the diff dialog; Escape changes nothing, their version is the default", async () => {
+    const fresh = () => detail({ name: "Naam van B", updatedAt: 1500 });
+    const { calls } = await renderEditor({
+      "admin/gestures/get": fresh,
+      "admin/gestures/update": staleThenSaved(fresh),
+    });
+    fireEvent.change(nameInput(), { target: { value: "Mijn naam" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Someone else changed this gesture",
+    });
+    const diff = within(dialog).getByRole("table", { name: "Name" });
+    expect(within(diff).getByText("Naam van B")).toBeDefined();
+    expect(within(diff).getByText("Mijn naam")).toBeDefined();
+    // Their version is the focused default.
+    expect(document.activeElement?.textContent).toBe("Use their version");
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(nameInput().value).toBe("Mijn naam");
+    expect(updates(calls)).toHaveLength(1);
+
+    // Escape armed nothing: the next save conflicts again.
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    const again = await screen.findByRole("dialog", {
+      name: "Someone else changed this gesture",
+    });
+    expect(updates(calls)).toHaveLength(2);
+    fireEvent.click(
+      within(again).getByRole("button", { name: "Use their version" })
+    );
+    await waitFor(() => expect(nameInput().value).toBe("Naam van B"));
+    expect(updates(calls)).toHaveLength(2);
+  });
+
+  test("overwrite with mine needs a second confirmation that names the fields", async () => {
+    const fresh = () => detail({ name: "Naam van B", updatedAt: 1500 });
+    const { calls } = await renderEditor({
+      "admin/gestures/get": fresh,
+      "admin/gestures/update": staleThenSaved(fresh),
+    });
+    fireEvent.change(nameInput(), { target: { value: "Mijn naam" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Someone else changed this gesture",
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Overwrite with mine" })
+    );
+    const confirm = await screen.findByRole("alertdialog", {
+      name: "Overwrite their changes?",
+    });
+    expect(confirm.textContent).toContain(
+      "This replaces the other admin's name with yours."
+    );
+    expect(updates(calls)).toHaveLength(1);
+    fireEvent.click(within(confirm).getByRole("button", { name: "Overwrite" }));
+    await waitFor(() => expect(updates(calls)).toHaveLength(2));
+    expect(updates(calls)[1]).toEqual({
+      expectedUpdatedAt: 1500,
+      id: "g1",
+      name: "Mijn naam",
+    });
+  });
+
+  test("a failed publish after a saved rename never conflicts with itself", async () => {
+    let publishCalls = 0;
+    const { calls } = await renderEditor({
+      "admin/gestures/get": detail(),
+      "admin/gestures/setPublished": () => {
+        publishCalls += 1;
+        return publishCalls === 1
+          ? rpcError("INTERNAL_SERVER_ERROR", 500)
+          : detail({ name: "Mijn naam", publishedAt: null, updatedAt: 3000 });
+      },
+      "admin/gestures/update": detail({ name: "Mijn naam", updatedAt: 2000 }),
+    });
+    fireEvent.change(nameInput(), { target: { value: "Mijn naam" } });
+    fireEvent.click(screen.getByRole("switch", { name: "Published" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(publishCalls).toBe(1));
+    expect(
+      await screen.findByText("The changes could not be saved.")
+    ).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(publishCalls).toBe(2));
+    // The rename is not sent again, and nothing conflicts.
+    expect(updates(calls)).toHaveLength(1);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  test("leaving with unsaved edits asks first; a clean editor lets go", async () => {
+    const { router } = await renderEditor({
+      "admin/gestures/get": detail(),
+    });
+    fireEvent.change(nameInput(), { target: { value: "Niet bewaard" } });
+    router.navigate({ to: "/elders" as never }).catch(() => undefined);
+    const ask = await screen.findByRole("alertdialog", {
+      name: "Leave without saving?",
+    });
+    fireEvent.click(within(ask).getByRole("button", { name: "Stay" }));
+    expect(router.state.location.pathname).toBe("/");
+  });
+
+  test("a clean editor never asks", async () => {
+    const { router } = await renderEditor({
+      "admin/gestures/get": detail(),
+    });
+    await router.navigate({ to: "/elders" as never });
+    expect(router.state.location.pathname).toBe("/elders");
+    expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
   test("delete is offered for a hidden gesture after typing its name", async () => {

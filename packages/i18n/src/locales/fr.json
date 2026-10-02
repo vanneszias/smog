@@ -64,7 +64,8 @@
     "otpDigit": "Chiffre {{index}} sur {{length}}",
     "userMenu": "Menu du compte",
     "favorite": "Favori",
-    "gestureVideo": "Vidéo du geste"
+    "gestureVideo": "Vidéo du geste",
+    "dragHandleFor": "Faire glisser pour réordonner\u00a0: {{name}}"
   },
   "nav": {
     "home": "Accueil",
@@ -901,7 +902,8 @@
         "done_one": "{{count}} geste mis à jour.",
         "done_many": "{{count}} gestes mis à jour.",
         "done_other": "{{count}} gestes mis à jour.",
-        "noCategoryLeft": "Un geste resterait sans catégorie. Rien n’a été modifié."
+        "noCategoryLeft": "Un geste resterait sans catégorie. Rien n’a été modifié.",
+        "actions": "Actions"
       },
       "table": {
         "label": "Éditeur de tableau",
@@ -916,15 +918,22 @@
         "editKeywords": "Mots-clés de {{name}}",
         "invalid": "Corrigez d’abord les cellules signalées.",
         "tooMany": "Enregistrez au plus {{max}} gestes à la fois.",
-        "stale_one": "Un autre administrateur a modifié {{count}} de ces gestes. Rechargez-le pour voir la modification\u00a0; vos modifications de ce geste sont perdues. Vos autres modifications restent.",
-        "stale_many": "Un autre administrateur a modifié {{count}} de ces gestes. Rechargez-les pour voir les modifications\u00a0; vos modifications de ces gestes sont perdues. Vos autres modifications restent.",
-        "stale_other": "Un autre administrateur a modifié {{count}} de ces gestes. Rechargez-les pour voir les modifications\u00a0; vos modifications de ces gestes sont perdues. Vos autres modifications restent.",
-        "reloadRows": "Recharger ces lignes",
         "staleRow": "Modifié par un autre administrateur",
         "saved_one": "{{count}} geste enregistré.",
         "saved_many": "{{count}} gestes enregistrés.",
         "saved_other": "{{count}} gestes enregistrés.",
-        "cell": "{{field}} de {{name}}"
+        "cell": "{{field}} de {{name}}",
+        "keywordsInvalid": "Vérifiez les mots-clés\u00a0: au plus 30, chacun d’au plus 60 caractères.",
+        "changedCell": "Modifié, pas encore enregistré",
+        "merged": "Fusionné avec des versions plus récentes. Vérifiez les modifications et enregistrez à nouveau.",
+        "conflict_one": "Un autre administrateur a modifié les mêmes champs de {{count}} geste. Utilisez sa version, ou remplacez-la par la vôtre.",
+        "conflict_other": "Un autre administrateur a modifié les mêmes champs de {{count}} gestes. Utilisez sa version, ou remplacez-la par la vôtre.",
+        "conflict_many": "Un autre administrateur a modifié les mêmes champs de {{count}} gestes. Utilisez sa version, ou remplacez-la par la vôtre.",
+        "overwriteItem": "{{name}}\u00a0: {{fields}}",
+        "overwriteDescription": "Cela remplace les modifications de l’autre administrateur ({{items}}) par les vôtres.",
+        "discardTitle": "Abandonner {{count}} modifications\u00a0?",
+        "discardDescription": "Les modifications de ces lignes seront perdues.",
+        "locked": "Enregistrez ou abandonnez vos modifications du tableau pour changer les filtres ou la page."
       },
       "changes": {
         "title": "Vérifiez vos modifications",
@@ -986,9 +995,23 @@
       },
       "conflict": {
         "title": "Quelqu’un d’autre a modifié ce geste",
-        "description": "Un autre administrateur a enregistré ce geste après que vous l’avez ouvert. Rechargez pour voir sa version, ou continuez\u00a0: enregistrer à nouveau remplace alors ses modifications des champs que vous avez changés.",
-        "reload": "Recharger (mes modifications sont perdues)",
-        "keep": "Continuer à modifier"
+        "description": "Un autre administrateur a enregistré ce geste à {{time}}. Ses modifications des autres champs sont conservées. Ces champs ont été modifiés des deux côtés\u00a0:",
+        "theirs": "Sa version",
+        "mine": "Votre version",
+        "useTheirs": "Utiliser sa version",
+        "overwrite": "Remplacer par la mienne",
+        "overwriteTitle": "Remplacer ses modifications\u00a0?",
+        "overwriteDescription": "Cela remplace {{fields}} de l’autre administrateur par les vôtres.",
+        "overwriteConfirm": "Remplacer",
+        "merged": "Fusionné avec une version plus récente et enregistré.",
+        "fieldNames": {
+          "video": "la vidéo",
+          "name": "le nom",
+          "description": "la description",
+          "keywords": "les mots-clés",
+          "categoryIds": "les catégories",
+          "published": "l’état de publication"
+        }
       },
       "danger": {
         "title": "Zone de danger",
@@ -1004,7 +1027,15 @@
       },
       "errors": {
         "saveFailed": "Les modifications n’ont pas pu être enregistrées."
-      }
+      },
+      "leave": {
+        "title": "Partir sans enregistrer\u00a0?",
+        "description": "Vos modifications ne sont pas encore enregistrées. Elles seront perdues si vous partez.",
+        "leave": "Partir",
+        "stay": "Rester"
+      },
+      "listHeading": "Liste des gestes",
+      "qrHiddenNote": "Ce geste est masqué\u00a0: le lien ne fonctionnera qu’une fois publié."
     },
     "categories": {
       "title": "Catégories",
@@ -1020,7 +1051,6 @@
       "count_one": "{{count}} geste",
       "count_many": "{{count}} gestes",
       "count_other": "{{count}} gestes",
-      "publishedCount": "{{count}} publiés",
       "rowActions": "Actions pour {{name}}",
       "moveUp": "Monter",
       "moveDown": "Descendre",
@@ -1043,7 +1073,8 @@
         "duplicate": "Une catégorie porte déjà ce nom.",
         "stale": "Un autre administrateur a modifié cette catégorie. Son nouveau nom est affiché\u00a0; réessayez.",
         "created": "{{name}} est créée.",
-        "renamed": "La catégorie est renommée."
+        "renamed": "La catégorie est renommée.",
+        "nameInvalid": "Indiquez un nom d’au plus {{max}} caractères."
       },
       "deleteConfirm": {
         "title": "Supprimer {{name}}\u00a0?",
@@ -1066,7 +1097,11 @@
       },
       "errors": {
         "saveFailed": "La modification n’a pas pu être enregistrée."
-      }
+      },
+      "hiddenName": "{{name}} (masquée)",
+      "countWithPublished_one": "{{count}} geste · {{published}} publiés",
+      "countWithPublished_many": "{{count}} gestes · {{published}} publiés",
+      "countWithPublished_other": "{{count}} gestes · {{published}} publiés"
     },
     "mux": {
       "title": "Vidéo",

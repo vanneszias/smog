@@ -2,9 +2,10 @@ import { describe, expect, test } from "bun:test";
 import type { AdminGestureRow } from "@smog/admin/schema";
 import {
   changesOf,
-  dropEdits,
   editedValues,
   invalidFields,
+  rebaseEdits,
+  resolveConflicts,
   saveManyItems,
   setEdit,
   type TableEdits,
@@ -27,6 +28,8 @@ function row(id: string, overrides: Partial<AdminGestureRow> = {}) {
     ...overrides,
   } satisfies AdminGestureRow;
 }
+
+const JOIN = (items: readonly string[]): string => items.join(", ");
 
 const NAMES = new Map([
   ["c1", "Begroeten"],
@@ -84,7 +87,7 @@ describe("the table editor's buffer", () => {
     const one = row("1");
     let edits = setEdit(new Map(), one, "categoryIds", ["c1", "c2"]);
     edits = setEdit(edits, one, "playbackId", "pb-nieuw");
-    expect(changesOf(edits, NAMES)).toEqual([
+    expect(changesOf(edits, NAMES, JOIN)).toEqual([
       {
         fields: [
           { after: "pb-nieuw", before: "pb-1", field: "playbackId" },
@@ -113,10 +116,59 @@ describe("the table editor's buffer", () => {
     expect(invalidFields(undefined).size).toBe(0);
   });
 
-  test("drops the stale rows and keeps the others", () => {
-    let edits = setEdit(new Map(), row("1"), "name", "Een");
-    edits = setEdit(edits, row("2"), "name", "Twee");
-    edits = dropEdits(edits, ["1"]);
-    expect([...edits.keys()]).toEqual(["2"]);
+  test("a new playback id clears the old Mux asset id (I4)", () => {
+    const one = row("1", { muxAssetId: "asset-old" });
+    const edits = setEdit(new Map(), one, "playbackId", "pb-nieuw");
+    expect(saveManyItems(edits)).toEqual([
+      {
+        expectedUpdatedAt: 100,
+        id: "1",
+        patch: { muxAssetId: null, playbackId: "pb-nieuw" },
+      },
+    ]);
+  });
+
+  test("a stale row is rebased on theirs: their fields stay, mine stay mine, both changed is a conflict", () => {
+    const one = row("1");
+    const two = row("2");
+    let edits = setEdit(new Map(), one, "name", "Mijn naam");
+    edits = setEdit(edits, one, "description", "Mijn uitleg");
+    edits = setEdit(edits, two, "name", "Rij twee");
+    // B changed row 1's description and keywords; row 2 is not stale.
+    const theirs = row("1", {
+      description: "Uitleg van B",
+      keywords: ["hallo", "dag"],
+      updatedAt: 200,
+    });
+    const { conflicts, edits: rebased } = rebaseEdits(
+      edits,
+      new Map([["1", theirs]]),
+      ["1"]
+    );
+    expect(conflicts).toEqual(new Map([["1", ["description"]]]));
+    expect(saveManyItems(rebased)).toEqual([
+      {
+        expectedUpdatedAt: 200,
+        id: "1",
+        patch: { description: "Mijn uitleg", name: "Mijn naam" },
+      },
+      { expectedUpdatedAt: 100, id: "2", patch: { name: "Rij twee" } },
+    ]);
+    // "Use their version": the conflicting fields leave the buffer.
+    expect(saveManyItems(resolveConflicts(rebased, conflicts))).toEqual([
+      { expectedUpdatedAt: 200, id: "1", patch: { name: "Mijn naam" } },
+      { expectedUpdatedAt: 100, id: "2", patch: { name: "Rij twee" } },
+    ]);
+  });
+
+  test("a stale row whose edits equal theirs leaves the buffer", () => {
+    const edits = setEdit(new Map(), row("1"), "name", "Zelfde");
+    const { conflicts, edits: rebased } = rebaseEdits(
+      edits,
+      new Map([["1", row("1", { name: "Zelfde", updatedAt: 200 })]]),
+      ["1"]
+    );
+    expect(conflicts.size).toBe(0);
+    expect(rebased.size).toBe(0);
   });
 });

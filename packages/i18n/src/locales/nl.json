@@ -64,7 +64,8 @@
     "otpDigit": "Cijfer {{index}} van {{length}}",
     "userMenu": "Accountmenu",
     "favorite": "Favoriet",
-    "gestureVideo": "Video van het gebaar"
+    "gestureVideo": "Video van het gebaar",
+    "dragHandleFor": "Slepen om de volgorde te wijzigen: {{name}}"
   },
   "nav": {
     "home": "Home",
@@ -886,7 +887,8 @@
         "clear": "Selectie wissen",
         "done_one": "{{count}} gebaar bijgewerkt.",
         "done_other": "{{count}} gebaren bijgewerkt.",
-        "noCategoryLeft": "Een gebaar zou zonder categorie blijven. Er is niets gewijzigd."
+        "noCategoryLeft": "Een gebaar zou zonder categorie blijven. Er is niets gewijzigd.",
+        "actions": "Acties"
       },
       "table": {
         "label": "Tabeleditor",
@@ -901,13 +903,20 @@
         "editKeywords": "Trefwoorden van {{name}}",
         "invalid": "Verbeter eerst de gemarkeerde cellen.",
         "tooMany": "Sla hoogstens {{max}} gebaren tegelijk op.",
-        "stale_one": "Een andere beheerder wijzigde {{count}} van deze gebaren. Herlaad het om de wijziging te zien; je wijzigingen eraan gaan verloren. Je andere wijzigingen blijven.",
-        "stale_other": "Een andere beheerder wijzigde {{count}} van deze gebaren. Herlaad ze om de wijzigingen te zien; je wijzigingen eraan gaan verloren. Je andere wijzigingen blijven.",
-        "reloadRows": "Deze rijen herladen",
         "staleRow": "Gewijzigd door een andere beheerder",
         "saved_one": "{{count}} gebaar opgeslagen.",
         "saved_other": "{{count}} gebaren opgeslagen.",
-        "cell": "{{field}} van {{name}}"
+        "cell": "{{field}} van {{name}}",
+        "keywordsInvalid": "Controleer de trefwoorden: hoogstens 30, elk hoogstens 60 tekens.",
+        "changedCell": "Gewijzigd, nog niet opgeslagen",
+        "merged": "Samengevoegd met nieuwere versies. Kijk de wijzigingen na en sla opnieuw op.",
+        "conflict_one": "Een andere beheerder wijzigde dezelfde velden van {{count}} gebaar. Gebruik hun versie, of overschrijf ze met de jouwe.",
+        "conflict_other": "Een andere beheerder wijzigde dezelfde velden van {{count}} gebaren. Gebruik hun versie, of overschrijf ze met de jouwe.",
+        "overwriteItem": "{{name}}: {{fields}}",
+        "overwriteDescription": "Dit vervangt de wijzigingen van de andere beheerder aan {{items}} door de jouwe.",
+        "discardTitle": "{{count}} wijzigingen verwerpen?",
+        "discardDescription": "De wijzigingen in deze rijen gaan verloren.",
+        "locked": "Sla je tabelwijzigingen op of verwerp ze om de filters of de pagina te wijzigen."
       },
       "changes": {
         "title": "Je wijzigingen nakijken",
@@ -966,9 +975,23 @@
       },
       "conflict": {
         "title": "Iemand anders wijzigde dit gebaar",
-        "description": "Een andere beheerder sloeg dit gebaar op nadat jij het opende. Herlaad om hun versie te zien, of bewerk verder: opnieuw opslaan vervangt dan hun wijzigingen aan de velden die jij aanpaste.",
-        "reload": "Herladen (mijn wijzigingen gaan verloren)",
-        "keep": "Verder bewerken"
+        "description": "Een andere beheerder sloeg dit gebaar op om {{time}}. Hun wijzigingen aan de andere velden blijven behouden. Deze velden werden aan beide kanten gewijzigd:",
+        "theirs": "Hun versie",
+        "mine": "Jouw versie",
+        "useTheirs": "Hun versie gebruiken",
+        "overwrite": "Overschrijven met de mijne",
+        "overwriteTitle": "Hun wijzigingen overschrijven?",
+        "overwriteDescription": "Dit vervangt {{fields}} van de andere beheerder door de jouwe.",
+        "overwriteConfirm": "Overschrijven",
+        "merged": "Samengevoegd met een nieuwere versie en opgeslagen.",
+        "fieldNames": {
+          "video": "de video",
+          "name": "de naam",
+          "description": "de beschrijving",
+          "keywords": "de trefwoorden",
+          "categoryIds": "de categorieën",
+          "published": "de publicatiestatus"
+        }
       },
       "danger": {
         "title": "Gevarenzone",
@@ -984,7 +1007,15 @@
       },
       "errors": {
         "saveFailed": "De wijzigingen konden niet opgeslagen worden."
-      }
+      },
+      "leave": {
+        "title": "Weggaan zonder op te slaan?",
+        "description": "Je wijzigingen zijn nog niet opgeslagen. Ze gaan verloren als je weggaat.",
+        "leave": "Weggaan",
+        "stay": "Blijven"
+      },
+      "listHeading": "Lijst met gebaren",
+      "qrHiddenNote": "Dit gebaar is verborgen: de link werkt pas als het gepubliceerd is."
     },
     "categories": {
       "title": "Categorieën",
@@ -999,7 +1030,6 @@
       },
       "count_one": "{{count}} gebaar",
       "count_other": "{{count}} gebaren",
-      "publishedCount": "{{count}} gepubliceerd",
       "rowActions": "Acties voor {{name}}",
       "moveUp": "Omhoog",
       "moveDown": "Omlaag",
@@ -1022,7 +1052,8 @@
         "duplicate": "Er bestaat al een categorie met deze naam.",
         "stale": "Een andere beheerder wijzigde deze categorie. De nieuwe naam staat er nu; probeer opnieuw.",
         "created": "{{name}} is aangemaakt.",
-        "renamed": "De categorie is hernoemd."
+        "renamed": "De categorie is hernoemd.",
+        "nameInvalid": "Vul een naam van hoogstens {{max}} tekens in."
       },
       "deleteConfirm": {
         "title": "{{name}} verwijderen?",
@@ -1045,7 +1076,10 @@
       },
       "errors": {
         "saveFailed": "De wijziging kon niet opgeslagen worden."
-      }
+      },
+      "hiddenName": "{{name}} (verborgen)",
+      "countWithPublished_one": "{{count}} gebaar · {{published}} gepubliceerd",
+      "countWithPublished_other": "{{count}} gebaren · {{published}} gepubliceerd"
     },
     "mux": {
       "title": "Video",

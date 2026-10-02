@@ -135,6 +135,8 @@ export interface SortState {
 export interface DataTableColumn<Row> {
   align?: "start" | "end";
   cell: (row: Row) => ReactNode;
+  /** Classes for the header and every cell of the column (e.g. sticky). */
+  className?: string;
   header: ReactNode;
   id: string;
   /** Makes the column sortable. */
@@ -290,7 +292,9 @@ function SortableHead<Row>({
   );
   if (!column.sortValue) {
     return (
-      <TableHead className={cn(end && "text-right")}>{column.header}</TableHead>
+      <TableHead className={cn(end && "text-right", column.className)}>
+        {column.header}
+      </TableHead>
     );
   }
   let Icon = ArrowUpDown;
@@ -302,7 +306,7 @@ function SortableHead<Row>({
   return (
     <TableHead
       aria-sort={active ? ARIA_SORT[active] : "none"}
-      className={cn("px-1", end && "text-right")}
+      className={cn("px-1", end && "text-right", column.className)}
     >
       <button
         className={cn(
@@ -342,7 +346,10 @@ function DataRow<Row>({
   const state = selected ? "selected" : undefined;
   const cells = columns.map((column) => (
     <TableCell
-      className={cn(column.align === "end" && "text-right tabular-nums")}
+      className={cn(
+        column.align === "end" && "text-right tabular-nums",
+        column.className
+      )}
       key={column.id}
     >
       {column.cell(row)}

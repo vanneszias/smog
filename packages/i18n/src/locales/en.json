@@ -64,7 +64,8 @@
     "otpDigit": "Digit {{index}} of {{length}}",
     "userMenu": "Account menu",
     "favorite": "Favorite",
-    "gestureVideo": "Gesture video"
+    "gestureVideo": "Gesture video",
+    "dragHandleFor": "Drag to reorder: {{name}}"
   },
   "nav": {
     "home": "Home",
@@ -886,7 +887,8 @@
         "clear": "Clear selection",
         "done_one": "{{count}} gesture updated.",
         "done_other": "{{count}} gestures updated.",
-        "noCategoryLeft": "A gesture would be left without a category. Nothing was changed."
+        "noCategoryLeft": "A gesture would be left without a category. Nothing was changed.",
+        "actions": "Actions"
       },
       "table": {
         "label": "Table editor",
@@ -901,13 +903,20 @@
         "editKeywords": "Keywords of {{name}}",
         "invalid": "Fix the marked cells before saving.",
         "tooMany": "Save at most {{max}} gestures at once.",
-        "stale_one": "Another admin changed {{count}} of these gestures. Reload it to see the change; your edits to it are lost. Your other edits stay.",
-        "stale_other": "Another admin changed {{count}} of these gestures. Reload them to see the changes; your edits to them are lost. Your other edits stay.",
-        "reloadRows": "Reload these rows",
         "staleRow": "Changed by another admin",
         "saved_one": "{{count}} gesture saved.",
         "saved_other": "{{count}} gestures saved.",
-        "cell": "{{field}} of {{name}}"
+        "cell": "{{field}} of {{name}}",
+        "keywordsInvalid": "Check the keywords: at most 30, each at most 60 characters.",
+        "changedCell": "Changed, not saved yet",
+        "merged": "Merged with newer versions. Check the changes and save again.",
+        "conflict_one": "Another admin changed the same fields of {{count}} gesture. Use their version, or overwrite it with yours.",
+        "conflict_other": "Another admin changed the same fields of {{count}} gestures. Use their version, or overwrite it with yours.",
+        "overwriteItem": "{{name}}: {{fields}}",
+        "overwriteDescription": "This replaces the other admin's changes to {{items}} with yours.",
+        "discardTitle": "Discard {{count}} changes?",
+        "discardDescription": "The edits in these rows are lost.",
+        "locked": "Save or discard your table edits to change the filters or the page."
       },
       "changes": {
         "title": "Review your changes",
@@ -966,9 +975,23 @@
       },
       "conflict": {
         "title": "Someone else changed this gesture",
-        "description": "Another admin saved this gesture after you opened it. Reload to see their version, or keep editing: saving again then replaces their changes to the fields you edited.",
-        "reload": "Reload (lose my edits)",
-        "keep": "Keep editing"
+        "description": "Another admin saved this gesture at {{time}}. Their changes to the other fields are kept. These fields were changed on both sides:",
+        "theirs": "Their version",
+        "mine": "Your version",
+        "useTheirs": "Use their version",
+        "overwrite": "Overwrite with mine",
+        "overwriteTitle": "Overwrite their changes?",
+        "overwriteDescription": "This replaces the other admin's {{fields}} with yours.",
+        "overwriteConfirm": "Overwrite",
+        "merged": "Merged with a newer version and saved.",
+        "fieldNames": {
+          "video": "video",
+          "name": "name",
+          "description": "description",
+          "keywords": "keywords",
+          "categoryIds": "categories",
+          "published": "published state"
+        }
       },
       "danger": {
         "title": "Danger zone",
@@ -984,7 +1007,15 @@
       },
       "errors": {
         "saveFailed": "The changes could not be saved."
-      }
+      },
+      "leave": {
+        "title": "Leave without saving?",
+        "description": "Your changes are not saved yet. They are lost if you leave.",
+        "leave": "Leave",
+        "stay": "Stay"
+      },
+      "listHeading": "Gesture list",
+      "qrHiddenNote": "This gesture is hidden: the link only works once it is published."
     },
     "categories": {
       "title": "Categories",
@@ -999,7 +1030,6 @@
       },
       "count_one": "{{count}} gesture",
       "count_other": "{{count}} gestures",
-      "publishedCount": "{{count}} published",
       "rowActions": "Actions for {{name}}",
       "moveUp": "Move up",
       "moveDown": "Move down",
@@ -1022,7 +1052,8 @@
         "duplicate": "A category with this name already exists.",
         "stale": "Another admin changed this category. Its new name is shown; try again.",
         "created": "{{name}} is created.",
-        "renamed": "The category is renamed."
+        "renamed": "The category is renamed.",
+        "nameInvalid": "Enter a name of at most {{max}} characters."
       },
       "deleteConfirm": {
         "title": "Delete {{name}}?",
@@ -1045,7 +1076,10 @@
       },
       "errors": {
         "saveFailed": "The change could not be saved."
-      }
+      },
+      "hiddenName": "{{name}} (hidden)",
+      "countWithPublished_one": "{{count}} gesture · {{published}} published",
+      "countWithPublished_other": "{{count}} gestures · {{published}} published"
     },
     "mux": {
       "title": "Video",

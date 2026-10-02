@@ -91,6 +91,10 @@ describe("CategoryList", () => {
         calls.find((call) => call.path === "admin/categories/reorder")?.input
       ).toEqual({ ids: ["c2", "c1", "c3"] })
     );
+    // A menu move is announced like a drop (M3).
+    expect(
+      await screen.findByText("Dropped Begroeten at position 2 of 2.")
+    ).toBeDefined();
   });
 
   test("offers delete only for an unused category", async () => {
@@ -101,12 +105,20 @@ describe("CategoryList", () => {
       },
     });
     const used = await openMenu("Begroeten");
+    // Reachable by keyboard, and it says why (M2).
+    await userEvent.click(
+      within(used).getByRole("menuitem", { name: "In use: unpublish instead" })
+    );
     expect(
-      within(used)
-        .getByRole("menuitem", { name: "In use: unpublish instead" })
-        .getAttribute("aria-disabled")
-    ).toBe("true");
-    await userEvent.keyboard("{Escape}");
+      (
+        await screen.findAllByText(
+          "Gestures use this category. Unpublish it instead."
+        )
+      ).length
+    ).toBeGreaterThan(0);
+    expect(calls.some((call) => call.path === "admin/categories/delete")).toBe(
+      false
+    );
     const unused = await openMenu("Oud");
     await userEvent.click(
       within(unused).getByRole("menuitem", { name: "Delete" })

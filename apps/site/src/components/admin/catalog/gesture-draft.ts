@@ -79,6 +79,93 @@ export function patchOf(
   return patch;
 }
 
+/** The form fields a merge compares, in form order. */
+export const DRAFT_FIELDS = [
+  "video",
+  "name",
+  "description",
+  "keywords",
+  "categoryIds",
+  "published",
+] as const satisfies readonly (keyof GestureDraft)[];
+export type DraftField = (typeof DRAFT_FIELDS)[number];
+
+/** Whether two drafts agree on `field` (as `patchOf` would compare it). */
+export function sameField(
+  field: DraftField,
+  a: GestureDraft,
+  b: GestureDraft
+): boolean {
+  switch (field) {
+    case "name":
+    case "description":
+      return a[field].trim() === b[field].trim();
+    case "keywords":
+      return sameList(a.keywords, b.keywords);
+    case "categoryIds":
+      return sameSet(a.categoryIds, b.categoryIds);
+    case "published":
+      return a.published === b.published;
+    default:
+      return (
+        a.video?.playbackId === b.video?.playbackId &&
+        (a.video?.muxAssetId ?? null) === (b.video?.muxAssetId ?? null)
+      );
+  }
+}
+
+function pick(
+  target: GestureDraft,
+  source: GestureDraft,
+  field: DraftField
+): GestureDraft {
+  return { ...target, [field]: source[field] };
+}
+
+export interface DraftMerge {
+  /** Fields both sides changed to different values (`merged` has theirs). */
+  conflicts: DraftField[];
+  /** Theirs where only they changed a field, mine where only I did. */
+  merged: GestureDraft;
+}
+
+/**
+ * The three-way merge of a stale save (C1): `base` is the version the
+ * form was based on, `mine` the form, `theirs` the newer version. Nothing
+ * of theirs is dropped silently: a field both changed differently is a
+ * conflict, and `merged` keeps their value until the admin chooses.
+ */
+export function mergeDrafts(
+  base: GestureDraft,
+  mine: GestureDraft,
+  theirs: GestureDraft
+): DraftMerge {
+  let merged = theirs;
+  const conflicts: DraftField[] = [];
+  for (const field of DRAFT_FIELDS) {
+    const mineChanged = !sameField(field, base, mine);
+    if (!mineChanged) {
+      continue;
+    }
+    const theirsChanged = !sameField(field, base, theirs);
+    if (theirsChanged && !sameField(field, mine, theirs)) {
+      conflicts.push(field);
+    } else {
+      merged = pick(merged, mine, field);
+    }
+  }
+  return { conflicts, merged };
+}
+
+/** `merged` with my values for `fields` ("Overwrite with mine"). */
+export function withMine(
+  merged: GestureDraft,
+  mine: GestureDraft,
+  fields: readonly DraftField[]
+): GestureDraft {
+  return fields.reduce((draft, field) => pick(draft, mine, field), merged);
+}
+
 export type DraftProblem = "categories" | "description" | "name" | "video";
 
 /** What the contract would refuse, shown once the admin tries to save. */

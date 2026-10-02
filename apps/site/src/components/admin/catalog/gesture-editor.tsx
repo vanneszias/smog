@@ -10,6 +10,7 @@ import {
   GESTURE_NAME_MAX,
 } from "@smog/admin/schema";
 import { useDebouncedValue } from "@smog/gestures/client";
+import type { TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
   AlertDialog,
@@ -40,6 +41,7 @@ import {
   useState,
 } from "react";
 import { AdminPage } from "@/components/admin/admin-page";
+import { LeaveGuard } from "@/components/admin/leave-guard";
 import {
   VideoField,
   type VideoFieldValue,
@@ -47,15 +49,20 @@ import {
 import { GestureQrDialog } from "@/components/gesture-qr-dialog";
 import { gestureHref } from "@/components/learning/links";
 import { CategoryPicker, pickerCategories } from "./category-picker";
+import { ConflictDialog, type EditorConflict } from "./editor-conflict";
 import { conflictReason } from "./errors";
 import {
   createInputOf,
+  DRAFT_FIELDS,
   type DraftProblem,
   draftOf,
   draftProblems,
   EMPTY_DRAFT,
   type GestureDraft,
+  mergeDrafts,
   patchOf,
+  sameField,
+  withMine,
 } from "./gesture-draft";
 import { KeywordInput } from "./keyword-input";
 
@@ -122,7 +129,14 @@ function DuplicateWarning({
   );
 }
 
-function DangerZone({ gesture }: { gesture: AdminGestureDetail }): ReactNode {
+function DangerZone({
+  gesture,
+  onLeave,
+}: {
+  gesture: AdminGestureDetail;
+  /** Called before the delete navigates away (the leave guard lets it). */
+  onLeave: () => void;
+}): ReactNode {
   const { t } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -145,6 +159,7 @@ function DangerZone({ gesture }: { gesture: AdminGestureDetail }): ReactNode {
           title: t("admin.gestures.danger.deleted", { name: gesture.name }),
           variant: "success",
         });
+        onLeave();
         return navigate({ to: "/admin/gestures" });
       })
       .catch((error: unknown) => {
@@ -158,7 +173,7 @@ function DangerZone({ gesture }: { gesture: AdminGestureDetail }): ReactNode {
         }
         toast({ title, variant: "danger" });
       });
-  }, [gesture.id, gesture.name, navigate, remove, t, toast, typed]);
+  }, [gesture.id, gesture.name, navigate, onLeave, remove, t, toast, typed]);
   const published = gesture.publishedAt !== null;
   return (
     <Card className="gap-3 border-danger sm:p-4">
@@ -266,6 +281,11 @@ function StatusCard({
             </div>
             <GestureQrDialog
               gesture={gesture}
+              note={
+                gesture.publishedAt === null
+                  ? t("admin.gestures.qrHiddenNote")
+                  : undefined
+              }
               onOpenChange={setQrOpen}
               open={qrOpen}
             />
@@ -281,15 +301,20 @@ const PROBLEM_KEYS = {
   description: "admin.gestures.editor.descriptionTooLong",
   name: "admin.gestures.editor.nameRequired",
   video: "admin.gestures.editor.videoRequired",
-} as const satisfies Record<DraftProblem, string>;
+} as const satisfies Record<DraftProblem, TranslationKey>;
+
+/** Auto-merged retries after a stale save, before giving up with a toast. */
+const MERGE_RETRIES = 2;
 
 /**
  * The gesture editor (A-16, A-17): the video (upload, pick or paste), the
  * name with its counter and a live duplicate warning, the description,
  * keywords, categories and the published switch. A save sends only the
- * changed fields with `expectedUpdatedAt`; a stale one asks to reload or
- * keep editing. An existing gesture shows its fixed slug, "View on site",
- * the QR code and, while hidden, the delete.
+ * changed fields with `expectedUpdatedAt`. A stale save is merged three
+ * ways (C1): their changes to fields this admin did not touch are kept;
+ * fields both changed open the diff dialog. An existing gesture shows its
+ * fixed slug, "View on site", the QR code and, while hidden, the delete.
+ * Leaving with unsaved edits asks first.
  */
 export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
   const { t } = useTranslation();
@@ -297,25 +322,36 @@ export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
   const navigate = useNavigate();
   const categories = useAdminCategories();
   const current = useAdminGesture(gesture?.id);
-  const { clearStale, create, setPublished, update } =
-    useAdminGestureMutations();
+  const { create, setPublished, update } = useAdminGestureMutations();
   // The version on the server this form is based on (`expectedUpdatedAt`).
   const [saved, setSaved] = useState<AdminGestureDetail | null>(gesture);
   const [draft, setDraft] = useState<GestureDraft>(() =>
     gesture ? draftOf(gesture) : EMPTY_DRAFT
   );
   const [tried, setTried] = useState(false);
-  const [conflict, setConflict] = useState(false);
-  const reloading = useRef(false);
+  const [conflict, setConflict] = useState<
+    (EditorConflict & { base: AdminGestureDetail; merged: GestureDraft }) | null
+  >(null);
 
   const savedDraft = useMemo(
     () => (saved ? draftOf(saved) : EMPTY_DRAFT),
     [saved]
   );
-  const patch = useMemo(() => patchOf(savedDraft, draft), [draft, savedDraft]);
-  const publishChanged =
-    saved !== null && draft.published !== savedDraft.published;
-  const dirty = Object.keys(patch).length > 0 || publishChanged;
+  const dirty = DRAFT_FIELDS.some(
+    (field) => !sameField(field, savedDraft, draft)
+  );
+  // Read at navigation time by the leave guard; set before a navigation
+  // the editor makes itself (after create or delete).
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const leaving = useRef(false);
+  const shouldBlock = useCallback(
+    () => dirtyRef.current && !leaving.current,
+    []
+  );
+  const allowLeave = useCallback(() => {
+    leaving.current = true;
+  }, []);
   const problems = draftProblems(draft);
   const shown = (problem: DraftProblem): string | undefined =>
     tried && problems.has(problem) ? t(PROBLEM_KEYS[problem]) : undefined;
@@ -351,20 +387,94 @@ export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
     [set]
   );
 
-  const failed = useCallback(
+  const saveFailed = useCallback(
     (error: unknown) => {
       console.error("[admin] Failed to save the gesture:", error);
-      if (conflictReason(error) === "stale") {
-        reloading.current = false;
-        setConflict(true);
-        return;
-      }
       toast({
         title: t("admin.gestures.errors.saveFailed"),
         variant: "danger",
       });
     },
     [t, toast]
+  );
+
+  /**
+   * Saves `next` against `base`: the changed fields (`update`), then the
+   * state (`setPublished`). The form is rebased after each step that
+   * succeeded (I6), so a failed second step never makes the next save
+   * conflict with this admin's own first step.
+   */
+  const persist = useCallback(
+    async (base: AdminGestureDetail, next: GestureDraft): Promise<void> => {
+      let latest = base;
+      const patch = patchOf(draftOf(base), next);
+      if (Object.keys(patch).length > 0) {
+        latest = await update.mutateAsync({
+          ...patch,
+          expectedUpdatedAt: base.updatedAt,
+          id: base.id,
+        });
+        setSaved(latest);
+      }
+      if (next.published !== (latest.publishedAt !== null)) {
+        latest = await setPublished.mutateAsync({
+          id: latest.id,
+          published: next.published,
+        });
+        setSaved(latest);
+      }
+      setDraft(draftOf(latest));
+      setTried(false);
+    },
+    [setPublished, update]
+  );
+
+  const { refetch } = current;
+  /**
+   * Saves, and on a stale save merges three ways with the newer version:
+   * without a field both changed it saves the merge at once; otherwise it
+   * opens the diff dialog and saves nothing.
+   */
+  const saveMerging = useCallback(
+    async (
+      base: AdminGestureDetail,
+      mine: GestureDraft,
+      retries: number
+    ): Promise<"saved" | "merged" | "conflict"> => {
+      try {
+        await persist(base, mine);
+        return "saved";
+      } catch (error) {
+        if (conflictReason(error) !== "stale" || retries === 0) {
+          throw error;
+        }
+      }
+      const { data: theirs } = await refetch();
+      if (!theirs) {
+        throw new Error("[admin] The newer version did not load");
+      }
+      const { conflicts, merged } = mergeDrafts(
+        draftOf(base),
+        mine,
+        draftOf(theirs)
+      );
+      if (conflicts.length > 0) {
+        setConflict({
+          base: theirs,
+          conflicts,
+          merged,
+          mine,
+          theirs: draftOf(theirs),
+          theirsAt: theirs.updatedAt,
+        });
+        return "conflict";
+      }
+      setSaved(theirs);
+      setDraft(merged);
+      const outcome = await saveMerging(theirs, merged, retries - 1);
+      return outcome === "saved" ? "merged" : outcome;
+    },
+    [persist, refetch]
   );
 
   const save = useCallback(async (): Promise<void> => {
@@ -380,31 +490,20 @@ export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
         title: t("admin.gestures.editor.created", { name: created.name }),
         variant: "success",
       });
+      allowLeave();
       await navigate({
         params: { id: created.id },
         to: "/admin/gestures/$id",
       });
       return;
     }
-    let next = saved;
-    if (Object.keys(patch).length > 0) {
-      next = await update.mutateAsync({
-        ...patch,
-        expectedUpdatedAt: saved.updatedAt,
-        id: saved.id,
-      });
+    const outcome = await saveMerging(saved, draft, MERGE_RETRIES);
+    if (outcome === "saved") {
+      toast({ title: t("admin.gestures.editor.saved"), variant: "success" });
+    } else if (outcome === "merged") {
+      toast({ title: t("admin.gestures.conflict.merged"), variant: "success" });
     }
-    if (draft.published !== (next.publishedAt !== null)) {
-      next = await setPublished.mutateAsync({
-        id: next.id,
-        published: draft.published,
-      });
-    }
-    setSaved(next);
-    setDraft(draftOf(next));
-    setTried(false);
-    toast({ title: t("admin.gestures.editor.saved"), variant: "success" });
-  }, [create, draft, navigate, patch, saved, setPublished, t, toast, update]);
+  }, [allowLeave, create, draft, navigate, saveMerging, saved, t, toast]);
 
   const submit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -413,47 +512,34 @@ export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
       if (draftProblems(draft).size > 0) {
         return;
       }
-      save().catch(failed);
+      save().catch(saveFailed);
     },
-    [draft, failed, save]
+    [draft, save, saveFailed]
   );
 
-  const { refetch } = current;
-  const resolveConflict = useCallback(
-    (keepEdits: boolean) => {
-      clearStale();
-      refetch()
-        .then(({ data }) => {
-          if (!data) {
-            return;
-          }
-          setSaved(data);
-          if (!keepEdits) {
-            setDraft(draftOf(data));
-          }
-        })
-        .catch((error: unknown) => {
-          console.error("[admin] Failed to reload the gesture:", error);
-          toast({ title: t("states.actionFailed"), variant: "danger" });
-        });
-    },
-    [clearStale, refetch, t, toast]
-  );
-  const reload = useCallback(() => {
-    reloading.current = true;
-    resolveConflict(false);
-  }, [resolveConflict]);
-  const onConflictOpen = useCallback(
-    (open: boolean) => {
-      setConflict(open);
-      // Cancel (or Escape) is "Keep editing": the next save is based on
-      // the version the admin was just told about.
-      if (!(open || reloading.current)) {
-        resolveConflict(true);
-      }
-    },
-    [resolveConflict]
-  );
+  const cancelConflict = useCallback(() => setConflict(null), []);
+  const takeTheirs = useCallback(() => {
+    if (!conflict) {
+      return;
+    }
+    setSaved(conflict.base);
+    setDraft(conflict.merged);
+    setConflict(null);
+  }, [conflict]);
+  const overwrite = useCallback(() => {
+    if (!conflict) {
+      return;
+    }
+    const mine = withMine(conflict.merged, conflict.mine, conflict.conflicts);
+    setSaved(conflict.base);
+    setDraft(mine);
+    setConflict(null);
+    persist(conflict.base, mine)
+      .then(() =>
+        toast({ title: t("admin.gestures.editor.saved"), variant: "success" })
+      )
+      .catch(saveFailed);
+  }, [conflict, persist, saveFailed, t, toast]);
 
   const busy = create.isPending || update.isPending || setPublished.isPending;
   const title = saved ? saved.name : t("admin.gestures.editor.newTitle");
@@ -552,18 +638,17 @@ export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
               onPublished={onPublished}
             />
           </div>
-          {saved ? <DangerZone gesture={saved} /> : null}
+          {saved ? <DangerZone gesture={saved} onLeave={allowLeave} /> : null}
         </div>
       </form>
-      <AlertDialog
-        cancelLabel={t("admin.gestures.conflict.keep")}
-        confirmLabel={t("admin.gestures.conflict.reload")}
-        description={t("admin.gestures.conflict.description")}
-        onConfirm={reload}
-        onOpenChange={onConflictOpen}
-        open={conflict}
-        title={t("admin.gestures.conflict.title")}
+      <ConflictDialog
+        categories={categories.data ?? []}
+        conflict={conflict}
+        onCancel={cancelConflict}
+        onOverwrite={overwrite}
+        onUseTheirs={takeTheirs}
       />
+      <LeaveGuard shouldBlock={shouldBlock} />
     </AdminPage>
   );
 }

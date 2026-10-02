@@ -1,3 +1,4 @@
+import type { TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import type { ListItem } from "@smog/lists/schema";
 import {
@@ -34,7 +35,7 @@ const REORDER_KEYS = {
   dropped: "lists.reorder.dropped",
   moved: "lists.reorder.moved",
   picked: "lists.reorder.picked",
-} as const satisfies Record<ReorderEvent, string>;
+} as const satisfies Record<ReorderEvent, TranslationKey>;
 
 function ItemRow({
   dragHandle,

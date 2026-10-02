@@ -29,9 +29,11 @@ import {
   useRef,
   useState,
 } from "react";
+import { LeaveGuard } from "@/components/admin/leave-guard";
 import { BulkBar } from "./bulk-bar";
 import { GestureTable } from "./gesture-table";
 import { GestureTableEditor } from "./gesture-table-editor";
+import type { TableEdits } from "./table-edits";
 
 /** The list's filters as they live in the URL (`/admin/gestures?…`). */
 export interface GestureListSearch {
@@ -115,9 +117,12 @@ function Stats({ counts }: { counts: AdminGesturePage["counts"] }): ReactNode {
 }
 
 function Filters({
+  locked,
   onSearchChange,
   search,
 }: {
+  /** While table edits are buffered, the page cannot change. */
+  locked: boolean;
   onSearchChange: (next: GestureListSearch) => void;
   search: GestureListSearch;
 }): ReactNode {
@@ -163,10 +168,23 @@ function Filters({
   }, [onSearchChange]);
   const filtered = Boolean(search.q || search.status || search.category);
   return (
-    <fieldset className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_auto_minmax(0,1fr)_auto]">
+    <fieldset
+      aria-describedby={locked ? "gesture-filters-locked" : undefined}
+      className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_auto_minmax(0,1fr)_auto]"
+      disabled={locked}
+    >
       <legend className="sr-only">{t("admin.gestures.filters.label")}</legend>
+      {locked ? (
+        <p
+          className="text-body-sm text-foreground-muted sm:col-span-2 xl:col-span-4"
+          id="gesture-filters-locked"
+        >
+          {t("admin.gestures.table.locked")}
+        </p>
+      ) : null}
       <Field label={t("admin.gestures.filters.search")}>
         <SearchField
+          disabled={locked}
           onValueChange={setQuery}
           placeholder={t("admin.gestures.filters.searchPlaceholder")}
           value={query}
@@ -181,6 +199,7 @@ function Filters({
         </span>
         <SegmentedControl
           aria-labelledby="gesture-status-label"
+          disabled={locked}
           onValueChange={onStatus}
           options={[
             { label: t("admin.gestures.filters.all"), value: ALL },
@@ -195,13 +214,14 @@ function Filters({
       </div>
       <Field label={t("admin.gestures.filters.category")}>
         <Select
+          disabled={locked}
           onValueChange={onCategory}
           options={[
             { label: t("admin.gestures.filters.allCategories"), value: ALL },
             ...(categories.data ?? []).map((category) => ({
               label:
                 category.publishedAt === null
-                  ? `${category.name} (${t("admin.categories.hiddenMark")})`
+                  ? t("admin.categories.hiddenName", { name: category.name })
                   : category.name,
               value: category.id,
             })),
@@ -211,7 +231,7 @@ function Filters({
       </Field>
       <Button
         className="justify-self-start"
-        disabled={!(filtered || query)}
+        disabled={locked || !(filtered || query)}
         icon={<X />}
         onClick={clear}
         variant="ghost"
@@ -225,6 +245,9 @@ function Filters({
 function ListRows({
   categories,
   editing,
+  edits,
+  onEditsChange,
+  onRefresh,
   onSelectedChange,
   onStopEditing,
   rows,
@@ -232,12 +255,28 @@ function ListRows({
 }: {
   categories: readonly AdminCategory[];
   editing: boolean;
+  edits: TableEdits;
+  onEditsChange: (edits: TableEdits) => void;
+  onRefresh: () => Promise<readonly AdminGestureRow[]>;
   onSelectedChange: (selected: ReadonlySet<string>) => void;
   onStopEditing: () => void;
   rows: readonly AdminGestureRow[];
   selected: ReadonlySet<string>;
 }): ReactNode {
   const { t } = useTranslation();
+  // The table editor stays mounted while editing, rows or not.
+  if (editing) {
+    return (
+      <GestureTableEditor
+        categories={categories}
+        edits={edits}
+        onEditsChange={onEditsChange}
+        onRefresh={onRefresh}
+        onStop={onStopEditing}
+        rows={rows}
+      />
+    );
+  }
   if (rows.length === 0) {
     return (
       <EmptyState
@@ -253,15 +292,6 @@ function ListRows({
       />
     );
   }
-  if (editing) {
-    return (
-      <GestureTableEditor
-        categories={categories}
-        onStop={onStopEditing}
-        rows={rows}
-      />
-    );
-  }
   return (
     <GestureTable
       onSelectedChange={onSelectedChange}
@@ -273,11 +303,13 @@ function ListRows({
 
 function Pager({
   cursor,
+  locked,
   nextCursor,
   onSearchChange,
   search,
 }: {
   cursor: string | undefined;
+  locked: boolean;
   nextCursor: string | null;
   onSearchChange: (next: GestureListSearch) => void;
   search: GestureListSearch;
@@ -298,12 +330,22 @@ function Pager({
   return (
     <div className="flex flex-wrap justify-end gap-2">
       {cursor ? (
-        <Button icon={<ChevronsLeft />} onClick={firstPage} variant="secondary">
+        <Button
+          disabled={locked}
+          icon={<ChevronsLeft />}
+          onClick={firstPage}
+          variant="secondary"
+        >
           {t("admin.gestures.firstPage")}
         </Button>
       ) : null}
       {nextCursor ? (
-        <Button icon={<ChevronRight />} onClick={next} variant="secondary">
+        <Button
+          disabled={locked}
+          icon={<ChevronRight />}
+          onClick={next}
+          variant="secondary"
+        >
           {t("admin.gestures.nextPage")}
         </Button>
       ) : null}
@@ -329,10 +371,19 @@ export function GestureList({
   onSearchChange,
   search,
 }: GestureListProps): ReactNode {
+  const { t } = useTranslation();
   const input = useMemo(() => gestureListInput(search), [search]);
   const gestures = useAdminGestures(input);
   const categories = useAdminCategories();
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  // The table editor's buffer lives here, so a refetch, an empty page or
+  // a remount never drops it; the filters and the pager wait for it.
+  const [edits, setEdits] = useState<TableEdits>(() => new Map());
+  const editsRef = useRef(edits);
+  editsRef.current = edits;
+  const shouldBlock = useCallback(() => editsRef.current.size > 0, []);
+  const locked = edits.size > 0;
+  const listHeading = useRef<HTMLHeadingElement>(null);
   const nextCursor = gestures.data?.nextCursor ?? null;
   const inputKey = JSON.stringify(input);
   // A new filter or page starts with nothing selected.
@@ -347,11 +398,20 @@ export function GestureList({
     selected.has(row.id) ? [row.id] : []
   );
   const clearSelection = useCallback(() => setSelected(new Set()), []);
-  const stopEditing = useCallback(
-    () => onEditingChange(false),
-    [onEditingChange]
-  );
+  // After a bulk action the bar unmounts: focus the list, not <body>.
+  const bulkDone = useCallback(() => {
+    setSelected(new Set());
+    setTimeout(() => listHeading.current?.focus(), 0);
+  }, []);
+  const stopEditing = useCallback(() => {
+    setEdits(new Map());
+    onEditingChange(false);
+  }, [onEditingChange]);
   const { refetch } = gestures;
+  const refresh = useCallback(
+    async () => (await refetch()).data?.items ?? [],
+    [refetch]
+  );
   const retry = useCallback(() => {
     refetch().catch((error: unknown) => {
       console.error("[admin] Failed to reload the gestures:", error);
@@ -371,6 +431,9 @@ export function GestureList({
         <ListRows
           categories={categories.data ?? []}
           editing={editing}
+          edits={edits}
+          onEditsChange={setEdits}
+          onRefresh={refresh}
           onSelectedChange={setSelected}
           onStopEditing={stopEditing}
           rows={rows}
@@ -391,17 +454,27 @@ export function GestureList({
       ) : (
         <Skeleton className="h-16 w-full sm:max-w-reading" />
       )}
-      <Filters onSearchChange={onSearchChange} search={search} />
+      <Filters
+        locked={locked}
+        onSearchChange={onSearchChange}
+        search={search}
+      />
       {!editing && selectedIds.length > 0 ? (
         <BulkBar
           categories={categories.data ?? []}
           onClear={clearSelection}
+          onDone={bulkDone}
           selected={selectedIds}
         />
       ) : null}
+      <h2 className="sr-only" ref={listHeading} tabIndex={-1}>
+        {t("admin.gestures.listHeading")}
+      </h2>
       {body}
+      <LeaveGuard shouldBlock={shouldBlock} />
       <Pager
         cursor={search.cursor}
+        locked={locked}
         nextCursor={nextCursor}
         onSearchChange={onSearchChange}
         search={search}

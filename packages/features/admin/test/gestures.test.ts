@@ -233,6 +233,7 @@ describe("admin.gestures.update", () => {
     expect(await search("ande nieuwe")).toContain(row.id);
     expect(await search("oude naam")).not.toContain(row.id);
     await expectAudit("gestures.update", {
+      action: "gesture.update",
       actorId: admin.user.id,
       data: {
         fields: ["keywords", "name"],
@@ -357,6 +358,21 @@ describe("admin.gestures.saveMany", () => {
       targetId: two.id,
       targetType: "gesture",
     });
+  });
+
+  it("a description-only save makes its new words searchable at once", async () => {
+    const row = await addGesture({ name: "Muziek maken" });
+    expect(await search("xylofoon")).not.toContain(row.id);
+    await callAs(admin, "gestures.saveMany", {
+      items: [
+        {
+          expectedUpdatedAt: row.updatedAt.getTime(),
+          id: row.id,
+          patch: { description: "Speel op een xylofoon." },
+        },
+      ],
+    });
+    expect(await search("xylofoon")).toContain(row.id);
   });
 
   it("is all or nothing: one stale row is CONFLICT with its id, and nothing is written", async () => {

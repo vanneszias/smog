@@ -141,6 +141,27 @@ describe("DataTable", () => {
     expect(screen.getByRole("cell", { name: "No rows" })).toBeDefined();
   });
 
+  test("a column's className reaches its header and its cells (a sticky column)", () => {
+    renderKit(
+      <DataTable
+        aria-label="Categories"
+        columns={[
+          {
+            ...(COLUMNS[0] as DataTableColumn<Row>),
+            className: "sticky left-0",
+          },
+        ]}
+        getRowId={rowId}
+        rows={ROWS}
+      />
+    );
+    const header = screen.getByRole("columnheader", { name: "Name" });
+    expect(classesOf(header)).toContain("sticky");
+    for (const cell of screen.getAllByRole("cell")) {
+      expect(classesOf(cell)).toContain("sticky");
+    }
+  });
+
   test("marks selected rows and adds per-row classes and attributes", () => {
     renderKit(
       <DataTable

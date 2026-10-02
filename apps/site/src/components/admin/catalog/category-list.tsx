@@ -3,6 +3,7 @@ import {
   useAdminCategoryMutations,
 } from "@smog/admin/client";
 import { type AdminCategory, CATEGORY_NAME_MAX } from "@smog/admin/schema";
+import type { TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
   AlertDialog,
@@ -61,7 +62,7 @@ const REORDER_KEYS = {
   dropped: "admin.categories.reorder.dropped",
   moved: "admin.categories.reorder.moved",
   picked: "admin.categories.reorder.picked",
-} as const satisfies Record<ReorderEvent, string>;
+} as const satisfies Record<ReorderEvent, TranslationKey>;
 
 interface RowActions {
   onDelete: (category: AdminCategory) => void;
@@ -136,6 +137,14 @@ function CategoryRow({
         });
       });
   }, [category.id, published, setPublished, t, toast]);
+  const explainInUse = useCallback(
+    () =>
+      toast({
+        title: t("admin.categories.deleteConfirm.inUse"),
+        variant: "warning",
+      }),
+    [t, toast]
+  );
   return (
     <div
       className={cn(
@@ -150,12 +159,12 @@ function CategoryRow({
           {category.name}
         </Text>
         <Text as="span" className="tabular-nums" size="body-sm" tone="muted">
-          {t("admin.categories.count", { count: category.gestureCount })}
           {used
-            ? ` · ${t("admin.categories.publishedCount", {
-                count: category.publishedGestureCount,
-              })}`
-            : null}
+            ? t("admin.categories.countWithPublished", {
+                count: category.gestureCount,
+                published: category.publishedGestureCount,
+              })
+            : t("admin.categories.count", { count: category.gestureCount })}
         </Text>
       </div>
       <PublishSwitch category={category} />
@@ -192,7 +201,8 @@ function CategoryRow({
           </MenuItem>
           <MenuSeparator />
           {used ? (
-            <MenuItem disabled icon={<Trash2 />}>
+            // Enabled, so keyboard and screen-reader users reach the reason.
+            <MenuItem icon={<Trash2 />} onSelect={explainInUse}>
               {t("admin.categories.inUse")}
             </MenuItem>
           ) : (
@@ -233,7 +243,9 @@ function CategoryForm({
       event.preventDefault();
       const trimmed = name.trim();
       if (!trimmed || trimmed.length > CATEGORY_NAME_MAX) {
-        setError(t("admin.gestures.editor.nameRequired"));
+        setError(
+          t("admin.categories.form.nameInvalid", { max: CATEGORY_NAME_MAX })
+        );
         return;
       }
       const saving =

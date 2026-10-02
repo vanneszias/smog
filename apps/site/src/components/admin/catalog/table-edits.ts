@@ -136,12 +136,89 @@ export function saveManyItems(edits: TableEdits): SaveManyInput["items"] {
   return [...edits.entries()].map(([id, edit]) => ({
     expectedUpdatedAt: edit.base.updatedAt,
     id,
-    patch: Object.fromEntries(
-      TABLE_FIELDS.flatMap((field) =>
-        edit.patch[field] === undefined ? [] : [[field, edit.patch[field]]]
-      )
-    ),
+    patch: {
+      ...Object.fromEntries(
+        TABLE_FIELDS.flatMap((field) =>
+          edit.patch[field] === undefined ? [] : [[field, edit.patch[field]]]
+        )
+      ),
+      // A typed playback id is not the old Mux asset any more (I4).
+      ...(edit.patch.playbackId === undefined ? {} : { muxAssetId: null }),
+    },
   }));
+}
+
+/** Gesture id → the fields both this admin and another one changed. */
+export type TableConflicts = ReadonlyMap<string, readonly TableField[]>;
+
+/**
+ * After a stale `saveMany` (C1): each stale row is rebased on their newer
+ * version. A field only I changed stays in the buffer, a field only they
+ * changed is theirs (it was never in the patch), an edit equal to theirs
+ * leaves; a field we both changed differently stays buffered as a
+ * conflict until the admin chooses (`resolveConflicts` or a save).
+ */
+export function rebaseEdits(
+  edits: TableEdits,
+  fresh: ReadonlyMap<string, AdminGestureRow>,
+  staleIds: readonly string[]
+): { conflicts: TableConflicts; edits: TableEdits } {
+  const next = new Map(edits);
+  const conflicts = new Map<string, TableField[]>();
+  for (const id of staleIds) {
+    const edit = edits.get(id);
+    const theirs = fresh.get(id);
+    if (!(edit && theirs)) {
+      continue;
+    }
+    const base = valuesOf(edit.base);
+    const now = valuesOf(theirs);
+    const patch: Partial<TableValues> = {};
+    const clashing: TableField[] = [];
+    for (const field of TABLE_FIELDS) {
+      const mine = edit.patch[field];
+      if (mine === undefined || same(field, now[field], mine as never)) {
+        continue;
+      }
+      Object.assign(patch, { [field]: mine });
+      if (!same(field, base[field], now[field])) {
+        clashing.push(field);
+      }
+    }
+    if (Object.keys(patch).length === 0) {
+      next.delete(id);
+    } else {
+      next.set(id, { base: theirs, patch });
+    }
+    if (clashing.length > 0) {
+      conflicts.set(id, clashing);
+    }
+  }
+  return { conflicts, edits: next };
+}
+
+/** "Use their version": drops the conflicting fields from the buffer. */
+export function resolveConflicts(
+  edits: TableEdits,
+  conflicts: TableConflicts
+): TableEdits {
+  const next = new Map(edits);
+  for (const [id, fields] of conflicts) {
+    const edit = next.get(id);
+    if (!edit) {
+      continue;
+    }
+    const patch: Partial<TableValues> = { ...edit.patch };
+    for (const field of fields) {
+      delete patch[field];
+    }
+    if (Object.keys(patch).length === 0) {
+      next.delete(id);
+    } else {
+      next.set(id, { base: edit.base, patch });
+    }
+  }
+  return next;
 }
 
 interface FieldChange {
@@ -157,23 +234,26 @@ export interface RowChanges {
   name: string;
 }
 
+/** Formats a list for people ("a, b and c"); `useListFormat` in the UI. */
+export type ListFormat = (items: readonly string[]) => string;
+
 function display(
   field: TableField,
   value: TableValues[TableField],
-  categoryNames: ReadonlyMap<string, string>
+  categoryNames: ReadonlyMap<string, string>,
+  list: ListFormat
 ): string {
   if (field === "categoryIds") {
-    return (value as string[])
-      .map((id) => categoryNames.get(id) ?? id)
-      .join(", ");
+    return list((value as string[]).map((id) => categoryNames.get(id) ?? id));
   }
-  return Array.isArray(value) ? value.join(", ") : value.trim();
+  return Array.isArray(value) ? list(value) : value.trim();
 }
 
 /** Old and new per changed field, for the confirm dialog. */
 export function changesOf(
   edits: TableEdits,
-  categoryNames: ReadonlyMap<string, string>
+  categoryNames: ReadonlyMap<string, string>,
+  list: ListFormat
 ): RowChanges[] {
   return [...edits.entries()].map(([id, edit]) => {
     const before = valuesOf(edit.base);
@@ -184,8 +264,8 @@ export function changesOf(
           ? []
           : [
               {
-                after: display(field, after, categoryNames),
-                before: display(field, before[field], categoryNames),
+                after: display(field, after, categoryNames, list),
+                before: display(field, before[field], categoryNames, list),
                 field,
               },
             ];
@@ -194,16 +274,4 @@ export function changesOf(
       name: edit.base.name,
     };
   });
-}
-
-/** The buffer without these rows (the stale ones, reloaded). */
-export function dropEdits(
-  edits: TableEdits,
-  ids: readonly string[]
-): TableEdits {
-  const next = new Map(edits);
-  for (const id of ids) {
-    next.delete(id);
-  }
-  return next;
 }

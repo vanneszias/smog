@@ -82,5 +82,11 @@ describe("KeywordInput", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Remove hond" }));
     expect(last).toEqual(["kat"]);
+    // The focus moves on to the next keyword, then to the input (M9).
+    expect(document.activeElement?.getAttribute("aria-label")).toBe(
+      "Remove kat"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Remove kat" }));
+    expect(document.activeElement).toBe(input());
   });
 });

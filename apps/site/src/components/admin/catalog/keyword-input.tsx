@@ -6,8 +6,11 @@ import { Plus, X } from "lucide-react";
 import {
   type ChangeEvent,
   type KeyboardEvent,
+  type MouseEvent,
   type ReactNode,
+  type RefObject,
   useCallback,
+  useRef,
   useState,
 } from "react";
 
@@ -48,14 +51,29 @@ export interface KeywordInputProps {
 }
 
 function KeywordChip({
+  fallback,
   keyword,
   onRemove,
 }: {
+  /** Takes the focus when the last keyword is removed. */
+  fallback: RefObject<HTMLInputElement | null>;
   keyword: string;
   onRemove: (keyword: string) => void;
 }): ReactNode {
   const { t } = useTranslation();
-  const remove = useCallback(() => onRemove(keyword), [keyword, onRemove]);
+  const remove = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      // The chip goes away: move the focus to the next one (or the input).
+      const item = event.currentTarget.closest("li");
+      const next =
+        item?.nextElementSibling?.querySelector("button") ??
+        item?.previousElementSibling?.querySelector("button") ??
+        fallback.current;
+      next?.focus();
+      onRemove(keyword);
+    },
+    [fallback, keyword, onRemove]
+  );
   return (
     <li>
       <Chip
@@ -82,6 +100,7 @@ export function KeywordInput({
 }: KeywordInputProps): ReactNode {
   const { t } = useTranslation();
   const [draft, setDraft] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState<{
     keyword: string;
     kind: KeywordProblem;
@@ -143,6 +162,7 @@ export function KeywordInput({
             onChange={onInput}
             onKeyDown={onKeyDown}
             placeholder={t("admin.gestures.keywords.placeholder")}
+            ref={inputRef}
             value={draft}
           />
           <Button
@@ -163,7 +183,12 @@ export function KeywordInput({
           className="flex flex-wrap gap-2"
         >
           {value.map((keyword) => (
-            <KeywordChip key={keyword} keyword={keyword} onRemove={remove} />
+            <KeywordChip
+              fallback={inputRef}
+              key={keyword}
+              keyword={keyword}
+              onRemove={remove}
+            />
           ))}
         </ul>
       ) : (

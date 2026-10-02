@@ -1,3 +1,4 @@
+import type { TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
   Button,
@@ -23,7 +24,7 @@ const FIELD_KEYS = {
   keywords: "admin.gestures.fields.keywords",
   name: "admin.gestures.fields.name",
   playbackId: "admin.gestures.fields.playbackId",
-} as const satisfies Record<TableField, string>;
+} as const satisfies Record<TableField, TranslationKey>;
 
 export interface ChangesDialogProps {
   changes: readonly RowChanges[];

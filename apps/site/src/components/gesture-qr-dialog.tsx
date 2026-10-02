@@ -26,6 +26,8 @@ export function gesturePageUrl(siteUrl: string, slug: string): string {
 
 export interface GestureQrDialogProps {
   gesture: { name: string; slug: string };
+  /** A line under the URL (the admin: a hidden gesture's page is a 404). */
+  note?: ReactNode;
   onOpenChange: (open: boolean) => void;
   open: boolean;
 }
@@ -37,6 +39,7 @@ export interface GestureQrDialogProps {
  */
 export function GestureQrDialog({
   gesture,
+  note,
   onOpenChange,
   open,
 }: GestureQrDialogProps): ReactNode {
@@ -90,6 +93,15 @@ export function GestureQrDialog({
           <Text className="break-all text-center" size="body-sm" tone="muted">
             {url}
           </Text>
+          {note ? (
+            <Text
+              className="rounded-md bg-warning-subtle px-3 py-2 text-center text-warning-strong"
+              role="note"
+              size="body-sm"
+            >
+              {note}
+            </Text>
+          ) : null}
         </div>
         <DialogFooter>
           <Button icon={<Copy />} onClick={copy} variant="secondary">

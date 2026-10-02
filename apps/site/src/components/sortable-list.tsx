@@ -113,7 +113,7 @@ function SortableEntry<Item extends SortableItem>({
             {...listeners}
             className="cursor-grab touch-none active:cursor-grabbing"
             icon={<GripVertical />}
-            label={`${t("a11y.dragHandle")}: ${item.name}`}
+            label={t("a11y.dragHandleFor", { name: item.name })}
             ref={setActivatorNodeRef}
           />
         ),
@@ -196,6 +196,25 @@ export function SortableList<Item extends SortableItem>({
     },
     [commit, ids]
   );
+  // A drag is announced by dnd-kit; a menu move ("Move up/down") here.
+  const [moved, setMoved] = useState("");
+  const menuMove = useCallback(
+    (from: number, to: number): void => {
+      const id = ids[from];
+      if (to < 0 || to >= ids.length || from === to || id === undefined) {
+        return;
+      }
+      move(from, to);
+      setMoved(
+        announce("dropped", {
+          name: byId.get(id)?.name ?? "",
+          position: to + 1,
+          total: ids.length,
+        })
+      );
+    },
+    [announce, byId, ids, move]
+  );
   const end = useCallback(
     ({ active, over }: DragEndEvent): void => {
       if (over && active.id !== over.id) {
@@ -245,13 +264,16 @@ export function SortableList<Item extends SortableItem>({
               index={index}
               item={item}
               key={item.id}
-              onMove={move}
+              onMove={menuMove}
               renderRow={renderRow}
               total={shown.length}
             />
           ))}
         </ol>
       </SortableContext>
+      <div aria-live="polite" className="sr-only" role="status">
+        {moved}
+      </div>
     </DndContext>
   );
 }
