@@ -1,3 +1,4 @@
+import type { MaintenanceSetting } from "@smog/admin/schema";
 import { handSvgs, logoSvg } from "@smog/brand/svg";
 import { createI18n, formatDate, type Locale, resolveLocale } from "@smog/i18n";
 import { tokens } from "@smog/styles/tokens";
@@ -9,7 +10,6 @@ import {
   THEME_COOKIE,
   type Theme,
 } from "@/lib/preferences";
-import type { MaintenanceState } from "./maintenance";
 import { retryAfterSeconds } from "./maintenance";
 
 /**
@@ -65,7 +65,7 @@ p+p{margin-top:1rem}
 export interface MaintenancePageOptions {
   locale: Locale;
   now: number;
-  state: MaintenanceState;
+  state: MaintenanceSetting;
   theme: Theme;
 }
 
@@ -120,7 +120,7 @@ ${untilHtml}${noteHtml}
  */
 export function maintenanceResponse(
   request: Request,
-  state: MaintenanceState,
+  state: MaintenanceSetting,
   now: number
 ): Response {
   const headers = {

@@ -1,15 +1,24 @@
 import { join } from "node:path";
+import {
+  MAINTENANCE_KV_KEY,
+  MAINTENANCE_MESSAGE_MAX,
+  maintenanceSettingSchema,
+  nextBypassVersion,
+  parseMaintenanceSetting,
+} from "@smog/admin/schema";
 
 /**
  * `bun run maintenance --env <dev|staging|production> on|off
  *   [--message <text>] [--until <ISO 8601>] [--dry-run] [--yes]`
  *
- * Writes the site's KV key `maintenance` with
+ * Writes the site's KV key `maintenance` (`MAINTENANCE_KV_KEY`, the
+ * `MaintenanceSetting` of `@smog/admin/schema`, shared with the Worker
+ * and the admin settings page) with
  * `wrangler kv key put --binding KV` from `apps/site` (`--local` in dev,
  * `--remote` otherwise; spec §9, apps/site/src/worker/maintenance.ts).
  * It reads the current value first (`wrangler kv key get`): `on` keeps its
- * `bypassVersion`, `off` writes a new one, so bypass cookies last one
- * window. Production needs `--yes`. `--dry-run` prints both commands
+ * `bypassVersion`, `off` writes a new one (`nextBypassVersion`), so bypass
+ * cookies last one window. Production needs `--yes`. `--dry-run` prints both commands
  * instead of running them (the version as a placeholder). Isolates
  * pick the change up within about a minute (30 s isolate cache + 30 s KV
  * `cacheTtl`).
@@ -126,6 +135,12 @@ export function parseMaintenanceArgs(
   if (raw.message !== undefined && raw.message.trim() === "") {
     fail("--message is empty");
   }
+  if (
+    raw.message !== undefined &&
+    raw.message.trim().length > MAINTENANCE_MESSAGE_MAX
+  ) {
+    fail(`--message is longer than ${MAINTENANCE_MESSAGE_MAX} characters`);
+  }
   if (raw.env === "production" && !raw.yes) {
     fail("Refusing to change production without --yes");
   }
@@ -139,52 +154,30 @@ export function parseMaintenanceArgs(
   };
 }
 
-/**
- * The version to write. `on` keeps the current one, so a bypass cookie an
- * admin fetched before the window (or earlier in it) keeps working; `off`
- * starts a new one (the current second, always above the old value), which
- * voids every cookie of the window that just ended.
- */
-export function nextBypassVersion(
-  action: Action,
-  current: number | null,
-  now: number = Date.now()
-): number {
-  const nowS = Math.floor(now / 1000);
-  if (action === "on") {
-    return current ?? nowS;
-  }
-  return Math.max(nowS, (current ?? 0) + 1);
-}
-
 /** `bypassVersion` from `wrangler kv key get --text`, or null (no key). */
 export function parseCurrentVersion(stdout: string): number | null {
-  try {
-    const value: unknown = JSON.parse(stdout);
-    const version =
-      typeof value === "object" && value !== null && "bypassVersion" in value
-        ? value.bypassVersion
-        : undefined;
-    return Number.isSafeInteger(version) ? (version as number) : null;
-  } catch {
-    return null;
-  }
+  return parseMaintenanceSetting(stdout.trim())?.bypassVersion ?? null;
 }
 
 /**
- * The KV value (`MaintenanceState` in the Worker). A string version is
- * only a `--dry-run` placeholder.
+ * The KV value (a `MaintenanceSetting`, checked with its schema). A string
+ * version is only a `--dry-run` placeholder.
  */
 export function buildMaintenanceValue(
   args: Pick<MaintenanceArgs, "action" | "message" | "until">,
   bypassVersion: number | string
 ): string {
-  return JSON.stringify({
+  const value = {
     bypassVersion,
     enabled: args.action === "on",
     ...(args.message === undefined ? {} : { message: args.message }),
     ...(args.until === undefined ? {} : { until: args.until }),
-  });
+  };
+  return JSON.stringify(
+    typeof bypassVersion === "number"
+      ? maintenanceSettingSchema.parse(value)
+      : value
+  );
 }
 
 function target(env: MaintenanceEnv): string[] {
@@ -204,7 +197,7 @@ export function buildReadCommand(env: MaintenanceEnv): string[] {
     "kv",
     "key",
     "get",
-    "maintenance",
+    MAINTENANCE_KV_KEY,
     ...target(env),
     "--text",
   ];
@@ -215,7 +208,15 @@ export function buildMaintenanceCommand(
   env: MaintenanceEnv,
   value: string
 ): string[] {
-  return ["wrangler", "kv", "key", "put", "maintenance", value, ...target(env)];
+  return [
+    "wrangler",
+    "kv",
+    "key",
+    "put",
+    MAINTENANCE_KV_KEY,
+    value,
+    ...target(env),
+  ];
 }
 
 const SITE_DIR = join(import.meta.dir, "..", "apps", "site");
@@ -256,7 +257,10 @@ function run(args: MaintenanceArgs): void {
     );
     return;
   }
-  const version = nextBypassVersion(args.action, readCurrentVersion(args.env));
+  const version = nextBypassVersion(
+    args.action === "on",
+    readCurrentVersion(args.env)
+  );
   const proc = Bun.spawnSync(
     [
       "bunx",

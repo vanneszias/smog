@@ -1,7 +1,7 @@
 import { os } from "@orpc/server";
 import { createDb } from "@smog/db/client";
 import type { RpcContext } from "@smog/rpc";
-import { trackAudits } from "./audit-writer";
+import { isUnchanged, trackAudits } from "./audit-writer";
 
 /** A procedure kind as the guard reads it (the contract types the actions). */
 export type GuardKind =
@@ -104,8 +104,15 @@ function fail(message: string): never {
 function checkMutation(
   name: string,
   kind: Exclude<GuardKind, "read">,
-  entries: readonly string[]
+  entries: readonly string[],
+  unchanged: boolean
 ): void {
+  if (unchanged) {
+    if (entries.length > 0) {
+      fail(`[admin] ${name} marked itself unchanged but built an audit entry`);
+    }
+    return;
+  }
   if ("exempt" in kind) {
     if (entries.length > 0) {
       fail(`[admin] ${name} is exempt but built an audit entry`);
@@ -141,7 +148,9 @@ function checkMutation(
  *   (`{ audit: [A, B] }`: each entry `A` or `B`)
  *   (checked when the handler succeeded; a handler that throws changed
  *   nothing, since the entry shares the change's batch);
- * - `{ exempt }` may build none.
+ * - `{ exempt }` may build none;
+ * - a mutation that found nothing to change calls `markUnchanged(db)` and
+ *   then builds no entry (a no-op leaves nothing to audit).
  * An unclassified path fails closed. Each call gets its own Drizzle client,
  * so the entries it built are its own.
  */
@@ -173,7 +182,7 @@ export function adminGuard(kinds: Readonly<Record<string, GuardKind>>) {
       const db = createDb(raw);
       const entries = trackAudits(db);
       const result = await next({ context: { db } });
-      checkMutation(name, kind, entries);
+      checkMutation(name, kind, entries, isUnchanged(db));
       return result;
     });
 }

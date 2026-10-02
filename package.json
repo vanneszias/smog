@@ -63,6 +63,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
+    "@smog/admin": "workspace:*",
     "@smog/config": "workspace:*",
     "@types/bun": "catalog:",
     "knip": "6.38.0",

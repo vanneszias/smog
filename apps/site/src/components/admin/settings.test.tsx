@@ -1,0 +1,254 @@
+import { describe, expect, mock, spyOn, test } from "bun:test";
+import type { MaintenanceSetting } from "@smog/admin/schema";
+import { createI18n, LOCALES } from "@smog/i18n";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { renderSite } from "@/test/render";
+import { BypassCard } from "./bypass-card";
+import {
+  EMAIL_PREVIEW_CSP,
+  EmailPreview,
+  type EmailPreviewSearch,
+  emailTemplateLabel,
+  sandboxedEmailDocument,
+  validateEmailPreviewSearch,
+} from "./email-preview";
+import { MaintenanceCard } from "./maintenance-card";
+
+const OFF: MaintenanceSetting = { bypassVersion: 4, enabled: false };
+const ON: MaintenanceSetting = {
+  bypassVersion: 4,
+  enabled: true,
+  message: "Nieuwe video's",
+};
+
+const PROPAGATION = /within about a minute/;
+const MESSAGE_LABEL = /Message/;
+const UNTIL_LABEL = /Expected end/;
+const ACTIVE_UNTIL = /^Active until /;
+
+function noop(): void {
+  // Nothing to do in these tests.
+}
+
+function bypassed(): Promise<string> {
+  return Promise.resolve("2026-10-02T23:00:00.000Z");
+}
+
+function page(ui: ReactNode): () => ReactNode {
+  return function Page(): ReactNode {
+    return <div data-testid="page">{ui}</div>;
+  };
+}
+
+describe("MaintenanceCard", () => {
+  test("enable asks for the bypass cookie first, then turns maintenance on", async () => {
+    const order: string[] = [];
+    const requestBypass = mock(() => {
+      order.push("bypass");
+      return Promise.resolve("2026-10-02T23:00:00.000Z");
+    });
+    const site = await renderSite(
+      page(<MaintenanceCard requestBypass={requestBypass} />),
+      {
+        api: {
+          "admin/maintenance/get": OFF,
+          "admin/maintenance/set": (input: unknown) => {
+            order.push("set");
+            return { ...OFF, ...(input as object) };
+          },
+        },
+      }
+    );
+    await screen.findByText("Off");
+    expect(screen.getByText(PROPAGATION)).toBeDefined();
+    fireEvent.change(screen.getByLabelText(MESSAGE_LABEL), {
+      target: { value: "  Update " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Enable maintenance" }));
+    await screen.findByText("Maintenance is on");
+    expect(order).toEqual(["bypass", "set"]);
+    expect(
+      site.calls.find((call) => call.path === "admin/maintenance/set")?.input
+    ).toEqual({ enabled: true, message: "Update" });
+  });
+
+  test("stays off when the bypass cookie is refused", async () => {
+    const logged = spyOn(console, "error").mockImplementation(() => {
+      // The card logs the refusal; asserted below.
+    });
+    const requestBypass = mock(() => Promise.reject(new Error("401")));
+    const site = await renderSite(
+      page(<MaintenanceCard requestBypass={requestBypass} />),
+      { api: { "admin/maintenance/get": OFF } }
+    );
+    await screen.findByText("Off");
+    fireEvent.click(screen.getByRole("button", { name: "Enable maintenance" }));
+    await screen.findByText(
+      "No bypass cookie for this browser, so maintenance stays off."
+    );
+    expect(
+      site.calls.some((call) => call.path === "admin/maintenance/set")
+    ).toBe(false);
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
+  });
+
+  test("refuses an end in the past before asking anything", async () => {
+    const requestBypass = mock(() => Promise.resolve("x"));
+    await renderSite(page(<MaintenanceCard requestBypass={requestBypass} />), {
+      api: { "admin/maintenance/get": OFF },
+    });
+    await screen.findByText("Off");
+    fireEvent.change(screen.getByLabelText(UNTIL_LABEL), {
+      target: { value: "2020-01-01T10:00" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Enable maintenance" }));
+    await screen.findByText("Pick a time in the future, at most 7 days ahead.");
+    expect(requestBypass).not.toHaveBeenCalled();
+  });
+
+  test("disable explains that every bypass cookie is revoked, then turns it off", async () => {
+    const onChanged = mock(() => undefined);
+    const site = await renderSite(
+      page(<MaintenanceCard onChanged={onChanged} requestBypass={bypassed} />),
+      {
+        api: {
+          "admin/maintenance/get": ON,
+          "admin/maintenance/set": { ...OFF, bypassVersion: 5 },
+        },
+      }
+    );
+    await screen.findByText("Nieuwe video's");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Disable maintenance" })
+    );
+    const alert = await screen.findByRole("alertdialog");
+    expect(alert.textContent).toContain("Every bypass cookie is revoked");
+    const confirm = Array.from(alert.querySelectorAll("button")).find(
+      (button) => button.textContent === "Disable maintenance"
+    );
+    fireEvent.click(confirm as HTMLButtonElement);
+    await screen.findByText(
+      "Maintenance is off. Every bypass cookie is revoked."
+    );
+    expect(
+      site.calls.find((call) => call.path === "admin/maintenance/set")?.input
+    ).toEqual({ enabled: false });
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  });
+});
+
+describe("BypassCard", () => {
+  test("shows the expiry, or that it is not active, and asks for a cookie", async () => {
+    const requestBypass = mock(() => Promise.resolve("2026-10-02T23:00:00Z"));
+    await renderSite(
+      page(
+        <>
+          <BypassCard
+            isError={false}
+            onRetry={noop}
+            requestBypass={requestBypass}
+            status={{ active: false }}
+          />
+          <BypassCard
+            isError={false}
+            onRetry={noop}
+            requestBypass={requestBypass}
+            status={{ active: true, expiresAt: "2026-10-02T23:00:00.000Z" }}
+          />
+        </>
+      )
+    );
+    expect(screen.getByText("Not active")).toBeDefined();
+    expect(screen.getByText(ACTIVE_UNTIL)).toBeDefined();
+    fireEvent.click(
+      screen.getAllByRole("button", {
+        name: "Bypass for this browser (12 h)",
+      })[0] as HTMLButtonElement
+    );
+    await waitFor(() => expect(requestBypass).toHaveBeenCalled());
+  });
+});
+
+describe("email previews", () => {
+  test("every template has a label in every locale", () => {
+    for (const locale of LOCALES) {
+      const { t } = createI18n(locale);
+      for (const id of [
+        "auth/magic-link",
+        "auth/otp",
+        "auth/reset-password",
+        "auth/verify-email",
+      ] as const) {
+        expect(emailTemplateLabel(t, id)).not.toContain("admin.emails");
+      }
+    }
+  });
+
+  test("the preview document carries its own strict CSP", () => {
+    const html =
+      '<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"></head><body>Hoi</body></html>';
+    const document = sandboxedEmailDocument(html);
+    expect(EMAIL_PREVIEW_CSP).toContain("default-src 'none'");
+    expect(EMAIL_PREVIEW_CSP).not.toContain("script-src");
+    expect(document).toContain(
+      `<head><meta http-equiv="Content-Security-Policy" content="${EMAIL_PREVIEW_CSP}">`
+    );
+    expect(document).toContain("<body>Hoi</body>");
+    // Without a head, the policy goes first.
+    expect(sandboxedEmailDocument("<p>x</p>").startsWith("<meta")).toBe(true);
+  });
+
+  test("keeps valid search params only", () => {
+    expect(
+      validateEmailPreviewSearch({
+        locale: "de",
+        template: "auth/otp",
+        width: "huge",
+      })
+    ).toEqual({ locale: undefined, template: "auth/otp", width: undefined });
+    expect(validateEmailPreviewSearch({ template: "auth/nope" })).toEqual({
+      locale: undefined,
+      template: undefined,
+      width: undefined,
+    });
+  });
+
+  test("renders the template in a sandboxed iframe, and its plain text in a tab", async () => {
+    const search: EmailPreviewSearch = { template: "auth/otp" };
+    await renderSite(
+      page(<EmailPreview onSearchChange={noop} search={search} />),
+      {
+        api: {
+          "admin/emails/list": [
+            {
+              id: "auth/otp",
+              subject: { en: "482913 is your code", fr: "f", nl: "n" },
+            },
+            {
+              id: "auth/magic-link",
+              subject: { en: "Your link", fr: "f", nl: "n" },
+            },
+          ],
+          "admin/emails/preview": {
+            html: "<html><head></head><body><script>alert(1)</script>OTP body</body></html>",
+            subject: "482913 is je code",
+            text: "Plain OTP <b>body</b>",
+          },
+        },
+      }
+    );
+    const frame = (await screen.findByTitle(
+      "Preview: Sign-in code"
+    )) as HTMLIFrameElement;
+    expect(frame.getAttribute("sandbox")).toBe("");
+    expect(frame.getAttribute("srcdoc")).toContain("Content-Security-Policy");
+    expect(frame.getAttribute("srcdoc")).toContain("OTP body");
+    expect(screen.getByText("482913 is je code")).toBeDefined();
+    expect(frame.style.width).toBe("780px");
+    // The text tab escapes it (React text, not HTML).
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Plain text" }));
+    expect(await screen.findByText("Plain OTP <b>body</b>")).toBeDefined();
+  });
+});

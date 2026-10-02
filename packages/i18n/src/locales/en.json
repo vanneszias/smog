@@ -1004,10 +1004,67 @@
       }
     },
     "settings": {
-      "title": "Settings"
+      "title": "Settings",
+      "description": "Maintenance mode and the bypass for this browser.",
+      "maintenance": {
+        "title": "Maintenance mode",
+        "description": "While it is on, visitors and the app get a maintenance page. Webhooks, the health check and the admin sign-in keep working, and admins with a bypass cookie keep the whole site.",
+        "status": "Status",
+        "on": "On",
+        "off": "Off",
+        "message": "Message",
+        "messageHint": "Shown on the maintenance page, at most {{max}} characters. Optional.",
+        "noMessage": "No message",
+        "until": "Expected end",
+        "untilHint": "Optional, at most 7 days ahead. Shown on the page and sent as Retry-After.",
+        "noUntil": "Not set",
+        "untilInvalid": "Pick a time in the future, at most 7 days ahead.",
+        "propagation": "Other visitors see a change within about a minute: each server keeps the setting for up to 30 seconds, and KV takes a little longer to reach every location.",
+        "enable": "Enable maintenance",
+        "enableNote": "You get a bypass cookie for this browser first, so you keep access.",
+        "enabled": "Maintenance is on",
+        "disable": "Disable maintenance",
+        "disableTitle": "Disable maintenance?",
+        "disableDescription": "The site opens for everyone. Every bypass cookie is revoked: admins need a new one for the next window.",
+        "disabled": "Maintenance is off. Every bypass cookie is revoked.",
+        "bypassFailed": "No bypass cookie for this browser, so maintenance stays off.",
+        "failed": "The setting was not changed.",
+        "loadError": "The maintenance setting could not be loaded."
+      },
+      "bypass": {
+        "title": "Bypass for this browser",
+        "description": "A signed cookie that gets this browser past maintenance for 12 hours. Turning maintenance off revokes it.",
+        "active": "Active until {{time}}",
+        "inactive": "Not active",
+        "action": "Bypass for this browser (12 h)",
+        "done": "This browser can bypass maintenance until {{time}}.",
+        "failed": "No bypass cookie: sign in again and retry.",
+        "loadError": "The bypass status could not be loaded."
+      }
     },
     "emails": {
-      "title": "Emails"
+      "title": "Emails",
+      "description": "The real templates with sample data. A preview is never sent.",
+      "templates": "Templates",
+      "template": {
+        "magicLink": "Sign-in link",
+        "otp": "Sign-in code",
+        "resetPassword": "Password reset",
+        "verifyEmail": "Confirm email address"
+      },
+      "locale": "Language",
+      "width": "Width",
+      "desktop": "Desktop (780 px)",
+      "mobile": "Mobile (390 px)",
+      "subject": "Subject",
+      "view": "View",
+      "html": "Email",
+      "text": "Plain text",
+      "frameTitle": "Preview: {{name}}",
+      "loadError": "The email templates could not be loaded.",
+      "previewError": "This preview could not be rendered.",
+      "empty": "No email templates yet.",
+      "sandboxed": "Shown in a sandbox: no scripts, links do not open."
     }
   }
 }

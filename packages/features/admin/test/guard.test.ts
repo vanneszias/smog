@@ -8,6 +8,7 @@ import { z } from "zod";
 import {
   type AuditSchemas,
   buildAuditStatement,
+  markUnchanged,
   writeAuditWith,
 } from "../src/server/audit-writer";
 import { adminGuard, type GuardKind } from "../src/server/guard";
@@ -39,6 +40,8 @@ const testContract = {
     createOneOf: ok,
     createOutsideOneOf: ok,
     createTwoKinds: ok,
+    createUnchanged: ok,
+    createUnchangedAudited: ok,
     createWrong: ok,
     exempt: ok,
     exemptAudited: ok,
@@ -61,6 +64,8 @@ const KINDS: Record<string, GuardKind> = {
   "things.createOneOf": { audit: ["gesture.create", "gesture.delete"] },
   "things.createOutsideOneOf": { audit: ["gesture.delete"] },
   "things.createTwoKinds": { audit: "gesture.create" },
+  "things.createUnchanged": { audit: "gesture.create" },
+  "things.createUnchangedAudited": { audit: "gesture.create" },
   "things.createWrong": { audit: "gesture.create" },
   "things.exempt": { exempt: "changes no stored state" },
   "things.exemptAudited": { exempt: "changes no stored state" },
@@ -158,6 +163,21 @@ const router = os.router({
       ]);
       return "two";
     }),
+    createUnchanged: os.things.createUnchanged.handler(({ context }) => {
+      markUnchanged(context.db);
+      return "unchanged";
+    }),
+    createUnchangedAudited: os.things.createUnchangedAudited.handler(
+      async ({ context }) => {
+        markUnchanged(context.db);
+        await writeAuditWith(
+          context.db,
+          SCHEMAS,
+          entry(context.user.id, "gesture.create", "t-unchanged")
+        );
+        return "unchanged, audited";
+      }
+    ),
     createWrong: os.things.createWrong.handler(async ({ context }) => {
       await context.db.batch([
         buildAuditStatement(
@@ -330,6 +350,21 @@ describe("the admin guard: mutations", () => {
     expect(logged).toHaveBeenCalledWith(
       "[admin] things.createOutsideOneOf built gesture.create, not only gesture.delete"
     );
+  });
+
+  it("passes a mutation that changed nothing (markUnchanged) without an entry", async () => {
+    const logged = quiet();
+    const mark = await auditMark();
+    await expect(run("createUnchanged")).resolves.toBe("unchanged");
+    await expect(run("createUnchangedAudited")).rejects.toMatchObject(INTERNAL);
+    expect(logged).toHaveBeenCalledWith(
+      "[admin] things.createUnchangedAudited marked itself unchanged but built an audit entry"
+    );
+    expect(
+      (await auditRowsSince(mark)).filter(
+        (row) => row.targetId !== "t-unchanged"
+      )
+    ).toEqual([]);
   });
 
   it("passes an exempt mutation, and fails one that audits", async () => {

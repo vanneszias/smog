@@ -118,8 +118,21 @@ accounts created in the last 30 days. Phase 6 adds the sponsorship stats.
 
 ### Maintenance
 
-Task 6.
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.maintenance.get` | none | `MaintenanceSetting` | read |
+| `admin.maintenance.set` | `{ enabled, message? (1..280, trimmed), until? (ISO 8601, future, at most 7 days ahead) }` | `MaintenanceSetting` | `maintenance.enable` or `maintenance.disable` `{ message, until }` |
+
+- `MaintenanceSetting` is the KV value `maintenance`: `{ bypassVersion, enabled, message?, until? }` (`@smog/admin/schema`, shared with the site's gate and `bun run maintenance`). Nothing stored reads as `{ bypassVersion: 0, enabled: false }`.
+- `get` reads KV without a cache. `set` writes KV first, then the audit entry (`target_type` `setting`, `target_id` `maintenance`); a failed entry is logged and rethrown with the change standing. Turning on keeps `bypassVersion`; turning off writes a new one, which revokes every bypass cookie. Asking for the stored state changes nothing and writes no entry. `message` and `until` only go with `enabled: true` (`VALIDATION`).
+- The site's isolates follow within about a minute (their 30 s cache plus KV propagation).
+- `POST /api/maintenance/bypass` (site, same-origin, `RL_AUTH`, admin session) sets the 12 h HttpOnly `smog_mx` cookie and answers `{ expiresAt }`; it is open during a window. The settings page calls it before `set({ enabled: true })`. The site server function `getMaintenanceBypassStatus()` answers `{ active, expiresAt? }` for the request's own cookie.
 
 ### Emails
 
-Task 6.
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.emails.list` | none | `{ id, subject: Record<"nl" \| "en" \| "fr", string> }[]` | read |
+| `admin.emails.preview` | `{ template, locale: "nl" \| "en" \| "fr" }` | `{ subject, html, text }` | read |
+
+- Every template registered in `@smog/email` with its sample (`EMAIL_SAMPLES` in `@smog/email/samples`), rendered with `renderEmail`. Nothing is sent. An unknown `template` or `locale` is `VALIDATION`.

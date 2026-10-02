@@ -1,3 +1,9 @@
+import {
+  BYPASS_VERSION_INITIAL,
+  MAINTENANCE_KV_KEY,
+  type MaintenanceSetting,
+  parseMaintenanceSetting,
+} from "@smog/admin/schema";
 import { AuthError, getSession, requireAdminUser } from "@smog/auth";
 import type { Environment } from "@smog/config/env/worker";
 import { checkRateLimit, isForeignRequest } from "@smog/rpc";
@@ -8,7 +14,9 @@ import { maintenanceResponse } from "./maintenance-page";
 
 /**
  * Maintenance mode (spec §9). The KV key `maintenance` holds a
- * `MaintenanceState`; `bun run maintenance` writes it. While it is enabled,
+ * `MaintenanceSetting` (`@smog/admin/schema`, the one definition);
+ * `admin.maintenance.set` (the admin settings page) and `bun run
+ * maintenance` write it. While it is enabled,
  * the Worker answers every request with a 503, except:
  * - `/api/webhooks/*`, `/api/health`, `/.well-known/*` and `/api/analytics`;
  * - the `/sign-in` page and `AUTH_SIGN_IN_ROUTES`, so an existing admin
@@ -19,24 +27,13 @@ import { maintenanceResponse } from "./maintenance-page";
  * - requests with a valid bypass cookie.
  *
  * `bypassVersion` changes only when maintenance is turned off
- * (`bun run maintenance … off`), so a cookie fetched before or during a
+ * (`nextBypassVersion`), so a cookie fetched before or during a
  * window lasts for that window and dies with it. Cookies are signed and
  * checked against a fresh KV read, never the isolate cache.
  */
 
-export const MAINTENANCE_KEY = "maintenance";
 export const BYPASS_COOKIE = "smog_mx";
 export const BYPASS_PATH = "/api/maintenance/bypass";
-
-export interface MaintenanceState {
-  /** A cookie is valid only for the version it was signed with. */
-  bypassVersion: number;
-  enabled: boolean;
-  /** The operator's note, shown under the page text (plain text). */
-  message?: string;
-  /** ISO 8601: the expected end (the page and `Retry-After`). */
-  until?: string;
-}
 
 /** The isolate cache; KV itself is read with its 30 s minimum `cacheTtl`. */
 const CACHE_MS = 30_000;
@@ -47,50 +44,7 @@ const EXP_DIGITS = /^\d{1,12}$/;
 const SIGNATURE = /^[A-Za-z0-9_-]{43}$/;
 const PADDING = /[=]+$/;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** The KV value, or null when it is missing or malformed (then: off). */
-export function parseMaintenanceState(
-  raw: string | null
-): MaintenanceState | null {
-  if (raw === null) {
-    return null;
-  }
-  let value: unknown;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    return null;
-  }
-  if (
-    !isRecord(value) ||
-    typeof value.enabled !== "boolean" ||
-    typeof value.bypassVersion !== "number" ||
-    !Number.isSafeInteger(value.bypassVersion)
-  ) {
-    return null;
-  }
-  const { bypassVersion, enabled, message, until } = value;
-  if (message !== undefined && typeof message !== "string") {
-    return null;
-  }
-  if (
-    until !== undefined &&
-    (typeof until !== "string" || Number.isNaN(Date.parse(until)))
-  ) {
-    return null;
-  }
-  return {
-    bypassVersion,
-    enabled,
-    ...(message === undefined ? {} : { message }),
-    ...(until === undefined ? {} : { until }),
-  };
-}
-
-let cache: { expiresAt: number; state: MaintenanceState | null } | undefined;
+let cache: { expiresAt: number; state: MaintenanceSetting | null } | undefined;
 
 /** Forgets the cached state (tests; the next read goes to KV). */
 export function clearMaintenanceCache(): void {
@@ -105,15 +59,15 @@ export function clearMaintenanceCache(): void {
 async function readMaintenance(
   kv: KVNamespace,
   { fresh = false }: { fresh?: boolean } = {}
-): Promise<MaintenanceState | null> {
+): Promise<MaintenanceSetting | null> {
   const now = Date.now();
   if (!fresh && cache && cache.expiresAt > now) {
     return cache.state;
   }
-  let state: MaintenanceState | null;
+  let state: MaintenanceSetting | null;
   try {
-    const raw = await kv.get(MAINTENANCE_KEY, { cacheTtl: KV_CACHE_TTL_S });
-    state = parseMaintenanceState(raw);
+    const raw = await kv.get(MAINTENANCE_KV_KEY, { cacheTtl: KV_CACHE_TTL_S });
+    state = parseMaintenanceSetting(raw);
     if (raw !== null && state === null) {
       console.error(
         "[maintenance] Failed to parse the KV value; treating as off"
@@ -129,7 +83,7 @@ async function readMaintenance(
 
 /** Seconds until `until` when it is in the future, else 600. */
 export function retryAfterSeconds(
-  state: MaintenanceState,
+  state: MaintenanceSetting,
   now: number = Date.now()
 ): number {
   const until = state.until ? Date.parse(state.until) : Number.NaN;
@@ -254,13 +208,16 @@ export async function signBypassCookie(
   return `${exp}.${base64Url(signature)}`;
 }
 
-/** Whether a cookie value is unexpired and signed for this version. */
+/**
+ * A cookie value's expiry (Unix seconds) when it is unexpired and signed
+ * for this version, else null.
+ */
 async function verifyBypassCookie(
   value: string | undefined,
   secret: string,
   bypassVersion: number,
   nowS: number
-): Promise<boolean> {
+): Promise<number | null> {
   const [exp = "", signature = "", ...rest] = (value ?? "").split(".");
   if (
     rest.length > 0 ||
@@ -268,15 +225,49 @@ async function verifyBypassCookie(
     !SIGNATURE.test(signature) ||
     Number(exp) <= nowS
   ) {
-    return false;
+    return null;
   }
   // `verify` compares in constant time.
-  return await crypto.subtle.verify(
+  const valid = await crypto.subtle.verify(
     "HMAC",
     await hmacKey(secret, "verify"),
     fromBase64Url(signature),
     encoder.encode(`${exp}|${bypassVersion}`)
   );
+  return valid ? Number(exp) : null;
+}
+
+export interface BypassStatus {
+  active: boolean;
+  /** ISO 8601, when active. */
+  expiresAt?: string;
+}
+
+/**
+ * Whether a bypass cookie value would get this browser past the gate:
+ * signed for the current `bypassVersion` (read fresh from KV; nothing
+ * stored = the first version) and unexpired, with its expiry. Whether
+ * maintenance is on does not matter (a cookie can be fetched before a
+ * window). The settings page's bypass card shows it (the cookie is
+ * HttpOnly).
+ */
+export async function bypassCookieStatus(
+  value: string | undefined
+): Promise<BypassStatus> {
+  if (!value) {
+    return { active: false };
+  }
+  const { auth, kv } = siteEnv();
+  const state = await readMaintenance(kv, { fresh: true });
+  const exp = await verifyBypassCookie(
+    value,
+    auth.BETTER_AUTH_SECRET,
+    state?.bypassVersion ?? BYPASS_VERSION_INITIAL,
+    Math.floor(Date.now() / 1000)
+  );
+  return exp === null
+    ? { active: false }
+    : { active: true, expiresAt: new Date(exp * 1000).toISOString() };
 }
 
 /** `Secure` outside dev only: dev runs on http://localhost or a LAN address. */
@@ -327,7 +318,7 @@ export async function maintenanceGate(
       auth.BETTER_AUTH_SECRET,
       state.bypassVersion,
       Math.floor(now / 1000)
-    ));
+    )) !== null;
   if (bypass) {
     return null;
   }
@@ -348,9 +339,9 @@ function json(status: number, body: unknown, init: HeadersInit = {}): Response {
  * cookie for the current `bypassVersion`, read fresh from KV. It also works
  * while maintenance is off, so it can be fetched just before a window.
  * Same-origin only (`isForeignRequest`, the rpc CSRF rule), then `RL_AUTH`
- * per IP, then the session (one D1 read). Phase 5 calls it from the admin
- * settings; until then an admin signs in at `/sign-in` and runs
- * `fetch("/api/maintenance/bypass", { method: "POST" })` in the console.
+ * per IP, then the session (one D1 read). The admin settings page calls it
+ * before it enables maintenance (so the acting admin keeps access) and from
+ * its bypass card.
  */
 export async function handleBypass(request: Request): Promise<Response> {
   if (request.method !== "POST") {
@@ -378,7 +369,7 @@ export async function handleBypass(request: Request): Promise<Response> {
   const nowS = Math.floor(Date.now() / 1000);
   const value = await signBypassCookie(
     auth.BETTER_AUTH_SECRET,
-    state?.bypassVersion ?? 0,
+    state?.bypassVersion ?? BYPASS_VERSION_INITIAL,
     nowS
   );
   return json(
