@@ -16,8 +16,11 @@ import { sponsorshipToken } from "./schema/sponsorships";
 
 /** Audit entries are kept 3 × 365 days (spec §5.6). */
 export const AUDIT_RETENTION_MS = 3 * 365 * DAY_MS;
-/** A used or expired sponsorship token is kept 30 days, for support. */
-export const SPONSORSHIP_TOKEN_GRACE_MS = 30 * DAY_MS;
+/**
+ * A used or expired sponsorship token is kept 29 days, for support: with a
+ * daily run it is gone within 30 days (fix round 1, M-4).
+ */
+export const SPONSORSHIP_TOKEN_GRACE_MS = 29 * DAY_MS;
 /** Rows per chunk. */
 export const RETENTION_CHUNK_SIZE = 500;
 /** Chunks per purge per run. */
@@ -97,7 +100,7 @@ export const RETENTION_PURGES: readonly RetentionPurge[] = [
     from: sponsorshipToken,
     indexed: true,
     table: "sponsorship_token",
-    what: "sponsorship tokens expired more than 30 days ago",
+    what: "sponsorship tokens expired more than 29 days ago",
     where: (now) =>
       sql`${sponsorshipToken.expiresAt} < ${before(now, SPONSORSHIP_TOKEN_GRACE_MS)}`,
   }),
@@ -105,7 +108,7 @@ export const RETENTION_PURGES: readonly RetentionPurge[] = [
     from: sponsorshipToken,
     indexed: false,
     table: "sponsorship_token",
-    what: "sponsorship tokens used more than 30 days ago",
+    what: "sponsorship tokens used more than 29 days ago",
     where: (now) =>
       sql`${sponsorshipToken.usedAt} < ${before(now, SPONSORSHIP_TOKEN_GRACE_MS)}`,
   }),

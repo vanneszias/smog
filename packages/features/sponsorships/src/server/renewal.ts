@@ -2,17 +2,14 @@
  * `sponsorships.renewal.*` (S-20, ruling 11): the link the reminder sweep
  * sends (it expires at `ends_at`, single use). The checkout creates a
  * `renewal` payment for one more year at `priceSponsorship` (one item,
- * `includes_logo` from `logo_key`) and its Mollie checkout. The token is
+ * `includes_logo` from what was paid for) and its Mollie checkout. The token is
  * used only when that payment settles paid (`renewStatements`), so a
  * failed or abandoned payment can be retried with the same link. One open
  * renewal payment per sponsorship: another checkout answers the open one.
  */
 
 import type { Locale } from "@smog/config/constants";
-import {
-  MOLLIE_DEFAULT_API_URL,
-  type WorkerEnv,
-} from "@smog/config/env/worker";
+import type { WorkerEnv } from "@smog/config/env/worker";
 import {
   failWhen,
   inList,
@@ -27,7 +24,12 @@ import { createMollie, type MollieClient } from "@smog/payments";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { priceSponsorship } from "../schema/pricing";
 import type { CheckoutResult } from "../schema/wizard";
-import { PaymentProviderError, startMolliePayment } from "./mollie-payment";
+import {
+  allowFakeWebhook,
+  isPaymentIdTaken,
+  PaymentProviderError,
+  startMolliePayment,
+} from "./mollie-payment";
 import type { SponsorshipsDeps, SponsorshipsImplementer } from "./procedure";
 import { invalidState, requireOpen } from "./refusals";
 import { isRenewable } from "./settle";
@@ -36,11 +38,10 @@ import { STALE_GUARD } from "./transition";
 
 /** Another renewal payment of the sponsorship is open. */
 const RENEWAL_OPEN_GUARD = "renewal-open";
-const PAYMENT_ID_TAKEN = "UNIQUE constraint failed: payment.id";
 
 /** One more year of `sponsorship`, in cents (a renewal is priced per gesture). */
 function renewalPrice(link: LinkSponsorship) {
-  const includesLogo = link.logoKey !== null;
+  const includesLogo = link.hasLogo;
   const [item] = priceSponsorship({ count: 1, logo: includesLogo }).items;
   return { amountCents: item?.amountCents ?? 0, includesLogo };
 }
@@ -127,15 +128,6 @@ function createStatements(
   ];
 }
 
-function isPaymentIdTaken(error: unknown): boolean {
-  for (let e: unknown = error; e instanceof Error; e = e.cause) {
-    if (e.message.includes(PAYMENT_ID_TAKEN)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /**
  * Writes the renewal payment. A lost race answers the winner's open
  * payment (`null` when this one was written).
@@ -169,16 +161,6 @@ async function writePayment(
     }
     throw error;
   }
-}
-
-/** Whether Mollie can reach a localhost webhook: only the local fake (ruling 2). */
-function allowFakeWebhook(env: WorkerEnv): boolean {
-  const apiUrl = env.MOLLIE_API_URL;
-  return (
-    env.ENVIRONMENT === "dev" &&
-    Boolean(apiUrl) &&
-    apiUrl !== MOLLIE_DEFAULT_API_URL
-  );
 }
 
 async function renewalCheckout(
@@ -264,7 +246,7 @@ export function renewalProcedures(
           displayName: target.displayName,
           endsAt: target.endsAt?.getTime() ?? link.expiresAt.getTime(),
           gesture: { name: target.gestureName, slug: target.gestureSlug },
-          hasLogo: target.logoKey !== null,
+          hasLogo: target.hasLogo,
         };
       }),
     },

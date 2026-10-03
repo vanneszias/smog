@@ -7,6 +7,8 @@
 import {
   failWhen,
   gesture,
+  paymentItem,
+  ref,
   type SponsorshipTokenPurpose,
   type Statement,
   sponsor,
@@ -23,6 +25,12 @@ export interface LinkSponsorship {
   endsAt: Date | null;
   gestureName: string;
   gestureSlug: string;
+  /**
+   * Whether a logo was paid for (`payment_item.includes_logo`; fix round 1,
+   * I-1). The key may be gone (the purge released it) while this holds:
+   * the re-edit then takes a new logo.
+   */
+  hasLogo: boolean;
   id: string;
   logoKey: string | null;
   sponsorLocale: "nl" | "en" | "fr";
@@ -52,6 +60,7 @@ export async function readTokenLink(
       expiresAt: sponsorshipToken.expiresAt,
       gestureName: gesture.name,
       gestureSlug: gesture.slug,
+      hasLogo: sql<number>`EXISTS (SELECT 1 FROM ${paymentItem} AS ${sql.raw("pi")} WHERE ${ref("pi", paymentItem.sponsorshipId)} = ${ref("sponsorship", sponsorship.id)} AND ${ref("pi", paymentItem.includesLogo)} = 1)`,
       id: sponsorship.id,
       logoKey: sponsorship.logoKey,
       purpose: sponsorshipToken.purpose,
@@ -80,6 +89,7 @@ export async function readTokenLink(
       endsAt: row.endsAt,
       gestureName: row.gestureName,
       gestureSlug: row.gestureSlug,
+      hasLogo: Boolean(row.hasLogo),
       id: row.id,
       logoKey: row.logoKey,
       sponsorLocale: row.sponsorLocale,

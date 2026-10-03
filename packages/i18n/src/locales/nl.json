@@ -1470,6 +1470,7 @@
       "paymentsUnavailable": "Sponsoren is even gepauzeerd. Probeer het later opnieuw.",
       "paymentProvider": "De betaling kon niet gestart worden. Er is niets aangerekend. Probeer het opnieuw.",
       "alreadySettled": "Deze betaling is al afgerond.",
+      "logoExpired": "Je geüploade logo is verlopen. Upload het opnieuw en verstuur dan.",
       "logoInvalid": "Het logo kon niet gelezen worden. Kies een PNG-, JPEG- of WebP-bestand van maximaal 2 MB.",
       "noLogo": "Deze sponsoring heeft geen logo, dus je kunt er geen toevoegen.",
       "notRenewable": "Deze sponsoring kan niet meer verlengd worden.",

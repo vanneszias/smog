@@ -5,7 +5,7 @@
  */
 import { env } from "cloudflare:workers";
 import { type AnyProcedure, call } from "@orpc/server";
-import { renderJob, sponsorshipToken } from "@smog/db";
+import { renderJob, sponsorship, sponsorshipToken } from "@smog/db";
 import type { EventMessage, QueueProducer } from "@smog/jobs";
 import { FAKE_MOLLIE_API_KEY } from "@smog/payments/testing";
 import { renderInputSchema } from "@smog/render/contract";
@@ -27,6 +27,8 @@ import {
 } from "./helpers";
 
 const db = testDb();
+const LOGO_KEY = /^logos\/[0-9a-f-]{36}$/;
+const REFUSED = /TOKEN_INVALID|INVALID_STATE/;
 const PNG = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 1, 2, 3,
 ]);
@@ -38,16 +40,18 @@ const queue: QueueProducer<EventMessage> = {
     return Promise.resolve();
   },
 };
-const router = createSponsorshipsRouter({
-  bindings: () => ({ EVENTS_QUEUE: queue, MEDIA: env.MEDIA }),
-});
+const router = createSponsorshipsRouter();
 
 async function reedit<T>(path: "get" | "submit", input: unknown): Promise<T> {
   const procedure = router.reedit[path] as unknown as AnyProcedure;
   return (await call(procedure, input, {
     context: makeRpcContext({
       db,
-      env: { MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY },
+      env: {
+        EVENTS_QUEUE: queue as unknown as Queue,
+        MEDIA: env.MEDIA,
+        MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY,
+      },
       kv: env.KV,
     }),
     path: ["sponsorships", "reedit", path],
@@ -182,11 +186,14 @@ describe("sponsorships.reedit.submit", () => {
 
     expect(result).toEqual({ submitted: true });
     const row = await sponsorshipRow(db, id);
-    expect(row).toMatchObject({
-      displayName: "Acme NV",
-      logoKey,
-      status: "rendering",
-    });
+    expect(row).toMatchObject({ displayName: "Acme NV", status: "rendering" });
+    // The claimed copy is stored (task 4's claimLogo), not the upload, which
+    // is deleted: a still-valid upload URL can no longer change the logo.
+    const claimed = row.logoKey as string;
+    expect(claimed).toMatch(LOGO_KEY);
+    expect(claimed).not.toBe(logoKey);
+    expect(await env.MEDIA.head(claimed)).not.toBeNull();
+    expect(await env.MEDIA.head(logoKey)).toBeNull();
     // The old object stays for the orphan sweep (ruling 9).
     expect(await env.MEDIA.head(before.logoKey as string)).not.toBeNull();
     const [tokenRow] = await db
@@ -202,7 +209,7 @@ describe("sponsorships.reedit.submit", () => {
     const [job] = jobs;
     expect(renderInputSchema.parse(job?.input)).toMatchObject({
       displayName: "Acme NV",
-      logoKey,
+      logoKey: claimed,
     });
     expect(messages).toEqual([
       { renderJobId: job?.id, type: "render.requested" },
@@ -256,24 +263,68 @@ describe("sponsorships.reedit.submit", () => {
     expect(await failure(reedit("get", { token }))).toBe("ok");
   });
 
-  it("refuses a missing or forged logo object (logoInvalid)", async () => {
+  it("refuses a forged logo (logoInvalid) and a vanished upload (logoExpired)", async () => {
     const { id, token } = await changesRequested();
-    const missing = `logos/${newId()}`;
     const gif = await upload(
       new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0, 0, 0, 0, 0]),
       "image/png"
     );
+    // An upload the orphan sweep removed (unreferenced for 24 h; the link
+    // lives 7 days): the page asks for a new upload (M-6).
+    const gone = `logos/${newId()}`;
 
-    const results = await Promise.all(
-      [missing, gif].map((logoKey) =>
-        failure(reedit("submit", { displayName: "Acme", logoKey, token }))
+    expect(
+      await failure(
+        reedit("submit", { displayName: "Acme", logoKey: gif, token })
       )
-    );
-    expect(results).toEqual([
-      { code: "INVALID_STATE", data: { reason: "logoInvalid" } },
-      { code: "INVALID_STATE", data: { reason: "logoInvalid" } },
-    ]);
+    ).toEqual({ code: "INVALID_STATE", data: { reason: "logoInvalid" } });
+    expect(
+      await failure(
+        reedit("submit", { displayName: "Acme", logoKey: gone, token })
+      )
+    ).toEqual({ code: "INVALID_STATE", data: { reason: "logoExpired" } });
     expect((await sponsorshipRow(db, id)).status).toBe("changes_requested");
+    expect(messages).toEqual([]);
+  });
+
+  it("takes a new logo when one was paid for but the purge released it (I-1)", async () => {
+    const { id, token } = await changesRequested();
+    await db
+      .update(sponsorship)
+      .set({ logoKey: null })
+      .where(eq(sponsorship.id, id));
+
+    expect(await reedit<{ hasLogo: boolean }>("get", { token })).toMatchObject({
+      hasLogo: true,
+    });
+    const logoKey = await upload();
+    await reedit("submit", { displayName: "Acme BV", logoKey, token });
+
+    const row = await sponsorshipRow(db, id);
+    expect(row.logoKey).not.toBeNull();
+    expect(await env.MEDIA.head(row.logoKey as string)).not.toBeNull();
+  });
+
+  it("two concurrent submits of one link: one wins, one job, one message", async () => {
+    const { id, token } = await changesRequested(false);
+
+    const results = await Promise.all([
+      failure(reedit("submit", { displayName: "Een", token })),
+      failure(reedit("submit", { displayName: "Twee", token })),
+    ]);
+
+    expect(results.filter((r) => r === "ok")).toHaveLength(1);
+    expect(results.filter((r) => r !== "ok")).toEqual([
+      expect.objectContaining({
+        code: expect.stringMatching(REFUSED),
+      }),
+    ]);
+    const jobs = await db
+      .select()
+      .from(renderJob)
+      .where(eq(renderJob.sponsorshipId, id));
+    expect(jobs).toHaveLength(1);
+    expect(messages).toHaveLength(1);
   });
 
   it("keeps the logo when none is sent, and refuses a used, expired or unknown link", async () => {

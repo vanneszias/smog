@@ -36,7 +36,7 @@ export function createSponsorshipsRouter(deps: SponsorshipsDeps = {}) {
     ...checkoutProcedures(os, deps),
     ...logoProcedures(os),
     ...statusProcedures(os, deps),
-    ...reeditProcedures(os, deps),
+    ...reeditProcedures(os),
     ...renewalProcedures(os, deps),
   });
 }

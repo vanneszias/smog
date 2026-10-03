@@ -3,7 +3,7 @@ import {
   type CronName,
   cronName,
   type EmailMessage,
-  type EventMessage,
+  type JobQueues,
   QueueEmailOutbox,
   type QueueProducer,
 } from "@smog/jobs";
@@ -26,15 +26,21 @@ import { siteEnv } from "@/server/auth";
 type CronHandler = (env: Env, now: Date) => Promise<Record<string, number>>;
 
 /**
- * The email outbox of a cron: `EMAIL_QUEUE`, and a failed hand-off is
- * retried and then logged, never thrown (the state is already committed;
- * ruling 8).
+ * The reminders' outbox: `EMAIL_QUEUE`, and a hand-off that still fails
+ * after the producer's retries throws, so the sweep counts it
+ * (`emailFailed`) and logs it for an admin (fix round 1, M-1). The state
+ * is already committed (ruling 8).
  */
-function cronOutbox(env: Env): QueueEmailOutbox {
+function reminderOutbox(env: Env): QueueEmailOutbox {
   return new QueueEmailOutbox(
     env.EMAIL_QUEUE as unknown as QueueProducer<EmailMessage>,
-    { onFailure: "log" }
+    { onFailure: "throw" }
   );
+}
+
+/** The queues a sweep hands its outputs to (`enqueueOutputs`, task 4). */
+function cronQueues(env: Env): JobQueues {
+  return { email: env.EMAIL_QUEUE, events: env.EVENTS_QUEUE };
 }
 
 const HANDLERS: Record<CronName, CronHandler> = {
@@ -48,7 +54,7 @@ const HANDLERS: Record<CronName, CronHandler> = {
   reminders: async (env, now) => ({
     ...(await runReminderSweep({
       db: createDb(siteEnv().db),
-      email: cronOutbox(env),
+      email: reminderOutbox(env),
       now,
       siteUrl: siteEnv().vars.SITE_URL,
     })),
@@ -56,6 +62,7 @@ const HANDLERS: Record<CronName, CronHandler> = {
   retention: async (env, now) => ({
     ...(await runRetentionPurge({
       db: createDb(siteEnv().db),
+      kv: siteEnv().kv,
       media: env.MEDIA,
       now,
     })),
@@ -63,12 +70,9 @@ const HANDLERS: Record<CronName, CronHandler> = {
   stale: async (env, now) => ({
     ...(await runStaleSweep({
       db: createDb(siteEnv().db),
-      email: cronOutbox(env),
-      events: env.EVENTS_QUEUE as unknown as
-        | QueueProducer<EventMessage>
-        | undefined,
       mollie: createMollie(siteEnv().worker),
       now,
+      queues: cronQueues(env),
     })),
   }),
 };

@@ -22,6 +22,7 @@ SMOG_OFFLINE=1 bun run release:check  # Same, on a machine without internet acce
 bun run admin:grant --env <dev|staging|production> [--dry-run] <email>  # Give an account the admin role and lift any ban (dev: local D1, else remote)
 bun run maintenance --env <dev|staging|production> on|off [--message …] [--until ISO] [--dry-run] [--yes]  # Maintenance mode (KV; production needs --yes)
 bun run cron <expiry|reminders|stale|retention>  # Run one Cron Trigger on the local dev server
+bun run retention --env <dev|staging|production> --dry-run  # Count what the daily purge would delete (read-only D1 SELECT)
 bun scripts/ensure-cloudflare-resources.ts --env <staging|production> --check|--create|--dry-run  # Queues, DLQs, R2 bucket + CORS (the deploy job runs it)
 ```
 

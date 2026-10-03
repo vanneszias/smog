@@ -121,6 +121,13 @@ describe("the retention purges (ruling 9)", () => {
         userId: user.id,
       },
       {
+        // Expiring exactly now: not expired yet (the comparison is strict).
+        expiresAt: NOW,
+        id: "s-edge",
+        token: newId(),
+        userId: user.id,
+      },
+      {
         expiresAt: new Date(NOW.getTime() + DAY),
         id: "s-live",
         token: newId(),
@@ -147,14 +154,15 @@ describe("the retention purges (ruling 9)", () => {
     expect(counts.session).toBe(1);
     expect(counts.verification).toBe(1);
     const sessions = await db.select({ id: session.id }).from(session);
-    expect(sessions.map((row) => row.id)).toEqual(["s-live"]);
+    expect(sessions.map((row) => row.id).sort()).toEqual(["s-edge", "s-live"]);
     const verifications = await db
       .select({ id: verification.id })
       .from(verification);
     expect(verifications.map((row) => row.id)).toEqual(["v-live"]);
   });
 
-  it("deletes tokens used or expired more than 30 days ago, and keeps the rest", async () => {
+  it("deletes tokens used or expired more than 29 days ago (gone within 30), and keeps the rest", async () => {
+    expect(SPONSORSHIP_TOKEN_GRACE_MS).toBe(29 * DAY);
     const old = new Date(NOW.getTime() - SPONSORSHIP_TOKEN_GRACE_MS - 1);
     const recent = new Date(NOW.getTime() - SPONSORSHIP_TOKEN_GRACE_MS + 1);
     const future = new Date(NOW.getTime() + DAY);
@@ -204,7 +212,7 @@ describe("the retention purges (ruling 9)", () => {
   it("seeks an index for every chunk read but the used-token one", async () => {
     expect(
       RETENTION_PURGES.filter((purge) => !purge.indexed).map((p) => p.what)
-    ).toEqual(["sponsorship tokens used more than 30 days ago"]);
+    ).toEqual(["sponsorship tokens used more than 29 days ago"]);
     for (const purge of RETENTION_PURGES.filter((p) => p.indexed)) {
       const query = purge.statement(db, NOW).toSQL();
       const inner = query.sql.slice(
@@ -226,7 +234,7 @@ describe("the retention purges (ruling 9)", () => {
     await addAudit(old, 3);
     await addAudit(new Date(NOW.getTime() - AUDIT_RETENTION_MS + 1));
     const gone = new Date(NOW.getTime() - SPONSORSHIP_TOKEN_GRACE_MS - 1);
-    // Used and expired more than 30 days ago: two purges match, one row.
+    // Used and expired more than 29 days ago: two purges match, one row.
     await addToken({ expiresAt: gone, usedAt: gone });
     await addToken({ expiresAt: new Date(NOW.getTime() + DAY) });
     const user = await makeUser(db);

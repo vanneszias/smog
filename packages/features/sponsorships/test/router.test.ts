@@ -108,13 +108,4 @@ describe("the sponsorships contract and its guards (ruling 5)", () => {
       }
     });
   }
-
-  it("the slices task 5 fills answer INTERNAL_SERVER_ERROR until then", async () => {
-    await expect(
-      callAt("reedit.get", await inputFor("reedit.get"))
-    ).rejects.toMatchObject({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "not implemented",
-    });
-  });
 });

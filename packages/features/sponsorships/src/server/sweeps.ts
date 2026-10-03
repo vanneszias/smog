@@ -28,12 +28,8 @@ import {
   sponsorship,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
-import type { EmailOutbox, OutboxEmail } from "@smog/email";
-import {
-  type EventMessage,
-  enqueueEvent,
-  type QueueProducer,
-} from "@smog/jobs";
+import type { EmailOutbox } from "@smog/email";
+import { enqueueOutputs, type JobQueues } from "@smog/jobs";
 import {
   cancelPayment,
   getPayment,
@@ -43,14 +39,27 @@ import {
 } from "@smog/payments";
 import { DAY_MS } from "@smog/utils";
 import { deleteAsset, type Mux } from "@smog/video";
-import { and, asc, eq, gt, isNull, lt, lte, ne, not, sql } from "drizzle-orm";
 import {
+  and,
+  asc,
+  eq,
+  gt,
+  isNull,
+  lt,
+  lte,
+  ne,
+  not,
+  type SQL,
+  sql,
+} from "drizzle-orm";
+import {
+  ENDED_STATUSES,
   type LogoBucket,
+  type LogoCursorStore,
   orphanLogoSweep,
   releaseTerminalLogos,
-  TERMINAL_LOGO_STATUSES,
 } from "./orphan-logos";
-import { type SettleResult, settlePayment } from "./settle";
+import { settlePayment } from "./settle";
 import {
   isStalePayment,
   issueTokenStatements,
@@ -148,7 +157,7 @@ async function assetInUse(
       and(
         eq(sponsorship.videoAssetId, assetId),
         ne(sponsorship.id, sponsorshipId),
-        not(inList(sponsorship.status, TERMINAL_LOGO_STATUSES))
+        not(inList(sponsorship.status, ENDED_STATUSES))
       )
     )
     .limit(1);
@@ -384,9 +393,11 @@ export async function runReminderSweep({
           to: row.sponsorEmail,
         });
       } catch (error) {
+        // `reminder_sent_at` is set, so no later run sends it: flag it for
+        // an admin, who regenerates the renewal link (ruling 11).
         result.emailFailed += 1;
         console.error(
-          `[sponsorships] Failed to queue the renewal reminder for ${row.id}:`,
+          `[sponsorships] Failed to queue the renewal reminder for ${row.id}; an admin must regenerate its renewal link:`,
           error
         );
       }
@@ -405,10 +416,17 @@ export interface StaleSweepResult {
   cancelled: number;
   /** Of those, the ones cancelled in Mollie by this sweep. */
   cancelledAtMollie: number;
-  /** Mollie could not be asked or would not cancel; the next hour retries. */
+  /** Mollie could not be asked; the next hour retries. */
   deferred: number;
   /** Payments whose local batch failed (logged). */
   failed: number;
+  /**
+   * Payments with a Mollie id left open because Mollie cannot settle them
+   * now: no key, Mollie answers 404, or open and not cancelable (fix round
+   * 1, I-2; logged). Only a payment without a Mollie id is cancelled
+   * without Mollie.
+   */
+  keptOpen: number;
   /**
    * Paid payments whose `payment.settled` was re-sent because an item sat
    * in `rendering` without a `queued`/`running` render job (the
@@ -417,6 +435,11 @@ export interface StaleSweepResult {
   resent: number;
   /** Payments Mollie reports paid, settled (never cancelled). */
   settled: number;
+  /**
+   * Paid payments still without a render job after the reconciliation
+   * window: no longer re-sent, logged once a day for an admin.
+   */
+  stuck: number;
 }
 
 interface StaleRow {
@@ -425,41 +448,12 @@ interface StaleRow {
   mollieId: string | null;
 }
 
-/** The fan-out and the admin emails of a settle (ruling 8: after the batch). */
-async function deliver(
-  outcome: SettleResult,
-  events: QueueProducer<EventMessage> | undefined,
-  email: EmailOutbox
-): Promise<void> {
-  for (const event of outcome.events) {
-    if (events) {
-      // biome-ignore lint/performance/noAwaitInLoops: one message per event, in order.
-      await enqueueEvent(events, event);
-    } else {
-      console.error(
-        `[sponsorships] No EVENTS_QUEUE: ${event.type} for payment ${outcome.paymentId} was not queued`
-      );
-    }
-  }
-  for (const message of outcome.notify) {
-    try {
-      // biome-ignore lint/performance/noAwaitInLoops: one message per admin, in order.
-      await email.send(message as OutboxEmail);
-    } catch (error) {
-      console.error(
-        `[sponsorships] Failed to queue ${message.template} for payment ${outcome.paymentId}:`,
-        error
-      );
-    }
-  }
-}
-
 /**
- * Cancels our open payment without Mollie (no key, no `mollie_id`, or a
- * payment Mollie does not know): the payment becomes `canceled`, and for
- * an initial payment every `awaiting_payment` item `cancelled`
- * (`{ reason: "stale" }`), so the gestures are free. A renewal only marks
- * the payment: the sponsorship runs to its end.
+ * Cancels our open payment that never reached Mollie (no `mollie_id`: a
+ * crash between the checkout batch and Mollie): the payment becomes
+ * `canceled`, and for an initial payment every `awaiting_payment` item
+ * `cancelled` (`{ reason: "stale" }`), so the gestures are free. A renewal
+ * only marks the payment: the sponsorship runs to its end.
  */
 async function cancelLocally(db: Db, row: StaleRow, now: Date): Promise<void> {
   const items = await db
@@ -490,26 +484,21 @@ async function cancelLocally(db: Db, row: StaleRow, now: Date): Promise<void> {
   ]);
 }
 
-type StaleStep = "settled" | "cancelled" | "local" | "deferred";
+type StaleStep = "settled" | "cancelled" | "keptOpen" | "deferred";
 
 /**
- * Mollie's view first (D-STALE): paid is settled, never cancelled; open
- * and cancelable is cancelled in Mollie and settled as such; an ended
- * payment is settled as it ended. `local` when Mollie cannot settle it
- * (no key, no id, unknown to Mollie, open and not cancelable).
+ * Mollie's view of a payment that has a Mollie id (D-STALE): paid is
+ * settled, never cancelled; open and cancelable is cancelled in Mollie and
+ * settled as such; an ended payment is settled as it ended. A payment
+ * Mollie answers 404 for, or that is open and not cancelable, is kept open
+ * (`keptOpen`, logged): money may still arrive for it (fix round 1, I-2).
  */
 async function staleAtMollie(
-  context: {
-    db: Db;
-    email: EmailOutbox;
-    events: QueueProducer<EventMessage> | undefined;
-    mollie: MollieClient;
-    now: Date;
-    result: StaleSweepResult;
-  },
-  row: StaleRow & { mollieId: string }
+  context: { db: Db; mollie: MollieClient; now: Date; queues: JobQueues },
+  row: StaleRow & { mollieId: string },
+  result: StaleSweepResult
 ): Promise<StaleStep> {
-  const { db, mollie, now, result } = context;
+  const { db, mollie, now } = context;
   let fetched: MolliePayment | null;
   try {
     fetched = await getPayment(mollie, row.mollieId);
@@ -528,8 +517,17 @@ async function staleAtMollie(
     );
     return "deferred";
   }
-  if (!fetched || mapMollieStatus(fetched.status) === "open") {
-    return "local";
+  if (!fetched) {
+    console.error(
+      `[sponsorships] Mollie does not know ${row.mollieId} of the stale payment ${row.id} (a key of another profile?); it is left open`
+    );
+    return "keptOpen";
+  }
+  if (mapMollieStatus(fetched.status) === "open") {
+    console.warn(
+      `[sponsorships] The stale payment ${row.id} is ${fetched.status} at Mollie and cannot be cancelled; it is left open`
+    );
+    return "keptOpen";
   }
   const outcome = await settlePayment(db, { now, payment: fetched });
   if (!outcome) {
@@ -540,38 +538,68 @@ async function staleAtMollie(
     );
     return "deferred";
   }
-  await deliver(outcome, context.events, context.email);
+  await enqueueOutputs(context.queues, outcome);
   return mapMollieStatus(fetched.status) === "paid" ? "settled" : "cancelled";
 }
 
+/** One stale payment: Mollie's view when it has a Mollie id, else a local cancel. */
+async function staleStep(
+  context: {
+    db: Db;
+    mollie: MollieClient | null;
+    now: Date;
+    queues: JobQueues;
+  },
+  row: StaleRow,
+  result: StaleSweepResult
+): Promise<StaleStep> {
+  const { db, mollie, now } = context;
+  if (row.mollieId === null) {
+    await cancelLocally(db, row, now);
+    return "cancelled";
+  }
+  if (!mollie) {
+    console.warn(
+      `[sponsorships] No MOLLIE_API_KEY: the stale payment ${row.id} has a Mollie id and is left open`
+    );
+    return "keptOpen";
+  }
+  return await staleAtMollie(
+    { ...context, mollie },
+    { ...row, mollieId: row.mollieId },
+    result
+  );
+}
+
 /**
- * Every `open` payment created more than 24 h ago (J-03, D-STALE): re-fetched
- * from Mollie first, then settled (paid), or cancelled in Mollie when it is
- * cancelable and settled as cancelled, or cancelled locally when Mollie
- * cannot settle it. Without `MOLLIE_API_KEY` (`mollie` is `null`: staging)
- * or without a `mollie_id` it is cancelled locally only. A Mollie error
- * leaves the payment open for the next hour.
+ * Every `open` payment created more than 24 h ago (J-03, D-STALE, amended
+ * by fix round 1, I-2): one with a Mollie id is re-fetched first, then
+ * settled (paid), or cancelled in Mollie when it is cancelable and settled
+ * as cancelled, or kept open (no key, a 404, not cancelable). One without
+ * a Mollie id never reached Mollie and is cancelled locally. A Mollie
+ * error leaves the payment open for the next hour. Then the
+ * reconciliation re-sends lost fan-outs.
  */
 export async function runStaleSweep({
   db,
-  email,
-  events,
   mollie,
   now,
+  queues,
 }: {
   db: Db;
-  email: EmailOutbox;
-  events: QueueProducer<EventMessage> | undefined;
   mollie: MollieClient | null;
   now: Date;
+  queues: JobQueues;
 }): Promise<StaleSweepResult> {
   const result: StaleSweepResult = {
     cancelled: 0,
     cancelledAtMollie: 0,
     deferred: 0,
     failed: 0,
+    keptOpen: 0,
     resent: 0,
     settled: 0,
+    stuck: 0,
   };
   const before = new Date(now.getTime() - STALE_PAYMENT_AGE_MS);
   await sweep(
@@ -594,24 +622,9 @@ export async function runStaleSweep({
         .limit(SWEEP_PAGE_SIZE),
     async (row) => {
       try {
-        const step =
-          mollie && row.mollieId
-            ? await staleAtMollie(
-                { db, email, events, mollie, now, result },
-                { ...row, mollieId: row.mollieId }
-              )
-            : "local";
-        if (step === "deferred") {
-          result.deferred += 1;
-          return "skip";
-        }
-        if (step === "local") {
-          await cancelLocally(db, row, now);
-          result.cancelled += 1;
-          return "done";
-        }
+        const step = await staleStep({ db, mollie, now, queues }, row, result);
         result[step] += 1;
-        return "done";
+        return step === "cancelled" || step === "settled" ? "done" : "skip";
       } catch (error) {
         if (!lostRace(error)) {
           result.failed += 1;
@@ -624,7 +637,9 @@ export async function runStaleSweep({
       }
     }
   );
-  result.resent = await resendSettled(db, events, now);
+  const reconciled = await resendSettled(db, queues, now);
+  result.resent = reconciled.resent;
+  result.stuck = reconciled.stuck;
   return result;
 }
 
@@ -635,61 +650,85 @@ export const RECONCILE_MAX_PAYMENTS = 100;
  * flight: the reconciliation leaves it to the next run.
  */
 export const RECONCILE_GRACE_MS = 5 * 60_000;
+/**
+ * A payment is re-sent hourly for this long after it was paid (at most
+ * 168 attempts); after that it is `stuck`: not re-sent, logged daily.
+ */
+export const RECONCILE_WINDOW_MS = 7 * DAY_MS;
+/** The UTC hour of the daily `stuck` log line. */
+const STUCK_LOG_HOUR = 0;
+
+/** A paid payment with an item in `rendering` and no active render job. */
+function waitingForRender(): SQL {
+  return and(
+    eq(sponsorship.status, "rendering"),
+    eq(payment.status, "paid"),
+    sql`NOT EXISTS (SELECT 1 FROM ${renderJob} AS ${sql.raw("rj")} WHERE ${ref("rj", renderJob.sponsorshipId)} = ${ref("sponsorship", sponsorship.id)} AND ${inList(ref("rj", renderJob.status), ["queued", "running"])})`
+  ) as SQL;
+}
+
+const PAID_AT = sql<number>`coalesce(${payment.paidAt}, ${payment.updatedAt})`;
 
 /**
  * The reconciliation step of the hourly sweep (task 4 review): every paid
  * payment with an item in `rendering` and no `queued`/`running` render
- * job gets `payment.settled` again, so a fan-out lost after the commit (a
- * crash, a queue outage past the retries, a dead-lettered message) is
- * resumed. Idempotent: the consumer creates at most one job per item in
- * D1 and keys its emails, so a re-send that races the original changes
- * nothing. Bounded to `RECONCILE_MAX_PAYMENTS` per run. Returns how many
- * were re-sent.
+ * job, paid between 7 days and 5 minutes ago, gets `payment.settled`
+ * again, oldest first, at most `RECONCILE_MAX_PAYMENTS` per run, so a
+ * fan-out lost after the commit (a crash, a queue outage past the
+ * retries, a dead-lettered message) is resumed. Idempotent: the consumer
+ * creates at most one job per item in D1 and keys its emails. Older ones
+ * are `stuck`: counted, and logged once a day (fix round 1, M-2).
  */
 async function resendSettled(
   db: Db,
-  events: QueueProducer<EventMessage> | undefined,
+  queues: JobQueues,
   now: Date
-): Promise<number> {
-  const paidBefore = now.getTime() - RECONCILE_GRACE_MS;
+): Promise<{ resent: number; stuck: number }> {
+  const windowStart = now.getTime() - RECONCILE_WINDOW_MS;
   const rows = await db
-    .selectDistinct({ id: payment.id })
+    .select({ id: payment.id, paidAt: sql<number>`min(${PAID_AT})` })
     .from(sponsorship)
     .innerJoin(paymentItem, eq(paymentItem.sponsorshipId, sponsorship.id))
     .innerJoin(payment, eq(payment.id, paymentItem.paymentId))
     .where(
       and(
-        eq(sponsorship.status, "rendering"),
-        eq(payment.status, "paid"),
-        sql`coalesce(${payment.paidAt}, ${payment.updatedAt}) < ${paidBefore}`,
-        sql`NOT EXISTS (SELECT 1 FROM ${renderJob} AS ${sql.raw("rj")} WHERE ${ref("rj", renderJob.sponsorshipId)} = ${ref("sponsorship", sponsorship.id)} AND ${inList(ref("rj", renderJob.status), ["queued", "running"])})`
+        waitingForRender(),
+        sql`${PAID_AT} < ${now.getTime() - RECONCILE_GRACE_MS}`,
+        sql`${PAID_AT} >= ${windowStart}`
       )
     )
+    .groupBy(payment.id)
+    .orderBy(asc(sql`min(${PAID_AT})`), asc(payment.id))
     .limit(RECONCILE_MAX_PAYMENTS);
-  if (rows.length === 0) {
-    return 0;
-  }
-  if (!events) {
-    console.error(
-      `[sponsorships] No EVENTS_QUEUE: ${rows.length} paid payment(s) wait for their render job`
-    );
-    return 0;
-  }
   let resent = 0;
   for (const row of rows) {
-    // biome-ignore lint/performance/noAwaitInLoops: one message per payment, bounded.
-    const sent = await enqueueEvent(events, {
-      paymentId: row.id,
-      type: "payment.settled",
+    // biome-ignore lint/performance/noAwaitInLoops: one message per payment, bounded, oldest first.
+    const sent = await enqueueOutputs(queues, {
+      events: [{ paymentId: row.id, type: "payment.settled" }],
+      notify: [],
     });
     if (sent) {
       resent += 1;
     }
   }
-  console.warn(
-    `[sponsorships] Re-sent payment.settled for ${resent} paid payment(s) with an item rendering and no render job`
-  );
-  return resent;
+  if (resent > 0) {
+    console.warn(
+      `[sponsorships] Re-sent payment.settled for ${resent} paid payment(s) with an item rendering and no render job`
+    );
+  }
+  const [stuckRow] = await db
+    .select({ n: sql<number>`count(DISTINCT ${payment.id})` })
+    .from(sponsorship)
+    .innerJoin(paymentItem, eq(paymentItem.sponsorshipId, sponsorship.id))
+    .innerJoin(payment, eq(payment.id, paymentItem.paymentId))
+    .where(and(waitingForRender(), sql`${PAID_AT} < ${windowStart}`));
+  const stuck = stuckRow?.n ?? 0;
+  if (stuck > 0 && now.getUTCHours() === STUCK_LOG_HOUR) {
+    console.error(
+      `[sponsorships] ${stuck} paid payment(s) have had an item rendering without a render job for more than 7 days; no longer re-sent, check the events DLQ and the render input`
+    );
+  }
+  return { resent, stuck };
 }
 
 // ── Retention (J-04) ───────────────────────────────────────────────────
@@ -697,34 +736,36 @@ async function resendSettled(
 export type RetentionPurgeResult = Record<RetentionTable, number> & {
   /** Logo objects deleted from R2 (orphans, and the released ones). */
   logosDeleted: number;
-  /** Sponsorships whose `logo_key` was cleared (terminal for 30 days). */
+  /** Sponsorships whose `logo_key` was cleared (see `releaseTerminalLogos`). */
   logosReleased: number;
 };
 
 /**
- * The daily purge the privacy text promises (ruling 9, J-04), and nothing
- * else:
+ * The daily purge the privacy text promises (ruling 9, J-04, amended by
+ * fix round 1), and nothing else:
  * - `audit_log` older than 3 × 365 days; expired `session` and
- *   `verification` rows; `sponsorship_token` used or expired more than 30
+ *   `verification` rows; `sponsorship_token` used or expired more than 29
  *   days ago (`runRetentionPurges`, `@smog/db`, chunked);
- * - the logos of sponsorships that ended (`rejected`, `cancelled`,
- *   `expired`) more than 30 days ago, when no other sponsorship still
- *   needs them: `logo_key` cleared (`payment_item.includes_logo` keeps the
- *   fact);
+ * - the logo key of sponsorships that ended more than 30 days ago and can
+ *   no longer use a logo that was paid for (`releaseTerminalLogos`):
+ *   `logo_key` cleared (`payment_item.includes_logo` keeps the fact);
  * - R2 `logos/*` objects no sponsorship references, uploaded more than
  *   24 h ago (an upload whose checkout never happened, a replaced logo,
- *   and the ones released above).
- * With `dryRun`, it counts and deletes nothing. A failing part is logged
- * and the others still run; the first error is rethrown at the end.
+ *   and the ones released above), resuming a KV cursor across runs.
+ * With `dryRun`, it counts what a real run would delete (the released
+ * logos included) and changes nothing, the cursor included. A failing
+ * part is logged and the others still run; the first error is rethrown.
  */
 export async function runRetentionPurge({
   db,
   dryRun = false,
+  kv,
   media,
   now,
 }: {
   db: Db;
   dryRun?: boolean;
+  kv: LogoCursorStore | undefined;
   media: LogoBucket | undefined;
   now: Date;
 }): Promise<RetentionPurgeResult> {
@@ -743,9 +784,14 @@ export async function runRetentionPurge({
   let logosReleased = 0;
   let logosDeleted = 0;
   try {
-    logosReleased = await releaseTerminalLogos(db, now, { dryRun });
+    const released = await releaseTerminalLogos(db, now, { dryRun });
+    logosReleased = released.count;
     if (media) {
-      logosDeleted = await orphanLogoSweep(db, media, now, { dryRun });
+      logosDeleted = await orphanLogoSweep(db, media, now, {
+        dryRun,
+        kv,
+        released: released.keys,
+      });
     } else {
       console.warn(
         "[sponsorships] No MEDIA binding: the logo sweep is skipped"

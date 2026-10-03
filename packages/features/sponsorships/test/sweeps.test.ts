@@ -11,17 +11,20 @@ import {
 } from "@smog/db";
 import { makeGesture } from "@smog/db/testing";
 import type { OutboxEmail } from "@smog/email";
-import type { EventMessage, QueueProducer } from "@smog/jobs";
+import type { EmailMessage, EventMessage, JobQueues } from "@smog/jobs";
+import type { MollieClient } from "@smog/payments";
 import { createFakeMollie, type FakeMollie } from "@smog/payments/testing";
 import { DAY_MS } from "@smog/utils";
 import { createFakeMux, type FakeMux } from "@smog/video/testing";
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { hashSponsorshipToken } from "../src/schema";
 import { createRenderJob } from "../src/server/render";
+import { settleFromMollie } from "../src/server/settle";
 import {
   RECONCILE_GRACE_MS,
   RECONCILE_MAX_PAYMENTS,
+  RECONCILE_WINDOW_MS,
   REMINDER_WINDOW_MS,
   runExpirySweep,
   runReminderSweep,
@@ -58,18 +61,6 @@ function recordingOutbox() {
   };
 }
 
-/** A queue producer that records the messages. */
-function recordingQueue() {
-  const messages: EventMessage[] = [];
-  const queue: QueueProducer<EventMessage> = {
-    send: (body) => {
-      messages.push(body);
-      return Promise.resolve();
-    },
-  };
-  return { messages, queue };
-}
-
 async function one(options: Parameters<typeof seedCheckout>[1] = {}) {
   const seeded = await seedCheckout(db, { count: 1, ...options });
   return {
@@ -88,6 +79,10 @@ async function setAsset(id: string, assetId: string | null): Promise<void> {
 
 beforeEach(async () => {
   await clearSponsorships(db);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe("runExpirySweep (J-01)", () => {
@@ -417,12 +412,33 @@ describe("runReminderSweep (J-02)", () => {
     expect(result).toEqual({ emailFailed: 1, failed: 0, reminded: 1 });
     expect((await sponsorshipRow(db, id)).status).toBe("expiring");
     expect(error).toHaveBeenCalledWith(
-      `[sponsorships] Failed to queue the renewal reminder for ${id}:`,
+      `[sponsorships] Failed to queue the renewal reminder for ${id}; an admin must regenerate its renewal link:`,
       expect.any(Error)
     );
     error.mockRestore();
   });
 });
+
+/** Both queues, recording: events and emails. */
+function recordingQueues() {
+  const events: EventMessage[] = [];
+  const emails: EmailMessage[] = [];
+  const queues: JobQueues = {
+    email: {
+      send: (body) => {
+        emails.push(body);
+        return Promise.resolve();
+      },
+    },
+    events: {
+      send: (body) => {
+        events.push(body);
+        return Promise.resolve();
+      },
+    },
+  };
+  return { emails, events, queues };
+}
 
 describe("runStaleSweep (J-03)", () => {
   let fake: FakeMollie;
@@ -443,27 +459,22 @@ describe("runStaleSweep (J-03)", () => {
     return seeded;
   }
 
+  async function sweep(
+    queues: JobQueues,
+    mollie = fake.mollie as MollieClient | null
+  ) {
+    return await runStaleSweep({ db, mollie, now: NOW, queues });
+  }
+
   it("settles a payment Mollie reports paid, never cancels it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const seeded = await staleCheckout();
     const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 10_000);
     fake.setStatus(mollieId, "paid");
-    const { messages, queue } = recordingQueue();
-    const { outbox } = recordingOutbox();
+    const { events, queues } = recordingQueues();
 
-    const first = await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: fake.mollie,
-      now: NOW,
-    });
-    const second = await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: fake.mollie,
-      now: NOW,
-    });
+    const first = await sweep(queues);
+    const second = await sweep(queues);
 
     expect(first).toMatchObject({ cancelled: 0, settled: 1 });
     expect(second).toMatchObject({ cancelled: 0, settled: 0 });
@@ -472,14 +483,14 @@ describe("runStaleSweep (J-03)", () => {
       // biome-ignore lint/performance/noAwaitInLoops: two rows, in order.
       expect((await sponsorshipRow(db, id)).status).toBe("rendering");
     }
-    // The settle's fan-out; the second run may re-send it (the
-    // reconciliation: no consumer creates the render jobs here).
-    expect(messages[0]).toEqual({
+    // The settle's fan-out; the reconciliation may re-send it (no consumer
+    // creates the render jobs here).
+    expect(events[0]).toEqual({
       paymentId: seeded.paymentId,
       type: "payment.settled",
     });
     expect(
-      messages.every(
+      events.every(
         (m) => m.type === "payment.settled" && m.paymentId === seeded.paymentId
       )
     ).toBe(true);
@@ -489,23 +500,10 @@ describe("runStaleSweep (J-03)", () => {
   it("cancels a cancelable payment in Mollie and frees the gestures", async () => {
     const seeded = await staleCheckout();
     const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 10_000);
-    const { messages, queue } = recordingQueue();
-    const { outbox } = recordingOutbox();
+    const { events, queues } = recordingQueues();
 
-    const first = await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: fake.mollie,
-      now: NOW,
-    });
-    const second = await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: fake.mollie,
-      now: NOW,
-    });
+    const first = await sweep(queues);
+    const second = await sweep(queues);
 
     expect(first).toMatchObject({ cancelled: 1, cancelledAtMollie: 1 });
     expect(second).toMatchObject({ cancelled: 0, cancelledAtMollie: 0 });
@@ -520,46 +518,68 @@ describe("runStaleSweep (J-03)", () => {
       expect((await sponsorshipRow(db, id)).status).toBe("cancelled");
       expect(trail.filter((e) => e.type !== "created")).toHaveLength(1);
     }
-    expect(messages).toEqual([]);
+    expect(events).toEqual([]);
   });
 
-  it("cancels locally without a Mollie key, and without a Mollie id", async () => {
-    const noKey = await staleCheckout({ mollieId: "tr_noKeyPayment1" });
-    const { outbox } = recordingOutbox();
-    const { queue } = recordingQueue();
+  it("keeps a payment with a Mollie id open without a key (I-2), and cancels one without a Mollie id", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const withId = await staleCheckout({ mollieId: "tr_noKeyPayment1" });
+    // A crash between the checkout batch and Mollie: no `mollie_id`.
+    const noId = await staleCheckout();
+    const { queues } = recordingQueues();
 
-    const result = await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: null,
-      now: NOW,
+    const first = await sweep(queues, null);
+    const second = await sweep(queues, null);
+
+    expect(first).toMatchObject({
+      cancelled: 1,
+      cancelledAtMollie: 0,
+      keptOpen: 1,
     });
-
-    expect(result).toMatchObject({ cancelled: 1, cancelledAtMollie: 0 });
-    expect((await paymentRow(db, noKey.paymentId)).status).toBe("canceled");
-    for (const id of noKey.sponsorshipIds) {
+    expect(second).toMatchObject({ cancelled: 0, keptOpen: 1 });
+    expect((await paymentRow(db, withId.paymentId)).status).toBe("open");
+    for (const id of withId.sponsorshipIds) {
+      // biome-ignore lint/performance/noAwaitInLoops: two rows, in order.
+      expect((await sponsorshipRow(db, id)).status).toBe("awaiting_payment");
+    }
+    expect(warn).toHaveBeenCalledWith(
+      `[sponsorships] No MOLLIE_API_KEY: the stale payment ${withId.paymentId} has a Mollie id and is left open`
+    );
+    expect((await paymentRow(db, noId.paymentId)).status).toBe("canceled");
+    for (const id of noId.sponsorshipIds) {
       // biome-ignore lint/performance/noAwaitInLoops: two rows, in order.
       const trail = await eventsOf(db, id);
       expect((await sponsorshipRow(db, id)).status).toBe("cancelled");
       expect(trail.at(-1)).toMatchObject({
-        data: { paymentId: noKey.paymentId, reason: "stale" },
+        data: { paymentId: noId.paymentId, reason: "stale" },
         type: "cancelled",
       });
     }
-
-    // A crash between the checkout batch and Mollie: no `mollie_id`.
-    const noId = await staleCheckout();
-    const again = await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: fake.mollie,
-      now: NOW,
-    });
-    expect(again).toMatchObject({ cancelled: 1, cancelledAtMollie: 0 });
-    expect((await paymentRow(db, noId.paymentId)).status).toBe("canceled");
     expect(fake.requests).toHaveLength(0);
+  });
+
+  it("keeps open a payment Mollie does not know (404) or cannot cancel (I-2)", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const unknown = await staleCheckout({
+      count: 1,
+      mollieId: "tr_unknownToMollie",
+    });
+    const pending = await staleCheckout({ count: 1 });
+    const pendingId = await molliePaymentFor(db, fake, pending.paymentId, 5000);
+    fake.setStatus(pendingId, "pending");
+    const { queues } = recordingQueues();
+
+    const result = await sweep(queues);
+
+    expect(result).toMatchObject({ cancelled: 0, keptOpen: 2 });
+    expect((await paymentRow(db, unknown.paymentId)).status).toBe("open");
+    expect((await paymentRow(db, pending.paymentId)).status).toBe("open");
+    expect(error).toHaveBeenCalledWith(
+      `[sponsorships] Mollie does not know tr_unknownToMollie of the stale payment ${unknown.paymentId} (a key of another profile?); it is left open`
+    );
   });
 
   it("cancels only the payment of a renewal: the sponsorship runs to its end", async () => {
@@ -573,23 +593,10 @@ describe("runStaleSweep (J-03)", () => {
       .update(payment)
       .set({ createdAt: old })
       .where(eq(payment.id, paymentId));
-    const { outbox } = recordingOutbox();
-    const { queue } = recordingQueue();
+    const { queues } = recordingQueues();
 
-    const first = await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: null,
-      now: NOW,
-    });
-    const second = await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: null,
-      now: NOW,
-    });
+    const first = await sweep(queues, null);
+    const second = await sweep(queues, null);
 
     expect(first.cancelled).toBe(1);
     expect(second.cancelled).toBe(0);
@@ -599,9 +606,7 @@ describe("runStaleSweep (J-03)", () => {
   });
 
   it("leaves a payment younger than 24 h, and one Mollie cannot be asked about now", async () => {
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const fresh = await seedCheckout(db, { count: 1 });
     await db
       .update(payment)
@@ -610,90 +615,66 @@ describe("runStaleSweep (J-03)", () => {
     const down = await staleCheckout({ count: 1 });
     await molliePaymentFor(db, fake, down.paymentId, 5000);
     fake.failNext(503);
-    const { outbox } = recordingOutbox();
-    const { queue } = recordingQueue();
+    const { queues } = recordingQueues();
 
-    const result = await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: fake.mollie,
-      now: NOW,
-    });
+    const result = await sweep(queues);
 
     expect(result).toMatchObject({ cancelled: 0, deferred: 1, settled: 0 });
     expect((await paymentRow(db, fresh.paymentId)).status).toBe("open");
     expect((await paymentRow(db, down.paymentId)).status).toBe("open");
-    error.mockRestore();
-  });
-
-  it("cancels locally a payment Mollie no longer knows", async () => {
-    const seeded = await staleCheckout({
-      count: 1,
-      mollieId: "tr_unknownToMollie",
-    });
-    const { outbox } = recordingOutbox();
-    const { queue } = recordingQueue();
-
-    const result = await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: fake.mollie,
-      now: NOW,
-    });
-
-    expect(result).toMatchObject({ cancelled: 1, cancelledAtMollie: 0 });
-    expect((await paymentRow(db, seeded.paymentId)).status).toBe("canceled");
   });
 
   it("settles what Mollie already ended (expired) without cancelling", async () => {
     const seeded = await staleCheckout({ count: 1 });
     const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 5000);
     fake.setStatus(mollieId, "expired");
-    const { outbox } = recordingOutbox();
-    const { queue } = recordingQueue();
+    const { queues } = recordingQueues();
 
-    const result = await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: fake.mollie,
-      now: NOW,
-    });
+    const result = await sweep(queues);
 
     expect(result).toMatchObject({ cancelled: 1, cancelledAtMollie: 0 });
     expect((await paymentRow(db, seeded.paymentId)).status).toBe("expired");
     expect(fake.requests.some((r) => r.method === "DELETE")).toBe(false);
   });
 
-  it("hands the admin emails of a paid-but-mismatched payment to the outbox", async () => {
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+  it("queues the admin emails of a paid-but-mismatched payment", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     await makeAdmin(db);
     const seeded = await staleCheckout({ count: 1 });
     const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 5000);
     fake.setStatus(mollieId, "paid");
     fake.corruptAmount(mollieId, "1.00");
-    const { outbox, sent } = recordingOutbox();
-    const { queue } = recordingQueue();
+    const { emails, queues } = recordingQueues();
 
-    await runStaleSweep({
-      db,
-      email: outbox,
-      events: queue,
-      mollie: fake.mollie,
-      now: NOW,
-    });
+    await sweep(queues);
 
     expect((await paymentRow(db, seeded.paymentId)).status).toBe(
       "refund_needed"
     );
-    expect(sent.map((email) => email.template)).toContain(
+    expect(emails.map((email) => email.template)).toContain(
       "transactional/admin-refund-needed"
     );
-    error.mockRestore();
+  });
+
+  it("a webhook settling while the sweep runs: one paid state, no failure", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const seeded = await staleCheckout();
+    const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 10_000);
+    fake.setStatus(mollieId, "paid");
+    const { queues } = recordingQueues();
+
+    const [swept] = await Promise.all([
+      sweep(queues),
+      settleFromMollie(db, fake.mollie, { mollieId, now: NOW }),
+    ]);
+
+    expect(swept.failed).toBe(0);
+    expect((await paymentRow(db, seeded.paymentId)).status).toBe("paid");
+    for (const id of seeded.sponsorshipIds) {
+      // biome-ignore lint/performance/noAwaitInLoops: two rows, in order.
+      const trail = await eventsOf(db, id);
+      expect(trail.filter((e) => e.type === "payment_paid")).toHaveLength(1);
+    }
   });
 });
 
@@ -701,7 +682,8 @@ describe("runStaleSweep's reconciliation (task 4 review)", () => {
   const paidLongAgo = new Date(NOW.getTime() - RECONCILE_GRACE_MS - 1);
 
   async function paidRendering(
-    options: Parameters<typeof seedCheckout>[1] = {}
+    options: Parameters<typeof seedCheckout>[1] = {},
+    paidAt: Date = paidLongAgo
   ) {
     const seeded = await seedCheckout(db, {
       count: 1,
@@ -711,42 +693,36 @@ describe("runStaleSweep's reconciliation (task 4 review)", () => {
     });
     await db
       .update(payment)
-      .set({ paidAt: paidLongAgo })
+      .set({ paidAt })
       .where(eq(payment.id, seeded.paymentId));
     return seeded;
   }
 
-  async function sweepOnce(queue: QueueProducer<EventMessage>) {
-    return await runStaleSweep({
-      db,
-      email: recordingOutbox().outbox,
-      events: queue,
-      mollie: null,
-      now: NOW,
-    });
+  async function sweepOnce(queues: JobQueues, now = NOW) {
+    return await runStaleSweep({ db, mollie: null, now, queues });
   }
 
   it("re-sends payment.settled for a paid item rendering without a job, until the job exists", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const seeded = await paidRendering();
-    const { messages, queue } = recordingQueue();
+    const { events, queues } = recordingQueues();
 
-    const first = await sweepOnce(queue);
+    const first = await sweepOnce(queues);
     // Nothing consumed it (a lost message): the next hour sends it again.
-    const second = await sweepOnce(queue);
+    const second = await sweepOnce(queues);
     // The consumer creates the job (one per item, decided in D1)...
     await createRenderJob(db, {
       now: NOW,
       sponsorshipId: seeded.sponsorshipIds[0] as string,
     });
     // ...and from then on nothing is re-sent.
-    const third = await sweepOnce(queue);
-    const fourth = await sweepOnce(queue);
+    const third = await sweepOnce(queues);
+    const fourth = await sweepOnce(queues);
 
     expect([first, second, third, fourth].map((r) => r.resent)).toEqual([
       1, 1, 0, 0,
     ]);
-    expect(messages).toEqual([
+    expect(events).toEqual([
       { paymentId: seeded.paymentId, type: "payment.settled" },
       { paymentId: seeded.paymentId, type: "payment.settled" },
     ]);
@@ -756,11 +732,10 @@ describe("runStaleSweep's reconciliation (task 4 review)", () => {
   });
 
   it("leaves a payment just paid, an item with a job, an unpaid payment and other statuses alone", async () => {
-    const recent = await paidRendering();
-    await db
-      .update(payment)
-      .set({ paidAt: new Date(NOW.getTime() - RECONCILE_GRACE_MS + 1000) })
-      .where(eq(payment.id, recent.paymentId));
+    await paidRendering(
+      {},
+      new Date(NOW.getTime() - RECONCILE_GRACE_MS + 1000)
+    );
     const withJob = await paidRendering();
     await createRenderJob(db, {
       now: NOW,
@@ -769,31 +744,60 @@ describe("runStaleSweep's reconciliation (task 4 review)", () => {
     await seedCheckout(db, { count: 1, status: "awaiting_payment" });
     await paidRendering({ status: "in_review" });
     await paidRendering({ status: "live" });
-    const { messages, queue } = recordingQueue();
+    const { events, queues } = recordingQueues();
 
-    const result = await sweepOnce(queue);
+    const result = await sweepOnce(queues);
 
     expect(result.resent).toBe(0);
-    expect(messages).toEqual([]);
+    expect(events).toEqual([]);
   });
 
-  it("sends one message per payment, at most RECONCILE_MAX_PAYMENTS per run", async () => {
+  it("sends the oldest first, one message per payment, at most RECONCILE_MAX_PAYMENTS per run (M-2)", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    await paidRendering({ count: 2 });
+    const oldest = await paidRendering(
+      { count: 2 },
+      new Date(NOW.getTime() - 2 * DAY_MS)
+    );
     for (let i = 0; i < RECONCILE_MAX_PAYMENTS; i += 1) {
       // biome-ignore lint/performance/noAwaitInLoops: fixtures, one checkout each.
       await paidRendering();
     }
-    const { messages, queue } = recordingQueue();
+    const { events, queues } = recordingQueues();
 
-    const result = await sweepOnce(queue);
+    const result = await sweepOnce(queues);
 
     expect(RECONCILE_MAX_PAYMENTS).toBe(100);
     expect(result.resent).toBe(RECONCILE_MAX_PAYMENTS);
-    const ids = messages.map((m) =>
+    const ids = events.map((m) =>
       m.type === "payment.settled" ? m.paymentId : ""
     );
+    expect(ids[0]).toBe(oldest.paymentId);
     expect(new Set(ids).size).toBe(RECONCILE_MAX_PAYMENTS);
+  });
+
+  it("stops re-sending after 7 days: stuck, counted every run and logged once a day (M-2)", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const midnight = new Date("2026-10-03T00:00:00.000Z");
+    const morning = new Date("2026-10-03T10:00:00.000Z");
+    await paidRendering(
+      {},
+      new Date(midnight.getTime() - RECONCILE_WINDOW_MS - 1)
+    );
+    const { events, queues } = recordingQueues();
+
+    const atMidnight = await sweepOnce(queues, midnight);
+    const later = await sweepOnce(queues, morning);
+
+    expect(RECONCILE_WINDOW_MS).toBe(7 * DAY_MS);
+    expect(atMidnight).toMatchObject({ resent: 0, stuck: 1 });
+    expect(later).toMatchObject({ resent: 0, stuck: 1 });
+    expect(events).toEqual([]);
+    const stuckLogs = error.mock.calls.filter(([line]) =>
+      String(line).includes("no longer re-sent")
+    );
+    expect(stuckLogs).toHaveLength(1);
   });
 
   it("logs and sends nothing without the EVENTS_QUEUE binding", async () => {
@@ -802,17 +806,38 @@ describe("runStaleSweep's reconciliation (task 4 review)", () => {
       .mockImplementation(() => undefined);
     await paidRendering();
 
-    const result = await runStaleSweep({
-      db,
-      email: recordingOutbox().outbox,
-      events: undefined,
-      mollie: null,
-      now: NOW,
-    });
+    const result = await sweepOnce({});
 
     expect(result.resent).toBe(0);
     expect(error).toHaveBeenCalledWith(
-      "[sponsorships] No EVENTS_QUEUE: 1 paid payment(s) wait for their render job"
+      "[jobs] The EVENTS_QUEUE binding is missing"
     );
+  });
+});
+
+describe("runReminderSweep in parallel (M-8)", () => {
+  it("two runs at once: one reminder, one token, one email", async () => {
+    const { id } = await one({
+      endsAt: new Date(NOW.getTime() + 5 * DAY_MS),
+      paymentStatus: "paid",
+      status: "live",
+    });
+    const { outbox, sent } = recordingOutbox();
+
+    const results = await Promise.all([
+      runReminderSweep({ db, email: outbox, now: NOW, siteUrl: SITE_URL }),
+      runReminderSweep({ db, email: outbox, now: NOW, siteUrl: SITE_URL }),
+    ]);
+
+    expect(results.map((r) => r.reminded).sort()).toEqual([0, 1]);
+    expect(results.every((r) => r.failed === 0)).toBe(true);
+    expect(sent).toHaveLength(1);
+    const tokens = await db
+      .select()
+      .from(sponsorshipToken)
+      .where(eq(sponsorshipToken.sponsorshipId, id));
+    expect(tokens).toHaveLength(1);
+    const trail = (await eventsOf(db, id)).map((event) => event.type);
+    expect(trail).toEqual(["token_issued", "reminder_sent"]);
   });
 });

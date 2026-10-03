@@ -1494,6 +1494,7 @@
       "paymentsUnavailable": "Le parrainage est momentanément suspendu. Réessayez plus tard.",
       "paymentProvider": "Le paiement n’a pas pu démarrer. Rien n’a été débité. Réessayez.",
       "alreadySettled": "Ce paiement est déjà finalisé.",
+      "logoExpired": "Votre logo téléversé a expiré. Téléversez-le à nouveau, puis envoyez.",
       "logoInvalid": "Le logo n’a pas pu être lu. Choisissez un fichier PNG, JPEG ou WebP de 2\u00a0Mo maximum.",
       "noLogo": "Ce parrainage n’a pas de logo, vous ne pouvez donc pas en ajouter.",
       "notRenewable": "Ce parrainage ne peut plus être prolongé.",
