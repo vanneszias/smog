@@ -79,6 +79,12 @@ const STEP_MS = 15_000;
 /** The budget of one cleanup request in `afterEach`. */
 const CLEANUP_MS = 10_000;
 
+const REGEXP_SPECIALS = /[.*+?^${}()|[\]\\]/g;
+
+function escapeRegExp(text: string): string {
+  return text.replace(REGEXP_SPECIALS, "\\$&");
+}
+
 /** One oRPC call over HTTP, as the admin client makes it. */
 async function rpc<T>(
   request: APIRequestContext,
@@ -572,25 +578,40 @@ async function reorderByKeyboard(
     name: `Slepen om de volgorde te wijzigen: ${first.name}`,
   });
   await expect(handle).toBeVisible();
-  // Each key waits for the previous step's announcement (the live region,
-  // `admin.categories.reorder.*`): dnd-kit measures the rows after the
-  // pick-up, and an ArrowDown sent before that finds no target, so the drop
-  // is a no-op and no reorder request is ever sent (task 7 review I6).
+  const from = hidden.findIndex((item) => item.id === first.id) + 1;
+  const position = hidden.findIndex((item) => item.id === second.id) + 1;
+  // Each key waits for the drag's own state (task 7 review I6). dnd-kit
+  // measures the rows after the pick-up and then announces the row over
+  // itself ("verplaatst naar positie <from>"), which replaces "opgepakt" in
+  // the live region at once; an ArrowDown sent before the measuring finds no
+  // target and the drop is a no-op. So: wait for the handle to be pressed
+  // and for the announcement at `from`, then press ArrowDown until the
+  // region announces `position` (a press that came too early did nothing).
   await handle.focus();
   await page.keyboard.press("Space");
+  await expect(handle).toHaveAttribute("aria-pressed", "true");
   await expect(
-    page.getByText(`${first.name} opgepakt, positie`, { exact: false })
+    page.getByText(
+      new RegExp(
+        `^${escapeRegExp(first.name)} (opgepakt, positie|verplaatst naar positie) ${from} van`
+      )
+    )
   ).toBeAttached();
-  await page.keyboard.press("ArrowDown");
-  await expect(
-    page.getByText(`${first.name} verplaatst naar positie`, { exact: false })
-  ).toBeAttached();
+  const moved = page.getByText(
+    `${first.name} verplaatst naar positie ${position} van`,
+    { exact: false }
+  );
+  await expect(async () => {
+    if ((await moved.count()) === 0) {
+      await page.keyboard.press("ArrowDown");
+    }
+    await expect(moved).toBeAttached({ timeout: 2000 });
+  }).toPass({ intervals: [500, 1000, 2000], timeout: STEP_MS });
   const saved = page.waitForResponse("**/api/rpc/admin/categories/reorder", {
     timeout: STEP_MS,
   });
   await page.keyboard.press("Space");
   expect((await saved).ok()).toBe(true);
-  const position = hidden.findIndex((item) => item.id === second.id) + 1;
   await expect(
     page.getByText(
       `${first.name} neergezet op positie ${position} van ${hidden.length}.`
