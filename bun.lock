@@ -204,6 +204,7 @@
       "name": "@smog/auth",
       "version": "0.0.0",
       "dependencies": {
+        "@better-auth/core": "1.7.6",
         "@better-auth/expo": "1.7.6",
         "@better-auth/passkey": "1.7.6",
         "@smog/config": "workspace:*",
@@ -282,6 +283,7 @@
         "@smog/config": "workspace:*",
         "@smog/i18n": "workspace:*",
         "@smog/styles": "workspace:*",
+        "@smog/utils": "workspace:*",
         "react": "catalog:",
         "react-dom": "catalog:",
         "react-email": "6.11.0",

@@ -4,6 +4,8 @@ export type { EmailTemplateId } from "./render";
 
 /** Reserved for examples (RFC 2606): a sample never points at a real host. */
 const SAMPLE_ORIGIN = "https://smog.example";
+const SAMPLE_PAYMENT_ID = "0b6c6d4e-6c43-4e1c-9a59-8a1b4c0d9e01";
+const SAMPLE_SPONSORSHIP_ID = "5a1e0c3d-2b4f-4e6a-8c7d-9e0f1a2b3c4d";
 
 /**
  * One sample prop set per template, for the admin email previews (A-25,
@@ -29,32 +31,36 @@ export const EMAIL_SAMPLES: {
     minutes: 60,
     url: `${SAMPLE_ORIGIN}/api/auth/verify-email?token=sample`,
   },
-  // Phase 6 task 1 placeholders; task 2 writes the real sample data.
+  // One checkout of two gestures, one with a logo (€ 60) and one without
+  // (€ 50), by Acme BV with an invoice request.
   "transactional/admin-new-sponsorship": {
     contact: { company: "Acme BV", email: "alex@smog.example", name: "Alex" },
     displayName: "Acme BV",
-    gestures: [{ amountCents: 6000, name: "Hond" }],
+    gestures: [
+      { amountCents: 6000, name: "Hond" },
+      { amountCents: 5000, name: "Kat" },
+    ],
     invoice: {
       email: "facturen@smog.example",
       name: "Acme BV",
       vatNumber: "0123456749",
     },
     kind: "initial",
-    paymentId: "0b6c6d4e-6c43-4e1c-9a59-8a1b4c0d9e01",
-    totalCents: 6000,
-    url: `${SAMPLE_ORIGIN}/admin/sponsorships/sample`,
+    paymentId: SAMPLE_PAYMENT_ID,
+    totalCents: 11_000,
+    url: `${SAMPLE_ORIGIN}/admin/sponsorships?payment=${SAMPLE_PAYMENT_ID}`,
   },
   "transactional/admin-refund-needed": {
     amountCents: 6000,
-    paymentId: "0b6c6d4e-6c43-4e1c-9a59-8a1b4c0d9e01",
+    paymentId: SAMPLE_PAYMENT_ID,
     reason: "late",
-    url: `${SAMPLE_ORIGIN}/mollie/payments/tr_sample`,
+    url: `${SAMPLE_ORIGIN}/mollie/dashboard/payments/tr_sample`,
   },
   "transactional/admin-render-failed": {
     displayName: "Acme BV",
-    error: "The source video could not be read.",
+    error: "The render container timed out after 20 minutes.",
     gestureName: "Hond",
-    url: `${SAMPLE_ORIGIN}/admin/sponsorships/sample`,
+    url: `${SAMPLE_ORIGIN}/admin/sponsorships/${SAMPLE_SPONSORSHIP_ID}`,
   },
   "transactional/payment-confirmed": {
     amountCents: 6000,

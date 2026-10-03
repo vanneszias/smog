@@ -502,38 +502,120 @@
         "footer": "Heb jij dit niet gevraagd? Dan mag je deze e-mail negeren. Je wachtwoord blijft hetzelfde."
       }
     },
+    "common": {
+      "yourGesture": "je gebaar",
+      "gestureNamed": "het gebaar ‘{{name}}’",
+      "logoAlt": "SMOG & Co",
+      "copyright": "© {{year}} SMOG & CO vzw · België",
+      "tagline": "SMOG — Spreken Met Ondersteuning van Gebaren",
+      "questions": "Vragen? Beantwoord deze e-mail gewoon.",
+      "adminFooter": "Je krijgt deze e-mail omdat je beheerder bent van SMOG & Co.",
+      "contactWithCompany": "{{name}} ({{company}})",
+      "oneYear": "1 jaar",
+      "yes": "Ja",
+      "no": "Nee",
+      "fields": {
+        "gesture": "Gebaar",
+        "gestures": "Gebaren",
+        "displayName": "Naam in de video",
+        "paidAmount": "Betaald bedrag",
+        "amount": "Bedrag",
+        "total": "Totaal",
+        "activeFrom": "Actief vanaf",
+        "activeUntil": "Actief tot",
+        "renewedUntil": "Verlengd tot",
+        "payment": "Betaling",
+        "email": "E-mail",
+        "contact": "Contactpersoon",
+        "duration": "Looptijd",
+        "invoiceRequested": "Factuur gevraagd",
+        "invoiceName": "Factuurnaam",
+        "vatNumber": "Btw-nummer",
+        "invoiceEmail": "Factuur-e-mail",
+        "error": "Fout",
+        "reason": "Reden"
+      }
+    },
     "transactional": {
       "welcome": {
         "subject": "Welkom bij SMOG & Co",
-        "body": "Je account is klaar. Ontdek de gebaren en bewaar je favorieten."
+        "preheader": "Ontdek gebaren en steun SMOG door er een te sponsoren.",
+        "heading": "Welkom bij SMOG & Co",
+        "body": "Je account is klaar. Dit kun je nu doen:",
+        "explore": "Gebaren ontdekken en bekijken hoe je ze maakt",
+        "favorites": "Je favoriete gebaren bewaren en eigen lijsten maken",
+        "sponsor": "SMOG steunen door een gebaar te sponsoren",
+        "button": "Ontdek gebaren",
+        "footer": "Heb jij dit account niet aangemaakt? Dan mag je deze e-mail negeren."
       },
       "sponsorshipReceived": {
         "subject": "We hebben je sponsoring ontvangen",
-        "body": "Bedankt! We maken nu je video en bekijken hem voor hij online komt."
+        "preheader": "Bedankt! Zo gaat het nu verder.",
+        "heading": "Sponsoring ontvangen",
+        "body": "Bedankt om {{gesture}} te sponsoren. In de video komt de naam {{displayName}}.",
+        "nextTitle": "Wat gebeurt er nu?",
+        "stepRender": "We maken je gesponsorde video.",
+        "stepReview": "We bekijken de video voor hij online komt.",
+        "stepLive": "Je krijgt een e-mail zodra je sponsoring online staat.",
+        "footer": "Je krijgt deze e-mail omdat je onlangs een sponsoring hebt ingediend via SMOG & Co."
       },
       "paymentConfirmed": {
-        "subject": "Je betaling is bevestigd",
-        "body": "Bedankt voor je betaling. Je vindt de details hieronder."
+        "subject": "Betaling bevestigd — bedankt!",
+        "preheader": "We hebben je betaling van {{amount}} ontvangen.",
+        "heading": "Betaling bevestigd",
+        "body": "We hebben je betaling goed ontvangen. Bedankt!",
+        "initialNext": "Je sponsoring staat normaal binnen 1 à 2 werkdagen online. We sturen je een e-mail zodra het zover is.",
+        "renewalNext": "Je sponsoring is verlengd en loopt nu tot {{date}}.",
+        "footer": "Bewaar deze e-mail als betaalbewijs. Heb je een factuur nodig? Neem dan contact met ons op."
       },
       "sponsorshipLive": {
-        "subject": "Je sponsoring staat online",
-        "body": "Je gesponsorde video is nu te zien bij het gebaar."
+        "subject": "Je sponsoring is nu live!",
+        "preheader": "Je gesponsorde video staat online.",
+        "heading": "Je sponsoring is live!",
+        "body": "Je gesponsorde video bij {{gesture}} staat nu online met de naam {{displayName}}.",
+        "button": "Bekijk op SMOG",
+        "thanks": "Bedankt om SMOG te steunen!",
+        "footer": "30 dagen voor het einde sturen we je een herinnering, zodat je kunt verlengen."
       },
       "renewalReminder": {
-        "subject": "Je sponsoring loopt binnenkort af",
-        "body": "Je sponsoring loopt over 30 dagen af. Verleng ze met de link hieronder."
+        "subject": "Je SMOG-sponsoring verloopt binnenkort",
+        "preheader": "Je sponsoring loopt af op {{date}}.",
+        "heading": "Je sponsoring verloopt binnenkort",
+        "body": "Je sponsoring van {{gesture}} loopt af op {{date}}, binnen 30 dagen. Daarna toont het gebaar weer de oorspronkelijke video.",
+        "renew": "Wil je nog een jaar sponsoren? Verleng dan met de knop hieronder. Je betaalt hetzelfde bedrag als vorig jaar.",
+        "button": "Sponsoring verlengen",
+        "footer": "De link werkt tot je sponsoring afloopt. Wil je niet verlengen? Dan hoef je niets te doen."
       },
       "adminNewSponsorship": {
-        "subject": "Nieuwe sponsoring betaald",
-        "body": "Er is een nieuwe sponsoring betaald. Bekijk ze in het beheer."
+        "subject": "Nieuwe sponsoring van {{name}}",
+        "subjectRenewal": "Sponsoring verlengd door {{name}}",
+        "preheader": "Betaald: {{total}}.",
+        "heading": "Nieuwe sponsoring betaald",
+        "headingRenewal": "Sponsoring verlengd",
+        "body": "Er is een sponsoring betaald. Ze wacht nu op de video en daarna op goedkeuring.",
+        "bodyRenewal": "Een sponsoring is verlengd voor een jaar. Er is geen nieuwe video of goedkeuring nodig.",
+        "detailsTitle": "Sponsoring",
+        "invoiceTitle": "Facturatie",
+        "button": "Bekijk in het beheer"
       },
       "adminRenderFailed": {
-        "subject": "Video maken mislukt",
-        "body": "De video van een sponsoring kon niet gemaakt worden. Bekijk ze in het beheer."
+        "subject": "Video maken mislukt voor {{gesture}}",
+        "preheader": "De video voor {{displayName}} kon niet gemaakt worden.",
+        "heading": "Video maken mislukt",
+        "body": "De gesponsorde video kon niet gemaakt worden, ook niet na nieuwe pogingen. Bekijk de sponsoring in het beheer.",
+        "button": "Bekijk de sponsoring"
       },
       "adminRefundNeeded": {
-        "subject": "Terugbetaling nodig",
-        "body": "Een betaling moet terugbetaald worden in het Mollie-dashboard."
+        "subject": "Terugbetaling nodig voor betaling {{paymentId}}",
+        "preheader": "Betaal {{amount}} terug in het Mollie-dashboard.",
+        "heading": "Terugbetaling nodig",
+        "body": "Deze betaling moet met de hand terugbetaald worden.",
+        "reasonLate": "Te laat betaald: het gebaar is intussen door iemand anders gesponsord.",
+        "reasonMismatch": "Het bedrag of de munt van de betaling klopt niet met de bestelling.",
+        "reasonDouble": "Dubbel betaald: de betaling was al met de hand als betaald gemarkeerd.",
+        "reasonChargeback": "Teruggeboekt: de bank heeft de betaling teruggedraaid (chargeback). Controleer de sponsoring en neem zo nodig contact op met de sponsor.",
+        "steps": "Betaal het bedrag terug in het Mollie-dashboard. Staat de terugbetaling daarna niet in het beheer? Registreer ze dan bij de betaling.",
+        "button": "Openen in Mollie"
       }
     }
   },

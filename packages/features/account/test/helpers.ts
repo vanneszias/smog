@@ -3,7 +3,7 @@ import { type Auth, createAuth, type SessionWithUser } from "@smog/auth";
 import type { User } from "@smog/db";
 import { createDb, type Db } from "@smog/db/client";
 import { insertGestures, makeUser } from "@smog/db/testing";
-import { MemoryEmailSender } from "@smog/email";
+import { DirectEmailOutbox, MemoryEmailSender } from "@smog/email";
 import { makeRpcContext } from "@smog/rpc/testing";
 
 export function testDb(): Db {
@@ -140,14 +140,16 @@ function testAuth(): Auth {
   return createAuth({
     baseURL: SITE_URL,
     db: testDb(),
-    email: new MemoryEmailSender(),
     env: {
       BETTER_AUTH_SECRET: "account-test-secret-at-least-32-characters",
-      EMAIL_FROM: "SMOG & Co <noreply@smog.vlaanderen>",
-      EMAIL_REPLY_TO: "info@smog.vlaanderen",
       ENVIRONMENT: "dev",
       SITE_URL,
     },
+    outbox: new DirectEmailOutbox(new MemoryEmailSender(), {
+      EMAIL_FROM: "SMOG & Co <noreply@smog.vlaanderen>",
+      EMAIL_REPLY_TO: "info@smog.vlaanderen",
+      SITE_URL,
+    }),
   });
 }
 

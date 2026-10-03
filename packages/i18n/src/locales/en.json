@@ -502,38 +502,120 @@
         "footer": "Didn't ask for this? You can ignore this email. Your password stays the same."
       }
     },
+    "common": {
+      "yourGesture": "your gesture",
+      "gestureNamed": "the gesture ‘{{name}}’",
+      "logoAlt": "SMOG & Co",
+      "copyright": "© {{year}} SMOG & CO vzw · Belgium",
+      "tagline": "SMOG — Spreken Met Ondersteuning van Gebaren (speaking with the support of signs)",
+      "questions": "Questions? Just reply to this email.",
+      "adminFooter": "You get this email because you are an administrator of SMOG & Co.",
+      "contactWithCompany": "{{name}} ({{company}})",
+      "oneYear": "1 year",
+      "yes": "Yes",
+      "no": "No",
+      "fields": {
+        "gesture": "Gesture",
+        "gestures": "Gestures",
+        "displayName": "Name in the video",
+        "paidAmount": "Amount paid",
+        "amount": "Amount",
+        "total": "Total",
+        "activeFrom": "Live from",
+        "activeUntil": "Live until",
+        "renewedUntil": "Renewed until",
+        "payment": "Payment",
+        "email": "Email",
+        "contact": "Contact person",
+        "duration": "Duration",
+        "invoiceRequested": "Invoice requested",
+        "invoiceName": "Invoice name",
+        "vatNumber": "VAT number",
+        "invoiceEmail": "Invoice email",
+        "error": "Error",
+        "reason": "Reason"
+      }
+    },
     "transactional": {
       "welcome": {
         "subject": "Welcome to SMOG & Co",
-        "body": "Your account is ready. Explore the gestures and save your favourites."
+        "preheader": "Discover gestures and support SMOG by sponsoring one.",
+        "heading": "Welcome to SMOG & Co",
+        "body": "Your account is ready. Here is what you can do:",
+        "explore": "Discover gestures and see how to make them",
+        "favorites": "Save your favourite gestures and make your own lists",
+        "sponsor": "Support SMOG by sponsoring a gesture",
+        "button": "Discover gestures",
+        "footer": "Didn't create this account? You can ignore this email."
       },
       "sponsorshipReceived": {
-        "subject": "We received your sponsorship",
-        "body": "Thank you! We are now making your video and will review it before it goes live."
+        "subject": "We have received your sponsorship",
+        "preheader": "Thank you! Here is what happens next.",
+        "heading": "Sponsorship received",
+        "body": "Thank you for sponsoring {{gesture}}. The video will show the name {{displayName}}.",
+        "nextTitle": "What happens next?",
+        "stepRender": "We make your sponsored video.",
+        "stepReview": "We review the video before it goes online.",
+        "stepLive": "You get an email as soon as your sponsorship is online.",
+        "footer": "You get this email because you recently submitted a sponsorship through SMOG & Co."
       },
       "paymentConfirmed": {
-        "subject": "Your payment is confirmed",
-        "body": "Thank you for your payment. The details are below."
+        "subject": "Payment confirmed — thank you!",
+        "preheader": "We have received your payment of {{amount}}.",
+        "heading": "Payment confirmed",
+        "body": "We have received your payment. Thank you!",
+        "initialNext": "Your sponsorship usually goes online within 1 or 2 working days. We will email you when it does.",
+        "renewalNext": "Your sponsorship has been renewed and now runs until {{date}}.",
+        "footer": "Keep this email as proof of payment. Need an invoice? Please get in touch."
       },
       "sponsorshipLive": {
-        "subject": "Your sponsorship is live",
-        "body": "Your sponsored video now shows with the gesture."
+        "subject": "Your sponsorship is live!",
+        "preheader": "Your sponsored video is online.",
+        "heading": "Your sponsorship is live!",
+        "body": "Your sponsored video for {{gesture}} is now online with the name {{displayName}}.",
+        "button": "View on SMOG",
+        "thanks": "Thank you for supporting SMOG!",
+        "footer": "We will send you a reminder 30 days before the end, so you can renew."
       },
       "renewalReminder": {
-        "subject": "Your sponsorship ends soon",
-        "body": "Your sponsorship ends in 30 days. Renew it with the link below."
+        "subject": "Your SMOG sponsorship ends soon",
+        "preheader": "Your sponsorship ends on {{date}}.",
+        "heading": "Your sponsorship ends soon",
+        "body": "Your sponsorship of {{gesture}} ends on {{date}}, within 30 days. After that the gesture shows its original video again.",
+        "renew": "Would you like to sponsor for another year? Renew with the button below. You pay the same amount as last year.",
+        "button": "Renew sponsorship",
+        "footer": "The link works until your sponsorship ends. Don't want to renew? Then you don't need to do anything."
       },
       "adminNewSponsorship": {
-        "subject": "New sponsorship paid",
-        "body": "A new sponsorship was paid. Review it in the admin."
+        "subject": "New sponsorship from {{name}}",
+        "subjectRenewal": "Sponsorship renewed by {{name}}",
+        "preheader": "Paid: {{total}}.",
+        "heading": "New sponsorship paid",
+        "headingRenewal": "Sponsorship renewed",
+        "body": "A sponsorship has been paid. It now waits for its video and then for approval.",
+        "bodyRenewal": "A sponsorship has been renewed for a year. No new video or approval is needed.",
+        "detailsTitle": "Sponsorship",
+        "invoiceTitle": "Invoicing",
+        "button": "View in the admin"
       },
       "adminRenderFailed": {
-        "subject": "Video render failed",
-        "body": "A sponsorship's video could not be made. Review it in the admin."
+        "subject": "Video failed for {{gesture}}",
+        "preheader": "The video for {{displayName}} could not be made.",
+        "heading": "Video failed",
+        "body": "The sponsored video could not be made, even after retrying. Check the sponsorship in the admin.",
+        "button": "View the sponsorship"
       },
       "adminRefundNeeded": {
-        "subject": "Refund needed",
-        "body": "A payment needs a refund in the Mollie dashboard."
+        "subject": "Refund needed for payment {{paymentId}}",
+        "preheader": "Refund {{amount}} in the Mollie dashboard.",
+        "heading": "Refund needed",
+        "body": "This payment has to be refunded by hand.",
+        "reasonLate": "Paid too late: someone else has sponsored the gesture in the meantime.",
+        "reasonMismatch": "The payment's amount or currency does not match the order.",
+        "reasonDouble": "Paid twice: the payment had already been marked as paid by hand.",
+        "reasonChargeback": "Charged back: the bank reversed the payment. Check the sponsorship and contact the sponsor if needed.",
+        "steps": "Refund the amount in the Mollie dashboard. If the refund does not show in the admin afterwards, record it on the payment.",
+        "button": "Open in Mollie"
       }
     }
   },
