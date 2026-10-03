@@ -11,9 +11,9 @@ import {
 import { renderSite } from "@/test/render";
 import { BypassCard } from "./bypass-card";
 import {
-  EMAIL_PREVIEW_CSP,
   EmailPreview,
   type EmailPreviewSearch,
+  emailPreviewCsp,
   emailTemplateLabel,
   sandboxedEmailDocument,
   validateEmailPreviewSearch,
@@ -252,10 +252,19 @@ describe("email previews", () => {
     const html =
       '<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"></head><body>Hoi</body></html>';
     const document = sandboxedEmailDocument(html);
-    expect(EMAIL_PREVIEW_CSP).toContain("default-src 'none'");
-    expect(EMAIL_PREVIEW_CSP).not.toContain("script-src");
+    const policy = emailPreviewCsp();
+    expect(policy).toContain("default-src 'none'");
+    expect(policy).not.toContain("script-src");
+    expect(policy).toContain("img-src data:;");
     expect(document).toContain(
-      `<head><meta http-equiv="Content-Security-Policy" content="${EMAIL_PREVIEW_CSP}">`
+      `<head><meta http-equiv="Content-Security-Policy" content="${policy}">`
+    );
+    // The header logo loads from this site's /brand/ folder, nothing else.
+    expect(emailPreviewCsp("http://localhost:5173")).toContain(
+      "img-src data: http://localhost:5173/brand/;"
+    );
+    expect(sandboxedEmailDocument(html, "http://localhost:5173")).toContain(
+      emailPreviewCsp("http://localhost:5173")
     );
     expect(document).toContain("<body>Hoi</body>");
     // A click on a link would be a popup, which the sandbox blocks.

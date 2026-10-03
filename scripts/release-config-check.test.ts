@@ -337,6 +337,19 @@ describe("checkWranglerResources (phase 6)", () => {
       })
     ).toContain("smog-staging-sponsorship-events needs max_retries 10");
   });
+
+  test("the email consumer does not wait to fill a batch (codes arrive fast)", () => {
+    expect(
+      check((env) => {
+        const queues = env.queues as { consumers: Record<string, unknown>[] };
+        if (queues.consumers[0]) {
+          queues.consumers[0].max_batch_timeout = undefined;
+        }
+      })
+    ).toContain(
+      "env.staging: the consumer of smog-staging-email needs max_batch_timeout 0"
+    );
+  });
 });
 
 describe("checkRequiredConfig (ruling 12)", () => {

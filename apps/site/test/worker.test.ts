@@ -10,6 +10,9 @@ import { CRON } from "@smog/jobs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/worker";
 import { queueKind } from "../src/worker/queues";
+import { mailTo } from "./helpers";
+
+const DROPPED_B = /^\[email\] Dropped an invalid message b: /;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -17,6 +20,18 @@ afterEach(() => {
 
 function message(id: string, body: unknown) {
   return { attempts: 1, body, id, timestamp: new Date() };
+}
+
+/** A valid `EMAIL_QUEUE` message: the welcome email, keyed. */
+function welcomeBody(to: string) {
+  return {
+    id: crypto.randomUUID(),
+    idempotencyKey: `welcome:${crypto.randomUUID()}`,
+    locale: "nl",
+    props: { name: "Alex", url: "http://localhost:5173" },
+    template: "transactional/welcome",
+    to,
+  };
 }
 
 describe("the queue dispatch", () => {
@@ -29,10 +44,14 @@ describe("the queue dispatch", () => {
     expect(queueKind("someone-else")).toBeNull();
   });
 
-  it("hands the email queue's batch to the email consumer (a stub that acks)", async () => {
-    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  it("hands the email queue's batch to the email consumer", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const to = `${crypto.randomUUID()}@smog.test`;
     const batch = createMessageBatch("smog-dev-email", [
-      message("a", { n: 1 }),
+      message("a", welcomeBody(to)),
       message("b", { n: 2 }),
     ]);
     const ctx = createExecutionContext();
@@ -42,9 +61,10 @@ describe("the queue dispatch", () => {
     const result = await getQueueResult(batch, ctx);
     expect(result.explicitAcks.sort()).toEqual(["a", "b"]);
     expect(result.retryMessages).toEqual([]);
-    expect(log).toHaveBeenCalledWith(
-      "[email-queue] 2 message(s) acked (the consumer is phase 6 task 2)"
-    );
+    expect((await mailTo(to)).map((mail) => mail.subject)).toEqual([
+      "Welkom bij SMOG & Co",
+    ]);
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(DROPPED_B));
   });
 
   it("hands the events queue's batch to the events consumer (a stub that acks)", async () => {
@@ -75,6 +95,55 @@ describe("the queue dispatch", () => {
     expect(warn).toHaveBeenCalledWith(
       "[worker] Acked 1 message(s) from an unknown queue smog-dev-email-dlq"
     );
+  });
+});
+
+describe("the email consumer (worker/email-queue.ts)", () => {
+  async function run(id: string, body: unknown, attempts = 1) {
+    const batch = createMessageBatch("smog-dev-email", [
+      { attempts, body, id, timestamp: new Date() },
+    ]);
+    const ctx = createExecutionContext();
+    await worker.queue(batch, env, ctx);
+    return await getQueueResult(batch, ctx);
+  }
+
+  it("sends a keyed message once when it is delivered twice", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const to = `${crypto.randomUUID()}@smog.test`;
+    const body = welcomeBody(to);
+
+    const first = await run("w-1", body);
+    const second = await run("w-2", body, 2);
+
+    expect(first.explicitAcks).toEqual(["w-1"]);
+    expect(second.explicitAcks).toEqual(["w-2"]);
+    expect(await mailTo(to)).toHaveLength(1);
+  });
+
+  it("retries a failed send with the backoff delay", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    if (!env.KV) {
+      throw new Error("[test] The KV binding is missing");
+    }
+    vi.spyOn(env.KV, "put").mockRejectedValue(new Error("KV down"));
+    const to = `${crypto.randomUUID()}@smog.test`;
+
+    const batch = createMessageBatch("smog-dev-email", [
+      { attempts: 3, body: welcomeBody(to), id: "r-1", timestamp: new Date() },
+    ]);
+    const [queued] = batch.messages;
+    const retry = vi.spyOn(queued as Message, "retry");
+    const ctx = createExecutionContext();
+
+    await worker.queue(batch, env, ctx);
+
+    const result = await getQueueResult(batch, ctx);
+    expect(result.explicitAcks).toEqual([]);
+    expect(result.retryMessages).toEqual([{ msgId: "r-1" }]);
+    // min(30 × 2^(3 − 1), 3600)
+    expect(retry).toHaveBeenCalledWith({ delaySeconds: 120 });
   });
 });
 

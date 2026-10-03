@@ -11,7 +11,7 @@ import { type Auth, createAuth } from "@smog/auth";
 import type { Category, Gesture, Role, User } from "@smog/db";
 import { createDb, type Db } from "@smog/db/client";
 import { makeCategory, makeGesture, makeUser } from "@smog/db/testing";
-import { MemoryEmailSender } from "@smog/email";
+import { DirectEmailOutbox, MemoryEmailSender } from "@smog/email";
 import { makeRpcContext } from "@smog/rpc/testing";
 import { expect } from "vitest";
 import { ADMIN_PROCEDURE_KINDS, adminContract } from "../src/contract";
@@ -32,14 +32,16 @@ function testAuth(): Auth {
   return createAuth({
     baseURL: SITE_URL,
     db: testDb(),
-    email: new MemoryEmailSender(),
     env: {
       BETTER_AUTH_SECRET: "admin-test-secret-at-least-32-characters",
-      EMAIL_FROM: "SMOG & Co <noreply@smog.vlaanderen>",
-      EMAIL_REPLY_TO: "info@smog.vlaanderen",
       ENVIRONMENT: "dev",
       SITE_URL,
     },
+    outbox: new DirectEmailOutbox(new MemoryEmailSender(), {
+      EMAIL_FROM: "SMOG & Co <noreply@smog.vlaanderen>",
+      EMAIL_REPLY_TO: "info@smog.vlaanderen",
+      SITE_URL,
+    }),
   });
 }
 
