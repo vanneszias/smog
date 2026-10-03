@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import {
   CLIENT_SECRET_MARKERS,
-  checkClientHasNoMuxSecrets,
+  checkClientHasNoSecrets,
   checkDeployTarget,
   checkDevTools,
   checkNoE2eSeed,
@@ -130,27 +130,28 @@ describe("checkDeployTarget", () => {
   });
 });
 
-describe("checkClientHasNoMuxSecrets", () => {
-  it("passes a client bundle without Mux credentials or the Mux SDK", () => {
+describe("checkClientHasNoSecrets", () => {
+  it("passes a client bundle without a secret's name or a server-only SDK", () => {
     expect(() =>
-      checkClientHasNoMuxSecrets([
+      checkClientHasNoSecrets([
         {
           content: 'fetch("https://direct.production.mux.com/upload/x")',
           path: "dist/client/assets/admin.js",
         },
         // The Worker reads the token; only the browser bundle matters.
         {
-          content: "env.MUX_TOKEN_ID",
+          content:
+            "env.MUX_TOKEN_ID; env.MOLLIE_API_KEY; env.R2_SECRET_ACCESS_KEY; new AwsClient() /* aws4fetch AWS4-HMAC-SHA256 */",
           path: "dist/server/index.js",
         },
       ])
     ).not.toThrow();
   });
 
-  it("fails on any Mux credential name or the Mux SDK in dist/client", () => {
+  it("fails on any secret's name, the Mux SDK or the S3 signer in dist/client", () => {
     for (const marker of CLIENT_SECRET_MARKERS) {
       expect(() =>
-        checkClientHasNoMuxSecrets([
+        checkClientHasNoSecrets([
           { content: `x.${marker}`, path: "dist/client/assets/a.js" },
         ])
       ).toThrow("dist/client/assets/a.js");
@@ -159,6 +160,10 @@ describe("checkClientHasNoMuxSecrets", () => {
       "MUX_TOKEN",
       "MUX_WEBHOOK_SECRET",
       "@mux/mux-node",
+      "MOLLIE_API_KEY",
+      "R2_SECRET_ACCESS_KEY",
+      "aws4fetch",
+      "AWS4-HMAC-SHA256",
     ]);
   });
 });

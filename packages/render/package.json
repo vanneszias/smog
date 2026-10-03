@@ -1,0 +1,22 @@
+{
+  "name": "@smog/render",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./contract": "./src/contract.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -b",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@smog/config": "workspace:*",
+    "@smog/styles": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

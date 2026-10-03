@@ -34,6 +34,7 @@
     "@smog/favorites": "workspace:*",
     "@smog/gestures": "workspace:*",
     "@smog/i18n": "workspace:*",
+    "@smog/jobs": "workspace:*",
     "@smog/lists": "workspace:*",
     "@smog/local-store": "workspace:*",
     "@smog/rpc": "workspace:*",

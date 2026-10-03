@@ -26,6 +26,11 @@
       "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
       "ignoreDependencies": ["cloudflare"]
     },
+    "packages/jobs": {
+      "entry": ["test/**/*.test.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts"],
+      "ignoreDependencies": ["cloudflare", "@types/react"]
+    },
     "packages/auth": {
       "entry": ["test/**/*.test.{ts,tsx}", "guard/*.ts"],
       "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}", "guard/**/*.ts"],

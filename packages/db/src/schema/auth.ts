@@ -70,7 +70,11 @@ export const session = sqliteTable(
       .references(() => user.id, { onDelete: "cascade" }),
     impersonatedBy: text("impersonated_by"),
   },
-  (t) => [index("session_user_id_idx").on(t.userId)]
+  (t) => [
+    index("session_user_id_idx").on(t.userId),
+    // The daily retention purge seeks expired rows (migration 0008).
+    index("session_expires_at_idx").on(t.expiresAt),
+  ]
 );
 
 export const account = sqliteTable(
@@ -108,7 +112,11 @@ export const verification = sqliteTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index("verification_identifier_idx").on(t.identifier)]
+  (t) => [
+    index("verification_identifier_idx").on(t.identifier),
+    // The daily retention purge seeks expired rows (migration 0008).
+    index("verification_expires_at_idx").on(t.expiresAt),
+  ]
 );
 
 export const passkey = sqliteTable(

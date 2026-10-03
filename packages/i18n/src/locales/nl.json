@@ -401,7 +401,8 @@
       "title": "QR-code voor {{name}}",
       "description": "Scan de code om dit gebaar te openen.",
       "download": "QR-code downloaden"
-    }
+    },
+    "sponsorCta": {}
   },
   "search": {
     "categories": "Categorieën",
@@ -499,6 +500,40 @@
         "button": "Nieuw wachtwoord kiezen",
         "expiry": "De link is {{minutes}} minuten geldig.",
         "footer": "Heb jij dit niet gevraagd? Dan mag je deze e-mail negeren. Je wachtwoord blijft hetzelfde."
+      }
+    },
+    "transactional": {
+      "welcome": {
+        "subject": "Welkom bij SMOG & Co",
+        "body": "Je account is klaar. Ontdek de gebaren en bewaar je favorieten."
+      },
+      "sponsorshipReceived": {
+        "subject": "We hebben je sponsoring ontvangen",
+        "body": "Bedankt! We maken nu je video en bekijken hem voor hij online komt."
+      },
+      "paymentConfirmed": {
+        "subject": "Je betaling is bevestigd",
+        "body": "Bedankt voor je betaling. Je vindt de details hieronder."
+      },
+      "sponsorshipLive": {
+        "subject": "Je sponsoring staat online",
+        "body": "Je gesponsorde video is nu te zien bij het gebaar."
+      },
+      "renewalReminder": {
+        "subject": "Je sponsoring loopt binnenkort af",
+        "body": "Je sponsoring loopt over 30 dagen af. Verleng ze met de link hieronder."
+      },
+      "adminNewSponsorship": {
+        "subject": "Nieuwe sponsoring betaald",
+        "body": "Er is een nieuwe sponsoring betaald. Bekijk ze in het beheer."
+      },
+      "adminRenderFailed": {
+        "subject": "Video maken mislukt",
+        "body": "De video van een sponsoring kon niet gemaakt worden. Bekijk ze in het beheer."
+      },
+      "adminRefundNeeded": {
+        "subject": "Terugbetaling nodig",
+        "body": "Een betaling moet terugbetaald worden in het Mollie-dashboard."
       }
     }
   },
@@ -731,7 +766,8 @@
       "noAudit": "Nog geen acties gelogd.",
       "quickLinks": "Snel naar",
       "newGesture": "Nieuw gebaar",
-      "manageCategories": "Categorieën beheren"
+      "manageCategories": "Categorieën beheren",
+      "sponsorships": {}
     },
     "audit": {
       "title": "Logboek",
@@ -1307,7 +1343,15 @@
         "magicLink": "Aanmeldlink",
         "otp": "Aanmeldcode",
         "resetPassword": "Wachtwoord opnieuw instellen",
-        "verifyEmail": "E-mailadres bevestigen"
+        "verifyEmail": "E-mailadres bevestigen",
+        "welcome": "Welkom",
+        "sponsorshipReceived": "Sponsoring ontvangen",
+        "paymentConfirmed": "Betaling bevestigd",
+        "sponsorshipLive": "Sponsoring online",
+        "renewalReminder": "Herinnering verlenging",
+        "adminNewSponsorship": "Nieuwe sponsoring (beheer)",
+        "adminRenderFailed": "Video mislukt (beheer)",
+        "adminRefundNeeded": "Terugbetaling nodig (beheer)"
       },
       "locale": "Taal",
       "width": "Breedte",
@@ -1322,6 +1366,10 @@
       "previewError": "Dit voorbeeld kon niet getoond worden.",
       "empty": "Nog geen e-mailsjablonen.",
       "sandboxed": "Getoond in een sandbox: geen scripts, links openen niet."
-    }
-  }
+    },
+    "sponsorships": {},
+    "export": {}
+  },
+  "sponsorship": {},
+  "sponsor": {}
 }

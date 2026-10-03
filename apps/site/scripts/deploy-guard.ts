@@ -137,20 +137,26 @@ export function checkServerHasNoVideoPlayer(files: readonly BuiltFile[]): void {
 }
 
 /**
- * What must never reach the browser bundle (`dist/client`): the Mux
- * credential names (their values live only in the Worker's env) and the
- * Mux Node SDK (`@smog/video` is a thin fetch client, Worker only).
+ * What must never reach the browser bundle (`dist/client`): the secret
+ * names (their values live only in the Worker's env: Mux, Mollie, the R2
+ * S3 token), the Mux Node SDK (`@smog/video` is a thin fetch client,
+ * Worker only), and `aws4fetch`, the R2 presigner (by its name and its
+ * signing algorithm string, which survives minification).
  */
 export const CLIENT_SECRET_MARKERS = [
   "MUX_TOKEN",
   "MUX_WEBHOOK_SECRET",
   "@mux/mux-node",
+  "MOLLIE_API_KEY",
+  "R2_SECRET_ACCESS_KEY",
+  "aws4fetch",
+  "AWS4-HMAC-SHA256",
 ] as const;
 
 const CLIENT_DIR = join("dist", "client");
 
-/** The browser build (`dist/client`) must not name a Mux secret or carry the SDK. */
-export function checkClientHasNoMuxSecrets(files: readonly BuiltFile[]): void {
+/** The browser build (`dist/client`) must not name a secret or carry a server-only SDK. */
+export function checkClientHasNoSecrets(files: readonly BuiltFile[]): void {
   const found = files
     .filter(
       (file) =>
@@ -160,7 +166,7 @@ export function checkClientHasNoMuxSecrets(files: readonly BuiltFile[]): void {
     .map((file) => file.path);
   if (found.length > 0) {
     throw new Error(
-      `[deploy-guard] the browser build names a Mux secret or bundles the Mux SDK: ${found.join(", ")}. Mux calls belong in the Worker (@smog/video).`
+      `[deploy-guard] the browser build names a secret or bundles a server-only SDK (${CLIENT_SECRET_MARKERS.join(", ")}): ${found.join(", ")}. Mux, Mollie and R2 calls belong in the Worker (@smog/video, @smog/payments, the logo upload).`
     );
   }
 }
@@ -191,7 +197,7 @@ if (import.meta.main && process.argv.includes("--bundle")) {
   try {
     const files = readBuiltFiles(DIST_DIR);
     checkServerHasNoVideoPlayer(files);
-    checkClientHasNoMuxSecrets(files);
+    checkClientHasNoSecrets(files);
     console.log("deploy-guard: bundle ok");
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
@@ -207,7 +213,7 @@ if (import.meta.main && process.argv.includes("--bundle")) {
     checkDevTools(env, files);
     checkNoE2eSeed(env, files);
     checkServerHasNoVideoPlayer(files);
-    checkClientHasNoMuxSecrets(files);
+    checkClientHasNoSecrets(files);
     console.log(`deploy-guard: ok (${env})`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

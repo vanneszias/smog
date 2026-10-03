@@ -7,6 +7,7 @@
       "devDependencies": {
         "@biomejs/biome": "2.5.14",
         "@smog/config": "workspace:*",
+        "@smog/jobs": "workspace:*",
         "@types/bun": "catalog:",
         "knip": "6.38.0",
         "turbo": "2.11.5",
@@ -109,6 +110,7 @@
         "@smog/favorites": "workspace:*",
         "@smog/gestures": "workspace:*",
         "@smog/i18n": "workspace:*",
+        "@smog/jobs": "workspace:*",
         "@smog/lists": "workspace:*",
         "@smog/local-store": "workspace:*",
         "@smog/rpc": "workspace:*",
@@ -493,6 +495,24 @@
         "expo-localization",
       ],
     },
+    "packages/jobs": {
+      "name": "@smog/jobs",
+      "version": "0.0.0",
+      "dependencies": {
+        "@smog/config": "workspace:*",
+        "@smog/email": "workspace:*",
+        "@smog/render": "workspace:*",
+        "@smog/utils": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@cloudflare/vitest-plugin": "catalog:",
+        "@types/react": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+        "wrangler": "catalog:",
+      },
+    },
     "packages/local-store": {
       "name": "@smog/local-store",
       "version": "0.0.0",
@@ -517,6 +537,32 @@
       "optionalPeers": [
         "@react-native-async-storage/async-storage",
       ],
+    },
+    "packages/payments": {
+      "name": "@smog/payments",
+      "version": "0.0.0",
+      "dependencies": {
+        "@smog/config": "workspace:*",
+        "@smog/utils": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/render": {
+      "name": "@smog/render",
+      "version": "0.0.0",
+      "dependencies": {
+        "@smog/config": "workspace:*",
+        "@smog/styles": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
     },
     "packages/rpc": {
       "name": "@smog/rpc",
@@ -1630,11 +1676,17 @@
 
     "@smog/i18n": ["@smog/i18n@workspace:packages/i18n"],
 
+    "@smog/jobs": ["@smog/jobs@workspace:packages/jobs"],
+
     "@smog/lists": ["@smog/lists@workspace:packages/features/lists"],
 
     "@smog/local-store": ["@smog/local-store@workspace:packages/local-store"],
 
     "@smog/mobile": ["@smog/mobile@workspace:apps/mobile"],
+
+    "@smog/payments": ["@smog/payments@workspace:packages/payments"],
+
+    "@smog/render": ["@smog/render@workspace:packages/render"],
 
     "@smog/rpc": ["@smog/rpc@workspace:packages/rpc"],
 

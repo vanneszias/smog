@@ -227,6 +227,8 @@ erDiagram
     integer paid_at
     integer created_at
     integer updated_at
+    integer refunded_cents
+    integer refunded_at
   }
   payment_item {
     text payment_id PK,FK
@@ -364,7 +366,7 @@ Trigger: `user_keep_one_admin` (migration 0007, hand-written): `BEFORE UPDATE OF
 | `user_id` | `userId` | text |  | → user.id ON DELETE CASCADE |
 | `impersonated_by` | `impersonatedBy` | text | yes |  |
 
-Indexes: `session_user_id_idx` (user_id).
+Indexes: `session_user_id_idx` (user_id); `session_expires_at_idx` (expires_at, migration 0008: the daily retention purge deletes expired sessions).
 #### `account`
 
 | Column | TS | Type | Null | Notes |
@@ -395,7 +397,7 @@ Indexes: `account_user_id_idx` (user_id); `account_provider_account_idx` (provid
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
 
-Indexes: `verification_identifier_idx` (identifier).
+Indexes: `verification_identifier_idx` (identifier); `verification_expires_at_idx` (expires_at, migration 0008: the daily retention purge).
 #### `passkey`
 
 | Column | TS | Type | Null | Notes |
@@ -619,8 +621,12 @@ CHECK: `sponsorship_status_check`, `sponsorship_display_name_length_check`.
 | `paid_at` | `paidAt` | integer (ms) → Date | yes |  |
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
+| `refunded_cents` | `refundedCents` | integer |  | default 0; Mollie's `amountRefunded`, stored on every re-fetch (migration 0008) |
+| `refunded_at` | `refundedAt` | integer (ms) → Date | yes | when a refund was first recorded (migration 0008) |
 
 Indexes: `payment_status_created_idx` (status, created_at).
+
+Refunds are made by hand in the Mollie dashboard (phase 6 ruling 4); a `refund_needed` payment with `refunded_cents >= amount_cents` reads as "Refunded" in the admin. Migration 0008 added both columns with `ALTER TABLE … ADD COLUMN` (no rebuild: `payment` has RESTRICT and CASCADE children).
 
 CHECK: `payment_kind_check`, `payment_status_check`, `payment_currency_check`, `payment_amount_check`.
 #### `payment_item`
@@ -694,6 +700,7 @@ CHECK: `sponsorship_token_purpose_check`.
 
 **Migrations are append-only.** `0000`–`0003` are merged; never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
 
+- **Retention** (phase 6 ruling 9, `packages/db/src/retention.ts`): the daily `15 3 * * *` cron deletes `audit_log` rows older than 3 × 365 days, expired `session` and `verification` rows, and `sponsorship_token` rows used or expired more than 30 days ago, in chunks of 500 (`rowid IN (SELECT rowid … LIMIT 500)`, at most 20 per purge per run). Each chunk read seeks an index except the used-token one (`used_at` has no index; the table is small).
 - `bun -F @smog/db db:generate` runs `drizzle-kit generate` (generate only; wrangler applies migrations). Hand-written SQL (such as the FTS table) goes in a file made with `drizzle-kit generate --custom --name <name>`, so the drizzle journal stays in step.
 - `bun -F @smog/db migrate:dev` applies them to the local dev D1 (`wrangler d1 migrations apply DB --env dev --local`, from `apps/site`; `migrations_dir` is `../../packages/db/migrations` in every env). `deploy.yml` applies them remotely before each deploy.
 - `bun -F @smog/db seed:dev` regenerates `seed/dev.sql` (`scripts/seed.ts`), applies it locally and bumps the local `catalog:version` KV key (so a running dev server drops its typo-tier projection): 5 categories, 20 published gestures (sample Mux playback id, keywords, FTS rows rebuilt by `rebuildGestureFtsSql`, the statements `reindexGesture` runs) and the admin user `admin@smog.test` with the **dev-only** password `smog-dev-admin` (a Better Auth scrypt credential with a fixed salt; the seed replaces any other credential of that user). The admin row upserts on `email`, so an account that already signed up with that address keeps its id and is promoted to `admin`. Ids and timestamps are fixed and every statement is an upsert, so it can be re-run.

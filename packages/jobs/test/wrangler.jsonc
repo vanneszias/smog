@@ -1,0 +1,15 @@
+{
+  // Test-only Worker config: Miniflare queue producers for the producer
+  // tests (no consumer: messages stay on the queue), and the source of
+  // `worker-configuration.d.ts` (`wrangler types`, check-types).
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "smog-jobs-test",
+  "compatibility_date": "2026-09-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "queues": {
+    "producers": [
+      { "binding": "EMAIL_QUEUE", "queue": "smog-test-email" },
+      { "binding": "EVENTS_QUEUE", "queue": "smog-test-sponsorship-events" }
+    ]
+  }
+}

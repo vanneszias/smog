@@ -1,5 +1,6 @@
 import { describe, expect, mock, spyOn, test } from "bun:test";
 import type { MaintenanceSetting } from "@smog/admin/schema";
+import { EMAIL_TEMPLATE_IDS } from "@smog/email/samples";
 import { createI18n, LOCALES } from "@smog/i18n";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -241,12 +242,7 @@ describe("email previews", () => {
   test("every template has a label in every locale", () => {
     for (const locale of LOCALES) {
       const { t } = createI18n(locale);
-      for (const id of [
-        "auth/magic-link",
-        "auth/otp",
-        "auth/reset-password",
-        "auth/verify-email",
-      ] as const) {
+      for (const id of EMAIL_TEMPLATE_IDS) {
         expect(emailTemplateLabel(t, id)).not.toContain("admin.emails");
       }
     }

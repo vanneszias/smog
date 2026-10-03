@@ -1,6 +1,7 @@
 // biome-ignore-all lint/performance/noBarrelFile: the package entry point (`@smog/email`).
 export { APP_NAME } from "./app-name";
 export { emailLocale } from "./locale";
+export type { EmailOutbox, OutboxEmail } from "./outbox";
 export {
   type EmailTemplateId,
   type EmailTemplateProps,

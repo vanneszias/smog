@@ -1,0 +1,28 @@
+{
+  "name": "@smog/jobs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cron": "./src/cron.ts"
+  },
+  "scripts": {
+    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@smog/config": "workspace:*",
+    "@smog/email": "workspace:*",
+    "@smog/render": "workspace:*",
+    "@smog/utils": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "catalog:",
+    "@types/react": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

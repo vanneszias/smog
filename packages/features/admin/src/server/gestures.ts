@@ -1,5 +1,7 @@
 import {
   category,
+  failWhen,
+  GuardFailedError,
   gesture,
   gestureCategory,
   gestureKeyword,
@@ -9,6 +11,7 @@ import {
   rebuildGestureFtsSql,
   rebuildGesturesFtsSql,
   ref,
+  type Statement,
   sponsorship,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
@@ -33,11 +36,8 @@ import {
 import { auditStatement } from "./audit-writer";
 import {
   bumpCatalog,
-  failWhen,
-  GuardFailedError,
   nextUpdatedAt,
   runCatalogBatch,
-  type Statement,
   withFreeSlug,
 } from "./catalog-writes";
 import { type AdminDeps, adminProcedure } from "./procedure";
