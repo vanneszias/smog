@@ -22,6 +22,7 @@ import {
   stubMuxStream,
   waitForApp,
 } from "./helpers";
+import { signInAsAdmin } from "./maintenance";
 import { PHASE6_PENDING, type Phase6Pending } from "./phase6";
 
 const NAAM_IN_DE_VIDEO = /^Naam in de video/;
@@ -45,8 +46,8 @@ const P_120_00 = /120,00/;
  * and any other 500 fails it outright:
  * - `checkout` (task 4): the paid and the failed checkout.
  * - `reedit` (task 5): the re-edit link flow.
- * - `adminQueue` (task 6): until then the paid test waits for both
- *   sponsorships to reach `in_review` through the dev-only seed read.
+ * The paid test checks the admin review queue (`admin.sponsorships.list`,
+ * task 6) until both sponsorships are `in_review`.
  *
  * Run alone with a dev server you started yourself (`reuseExistingServer`),
  * that server needs the Mollie fake's `SMOG_DEV_MOLLIE_*` env (see
@@ -85,10 +86,7 @@ const PNG = Buffer.from(
 const SUCCESS_URL = /\/sponsor\/success\?payment=/;
 const CHECKOUT_URL = new RegExp(`^${MOLLIE_FAKE}/checkout/`);
 /** The probe of each flagged part: a read the stub answers "not implemented". */
-const PROBES: Record<
-  Exclude<Phase6Pending, "adminQueue">,
-  { input: unknown; path: string }
-> = {
+const PROBES: Record<Phase6Pending, { input: unknown; path: string }> = {
   checkout: {
     input: { payment: "8c3c5a52-7a0c-4d9b-9d65-1f1d7f0c2a11" },
     path: "sponsorships/paymentStatus",
@@ -135,19 +133,26 @@ async function skipWhilePending(
   test.skip(stub, `waits for phase 6 (PHASE6_PENDING.${part})`);
 }
 
-/** The sponsorships' statuses on these gestures (dev-only seed read). */
-async function statuses(
-  request: APIRequestContext,
+/**
+ * The admin review queue (`admin.sponsorships.list`, status `in_review`)
+ * as `slug:status`, for these gestures, read with an admin session.
+ */
+async function reviewQueue(
+  admin: APIRequestContext,
   slugs: readonly string[]
 ): Promise<string[]> {
-  const response = await request.post("/dev/e2e-seed", {
-    data: [{ op: "sponsorshipStatus", slugs }],
+  const response = await admin.post("/api/rpc/admin/sponsorships/list", {
+    data: { json: { limit: 100, status: ["in_review"] } },
     headers: { origin: ORIGIN },
   });
-  const { rows } = (await response.json()) as {
-    rows: { slug: string; status: string }[];
+  expect(response.ok(), await response.text()).toBe(true);
+  const { json } = (await response.json()) as {
+    json: { items: { gesture: { slug: string }; status: string }[] };
   };
-  return rows.map((row) => `${row.slug}:${row.status}`);
+  return json.items
+    .filter((item) => slugs.includes(item.gesture.slug))
+    .map((item) => `${item.gesture.slug}:${item.status}`)
+    .sort();
 }
 
 async function availability(
@@ -369,6 +374,7 @@ test("the gesture CTA: free, being sponsored, sponsored (L-17)", async ({
 
 test("pays for 2 gestures with a logo and an invoice; the success page shows paid", async ({
   page,
+  request,
 }) => {
   await skipWhilePending(page.request, "checkout");
   await openWizard(page);
@@ -381,17 +387,13 @@ test("pays for 2 gestures with a logo and an invoice; the success page shows pai
   await expect(page.getByText("Broer, Zus")).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
   // The webhook, `payment.settled`, the consumer and the fake render ran:
-  // both sponsorships wait in review (review I-7).
+  // both wait in the admin review queue (task 6's API, its own session).
+  await signInAsAdmin(request);
   await expect
-    .poll(async () => await statuses(page.request, FLOW_PAID), {
+    .poll(async () => await reviewQueue(request, FLOW_PAID), {
       timeout: 30_000,
     })
     .toEqual(["broer:in_review", "zus:in_review"]);
-  if (!PHASE6_PENDING.adminQueue) {
-    throw new Error(
-      "task 6: assert here that the admin moderation queue lists Broer and Zus"
-    );
-  }
 });
 
 test("a failed payment frees the gestures, and Try again keeps the selection", async ({
