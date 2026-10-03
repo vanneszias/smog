@@ -5,6 +5,7 @@
  */
 
 import type { EmailMessage, EventMessage } from "@smog/jobs";
+import type { MollieFetch } from "@smog/payments";
 import { createFakeMollie, FAKE_MOLLIE_API_KEY } from "@smog/payments/testing";
 import type { MuxFetch } from "@smog/video";
 import type { AdminQueues } from "../src/server";
@@ -13,6 +14,21 @@ import { testMux } from "./mux-fake";
 export const testMollie = createFakeMollie({
   apiUrl: "https://api.mollie.test",
 });
+
+/** Set to make the next Mollie `DELETE` (a cancel) answer this status. */
+export const mollieFaults = { cancelStatus: null as number | null };
+
+/** The Mollie fake, whose cancel can be made to fail (`mollieFaults`). */
+export const mollieWithFaults: MollieFetch = (input, init) => {
+  const status = mollieFaults.cancelStatus;
+  if (init?.method === "DELETE" && status !== null) {
+    mollieFaults.cancelStatus = null;
+    return Promise.resolve(
+      Response.json({ detail: "fault", status, title: "Fault" }, { status })
+    );
+  }
+  return testMollie.fetch(input, init);
+};
 
 export const TEST_MOLLIE_ENV = {
   MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY,

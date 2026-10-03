@@ -154,13 +154,22 @@ const SPONSORSHIP_AUDIT_SCHEMAS = {
     refundedCents: z.number().int().positive(),
   }),
   "sponsorship.approve": z.object({ endsAt: isoDate, startsAt: isoDate }),
-  "sponsorship.cancel": paymentRef,
+  "sponsorship.cancel": paymentRef.extend({
+    /**
+     * Set when Mollie already had the money: the payment was settled as
+     * the webhook does, in the same batch as this entry, and the cancel
+     * refused (`INVALID_STATE paid`).
+     */
+    refused: z.literal("paid").optional(),
+  }),
   "sponsorship.force_expire": z.object({
     /** Whether a sponsored Mux asset was to be deleted (not the gesture's own). */
     deletesAsset: z.boolean(),
     from: z.enum(["live", "expiring"]),
   }),
   "sponsorship.mark_paid": paymentRef.extend({
+    /** `false` for an item of the payment that was not moved (already past payment). */
+    changed: z.literal(false).optional(),
     /** The admin's note (a bank transfer reference). */
     note: z.string().min(1).max(MARK_PAID_NOTE_MAX).optional(),
     /**

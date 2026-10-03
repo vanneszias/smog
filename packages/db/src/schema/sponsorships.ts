@@ -48,6 +48,9 @@ export const sponsor = sqliteTable(
     check("sponsor_company_length_check", lengthBetween(t.company, 0, 120)),
     check("sponsor_locale_check", inValues(t.locale, LOCALES)),
     index("sponsor_email_idx").on(t.email),
+    // The admin user panel and the account export match sponsors to an
+    // account by `lower(email)`: migration 0010, phase 6 task 6.
+    index("sponsor_email_lower_idx").on(sql`lower(${t.email})`),
   ]
 );
 

@@ -112,8 +112,17 @@ export interface AdminSponsorshipServices {
    */
   settle: (
     db: Db,
-    input: { now: Date; payment: MolliePayment }
-  ) => Promise<{ events: EventMessage[]; notify: OutboxEmail[] } | null>;
+    input: {
+      /** Written in the settlement's final batch (the admin's audit entries). */
+      extra?: Statement[];
+      now: Date;
+      payment: MolliePayment;
+    }
+  ) => Promise<{
+    events: EventMessage[];
+    notify: OutboxEmail[];
+    outcome: string;
+  } | null>;
 }
 
 /** The queue bindings the admin enqueues on (after a commit). */

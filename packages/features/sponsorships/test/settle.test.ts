@@ -1,4 +1,10 @@
-import { type Gesture, payment, sponsorship, sponsorshipToken } from "@smog/db";
+import {
+  type Gesture,
+  payment,
+  sponsor,
+  sponsorship,
+  sponsorshipToken,
+} from "@smog/db";
 import { makeGesture } from "@smog/db/testing";
 import { createFakeMollie, type FakeMollie } from "@smog/payments/testing";
 import { DAY_MS, newId } from "@smog/utils";
@@ -433,5 +439,67 @@ describe("settlePayment (ruling 6)", () => {
     fake.setStatus(mollieId, "paid");
     const { first } = await settleTwice(mollieId);
     expect(first?.outcome).toBe("paid");
+  });
+});
+
+async function companyOf(sponsorId: string): Promise<string | null> {
+  const row = await db.query.sponsor.findFirst({
+    where: (table, { eq: equals }) => equals(table.id, sponsorId),
+  });
+  return row?.company ?? null;
+}
+
+describe("settlePayment's extra statements (the caller's, same batch)", () => {
+  /** A marker the caller wants written with the settlement. */
+  const marker = (id: string) =>
+    db.update(sponsor).set({ company: id }).where(eq(sponsor.id, id));
+
+  it("are written with the settlement, and alone when nothing else changes", async () => {
+    const seeded = await seedCheckout(db, { count: 2 });
+    const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 10_000);
+    fake.setStatus(mollieId, "paid");
+    const first = await settlePayment(db, {
+      extra: [marker(seeded.sponsorId)],
+      now: NOW,
+      payment: await refetch(fake, mollieId),
+    });
+    expect(first?.outcome).toBe("paid");
+    expect(await companyOf(seeded.sponsorId)).toBe(seeded.sponsorId);
+
+    await db
+      .update(sponsor)
+      .set({ company: null })
+      .where(eq(sponsor.id, seeded.sponsorId));
+    const again = await settlePayment(db, {
+      extra: [marker(seeded.sponsorId)],
+      now: NOW,
+      payment: await refetch(fake, mollieId),
+    });
+    expect(again?.outcome).toBe("already");
+    expect(await companyOf(seeded.sponsorId)).toBe(seeded.sponsorId);
+  });
+
+  it("a failing extra statement leaves the settlement unwritten", async () => {
+    const seeded = await seedCheckout(db, { count: 2 });
+    const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 10_000);
+    fake.setStatus(mollieId, "paid");
+    await expect(
+      settlePayment(db, {
+        // A CHECK violation: the name must be 1..120 characters.
+        extra: [
+          db
+            .update(sponsor)
+            .set({ name: "" })
+            .where(eq(sponsor.id, seeded.sponsorId)),
+        ],
+        now: NOW,
+        payment: await refetch(fake, mollieId),
+      })
+    ).rejects.toThrow();
+    expect((await paymentRow(db, seeded.paymentId)).status).toBe("open");
+    const statuses = await Promise.all(
+      seeded.sponsorshipIds.map((id) => statusOf(db, id))
+    );
+    expect(statuses).toEqual(["awaiting_payment", "awaiting_payment"]);
   });
 });

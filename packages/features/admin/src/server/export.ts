@@ -18,18 +18,46 @@ import {
   statusFilter,
 } from "./sponsorships";
 
-/** A cell a spreadsheet would read as a formula (or a command) when it leads. */
-const FORMULA_LEAD = /^[=+\-@\t\r]/;
+/** A control character a spreadsheet may act on when it leads a cell. */
+const CONTROL_LEAD = /^[\t\r\n]/;
+/**
+ * Whitespace a spreadsheet may trim on import before it reads a formula:
+ * every Unicode space (`\s` covers NBSP, U+3000 and the BOM) plus the
+ * zero-width ones.
+ */
+const LEADING_SPACE = /^[\s\u200b-\u200d\u2060]+/u;
+/**
+ * A formula sign, after NFKC (which folds the full-width and small forms,
+ * `＝` and `﹢`, into `=` and `+`); U+2212 (minus) is not folded.
+ */
+const FORMULA_SIGN = /^[=+\-@\u2212]/u;
+
+/** Whether a spreadsheet could read `value` as a formula or a command. */
+function looksLikeFormula(value: string): boolean {
+  if (CONTROL_LEAD.test(value)) {
+    return true;
+  }
+  return FORMULA_SIGN.test(value.normalize("NFKC").replace(LEADING_SPACE, ""));
+}
 
 /**
- * One CSV field: always quoted with `"` doubled (RFC 4180), and a cell that
- * starts with `=`, `+`, `-`, `@`, a tab or a CR gets a leading `'`, so a
- * spreadsheet shows it as text instead of running it (formula injection).
+ * One CSV field: always quoted with `"` doubled (RFC 4180), and a cell a
+ * spreadsheet could read as a formula gets a leading `'`, so it shows as
+ * text instead of running (formula injection). That is a cell starting
+ * with a tab, CR or LF, or whose first character after any leading
+ * whitespace is `=`, `+`, `-` or `@`, full-width forms included (fix
+ * round 1, I3: imported legacy rows never passed the trimming schemas).
  */
 export function csvCell(value: string): string {
-  const safe = FORMULA_LEAD.test(value) ? `'${value}` : value;
+  const safe = looksLikeFormula(value) ? `'${value}` : value;
   return `"${safe.replaceAll('"', '""')}"`;
 }
+
+/**
+ * The UTF-8 byte order mark the CSV starts with, so Excel reads it (the
+ * euro sign, accented names) as UTF-8 (fix round 1, M4).
+ */
+export const CSV_BOM = "\ufeff";
 
 const csvLine = (cells: readonly string[]): string =>
   `${cells.map(csvCell).join(",")}\r\n`;
@@ -134,7 +162,11 @@ class TooManyRowsError extends Error {
 /**
  * The CSV, read in keyset pages of 500 (no 10,000 row cap, bug 11): one
  * page of rows is held at a time, serialised to text before the next is
- * read. Counted first, so an export over the cap reads no rows.
+ * read. Counted first, so an export over the cap reads no rows. The text
+ * itself is held whole (the oRPC answer is one JSON value): at the 50,000
+ * row cap, about 20 MB of text, held as UTF-16 (the `€` of the header) and
+ * copied once more by the JSON answer, so well under the Worker's 128 MB
+ * (fix round 1, M3; DECISIONS).
  */
 async function buildCsv(
   db: Db,
@@ -147,7 +179,7 @@ async function buildCsv(
   if ((total?.n ?? 0) > SPONSORSHIP_EXPORT_ROWS_MAX) {
     throw new TooManyRowsError(total?.n ?? 0);
   }
-  const chunks = [csvLine(SPONSORSHIP_CSV_COLUMNS)];
+  const chunks = [CSV_BOM, csvLine(SPONSORSHIP_CSV_COLUMNS)];
   let rows = 0;
   let position: SponsorshipPosition | null = null;
   for (;;) {

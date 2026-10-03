@@ -20,6 +20,8 @@ import { seedCheckout } from "./sponsorship-helpers";
  * 11), the status and date filters, and the audit entry.
  */
 
+/** UTF-8 byte order mark: Excel then reads the file (and the euro sign) as UTF-8 (M4). */
+const BOM = "\ufeff";
 const FILENAME = /^sponsorships-\d{4}-\d{2}-\d{2}\.csv$/;
 const EXAMPLE_EMAIL = /@example\.com$/;
 const FIRST_BULK = /-00000000$/;
@@ -50,7 +52,9 @@ async function failure(
 
 /** The records of a CSV whose fields hold no line breaks. */
 function records(csv: string): string[][] {
+  expect(csv.startsWith(BOM)).toBe(true);
   return csv
+    .slice(BOM.length)
     .split("\r\n")
     .filter((line) => line !== "")
     .map((line) =>
@@ -74,6 +78,35 @@ describe("csvCell", () => {
       expect(csvCell(`${lead}SUM(A1)`)).toBe(`"'${lead}SUM(A1)"`);
     }
     expect(csvCell("Acme = goed")).toBe('"Acme = goed"');
+  });
+
+  it("also guards a formula behind whitespace, a line break or a full-width sign (I3)", () => {
+    const variants = [
+      " =1+1",
+      "  +1",
+      "\n=1+1",
+      "\r\n=1+1",
+      " =1+1",
+      "　-1",
+      "﻿@SUM(A1)",
+      "​=1",
+      "＝1+1",
+      "＋1",
+      "－1",
+      "＠A1",
+      "﹢ 1",
+      "− 1",
+      "\t",
+      "\n",
+    ];
+    for (const value of variants) {
+      expect(csvCell(value), JSON.stringify(value)).toBe(
+        `"'${value.replaceAll('"', '""')}"`
+      );
+    }
+    for (const value of ["Acme = goed", "1+1", " Acme", "é=1", "a@b.be"]) {
+      expect(csvCell(value), JSON.stringify(value)).toBe(`"${value}"`);
+    }
   });
 });
 

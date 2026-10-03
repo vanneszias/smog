@@ -574,7 +574,7 @@ CHECK: `audit_log_action_check`, `audit_log_target_type_check`.
 | `locale` | `locale` | text |  | enum: `nl`, `en`, `fr` |
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 
-Indexes: `sponsor_email_idx` (email).
+Indexes: `sponsor_email_idx` (email); `sponsor_email_lower_idx` (lower(email)), migration 0010: the admin user panel finds an account's sponsors by it.
 
 CHECK: `sponsor_name_length_check`, `sponsor_email_length_check`, `sponsor_company_length_check`, `sponsor_locale_check`.
 #### `invoice_request`

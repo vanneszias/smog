@@ -144,6 +144,30 @@ export async function seedCheckout(options: SeedOptions = {}): Promise<Seeded> {
   return { gestures, mollieId, paymentId, sponsorId, sponsorshipIds };
 }
 
+/** An open renewal payment of one sponsorship (`amountCents`, no Mollie). */
+export async function seedRenewal(
+  sponsorshipId: string,
+  amountCents = 5000
+): Promise<string> {
+  const db = testDb();
+  const paymentId = newId();
+  await db.batch([
+    db.insert(payment).values({
+      amountCents,
+      id: paymentId,
+      kind: "renewal",
+      status: "open",
+    }),
+    db.insert(paymentItem).values({
+      amountCents,
+      includesLogo: false,
+      paymentId,
+      sponsorshipId,
+    }),
+  ]);
+  return paymentId;
+}
+
 /** An open token of `purpose` (its hash is random: no raw token exists). */
 export async function seedToken(
   sponsorshipId: string,

@@ -303,9 +303,11 @@ export const paymentActionResultSchema = z.object({
   paymentId: z.string(),
   /**
    * `marked_paid`: marked paid by hand; `settled`: Mollie already had the
-   * money, so it was settled as the webhook does.
+   * money, so it was settled as the webhook does; `refund_needed`: Mollie
+   * had it, but the settlement flagged the payment (an amount mismatch, a
+   * gesture taken meanwhile); `canceled`: cancelled.
    */
-  result: z.enum(["marked_paid", "settled", "canceled"]),
+  result: z.enum(["marked_paid", "settled", "refund_needed", "canceled"]),
   /** Every sponsorship of the payment. */
   sponsorshipIds: z.array(z.string()),
 });
@@ -332,6 +334,8 @@ export const sponsorshipsCsvSchema = z.object({
   filename: z.string(),
   rows: count,
 });
+
+export type SponsorshipsCsv = z.infer<typeof sponsorshipsCsvSchema>;
 
 /**
  * The export's 18 columns in the old order (A-09), with `display_name` as

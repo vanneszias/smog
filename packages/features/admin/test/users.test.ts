@@ -10,7 +10,7 @@ import type {
   AdminUserPage,
   UserGuardReason,
 } from "../src/schema";
-import { userActionRefusal } from "../src/server/users";
+import { userActionRefusal, userSponsorshipsQuery } from "../src/server/users";
 import {
   type Authed,
   auditMark,
@@ -289,6 +289,18 @@ describe("admin.users.list", () => {
 });
 
 describe("admin.users.get", () => {
+  it("finds the sponsors by the lower(email) index of migration 0010 (M2)", async () => {
+    const query = userSponsorshipsQuery(testDb(), "u-1").toSQL();
+    const { results } = await env.DB.prepare(`EXPLAIN QUERY PLAN ${query.sql}`)
+      .bind(...query.params)
+      .all<{ detail: string }>();
+    const plan = results.map((row) => row.detail);
+    expect(plan.some((step) => step.includes("sponsor_email_lower_idx"))).toBe(
+      true
+    );
+    expect(plan.some((step) => step.startsWith("SCAN us"))).toBe(false);
+  });
+
   it("returns the account with its methods and counts", async () => {
     const member = await signedUp("user", "Mia Member");
     const gesture = await makeGesture(testDb(), { name: "Users get gesture" });

@@ -168,10 +168,31 @@ function signInMethods(
 /**
  * The sponsors whose email is the account's, once the account's email is
  * verified (compared case-insensitively: sponsors type their address), as
- * the account export does.
+ * the account export does. The account's address is read first, so the
+ * sponsors are a seek of migration 0010's `sponsor_email_lower_idx`, not a
+ * scan (fix round 1, M2).
  */
 function sponsorIdsOf(userId: string): SQL {
-  return sql`SELECT us.id FROM sponsor AS us JOIN "user" AS uu ON lower(us.email) = lower(uu.email) WHERE uu.id = ${userId} AND uu.email_verified = 1`;
+  return sql`SELECT us.id FROM sponsor AS us WHERE lower(us.email) = (SELECT lower(uu.email) FROM "user" AS uu WHERE uu.id = ${userId} AND uu.email_verified = 1)`;
+}
+
+/** The user panel's sponsorships, newest first (exported for the plan test). */
+export function userSponsorshipsQuery(db: Db, userId: string) {
+  return db
+    .select({
+      createdAt: sponsorship.createdAt,
+      displayName: sponsorship.displayName,
+      gestureId: aliased(gesture.id, "gesture_id_"),
+      gestureName: gesture.name,
+      gestureSlug: gesture.slug,
+      id: aliased(sponsorship.id, "sponsorship_id_"),
+      status: sponsorship.status,
+    })
+    .from(sponsorship)
+    .innerJoin(gesture, eq(gesture.id, sponsorship.gestureId))
+    .where(sql`${sponsorship.sponsorId} IN (${sponsorIdsOf(userId)})`)
+    .orderBy(desc(sponsorship.createdAt), desc(sponsorship.id))
+    .limit(USER_SPONSORSHIPS_MAX);
 }
 
 /** One account with its methods, counts and sponsorships, in one D1 batch (or `null`). */
@@ -192,21 +213,7 @@ async function getUser(db: Db, id: string): Promise<AdminUserDetail | null> {
           .where(and(eq(session.userId, id), gt(session.expiresAt, now))),
         db.select({ n: count() }).from(favorite).where(eq(favorite.userId, id)),
         db.select({ n: count() }).from(list).where(eq(list.ownerId, id)),
-        db
-          .select({
-            createdAt: sponsorship.createdAt,
-            displayName: sponsorship.displayName,
-            gestureId: aliased(gesture.id, "gesture_id_"),
-            gestureName: gesture.name,
-            gestureSlug: gesture.slug,
-            id: aliased(sponsorship.id, "sponsorship_id_"),
-            status: sponsorship.status,
-          })
-          .from(sponsorship)
-          .innerJoin(gesture, eq(gesture.id, sponsorship.gestureId))
-          .where(sql`${sponsorship.sponsorId} IN (${sponsorIdsOf(id)})`)
-          .orderBy(desc(sponsorship.createdAt), desc(sponsorship.id))
-          .limit(USER_SPONSORSHIPS_MAX),
+        userSponsorshipsQuery(db, id),
       ]);
     const [row] = rows;
     if (!row) {

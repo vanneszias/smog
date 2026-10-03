@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "56115292-da6c-43d6-b136-fa0247a9481d",
+  "id": "5832532c-a015-42e5-a17c-7827d9f58ed4",
   "prevId": "04750157-8594-4b6d-bc9a-f9de9f9ced18",
   "tables": {
     "account": {
@@ -1862,6 +1862,13 @@
             "email"
           ],
           "isUnique": false
+        },
+        "sponsor_email_lower_idx": {
+          "name": "sponsor_email_lower_idx",
+          "columns": [
+            "lower(\"email\")"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -2489,6 +2496,14 @@
     "columns": {}
   },
   "internal": {
-    "indexes": {}
+    "indexes": {
+      "sponsor_email_lower_idx": {
+        "columns": {
+          "lower(\"email\")": {
+            "isExpression": true
+          }
+        }
+      }
+    }
   }
 }

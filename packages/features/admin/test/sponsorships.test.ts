@@ -10,7 +10,11 @@ import type {
   AdminSponsorshipDetail,
   AdminSponsorshipPage,
 } from "../src/schema";
-import { adminSponsorshipsQuery } from "../src/server/sponsorships";
+import {
+  adminSponsorshipsQuery,
+  sponsorshipFilters,
+  statusFilter,
+} from "../src/server/sponsorships";
 import {
   type Authed,
   auditMark,
@@ -26,12 +30,14 @@ import {
   clearQueues,
   deletedAssets,
   enqueued,
+  mollieFaults,
   testMollie,
 } from "./sponsorship-fakes";
 import {
   eventTypes,
   paymentRow,
   seedCheckout,
+  seedRenewal,
   seedToken,
   sponsorshipRow,
 } from "./sponsorship-helpers";
@@ -79,6 +85,18 @@ async function callOver<T>(
   const context = await contextAs(admin);
   return (await call(procedureAt(path), input, {
     context: { ...context, db: createDb(d1) },
+    path: ["admin", ...path.split(".")],
+  })) as T;
+}
+
+/** Calls `admin.<path>` as `admin` with no Mollie key (staging before its key). */
+async function callWithoutMollie<T>(path: string, input: unknown): Promise<T> {
+  const context = await contextAs(admin);
+  return (await call(procedureAt(path), input, {
+    context: {
+      ...context,
+      env: { ...context.env, MOLLIE_API_KEY: undefined },
+    },
     path: ["admin", ...path.split(".")],
   })) as T;
 }
@@ -881,7 +899,8 @@ describe("cancel", () => {
         expect((await sponsorshipRow(id)).status).toBe("rendering");
       })
     );
-    expect(await auditRowsSince(mark)).toEqual([]);
+    // The refused cancel is audited with the settlement (fix round 1, I1).
+    expect(await auditRowsSince(mark)).toHaveLength(2);
     expect(enqueued.events).toEqual([
       { paymentId: seeded.paymentId, type: "payment.settled" },
     ]);
@@ -995,5 +1014,382 @@ describe("recordRefund", () => {
       targetId: seeded.paymentId,
       targetType: "payment",
     });
+  });
+});
+
+/*
+ * Fix round 1: the settle paths audit in the settlement's batch (I1), mark
+ * paid commits before it cancels at Mollie (I2), and the atomicity, race
+ * and degradation cases of every action (M6).
+ */
+
+/** The data of the audit entries written since `mark`, by target. */
+async function auditData(mark: number): Promise<Map<string | null, unknown>> {
+  return new Map(
+    (await auditRowsSince(mark)).map((row) => [row.targetId, row.data])
+  );
+}
+
+describe("settle paths audit in the settlement's batch (I1)", () => {
+  it("mark paid on a Mollie-paid payment: a failing audit leaves it open and enqueues nothing", async () => {
+    const seeded = await seedCheckout({ count: 2, mollie: true });
+    testMollie.setStatus(seeded.mollieId as string, "paid");
+    const mark = await auditMark();
+    const logged = quietErrors();
+    expect(
+      await failure(
+        callOver(failingAudit(), "sponsorships.markPaid", {
+          paymentId: seeded.paymentId,
+        })
+      )
+    ).toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
+    logged.mockRestore();
+    expect((await paymentRow(seeded.paymentId)).status).toBe("open");
+    const counts = await Promise.all(seeded.sponsorshipIds.map(eventCount));
+    expect(counts).toEqual([0, 0]);
+    expect(await auditRowsSince(mark)).toEqual([]);
+    expect(enqueued.events).toEqual([]);
+  });
+
+  it("keeps the admin's note, and reports a flagged payment as refund_needed", async () => {
+    const seeded = await seedCheckout({ mollie: true });
+    const mollieId = seeded.mollieId as string;
+    testMollie.setStatus(mollieId, "paid");
+    // Mollie reports another amount: settled as refund_needed (ruling 6).
+    testMollie.corruptAmount(mollieId, "1.00");
+    const mark = await auditMark();
+    await expect(
+      callAs(admin, "sponsorships.markPaid", {
+        note: "Overschrijving",
+        paymentId: seeded.paymentId,
+      })
+    ).resolves.toMatchObject({ result: "refund_needed" });
+    expect((await paymentRow(seeded.paymentId)).status).toBe("refund_needed");
+    await expectAudit("sponsorships.markPaid", {
+      actorId: admin.user.id,
+      data: {
+        note: "Overschrijving",
+        paymentId: seeded.paymentId,
+        source: "mollie",
+      },
+      mark,
+      targetId: seeded.sponsorshipIds[0] as string,
+      targetType: "sponsorship",
+    });
+  });
+
+  it("cancel on a Mollie-paid payment audits the refused cancel with the settlement", async () => {
+    const seeded = await seedCheckout({ count: 2, mollie: true });
+    testMollie.setStatus(seeded.mollieId as string, "paid");
+    const mark = await auditMark();
+    expect(
+      await failure(
+        callAs(admin, "sponsorships.cancel", { paymentId: seeded.paymentId })
+      )
+    ).toMatchObject({ code: "INVALID_STATE", data: { reason: "paid" } });
+    const data = await auditData(mark);
+    expect(data.size).toBe(2);
+    for (const id of seeded.sponsorshipIds) {
+      expect(data.get(id)).toEqual({
+        paymentId: seeded.paymentId,
+        refused: "paid",
+      });
+    }
+  });
+});
+
+describe("mark paid commits before it cancels at Mollie (I2)", () => {
+  it("a failed Mollie cancel after the commit leaves the payment paid", async () => {
+    const seeded = await seedCheckout({ count: 2, mollie: true });
+    mollieFaults.cancelStatus = 500;
+    const logged = quietErrors();
+    await expect(
+      callAs(admin, "sponsorships.markPaid", { paymentId: seeded.paymentId })
+    ).resolves.toMatchObject({ result: "marked_paid" });
+    const messages = logged.mock.calls.map(([message]) => String(message));
+    logged.mockRestore();
+    expect((await paymentRow(seeded.paymentId)).status).toBe("paid");
+    expect(testMollie.payments.get(seeded.mollieId as string)?.status).toBe(
+      "open"
+    );
+    expect(
+      messages.some((message) =>
+        message.startsWith("[admin] Failed to cancel the Mollie payment")
+      )
+    ).toBe(true);
+    // Mollie's later `canceled` changes nothing: the payment is paid.
+    testMollie.setStatus(seeded.mollieId as string, "canceled");
+    expect(enqueued.events).toEqual([
+      { paymentId: seeded.paymentId, type: "payment.settled" },
+    ]);
+  });
+
+  it("a failing local batch leaves the Mollie payment open", async () => {
+    const seeded = await seedCheckout({ count: 2, mollie: true });
+    const logged = quietErrors();
+    await failure(
+      callOver(failingAudit(), "sponsorships.markPaid", {
+        paymentId: seeded.paymentId,
+      })
+    );
+    logged.mockRestore();
+    expect(testMollie.payments.get(seeded.mollieId as string)?.status).toBe(
+      "open"
+    );
+  });
+
+  it("audits an item it did not change as changed: false (M8)", async () => {
+    const seeded = await seedCheckout({ count: 2 });
+    const [moved, kept] = seeded.sponsorshipIds as [string, string];
+    await env.DB.prepare(
+      "UPDATE sponsorship SET status = 'cancelled' WHERE id = ?"
+    )
+      .bind(kept)
+      .run();
+    const mark = await auditMark();
+    await callAs(admin, "sponsorships.markPaid", {
+      paymentId: seeded.paymentId,
+    });
+    const data = await auditData(mark);
+    expect(data.get(moved)).toEqual({
+      paymentId: seeded.paymentId,
+      source: "manual",
+    });
+    expect(data.get(kept)).toEqual({
+      changed: false,
+      paymentId: seeded.paymentId,
+      source: "manual",
+    });
+  });
+});
+
+describe("every action: a failing audit leaves nothing (M6)", () => {
+  async function failsWhole(path: string, input: unknown): Promise<void> {
+    const logged = quietErrors();
+    expect(await failure(callOver(failingAudit(), path, input))).toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+    });
+    logged.mockRestore();
+  }
+
+  it("reject", async () => {
+    const id = (await seedCheckout({ status: "in_review" }))
+      .sponsorshipIds[0] as string;
+    await failsWhole("sponsorships.reject", { id, reason: "Nee" });
+    expect((await sponsorshipRow(id)).status).toBe("in_review");
+    expect(await eventCount(id)).toBe(0);
+  });
+
+  it("requestChanges and regenerateToken keep the old token open", async () => {
+    const review = (await seedCheckout({ status: "in_review" }))
+      .sponsorshipIds[0] as string;
+    const oldReview = await seedToken(review, "reedit");
+    await failsWhole("sponsorships.requestChanges", { id: review });
+    expect((await sponsorshipRow(review)).status).toBe("in_review");
+    expect(await tokenRows(review)).toEqual([
+      { id: oldReview, purpose: "reedit", usedAt: null },
+    ]);
+
+    const changes = (await seedCheckout({ status: "changes_requested" }))
+      .sponsorshipIds[0] as string;
+    const oldChanges = await seedToken(changes, "reedit");
+    await failsWhole("sponsorships.regenerateToken", {
+      id: changes,
+      purpose: "reedit",
+    });
+    expect(await tokenRows(changes)).toEqual([
+      { id: oldChanges, purpose: "reedit", usedAt: null },
+    ]);
+  });
+
+  it("cancel", async () => {
+    const seeded = await seedCheckout({ count: 2, mollie: true });
+    await failsWhole("sponsorships.cancel", { paymentId: seeded.paymentId });
+    expect((await paymentRow(seeded.paymentId)).status).toBe("open");
+    // Mollie is cancelled only after the local commit.
+    expect(testMollie.payments.get(seeded.mollieId as string)?.status).toBe(
+      "open"
+    );
+  });
+
+  it("forceExpire keeps the sponsored asset", async () => {
+    const gesture = await makeGesture(testDb(), { name: "Blijf staan" });
+    const seeded = await seedCheckout({
+      gestures: [gesture],
+      paymentStatus: "paid",
+      status: "live",
+      videoAssetId: "kept-asset",
+    });
+    await failsWhole("sponsorships.forceExpire", {
+      confirmName: "Blijf staan",
+      id: seeded.sponsorshipIds[0],
+    });
+    expect(
+      (await sponsorshipRow(seeded.sponsorshipIds[0] as string)).status
+    ).toBe("live");
+    expect(deletedAssets).not.toContain("kept-asset");
+  });
+
+  it("recordRefund", async () => {
+    const seeded = await seedCheckout({
+      mollie: true,
+      paymentStatus: "refund_needed",
+      status: "cancelled",
+    });
+    testMollie.setStatus(seeded.mollieId as string, "paid");
+    testMollie.refund(seeded.mollieId as string, 5000);
+    await failsWhole("sponsorships.recordRefund", {
+      paymentId: seeded.paymentId,
+    });
+    expect((await paymentRow(seeded.paymentId)).refundedCents).toBe(0);
+  });
+});
+
+describe("lost races, Mollie failures, no Mollie key, renewals (M6)", () => {
+  it("reject and cancel lose a race as INVALID_STATE stale", async () => {
+    const id = (await seedCheckout({ status: "in_review" }))
+      .sponsorshipIds[0] as string;
+    expect(
+      await failure(
+        callOver(
+          racingD1("UPDATE sponsorship SET status = 'live' WHERE id = ?", id),
+          "sponsorships.reject",
+          { id, reason: "Nee" }
+        )
+      )
+    ).toMatchObject({ code: "INVALID_STATE", data: { reason: "stale" } });
+    expect(await eventCount(id)).toBe(0);
+
+    const seeded = await seedCheckout({ count: 2 });
+    expect(
+      await failure(
+        callOver(
+          racingD1(
+            "UPDATE payment SET status = 'paid' WHERE id = ?",
+            seeded.paymentId
+          ),
+          "sponsorships.cancel",
+          { paymentId: seeded.paymentId }
+        )
+      )
+    ).toMatchObject({ code: "INVALID_STATE", data: { reason: "stale" } });
+    const statuses = await Promise.all(
+      seeded.sponsorshipIds.map(
+        async (sid) => (await sponsorshipRow(sid)).status
+      )
+    );
+    expect(statuses).toEqual(["awaiting_payment", "awaiting_payment"]);
+  });
+
+  it("a Mollie outage is INVALID_STATE paymentProvider, and nothing changes", async () => {
+    const seeded = await seedCheckout({ count: 2, mollie: true });
+    testMollie.failNext(503);
+    const logged = quietErrors();
+    expect(
+      await failure(
+        callAs(admin, "sponsorships.markPaid", { paymentId: seeded.paymentId })
+      )
+    ).toMatchObject({
+      code: "INVALID_STATE",
+      data: { reason: "paymentProvider" },
+    });
+    logged.mockRestore();
+    expect((await paymentRow(seeded.paymentId)).status).toBe("open");
+  });
+
+  it("without a Mollie key: mark paid is local only, record refund is paymentsUnavailable", async () => {
+    const seeded = await seedCheckout({ mollie: true });
+    await expect(
+      callWithoutMollie("sponsorships.markPaid", {
+        paymentId: seeded.paymentId,
+      })
+    ).resolves.toMatchObject({ result: "marked_paid" });
+    expect((await paymentRow(seeded.paymentId)).status).toBe("paid");
+    expect(testMollie.payments.get(seeded.mollieId as string)?.status).toBe(
+      "open"
+    );
+    expect(
+      await failure(
+        callWithoutMollie("sponsorships.recordRefund", {
+          paymentId: seeded.paymentId,
+        })
+      )
+    ).toMatchObject({
+      code: "INVALID_STATE",
+      data: { reason: "paymentsUnavailable" },
+    });
+  });
+
+  it("mark paid renews, cancel only marks a renewal payment", async () => {
+    const endsAt = new Date(Date.now() + 20 * DAY_MS);
+    const live = await seedCheckout({
+      endsAt,
+      paymentStatus: "paid",
+      startsAt: new Date(endsAt.getTime() - 365 * DAY_MS),
+      status: "expiring",
+    });
+    const id = live.sponsorshipIds[0] as string;
+    const renewal = await seedRenewal(id);
+    await expect(
+      callAs(admin, "sponsorships.markPaid", { paymentId: renewal })
+    ).resolves.toMatchObject({ result: "marked_paid", sponsorshipIds: [id] });
+    const renewed = await sponsorshipRow(id);
+    expect(renewed.status).toBe("live");
+    expect(renewed.endsAt?.getTime()).toBe(endsAt.getTime() + 365 * DAY_MS);
+
+    const second = await seedRenewal(id);
+    await callAs(admin, "sponsorships.cancel", { paymentId: second });
+    expect((await paymentRow(second)).status).toBe("canceled");
+    expect((await sponsorshipRow(id)).status).toBe("live");
+  });
+
+  it("the raw token reaches no log", async () => {
+    const id = (await seedCheckout({ status: "in_review" }))
+      .sponsorshipIds[0] as string;
+    const spies = (["log", "info", "warn", "error"] as const).map((method) =>
+      vi.spyOn(console, method)
+    );
+    const link = await callAs<{ url: string }>(
+      admin,
+      "sponsorships.requestChanges",
+      { id }
+    );
+    const raw = new URL(link.url).searchParams.get("token") as string;
+    const logged = JSON.stringify(spies.flatMap((spy) => spy.mock.calls));
+    for (const spy of spies) {
+      spy.mockRestore();
+    }
+    expect(logged).not.toContain(raw);
+  });
+});
+
+describe("the status-filtered list keeps the created index (M1)", () => {
+  it("plans the Review tab and a combined filter without a sort", async () => {
+    const db = testDb();
+    const shapes = [
+      statusFilter(["in_review"]),
+      statusFilter(["live", "expiring"]),
+      sql`${statusFilter(["in_review"])} AND ${sponsorshipFilters({
+        q: "acme",
+        refundNeeded: true,
+      })}`,
+    ];
+    const plans = await Promise.all(
+      shapes.map(async (filters) => {
+        const query = adminSponsorshipsQuery(db, filters, null, 50).toSQL();
+        const { results } = await env.DB.prepare(
+          `EXPLAIN QUERY PLAN ${query.sql}`
+        )
+          .bind(...query.params)
+          .all<{ detail: string }>();
+        return results.map((row) => row.detail);
+      })
+    );
+    for (const plan of plans) {
+      expect(plan).toContain(
+        "SCAN sponsorship USING INDEX sponsorship_created_id_idx"
+      );
+      expect(plan.some((step) => step.includes("TEMP B-TREE"))).toBe(false);
+    }
   });
 });

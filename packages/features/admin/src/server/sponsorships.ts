@@ -113,9 +113,13 @@ const BLOCKING: readonly SponsorshipStatus[] = BLOCKING_SPONSORSHIP_STATUSES;
 /**
  * Whether the `payment` row named `alias` needs the admin: `refund_needed`
  * with no refund recorded yet (ruling 4), or a chargeback while one of its
- * sponsorships still holds its gesture (the admin cancels or force-expires
- * it; task 3 fix round 1, I-3). The dashboard counts these payments, and
- * the list's `refundNeeded` filter finds their sponsorships.
+ * sponsorships still holds its gesture (task 3 fix round 1, I-3). A
+ * charged-back payment is `paid`, so cancel (open payments only) does not
+ * apply: the admin force-expires a `live`/`expiring` sponsorship or rejects
+ * one `in_review`/`changes_requested`; one still `rendering` or
+ * `render_failed` stays flagged until its render ends (fix round 1, M7).
+ * The dashboard counts these payments, and the list's `refundNeeded`
+ * filter finds their sponsorships.
  */
 export function paymentNeedsAdmin(alias: string): SQL {
   const p = sql.raw(`"${alias}"`);
@@ -193,10 +197,16 @@ export function sponsorshipFilters(input: {
   );
 }
 
+/**
+ * `status IN (…)` written as `+status`: the unary `+` keeps SQLite from
+ * choosing `sponsorship_status_ends_at_idx` and sorting, so a status tab
+ * (the default Review tab) scans `sponsorship_created_id_idx` in order
+ * whatever the statistics (fix round 1, M1).
+ */
 export function statusFilter(
   statuses: readonly SponsorshipStatus[] | undefined
 ): SQL | undefined {
-  return statuses ? inList(sponsorship.status, statuses) : undefined;
+  return statuses ? inList(sql`+${sponsorship.status}`, statuses) : undefined;
 }
 
 /**
@@ -562,6 +572,9 @@ async function refusing<T>(
     if (reason) {
       throw errors.INVALID_STATE({ data: { reason } });
     }
+    if (error instanceof StaleError) {
+      throw errors.INVALID_STATE({ data: { reason: "stale" } });
+    }
     if (error instanceof MollieApiError) {
       console.error(`[admin] Mollie failed while trying to ${label}:`, error);
       throw errors.INVALID_STATE({ data: { reason: "paymentProvider" } });
@@ -632,21 +645,38 @@ async function enqueueAfter(
   }
 }
 
-/** Settles Mollie's payment as the webhook does, then enqueues its fan-out. */
+/** A state that moved on under the action: `INVALID_STATE stale`. */
+class StaleError extends Error {
+  constructor(message: string) {
+    super(`[admin] ${message}`);
+    this.name = "StaleError";
+  }
+}
+
+/**
+ * Settles Mollie's payment as the webhook does, with the admin's audit
+ * entries (`audits`) in the settlement's final batch (fix round 1, I1),
+ * then enqueues its fan-out. Answers the settle outcome; `stale` when the
+ * payment is no longer ours (it was found by its Mollie id).
+ */
 async function settleAndEnqueue(
   deps: AdminDeps,
   db: Db,
-  fetched: MolliePayment,
-  now: Date
-): Promise<void> {
-  const result = await deps.sponsorships.settle(db, { now, payment: fetched });
+  input: { audits: Statement[]; fetched: MolliePayment; now: Date }
+): Promise<string> {
+  const result = await deps.sponsorships.settle(db, {
+    extra: input.audits,
+    now: input.now,
+    payment: input.fetched,
+  });
   if (!result) {
-    return;
+    throw new StaleError("the payment is not ours");
   }
   await enqueueAfter(deps, [
     ...result.events.map((event) => ({ event, kind: "event" as const })),
     ...result.notify.map((email) => ({ email, kind: "email" as const })),
   ]);
+  return result.outcome;
 }
 
 function mollieFor(context: RpcContext, deps: AdminDeps): MollieClient | null {
@@ -655,7 +685,10 @@ function mollieFor(context: RpcContext, deps: AdminDeps): MollieClient | null {
 
 interface PaymentBrief {
   amountCents: number;
+  /** The items mark paid moves (`awaiting_payment`; a renewal's one item). */
+  changing: ReadonlySet<string>;
   id: string;
+  kind: AdminPayment["kind"];
   mollieId: string | null;
   sponsorshipIds: string[];
   status: AdminPayment["status"];
@@ -670,6 +703,7 @@ async function paymentBrief(
       .select({
         amountCents: payment.amountCents,
         id: payment.id,
+        kind: payment.kind,
         mollieId: payment.mollieId,
         status: payment.status,
       })
@@ -677,13 +711,30 @@ async function paymentBrief(
       .where(eq(payment.id, paymentId))
       .limit(1),
     db
-      .select({ id: paymentItem.sponsorshipId })
+      .select({
+        id: paymentItem.sponsorshipId,
+        status: aliased(sponsorship.status, "item_status"),
+      })
       .from(paymentItem)
+      .innerJoin(sponsorship, eq(sponsorship.id, paymentItem.sponsorshipId))
       .where(eq(paymentItem.paymentId, paymentId))
       .orderBy(asc(paymentItem.sponsorshipId)),
   ]);
   const [row] = rows;
-  return row ? { ...row, sponsorshipIds: items.map((item) => item.id) } : null;
+  if (!row) {
+    return null;
+  }
+  return {
+    ...row,
+    changing: new Set(
+      items
+        .filter(
+          (item) => row.kind === "renewal" || item.status === "awaiting_payment"
+        )
+        .map((item) => item.id)
+    ),
+    sponsorshipIds: items.map((item) => item.id),
+  };
 }
 
 /**
@@ -704,12 +755,26 @@ async function mollieView(
   return fetched ? { fetched, mollie } : null;
 }
 
-/** Cancels at Mollie while it can; the local cancel follows either way. */
+/**
+ * Cancels at Mollie while it can, **after** the local commit (fix round 1,
+ * I2): best effort, a failure is logged, never thrown. Mollie's later
+ * `canceled` webhook then finds our payment final and changes nothing; if
+ * the customer pays in between, ruling 6 flags it (`refund_needed`, paid
+ * twice) or revives it (late paid).
+ */
 async function cancelAtMollie(
   view: { fetched: MolliePayment; mollie: MollieClient } | null
 ): Promise<void> {
-  if (view?.fetched.isCancelable) {
+  if (!view?.fetched.isCancelable) {
+    return;
+  }
+  try {
     await cancelPayment(view.mollie, view.fetched.id);
+  } catch (error) {
+    console.error(
+      `[admin] Failed to cancel the Mollie payment ${view.fetched.id} after the local change:`,
+      error
+    );
   }
 }
 
@@ -822,11 +887,23 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
             const now = new Date();
             const view = await mollieView(context, deps, brief);
             if (view?.fetched.status === "paid") {
-              // The money arrived: settle it as the webhook would, and refuse.
-              await settleAndEnqueue(deps, context.db, view.fetched, now);
+              // The money arrived: settle it as the webhook would, with the
+              // refused cancel audited in the settlement's batch, and refuse.
+              await settleAndEnqueue(deps, context.db, {
+                audits: brief.sponsorshipIds.map((id) =>
+                  auditStatement(context.db, {
+                    action: "sponsorship.cancel",
+                    actorId: context.user.id,
+                    data: { paymentId: brief.id, refused: "paid" },
+                    targetId: id,
+                    targetType: "sponsorship",
+                  })
+                ),
+                fetched: view.fetched,
+                now,
+              });
               throw errors.INVALID_STATE({ data: { reason: "paid" } });
             }
-            await cancelAtMollie(view);
             const plan = await services.cancelPayment(context.db, {
               actorId: context.user.id,
               now,
@@ -844,6 +921,7 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
                 })
               ),
             ]);
+            await cancelAtMollie(view);
             await enqueueAfter(deps, plan.after);
             return {
               paymentId: input.paymentId,
@@ -927,35 +1005,39 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
             }
             const now = new Date();
             const view = await mollieView(context, deps, brief);
+            const note = input.note ? { note: input.note } : {};
             if (view?.fetched.status === "paid") {
-              // Mollie has the money: settled normally (ruling 14), and the
-              // admin's action is recorded per sponsorship.
-              await settleAndEnqueue(deps, context.db, view.fetched, now);
-              await commit(
-                context.db,
-                brief.sponsorshipIds.map((id) =>
+              // Mollie has the money: settled normally (ruling 14), with
+              // the admin's entries in the settlement's batch (I1).
+              const outcome = await settleAndEnqueue(deps, context.db, {
+                audits: brief.sponsorshipIds.map((id) =>
                   auditStatement(context.db, {
                     action: "sponsorship.mark_paid",
                     actorId: context.user.id,
-                    data: { paymentId: brief.id, source: "mollie" },
+                    data: { paymentId: brief.id, source: "mollie", ...note },
                     targetId: id,
                     targetType: "sponsorship",
                   })
-                )
-              );
+                ),
+                fetched: view.fetched,
+                now,
+              });
               return {
                 paymentId: brief.id,
-                result: "settled" as const,
+                result:
+                  outcome === "refund_needed"
+                    ? ("refund_needed" as const)
+                    : ("settled" as const),
                 sponsorshipIds: brief.sponsorshipIds,
               };
             }
-            await cancelAtMollie(view);
             const plan = await services.markPaid(context.db, {
               actorId: context.user.id,
               now,
               paymentId: input.paymentId,
-              ...(input.note ? { note: input.note } : {}),
+              ...note,
             });
+            // Committed first, then cancelled at Mollie (I2).
             await commit(context.db, [
               ...plan.statements,
               ...plan.sponsorshipIds.map((id) =>
@@ -965,13 +1047,16 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
                   data: {
                     paymentId: input.paymentId,
                     source: "manual",
-                    ...(input.note ? { note: input.note } : {}),
+                    ...note,
+                    // An item this payment did not move (M8).
+                    ...(brief.changing.has(id) ? {} : { changed: false }),
                   },
                   targetId: id,
                   targetType: "sponsorship",
                 })
               ),
             ]);
+            await cancelAtMollie(view);
             await enqueueAfter(deps, plan.after);
             return {
               paymentId: input.paymentId,

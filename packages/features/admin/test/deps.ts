@@ -9,16 +9,16 @@ import { adminSponsorshipServices } from "../../../api/src/admin-deps";
 import { bumpCatalogVersion } from "../../gestures/src/server/catalog-cache";
 import type { AdminDeps } from "../src/server";
 import {
+  mollieWithFaults,
   muxWithDeletes,
   recordingQueues,
-  testMollie,
 } from "./sponsorship-fakes";
 
 export const adminDeps: AdminDeps = {
   bumpCatalogVersion,
   // Production leaves the fetches unset (the Worker's fetch, to
   // MOLLIE_API_URL and MUX_API_URL) and reads the Worker's queues.
-  mollieFetch: testMollie.fetch,
+  mollieFetch: mollieWithFaults,
   muxFetch: muxWithDeletes,
   queues: recordingQueues,
   sponsorships: adminSponsorshipServices,
