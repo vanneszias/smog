@@ -378,7 +378,6 @@
     "about": "Over dit gebaar",
     "keywords": "Verwante begrippen",
     "related": "Verwante gebaren",
-    "sponsoredBy": "Gesponsord door {{name}}",
     "share": "Gebaar delen",
     "shareMessage": "{{name}} in SMOG: {{url}}",
     "notFound": {
