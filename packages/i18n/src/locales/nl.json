@@ -596,7 +596,7 @@
         "preheader": "Je sponsoring loopt af op {{date}}.",
         "heading": "Je sponsoring verloopt binnenkort",
         "body": "Je sponsoring van {{gesture}} loopt af op {{date}}, binnen 30 dagen. Daarna toont het gebaar weer de oorspronkelijke video.",
-        "renew": "Wil je nog een jaar sponsoren? Verleng dan met de knop hieronder. Je betaalt hetzelfde bedrag als vorig jaar.",
+        "renew": "Wil je nog een jaar sponsoren? Verleng dan met de knop hieronder. Een verlenging is een nieuwe betaling voor een extra jaar, tegen de dan getoonde prijs.",
         "button": "Sponsoring verlengen",
         "footer": "De link werkt tot je sponsoring afloopt. Wil je niet verlengen? Dan hoef je niets te doen."
       },

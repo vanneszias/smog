@@ -89,8 +89,9 @@ export interface RenderOptions {
 
 /**
  * A template could not be rendered from its props (a missing or malformed
- * prop, a non-http link). Retrying cannot help, so the email consumer
- * drops such a message instead of retrying it; a failed send is not this.
+ * prop, a non-http link): a producer bug or version skew, and a failed
+ * send is not this. The email consumer retries it like a failed send, so
+ * after the retries the DLQ keeps the message for a replay once fixed.
  */
 export class EmailRenderError extends Error {
   override name = "EmailRenderError";

@@ -602,7 +602,7 @@
         "preheader": "Votre parrainage se termine le {{date}}.",
         "heading": "Votre parrainage se termine bientôt",
         "body": "Votre parrainage pour {{gesture}} se termine le {{date}}, dans moins de 30 jours. Ensuite, le geste affichera de nouveau sa vidéo d'origine.",
-        "renew": "Vous souhaitez parrainer une année de plus\u00a0? Prolongez avec le bouton ci-dessous. Vous payez le même montant que l'an dernier.",
+        "renew": "Vous souhaitez parrainer une année de plus\u00a0? Prolongez avec le bouton ci-dessous. Un renouvellement est un nouveau paiement pour une année supplémentaire, au prix alors indiqué.",
         "button": "Prolonger le parrainage",
         "footer": "Le lien fonctionne jusqu'à la fin de votre parrainage. Vous ne souhaitez pas prolonger\u00a0? Vous n'avez rien à faire."
       },

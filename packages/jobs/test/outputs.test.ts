@@ -89,6 +89,33 @@ describe("enqueueOutputs", () => {
     );
   });
 
+  it("drops an invalid email, logged, and still enqueues the others, even in throw mode (fix wave, jobs M-1)", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const email = queue<EmailMessage>();
+    const events = queue<EventMessage>();
+    const bad = { ...EMAIL, idempotencyKey: "welcome:u-2", to: "not-an-email" };
+    const good = { ...EMAIL, idempotencyKey: "welcome:u-3" };
+    for (const onFailure of ["log", "throw"] as const) {
+      email.sent.length = 0;
+      // biome-ignore lint/performance/noAwaitInLoops: one mode after the other.
+      const all = await enqueueOutputs(
+        { email: email.producer, events: events.producer },
+        { events: [EVENT], notify: [EMAIL, bad, good] },
+        { ...noWait, onFailure }
+      );
+      expect(all).toBe(false);
+      expect(email.sent.map((m) => m.idempotencyKey)).toEqual([
+        "welcome:u-1",
+        "welcome:u-3",
+      ]);
+    }
+    expect(error).toHaveBeenCalledWith(
+      "[jobs] Dropped an invalid transactional/welcome message"
+    );
+  });
+
   it("does nothing for empty outputs, bound queues or not", async () => {
     expect(await enqueueOutputs({}, { events: [], notify: [] })).toBe(true);
   });

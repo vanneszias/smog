@@ -27,6 +27,21 @@ export interface QueueProducer<Body> {
 
 export const ENQUEUE_RETRY_DELAYS_MS = [100, 400, 1600] as const;
 
+/**
+ * A message that cannot be enqueued as it is (it fails its schema, or is
+ * over 128 KB): a bug or bad data, which no retry fixes.
+ */
+export class InvalidMessageError extends Error {
+  /** The template or event type, for the log line. */
+  readonly what: string;
+
+  constructor(message: string, what: string) {
+    super(message);
+    this.name = "InvalidMessageError";
+    this.what = what;
+  }
+}
+
 export interface EnqueueOptions {
   /** `log` (default): log and swallow after the retries; `throw`: rethrow. */
   onFailure?: "log" | "throw";
@@ -74,8 +89,9 @@ async function sendWithRetries<Body>(
 /**
  * Validates an email (a new `id`, the schema, at most 128 KB) and puts it
  * on `EMAIL_QUEUE`. Returns the message, or `null` when the queue stayed
- * down and the failure was swallowed. An invalid message always throws: it
- * is a bug, and retrying would not help.
+ * down and the failure was swallowed. An invalid message always throws
+ * `InvalidMessageError`: retrying would not help (`enqueueOutputs` drops
+ * it and goes on).
  */
 export async function enqueueEmail(
   queue: QueueProducer<EmailMessage>,
@@ -85,18 +101,20 @@ export async function enqueueEmail(
   const message = { ...email, id: newId() } as EmailMessage;
   const parsed = emailMessageSchema.safeParse(message);
   if (!parsed.success) {
-    const error = new TypeError(
+    const error = new InvalidMessageError(
       `[jobs] Invalid email message for ${String(email.template)}: ${parsed.error.issues
         .map((issue) => issue.path.join("."))
-        .join(", ")}`
+        .join(", ")}`,
+      String(email.template)
     );
     console.error(error.message);
     throw error;
   }
   const bytes = messageBytes(message);
   if (bytes > EMAIL_MESSAGE_MAX_BYTES) {
-    const error = new RangeError(
-      `[jobs] The ${message.template} message is ${bytes} bytes; a queue message holds at most 128 KB`
+    const error = new InvalidMessageError(
+      `[jobs] The ${message.template} message is ${bytes} bytes; a queue message holds at most 128 KB`,
+      message.template
     );
     console.error(error.message);
     throw error;
@@ -116,8 +134,9 @@ export async function enqueueEvent(
 ): Promise<boolean> {
   const parsed = eventMessageSchema.safeParse(event);
   if (!parsed.success) {
-    const error = new TypeError(
-      `[jobs] Invalid event message: ${JSON.stringify(event)}`
+    const error = new InvalidMessageError(
+      `[jobs] Invalid event message: ${JSON.stringify(event)}`,
+      String((event as { type?: unknown }).type)
     );
     console.error(error.message);
     throw error;

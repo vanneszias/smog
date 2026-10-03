@@ -10,8 +10,8 @@ import {
  * The outbox on `EMAIL_QUEUE` (ruling 8): each `send` is one queue message,
  * rendered and sent by the email consumer (`processEmailMessage`). It
  * throws when the queue stays down after the retries, and the caller
- * decides: Better Auth hands its emails over after the response
- * (`waitUntil`) and logs the failure, so the user asks for a new code; the
+ * decides: Better Auth hands its emails over before it answers, and a
+ * failure answers `503 EMAIL_NOT_SENT`, so the user asks again; the
  * welcome hook logs and goes on. Pass `{ onFailure: "log" }` to swallow.
  */
 export class QueueEmailOutbox implements EmailOutbox {
