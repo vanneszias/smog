@@ -22,7 +22,7 @@ export const SPONSORSHIP_TABS = [
 export type SponsorshipTab = (typeof SPONSORSHIP_TABS)[number];
 
 /** The statuses of each status tab. */
-export const TAB_STATUSES = {
+const TAB_STATUSES = {
   awaiting: ["awaiting_payment"],
   closed: ["rejected", "cancelled", "expired"],
   live: ["live", "expiring"],

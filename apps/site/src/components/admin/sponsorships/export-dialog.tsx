@@ -34,7 +34,7 @@ const ALL = "all";
  * Saves a file the browser holds (an object URL and a temporary link): the
  * export is an oRPC answer, so there is no URL to navigate to.
  */
-export function downloadFile(file: File): void {
+function downloadFile(file: File): void {
   const url = URL.createObjectURL(file);
   const link = document.createElement("a");
   link.href = url;
