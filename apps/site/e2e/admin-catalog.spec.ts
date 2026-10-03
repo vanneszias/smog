@@ -577,7 +577,7 @@ async function reorderByKeyboard(
   const handle = page.getByRole("button", {
     name: `Slepen om de volgorde te wijzigen: ${first.name}`,
   });
-  await expect(handle).toBeVisible();
+  await expect(handle).toBeVisible({ timeout: STEP_MS });
   const from = hidden.findIndex((item) => item.id === first.id) + 1;
   const position = hidden.findIndex((item) => item.id === second.id) + 1;
   // Each key waits for the drag's own state (task 7 review I6). dnd-kit
@@ -587,16 +587,19 @@ async function reorderByKeyboard(
   // target and the drop is a no-op. So: wait for the handle to be pressed
   // and for the announcement at `from`, then press ArrowDown until the
   // region announces `position` (a press that came too early did nothing).
-  await handle.focus();
+  // Every wait here is bounded on its own line (no global actionTimeout).
+  await handle.focus({ timeout: STEP_MS });
   await page.keyboard.press("Space");
-  await expect(handle).toHaveAttribute("aria-pressed", "true");
+  await expect(handle).toHaveAttribute("aria-pressed", "true", {
+    timeout: STEP_MS,
+  });
   await expect(
     page.getByText(
       new RegExp(
         `^${escapeRegExp(first.name)} (opgepakt, positie|verplaatst naar positie) ${from} van`
       )
     )
-  ).toBeAttached();
+  ).toBeAttached({ timeout: STEP_MS });
   const moved = page.getByText(
     `${first.name} verplaatst naar positie ${position} van`,
     { exact: false }
@@ -616,8 +619,10 @@ async function reorderByKeyboard(
     page.getByText(
       `${first.name} neergezet op positie ${position} van ${hidden.length}.`
     )
-  ).toBeAttached();
-  await expect.poll(mine).toEqual([second.name, first.name]);
+  ).toBeAttached({ timeout: STEP_MS });
+  await expect
+    .poll(mine, { timeout: STEP_MS })
+    .toEqual([second.name, first.name]);
   expect(await blockingViolations(page)).toEqual([]);
 }
 

@@ -101,9 +101,10 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
   use: {
-    // Every action (a click, a focus) fails on its own line after 15 s
-    // instead of hanging until the test times out (task 7 review I6).
-    actionTimeout: 15_000,
+    // No global actionTimeout: it also becomes the context's default for
+    // `request` calls, `waitForFunction` (hydration) and `waitForResponse`
+    // (phase 6 review M-8). A step that must fail on its own line sets its
+    // own timeout (the catalogue reorder, `STEP_MS`).
     baseURL: `http://localhost:${PORT}`,
     // Accept-Language picks the page language (no cookie yet): Dutch, the default.
     locale: "nl-BE",
