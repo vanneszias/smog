@@ -5,7 +5,7 @@ import {
   E2E_SEED_MARKER,
   e2eSeedEnabled,
   e2eSeedSchema,
-  seedStatement,
+  seedStatements,
 } from "./e2e-seed";
 
 const bodySchema = z.array(e2eSeedSchema).min(1).max(20);
@@ -35,7 +35,7 @@ export async function e2eSeed(request: Request): Promise<Response> {
   }
   try {
     const results = await db.batch(
-      parsed.data.map((seed) => seedStatement(db, seed))
+      parsed.data.flatMap((seed) => seedStatements(db, seed))
     );
     return Response.json({
       changes: results.map((result) => result.meta.changes),

@@ -4,6 +4,7 @@ import { createTestDb, makeCategory, makeGesture } from "@smog/db/testing";
 import { bumpCatalogVersion, reindexGesture } from "@smog/gestures/server";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  gestureIdParam,
   LEGACY_REDIRECTS,
   legacyRedirectTarget,
   needsCategoryLookup,
@@ -12,6 +13,8 @@ import {
 const ORIGIN = "http://localhost:5173";
 /** An old Convex id, as printed on QR codes (inventory §7). */
 const LEGACY_ID = "k17a0legacyredirecttest000000";
+/** The test gesture's id (a v4 UUID, set in `beforeAll`). */
+let halloId = "";
 /** A same-site path: one slash, never `//` or `/\`. */
 const SITE_PATH = /^\/(?![/\\])/;
 const OLD_PATH = /^\/[a-z-]+(\/[a-z-]+)?$/;
@@ -47,6 +50,14 @@ beforeAll(async () => {
     publishedAt: new Date(),
     slug: "hallo",
   });
+  halloId = row.id;
+  // Unpublished: an old link to it opens the wizard empty.
+  await makeGesture(db, {
+    legacyId: "k17a0legacyredirectdraft00000",
+    name: "Concept",
+    publishedAt: null,
+    slug: "concept-gebaar",
+  });
   await db
     .insert(gestureCategory)
     .values({ categoryId: category.id, gestureId: row.id });
@@ -67,7 +78,9 @@ describe("the legacy redirect table (spec §9, inventory §7)", () => {
   it.each([
     ["/sponsors", "/sponsor"],
     ["/sponsors/", "/sponsor"],
-    ["/sponsors?gestureId=j57abc", "/sponsor?gestureId=j57abc"],
+    // R-11: without the D1 lookup, an old gesture id is dropped.
+    ["/sponsors?gestureId=j57abc", "/sponsor"],
+    ["/sponsor?gestureId=j57abc&x=1", "/sponsor?x=1"],
     ["/sponsors/re-edit?token=abc-123", "/sponsor/edit?token=abc-123"],
     ["/sponsors/re-edit/", "/sponsor/edit"],
     [
@@ -117,6 +130,36 @@ describe("the legacy redirect table (spec §9, inventory §7)", () => {
       needsCategoryLookup(new URL("/gestures?category=gevoelens-2", ORIGIN))
     ).toBe(false);
     expect(needsCategoryLookup(new URL("/login", ORIGIN))).toBe(false);
+  });
+
+  it("renames ?gestureId= to the wizard's ?gesture=<slug> (R-11, ruling 13)", () => {
+    const at = (path: string, slug: string | null) =>
+      legacyRedirectTarget(new URL(path, ORIGIN), new Map(), slug);
+    expect(at("/sponsors?gestureId=k17&utm_source=qr", "hallo")).toBe(
+      "/sponsor?gesture=hallo&utm_source=qr"
+    );
+    expect(at("/sponsor/?gestureId=k17", "hallo")).toBe(
+      "/sponsor?gesture=hallo"
+    );
+    expect(at("/Sponsors?gestureId=k17", "hallo")).toBe(
+      "/sponsor?gesture=hallo"
+    );
+    expect(at("/sponsors?gestureId=x&gestureId=y", "hallo")).toBe(
+      "/sponsor?gesture=hallo"
+    );
+    expect(at("/sponsor?gestureId=nope&q=1", null)).toBe("/sponsor?q=1");
+    // The current URL and the other sponsor pages are left alone.
+    expect(at("/sponsor?gesture=hallo", "hallo")).toBeNull();
+    expect(at("/sponsor/success?gestureId=k17", "hallo")).toBeNull();
+    expect(gestureIdParam(new URL("/sponsors?gestureId=k17", ORIGIN))).toBe(
+      "k17"
+    );
+    expect(gestureIdParam(new URL("/sponsor?gesture=hallo", ORIGIN))).toBe(
+      null
+    );
+    expect(gestureIdParam(new URL("/gestures?gestureId=k17", ORIGIN))).toBe(
+      null
+    );
   });
 
   it("matches the old paths case-insensitively, like the old router (review M5)", () => {
@@ -211,6 +254,40 @@ describe("the Worker applies the table first", () => {
     expect(response.headers.get("location")).toBe(
       "/gestures?category=gevoelens-2"
     );
+  });
+
+  it.each([
+    ["the id", () => halloId],
+    ["the legacy id", () => LEGACY_ID],
+    ["the slug", () => "hallo"],
+  ])(
+    "sends an old /sponsors?gestureId=<%s> to the wizard preselected, in one hop (R-11)",
+    async (_, value) => {
+      const response = await get(
+        `/sponsors?gestureId=${encodeURIComponent(value())}&utm_source=qr`
+      );
+      expect(response.status).toBe(301);
+      expect(response.headers.get("location")).toBe(
+        "/sponsor?gesture=hallo&utm_source=qr"
+      );
+      const current = await get(`/sponsor?gestureId=${value()}`);
+      expect(current.status).toBe(301);
+      expect(current.headers.get("location")).toBe("/sponsor?gesture=hallo");
+    }
+  );
+
+  it("drops an unknown or unpublished gesture, so the wizard opens empty (R-11)", async () => {
+    for (const value of [
+      "k17a0doesnotexist000000000000",
+      "k17a0legacyredirectdraft00000",
+      "concept-gebaar",
+      "x".repeat(300),
+    ]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one request at a time.
+      const response = await get(`/sponsors?gestureId=${value}&x=1`);
+      expect(response.status, value).toBe(301);
+      expect(response.headers.get("location"), value).toBe("/sponsor?x=1");
+    }
   });
 
   it("keeps /favorites (now a real page)", async () => {
