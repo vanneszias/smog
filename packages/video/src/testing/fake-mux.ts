@@ -3,7 +3,7 @@ import { muxSignature } from "../webhooks";
 
 /**
  * An in-memory Mux Video API: a `fetch` that answers the endpoints
- * `@smog/video` calls (create/get upload, get/list assets) plus the
+ * `@smog/video` calls (create/get upload, get/list/delete assets) plus the
  * browser's `PUT` to the upload URL, so the real client code runs against
  * it. No network. The Bun fake server (`./fake-server`) serves the same
  * handler over HTTP for e2e.
@@ -278,6 +278,15 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     return json({ data });
   }
 
+  /** `DELETE /video/v1/assets/:id`: 204, or 404 for an unknown asset. */
+  function deleteAssetRoute(pathname: string): Response {
+    const assetId = idIn(ASSET_PATH, pathname);
+    if (assetId === null || !assets.delete(assetId)) {
+      return notFound();
+    }
+    return new Response(null, { status: 204 });
+  }
+
   function getRoute(pathname: string): Response {
     const uploadId = idIn(UPLOAD_PATH, pathname);
     if (uploadId !== null) {
@@ -319,6 +328,9 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/video/v1/uploads") {
       return createUploadRoute(body);
+    }
+    if (request.method === "DELETE") {
+      return deleteAssetRoute(url.pathname);
     }
     if (request.method !== "GET") {
       return notFound();

@@ -11,6 +11,10 @@
  */
 import type { Locale } from "@smog/config/constants";
 import {
+  MOLLIE_DEFAULT_API_URL,
+  type WorkerEnv,
+} from "@smog/config/env/worker";
+import {
   type PaymentKind,
   payment,
   paymentItem,
@@ -23,6 +27,38 @@ import { createPayment, type MollieClient } from "@smog/payments";
 import { and, eq, isNull } from "drizzle-orm";
 import { paymentGuard } from "./statements";
 import { transitionStatements } from "./transition";
+
+const PAYMENT_ID_TAKEN = "UNIQUE constraint failed: payment.id";
+
+/**
+ * Whether a batch failed because the payment id (the client's
+ * `checkoutId`) exists already: a concurrent repeat of the same checkout.
+ */
+export function isPaymentIdTaken(error: unknown): boolean {
+  for (let e: unknown = error; e instanceof Error; e = e.cause) {
+    if (e.message.includes(PAYMENT_ID_TAKEN)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether Mollie can reach a `localhost` webhook: only the local Mollie
+ * fake can (dev, `MOLLIE_API_URL` not the real API; ruling 2).
+ */
+export function allowFakeWebhook(
+  env: Pick<WorkerEnv, "ENVIRONMENT" | "MOLLIE_API_URL">
+): boolean {
+  if (env.ENVIRONMENT !== "dev") {
+    return false;
+  }
+  try {
+    return new URL(env.MOLLIE_API_URL).origin !== MOLLIE_DEFAULT_API_URL;
+  } catch {
+    return false;
+  }
+}
 
 /** Mollie could not create the payment; the compensation has run. */
 export class PaymentProviderError extends Error {

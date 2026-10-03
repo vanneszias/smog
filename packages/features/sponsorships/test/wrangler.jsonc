@@ -17,5 +17,7 @@
   "kv_namespaces": [
     { "binding": "KV", "id": "00000000000000000000000000000000" }
   ],
+  // The logo bucket (task 4: the checkout and the upload route; task 5:
+  // the re-edit and the retention purge's logo sweep).
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "smog-test-media" }]
 }

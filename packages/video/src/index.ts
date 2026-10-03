@@ -8,6 +8,7 @@
  */
 
 export {
+  deleteAsset,
   getAsset,
   listAssets,
   type MuxAsset,

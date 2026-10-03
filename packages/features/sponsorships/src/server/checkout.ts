@@ -18,7 +18,6 @@
  */
 import { ORPCError } from "@orpc/server";
 import type { Locale } from "@smog/config/constants";
-import { MOLLIE_DEFAULT_API_URL } from "@smog/config/env/worker";
 import {
   failWhen,
   gesture,
@@ -37,29 +36,22 @@ import type { RpcEnv } from "@smog/rpc";
 import { newId } from "@smog/utils";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { priceSponsorship } from "../schema/pricing";
-import type { InvalidStateReason } from "../schema/status";
 import type { CheckoutInput, CheckoutResult } from "../schema/wizard";
 import { getAvailability } from "./availability";
 import { claimLogo, deleteLogo } from "./logo";
-import { PaymentProviderError, startMolliePayment } from "./mollie-payment";
+import {
+  allowFakeWebhook,
+  isPaymentIdTaken,
+  PaymentProviderError,
+  startMolliePayment,
+} from "./mollie-payment";
 import type { SponsorshipsDeps, SponsorshipsImplementer } from "./procedure";
+import { invalidState } from "./refusals";
 import { isGestureTaken } from "./statements";
 import { eventStatement } from "./transition";
 
-const PAYMENT_TAKEN = "UNIQUE constraint failed: payment.id";
 /** A gesture was unpublished between the read and the batch. */
 const UNPUBLISHED_GUARD = "gesture-unpublished";
-
-/** A typed `INVALID_STATE` with its reason. */
-function invalidState(
-  reason: InvalidStateReason
-): ORPCError<"INVALID_STATE", { reason: InvalidStateReason }> {
-  return new ORPCError("INVALID_STATE", {
-    data: { reason },
-    defined: true,
-    status: 409,
-  });
-}
 
 function gestureUnavailable(gestureIds: string[]) {
   return new ORPCError("GESTURE_UNAVAILABLE", {
@@ -75,30 +67,6 @@ export function mollieFor(
   deps: SponsorshipsDeps
 ): MollieClient | null {
   return createMollie(env, { fetch: deps.mollieFetch });
-}
-
-/**
- * Whether Mollie can reach a `localhost` webhook: only the local Mollie
- * fake can (dev, `MOLLIE_API_URL` not the real API).
- */
-function allowFakeWebhook(env: RpcEnv): boolean {
-  if (env.ENVIRONMENT !== "dev") {
-    return false;
-  }
-  try {
-    return new URL(env.MOLLIE_API_URL).origin !== MOLLIE_DEFAULT_API_URL;
-  } catch {
-    return false;
-  }
-}
-
-function isPaymentTaken(error: unknown): boolean {
-  for (let e: unknown = error; e instanceof Error; e = e.cause) {
-    if (e.message.includes(PAYMENT_TAKEN)) {
-      return true;
-    }
-  }
-  return false;
 }
 
 interface ExistingPayment {
@@ -413,7 +381,7 @@ async function afterFailedBatch(
     const missing = await unpublished(db, input.gestureIds);
     throw gestureUnavailable(missing.length > 0 ? missing : input.gestureIds);
   }
-  if (!(isGestureTaken(error) || isPaymentTaken(error))) {
+  if (!(isGestureTaken(error) || isPaymentIdTaken(error))) {
     console.error("[sponsorships] Failed to write the checkout:", error);
     throw error;
   }
