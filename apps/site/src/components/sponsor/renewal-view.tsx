@@ -5,11 +5,12 @@ import { useRenewal, useRenewalCheckout } from "@smog/sponsorships/client";
 import { Button, Card, Heading, Text } from "@smog/ui-web";
 import { DAY_MS, formatMoney } from "@smog/utils";
 import { Lock } from "lucide-react";
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useCallback } from "react";
 import { Turnstile } from "@/components/auth/turnstile";
 import { mutationErrorMessage } from "./errors";
 import { LinkState } from "./link-state";
 import { usePageLocale } from "./page-locale";
+import { useTurnstileToken } from "./use-turnstile-token";
 
 function sendToMollie(checkoutUrl: string): void {
   window.location.assign(checkoutUrl);
@@ -36,25 +37,20 @@ export function RenewalView({
   const locale = usePageLocale();
   const link = useRenewal(token);
   const checkout = useRenewalCheckout({ onRedirect: redirect });
-  const [captcha, setCaptcha] = useState<string | null>(null);
-  const [captchaKey, setCaptchaKey] = useState(0);
+  const captcha = useTurnstileToken();
   const retry = useCallback(() => {
     link.refetch().catch(() => undefined);
   }, [link]);
+  // One attempt at a time, and none while the browser leaves for Mollie
+  // (phase review M-1, as the wizard's Pay).
+  const busy = checkout.isPending || checkout.redirecting;
+  const { reset: resetCaptcha, token: turnstileToken } = captcha;
   const pay = useCallback(() => {
-    if (token === null) {
+    if (token === null || busy) {
       return;
     }
-    checkout.mutate(
-      { token, turnstileToken: captcha },
-      {
-        onError: () => {
-          setCaptcha(null);
-          setCaptchaKey((key) => key + 1);
-        },
-      }
-    );
-  }, [captcha, checkout, token]);
+    checkout.mutate({ token, turnstileToken }, { onError: resetCaptcha });
+  }, [busy, checkout, resetCaptcha, token, turnstileToken]);
 
   if (token === null || !link.data) {
     return (
@@ -83,7 +79,7 @@ export function RenewalView({
       value: formatMoney(view.amountCents, locale),
     },
   ];
-  const verified = turnstileSiteKey === null || captcha !== null;
+  const verified = turnstileSiteKey === null || captcha.token !== null;
   return (
     <div className="mx-auto flex w-full max-w-reading flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -110,8 +106,8 @@ export function RenewalView({
       </Card>
       {turnstileSiteKey ? (
         <Turnstile
-          onToken={setCaptcha}
-          resetKey={captchaKey}
+          onToken={captcha.setToken}
+          resetKey={captcha.key}
           siteKey={turnstileSiteKey}
         />
       ) : null}
@@ -124,7 +120,7 @@ export function RenewalView({
         className="self-start"
         disabled={!verified}
         icon={<Lock />}
-        loading={checkout.isPending}
+        loading={busy}
         onClick={pay}
         size="lg"
       >

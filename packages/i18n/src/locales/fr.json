@@ -220,6 +220,7 @@
       "passwordMismatch": "Les mots de passe ne sont pas identiques.",
       "invalidCredentials": "Cette adresse e-mail ou ce mot de passe est incorrect.",
       "emailNotVerified": "Votre adresse e-mail n'est pas encore confirmée. Consultez votre boîte mail ou demandez un nouvel e-mail de confirmation.",
+      "emailNotSent": "L'e-mail n'a pas pu être envoyé. Réessayez dans un instant.",
       "userExists": "Un compte existe déjà avec cette adresse e-mail. Connectez-vous.",
       "codeRequired": "Saisissez le code.",
       "codeInvalid": "Ce code est incorrect ou a expiré.",
@@ -1884,6 +1885,10 @@
       },
       "limit": "Vous pouvez parrainer jusqu'à {{max}} gestes par paiement. Retirez-en un pour en choisir un autre.",
       "taken": "Quelqu'un d'autre a été plus rapide. Ces gestes sont signalés\u00a0; choisissez-en d'autres si vous le souhaitez.",
+      "availabilityError": {
+        "title": "Disponibilité non vérifiée",
+        "description": "Nous n'avons pas pu vérifier quels gestes sont encore libres. Réessayez."
+      },
       "empty": {
         "title": "Aucun geste trouvé",
         "description": "Essayez un autre mot ou effacez les filtres."
@@ -2008,7 +2013,8 @@
       },
       "failed": {
         "title": "Le paiement n'a pas abouti",
-        "description": "Rien n'a été débité et les gestes sont à nouveau libres. Vous pouvez réessayer."
+        "description": "Rien n'a été débité et les gestes sont à nouveau libres. Vous pouvez réessayer.",
+        "renewalDescription": "Rien n'a été débité et votre parrainage continue jusqu'à sa date de fin actuelle. Utilisez le lien de votre e-mail pour réessayer."
       },
       "canceled": {
         "title": "Le paiement a été annulé"
@@ -2052,6 +2058,9 @@
         "title": "Lien expiré",
         "description": "Ce lien a expiré. Demandez un nouveau lien à SMOG.",
         "since": "Expiré le {{date}}"
+      },
+      "unavailable": {
+        "title": "Lien plus utilisable"
       },
       "back": "Retour au site"
     },

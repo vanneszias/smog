@@ -710,6 +710,161 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     );
   });
 
+  test("a failed availability read says so and retries, instead of a dead grid (phase review I-2)", async () => {
+    const read: { fail: boolean } = { fail: true };
+    await renderSite(() => <Wizard />, {
+      api: api({
+        "sponsorships/availability": (input: unknown) =>
+          read.fail
+            ? rpcError("INTERNAL_SERVER_ERROR", 500)
+            : availability()(input),
+      }),
+    });
+    const alert = await screen.findByRole("alert");
+    expect(
+      within(alert).getByRole("heading", {
+        level: 2,
+        name: "Availability could not be checked",
+      })
+    ).toBeDefined();
+    // The cards stay visible, but cannot be chosen yet.
+    expect((card("Broer") as HTMLButtonElement).disabled).toBe(true);
+    read.fail = false;
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+    await waitFor(() =>
+      expect(card("Broer").getAttribute("data-state")).toBe("available")
+    );
+    expect((card("Broer") as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  test("the grid's empty state is an h2 under the step's h1 (phase review M-5)", async () => {
+    await renderSite(() => <Wizard />, {
+      api: api({ "gestures/list": { items: [], nextCursor: null } }),
+    });
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "No gestures found",
+      })
+    ).toBeDefined();
+  });
+
+  test("Load more keeps the cards already shown enabled (phase review M-6)", async () => {
+    const page2 = Array.from({ length: 2 }, (_, index) => ({
+      ...GESTURES[0],
+      id: `00000000-0000-4000-8000-0000000003${String(index).padStart(2, "0")}`,
+      name: `Later ${index}`,
+      slug: `later-${index}`,
+    }));
+    let release: (() => void) | undefined;
+    let reads = 0;
+    await renderSite(() => <Wizard />, {
+      api: api({
+        "gestures/list": (input: unknown) =>
+          (input as { cursor?: string }).cursor === "c2"
+            ? { items: page2, nextCursor: null }
+            : { items: GESTURES, nextCursor: "c2" },
+        "sponsorships/availability": async (input: unknown) => {
+          reads += 1;
+          if (reads > 1) {
+            // Hold the second read: the first cards must keep their state.
+            await new Promise<void>((resolve) => {
+              release = resolve;
+            });
+          }
+          return availability()(input);
+        },
+      }),
+    });
+    await waitFor(() =>
+      expect(card("Broer").getAttribute("data-state")).toBe("available")
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    await screen.findByRole("button", { name: "Later 1" });
+    await waitFor(() => expect(release).toBeDefined());
+    expect(card("Broer").getAttribute("data-state")).toBe("available");
+    expect((card("Broer") as HTMLButtonElement).disabled).toBe(false);
+    act(() => release?.());
+    await waitFor(() =>
+      expect(card("Later 1").getAttribute("data-state")).toBe("available")
+    );
+  });
+
+  test("step 1 reserves the selection bar's height as scroll padding (phase review M-4)", async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      "offsetHeight"
+    );
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+      configurable: true,
+      get: () => 72,
+    });
+    try {
+      await renderSite(() => <Wizard />, { api: api() });
+      await waitFor(() =>
+        expect(card("Broer").getAttribute("data-state")).toBe("available")
+      );
+      const root = document.documentElement;
+      await waitFor(() => expect(root.style.scrollPaddingBottom).toBe("72px"));
+      fireEvent.click(card("Broer"));
+      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Configure your sponsorship",
+      });
+      await waitFor(() => expect(root.style.scrollPaddingBottom).toBe(""));
+    } finally {
+      if (descriptor) {
+        Object.defineProperty(
+          HTMLElement.prototype,
+          "offsetHeight",
+          descriptor
+        );
+      }
+    }
+  });
+
+  test("a Turnstile token does not outlive its widget: Back, or a bfcache return (phase review M-3)", async () => {
+    await renderSite(
+      () => (
+        <div data-testid="page">
+          <SponsorWizard
+            preselect={[]}
+            redirect={pushRedirect}
+            turnstileSiteKey="site-key"
+          />
+        </div>
+      ),
+      { api: api() }
+    );
+    await chooseBroerAndZus();
+    await fillDetails();
+    const payButton = () =>
+      screen.getByRole("button", {
+        name: "Continue to payment",
+      }) as HTMLButtonElement;
+    await waitFor(() => expect(widget.callback).toBeDefined());
+    act(() => widget.callback?.("token-1"));
+    await waitFor(() => expect(payButton().disabled).toBe(false));
+    // Back to the details and forward again: a new widget, a new token.
+    fireEvent.click(screen.getByRole("button", { name: "Back to details" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Continue to preview" })
+    );
+    await screen.findByRole("heading", { name: "Review your sponsorship" });
+    expect(payButton().disabled).toBe(true);
+    act(() => widget.callback?.("token-2"));
+    await waitFor(() => expect(payButton().disabled).toBe(false));
+    // A bfcache return keeps the page, but not the used token.
+    act(() => {
+      window.dispatchEvent(
+        Object.assign(new Event("pageshow"), { persisted: true })
+      );
+    });
+    await waitFor(() => expect(payButton().disabled).toBe(true));
+  });
+
   test("a paused wizard is the page's h1 (review I-3)", async () => {
     await renderSite(() => <Wizard />, {
       api: api({ "sponsorships/availability": availability({}, false) }),

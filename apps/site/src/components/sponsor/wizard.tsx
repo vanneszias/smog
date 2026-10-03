@@ -52,6 +52,7 @@ import { SelectionBar } from "./selection-bar";
 import { StepDetails } from "./step-details";
 import { StepReview } from "./step-review";
 import { type SelectSearch, StepSelect } from "./step-select";
+import { useTurnstileToken } from "./use-turnstile-token";
 
 /** A search answers one page of at most 50 (`gestures.search`). */
 const SEARCH_LIMIT = 50;
@@ -176,6 +177,13 @@ function useGrid(search: SelectSearch) {
 /**
  * `sponsorships.availability` for every id shown, in reads of at most
  * 100 (one `json_each` parameter each); `checkoutEnabled` from the first.
+ *
+ * - "Load more" and every search keystroke change the chunks' ids, so
+ *   each read is a new query with no data. An id keeps its last answered
+ *   state until its new read answers (phase review M-6), so cards already
+ *   shown never flash disabled; the server checks again at checkout.
+ * - A failed read is reported with a `retry` over the failed chunks
+ *   (phase review I-2): the step says so instead of a dead grid.
  */
 function useGridAvailability(ids: readonly string[]) {
   const sponsorships = useSponsorshipsRpc();
@@ -189,13 +197,45 @@ function useGridAvailability(ids: readonly string[]) {
   const reads = useQueries({
     queries: chunks.map((chunk) => availabilityOptions(sponsorships, chunk)),
   });
+  // The last answer per id, kept across reads (written after render).
+  const known = useRef<{
+    byId: Map<string, AvailabilityItem>;
+    checkoutEnabled: boolean | undefined;
+  }>({ byId: new Map(), checkoutEnabled: undefined });
   const byId = new Map<string, AvailabilityItem>();
+  for (const id of ids) {
+    const item = known.current.byId.get(id);
+    if (item) {
+      byId.set(id, item);
+    }
+  }
   for (const read of reads) {
     for (const item of read.data?.items ?? []) {
       byId.set(item.gestureId, item);
     }
   }
-  return { byId, checkoutEnabled: reads[0]?.data?.checkoutEnabled };
+  const checkoutEnabled =
+    reads[0]?.data?.checkoutEnabled ?? known.current.checkoutEnabled;
+  useEffect(() => {
+    for (const [id, item] of byId) {
+      known.current.byId.set(id, item);
+    }
+    known.current.checkoutEnabled = checkoutEnabled;
+  });
+  const failed = reads.filter((read) => read.isError);
+  const retry = useCallback(() => {
+    for (const read of failed) {
+      read.refetch().catch(() => undefined);
+    }
+  }, [failed]);
+  return {
+    byId,
+    checkoutEnabled,
+    error:
+      failed.length > 0
+        ? { retry, retrying: failed.some((read) => read.isFetching) }
+        : null,
+  };
 }
 
 /** Moves focus to the new step's title (and the page to the top). */
@@ -242,8 +282,8 @@ export function SponsorWizard({
   const [search, setSearch] = useState<SelectSearch>({ categories: [], q: "" });
   const [paused, setPaused] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [turnstileKey, setTurnstileKey] = useState(0);
+  const turnstile = useTurnstileToken();
+  const { reset: resetTurnstile, token } = turnstile;
   const titleRef = useStepFocus(state.step);
 
   const results = useGrid(search);
@@ -274,9 +314,11 @@ export function SponsorWizard({
   const goTo = useCallback(
     (step: WizardStep) => () => {
       setPayError(null);
+      // The widget lives on step 3: its token goes with it (review M-3).
+      resetTurnstile();
       dispatch({ step, type: "step" });
     },
-    [dispatch]
+    [dispatch, resetTurnstile]
   );
   const setDetails = useCallback(
     (patch: Partial<WizardDetails>) => dispatch({ patch, type: "details" }),
@@ -301,8 +343,7 @@ export function SponsorWizard({
       {
         onError: (error) => {
           // A Turnstile token is single use: fetch another.
-          setTurnstileKey((key) => key + 1);
-          setToken(null);
+          resetTurnstile();
           const taken = unavailableGestureIds(error);
           if (taken) {
             dispatch({ gestureIds: taken, type: "unavailable" });
@@ -329,6 +370,7 @@ export function SponsorWizard({
     dispatch,
     locale,
     queryClient,
+    resetTurnstile,
     sponsorships,
     state,
     t,
@@ -357,6 +399,7 @@ export function SponsorWizard({
       <>
         <StepSelect
           availability={availability.byId}
+          availabilityError={availability.error}
           categories={categories.data ?? []}
           onSearch={setSearch}
           onToggle={toggle}
@@ -389,11 +432,11 @@ export function SponsorWizard({
         error={payError}
         onBack={goTo(1)}
         onPay={pay}
-        onToken={setToken}
+        onToken={turnstile.setToken}
         paying={busy}
         state={state}
         titleRef={titleRef}
-        turnstileKey={turnstileKey}
+        turnstileKey={turnstile.key}
         turnstileSiteKey={turnstileSiteKey}
         verified={turnstileSiteKey === null || token !== null}
       />

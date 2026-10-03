@@ -220,6 +220,7 @@
       "passwordMismatch": "The passwords don't match.",
       "invalidCredentials": "That email address or password is incorrect.",
       "emailNotVerified": "Your email address isn't confirmed yet. Check your inbox or request a new confirmation email.",
+      "emailNotSent": "We couldn't send the email. Please try again in a moment.",
       "userExists": "An account with this email address already exists. Sign in instead.",
       "codeRequired": "Enter the code.",
       "codeInvalid": "That code is incorrect or has expired.",
@@ -1847,6 +1848,10 @@
       },
       "limit": "You can sponsor up to {{max}} gestures per payment. Deselect one to choose another.",
       "taken": "Someone else was just ahead of you. Those gestures are marked; choose others if you like.",
+      "availabilityError": {
+        "title": "Availability could not be checked",
+        "description": "We could not check which gestures are still free. Please try again."
+      },
       "empty": {
         "title": "No gestures found",
         "description": "Try another word or clear the filters."
@@ -1969,7 +1974,8 @@
       },
       "failed": {
         "title": "The payment did not go through",
-        "description": "Nothing was charged and the gestures are free again. You can try again."
+        "description": "Nothing was charged and the gestures are free again. You can try again.",
+        "renewalDescription": "Nothing was charged and your sponsorship keeps running until its current end date. Use the link in your email to try again."
       },
       "canceled": {
         "title": "The payment was cancelled"
@@ -2013,6 +2019,9 @@
         "title": "Link expired",
         "description": "This link has expired. Ask SMOG for a new link.",
         "since": "Expired on {{date}}"
+      },
+      "unavailable": {
+        "title": "Link no longer usable"
       },
       "back": "Back to the website"
     },

@@ -191,6 +191,61 @@ describe("the renewal page (S-20)", () => {
     expect(ids[1]).not.toBe(ids[0]);
   });
 
+  test("Pay cannot run twice while the browser leaves for Mollie (phase review M-1)", async () => {
+    const { calls } = await renderSite(() => <Renew />, {
+      api: {
+        "sponsorships/renewal/checkout": {
+          checkoutUrl: "https://mollie.test/checkout/tr_7",
+          paymentId: "8c3c5a52-7a0c-4d9b-9d65-1f1d7f0c2a11",
+        },
+        "sponsorships/renewal/get": {
+          amountCents: 5000,
+          displayName: "Bakkerij Jansen",
+          endsAt: Date.now() + DAY,
+          gesture: { name: "Broer", slug: "broer" },
+          hasLogo: false,
+        },
+      },
+    });
+    const pay = await screen.findByRole("button", { name: "Renew and pay" });
+    fireEvent.click(pay);
+    await waitFor(() => expect(redirects).toHaveLength(1));
+    // Busy while the browser navigates away.
+    await waitFor(() => expect(pay.getAttribute("aria-busy")).toBe("true"));
+    fireEvent.click(pay);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(
+      calls.filter((call) => call.path === "sponsorships/renewal/checkout")
+    ).toHaveLength(1);
+  });
+
+  test("a link to a sponsorship that can no longer be renewed is a dead end, not a retry (review I-1)", async () => {
+    const { calls } = await renderSite(() => <Renew />, {
+      api: {
+        "sponsorships/renewal/get": rpcError("INVALID_STATE", 409, {
+          reason: "notRenewable",
+        }),
+      },
+    });
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Link no longer usable",
+      })
+    ).toBeDefined();
+    expect(
+      screen.getByText("This sponsorship can no longer be renewed.")
+    ).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Back to the website" })
+    ).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    // Defined errors are not retried: one read.
+    expect(
+      calls.filter((call) => call.path === "sponsorships/renewal/get")
+    ).toHaveLength(1);
+  });
+
   test("a sponsorship that can no longer be renewed says so", async () => {
     await renderSite(() => <Renew />, {
       api: {

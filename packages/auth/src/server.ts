@@ -17,9 +17,13 @@ import {
   emailLocale,
   type OutboxEmail,
 } from "@smog/email";
-import { betterAuth } from "better-auth";
+import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import {
+  APIError,
+  createAuthMiddleware,
+  sendVerificationEmailFn,
+} from "better-auth/api";
 import { admin, captcha, emailOTP, magicLink } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { COOKIE_PREFIX } from "./cookie";
@@ -344,6 +348,15 @@ export function createAuth(options: CreateAuthOptions) {
    */
   const emailFailure = defineRequestState(() => ({ failed: false }));
 
+  /**
+   * The unverified account a repeated email sign-up asked for (Better
+   * Auth's `onExistingUserSignUp`), so the `after` hook mails it a fresh
+   * verification link with the endpoint's context (phase 6 jobs M-2).
+   */
+  const repeatedSignUp = defineRequestState((): { user: User | null } => ({
+    user: null,
+  }));
+
   /** Whether `data` turns an unverified address into a verified one. */
   async function becomesVerified(data: {
     email?: unknown;
@@ -444,6 +457,15 @@ export function createAuth(options: CreateAuthOptions) {
       enabled: true,
       maxPasswordLength: PASSWORD_MAX_LENGTH,
       minPasswordLength: PASSWORD_MIN_LENGTH,
+      // A sign-up with the address of an account that never confirmed it
+      // (its first verification email may never have left: EMAIL_NOT_SENT)
+      // mails a fresh link from the `after` hook. A verified account gets
+      // nothing, and the answer is Better Auth's generic one either way.
+      onExistingUserSignUp: async ({ user: existing }) => {
+        if (!existing.emailVerified) {
+          (await repeatedSignUp.get()).user = existing;
+        }
+      },
       requireEmailVerification: true,
       resetPasswordTokenExpiresIn: RESET_PASSWORD_TTL,
       revokeSessionsOnPasswordReset: true,
@@ -470,7 +492,20 @@ export function createAuth(options: CreateAuthOptions) {
       },
     },
     hooks: {
-      after: createAuthMiddleware(async () => {
+      after: createAuthMiddleware(async (ctx) => {
+        const repeated = (await repeatedSignUp.get()).user;
+        if (repeated && ctx.path === "/sign-up/email") {
+          try {
+            // Better Auth's own token and URL (the body's callbackURL).
+            await sendVerificationEmailFn(ctx, repeated);
+          } catch (error) {
+            // `send` marked the failure: answered as EMAIL_NOT_SENT below.
+            console.error(
+              "[auth] Failed to resend the verification email:",
+              error
+            );
+          }
+        }
         if ((await emailFailure.get()).failed) {
           throw new APIError("SERVICE_UNAVAILABLE", {
             code: "EMAIL_NOT_SENT",

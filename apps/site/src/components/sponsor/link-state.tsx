@@ -1,6 +1,7 @@
 import { formatDate } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import { sponsorshipError } from "@smog/sponsorships/client";
+import { INVALID_STATE_REASON_KEYS } from "@smog/sponsorships/schema";
 import {
   Button,
   EmptyState,
@@ -10,6 +11,7 @@ import {
 } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { invalidStateReason } from "./errors";
 import { usePageLocale } from "./page-locale";
 
 function BackLink(): ReactNode {
@@ -34,7 +36,9 @@ export interface LinkStateProps {
 /**
  * The guards of a re-edit or renewal link (S-19, S-20): no token
  * ("Invalid link"), checking, unknown or used ("Link not found"), expired
- * (with its date), or a failed read (retry). `null` once the link is good.
+ * (with its date), refused for good (`INVALID_STATE`: the sponsorship can
+ * no longer be renewed, with the reason and no Retry, which would only get
+ * the same answer), or a failed read (retry). `null` once the link is good.
  */
 export function LinkState({
   error,
@@ -86,6 +90,17 @@ export function LinkState({
         }
         level={1}
         title={t("sponsor.link.expired.title")}
+      />
+    );
+  }
+  const reason = invalidStateReason(error);
+  if (reason) {
+    return (
+      <EmptyState
+        action={<BackLink />}
+        description={t(INVALID_STATE_REASON_KEYS[reason])}
+        level={1}
+        title={t("sponsor.link.unavailable.title")}
       />
     );
   }
