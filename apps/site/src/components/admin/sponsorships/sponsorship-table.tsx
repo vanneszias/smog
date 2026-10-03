@@ -11,6 +11,7 @@ import {
   Button,
   DataTable,
   type DataTableColumn,
+  EmptyState,
   ErrorState,
   Field,
   Input,
@@ -24,7 +25,7 @@ import {
   Text,
 } from "@smog/ui-web";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRight, ChevronsLeft, FileText, X } from "lucide-react";
+import { ChevronRight, ChevronsLeft, FileText, SearchX, X } from "lucide-react";
 import {
   type ChangeEvent,
   type ReactNode,
@@ -289,6 +290,17 @@ function SponsorshipRows({
     ],
     [day, money, t]
   );
+  if (rows.length === 0) {
+    // No empty table: on a phone it scrolls sideways with nothing to focus.
+    return (
+      <EmptyState
+        description={t("admin.sponsorships.emptyDescription")}
+        icon={<SearchX />}
+        level={2}
+        title={t("admin.sponsorships.empty")}
+      />
+    );
+  }
   return (
     <DataTable
       aria-label={t("admin.sponsorships.title")}

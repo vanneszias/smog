@@ -1750,7 +1750,8 @@
         "used": "Used or replaced",
         "expired": "Expired",
         "dates": "Made {{created}} · works until {{expires}}"
-      }
+      },
+      "emptyDescription": "Choose another tab or clear the filters."
     },
     "export": {
       "action": "Export CSV",

@@ -1750,7 +1750,8 @@
         "used": "Gebruikt of vervangen",
         "expired": "Verlopen",
         "dates": "Gemaakt {{created}} · werkt tot {{expires}}"
-      }
+      },
+      "emptyDescription": "Kies een ander tabblad of wis de filters."
     },
     "export": {
       "action": "CSV exporteren",

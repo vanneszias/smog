@@ -1782,7 +1782,8 @@
         "used": "Utilisé ou remplacé",
         "expired": "Expiré",
         "dates": "Créé le {{created}} · valable jusqu’au {{expires}}"
-      }
+      },
+      "emptyDescription": "Choisissez un autre onglet ou effacez les filtres."
     },
     "export": {
       "action": "Exporter en CSV",

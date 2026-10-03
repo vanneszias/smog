@@ -417,6 +417,26 @@ describe("SponsorshipTable", () => {
   });
 });
 
+describe("SponsorshipTable, empty", () => {
+  test("an empty tab is an empty state, not an empty table", async () => {
+    await renderSite(
+      function Page(): ReactNode {
+        const [search, setSearch] = useState<SponsorshipSearch>({
+          tab: "closed",
+        });
+        return (
+          <div data-testid="page">
+            <SponsorshipTable onSearchChange={setSearch} search={search} />
+          </div>
+        );
+      },
+      { api: { "admin/sponsorships/list": page([]) } }
+    );
+    await screen.findByRole("heading", { name: "No sponsorships found." });
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+});
+
 describe("SponsorshipDetail", () => {
   test("in review: approve, request changes and reject; the payment's Mollie link", async () => {
     await showDetail(detail());

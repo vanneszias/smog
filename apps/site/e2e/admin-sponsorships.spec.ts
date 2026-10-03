@@ -208,7 +208,7 @@ test.describe("admin sponsorships", () => {
     await expect(alert).toContainText("50,00");
     await alert.getByRole("button", { name: "Goedkeuren" }).click();
     await expect(
-      page.getByText("E2E Vogel is goedgekeurd en live.")
+      page.getByText("E2E Vogel is goedgekeurd en live.").first()
     ).toBeVisible();
     await expect(
       page.locator("main").getByText("Live", { exact: true }).first()
