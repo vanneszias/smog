@@ -25,7 +25,9 @@ export {
   type EmailMessage,
   type EmailSender,
   type EmailSenderOptions,
+  isPermanentSendError,
   MemoryEmailSender,
   readDevMail,
   type StoredEmail,
+  sendErrorCode,
 } from "./sender";

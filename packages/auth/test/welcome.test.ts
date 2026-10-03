@@ -1,3 +1,4 @@
+import { runWithEndpointContext } from "@better-auth/core/context";
 import { makeUser } from "@smog/db/testing";
 import type { OutboxEmail } from "@smog/email";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -172,5 +173,76 @@ describe("the welcome email", () => {
       "[auth] Failed to queue the welcome email:",
       expect.any(Error)
     );
+  });
+});
+
+/*
+ * The Better Auth 1.7.6 paths that verify an existing, unverified account
+ * (review M7). `becomesVerified` relies on each of them writing only the
+ * flag after checking it was false; an upgrade that changes one fails here.
+ */
+describe("the welcome email on every path that verifies an existing account", () => {
+  it("a magic link to an unverified account (open server)", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    const member = await makeUser(ctx.db, { email, emailVerified: false });
+
+    await ctx.call("/sign-in/magic-link", {
+      body: { callbackURL: "/", email },
+    });
+    const verify = await ctx.call(linkIn(lastText(ctx)));
+    expect(verify.status).toBe(302);
+
+    expect(welcomes(ctx).map((sent) => sent.idempotencyKey)).toEqual([
+      `welcome:${member.id}`,
+    ]);
+  });
+
+  it("a password reset by code for an unverified account", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    const member = await makeUser(ctx.db, { email, emailVerified: false });
+
+    await ctx.call("/email-otp/request-password-reset", { body: { email } });
+    const reset = await ctx.call("/email-otp/reset-password", {
+      body: { email, otp: codeIn(lastText(ctx)), password: PASSWORD },
+    });
+    expect(reset.status).toBe(200);
+
+    expect((await findUser(ctx.db, email))?.emailVerified).toBe(true);
+    expect(welcomes(ctx).map((sent) => sent.idempotencyKey)).toEqual([
+      `welcome:${member.id}`,
+    ]);
+  });
+
+  it("account linking over an unverified local account (a flag-only update in an endpoint)", async () => {
+    const ctx = setup();
+    const context = await ctx.auth.$context;
+    const email = uniqueEmail();
+    const member = await makeUser(ctx.db, { email, emailVerified: false });
+
+    // What `oauth2/link-account.mjs` does once the provider vouches for the
+    // address: `updateUser(id, { emailVerified: true })` inside the callback.
+    await runWithEndpointContext({ context } as never, () =>
+      context.internalAdapter.updateUser(member.id, { emailVerified: true })
+    );
+
+    expect(welcomes(ctx).map((sent) => sent.idempotencyKey)).toEqual([
+      `welcome:${member.id}`,
+    ]);
+  });
+
+  it("an update that matched no row sends nothing and does not throw (M1)", async () => {
+    const ctx = setup();
+    const context = await ctx.auth.$context;
+
+    await expect(
+      runWithEndpointContext({ context } as never, () =>
+        context.internalAdapter.updateUser("no-such-user", {
+          emailVerified: true,
+        })
+      )
+    ).resolves.not.toThrow();
+    expect(welcomes(ctx)).toEqual([]);
   });
 });

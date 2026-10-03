@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import { Text } from "react-email";
 import { styles } from "../../theme";
 import { emailMoney, formatVatNumber, gestureValue } from "../format";
@@ -55,12 +54,13 @@ export const adminNewSponsorship: EmailTemplate<AdminNewSponsorshipProps> = {
       { label: t("email.common.fields.email"), value: contact.email },
       {
         label: t("email.common.fields.gestures"),
+        // One block per gesture: no `<br />`, which some clients pad with an
+        // empty line at the end of the cell.
         value: gestures.map((gesture, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: the payment's items, in order; two may share a missing name.
-          <Fragment key={index}>
-            {index > 0 ? <br /> : null}
+          <span key={index} style={styles.lineBlock}>
             {`${gestureValue(t, locale, gesture.name)} · ${emailMoney(gesture.amountCents, locale)}`}
-          </Fragment>
+          </span>
         )),
       },
       { label: t("email.common.fields.total"), value: total },

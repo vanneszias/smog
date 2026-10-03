@@ -41,7 +41,9 @@ export interface EmailDeliveryEnv {
  * Renders one outbox email in its locale and sends it with `From` and
  * `Reply-To` from env. The one path from an `OutboxEmail` to a sender: the
  * email queue's consumer and `DirectEmailOutbox` both use it. A render
- * failure is an `EmailRenderError`; a send failure is logged and rethrown.
+ * failure is an `EmailRenderError`; a send failure is the sender's error.
+ * Neither is logged here: the caller logs once (the consumer without the
+ * address, which a binding error may contain).
  */
 export async function deliverEmail(
   sender: EmailSender,
@@ -54,17 +56,12 @@ export async function deliverEmail(
     email.locale,
     { siteUrl: env.SITE_URL }
   );
-  try {
-    await sender.send({
-      ...rendered,
-      from: env.EMAIL_FROM,
-      replyTo: env.EMAIL_REPLY_TO,
-      to: email.to,
-    });
-  } catch (error) {
-    console.error(`[email] Failed to send ${email.template}:`, error);
-    throw error;
-  }
+  await sender.send({
+    ...rendered,
+    from: env.EMAIL_FROM,
+    replyTo: env.EMAIL_REPLY_TO,
+    to: email.to,
+  });
 }
 
 /**

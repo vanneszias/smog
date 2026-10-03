@@ -1,4 +1,4 @@
-import { env, waitUntil } from "cloudflare:workers";
+import { env } from "cloudflare:workers";
 import { type Auth, type AuthEnv, createAuth, parseAuthEnv } from "@smog/auth";
 import {
   parseWorkerEnv,
@@ -102,7 +102,7 @@ const instances: { open?: Auth; signInOnly?: Auth } = {};
 
 /**
  * The Better Auth instance, built once per isolate: its env, bindings and
- * `waitUntil` do not change between requests, and it keeps no per-request
+ * outbox do not change between requests, and it keeps no per-request
  * state (sessions are read from D1 on every call). `signInOnly` is the
  * second instance, for the admin sign-in routes during maintenance
  * (`createAuth({ signInOnly })`: nothing creates a user).
@@ -122,7 +122,6 @@ export function getAuth({
       env: authEnv,
       outbox: getEmailOutbox(),
       signInOnly,
-      waitUntil,
     });
     instances[key] = auth;
   }

@@ -587,13 +587,13 @@
         "subject": "Votre parrainage SMOG se termine bientôt",
         "preheader": "Votre parrainage se termine le {{date}}.",
         "heading": "Votre parrainage se termine bientôt",
-        "body": "Votre parrainage de {{gesture}} se termine le {{date}}, dans moins de 30 jours. Ensuite, le geste affichera de nouveau sa vidéo d'origine.",
+        "body": "Votre parrainage pour {{gesture}} se termine le {{date}}, dans moins de 30 jours. Ensuite, le geste affichera de nouveau sa vidéo d'origine.",
         "renew": "Vous souhaitez parrainer une année de plus\u00a0? Prolongez avec le bouton ci-dessous. Vous payez le même montant que l'an dernier.",
         "button": "Prolonger le parrainage",
         "footer": "Le lien fonctionne jusqu'à la fin de votre parrainage. Vous ne souhaitez pas prolonger\u00a0? Vous n'avez rien à faire."
       },
       "adminNewSponsorship": {
-        "subject": "Nouveau parrainage de {{name}}",
+        "subject": "Nouveau parrainage\u00a0: {{name}}",
         "subjectRenewal": "Parrainage prolongé par {{name}}",
         "preheader": "Payé\u00a0: {{total}}.",
         "heading": "Nouveau parrainage payé",

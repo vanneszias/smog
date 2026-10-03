@@ -5,6 +5,7 @@ import { EMAIL_SAMPLES } from "../src/samples";
 
 const SITE = "https://smog.example";
 const SCRIPT = "<script>alert(1)</script>";
+const IMG_TAG = /<img[^>]*>/;
 
 /** Any run of spaces (also no-break and narrow no-break) as one space. */
 function plain(text: string): string {
@@ -48,6 +49,43 @@ describe("the layout", () => {
     expect(email.text).toContain(
       "SMOG — Spreken Met Ondersteuning van Gebaren"
     );
+  });
+
+  it("styles the logo's alt text white, for clients that block images", async () => {
+    const email = await renderEmail(
+      "auth/otp",
+      EMAIL_SAMPLES["auth/otp"],
+      "nl",
+      { siteUrl: SITE }
+    );
+    const img = email.html.match(IMG_TAG)?.[0] ?? "";
+    expect(img.toLowerCase()).toContain("color:#ffffff");
+  });
+
+  it("lists the gestures as blocks, not <br> lines", async () => {
+    const email = await renderEmail(
+      "transactional/admin-new-sponsorship",
+      EMAIL_SAMPLES["transactional/admin-new-sponsorship"],
+      "nl"
+    );
+    expect(email.html).not.toContain("<br");
+    expect(email.html).toContain('display:block">Kat');
+  });
+
+  it("names the sponsor without an elision problem in French", async () => {
+    const email = await renderEmail(
+      "transactional/admin-new-sponsorship",
+      EMAIL_SAMPLES["transactional/admin-new-sponsorship"],
+      "fr"
+    );
+    expect(email.subject).toBe("Nouveau parrainage : Acme BV");
+    const reminder = await renderEmail(
+      "transactional/renewal-reminder",
+      EMAIL_SAMPLES["transactional/renewal-reminder"],
+      "fr"
+    );
+    expect(plain(reminder.text)).toContain("pour le geste « Hond »");
+    expect(plain(reminder.text)).not.toContain("de le geste");
   });
 
   it("falls back to the wordmark without a site URL", async () => {

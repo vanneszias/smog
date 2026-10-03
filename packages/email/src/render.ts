@@ -166,7 +166,6 @@ export async function renderEmail<Id extends EmailTemplateId>(
     ]);
     return { html, subject: definition.subject(props, context), text };
   } catch (error) {
-    console.error(`[email] Failed to render ${template}:`, error);
     throw new EmailRenderError(
       error instanceof Error ? error.message : String(error),
       { cause: error }

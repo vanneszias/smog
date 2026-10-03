@@ -23,12 +23,11 @@ export async function mailTo(email: string): Promise<DevMailMessage[]> {
 
 /**
  * Waits until the dev mailbox has a message to `email` (that `match`
- * accepts) and returns every such message. Auth emails are queued in
- * `waitUntil`, after the response, then rendered and sent by the email
- * queue's consumer (a batch waits up to 1 s), and a React Email render can
- * take seconds under load, so this polls against a deadline (in workerd
- * `Date.now()` advances across I/O) and, on timeout, throws with what the
- * mailbox held.
+ * accepts) and returns every such message. Auth emails are queued during
+ * the request, then rendered and sent by the email queue's consumer, and a
+ * React Email render can take seconds under load, so this polls against a
+ * deadline (in workerd `Date.now()` advances across I/O) and, on timeout,
+ * throws with what the mailbox held.
  */
 export async function waitForMail(
   email: string,

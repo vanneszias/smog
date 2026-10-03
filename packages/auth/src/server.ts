@@ -1,3 +1,4 @@
+import { defineRequestState } from "@better-auth/core/context";
 import { expo } from "@better-auth/expo";
 import { passkey } from "@better-auth/passkey";
 import {
@@ -106,8 +107,6 @@ export interface CreateAuthOptions {
    * code endpoint sends sign-in codes only.
    */
   signInOnly?: boolean | undefined;
-  /** Runs the email hand-offs after the response (`waitUntil`); awaited when unset. */
-  waitUntil?: ((promise: Promise<unknown>) => void) | undefined;
 }
 
 const minutes = (seconds: number): number => Math.round(seconds / 60);
@@ -284,15 +283,23 @@ export function createAuth(options: CreateAuthOptions) {
     props: EmailTemplateProps[Id],
     context: { locale: string | null; request?: Request | undefined }
   ): Promise<void> {
-    await options.outbox.send({
-      locale: emailLocale({
-        request: context.request,
-        userLocale: context.locale,
-      }),
-      props,
-      template,
-      to,
-    } as OutboxEmail);
+    try {
+      await options.outbox.send({
+        locale: emailLocale({
+          request: context.request,
+          userLocale: context.locale,
+        }),
+        props,
+        template,
+        to,
+      } as OutboxEmail);
+    } catch (error) {
+      // Better Auth catches and logs a failed send on most endpoints
+      // (`runInBackgroundOrAwait`) and answers 200; the `after` hook turns
+      // this mark into an error, so the user asks again (review I1).
+      (await emailFailure.get()).failed = true;
+      throw error;
+    }
   }
 
   /**
@@ -330,6 +337,13 @@ export function createAuth(options: CreateAuthOptions) {
    */
   const verifying = new WeakMap<object, number>();
 
+  /**
+   * Whether this request failed to hand an auth email to the outbox. Better
+   * Auth runs the hooks and the endpoint inside one request state, so the
+   * `after` hook sees what `send` marked.
+   */
+  const emailFailure = defineRequestState(() => ({ failed: false }));
+
   /** Whether `data` turns an unverified address into a verified one. */
   async function becomesVerified(data: {
     email?: unknown;
@@ -364,9 +378,6 @@ export function createAuth(options: CreateAuthOptions) {
       },
     },
     advanced: {
-      ...(options.waitUntil
-        ? { backgroundTasks: { handler: options.waitUntil } }
-        : {}),
       cookiePrefix: COOKIE_PREFIX,
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
       useSecureCookies: env.ENVIRONMENT !== "dev",
@@ -402,7 +413,7 @@ export function createAuth(options: CreateAuthOptions) {
         update: {
           after: async (updated, context) => {
             const pending = context ? (verifying.get(context) ?? 0) : 0;
-            if (!(context && pending > 0 && updated.emailVerified)) {
+            if (!(context && pending > 0 && updated?.emailVerified)) {
               return;
             }
             verifying.set(context, pending - 1);
@@ -459,6 +470,14 @@ export function createAuth(options: CreateAuthOptions) {
       },
     },
     hooks: {
+      after: createAuthMiddleware(async () => {
+        if ((await emailFailure.get()).failed) {
+          throw new APIError("SERVICE_UNAVAILABLE", {
+            code: "EMAIL_NOT_SENT",
+            message: "The email could not be sent; try again",
+          });
+        }
+      }),
       // biome-ignore lint/suspicious/useAwait: Better Auth's middleware signature is async.
       before: createAuthMiddleware(async (ctx) => {
         const type = (ctx.body as { type?: unknown } | undefined)?.type;

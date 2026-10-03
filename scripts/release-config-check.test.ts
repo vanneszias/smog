@@ -338,7 +338,7 @@ describe("checkWranglerResources (phase 6)", () => {
     ).toContain("smog-staging-sponsorship-events needs max_retries 10");
   });
 
-  test("the email consumer waits at most 1 s for a batch (codes arrive fast)", () => {
+  test("the email consumer does not wait to fill a batch (codes arrive fast)", () => {
     expect(
       check((env) => {
         const queues = env.queues as { consumers: Record<string, unknown>[] };
@@ -347,7 +347,7 @@ describe("checkWranglerResources (phase 6)", () => {
         }
       })
     ).toContain(
-      "env.staging: the consumer of smog-staging-email needs max_batch_timeout 1"
+      "env.staging: the consumer of smog-staging-email needs max_batch_timeout 0"
     );
   });
 });

@@ -116,9 +116,22 @@ export const styles = {
     maxWidth: px(EMAIL_WIDTH),
     padding: `0 ${px(spacing["4"])}`,
   },
+  /** One line of a details value that lists several (the gestures). */
+  lineBlock: { display: "block" },
   link: { color: color.primaryStrong, wordBreak: "break-all" },
   /** The logo in the header bar, 40 px tall. */
-  logo: { border: "0", display: "block", margin: "0 auto" },
+  /**
+   * With images blocked (Outlook's default) the alt text shows instead: in
+   * the brand's white and size, not the client's dark default on green.
+   */
+  logo: {
+    border: "0",
+    color: color.primaryForeground,
+    display: "block",
+    fontSize: px(fontSize["title-3"].size),
+    fontWeight: fontWeight.semibold,
+    margin: "0 auto",
+  },
   /** The error text in the render-failed email. */
   pre: {
     backgroundColor: color.surfaceSunken,

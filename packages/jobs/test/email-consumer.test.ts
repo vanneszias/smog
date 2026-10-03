@@ -16,11 +16,33 @@ import {
 } from "../src";
 
 const SEND_FAILED =
-  /^\[email\] Failed to send transactional\/welcome \(message .+, attempt 3\); retrying in 120 s:$/;
-const MARK_FAILED = /^\[email\] Failed to mark /;
+  /^\[email\] Failed to send transactional\/welcome \(message .+, attempt 3\); retrying in 120 s: Error$/;
+const MARK_FAILED = /^\[email\] Failed to mark .+ as sent: Error$/;
+const DELIVERY_FAILED_CODE = /E_DELIVERY_FAILED$/;
 const DROPPED_INVALID = /^\[email\] Dropped an invalid message /;
-const DROPPED_UNRENDERABLE =
-  /^\[email\] Dropped transactional\/payment-confirmed \(message .+\): it cannot be rendered$/;
+const RENDER_FAILED =
+  /^\[email\] Failed to render transactional\/payment-confirmed \(message .+, attempt 1\); retrying in 30 s: EmailRenderError$/;
+const PERMANENT =
+  /^\[email\] Dropped transactional\/welcome \(message .+, attempt 1\): the Email Service refused it for good: Error E_RECIPIENT_SUPPRESSED$/;
+const EXPIRED =
+  /^\[email\] Dropped auth\/otp \(message .+, attempt 2\): expired \(valid 5 min\)$/;
+
+/** A binding error as the Email Service throws it: an `Error` with a `code`. */
+function bindingError(code: string, message: string): Error {
+  return Object.assign(new Error(message), { code });
+}
+
+function failingWith(error: Error): EmailSender {
+  return { send: () => Promise.reject(error) };
+}
+
+function otp(): EmailMessage {
+  return welcome({
+    idempotencyKey: undefined,
+    props: { code: "482913", minutes: 5 },
+    template: "auth/otp",
+  } as Partial<EmailMessage>);
+}
 
 const DELIVERY_ENV = {
   EMAIL_FROM: "SMOG & Co <noreply@smog.example>",
@@ -40,8 +62,8 @@ function welcome(overrides: Partial<EmailMessage> = {}): EmailMessage {
   } as EmailMessage;
 }
 
-function delivery(body: unknown, attempts = 1) {
-  return { attempts, body, id: crypto.randomUUID() };
+function delivery(body: unknown, attempts = 1, timestamp = new Date()) {
+  return { attempts, body, id: crypto.randomUUID(), timestamp };
 }
 
 function deps(sender: EmailSender) {
@@ -57,9 +79,17 @@ afterEach(() => {
 });
 
 describe("emailRetryDelaySeconds", () => {
+  const attempts = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
   it("doubles from 30 s per attempt and stops at an hour", () => {
-    expect([1, 2, 3, 4, 5, 6, 7, 8, 9].map(emailRetryDelaySeconds)).toEqual([
-      30, 60, 120, 240, 480, 960, 1920, 3600, 3600,
+    expect(
+      attempts.map((n) => emailRetryDelaySeconds(n, "transactional/welcome"))
+    ).toEqual([30, 60, 120, 240, 480, 960, 1920, 3600, 3600]);
+  });
+
+  it("retries auth emails fast: from 5 s, at most a minute", () => {
+    expect(attempts.map((n) => emailRetryDelaySeconds(n, "auth/otp"))).toEqual([
+      5, 10, 20, 40, 60, 60, 60, 60, 60,
     ]);
   });
 });
@@ -132,10 +162,104 @@ describe("processEmailMessage", () => {
     expect(
       await env.KV.get(emailSentKey(body.idempotencyKey ?? ""))
     ).toBeNull();
-    expect(error).toHaveBeenCalledWith(
-      expect.stringMatching(SEND_FAILED),
-      expect.any(Error)
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(SEND_FAILED));
+  });
+
+  it("logs a failure once, without the recipient's address", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const failing = failingWith(
+      bindingError(
+        "E_DELIVERY_FAILED",
+        "could not deliver to alex@smog.example"
+      )
     );
+
+    await processEmailMessage(delivery(welcome()), deps(failing));
+
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(error.mock.calls)).not.toContain("alex@smog.example");
+    expect(error.mock.calls[0]?.[0]).toMatch(DELIVERY_FAILED_CODE);
+  });
+
+  it("drops a message the Email Service refuses for good (recipient or payload)", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const failing = failingWith(
+      bindingError("E_RECIPIENT_SUPPRESSED", "suppressed alex@smog.example")
+    );
+
+    const decision = await processEmailMessage(
+      delivery(welcome()),
+      deps(failing)
+    );
+
+    expect(decision).toEqual({ action: "ack", outcome: "refused" });
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(PERMANENT));
+  });
+
+  it("retries a sender configuration error, so the DLQ keeps the email", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const failing = failingWith(
+      bindingError("E_SENDER_NOT_VERIFIED", "sender not verified")
+    );
+
+    const decision = await processEmailMessage(
+      delivery(welcome()),
+      deps(failing)
+    );
+
+    expect(decision).toEqual({ action: "retry", delaySeconds: 30 });
+  });
+
+  it("retries an auth email fast", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const failing = failingWith(new Error("binding down"));
+
+    const decision = await processEmailMessage(
+      delivery(otp(), 2),
+      deps(failing)
+    );
+
+    expect(decision).toEqual({ action: "retry", delaySeconds: 10 });
+  });
+
+  it("drops an auth email once its code or link has expired", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const sender = new MemoryEmailSender();
+    const now = Date.now();
+    const sixMinutesAgo = new Date(now - 6 * 60 * 1000);
+    const fourMinutesAgo = new Date(now - 4 * 60 * 1000);
+
+    const expired = await processEmailMessage(
+      delivery(otp(), 2, sixMinutesAgo),
+      { ...deps(sender), now: () => now }
+    );
+    const fresh = await processEmailMessage(
+      delivery(otp(), 2, fourMinutesAgo),
+      { ...deps(sender), now: () => now }
+    );
+
+    expect(expired).toEqual({ action: "ack", outcome: "expired" });
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(EXPIRED));
+    expect(fresh).toEqual({ action: "ack", outcome: "sent" });
+    expect(sender.sent).toHaveLength(1);
+  });
+
+  it("never expires a transactional email", async () => {
+    const sender = new MemoryEmailSender();
+    const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const decision = await processEmailMessage(
+      delivery(welcome(), 3, lastWeek),
+      deps(sender)
+    );
+
+    expect(decision).toEqual({ action: "ack", outcome: "sent" });
   });
 
   it("retries when the idempotency check cannot read KV", async () => {
@@ -174,10 +298,7 @@ describe("processEmailMessage", () => {
 
     expect(decision).toEqual({ action: "ack", outcome: "sent" });
     expect(sender.sent).toHaveLength(1);
-    expect(error).toHaveBeenCalledWith(
-      expect.stringMatching(MARK_FAILED),
-      expect.any(Error)
-    );
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(MARK_FAILED));
   });
 
   it.each([
@@ -206,7 +327,7 @@ describe("processEmailMessage", () => {
     }
   );
 
-  it("acks a message whose props cannot be rendered (retrying cannot help)", async () => {
+  it("retries a message whose props cannot be rendered, so it reaches the DLQ", async () => {
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -218,12 +339,9 @@ describe("processEmailMessage", () => {
 
     const decision = await processEmailMessage(delivery(body), deps(sender));
 
-    expect(decision).toEqual({ action: "ack", outcome: "unrenderable" });
+    expect(decision).toEqual({ action: "retry", delaySeconds: 30 });
     expect(sender.sent).toEqual([]);
-    expect(error).toHaveBeenCalledWith(
-      expect.stringMatching(DROPPED_UNRENDERABLE),
-      expect.any(Error)
-    );
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(RENDER_FAILED));
   });
 
   it("puts the email in the dev mailbox in dev (DevEmailSender)", async () => {
