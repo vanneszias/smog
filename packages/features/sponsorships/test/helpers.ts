@@ -24,6 +24,7 @@ import { FAKE_MOLLIE_API_KEY, type FakeMollie } from "@smog/payments/testing";
 import { makeRpcContext } from "@smog/rpc/testing";
 import { DAY_MS, newId } from "@smog/utils";
 import { asc, eq, sql } from "drizzle-orm";
+import type { SponsorshipsDeps } from "../src/server/procedure";
 import { createSponsorshipsRouter } from "../src/server/router";
 
 export const SITE_URL = "http://localhost:5173";
@@ -268,10 +269,13 @@ export async function refetch(
   return fetched;
 }
 
-const router = createSponsorshipsRouter();
+const defaultRouter = createSponsorshipsRouter();
 
 /** The router's procedure at `path` (relative to `sponsorships`). */
-function procedureAt(path: string): AnyProcedure {
+function procedureAt(
+  router: ReturnType<typeof createSponsorshipsRouter>,
+  path: string
+): AnyProcedure {
   let node: unknown = router;
   for (const key of path.split(".")) {
     node = (node as Record<string, unknown>)[key];
@@ -282,18 +286,28 @@ function procedureAt(path: string): AnyProcedure {
   return node as AnyProcedure;
 }
 
-/** Calls `sponsorships.<path>` as `/api/rpc` routes it (the guards read the path). */
+/**
+ * Calls `sponsorships.<path>` as `/api/rpc` routes it (the guards read the
+ * path), with the test Worker's D1, KV and R2. `deps` builds a router with
+ * them (the Mollie fake's `fetch`).
+ */
 export async function callAt<T = unknown>(
   path: string,
   input: unknown,
-  overrides: Parameters<typeof makeRpcContext>[0] = {}
+  overrides: Parameters<typeof makeRpcContext>[0] = {},
+  deps?: SponsorshipsDeps
 ): Promise<T> {
-  return (await call(procedureAt(path), input, {
+  const router = deps ? createSponsorshipsRouter(deps) : defaultRouter;
+  return (await call(procedureAt(router, path), input, {
     context: makeRpcContext({
       db: testDb(),
       kv: env.KV,
       ...overrides,
-      env: { MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY, ...overrides.env },
+      env: {
+        MEDIA: env.MEDIA,
+        MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY,
+        ...overrides.env,
+      },
     }),
     path: ["sponsorships", ...path.split(".")],
   })) as T;

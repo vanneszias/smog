@@ -27,6 +27,7 @@ export {
   messageBytes,
 } from "./messages";
 export { QueueEmailOutbox } from "./outbox";
+export { enqueueOutputs, type JobQueues, type Outputs } from "./outputs";
 export {
   ENQUEUE_RETRY_DELAYS_MS,
   type EnqueueOptions,
