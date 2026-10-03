@@ -1,7 +1,7 @@
 import type { GestureDetail } from "@smog/gestures/schema";
 import { DEFAULT_LOCALE, formatDate, isLocale } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
-import { useAvailability } from "@smog/sponsorships/client";
+import { useSponsorCta } from "@smog/sponsorships/client";
 import { Button, Card, Heading, Text } from "@smog/ui-native";
 import { type ReactElement, useCallback } from "react";
 import { Linking, Platform } from "react-native";
@@ -14,47 +14,6 @@ export function sponsorLinkShown(
   linkInApp: boolean
 ): boolean {
   return platform !== "ios" || linkInApp;
-}
-
-type CtaView =
-  | { kind: "available" }
-  | { kind: "pending" }
-  | { endsAt: number | null; kind: "sponsored"; name: string };
-
-function useCtaView(
-  gesture: SponsorCtaProps["gesture"],
-  linkShown: boolean
-): CtaView | null {
-  const availability = useAvailability([gesture.id]);
-  const item = availability.data?.items.find(
-    (entry) => entry.gestureId === gesture.id
-  );
-  if (!(availability.data && item)) {
-    // Loading or failed: the detail's own credit stands, nothing blocks.
-    return gesture.sponsor
-      ? {
-          endsAt: gesture.sponsor.until,
-          kind: "sponsored",
-          name: gesture.sponsor.name,
-        }
-      : null;
-  }
-  switch (item.state) {
-    case "available":
-      return availability.data.checkoutEnabled && linkShown
-        ? { kind: "available" }
-        : null;
-    case "pending":
-      return { kind: "pending" };
-    case "sponsored":
-      return {
-        endsAt: item.endsAt ?? null,
-        kind: "sponsored",
-        name: item.sponsorName ?? gesture.sponsor?.name ?? "",
-      };
-    default:
-      return null;
-  }
 }
 
 export interface SponsorCtaProps {
@@ -78,7 +37,7 @@ export function SponsorCta({
 }: SponsorCtaProps): ReactElement | null {
   const { i18n, t } = useTranslation();
   const linkShown = sponsorLinkShown(platform, linkInApp);
-  const view = useCtaView(gesture, linkShown);
+  const view = useSponsorCta(gesture, { linkShown });
   const { slug } = gesture;
   const open = useCallback(() => {
     Linking.openURL(sponsorUrl(slug)).catch((error: unknown) => {

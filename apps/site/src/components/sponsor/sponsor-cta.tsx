@@ -1,60 +1,17 @@
 import type { GestureDetail } from "@smog/gestures/schema";
 import { formatDate } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
-import { useAvailability } from "@smog/sponsorships/client";
+import { useSponsorCta } from "@smog/sponsorships/client";
 import { Button, Card, Heading, Text } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { HandHeart } from "lucide-react";
 import type { ReactNode } from "react";
 import { usePageLocale } from "./page-locale";
 
-/** What the card says (ruling 13). */
-type CtaView =
-  | { kind: "available" }
-  | { kind: "pending" }
-  | { endsAt: number | null; kind: "sponsored"; name: string };
-
 export interface SponsorCtaProps {
   gesture: Pick<GestureDetail, "id" | "slug" | "sponsor">;
   /** The card title's heading level (the page's section level). */
   level: 2 | 3;
-}
-
-/**
- * Which card to show: `available` (when checkout is on), `pending` or
- * `sponsored` from `sponsorships.availability`; nothing for an unknown or
- * unpublished gesture, or a free one while sponsoring is paused. Until
- * the read answers (or when it fails), the detail's own sponsor credit
- * stands, so the page never waits on it and never loses the credit.
- */
-function useCtaView(gesture: SponsorCtaProps["gesture"]): CtaView | null {
-  const availability = useAvailability([gesture.id]);
-  const item = availability.data?.items.find(
-    (entry) => entry.gestureId === gesture.id
-  );
-  if (!(availability.data && item)) {
-    return gesture.sponsor
-      ? {
-          endsAt: gesture.sponsor.until,
-          kind: "sponsored",
-          name: gesture.sponsor.name,
-        }
-      : null;
-  }
-  switch (item.state) {
-    case "available":
-      return availability.data.checkoutEnabled ? { kind: "available" } : null;
-    case "pending":
-      return { kind: "pending" };
-    case "sponsored":
-      return {
-        endsAt: item.endsAt ?? null,
-        kind: "sponsored",
-        name: item.sponsorName ?? gesture.sponsor?.name ?? "",
-      };
-    default:
-      return null;
-  }
 }
 
 /**
@@ -65,7 +22,7 @@ function useCtaView(gesture: SponsorCtaProps["gesture"]): CtaView | null {
 export function SponsorCta({ gesture, level }: SponsorCtaProps): ReactNode {
   const { t } = useTranslation();
   const locale = usePageLocale();
-  const view = useCtaView(gesture);
+  const view = useSponsorCta(gesture);
   if (!view) {
     return null;
   }

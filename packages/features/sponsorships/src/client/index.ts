@@ -65,3 +65,9 @@ export {
   useRenewal,
   useRenewalCheckout,
 } from "./use-renewal";
+export {
+  type SponsorCtaGesture,
+  type SponsorCtaOptions,
+  type SponsorCtaView,
+  useSponsorCta,
+} from "./use-sponsor-cta";
