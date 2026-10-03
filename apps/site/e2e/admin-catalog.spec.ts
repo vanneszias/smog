@@ -74,15 +74,22 @@ async function signInAsAdmin(page: Page): Promise<void> {
   expect(response.ok()).toBe(true);
 }
 
+/** The budget of one bounded wait in a test step (the reorder response). */
+const STEP_MS = 15_000;
+/** The budget of one cleanup request in `afterEach`. */
+const CLEANUP_MS = 10_000;
+
 /** One oRPC call over HTTP, as the admin client makes it. */
 async function rpc<T>(
   request: APIRequestContext,
   path: string,
-  input: unknown = null
+  input: unknown = null,
+  timeout?: number
 ): Promise<T> {
   const response = await request.post(`/api/rpc/${path}`, {
     data: { json: input },
     headers: HEADERS,
+    ...(timeout === undefined ? {} : { timeout }),
   });
   const body = (await response.json()) as { json: T };
   if (!response.ok()) {
@@ -178,11 +185,12 @@ test.describe("admin catalogue", () => {
     await signInAsAdmin(page);
   });
 
-  // After the tests' own `finally` deleted their gestures.
+  // After the tests' own `finally` deleted their gestures. Each delete has
+  // its own budget, so a cleanup failure never hides a test's real error.
   test.afterEach(async ({ page }) => {
     for (const id of madeCategories.splice(0)) {
       // biome-ignore lint/performance/noAwaitInLoops: one at a time.
-      await rpc(page.request, "admin/categories/delete", { id });
+      await rpc(page.request, "admin/categories/delete", { id }, CLEANUP_MS);
     }
   });
 
@@ -521,27 +529,20 @@ test.describe("admin catalogue", () => {
   }) => {
     // Only categories this test owns: two hidden ones, reordered within
     // the hidden section (the public order never changes).
+    // `afterEach` deletes them (`madeCategories`).
     const word = tag();
     const made: AdminCategory[] = [];
-    try {
-      for (const name of [`Zzorde a ${word}`, `Zzorde b ${word}`]) {
-        // biome-ignore lint/performance/noAwaitInLoops: created in this order.
-        const category = await rpc<AdminCategory>(
-          page.request,
-          "admin/categories/create",
-          { name, published: false }
-        );
-        made.push(category);
-      }
-      await reorderByKeyboard(page, made);
-    } finally {
-      for (const category of made) {
-        // biome-ignore lint/performance/noAwaitInLoops: one at a time.
-        await rpc(page.request, "admin/categories/delete", {
-          id: category.id,
-        });
-      }
+    for (const name of [`Zzorde a ${word}`, `Zzorde b ${word}`]) {
+      // biome-ignore lint/performance/noAwaitInLoops: created in this order.
+      const category = await rpc<AdminCategory>(
+        page.request,
+        "admin/categories/create",
+        { name, published: false }
+      );
+      madeCategories.push(category.id);
+      made.push(category);
     }
+    await reorderByKeyboard(page, made);
   });
 
   test("the QR dialog downloads smog-<slug>-qr.png", async ({ page }) => {
@@ -570,10 +571,23 @@ async function reorderByKeyboard(
   const handle = page.getByRole("button", {
     name: `Slepen om de volgorde te wijzigen: ${first.name}`,
   });
-  const saved = page.waitForResponse("**/api/rpc/admin/categories/reorder");
+  await expect(handle).toBeVisible();
+  // Each key waits for the previous step's announcement (the live region,
+  // `admin.categories.reorder.*`): dnd-kit measures the rows after the
+  // pick-up, and an ArrowDown sent before that finds no target, so the drop
+  // is a no-op and no reorder request is ever sent (task 7 review I6).
   await handle.focus();
   await page.keyboard.press("Space");
+  await expect(
+    page.getByText(`${first.name} opgepakt, positie`, { exact: false })
+  ).toBeAttached();
   await page.keyboard.press("ArrowDown");
+  await expect(
+    page.getByText(`${first.name} verplaatst naar positie`, { exact: false })
+  ).toBeAttached();
+  const saved = page.waitForResponse("**/api/rpc/admin/categories/reorder", {
+    timeout: STEP_MS,
+  });
   await page.keyboard.press("Space");
   expect((await saved).ok()).toBe(true);
   const position = hidden.findIndex((item) => item.id === second.id) + 1;
@@ -582,7 +596,7 @@ async function reorderByKeyboard(
       `${first.name} neergezet op positie ${position} van ${hidden.length}.`
     )
   ).toBeAttached();
-  expect(await mine()).toEqual([second.name, first.name]);
+  await expect.poll(mine).toEqual([second.name, first.name]);
   expect(await blockingViolations(page)).toEqual([]);
 }
 
