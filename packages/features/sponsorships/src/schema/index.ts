@@ -40,8 +40,10 @@ export {
   SponsorshipPricingError,
 } from "./pricing";
 export {
+  INVALID_STATE_REASON_KEYS,
   INVALID_STATE_REASONS,
   type InvalidStateReason,
+  invalidStateReasonOf,
   type PaymentStatusView,
   paymentStatusInputSchema,
   paymentStatusSchema,

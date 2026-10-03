@@ -35,6 +35,8 @@ export interface SelectSearch {
 
 export interface StepSelectProps {
   availability: ReadonlyMap<string, AvailabilityItem>;
+  /** A failed availability read, with a retry of the failed reads. */
+  availabilityError: { retry: () => void; retrying: boolean } | null;
   categories: readonly Category[];
   onSearch: (search: SelectSearch) => void;
   onToggle: (gesture: WizardGesture) => void;
@@ -252,7 +254,7 @@ function Grid({
   if (results.isError) {
     return (
       <ErrorState
-        level={3}
+        level={2}
         onRetry={results.refetch}
         retrying={results.isRefetching}
       />
@@ -281,7 +283,7 @@ function Grid({
           ) : undefined
         }
         description={t("sponsor.select.empty.description")}
-        level={3}
+        level={2}
         title={t("sponsor.select.empty.title")}
       />
     );
@@ -335,10 +337,13 @@ function useChips(
  * `gestures.search` (with a note when it shows part of its matches), the
  * category chips, the result line, and a grid of
  * toggle cards with their availability. Sponsored, pending and just-taken
- * gestures are disabled. At most 10 per payment, with the reason.
+ * gestures are disabled, and so is a card whose availability is unknown
+ * (a failed read says so above the grid, with Retry). At most 10 per
+ * payment, with the reason. The grid's states are h2s under the step's h1.
  */
 export function StepSelect({
   availability,
+  availabilityError,
   categories,
   onSearch,
   onToggle,
@@ -462,6 +467,16 @@ export function StepSelect({
         >
           {t("sponsor.select.limit", { max: MAX_GESTURES_PER_CHECKOUT })}
         </Text>
+      ) : null}
+      {availabilityError && !results.isError ? (
+        // The cards stay in view, but cannot be chosen until it answers.
+        <ErrorState
+          description={t("sponsor.select.availabilityError.description")}
+          level={2}
+          onRetry={availabilityError.retry}
+          retrying={availabilityError.retrying}
+          title={t("sponsor.select.availabilityError.title")}
+        />
       ) : null}
       {grid}
       {results.partialOf === null || items === undefined ? null : (

@@ -26,6 +26,15 @@ const UNPAID_TITLE_KEYS = {
   failed: "sponsor.success.failed.title",
 } as const;
 
+/**
+ * A failed initial payment frees its gestures; a renewal frees nothing
+ * (ruling 6), and its way back is the email's link (phase review M-2).
+ */
+const UNPAID_DESCRIPTION_KEYS = {
+  initial: "sponsor.success.failed.description",
+  renewal: "sponsor.success.failed.renewalDescription",
+} as const satisfies Record<PaymentStatusView["kind"], string>;
+
 function Summary({ view }: { view: PaymentStatusView }): ReactNode {
   const { t } = useTranslation();
   const locale = usePageLocale();
@@ -255,7 +264,7 @@ export function PaymentResult({
   } else {
     const slugs = view.items.map((item) => item.gestureSlug).join(",");
     headline = {
-      description: t("sponsor.success.failed.description"),
+      description: t(UNPAID_DESCRIPTION_KEYS[view.kind]),
       final: true,
       icon: <CircleX className="text-danger-strong" />,
       title: t(UNPAID_TITLE_KEYS[view.status]),

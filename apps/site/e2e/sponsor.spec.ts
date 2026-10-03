@@ -457,7 +457,7 @@ function rpcAnswer(json: unknown, status = 200) {
   };
 }
 
-/** Answers one sponsorship read in the page (the server's stubs aside). */
+/** Answers one sponsorship read in the page (a stubbed state for the matrix). */
 async function answer(
   page: Page,
   path: string,
@@ -517,10 +517,11 @@ async function eachThemeAndWidth(
 }
 
 /**
- * The pages whose data the server's stubs cannot give yet, answered in
- * the page (`page.route`): paused, every success state, the re-edit and
- * renewal links and their guards; then the CTA's three states (seeded).
- * `each` runs on every state (a screenshot, an axe check).
+ * A deliberate matrix of stubbed states, answered in the page
+ * (`page.route`) so each is reached at once and deterministically: paused,
+ * every success state, the re-edit and renewal links and their guards;
+ * then the CTA's three states (seeded). The real flows run end to end in
+ * the tests above. `each` runs on every state (a screenshot, an axe check).
  */
 async function stubbedStates(
   page: Page,

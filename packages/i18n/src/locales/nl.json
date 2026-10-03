@@ -220,6 +220,7 @@
       "passwordMismatch": "De wachtwoorden zijn niet hetzelfde.",
       "invalidCredentials": "Dat e-mailadres of wachtwoord klopt niet.",
       "emailNotVerified": "Je e-mailadres is nog niet bevestigd. Kijk in je mailbox of vraag een nieuwe bevestigingsmail aan.",
+      "emailNotSent": "De e-mail kon niet verstuurd worden. Probeer het zo meteen opnieuw.",
       "userExists": "Er bestaat al een account met dit e-mailadres. Meld je aan.",
       "codeRequired": "Vul de code in.",
       "codeInvalid": "Die code klopt niet of is verlopen.",
@@ -1847,6 +1848,10 @@
       },
       "limit": "Je kunt tot {{max}} gebaren per betaling sponsoren. Haal er een weg om een ander te kiezen.",
       "taken": "Iemand anders was je net voor. Die gebaren zijn gemarkeerd; kies eventueel andere.",
+      "availabilityError": {
+        "title": "Beschikbaarheid niet gecontroleerd",
+        "description": "We konden niet nagaan welke gebaren nog vrij zijn. Probeer het opnieuw."
+      },
       "empty": {
         "title": "Geen gebaren gevonden",
         "description": "Probeer een ander woord of wis de filters."
@@ -1969,7 +1974,8 @@
       },
       "failed": {
         "title": "De betaling is niet gelukt",
-        "description": "Er werd niets aangerekend en de gebaren zijn weer vrij. Je kunt het opnieuw proberen."
+        "description": "Er werd niets aangerekend en de gebaren zijn weer vrij. Je kunt het opnieuw proberen.",
+        "renewalDescription": "Er werd niets aangerekend en je sponsoring loopt gewoon verder tot de huidige einddatum. Gebruik de link in je e-mail om het opnieuw te proberen."
       },
       "canceled": {
         "title": "De betaling is geannuleerd"
@@ -2013,6 +2019,9 @@
         "title": "Link verlopen",
         "description": "Deze link is verlopen. Vraag SMOG om een nieuwe link.",
         "since": "Verlopen op {{date}}"
+      },
+      "unavailable": {
+        "title": "Link niet meer bruikbaar"
       },
       "back": "Terug naar de website"
     },

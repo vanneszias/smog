@@ -3,6 +3,7 @@ import { Button, Text } from "@smog/ui-web";
 import { formatMoney } from "@smog/utils";
 import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
+import { useReservedSpace } from "@/lib/use-reserved-space";
 import { usePageLocale } from "./page-locale";
 
 export interface SelectionBarProps {
@@ -15,7 +16,9 @@ export interface SelectionBarProps {
 /**
  * The sticky bar under step 1 (S-03): how many gestures are chosen, the
  * total (`formatMoney`) and Continue. It stays in view while the grid
- * scrolls; the count is announced as it changes.
+ * scrolls; the count is announced as it changes. Its height is reserved as
+ * scroll padding, so a control that takes focus (Load more, a card) is
+ * never scrolled under it (WCAG 2.4.11, phase review M-4).
  */
 export function SelectionBar({
   count,
@@ -24,8 +27,12 @@ export function SelectionBar({
 }: SelectionBarProps): ReactNode {
   const { t } = useTranslation();
   const locale = usePageLocale();
+  const space = useReservedSpace();
   return (
-    <div className="sticky bottom-0 z-[1] -mx-4 border-border-subtle border-t bg-surface px-4 py-3 shadow-2 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 dark:shadow-none">
+    <div
+      className="sticky bottom-0 z-[1] -mx-4 border-border-subtle border-t bg-surface px-4 py-3 shadow-2 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 dark:shadow-none"
+      ref={space.ref}
+    >
       <div className="mx-auto flex max-w-content flex-wrap items-center justify-between gap-3">
         <div aria-live="polite" className="flex flex-col">
           <Text className="font-semibold" data-testid="selection-count">

@@ -6,6 +6,7 @@ import { renderSite, rpcError } from "@/test/render";
 import { PaymentResult } from "./payment-result";
 
 const PAYMENT = "8c3c5a52-7a0c-4d9b-9d65-1f1d7f0c2a11";
+const GESTURES_FREED = /gestures are free again/;
 
 function view(overrides: Partial<PaymentStatusView> = {}): PaymentStatusView {
   return {
@@ -199,6 +200,30 @@ describe("the payment's return page (S-14)", () => {
     expect(
       screen.getByText("Your name stays in the video until 12 May 2028.")
     ).toBeDefined();
+  });
+
+  test("a failed renewal frees nothing and offers no wizard retry (phase review M-2)", async () => {
+    await renderSite(() => <Result />, {
+      api: {
+        "sponsorships/paymentStatus": view({
+          kind: "renewal",
+          status: "failed",
+          totalCents: 6000,
+        }),
+      },
+    });
+    expect(
+      await screen.findByRole("heading", {
+        name: "The payment did not go through",
+      })
+    ).toBeDefined();
+    expect(
+      screen.getByText(
+        "Nothing was charged and your sponsorship keeps running until its current end date. Use the link in your email to try again."
+      )
+    ).toBeDefined();
+    expect(screen.queryByText(GESTURES_FREED)).toBeNull();
+    expect(screen.queryByRole("link", { name: "Try again" })).toBeNull();
   });
 
   test("no or an unknown payment: a calm notice", async () => {

@@ -39,6 +39,7 @@ export type AuthErrorKey =
   | "passwordMismatch"
   | "invalidCredentials"
   | "emailNotVerified"
+  | "emailNotSent"
   | "userExists"
   | "codeRequired"
   | "codeInvalid"
@@ -221,6 +222,7 @@ export interface AuthClientError {
 }
 
 const ERROR_CODES: Record<string, AuthErrorKey> = {
+  EMAIL_NOT_SENT: "emailNotSent",
   EMAIL_NOT_VERIFIED: "emailNotVerified",
   INVALID_EMAIL: "emailInvalid",
   INVALID_EMAIL_OR_PASSWORD: "invalidCredentials",

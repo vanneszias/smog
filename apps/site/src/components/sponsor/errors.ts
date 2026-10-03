@@ -6,39 +6,17 @@ import {
   sponsorshipError,
 } from "@smog/sponsorships/client";
 import {
-  INVALID_STATE_REASONS,
+  INVALID_STATE_REASON_KEYS,
   type InvalidStateReason,
+  invalidStateReasonOf,
 } from "@smog/sponsorships/schema";
-
-/** `INVALID_STATE` reasons → their copy (`sponsorship.errors.*`, Task 3). */
-const INVALID_STATE_KEYS = {
-  alreadySettled: "sponsorship.errors.alreadySettled",
-  gestureTaken: "sponsorship.errors.gestureTaken",
-  logoExpired: "sponsorship.errors.logoExpired",
-  logoInvalid: "sponsorship.errors.logoInvalid",
-  noLogo: "sponsorship.errors.noLogo",
-  notRefunded: "sponsorship.errors.notRefunded",
-  notRenewable: "sponsorship.errors.notRenewable",
-  noVideo: "sponsorship.errors.noVideo",
-  paid: "sponsorship.errors.paid",
-  paymentProvider: "sponsorship.errors.paymentProvider",
-  paymentsUnavailable: "sponsorship.errors.paymentsUnavailable",
-  stale: "sponsorship.errors.stale",
-  tooMany: "sponsorship.errors.tooMany",
-} as const satisfies Record<InvalidStateReason, TranslationKey>;
-
-function isReason(value: unknown): value is InvalidStateReason {
-  return (INVALID_STATE_REASONS as readonly unknown[]).includes(value);
-}
 
 /** The `INVALID_STATE` reason of an error, else `null`. */
 export function invalidStateReason(error: unknown): InvalidStateReason | null {
   const known = sponsorshipError(error);
-  if (known?.code !== "INVALID_STATE") {
-    return null;
-  }
-  const reason = (known.data as { reason?: unknown } | undefined)?.reason;
-  return isReason(reason) ? reason : null;
+  return known?.code === "INVALID_STATE"
+    ? invalidStateReasonOf(known.data)
+    : null;
 }
 
 /** The ids of a `GESTURE_UNAVAILABLE` answer, else `null`. */
@@ -64,7 +42,7 @@ export function mutationErrorMessage(
 ): string {
   const reason = invalidStateReason(error);
   if (reason) {
-    return t(INVALID_STATE_KEYS[reason]);
+    return t(INVALID_STATE_REASON_KEYS[reason]);
   }
   if (error instanceof LogoUploadError) {
     return t("sponsorship.errors.logoInvalid");
