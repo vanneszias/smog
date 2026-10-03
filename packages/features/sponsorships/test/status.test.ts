@@ -3,7 +3,8 @@ import { payment } from "@smog/db";
 import { createFakeMollie, type FakeMollie } from "@smog/payments/testing";
 import { newId } from "@smog/utils";
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { recentFanout } from "../src/server/fanout-marker";
 import {
   callAt,
   makeAdmin,
@@ -111,6 +112,33 @@ describe("sponsorships.paymentStatus (S-14, ruling 2)", () => {
     expect(queues.events.messages).toEqual([
       { paymentId: seeded.paymentId, type: "payment.settled" },
     ]);
+  });
+
+  it("marks the fan-out it enqueued, so the webhook's `already` that follows sends no second one (fix wave, payments M-2)", async () => {
+    const seeded = await seedCheckout(db, { count: 1 });
+    const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 5000);
+    fake.setStatus(mollieId, "paid");
+    expect(await recentFanout(env.KV, seeded.paymentId)).toBe(false);
+    await paymentStatus(seeded.paymentId);
+    expect(await recentFanout(env.KV, seeded.paymentId)).toBe(true);
+    // A failed enqueue leaves no marker: the webhook then sends it.
+    const other = await seedCheckout(db, { count: 1 });
+    const otherMollie = await molliePaymentFor(
+      db,
+      fake,
+      other.paymentId,
+      5000
+    );
+    fake.setStatus(otherMollie, "paid");
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    await paymentStatus(other.paymentId, {
+      email: recordingQueue(),
+      events: undefined as unknown as ReturnType<typeof recordingQueue>,
+    });
+    expect(await recentFanout(env.KV, other.paymentId)).toBe(false);
+    error.mockRestore();
   });
 
   it("re-fetches an open payment at most once per 5 s", async () => {

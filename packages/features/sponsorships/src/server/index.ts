@@ -38,6 +38,11 @@ export {
 export type { SponsorshipsDeps, SponsorshipsImplementer } from "./procedure";
 export { getQuote } from "./quote";
 export {
+  FANOUT_MARKER_TTL_S,
+  markFanout,
+  recentFanout,
+} from "./fanout-marker";
+export {
   type AdminRecipient,
   adminRecipients,
   emailAdmins,
