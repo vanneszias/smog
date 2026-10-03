@@ -5,6 +5,7 @@ import { favoritesContract } from "@smog/favorites/contract";
 import { gesturesContract } from "@smog/gestures/contract";
 import { listsContract } from "@smog/lists/contract";
 import { baseContract, roleSchema } from "@smog/rpc/contract";
+import { sponsorshipsContract } from "@smog/sponsorships/contract";
 import { z } from "zod";
 
 /** The public fields of the signed-in user. */
@@ -42,6 +43,7 @@ export const appContract = {
   favorites: favoritesContract,
   gestures: gesturesContract,
   lists: listsContract,
+  sponsorships: sponsorshipsContract,
   system: systemContract,
 };
 

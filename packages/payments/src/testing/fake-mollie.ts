@@ -25,6 +25,8 @@ export interface FakeMollieRequest {
 export interface FakePayment {
   /** Mollie's string, e.g. `"60.00"` (`corruptAmount` may break it). */
   amountValue: string;
+  /** What the customer's bank charged back, in cents. */
+  chargedBackCents: number;
   createdAt: Date;
   description: string;
   id: string;
@@ -46,6 +48,8 @@ export interface FakeMollieOptions {
 
 export interface FakeMollie {
   readonly apiUrl: string;
+  /** The bank charges `cents` back (the status stays `paid`) and the webhook is called. */
+  chargeback: (id: string, cents: number) => FakePayment;
   /** The next answer for `id` has this amount value (a tampered payment). */
   corruptAmount: (id: string, value: string) => void;
   /** The next API request answers `status` (an outage or a rate limit). */
@@ -179,6 +183,14 @@ export function createFakeMollie(options: FakeMollieOptions = {}): FakeMollie {
         },
       },
       amount: { currency: "EUR", value },
+      ...(payment.chargedBackCents > 0
+        ? {
+            amountChargedBack: {
+              currency: "EUR",
+              value: centsToMollieValue(payment.chargedBackCents),
+            },
+          }
+        : {}),
       ...(payment.refundedCents > 0
         ? {
             amountRefunded: {
@@ -235,6 +247,7 @@ export function createFakeMollie(options: FakeMollieOptions = {}): FakeMollie {
     }
     const payment: FakePayment = {
       amountValue: value,
+      chargedBackCents: 0,
       createdAt: new Date(Math.floor(Date.now() / 1000) * 1000),
       description: body.description,
       id: `tr_${randomId()}`,
@@ -339,6 +352,15 @@ export function createFakeMollie(options: FakeMollieOptions = {}): FakeMollie {
 
   return {
     apiUrl,
+    chargeback: (id, cents) => {
+      const payment = required(id);
+      payment.chargedBackCents = Math.min(
+        payment.chargedBackCents + cents,
+        mollieValueToCents(payment.amountValue)
+      );
+      notify(payment);
+      return payment;
+    },
     corruptAmount: (id, value) => {
       corrupt.set(id, value);
     },

@@ -4,23 +4,30 @@ import { emailMoney } from "../format";
 import { ActionLink, DetailsBox, EmailLayout, Footer } from "../layout";
 import type { EmailTemplate } from "../types";
 
-type RefundReason = "late" | "mismatch" | "double";
+type RefundReason = "late" | "mismatch" | "double" | "chargeback";
 
 export interface AdminRefundNeededProps {
-  /** The amount Mollie received, in integer cents. */
+  /**
+   * In integer cents: the share to refund (late), what Mollie received
+   * (mismatch, paid twice), or what the bank charged back (chargeback).
+   */
   amountCents: number;
   paymentId: string;
-  /** Late (the gesture was taken), an amount mismatch, or paid twice. */
+  /**
+   * Late (the gesture was taken), an amount mismatch, paid twice, or a
+   * chargeback (sent as `admin_chargeback:<paymentId>:<cents>:<adminId>`).
+   */
   reason: RefundReason;
   /** The payment's page in the Mollie dashboard. */
   url: string;
 }
 
 const REASON_KEYS = {
+  chargeback: "email.transactional.adminRefundNeeded.reasonChargeback",
   double: "email.transactional.adminRefundNeeded.reasonDouble",
   late: "email.transactional.adminRefundNeeded.reasonLate",
   mismatch: "email.transactional.adminRefundNeeded.reasonMismatch",
-} as const;
+} as const satisfies Record<RefundReason, string>;
 
 /**
  * `admin_refund_needed` (E-08): to every admin when a payment must be

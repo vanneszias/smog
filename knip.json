@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/knip/schema.json",
-  "ignore": ["scripts/__fixtures__/**"],
+  "ignore": [
+    "scripts/__fixtures__/**",
+    "packages/features/sponsorships/src/client/use-{checkout,logo-upload,payment-status,reedit,renewal}.ts"
+  ],
   "workspaces": {
     ".": {
       "entry": ["scripts/*.ts"],

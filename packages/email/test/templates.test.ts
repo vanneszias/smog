@@ -318,6 +318,7 @@ describe("the admin emails", () => {
     ["late", "Te laat betaald"],
     ["mismatch", "klopt niet"],
     ["double", "Dubbel betaald"],
+    ["chargeback", "Teruggeboekt"],
   ] as const)("admin_refund_needed explains %s", async (reason, phrase) => {
     const sampleRefund = EMAIL_SAMPLES["transactional/admin-refund-needed"];
     const email = await renderEmail(
