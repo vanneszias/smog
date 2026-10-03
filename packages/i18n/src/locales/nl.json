@@ -1492,10 +1492,10 @@
         "review": "Te beoordelen",
         "all": "Alle",
         "awaiting": "Wacht op betaling",
-        "rendering": "Video in de maak of mislukt",
-        "live": "Live of loopt af",
         "refund": "Terug te betalen",
-        "closed": "Afgesloten"
+        "closed": "Afgesloten",
+        "rendering": "In de maak/mislukt",
+        "live": "Live/loopt af"
       },
       "filters": {
         "label": "Filters",
@@ -1504,7 +1504,9 @@
         "all": "Alle statussen",
         "from": "Vanaf",
         "to": "Tot en met",
-        "clear": "Filters wissen"
+        "clear": "Filters wissen",
+        "payment": "Betaling {{id}}",
+        "remove": "Filter {{label}} verwijderen"
       },
       "columns": {
         "gesture": "Gebaar en naam",
@@ -1541,7 +1543,9 @@
       },
       "errors": {
         "notFound": "Deze sponsoring of betaling bestaat niet meer.",
-        "validation": "Dat klopt niet. Controleer wat je invulde."
+        "validation": "Dat klopt niet. Controleer wat je invulde.",
+        "forbidden": "Je bent geen beheerder meer. Laad de pagina opnieuw.",
+        "generic": "De actie is mislukt. Probeer het opnieuw."
       },
       "paymentStatus": {
         "open": "Open",
@@ -1626,27 +1630,28 @@
       },
       "markPaid": {
         "action": "Als betaald markeren",
-        "title": "{{amount}} als betaald markeren?",
-        "description": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: van elk wordt de video gemaakt.",
         "note": "Bankreferentie",
         "noteHint": "Komt in de geschiedenis, bv. de mededeling van de overschrijving.",
         "done": "Als betaald gemarkeerd. De video’s worden gemaakt.",
         "settled": "Mollie had deze betaling al: ze is als betaald verwerkt.",
         "refundNeeded": "Mollie had deze betaling al, maar ze moet terugbetaald worden. Bekijk de betaling hieronder.",
-        "lateFailure": "De betaling is als betaald gemarkeerd, maar de video’s starten mislukte. De controle van elk uur start ze; je hoeft niets meer te doen."
+        "lateFailure": "De betaling is als betaald gemarkeerd, maar de video’s zijn misschien niet gestart. De controle van elk uur start wat ontbreekt; kijk over een uur opnieuw.",
+        "title": "{{amount}} van {{name}} als betaald markeren?",
+        "description_one": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: de video wordt gemaakt.",
+        "description_other": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: van elk wordt de video gemaakt."
       },
       "cancel": {
         "action": "Betaling annuleren",
         "keep": "Behouden",
-        "title": "De betaling van {{amount}} annuleren?",
         "description": "Ze dekt {{gestures}}: die worden allemaal geannuleerd en komen weer vrij, en de betaling wordt ook bij Mollie geannuleerd. Er gaat geen e-mail uit.",
-        "done": "Betaling geannuleerd. {{gestures}}: weer vrij."
+        "done": "Betaling geannuleerd. {{gestures}}: weer vrij.",
+        "title": "De betaling van {{amount}} van {{name}} annuleren?"
       },
       "recordRefund": {
         "action": "Terugbetaling registreren",
-        "title": "De terugbetaling van {{amount}} registreren?",
         "description": "Betaal eerst terug in het Mollie-dashboard. Dit leest wat Mollie terugbetaalde voor {{gestures}}.",
-        "done": "Terugbetaling van {{amount}} geregistreerd."
+        "done": "Terugbetaling van {{amount}} geregistreerd.",
+        "title": "De terugbetaling op deze betaling van {{amount}} registreren?"
       },
       "link": {
         "reeditTitle": "Bewerklink voor {{name}}",
@@ -1682,7 +1687,8 @@
         "openInMollie": "Openen in Mollie",
         "newTab": "(opent in een nieuw tabblad)",
         "gestures_one": "Dekt {{count}} gebaar",
-        "gestures_other": "Dekt {{count}} gebaren"
+        "gestures_other": "Dekt {{count}} gebaren",
+        "refundNeededNoMollie": "Deze betaling moet terugbetaald worden. Ze heeft geen Mollie-betaling: betaal terug met een overschrijving. Registreren kan hier niet; ze blijft bij Terug te betalen staan."
       },
       "events": {
         "title": "Geschiedenis",

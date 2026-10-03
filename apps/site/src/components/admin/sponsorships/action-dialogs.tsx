@@ -460,6 +460,11 @@ export function SponsorshipActions({
 type PaymentDialog = "cancel" | "markPaid" | "recordRefund";
 
 export interface PaymentActionsProps {
+  /**
+   * The sponsor's display name, for the dialogs (a payment's sponsorships
+   * share one checkout and one sponsor).
+   */
+  name: string;
   payment: AdminPayment;
   /** Reads the detail again (after a mark paid that failed late). */
   reload: () => Promise<AdminSponsorshipDetail | undefined>;
@@ -476,6 +481,7 @@ const MARK_PAID_DONE = {
  * amount; record refund reads what Mollie refunded.
  */
 export function PaymentActions({
+  name,
   payment,
   reload,
 }: PaymentActionsProps): ReactNode {
@@ -493,7 +499,7 @@ export function PaymentActions({
     payment.items.map((item) => item.gesture.name),
     locale
   );
-  const named = { amount, count: payment.items.length, gestures };
+  const named = { amount, count: payment.items.length, gestures, name };
   const isOpen = payment.status === "open";
   const canRecordRefund =
     payment.mollieId !== null &&
@@ -518,8 +524,11 @@ export function PaymentActions({
 
   /**
    * Mark paid commits first and fails loudly when the render cannot be
-   * started (the hourly check is the backstop): a failure after which the
-   * payment reads paid is that case, not a refusal.
+   * started (the hourly check is the backstop). After a failure that is not
+   * a refusal the payment is read again: `paid` is that case,
+   * `refund_needed` is Mollie's settlement flagging it, and anything else
+   * (still open, or cancelled by another write) is a plain error. The
+   * warnings stay until dismissed: this is the case meant to be loud.
    */
   const markedPaidLate = useCallback(
     async (error: unknown): Promise<ToastOptions | null> => {
@@ -529,13 +538,21 @@ export function PaymentActions({
       try {
         const fresh = await reload();
         const now = fresh?.payments.find((entry) => entry.id === paymentId);
-        return now && now.status !== "open"
-          ? {
-              duration: 10_000,
-              title: t("admin.sponsorships.markPaid.lateFailure"),
-              variant: "warning",
-            }
-          : null;
+        if (now?.status === "paid") {
+          return {
+            duration: Number.POSITIVE_INFINITY,
+            title: t("admin.sponsorships.markPaid.lateFailure"),
+            variant: "warning",
+          };
+        }
+        if (now?.status === "refund_needed") {
+          return {
+            duration: Number.POSITIVE_INFINITY,
+            title: t("admin.sponsorships.markPaid.refundNeeded"),
+            variant: "warning",
+          };
+        }
+        return null;
       } catch (reloadError) {
         console.error("[admin] Failed to reload the sponsorship:", reloadError);
         return null;
@@ -556,7 +573,7 @@ export function PaymentActions({
       (result) =>
         result.result === "refund_needed"
           ? {
-              duration: 10_000,
+              duration: Number.POSITIVE_INFINITY,
               title: t("admin.sponsorships.markPaid.refundNeeded"),
               variant: "warning",
             }

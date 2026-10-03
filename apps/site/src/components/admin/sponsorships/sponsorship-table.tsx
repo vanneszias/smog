@@ -14,6 +14,7 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  IconButton,
   Input,
   SearchField,
   Select,
@@ -124,6 +125,10 @@ function SponsorshipFilters({
     setQuery("");
     onSearchChange({ tab: search.tab });
   }, [onSearchChange, search.tab]);
+  const removePayment = useCallback(() => set({ payment: undefined }), [set]);
+  const paymentLabel = search.payment
+    ? t("admin.sponsorships.filters.payment", { id: search.payment })
+    : "";
   const onAllTab = search.tab === "all";
   const filtered = Boolean(
     search.q ||
@@ -178,6 +183,23 @@ function SponsorshipFilters({
       >
         {t("admin.sponsorships.filters.clear")}
       </Button>
+      {search.payment ? (
+        // The audit log's payment link narrows the list to one payment:
+        // shown, so the narrowing is never invisible (review M6).
+        <div className="col-span-2 flex lg:col-span-5">
+          <span className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border bg-surface-sunken py-0.5 pr-1 pl-3 text-body-sm">
+            <span className="truncate">{paymentLabel}</span>
+            <IconButton
+              icon={<X />}
+              label={t("admin.sponsorships.filters.remove", {
+                label: paymentLabel,
+              })}
+              onClick={removePayment}
+              size="sm"
+            />
+          </span>
+        </div>
+      ) : null}
     </fieldset>
   );
 }
@@ -411,7 +433,13 @@ export function SponsorshipTable({
     <div className="flex flex-col gap-4">
       <SponsorshipFilters onSearchChange={onSearchChange} search={search} />
       <Tabs onValueChange={onTab} value={tab}>
-        <TabsList aria-label={t("admin.sponsorships.tabs.label")} ref={tabList}>
+        <TabsList
+          aria-label={t("admin.sponsorships.tabs.label")}
+          // From lg every tab is visible: the strip wraps instead of
+          // hiding the last ones (review M4); below it scrolls.
+          className="lg:flex-wrap lg:overflow-visible"
+          ref={tabList}
+        >
           {SPONSORSHIP_TABS.map((entry: SponsorshipTab) => {
             const count =
               counts === undefined

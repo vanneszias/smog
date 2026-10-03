@@ -126,6 +126,8 @@ export interface RenderedSite {
   events: AnalyticsEvent[];
   /** Every API call's request headers (the Turnstile token, …). */
   headers: { headers: Headers; path: string }[];
+  /** The screen's query client (its query and mutation caches). */
+  queryClient: QueryClient;
   router: AnyRouter;
 }
 
@@ -202,6 +204,7 @@ export async function renderSite(
     calls,
     events: recorder.events,
     headers,
+    queryClient,
     router: router as AnyRouter,
   };
 }

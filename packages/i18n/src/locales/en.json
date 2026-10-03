@@ -1492,10 +1492,10 @@
         "review": "Review",
         "all": "All",
         "awaiting": "Awaiting payment",
-        "rendering": "Rendering or failed",
-        "live": "Live or ending",
         "refund": "Refund needed",
-        "closed": "Closed"
+        "closed": "Closed",
+        "rendering": "Rendering/failed",
+        "live": "Live/ending"
       },
       "filters": {
         "label": "Filters",
@@ -1504,7 +1504,9 @@
         "all": "All statuses",
         "from": "From",
         "to": "To",
-        "clear": "Clear filters"
+        "clear": "Clear filters",
+        "payment": "Payment {{id}}",
+        "remove": "Remove the filter {{label}}"
       },
       "columns": {
         "gesture": "Gesture and name",
@@ -1541,7 +1543,9 @@
       },
       "errors": {
         "notFound": "This sponsorship or payment no longer exists.",
-        "validation": "That does not match. Check what you entered."
+        "validation": "That does not match. Check what you entered.",
+        "forbidden": "You are no longer an admin. Reload the page.",
+        "generic": "The action failed. Please try again."
       },
       "paymentStatus": {
         "open": "Open",
@@ -1626,27 +1630,28 @@
       },
       "markPaid": {
         "action": "Mark paid",
-        "title": "Mark {{amount}} as paid?",
-        "description": "Only for a bank transfer you received. This payment covers {{gestures}}: each one gets its video made.",
         "note": "Bank reference",
         "noteHint": "Goes into the history, e.g. the transfer’s reference.",
         "done": "Marked paid. The videos are being made.",
         "settled": "Mollie already had this payment: it is settled as paid.",
         "refundNeeded": "Mollie already had this payment, but it needs a refund. Check the payment below.",
-        "lateFailure": "The payment is marked paid, but starting the videos failed. The hourly check starts them; nothing else is needed."
+        "lateFailure": "The payment is marked paid, but the videos may not have started. The hourly check starts any that are missing; check back in an hour.",
+        "title": "Mark {{amount}} from {{name}} as paid?",
+        "description_one": "Only for a bank transfer you received. This payment covers {{gestures}}: its video gets made.",
+        "description_other": "Only for a bank transfer you received. This payment covers {{gestures}}: each one gets its video made."
       },
       "cancel": {
         "action": "Cancel payment",
         "keep": "Keep it",
-        "title": "Cancel the payment of {{amount}}?",
         "description": "It covers {{gestures}}: they are all cancelled and free again, and the payment is cancelled at Mollie too. No email is sent.",
-        "done": "Payment cancelled. {{gestures}}: free again."
+        "done": "Payment cancelled. {{gestures}}: free again.",
+        "title": "Cancel the {{amount}} payment from {{name}}?"
       },
       "recordRefund": {
         "action": "Record refund",
-        "title": "Record the refund of {{amount}}?",
         "description": "Refund in the Mollie dashboard first. This reads what Mollie refunded for {{gestures}}.",
-        "done": "Refund of {{amount}} recorded."
+        "done": "Refund of {{amount}} recorded.",
+        "title": "Record the refund on this {{amount}} payment?"
       },
       "link": {
         "reeditTitle": "Edit link for {{name}}",
@@ -1682,7 +1687,8 @@
         "openInMollie": "Open in Mollie",
         "newTab": "(opens in a new tab)",
         "gestures_one": "Covers {{count}} gesture",
-        "gestures_other": "Covers {{count}} gestures"
+        "gestures_other": "Covers {{count}} gestures",
+        "refundNeededNoMollie": "This payment needs a refund. It has no Mollie payment, so refund it by bank transfer. It cannot be recorded here and stays in Refund needed."
       },
       "events": {
         "title": "History",

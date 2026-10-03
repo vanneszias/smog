@@ -1523,10 +1523,10 @@
         "review": "À examiner",
         "all": "Tous",
         "awaiting": "En attente de paiement",
-        "rendering": "Vidéo en cours ou en échec",
-        "live": "En ligne ou bientôt fini",
         "refund": "À rembourser",
-        "closed": "Clôturés"
+        "closed": "Clôturés",
+        "rendering": "En cours/en échec",
+        "live": "En ligne/bientôt fini"
       },
       "filters": {
         "label": "Filtres",
@@ -1535,7 +1535,9 @@
         "all": "Tous les statuts",
         "from": "Du",
         "to": "Au",
-        "clear": "Effacer les filtres"
+        "clear": "Effacer les filtres",
+        "payment": "Paiement {{id}}",
+        "remove": "Retirer le filtre {{label}}"
       },
       "columns": {
         "gesture": "Geste et nom",
@@ -1572,7 +1574,9 @@
       },
       "errors": {
         "notFound": "Ce parrainage ou ce paiement n’existe plus.",
-        "validation": "Cela ne correspond pas. Vérifiez votre saisie."
+        "validation": "Cela ne correspond pas. Vérifiez votre saisie.",
+        "forbidden": "Vous n’êtes plus administrateur. Rechargez la page.",
+        "generic": "L’action a échoué. Réessayez."
       },
       "paymentStatus": {
         "open": "Ouvert",
@@ -1657,27 +1661,29 @@
       },
       "markPaid": {
         "action": "Marquer comme payé",
-        "title": "Marquer {{amount}} comme payé\u00a0?",
-        "description": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: la vidéo de chacun est préparée.",
         "note": "Référence bancaire",
         "noteHint": "Figure dans l’historique, p. ex. la communication du virement.",
         "done": "Marqué comme payé. Les vidéos sont en préparation.",
         "settled": "Mollie avait déjà ce paiement\u00a0: il est traité comme payé.",
         "refundNeeded": "Mollie avait déjà ce paiement, mais il doit être remboursé. Consultez le paiement ci-dessous.",
-        "lateFailure": "Le paiement est marqué comme payé, mais le lancement des vidéos a échoué. La vérification horaire les lance\u00a0; rien d’autre à faire."
+        "lateFailure": "Le paiement est marqué comme payé, mais les vidéos n’ont peut-être pas démarré. La vérification horaire lance celles qui manquent\u00a0; revenez dans une heure.",
+        "title": "Marquer {{amount}} de {{name}} comme payé\u00a0?",
+        "description_one": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: sa vidéo est préparée.",
+        "description_other": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: la vidéo de chacun est préparée.",
+        "description_many": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: la vidéo de chacun est préparée."
       },
       "cancel": {
         "action": "Annuler le paiement",
         "keep": "Conserver",
-        "title": "Annuler le paiement de {{amount}}\u00a0?",
         "description": "Il couvre {{gestures}}\u00a0: tous sont annulés et redeviennent libres, et le paiement est aussi annulé chez Mollie. Aucun e-mail n’est envoyé.",
-        "done": "Paiement annulé. {{gestures}}\u00a0: de nouveau libre."
+        "done": "Paiement annulé. {{gestures}}\u00a0: de nouveau libre.",
+        "title": "Annuler le paiement de {{amount}} de {{name}}\u00a0?"
       },
       "recordRefund": {
         "action": "Enregistrer le remboursement",
-        "title": "Enregistrer le remboursement de {{amount}}\u00a0?",
         "description": "Remboursez d’abord dans le tableau de bord Mollie. Ceci lit ce que Mollie a remboursé pour {{gestures}}.",
-        "done": "Remboursement de {{amount}} enregistré."
+        "done": "Remboursement de {{amount}} enregistré.",
+        "title": "Enregistrer le remboursement de ce paiement de {{amount}}\u00a0?"
       },
       "link": {
         "reeditTitle": "Lien de modification pour {{name}}",
@@ -1714,7 +1720,8 @@
         "newTab": "(s’ouvre dans un nouvel onglet)",
         "gestures_one": "Couvre {{count}} geste",
         "gestures_other": "Couvre {{count}} gestes",
-        "gestures_many": "Couvre {{count}} gestes"
+        "gestures_many": "Couvre {{count}} gestes",
+        "refundNeededNoMollie": "Ce paiement doit être remboursé. Il n’a pas de paiement Mollie\u00a0: remboursez-le par virement. Il ne peut pas être enregistré ici et reste dans «\u00a0À rembourser\u00a0»."
       },
       "events": {
         "title": "Historique",

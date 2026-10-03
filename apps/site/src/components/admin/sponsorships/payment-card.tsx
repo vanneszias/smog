@@ -3,7 +3,7 @@ import { useTranslation } from "@smog/i18n/react";
 import { Badge, Text, TextLink } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, TriangleAlert } from "lucide-react";
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useEffect, useId, useRef } from "react";
 import { useAuditTime } from "../audit-data";
 import { PaymentActions } from "./action-dialogs";
 import {
@@ -64,6 +64,8 @@ function RefundState({ payment }: { payment: AdminPayment }): ReactNode {
 export interface PaymentCardProps {
   /** The sponsorship whose detail this is (its own row is marked). */
   currentId: string;
+  /** The sponsor's display name, for the action dialogs. */
+  name: string;
   payment: AdminPayment;
   reload: () => Promise<AdminSponsorshipDetail | undefined>;
 }
@@ -75,6 +77,7 @@ export interface PaymentCardProps {
  */
 export function PaymentCard({
   currentId,
+  name,
   payment,
   reload,
 }: PaymentCardProps): ReactNode {
@@ -82,14 +85,35 @@ export function PaymentCard({
   const money = useMoney();
   const time = useAuditTime();
   const headingId = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
   const needsRefund = payment.status === "refund_needed" && !payment.refunded;
+  // A payment action that removes its own button (record refund, mark
+  // paid, cancel) would drop the focus to <body>: it moves to this card's
+  // heading instead (review M3).
+  const state = `${payment.status}:${payment.refunded}`;
+  const shownState = useRef(state);
+  useEffect(() => {
+    if (shownState.current === state) {
+      return;
+    }
+    shownState.current = state;
+    const active = document.activeElement;
+    if (!active || active === document.body || !active.isConnected) {
+      heading.current?.focus({ preventScroll: true });
+    }
+  }, [state]);
   return (
     <section
       aria-labelledby={headingId}
       className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-surface p-3 sm:p-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-semibold text-body" id={headingId}>
+        <h3
+          className="font-semibold text-body outline-none"
+          id={headingId}
+          ref={heading}
+          tabIndex={-1}
+        >
           {t("admin.sponsorships.payment.title", {
             kind: paymentKindLabel(t, payment.kind),
           })}
@@ -109,7 +133,9 @@ export function PaymentCard({
             aria-hidden="true"
             className="mt-0.5 size-4 shrink-0"
           />
-          {t("admin.sponsorships.payment.refundNeeded")}
+          {payment.mollieId
+            ? t("admin.sponsorships.payment.refundNeeded")
+            : t("admin.sponsorships.payment.refundNeededNoMollie")}
         </p>
       ) : null}
       {payment.chargedBackCents > 0 ? (
@@ -201,7 +227,7 @@ export function PaymentCard({
         ) : (
           <span />
         )}
-        <PaymentActions payment={payment} reload={reload} />
+        <PaymentActions name={name} payment={payment} reload={reload} />
       </div>
     </section>
   );

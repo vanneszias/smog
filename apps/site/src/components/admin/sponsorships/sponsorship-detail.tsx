@@ -402,6 +402,7 @@ function DetailView({
                 <PaymentCard
                   currentId={sponsorship.id}
                   key={payment.id}
+                  name={sponsorship.displayName}
                   payment={payment}
                   reload={reload}
                 />

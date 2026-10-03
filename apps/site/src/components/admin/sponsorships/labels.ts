@@ -60,7 +60,11 @@ export function sponsorshipActionError(t: Translate, error: unknown): string {
   if (code === "VALIDATION" || code === "BAD_REQUEST") {
     return t("admin.sponsorships.errors.validation");
   }
-  return t("auth.errors.generic");
+  if (code === "FORBIDDEN") {
+    // The role is checked on every call: an admin demoted meanwhile.
+    return t("admin.sponsorships.errors.forbidden");
+  }
+  return t("admin.sponsorships.errors.generic");
 }
 
 const PAYMENT_STATUS_KEYS = {

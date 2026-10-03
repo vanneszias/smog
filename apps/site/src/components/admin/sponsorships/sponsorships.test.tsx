@@ -46,6 +46,8 @@ const REASON = /Reason/;
 const BANK_REFERENCE = /Bank reference/;
 const TYPE_HOND = /Type Hond/;
 const CHECKOUT_PAYMENT = /Checkout payment/;
+const LATE_FAILURE = /may not have started/;
+const REMOVE_PAYMENT_FILTER = /Remove the filter Payment/;
 const DAY = 86_400_000;
 const CREATED = Date.UTC(2026, 8, 20, 9, 30);
 const REEDIT_URL =
@@ -233,13 +235,23 @@ describe("sponsorship labels", () => {
         );
         expect(message, `${locale} ${reason}`).not.toContain("sponsorship.");
       }
-      for (const code of ["NOT_FOUND", "VALIDATION", "OTHER"]) {
+      for (const code of ["NOT_FOUND", "VALIDATION", "FORBIDDEN", "OTHER"]) {
         expect(
           sponsorshipActionError(t, new ORPCError(code)),
           `${locale} ${code}`
-        ).not.toContain("admin.");
+        ).not.toContain("admin.sponsorships.");
       }
     }
+  });
+
+  test("a demoted admin is told so; anything else gets the admin's own message", () => {
+    const { t } = createI18n("en");
+    expect(sponsorshipActionError(t, new ORPCError("FORBIDDEN"))).toBe(
+      "You are no longer an admin. Reload the page."
+    );
+    expect(sponsorshipActionError(t, new Error("network"))).toBe(
+      "The action failed. Please try again."
+    );
   });
 
   test("the status badge reads the shared label map", async () => {
@@ -435,6 +447,39 @@ describe("SponsorshipTable, empty", () => {
     await screen.findByRole("heading", { name: "No sponsorships found." });
     expect(screen.queryByRole("table")).toBeNull();
   });
+
+  test("a payment filter (the audit log's link) shows as a removable chip", async () => {
+    const seen: SponsorshipSearch[] = [];
+    await renderSite(
+      function Page(): ReactNode {
+        const [search, setSearch] = useState<SponsorshipSearch>({
+          payment: "pay-123",
+          tab: "all",
+        });
+        const change = (next: SponsorshipSearch) => {
+          seen.push(next);
+          setSearch(next);
+        };
+        return (
+          <div data-testid="page">
+            <SponsorshipTable onSearchChange={change} search={search} />
+          </div>
+        );
+      },
+      { api: { "admin/sponsorships/list": page([row()]) } }
+    );
+    const remove = await screen.findByRole("button", {
+      name: "Remove the filter Payment pay-123",
+    });
+    fireEvent.click(remove);
+    expect(seen.at(-1)?.payment).toBeUndefined();
+    expect(seen.at(-1)?.tab).toBe("all");
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: REMOVE_PAYMENT_FILTER })
+      ).toBeNull()
+    );
+  });
 });
 
 describe("SponsorshipDetail", () => {
@@ -512,23 +557,42 @@ describe("SponsorshipDetail", () => {
     ).toEqual({ id: "sp-1" });
 
     const written: string[] = [];
-    const clipboard = { writeText: (text: string) => written.push(text) };
+    const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: {
         writeText: (text: string) => {
-          clipboard.writeText(text);
+          written.push(text);
           return Promise.resolve();
         },
       },
     });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Copy link" }));
-    await waitFor(() => expect(written).toEqual([REEDIT_URL]));
+    try {
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Copy link" })
+      );
+      await waitFor(() => expect(written).toEqual([REEDIT_URL]));
+    } finally {
+      if (original) {
+        Object.defineProperty(navigator, "clipboard", original);
+      } else {
+        Reflect.deleteProperty(navigator, "clipboard");
+      }
+    }
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    // Shown once: nothing on the page holds the link any more.
+    // Shown once: nothing on the page holds the link any more, and neither
+    // does the mutation cache (review I1).
     expect(document.body.innerHTML).not.toContain("e2eFakeToken");
+    const cached = () =>
+      site.queryClient
+        .getMutationCache()
+        .getAll()
+        .some((mutation) =>
+          JSON.stringify(mutation.state.data ?? null).includes("e2eFakeToken")
+        );
+    await waitFor(() => expect(cached()).toBe(false));
   });
 
   test("reject needs a reason: the confirm is off while it is blank", async () => {
@@ -595,6 +659,7 @@ describe("SponsorshipDetail", () => {
     let alert = await screen.findByRole("alertdialog");
     expect(alert.textContent).toContain("€120.00");
     expect(alert.textContent).toContain("Hond and Kat");
+    expect(alert.textContent).toContain("Bakkerij Zon");
     fireEvent.click(within(alert).getByRole("button", { name: "Keep it" }));
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 
@@ -602,6 +667,8 @@ describe("SponsorshipDetail", () => {
     alert = await screen.findByRole("alertdialog");
     expect(alert.textContent).toContain("€120.00");
     expect(alert.textContent).toContain("Hond and Kat");
+    expect(alert.textContent).toContain("Bakkerij Zon");
+    expect(alert.textContent).toContain("each one gets its video");
     fireEvent.change(
       within(alert).getByRole("textbox", { name: BANK_REFERENCE }),
       { target: { value: "BE-REF-42" } }
@@ -614,7 +681,8 @@ describe("SponsorshipDetail", () => {
     ).toEqual({ note: "BE-REF-42", paymentId: "pay-1" });
   });
 
-  test("mark paid that fails after the payment was marked paid says so", async () => {
+  /** Mark paid fails loudly; the detail then reads the payment as `after`. */
+  async function markPaidFailsThen(after: AdminPayment["status"]) {
     let reads = 0;
     const open = payment({ paidAt: null, status: "open" });
     await showDetail(
@@ -624,7 +692,7 @@ describe("SponsorshipDetail", () => {
           reads += 1;
           return reads === 1
             ? detail({ payments: [open] }, { status: "awaiting_payment" })
-            : detail({ payments: [payment()] }, { status: "rendering" });
+            : detail({ payments: [payment({ status: after })] });
         },
         "admin/sponsorships/markPaid": rpcError("INTERNAL_SERVER_ERROR", 500),
       }
@@ -632,9 +700,27 @@ describe("SponsorshipDetail", () => {
     fireEvent.click(button("Mark paid"));
     const alert = await screen.findByRole("alertdialog");
     fireEvent.click(within(alert).getByRole("button", { name: "Mark paid" }));
+  }
+
+  test("mark paid that fails after the payment was marked paid says so", async () => {
+    await markPaidFailsThen("paid");
     await screen.findByText(
-      "The payment is marked paid, but starting the videos failed. The hourly check starts them; nothing else is needed."
+      "The payment is marked paid, but the videos may not have started. The hourly check starts any that are missing; check back in an hour."
     );
+  });
+
+  test("mark paid that fails with the payment flagged says it needs a refund", async () => {
+    await markPaidFailsThen("refund_needed");
+    await screen.findByText(
+      "Mollie already had this payment, but it needs a refund. Check the payment below."
+    );
+    expect(screen.queryByText(LATE_FAILURE)).toBeNull();
+  });
+
+  test("mark paid that fails with the payment cancelled meanwhile is a plain error", async () => {
+    await markPaidFailsThen("canceled");
+    await screen.findByText("The action failed. Please try again.");
+    expect(screen.queryByText(LATE_FAILURE)).toBeNull();
   });
 
   test("Mollie already had the money: settled, or flagged for a refund", async () => {
@@ -726,24 +812,34 @@ describe("SponsorshipDetail", () => {
   });
 
   test("a refunded payment, a chargeback and record refund", async () => {
-    const site = await showDetail(
-      detail({
-        payments: [
-          payment({
-            chargedBackAt: CREATED + 2 * DAY,
-            chargedBackCents: 6000,
-            status: "refund_needed",
-          }),
-        ],
-      }),
-      {
-        "admin/sponsorships/recordRefund": {
-          amountCents: 6000,
-          paymentId: "pay-1",
-          refundedCents: 6000,
-        },
-      }
-    );
+    const flagged = payment({
+      chargedBackAt: CREATED + 2 * DAY,
+      chargedBackCents: 6000,
+      status: "refund_needed",
+    });
+    let reads = 0;
+    const site = await showDetail(detail({ payments: [flagged] }), {
+      "admin/sponsorships/get": () => {
+        reads += 1;
+        return detail({
+          payments: [
+            reads === 1
+              ? flagged
+              : {
+                  ...flagged,
+                  refunded: true,
+                  refundedAt: CREATED + 3 * DAY,
+                  refundedCents: 6000,
+                },
+          ],
+        });
+      },
+      "admin/sponsorships/recordRefund": {
+        amountCents: 6000,
+        paymentId: "pay-1",
+        refundedCents: 6000,
+      },
+    });
     const card = screen.getByRole("region", { name: CHECKOUT_PAYMENT });
     expect(card.textContent).toContain("Charged back");
     expect(card.textContent).toContain("only cancels open payments");
@@ -751,16 +847,46 @@ describe("SponsorshipDetail", () => {
       within(card).getByRole("button", { name: "Record refund" })
     );
     const alert = await screen.findByRole("alertdialog");
-    expect(alert.textContent).toContain("€60.00");
-    expect(alert.textContent).toContain("Refund in the Mollie dashboard first");
-    fireEvent.click(
-      within(alert).getByRole("button", { name: "Record refund" })
+    // The payment's total, not a claim that all of it was refunded (M1).
+    expect(alert.textContent).toContain(
+      "Record the refund on this €60.00 payment?"
     );
+    expect(alert.textContent).toContain("Refund in the Mollie dashboard first");
+    const confirm = within(alert).getByRole("button", {
+      name: "Record refund",
+    });
+    confirm.focus();
+    fireEvent.click(confirm);
     await screen.findByText("Refund of €60.00 recorded.");
     expect(
       site.calls.find((call) => call.path === "admin/sponsorships/recordRefund")
         ?.input
     ).toEqual({ paymentId: "pay-1" });
+    // The button is gone: the focus moves to the payment's heading (M3).
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toBe("Checkout payment")
+    );
+  });
+
+  test("a refund-needed payment without Mollie cannot be recorded here, and says so", async () => {
+    await showDetail(
+      detail({
+        payments: [
+          payment({
+            mollieDashboardUrl: null,
+            mollieId: null,
+            status: "refund_needed",
+          }),
+        ],
+      })
+    );
+    const card = screen.getByRole("region", { name: CHECKOUT_PAYMENT });
+    expect(card.textContent).toContain(
+      "It has no Mollie payment, so refund it by bank transfer. It cannot be recorded here and stays in Refund needed."
+    );
+    expect(
+      within(card).queryByRole("button", { name: "Record refund" })
+    ).toBeNull();
   });
 
   test("a fully refunded payment reads Refunded, with no record button", async () => {
