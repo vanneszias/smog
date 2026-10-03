@@ -121,10 +121,13 @@ area; each task fills its own.
 
 | Procedure | Input | Output | Audit |
 |---|---|---|---|
-| `admin.dashboard` | none | `{ gestures: { total, published, unpublished }, categories: { total, published }, users: { total, admins, banned, last30Days }, recentAudit: AuditEntry[≤5] }` | read |
+| `admin.dashboard` | none | `{ gestures: { total, published, unpublished }, categories: { total, published }, users: { total, admins, banned, last30Days }, sponsorships: { inReview, awaitingPayment, rendering, renderFailed, live, expiring, refundNeeded }, recentAudit: AuditEntry[≤5] }` | read |
 
 One D1 batch. `banned` counts bans that have not expired; `last30Days` counts
-accounts created in the last 30 days. Phase 6 adds the sponsorship stats.
+accounts created in the last 30 days. The sponsorship counts are by status;
+`refundNeeded` counts payments that need the admin: `refund_needed` with no
+refund recorded yet (`refunded_cents = 0`), or a chargeback while one of the
+payment's sponsorships still holds its gesture (a blocking status).
 
 ### Audit log
 
@@ -199,7 +202,7 @@ accounts created in the last 30 days. Phase 6 adds the sponsorship stats.
 | Procedure | Input | Output | Audit |
 |---|---|---|---|
 | `admin.users.list` | `{ q?, role?: "user" \| "admin", banned?: boolean, cursor?, limit? (1..100, = 50) }` | `{ items: AdminUser[], nextCursor: string \| null }` | read |
-| `admin.users.get` | `{ id }` | `AdminUser & { methods: string[], sessions, favorites, lists }` | read |
+| `admin.users.get` | `{ id }` | `AdminUser & { methods: string[], sessions, favorites, lists, sponsorships: { id, status, displayName, gesture: { id, name, slug }, createdAt }[≤100] }` | read |
 | `admin.users.setRole` | `{ userId, role }` | `{ user: AdminUser }` | `user.role_change` `{ from, to }` |
 | `admin.users.ban` | `{ userId, reason (1..200, trimmed), expiresInDays? (1..365) }` | `{ user: AdminUser }` | `user.ban` `{ reason, expiresAt }` |
 | `admin.users.unban` | `{ userId }` | `{ user: AdminUser }` | `user.unban` `{}` |
@@ -207,7 +210,7 @@ accounts created in the last 30 days. Phase 6 adds the sponsorship stats.
 
 - `AdminUser` is `{ id, name, email, emailVerified, role, banned, banReason, banExpires, createdAt }` (epoch ms). `banned` means a ban in force now (an expired ban reads `false`, with `banReason`/`banExpires` `null`); the `banned` filter means the same.
 - `list` reads D1 newest first with a `(created_at, id)` keyset. `q` is a literal substring of the email or the name (`instr`, so `%` and `_` are plain characters and a long email works; D1 refuses `LIKE` patterns over 50 bytes), case-insensitive for ASCII; a name is also matched as typed (`Émile`), not case-folded beyond ASCII.
-- `methods` are the account providers (`credential`, `google`, `apple`) plus `passkey`; `sessions` counts unexpired sessions; `favorites` and `lists` (owned) are counts. Phase 6 adds sponsorships by email.
+- `methods` are the account providers (`credential`, `google`, `apple`) plus `passkey`; `sessions` counts unexpired sessions; `favorites` and `lists` (owned) are counts. `sponsorships` are those whose sponsor email equals the account's (case-insensitive), only while the account's email is verified (the account export's rule), newest first.
 - The writes call Better Auth's `auth.api` (`setRole`, `banUser`, `unbanUser`, `removeUser`) with the request's headers, then write the audit entry (the change first; a failed entry is logged and rethrown, so the call fails after the change). Better Auth's `/api/auth/admin/*` HTTP endpoints are all 404 (`ADMIN_DISABLED_PATHS`).
 - A ban revokes every session of the account at once. A delete cascades the account's data; audit entries it wrote keep a `null` actor, and its `user.ban` entries lose their free-text reason (`reasonRemoved: true`) in the same batch as the `user.delete` entry. The audit data holds no email or name.
 - Guards, before any change: `INVALID_STATE` with `data.reason`: `self` (own role, ban or delete), `unchanged` (the role it has), `lastAdmin` (demoting the last admin whose ban is not in force; also enforced atomically by migration 0007's trigger), `targetBanned` (promoting an account whose ban is in force), `adminTarget` (ban or delete an admin: demote first), `alreadyBanned`, `notBanned`. A Better Auth refusal is typed: `FORBIDDEN` (the actor lost the role), `NOT_FOUND`, `BAD_REQUEST`. `NOT_FOUND` for an unknown account; `VALIDATION` when `confirmEmail` differs from the email (case-insensitive).
@@ -234,3 +237,37 @@ accounts created in the last 30 days. Phase 6 adds the sponsorship stats.
 | `admin.emails.preview` | `{ template, locale: "nl" \| "en" \| "fr" }` | `{ subject, html, text }` | read |
 
 - Every template registered in `@smog/email` with its sample (`EMAIL_SAMPLES` in `@smog/email/samples`), rendered with `renderEmail`. Nothing is sent. An unknown `template` or `locale` is `VALIDATION`.
+
+### Sponsorships
+
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.sponsorships.list` | `{ status?: Status[] (1..10, distinct), q? (1..200), paymentId?, refundNeeded?: boolean, from?, to? (epoch ms, inclusive, on `created_at`), cursor?, limit? (1..100, = 50) }` | `{ items: AdminSponsorshipRow[], nextCursor, counts: Record<Status, number> }` | read |
+| `admin.sponsorships.get` | `{ id }` | `AdminSponsorshipDetail` | read |
+| `admin.sponsorships.approve` | `{ id }` | `{ id, status: "live" }` | `sponsorship.approve` `{ startsAt, endsAt }` |
+| `admin.sponsorships.reject` | `{ id, reason (1..500, trimmed) }` | `{ id, status: "rejected" }` | `sponsorship.reject` `{ reason }` |
+| `admin.sponsorships.requestChanges` | `{ id }` | `{ url, expiresAt }` | `sponsorship.request_changes` `{ expiresAt }` |
+| `admin.sponsorships.regenerateToken` | `{ id, purpose: "reedit" \| "renewal" }` | `{ url, expiresAt }` | `sponsorship.regenerate_token` `{ purpose, expiresAt }` |
+| `admin.sponsorships.markPaid` | `{ paymentId, note? (1..200) }` | `{ paymentId, result: "marked_paid" \| "settled", sponsorshipIds }` | `sponsorship.mark_paid` `{ paymentId, source: "manual" \| "mollie", note? }`, one per sponsorship |
+| `admin.sponsorships.cancel` | `{ paymentId }` | `{ paymentId, result: "canceled", sponsorshipIds }` | `sponsorship.cancel` `{ paymentId }`, one per sponsorship |
+| `admin.sponsorships.forceExpire` | `{ id, confirmName }` | `{ id, status: "expired" }` | `sponsorship.force_expire` `{ from, deletesAsset }` |
+| `admin.sponsorships.recordRefund` | `{ paymentId }` | `{ paymentId, amountCents, refundedCents }` | `payment.refund` `{ amountCents, refundedCents }` (target the payment) |
+
+- `AdminSponsorshipRow` is `{ id, status, gesture: { id, name, slug }, displayName, sponsor: { name, email, company }, hasLogo, invoiceRequested, amountCents, paymentStatus, refundNeeded, createdAt, updatedAt, startsAt, endsAt }` (epoch ms). `amountCents`, `paymentStatus` and `hasLogo` come from the checkout's (`initial`) payment item; `refundNeeded` is the dashboard's rule for any payment of the sponsorship.
+- `list` reads D1 newest first with a `(created_at, id)` keyset over `sponsorship_created_id_idx` (migration 0010). `q` is a literal substring (`instr`) of the gesture name, the display name or the sponsor email, case-insensitive for ASCII. `counts` are per status under every filter except `status` (the tabs). A foreign cursor is `VALIDATION`.
+- `AdminSponsorshipDetail` holds the sponsorship, the gesture with its original `playbackId`, `video: { playbackId, fakeRender }` (`fakeRender` when the video is the gesture's own: the phase 6 fake render), the sponsor and the invoice request (or `null`), `logoUrl` (`/api/logos/<uuid>`), the payments (`id, mollieId, kind, status, amountCents, refundedCents, refundedAt, refunded, chargedBackCents, chargedBackAt, paidAt, createdAt, mollieDashboardUrl, items: { sponsorshipId, gesture, amountCents, includesLogo, status }[]`), the event trail (`actor` `null` for the system or a deleted account), the render jobs (read only) and the tokens (`id, purpose, createdAt, expiresAt, usedAt`; never a hash).
+- Every action runs the guarded batch of `@smog/sponsorships` (injected by `@smog/api` as `AdminDeps.sponsorships`) with its audit entries in the **same** D1 batch: the change, its `sponsorship_event` and the entries land together or not at all. A lost race (a guard in the batch) and a status that does not allow the action are `INVALID_STATE stale`; the other refusals are `INVALID_STATE` `noVideo`, `gestureTaken`, `notRenewable`, `paid`, `notRefunded`, `paymentsUnavailable`, `paymentProvider` (Mollie failed); `NOT_FOUND` for an unknown sponsorship or payment. Emails (`sponsorship_live` on approve) and `payment.settled` are enqueued after the commit (a failed enqueue is retried, logged and swallowed).
+- `requestChanges` and `regenerateToken` revoke the open links of that purpose; the URL holds the raw token, shown once, and is never stored, logged or audited (only its expiry is).
+- `markPaid` and `cancel` act on the whole payment (every sponsorship in it), only while it is `open`. Both ask Mollie first (when a key and a Mollie id exist): for `markPaid`, a payment Mollie reports `paid` is settled as the webhook does (`result: "settled"`, `source: "mollie"`); otherwise it is cancelled at Mollie while `isCancelable`, then marked paid by hand (`marked_paid_manually`, every item to `rendering`, `payment.settled`). `cancel` refuses a payment Mollie reports `paid` (`INVALID_STATE paid`) after settling it.
+- `forceExpire` needs `confirmName` equal to the gesture name (case-insensitive, else `VALIDATION`); after the batch it deletes the sponsored Mux asset unless it is the gesture's own (a failure is logged).
+- `recordRefund` re-fetches the payment from Mollie and stores `amountRefunded`; nothing refunded is `INVALID_STATE notRefunded`.
+
+### Export
+
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.export.sponsorshipsCsv` | `{ status?: Status[], from?, to? }` | `{ csv, filename, rows }` | `export.sponsorships_csv` `{ filters, rows }` (`system`) |
+
+- The 18 columns in the old order (A-09): ID, Status, Sponsor name (`display_name`), Sponsor email, Contact name, Company, Invoice name, VAT number, Invoice email, Invoice requested, Has logo, Payment amount (€) (the checkout's item amount, `"50.00"`), Mollie payment ID, Start date, End date, Duration (years), Gesture ID, Created at (ISO 8601).
+- Every field is quoted with `"` doubled; rows end in CRLF. A cell starting with `=`, `+`, `-`, `@`, a tab or a CR gets a leading `'` (formula injection).
+- Oldest first, read in keyset pages of 500 with no 10,000 row cap; over 50,000 rows is `INVALID_STATE tooMany` (narrow the date range). `filename` is `sponsorships-YYYY-MM-DD.csv` (the Brussels date).
