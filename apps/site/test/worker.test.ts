@@ -67,19 +67,21 @@ describe("the queue dispatch", () => {
     expect(error).toHaveBeenCalledWith(expect.stringMatching(DROPPED_B));
   });
 
-  it("hands the events queue's batch to the events consumer (a stub that acks)", async () => {
-    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  it("hands the events queue's batch to the events consumer", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const batch = createMessageBatch("smog-dev-sponsorship-events", [
       message("e", { paymentId: "p-1", type: "payment.settled" }),
+      message("f", { nope: true }),
     ]);
     const ctx = createExecutionContext();
 
     await worker.queue(batch, env, ctx);
 
     const result = await getQueueResult(batch, ctx);
-    expect(result.explicitAcks).toEqual(["e"]);
-    expect(log).toHaveBeenCalledWith(
-      "[events-queue] 1 message(s) acked (the consumer is phase 6 task 4)"
+    expect(result.explicitAcks.sort()).toEqual(["e", "f"]);
+    expect(warn).toHaveBeenCalledWith(
+      "[sponsorships] payment.settled for p-1, which is unknown: nothing to do"
     );
   });
 

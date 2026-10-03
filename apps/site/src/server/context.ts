@@ -1,3 +1,4 @@
+import { env as bindings } from "cloudflare:workers";
 import { createDb } from "@smog/db/client";
 import { resolveLocale } from "@smog/i18n";
 import type { RpcContext } from "@smog/rpc";
@@ -31,7 +32,13 @@ export function createRpcContext(
   return {
     auth: getAuth(),
     db: createDb(env.db),
-    env: { ...env.worker, ...env.rateLimits },
+    env: {
+      ...env.worker,
+      ...env.rateLimits,
+      EMAIL_QUEUE: bindings.EMAIL_QUEUE,
+      EVENTS_QUEUE: bindings.EVENTS_QUEUE,
+      MEDIA: bindings.MEDIA,
+    },
     ip: clientIp(request),
     kv: env.kv,
     locale: requestLocale(request),

@@ -94,9 +94,9 @@ integer cents, dates epoch milliseconds.
 |---|---|---|---|
 | `sponsorships.availability` | `RL_API` | `{ gestureIds (1..100) }` | `{ checkoutEnabled, items: { gestureId, state: available \| pending \| sponsored \| unavailable, sponsorName?, endsAt? }[] }` (one D1 read; the name and end only for `live`/`expiring`) |
 | `sponsorships.quote` | `RL_API` | `{ gestureIds (1..10, distinct), logo }` | `{ items: { gestureId, amountCents, includesLogo }[], totalCents, currency: "EUR", unavailable }` (`priceSponsorship`) |
-| `sponsorships.checkout` | Turnstile, `RL_SPONSOR` | `checkoutInputSchema` | `{ paymentId, checkoutUrl }` (phase 6 task 4) |
-| `sponsorships.uploadLogo` | `RL_SPONSOR` | `{ contentType: image/png \| image/jpeg \| image/webp, size ≤ 2 MiB }` | `{ key, uploadUrl, headers, expiresAt }` (task 4) |
-| `sponsorships.paymentStatus` | `RL_API` | `{ payment: uuid \| tr_… }` | `{ status, kind, totalCents, displayName, items, renewedUntil? }`, no PII (task 4) |
+| `sponsorships.checkout` | Turnstile, `RL_SPONSOR` | `checkoutInputSchema` | `{ paymentId, checkoutUrl }` |
+| `sponsorships.uploadLogo` | `RL_SPONSOR` | `{ contentType: image/png \| image/jpeg \| image/webp, size ≤ 2 MiB }` | `{ key: "logos/<uuid>", uploadUrl, headers: { "content-type" }, expiresAt }` |
+| `sponsorships.paymentStatus` | `RL_API` | `{ payment: uuid \| tr_… }` | `{ status, kind, totalCents, displayName, items: { gestureName, gestureSlug, includesLogo }[], renewedUntil? }`, no PII |
 | `sponsorships.reedit.get` | `RL_API` | `{ token }` | `{ displayName, expiresAt, gesture, hasLogo }` (task 5) |
 | `sponsorships.reedit.submit` | Turnstile, `RL_SPONSOR` | `{ token, displayName, logoKey? }` | `{ submitted: true }` (task 5) |
 | `sponsorships.renewal.get` | `RL_API` | `{ token }` | `{ gesture, displayName, endsAt, hasLogo, amountCents }` (task 5) |
@@ -104,6 +104,28 @@ integer cents, dates epoch milliseconds.
 
 Until their task lands, the procedures marked with a task answer
 `INTERNAL_SERVER_ERROR` ("not implemented") after their guards.
+
+- `checkout`, in order: no `MOLLIE_API_KEY` → `INVALID_STATE paymentsUnavailable` (nothing written; `availability.checkoutEnabled` is false then). A repeat of a `checkoutId` answers the same `{ paymentId, checkoutUrl }` while the payment is `open` (concurrent repeats included), `INVALID_STATE alreadySettled` after. `expectedTotalCents` other than `priceSponsorship`'s → `PAYMENT_MISMATCH`. Unknown or unpublished gestures → `GESTURE_UNAVAILABLE { gestureIds }`. The logo must exist in `MEDIA`, be ≤ 2 MiB, have one of the three types and start with that type's magic bytes, else `INVALID_STATE logoInvalid` and the object is deleted. Then one D1 batch writes the payment (`id` = `checkoutId`, `initial`, `open`), the sponsor, the invoice request, the sponsorships (`awaiting_payment`), the items and the `created` events; the partial unique index decides availability (`GESTURE_UNAVAILABLE` with the ids read again). Then `POST /v2/payments` (`Idempotency-Key` = our id); a Mollie failure cancels what the batch took and answers `INVALID_STATE paymentProvider`.
+- `uploadLogo`: with `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ACCOUNT_ID` and `MEDIA_BUCKET` an R2 presigned `PUT` on `https://<account>.r2.cloudflarestorage.com/<bucket>/logos/<uuid>` (300 s, `Content-Type` signed); otherwise the signed fallback below. The browser PUTs the file itself with exactly `headers`.
+- `paymentStatus`: by our id or Mollie's; `NOT_FOUND` otherwise. An `open` payment is re-fetched from Mollie and settled (the webhook's `settlePayment`) at most once per 5 s per payment (KV `sponsorships:status-refetch:<id>`); a Mollie failure answers the stored status. Its outputs are enqueued (logged on failure: the webhook re-derives them). `renewedUntil` is the sponsorship's end for a paid renewal.
+
+### `POST /api/webhooks/mollie` and the legacy `POST /webhooks/mollie`
+
+- Mollie's webhook (phase 6 ruling 2). No signature, no cookie, no origin check: the body (`id=tr_…` form, or `{ "id": … }` JSON, at most 4 KiB) is only a pointer, and the payment is re-fetched with our key. Exempt from maintenance (`/api/webhooks/*`; the alias is in `EXEMPT_PATHS`).
+- `400` for a missing or malformed id (`^tr_[A-Za-z0-9]{4,64}$`), `413` over 4 KiB, `200 UNKNOWN` for an id Mollie answers 404 for: these count against `RL_API` per IP (`429` past it); a verified id never does. `200 NOT_OURS` for a payment that is neither ours by `mollie_id` nor by `metadata.paymentId`. `503` without `MOLLIE_API_KEY`, for a Mollie failure, or when an enqueue fails after the settle (Mollie retries; the retry re-derives the outputs). `500` when settling fails. `200 OK` otherwise.
+- After `settlePayment` it enqueues every event (`payment.settled`) and email (`admin_refund_needed`, chargebacks) of the result, whatever the outcome; logs are `[payments]`. The alias is the same handler and logs `[mollie] legacy webhook path used`; PROGRESS carries its removal 30 days after cutover.
+
+### `PUT /api/logos/upload/$key` and `GET /api/logos/$key`
+
+- `$key` is the uuid of `logos/<uuid>`.
+- `PUT …?exp=<ms>&sig=<base64url>`: the signed fallback upload (no R2 tokens: dev, tests, e2e, a staging without them). `403` for a foreign origin (`isForeignRequest`), a forged signature (it covers the key, the `Content-Type` and `exp`; the HMAC key is HKDF of `BETTER_AUTH_SECRET`, `info: smog-logo-upload`) or an expired one; `415` for another type or bytes that are not that type; `413` over 2 MiB (by `Content-Length` and by counting the stream). Stores the object with its type and `customMetadata.uploadedAt`; answers `{ key }`.
+- `GET`: an admin session only (`401`/`403`), `404` for an unknown key; the image with `Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff` and a sandboxing CSP.
+
+### The `EVENTS_QUEUE` consumer
+
+- `payment.settled { paymentId }`: only for a `paid` or `refund_needed` payment and its items past payment (`rendering` … `expiring`, not flagged `late`/`mismatch`). Each `rendering` item without a `queued`/`running` job gets one render job (`render_started`); `render.requested` goes out for every queued job. An initial payment queues `sponsorship_received:<sponsorshipId>` and `payment_confirmed:<paymentId>:<sponsorshipId>` per sponsorship and `admin_new_sponsorship:<paymentId>:<adminId>` per admin; a renewal queues `payment_confirmed` with the new end.
+- `render.requested { renderJobId }`: a `queued` job is started by `worker/render.ts` (`renderStarterFor(RENDER_MODE)`: `fake` completes it with the gesture's own video; `container`/`local` log and leave it queued until phase 7); any other job is acked.
+- An invalid message is acked; a failure retries after `min(30 × 2^(attempts − 1), 3600)` s, and the DLQ takes it after 10 attempts.
 
 ## `admin.*` (`@smog/admin`)
 

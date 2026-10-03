@@ -8,6 +8,11 @@
  */
 export { getAvailability } from "./availability";
 export {
+  enqueueOutputs,
+  type Outputs,
+  type SponsorshipQueues,
+} from "./dispatch";
+export {
   type AfterCommit,
   approveStatements,
   cancelPaymentStatements,
@@ -22,6 +27,13 @@ export {
   SponsorshipActionError,
   type TokenPlan,
 } from "./lifecycle";
+export {
+  isLogoContentType,
+  LOGO_KEY_PREFIX,
+  r2Origin,
+  sniffLogoType,
+  verifyLogoUpload,
+} from "./logo";
 export {
   PaymentProviderError,
   type StartMolliePaymentInput,
@@ -54,6 +66,7 @@ export {
   settleFromMollie,
   settlePayment,
 } from "./settle";
+export { handlePaymentSettled, queuedRenderJob } from "./settled";
 export {
   type IssuedToken,
   isGestureTaken,

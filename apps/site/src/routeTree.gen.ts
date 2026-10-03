@@ -41,13 +41,17 @@ import { Route as GesturesSlugRouteImport } from './routes/gestures/$slug'
 import { Route as ListsIndexRouteImport } from './routes/lists/index'
 import { Route as ListsShareTokenRouteImport } from './routes/lists/$shareToken'
 import { Route as MagicLinkAppRouteImport } from './routes/magic-link_.app'
+import { Route as WebhooksMollieRouteImport } from './routes/webhooks/mollie'
 import { Route as AdminGesturesIndexRouteImport } from './routes/admin/gestures/index'
 import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id'
 import { Route as AdminGesturesNewRouteImport } from './routes/admin/gestures/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiLogosKeyRouteImport } from './routes/api/logos/$key'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
+import { Route as ApiWebhooksMollieRouteImport } from './routes/api/webhooks/mollie'
 import { Route as ApiWebhooksMuxRouteImport } from './routes/api/webhooks/mux'
+import { Route as ApiLogosUploadKeyRouteImport } from './routes/api/logos/upload.$key'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -209,6 +213,11 @@ const MagicLinkAppRoute = MagicLinkAppRouteImport.update({
   path: '/magic-link/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WebhooksMollieRoute = WebhooksMollieRouteImport.update({
+  id: '/webhooks/mollie',
+  path: '/webhooks/mollie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminGesturesIndexRoute = AdminGesturesIndexRouteImport.update({
   id: '/gestures/',
   path: '/gestures/',
@@ -229,6 +238,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiLogosKeyRoute = ApiLogosKeyRouteImport.update({
+  id: '/api/logos/$key',
+  path: '/api/logos/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOpenapiSplatRoute = ApiOpenapiSplatRouteImport.update({
   id: '/api/openapi/$',
   path: '/api/openapi/$',
@@ -239,9 +253,19 @@ const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   path: '/api/rpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhooksMollieRoute = ApiWebhooksMollieRouteImport.update({
+  id: '/api/webhooks/mollie',
+  path: '/api/webhooks/mollie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWebhooksMuxRoute = ApiWebhooksMuxRouteImport.update({
   id: '/api/webhooks/mux',
   path: '/api/webhooks/mux',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLogosUploadKeyRoute = ApiLogosUploadKeyRouteImport.update({
+  id: '/api/logos/upload/$key',
+  path: '/api/logos/upload/$key',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -275,16 +299,20 @@ export interface FileRoutesByFullPath {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link/app': typeof MagicLinkAppRoute
+  '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
+  '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -315,16 +343,20 @@ export interface FileRoutesByTo {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link/app': typeof MagicLinkAppRoute
+  '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin': typeof AdminIndexRoute
   '/gestures': typeof GesturesIndexRoute
   '/lists': typeof ListsIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures': typeof AdminGesturesIndexRoute
+  '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -357,16 +389,20 @@ export interface FileRoutesById {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link_/app': typeof MagicLinkAppRoute
+  '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
+  '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -400,16 +436,20 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link/app'
+    | '/webhooks/mollie'
     | '/admin/'
     | '/gestures/'
     | '/lists/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/api/auth/$'
+    | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
+    | '/api/logos/upload/$key'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -440,16 +480,20 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link/app'
+    | '/webhooks/mollie'
     | '/admin'
     | '/gestures'
     | '/lists'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/api/auth/$'
+    | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures'
+    | '/api/logos/upload/$key'
   id:
     | '__root__'
     | '/'
@@ -481,16 +525,20 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link_/app'
+    | '/webhooks/mollie'
     | '/admin/'
     | '/gestures/'
     | '/lists/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/api/auth/$'
+    | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
+    | '/api/logos/upload/$key'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -518,12 +566,16 @@ export interface RootRouteChildren {
   GesturesSlugRoute: typeof GesturesSlugRoute
   ListsShareTokenRoute: typeof ListsShareTokenRoute
   MagicLinkAppRoute: typeof MagicLinkAppRoute
+  WebhooksMollieRoute: typeof WebhooksMollieRoute
   GesturesIndexRoute: typeof GesturesIndexRoute
   ListsIndexRoute: typeof ListsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiLogosKeyRoute: typeof ApiLogosKeyRoute
   ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
+  ApiWebhooksMollieRoute: typeof ApiWebhooksMollieRoute
   ApiWebhooksMuxRoute: typeof ApiWebhooksMuxRoute
+  ApiLogosUploadKeyRoute: typeof ApiLogosUploadKeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -752,6 +804,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MagicLinkAppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/webhooks/mollie': {
+      id: '/webhooks/mollie'
+      path: '/webhooks/mollie'
+      fullPath: '/webhooks/mollie'
+      preLoaderRoute: typeof WebhooksMollieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/gestures/': {
       id: '/admin/gestures/'
       path: '/gestures'
@@ -780,6 +839,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/logos/$key': {
+      id: '/api/logos/$key'
+      path: '/api/logos/$key'
+      fullPath: '/api/logos/$key'
+      preLoaderRoute: typeof ApiLogosKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/openapi/$': {
       id: '/api/openapi/$'
       path: '/api/openapi/$'
@@ -794,11 +860,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/mollie': {
+      id: '/api/webhooks/mollie'
+      path: '/api/webhooks/mollie'
+      fullPath: '/api/webhooks/mollie'
+      preLoaderRoute: typeof ApiWebhooksMollieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/webhooks/mux': {
       id: '/api/webhooks/mux'
       path: '/api/webhooks/mux'
       fullPath: '/api/webhooks/mux'
       preLoaderRoute: typeof ApiWebhooksMuxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/logos/upload/$key': {
+      id: '/api/logos/upload/$key'
+      path: '/api/logos/upload/$key'
+      fullPath: '/api/logos/upload/$key'
+      preLoaderRoute: typeof ApiLogosUploadKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -855,12 +935,16 @@ const rootRouteChildren: RootRouteChildren = {
   GesturesSlugRoute: GesturesSlugRoute,
   ListsShareTokenRoute: ListsShareTokenRoute,
   MagicLinkAppRoute: MagicLinkAppRoute,
+  WebhooksMollieRoute: WebhooksMollieRoute,
   GesturesIndexRoute: GesturesIndexRoute,
   ListsIndexRoute: ListsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiLogosKeyRoute: ApiLogosKeyRoute,
   ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
+  ApiWebhooksMollieRoute: ApiWebhooksMollieRoute,
   ApiWebhooksMuxRoute: ApiWebhooksMuxRoute,
+  ApiLogosUploadKeyRoute: ApiLogosUploadKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,4 +1,5 @@
 import { type Environment, MUX_DEFAULT_API_URL } from "@smog/config/env/worker";
+import { r2Origin } from "@smog/sponsorships/server";
 
 /**
  * The site's security headers (spec §9, the old Caddy set), added to every
@@ -96,6 +97,20 @@ export function devConnectSources(
   } catch {
     return [];
   }
+}
+
+/** A Cloudflare account id: 32 lowercase hex characters. */
+const R2_ACCOUNT_ID = /^[0-9a-f]{32}$/;
+
+/**
+ * The extra `connect-src` for the sponsor logo's presigned PUT (phase 6
+ * ruling 10): the account's R2 S3 host, when `R2_ACCOUNT_ID` is set. Without
+ * it the logo uses the same-origin fallback, which `'self'` covers.
+ */
+export function r2ConnectSources(accountId: unknown): string[] {
+  return typeof accountId === "string" && R2_ACCOUNT_ID.test(accountId)
+    ? [r2Origin(accountId)]
+    : [];
 }
 
 /** A fresh CSP nonce: 128 random bits, base64. */

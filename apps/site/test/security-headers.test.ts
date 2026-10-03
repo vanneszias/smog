@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SYSTEM_THEME_SCRIPT } from "../src/lib/preferences";
 import {
   buildCsp,
+  r2ConnectSources,
   respondSecurely,
   THEME_SCRIPT_HASH,
   withSecurityHeaders,
@@ -50,6 +51,23 @@ describe("the CSP", () => {
 
   it("hashes the exact theme pre-paint script the page inlines", async () => {
     expect(THEME_SCRIPT_HASH).toBe(await sha256Base64(SYSTEM_THEME_SCRIPT));
+  });
+
+  it("allows blob: images (the wizard's local logo preview, ruling 10)", () => {
+    expect(buildCsp("n")).toContain("img-src 'self' data: blob:");
+  });
+
+  it("adds the R2 S3 host to connect-src when R2_ACCOUNT_ID is set (the presigned logo PUT)", () => {
+    const account = "0123456789abcdef0123456789abcdef";
+    expect(r2ConnectSources(account)).toEqual([
+      `https://${account}.r2.cloudflarestorage.com`,
+    ]);
+    expect(buildCsp("n", { connectSrc: r2ConnectSources(account) })).toContain(
+      `connect-src 'self' https://*.mux.com https://inferred.litix.io https://${account}.r2.cloudflarestorage.com;`
+    );
+    for (const unset of [undefined, "", "not an account", "evil.com/x"]) {
+      expect(r2ConnectSources(unset)).toEqual([]);
+    }
   });
 });
 
