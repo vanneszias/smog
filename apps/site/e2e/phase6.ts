@@ -14,7 +14,7 @@ export const PHASE6_PENDING: Readonly<Record<Phase6Pending, boolean>> = {
   /** Task 6: assert the admin moderation queue lists the paid gestures. */
   adminQueue: true,
   /** Task 4: checkout, payment status, the webhook, the fake render. */
-  checkout: true,
+  checkout: false,
   /** Task 5: `reedit.get` / `reedit.submit`. */
   reedit: true,
 };

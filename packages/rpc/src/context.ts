@@ -18,8 +18,22 @@ export const RATE_LIMIT_BINDINGS = [
 
 export type RateLimitBinding = (typeof RATE_LIMIT_BINDINGS)[number];
 
-/** Validated vars and secrets plus the bindings the middleware uses. */
-export type RpcEnv = WorkerEnv & Record<RateLimitBinding, RateLimiter>;
+/**
+ * The queue and R2 bindings some procedures use (phase 6: the sponsor
+ * checkout verifies the logo in `MEDIA`; settling a payment enqueues on
+ * `EVENTS_QUEUE` and `EMAIL_QUEUE`). Optional: every env binds them, and a
+ * procedure that finds one missing logs it and answers cleanly.
+ */
+interface RpcBindings {
+  EMAIL_QUEUE?: Queue | undefined;
+  EVENTS_QUEUE?: Queue | undefined;
+  MEDIA?: R2Bucket | undefined;
+}
+
+/** Validated vars and secrets plus the bindings the procedures use. */
+export type RpcEnv = WorkerEnv &
+  Record<RateLimitBinding, RateLimiter> &
+  RpcBindings;
 
 /** The per-request context every procedure receives (built once per request). */
 export interface RpcContext {

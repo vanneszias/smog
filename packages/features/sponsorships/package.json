@@ -27,6 +27,7 @@
     "@smog/render": "workspace:*",
     "@smog/rpc": "workspace:*",
     "@smog/utils": "workspace:*",
+    "aws4fetch": "catalog:",
     "drizzle-orm": "catalog:",
     "zod": "catalog:"
   },

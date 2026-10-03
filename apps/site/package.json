@@ -37,6 +37,7 @@
     "@smog/jobs": "workspace:*",
     "@smog/lists": "workspace:*",
     "@smog/local-store": "workspace:*",
+    "@smog/payments": "workspace:*",
     "@smog/render": "workspace:*",
     "@smog/rpc": "workspace:*",
     "@smog/sponsorships": "workspace:*",

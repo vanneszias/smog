@@ -186,6 +186,7 @@ describe("maintenance mode", () => {
     await health.body?.cancel();
     for (const path of [
       "/api/webhooks/mollie",
+      "/webhooks/mollie",
       "/api/webhooks/mux",
       "/.well-known/nothing-here",
       "/api/maintenance/bypass",
@@ -237,6 +238,9 @@ describe("maintenance mode", () => {
     for (const path of [
       "/api/healthz",
       "/api/webhooksx",
+      "/webhooks/molliex",
+      "/webhooks/mollie/x",
+      "/webhooks",
       "/.well-knownx",
       "/api/authx",
       "/sign-in-x",
