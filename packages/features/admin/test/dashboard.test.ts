@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { Dashboard } from "../src/schema";
 import { getDashboard } from "../src/server/dashboard";
 import { callAs, signedUp, testDb } from "./helpers";
+import { seedCheckout } from "./sponsorship-helpers";
 
 /**
  * A D1 binding that counts round trips: each `batch()` and each statement
@@ -133,6 +134,68 @@ describe("admin.dashboard", () => {
       actor: { id: admin.user.id, name: admin.user.name },
       data: { legacy: 5 },
     });
+  });
+
+  it("counts the sponsorships by status, and the payments that need the admin", async () => {
+    const admin = await signedUp("admin");
+    const before = await callAs<Dashboard>(admin, "dashboard");
+    await seedCheckout({ count: 2 });
+    await seedCheckout({ paymentStatus: "paid", status: "rendering" });
+    await seedCheckout({ paymentStatus: "paid", status: "render_failed" });
+    await seedCheckout({
+      count: 3,
+      paymentStatus: "paid",
+      status: "in_review",
+    });
+    await seedCheckout({ paymentStatus: "paid", status: "live" });
+    await seedCheckout({ paymentStatus: "paid", status: "expiring" });
+    // Refund needed: one flagged payment, one with its refund recorded
+    // (handled), and a chargeback on a live sponsorship.
+    await seedCheckout({ paymentStatus: "refund_needed", status: "cancelled" });
+    const handled = await seedCheckout({
+      paymentStatus: "refund_needed",
+      status: "cancelled",
+    });
+    await env.DB.prepare(
+      "UPDATE payment SET refunded_cents = 5000 WHERE id = ?"
+    )
+      .bind(handled.paymentId)
+      .run();
+    const chargedBack = await seedCheckout({
+      paymentStatus: "paid",
+      status: "live",
+    });
+    await env.DB.prepare(
+      "UPDATE payment SET charged_back_cents = 5000 WHERE id = ?"
+    )
+      .bind(chargedBack.paymentId)
+      .run();
+    // A chargeback on a sponsorship that is already over needs nothing.
+    const over = await seedCheckout({
+      paymentStatus: "paid",
+      status: "expired",
+    });
+    await env.DB.prepare(
+      "UPDATE payment SET charged_back_cents = 5000 WHERE id = ?"
+    )
+      .bind(over.paymentId)
+      .run();
+
+    const after = await callAs<Dashboard>(admin, "dashboard");
+    const delta = (key: keyof Dashboard["sponsorships"]) =>
+      after.sponsorships[key] - before.sponsorships[key];
+    expect(delta("awaitingPayment")).toBe(2);
+    expect(delta("rendering")).toBe(1);
+    expect(delta("renderFailed")).toBe(1);
+    expect(delta("inReview")).toBe(3);
+    expect(delta("live")).toBe(2);
+    expect(delta("expiring")).toBe(1);
+    expect(delta("refundNeeded")).toBe(2);
+    expect(after.sponsorships.live).toBe(
+      await direct(
+        "SELECT count(*) AS n FROM sponsorship WHERE status = 'live'"
+      )
+    );
   });
 
   it("is one D1 round trip", async () => {

@@ -22,6 +22,7 @@ import {
   signedUp,
   testDb,
 } from "./helpers";
+import { seedCheckout } from "./sponsorship-helpers";
 
 /*
  * `admin.users.*` over the test D1 with real Better Auth sessions: every
@@ -324,6 +325,41 @@ describe("admin.users.get", () => {
       // The expired session does not count.
       sessions: 1,
     });
+  });
+
+  it("lists the sponsorships by the account's email, only once it is verified", async () => {
+    const member = await signedUp("user", "Sam Sponsor");
+    const older = await seedCheckout({
+      createdAt: new Date(Date.now() - 2 * DAY),
+      // Sponsors type their address: compared case-insensitively.
+      email: member.user.email.toUpperCase(),
+      status: "live",
+    });
+    const newer = await seedCheckout({
+      createdAt: new Date(Date.now() - DAY),
+      email: member.user.email,
+    });
+    await seedCheckout({ email: `other-${member.user.email}` });
+    const detail = await callAs<AdminUserDetail>(admin, "users.get", {
+      id: member.user.id,
+    });
+    expect(detail.sponsorships.map((row) => row.id)).toEqual([
+      newer.sponsorshipIds[0],
+      older.sponsorshipIds[0],
+    ]);
+    expect(detail.sponsorships[1]).toMatchObject({
+      displayName: "Acme BV",
+      gesture: { id: older.gestures[0]?.id, name: older.gestures[0]?.name },
+      status: "live",
+    });
+
+    await env.DB.prepare("UPDATE user SET email_verified = 0 WHERE id = ?")
+      .bind(member.user.id)
+      .run();
+    const unverified = await callAs<AdminUserDetail>(admin, "users.get", {
+      id: member.user.id,
+    });
+    expect(unverified.sponsorships).toEqual([]);
   });
 
   it("is NOT_FOUND for an unknown account", async () => {

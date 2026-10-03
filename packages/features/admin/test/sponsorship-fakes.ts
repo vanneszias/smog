@@ -1,0 +1,62 @@
+/**
+ * The fakes behind the sponsorship actions in every admin test: the
+ * in-memory Mollie, queues that record what was enqueued, and the Mux
+ * fake with the asset `DELETE` the force expire sends (recorded here).
+ */
+
+import type { EmailMessage, EventMessage } from "@smog/jobs";
+import { createFakeMollie, FAKE_MOLLIE_API_KEY } from "@smog/payments/testing";
+import type { MuxFetch } from "@smog/video";
+import type { AdminQueues } from "../src/server";
+import { testMux } from "./mux-fake";
+
+export const testMollie = createFakeMollie({
+  apiUrl: "https://api.mollie.test",
+});
+
+export const TEST_MOLLIE_ENV = {
+  MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY,
+  MOLLIE_API_URL: testMollie.apiUrl,
+} as const;
+
+/** What the admin enqueued, in order (cleared by `clearQueues`). */
+export const enqueued = {
+  emails: [] as EmailMessage[],
+  events: [] as EventMessage[],
+};
+
+export function clearQueues(): void {
+  enqueued.emails.length = 0;
+  enqueued.events.length = 0;
+}
+
+export const recordingQueues = (): AdminQueues => ({
+  email: {
+    send: (body) => {
+      enqueued.emails.push(body);
+      return Promise.resolve();
+    },
+  },
+  events: {
+    send: (body) => {
+      enqueued.events.push(body);
+      return Promise.resolve();
+    },
+  },
+});
+
+/** The Mux asset ids the admin asked Mux to delete, in order. */
+export const deletedAssets: string[] = [];
+
+const ASSET_PATH = /\/video\/v1\/assets\/([^/?]+)$/;
+
+/** The Mux fake, plus `DELETE /video/v1/assets/<id>` (204, recorded). */
+export const muxWithDeletes: MuxFetch = (input, init) => {
+  const request = new Request(input, init);
+  const match = ASSET_PATH.exec(new URL(request.url).pathname);
+  if (request.method === "DELETE" && match) {
+    deletedAssets.push(decodeURIComponent(match[1] as string));
+    return Promise.resolve(new Response(null, { status: 204 }));
+  }
+  return testMux.fetch(input, init);
+};

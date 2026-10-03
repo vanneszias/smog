@@ -3,9 +3,11 @@ import { AUDIT_INPUTS } from "./audit";
 import { CATEGORIES_INPUTS } from "./categories";
 import { DASHBOARD_INPUTS } from "./dashboard";
 import { EMAILS_INPUTS } from "./emails";
+import { EXPORT_INPUTS } from "./export";
 import { GESTURES_INPUTS } from "./gestures";
 import { MAINTENANCE_INPUTS } from "./maintenance";
 import { MUX_INPUTS } from "./mux";
+import { SPONSORSHIPS_INPUTS } from "./sponsorships";
 import { USERS_INPUTS } from "./users";
 
 /**
@@ -30,4 +32,6 @@ export const ADMIN_INPUTS: ProcedureInputs = {
   ...USERS_INPUTS,
   ...MAINTENANCE_INPUTS,
   ...EMAILS_INPUTS,
+  ...SPONSORSHIPS_INPUTS,
+  ...EXPORT_INPUTS,
 };

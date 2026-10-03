@@ -98,7 +98,7 @@ describe("the audit writer", () => {
     expect(() =>
       buildAuditStatement(testDb(), SCHEMAS, {
         ...entry("someone", "s-1"),
-        action: "sponsorship.approve",
+        action: "sponsorship.retry_render",
       })
     ).toThrow(AuditDataError);
   });
@@ -304,7 +304,7 @@ describe("admin.audit.list", () => {
     const [legacy, unknown] = (await seed([
       { actorId: actor.id, createdAt: 50_000, data: { legacy: { a: 1 } } },
       {
-        action: "sponsorship.approve",
+        action: "sponsorship.retry_render",
         actorId: actor.id,
         createdAt: 60_000,
         data: { anything: ["goes"] },

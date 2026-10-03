@@ -5,12 +5,21 @@
  * tests, so this test-only file reaches it by relative path (the account
  * tests do the same; docs/DECISIONS.md, Account).
  */
+import { adminSponsorshipServices } from "../../../api/src/admin-deps";
 import { bumpCatalogVersion } from "../../gestures/src/server/catalog-cache";
 import type { AdminDeps } from "../src/server";
-import { testMux } from "./mux-fake";
+import {
+  muxWithDeletes,
+  recordingQueues,
+  testMollie,
+} from "./sponsorship-fakes";
 
 export const adminDeps: AdminDeps = {
   bumpCatalogVersion,
-  // Production leaves it unset (the Worker's fetch, to MUX_API_URL).
-  muxFetch: testMux.fetch,
+  // Production leaves the fetches unset (the Worker's fetch, to
+  // MOLLIE_API_URL and MUX_API_URL) and reads the Worker's queues.
+  mollieFetch: testMollie.fetch,
+  muxFetch: muxWithDeletes,
+  queues: recordingQueues,
+  sponsorships: adminSponsorshipServices,
 };

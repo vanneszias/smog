@@ -2,18 +2,22 @@ import { env } from "cloudflare:workers";
 import { call } from "@orpc/server";
 import type { Category, Gesture } from "@smog/db";
 import { createDb } from "@smog/db/client";
+import { SPONSORSHIP_STATUSES } from "@smog/db/enums";
 import { SAMPLE_PLAYBACK_ID } from "@smog/db/testing";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   ADMIN_CATEGORIES_MAX,
   ADMIN_GESTURE_PAGE_MAX,
+  ADMIN_SPONSORSHIPS_PAGE_MAX,
   BULK_UPDATE_MAX,
   GESTURE_CATEGORIES_MAX,
   GESTURE_KEYWORDS_MAX,
   SAVE_MANY_MAX,
+  SPONSORSHIP_QUERY_MAX,
 } from "../src/schema";
 import { addCategory, addGesture } from "./catalog-helpers";
 import { type Authed, contextAs, procedureAt, signedUp } from "./helpers";
+import { seedCheckout } from "./sponsorship-helpers";
 
 /*
  * D1 allows at most 100 bound parameters per statement, also inside a
@@ -187,6 +191,46 @@ describe("D1's 100 bound parameters per statement", () => {
       over.map((entry) => `${entry.params}: ${entry.query.slice(0, 120)}`)
     ).toEqual([]);
     expect(recorded.length).toBeGreaterThan(50);
+  });
+
+  it("holds for every sponsorship procedure at its maximums (every status, a 10 gesture payment)", async () => {
+    recorded.length = 0;
+    // A checkout holds at most 10 gestures: mark paid and cancel act on all.
+    const toPay = await seedCheckout({ count: 10, logo: true });
+    const toCancel = await seedCheckout({ count: 10 });
+    const statuses = [...SPONSORSHIP_STATUSES];
+    const page = await run<{
+      items: { id: string }[];
+      nextCursor: string | null;
+    }>("sponsorships.list", {
+      limit: ADMIN_SPONSORSHIPS_PAGE_MAX,
+      status: statuses,
+    });
+    await run("sponsorships.list", {
+      cursor: page.nextCursor ?? undefined,
+      from: 0,
+      limit: ADMIN_SPONSORSHIPS_PAGE_MAX,
+      paymentId: toPay.paymentId,
+      q: "q".repeat(SPONSORSHIP_QUERY_MAX),
+      refundNeeded: true,
+      status: statuses,
+      to: Date.now(),
+    });
+    await run("sponsorships.get", { id: toPay.sponsorshipIds[0] });
+    await run("sponsorships.markPaid", {
+      note: "n".repeat(200),
+      paymentId: toPay.paymentId,
+    });
+    await run("sponsorships.cancel", { paymentId: toCancel.paymentId });
+    await run("sponsorships.get", { id: toPay.sponsorshipIds[0] });
+    await run("export.sponsorshipsCsv", { status: statuses });
+    await run("dashboard");
+
+    const over = recorded.filter((entry) => entry.params > D1_MAX_PARAMS);
+    expect(
+      over.map((entry) => `${entry.params}: ${entry.query.slice(0, 120)}`)
+    ).toEqual([]);
+    expect(recorded.length).toBeGreaterThan(20);
   });
 
   it("caps the categories at 100: a 101st is INVALID_STATE, reorder takes them all", async () => {

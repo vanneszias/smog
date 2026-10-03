@@ -105,6 +105,9 @@ export const sponsorship = sqliteTable(
     index("sponsorship_gesture_status_idx").on(t.gestureId, t.status),
     index("sponsorship_status_ends_at_idx").on(t.status, t.endsAt),
     index("sponsorship_sponsor_id_idx").on(t.sponsorId),
+    // The admin list and the CSV export (`created_at, id` keyset, newest
+    // first and oldest first): migration 0010, phase 6 task 6.
+    index("sponsorship_created_id_idx").on(t.createdAt, t.id),
   ]
 );
 

@@ -3,10 +3,12 @@ import {
   account,
   auditLog,
   favorite,
+  gesture,
   list,
   passkey,
   type Role,
   session,
+  sponsorship,
   type User,
   user,
   userBanInForce,
@@ -25,15 +27,17 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import type {
-  AdminUser,
-  AdminUserDetail,
-  AdminUserListQuery,
-  AdminUserPage,
-  UserGuardReason,
+import {
+  type AdminUser,
+  type AdminUserDetail,
+  type AdminUserListQuery,
+  type AdminUserPage,
+  USER_SPONSORSHIPS_MAX,
+  type UserGuardReason,
 } from "../schema";
 import { auditStatement, writeAudit } from "./audit-writer";
 import { type AdminDeps, adminProcedure } from "./procedure";
+import { aliased } from "./sql";
 
 const DAY_SECONDS = 24 * 60 * 60;
 
@@ -161,11 +165,20 @@ function signInMethods(
   return passkeys > 0 ? [...methods, "passkey"] : methods;
 }
 
-/** One account with its methods and counts, in one D1 batch (or `null`). */
+/**
+ * The sponsors whose email is the account's, once the account's email is
+ * verified (compared case-insensitively: sponsors type their address), as
+ * the account export does.
+ */
+function sponsorIdsOf(userId: string): SQL {
+  return sql`SELECT us.id FROM sponsor AS us JOIN "user" AS uu ON lower(us.email) = lower(uu.email) WHERE uu.id = ${userId} AND uu.email_verified = 1`;
+}
+
+/** One account with its methods, counts and sponsorships, in one D1 batch (or `null`). */
 async function getUser(db: Db, id: string): Promise<AdminUserDetail | null> {
   const now = new Date();
   try {
-    const [rows, providers, passkeys, sessions, favorites, lists] =
+    const [rows, providers, passkeys, sessions, favorites, lists, sponsored] =
       await db.batch([
         db.select().from(user).where(eq(user.id, id)).limit(1),
         db
@@ -179,6 +192,21 @@ async function getUser(db: Db, id: string): Promise<AdminUserDetail | null> {
           .where(and(eq(session.userId, id), gt(session.expiresAt, now))),
         db.select({ n: count() }).from(favorite).where(eq(favorite.userId, id)),
         db.select({ n: count() }).from(list).where(eq(list.ownerId, id)),
+        db
+          .select({
+            createdAt: sponsorship.createdAt,
+            displayName: sponsorship.displayName,
+            gestureId: aliased(gesture.id, "gesture_id_"),
+            gestureName: gesture.name,
+            gestureSlug: gesture.slug,
+            id: aliased(sponsorship.id, "sponsorship_id_"),
+            status: sponsorship.status,
+          })
+          .from(sponsorship)
+          .innerJoin(gesture, eq(gesture.id, sponsorship.gestureId))
+          .where(sql`${sponsorship.sponsorId} IN (${sponsorIdsOf(id)})`)
+          .orderBy(desc(sponsorship.createdAt), desc(sponsorship.id))
+          .limit(USER_SPONSORSHIPS_MAX),
       ]);
     const [row] = rows;
     if (!row) {
@@ -190,6 +218,17 @@ async function getUser(db: Db, id: string): Promise<AdminUserDetail | null> {
       lists: lists[0]?.n ?? 0,
       methods: signInMethods(providers, passkeys[0]?.n ?? 0),
       sessions: sessions[0]?.n ?? 0,
+      sponsorships: sponsored.map((item) => ({
+        createdAt: item.createdAt.getTime(),
+        displayName: item.displayName,
+        gesture: {
+          id: item.gestureId,
+          name: item.gestureName,
+          slug: item.gestureSlug,
+        },
+        id: item.id,
+        status: item.status,
+      })),
     };
   } catch (error) {
     console.error(`[admin] Failed to read the user ${id}:`, error);
