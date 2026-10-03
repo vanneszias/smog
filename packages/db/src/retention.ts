@@ -7,7 +7,7 @@
  * statement, so a crash half way loses nothing and a re-run continues.
  */
 import { DAY_MS } from "@smog/utils";
-import { type SQL, sql } from "drizzle-orm";
+import { or, type SQL, sql } from "drizzle-orm";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { Db } from "./client";
 import { auditLog } from "./schema/account";
@@ -16,8 +16,11 @@ import { sponsorshipToken } from "./schema/sponsorships";
 
 /** Audit entries are kept 3 × 365 days (spec §5.6). */
 export const AUDIT_RETENTION_MS = 3 * 365 * DAY_MS;
-/** A used or expired sponsorship token is kept 30 days, for support. */
-export const SPONSORSHIP_TOKEN_GRACE_MS = 30 * DAY_MS;
+/**
+ * A used or expired sponsorship token is kept 29 days, for support: with a
+ * daily run it is gone within 30 days (fix round 1, M-4).
+ */
+export const SPONSORSHIP_TOKEN_GRACE_MS = 29 * DAY_MS;
 /** Rows per chunk. */
 export const RETENTION_CHUNK_SIZE = 500;
 /** Chunks per purge per run. */
@@ -38,6 +41,8 @@ function chunk(db: Db, table: SQLiteTable, where: SQL) {
 }
 
 export interface RetentionPurge {
+  /** The table the purge deletes from. */
+  from: SQLiteTable;
   /** Whether the chunk read seeks an index (a query-plan test checks it). */
   indexed: boolean;
   /** One chunk: deletes at most `RETENTION_CHUNK_SIZE` rows. */
@@ -45,11 +50,20 @@ export interface RetentionPurge {
   table: RetentionTable;
   /** What the purge deletes, for the logs. */
   what: string;
+  /** The rows the purge deletes at `now`. */
+  where: (now: Date) => SQL;
 }
 
 /** Before `now − ms`, as the integer milliseconds the columns hold. */
 function before(now: Date, ms: number): number {
   return now.getTime() - ms;
+}
+
+function definePurge(input: Omit<RetentionPurge, "statement">): RetentionPurge {
+  return {
+    ...input,
+    statement: (db, now) => chunk(db, input.from, input.where(now)),
+  };
 }
 
 /**
@@ -60,80 +74,97 @@ function before(now: Date, ms: number): number {
  * a few rows per sponsorship, so that scan stays small.
  */
 export const RETENTION_PURGES: readonly RetentionPurge[] = [
-  {
+  definePurge({
+    from: auditLog,
     indexed: true,
-    statement: (db, now) =>
-      chunk(
-        db,
-        auditLog,
-        sql`${auditLog.createdAt} < ${before(now, AUDIT_RETENTION_MS)}`
-      ),
     table: "audit_log",
     what: "audit entries older than 3 × 365 days",
-  },
-  {
+    where: (now) =>
+      sql`${auditLog.createdAt} < ${before(now, AUDIT_RETENTION_MS)}`,
+  }),
+  definePurge({
+    from: session,
     indexed: true,
-    statement: (db, now) =>
-      chunk(db, session, sql`${session.expiresAt} < ${now.getTime()}`),
     table: "session",
     what: "expired sessions",
-  },
-  {
+    where: (now) => sql`${session.expiresAt} < ${now.getTime()}`,
+  }),
+  definePurge({
+    from: verification,
     indexed: true,
-    statement: (db, now) =>
-      chunk(
-        db,
-        verification,
-        sql`${verification.expiresAt} < ${now.getTime()}`
-      ),
     table: "verification",
     what: "expired verifications",
-  },
-  {
+    where: (now) => sql`${verification.expiresAt} < ${now.getTime()}`,
+  }),
+  definePurge({
+    from: sponsorshipToken,
     indexed: true,
-    statement: (db, now) =>
-      chunk(
-        db,
-        sponsorshipToken,
-        sql`${sponsorshipToken.expiresAt} < ${before(now, SPONSORSHIP_TOKEN_GRACE_MS)}`
-      ),
     table: "sponsorship_token",
-    what: "sponsorship tokens expired more than 30 days ago",
-  },
-  {
+    what: "sponsorship tokens expired more than 29 days ago",
+    where: (now) =>
+      sql`${sponsorshipToken.expiresAt} < ${before(now, SPONSORSHIP_TOKEN_GRACE_MS)}`,
+  }),
+  definePurge({
+    from: sponsorshipToken,
     indexed: false,
-    statement: (db, now) =>
-      chunk(
-        db,
-        sponsorshipToken,
-        sql`${sponsorshipToken.usedAt} < ${before(now, SPONSORSHIP_TOKEN_GRACE_MS)}`
-      ),
     table: "sponsorship_token",
-    what: "sponsorship tokens used more than 30 days ago",
-  },
+    what: "sponsorship tokens used more than 29 days ago",
+    where: (now) =>
+      sql`${sponsorshipToken.usedAt} < ${before(now, SPONSORSHIP_TOKEN_GRACE_MS)}`,
+  }),
 ];
 
+function emptyCounts(): Record<RetentionTable, number> {
+  return { audit_log: 0, session: 0, sponsorship_token: 0, verification: 0 };
+}
+
+/**
+ * A dry run: how many rows each table would lose at `now`, without the
+ * chunk cap and without deleting anything. A row that two purges match (a
+ * token both used and expired long ago) counts once.
+ */
+async function countPurgeable(
+  db: Db,
+  now: Date
+): Promise<Record<RetentionTable, number>> {
+  const counts = emptyCounts();
+  for (const table of Object.keys(counts) as RetentionTable[]) {
+    const purges = RETENTION_PURGES.filter((p) => p.table === table);
+    const [first] = purges;
+    if (first) {
+      // biome-ignore lint/performance/noAwaitInLoops: four small counts, one per table.
+      const [row] = await db
+        .select({ n: sql<number>`count(*)` })
+        .from(first.from)
+        .where(or(...purges.map((p) => p.where(now))));
+      counts[table] = row?.n ?? 0;
+    }
+  }
+  return counts;
+}
+
 export interface RetentionOptions {
+  /** Count what would be deleted and delete nothing (tests and ops). */
+  dryRun?: boolean;
   /** At most this many chunks per purge (default `RETENTION_MAX_CHUNKS`). */
   maxChunks?: number;
 }
 
 /**
- * Runs every D1 purge and returns the rows deleted per table. A purge that
- * fails is logged and the others still run; the error is rethrown at the
- * end, so the cron reports the failure and the next day continues.
+ * Runs every D1 purge and returns the rows deleted per table (with
+ * `dryRun`, the rows it would delete, and nothing is deleted). A purge
+ * that fails is logged and the others still run; the error is rethrown at
+ * the end, so the cron reports the failure and the next day continues.
  */
 export async function runRetentionPurges(
   db: Db,
   now: Date,
-  { maxChunks = RETENTION_MAX_CHUNKS }: RetentionOptions = {}
+  { dryRun = false, maxChunks = RETENTION_MAX_CHUNKS }: RetentionOptions = {}
 ): Promise<Record<RetentionTable, number>> {
-  const counts: Record<RetentionTable, number> = {
-    audit_log: 0,
-    session: 0,
-    sponsorship_token: 0,
-    verification: 0,
-  };
+  if (dryRun) {
+    return await countPurgeable(db, now);
+  }
+  const counts = emptyCounts();
   let failure: unknown;
   for (const purge of RETENTION_PURGES) {
     try {

@@ -65,7 +65,7 @@
     "userMenu": "Menu du compte",
     "favorite": "Favori",
     "gestureVideo": "Vidéo du geste",
-    "dragHandleFor": "Faire glisser pour réordonner : {{name}}"
+    "dragHandleFor": "Faire glisser pour réordonner\u00a0: {{name}}"
   },
   "nav": {
     "home": "Accueil",
@@ -120,7 +120,7 @@
       "placeholder": "Votre prénom et votre nom"
     },
     "methods": {
-      "title": "Comment souhaitez-vous vous connecter ?",
+      "title": "Comment souhaitez-vous vous connecter\u202f?",
       "password": "Avec mon mot de passe",
       "emailCode": "Avec un code par e-mail",
       "magicLink": "Avec un lien de connexion par e-mail",
@@ -134,10 +134,10 @@
       "placeholder": "Votre mot de passe",
       "newLabel": "Nouveau mot de passe",
       "confirmLabel": "Répétez votre mot de passe",
-      "forgot": "Mot de passe oublié ?",
+      "forgot": "Mot de passe oublié\u202f?",
       "signIn": "Se connecter",
       "signUp": "Créer le compte",
-      "rulesTitle": "Votre mot de passe :",
+      "rulesTitle": "Votre mot de passe\u00a0:",
       "ruleMinLength": "compte au moins {{min}} caractères",
       "ruleMaxLength": "compte au plus {{max}} caractères",
       "ruleMatch": "est identique dans les deux champs"
@@ -159,18 +159,18 @@
       "appTitle": "Se connecter dans l'app",
       "appDescription": "Ce lien vous connecte à l'app SMOG & Co. Ouvrez-le sur le téléphone où l'app est installée.",
       "continueInBrowser": "Se connecter dans ce navigateur",
-      "confirmTitle": "Se connecter avec le lien de votre e-mail ?",
+      "confirmTitle": "Se connecter avec le lien de votre e-mail\u202f?",
       "confirmDescription": "Ne continuez que si vous avez demandé ce lien vous-même. Vous verrez à quel compte vous êtes connecté.",
       "confirm": "Se connecter",
-      "switchTitle": "Changer de compte ?",
+      "switchTitle": "Changer de compte\u202f?",
       "switchDescription": "Vous êtes connecté en tant que {{current}}. Ce lien peut vous connecter à un autre compte.",
       "switch": "Changer de compte",
       "wrongAccount": "Ce lien connecte à un autre compte."
     },
     "checkInbox": {
       "openMail": "Ouvrir votre application de messagerie",
-      "spamHint": "Rien reçu ? Vérifiez aussi vos courriers indésirables.",
-      "wrongEmail": "Mauvaise adresse e-mail ?"
+      "spamHint": "Rien reçu\u202f? Vérifiez aussi vos courriers indésirables.",
+      "wrongEmail": "Mauvaise adresse e-mail\u202f?"
     },
     "verifyEmail": {
       "title": "Confirmez votre adresse e-mail",
@@ -231,9 +231,9 @@
       "generic": "Une erreur s'est produite. Veuillez réessayer."
     },
     "import": {
-      "title": "Récupérer vos données ?",
+      "title": "Récupérer vos données\u202f?",
       "description": "Vous avez enregistré des gestes sur cet appareil sans compte. Ajoutez-les à votre compte pour les retrouver partout.",
-      "prompt": "Importer {{items}} ?",
+      "prompt": "Importer {{items}}\u202f?",
       "favorites_one": "{{count}} favori",
       "favorites_many": "{{count}} favoris",
       "favorites_other": "{{count}} favoris",
@@ -248,11 +248,11 @@
       "skipped_one": "{{count}} geste n'est plus disponible et a été ignoré.",
       "skipped_many": "{{count}} gestes ne sont plus disponibles et ont été ignorés.",
       "skipped_other": "{{count}} gestes ne sont plus disponibles et ont été ignorés.",
-      "overLimit": "Tout n'a pas pu être ajouté à votre compte : il contient jusqu'à {{maxLists}} listes de {{maxItems}} gestes chacune.",
+      "overLimit": "Tout n'a pas pu être ajouté à votre compte\u00a0: il contient jusqu'à {{maxLists}} listes de {{maxItems}} gestes chacune.",
       "untitledList": "Liste sans nom"
     },
-    "noAccount": "Pas encore de compte ?",
-    "haveAccount": "Vous avez déjà un compte ?",
+    "noAccount": "Pas encore de compte\u202f?",
+    "haveAccount": "Vous avez déjà un compte\u202f?",
     "signUpLink": "Créez-en un"
   },
   "states": {
@@ -301,7 +301,7 @@
       "linkLabel": "Lien",
       "copyLink": "Copier le lien",
       "revoke": "Révoquer le lien",
-      "revokeTitle": "Révoquer ce lien ?",
+      "revokeTitle": "Révoquer ce lien\u00a0?",
       "revokeDescription": "Les personnes qui ont le lien perdent l'accès immédiatement. Vous pourrez créer un nouveau lien plus tard.",
       "revokeConfirm": "Révoquer",
       "title": "Partager la liste",
@@ -309,7 +309,7 @@
       "createView": "Créer un lien de consultation",
       "createEdit": "Créer un lien de modification",
       "send": "Envoyer le lien",
-      "message": "{{name}} : {{url}}",
+      "message": "{{name}}\u00a0: {{url}}",
       "signInTitle": "Connectez-vous pour partager",
       "signInDescription": "Partager une liste nécessite un compte. Vos listes vous suivent lorsque vous vous connectez.",
       "copied": "Lien copié",
@@ -323,8 +323,8 @@
     "rename": "Renommer",
     "nameLabel": "Nom",
     "delete": "Supprimer la liste",
-    "deleteTitle": "Supprimer cette liste ?",
-    "deleteDescription": "« {{name}} » sera supprimée. Les gestes eux-mêmes restent.",
+    "deleteTitle": "Supprimer cette liste\u202f?",
+    "deleteDescription": "«\u00a0{{name}}\u00a0» sera supprimée. Les gestes eux-mêmes restent.",
     "deleted": "Liste supprimée",
     "addedTo": "Ajouté à « {{name}} »",
     "removedFrom": "Retiré de « {{name}} »",
@@ -384,14 +384,14 @@
     "related": "Gestes liés",
     "sponsoredBy": "Sponsorisé par {{name}}",
     "share": "Partager le geste",
-    "shareMessage": "{{name}} en SMOG : {{url}}",
+    "shareMessage": "{{name}} en SMOG\u00a0: {{url}}",
     "notFound": {
       "title": "Geste introuvable",
       "description": "Ce geste n'existe pas (ou plus)."
     },
     "screenshot": {
-      "title": "Partager ce geste ?",
-      "message": "Vous avez fait une capture d'écran. Envoyez plutôt un lien : la vidéo suivra.",
+      "title": "Partager ce geste\u202f?",
+      "message": "Vous avez fait une capture d'écran. Envoyez plutôt un lien\u00a0: la vidéo suivra.",
       "share": "Partager le lien",
       "dismiss": "Pas maintenant"
     },
@@ -471,7 +471,7 @@
       "greeting": "Bonjour,",
       "greetingName": "Bonjour {{name}},",
       "signature": "L'équipe SMOG & Co",
-      "linkFallback": "Le bouton ne fonctionne pas ? Copiez ce lien dans votre navigateur :",
+      "linkFallback": "Le bouton ne fonctionne pas\u202f? Copiez ce lien dans votre navigateur\u00a0:",
       "verifyEmail": {
         "subject": "Confirmez votre adresse e-mail",
         "preheader": "Encore un clic et votre compte est prêt.",
@@ -479,15 +479,15 @@
         "body": "Merci d'avoir créé un compte SMOG & Co. Cliquez sur le bouton ci-dessous pour confirmer votre adresse e-mail.",
         "button": "Confirmer l'adresse e-mail",
         "expiry": "Le lien est valable {{minutes}} minutes.",
-        "footer": "Vous n'avez pas créé de compte ? Vous pouvez ignorer cet e-mail."
+        "footer": "Vous n'avez pas créé de compte\u202f? Vous pouvez ignorer cet e-mail."
       },
       "otp": {
         "subject": "{{code}} est votre code SMOG & Co",
         "preheader": "Votre code est {{code}}.",
         "heading": "Votre code",
-        "body": "Saisissez ce code pour continuer :",
+        "body": "Saisissez ce code pour continuer\u00a0:",
         "expiry": "Le code est valable {{minutes}} minutes. Ne le communiquez à personne.",
-        "footer": "Vous n'avez pas demandé de code ? Vous pouvez ignorer cet e-mail."
+        "footer": "Vous n'avez pas demandé de code\u202f? Vous pouvez ignorer cet e-mail."
       },
       "magicLink": {
         "subject": "Votre lien de connexion SMOG & Co",
@@ -496,7 +496,7 @@
         "body": "Cliquez sur le bouton ci-dessous pour vous connecter. Aucun mot de passe n'est nécessaire.",
         "button": "Se connecter",
         "expiry": "Le lien est valable {{minutes}} minutes et ne fonctionne qu'une seule fois.",
-        "footer": "Vous n'avez pas essayé de vous connecter ? Vous pouvez ignorer cet e-mail."
+        "footer": "Vous n'avez pas essayé de vous connecter\u202f? Vous pouvez ignorer cet e-mail."
       },
       "resetPassword": {
         "subject": "Choisissez un nouveau mot de passe",
@@ -505,16 +505,16 @@
         "body": "Nous avons reçu une demande de modification du mot de passe de votre compte. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.",
         "button": "Choisir un nouveau mot de passe",
         "expiry": "Le lien est valable {{minutes}} minutes.",
-        "footer": "Vous n'avez rien demandé ? Vous pouvez ignorer cet e-mail. Votre mot de passe reste inchangé."
+        "footer": "Vous n'avez rien demandé\u202f? Vous pouvez ignorer cet e-mail. Votre mot de passe reste inchangé."
       }
     },
     "common": {
       "yourGesture": "votre geste",
-      "gestureNamed": "le geste « {{name}} »",
+      "gestureNamed": "le geste «\u00a0{{name}}\u00a0»",
       "logoAlt": "SMOG & Co",
       "copyright": "© {{year}} SMOG & CO asbl · Belgique",
       "tagline": "SMOG — Spreken Met Ondersteuning van Gebaren (parler avec le soutien des signes)",
-      "questions": "Des questions ? Répondez simplement à cet e-mail.",
+      "questions": "Des questions\u00a0? Répondez simplement à cet e-mail.",
       "adminFooter": "Vous recevez cet e-mail parce que vous êtes administrateur de SMOG & Co.",
       "contactWithCompany": "{{name}} ({{company}})",
       "oneYear": "1 an",
@@ -547,40 +547,40 @@
         "subject": "Bienvenue chez SMOG & Co",
         "preheader": "Découvrez des gestes et soutenez SMOG en parrainant un geste.",
         "heading": "Bienvenue chez SMOG & Co",
-        "body": "Votre compte est prêt. Voici ce que vous pouvez faire :",
+        "body": "Votre compte est prêt. Voici ce que vous pouvez faire\u00a0:",
         "explore": "Découvrir des gestes et voir comment les faire",
         "favorites": "Enregistrer vos gestes favoris et créer vos propres listes",
         "sponsor": "Soutenir SMOG en parrainant un geste",
         "button": "Découvrir les gestes",
-        "footer": "Vous n'avez pas créé ce compte ? Vous pouvez ignorer cet e-mail."
+        "footer": "Vous n'avez pas créé ce compte\u00a0? Vous pouvez ignorer cet e-mail."
       },
       "sponsorshipReceived": {
         "subject": "Nous avons bien reçu votre parrainage",
-        "preheader": "Merci ! Voici la suite.",
+        "preheader": "Merci\u00a0! Voici la suite.",
         "heading": "Parrainage reçu",
         "body": "Merci de parrainer {{gesture}}. La vidéo affichera le nom {{displayName}}.",
-        "nextTitle": "Et maintenant ?",
+        "nextTitle": "Et maintenant\u00a0?",
         "stepRender": "Nous réalisons votre vidéo parrainée.",
         "stepReview": "Nous vérifions la vidéo avant sa mise en ligne.",
         "stepLive": "Vous recevez un e-mail dès que votre parrainage est en ligne.",
         "footer": "Vous recevez cet e-mail parce que vous avez récemment soumis un parrainage via SMOG & Co."
       },
       "paymentConfirmed": {
-        "subject": "Paiement confirmé — merci !",
+        "subject": "Paiement confirmé — merci\u00a0!",
         "preheader": "Nous avons bien reçu votre paiement de {{amount}}.",
         "heading": "Paiement confirmé",
-        "body": "Nous avons bien reçu votre paiement. Merci !",
+        "body": "Nous avons bien reçu votre paiement. Merci\u00a0!",
         "initialNext": "Votre parrainage est normalement en ligne dans un délai de 1 à 2 jours ouvrables. Nous vous enverrons un e-mail à ce moment-là.",
         "renewalNext": "Votre parrainage a été prolongé et court désormais jusqu'au {{date}}.",
-        "footer": "Conservez cet e-mail comme preuve de paiement. Besoin d'une facture ? Contactez-nous."
+        "footer": "Conservez cet e-mail comme preuve de paiement. Besoin d'une facture\u00a0? Contactez-nous."
       },
       "sponsorshipLive": {
-        "subject": "Votre parrainage est en ligne !",
+        "subject": "Votre parrainage est en ligne\u00a0!",
         "preheader": "Votre vidéo parrainée est en ligne.",
-        "heading": "Votre parrainage est en ligne !",
+        "heading": "Votre parrainage est en ligne\u00a0!",
         "body": "Votre vidéo parrainée pour {{gesture}} est maintenant en ligne avec le nom {{displayName}}.",
         "button": "Voir sur SMOG",
-        "thanks": "Merci de soutenir SMOG !",
+        "thanks": "Merci de soutenir SMOG\u00a0!",
         "footer": "Nous vous enverrons un rappel 30 jours avant la fin, pour que vous puissiez prolonger."
       },
       "renewalReminder": {
@@ -588,14 +588,14 @@
         "preheader": "Votre parrainage se termine le {{date}}.",
         "heading": "Votre parrainage se termine bientôt",
         "body": "Votre parrainage pour {{gesture}} se termine le {{date}}, dans moins de 30 jours. Ensuite, le geste affichera de nouveau sa vidéo d'origine.",
-        "renew": "Vous souhaitez parrainer une année de plus ? Prolongez avec le bouton ci-dessous. Vous payez le même montant que l'an dernier.",
+        "renew": "Vous souhaitez parrainer une année de plus\u00a0? Prolongez avec le bouton ci-dessous. Vous payez le même montant que l'an dernier.",
         "button": "Prolonger le parrainage",
-        "footer": "Le lien fonctionne jusqu'à la fin de votre parrainage. Vous ne souhaitez pas prolonger ? Vous n'avez rien à faire."
+        "footer": "Le lien fonctionne jusqu'à la fin de votre parrainage. Vous ne souhaitez pas prolonger\u00a0? Vous n'avez rien à faire."
       },
       "adminNewSponsorship": {
-        "subject": "Nouveau parrainage : {{name}}",
+        "subject": "Nouveau parrainage\u00a0: {{name}}",
         "subjectRenewal": "Parrainage prolongé par {{name}}",
-        "preheader": "Payé : {{total}}.",
+        "preheader": "Payé\u00a0: {{total}}.",
         "heading": "Nouveau parrainage payé",
         "headingRenewal": "Parrainage prolongé",
         "body": "Un parrainage a été payé. Il attend maintenant sa vidéo, puis une approbation.",
@@ -616,10 +616,10 @@
         "preheader": "Remboursez {{amount}} dans le tableau de bord Mollie.",
         "heading": "Remboursement nécessaire",
         "body": "Ce paiement doit être remboursé manuellement.",
-        "reasonLate": "Payé trop tard : quelqu'un d'autre a parrainé le geste entre-temps.",
+        "reasonLate": "Payé trop tard\u00a0: quelqu'un d'autre a parrainé le geste entre-temps.",
         "reasonMismatch": "Le montant ou la devise du paiement ne correspond pas à la commande.",
-        "reasonDouble": "Payé deux fois : le paiement avait déjà été marqué comme payé manuellement.",
-        "reasonChargeback": "Rétrofacturé : la banque a annulé le paiement. Vérifiez le parrainage et contactez le parrain si nécessaire.",
+        "reasonDouble": "Payé deux fois\u00a0: le paiement avait déjà été marqué comme payé manuellement.",
+        "reasonChargeback": "Rétrofacturé\u00a0: la banque a annulé le paiement. Vérifiez le parrainage et contactez le parrain si nécessaire.",
         "steps": "Remboursez le montant dans le tableau de bord Mollie. Si le remboursement n'apparaît pas ensuite dans l'administration, enregistrez-le sur le paiement.",
         "button": "Ouvrir dans Mollie"
       }
@@ -687,7 +687,7 @@
     "title": "Votre compte",
     "signedInAs": "Connecté en tant que {{email}}",
     "export": {
-      "sensitive": "Ce fichier contient vos données personnelles et les liens de partage actifs de vos listes : toute personne disposant d'un lien peut ouvrir la liste. Conservez-le en lieu sûr et ne le partagez pas."
+      "sensitive": "Ce fichier contient vos données personnelles et les liens de partage actifs de vos listes\u00a0: toute personne disposant d'un lien peut ouvrir la liste. Conservez-le en lieu sûr et ne le partagez pas."
     },
     "errors": {
       "passwordRequired": "Saisissez votre mot de passe pour supprimer votre compte.",
@@ -725,7 +725,7 @@
       "passkeyName": "Clé d'accès",
       "addedOn": "Ajoutée le {{date}}",
       "removePasskey": "Supprimer la clé d'accès",
-      "removePasskeyTitle": "Supprimer cette clé d'accès ?",
+      "removePasskeyTitle": "Supprimer cette clé d'accès\u202f?",
       "removePasskeyDescription": "Vous ne pourrez plus vous connecter avec elle.",
       "passkeyRemoved": "La clé d'accès a été supprimée.",
       "linked": "Associé",
@@ -733,7 +733,7 @@
       "link": "Associer",
       "unlink": "Dissocier",
       "linkedToast": "{{provider}} a été associé.",
-      "unlinkTitle": "Dissocier {{provider}} ?",
+      "unlinkTitle": "Dissocier {{provider}}\u202f?",
       "unlinkDescription": "Vous ne pourrez plus vous connecter avec {{provider}}. Vous pourrez l'associer à nouveau plus tard.",
       "unlinked": "{{provider}} a été dissocié.",
       "lastMethod": "C'est votre seule méthode de connexion. Ajoutez-en d'abord une autre.",
@@ -753,7 +753,7 @@
       "title": "Supprimer le compte",
       "description": "Cela supprime définitivement votre compte, vos favoris, vos listes et vos liens de partage. Les parrainages sont conservés, comme la loi l'exige.",
       "action": "Supprimer mon compte",
-      "dialogTitle": "Supprimer définitivement votre compte ?",
+      "dialogTitle": "Supprimer définitivement votre compte\u202f?",
       "dialogDescription": "Cette action est irréversible.",
       "confirmLabel": "Tapez {{word}} pour confirmer",
       "password": "Votre mot de passe",
@@ -782,14 +782,14 @@
   },
   "appBanner": {
     "badge": "Nouveau",
-    "title": "SMOG est maintenant disponible sur votre téléphone !",
+    "title": "SMOG est maintenant disponible sur votre téléphone\u202f!",
     "description": "Téléchargez l'application et apprenez les gestes où que vous soyez.",
     "appStorePrefix": "Télécharger dans l'",
     "googlePlayPrefix": "Disponible sur",
     "dismiss": "Fermer la bannière de l'application"
   },
   "openInApp": {
-    "title": "Vous avez l'application SMOG ?",
+    "title": "Vous avez l'application SMOG\u202f?",
     "description": "Regardez ce geste dans l'application.",
     "action": "Ouvrir dans l'application",
     "getApp": "Obtenir l'application"
@@ -797,7 +797,7 @@
   "legal": {
     "lastUpdated": "Dernière mise à jour le {{date}}",
     "contents": "Sommaire",
-    "translationNotice": "Cette traduction est fournie pour votre commodité ; la version néerlandaise prévaut.",
+    "translationNotice": "Cette traduction est fournie pour votre commodité\u202f; la version néerlandaise prévaut.",
     "readDutch": "Lire la version néerlandaise",
     "consentControl": "Votre choix pour les statistiques",
     "readingDutch": "Vous lisez la version néerlandaise, qui prévaut.",
@@ -1054,7 +1054,7 @@
         "discard": "Annuler ({{count}})",
         "save": "Enregistrer les modifications",
         "stop": "Arrêter la modification",
-        "stopConfirmTitle": "Abandonner vos modifications ?",
+        "stopConfirmTitle": "Abandonner vos modifications\u00a0?",
         "stopConfirmDescription": "Les modifications de {{count}} gestes ne sont pas encore enregistrées.",
         "stopConfirm": "Abandonner",
         "editCategories": "Catégories de {{name}}",
@@ -1066,15 +1066,15 @@
         "saved_many": "{{count}} gestes enregistrés.",
         "saved_other": "{{count}} gestes enregistrés.",
         "cell": "{{field}} de {{name}}",
-        "keywordsInvalid": "Vérifiez les mots-clés : au plus 30, chacun d’au plus 60 caractères.",
+        "keywordsInvalid": "Vérifiez les mots-clés\u00a0: au plus 30, chacun d’au plus 60 caractères.",
         "changedCell": "Modifié, pas encore enregistré",
         "merged": "Fusionné avec des versions plus récentes. Vérifiez les modifications et enregistrez à nouveau.",
         "conflict_one": "Un autre administrateur a modifié les mêmes champs de {{count}} geste. Utilisez sa version, ou remplacez-la par la vôtre.",
         "conflict_other": "Un autre administrateur a modifié les mêmes champs de {{count}} gestes. Utilisez sa version, ou remplacez-la par la vôtre.",
         "conflict_many": "Un autre administrateur a modifié les mêmes champs de {{count}} gestes. Utilisez sa version, ou remplacez-la par la vôtre.",
-        "overwriteItem": "{{name}} : {{fields}}",
+        "overwriteItem": "{{name}}\u00a0: {{fields}}",
         "overwriteDescription": "Cela remplace les modifications de l’autre administrateur ({{items}}) par les vôtres.",
-        "discardTitle": "Abandonner {{count}} modifications ?",
+        "discardTitle": "Abandonner {{count}} modifications\u00a0?",
         "discardDescription": "Les modifications de ces lignes seront perdues.",
         "locked": "Enregistrez ou abandonnez vos modifications du tableau pour changer les filtres ou la page."
       },
@@ -1105,7 +1105,7 @@
         "list_many": "{{count}} mots-clés",
         "list_other": "{{count}} mots-clés",
         "none": "Pas encore de mots-clés.",
-        "duplicate": "« {{keyword}} » est déjà un mot-clé.",
+        "duplicate": "«\u00a0{{keyword}}\u00a0» est déjà un mot-clé.",
         "tooLong": "Un mot-clé compte au plus {{max}} caractères.",
         "max": "Au plus {{max}} mots-clés."
       },
@@ -1123,9 +1123,9 @@
         "saved": "Le geste est enregistré.",
         "created": "{{name}} est créé.",
         "duplicateTitle": "Doublon possible",
-        "duplicate_one": "Un autre geste porte ce nom :",
-        "duplicate_many": "D’autres gestes portent ce nom :",
-        "duplicate_other": "D’autres gestes portent ce nom :",
+        "duplicate_one": "Un autre geste porte ce nom\u00a0:",
+        "duplicate_many": "D’autres gestes portent ce nom\u00a0:",
+        "duplicate_other": "D’autres gestes portent ce nom\u00a0:",
         "categoriesHint": "Au moins une. Les catégories masquées sont signalées.",
         "nameRequired": "Indiquez un nom.",
         "descriptionTooLong": "La description est trop longue.",
@@ -1138,12 +1138,12 @@
       },
       "conflict": {
         "title": "Quelqu’un d’autre a modifié ce geste",
-        "description": "Un autre administrateur a enregistré ce geste à {{time}}. Ses modifications des autres champs sont conservées. Ces champs ont été modifiés des deux côtés :",
+        "description": "Un autre administrateur a enregistré ce geste à {{time}}. Ses modifications des autres champs sont conservées. Ces champs ont été modifiés des deux côtés\u00a0:",
         "theirs": "Sa version",
         "mine": "Votre version",
         "useTheirs": "Utiliser sa version",
         "overwrite": "Remplacer par la mienne",
-        "overwriteTitle": "Remplacer ses modifications ?",
+        "overwriteTitle": "Remplacer ses modifications\u00a0?",
         "overwriteDescription": "Cela remplace {{fields}} de l’autre administrateur par les vôtres.",
         "overwriteConfirm": "Remplacer",
         "merged": "Fusionné avec une version plus récente et enregistré.",
@@ -1161,8 +1161,8 @@
         "description": "La suppression retire le geste définitivement. Seul un geste masqué sans parrainage peut être supprimé.",
         "publishedNote": "Masquez d’abord le geste pour le supprimer.",
         "delete": "Supprimer le geste",
-        "confirmTitle": "Supprimer {{name}} ?",
-        "confirmDescription": "Cette action est irréversible. Tapez « {{name}} » pour confirmer.",
+        "confirmTitle": "Supprimer {{name}}\u00a0?",
+        "confirmDescription": "Cette action est irréversible. Tapez «\u00a0{{name}}\u00a0» pour confirmer.",
         "confirmLabel": "Nom du geste",
         "confirm": "Supprimer",
         "deleted": "{{name}} est supprimé.",
@@ -1172,13 +1172,13 @@
         "saveFailed": "Les modifications n’ont pas pu être enregistrées."
       },
       "leave": {
-        "title": "Partir sans enregistrer ?",
+        "title": "Partir sans enregistrer\u00a0?",
         "description": "Vos modifications ne sont pas encore enregistrées. Elles seront perdues si vous partez.",
         "leave": "Partir",
         "stay": "Rester"
       },
       "listHeading": "Liste des gestes",
-      "qrHiddenNote": "Ce geste est masqué : le lien ne fonctionnera qu’une fois publié."
+      "qrHiddenNote": "Ce geste est masqué\u00a0: le lien ne fonctionnera qu’une fois publié."
     },
     "categories": {
       "title": "Catégories",
@@ -1201,7 +1201,7 @@
       "publish": "Publier",
       "unpublish": "Masquer",
       "delete": "Supprimer",
-      "inUse": "Utilisée : masquez-la plutôt",
+      "inUse": "Utilisée\u00a0: masquez-la plutôt",
       "publishToggle": "{{name}} publiée",
       "publishedToast": "{{name}} est publiée.",
       "unpublishedToast": "{{name}} est masquée.",
@@ -1214,13 +1214,13 @@
         "save": "Enregistrer",
         "slugNote": "Le slug ne change pas, pour que les liens restent valables.",
         "duplicate": "Une catégorie porte déjà ce nom.",
-        "stale": "Un autre administrateur a modifié cette catégorie. Son nouveau nom est affiché ; réessayez.",
+        "stale": "Un autre administrateur a modifié cette catégorie. Son nouveau nom est affiché\u00a0; réessayez.",
         "created": "{{name}} est créée.",
         "renamed": "La catégorie est renommée.",
         "nameInvalid": "Indiquez un nom d’au plus {{max}} caractères."
       },
       "deleteConfirm": {
-        "title": "Supprimer {{name}} ?",
+        "title": "Supprimer {{name}}\u00a0?",
         "description": "Aucun geste n’utilise cette catégorie. Cette action est irréversible.",
         "confirm": "Supprimer",
         "deleted": "{{name}} est supprimée.",
@@ -1252,7 +1252,7 @@
       "none": "Aucune vidéo choisie.",
       "statusError": "Les réglages vidéo n’ont pas pu être chargés.",
       "current": "Vidéo choisie",
-      "playbackIdValue": "ID de lecture : {{id}}",
+      "playbackIdValue": "ID de lecture\u00a0: {{id}}",
       "notConfigured": {
         "title": "L’envoi de vidéos n’est pas configuré",
         "description": "Mux n’est pas configuré sur cet environnement. Collez l’ID de lecture d’une vidéo Mux existante."
@@ -1271,7 +1271,7 @@
         "creating": "Préparation de l’envoi…",
         "progressLabel": "Envoi vers Mux",
         "uploadingStart": "Envoi de {{name}}…",
-        "uploading": "Envoi de {{name}}… {{percent}} %",
+        "uploading": "Envoi de {{name}}… {{percent}}\u00a0%",
         "processing": "Mux traite la vidéo…",
         "processingHint": "Cela prend généralement moins d’une minute. Vous pouvez laisser cette fenêtre ouverte.",
         "ready": "La vidéo est prête.",
@@ -1302,7 +1302,7 @@
         "usedBy_one": "Utilisée par {{count}} geste",
         "usedBy_many": "Utilisée par {{count}} gestes",
         "usedBy_other": "Utilisée par {{count}} gestes",
-        "usedByNames": "Utilisée par : {{names}}",
+        "usedByNames": "Utilisée par\u00a0: {{names}}",
         "thumbnail": "Vidéo du {{date}}",
         "duration": "{{seconds}} s",
         "status": {
@@ -1379,19 +1379,19 @@
       },
       "promote": {
         "action": "Nommer administrateur",
-        "title": "Nommer {{name}} administrateur ?",
+        "title": "Nommer {{name}} administrateur\u202f?",
         "description": "Les administrateurs peuvent modifier le catalogue, les comptes et les réglages. Cela s’applique dès leur prochaine page.",
         "done": "{{name}} est maintenant administrateur."
       },
       "demote": {
         "action": "Retirer le rôle d’administrateur",
-        "title": "Retirer le rôle d’administrateur de {{name}} ?",
+        "title": "Retirer le rôle d’administrateur de {{name}}\u202f?",
         "description": "L’accès à l’administration disparaît immédiatement.",
         "done": "{{name}} n’est plus administrateur."
       },
       "ban": {
         "action": "Bloquer",
-        "title": "Bloquer {{name}} ?",
+        "title": "Bloquer {{name}}\u202f?",
         "description": "Le compte est immédiatement déconnecté sur tous les appareils et ne peut plus se connecter pendant le blocage.",
         "reason": "Motif",
         "reasonHint": "Seuls les administrateurs le voient.",
@@ -1404,13 +1404,13 @@
       },
       "unban": {
         "action": "Lever le blocage",
-        "title": "Lever le blocage de {{name}} ?",
+        "title": "Lever le blocage de {{name}}\u202f?",
         "description": "Le compte peut à nouveau se connecter.",
         "done": "Le blocage de {{name}} est levé."
       },
       "delete": {
         "action": "Supprimer le compte",
-        "title": "Supprimer le compte de {{name}} ?",
+        "title": "Supprimer le compte de {{name}}\u202f?",
         "description": "Ses favoris, listes et méthodes de connexion sont supprimés définitivement. Le journal d’audit garde ses entrées.",
         "confirmLabel": "Tapez {{email}} pour confirmer",
         "done": "Le compte est supprimé."
@@ -1443,18 +1443,18 @@
         "untilHint": "Facultatif, 7 jours à l’avance au plus. Affichée sur la page et envoyée comme Retry-After.",
         "noUntil": "Non définie",
         "untilInvalid": "Choisissez un moment futur, 7 jours à l’avance au plus.",
-        "propagation": "Les autres visiteurs suivent en 2 minutes environ : chaque serveur et chaque site Cloudflare garde le réglage jusqu’à 30 secondes, et KV met jusqu’à une minute pour atteindre chaque région.",
+        "propagation": "Les autres visiteurs suivent en 2 minutes environ\u00a0: chaque serveur et chaque site Cloudflare garde le réglage jusqu’à 30 secondes, et KV met jusqu’à une minute pour atteindre chaque région.",
         "enable": "Activer la maintenance",
         "enableNote": "Vous recevez d’abord un cookie de contournement pour ce navigateur, pour garder l’accès.",
         "enabled": "La maintenance est active",
         "disable": "Désactiver la maintenance",
-        "disableTitle": "Désactiver la maintenance ?",
-        "disableDescription": "Le site s’ouvre à tous. Chaque cookie de contournement est révoqué : les admins en auront besoin d’un nouveau pour la prochaine maintenance.",
+        "disableTitle": "Désactiver la maintenance\u202f?",
+        "disableDescription": "Le site s’ouvre à tous. Chaque cookie de contournement est révoqué\u00a0: les admins en auront besoin d’un nouveau pour la prochaine maintenance.",
         "disabled": "La maintenance est inactive. Chaque cookie de contournement est révoqué.",
-        "bypassFailed": "Pas de cookie de contournement pour ce navigateur : la maintenance reste inactive.",
+        "bypassFailed": "Pas de cookie de contournement pour ce navigateur\u00a0: la maintenance reste inactive.",
         "failed": "Le réglage n’a pas été modifié.",
         "loadError": "Le réglage de maintenance n’a pas pu être chargé.",
-        "staleCookie": "La maintenance est active, mais votre cookie de contournement date d’une maintenance précédente. Appuyez sur « Contourner pour ce navigateur » dans une minute."
+        "staleCookie": "La maintenance est active, mais votre cookie de contournement date d’une maintenance précédente. Appuyez sur «\u00a0Contourner pour ce navigateur\u00a0» dans une minute."
       },
       "bypass": {
         "title": "Contournement pour ce navigateur",
@@ -1463,7 +1463,7 @@
         "inactive": "Inactif",
         "action": "Contourner pour ce navigateur (12 h)",
         "done": "Ce navigateur peut contourner la maintenance jusqu’au {{time}}.",
-        "failed": "Pas de cookie de contournement : reconnectez-vous et réessayez.",
+        "failed": "Pas de cookie de contournement\u00a0: reconnectez-vous et réessayez.",
         "loadError": "L’état du contournement n’a pas pu être chargé.",
         "rateLimited": "Trop de tentatives. Réessayez dans une minute."
       }
@@ -1494,11 +1494,11 @@
       "view": "Affichage",
       "html": "E-mail",
       "text": "Texte brut",
-      "frameTitle": "Aperçu : {{name}}",
+      "frameTitle": "Aperçu\u00a0: {{name}}",
       "loadError": "Les modèles d’e-mail n’ont pas pu être chargés.",
       "previewError": "Cet aperçu n’a pas pu être affiché.",
       "empty": "Pas encore de modèles d’e-mail.",
-      "sandboxed": "Affiché dans un bac à sable : pas de scripts, les liens ne s’ouvrent pas."
+      "sandboxed": "Affiché dans un bac à sable\u00a0: pas de scripts, les liens ne s’ouvrent pas."
     },
     "sponsorships": {
       "title": "Parrainages",
@@ -1598,82 +1598,82 @@
         "notes": {
           "awaitingPayment": "En attente de paiement. Marquez-le payé ou annulez-le sur le paiement ci-dessous.",
           "rendering": "La vidéo est en préparation. Ensuite, le parrainage passe à l’examen.",
-          "renderFailed": "La vidéo a échoué. Le nouvel essai arrive avec le moteur de rendu ; d’ici là, rien à faire ici.",
+          "renderFailed": "La vidéo a échoué. Le nouvel essai arrive avec le moteur de rendu\u00a0; d’ici là, rien à faire ici.",
           "closed": "Ce parrainage est clôturé."
         }
       },
       "approve": {
         "action": "Approuver",
-        "title": "Approuver {{name}} sur {{gesture}} ?",
-        "description": "Payé : {{amount}}. Il est mis en ligne maintenant pour un an, jusqu’au {{date}}, et le parrain reçoit un e-mail.",
+        "title": "Approuver {{name}} sur {{gesture}}\u00a0?",
+        "description": "Payé\u00a0: {{amount}}. Il est mis en ligne maintenant pour un an, jusqu’au {{date}}, et le parrain reçoit un e-mail.",
         "done": "{{name}} est approuvé et en ligne.",
-        "noVideo": "Il n’y a pas encore de vidéo : approuvez dès qu’elle est prête."
+        "noVideo": "Il n’y a pas encore de vidéo\u00a0: approuvez dès qu’elle est prête."
       },
       "requestChanges": {
         "action": "Demander des modifications",
-        "title": "Demander des modifications à {{name}} ?",
-        "description": "Vous recevez un lien à envoyer vous-même au parrain ; aucun e-mail n’est envoyé. Le lien fonctionne une fois, pendant 7 jours.",
+        "title": "Demander des modifications à {{name}}\u00a0?",
+        "description": "Vous recevez un lien à envoyer vous-même au parrain\u00a0; aucun e-mail n’est envoyé. Le lien fonctionne une fois, pendant 7 jours.",
         "done": "Modifications demandées. Envoyez le lien au parrain."
       },
       "regenerate": {
         "reeditAction": "Nouveau lien de modification",
         "renewalAction": "Nouveau lien de renouvellement",
         "confirm": "Créer un nouveau lien",
-        "reeditTitle": "Un nouveau lien de modification pour {{name}} ?",
-        "renewalTitle": "Un nouveau lien de renouvellement pour {{name}} ?",
+        "reeditTitle": "Un nouveau lien de modification pour {{name}}\u00a0?",
+        "renewalTitle": "Un nouveau lien de renouvellement pour {{name}}\u00a0?",
         "reeditDescription": "Le lien précédent cesse aussitôt de fonctionner. Le nouveau fonctionne une fois, pendant 7 jours.",
         "renewalDescription": "Le lien précédent cesse aussitôt de fonctionner. Le nouveau fonctionne jusqu’à la fin du parrainage.",
         "done": "Nouveau lien créé. Le précédent ne fonctionne plus."
       },
       "reject": {
         "action": "Refuser",
-        "title": "Refuser {{name}} sur {{gesture}} ?",
-        "description": "Payé : {{amount}}. Le geste redevient libre. Aucun e-mail n’est envoyé et rien n’est remboursé automatiquement : remboursez dans le tableau de bord Mollie si c’est convenu.",
+        "title": "Refuser {{name}} sur {{gesture}}\u00a0?",
+        "description": "Payé\u00a0: {{amount}}. Le geste redevient libre. Aucun e-mail n’est envoyé et rien n’est remboursé automatiquement\u00a0: remboursez dans le tableau de bord Mollie si c’est convenu.",
         "reason": "Motif",
         "reasonHint": "Figure dans l’historique et le journal. Le parrain ne le voit pas.",
         "done": "{{name}} est refusé."
       },
       "forceExpire": {
         "action": "Terminer maintenant",
-        "title": "Terminer {{name}} sur {{gesture}} maintenant ?",
-        "description": "Il est retiré aussitôt et sa vidéo parrainée est supprimée. Payé : {{amount}} ; rien n’est remboursé automatiquement et aucun e-mail n’est envoyé.",
+        "title": "Terminer {{name}} sur {{gesture}} maintenant\u00a0?",
+        "description": "Il est retiré aussitôt et sa vidéo parrainée est supprimée. Payé\u00a0: {{amount}}\u00a0; rien n’est remboursé automatiquement et aucun e-mail n’est envoyé.",
         "confirmLabel": "Tapez {{gesture}} pour confirmer",
         "done": "{{name}} est terminé."
       },
       "markPaid": {
         "action": "Marquer comme payé",
-        "title": "Marquer {{amount}} comme payé ?",
-        "description": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}} : la vidéo de chacun est préparée.",
+        "title": "Marquer {{amount}} comme payé\u00a0?",
+        "description": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: la vidéo de chacun est préparée.",
         "note": "Référence bancaire",
         "noteHint": "Figure dans l’historique, p. ex. la communication du virement.",
         "done": "Marqué comme payé. Les vidéos sont en préparation.",
-        "settled": "Mollie avait déjà ce paiement : il est traité comme payé.",
+        "settled": "Mollie avait déjà ce paiement\u00a0: il est traité comme payé.",
         "refundNeeded": "Mollie avait déjà ce paiement, mais il doit être remboursé. Consultez le paiement ci-dessous.",
-        "lateFailure": "Le paiement est marqué comme payé, mais le lancement des vidéos a échoué. La vérification horaire les lance ; rien d’autre à faire."
+        "lateFailure": "Le paiement est marqué comme payé, mais le lancement des vidéos a échoué. La vérification horaire les lance\u00a0; rien d’autre à faire."
       },
       "cancel": {
         "action": "Annuler le paiement",
         "keep": "Conserver",
-        "title": "Annuler le paiement de {{amount}} ?",
-        "description": "Il couvre {{gestures}} : tous sont annulés et redeviennent libres, et le paiement est aussi annulé chez Mollie. Aucun e-mail n’est envoyé.",
-        "done": "Paiement annulé. {{gestures}} : de nouveau libre."
+        "title": "Annuler le paiement de {{amount}}\u00a0?",
+        "description": "Il couvre {{gestures}}\u00a0: tous sont annulés et redeviennent libres, et le paiement est aussi annulé chez Mollie. Aucun e-mail n’est envoyé.",
+        "done": "Paiement annulé. {{gestures}}\u00a0: de nouveau libre."
       },
       "recordRefund": {
         "action": "Enregistrer le remboursement",
-        "title": "Enregistrer le remboursement de {{amount}} ?",
+        "title": "Enregistrer le remboursement de {{amount}}\u00a0?",
         "description": "Remboursez d’abord dans le tableau de bord Mollie. Ceci lit ce que Mollie a remboursé pour {{gestures}}.",
         "done": "Remboursement de {{amount}} enregistré."
       },
       "link": {
         "reeditTitle": "Lien de modification pour {{name}}",
         "renewalTitle": "Lien de renouvellement pour {{name}}",
-        "description": "Copiez-le maintenant : il n’est affiché qu’une fois. Il fonctionne jusqu’au {{date}}.",
+        "description": "Copiez-le maintenant\u00a0: il n’est affiché qu’une fois. Il fonctionne jusqu’au {{date}}.",
         "label": "Lien",
         "reeditHint": "Envoyez-le vous-même au parrain. Il peut y modifier le nom et le logo.",
         "renewalHint": "Envoyez-le vous-même au parrain. Il peut y renouveler pour un an.",
         "copy": "Copier le lien",
         "copied": "Lien copié.",
-        "copyByHand": "La copie a échoué. Le lien est sélectionné : copiez-le vous-même.",
+        "copyByHand": "La copie a échoué. Le lien est sélectionné\u00a0: copiez-le vous-même.",
         "done": "Terminé"
       },
       "payment": {
@@ -1691,8 +1691,8 @@
         "partlyRefunded": "{{amount}} sur {{total}} remboursés",
         "notRefunded": "Rien de remboursé",
         "refundNeeded": "Ce paiement doit être remboursé. Remboursez-le dans le tableau de bord Mollie, puis enregistrez-le ici.",
-        "chargedBack": "Rétrofacturé : {{amount}} ({{date}}).",
-        "chargebackHint": "L’annulation ne vaut que pour les paiements ouverts : terminez un parrainage en ligne ou refusez-en un en examen.",
+        "chargedBack": "Rétrofacturé\u00a0: {{amount}} ({{date}}).",
+        "chargebackHint": "L’annulation ne vaut que pour les paiements ouverts\u00a0: terminez un parrainage en ligne ou refusez-en un en examen.",
         "mollieId": "Id Mollie",
         "noMollie": "Aucun (local)",
         "openInMollie": "Ouvrir dans Mollie",
@@ -1738,7 +1738,7 @@
           "mismatch": "Le montant ne correspondait pas"
         },
         "refundReason": {
-          "late": "Payé en retard : le geste était pris entre-temps",
+          "late": "Payé en retard\u00a0: le geste était pris entre-temps",
           "mismatch": "Le montant ne correspondait pas",
           "double": "Payé deux fois",
           "chargeback": "Rétrofacturé par la banque"
@@ -1772,7 +1772,7 @@
     "export": {
       "action": "Exporter en CSV",
       "title": "Exporter en CSV",
-      "description": "Une ligne par parrainage, avec les 18 colonnes d’avant. Laissez vide pour tout exporter ; l’export est journalisé.",
+      "description": "Une ligne par parrainage, avec les 18 colonnes d’avant. Laissez vide pour tout exporter\u00a0; l’export est journalisé.",
       "status": "Statut",
       "allStatuses": "Tous les statuts",
       "from": "Créé à partir du",
@@ -1801,7 +1801,8 @@
       "paymentsUnavailable": "Le parrainage est momentanément suspendu. Réessayez plus tard.",
       "paymentProvider": "Le paiement n’a pas pu démarrer. Rien n’a été débité. Réessayez.",
       "alreadySettled": "Ce paiement est déjà finalisé.",
-      "logoInvalid": "Le logo n’a pas pu être lu. Choisissez un fichier PNG, JPEG ou WebP de 2 Mo maximum.",
+      "logoExpired": "Votre logo téléversé a expiré. Téléversez-le à nouveau, puis envoyez.",
+      "logoInvalid": "Le logo n’a pas pu être lu. Choisissez un fichier PNG, JPEG ou WebP de 2\u00a0Mo maximum.",
       "noLogo": "Ce parrainage n’a pas de logo, vous ne pouvez donc pas en ajouter.",
       "notRenewable": "Ce parrainage ne peut plus être prolongé.",
       "gestureTaken": "Quelqu’un d’autre parraine ce geste entre-temps.",

@@ -22,6 +22,11 @@ const ROOT = join(import.meta.dir, "..", "..", "..", "..");
  * adds its file here, with the reason.
  */
 const WRITERS: Readonly<Record<string, { reason: string; status: boolean }>> = {
+  "packages/features/sponsorships/src/server/orphan-logos.ts": {
+    reason:
+      "the retention purge clears logo_key on sponsorships that ended 30 days ago (ruling 9)",
+    status: false,
+  },
   "packages/features/sponsorships/src/server/transition.ts": {
     reason: "transitionStatements, the only status writer",
     status: true,

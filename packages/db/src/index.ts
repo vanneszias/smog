@@ -10,6 +10,7 @@ export {
   RETENTION_CHUNK_SIZE,
   RETENTION_MAX_CHUNKS,
   RETENTION_PURGES,
+  type RetentionOptions,
   type RetentionPurge,
   type RetentionTable,
   runRetentionPurges,

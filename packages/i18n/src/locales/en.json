@@ -1768,6 +1768,7 @@
       "paymentsUnavailable": "Sponsoring is paused for now. Please try again later.",
       "paymentProvider": "The payment could not be started. Nothing was charged. Please try again.",
       "alreadySettled": "This payment has already been completed.",
+      "logoExpired": "Your uploaded logo has expired. Please upload it again, then submit.",
       "logoInvalid": "The logo could not be read. Choose a PNG, JPEG or WebP file of at most 2 MB.",
       "noLogo": "This sponsorship has no logo, so one cannot be added.",
       "notRenewable": "This sponsorship can no longer be renewed.",

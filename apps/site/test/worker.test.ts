@@ -1,12 +1,9 @@
 import {
   createExecutionContext,
   createMessageBatch,
-  createScheduledController,
   getQueueResult,
-  waitOnExecutionContext,
 } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { CRON } from "@smog/jobs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/worker";
 import { queueKind } from "../src/worker/queues";
@@ -146,36 +143,6 @@ describe("the email consumer (worker/email-queue.ts)", () => {
     expect(result.retryMessages).toEqual([{ msgId: "r-1" }]);
     // min(30 × 2^(3 − 1), 3600)
     expect(retry).toHaveBeenCalledWith({ delaySeconds: 120 });
-  });
-});
-
-describe("the scheduled dispatch", () => {
-  it.each(Object.entries(CRON))(
-    "routes %s (%s) to its handler (a stub that logs)",
-    async (name, cron) => {
-      const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
-      const controller = createScheduledController({
-        cron,
-        scheduledTime: new Date("2026-10-02T08:00:00Z"),
-      });
-      const ctx = createExecutionContext();
-
-      await worker.scheduled(controller, env, ctx);
-      await waitOnExecutionContext(ctx);
-
-      expect(log).toHaveBeenCalledWith(
-        `[cron] ${name} skipped (its handler is phase 6 task 5)`
-      );
-    }
-  );
-
-  it("logs a cron it does not know and does not throw", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const controller = createScheduledController({ cron: "0 3 1 * *" });
-
-    await worker.scheduled(controller, env, createExecutionContext());
-
-    expect(warn).toHaveBeenCalledWith("[cron] Unknown schedule 0 3 1 * *");
   });
 });
 

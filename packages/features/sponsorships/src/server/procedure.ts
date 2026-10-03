@@ -88,8 +88,3 @@ export interface SponsorshipsDeps {
    */
   mollieFetch?: MollieFetch;
 }
-
-/** A slice that a later phase 6 task implements. */
-export function notImplemented(): never {
-  throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "not implemented" });
-}
