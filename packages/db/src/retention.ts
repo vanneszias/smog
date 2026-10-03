@@ -143,6 +143,21 @@ async function countPurgeable(
   return counts;
 }
 
+/**
+ * A purge failed part way (Phase 6 fix wave, jobs M-6): `counts` holds the
+ * rows the other purges deleted (logged before the throw, so a failing
+ * table never hides what was purged), `cause` the first failure.
+ */
+export class RetentionPurgeError extends Error {
+  readonly counts: Record<RetentionTable, number>;
+
+  constructor(counts: Record<RetentionTable, number>, cause: unknown) {
+    super("[db] The retention purge failed part way", { cause });
+    this.name = "RetentionPurgeError";
+    this.counts = counts;
+  }
+}
+
 export interface RetentionOptions {
   /** Count what would be deleted and delete nothing (tests and ops). */
   dryRun?: boolean;
@@ -153,8 +168,10 @@ export interface RetentionOptions {
 /**
  * Runs every D1 purge and returns the rows deleted per table (with
  * `dryRun`, the rows it would delete, and nothing is deleted). A purge
- * that fails is logged and the others still run; the error is rethrown at
- * the end, so the cron reports the failure and the next day continues.
+ * that fails is logged and the others still run; then the counts are
+ * logged and `RetentionPurgeError` (with them, and the first failure as
+ * its `cause`) is thrown, so the cron reports the failure and the next day
+ * continues.
  */
 export async function runRetentionPurges(
   db: Db,
@@ -183,7 +200,10 @@ export async function runRetentionPurges(
     }
   }
   if (failure !== undefined) {
-    throw failure;
+    console.error(
+      `[db] The retention purge failed part way; deleted: ${JSON.stringify(counts)}`
+    );
+    throw new RetentionPurgeError(counts, failure);
   }
   return counts;
 }

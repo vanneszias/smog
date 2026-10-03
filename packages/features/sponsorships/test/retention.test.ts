@@ -16,7 +16,7 @@ import {
 import { makeUser } from "@smog/db/testing";
 import { DAY_MS, newId } from "@smog/utils";
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   LOGO_CURSOR_KEY,
   ORPHAN_LOGO_MIN_AGE_MS,
@@ -300,6 +300,30 @@ describe("runRetentionPurge (J-04)", () => {
     const result = await runRetentionPurge({ db, kv, media: undefined, now });
 
     expect(result).toMatchObject({ audit_log: 1, logosDeleted: 0 });
+  });
+
+  it("logs what it purged before it rethrows a failing logo sweep (fix wave, jobs M-6)", async () => {
+    const now = new Date("2026-10-03T03:15:00.000Z");
+    await audit(new Date(now.getTime() - AUDIT_RETENTION_MS - 1));
+    const failing = {
+      delete: () => Promise.resolve(),
+      head: () => Promise.resolve(null),
+      list: () => Promise.reject(new Error("R2 is down")),
+    } as unknown as R2Bucket;
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    await expect(
+      runRetentionPurge({ db, kv, media: failing, now })
+    ).rejects.toThrow("R2 is down");
+
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '[sponsorships] The retention purge failed part way; done: {"audit_log":1'
+      )
+    );
+    error.mockRestore();
   });
 });
 

@@ -12,6 +12,7 @@ export {
   RETENTION_PURGES,
   type RetentionOptions,
   type RetentionPurge,
+  RetentionPurgeError,
   type RetentionTable,
   runRetentionPurges,
   SPONSORSHIP_TOKEN_GRACE_MS,

@@ -18,6 +18,7 @@ import {
   type PaymentKind,
   payment,
   paymentItem,
+  RetentionPurgeError,
   type RetentionTable,
   ref,
   renderJob,
@@ -757,7 +758,10 @@ export type RetentionPurgeResult = Record<RetentionTable, number> & {
  *   and the ones released above), resuming a KV cursor across runs.
  * With `dryRun`, it counts what a real run would delete (the released
  * logos included) and changes nothing, the cursor included. A failing
- * part is logged and the others still run; the first error is rethrown.
+ * part is logged and the others still run; then what was done is logged
+ * (`[sponsorships] The retention purge failed part way; done: {…}`, the
+ * D1 counts from `RetentionPurgeError`) and the first error is rethrown
+ * (Phase 6 fix wave, jobs M-6).
  */
 export async function runRetentionPurge({
   db,
@@ -783,6 +787,9 @@ export async function runRetentionPurge({
     tables = await runRetentionPurges(db, now, { dryRun });
   } catch (error) {
     failure = error;
+    if (error instanceof RetentionPurgeError) {
+      tables = error.counts;
+    }
   }
   let logosReleased = 0;
   let logosDeleted = 0;
@@ -804,8 +811,12 @@ export async function runRetentionPurge({
     console.error("[sponsorships] Failed to sweep the logos:", error);
     failure ??= error;
   }
+  const counts = { ...tables, logosDeleted, logosReleased };
   if (failure !== undefined) {
+    console.error(
+      `[sponsorships] The retention purge failed part way; done: ${JSON.stringify(counts)}`
+    );
     throw failure;
   }
-  return { ...tables, logosDeleted, logosReleased };
+  return counts;
 }
