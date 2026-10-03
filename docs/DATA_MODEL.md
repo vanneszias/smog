@@ -229,6 +229,8 @@ erDiagram
     integer updated_at
     integer refunded_cents
     integer refunded_at
+    integer charged_back_cents
+    integer charged_back_at
   }
   payment_item {
     text payment_id PK,FK
@@ -623,10 +625,12 @@ CHECK: `sponsorship_status_check`, `sponsorship_display_name_length_check`.
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
 | `refunded_cents` | `refundedCents` | integer |  | default 0; Mollie's `amountRefunded`, stored on every re-fetch (migration 0008) |
 | `refunded_at` | `refundedAt` | integer (ms) → Date | yes | when a refund was first recorded (migration 0008) |
+| `charged_back_cents` | `chargedBackCents` | integer |  | default 0; Mollie's `amountChargedBack`, stored on every re-fetch (migration 0009) |
+| `charged_back_at` | `chargedBackAt` | integer (ms) → Date | yes | when a chargeback was first seen (migration 0009) |
 
 Indexes: `payment_status_created_idx` (status, created_at).
 
-Refunds are made by hand in the Mollie dashboard (phase 6 ruling 4); a `refund_needed` payment with `refunded_cents >= amount_cents` reads as "Refunded" in the admin. Migration 0008 added both columns with `ALTER TABLE … ADD COLUMN` (no rebuild: `payment` has RESTRICT and CASCADE children).
+Refunds are made by hand in the Mollie dashboard (phase 6 ruling 4); a `refund_needed` payment with `refunded_cents >= amount_cents` reads as "Refunded" in the admin. Migration 0008 added both columns with `ALTER TABLE … ADD COLUMN` (no rebuild: `payment` has RESTRICT and CASCADE children). Migration 0009 added the two chargeback columns the same way: a chargeback keeps the payment `paid`, writes a `refund_needed` event (`reason: "chargeback"`) on each item and emails the admins; the sponsorship is not cancelled automatically.
 
 CHECK: `payment_kind_check`, `payment_status_check`, `payment_currency_check`, `payment_amount_check`.
 #### `payment_item`

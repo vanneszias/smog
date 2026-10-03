@@ -25,6 +25,11 @@ export const MOLLIE_PAYMENT_ID = /^tr_[A-Za-z0-9]{4,64}$/;
 export const molliePaymentSchema = z.object({
   /** The amount in integer cents. */
   amountCents: z.number().int().nonnegative(),
+  /**
+   * Mollie's `amountChargedBack` in cents (0 without a chargeback). A
+   * chargeback keeps the status `paid` (phase 6 task 3 fix round 1, I-3).
+   */
+  amountChargedBackCents: z.number().int().nonnegative(),
   /** Mollie's `amountRefunded` in cents (0 when nothing is refunded). */
   amountRefundedCents: z.number().int().nonnegative(),
   /** The hosted checkout (`_links.checkout.href`), while it is payable. */
@@ -57,6 +62,7 @@ export const mollieApiPaymentSchema = z
       .partial()
       .nullish(),
     amount: amountSchema,
+    amountChargedBack: amountSchema.nullish(),
     amountRefunded: amountSchema.nullish(),
     createdAt: z.iso.datetime({ offset: true }),
     id: z.string().regex(MOLLIE_PAYMENT_ID),
@@ -68,10 +74,14 @@ export const mollieApiPaymentSchema = z
   .transform((raw, context): MolliePayment => {
     let amountCents = 0;
     let amountRefundedCents = 0;
+    let amountChargedBackCents = 0;
     try {
       amountCents = mollieValueToCents(raw.amount.value);
       amountRefundedCents = raw.amountRefunded
         ? mollieValueToCents(raw.amountRefunded.value)
+        : 0;
+      amountChargedBackCents = raw.amountChargedBack
+        ? mollieValueToCents(raw.amountChargedBack.value)
         : 0;
     } catch (error) {
       context.addIssue({
@@ -91,6 +101,7 @@ export const mollieApiPaymentSchema = z
     const dashboardUrl = raw._links?.dashboard?.href;
     return {
       amountCents,
+      amountChargedBackCents,
       amountRefundedCents,
       createdAt: new Date(raw.createdAt),
       currency: raw.amount.currency,

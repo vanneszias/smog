@@ -20,6 +20,7 @@ import {
 } from "@smog/lists/server";
 import { implementRpc } from "@smog/rpc";
 import { roleSchema } from "@smog/rpc/contract";
+import { createSponsorshipsRouter } from "@smog/sponsorships/server";
 import { appContract } from "./contract";
 
 const os = implementRpc(appContract);
@@ -68,6 +69,10 @@ export const appRouter = os.router({
   favorites: createFavoritesRouter({ findSummaries: findGesturesByIds }),
   gestures: gesturesRouter,
   lists: createListsRouter({ findSummaries: findGesturesByIds }),
+  // Public: every procedure runs its declared guards (Turnstile,
+  // RL_SPONSOR). Tasks 4 and 5 fill the checkout, logo, status, re-edit
+  // and renewal slices.
+  sponsorships: createSponsorshipsRouter(),
   system,
 });
 

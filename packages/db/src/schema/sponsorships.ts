@@ -131,6 +131,14 @@ export const payment = sqliteTable(
     refundedCents: integer("refunded_cents").notNull().default(0),
     /** When a refund was first recorded (`admin.sponsorships.recordRefund` or a webhook). */
     refundedAt: timestamp("refunded_at"),
+    /**
+     * Mollie's `amountChargedBack` (migration 0009): the money the payer's
+     * bank took back. The status stays `paid`; an admin decides what
+     * happens to the sponsorship (phase 6 task 3 fix round 1, I-3).
+     */
+    chargedBackCents: integer("charged_back_cents").notNull().default(0),
+    /** When a chargeback was first seen. */
+    chargedBackAt: timestamp("charged_back_at"),
   },
   (t) => [
     check("payment_kind_check", inValues(t.kind, PAYMENT_KINDS)),
