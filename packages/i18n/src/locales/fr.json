@@ -1394,6 +1394,38 @@
     "sponsorships": {},
     "export": {}
   },
-  "sponsorship": {},
+  "sponsorship": {
+    "status": {
+      "awaiting_payment": "En attente de paiement",
+      "rendering": "Vidéo en préparation",
+      "render_failed": "Échec de la vidéo",
+      "in_review": "En cours d’examen",
+      "changes_requested": "Modifications demandées",
+      "live": "En ligne",
+      "expiring": "Expire bientôt",
+      "rejected": "Refusé",
+      "cancelled": "Annulé",
+      "expired": "Expiré"
+    },
+    "errors": {
+      "stale": "Ce parrainage a changé entre-temps. Actualisez la page et réessayez.",
+      "paymentsUnavailable": "Le parrainage est momentanément suspendu. Réessayez plus tard.",
+      "paymentProvider": "Le paiement n’a pas pu démarrer. Rien n’a été débité. Réessayez.",
+      "alreadySettled": "Ce paiement est déjà finalisé.",
+      "logoInvalid": "Le logo n’a pas pu être lu. Choisissez un fichier PNG, JPEG ou WebP de 2\u00a0Mo maximum.",
+      "noLogo": "Ce parrainage n’a pas de logo, vous ne pouvez donc pas en ajouter.",
+      "notRenewable": "Ce parrainage ne peut plus être prolongé.",
+      "noVideo": "La vidéo n’est pas encore prête.",
+      "paid": "Ce paiement a été réglé et ne peut pas être annulé.",
+      "notRefunded": "Mollie n’indique encore aucun remboursement. Remboursez d’abord dans le tableau de bord Mollie.",
+      "tooMany": "Trop de lignes à exporter. Choisissez une période plus courte."
+    },
+    "mollie": {
+      "description_one": "Parrainage de {{count}} geste chez SMOG & Co",
+      "description_many": "Parrainage de {{count}} gestes chez SMOG & Co",
+      "description_other": "Parrainage de {{count}} gestes chez SMOG & Co",
+      "renewal": "Prolongation de votre parrainage chez SMOG & Co"
+    }
+  },
   "sponsor": {}
 }

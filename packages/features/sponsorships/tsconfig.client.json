@@ -1,0 +1,21 @@
+{
+  // The entries the apps bundle (./schema, ./contract, ./client) and the
+  // bun tests, as the apps compile them: DOM lib, no Workers types (no
+  // worker-configuration.d.ts). A server import (D1Database, KVNamespace, …)
+  // in client code fails this check. `transition-table.ts` is the pure part
+  // of the state machine, which a bun test enumerates.
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["bun"]
+  },
+  "include": [
+    "src/schema",
+    "src/contract",
+    "src/client",
+    "src/server/transition-table.ts",
+    "src/**/*.test.ts"
+  ]
+}

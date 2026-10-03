@@ -1,0 +1,45 @@
+{
+  "name": "@smog/sponsorships",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./schema": "./src/schema/index.ts",
+    "./contract": "./src/contract/index.ts",
+    "./server": "./src/server/index.ts",
+    "./client": "./src/client/index.ts"
+  },
+  "scripts": {
+    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json && tsc -p tsconfig.test.json",
+    "test": "vitest run && bun test --timeout=20000 src"
+  },
+  "dependencies": {
+    "@orpc/contract": "catalog:",
+    "@orpc/server": "catalog:",
+    "@smog/config": "workspace:*",
+    "@smog/db": "workspace:*",
+    "@smog/email": "workspace:*",
+    "@smog/i18n": "workspace:*",
+    "@smog/jobs": "workspace:*",
+    "@smog/payments": "workspace:*",
+    "@smog/render": "workspace:*",
+    "@smog/rpc": "workspace:*",
+    "@smog/utils": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/react": "catalog:",
+    "react": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "catalog:",
+    "react": "catalog:"
+  }
+}

@@ -79,6 +79,32 @@ Every procedure needs a session (`UNAUTHORIZED`).
 | `account.importGuestData` | the guest's favorites, lists and consent | counts of what was merged and skipped; all or nothing, idempotent |
 | `account.delete` | `{ confirm, password? }` | `{ deleted: true }`; adds `INVALID_PASSWORD`, `PASSWORD_REQUIRED`, `SESSION_NOT_FRESH`, and `INVALID_STATE` for the last admin whose ban is not in force |
 
+## `sponsorships.*` (`@smog/sponsorships`)
+
+Public: sponsoring needs no account. Every procedure declares its guards
+(`SPONSORSHIP_PROCEDURE_GUARDS`, phase 6 ruling 5), on top of the
+transport's `RL_API`: Turnstile (`x-turnstile-token`, `TURNSTILE_FAILED`)
+and `RL_SPONSOR` (`RATE_LIMITED`) on the mutations that take money or change
+a sponsorship, `RL_SPONSOR` alone on `uploadLogo`. The typed error data:
+`GESTURE_UNAVAILABLE { gestureIds }`, `INVALID_STATE { reason }`
+(`sponsorship.errors.<reason>`), `TOKEN_EXPIRED { expiresAt }`. Amounts are
+integer cents, dates epoch milliseconds.
+
+| Procedure | Guards | Input | Output |
+|---|---|---|---|
+| `sponsorships.availability` | `RL_API` | `{ gestureIds (1..100) }` | `{ checkoutEnabled, items: { gestureId, state: available \| pending \| sponsored \| unavailable, sponsorName?, endsAt? }[] }` (one D1 read; the name and end only for `live`/`expiring`) |
+| `sponsorships.quote` | `RL_API` | `{ gestureIds (1..10, distinct), logo }` | `{ items: { gestureId, amountCents, includesLogo }[], totalCents, currency: "EUR", unavailable }` (`priceSponsorship`) |
+| `sponsorships.checkout` | Turnstile, `RL_SPONSOR` | `checkoutInputSchema` | `{ paymentId, checkoutUrl }` (phase 6 task 4) |
+| `sponsorships.uploadLogo` | `RL_SPONSOR` | `{ contentType: image/png \| image/jpeg \| image/webp, size ≤ 2 MiB }` | `{ key, uploadUrl, headers, expiresAt }` (task 4) |
+| `sponsorships.paymentStatus` | `RL_API` | `{ payment: uuid \| tr_… }` | `{ status, kind, totalCents, displayName, items, renewedUntil? }`, no PII (task 4) |
+| `sponsorships.reedit.get` | `RL_API` | `{ token }` | `{ displayName, expiresAt, gesture, hasLogo }` (task 5) |
+| `sponsorships.reedit.submit` | Turnstile, `RL_SPONSOR` | `{ token, displayName, logoKey? }` | `{ submitted: true }` (task 5) |
+| `sponsorships.renewal.get` | `RL_API` | `{ token }` | `{ gesture, displayName, endsAt, hasLogo, amountCents }` (task 5) |
+| `sponsorships.renewal.checkout` | Turnstile, `RL_SPONSOR` | `{ token, checkoutId }` | `{ paymentId, checkoutUrl }` (task 5) |
+
+Until their task lands, the procedures marked with a task answer
+`INTERNAL_SERVER_ERROR` ("not implemented") after their guards.
+
 ## `admin.*` (`@smog/admin`)
 
 Every admin procedure needs the admin role: `UNAUTHORIZED` for a guest,

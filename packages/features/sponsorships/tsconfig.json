@@ -1,0 +1,13 @@
+{
+  // The Worker side (./server), with the Workers types. The D1 tests are
+  // checked by tsconfig.test.json, and the client-safe entries and the bun
+  // tests by tsconfig.client.json (no Workers types).
+  "extends": "@smog/config/tsconfig/worker.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["@cloudflare/vitest-plugin/types"]
+  },
+  "include": ["src", "vitest.config.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

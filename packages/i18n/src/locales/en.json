@@ -1370,6 +1370,37 @@
     "sponsorships": {},
     "export": {}
   },
-  "sponsorship": {},
+  "sponsorship": {
+    "status": {
+      "awaiting_payment": "Awaiting payment",
+      "rendering": "Making the video",
+      "render_failed": "Video failed",
+      "in_review": "In review",
+      "changes_requested": "Changes requested",
+      "live": "Live",
+      "expiring": "Expiring soon",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
+    },
+    "errors": {
+      "stale": "This sponsorship changed in the meantime. Refresh the page and try again.",
+      "paymentsUnavailable": "Sponsoring is paused for now. Please try again later.",
+      "paymentProvider": "The payment could not be started. Nothing was charged. Please try again.",
+      "alreadySettled": "This payment has already been completed.",
+      "logoInvalid": "The logo could not be read. Choose a PNG, JPEG or WebP file of at most 2 MB.",
+      "noLogo": "This sponsorship has no logo, so one cannot be added.",
+      "notRenewable": "This sponsorship can no longer be renewed.",
+      "noVideo": "The video is not ready yet.",
+      "paid": "This payment has been paid and cannot be cancelled.",
+      "notRefunded": "Mollie reports no refund yet. Refund in the Mollie dashboard first.",
+      "tooMany": "Too many rows to export. Choose a shorter date range."
+    },
+    "mollie": {
+      "description_one": "Sponsorship of {{count}} gesture at SMOG & Co",
+      "description_other": "Sponsorship of {{count}} gestures at SMOG & Co",
+      "renewal": "Renewal of your sponsorship at SMOG & Co"
+    }
+  },
   "sponsor": {}
 }

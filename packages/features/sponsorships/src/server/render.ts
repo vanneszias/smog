@@ -1,0 +1,392 @@
+/**
+ * The render seam (ruling 7): what phase 7's pipeline plugs into. Phase 6
+ * creates the jobs, starts them through a `RenderStarter` chosen by
+ * `RENDER_MODE`, and records their result; the render itself is a fake
+ * (the gesture's own video) until phase 7 replaces only the starter switch
+ * with `RENDER_WORKFLOW.create(…)`.
+ *
+ * - `createRenderJobStatements`: a `queued` job (`id` = the Workflow
+ *   instance id, `attempt` counted up) and its `render_started` event, for
+ *   a sponsorship in `rendering` without a `queued`/`running` job; the
+ *   caller enqueues `render.requested` after the batch.
+ * - `markRenderRunning`, `completeRender`, `failRender`: idempotent (a
+ *   final job is a no-op).
+ */
+import type { WorkerEnv } from "@smog/config/env/worker";
+import {
+  failWhen,
+  gesture,
+  inList,
+  type RenderJobStatus,
+  ref,
+  renderJob,
+  type Statement,
+  sponsorship,
+  toGuardFailure,
+} from "@smog/db";
+import type { Db } from "@smog/db/client";
+import type { OutboxEmail } from "@smog/email";
+import {
+  type EventMessage,
+  pendingRenderStarter,
+  type RenderStarter,
+} from "@smog/jobs";
+import { RENDER_INPUT_VERSION, renderInputSchema } from "@smog/render/contract";
+import { newId } from "@smog/utils";
+import { and, eq, type SQL, sql } from "drizzle-orm";
+import { RENDER_ERROR_MAX } from "../schema/events";
+import { emailAdmins } from "./recipients";
+import {
+  eventStatement,
+  STALE_GUARD,
+  transitionStatements,
+} from "./transition";
+
+/** A job that is still queued or running: no second one is created. */
+const ACTIVE_JOB_GUARD = "render-active";
+/** A job that finished between the read and the batch. */
+const FINAL_JOB_GUARD = "render-final";
+
+/** The job statuses that are not final. */
+const ACTIVE: readonly RenderJobStatus[] = ["queued", "running"];
+
+type RenderMode = WorkerEnv["RENDER_MODE"];
+
+/** A `queued`/`running` job of the sponsorship `sponsorshipId` names. */
+function activeJobExists(sponsorshipId: SQL | string): SQL {
+  return sql`EXISTS (SELECT 1 FROM ${renderJob} AS ${sql.raw("rj")} WHERE ${ref("rj", renderJob.sponsorshipId)} = ${sponsorshipId} AND ${inList(ref("rj", renderJob.status), ACTIVE)})`;
+}
+
+export interface RenderJobPlan {
+  /** `render.requested` for the new job, to enqueue after the batch. */
+  after: EventMessage[];
+  renderJobId: string;
+  statements: Statement[];
+}
+
+/**
+ * The batch that creates the next render job of a `rendering`
+ * sponsorship, or `null` when it is not rendering or already has a
+ * `queued`/`running` job. In-batch guards make a race between two
+ * creators fail one of them (`createRenderJob` answers `null` then).
+ */
+export async function createRenderJobStatements(
+  db: Db,
+  input: { now: Date; sponsorshipId: string }
+): Promise<RenderJobPlan | null> {
+  const { now, sponsorshipId } = input;
+  const [row] = await db
+    .select({
+      active: sql<number>`${activeJobExists(ref("sponsorship", sponsorship.id))}`,
+      displayName: sponsorship.displayName,
+      lastAttempt: sql<
+        number | null
+      >`(SELECT max(${ref("rj", renderJob.attempt)}) FROM ${renderJob} AS ${sql.raw("rj")} WHERE ${ref("rj", renderJob.sponsorshipId)} = ${ref("sponsorship", sponsorship.id)})`,
+      logoKey: sponsorship.logoKey,
+      playbackId: gesture.playbackId,
+      status: sponsorship.status,
+    })
+    .from(sponsorship)
+    .innerJoin(gesture, eq(gesture.id, sponsorship.gestureId))
+    .where(eq(sponsorship.id, sponsorshipId))
+    .limit(1);
+  if (row?.status !== "rendering" || row.active) {
+    return null;
+  }
+  const renderJobId = newId();
+  const attempt = (row.lastAttempt ?? 0) + 1;
+  const jobInput = renderInputSchema.parse({
+    displayName: row.displayName,
+    logoKey: row.logoKey,
+    sourcePlaybackId: row.playbackId,
+    v: RENDER_INPUT_VERSION,
+  });
+  return {
+    after: [{ renderJobId, type: "render.requested" }],
+    renderJobId,
+    statements: [
+      failWhen(
+        db,
+        STALE_GUARD,
+        sql`NOT EXISTS (SELECT 1 FROM ${sponsorship} WHERE ${sponsorship.id} = ${sponsorshipId} AND ${sponsorship.status} = 'rendering')`
+      ),
+      failWhen(db, ACTIVE_JOB_GUARD, activeJobExists(sponsorshipId)),
+      db.insert(renderJob).values({
+        attempt,
+        createdAt: now,
+        id: renderJobId,
+        input: jobInput,
+        sponsorshipId,
+        status: "queued",
+        updatedAt: now,
+        workflowInstanceId: renderJobId,
+      }),
+      eventStatement(db, {
+        actorId: null,
+        data: { attempt, renderJobId },
+        now,
+        sponsorshipId,
+        type: "render_started",
+      }),
+    ],
+  };
+}
+
+/** Whether a batch lost a race these services treat as "already done". */
+function lostRace(error: unknown): boolean {
+  const guard = toGuardFailure(error)?.guard;
+  return (
+    guard === STALE_GUARD ||
+    guard === ACTIVE_JOB_GUARD ||
+    guard === FINAL_JOB_GUARD
+  );
+}
+
+/**
+ * Creates the next render job (one batch), or `null` when there is
+ * nothing to create or another caller created it first. Safe to run
+ * twice: one job.
+ */
+export async function createRenderJob(
+  db: Db,
+  input: { now: Date; sponsorshipId: string }
+): Promise<{ after: EventMessage[]; renderJobId: string } | null> {
+  const plan = await createRenderJobStatements(db, input);
+  if (!plan) {
+    return null;
+  }
+  const [first, ...rest] = plan.statements;
+  try {
+    if (first) {
+      await db.batch([first, ...rest]);
+    }
+  } catch (error) {
+    if (lostRace(error)) {
+      return null;
+    }
+    console.error(
+      `[sponsorships] Failed to create a render job for ${input.sponsorshipId}:`,
+      error
+    );
+    throw error;
+  }
+  return { after: plan.after, renderJobId: plan.renderJobId };
+}
+
+/** `queued → running`; `false` when the job is not queued (any more). */
+export async function markRenderRunning(
+  db: Db,
+  input: { now: Date; renderJobId: string }
+): Promise<boolean> {
+  const rows = await db
+    .update(renderJob)
+    .set({ status: "running", updatedAt: input.now })
+    .where(
+      and(eq(renderJob.id, input.renderJobId), eq(renderJob.status, "queued"))
+    )
+    .returning({ id: renderJob.id });
+  return rows.length > 0;
+}
+
+interface JobRow {
+  displayName: string;
+  gestureName: string;
+  jobStatus: RenderJobStatus;
+  sponsorshipId: string;
+  status: typeof sponsorship.$inferSelect.status;
+}
+
+async function readJob(db: Db, renderJobId: string): Promise<JobRow | null> {
+  const [row] = await db
+    .select({
+      displayName: sponsorship.displayName,
+      gestureName: gesture.name,
+      jobStatus: renderJob.status,
+      sponsorshipId: sponsorship.id,
+      status: sponsorship.status,
+    })
+    .from(renderJob)
+    .innerJoin(sponsorship, eq(sponsorship.id, renderJob.sponsorshipId))
+    .innerJoin(gesture, eq(gesture.id, sponsorship.gestureId))
+    .where(eq(renderJob.id, renderJobId))
+    .limit(1);
+  return row ?? null;
+}
+
+function isActive(status: RenderJobStatus): boolean {
+  return ACTIVE.includes(status);
+}
+
+function finalJobGuard(db: Db, renderJobId: string): Statement {
+  return failWhen(
+    db,
+    FINAL_JOB_GUARD,
+    sql`NOT EXISTS (SELECT 1 FROM ${renderJob} WHERE ${renderJob.id} = ${renderJobId} AND ${inList(renderJob.status, ACTIVE)})`
+  );
+}
+
+async function runFinal(
+  db: Db,
+  statements: Statement[],
+  renderJobId: string
+): Promise<boolean> {
+  const [first, ...rest] = statements;
+  try {
+    if (first) {
+      await db.batch([first, ...rest]);
+    }
+    return true;
+  } catch (error) {
+    if (lostRace(error)) {
+      return false;
+    }
+    console.error(
+      `[sponsorships] Failed to finish render job ${renderJobId}:`,
+      error
+    );
+    throw error;
+  }
+}
+
+/**
+ * The render succeeded: the job `succeeded` with the Mux ids, the video on
+ * the sponsorship, and `rendering → in_review` (`render_succeeded`). The
+ * fake render passes the gesture's own playback id and no asset.
+ */
+export async function completeRender(
+  db: Db,
+  input: {
+    assetId: string | null;
+    now: Date;
+    playbackId: string;
+    renderJobId: string;
+  }
+): Promise<{ outcome: "completed" | "noop" }> {
+  const { assetId, now, playbackId, renderJobId } = input;
+  const job = await readJob(db, renderJobId);
+  if (!(job && isActive(job.jobStatus))) {
+    return { outcome: "noop" };
+  }
+  const statements: Statement[] = [
+    finalJobGuard(db, renderJobId),
+    db
+      .update(renderJob)
+      .set({
+        finishedAt: now,
+        muxAssetId: assetId,
+        playbackId,
+        status: "succeeded",
+        updatedAt: now,
+      })
+      .where(eq(renderJob.id, renderJobId)),
+  ];
+  if (job.status === "rendering") {
+    statements.push(
+      ...transitionStatements(db, {
+        actorId: null,
+        data: { renderJobId },
+        event: "render_succeeded",
+        from: "rendering",
+        now,
+        patch: { videoAssetId: assetId, videoPlaybackId: playbackId },
+        sponsorshipId: job.sponsorshipId,
+      })
+    );
+  } else {
+    console.warn(
+      `[sponsorships] Render job ${renderJobId} finished, but its sponsorship is ${job.status}; the video is not used`
+    );
+  }
+  return {
+    outcome: (await runFinal(db, statements, renderJobId))
+      ? "completed"
+      : "noop",
+  };
+}
+
+/**
+ * The render failed: the job `failed` with the error (at most 300
+ * characters), `rendering → render_failed`, and the `admin_render_failed`
+ * email for every admin, which the caller enqueues.
+ */
+export async function failRender(
+  db: Db,
+  input: { error: string; now: Date; renderJobId: string; siteUrl: string }
+): Promise<{ notify: OutboxEmail[]; outcome: "failed" | "noop" }> {
+  const { now, renderJobId, siteUrl } = input;
+  const error = input.error.slice(0, RENDER_ERROR_MAX);
+  const job = await readJob(db, renderJobId);
+  if (!(job && isActive(job.jobStatus))) {
+    return { notify: [], outcome: "noop" };
+  }
+  const statements: Statement[] = [
+    finalJobGuard(db, renderJobId),
+    db
+      .update(renderJob)
+      .set({ error, finishedAt: now, status: "failed", updatedAt: now })
+      .where(eq(renderJob.id, renderJobId)),
+  ];
+  if (job.status === "rendering") {
+    statements.push(
+      ...transitionStatements(db, {
+        actorId: null,
+        data: { error, renderJobId },
+        event: "render_failed",
+        from: "rendering",
+        now,
+        sponsorshipId: job.sponsorshipId,
+      })
+    );
+  }
+  if (!(await runFinal(db, statements, renderJobId))) {
+    return { notify: [], outcome: "noop" };
+  }
+  const notify = await emailAdmins(db, now, (admin) => ({
+    idempotencyKey: `admin_render_failed:${renderJobId}:${admin.id}`,
+    locale: admin.locale,
+    props: {
+      displayName: job.displayName,
+      error,
+      gestureName: job.gestureName,
+      url: `${siteUrl}/admin/sponsorships/${job.sponsorshipId}`,
+    },
+    template: "transactional/admin-render-failed",
+    to: admin.email,
+  }));
+  return { notify, outcome: "failed" };
+}
+
+/**
+ * `RENDER_MODE=fake` (dev, tests, e2e and staging until phase 7): the
+ * render "succeeds" at once with the gesture's own video and no asset
+ * (spec §8.2; the admin labels it "fake render (no overlay)").
+ */
+export function fakeRenderStarter(
+  db: Db,
+  clock: () => Date = () => new Date()
+): RenderStarter {
+  return {
+    start: async ({ input, renderJobId }) => {
+      await completeRender(db, {
+        assetId: null,
+        now: clock(),
+        playbackId: input.sourcePlaybackId,
+        renderJobId,
+      });
+    },
+  };
+}
+
+/**
+ * The starter for `RENDER_MODE`: `fake` completes at once; `container` and
+ * `local` leave the job `queued` (logged) until phase 7. Phase 7 replaces
+ * only this switch.
+ */
+export function renderStarterFor(
+  mode: RenderMode,
+  deps: { clock?: () => Date; db: Db }
+): RenderStarter {
+  return mode === "fake"
+    ? fakeRenderStarter(deps.db, deps.clock)
+    : pendingRenderStarter(mode);
+}

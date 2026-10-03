@@ -1370,6 +1370,37 @@
     "sponsorships": {},
     "export": {}
   },
-  "sponsorship": {},
+  "sponsorship": {
+    "status": {
+      "awaiting_payment": "Wacht op betaling",
+      "rendering": "Video wordt gemaakt",
+      "render_failed": "Video mislukt",
+      "in_review": "Ter beoordeling",
+      "changes_requested": "Aanpassing gevraagd",
+      "live": "Live",
+      "expiring": "Loopt binnenkort af",
+      "rejected": "Afgewezen",
+      "cancelled": "Geannuleerd",
+      "expired": "Verlopen"
+    },
+    "errors": {
+      "stale": "Deze sponsoring is intussen gewijzigd. Vernieuw de pagina en probeer opnieuw.",
+      "paymentsUnavailable": "Sponsoren is even gepauzeerd. Probeer het later opnieuw.",
+      "paymentProvider": "De betaling kon niet gestart worden. Er is niets aangerekend. Probeer het opnieuw.",
+      "alreadySettled": "Deze betaling is al afgerond.",
+      "logoInvalid": "Het logo kon niet gelezen worden. Kies een PNG-, JPEG- of WebP-bestand van maximaal 2 MB.",
+      "noLogo": "Deze sponsoring heeft geen logo, dus je kunt er geen toevoegen.",
+      "notRenewable": "Deze sponsoring kan niet meer verlengd worden.",
+      "noVideo": "De video is nog niet klaar.",
+      "paid": "Deze betaling is al betaald en kan niet geannuleerd worden.",
+      "notRefunded": "Mollie meldt nog geen terugbetaling. Betaal eerst terug in het Mollie-dashboard.",
+      "tooMany": "Te veel rijen om te exporteren. Kies een kortere periode."
+    },
+    "mollie": {
+      "description_one": "Sponsoring van {{count}} gebaar bij SMOG & Co",
+      "description_other": "Sponsoring van {{count}} gebaren bij SMOG & Co",
+      "renewal": "Verlenging van je sponsoring bij SMOG & Co"
+    }
+  },
   "sponsor": {}
 }
