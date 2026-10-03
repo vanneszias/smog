@@ -10,8 +10,7 @@ import { e2eSeed, ORIGIN } from "./helpers";
  * and the detail page. No `expect` here (as `admin.ts`).
  */
 
-const SAMPLE_PLAYBACK_ID =
-  "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
+const SAMPLE_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
 const DAY = 86_400_000;
 const IN_REVIEW = {
   paymentStatus: "paid",
